@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/boltdb/bolt"
-  packages = ["."]
-  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
-  version = "v1.3.1"
-
-[[projects]]
   branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
@@ -38,15 +32,9 @@
   packages = ["ripemd160"]
   revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "7138fd3d9dc8335c567ca206f4333fb75eb05d56"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "50c49d489ab772613d3e62a9511bb62563d623d39d0ba2190a109b501306b58f"
+  inputs-digest = "84a471b952bdd80d512194ab613d2f5aa6974504e70b7eb17d487017b559e038"
   solver-name = "gps-cdcl"
   solver-version = 1
