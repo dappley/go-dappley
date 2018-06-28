@@ -9,16 +9,20 @@ import (
 	"errors"
 	"crypto/ecdsa"
 
-	"github.com/boltdb/bolt"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/filter"
 )
 
 const dbFile = "../bin/blockchain.DB"
 const blocksBucket = "blocks"
 const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
+var tipKey = []byte("1")
 
 type Blockchain struct {
 	currentHash []byte
-	DB          *bolt.DB
+	/*DB          *bolt.DB*/
+	DB 			*leveldb.DB
 }
 
 //TODO: put into genesis
@@ -33,35 +37,29 @@ func CreateBlockchain(address string) *Blockchain {
 	cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
 	genesis := NewGenesisBlock(cbtx)
 
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		log.Panic(err)
-	}
+	//db, err := bolt.Open(dbFile, 0600, nil)
 
-	err = db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucket([]byte(blocksBucket))
-		if err != nil {
-			log.Panic(err)
-		}
-
-		err = b.Put(genesis.Hash, genesis.Serialize())
-		if err != nil {
-			log.Panic(err)
-		}
-
-		err = b.Put([]byte("l"), genesis.Hash)
-		if err != nil {
-			log.Panic(err)
-		}
-		tip = genesis.Hash
-
-		return nil
+	db, err := leveldb.OpenFile(dbFile, &opt.Options{
+		OpenFilesCacheCapacity: 500,
+		BlockCacheCapacity:     8 * opt.MiB,
+		BlockSize:              4 * opt.MiB,
+		Filter:                 filter.NewBloomFilter(10),
 	})
+
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bc := Blockchain{tip, db}
+	err = updateDbWithNewBlock(db, genesis)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	bc := Blockchain{tip, /*db,*/ db}
 
 	return &bc
 }
@@ -75,22 +73,25 @@ func NewBlockchain(address string) *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		tip = b.Get([]byte("l"))
-
-		return nil
+	//db, err := bolt.Open(dbFile, 0600, nil)
+	db1, err := leveldb.OpenFile(dbFile, &opt.Options{
+		OpenFilesCacheCapacity: 500,
+		BlockCacheCapacity:     8 * opt.MiB,
+		BlockSize:              4 * opt.MiB,
+		Filter:                 filter.NewBloomFilter(10),
 	})
+
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bc := Blockchain{tip, db}
+	tip, err = db1.Get(tipKey,nil)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	bc := Blockchain{tip, /*db,*/ db1}
 
 	return &bc
 }
@@ -105,35 +106,35 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 		}
 	}
 
-	err := bc.DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		lastHash = b.Get([]byte("1"))
-		return nil
-	})
+	lastHash, err := bc.DB.Get(tipKey,nil)
+
 	if err != nil {
 		log.Panic(err)
 	}
 
 	newBlock := NewBlock(transactions, lastHash)
-
-	err = bc.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		err := b.Put(newBlock.Hash, newBlock.Serialize())
-		if err != nil {
-			log.Panic(err)
-		}
-
-		err = b.Put([]byte("l"), newBlock.Hash)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		bc.currentHash = newBlock.Hash
-		return nil
-	})
+	err = updateDbWithNewBlock(bc.DB, newBlock)
 	if err != nil {
 		log.Panic(err)
 	}
+
+	bc.currentHash = newBlock.Hash
+
+}
+
+//record the new block in the database
+func updateDbWithNewBlock(db *leveldb.DB, newBlock *Block) error{
+	err := db.Put(newBlock.Hash, newBlock.Serialize(), nil)
+	if err != nil {
+		return err
+			}
+
+	err = db.Put(tipKey, newBlock.Hash,nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int) {
@@ -278,21 +279,17 @@ func (bc *Blockchain) Iterator() *Blockchain {
 	return &Blockchain{bc.currentHash, bc.DB}
 }
 
-func (i *Blockchain) Next() *Block {
+func (bc *Blockchain) Next() *Block {
 	var block *Block
 
-	err := i.DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		encodedBlock := b.Get(i.currentHash)
-		block = DeserializeBlock(encodedBlock)
-
-		return nil
-	})
+	encodedBlock, err := bc.DB.Get(bc.currentHash,nil)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	i.currentHash = block.PrevBlockHash
+	block = DeserializeBlock(encodedBlock)
+
+	bc.currentHash = block.PrevBlockHash
 
 	return block
 }

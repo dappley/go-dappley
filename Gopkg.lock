@@ -9,6 +9,31 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/goleveldb"
+  packages = [
+    "leveldb",
+    "leveldb/cache",
+    "leveldb/comparer",
+    "leveldb/errors",
+    "leveldb/filter",
+    "leveldb/iterator",
+    "leveldb/journal",
+    "leveldb/memdb",
+    "leveldb/opt",
+    "leveldb/storage",
+    "leveldb/table",
+    "leveldb/util"
+  ]
+  revision = "0d5a0ceb10cf9ab89fdd744cc8c50a83134f6697"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ripemd160"]
   revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
@@ -22,6 +47,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bd7d3cdaf86d19746772c556951f4ee7a72a3f8b5271756de63fc58f163bed59"
+  inputs-digest = "50c49d489ab772613d3e62a9511bb62563d623d39d0ba2190a109b501306b58f"
   solver-name = "gps-cdcl"
   solver-version = 1
