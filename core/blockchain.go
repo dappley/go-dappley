@@ -9,9 +9,7 @@ import (
 	"errors"
 	"crypto/ecdsa"
 
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/filter"
+	"github.com/dappworks/go-dappworks/storage"
 )
 
 const dbFile = "../bin/blockchain.DB"
@@ -22,8 +20,9 @@ var tipKey = []byte("1")
 type Blockchain struct {
 	currentHash []byte
 	/*DB          *bolt.DB*/
-	DB 			*leveldb.DB
+	DB 			*storage.LevelDB
 }
+
 
 //TODO: put into genesis
 // CreateBlockchain creates a new blockchain DB
@@ -39,12 +38,7 @@ func CreateBlockchain(address string) *Blockchain {
 
 	//db, err := bolt.Open(dbFile, 0600, nil)
 
-	db, err := leveldb.OpenFile(dbFile, &opt.Options{
-		OpenFilesCacheCapacity: 500,
-		BlockCacheCapacity:     8 * opt.MiB,
-		BlockSize:              4 * opt.MiB,
-		Filter:                 filter.NewBloomFilter(10),
-	})
+	db, err := storage.NewDatabase(dbFile)
 
 	if err != nil {
 		log.Panic(err)
@@ -59,7 +53,7 @@ func CreateBlockchain(address string) *Blockchain {
 		log.Panic(err)
 	}
 
-	bc := Blockchain{tip, /*db,*/ db}
+	bc := Blockchain{tip, db}
 
 	return &bc
 }
@@ -73,25 +67,20 @@ func NewBlockchain(address string) *Blockchain {
 	}
 
 	var tip []byte
-	//db, err := bolt.Open(dbFile, 0600, nil)
-	db1, err := leveldb.OpenFile(dbFile, &opt.Options{
-		OpenFilesCacheCapacity: 500,
-		BlockCacheCapacity:     8 * opt.MiB,
-		BlockSize:              4 * opt.MiB,
-		Filter:                 filter.NewBloomFilter(10),
-	})
+
+	db, err := storage.NewDatabase(dbFile)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	tip, err = db1.Get(tipKey,nil)
+	tip, err = db.Get(tipKey)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bc := Blockchain{tip, /*db,*/ db1}
+	bc := Blockchain{tip, db}
 
 	return &bc
 }
@@ -106,7 +95,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 		}
 	}
 
-	lastHash, err := bc.DB.Get(tipKey,nil)
+	lastHash, err := bc.DB.Get(tipKey)
 
 	if err != nil {
 		log.Panic(err)
@@ -123,13 +112,13 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 }
 
 //record the new block in the database
-func updateDbWithNewBlock(db *leveldb.DB, newBlock *Block) error{
-	err := db.Put(newBlock.Hash, newBlock.Serialize(), nil)
+func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) error{
+	err := db.Put(newBlock.Hash, newBlock.Serialize())
 	if err != nil {
 		return err
 			}
 
-	err = db.Put(tipKey, newBlock.Hash,nil)
+	err = db.Put(tipKey, newBlock.Hash)
 	if err != nil {
 		return err
 	}
@@ -282,7 +271,7 @@ func (bc *Blockchain) Iterator() *Blockchain {
 func (bc *Blockchain) Next() *Block {
 	var block *Block
 
-	encodedBlock, err := bc.DB.Get(bc.currentHash,nil)
+	encodedBlock, err := bc.DB.Get(bc.currentHash)
 	if err != nil {
 		log.Panic(err)
 	}
