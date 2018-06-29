@@ -12,7 +12,7 @@ import (
 	"github.com/dappworks/go-dappworks/core"
 )
 
-const walletFile = "../bin/client.dat"
+const WalletFile = "../bin/client.dat"
 
 type Wallets struct {
 	Wallets map[string]*core.Address
@@ -51,11 +51,11 @@ func (ws Wallets) GetWallet(address string) core.Address {
 }
 
 func (ws *Wallets) LoadFromFile() error {
-	if _, err := os.Stat(walletFile); os.IsNotExist(err) {
+	if _, err := os.Stat(WalletFile); os.IsNotExist(err) {
 		return err
 	}
 
-	fileContent, err := ioutil.ReadFile(walletFile)
+	fileContent, err := ioutil.ReadFile(WalletFile)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -85,7 +85,7 @@ func (ws Wallets) SaveToFile() {
 		log.Panic(err)
 	}
 
-	err = ioutil.WriteFile(walletFile, content.Bytes(), 0644)
+	err = ioutil.WriteFile(WalletFile, content.Bytes(), 0644)
 	if err != nil {
 		log.Panic(err)
 	}
