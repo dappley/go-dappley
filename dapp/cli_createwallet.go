@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/dappworks/go-dappworks/core"
+	"github.com/dappworks/go-dappworks/client"
 )
 
 func (cli *CLI) createWallet() {
-	wallets, _ := core.NewWallets()
+	wallets, _ := client.NewWallets()
 	address := wallets.CreateWallet()
 	wallets.SaveToFile()
 

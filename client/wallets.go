@@ -1,4 +1,4 @@
-package core
+package client
 
 import (
 	"log"
@@ -8,26 +8,27 @@ import (
 	"io/ioutil"
 	"fmt"
 	"os"
+
+	"github.com/dappworks/go-dappworks/core"
 )
 
-// Wallets stores a collection of wallets
+const walletFile = "../bin/client.dat"
+
 type Wallets struct {
-	Wallets map[string]*Wallet
+	Wallets map[string]*core.Address
 }
 
-// NewWallets creates Wallets and fills it from a file if it exists
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
-	wallets.Wallets = make(map[string]*Wallet)
+	wallets.Wallets = make(map[string]*core.Address)
 
 	err := wallets.LoadFromFile()
 
 	return &wallets, err
 }
 
-// CreateWallet adds a Wallet to Wallets
 func (ws *Wallets) CreateWallet() string {
-	wallet := NewWallet()
+	wallet := core.NewAddress()
 	address := fmt.Sprintf("%s", wallet.GetAddress())
 
 	ws.Wallets[address] = wallet
@@ -35,7 +36,6 @@ func (ws *Wallets) CreateWallet() string {
 	return address
 }
 
-// GetAddresses returns an array of addresses stored in the wallet file
 func (ws *Wallets) GetAddresses() []string {
 	var addresses []string
 
@@ -46,12 +46,10 @@ func (ws *Wallets) GetAddresses() []string {
 	return addresses
 }
 
-// GetWallet returns a Wallet by its address
-func (ws Wallets) GetWallet(address string) Wallet {
+func (ws Wallets) GetWallet(address string) core.Address {
 	return *ws.Wallets[address]
 }
 
-// LoadFromFile loads wallets from the file
 func (ws *Wallets) LoadFromFile() error {
 	if _, err := os.Stat(walletFile); os.IsNotExist(err) {
 		return err

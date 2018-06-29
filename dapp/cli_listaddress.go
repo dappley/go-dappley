@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/dappworks/go-dappworks/core"
+	"github.com/dappworks/go-dappworks/client"
 )
 
 func (cli *CLI) listAddresses() {
-	wallets, err := core.NewWallets()
+	wallets, err := client.NewWallets()
 	if err != nil {
 		log.Panic(err)
 	}

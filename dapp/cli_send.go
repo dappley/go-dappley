@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/dappworks/go-dappworks/core"
+	"github.com/dappworks/go-dappworks/client"
 )
 
 func (cli *CLI) send(from, to string, amount int) {
@@ -18,7 +19,13 @@ func (cli *CLI) send(from, to string, amount int) {
 	bc := core.NewBlockchain(from)
 	defer bc.DB.Close()
 
-	tx := core.NewUTXOTransaction(from, to, amount, bc)
+
+	wallets, err := client.NewWallets()
+	if err != nil {
+		log.Panic(err)
+	}
+	wallet := wallets.GetWallet(from)
+	tx := core.NewUTXOTransaction(from, to, amount, wallet, bc)
 	cbTx := core.NewCoinbaseTX(from, "")
 	txs := []*core.Transaction{cbTx, tx}
 
