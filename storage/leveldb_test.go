@@ -44,7 +44,7 @@ func TestLevelDB_PutAndGet(t *testing.T){
 }
 
 //Test if database access after closing will result in error
-func TestLevelDB_AcessAfterClose(t *testing.T) {
+func TestLevelDB_Close(t *testing.T) {
 	//create new database
 	ldb, err := NewDatabase("../bin/test.DB")
 	assert.Nil(t, err)
