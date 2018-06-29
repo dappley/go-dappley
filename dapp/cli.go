@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"github.com/dappworks/go-dappworks/logic"
 )
 
 // CLI responsible for processing command line arguments
@@ -85,7 +86,14 @@ func (cli *CLI) Run() {
 			getBalanceCmd.Usage()
 			os.Exit(1)
 		}
-		cli.getBalance(*getBalanceAddress)
+		balance, err := logic.GetBalance(*getBalanceAddress)
+
+		if err != nil{
+			log.Println(err)
+		}
+
+		fmt.Printf("Balance of '%s': %d\n", *getBalanceAddress, balance)
+
 	}
 
 	if createBlockchainCmd.Parsed() {
@@ -93,15 +101,30 @@ func (cli *CLI) Run() {
 			createBlockchainCmd.Usage()
 			os.Exit(1)
 		}
-		cli.createBlockchain(*createBlockchainAddress)
+		_, err := logic.CreateBlockchain(*createBlockchainAddress)
+		if err != nil {
+			log.Println(err)
+		}else{
+			fmt.Println("Create Blockchain Successful")
+		}
 	}
 
 	if createWalletCmd.Parsed() {
-		cli.createWallet()
+		walletAddr, err := logic.CreateWallet()
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Printf("Your new address: %s\n", walletAddr)
 	}
 
 	if listAddressesCmd.Parsed() {
-		cli.listAddresses()
+		addrs, err := logic.GetAllAddresses()
+		if err != nil {
+			log.Println(err)
+		}
+		for _, address := range addrs {
+			fmt.Println(address)
+		}
 	}
 
 	if printChainCmd.Parsed() {
@@ -114,6 +137,11 @@ func (cli *CLI) Run() {
 			os.Exit(1)
 		}
 
-		cli.send(*sendFrom, *sendTo, *sendAmount)
+		if err := logic.Send(*sendFrom, *sendTo, *sendAmount); err != nil{
+			log.Println(err)
+		}else{
+			fmt.Println("Send Successful")
+		}
+
 	}
 }
