@@ -19,7 +19,6 @@ var tipKey = []byte("1")
 
 type Blockchain struct {
 	currentHash []byte
-	/*DB          *bolt.DB*/
 	DB 			*storage.LevelDB
 }
 

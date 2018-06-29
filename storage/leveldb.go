@@ -57,7 +57,11 @@ func (ldb *LevelDB) Close() error{
 }
 
 func (ldb *LevelDB) Get(key []byte) ([]byte, error){
-	return ldb.db.Get(key,nil)
+	val, err:=ldb.db.Get(key,nil)
+	if err!=nil && err !=leveldb.ErrNotFound {
+		return nil,err
+	}
+	return val,nil
 }
 
 func (ldb *LevelDB) Put(key []byte, val []byte) error{
