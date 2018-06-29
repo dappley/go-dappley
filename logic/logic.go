@@ -88,3 +88,29 @@ func Send(from, to string, amount int) error {
 }
 
 //delete wallet
+
+func DeleteWallet(address string) error {
+	wallets, err := client.NewWallets()
+	if err != nil {
+		return err
+	}
+	err = wallets.DeleteWallet(address)
+	if err != nil {
+		return err
+	}
+	wallets.SaveToFile()
+	return err
+}
+
+func DeleteWallets() error {
+	wallets, err := client.NewWallets()
+	if err != nil {
+		return err
+	}
+	err = wallets.DeleteWallets()
+	if err != nil {
+		return err
+	}
+	wallets.SaveToFile()
+	return err
+}
