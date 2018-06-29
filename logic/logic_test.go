@@ -153,6 +153,64 @@ func TestSend(t *testing.T) {
 	teardown()
 }
 
+func TestDeleteWallets(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+
+	//create wallets address
+	addr1, err := CreateWallet()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, addr1)
+
+	addr2, err := CreateWallet()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, addr2)
+
+	addr3, err := CreateWallet()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, addr3)
+
+	err = DeleteWallets()
+	assert.Nil(t, err)
+
+	list, err := GetAllAddresses()
+	assert.Nil(t, err)
+	assert.Empty(t, list)
+
+	//teardown :clean up database amd files
+	teardown()
+}
+
+func TestDeleteWallet(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+
+	//create wallets address
+	addr1, err := CreateWallet()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, addr1)
+
+	addr2, err := CreateWallet()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, addr2)
+
+	addr3, err := CreateWallet()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, addr3)
+
+	addressList := [2]string{addr2, addr3}
+
+	err = DeleteWallet(addr1)
+	assert.Nil(t, err)
+
+	list, err := GetAllAddresses()
+	assert.Nil(t, err)
+	assert.Equal(t, list, addressList)
+
+	//teardown :clean up database amd files
+	teardown()
+}
+
 func setup() {
 	cleanUpDatabase()
 }
