@@ -1,26 +1,27 @@
 package logic
 
 import (
-	"github.com/dappworks/go-dappworks/core"
 	"errors"
+
 	"github.com/dappworks/go-dappworks/client"
+	"github.com/dappworks/go-dappworks/core"
 	"github.com/dappworks/go-dappworks/util"
 )
 
 var (
-	ErrInvalidAddress = errors.New("ERROR: Address is invalid")
+	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
-	ErrInvalidRcverAddress = errors.New("ERROR: Receiver address is invalid")
+	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
 )
 
 //create a blockchain
-func CreateBlockchain(address string) (*core.Blockchain, error){
+func CreateBlockchain(address string) (*core.Blockchain, error) {
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
 	bc := core.CreateBlockchain(address)
 	err := bc.DB.Close()
-	return bc,err
+	return bc, err
 }
 
 //create a wallet
@@ -34,7 +35,7 @@ func CreateWallet() (string, error) {
 //get balance
 func GetBalance(address string) (int, error) {
 	if !core.ValidateAddress(address) {
-		return 0,ErrInvalidAddress
+		return 0, ErrInvalidAddress
 	}
 	bc := core.NewBlockchain(address)
 	defer bc.DB.Close()
@@ -54,14 +55,14 @@ func GetBalance(address string) (int, error) {
 func GetAllAddresses() ([]string, error) {
 	wallets, err := client.NewWallets()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	addresses := wallets.GetAddresses()
 
-	return addresses,err
+	return addresses, err
 }
 
-func Send(from, to string, amount int) error{
+func Send(from, to string, amount int) error {
 	if !core.ValidateAddress(from) {
 		return ErrInvalidSenderAddress
 	}
@@ -85,3 +86,5 @@ func Send(from, to string, amount int) error{
 	bc.MineBlock(txs)
 	return err
 }
+
+//delete wallet

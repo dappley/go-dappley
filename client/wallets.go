@@ -1,12 +1,13 @@
 package client
 
 import (
-	"log"
 	"bytes"
-	"encoding/gob"
 	"crypto/elliptic"
-	"io/ioutil"
+	"encoding/gob"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/dappworks/go-dappworks/core"
@@ -34,6 +35,24 @@ func (ws *Wallets) CreateWallet() string {
 	ws.Wallets[address] = wallet
 
 	return address
+}
+
+func (ws *Wallets) DeleteWallet(address string) error {
+	if ws.GetWallet(address).PublicKey == nil {
+		return errors.New("wallet is not exist")
+	}
+	delete(ws.Wallets, address)
+	return nil
+}
+
+func (ws *Wallets) DeleteWallets() error {
+	if len(ws.Wallets) == 0 {
+		return errors.New("no wallet yet")
+	}
+	for k := range ws.Wallets {
+		delete(ws.Wallets, k)
+	}
+	return nil
 }
 
 func (ws *Wallets) GetAddresses() []string {

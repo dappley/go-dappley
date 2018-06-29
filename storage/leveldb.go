@@ -29,7 +29,7 @@ var (
 	ErrLevelDbNotAbleToOpenFile = errors.New("leveldb fails to open file")
 )
 
-type LevelDB struct{
+type LevelDB struct {
 	db *leveldb.DB
 }
 
@@ -43,29 +43,27 @@ func NewDatabase(dbFilePath string) (*LevelDB, error) {
 		fp = defaultDbFile
 	}
 	db1, err := leveldb.OpenFile(fp, nil)
-	if err!= nil {
+	if err != nil {
 		return nil, ErrLevelDbNotAbleToOpenFile
 	}
 
 	return &LevelDB{
-		db : db1,
-	},nil
+		db: db1,
+	}, nil
 }
 
-func (ldb *LevelDB) Close() error{
+func (ldb *LevelDB) Close() error {
 	return ldb.db.Close()
 }
 
-func (ldb *LevelDB) Get(key []byte) ([]byte, error){
-	val, err:=ldb.db.Get(key,nil)
-	if err!=nil && err !=leveldb.ErrNotFound {
-		return nil,err
+func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
+	val, err := ldb.db.Get(key, nil)
+	if err != nil && err != leveldb.ErrNotFound {
+		return nil, err
 	}
-	return val,nil
+	return val, nil
 }
 
-func (ldb *LevelDB) Put(key []byte, val []byte) error{
-	return  ldb.db.Put(key,val,nil)
+func (ldb *LevelDB) Put(key []byte, val []byte) error {
+	return ldb.db.Put(key, val, nil)
 }
-
-
