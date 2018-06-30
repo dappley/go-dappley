@@ -49,16 +49,6 @@ func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
 	}
 }
 
-func NewGenesisBlock(coinbase *Transaction) *Block {
-	block := NewBlock([]*Transaction{coinbase}, []byte{})
-	pow := NewProofOfWork(block)
-	nonce, hash := pow.Run()
-
-	block.SetHash(hash[:])
-	block.SetNonce(nonce)
-	return block
-}
-
 func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
 	var txHash [32]byte

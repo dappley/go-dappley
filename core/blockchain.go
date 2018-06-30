@@ -13,7 +13,6 @@ import (
 )
 
 const dbFile = "../bin/blockchain.DB"
-const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
 var tipKey = []byte("1")
 
 type Blockchain struct {
@@ -31,10 +30,7 @@ func CreateBlockchain(address string) *Blockchain {
 	}
 
 	var tip []byte
-	cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
-	genesis := NewGenesisBlock(cbtx)
-
-	//db, err := bolt.Open(dbFile, 0600, nil)
+	genesis := NewGenesisBlock(address)
 
 	db, err := storage.NewDatabase(dbFile)
 
