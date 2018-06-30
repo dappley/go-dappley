@@ -159,15 +159,12 @@ func TestDeleteWallets(t *testing.T) {
 
 	//create wallets address
 	addr1, err := CreateWallet()
-	assert.Nil(t, err)
 	assert.NotEmpty(t, addr1)
 
 	addr2, err := CreateWallet()
-	assert.Nil(t, err)
 	assert.NotEmpty(t, addr2)
 
 	addr3, err := CreateWallet()
-	assert.Nil(t, err)
 	assert.NotEmpty(t, addr3)
 
 	err = DeleteWallets()
@@ -187,18 +184,15 @@ func TestDeleteWallet(t *testing.T) {
 
 	//create wallets address
 	addr1, err := CreateWallet()
-	assert.Nil(t, err)
 	assert.NotEmpty(t, addr1)
 
 	addr2, err := CreateWallet()
-	assert.Nil(t, err)
 	assert.NotEmpty(t, addr2)
 
 	addr3, err := CreateWallet()
-	assert.Nil(t, err)
 	assert.NotEmpty(t, addr3)
 
-	addressList := [2]string{addr2, addr3}
+	addressList := []string{addr2, addr3}
 
 	err = DeleteWallet(addr1)
 	assert.Nil(t, err)
