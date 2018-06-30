@@ -27,6 +27,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCreateWallet(t *testing.T) {
+	addr, _ := CreateWallet()
+	assert.NotEmpty(t, addr)
+
+	teardown()
+}
+
 func TestCreateBlockchain(t *testing.T) {
 
 	//setup: clean up database and files
