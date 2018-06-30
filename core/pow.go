@@ -28,9 +28,9 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 func (pow *ProofOfWork) prepareData(nonce int64) []byte {
 	data := bytes.Join(
 		[][]byte{
-			pow.block.PrevBlockHash,
+			pow.block.GetPrevHash(),
 			pow.block.HashTransactions(),
-			util.IntToHex(pow.block.Timestamp),
+			util.IntToHex(pow.block.GetTimestamp()),
 			util.IntToHex(targetBits),
 			util.IntToHex(nonce),
 		},
@@ -65,7 +65,7 @@ func (pow *ProofOfWork) Run() (int64, []byte) {
 func (pow *ProofOfWork) Validate() bool {
 	var hashInt big.Int
 
-	data := pow.prepareData(pow.block.Nonce)
+	data := pow.prepareData(pow.block.GetNonce())
 	hash := sha256.Sum256(data)
 	hashInt.SetBytes(hash[:])
 

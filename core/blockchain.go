@@ -13,7 +13,6 @@ import (
 )
 
 const dbFile = "../bin/blockchain.DB"
-const blocksBucket = "blocks"
 const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
 var tipKey = []byte("1")
 
@@ -100,24 +99,29 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 		log.Panic(err)
 	}
 
-	newBlock := NewBlock(transactions, lastHash)
-	err = updateDbWithNewBlock(bc.DB, newBlock)
+	block := NewBlock(transactions, lastHash)
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+	block.SetHash(hash[:])
+	block.SetNonce(nonce)
+
+	err = updateDbWithNewBlock(bc.DB, block)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bc.currentHash = newBlock.Hash
+	bc.currentHash = block.GetHash()
 
 }
 
 //record the new block in the database
 func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) error{
-	err := db.Put(newBlock.Hash, newBlock.Serialize())
+	err := db.Put(newBlock.GetHash(), newBlock.Serialize())
 	if err != nil {
 		return err
 			}
 
-	err = db.Put(tipKey, newBlock.Hash)
+	err = db.Put(tipKey, newBlock.GetHash())
 	if err != nil {
 		return err
 	}
@@ -156,13 +160,13 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	for {
 		block := bci.Next()
 
-		for _, tx := range block.Transactions {
+		for _, tx := range block.GetTransactions() {
 			if bytes.Compare(tx.ID, ID) == 0 {
 				return *tx, nil
 			}
 		}
 
-		if len(block.PrevBlockHash) == 0 {
+		if len(block.GetPrevHash()) == 0 {
 			break
 		}
 	}
@@ -179,7 +183,7 @@ func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []Transaction {
 	for {
 		block := bci.Next()
 
-		for _, tx := range block.Transactions {
+		for _, tx := range block.GetTransactions() {
 			txID := hex.EncodeToString(tx.ID)
 
 		Outputs: //TODO
@@ -207,7 +211,7 @@ func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []Transaction {
 			}
 		}
 
-		if len(block.PrevBlockHash) == 0 {
+		if len(block.GetPrevHash()) == 0 {
 			break
 		}
 	}
@@ -275,9 +279,9 @@ func (bc *Blockchain) Next() *Block {
 		log.Panic(err)
 	}
 
-	block = DeserializeBlock(encodedBlock)
+	block = Deserialize(encodedBlock)
 
-	bc.currentHash = block.PrevBlockHash
+	bc.currentHash = block.GetPrevHash()
 
 	return block
 }

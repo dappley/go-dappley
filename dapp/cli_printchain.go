@@ -16,16 +16,16 @@ func (cli *CLI) printChain() {
 	for {
 		block := bci.Next()
 
-		fmt.Printf("============ Block %x ============\n", block.Hash)
-		fmt.Printf("Prev. block: %x\n", block.PrevBlockHash)
+		fmt.Printf("============ Block %x ============\n", block.GetHash())
+		fmt.Printf("Prev. block: %x\n", block.GetPrevHash())
 		pow := core.NewProofOfWork(block)
 		fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate()))
-		for _, tx := range block.Transactions {
+		for _, tx := range block.GetTransactions() {
 			fmt.Println(tx)
 		}
 		fmt.Printf("\n\n")
 
-		if len(block.PrevBlockHash) == 0 {
+		if len(block.GetPrevHash()) == 0 {
 			break
 		}
 	}
