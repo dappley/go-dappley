@@ -31,7 +31,7 @@ func CreateBlockchain(address string) *Blockchain {
 	var tip []byte
 	genesis := NewGenesisBlock(address)
 
-	db, err := storage.NewDatabase(dbFile)
+	db, err := storage.OpenDatabase(dbFile)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -52,7 +52,7 @@ func GetBlockchain(address string) *Blockchain {
 
 	var tip []byte
 
-	db, err := storage.NewDatabase(dbFile)
+	db, err := storage.OpenDatabase(dbFile)
 	if err != nil {
 		log.Panic(err)
 	}
