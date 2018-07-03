@@ -21,7 +21,6 @@ type Blockchain struct {
 }
 
 
-//TODO: put into genesis
 // CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string) *Blockchain {
 	if dbExists() {
@@ -33,7 +32,6 @@ func CreateBlockchain(address string) *Blockchain {
 	genesis := NewGenesisBlock(address)
 
 	db, err := storage.NewDatabase(dbFile)
-
 	if err != nil {
 		log.Panic(err)
 	}
@@ -43,18 +41,10 @@ func CreateBlockchain(address string) *Blockchain {
 		log.Panic(err)
 	}
 
-	if err != nil {
-		log.Panic(err)
-	}
-
-	bc := Blockchain{tip, db}
-
-	return &bc
+	return &Blockchain{tip, db}
 }
 
-//TODO: put into genesis
-// NewBlockchain creates a new Blockchain with genesis Block
-func NewBlockchain(address string) *Blockchain {
+func GetBlockchain(address string) *Blockchain {
 	if dbExists() == false {
 		fmt.Println("No existing blockchain found. Create one first.")
 		os.Exit(1)
@@ -63,20 +53,16 @@ func NewBlockchain(address string) *Blockchain {
 	var tip []byte
 
 	db, err := storage.NewDatabase(dbFile)
-
 	if err != nil {
 		log.Panic(err)
 	}
 
 	tip, err = db.Get(tipKey)
-
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bc := Blockchain{tip, db}
-
-	return &bc
+	return &Blockchain{tip, db}
 }
 
 func (bc *Blockchain) MineBlock(transactions []*Transaction) {
@@ -115,7 +101,7 @@ func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) error{
 	err := db.Put(newBlock.GetHash(), newBlock.Serialize())
 	if err != nil {
 		return err
-			}
+	}
 
 	err = db.Put(tipKey, newBlock.GetHash())
 	if err != nil {

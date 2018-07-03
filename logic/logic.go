@@ -55,7 +55,7 @@ func GetBalance(address string) (int, error) {
 	if !core.ValidateAddress(address) {
 		return 0, ErrInvalidAddress
 	}
-	bc := core.NewBlockchain(address)
+	bc := core.GetBlockchain(address)
 	defer bc.DB.Close()
 
 	balance := 0
@@ -88,7 +88,7 @@ func Send(from, to string, amount int) error {
 		return ErrInvalidRcverAddress
 	}
 
-	bc := core.NewBlockchain(from)
+	bc := core.GetBlockchain(from)
 	defer bc.DB.Close()
 
 	wallets, err := client.NewWallets()
