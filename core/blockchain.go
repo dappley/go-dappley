@@ -21,7 +21,6 @@ type Blockchain struct {
 }
 
 
-// CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string) *Blockchain {
 	if dbExists() {
 		fmt.Println("Blockchain already exists.")
