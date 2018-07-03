@@ -38,11 +38,16 @@ func (ws *Wallets) CreateWallet() string {
 }
 
 func (ws *Wallets) DeleteWallet(address string) error {
-	if ws.GetWallet(address).PublicKey == nil {
-		return errors.New("wallet is not exist")
+	addresses := ws.GetAddresses()
+	for _, value := range addresses {
+		if value == address {
+			delete(ws.Wallets, address)
+			return nil
+		}
 	}
-	delete(ws.Wallets, address)
-	return nil
+
+	return errors.New("wallet is not exist")
+
 }
 
 func (ws *Wallets) DeleteWallets() error {

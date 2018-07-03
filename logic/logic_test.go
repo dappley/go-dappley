@@ -19,6 +19,7 @@
 package logic
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -70,6 +71,31 @@ func TestGetBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, balance, 10)
 
+	//teardown :clean up database amd files
+	teardown()
+}
+
+func TestGetBalanceWithInvildeAddress(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+
+	//create a wallet address
+	addr, err := CreateWallet()
+	assert.NotEmpty(t, addr)
+
+	//create a blockchain
+	b, err := CreateBlockchain(addr)
+	assert.Nil(t, err)
+	assert.NotNil(t, b)
+
+	//The balance should be 10 after creating a blockchain
+	balance1, err := GetBalance("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb")
+	assert.Nil(t, err)
+	assert.Equal(t, balance1, 0)
+
+	balance2, err := GetBalance("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww")
+	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
+	assert.Equal(t, balance2, 0)
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -203,6 +229,29 @@ func TestDeleteWallet(t *testing.T) {
 
 	err = DeleteWallet(addr1)
 	assert.Nil(t, err)
+
+	list, err := GetAllAddresses()
+	assert.Nil(t, err)
+	assert.Equal(t, list, addressList)
+
+	//teardown :clean up database amd files
+	teardown()
+}
+
+func TestDeleteInvildeWallet(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+
+	//create wallets address
+	addr1, err := CreateWallet()
+	assert.NotEmpty(t, addr1)
+
+	addressList := []string{addr1}
+
+	println(addr1)
+
+	err = DeleteWallet("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb")
+	assert.Equal(t, errors.New("wallet is not exist"), err)
 
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
