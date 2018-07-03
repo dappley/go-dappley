@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestCreateWallet(t *testing.T) {
 	addr, _ := CreateWallet()
 	assert.NotEmpty(t, addr)
@@ -37,7 +36,6 @@ func TestCreateWallet(t *testing.T) {
 }
 
 const invalidAddress = "Invalid Address"
-
 
 func TestCreateBlockchain(t *testing.T) {
 
@@ -58,20 +56,18 @@ func TestCreateBlockchain(t *testing.T) {
 }
 
 //create a blockchain with invalid address
-func TestCreateBlockchainWithInvalidAddress(t *testing.T){
+func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
 	//create a blockchain with an invalid address
 	b, err := CreateBlockchain(invalidAddress)
-	assert.Equal(t, err,ErrInvalidAddress)
+	assert.Equal(t, err, ErrInvalidAddress)
 	assert.Nil(t, b)
 
 	//teardown :clean up database amd files
 	teardown()
 }
-
-
 
 func TestGetBalance(t *testing.T) {
 	//setup: clean up database and files
@@ -228,8 +224,9 @@ func TestDeleteWallets(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, list)
 }
+
 //test send to invalid address
-func TestSendToInvalidAddress(t *testing.T){
+func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	//this is internally set. Dont modify
@@ -312,8 +309,10 @@ func TestDeleteInvildeWallet(t *testing.T) {
 
 	//teardown :clean up database amd files
 	teardown()
+}
+
 //insufficient fund
-func TestSendInefficientBalance(t *testing.T){
+func TestSendInefficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	//this is internally set. Dont modify
