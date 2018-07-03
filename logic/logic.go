@@ -96,7 +96,10 @@ func Send(from, to string, amount int) error {
 		return err
 	}
 	wallet := wallets.GetWallet(from)
-	tx := core.NewUTXOTransaction(from, to, amount, wallet, bc)
+	tx, err := core.NewUTXOTransaction(from, to, amount, wallet, bc)
+	if err != nil {
+		return err
+	}
 	cbTx := core.NewCoinbaseTX(from, "")
 	txs := []*core.Transaction{cbTx, tx}
 

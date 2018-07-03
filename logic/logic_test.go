@@ -28,12 +28,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+
 func TestCreateWallet(t *testing.T) {
 	addr, _ := CreateWallet()
 	assert.NotEmpty(t, addr)
 
 	teardown()
 }
+
+const invalidAddress = "Invalid Address"
+
 
 func TestCreateBlockchain(t *testing.T) {
 
@@ -52,6 +56,22 @@ func TestCreateBlockchain(t *testing.T) {
 	//teardown :clean up database amd files
 	teardown()
 }
+
+//create a blockchain with invalid address
+func TestCreateBlockchainWithInvalidAddress(t *testing.T){
+	//setup: clean up database and files
+	setup()
+
+	//create a blockchain with an invalid address
+	b, err := CreateBlockchain(invalidAddress)
+	assert.Equal(t, err,ErrInvalidAddress)
+	assert.Nil(t, b)
+
+	//teardown :clean up database amd files
+	teardown()
+}
+
+
 
 func TestGetBalance(t *testing.T) {
 	//setup: clean up database and files
@@ -138,6 +158,7 @@ func TestGetAllAddresses(t *testing.T) {
 	teardown()
 }
 
+//test send
 func TestSend(t *testing.T) {
 	//setup: clean up database and files
 	setup()
@@ -206,6 +227,38 @@ func TestDeleteWallets(t *testing.T) {
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
 	assert.Empty(t, list)
+}
+//test send to invalid address
+func TestSendToInvalidAddress(t *testing.T){
+	//setup: clean up database and files
+	setup()
+	//this is internally set. Dont modify
+	mineAward := int(10)
+	//Transfer ammount
+	transferAmount := int(25)
+
+	//create a wallet address
+	addr1, err := CreateWallet()
+	assert.NotEmpty(t, addr1)
+
+	//create a blockchain
+	b, err := CreateBlockchain(addr1)
+	assert.Nil(t, err)
+	assert.NotNil(t, b)
+
+	//The balance should be 10 after creating a blockchain
+	balance1, err := GetBalance(addr1)
+	assert.Nil(t, err)
+	assert.Equal(t, balance1, mineAward)
+
+	//Send 5 coins from addr1 to an invalid address
+	err = Send(addr1, invalidAddress, transferAmount)
+	assert.NotNil(t, err)
+
+	//the balance of the first wallet should be still be 10
+	balance1, err = GetBalance(addr1)
+	assert.Nil(t, err)
+	assert.Equal(t, balance1, mineAward)
 
 	//teardown :clean up database amd files
 	teardown()
@@ -259,6 +312,56 @@ func TestDeleteInvildeWallet(t *testing.T) {
 
 	//teardown :clean up database amd files
 	teardown()
+//insufficient fund
+func TestSendInefficientBalance(t *testing.T){
+	//setup: clean up database and files
+	setup()
+	//this is internally set. Dont modify
+	mineAward := int(10)
+	//Transfer ammount is larger than the balance
+	transferAmount := int(25)
+
+	//create a wallet address
+	addr1, err := CreateWallet()
+	assert.NotEmpty(t, addr1)
+
+	//create a blockchain
+	b, err := CreateBlockchain(addr1)
+	assert.Nil(t, err)
+	assert.NotNil(t, b)
+
+	//The balance should be 10 after creating a blockchain
+	balance1, err := GetBalance(addr1)
+	assert.Nil(t, err)
+	assert.Equal(t, balance1, mineAward)
+
+	//Create a second wallet
+	addr2, err := CreateWallet()
+	assert.NotEmpty(t, addr2)
+	assert.Nil(t, err)
+
+	//The balance should be 0
+	balance2, err := GetBalance(addr2)
+	assert.Nil(t, err)
+	assert.Equal(t, balance2, 0)
+
+	//Send 5 coins from addr1 to addr2
+	err = Send(addr1, addr2, transferAmount)
+	assert.NotNil(t, err)
+
+	//the balance of the first wallet should be still be 10
+	balance1, err = GetBalance(addr1)
+	assert.Nil(t, err)
+	assert.Equal(t, balance1, mineAward)
+
+	//the balance of the second wallet should be 0
+	balance2, err = GetBalance(addr2)
+	assert.Nil(t, err)
+	assert.Equal(t, balance2, 0)
+
+	//teardown :clean up database amd files
+	teardown()
+
 }
 
 func setup() {
