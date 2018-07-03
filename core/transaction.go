@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"bytes"
 	"encoding/gob"
@@ -15,6 +16,10 @@ import (
 )
 
 const subsidy = 10
+
+var(
+	ErrInsufficientFund = errors.New("ERROR: The balance is insufficient")
+)
 
 type Transaction struct {
 	ID   []byte
@@ -158,7 +163,7 @@ func NewCoinbaseTX(to, data string) *Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain) *Transaction {
+func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain) (*Transaction,error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
@@ -166,14 +171,14 @@ func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockc
 	acc, validOutputs := bc.FindSpendableOutputs(pubKeyHash, amount)
 
 	if acc < amount {
-		log.Panic("ERROR: Not enough funds")
+		return nil, ErrInsufficientFund
 	}
 
 	// Build a list of inputs
 	for txid, outs := range validOutputs {
 		txID, err := hex.DecodeString(txid)
 		if err != nil {
-			log.Panic(err)
+			return nil,err
 		}
 
 		for _, out := range outs {
@@ -192,7 +197,7 @@ func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockc
 	tx.ID = tx.Hash()
 	bc.SignTransaction(&tx, keypair.PrivateKey)
 
-	return &tx
+	return &tx,nil
 }
 
 // String returns a human-readable representation of a transaction
