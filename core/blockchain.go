@@ -20,7 +20,6 @@ type Blockchain struct {
 	DB          *storage.LevelDB
 }
 
-//TODO: put into genesis
 // CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string) (*Blockchain, error) {
 	if dbExists() {
@@ -39,17 +38,10 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 	err = updateDbWithNewBlock(db, genesis)
 
 	tip, err = db.Get(tipKey)
-	if err != nil {
-		log.Panic(err)
-	}
 
-	bc := Blockchain{tip, db}
-
-	return &bc, nil
+	return &Blockchain{tip, db}, nil
 }
 
-//TODO: put into genesis
-// NewBlockchain creates a new Blockchain with genesis Block
 func GetBlockchain(address string) (*Blockchain, error) {
 	if dbExists() == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
@@ -64,13 +56,8 @@ func GetBlockchain(address string) (*Blockchain, error) {
 	}
 
 	tip, err = db.Get(tipKey)
-	if err != nil {
-		log.Panic(err)
-	}
 
-	bc := Blockchain{tip, db}
-
-	return &bc, nil
+	return &Blockchain{tip, db}, nil
 }
 
 func (bc *Blockchain) MineBlock(transactions []*Transaction) {
