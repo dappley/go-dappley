@@ -34,7 +34,7 @@ type LevelDB struct {
 }
 
 //Create a new database instance
-func NewDatabase(dbFilePath string) (*LevelDB, error) {
+func OpenDatabase(dbFilePath string) (*LevelDB, error) {
 
 	fp := dbFilePath
 

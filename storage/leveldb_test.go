@@ -9,7 +9,7 @@ import (
 //put key value pairs into database and read later
 func TestLevelDB_PutAndGet(t *testing.T){
 	//use default path
-	ldb, err := NewDatabase("")
+	ldb, err := OpenDatabase("")
 	assert.Nil(t, err)
 
 	err = ldb.Put([]byte("a"),[]byte("1"))
@@ -46,7 +46,7 @@ func TestLevelDB_PutAndGet(t *testing.T){
 //Test if database access after closing will result in error
 func TestLevelDB_Close(t *testing.T) {
 	//create new database
-	ldb, err := NewDatabase("../bin/test.DB")
+	ldb, err := OpenDatabase("../bin/test.DB")
 	assert.Nil(t, err)
 
 	//put new values in

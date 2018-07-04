@@ -31,17 +31,14 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 	var tip []byte
 	genesis := NewGenesisBlock(address)
 
-	db, err := storage.NewDatabase(dbFile)
-
+	db, err := storage.OpenDatabase(dbFile)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	err = updateDbWithNewBlock(db, genesis)
-	if err != nil {
-		log.Panic(err)
-	}
 
+	tip, err = db.Get(tipKey)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -61,14 +58,12 @@ func NewBlockchain(address string) (*Blockchain, error) {
 
 	var tip []byte
 
-	db, err := storage.NewDatabase(dbFile)
-
+	db, err := storage.OpenDatabase(dbFile)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	tip, err = db.Get(tipKey)
-
 	if err != nil {
 		log.Panic(err)
 	}
@@ -107,6 +102,13 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 
 	bc.currentHash = block.GetHash()
 
+}
+
+func (bc *Blockchain) UpdateNewBlock(newBlock *Block) error {
+	err := updateDbWithNewBlock(bc.DB, newBlock)
+	bc.currentHash = newBlock.GetHash()
+
+	return err
 }
 
 //record the new block in the database
@@ -286,4 +288,8 @@ func dbExists() bool {
 	}
 
 	return true
+}
+
+func (bc *Blockchain) GetLastHash() ([]byte, error) {
+	return bc.DB.Get(tipKey)
 }

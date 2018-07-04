@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/dappworks/go-dappworks/client"
+	"github.com/dappworks/go-dappworks/consensus"
 	"github.com/dappworks/go-dappworks/core"
 	"github.com/dappworks/go-dappworks/util"
 )
@@ -109,11 +110,12 @@ func Send(from, to string, amount int) error {
 	if err != nil {
 		return err
 	}
-	cbTx := core.NewCoinbaseTX(from, "")
-	txs := []*core.Transaction{cbTx, tx}
+
+	txs := []*core.Transaction{tx}
 
 	//TODO: miner should be separated from the sender
-	bc.MineBlock(txs)
+	miner := consensus.NewMiner(txs, bc, from)
+	miner.Start()
 	return err
 }
 
