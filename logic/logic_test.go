@@ -27,20 +27,23 @@ import (
 	"github.com/dappworks/go-dappworks/storage"
 	"github.com/stretchr/testify/assert"
 )
+const invalidAddress = "Invalid Address"
 
 func TestCreateWallet(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+
 	addr, _ := CreateWallet()
 	assert.NotEmpty(t, addr)
-
+	//teardown :clean up database amd files
 	teardown()
 }
-
-const invalidAddress = "Invalid Address"
 
 func TestCreateBlockchain(t *testing.T) {
 
 	//setup: clean up database and files
 	setup()
+
 
 	//create a wallet address
 	addr, err := CreateWallet()
@@ -53,6 +56,7 @@ func TestCreateBlockchain(t *testing.T) {
 
 	//teardown :clean up database amd files
 	teardown()
+
 }
 
 //create a blockchain with invalid address
@@ -60,11 +64,11 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
+
 	//create a blockchain with an invalid address
 	b, err := CreateBlockchain(invalidAddress)
 	assert.Equal(t, err, ErrInvalidAddress)
 	assert.Nil(t, b)
-
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -95,6 +99,7 @@ func TestGetBalanceWithInvildeAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
+
 	//create a wallet address
 	addr, err := CreateWallet()
 	assert.NotEmpty(t, addr)
@@ -112,6 +117,7 @@ func TestGetBalanceWithInvildeAddress(t *testing.T) {
 	balance2, err := GetBalance("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww")
 	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
 	assert.Equal(t, balance2, 0)
+
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -158,6 +164,7 @@ func TestGetAllAddresses(t *testing.T) {
 func TestSend(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+
 	mineAward := int(10)
 	transferAmount := int(5)
 
@@ -173,7 +180,7 @@ func TestSend(t *testing.T) {
 	//The balance1 should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineAward)
+	assert.Equal(t,mineAward, balance1)
 
 	//Create a second wallet
 	addr2, err := CreateWallet()
@@ -192,12 +199,12 @@ func TestSend(t *testing.T) {
 	//the balance1 of the first wallet should be 10-5+10(mining new block)=15
 	balance1, err = GetBalance(addr1)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineAward-transferAmount+mineAward)
+	assert.Equal(t,mineAward-transferAmount+mineAward, balance1)
 
 	//the balance1 of the second wallet should be 5
 	balance2, err = GetBalance(addr2)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, transferAmount)
+	assert.Equal(t, transferAmount, balance2)
 
 	//teardown :clean up database amd files
 	teardown()
@@ -223,12 +230,15 @@ func TestDeleteWallets(t *testing.T) {
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
 	assert.Empty(t, list)
+
+	teardown()
 }
 
 //test send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+
 	//this is internally set. Dont modify
 	mineAward := int(10)
 	//Transfer ammount
@@ -256,7 +266,6 @@ func TestSendToInvalidAddress(t *testing.T) {
 	balance1, err = GetBalance(addr1)
 	assert.Nil(t, err)
 	assert.Equal(t, balance1, mineAward)
-
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -282,7 +291,7 @@ func TestDeleteWallet(t *testing.T) {
 
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
-	assert.Equal(t, list, addressList)
+	assert.ElementsMatch(t, list, addressList)
 
 	//teardown :clean up database amd files
 	teardown()
@@ -305,7 +314,7 @@ func TestDeleteInvildeWallet(t *testing.T) {
 
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
-	assert.Equal(t, list, addressList)
+	assert.ElementsMatch(t, list, addressList)
 
 	//teardown :clean up database amd files
 	teardown()
@@ -315,6 +324,7 @@ func TestDeleteInvildeWallet(t *testing.T) {
 func TestSendInefficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+
 	//this is internally set. Dont modify
 	mineAward := int(10)
 	//Transfer ammount is larger than the balance
@@ -360,7 +370,6 @@ func TestSendInefficientBalance(t *testing.T) {
 
 	//teardown :clean up database amd files
 	teardown()
-
 }
 
 func setup() {
