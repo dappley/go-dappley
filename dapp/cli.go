@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"github.com/dappworks/go-dappworks/logic"
+	"bufio"
+	"strings"
 )
 
 // CLI responsible for processing command line arguments
@@ -30,105 +32,107 @@ func (cli *CLI) validateArgs() {
 
 // Run parses command line arguments and processes commands
 func (cli *CLI) Run() {
-	cli.validateArgs()
+	cli.printUsage()
 
-	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
-	createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)
-	createWalletCmd := flag.NewFlagSet("createwallet", flag.ExitOnError)
-	listAddressesCmd := flag.NewFlagSet("listaddresses", flag.ExitOnError)
-	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
-	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter command: ")
+		text, _ := reader.ReadString('\n')
+		args := strings.Fields(text)
 
-	getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
-	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
-	sendFrom := sendCmd.String("from", "", "Source client address")
-	sendTo := sendCmd.String("to", "", "Destination client address")
-	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
+		getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
+		createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)
+		createWalletCmd := flag.NewFlagSet("createwallet", flag.ExitOnError)
+		listAddressesCmd := flag.NewFlagSet("listaddresses", flag.ExitOnError)
+		sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
+		printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 
-	var err error
-	switch os.Args[1] {
-	case "getbalance":
-		err = getBalanceCmd.Parse(os.Args[2:])
-	case "createblockchain":
-		err = createBlockchainCmd.Parse(os.Args[2:])
-	case "createwallet":
-		err = createWalletCmd.Parse(os.Args[2:])
-	case "listaddresses":
-		err = listAddressesCmd.Parse(os.Args[2:])
-	case "printchain":
-		err = printChainCmd.Parse(os.Args[2:])
-	case "send":
-		err = sendCmd.Parse(os.Args[2:])
-	default:
-		cli.printUsage()
-		os.Exit(1)
-	}
-	if err != nil {
-		log.Panic(err)
-	}
+		getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
+		createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
+		sendFrom := sendCmd.String("from", "", "Source client address")
+		sendTo := sendCmd.String("to", "", "Destination client address")
+		sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 
-
-	if getBalanceCmd.Parsed() {
-		if *getBalanceAddress == "" {
-			getBalanceCmd.Usage()
+		var err error
+		switch args[0] {
+		case "getbalance":
+			err = getBalanceCmd.Parse(args[1:])
+		case "createblockchain":
+			err = createBlockchainCmd.Parse(args[1:])
+		case "createwallet":
+			err = createWalletCmd.Parse(args[1:])
+		case "listaddresses":
+			err = listAddressesCmd.Parse(args[1:])
+		case "printchain":
+			err = printChainCmd.Parse(args[1:])
+		case "send":
+			err = sendCmd.Parse(args[1:])
+		case "exit":
 			os.Exit(1)
+		default:
+			cli.printUsage()
 		}
-		balance, err := logic.GetBalance(*getBalanceAddress)
-
-		if err != nil{
-			log.Println(err)
-		}
-
-		fmt.Printf("Balance of '%s': %d\n", *getBalanceAddress, balance)
-
-	}
-
-	if createBlockchainCmd.Parsed() {
-		if *createBlockchainAddress == "" {
-			createBlockchainCmd.Usage()
-			os.Exit(1)
-		}
-		_, err := logic.CreateBlockchain(*createBlockchainAddress)
 		if err != nil {
-			log.Println(err)
-		}else{
-			fmt.Println("Create Blockchain Successful")
-		}
-	}
-
-	if createWalletCmd.Parsed() {
-		walletAddr, err := logic.CreateWallet()
-		if err != nil {
-			log.Println(err)
-		}
-		fmt.Printf("Your new address: %s\n", walletAddr)
-	}
-
-	if listAddressesCmd.Parsed() {
-		addrs, err := logic.GetAllAddresses()
-		if err != nil {
-			log.Println(err)
-		}
-		for _, address := range addrs {
-			fmt.Println(address)
-		}
-	}
-
-	if printChainCmd.Parsed() {
-		cli.printChain()
-	}
-
-	if sendCmd.Parsed() {
-		if *sendFrom == "" || *sendTo == "" || *sendAmount <= 0 {
-			sendCmd.Usage()
-			os.Exit(1)
+			log.Panic(err)
 		}
 
-		if err := logic.Send(*sendFrom, *sendTo, *sendAmount); err != nil{
-			log.Println(err)
-		}else{
-			fmt.Println("Send Successful")
+		if getBalanceCmd.Parsed() {
+			if *getBalanceAddress == "" {
+				getBalanceCmd.Usage()
+			}
+			balance, err := logic.GetBalance(*getBalanceAddress)
+			if err != nil {
+				log.Println(err)
+			}
+
+			fmt.Printf("Balance of '%s': %d\n", *getBalanceAddress, balance)
+
 		}
 
+		if createBlockchainCmd.Parsed() {
+			if *createBlockchainAddress == "" {
+				createBlockchainCmd.Usage()
+			}
+			_, err := logic.CreateBlockchain(*createBlockchainAddress)
+			if err != nil {
+				log.Println(err)
+			} else {
+				fmt.Println("Create Blockchain Successful")
+			}
+		}
+
+		if createWalletCmd.Parsed() {
+			walletAddr, err := logic.CreateWallet()
+			if err != nil {
+				log.Println(err)
+			}
+			fmt.Printf("Your new address: %s\n", walletAddr)
+		}
+
+		if listAddressesCmd.Parsed() {
+			addrs, err := logic.GetAllAddresses()
+			if err != nil {
+				log.Println(err)
+			}
+			for _, address := range addrs {
+				fmt.Println(address)
+			}
+		}
+
+		if printChainCmd.Parsed() {
+			cli.printChain()
+		}
+
+		if sendCmd.Parsed() {
+			if *sendFrom == "" || *sendTo == "" || *sendAmount <= 0 {
+				sendCmd.Usage()
+			}
+
+			if err := logic.Send(*sendFrom, *sendTo, *sendAmount); err != nil {
+				log.Println(err)
+			} else {
+				fmt.Println("Send Successful")
+			}
+		}
 	}
 }
