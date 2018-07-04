@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/dappworks/go-dappworks/client"
+	"github.com/dappworks/go-dappworks/consensus"
 	"github.com/dappworks/go-dappworks/core"
 	"github.com/dappworks/go-dappworks/util"
 )
@@ -37,8 +38,11 @@ func CreateBlockchain(address string) (*core.Blockchain, error) {
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
-	bc := core.CreateBlockchain(address)
-	err := bc.DB.Close()
+	bc, err := core.CreateBlockchain(address)
+	if err != nil {
+		return nil, err
+	}
+	err = bc.DB.Close()
 	return bc, err
 }
 
@@ -55,7 +59,10 @@ func GetBalance(address string) (int, error) {
 	if !core.ValidateAddress(address) {
 		return 0, ErrInvalidAddress
 	}
-	bc := core.GetBlockchain(address)
+	bc, err := core.GetBlockchain(address)
+	if err != nil {
+		return 0, err
+	}
 	defer bc.DB.Close()
 
 	balance := 0
@@ -88,7 +95,10 @@ func Send(from, to string, amount int, tip int64) error {
 		return ErrInvalidRcverAddress
 	}
 
-	bc := core.GetBlockchain(from)
+	bc, err := core.GetBlockchain(from)
+	if err != nil {
+		return err
+	}
 	defer bc.DB.Close()
 
 	wallets, err := client.NewWallets()
@@ -100,11 +110,12 @@ func Send(from, to string, amount int, tip int64) error {
 	if err != nil {
 		return err
 	}
-	cbTx := core.NewCoinbaseTX(from, "")
-	txs := []*core.Transaction{cbTx, tx}
+
+	txs := []*core.Transaction{tx}
 
 	//TODO: miner should be separated from the sender
-	bc.MineBlock(txs)
+	miner := consensus.NewMiner(txs, bc, from)
+	miner.Start()
 	return err
 }
 
