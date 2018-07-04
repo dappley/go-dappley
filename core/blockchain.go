@@ -1,32 +1,31 @@
 package core
 
 import (
-	"log"
-	"encoding/hex"
-	"fmt"
-	"os"
 	"bytes"
-	"errors"
 	"crypto/ecdsa"
+	"encoding/hex"
+	"errors"
+	"log"
+	"os"
 
 	"github.com/dappworks/go-dappworks/storage"
 )
 
 const dbFile = "../bin/blockchain.DB"
+
 var tipKey = []byte("1")
 
 type Blockchain struct {
 	currentHash []byte
-	DB 			*storage.LevelDB
+	DB          *storage.LevelDB
 }
-
 
 //TODO: put into genesis
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string) *Blockchain {
+func CreateBlockchain(address string) (*Blockchain, error) {
 	if dbExists() {
-		fmt.Println("Blockchain already exists.")
-		os.Exit(1)
+		err := errors.New("Blockchain already exists.\n")
+		return nil, err
 	}
 
 	var tip []byte
@@ -49,15 +48,15 @@ func CreateBlockchain(address string) *Blockchain {
 
 	bc := Blockchain{tip, db}
 
-	return &bc
+	return &bc, nil
 }
 
 //TODO: put into genesis
 // NewBlockchain creates a new Blockchain with genesis Block
-func NewBlockchain(address string) *Blockchain {
+func NewBlockchain(address string) (*Blockchain, error) {
 	if dbExists() == false {
-		fmt.Println("No existing blockchain found. Create one first.")
-		os.Exit(1)
+		err := errors.New("No existing blockchain found. Create one first.\n")
+		return nil, err
 	}
 
 	var tip []byte
@@ -76,7 +75,7 @@ func NewBlockchain(address string) *Blockchain {
 
 	bc := Blockchain{tip, db}
 
-	return &bc
+	return &bc, nil
 }
 
 func (bc *Blockchain) MineBlock(transactions []*Transaction) {
@@ -111,11 +110,11 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 }
 
 //record the new block in the database
-func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) error{
+func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) error {
 	err := db.Put(newBlock.GetHash(), newBlock.Serialize())
 	if err != nil {
 		return err
-			}
+	}
 
 	err = db.Put(tipKey, newBlock.GetHash())
 	if err != nil {
@@ -130,21 +129,21 @@ func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, 
 	unspentTXs := bc.FindUnspentTransactions(pubKeyHash)
 	accumulated := 0
 
-	Work: //TODO
-		for _, tx := range unspentTXs {
-			txID := hex.EncodeToString(tx.ID)
+Work: //TODO
+	for _, tx := range unspentTXs {
+		txID := hex.EncodeToString(tx.ID)
 
-			for outIdx, out := range tx.Vout {
-				if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
-					accumulated += out.Value
-					unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+		for outIdx, out := range tx.Vout {
+			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
+				accumulated += out.Value
+				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
 
-					if accumulated >= amount {
-						break Work
-					}
+				if accumulated >= amount {
+					break Work
 				}
 			}
 		}
+	}
 
 	return accumulated, unspentOutputs
 }
@@ -261,7 +260,6 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 
 	return tx.Verify(prevTXs)
 }
-
 
 func (bc *Blockchain) Iterator() *Blockchain {
 	return &Blockchain{bc.currentHash, bc.DB}
