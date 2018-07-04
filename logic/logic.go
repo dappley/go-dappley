@@ -80,7 +80,7 @@ func GetAllAddresses() ([]string, error) {
 	return addresses, err
 }
 
-func Send(from, to string, amount int) error {
+func Send(from, to string, amount int, tip int64) error {
 	if !core.ValidateAddress(from) {
 		return ErrInvalidSenderAddress
 	}
@@ -96,7 +96,7 @@ func Send(from, to string, amount int) error {
 		return err
 	}
 	wallet := wallets.GetWallet(from)
-	tx, err := core.NewUTXOTransaction(from, to, amount, wallet, bc)
+	tx, err := core.NewUTXOTransaction(from, to, amount, wallet, bc, tip)
 	if err != nil {
 		return err
 	}

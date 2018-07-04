@@ -160,7 +160,7 @@ func TestSend(t *testing.T) {
 	setup()
 	mineAward := int(10)
 	transferAmount := int(5)
-
+	tip := int64(5)
 	//create a wallet address
 	addr1, err := CreateWallet()
 	assert.NotEmpty(t, addr1)
@@ -186,7 +186,7 @@ func TestSend(t *testing.T) {
 	assert.Equal(t, balance2, 0)
 
 	//Send 5 coins from addr1 to addr2
-	err = Send(addr1, addr2, transferAmount)
+	err = Send(addr1, addr2, transferAmount, tip)
 	assert.Nil(t, err)
 
 	//the balance1 of the first wallet should be 10-5+10(mining new block)=15
@@ -233,7 +233,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	mineAward := int(10)
 	//Transfer ammount
 	transferAmount := int(25)
-
+	tip := int64(5)
 	//create a wallet address
 	addr1, err := CreateWallet()
 	assert.NotEmpty(t, addr1)
@@ -249,7 +249,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Equal(t, balance1, mineAward)
 
 	//Send 5 coins from addr1 to an invalid address
-	err = Send(addr1, invalidAddress, transferAmount)
+	err = Send(addr1, invalidAddress, transferAmount, tip)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -315,6 +315,7 @@ func TestDeleteInvildeWallet(t *testing.T) {
 func TestSendInefficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+	tip := int64(5)
 	//this is internally set. Dont modify
 	mineAward := int(10)
 	//Transfer ammount is larger than the balance
@@ -345,7 +346,7 @@ func TestSendInefficientBalance(t *testing.T) {
 	assert.Equal(t, balance2, 0)
 
 	//Send 5 coins from addr1 to addr2
-	err = Send(addr1, addr2, transferAmount)
+	err = Send(addr1, addr2, transferAmount, tip)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10

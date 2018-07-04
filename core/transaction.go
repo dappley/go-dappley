@@ -25,6 +25,7 @@ type Transaction struct {
 	ID   []byte
 	Vin  []TXInput
 	Vout []TXOutput
+	Tip int64
 }
 
 func (tx Transaction) IsCoinbase() bool {
@@ -100,7 +101,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash})
 	}
 
-	txCopy := Transaction{tx.ID, inputs, outputs}
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
 
 	return txCopy
 }
@@ -156,14 +157,14 @@ func NewCoinbaseTX(to, data string) *Transaction {
 
 	txin := TXInput{[]byte{}, -1, nil, []byte(data)}
 	txout := NewTXOutput(subsidy, to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()
 
 	return &tx
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain) (*Transaction,error) {
+func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain, tip int64) (*Transaction,error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
@@ -193,7 +194,7 @@ func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockc
 		outputs = append(outputs, *NewTXOutput(acc-amount, from)) // a change
 	}
 
-	tx := Transaction{nil, inputs, outputs}
+	tx := Transaction{nil, inputs, outputs, tip}
 	tx.ID = tx.Hash()
 	bc.SignTransaction(&tx, keypair.PrivateKey)
 

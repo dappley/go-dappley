@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"log"
 	"math/big"
+	"math/rand"
 )
 
 var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
@@ -76,4 +77,10 @@ func ReverseBytes(data []byte) {
 	for i, j := 0, len(data)-1; i < j; i, j = i+1, j-1 {
 		data[i], data[j] = data[j], data[i]
 	}
+}
+
+func GenerateRandomAoB(length int64) []byte {
+	token := make([]byte, length)
+	rand.Read(token)
+	return token
 }

@@ -44,6 +44,7 @@ func (cli *CLI) Run() {
 	sendFrom := sendCmd.String("from", "", "Source client address")
 	sendTo := sendCmd.String("to", "", "Destination client address")
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
+	tipAmount := sendCmd.Int("tip", 0, "Amount to tip")
 
 	var err error
 	switch os.Args[1] {
@@ -124,7 +125,7 @@ func (cli *CLI) Run() {
 			os.Exit(1)
 		}
 
-		if err := logic.Send(*sendFrom, *sendTo, *sendAmount); err != nil{
+		if err := logic.Send(*sendFrom, *sendTo, *sendAmount, int64(*tipAmount)); err != nil{
 			log.Println(err)
 		}else{
 			fmt.Println("Send Successful")
