@@ -59,7 +59,7 @@ func GetBalance(address string) (int, error) {
 	if !core.ValidateAddress(address) {
 		return 0, ErrInvalidAddress
 	}
-	bc, err := core.NewBlockchain(address)
+	bc, err := core.GetBlockchain(address)
 	if err != nil {
 		return 0, err
 	}
@@ -95,7 +95,7 @@ func Send(from, to string, amount int) error {
 		return ErrInvalidRcverAddress
 	}
 
-	bc, err := core.NewBlockchain(from)
+	bc, err := core.GetBlockchain(from)
 	if err != nil {
 		return err
 	}

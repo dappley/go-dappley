@@ -50,7 +50,7 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 
 //TODO: put into genesis
 // NewBlockchain creates a new Blockchain with genesis Block
-func NewBlockchain(address string) (*Blockchain, error) {
+func GetBlockchain(address string) (*Blockchain, error) {
 	if dbExists() == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
 		return nil, err
