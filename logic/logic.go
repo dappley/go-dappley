@@ -51,6 +51,7 @@ func CreateWallet() (string, error) {
 	wallets, err := client.NewWallets()
 	address := wallets.CreateWallet()
 	wallets.SaveToFile()
+
 	return address, err
 }
 
@@ -82,6 +83,7 @@ func GetAllAddresses() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	addresses := wallets.GetAddresses()
 
 	return addresses, err

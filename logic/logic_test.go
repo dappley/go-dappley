@@ -26,6 +26,7 @@ import (
 	"github.com/dappworks/go-dappworks/client"
 	"github.com/dappworks/go-dappworks/storage"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 const invalidAddress = "Invalid Address"
 
@@ -33,7 +34,8 @@ func TestCreateWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
-	addr, _ := CreateWallet()
+	addr, err := CreateWallet()
+	assert.Nil(t, err)
 	assert.NotEmpty(t, addr)
 	//teardown :clean up database amd files
 	teardown()
@@ -43,7 +45,6 @@ func TestCreateBlockchain(t *testing.T) {
 
 	//setup: clean up database and files
 	setup()
-
 
 	//create a wallet address
 	addr, err := CreateWallet()
@@ -149,6 +150,7 @@ func TestGetAllAddresses(t *testing.T) {
 
 	//get all addresses
 	addrs, err := GetAllAddresses()
+	fmt.Println(addrs)
 	assert.Nil(t, err)
 	assert.NotNil(t, addrs)
 

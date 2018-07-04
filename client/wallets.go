@@ -76,6 +76,8 @@ func (ws Wallets) GetWallet(address string) core.Address {
 
 func (ws *Wallets) LoadFromFile() error {
 	if _, err := os.Stat(WalletFile); os.IsNotExist(err) {
+		ws.SaveToFile()
+	}else if err!=nil {
 		return err
 	}
 
