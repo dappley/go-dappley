@@ -45,41 +45,28 @@ func (cli *CLI) Run() {
 	sendTo := sendCmd.String("to", "", "Destination client address")
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 
+	var err error
 	switch os.Args[1] {
 	case "getbalance":
-		err := getBalanceCmd.Parse(os.Args[2:])
-		if err != nil {
-			log.Panic(err)
-		}
+		err = getBalanceCmd.Parse(os.Args[2:])
 	case "createblockchain":
-		err := createBlockchainCmd.Parse(os.Args[2:])
-		if err != nil {
-			log.Panic(err)
-		}
+		err = createBlockchainCmd.Parse(os.Args[2:])
 	case "createwallet":
-		err := createWalletCmd.Parse(os.Args[2:])
-		if err != nil {
-			log.Panic(err)
-		}
+		err = createWalletCmd.Parse(os.Args[2:])
 	case "listaddresses":
-		err := listAddressesCmd.Parse(os.Args[2:])
-		if err != nil {
-			log.Panic(err)
-		}
+		err = listAddressesCmd.Parse(os.Args[2:])
 	case "printchain":
-		err := printChainCmd.Parse(os.Args[2:])
-		if err != nil {
-			log.Panic(err)
-		}
+		err = printChainCmd.Parse(os.Args[2:])
 	case "send":
-		err := sendCmd.Parse(os.Args[2:])
-		if err != nil {
-			log.Panic(err)
-		}
+		err = sendCmd.Parse(os.Args[2:])
 	default:
 		cli.printUsage()
 		os.Exit(1)
 	}
+	if err != nil {
+		log.Panic(err)
+	}
+
 
 	if getBalanceCmd.Parsed() {
 		if *getBalanceAddress == "" {
