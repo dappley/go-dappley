@@ -1,18 +1,18 @@
 package consensus
 
 import (
+	"os"
 	"testing"
+
 	"github.com/dappworks/go-dappworks/client"
 	"github.com/dappworks/go-dappworks/core"
-	"os"
 	"github.com/dappworks/go-dappworks/storage"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappworks/go-dappworks/util"
+	"github.com/stretchr/testify/assert"
 )
 
 var sendAmount = int(5)
 var mineAward = int(10)
-
 
 //mine one transaction
 func TestMiner_SingleValidTx(t *testing.T) {
@@ -21,19 +21,20 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//create new wallet
 	wallets, _ := client.NewWallets()
-	assert.NotNil(t,wallets)
+	assert.NotNil(t, wallets)
 
 	addr1 := wallets.CreateWallet()
 	assert.NotNil(t, addr1)
 
-	addr2:= wallets.CreateWallet()
+	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
 	wallet := wallets.GetWallet(addr1)
 
 	//create a blockchain
-	assert.Equal(t,true,core.ValidateAddress(addr1))
-	bc := core.CreateBlockchain(addr1)
+	assert.Equal(t, true, core.ValidateAddress(addr1))
+	bc, err := core.CreateBlockchain(addr1)
+	assert.Nil(t, err)
 
 	assert.NotNil(t, bc)
 	defer bc.DB.Close()
@@ -61,17 +62,18 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//create new wallet
 	wallets, _ := client.NewWallets()
-	assert.NotNil(t,wallets)
+	assert.NotNil(t, wallets)
 
 	addr1 := wallets.CreateWallet()
 	assert.NotNil(t, addr1)
 
-	addr2:= wallets.CreateWallet()
+	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
 	//create a blockchain
-	assert.Equal(t,true,core.ValidateAddress(addr1))
-	bc := core.CreateBlockchain(addr1)
+	assert.Equal(t, true, core.ValidateAddress(addr1))
+	bc, err := core.CreateBlockchain(addr1)
+	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	defer bc.DB.Close()
@@ -97,19 +99,20 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//create new wallet
 	wallets, _ := client.NewWallets()
-	assert.NotNil(t,wallets)
+	assert.NotNil(t, wallets)
 
 	addr1 := wallets.CreateWallet()
 	assert.NotNil(t, addr1)
 
-	addr2:= wallets.CreateWallet()
+	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
 	wallet := wallets.GetWallet(addr1)
 
 	//create a blockchain
-	assert.Equal(t,true,core.ValidateAddress(addr1))
-	bc := core.CreateBlockchain(addr1)
+	assert.Equal(t, true, core.ValidateAddress(addr1))
+	bc, err := core.CreateBlockchain(addr1)
+	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	defer bc.DB.Close()
@@ -121,7 +124,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc)
 	assert.Nil(t, err)
 	//duplicated transactions. The second transaction will be ignored
-	txs := []*core.Transaction{tx,tx}
+	txs := []*core.Transaction{tx, tx}
 
 	miner := NewMiner(txs, bc, addr1)
 	miner.Start()
@@ -139,19 +142,20 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 
 	//create new wallet
 	wallets, _ := client.NewWallets()
-	assert.NotNil(t,wallets)
+	assert.NotNil(t, wallets)
 
 	addr1 := wallets.CreateWallet()
 	assert.NotNil(t, addr1)
 
-	addr2:= wallets.CreateWallet()
+	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
 	wallet := wallets.GetWallet(addr1)
 
 	//create a blockchain
-	assert.Equal(t,true,core.ValidateAddress(addr1))
-	bc := core.CreateBlockchain(addr1)
+	assert.Equal(t, true, core.ValidateAddress(addr1))
+	bc, err := core.CreateBlockchain(addr1)
+	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	defer bc.DB.Close()
@@ -163,7 +167,7 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc)
 	assert.Nil(t, err)
 	//duplicated transactions. The second transaction will be ignored
-	txs := []*core.Transaction{tx,tx}
+	txs := []*core.Transaction{tx, tx}
 
 	miner := NewMiner(txs, bc, addr1)
 	miner.Start()
@@ -171,7 +175,7 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 	checkBalance(t, addr1, addr2, bc, mineAward*3-sendAmount*2, sendAmount*2)
 
 	tx1, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc)
-	txs = []*core.Transaction{tx1,tx1}
+	txs = []*core.Transaction{tx1, tx1}
 	miner.UpdateTxPool(txs)
 	miner.Start()
 
@@ -181,12 +185,12 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 }
 
 //TODO: test mining with invalid transactions
-func TestMiner_InvalidTransactions(t *testing.T){
+func TestMiner_InvalidTransactions(t *testing.T) {
 
 }
 
 //balance
-func getBalance(bc *core.Blockchain, addr string) (int, error){
+func getBalance(bc *core.Blockchain, addr string) (int, error) {
 
 	balance := 0
 	pubKeyHash := util.Base58Decode([]byte(addr))
@@ -212,7 +216,7 @@ func cleanUpDatabase() {
 	os.RemoveAll(client.WalletFile)
 }
 
-func checkBalance(t *testing.T, addr1, addr2 string,bc *core.Blockchain,addr1v,addr2v int){
+func checkBalance(t *testing.T, addr1, addr2 string, bc *core.Blockchain, addr1v, addr2v int) {
 	//check balance after transaction
 	balance1, err := getBalance(bc, addr1)
 	assert.Nil(t, err)
