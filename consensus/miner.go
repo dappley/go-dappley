@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"log"
 	"github.com/dappworks/go-dappworks/core"
 )
 
@@ -14,17 +13,16 @@ const (
 	cleanUpState
 )
 
-
-type Miner struct{
-	bc 		  		*core.Blockchain
-	txPool    		[]*core.Transaction
-	newBlock 		*core.Block
-	coinBaseAddr 	string
-	nextState 		state
+type Miner struct {
+	bc           *core.Blockchain
+	txPool       []*core.Transaction
+	newBlock     *core.Block
+	coinBaseAddr string
+	nextState    state
 }
 
 //create a new instance
-func NewMiner(txs []*core.Transaction,bc *core.Blockchain,coinBaseAddr string) *Miner{
+func NewMiner(txs []*core.Transaction, bc *core.Blockchain, coinBaseAddr string) *Miner {
 
 	return &Miner{
 		bc,
@@ -36,19 +34,19 @@ func NewMiner(txs []*core.Transaction,bc *core.Blockchain,coinBaseAddr string) *
 }
 
 //start mining
-func (pd *Miner) Start(){
+func (pd *Miner) Start() {
 	pd.run()
 }
 
-func (pd *Miner) UpdateTxPool(txs []*core.Transaction){
+func (pd *Miner) UpdateTxPool(txs []*core.Transaction) {
 	pd.txPool = txs
 }
 
 //start the state machine
-func (pd *Miner) run(){
+func (pd *Miner) run() {
 
-	Loop:
-	for{
+Loop:
+	for {
 		switch pd.nextState {
 		case prepareTxPoolState:
 			pd.prepareTxPool()
@@ -66,24 +64,25 @@ func (pd *Miner) run(){
 		}
 	}
 }
+
 //prepare transaction pool
-func (pd *Miner) prepareTxPool(){
+func (pd *Miner) prepareTxPool() {
 	// verify all transactions
 	pd.verifyTransactions()
 
 	// add coinbase transaction
-	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr,"")
-	pd.txPool = append([]*core.Transaction{cbtx},pd.txPool...)
+	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr, "")
+	pd.txPool = append([]*core.Transaction{cbtx}, pd.txPool...)
 
 }
 
 //start proof of work process
-func (pd *Miner) mine(){
+func (pd *Miner) mine() {
 
 	//get the hash of last newBlock
 	lastHash, err := pd.bc.GetLastHash()
 	if err != nil {
-		log.Panic(err)
+		//TODU
 	}
 
 	//create a new newBlock with the transaction pool and last hasth
@@ -95,16 +94,14 @@ func (pd *Miner) mine(){
 }
 
 //update the blockchain with the new block
-func (pd *Miner) updateNewBlock(){
+func (pd *Miner) updateNewBlock() {
 
 	pd.txPool = nil
-	err := pd.bc.UpdateNewBlock(pd.newBlock)
-	if err != nil {
-		log.Panic(err)
-	}
+	pd.bc.UpdateNewBlock(pd.newBlock)
+
 }
 
-func (pd *Miner) cleanUp(){
+func (pd *Miner) cleanUp() {
 	pd.txPool = nil
 	pd.nextState = prepareTxPoolState
 }
@@ -114,7 +111,7 @@ func (pd *Miner) verifyTransactions() {
 	for i, tx := range pd.txPool {
 		if pd.bc.VerifyTransaction(tx) != true {
 			//Remove transaction from transaction pool if the transaction is not verified
-			pd.txPool = append(pd.txPool[0:i],pd.txPool[i+1:len(pd.txPool)]...)
+			pd.txPool = append(pd.txPool[0:i], pd.txPool[i+1:len(pd.txPool)]...)
 		}
 	}
 }

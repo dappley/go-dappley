@@ -12,9 +12,11 @@ func (cli *CLI) printChain() {
 	defer bc.DB.Close()
 
 	bci := bc.Iterator()
-
 	for {
-		block := bci.Next()
+		block, err := bci.Next()
+		if err != nil {
+			fmt.Println(err)
+		}
 
 		fmt.Printf("============ Block %x ============\n", block.GetHash())
 		fmt.Printf("Prev. block: %x\n", block.GetPrevHash())

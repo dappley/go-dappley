@@ -38,6 +38,7 @@ func CreateBlockchain(address string) (*core.Blockchain, error) {
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
+
 	bc, err := core.CreateBlockchain(address)
 	if err != nil {
 		return nil, err
@@ -69,7 +70,10 @@ func GetBalance(address string) (int, error) {
 	balance := 0
 	pubKeyHash := util.Base58Decode([]byte(address))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	UTXOs := bc.FindUTXO(pubKeyHash)
+	UTXOs, err := bc.FindUTXO(pubKeyHash)
+	if err != nil {
+		return 0, err
+	}
 
 	for _, out := range UTXOs {
 		balance += out.Value
