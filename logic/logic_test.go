@@ -26,7 +26,6 @@ import (
 	"github.com/dappworks/go-dappworks/client"
 	"github.com/dappworks/go-dappworks/storage"
 	"github.com/stretchr/testify/assert"
-	"fmt"
 )
 const invalidAddress = "Invalid Address"
 
@@ -96,10 +95,9 @@ func TestGetBalance(t *testing.T) {
 	teardown()
 }
 
-func TestGetBalanceWithInvildeAddress(t *testing.T) {
+func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
-
 
 	//create a wallet address
 	addr, err := CreateWallet()
@@ -150,7 +148,6 @@ func TestGetAllAddresses(t *testing.T) {
 
 	//get all addresses
 	addrs, err := GetAllAddresses()
-	fmt.Println(addrs)
 	assert.Nil(t, err)
 	assert.NotNil(t, addrs)
 
@@ -299,7 +296,7 @@ func TestDeleteWallet(t *testing.T) {
 	teardown()
 }
 
-func TestDeleteInvildeWallet(t *testing.T) {
+func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
@@ -323,7 +320,7 @@ func TestDeleteInvildeWallet(t *testing.T) {
 }
 
 //insufficient fund
-func TestSendInefficientBalance(t *testing.T) {
+func TestSendInsufficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	tip := int64(5)

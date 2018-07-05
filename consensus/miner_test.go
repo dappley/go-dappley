@@ -20,8 +20,10 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	setup()
 
 	//create new wallet
-	wallets, _ := client.NewWallets()
-	assert.NotNil(t, wallets)
+
+	wallets, err := client.NewWallets()
+	assert.Nil(t, err)
+	assert.NotNil(t,wallets)
 
 	addr1 := wallets.CreateWallet()
 	assert.NotNil(t, addr1)
