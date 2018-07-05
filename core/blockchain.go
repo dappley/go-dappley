@@ -42,7 +42,7 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 	return &Blockchain{tip, db}, nil
 }
 
-func GetBlockchain(address string) (*Blockchain, error) {
+func GetBlockchain() (*Blockchain, error) {
 	if dbExists() == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
 		return nil, err

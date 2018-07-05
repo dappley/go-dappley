@@ -8,7 +8,7 @@ import (
 )
 
 func (cli *CLI) printChain() {
-	bc, _ := core.GetBlockchain("")
+	bc, _ := core.GetBlockchain()
 	defer bc.DB.Close()
 
 	bci := bc.Iterator()
