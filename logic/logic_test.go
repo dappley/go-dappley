@@ -33,7 +33,8 @@ func TestCreateWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
-	addr, _ := CreateWallet()
+	addr, err := CreateWallet()
+	assert.Nil(t, err)
 	assert.NotEmpty(t, addr)
 	//teardown :clean up database amd files
 	teardown()
@@ -43,7 +44,6 @@ func TestCreateBlockchain(t *testing.T) {
 
 	//setup: clean up database and files
 	setup()
-
 
 	//create a wallet address
 	addr, err := CreateWallet()
@@ -95,10 +95,9 @@ func TestGetBalance(t *testing.T) {
 	teardown()
 }
 
-func TestGetBalanceWithInvildeAddress(t *testing.T) {
+func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
-
 
 	//create a wallet address
 	addr, err := CreateWallet()
@@ -297,7 +296,7 @@ func TestDeleteWallet(t *testing.T) {
 	teardown()
 }
 
-func TestDeleteInvildeWallet(t *testing.T) {
+func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
@@ -321,7 +320,7 @@ func TestDeleteInvildeWallet(t *testing.T) {
 }
 
 //insufficient fund
-func TestSendInefficientBalance(t *testing.T) {
+func TestSendInsufficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	tip := int64(5)

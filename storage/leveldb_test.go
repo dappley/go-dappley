@@ -4,10 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"os"
 )
 
 //put key value pairs into database and read later
 func TestLevelDB_PutAndGet(t *testing.T){
+
+	setup()
+
 	//use default path
 	ldb, err := OpenDatabase("")
 	assert.Nil(t, err)
@@ -41,10 +45,14 @@ func TestLevelDB_PutAndGet(t *testing.T){
 
 	err = ldb.Close()
 	assert.Nil(t,err)
+
+	teardown()
 }
 
 //Test if database access after closing will result in error
 func TestLevelDB_Close(t *testing.T) {
+
+	setup()
 	//create new database
 	ldb, err := OpenDatabase("../bin/test.DB")
 	assert.Nil(t, err)
@@ -70,4 +78,18 @@ func TestLevelDB_Close(t *testing.T) {
 	//Writing should return error
 	err = ldb.Put([]byte("b"),[]byte("2"))
 	assert.NotNil(t, err)
+
+	teardown()
+}
+
+func setup() {
+	cleanUpDatabase()
+}
+
+func teardown() {
+	cleanUpDatabase()
+}
+
+func cleanUpDatabase() {
+	os.RemoveAll(DefaultDbFile)
 }
