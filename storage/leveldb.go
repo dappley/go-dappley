@@ -19,6 +19,7 @@ package storage
 
 import (
 	"errors"
+	"os"
 
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -66,4 +67,12 @@ func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 
 func (ldb *LevelDB) Put(key []byte, val []byte) error {
 	return ldb.db.Put(key, val, nil)
+}
+
+func DbExists() bool {
+	if _, err := os.Stat(DefaultDbFile); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
 }

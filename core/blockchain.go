@@ -6,14 +6,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
-	"os"
+
+	"container/heap"
 
 	"github.com/dappworks/go-dappworks/storage"
-	"container/heap"
 )
 
 const dbFile = "../bin/blockchain.DB"
 const transactionPoolSize = 10
+
 var tipKey = []byte("1")
 
 type Blockchain struct {
@@ -23,7 +24,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string) (*Blockchain, error) {
-	if dbExists() {
+	if storage.DbExists() {
 		err := errors.New("Blockchain already exists.\n")
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 }
 
 func GetBlockchain() (*Blockchain, error) {
-	if dbExists() == false {
+	if storage.DbExists() == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (bc *Blockchain) MineBlock(transactionsHeap *TransactionHeap) {
 		if bc.VerifyTransaction(transaction) != true {
 			//TODO: invalid transaction should be skipped
 			log.Panic("ERROR: Invalid transaction")
-		}else {
+		} else {
 			transactionPool = append(transactionPool, transaction)
 		}
 	}
@@ -272,14 +273,6 @@ func (bc *Blockchain) Next() *Block {
 	bc.currentHash = block.GetPrevHash()
 
 	return block
-}
-
-func dbExists() bool {
-	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
-		return false
-	}
-
-	return true
 }
 
 func (bc *Blockchain) GetLastHash() ([]byte, error) {
