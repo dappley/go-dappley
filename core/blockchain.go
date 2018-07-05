@@ -60,37 +60,6 @@ func GetBlockchain(address string) (*Blockchain, error) {
 	return &Blockchain{tip, db}, nil
 }
 
-func (bc *Blockchain) MineBlock(transactions []*Transaction) {
-	var lastHash []byte
-
-	for _, tx := range transactions {
-		if bc.VerifyTransaction(tx) != true {
-			//TODO: invalid transaction should be skipped
-			log.Panic("ERROR: Invalid transaction")
-		}
-	}
-
-	lastHash, err := bc.DB.Get(tipKey)
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	block := NewBlock(transactions, lastHash)
-	pow := NewProofOfWork(block)
-	nonce, hash := pow.Run()
-	block.SetHash(hash[:])
-	block.SetNonce(nonce)
-
-	err = updateDbWithNewBlock(bc.DB, block)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	bc.currentHash = block.GetHash()
-
-}
-
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) error {
 	err := updateDbWithNewBlock(bc.DB, newBlock)
 	bc.currentHash = newBlock.GetHash()
