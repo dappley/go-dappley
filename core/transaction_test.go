@@ -71,11 +71,11 @@ func TestTranstionHeapOperations(t *testing.T) {
 	heap.Push(h,t3)
 	heap.Push(h,t4)
 	assert.Equal(t, 4, h.Len() )
+	//var test_slice = []Transaction{}
 	for h.Len() > 0 {
-		fmt.Print("popping highest tip txn \n")
-		fmt.Printf("%d\n ", heap.Pop(h))
-
-	}
+		var txnInterface = heap.Pop(h)
+		fmt.Println(txnInterface.(Transaction).Tip)
+		}
 	assert.Equal(t, 0, h.Len() )
 
 }

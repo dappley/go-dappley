@@ -9,10 +9,11 @@ import (
 	"os"
 
 	"github.com/dappworks/go-dappworks/storage"
+	"container/heap"
 )
 
 const dbFile = "../bin/blockchain.DB"
-
+const transactionPoolSize = 10
 var tipKey = []byte("1")
 
 type Blockchain struct {
@@ -60,13 +61,17 @@ func GetBlockchain(address string) (*Blockchain, error) {
 	return &Blockchain{tip, db}, nil
 }
 
-func (bc *Blockchain) MineBlock(transactions []*Transaction) {
-	var lastHash []byte
+func (bc *Blockchain) MineBlock(transactionsHeap *TransactionHeap) {
 
-	for _, tx := range transactions {
-		if bc.VerifyTransaction(tx) != true {
+	var transactionPool = []*Transaction{}
+	var lastHash []byte
+	for transactionsHeap.Len() > 0 {
+		var transaction = heap.Pop(transactionsHeap).(*Transaction)
+		if bc.VerifyTransaction(transaction) != true {
 			//TODO: invalid transaction should be skipped
 			log.Panic("ERROR: Invalid transaction")
+		}else {
+			transactionPool = append(transactionPool, transaction)
 		}
 	}
 
@@ -76,7 +81,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 		log.Panic(err)
 	}
 
-	block := NewBlock(transactions, lastHash)
+	block := NewBlock(transactionPool, lastHash)
 	pow := NewProofOfWork(block)
 	nonce, hash := pow.Run()
 	block.SetHash(hash[:])
