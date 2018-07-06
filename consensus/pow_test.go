@@ -42,7 +42,9 @@ func TestProofOfWork_Validate(t *testing.T) {
 	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
 	pow := NewProofOfWork(cbAddr)
 	blk := pow.ProduceBlock([]byte{})
+	//hash :=blk.GetHash()
 	assert.True(t,pow.Validate(blk))
-	//TODO: mock a block that cant be validated
+	blk.SetNonce(blk.GetNonce()+1)
+	assert.False(t, pow.Validate(blk))
 }
 
