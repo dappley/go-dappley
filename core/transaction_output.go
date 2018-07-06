@@ -3,7 +3,7 @@ package core
 import (
 	"bytes"
 
-	"github.com/dappworks/go-dappworks/util"
+	"github.com/dappley/go-dappley/util"
 )
 
 type TXOutput struct {

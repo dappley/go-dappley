@@ -1,19 +1,19 @@
-// Copyright (C) 2018 go-dappworks authors
+// Copyright (C) 2018 go-dappley authors
 //
-// This file is part of the go-dappworks library.
+// This file is part of the go-dappley library.
 //
-// the go-dappworks library is free software: you can redistribute it and/or modify
+// the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// the go-dappworks library is distributed in the hope that it will be useful,
+// the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with the go-dappworks library.  If not, see <http://www.gnu.org/licenses/>.
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
 package logic
@@ -23,10 +23,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dappworks/go-dappworks/client"
+	"github.com/dappley/go-dappley/client"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappworks/go-dappworks/core"
 )
+
 const invalidAddress = "Invalid Address"
 
 func TestCreateWallet(t *testing.T) {
@@ -63,7 +63,6 @@ func TestCreateBlockchain(t *testing.T) {
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
-
 
 	//create a blockchain with an invalid address
 	b, err := CreateBlockchain(invalidAddress)
@@ -179,7 +178,7 @@ func TestSend(t *testing.T) {
 	//The balance1 should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1)
 	assert.Nil(t, err)
-	assert.Equal(t,mineAward, balance1)
+	assert.Equal(t, mineAward, balance1)
 
 	//Create a second wallet
 	addr2, err := CreateWallet()
@@ -198,7 +197,7 @@ func TestSend(t *testing.T) {
 	//the balance1 of the first wallet should be 10-5+10(mining new block)=15
 	balance1, err = GetBalance(addr1)
 	assert.Nil(t, err)
-	assert.Equal(t,mineAward-transferAmount+mineAward, balance1)
+	assert.Equal(t, mineAward-transferAmount+mineAward, balance1)
 
 	//the balance1 of the second wallet should be 5
 	balance2, err = GetBalance(addr2)
@@ -381,6 +380,6 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(core.BlockchainDbFile)
+	os.RemoveAll("../bin/blockchain.DB")
 	os.RemoveAll(client.WalletFile)
 }

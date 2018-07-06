@@ -1,56 +1,56 @@
-// Copyright (C) 2018 go-dappworks authors
+// Copyright (C) 2018 go-dappley authors
 //
-// This file is part of the go-dappworks library.
+// This file is part of the go-dappley library.
 //
-// the go-dappworks library is free software: you can redistribute it and/or modify
+// the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// the go-dappworks library is distributed in the hope that it will be useful,
+// the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with the go-dappworks library.  If not, see <http://www.gnu.org/licenses/>.
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 package core
 
 import (
 	"bytes"
+	"container/heap"
 	"crypto/sha256"
-	"time"
 	"encoding/gob"
 	"log"
-	"container/heap"
+	"time"
 )
 
 type BlockHeader struct {
-	hash Hash
-	prevHash Hash
-	nonce int64
+	hash      Hash
+	prevHash  Hash
+	nonce     int64
 	timestamp int64
 }
 
 type Block struct {
-	header *BlockHeader
-	transactions  []*Transaction
+	header       *BlockHeader
+	transactions []*Transaction
 }
 
 func NewBlock(prevHash []byte) *Block {
 	sortedTransactions := []*Transaction{}
 	for TransactionPoolSingleton.Len() > 0 {
-		if(len(sortedTransactions) < TransactionPoolLimit){
+		if len(sortedTransactions) < TransactionPoolLimit {
 			var transaction = heap.Pop(&TransactionPoolSingleton).(Transaction)
 			sortedTransactions = append(sortedTransactions, &transaction)
 		}
 	}
 	return &Block{
 		header: &BlockHeader{
-			hash: []byte{},
-			prevHash: prevHash,
-			nonce: 0,
+			hash:      []byte{},
+			prevHash:  prevHash,
+			nonce:     0,
 			timestamp: time.Now().Unix(),
 		},
 		transactions: sortedTransactions,
@@ -69,16 +69,15 @@ func (b *Block) HashTransactions() []byte {
 	return txHash[:]
 }
 
-
 func (b *Block) Serialize() []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
 
 	bs := &BlockStream{
 		Header: &BlockHeaderStream{
-			Hash: b.header.hash,
-			PrevHash: b.header.prevHash,
-			Nonce: b.header.nonce,
+			Hash:      b.header.hash,
+			PrevHash:  b.header.prevHash,
+			Nonce:     b.header.nonce,
 			Timestamp: b.header.timestamp,
 		},
 		Transactions: b.transactions,
@@ -101,16 +100,16 @@ func Deserialize(d []byte) *Block {
 
 	return &Block{
 		header: &BlockHeader{
-			hash: bs.Header.Hash,
-			prevHash: bs.Header.PrevHash,
-			nonce: bs.Header.Nonce,
+			hash:      bs.Header.Hash,
+			prevHash:  bs.Header.PrevHash,
+			nonce:     bs.Header.Nonce,
 			timestamp: bs.Header.Timestamp,
 		},
 		transactions: bs.Transactions,
 	}
 }
 
-func (b *Block) SetHash(hash Hash)  {
+func (b *Block) SetHash(hash Hash) {
 	b.header.hash = hash
 }
 
@@ -122,7 +121,7 @@ func (b *Block) GetPrevHash() Hash {
 	return b.header.prevHash
 }
 
-func (b *Block) SetNonce(nonce int64)  {
+func (b *Block) SetNonce(nonce int64) {
 	b.header.nonce = nonce
 }
 

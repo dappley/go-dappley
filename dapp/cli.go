@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"github.com/dappworks/go-dappworks/logic"
-	"bufio"
 	"strings"
+
+	"github.com/dappley/go-dappley/logic"
 )
 
 // CLI responsible for processing command line arguments
@@ -32,7 +33,6 @@ func (cli *CLI) validateArgs() {
 
 // Run parses command line arguments and processes commands
 func (cli *CLI) Run() {
-
 
 	cli.printUsage()
 
@@ -121,7 +121,6 @@ func (cli *CLI) Run() {
 				fmt.Println(address)
 			}
 		}
-
 
 		if printChainCmd.Parsed() {
 			cli.printChain()

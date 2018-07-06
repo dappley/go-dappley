@@ -1,20 +1,21 @@
 package core
 
 import (
-	"math/big"
 	"bytes"
-	"fmt"
 	"crypto/sha256"
+	"fmt"
 	"math"
+	"math/big"
 
-	"github.com/dappworks/go-dappworks/util"
+	"github.com/dappley/go-dappley/util"
 )
 
 var maxNonce int64 = math.MaxInt64
+
 const targetBits = int64(14)
 
 type ProofOfWork struct {
-	block *Block
+	block  *Block
 	target *big.Int
 }
 
