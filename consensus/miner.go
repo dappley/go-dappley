@@ -18,9 +18,8 @@
 package consensus
 
 import (
-	"container/heap"
-
 	"github.com/dappley/go-dappley/core"
+	"container/heap"
 )
 
 type state int
@@ -33,26 +32,28 @@ const (
 )
 
 type Miner struct {
-	bc           *core.Blockchain
-	newBlock     *core.Block
-	coinBaseAddr string
-	nextState    state
+	bc           	*core.Blockchain
+	newBlock     	*core.Block
+	coinBaseAddr 	string
+	nextState    	state
+	consensus		core.Consensus
 }
 
 //create a new instance
-func NewMiner(bc *core.Blockchain, coinBaseAddr string) *Miner {
+func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus) *Miner {
 
 	return &Miner{
 		bc,
 		nil,
 		coinBaseAddr,
 		prepareTxPoolState,
+		consensus,
 	}
 }
 
 //start mining
-func (pd *Miner) Start() {
-	pd.run()
+func (miner *Miner) Start() {
+	miner.run()
 }
 
 func UpdateTxPool(txs core.TransactionPool) {
@@ -60,35 +61,34 @@ func UpdateTxPool(txs core.TransactionPool) {
 }
 
 //start the state machine
-func (pd *Miner) run() {
+func (miner *Miner) run() {
 
 Loop:
 	for {
-		switch pd.nextState {
+		switch miner.nextState {
 		case prepareTxPoolState:
-			pd.prepareTxPool()
-			pd.nextState = mineState
+			miner.prepareTxPool()
+			miner.nextState = mineState
 
 		case mineState:
-			pd.mine()
-			pd.nextState = updateNewBlock
+			miner.mine()
+			miner.nextState = updateNewBlock
 		case updateNewBlock:
-			pd.updateNewBlock()
-			pd.nextState = cleanUpState
+			miner.updateNewBlock()
+			miner.nextState = cleanUpState
 		case cleanUpState:
-			pd.cleanUp()
+			miner.cleanUp()
 			break Loop
 		}
 	}
 }
 
 //prepare transaction pool
-func (pd *Miner) prepareTxPool() {
+func (miner *Miner) prepareTxPool() {
 	// verify all transactions
-	pd.verifyTransactions()
-
+	miner.verifyTransactions()
 	// add coinbase transaction
-	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr, "")
+	cbtx := core.NewCoinbaseTX(miner.coinBaseAddr, "")
 	h := core.GetTxnPoolInstance()
 	heap.Init(h)
 	heap.Push(core.GetTxnPoolInstance(), cbtx)
@@ -96,40 +96,37 @@ func (pd *Miner) prepareTxPool() {
 }
 
 //start proof of work process
-func (pd *Miner) mine() {
+func (miner *Miner) mine() {
 
 	//get the hash of last newBlock
-	lastHash, err := pd.bc.GetLastHash()
+	lastHash, err := miner.bc.GetLastHash()
 	if err != nil {
-		//TODU
+		//TODO
 	}
 
-	//create a new newBlock with the transaction pool and last hasth
-	pd.newBlock = core.NewBlock(lastHash)
-	pow := core.NewProofOfWork(pd.newBlock)
-	nonce, hash := pow.Run()
-	pd.newBlock.SetHash(hash[:])
-	pd.newBlock.SetNonce(nonce)
+	//create a new newBlock with the transaction pool and last hash
+	miner.consensus = NewProofOfWork(miner.coinBaseAddr)
+	miner.newBlock = miner.consensus.ProduceBlock(lastHash)
 }
 
 //update the blockchain with the new block
-func (pd *Miner) updateNewBlock() {
-	pd.bc.UpdateNewBlock(pd.newBlock)
+func (miner *Miner) updateNewBlock() {
+	miner.bc.UpdateNewBlock(miner.newBlock)
 }
 
-func (pd *Miner) cleanUp() {
-	pd.nextState = prepareTxPoolState
+func (miner *Miner) cleanUp() {
+	miner.nextState = prepareTxPoolState
 }
 
 //verify transactions and remove invalid transactions
-func (pd *Miner) verifyTransactions() {
+func (miner *Miner) verifyTransactions() {
 	//for TransactionPool.Len() > 0 {
 	//
 	//	var txn = heap.Pop(&TransactionPool).(core.Transaction)
 	//
-	//	//if pd.bc.VerifyTransaction(txn) != true {
+	//	//if miner.bc.VerifyTransaction(txn) != true {
 	//	//	//Remove transaction from transaction pool if the transaction is not verified
-	//	//	pd.txPool = append(pd.txPool[0:i],pd.txPool[i+1:len(pd.txPool)]...)
+	//	//	miner.txPool = append(miner.txPool[0:i],miner.txPool[i+1:len(miner.txPool)]...)
 	//	//}
 	//}
 	//}

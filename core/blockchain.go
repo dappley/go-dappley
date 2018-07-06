@@ -20,14 +20,14 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string) (*Blockchain, error) {
+func CreateBlockchain(address string, consensus Consensus) (*Blockchain, error) {
 	if storage.DbExists(BlockchainDbFile) {
 		err := errors.New("Blockchain already exists.\n")
 		return nil, err
 	}
 
 	var tip []byte
-	genesis := NewGenesisBlock(address)
+	genesis := NewGenesisBlock(address, consensus)
 
 	db := storage.OpenDatabase(BlockchainDbFile)
 

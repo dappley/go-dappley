@@ -15,13 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
 
-const genesisCoinbaseData = "Hell world"
+package consensus
 
+import (
+	"testing"
+	"github.com/stretchr/testify/assert"
+)
 
-func NewGenesisBlock(address string, consensus Consensus) *Block {
-	consensus.UpdateCoinbaseData(genesisCoinbaseData)
-	return consensus.ProduceBlock([]byte{})
+func TestNewProofOfWork(t *testing.T) {
+	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
+	pow := NewProofOfWork(cbAddr)
+	assert.Equal(t, cbAddr, pow.cbAddr)
+	assert.Equal(t, "", pow.cbData)
+}
+
+func TestProofOfWork_AddTransactions(t *testing.T) {
 
 }
