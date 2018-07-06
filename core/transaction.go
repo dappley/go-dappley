@@ -150,7 +150,7 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string) *Transaction {
+func NewCoinbaseTX(to, data string) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -160,29 +160,29 @@ func NewCoinbaseTX(to, data string) *Transaction {
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()
 
-	return &tx
+	return tx
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain, tip int64) (*Transaction, error) {
+func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
 	pubKeyHash := HashPubKey(keypair.PublicKey)
 	acc, validOutputs, err := bc.FindSpendableOutputs(pubKeyHash, amount)
 	if err != nil {
-		return nil, err
+		return Transaction{}, err
 	}
 
 	if acc < amount {
-		return nil, ErrInsufficientFund
+		return Transaction{}, ErrInsufficientFund
 	}
 
 	// Build a list of inputs
 	for txid, outs := range validOutputs {
 		txID, err := hex.DecodeString(txid)
 		if err != nil {
-			return nil, err
+			return Transaction{}, err
 		}
 
 		for _, out := range outs {
@@ -201,7 +201,7 @@ func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockc
 	tx.ID = tx.Hash()
 	bc.SignTransaction(&tx, keypair.PrivateKey)
 
-	return &tx, nil
+	return tx, nil
 }
 
 // String returns a human-readable representation of a transaction

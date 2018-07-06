@@ -3,7 +3,6 @@ package consensus
 import (
 	"os"
 	"testing"
-
 	"github.com/dappworks/go-dappworks/client"
 	"github.com/dappworks/go-dappworks/core"
 	"github.com/dappworks/go-dappworks/util"
@@ -126,7 +125,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
 	//duplicated transactions. The second transaction will be ignored
-	core.TransactionPoolSingleton.Push(*tx)
+	core.TransactionPoolSingleton.Push(tx)
+	core.TransactionPoolSingleton.Push(tx)
 
 	miner := NewMiner(bc, addr1)
 	miner.Start()
@@ -169,7 +169,7 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
 	//duplicated transactions. The second transaction will be ignored
-	core.TransactionPoolSingleton.Push(*tx)
+	core.TransactionPoolSingleton.Push(tx)
 
 	miner := NewMiner(bc, addr1)
 	miner.Start()
@@ -177,8 +177,8 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 	checkBalance(t, addr1, addr2, bc, mineAward*3-sendAmount*2, sendAmount*2)
 
 	tx1, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
-	core.TransactionPoolSingleton.Push(*tx1)
-	core.TransactionPoolSingleton.Push(*tx1)
+	core.TransactionPoolSingleton.Push(tx1)
+	core.TransactionPoolSingleton.Push(tx1)
 	UpdateTxPool(core.TransactionPoolSingleton)
 	miner.Start()
 
