@@ -6,12 +6,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
-	"os"
 
 	"github.com/dappworks/go-dappworks/storage"
 )
 
-const dbFile = "../bin/blockchain.DB"
+const transactionPoolSize = 10
+const BlockchainDbFile = "../bin/blockchain.DB"
+
 var tipKey = []byte("1")
 
 type Blockchain struct {
@@ -21,7 +22,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string) (*Blockchain, error) {
-	if dbExists() {
+	if storage.DbExists(BlockchainDbFile) {
 		err := errors.New("Blockchain already exists.\n")
 		return nil, err
 	}
@@ -29,61 +30,53 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 	var tip []byte
 	genesis := NewGenesisBlock(address)
 
-	db, err := storage.OpenDatabase(dbFile)
+	db := storage.OpenDatabase(BlockchainDbFile)
+
+	updateDbWithNewBlock(db, genesis)
+
+	tip, err := db.Get(tipKey)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
-
-	err = updateDbWithNewBlock(db, genesis)
-
-	tip, err = db.Get(tipKey)
-
 	return &Blockchain{tip, db}, nil
 }
 
 func GetBlockchain() (*Blockchain, error) {
-	if dbExists() == false {
+	if storage.DbExists(BlockchainDbFile) == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
 		return nil, err
 	}
 
 	var tip []byte
 
-	db, err := storage.OpenDatabase(dbFile)
-	if err != nil {
-		log.Panic(err)
-	}
+	db := storage.OpenDatabase(BlockchainDbFile)
 
-	tip, err = db.Get(tipKey)
+	tip, err := db.Get(tipKey)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Blockchain{tip, db}, nil
 }
 
-func (bc *Blockchain) UpdateNewBlock(newBlock *Block) error {
-	err := updateDbWithNewBlock(bc.DB, newBlock)
+func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
+	updateDbWithNewBlock(bc.DB, newBlock)
 	bc.currentHash = newBlock.GetHash()
-
-	return err
 }
-
 //record the new block in the database
-func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) error {
-	err := db.Put(newBlock.GetHash(), newBlock.Serialize())
-	if err != nil {
-		return err
-	}
+func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) {
+	db.Put(newBlock.GetHash(), newBlock.Serialize())
 
-	err = db.Put(tipKey, newBlock.GetHash())
-	if err != nil {
-		return err
-	}
+	db.Put(tipKey, newBlock.GetHash())
 
-	return nil
 }
 
-func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int) {
+func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
 	unspentOutputs := make(map[string][]int)
-	unspentTXs := bc.FindUnspentTransactions(pubKeyHash)
+	unspentTXs, err := bc.FindUnspentTransactions(pubKeyHash)
+	if err != nil {
+		return 0, nil, err
+	}
 	accumulated := 0
 
 Work: //TODO
@@ -102,7 +95,7 @@ Work: //TODO
 		}
 	}
 
-	return accumulated, unspentOutputs
+	return accumulated, unspentOutputs, nil
 }
 
 //TODO: optimize performance
@@ -110,7 +103,10 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	bci := bc.Iterator()
 
 	for {
-		block := bci.Next()
+		block, err := bci.Next()
+		if err != nil {
+			return Transaction{}, err
+		}
 
 		for _, tx := range block.GetTransactions() {
 			if bytes.Compare(tx.ID, ID) == 0 {
@@ -127,13 +123,15 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 }
 
 //TODO: optimize performance
-func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []Transaction {
+func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) ([]Transaction, error) {
 	var unspentTXs []Transaction
 	spentTXOs := make(map[string][]int)
 	bci := bc.Iterator()
 
 	for {
-		block := bci.Next()
+		block, err := bci.Next()
+		if err != nil {
+		}
 
 		for _, tx := range block.GetTransactions() {
 			txID := hex.EncodeToString(tx.ID)
@@ -168,12 +166,15 @@ func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) []Transaction {
 		}
 	}
 
-	return unspentTXs
+	return unspentTXs, nil
 }
 
-func (bc *Blockchain) FindUTXO(pubKeyHash []byte) []TXOutput {
+func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
 	var UTXOs []TXOutput
-	unspentTransactions := bc.FindUnspentTransactions(pubKeyHash)
+	unspentTransactions, err := bc.FindUnspentTransactions(pubKeyHash)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, tx := range unspentTransactions {
 		for _, out := range tx.Vout {
@@ -183,7 +184,7 @@ func (bc *Blockchain) FindUTXO(pubKeyHash []byte) []TXOutput {
 		}
 	}
 
-	return UTXOs
+	return UTXOs, nil
 }
 
 func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey) {
@@ -222,27 +223,19 @@ func (bc *Blockchain) Iterator() *Blockchain {
 	return &Blockchain{bc.currentHash, bc.DB}
 }
 
-func (bc *Blockchain) Next() *Block {
+func (bc *Blockchain) Next() (*Block, error) {
 	var block *Block
 
 	encodedBlock, err := bc.DB.Get(bc.currentHash)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
 	block = Deserialize(encodedBlock)
 
 	bc.currentHash = block.GetPrevHash()
 
-	return block
-}
-
-func dbExists() bool {
-	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
-		return false
-	}
-
-	return true
+	return block, nil
 }
 
 func (bc *Blockchain) GetLastHash() ([]byte, error) {

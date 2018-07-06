@@ -6,7 +6,6 @@ import (
 
 	"github.com/dappworks/go-dappworks/client"
 	"github.com/dappworks/go-dappworks/core"
-	"github.com/dappworks/go-dappworks/storage"
 	"github.com/dappworks/go-dappworks/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,6 +13,7 @@ import (
 var sendAmount = int(5)
 var mineAward = int(10)
 var tip = int64(5)
+
 //mine one transaction
 func TestMiner_SingleValidTx(t *testing.T) {
 
@@ -198,7 +198,10 @@ func getBalance(bc *core.Blockchain, addr string) (int, error) {
 	balance := 0
 	pubKeyHash := util.Base58Decode([]byte(addr))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	UTXOs := bc.FindUTXO(pubKeyHash)
+	UTXOs, err := bc.FindUTXO(pubKeyHash)
+	if err != nil {
+		return 0, err
+	}
 
 	for _, out := range UTXOs {
 		balance += out.Value
@@ -215,7 +218,7 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(storage.DefaultDbFile)
+	os.RemoveAll(core.BlockchainDbFile)
 	os.RemoveAll(client.WalletFile)
 }
 

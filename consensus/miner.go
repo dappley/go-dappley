@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"log"
 	"github.com/dappworks/go-dappworks/core"
 	"container/heap"
 )
@@ -27,6 +26,7 @@ type Miner struct{
 //create a new instance
 func NewMiner(bc *core.Blockchain,coinBaseAddr string) *Miner{
 
+
 	return &Miner{
 		bc,
 		nil,
@@ -36,7 +36,7 @@ func NewMiner(bc *core.Blockchain,coinBaseAddr string) *Miner{
 }
 
 //start mining
-func (pd *Miner) Start(){
+func (pd *Miner) Start() {
 	pd.run()
 }
 
@@ -45,10 +45,10 @@ func UpdateTxPool(txs core.TransactionPool){
 }
 
 //start the state machine
-func (pd *Miner) run(){
+func (pd *Miner) run() {
 
-	Loop:
-	for{
+Loop:
+	for {
 		switch pd.nextState {
 		case prepareTxPoolState:
 			pd.prepareTxPool()
@@ -66,8 +66,9 @@ func (pd *Miner) run(){
 		}
 	}
 }
+
 //prepare transaction pool
-func (pd *Miner) prepareTxPool(){
+func (pd *Miner) prepareTxPool() {
 	// verify all transactions
 	pd.verifyTransactions()
 
@@ -80,12 +81,12 @@ func (pd *Miner) prepareTxPool(){
 }
 
 //start proof of work process
-func (pd *Miner) mine(){
+func (pd *Miner) mine() {
 
 	//get the hash of last newBlock
 	lastHash, err := pd.bc.GetLastHash()
 	if err != nil {
-		log.Panic(err)
+		//TODU
 	}
 
 	//create a new newBlock with the transaction pool and last hasth
@@ -97,16 +98,10 @@ func (pd *Miner) mine(){
 }
 
 //update the blockchain with the new block
-func (pd *Miner) updateNewBlock(){
-
-	err := pd.bc.UpdateNewBlock(pd.newBlock)
-	if err != nil {
-		log.Panic(err)
-	}
-}
+func (pd *Miner) updateNewBlock() {
+	pd.bc.UpdateNewBlock(pd.newBlock)}
 
 func (pd *Miner) cleanUp(){
-
 	pd.nextState = prepareTxPoolState
 }
 
@@ -123,3 +118,4 @@ func (pd *Miner) verifyTransactions() {
 	//}
 	//}
 }
+

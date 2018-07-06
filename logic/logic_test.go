@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/dappworks/go-dappworks/client"
-	"github.com/dappworks/go-dappworks/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappworks/go-dappworks/core"
 )
 const invalidAddress = "Invalid Address"
 
@@ -381,6 +381,6 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(storage.DefaultDbFile)
+	os.RemoveAll(core.BlockchainDbFile)
 	os.RemoveAll(client.WalletFile)
 }
