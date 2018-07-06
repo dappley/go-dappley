@@ -30,6 +30,19 @@ func TestNewProofOfWork(t *testing.T) {
 	assert.Equal(t, "", pow.cbData)
 }
 
-func TestProofOfWork_AddTransactions(t *testing.T) {
-
+func TestProofOfWork_UpdateCoinbaseData(t *testing.T) {
+	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
+	var cbData = string("testData")
+	pow := NewProofOfWork(cbAddr)
+	pow.UpdateCoinbaseData(cbData)
+	assert.Equal(t, cbData, pow.cbData)
 }
+
+func TestProofOfWork_Validate(t *testing.T) {
+	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
+	pow := NewProofOfWork(cbAddr)
+	blk := pow.ProduceBlock([]byte{})
+	assert.True(t,pow.Validate(blk))
+	//TODO: mock a block that cant be validated
+}
+
