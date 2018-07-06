@@ -36,22 +36,16 @@ const targetBits = int64(14)
 
 type ProofOfWork struct {
 
-	cbAddr 		string
-	cbData		string
 	target 		*big.Int
 
 }
 
-func NewProofOfWork(coinbaseAddr string) *ProofOfWork {
+func NewProofOfWork() *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
-	return &ProofOfWork{coinbaseAddr,"",target}
+	return &ProofOfWork{target}
 }
 
-
-func (pow *ProofOfWork) UpdateCoinbaseData(coinbaseData string){
-	pow.cbData = coinbaseData
-}
 
 func prepareData(nonce int64, blk *core.Block) []byte {
 	data := bytes.Join(
@@ -67,15 +61,17 @@ func prepareData(nonce int64, blk *core.Block) []byte {
 	return data
 }
 
-func (pow *ProofOfWork) ProduceBlock(prevHash []byte) *core.Block{
+func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *core.Block{
 
 	var hashInt big.Int
 	var hash [32]byte
 	nonce := int64(0)
 
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(pow.cbAddr,pow.cbData)
+
+	cbtx := core.NewCoinbaseTX(cbAddr,cbData)
 	h := core.GetTxnPoolInstance()
+
 	heap.Init(h)
 	heap.Push(core.GetTxnPoolInstance(), cbtx)
 

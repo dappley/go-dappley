@@ -21,7 +21,5 @@ const genesisCoinbaseData = "Hell world"
 
 
 func NewGenesisBlock(address string, consensus Consensus) *Block {
-	consensus.UpdateCoinbaseData(genesisCoinbaseData)
-	return consensus.ProduceBlock([]byte{})
-
+	return consensus.ProduceBlock(address, genesisCoinbaseData,[]byte{})
 }

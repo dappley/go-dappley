@@ -21,7 +21,7 @@ func (cli *CLI) printChain() {
 
 		fmt.Printf("============ Block %x ============\n", block.GetHash())
 		fmt.Printf("Prev. block: %x\n", block.GetPrevHash())
-		pow := consensus.NewProofOfWork("")
+		pow := consensus.NewProofOfWork()
 		fmt.Printf("PoW: %s\n\n", strconv.FormatBool(pow.Validate(block)))
 		for _, tx := range block.GetTransactions() {
 			fmt.Println(tx)

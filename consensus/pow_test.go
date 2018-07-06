@@ -23,25 +23,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewProofOfWork(t *testing.T) {
-	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
-	pow := NewProofOfWork(cbAddr)
-	assert.Equal(t, cbAddr, pow.cbAddr)
-	assert.Equal(t, "", pow.cbData)
-}
-
-func TestProofOfWork_UpdateCoinbaseData(t *testing.T) {
-	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
-	var cbData = string("testData")
-	pow := NewProofOfWork(cbAddr)
-	pow.UpdateCoinbaseData(cbData)
-	assert.Equal(t, cbData, pow.cbData)
-}
-
 func TestProofOfWork_Validate(t *testing.T) {
 	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
-	pow := NewProofOfWork(cbAddr)
-	blk := pow.ProduceBlock([]byte{})
+	pow := NewProofOfWork()
+	blk := pow.ProduceBlock(cbAddr, "", []byte{})
 	//hash :=blk.GetHash()
 	assert.True(t,pow.Validate(blk))
 	blk.SetNonce(blk.GetNonce()+1)

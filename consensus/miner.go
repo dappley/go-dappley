@@ -19,7 +19,6 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/core"
-	"container/heap"
 )
 
 type state int
@@ -56,10 +55,6 @@ func (miner *Miner) Start() {
 	miner.run()
 }
 
-func UpdateTxPool(txs core.TransactionPool) {
-	core.ModifyTxnPoolInstance(&txs)
-}
-
 //start the state machine
 func (miner *Miner) run() {
 
@@ -87,12 +82,6 @@ Loop:
 func (miner *Miner) prepareTxPool() {
 	// verify all transactions
 	miner.verifyTransactions()
-	// add coinbase transaction
-	cbtx := core.NewCoinbaseTX(miner.coinBaseAddr, "")
-	h := core.GetTxnPoolInstance()
-	heap.Init(h)
-	heap.Push(core.GetTxnPoolInstance(), cbtx)
-
 }
 
 //start proof of work process
@@ -103,10 +92,10 @@ func (miner *Miner) mine() {
 	if err != nil {
 		//TODO
 	}
-
 	//create a new newBlock with the transaction pool and last hash
-	miner.consensus = NewProofOfWork(miner.coinBaseAddr)
-	miner.newBlock = miner.consensus.ProduceBlock(lastHash)
+
+	miner.consensus = NewProofOfWork()
+	miner.newBlock = miner.consensus.ProduceBlock(miner.coinBaseAddr,"",lastHash)
 }
 
 //update the blockchain with the new block

@@ -194,10 +194,10 @@ func TestSend(t *testing.T) {
 	//Send 5 coins from addr1 to addr2
 	err = Send(addr1, addr2, transferAmount, tip)
 	assert.Nil(t, err)
-	//send function creates utxo and then new miner which results in 2 mineRewards, adding unto the blockchain creation is 3*mineAward
+	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineAward
 	balance1, err = GetBalance(addr1)
 	assert.Nil(t, err)
-	assert.Equal(t, 3*mineAward-transferAmount, balance1)
+	assert.Equal(t, 2*mineAward-transferAmount, balance1)
 
 	//the balance1 of the second wallet should be 5
 	balance2, err = GetBalance(addr2)
