@@ -7,7 +7,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/dappworks/go-dappworks/storage"
+	"github.com/dappley/go-dappley/storage"
 )
 
 const transactionPoolSize = 10
@@ -63,6 +63,7 @@ func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	updateDbWithNewBlock(bc.DB, newBlock)
 	bc.currentHash = newBlock.GetHash()
 }
+
 //record the new block in the database
 func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) {
 	db.Put(newBlock.GetHash(), newBlock.Serialize())

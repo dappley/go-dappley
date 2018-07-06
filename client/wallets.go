@@ -10,7 +10,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/dappworks/go-dappworks/core"
+	"github.com/dappley/go-dappley/core"
 )
 
 const WalletFile = "../bin/client.dat"
@@ -77,7 +77,7 @@ func (ws Wallets) GetWallet(address string) core.Address {
 func (ws *Wallets) LoadFromFile() error {
 	if _, err := os.Stat(WalletFile); os.IsNotExist(err) {
 		ws.SaveToFile()
-	}else if err!=nil {
+	} else if err != nil {
 		return err
 	}
 

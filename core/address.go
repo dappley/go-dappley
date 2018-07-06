@@ -1,4 +1,5 @@
 package core
+
 import (
 	"bytes"
 	"crypto/ecdsa"
@@ -7,8 +8,8 @@ import (
 	"crypto/sha256"
 	"log"
 
+	"github.com/dappley/go-dappley/util"
 	"golang.org/x/crypto/ripemd160"
-	"github.com/dappworks/go-dappworks/util"
 )
 
 const version = byte(0x00)

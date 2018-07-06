@@ -1,12 +1,29 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
 package consensus
 
 import (
-	"github.com/dappworks/go-dappworks/core"
 	"container/heap"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 type state int
-
 
 const (
 	prepareTxPoolState state = iota
@@ -15,17 +32,15 @@ const (
 	cleanUpState
 )
 
-
-type Miner struct{
-	bc 		  		*core.Blockchain
-	newBlock 		*core.Block
-	coinBaseAddr 	string
-	nextState 		state
+type Miner struct {
+	bc           *core.Blockchain
+	newBlock     *core.Block
+	coinBaseAddr string
+	nextState    state
 }
 
 //create a new instance
-func NewMiner(bc *core.Blockchain,coinBaseAddr string) *Miner{
-
+func NewMiner(bc *core.Blockchain, coinBaseAddr string) *Miner {
 
 	return &Miner{
 		bc,
@@ -40,7 +55,7 @@ func (pd *Miner) Start() {
 	pd.run()
 }
 
-func UpdateTxPool(txs core.TransactionPool){
+func UpdateTxPool(txs core.TransactionPool) {
 	core.TransactionPoolSingleton = txs
 }
 
@@ -73,7 +88,7 @@ func (pd *Miner) prepareTxPool() {
 	pd.verifyTransactions()
 
 	// add coinbase transaction
-	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr,"")
+	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr, "")
 	h := &core.TransactionPool{}
 	heap.Init(h)
 	heap.Push(&core.TransactionPoolSingleton, cbtx)
@@ -99,9 +114,10 @@ func (pd *Miner) mine() {
 
 //update the blockchain with the new block
 func (pd *Miner) updateNewBlock() {
-	pd.bc.UpdateNewBlock(pd.newBlock)}
+	pd.bc.UpdateNewBlock(pd.newBlock)
+}
 
-func (pd *Miner) cleanUp(){
+func (pd *Miner) cleanUp() {
 	pd.nextState = prepareTxPoolState
 }
 
@@ -118,4 +134,3 @@ func (pd *Miner) verifyTransactions() {
 	//}
 	//}
 }
-

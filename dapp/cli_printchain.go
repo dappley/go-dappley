@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/dappworks/go-dappworks/core"
+	"github.com/dappley/go-dappley/core"
 )
 
 func (cli *CLI) printChain() {

@@ -3,9 +3,10 @@ package consensus
 import (
 	"os"
 	"testing"
-	"github.com/dappworks/go-dappworks/client"
-	"github.com/dappworks/go-dappworks/core"
-	"github.com/dappworks/go-dappworks/util"
+
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	wallets, err := client.NewWallets()
 	assert.Nil(t, err)
-	assert.NotNil(t,wallets)
+	assert.NotNil(t, wallets)
 
 	addr1 := wallets.CreateWallet()
 	assert.NotNil(t, addr1)
@@ -218,7 +219,7 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(core.BlockchainDbFile)
+	os.RemoveAll("../bin/blockchain.DB")
 	os.RemoveAll(client.WalletFile)
 }
 

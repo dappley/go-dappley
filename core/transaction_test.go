@@ -1,38 +1,35 @@
 package core
 
 import (
-	"github.com/dappworks/go-dappworks/util"
-	"testing"
 	"container/heap"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"testing"
+
+	"github.com/dappley/go-dappley/util"
+	"github.com/stretchr/testify/assert"
 )
 
-
-func getAoB (length int64) []byte{
+func getAoB(length int64) []byte {
 	return util.GenerateRandomAoB(length)
 }
 
 func generateFakeTxInputs() []TXInput {
 
-	var a = []TXInput {
-		TXInput{getAoB(2), 10, getAoB(2), getAoB(2) },
-		TXInput{getAoB(2), 5, getAoB(2), getAoB(2) },
+	var a = []TXInput{
+		TXInput{getAoB(2), 10, getAoB(2), getAoB(2)},
+		TXInput{getAoB(2), 5, getAoB(2), getAoB(2)},
 	}
 	return a
 }
 
+func generateFakeTxOutputs() []TXOutput {
 
-func generateFakeTxOutputs() []TXOutput{
-
-	var a = []TXOutput {
-		TXOutput{1, getAoB(2), },
-		TXOutput{2, getAoB(2), },
-
+	var a = []TXOutput{
+		TXOutput{1, getAoB(2)},
+		TXOutput{2, getAoB(2)},
 	}
 	return a
 }
-
 
 func TestTranstionHeapOperations(t *testing.T) {
 	t1 := Transaction{
@@ -61,21 +58,20 @@ func TestTranstionHeapOperations(t *testing.T) {
 	}
 	h := &TransactionPool{}
 	heap.Init(h)
-	heap.Push(h,t1)
+	heap.Push(h, t1)
 
-	assert.Equal(t, 1, h.Len() )
-
+	assert.Equal(t, 1, h.Len())
 
 	heap.Push(h, t2)
-	assert.Equal(t, 2, h.Len() )
-	heap.Push(h,t3)
-	heap.Push(h,t4)
-	assert.Equal(t, 4, h.Len() )
+	assert.Equal(t, 2, h.Len())
+	heap.Push(h, t3)
+	heap.Push(h, t4)
+	assert.Equal(t, 4, h.Len())
 	//var test_slice = []Transaction{}
 	for h.Len() > 0 {
 		var txnInterface = heap.Pop(h)
 		fmt.Println(txnInterface.(Transaction).Tip)
-		}
-	assert.Equal(t, 0, h.Len() )
+	}
+	assert.Equal(t, 0, h.Len())
 
 }
