@@ -59,7 +59,7 @@ func TestTranstionHeapOperations(t *testing.T) {
 		Vout: generateFakeTxOutputs(),
 		Tip:  20,
 	}
-	h := &TransactionHeap{}
+	h := &TransactionPool{}
 	heap.Init(h)
 	heap.Push(h,t1)
 

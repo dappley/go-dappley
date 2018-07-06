@@ -47,9 +47,10 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	//create 2 transactions and start mining
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
-	txs := []*core.Transaction{tx}
 
-	miner := NewMiner(txs, bc, addr1)
+	core.TransactionPoolSingleton.Push(tx)
+
+	miner := NewMiner(bc, addr1)
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineAward*2-sendAmount, sendAmount)
@@ -84,9 +85,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	checkBalance(t, addr1, addr2, bc, mineAward, 0)
 
 	//create 2 transactions and start mining
-	txs := []*core.Transaction{}
 
-	miner := NewMiner(txs, bc, addr1)
+	miner := NewMiner(bc, addr1)
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineAward*2, 0)
@@ -126,9 +126,9 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
 	//duplicated transactions. The second transaction will be ignored
-	txs := []*core.Transaction{tx, tx}
+	core.TransactionPoolSingleton.Push(*tx)
 
-	miner := NewMiner(txs, bc, addr1)
+	miner := NewMiner(bc, addr1)
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineAward*3-sendAmount*2, sendAmount*2)
@@ -169,16 +169,17 @@ func TestMiner_UpdateTxPool(t *testing.T) {
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
 	//duplicated transactions. The second transaction will be ignored
-	txs := []*core.Transaction{tx, tx}
+	core.TransactionPoolSingleton.Push(*tx)
 
-	miner := NewMiner(txs, bc, addr1)
+	miner := NewMiner(bc, addr1)
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineAward*3-sendAmount*2, sendAmount*2)
 
 	tx1, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
-	txs = []*core.Transaction{tx1, tx1}
-	miner.UpdateTxPool(txs)
+	core.TransactionPoolSingleton.Push(*tx1)
+	core.TransactionPoolSingleton.Push(*tx1)
+	UpdateTxPool(core.TransactionPoolSingleton)
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineAward*5-sendAmount*4, sendAmount*4)

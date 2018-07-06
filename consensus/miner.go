@@ -3,9 +3,11 @@ package consensus
 import (
 	"log"
 	"github.com/dappworks/go-dappworks/core"
+	"container/heap"
 )
 
 type state int
+
 
 const (
 	prepareTxPoolState state = iota
@@ -17,18 +19,16 @@ const (
 
 type Miner struct{
 	bc 		  		*core.Blockchain
-	txPool    		[]*core.Transaction
 	newBlock 		*core.Block
 	coinBaseAddr 	string
 	nextState 		state
 }
 
 //create a new instance
-func NewMiner(txs []*core.Transaction,bc *core.Blockchain,coinBaseAddr string) *Miner{
+func NewMiner(bc *core.Blockchain,coinBaseAddr string) *Miner{
 
 	return &Miner{
 		bc,
-		txs,
 		nil,
 		coinBaseAddr,
 		prepareTxPoolState,
@@ -40,8 +40,8 @@ func (pd *Miner) Start(){
 	pd.run()
 }
 
-func (pd *Miner) UpdateTxPool(txs []*core.Transaction){
-	pd.txPool = txs
+func UpdateTxPool(txs core.TransactionPool){
+	core.TransactionPoolSingleton = txs
 }
 
 //start the state machine
@@ -73,7 +73,9 @@ func (pd *Miner) prepareTxPool(){
 
 	// add coinbase transaction
 	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr,"")
-	pd.txPool = append([]*core.Transaction{cbtx},pd.txPool...)
+	h := &core.TransactionPool{}
+	heap.Init(h)
+	heap.Push(&core.TransactionPoolSingleton, cbtx)
 
 }
 
@@ -87,7 +89,7 @@ func (pd *Miner) mine(){
 	}
 
 	//create a new newBlock with the transaction pool and last hasth
-	pd.newBlock = core.NewBlock(pd.txPool, lastHash)
+	pd.newBlock = core.NewBlock(lastHash)
 	pow := core.NewProofOfWork(pd.newBlock)
 	nonce, hash := pow.Run()
 	pd.newBlock.SetHash(hash[:])
@@ -97,7 +99,6 @@ func (pd *Miner) mine(){
 //update the blockchain with the new block
 func (pd *Miner) updateNewBlock(){
 
-	pd.txPool = nil
 	err := pd.bc.UpdateNewBlock(pd.newBlock)
 	if err != nil {
 		log.Panic(err)
@@ -105,16 +106,20 @@ func (pd *Miner) updateNewBlock(){
 }
 
 func (pd *Miner) cleanUp(){
-	pd.txPool = nil
+
 	pd.nextState = prepareTxPoolState
 }
 
 //verify transactions and remove invalid transactions
 func (pd *Miner) verifyTransactions() {
-	for i, tx := range pd.txPool {
-		if pd.bc.VerifyTransaction(tx) != true {
-			//Remove transaction from transaction pool if the transaction is not verified
-			pd.txPool = append(pd.txPool[0:i],pd.txPool[i+1:len(pd.txPool)]...)
-		}
-	}
+	//for TransactionPool.Len() > 0 {
+	//
+	//	var txn = heap.Pop(&TransactionPool).(core.Transaction)
+	//
+	//	//if pd.bc.VerifyTransaction(txn) != true {
+	//	//	//Remove transaction from transaction pool if the transaction is not verified
+	//	//	pd.txPool = append(pd.txPool[0:i],pd.txPool[i+1:len(pd.txPool)]...)
+	//	//}
+	//}
+	//}
 }

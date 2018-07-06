@@ -23,6 +23,7 @@ import (
 	"time"
 	"encoding/gob"
 	"log"
+	"container/heap"
 )
 
 type BlockHeader struct {
@@ -37,7 +38,14 @@ type Block struct {
 	transactions  []*Transaction
 }
 
-func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
+func NewBlock(prevHash []byte) *Block {
+	sortedTransactions := []*Transaction{}
+	for TransactionPoolSingleton.Len() > 0 {
+		if(len(sortedTransactions) < TransactionPoolLimit){
+			var transaction = heap.Pop(&TransactionPoolSingleton).(Transaction)
+			sortedTransactions = append(sortedTransactions, &transaction)
+		}
+	}
 	return &Block{
 		header: &BlockHeader{
 			hash: []byte{},
@@ -45,7 +53,7 @@ func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
 			nonce: 0,
 			timestamp: time.Now().Unix(),
 		},
-		transactions: transactions,
+		transactions: sortedTransactions,
 	}
 }
 

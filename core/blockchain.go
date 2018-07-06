@@ -9,11 +9,9 @@ import (
 	"os"
 
 	"github.com/dappworks/go-dappworks/storage"
-	"container/heap"
 )
 
 const dbFile = "../bin/blockchain.DB"
-const transactionPoolSize = 10
 var tipKey = []byte("1")
 
 type Blockchain struct {
@@ -59,41 +57,6 @@ func GetBlockchain() (*Blockchain, error) {
 	tip, err = db.Get(tipKey)
 
 	return &Blockchain{tip, db}, nil
-}
-
-func (bc *Blockchain) MineBlock(transactionsHeap *TransactionHeap) {
-
-	var transactionPool = []*Transaction{}
-	var lastHash []byte
-	for transactionsHeap.Len() > 0 {
-		var transaction = heap.Pop(transactionsHeap).(*Transaction)
-		if bc.VerifyTransaction(transaction) != true {
-			//TODO: invalid transaction should be skipped
-			log.Panic("ERROR: Invalid transaction")
-		}else {
-			transactionPool = append(transactionPool, transaction)
-		}
-	}
-
-	lastHash, err := bc.DB.Get(tipKey)
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	block := NewBlock(transactionPool, lastHash)
-	pow := NewProofOfWork(block)
-	nonce, hash := pow.Run()
-	block.SetHash(hash[:])
-	block.SetNonce(nonce)
-
-	err = updateDbWithNewBlock(bc.DB, block)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	bc.currentHash = block.GetHash()
-
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) error {
@@ -237,7 +200,7 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 	tx.Sign(privKey, prevTXs)
 }
 
-func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
+func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 	if tx.IsCoinbase() {
 		return true
 	}

@@ -109,14 +109,14 @@ func Send(from, to string, amount int, tip int64) error {
 	}
 	wallet := wallets.GetWallet(from)
 	tx, err := core.NewUTXOTransaction(from, to, amount, wallet, bc, tip)
+
 	if err != nil {
 		return err
 	}
-
-	txs := []*core.Transaction{tx}
+	core.TransactionPoolSingleton.Push(tx)
 
 	//TODO: miner should be separated from the sender
-	miner := consensus.NewMiner(txs, bc, from)
+	miner := consensus.NewMiner(bc, from)
 	miner.Start()
 	return err
 }
