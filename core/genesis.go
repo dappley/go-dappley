@@ -22,7 +22,7 @@ const genesisCoinbaseData = "Hell world"
 func NewGenesisBlock(address string) *Block {
 	cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
 	//add coinbase txn to txn pool
-	TransactionPoolSingleton.Push(cbtx)
+	GetTxnPoolInstance().Push(cbtx)
 	block := NewBlock([]byte{})
 	pow := NewProofOfWork(block)
 	nonce, hash := pow.Run()

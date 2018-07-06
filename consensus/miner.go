@@ -56,7 +56,7 @@ func (pd *Miner) Start() {
 }
 
 func UpdateTxPool(txs core.TransactionPool) {
-	core.TransactionPoolSingleton = txs
+	core.ModifyTxnPoolInstance(&txs)
 }
 
 //start the state machine
@@ -89,9 +89,9 @@ func (pd *Miner) prepareTxPool() {
 
 	// add coinbase transaction
 	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr, "")
-	h := &core.TransactionPool{}
+	h := core.GetTxnPoolInstance()
 	heap.Init(h)
-	heap.Push(&core.TransactionPoolSingleton, cbtx)
+	heap.Push(core.GetTxnPoolInstance(), cbtx)
 
 }
 

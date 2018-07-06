@@ -117,7 +117,7 @@ func Send(from, to string, amount int, tip int64) error {
 	if err != nil {
 		return err
 	}
-	core.TransactionPoolSingleton.Push(tx)
+	core.GetTxnPoolInstance().Push(tx)
 
 	//TODO: miner should be separated from the sender
 	miner := consensus.NewMiner(bc, from)

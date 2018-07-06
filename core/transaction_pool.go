@@ -1,9 +1,12 @@
 package core
 
-
+import "sync"
 
 // An TransactionPool is a max-heap of Transactions.
 type TransactionPool []Transaction
+
+var instance *TransactionPool
+var once sync.Once
 
 func (pool TransactionPool) Len() int { return len(pool) }
 //Compares Transaction Tips
@@ -22,5 +25,17 @@ func (pool *TransactionPool) Pop() interface{} {
 	last := old[length-1]
 	*pool = old[0 : length-1]
 	return last
+}
+
+func GetTxnPoolInstance() *TransactionPool {
+	once.Do(func() {
+		instance = &TransactionPool{}
+	})
+	return instance
+}
+
+func ModifyTxnPoolInstance(pool *TransactionPool) *TransactionPool {
+	instance = pool
+	return instance
 }
 

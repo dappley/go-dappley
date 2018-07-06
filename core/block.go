@@ -40,9 +40,9 @@ type Block struct {
 
 func NewBlock(prevHash []byte) *Block {
 	sortedTransactions := []*Transaction{}
-	for TransactionPoolSingleton.Len() > 0 {
+	for GetTxnPoolInstance().Len() > 0 {
 		if len(sortedTransactions) < TransactionPoolLimit {
-			var transaction = heap.Pop(&TransactionPoolSingleton).(Transaction)
+			var transaction = heap.Pop(GetTxnPoolInstance()).(Transaction)
 			sortedTransactions = append(sortedTransactions, &transaction)
 		}
 	}
