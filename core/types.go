@@ -12,3 +12,10 @@
 package core
 
 type Hash []byte
+
+type Consensus interface{
+	UpdateCoinbaseData(string)
+	ProduceBlock([]byte) *Block
+	Validate(*Block) bool
+}
+

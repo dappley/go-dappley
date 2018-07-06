@@ -35,7 +35,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//create a blockchain
 	assert.Equal(t, true, core.ValidateAddress(addr1))
-	bc, err := core.CreateBlockchain(addr1)
+	bc, err := core.CreateBlockchain(addr1, NewProofOfWork(addr1))
 	assert.Nil(t, err)
 
 	assert.NotNil(t, bc)
@@ -50,7 +50,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	core.TransactionPoolSingleton.Push(tx)
 
-	miner := NewMiner(bc, addr1)
+	miner := NewMiner(bc, addr1, NewProofOfWork(addr1))
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineReward*2-sendAmount, sendAmount)
@@ -75,7 +75,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//create a blockchain
 	assert.Equal(t, true, core.ValidateAddress(addr1))
-	bc, err := core.CreateBlockchain(addr1)
+	bc, err := core.CreateBlockchain(addr1, NewProofOfWork(addr1))
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -86,7 +86,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//create 2 transactions and start mining
 
-	miner := NewMiner(bc, addr1)
+	miner := NewMiner(bc, addr1, NewProofOfWork(addr1))
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineReward*2, 0)
@@ -113,7 +113,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//create a blockchain
 	assert.Equal(t, true, core.ValidateAddress(addr1))
-	bc, err := core.CreateBlockchain(addr1)
+	bc, err := core.CreateBlockchain(addr1, NewProofOfWork(addr1))
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -129,7 +129,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	core.TransactionPoolSingleton.Push(tx)
 	core.TransactionPoolSingleton.Push(tx)
 
-	miner := NewMiner(bc, addr1)
+	miner := NewMiner(bc, addr1, NewProofOfWork(addr1))
 	miner.Start()
 
 	checkBalance(t, addr1, addr2, bc, mineReward*3-sendAmount*2, sendAmount*2)

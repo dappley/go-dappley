@@ -18,8 +18,6 @@
 package consensus
 
 import (
-	"container/heap"
-
 	"github.com/dappley/go-dappley/core"
 )
 
@@ -33,20 +31,22 @@ const (
 )
 
 type Miner struct {
-	bc           *core.Blockchain
-	newBlock     *core.Block
-	coinBaseAddr string
-	nextState    state
+	bc           	*core.Blockchain
+	newBlock     	*core.Block
+	coinBaseAddr 	string
+	nextState    	state
+	consensus		core.Consensus
 }
 
 //create a new instance
-func NewMiner(bc *core.Blockchain, coinBaseAddr string) *Miner {
+func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus) *Miner {
 
 	return &Miner{
 		bc,
 		nil,
 		coinBaseAddr,
 		prepareTxPoolState,
+		consensus,
 	}
 }
 
@@ -86,13 +86,6 @@ Loop:
 func (pd *Miner) prepareTxPool() {
 	// verify all transactions
 	pd.verifyTransactions()
-
-	// add coinbase transaction
-	cbtx := core.NewCoinbaseTX(pd.coinBaseAddr, "")
-	h := &core.TransactionPool{}
-	heap.Init(h)
-	heap.Push(&core.TransactionPoolSingleton, cbtx)
-
 }
 
 //start proof of work process
@@ -101,15 +94,12 @@ func (pd *Miner) mine() {
 	//get the hash of last newBlock
 	lastHash, err := pd.bc.GetLastHash()
 	if err != nil {
-		//TODU
+		//TODO
 	}
 
-	//create a new newBlock with the transaction pool and last hasth
-	pd.newBlock = core.NewBlock(lastHash)
-	pow := core.NewProofOfWork(pd.newBlock)
-	nonce, hash := pow.Run()
-	pd.newBlock.SetHash(hash[:])
-	pd.newBlock.SetNonce(nonce)
+	//create a new newBlock with the transaction pool and last hash
+	pd.consensus = NewProofOfWork(pd.coinBaseAddr)
+	pd.newBlock = pd.consensus.ProduceBlock(lastHash)
 }
 
 //update the blockchain with the new block
