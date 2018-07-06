@@ -10,7 +10,6 @@ import (
 	"github.com/dappworks/go-dappworks/storage"
 )
 
-const transactionPoolSize = 10
 const BlockchainDbFile = "../bin/blockchain.DB"
 
 var tipKey = []byte("1")
