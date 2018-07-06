@@ -25,8 +25,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-const DefaultDbFile = "../bin/blockchain.DB"
-
 var (
 	ErrLevelDbNotAbleToOpenFile = errors.New("leveldb fails to open file")
 )
@@ -40,10 +38,6 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 
 	fp := dbFilePath
 
-	//if file path is empty, use the default file path
-	if dbFilePath == "" {
-		fp = DefaultDbFile
-	}
 	db1, err := leveldb.OpenFile(fp, nil)
 	if err != nil {
 		log.Panic(ErrLevelDbNotAbleToOpenFile)
@@ -73,8 +67,8 @@ func (ldb *LevelDB) Put(key []byte, val []byte) {
 
 }
 
-func DbExists() bool {
-	if _, err := os.Stat(DefaultDbFile); os.IsNotExist(err) {
+func DbExists(dbFilePath string) bool {
+	if _, err := os.Stat(dbFilePath); os.IsNotExist(err) {
 		return false
 	}
 

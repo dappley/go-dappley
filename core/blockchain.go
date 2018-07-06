@@ -12,8 +12,8 @@ import (
 	"github.com/dappworks/go-dappworks/storage"
 )
 
-const dbFile = "../bin/blockchain.DB"
 const transactionPoolSize = 10
+const BlockchainDbFile = "../bin/blockchain.DB"
 
 var tipKey = []byte("1")
 
@@ -24,7 +24,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string) (*Blockchain, error) {
-	if storage.DbExists() {
+	if storage.DbExists(BlockchainDbFile) {
 		err := errors.New("Blockchain already exists.\n")
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 	var tip []byte
 	genesis := NewGenesisBlock(address)
 
-	db := storage.OpenDatabase(dbFile)
+	db := storage.OpenDatabase(BlockchainDbFile)
 
 	updateDbWithNewBlock(db, genesis)
 
@@ -44,14 +44,14 @@ func CreateBlockchain(address string) (*Blockchain, error) {
 }
 
 func GetBlockchain() (*Blockchain, error) {
-	if storage.DbExists() == false {
+	if storage.DbExists(BlockchainDbFile) == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
 		return nil, err
 	}
 
 	var tip []byte
 
-	db := storage.OpenDatabase(dbFile)
+	db := storage.OpenDatabase(BlockchainDbFile)
 
 	tip, err := db.Get(tipKey)
 	if err != nil {

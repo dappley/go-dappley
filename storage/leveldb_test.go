@@ -8,13 +8,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const BlockchainDbFile = "../bin/blockchain.DB"
+
 //put key value pairs into database and read later
 func TestLevelDB_PutAndGet(t *testing.T) {
 
 	setup()
 
 	//use default path
-	ldb := OpenDatabase("")
+	ldb := OpenDatabase(BlockchainDbFile)
 
 	ldb.Put([]byte("a"), []byte("1"))
 
@@ -78,5 +80,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(DefaultDbFile)
+	os.RemoveAll(BlockchainDbFile)
 }
