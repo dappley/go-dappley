@@ -42,7 +42,6 @@ func CreateBlockchain(address string) (*core.Blockchain, error) {
 	defer db.Close()
 	bc, err := core.CreateBlockchain(address, consensus.NewProofOfWork(), *db)
 
-
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +62,9 @@ func GetBalance(address string) (int, error) {
 	if !core.ValidateAddress(address) {
 		return 0, ErrInvalidAddress
 	}
-	bc, err := core.GetBlockchain()
+	//inject db here
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	bc, err := core.GetBlockchain(*db)
 	if err != nil {
 		return 0, err
 	}
@@ -102,8 +103,8 @@ func Send(from, to string, amount int, tip int64) error {
 	if !core.ValidateAddress(to) {
 		return ErrInvalidRcverAddress
 	}
-
-	bc, err := core.GetBlockchain()
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	bc, err := core.GetBlockchain(*db)
 	if err != nil {
 		return err
 	}

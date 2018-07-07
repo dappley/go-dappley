@@ -6,10 +6,12 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/storage"
 )
 
 func (cli *CLI) printChain() {
-	bc, _ := core.GetBlockchain()
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	bc, _ := core.GetBlockchain(*db)
 	defer bc.DB.Close()
 
 	bci := bc.Iterator()

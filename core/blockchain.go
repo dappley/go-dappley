@@ -10,7 +10,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 )
 
-const BlockchainDbFile = "../bin/blockchain.DB"
+
 
 var tipKey = []byte("1")
 
@@ -39,7 +39,7 @@ func CreateBlockchain(address string, consensus Consensus, db storage.LevelDB) (
 	return &Blockchain{tip, &db}, nil
 }
 
-func GetBlockchain() (*Blockchain, error) {
+func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
 	if storage.DbExists(BlockchainDbFile) == false {
 		err := errors.New("No existing blockchain found. Create one first.\n")
 		return nil, err
@@ -47,14 +47,14 @@ func GetBlockchain() (*Blockchain, error) {
 
 	var tip []byte
 
-	db := storage.OpenDatabase(BlockchainDbFile)
+
 
 	tip, err := db.Get(tipKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Blockchain{tip, db}, nil
+	return &Blockchain{tip, &db}, nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
