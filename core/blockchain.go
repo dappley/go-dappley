@@ -20,24 +20,23 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string, consensus Consensus) (*Blockchain, error) {
-	if storage.DbExists(BlockchainDbFile) {
-		err := errors.New("Blockchain already exists.\n")
-		return nil, err
-	}
+func CreateBlockchain(address string, consensus Consensus, db storage.LevelDB) (*Blockchain, error) {
+
+	// if storage.DbExists(BlockchainDbFile) {
+	// 	err := errors.New("Database already exists.\n")
+	// 	return nil, err
+	// }
 
 	var tip []byte
 	genesis := NewGenesisBlock(address, consensus)
 
-	db := storage.OpenDatabase(BlockchainDbFile)
-
-	updateDbWithNewBlock(db, genesis)
+	updateDbWithNewBlock(&db, genesis)
 
 	tip, err := db.Get(tipKey)
 	if err != nil {
 		return nil, err
 	}
-	return &Blockchain{tip, db}, nil
+	return &Blockchain{tip, &db}, nil
 }
 
 func GetBlockchain() (*Blockchain, error) {

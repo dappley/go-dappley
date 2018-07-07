@@ -8,6 +8,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/storage"
 )
 
 var sendAmount = int(5)
@@ -35,11 +36,15 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//create a blockchain
 	assert.Equal(t, true, core.ValidateAddress(addr1))
-	bc, err := core.CreateBlockchain(addr1, NewProofOfWork())
+
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	defer db.Close()
+
+	bc, err := core.CreateBlockchain(addr1, NewProofOfWork(), *db)
 	assert.Nil(t, err)
 
 	assert.NotNil(t, bc)
-	defer bc.DB.Close()
+
 
 	//check balance
 	checkBalance(t, addr1, addr2, bc, mineReward, 0)
@@ -75,11 +80,14 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//create a blockchain
 	assert.Equal(t, true, core.ValidateAddress(addr1))
-	bc, err := core.CreateBlockchain(addr1, NewProofOfWork())
+
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	defer db.Close()
+
+	bc, err := core.CreateBlockchain(addr1, NewProofOfWork(),*db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	defer bc.DB.Close()
 
 	//check balance
 	checkBalance(t, addr1, addr2, bc, mineReward, 0)
@@ -113,11 +121,15 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//create a blockchain
 	assert.Equal(t, true, core.ValidateAddress(addr1))
-	bc, err := core.CreateBlockchain(addr1, NewProofOfWork())
+
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	defer db.Close()
+	
+	bc, err := core.CreateBlockchain(addr1, NewProofOfWork(), *db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	defer bc.DB.Close()
+	
 
 	//check balance ; a:10, b:0
 	checkBalance(t, addr1, addr2, bc, mineReward, 0)

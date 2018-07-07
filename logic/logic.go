@@ -20,11 +20,11 @@ package logic
 
 import (
 	"errors"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
+	"github.com/dappley/go-dappley/storage"
 )
 
 var (
@@ -38,12 +38,14 @@ func CreateBlockchain(address string) (*core.Blockchain, error) {
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
+	db := storage.OpenDatabase(core.BlockchainDbFile)
+	defer db.Close()
+	bc, err := core.CreateBlockchain(address, consensus.NewProofOfWork(), *db)
 
-	bc, err := core.CreateBlockchain(address, consensus.NewProofOfWork())
+
 	if err != nil {
 		return nil, err
 	}
-	err = bc.DB.Close()
 	return bc, err
 }
 
