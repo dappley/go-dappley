@@ -10,6 +10,7 @@ import (
 
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
+	"sync"
 )
 
 // CLI responsible for processing command line arguments
@@ -23,6 +24,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  listaddresses")
 	fmt.Println("  printchain")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT")
+	fmt.Println("  exit")
 }
 
 func (cli *CLI) validateArgs() {
@@ -33,10 +35,8 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run(db storage.LevelDB) {
-
+func (cli *CLI) Run(db storage.LevelDB, signal chan bool, waitGroup sync.WaitGroup) {
 	cli.printUsage()
-
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Enter command: ")
@@ -72,6 +72,7 @@ func (cli *CLI) Run(db storage.LevelDB) {
 		case "send":
 			err = sendCmd.Parse(args[1:])
 		case "exit":
+			signal <- true
 			os.Exit(1)
 		default:
 			cli.printUsage()

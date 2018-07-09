@@ -6,6 +6,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"log"
 	"github.com/dappley/go-dappley/consensus"
+	"sync"
 )
 
 func mining(db storage.LevelDB, signal chan bool)  {
@@ -24,9 +25,16 @@ func mining(db storage.LevelDB, signal chan bool)  {
 func main() {
 	cli := CLI{}
 	signal :=make(chan bool)
-	var db = storage.OpenDatabase(core.BlockchainDbFile)
+	var waitGroup sync.WaitGroup
+	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	go mining(*db, signal)
-	cli.Run(*db)
+	waitGroup.Add(1)
+	go func() {
+		mining(*db, signal)
+		waitGroup.Done()
+	}()
+
+	cli.Run(*db, signal, waitGroup)
+	waitGroup.Wait()
 }
