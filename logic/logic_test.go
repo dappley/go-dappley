@@ -29,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/core"
 	"fmt"
+	"time"
 )
 
 const invalidAddress = "Invalid Address"
@@ -373,7 +374,7 @@ func TestProofOfWork_Start(t *testing.T) {
 	assert.NotEmpty(t, addr)
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr)
+	b, err := CreateBlockchain(addr,*databaseInstance)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 

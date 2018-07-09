@@ -39,9 +39,8 @@ func CreateBlockchain(address string, db storage.LevelDB) (*core.Blockchain, err
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
-	db := storage.OpenDatabase(core.BlockchainDbFile)
-	defer db.Close()
-	bc, err := core.CreateBlockchain(address, *db)
+
+	bc, err := core.CreateBlockchain(address, db)
 
 	if err != nil {
 		return nil, err
