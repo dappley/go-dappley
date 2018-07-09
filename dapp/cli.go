@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/storage"
 )
 
 // CLI responsible for processing command line arguments
@@ -32,7 +33,7 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run() {
+func (cli *CLI) Run(db storage.LevelDB) {
 
 	cli.printUsage()
 
@@ -83,7 +84,7 @@ func (cli *CLI) Run() {
 			if *getBalanceAddress == "" {
 				getBalanceCmd.Usage()
 			}
-			balance, err := logic.GetBalance(*getBalanceAddress)
+			balance, err := logic.GetBalance(*getBalanceAddress, db)
 			if err != nil {
 				log.Println(err)
 			}
@@ -96,7 +97,8 @@ func (cli *CLI) Run() {
 			if *createBlockchainAddress == "" {
 				createBlockchainCmd.Usage()
 			}
-			_, err := logic.CreateBlockchain(*createBlockchainAddress)
+
+			_, err := logic.CreateBlockchain(*createBlockchainAddress, db)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -131,7 +133,7 @@ func (cli *CLI) Run() {
 				sendCmd.Usage()
 			}
 
-			if err := logic.Send(*sendFrom, *sendTo, *sendAmount, int64(*tipAmount)); err != nil {
+			if err := logic.Send(*sendFrom, *sendTo, *sendAmount, int64(*tipAmount), db); err != nil {
 				log.Println(err)
 			} else {
 				fmt.Println("Send Successful")
