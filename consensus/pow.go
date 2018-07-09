@@ -28,7 +28,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
 	"container/heap"
-	"github.com/copernet/copernicus/log"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -126,12 +125,12 @@ func (pow *ProofOfWork) Feed(msg string) {
 
 func (pow *ProofOfWork) Start() {
 	for {
-		log.Info("running")
+		fmt.Println("running")
 		select {
 		case msg:= <-pow.messageCh:
-			log.Info(msg)
+			fmt.Println(msg)
 		case <-pow.exitCh:
-			log.Info("quit Pow.")
+			fmt.Println("quit Pow.")
 			return
 		}
 	}
