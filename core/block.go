@@ -38,8 +38,10 @@ type Block struct {
 	transactions []*Transaction
 }
 
+
 func NewBlock(prevHash []byte) *Block {
 	sortedTransactions := []*Transaction{}
+
 	for GetTxnPoolInstance().Len() > 0 {
 		if len(sortedTransactions) < TransactionPoolLimit {
 			var transaction = heap.Pop(GetTxnPoolInstance()).(Transaction)

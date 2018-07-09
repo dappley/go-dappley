@@ -19,6 +19,7 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/core"
+	"container/heap"
 )
 
 type state int
@@ -109,14 +110,14 @@ func (miner *Miner) cleanUp() {
 
 //verify transactions and remove invalid transactions
 func (miner *Miner) verifyTransactions() {
-	//for TransactionPool.Len() > 0 {
-	//
-	//	var txn = heap.Pop(&TransactionPool).(core.Transaction)
-	//
-	//	//if miner.bc.VerifyTransaction(txn) != true {
-	//	//	//Remove transaction from transaction pool if the transaction is not verified
-	//	//	miner.txPool = append(miner.txPool[0:i],miner.txPool[i+1:len(miner.txPool)]...)
-	//	//}
-	//}
-	//}
+	txnPool := core.GetTxnPoolInstance()
+	txnPoolLength := txnPool.Len()
+	for i := 0; i < txnPoolLength; i++ {
+		var txn = heap.Pop(txnPool).(core.Transaction)
+		if miner.bc.VerifyTransaction(txn) == true {
+			//Remove transaction from transaction pool if the transaction is not verified
+			txnPool.Push(txn)
+		}
+	}
+
 }
