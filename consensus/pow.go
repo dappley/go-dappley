@@ -137,7 +137,7 @@ func (pow *ProofOfWork) Start() {
 			fmt.Println(msg)
 		case block := <-pow.chain.BlockPool().BlockReceivedCh():
 			pow.newBlockReceived = true
-			fmt.Println("block recieved: %s",block.GetHash())
+			fmt.Println("block recieved: %h",block.GetHash())
 		case <-pow.exitCh:
 			fmt.Println("quit Pow.")
 			return

@@ -379,10 +379,15 @@ func TestProofOfWork_Start(t *testing.T) {
 	assert.NotNil(t, b)
 
 	pow := consensus.NewProofOfWork(b)
+
 	go pow.Start()
 	for i := 0; i < 3; i++ {
 		pow.Feed(time.Now().String())
 		pow.Feed("test test")
+
+		bk := core.NewBlock([]byte{})
+		bk.SetHash([]byte{123})
+		b.BlockPool().Push(bk)
 		time.Sleep(1 * time.Second)
 	}
 	pow.Stop()
