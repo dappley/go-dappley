@@ -40,12 +40,21 @@ type ProofOfWork struct {
 
 	exitCh chan bool
 	messageCh chan string
+	chain *core.Blockchain
+	newBlockReceived bool
 }
 
-func NewProofOfWork() *ProofOfWork {
+func NewProofOfWork(chain *core.Blockchain) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
-	return &ProofOfWork{target, make(chan bool, 1), make(chan string, 128)}
+
+	p := &ProofOfWork{
+		target: target,
+	    exitCh:	make(chan bool, 1),
+	    messageCh: make(chan string, 128),
+	    chain: chain,
+	}
+	return p
 }
 
 
@@ -129,6 +138,9 @@ func (pow *ProofOfWork) Start() {
 		select {
 		case msg:= <-pow.messageCh:
 			fmt.Println(msg)
+		case block := <-pow.chain.BlockPool().BlockReceivedCh():
+			pow.newBlockReceived = true
+			fmt.Println("block recieved: %s",block.GetHash())
 		case <-pow.exitCh:
 			fmt.Println("quit Pow.")
 			return

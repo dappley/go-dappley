@@ -94,7 +94,7 @@ func (miner *Miner) mine() {
 	}
 	//create a new newBlock with the transaction pool and last hash
 
-	miner.consensus = NewProofOfWork()
+	miner.consensus = NewProofOfWork(miner.bc)
 	miner.newBlock = miner.consensus.ProduceBlock(miner.coinBaseAddr,"",lastHash)
 }
 
