@@ -21,6 +21,7 @@ package consensus
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 func TestProofOfWork_Validate(t *testing.T) {
@@ -33,3 +34,13 @@ func TestProofOfWork_Validate(t *testing.T) {
 	assert.False(t, pow.Validate(blk))
 }
 
+func TestProofOfWork_Start(t *testing.T) {
+	pow := NewProofOfWork()
+	go pow.Start()
+	for i := 0; i < 3; i++ {
+		pow.Feed(time.Now().String())
+		pow.Feed("test test")
+		time.Sleep(1 * time.Second)
+	}
+	pow.Stop()
+}

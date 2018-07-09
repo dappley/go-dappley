@@ -16,5 +16,7 @@ type Hash []byte
 type Consensus interface{
 	ProduceBlock(string, string, []byte) *Block
 	Validate(*Block) bool
+	Start()
+	Stop()
 }
 

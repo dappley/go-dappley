@@ -28,6 +28,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
 	"container/heap"
+	"github.com/copernet/copernicus/log"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -38,12 +39,14 @@ type ProofOfWork struct {
 
 	target 		*big.Int
 
+	exitCh chan bool
+	messageCh chan string
 }
 
 func NewProofOfWork() *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
-	return &ProofOfWork{target}
+	return &ProofOfWork{target, make(chan bool, 1), make(chan string, 128)}
 }
 
 
@@ -112,3 +115,25 @@ func (pow *ProofOfWork) Validate(blk *core.Block) bool {
 
 	return isValid
 }
+
+func (pow *ProofOfWork) Stop() {
+	pow.exitCh <- true
+}
+
+func (pow *ProofOfWork) Feed(msg string) {
+	pow.messageCh <- msg
+}
+
+func (pow *ProofOfWork) Start() {
+	for {
+		log.Info("running")
+		select {
+		case msg:= <-pow.messageCh:
+			log.Info(msg)
+		case <-pow.exitCh:
+			log.Info("quit Pow.")
+			return
+		}
+	}
+}
+
