@@ -33,14 +33,13 @@ var (
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
 )
 
+
 //create a blockchain
-func CreateBlockchain(address string) (*core.Blockchain, error) {
+func CreateBlockchain(address string, db storage.LevelDB) (*core.Blockchain, error) {
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
-	db := storage.OpenDatabase(core.BlockchainDbFile)
-	defer db.Close()
-	bc, err := core.CreateBlockchain(address, consensus.NewProofOfWork(), *db)
+	bc, err := core.CreateBlockchain(address, consensus.NewProofOfWork(), db)
 
 	if err != nil {
 		return nil, err
@@ -58,17 +57,16 @@ func CreateWallet() (string, error) {
 }
 
 //get balance
-func GetBalance(address string) (int, error) {
+func GetBalance(address string, db storage.LevelDB) (int, error) {
 	if !core.ValidateAddress(address) {
 		return 0, ErrInvalidAddress
 	}
 	//inject db here
-	db := storage.OpenDatabase(core.BlockchainDbFile)
-	bc, err := core.GetBlockchain(*db)
+
+	bc, err := core.GetBlockchain(db)
 	if err != nil {
 		return 0, err
 	}
-	defer bc.DB.Close()
 
 	balance := 0
 	pubKeyHash := util.Base58Decode([]byte(address))
@@ -96,19 +94,18 @@ func GetAllAddresses() ([]string, error) {
 	return addresses, err
 }
 
-func Send(from, to string, amount int, tip int64) error {
+func Send(from, to string, amount int, tip int64, db storage.LevelDB) error {
 	if !core.ValidateAddress(from) {
 		return ErrInvalidSenderAddress
 	}
 	if !core.ValidateAddress(to) {
 		return ErrInvalidRcverAddress
 	}
-	db := storage.OpenDatabase(core.BlockchainDbFile)
-	bc, err := core.GetBlockchain(*db)
+
+	bc, err := core.GetBlockchain(db)
 	if err != nil {
 		return err
 	}
-	defer bc.DB.Close()
 
 	wallets, err := client.NewWallets()
 	if err != nil {

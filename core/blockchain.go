@@ -40,14 +40,12 @@ func CreateBlockchain(address string, consensus Consensus, db storage.LevelDB) (
 }
 
 func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
-	if storage.DbExists(BlockchainDbFile) == false {
-		err := errors.New("No existing blockchain found. Create one first.\n")
-		return nil, err
-	}
 
+	//if storage.DbExists(BlockchainDbFile) == false {
+	//	err := errors.New("Designated database file not found.\n")
+	//	return nil, err
+	//}
 	var tip []byte
-
-
 
 	tip, err := db.Get(tipKey)
 	if err != nil {

@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"fmt"
 )
 
 var (
@@ -49,6 +50,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 }
 
 func (ldb *LevelDB) Close() error {
+	fmt.Println("closing database")
 	return ldb.db.Close()
 }
 
