@@ -52,11 +52,6 @@ func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus
 
 //start mining
 func (miner *Miner) Start() {
-	miner.run()
-}
-
-//start the state machine
-func (miner *Miner) run() {
 
 Loop:
 	for {
@@ -74,6 +69,34 @@ Loop:
 		case cleanUpState:
 			miner.cleanUp()
 			break Loop
+		}
+	}
+}
+
+//start mining
+func (pd *Miner) StartMining(signal chan bool) {
+Loop:
+	for {
+		select {
+		case stop := <-signal:
+			if stop {
+				break Loop
+			}
+		default:
+			switch pd.nextState {
+			case prepareTxPoolState:
+				pd.prepareTxPool()
+				pd.nextState = mineState
+			case mineState:
+				pd.mine()
+				pd.nextState = updateNewBlock
+			case updateNewBlock:
+				pd.updateNewBlock()
+				pd.nextState = cleanUpState
+			case cleanUpState:
+				pd.cleanUp()
+				pd.nextState = prepareTxPoolState
+			}
 		}
 	}
 }

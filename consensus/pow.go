@@ -90,11 +90,9 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 	blk := core.NewBlock(prevHash)
 
 	//find the nonce value
-	fmt.Println("Mining a new block")
 	for nonce < maxNonce {
 		data := prepareData(nonce, blk)
 		hash = sha256.Sum256(data)
-		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {
@@ -103,7 +101,6 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 
 		nonce++
 	}
-	fmt.Print("\n\n")
 
 	//complete the block
 	blk.SetHash(hash[:])
