@@ -17,10 +17,11 @@ var tipKey = []byte("1")
 type Blockchain struct {
 	currentHash []byte
 	DB          *storage.LevelDB
+	blockPool *BlockPool
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string, consensus Consensus, db storage.LevelDB) (*Blockchain, error) {
+func CreateBlockchain(address string, db storage.LevelDB) (*Blockchain, error) {
 
 	// if storage.DbExists(BlockchainDbFile) {
 	// 	err := errors.New("Database already exists.\n")
@@ -28,7 +29,7 @@ func CreateBlockchain(address string, consensus Consensus, db storage.LevelDB) (
 	// }
 
 	var tip []byte
-	genesis := NewGenesisBlock(address, consensus)
+	genesis := NewGenesisBlock(address)
 
 	updateDbWithNewBlock(&db, genesis)
 
@@ -36,7 +37,8 @@ func CreateBlockchain(address string, consensus Consensus, db storage.LevelDB) (
 	if err != nil {
 		return nil, err
 	}
-	return &Blockchain{tip, &db}, nil
+	blockPool := NewBlockPool(10)
+	return &Blockchain{tip, &db,blockPool}, nil
 }
 
 func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
@@ -52,7 +54,9 @@ func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
 		return nil, err
 	}
 
-	return &Blockchain{tip, &db}, nil
+	blockPool := NewBlockPool(10)
+
+	return &Blockchain{tip, &db,blockPool}, nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
@@ -66,6 +70,9 @@ func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) {
 
 	db.Put(tipKey, newBlock.GetHash())
 
+}
+func (bc *Blockchain) BlockPool() *BlockPool {
+	return bc.blockPool
 }
 
 func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
@@ -217,7 +224,9 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.currentHash, bc.DB}
+	blockPool := NewBlockPool(10)
+
+	return &Blockchain{bc.currentHash, bc.DB,blockPool}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

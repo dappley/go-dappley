@@ -16,37 +16,25 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package consensus
+package core
 
-/*
-
-
-func TestProofOfWork_Validate(t *testing.T) {
-	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
-
-	//create a blockchain
-	b, err := CreateBlockchain(addr)
-
-	pow := NewProofOfWork()
-	blk := pow.ProduceBlock(cbAddr, "", []byte{})
-	//hash :=blk.GetHash()
-	assert.True(t,pow.Validate(blk))
-	blk.SetNonce(blk.GetNonce()+1)
-	assert.False(t, pow.Validate(blk))
+type BlockPool struct{
+	blockReceivedCh chan *Block
+	size int
 }
 
-func TestProofOfWork_Start(t *testing.T) {
-	pow := NewProofOfWork()
-	go pow.Start()
-	for i := 0; i < 3; i++ {
-		pow.Feed(time.Now().String())
-		pow.Feed("test test")
-		time.Sleep(1 * time.Second)
+func NewBlockPool(size int) (*BlockPool){
+	pool := &BlockPool{
+		size: size,
+		blockReceivedCh: make(chan *Block, size),
 	}
-	pow.Stop()
+	return pool
 }
 
+func (pool *BlockPool) BlockReceivedCh() chan *Block {
+	return pool.blockReceivedCh
+}
 
-*/
+func (pool *BlockPool) Push(block *Block){
+	pool.blockReceivedCh <- block
+}

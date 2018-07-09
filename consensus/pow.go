@@ -40,12 +40,21 @@ type ProofOfWork struct {
 
 	exitCh chan bool
 	messageCh chan string
+	chain *core.Blockchain
+	newBlockReceived bool
 }
 
-func NewProofOfWork() *ProofOfWork {
+func NewProofOfWork(chain *core.Blockchain) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
-	return &ProofOfWork{target, make(chan bool, 1), make(chan string, 128)}
+
+	p := &ProofOfWork{
+		target: target,
+	    exitCh:	make(chan bool, 1),
+	    messageCh: make(chan string, 128),
+	    chain: chain,
+	}
+	return p
 }
 
 
@@ -81,11 +90,9 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 	blk := core.NewBlock(prevHash)
 
 	//find the nonce value
-	fmt.Println("Mining a new block")
 	for nonce < maxNonce {
 		data := prepareData(nonce, blk)
 		hash = sha256.Sum256(data)
-		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {
@@ -94,7 +101,6 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 
 		nonce++
 	}
-	fmt.Print("\n\n")
 
 	//complete the block
 	blk.SetHash(hash[:])
@@ -129,6 +135,9 @@ func (pow *ProofOfWork) Start() {
 		select {
 		case msg:= <-pow.messageCh:
 			fmt.Println(msg)
+		case block := <-pow.chain.BlockPool().BlockReceivedCh():
+			pow.newBlockReceived = true
+			fmt.Println("block recieved: %h",block.GetHash())
 		case <-pow.exitCh:
 			fmt.Println("quit Pow.")
 			return

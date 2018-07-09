@@ -25,9 +25,11 @@ import (
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/core"
 	"fmt"
+	"time"
 )
 
 const invalidAddress = "Invalid Address"
@@ -360,6 +362,35 @@ func TestSendInsufficientBalance(t *testing.T) {
 
 	//teardown :clean up database amd files
 	teardown()
+}
+
+
+func TestProofOfWork_Start(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+
+	//create a wallet address
+	addr, err := CreateWallet()
+	assert.NotEmpty(t, addr)
+
+	//create a blockchain
+	b, err := CreateBlockchain(addr,*databaseInstance)
+	assert.Nil(t, err)
+	assert.NotNil(t, b)
+
+	pow := consensus.NewProofOfWork(b)
+
+	go pow.Start()
+	for i := 0; i < 3; i++ {
+		pow.Feed(time.Now().String())
+		pow.Feed("test test")
+
+		bk := core.NewBlock([]byte{})
+		bk.SetHash([]byte{123})
+		b.BlockPool().Push(bk)
+		time.Sleep(1 * time.Second)
+	}
+	pow.Stop()
 }
 
 func setup() {

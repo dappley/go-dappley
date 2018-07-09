@@ -39,7 +39,8 @@ func CreateBlockchain(address string, db storage.LevelDB) (*core.Blockchain, err
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
-	bc, err := core.CreateBlockchain(address, consensus.NewProofOfWork(), db)
+
+	bc, err := core.CreateBlockchain(address, db)
 
 	if err != nil {
 		return nil, err
@@ -120,7 +121,7 @@ func Send(from, to string, amount int, tip int64, db storage.LevelDB) error {
 	core.GetTxnPoolInstance().Push(tx)
 
 	//TODO: miner should be separated from the sender
-	miner := consensus.NewMiner(bc, from, consensus.NewProofOfWork())
+	miner := consensus.NewMiner(bc, from, consensus.NewProofOfWork(bc))
 	miner.Start()
 	return err
 }
