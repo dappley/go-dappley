@@ -13,8 +13,9 @@ import (
 	"log"
 	"math/big"
 	"strings"
-	"github.com/gogo/protobuf/proto"
+
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/gogo/protobuf/proto"
 )
 
 const subsidy = 10
@@ -166,7 +167,7 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(from, to string, amount int, keypair Address, bc *Blockchain, tip int64) (Transaction, error) {
+func NewUTXOTransaction(from, to string, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
@@ -230,44 +231,43 @@ func (tx Transaction) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (tx *Transaction) ToProto() proto.Message{
+func (tx *Transaction) ToProto() proto.Message {
 
 	vinArray := []*corepb.TXInput{}
-	for _,txin := range tx.Vin{
+	for _, txin := range tx.Vin {
 		vinArray = append(vinArray, txin.ToProto().(*corepb.TXInput))
 	}
 
 	voutArray := []*corepb.TXOutput{}
-	for _,txout := range tx.Vout{
+	for _, txout := range tx.Vout {
 		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
 	}
 
 	return &corepb.Transaction{
-		ID: 		tx.ID,
-		Vin:		vinArray,
-		Vout:		voutArray,
-		Tip:		tx.Tip,
+		ID:   tx.ID,
+		Vin:  vinArray,
+		Vout: voutArray,
+		Tip:  tx.Tip,
 	}
 }
 
-func (tx *Transaction) FromProto(pb proto.Message){
+func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*corepb.Transaction).ID
 	tx.Tip = pb.(*corepb.Transaction).Tip
 
 	vinArray := []TXInput{}
 	txin := TXInput{}
-	for _,txinpb := range pb.(*corepb.Transaction).Vin{
+	for _, txinpb := range pb.(*corepb.Transaction).Vin {
 		txin.FromProto(txinpb)
-		vinArray = append(vinArray,txin)
+		vinArray = append(vinArray, txin)
 	}
 	tx.Vin = vinArray
 
 	voutArray := []TXOutput{}
 	txout := TXOutput{}
-	for _,txoutpb := range pb.(*corepb.Transaction).Vout{
+	for _, txoutpb := range pb.(*corepb.Transaction).Vout {
 		txout.FromProto(txoutpb)
-		voutArray = append(voutArray,txout)
+		voutArray = append(voutArray, txout)
 	}
 	tx.Vout = voutArray
 }
-

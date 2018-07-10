@@ -16,12 +16,12 @@ import (
 const WalletFile = "../bin/client.dat"
 
 type Wallets struct {
-	Wallets map[string]*core.Address
+	Wallets map[string]*core.KeyPair
 }
 
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
-	wallets.Wallets = make(map[string]*core.Address)
+	wallets.Wallets = make(map[string]*core.KeyPair)
 
 	err := wallets.LoadFromFile()
 
@@ -70,7 +70,7 @@ func (ws *Wallets) GetAddresses() []string {
 	return addresses
 }
 
-func (ws Wallets) GetWallet(address string) core.Address {
+func (ws Wallets) GetWallet(address string) core.KeyPair {
 	return *ws.Wallets[address]
 }
 

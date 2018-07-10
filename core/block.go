@@ -24,8 +24,9 @@ import (
 	"encoding/gob"
 	"log"
 	"time"
-	"github.com/gogo/protobuf/proto"
+
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/gogo/protobuf/proto"
 )
 
 type BlockHeader struct {
@@ -39,7 +40,6 @@ type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
 }
-
 
 func NewBlock(prevHash []byte) *Block {
 	sortedTransactions := []*Transaction{}
@@ -141,20 +141,20 @@ func (b *Block) GetTransactions() []*Transaction {
 	return b.transactions
 }
 
-func (b *Block) ToProto() proto.Message{
+func (b *Block) ToProto() proto.Message {
 
 	txArray := []*corepb.Transaction{}
-	for _,tx := range b.transactions {
-		txArray = append(txArray,tx.ToProto().(*corepb.Transaction))
+	for _, tx := range b.transactions {
+		txArray = append(txArray, tx.ToProto().(*corepb.Transaction))
 	}
 
 	return &corepb.Block{
-		Header:			b.header.ToProto().(*corepb.BlockHeader),
-		Transactions:	txArray,
+		Header:       b.header.ToProto().(*corepb.BlockHeader),
+		Transactions: txArray,
 	}
 }
 
-func (b *Block) FromProto(pb proto.Message){
+func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
 	bh.FromProto(pb.(*corepb.Block).Header)
@@ -162,23 +162,23 @@ func (b *Block) FromProto(pb proto.Message){
 
 	txs := []*Transaction{}
 	tx := &Transaction{}
-	for _,txpb := range pb.(*corepb.Block).Transactions{
+	for _, txpb := range pb.(*corepb.Block).Transactions {
 		tx.FromProto(txpb)
-		txs = append(txs,tx)
+		txs = append(txs, tx)
 	}
 	b.transactions = txs
 }
 
-func (bh *BlockHeader) ToProto() proto.Message{
+func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
-		Hash:		bh.hash,
-		Prevhash:	bh.prevHash,
-		Nonce:		bh.nonce,
-		Timestamp:	bh.timestamp,
+		Hash:      bh.hash,
+		Prevhash:  bh.prevHash,
+		Nonce:     bh.nonce,
+		Timestamp: bh.timestamp,
 	}
 }
 
-func (bh *BlockHeader) FromProto(pb proto.Message){
+func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.hash = pb.(*corepb.BlockHeader).Hash
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
