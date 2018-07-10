@@ -20,10 +20,11 @@ package logic
 
 import (
 	"errors"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 )
 
 var (
@@ -31,7 +32,6 @@ var (
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
 )
-
 
 //create a blockchain
 func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, error) {
@@ -50,10 +50,11 @@ func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, err
 //create a wallet
 func CreateWallet() (string, error) {
 	wallets, err := client.NewWallets()
-	address := wallets.CreateWallet()
+	wallet := client.NewWallet()
+	wallets.AddWallet(wallet)
 	wallets.SaveToFile()
 
-	return address, err
+	return wallet.GetAddress()[0], err
 }
 
 //get balance
@@ -124,12 +125,12 @@ func Send(from, to string, amount int, tip int64, db storage.Storage) error {
 
 //delete wallet
 
-func DeleteWallet(address string) error {
+func DeleteWallet(key *core.KeyPair) error {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return err
 	}
-	err = wallets.DeleteWallet(address)
+	err = wallets.DeleteWallet(key)
 	if err != nil {
 		return err
 	}
