@@ -11,8 +11,6 @@
 //
 package storage
 
-type Hash []byte
-
 type Storage interface {
 	Close() error
 
