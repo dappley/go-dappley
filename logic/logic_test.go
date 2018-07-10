@@ -157,53 +157,63 @@ func TestGetAllAddresses(t *testing.T) {
 }
 
 //test send
-//func TestSend(t *testing.T) {
-//	//setup: clean up database and files
-//	setup()
-//	mineAward := int(10)
-//	transferAmount := int(5)
-//	tip := int64(5)
-//	//create a wallet address
-//	addr1, err := CreateWallet()
-//	assert.NotEmpty(t, addr1)
-//
-//
-//	//create a blockchain
-//	b, err := CreateBlockchain(addr1,databaseInstance)
-//	assert.Nil(t, err)
-//	assert.NotNil(t, b)
-//
-//	//The balance1 should be 10 after creating a blockchain
-//	balance1, err := GetBalance(addr1,databaseInstance)
-//	assert.Nil(t, err)
-//	assert.Equal(t, mineAward, balance1)
-//	fmt.Println(balance1)
-//	//Create a second wallet
-//	addr2, err := CreateWallet()
-//	assert.NotEmpty(t, addr2)
-//	assert.Nil(t, err)
-//
-//	//The balance1 should be 0
-//	balance2, err := GetBalance(addr2,databaseInstance)
-//	assert.Nil(t, err)
-//	assert.Equal(t, balance2, 0)
-//
-//	//Send 5 coins from addr1 to addr2
-//	err = Send(addr1, addr2, transferAmount, tip,databaseInstance)
-//	assert.Nil(t, err)
-//	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineAward
-//	balance1, err = GetBalance(addr1,databaseInstance)
-//	assert.Nil(t, err)
-//	assert.Equal(t, 2*mineAward-transferAmount, balance1)
-//
-//	//the balance1 of the second wallet should be 5
-//	balance2, err = GetBalance(addr2,databaseInstance)
-//	assert.Nil(t, err)
-//	assert.Equal(t, transferAmount, balance2)
-//
-//	//teardown :clean up database amd files
-//	teardown()
-//}
+func TestSend(t *testing.T) {
+	//setup: clean up database and files
+	setup()
+	mineAward := int(10)
+	transferAmount := int(5)
+	tip := int64(5)
+	//create a wallet address
+	addr1, err := CreateWallet()
+	assert.NotEmpty(t, addr1)
+
+
+	//create a blockchain
+	b, err := CreateBlockchain(addr1,databaseInstance)
+	assert.Nil(t, err)
+	assert.NotNil(t, b)
+
+	//The balance1 should be 10 after creating a blockchain
+	balance1, err := GetBalance(addr1,databaseInstance)
+	assert.Nil(t, err)
+	assert.Equal(t, mineAward, balance1)
+	fmt.Println(balance1)
+	//Create a second wallet
+	addr2, err := CreateWallet()
+	assert.NotEmpty(t, addr2)
+	assert.Nil(t, err)
+	//
+	//The balance1 should be 0
+	balance2, err := GetBalance(addr2,databaseInstance)
+	assert.Nil(t, err)
+	assert.Equal(t, balance2, 0)
+
+
+
+	//Send 5 coins from addr1 to addr2
+	err = Send(addr1, addr2, transferAmount, tip,databaseInstance)
+	miner := consensus.NewMiner(b, addr1, consensus.NewProofOfWork(b))
+	go miner.Start()
+	for i := 0; i < 3; i++ {
+		miner.Feed(time.Now().String())
+		time.Sleep(1 * time.Second)
+	}
+	assert.Nil(t, err)
+	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineAward
+	balance1, err = GetBalance(addr1,databaseInstance)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 2*mineAward-transferAmount, balance1)
+
+	//the balance1 of the second wallet should be 5
+	balance2, err = GetBalance(addr2,databaseInstance)
+	assert.Nil(t, err)
+	assert.Equal(t, transferAmount, balance2)
+
+	miner.Stop()
+	//teardown :clean up database amd files
+	teardown()
+}
 
 func TestDeleteWallets(t *testing.T) {
 	//setup: clean up database and files

@@ -21,7 +21,6 @@ package logic
 import (
 	"errors"
 	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/storage"
@@ -120,9 +119,6 @@ func Send(from, to string, amount int, tip int64, db storage.Storage) error {
 	}
 	core.GetTxnPoolInstance().Push(tx)
 
-	//TODO: miner should be separated from the sender
-	miner := consensus.NewMiner(bc, from, consensus.NewProofOfWork(bc))
-	miner.Start()
 	return err
 }
 
