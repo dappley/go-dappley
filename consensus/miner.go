@@ -72,9 +72,6 @@ func (miner *Miner) Feed(msg string) {
 	miner.messageCh <- msg
 }
 
-func (miner *Miner) FeedBlock(blk *core.Block) {
-	miner.bc.BlockPool().Push(blk)
-}
 
 func (miner *Miner) stateLoop() {
 
@@ -105,8 +102,6 @@ func (miner *Miner) messageLoop() {
 			fmt.Println(msg)
 		case block := <-miner.bc.BlockPool().BlockReceivedCh():
 			miner.newBlockReceived = true
-			miner.newBlock = block
-			miner.nextState = updateNewBlock
 			fmt.Println("block recieved: %h",block.GetHash())
 		case <-miner.exitCh:
 			fmt.Println("quit Pow.")

@@ -107,17 +107,6 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
 	}
-	//get the hash of last newBlock
-	lastHash, err := miner.bc.GetLastHash()
-	miner.consensus = NewProofOfWork(miner.bc)
-	wallet := wallets.GetWallet(addr1)
-	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
-	core.GetTxnPoolInstance().Push(tx)
-	nb := miner.consensus.ProduceBlock(miner.coinBaseAddr, "", lastHash)
-	miner.FeedBlock(nb)
-	for i := 0; i < 3; i++ {
-		time.Sleep(1 * time.Second)
-	}
 	miner.Stop()
 	checkBalance(t, addr1, addr2, bc, mineReward*2, 0)
 
