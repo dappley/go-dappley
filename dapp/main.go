@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-func mining(db storage.LevelDB, signal chan bool)  {
+func mining(db storage.Storage, signal chan bool)  {
 	walletAddr, err := logic.CreateWallet()
 	if err != nil {
 		log.Panic(err)
@@ -31,10 +31,10 @@ func main() {
 
 	waitGroup.Add(1)
 	go func() {
-		mining(*db, signal)
+		mining(db, signal)
 		waitGroup.Done()
 	}()
 
-	cli.Run(*db, signal, waitGroup)
+	cli.Run(db, signal, waitGroup)
 	waitGroup.Wait()
 }

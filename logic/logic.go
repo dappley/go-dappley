@@ -35,7 +35,7 @@ var (
 
 
 //create a blockchain
-func CreateBlockchain(address string, db storage.LevelDB) (*core.Blockchain, error) {
+func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, error) {
 	if !core.ValidateAddress(address) {
 		return nil, ErrInvalidAddress
 	}
@@ -58,7 +58,7 @@ func CreateWallet() (string, error) {
 }
 
 //get balance
-func GetBalance(address string, db storage.LevelDB) (int, error) {
+func GetBalance(address string, db storage.Storage) (int, error) {
 	if !core.ValidateAddress(address) {
 		return 0, ErrInvalidAddress
 	}
@@ -95,7 +95,7 @@ func GetAllAddresses() ([]string, error) {
 	return addresses, err
 }
 
-func Send(from, to string, amount int, tip int64, db storage.LevelDB) error {
+func Send(from, to string, amount int, tip int64, db storage.Storage) error {
 	if !core.ValidateAddress(from) {
 		return ErrInvalidSenderAddress
 	}

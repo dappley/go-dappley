@@ -35,7 +35,7 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run(db storage.LevelDB, signal chan bool, waitGroup sync.WaitGroup) {
+func (cli *CLI) Run(db storage.Storage, signal chan bool, waitGroup sync.WaitGroup) {
 	cli.printUsage()
 	for {
 		reader := bufio.NewReader(os.Stdin)

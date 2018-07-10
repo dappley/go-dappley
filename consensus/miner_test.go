@@ -41,7 +41,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1, *db)
+	bc, err := core.CreateBlockchain(addr1, db)
 	assert.Nil(t, err)
 
 	assert.NotNil(t, bc)
@@ -91,7 +91,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1,*db)
+	bc, err := core.CreateBlockchain(addr1,db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -136,7 +136,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 	
-	bc, err := core.CreateBlockchain(addr1, *db)
+	bc, err := core.CreateBlockchain(addr1, db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 

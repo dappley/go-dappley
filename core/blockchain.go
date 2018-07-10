@@ -16,12 +16,12 @@ var tipKey = []byte("1")
 
 type Blockchain struct {
 	currentHash []byte
-	DB          *storage.LevelDB
+	DB          storage.Storage
 	blockPool *BlockPool
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string, db storage.LevelDB) (*Blockchain, error) {
+func CreateBlockchain(address string, db storage.Storage) (*Blockchain, error) {
 
 	// if storage.DbExists(BlockchainDbFile) {
 	// 	err := errors.New("Database already exists.\n")
@@ -31,17 +31,17 @@ func CreateBlockchain(address string, db storage.LevelDB) (*Blockchain, error) {
 	var tip []byte
 	genesis := NewGenesisBlock(address)
 
-	updateDbWithNewBlock(&db, genesis)
+	updateDbWithNewBlock(db, genesis)
 
 	tip, err := db.Get(tipKey)
 	if err != nil {
 		return nil, err
 	}
 	blockPool := NewBlockPool(10)
-	return &Blockchain{tip, &db,blockPool}, nil
+	return &Blockchain{tip, db,blockPool}, nil
 }
 
-func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 
 	//if storage.DbExists(BlockchainDbFile) == false {
 	//	err := errors.New("Designated database file not found.\n")
@@ -56,7 +56,7 @@ func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
 
 	blockPool := NewBlockPool(10)
 
-	return &Blockchain{tip, &db,blockPool}, nil
+	return &Blockchain{tip, db,blockPool}, nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
@@ -65,7 +65,7 @@ func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 }
 
 //record the new block in the database
-func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) {
+func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(newBlock.GetHash(), newBlock.Serialize())
 
 	db.Put(tipKey, newBlock.GetHash())
