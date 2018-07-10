@@ -24,6 +24,8 @@ import (
 	"encoding/gob"
 	"log"
 	"time"
+	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/core/pb"
 )
 
 type BlockHeader struct {
@@ -137,4 +139,48 @@ func (b *Block) GetTimestamp() int64 {
 
 func (b *Block) GetTransactions() []*Transaction {
 	return b.transactions
+}
+
+func (b *Block) ToProto() proto.Message{
+
+	txArray := []*corepb.Transaction{}
+	for _,tx := range b.transactions {
+		txArray = append(txArray,tx.ToProto().(*corepb.Transaction))
+	}
+
+	return &corepb.Block{
+		Header:			b.header.ToProto().(*corepb.BlockHeader),
+		Transactions:	txArray,
+	}
+}
+
+func (b *Block) FromProto(pb proto.Message){
+
+	bh := BlockHeader{}
+	bh.FromProto(pb.(*corepb.Block).Header)
+	b.header = &bh
+
+	txs := []*Transaction{}
+	tx := &Transaction{}
+	for _,txpb := range pb.(*corepb.Block).Transactions{
+		tx.FromProto(txpb)
+		txs = append(txs,tx)
+	}
+	b.transactions = txs
+}
+
+func (bh *BlockHeader) ToProto() proto.Message{
+	return &corepb.BlockHeader{
+		Hash:		bh.hash,
+		Prevhash:	bh.prevHash,
+		Nonce:		bh.nonce,
+		Timestamp:	bh.timestamp,
+	}
+}
+
+func (bh *BlockHeader) FromProto(pb proto.Message){
+	bh.hash = pb.(*corepb.BlockHeader).Hash
+	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
+	bh.nonce = pb.(*corepb.BlockHeader).Nonce
+	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
 }

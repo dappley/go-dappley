@@ -7,6 +7,8 @@ import (
 
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/gogo/protobuf/proto"
 )
 
 func getAoB(length int64) []byte {
@@ -74,4 +76,26 @@ func TestTranstionHeapOperations(t *testing.T) {
 	}
 	assert.Equal(t, 0, h.Len())
 
+}
+
+func TestTransaction_Proto(t *testing.T) {
+	t1 := Transaction{
+		ID:   util.GenerateRandomAoB(1),
+		Vin:  generateFakeTxInputs(),
+		Vout: generateFakeTxOutputs(),
+		Tip:  5,
+	}
+
+	pb := t1.ToProto()
+	mpb,err := proto.Marshal(pb)
+	assert.Nil(t, err)
+
+	newpb := &corepb.Transaction{}
+	err = proto.Unmarshal(mpb, newpb)
+	assert.Nil(t, err)
+
+	t2 := Transaction{}
+	t2.FromProto(newpb)
+
+	assert.Equal(t,t1,t2)
 }
