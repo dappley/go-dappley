@@ -20,6 +20,7 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core"
 	"container/heap"
+	"fmt"
 )
 
 type state int
@@ -32,27 +33,47 @@ const (
 )
 
 type Miner struct {
-	bc           	*core.Blockchain
-	newBlock     	*core.Block
-	coinBaseAddr 	string
-	nextState    	state
-	consensus		core.Consensus
+	bc           *core.Blockchain
+	newBlock     *core.Block
+	coinBaseAddr string
+	nextState    state
+	consensus    core.Consensus
+
+	exitCh           chan bool
+	messageCh        chan string
+	newBlockReceived bool
 }
 
 //create a new instance
 func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus) *Miner {
 
 	return &Miner{
-		bc,
-		nil,
-		coinBaseAddr,
-		prepareTxPoolState,
-		consensus,
+		bc:           bc,
+		newBlock:     nil,
+		coinBaseAddr: coinBaseAddr,
+		nextState:    prepareTxPoolState,
+		consensus:    consensus,
+		exitCh:       make(chan bool, 1),
+		messageCh:    make(chan string, 128),
 	}
 }
 
 //start mining
 func (miner *Miner) Start() {
+	miner.stateLoop()
+	miner.messageLoop()
+}
+
+func (miner *Miner) Stop() {
+	miner.exitCh <- true
+}
+
+func (miner *Miner) Feed(msg string) {
+	miner.messageCh <- msg
+}
+
+
+func (miner *Miner) stateLoop() {
 
 Loop:
 	for {
@@ -73,7 +94,21 @@ Loop:
 		}
 	}
 }
-
+func (miner *Miner) messageLoop() {
+	for {
+		fmt.Println("running")
+		select {
+		case msg:= <-miner.messageCh:
+			fmt.Println(msg)
+		case block := <-miner.bc.BlockPool().BlockReceivedCh():
+			miner.newBlockReceived = true
+			fmt.Println("block recieved: %h",block.GetHash())
+		case <-miner.exitCh:
+			fmt.Println("quit Pow.")
+			return
+		}
+	}
+}
 //start mining
 func (pd *Miner) StartMining(signal chan bool) {
 Loop:
@@ -119,7 +154,7 @@ func (miner *Miner) mine() {
 	//create a new newBlock with the transaction pool and last hash
 
 	miner.consensus = NewProofOfWork(miner.bc)
-	miner.newBlock = miner.consensus.ProduceBlock(miner.coinBaseAddr,"",lastHash)
+	miner.newBlock = miner.consensus.ProduceBlock(miner.coinBaseAddr, "", lastHash)
 }
 
 //update the blockchain with the new block

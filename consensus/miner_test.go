@@ -9,6 +9,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/storage"
+	"time"
 )
 
 var sendAmount = int(5)
@@ -56,7 +57,13 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	miner := NewMiner(bc, addr1, NewProofOfWork(bc))
-	miner.Start()
+	go miner.Start()
+	for i := 0; i < 3; i++ {
+		miner.Feed(time.Now().String())
+		miner.Feed("test test")
+		time.Sleep(1 * time.Second)
+	}
+	miner.Stop()
 
 	checkBalance(t, addr1, addr2, bc, mineReward*2-sendAmount, sendAmount)
 
@@ -95,8 +102,12 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	//create 2 transactions and start mining
 
 	miner := NewMiner(bc, addr1, NewProofOfWork(bc))
-	miner.Start()
-
+	go miner.Start()
+	for i := 0; i < 1; i++ {
+		miner.Feed(time.Now().String())
+		time.Sleep(1 * time.Second)
+	}
+	miner.Stop()
 	checkBalance(t, addr1, addr2, bc, mineReward*2, 0)
 
 	teardown()
@@ -143,7 +154,12 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	miner := NewMiner(bc, addr1, NewProofOfWork(bc))
-	miner.Start()
+	go miner.Start()
+	for i := 0; i < 2; i++ {
+		miner.Feed(time.Now().String())
+		time.Sleep(1 * time.Second)
+	}
+	miner.Stop()
 	checkBalance(t, addr1, addr2, bc, mineReward*3-sendAmount*2, sendAmount*2)
 
 	teardown()
