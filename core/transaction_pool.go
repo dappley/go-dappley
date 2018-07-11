@@ -37,11 +37,6 @@ func GetTxnPoolInstance() *TransactionPool {
 	return instance
 }
 
-func ModifyTxnPoolInstance(pool *TransactionPool) *TransactionPool {
-	instance = pool
-	return instance
-}
-
 func (pool *TransactionPool) GetSortedTransactions() []*Transaction{
 	sortedTransactions := []*Transaction{}
 
