@@ -11,10 +11,12 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"sync"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/core"
 )
 
 // CLI responsible for processing command line arguments
 type CLI struct{}
+
 
 func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
@@ -26,6 +28,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT")
 	fmt.Println("  setListeningPort -port PORT")
 	fmt.Println("  addPeer -address FULLADDRESS")
+	fmt.Println("  sendMockBlock")
 	fmt.Println("  exit")
 }
 
@@ -55,6 +58,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 		nodeSetPortCmd := flag.NewFlagSet("setListeningPort", flag.ExitOnError)
 		addPeerCmd := flag.NewFlagSet("addPeer",flag.ExitOnError)
+		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock",flag.ExitOnError)
 
 		getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
 		createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
@@ -83,6 +87,8 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 			err = nodeSetPortCmd.Parse(args[1:])
 		case "addPeer":
 			err = addPeerCmd.Parse(args[1:])
+		case "sendMockBlock":
+			err = sendMockBlockCmd.Parse(args[1:])
 		case "exit":
 			signal <- true
 			os.Exit(1)
@@ -106,6 +112,11 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 				addPeerCmd.Usage()
 			}
 			node.AddStreamString(*peerAddr)
+		}
+
+		if sendMockBlockCmd.Parsed() {
+			b := core.GenerateMockBlock()
+			node.SendBlock(b)
 		}
 
 		if getBalanceCmd.Parsed() {
