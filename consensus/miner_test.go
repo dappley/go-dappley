@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/storage"
 	"time"
+	"fmt"
 )
 
 var sendAmount = int(5)
@@ -108,6 +109,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
+	fmt.Println(bc)
 	checkBalance(t, addr1, addr2, bc, mineReward*2, 0)
 
 	teardown()

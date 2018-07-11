@@ -131,7 +131,6 @@ func (pow *ProofOfWork) Feed(msg string) {
 
 func (pow *ProofOfWork) Start() {
 	for {
-		fmt.Println("running")
 		select {
 		case msg:= <-pow.messageCh:
 			fmt.Println(msg)

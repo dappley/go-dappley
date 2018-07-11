@@ -8,16 +8,15 @@ import (
 	"log"
 
 	"github.com/dappley/go-dappley/storage"
+	"fmt"
 )
-
-
 
 var tipKey = []byte("1")
 
 type Blockchain struct {
 	currentHash []byte
 	DB          storage.Storage
-	blockPool *BlockPool
+	blockPool   *BlockPool
 }
 
 // CreateBlockchain creates a new blockchain DB
@@ -38,7 +37,7 @@ func CreateBlockchain(address string, db storage.Storage) (*Blockchain, error) {
 		return nil, err
 	}
 	blockPool := NewBlockPool(10)
-	return &Blockchain{tip, db,blockPool}, nil
+	return &Blockchain{tip, db, blockPool}, nil
 }
 
 func GetBlockchain(db storage.Storage) (*Blockchain, error) {
@@ -56,7 +55,7 @@ func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 
 	blockPool := NewBlockPool(10)
 
-	return &Blockchain{tip, db,blockPool}, nil
+	return &Blockchain{tip, db, blockPool}, nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
@@ -226,7 +225,7 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 func (bc *Blockchain) Iterator() *Blockchain {
 	blockPool := NewBlockPool(10)
 
-	return &Blockchain{bc.currentHash, bc.DB,blockPool}
+	return &Blockchain{bc.currentHash, bc.DB, blockPool}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -246,4 +245,28 @@ func (bc *Blockchain) Next() (*Block, error) {
 
 func (bc *Blockchain) GetLastHash() ([]byte, error) {
 	return bc.DB.Get(tipKey)
+}
+
+func (bc *Blockchain) String() string {
+	var buffer bytes.Buffer
+
+	bci := bc.Iterator()
+	for {
+		block, err := bci.Next()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))
+		buffer.WriteString(fmt.Sprintf("Prev. block: %x\n", block.GetPrevHash()))
+		for _, tx := range block.GetTransactions() {
+			fmt.Println(tx)
+		}
+		buffer.WriteString(fmt.Sprintf("\n\n"))
+
+		if len(block.GetPrevHash()) == 0 {
+			break
+		}
+	}
+	return buffer.String()
 }
