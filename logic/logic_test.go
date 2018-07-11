@@ -44,18 +44,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateWallet(t *testing.T) {
-	//setup: clean up database and files
-
 	addr, err := CreateWallet()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, addr)
-	//teardown :clean up database amd files
 }
 
 func TestCreateBlockchain(t *testing.T) {
-
-	//setup: clean up database and files
-
 	//create a wallet address
 	addr, err := CreateWallet()
 	assert.NotEmpty(t, addr)
@@ -64,26 +58,17 @@ func TestCreateBlockchain(t *testing.T) {
 	b, err := CreateBlockchain(addr, databaseInstance)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
-
-	//teardown :clean up database amd files
-
 }
 
 //create a blockchain with invalid address
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
-	//setup: clean up database and files
-
-
 	//create a blockchain with an invalid address
 	b, err := CreateBlockchain(invalidAddress, databaseInstance)
 	assert.Equal(t, err, ErrInvalidAddress)
 	assert.Nil(t, b)
-	//teardown :clean up database amd files
 }
 
 func TestGetBalance(t *testing.T) {
-	//setup: clean up database and files
-
 	//create a wallet address
 	addr, err := CreateWallet()
 	assert.NotEmpty(t, addr)
@@ -97,12 +82,9 @@ func TestGetBalance(t *testing.T) {
 	balance, err := GetBalance(addr,databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, balance, 10)
-
-	//teardown :clean up database amd files
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
-
 	//create a wallet address
 	addr, err := CreateWallet()
 	assert.NotEmpty(t, addr)
@@ -120,7 +102,6 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	balance2, err := GetBalance("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww",databaseInstance)
 	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
 	assert.Equal(t, balance2, 0)
-
 }
 
 func TestGetAllAddresses(t *testing.T) {
@@ -182,13 +163,11 @@ func TestSend(t *testing.T) {
 	addr2, err := CreateWallet()
 	assert.NotEmpty(t, addr2)
 	assert.Nil(t, err)
-	//
+
 	//The balance1 should be 0
 	balance2, err := GetBalance(addr2,databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, balance2, 0)
-
-
 
 	//Send 5 coins from addr1 to addr2
 	err = Send(addr1, addr2, transferAmount, tip,databaseInstance)
@@ -216,9 +195,6 @@ func TestSend(t *testing.T) {
 }
 
 func TestDeleteWallets(t *testing.T) {
-	//setup: clean up database and files
-	//setup()
-
 	//create wallets address
 	addr1, err := CreateWallet()
 	assert.NotEmpty(t, addr1)
@@ -235,8 +211,6 @@ func TestDeleteWallets(t *testing.T) {
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
 	assert.Empty(t, list)
-
-	//teardown()
 }
 
 //test send to invalid address
@@ -275,8 +249,6 @@ func TestSendToInvalidAddress(t *testing.T) {
 }
 
 func TestDeleteWallet(t *testing.T) {
-	//setup: clean up database and files
-
 	//create wallets address
 	addr1, err := CreateWallet()
 	assert.NotEmpty(t, addr1)
@@ -295,8 +267,6 @@ func TestDeleteWallet(t *testing.T) {
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
-
-	//teardown :clean up database amd files
 }
 
 func TestDeleteInvalidWallet(t *testing.T) {
@@ -406,7 +376,6 @@ func TestProofOfWork_Start(t *testing.T) {
 func setup() {
 	cleanUpDatabase()
 }
-
 
 func teardown() {
 	cleanUpDatabase()
