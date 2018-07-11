@@ -50,11 +50,10 @@ func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, err
 //create a wallet
 func CreateWallet() (string, error) {
 	wallets, err := client.NewWallets()
-	wallet := client.NewWallet()
-
+	address := wallets.CreateWallet()
 	wallets.SaveToFile()
 
-	return wallet.GetAddress()[0], err
+	return address, err
 }
 
 //get balance
@@ -125,12 +124,12 @@ func Send(from, to string, amount int, tip int64, db storage.Storage) error {
 
 //delete wallet
 
-func DeleteWallet(key *core.KeyPair) error {
+func DeleteWallet(address string) error {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return err
 	}
-	err = wallets.DeleteWallet("")
+	err = wallets.DeleteWallet(address)
 	if err != nil {
 		return err
 	}
