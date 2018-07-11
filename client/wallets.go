@@ -5,7 +5,6 @@ import (
 	"crypto/elliptic"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,8 +28,8 @@ func NewWallets() (*Wallets, error) {
 }
 
 func (ws *Wallets) CreateWallet() string {
-	wallet := core.NewAddress()
-	address := fmt.Sprintf("%s", wallet.GetAddress())
+	wallet := core.NewKeyPair()
+	address := wallet.GenerateAddress()
 
 	ws.Wallets[address] = wallet
 

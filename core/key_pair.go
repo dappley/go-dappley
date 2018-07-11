@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"log"
 
 	"github.com/dappley/go-dappley/util"
@@ -20,12 +21,12 @@ type KeyPair struct {
 	PublicKey  []byte
 }
 
-func NewAddress() *KeyPair {
+func NewKeyPair() *KeyPair {
 	private, public := newKeyPair()
 	return &KeyPair{private, public}
 }
 
-func (w KeyPair) GetAddress() []byte {
+func (w KeyPair) GenerateAddress() string {
 	pubKeyHash := HashPubKey(w.PublicKey)
 
 	versionedPayload := append([]byte{version}, pubKeyHash...)
@@ -34,7 +35,7 @@ func (w KeyPair) GetAddress() []byte {
 	fullPayload := append(versionedPayload, checksum...)
 	address := util.Base58Encode(fullPayload)
 
-	return address
+	return fmt.Sprintf("%s", address)
 }
 
 func HashPubKey(pubKey []byte) []byte {
