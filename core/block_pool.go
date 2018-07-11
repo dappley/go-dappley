@@ -18,14 +18,17 @@
 
 package core
 
-type BlockPool struct{
+import "fmt"
+
+type BlockPool struct {
 	blockReceivedCh chan *Block
-	size int
+	size            int
+	exitCh          chan bool
 }
 
-func NewBlockPool(size int) (*BlockPool){
+func NewBlockPool(size int) (*BlockPool) {
 	pool := &BlockPool{
-		size: size,
+		size:            size,
 		blockReceivedCh: make(chan *Block, size),
 	}
 	return pool
@@ -35,6 +38,30 @@ func (pool *BlockPool) BlockReceivedCh() chan *Block {
 	return pool.blockReceivedCh
 }
 
-func (pool *BlockPool) Push(block *Block){
+func (pool *BlockPool) Push(block *Block) {
 	pool.blockReceivedCh <- block
+}
+
+func (pool *BlockPool) Start() {
+	go pool.messageLoop()
+}
+
+func (pool *BlockPool) Stop() {
+	pool.exitCh <- true
+}
+
+func (pool *BlockPool) messageLoop() {
+	for {
+		select {
+		case <-pool.exitCh:
+			fmt.Println("quit block pool")
+			return
+		case blk := <-pool.blockReceivedCh:
+			pool.handleBlock(blk)
+		}
+	}
+}
+
+func (pool *BlockPool) handleBlock(blk *Block) {
+	pool.Push(blk)
 }
