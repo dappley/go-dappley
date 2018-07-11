@@ -160,7 +160,7 @@ func TestGetAllAddresses(t *testing.T) {
 func TestSend(t *testing.T) {
 	//setup: clean up database and files
 	setup()
-	mineAward := int(10)
+	mineReward := int(10)
 	transferAmount := int(5)
 	tip := int64(5)
 	//create a wallet address
@@ -176,7 +176,7 @@ func TestSend(t *testing.T) {
 	//The balance1 should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1,databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, mineAward, balance1)
+	assert.Equal(t, mineReward, balance1)
 	fmt.Println(balance1)
 	//Create a second wallet
 	addr2, err := CreateWallet()
@@ -199,11 +199,11 @@ func TestSend(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 	assert.Nil(t, err)
-	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineAward
+	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
 	balance1, err = GetBalance(addr1,databaseInstance)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2*mineAward-transferAmount, balance1)
+	assert.Equal(t, 2*mineReward-transferAmount, balance1)
 
 	//the balance1 of the second wallet should be 5
 	balance2, err = GetBalance(addr2,databaseInstance)
@@ -244,7 +244,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	//this is internally set. Dont modify
-	mineAward := int(10)
+	mineReward := int(10)
 	//Transfer ammount
 	transferAmount := int(25)
 	tip := int64(5)
@@ -260,7 +260,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1,databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineAward)
+	assert.Equal(t, balance1, mineReward)
 
 	//Send 5 coins from addr1 to an invalid address
 	err = Send(addr1, invalidAddress, transferAmount, tip,databaseInstance)
@@ -269,7 +269,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//the balance of the first wallet should be still be 10
 	balance1, err = GetBalance(addr1,databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineAward)
+	assert.Equal(t, balance1, mineReward)
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -328,7 +328,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	tip := int64(5)
 
 	//this is internally set. Dont modify
-	mineAward := int(10)
+	mineReward := int(10)
 	//Transfer ammount is larger than the balance
 	transferAmount := int(25)
 
@@ -344,7 +344,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1,databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineAward)
+	assert.Equal(t, balance1, mineReward)
 
 	//Create a second wallet
 	addr2, err := CreateWallet()
@@ -363,7 +363,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//the balance of the first wallet should be still be 10
 	balance1, err = GetBalance(addr1,databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineAward)
+	assert.Equal(t, balance1, mineReward)
 
 	//the balance of the second wallet should be 0
 	balance2, err = GetBalance(addr2,databaseInstance)
