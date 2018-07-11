@@ -51,7 +51,7 @@ func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, err
 func CreateWallet() (string, error) {
 	wallets, err := client.NewWallets()
 	wallet := client.NewWallet()
-	wallets.AddWallet(wallet)
+
 	wallets.SaveToFile()
 
 	return wallet.GetAddress()[0], err
@@ -130,7 +130,7 @@ func DeleteWallet(key *core.KeyPair) error {
 	if err != nil {
 		return err
 	}
-	err = wallets.DeleteWallet(key)
+	err = wallets.DeleteWallet("")
 	if err != nil {
 		return err
 	}

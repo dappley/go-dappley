@@ -3,8 +3,8 @@ package client
 import "github.com/dappley/go-dappley/core"
 
 type Wallet struct {
-	key       *core.KeyPair
-	addresses []string
+	Key       *core.KeyPair
+	Addresses []string
 }
 
 func NewWallet() Wallet {
@@ -12,5 +12,5 @@ func NewWallet() Wallet {
 }
 
 func (w Wallet) GetAddress() []string {
-	return w.addresses
+	return w.Addresses
 }
