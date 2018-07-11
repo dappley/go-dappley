@@ -1,7 +1,6 @@
 package core
 
 import (
-	"container/heap"
 	"fmt"
 	"testing"
 
@@ -58,23 +57,24 @@ func TestTranstionHeapOperations(t *testing.T) {
 		Vout: generateFakeTxOutputs(),
 		Tip:  20,
 	}
-	h := &TransactionPool{}
-	heap.Init(h)
-	heap.Push(h, t1)
+	txPool := NewTransactionPool(10)
 
-	assert.Equal(t, 1, h.Len())
+	//heap.Init(h)
+	txPool.Push(t1)
 
-	heap.Push(h, t2)
-	assert.Equal(t, 2, h.Len())
-	heap.Push(h, t3)
-	heap.Push(h, t4)
-	assert.Equal(t, 4, h.Len())
+	assert.Equal(t, 1, txPool.Len())
+
+	txPool.Push(t2)
+	assert.Equal(t, 2, txPool.Len())
+	txPool.Push(t3)
+	txPool.Push(t4)
+	assert.Equal(t, 4, txPool.Len())
 	//var test_slice = []Transaction{}
-	for h.Len() > 0 {
-		var txnInterface = heap.Pop(h)
+	for txPool.Len() > 0 {
+		var txnInterface = txPool.Pop()
 		fmt.Println(txnInterface.(Transaction).Tip)
 	}
-	assert.Equal(t, 0, h.Len())
+	assert.Equal(t, 0, txPool.Len())
 
 }
 
