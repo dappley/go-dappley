@@ -45,3 +45,4 @@ func MockTxOutputs() []TXOutput {
 		{2, util.GenerateRandomAoB(2)},
 	}
 }
+

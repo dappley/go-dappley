@@ -11,6 +11,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
 	"sync"
+	"github.com/dappley/go-dappley/network"
 )
 
 // CLI responsible for processing command line arguments
@@ -35,7 +36,9 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run(db storage.Storage, signal chan bool, waitGroup sync.WaitGroup) {
+
+func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, waitGroup sync.WaitGroup) {
+
 	cli.printUsage()
 	for {
 		reader := bufio.NewReader(os.Stdin)
