@@ -12,10 +12,15 @@ import (
 
 
 const(
-	listenPort = 12321
+	listeningPort = 12321
 )
 
-func setup(db storage.LevelDB) (string, *core.Blockchain){
+type Dep struct{
+	db 			*storage.LevelDB
+	bc			*core.Blockchain
+}
+
+func setup(db *storage.LevelDB) (string, *core.Blockchain){
 	walletAddr, err := logic.CreateWallet()
 	if err != nil {
 		log.Panic(err)
@@ -29,7 +34,8 @@ func setup(db storage.LevelDB) (string, *core.Blockchain){
 
 func startNetwork(bc *core.Blockchain) *network.Node{
 	//start network
-	node, err:= network.NewNode(listenPort, bc)
+	node := network.NewNode(bc)
+	err := node.Start(listeningPort)
 	if err!= nil {
 		log.Panic(err)
 	}
@@ -49,10 +55,12 @@ func main() {
 	//setup
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
-	addr,bc:=setup(*db)
+	addr,bc:=setup(db)
 
-	//start network
-	node := startNetwork(bc)
+	input := &Dep{
+		db,
+		bc,
+	}
 
 	waitGroup.Add(1)
 	go func() {
@@ -60,6 +68,6 @@ func main() {
 		waitGroup.Done()
 	}()
 
-	cli.Run(node, *db, signal, waitGroup)
+	cli.Run(input, signal, waitGroup)
 	waitGroup.Wait()
 }

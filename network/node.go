@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"sync"
 
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/core"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-host"
@@ -14,7 +15,6 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -37,24 +37,30 @@ type Node struct{
 }
 
 //create new Node instance
-func NewNode(listenPort int, bc *core.Blockchain) (*Node, error){
-	host, addr, err := createBasicHost(listenPort)
-	if err != nil {
-		return &Node{},err
-	}
+func NewNode(bc *core.Blockchain) *Node{
 
-	node := &Node{host,
-	addr,
+	return &Node{nil,
+	nil,
 	nil,
 	bc,
 	nil,
 	make(chan []byte, 5), 	//TODO: Redefine the size of the channel
 	make(chan bool, 2), 		//two channels to stop
 	}
+}
+
+func (n *Node) Start(listenPort int) error{
+	host,addr,err :=createBasicHost(listenPort)
+	if err != nil {
+		return err
+	}
+
+	n.host = host
+	n.addr = addr
 
 	//set streamhandler. streamHanlder function is called upon stream connection
-	node.host.SetStreamHandler(protocalName, node.streamHandler)
-	return node,nil
+	n.host.SetStreamHandler(protocalName, n.streamHandler)
+	return nil
 }
 
 //create basic host. Returns host object, host address and error
@@ -82,8 +88,16 @@ func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 	return basicHost,fullAddr, nil
 }
 
-//AddStream stream to the targetFullAddr address. If the targetFullAddr is nil, the node goes to listening mode
-func (n *Node) AddStream(targetFullAddr ma.Multiaddr) error{
+func (n *Node) AddStreamString(targetFullAddr string) error{
+	addr, err:=ma.NewMultiaddr(targetFullAddr)
+	if err!= nil {
+		return err
+	}
+	return n.AddStreamMultiAddr(addr)
+}
+
+//AddStreamMultiAddr stream to the targetFullAddr address. If the targetFullAddr is nil, the node goes to listening mode
+func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
 
 	//If there is a target address, connect to that address
 	if targetFullAddr != nil {
@@ -184,7 +198,7 @@ func (n *Node) readLoop() {
 }
 
 func (n *Node) StopStream(){
-	fmt.Println("Stopping stream...")
+	fmt.Println("Stream Terminated")
 	n.quitCh <- true;
 	n.quitCh <- true;
 }
@@ -216,7 +230,6 @@ func (n *Node) streamHandler(s net.Stream){
 func (n *Node) GetBlocks() []*core.Block {return n.blks}
 
 func (n *Node) GetMultiaddr() ma.Multiaddr { return n.addr}
-
 
 func (n *Node) SendBlock(block *core.Block) error{
 	//marshal the block to wire format

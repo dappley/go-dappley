@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/storage"
 	"sync"
 	"github.com/dappley/go-dappley/network"
 )
@@ -25,6 +24,8 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  listaddresses")
 	fmt.Println("  printchain")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT")
+	fmt.Println("  setListeningPort -port PORT")
+	fmt.Println("  addPeer -address FULLADDRESS")
 	fmt.Println("  exit")
 }
 
@@ -36,10 +37,10 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-
-func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, waitGroup sync.WaitGroup) {
+func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 
 	cli.printUsage()
+	var node *network.Node
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Enter command: ")
@@ -52,6 +53,8 @@ func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, wa
 		listAddressesCmd := flag.NewFlagSet("listaddresses", flag.ExitOnError)
 		sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 		printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
+		nodeSetPortCmd := flag.NewFlagSet("setListeningPort", flag.ExitOnError)
+		addPeerCmd := flag.NewFlagSet("addPeer",flag.ExitOnError)
 
 		getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
 		createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
@@ -59,6 +62,8 @@ func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, wa
 		sendTo := sendCmd.String("to", "", "Destination client address")
 		sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 		tipAmount := sendCmd.Int("tip", 0, "Amount to tip")
+		nodePort := nodeSetPortCmd.Int("port", 12345,"Port to listen")
+		peerAddr := addPeerCmd.String("address","","peer ip4 address")
 
 		var err error
 		switch args[0] {
@@ -74,6 +79,10 @@ func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, wa
 			err = printChainCmd.Parse(args[1:])
 		case "send":
 			err = sendCmd.Parse(args[1:])
+		case "setListeningPort":
+			err = nodeSetPortCmd.Parse(args[1:])
+		case "addPeer":
+			err = addPeerCmd.Parse(args[1:])
 		case "exit":
 			signal <- true
 			os.Exit(1)
@@ -84,11 +93,26 @@ func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, wa
 			log.Panic(err)
 		}
 
+		if nodeSetPortCmd.Parsed(){
+			if *nodePort <= 0 {
+				nodeSetPortCmd.Usage()
+			}
+			node = network.NewNode(dep.bc)
+			err = node.Start(*nodePort)
+		}
+
+		if addPeerCmd.Parsed(){
+			if *peerAddr == "" {
+				addPeerCmd.Usage()
+			}
+			node.AddStreamString(*peerAddr)
+		}
+
 		if getBalanceCmd.Parsed() {
 			if *getBalanceAddress == "" {
 				getBalanceCmd.Usage()
 			}
-			balance, err := logic.GetBalance(*getBalanceAddress, db)
+			balance, err := logic.GetBalance(*getBalanceAddress, dep.db)
 			if err != nil {
 				log.Println(err)
 			}
@@ -102,7 +126,7 @@ func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, wa
 				createBlockchainCmd.Usage()
 			}
 
-			_, err := logic.CreateBlockchain(*createBlockchainAddress, db)
+			_, err := logic.CreateBlockchain(*createBlockchainAddress, dep.db)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -137,7 +161,7 @@ func (cli *CLI) Run(node *network.Node, db storage.LevelDB, signal chan bool, wa
 				sendCmd.Usage()
 			}
 
-			if err := logic.Send(*sendFrom, *sendTo, *sendAmount, int64(*tipAmount), db); err != nil {
+			if err := logic.Send(*sendFrom, *sendTo, *sendAmount, int64(*tipAmount), dep.db); err != nil {
 				log.Println(err)
 			} else {
 				fmt.Println("Send Successful")

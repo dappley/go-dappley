@@ -21,18 +21,20 @@ func TestNetwork_Setup(t *testing.T) {
 	bc := mockBlockchain(t)
 
 	//create node1
-	node1, err := NewNode(test_port1, bc)
+	node1 := NewNode(bc)
+	err := node1.Start(test_port1)
 	assert.Nil(t, err)
 
 	//currently it should only have itself as its node
 	assert.Len(t, node1.host.Network().Peerstore().Peers(), 1)
 
 	//create node2
-	node2, err := NewNode(test_port2, bc)
+	node2 := NewNode(bc)
+	err = node2.Start(test_port2)
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
-	err = node1.AddStream(node2.GetMultiaddr())
+	err = node1.AddStreamMultiAddr(node2.GetMultiaddr())
 	assert.Nil(t, err)
 	assert.Len(t, node1.host.Network().Peerstore().Peers(), 2)
 }
@@ -40,13 +42,15 @@ func TestNetwork_Setup(t *testing.T) {
 func TestNetwork_SendBlock(t *testing.T){
 	bc := mockBlockchain(t)
 
-	node1, err := NewNode(test_port3, bc)
+	node1 := NewNode(bc)
+	err := node1.Start(test_port3)
 	assert.Nil(t, err)
 
-	node2, err := NewNode(test_port4, bc)
+	node2 := NewNode(bc)
+	err = node2.Start(test_port4)
 	assert.Nil(t, err)
 
-	err = node2.AddStream(node1.GetMultiaddr())
+	err = node2.AddStreamMultiAddr(node1.GetMultiaddr())
 	assert.Nil(t, err)
 
 	b2 := core.GenerateMockBlock()
@@ -64,7 +68,15 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 	defer db.Close()
 	addr,err := logic.CreateWallet()
 	assert.Nil(t, err)
-	bc,err := core.CreateBlockchain(addr,*db)
+	bc,err := core.CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 	return bc
 }
+
+/*func TestNetwork(t *testing.T){
+	bc := mockBlockchain(t)
+
+	node1 := NewNode(bc)
+	node1.Start(test_port3)
+	select{}
+}*/
