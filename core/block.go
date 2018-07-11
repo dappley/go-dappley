@@ -19,7 +19,6 @@ package core
 
 import (
 	"bytes"
-	"container/heap"
 	"crypto/sha256"
 	"encoding/gob"
 	"log"
@@ -41,15 +40,7 @@ type Block struct {
 	transactions []*Transaction
 }
 
-func NewBlock(prevHash []byte) *Block {
-	sortedTransactions := []*Transaction{}
-
-	for GetTxnPoolInstance().Len() > 0 {
-		if len(sortedTransactions) < TransactionPoolLimit {
-			var transaction = heap.Pop(GetTxnPoolInstance()).(Transaction)
-			sortedTransactions = append(sortedTransactions, &transaction)
-		}
-	}
+func NewBlock(sortedTransactions []*Transaction,prevHash []byte) *Block {
 	return &Block{
 		header: &BlockHeader{
 			hash:      []byte{},

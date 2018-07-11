@@ -17,6 +17,7 @@ type Blockchain struct {
 	currentHash []byte
 	DB          storage.Storage
 	blockPool   *BlockPool
+	//txPool      *TransactionPool
 }
 
 // CreateBlockchain creates a new blockchain DB
@@ -73,7 +74,9 @@ func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
 }
-
+//func (bc *Blockchain) TransactionPool() *TransactionPool {
+//	return bc.txPool
+//}
 func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
 	unspentOutputs := make(map[string][]int)
 	unspentTXs, err := bc.FindUnspentTransactions(pubKeyHash)

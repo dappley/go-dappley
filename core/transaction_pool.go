@@ -1,6 +1,9 @@
 package core
 
-import "sync"
+import (
+	"sync"
+	"container/heap"
+)
 
 // An TransactionPool is a max-heap of Transactions.
 type TransactionPool []Transaction
@@ -39,3 +42,14 @@ func ModifyTxnPoolInstance(pool *TransactionPool) *TransactionPool {
 	return instance
 }
 
+func (pool *TransactionPool) GetSortedTransactions() []*Transaction{
+	sortedTransactions := []*Transaction{}
+
+	for GetTxnPoolInstance().Len() > 0 {
+		if len(sortedTransactions) < TransactionPoolLimit {
+			var transaction = heap.Pop(GetTxnPoolInstance()).(Transaction)
+			sortedTransactions = append(sortedTransactions, &transaction)
+		}
+	}
+	return sortedTransactions
+}
