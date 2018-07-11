@@ -22,41 +22,18 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain DB
 func CreateBlockchain(address string, db storage.Storage) (*Blockchain, error) {
-
-	// if storage.DbExists(BlockchainDbFile) {
-	// 	err := errors.New("Database already exists.\n")
-	// 	return nil, err
-	// }
-
-	var tip []byte
 	genesis := NewGenesisBlock(address)
-
 	updateDbWithNewBlock(db, genesis)
-
-	tip, err := db.Get(tipKey)
-	if err != nil {
-		return nil, err
-	}
-	blockPool := NewBlockPool(10)
-	return &Blockchain{tip, db, blockPool}, nil
+	return GetBlockchain(db)
 }
 
 func GetBlockchain(db storage.Storage) (*Blockchain, error) {
-
-	//if storage.DbExists(BlockchainDbFile) == false {
-	//	err := errors.New("Designated database file not found.\n")
-	//	return nil, err
-	//}
 	var tip []byte
-
 	tip, err := db.Get(tipKey)
 	if err != nil {
 		return nil, err
 	}
-
-	blockPool := NewBlockPool(10)
-
-	return &Blockchain{tip, db, blockPool}, nil
+	return initializeBlockChainWithBlockPool(tip,db), nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
@@ -64,13 +41,6 @@ func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	bc.currentHash = newBlock.GetHash()
 }
 
-//record the new block in the database
-func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
-	db.Put(newBlock.GetHash(), newBlock.Serialize())
-
-	db.Put(tipKey, newBlock.GetHash())
-
-}
 func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
 }
@@ -226,9 +196,7 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	blockPool := NewBlockPool(10)
-
-	return &Blockchain{bc.currentHash, bc.DB, blockPool}
+	return initializeBlockChainWithBlockPool(bc.currentHash,bc.DB)
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -272,4 +240,17 @@ func (bc *Blockchain) String() string {
 		}
 	}
 	return buffer.String()
+}
+
+func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) (*Blockchain){
+	blockPool := NewBlockPool(10)
+	return &Blockchain{current, db,blockPool}
+}
+
+//record the new block in the database
+func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
+	db.Put(newBlock.GetHash(), newBlock.Serialize())
+
+	db.Put(tipKey, newBlock.GetHash())
+
 }
