@@ -36,7 +36,7 @@ const invalidAddress = "Invalid Address"
 var databaseInstance *storage.LevelDB
 
 func TestMain(m *testing.M) {
-	fmt.Println("initiating db instance")
+	setup()
 	databaseInstance = storage.OpenDatabase(core.BlockchainDbFile)
 	defer databaseInstance.Close()
 	retCode := m.Run()
