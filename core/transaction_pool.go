@@ -22,14 +22,14 @@ func (pool TransactionPool) Len() int { return len(pool.transactions) }
 func (pool TransactionPool) Less(i, j int) bool { return pool.transactions[i].Tip > pool.transactions[j].Tip }
 func (pool TransactionPool) Swap(i, j int)      { pool.transactions[i], pool.transactions[j] = pool.transactions[j], pool.transactions[i] }
 
-func NewTransactionPool(size int) (*TransactionPool) {
-	txPool := &TransactionPool{
-		messageCh:    make(chan string, size),
-		size:         size,
-	}
-	heap.Init(txPool)
-	return txPool
-}
+//func NewTransactionPool(size int) (*TransactionPool) {
+//	txPool := &TransactionPool{
+//		messageCh:    make(chan string, size),
+//		size:         size,
+//	}
+//	heap.Init(txPool)
+//	return txPool
+//}
 func (pool *TransactionPool) Push(x interface{}) {
 	// Push and Pop use pointer receivers because they modify the slice's length,
 	// not just its contents.
@@ -46,8 +46,13 @@ func (pool *TransactionPool) Pop() interface{} {
 
 func GetTxnPoolInstance() *TransactionPool {
 	once.Do(func() {
-		instance = &TransactionPool{}
+		//instance = &TransactionPool{}
+		instance = &TransactionPool{
+			messageCh:    make(chan string, 128),
+			size:         128,
+		}
 	})
+	heap.Init(instance)
 	return instance
 }
 

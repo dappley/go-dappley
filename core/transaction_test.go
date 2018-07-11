@@ -57,7 +57,7 @@ func TestTranstionHeapOperations(t *testing.T) {
 		Vout: generateFakeTxOutputs(),
 		Tip:  20,
 	}
-	txPool := NewTransactionPool(10)
+	txPool := GetTxnPoolInstance()
 
 	//heap.Init(h)
 	txPool.Push(t1)
