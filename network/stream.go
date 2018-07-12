@@ -117,13 +117,13 @@ func (s *Stream) Send(data []byte){
 }
 
 func (s *Stream) parseData(data []byte){
-	dmpb := &networkpb.Depmsg{}
+	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, dmpb); err!=nil{
 		log.Println(err)
 	}
 
-	dm := &Depmsg{}
+	dm := &Dapmsg{}
 	dm.FromProto(dmpb)
 	switch(dm.GetCmd()){
 	case SyncBlock:

@@ -153,7 +153,7 @@ func (n *Node) SendBlock(block *core.Block) error{
 	}
 
 	//build a deppley message
-	dm := NewDepmsg(SyncBlock,bytes)
+	dm := NewDapmsg(SyncBlock,bytes)
 	data, err :=proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err

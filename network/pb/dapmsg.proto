@@ -1,7 +1,7 @@
 syntax = "proto3";
 package networkpb;
 
-message Depmsg{
+message Dapmsg {
     string Cmd = 1;
     bytes data = 2;
 }
