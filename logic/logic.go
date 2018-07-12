@@ -124,12 +124,12 @@ func Send(from, to core.Address, amount int, tip int64, db storage.Storage) erro
 
 //delete wallet
 
-func DeleteWallet(address core.Address) error {
+func DeleteWallet(key *core.KeyPair) error {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return err
 	}
-	err = wallets.DeleteWallet(address)
+	err = wallets.DeleteWallet(key)
 	if err != nil {
 		return err
 	}

@@ -15,12 +15,12 @@ import (
 const WalletFile = "../bin/wallets.dat"
 
 type Wallets struct {
-	Wallets map[core.Address]*core.KeyPair
+	Wallets map[*core.KeyPair]core.Address
 }
 
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
-	wallets.Wallets = make(map[core.Address]*core.KeyPair)
+	wallets.Wallets = make(map[*core.KeyPair]core.Address)
 
 	err := wallets.LoadFromFile()
 
@@ -31,16 +31,15 @@ func (ws *Wallets) CreateWallet() core.Address {
 	wallet := core.NewKeyPair()
 	address := wallet.GenerateAddress()
 
-	ws.Wallets[address] = wallet
+	ws.Wallets[wallet] = address
 
 	return address
 }
 
-func (ws *Wallets) DeleteWallet(address core.Address) error {
-	addresses := ws.GetAddresses()
-	for _, value := range addresses {
-		if value == address {
-			delete(ws.Wallets, address)
+func (ws *Wallets) DeleteWallet(key *core.KeyPair) error {
+	for value := range ws.Wallets {
+		if value == key {
+			delete(ws.Wallets, key)
 			return nil
 		}
 	}
@@ -62,7 +61,7 @@ func (ws *Wallets) DeleteWallets() error {
 func (ws *Wallets) GetAddresses() []core.Address {
 	var addresses []core.Address
 
-	for address := range ws.Wallets {
+	for _, address := range ws.Wallets {
 		addresses = append(addresses, address)
 	}
 
@@ -70,7 +69,13 @@ func (ws *Wallets) GetAddresses() []core.Address {
 }
 
 func (ws Wallets) GetWallet(address core.Address) core.KeyPair {
-	return *ws.Wallets[address]
+	for key, value := range ws.Wallets {
+		if value == address {
+			return *key
+		}
+	}
+	return core.KeyPair{}
+
 }
 
 func (ws *Wallets) LoadFromFile() error {
