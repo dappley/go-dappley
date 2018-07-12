@@ -164,8 +164,7 @@ func (miner *Miner) mine() {
 
 	miner.consensus = NewProofOfWork(miner.bc)
 	miner.newBlock = miner.consensus.ProduceBlock(miner.coinBaseAddr, "", lastHash)
-	
-	//miner.node.SendBlock(miner.newBlock)
+	miner.node.SendBlock(miner.newBlock)
 }
 
 //update the blockchain with the new block
