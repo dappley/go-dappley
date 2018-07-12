@@ -249,27 +249,6 @@ func TestSendToInvalidAddress(t *testing.T) {
 	teardown()
 }
 
-func TestDeleteWallet(t *testing.T) {
-	//create wallets address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
-
-	addr2, err := CreateWallet()
-	assert.NotEmpty(t, addr2)
-
-	addr3, err := CreateWallet()
-	assert.NotEmpty(t, addr3)
-
-	addressList := []core.Address{addr2, addr3}
-
-	err = DeleteWallet(addr1)
-	assert.Nil(t, err)
-
-	list, err := GetAllAddresses()
-	assert.Nil(t, err)
-	assert.ElementsMatch(t, list, addressList)
-}
-
 func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
@@ -280,9 +259,6 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	addressList := []core.Address{addr1}
 
 	println(addr1.Address)
-
-	err = DeleteWallet(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"))
-	assert.Equal(t, errors.New("wallet is not exist"), err)
 
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
