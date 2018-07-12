@@ -73,10 +73,60 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 	return bc
 }
 
-/*func TestNetwork(t *testing.T){
+/*func TestNetwork_node0(t *testing.T){
+	bc := mockBlockchain(t)
+
+	node1 := NewNode(bc)
+	node1.Start(test_port1)
+	//node1.AddStreamString("/ip4/127.0.0.1/tcp/10009/ipfs/QmcrXvSkD7JcVSi2UQ4RRED8McfsoGG2p7x8Ev9tUyZ584")
+	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	select{}
+
+}
+
+const node0_addr = "/ip4/127.0.0.1/tcp/12345/ipfs/Qma6Jq6JSH7MCTRKtFRY2SBYXW2xB4EFV3TeGwKUG9isDm"
+
+func TestNetwork_node1(t *testing.T){
+	bc := mockBlockchain(t)
+
+	node1 := NewNode(bc)
+	node1.Start(test_port2)
+	node1.AddStreamString(node0_addr)
+	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	//select{}
+	b := core.GenerateMockBlock()
+	for{
+		node1.SendBlock(b)
+		time.Sleep(time.Second*15)
+	}
+}
+
+func TestNetwork_node2(t *testing.T){
 	bc := mockBlockchain(t)
 
 	node1 := NewNode(bc)
 	node1.Start(test_port3)
-	select{}
+	node1.AddStreamString(node0_addr)
+	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	//select{}
+	b := core.GenerateMockBlock()
+	for{
+		node1.SendBlock(b)
+		time.Sleep(time.Second*15)
+	}
+}
+
+func TestNetwork_node3(t *testing.T){
+	bc := mockBlockchain(t)
+
+	node1 := NewNode(bc)
+	node1.Start(test_port4)
+	node1.AddStreamString(node0_addr)
+	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	//select{}
+	b := core.GenerateMockBlock()
+	for{
+		node1.SendBlock(b)
+		time.Sleep(time.Second*15)
+	}
 }*/

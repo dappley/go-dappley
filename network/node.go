@@ -21,41 +21,42 @@ import (
 const(
 	protocalName = "dappley/1.0.0"
  	delimiter = 0x00
-
- 	//cmd names
- 	syncBlock = "SyncBlock"
 )
 
 type Node struct{
-	host   host.Host
-	addr   ma.Multiaddr
-	rw     *bufio.ReadWriter
-	bc	   *core.Blockchain
-	blks   []*core.Block
-	dataCh chan []byte
-	quitCh chan bool
+	host     host.Host
+	addr     ma.Multiaddr
+	bc       *core.Blockchain
+	blks     []*core.Block
+	dataCh   chan []byte
+	quitRdCh chan bool
+	quitWrCh chan bool
 }
+
+var writeLoopCount = int(0)
+var readLoopCount = int(0)
+
 
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node{
 
 	return &Node{nil,
 	nil,
-	nil,
 	bc,
 	nil,
 	make(chan []byte, 5), 	//TODO: Redefine the size of the channel
-	make(chan bool, 2), 		//two channels to stop
+	make(chan bool, 1), 		//two channels to stop
+	make(chan bool, 1),
 	}
 }
 
 func (n *Node) Start(listenPort int) error{
-	host,addr,err :=createBasicHost(listenPort)
+	h,addr,err :=createBasicHost(listenPort)
 	if err != nil {
 		return err
 	}
 
-	n.host = host
+	n.host = h
 	n.addr = addr
 
 	//set streamhandler. streamHanlder function is called upon stream connection
@@ -79,6 +80,7 @@ func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 
 	// Build host multiaddress
 	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", basicHost.ID().Pretty()))
+
 	// Now we can build a full multiaddress to reach this host
 	// by encapsulating both addresses:
 	addr := basicHost.Addrs()[0]
@@ -122,32 +124,33 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
 		// We have a peer ID and a targetAddr so we add it to the peerstore
 		// so LibP2P knows how to contact it
 		n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
+		fmt.Println(n.host.Peerstore().Peers())
 
-		log.Println("Opening stream")
+
 
 		// make a new stream
-		s, err := n.host.NewStream(context.Background(), peerid, protocalName)
-
+		stream, err := n.host.NewStream(context.Background(), peerid, protocalName)
+		log.Println("Opening stream to peer:", stream.Conn().RemoteMultiaddr())
 		if err != nil {
 			return err
 		}
 
 		// Create a buffered stream so that read and write are non blocking.
-		n.rw = bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-		n.startLoop()
+		rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+		n.startLoop(rw)
 	}
 
 	return nil
 }
 
-func (n *Node) startLoop(){
-	go n.readLoop()
-	go n.writeLoop()
+func (n *Node) startLoop(rw *bufio.ReadWriter){
+	go n.readLoop(rw)
+	go n.writeLoop(rw)
 }
 
-func (n *Node) read(){
+func (n *Node) read(rw *bufio.ReadWriter){
 	//read stream with delimiter
-	bytes,err := n.rw.ReadBytes(delimiter)
+	bytes,err := rw.ReadBytes(delimiter)
 
 	if err != nil {
 		log.Println(err)
@@ -159,7 +162,7 @@ func (n *Node) read(){
 
 		//get rid of the delimiter
 		bytes = bytes[:len(bytes)-1]
-		fmt.Println("Received Data:", bytes)
+		log.Println("Received Data:", bytes)
 
 		//create a block proto
 		blockpb := &corepb.Block{}
@@ -175,45 +178,56 @@ func (n *Node) read(){
 		//load the block with proto
 		block.FromProto(blockpb)
 
-		//TODO: add blockpb to blockchain
+		//TODO: add block to blockchain
 		n.bc.BlockPool().Push(block)
 		//add the block to the buffer pool (for testing purpose)
 		n.blks = append(n.blks, block)
 	}else{
 		//stop the stream
+		log.Println("Empty Byte Detected.Probably due to stream reset")
 		n.StopStream()
-		return
 	}
 }
 
-func (n *Node) readLoop() {
+func (n *Node) readLoop(rw *bufio.ReadWriter) {
+	readLoopCount++
+	log.Println("ReadLoopLoopCount:",readLoopCount)
 	for {
 		select{
-			case <- n.quitCh:
+			case <- n.quitRdCh:
+				log.Println("Stream ReadLoop Terminated!")
+				readLoopCount--
+				log.Println("ReadLoopLoopCount:",readLoopCount)
 				return
 			default:
-				n.read()
+				n.read(rw)
 		}
 	}
 }
 
 func (n *Node) StopStream(){
-	fmt.Println("Stream Terminated")
-	n.quitCh <- true;
-	n.quitCh <- true;
+	log.Println("Stream Terminated")
+	n.quitRdCh <- true;
+	n.quitWrCh <- true;
 }
 
-func (n *Node) writeLoop() error{
+func (n *Node) writeLoop(rw *bufio.ReadWriter) error{
 	var mutex = &sync.Mutex{}
+	writeLoopCount++
+	log.Println("WriteLoopCount:",writeLoopCount)
 	for{
 		select{
 			case data := <- n.dataCh:
 				mutex.Lock()
 				//attach a delimiter byte of 0x00 to the end of the message
-				n.rw.WriteString(string(append(data, delimiter)))
-				n.rw.Flush()
+				rw.WriteString(string(append(data, delimiter)))
+				rw.Flush()
 				mutex.Unlock()
-			case <- n.quitCh:
+			case <- n.quitWrCh:
+				log.Println("Stream Write Terminated!")
+				writeLoopCount--
+				log.Println("WriteLoopCount:",writeLoopCount)
+				log.Println("ReadLoopLoopCount:",readLoopCount)
 				return nil
 		}
 	}
@@ -222,9 +236,9 @@ func (n *Node) writeLoop() error{
 
 func (n *Node) streamHandler(s net.Stream){
 	// Create a buffer stream for non blocking read and write.
-	fmt.Println("Got a new STREAM!")
-	n.rw = bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-	n.startLoop()
+	log.Println("Got a new STREAM from peer:", s.Conn().RemoteMultiaddr())
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	n.startLoop(rw)
 }
 
 func (n *Node) GetBlocks() []*core.Block {return n.blks}
@@ -238,7 +252,7 @@ func (n *Node) SendBlock(block *core.Block) error{
 		return err
 	}
 
-	fmt.Println("Sending data:",bytes)
+	log.Println("Sending data:",bytes)
 	n.dataCh <- bytes
 	return nil
 }
