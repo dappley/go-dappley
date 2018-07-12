@@ -12,22 +12,22 @@ import (
 	"github.com/dappley/go-dappley/core"
 )
 
-const WalletFile = "../bin/client.dat"
+const WalletFile = "../bin/wallets.dat"
 
 type Wallets struct {
-	Wallets map[string]*core.KeyPair
+	Wallets map[core.Address]*core.KeyPair
 }
 
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
-	wallets.Wallets = make(map[string]*core.KeyPair)
+	wallets.Wallets = make(map[core.Address]*core.KeyPair)
 
 	err := wallets.LoadFromFile()
 
 	return &wallets, err
 }
 
-func (ws *Wallets) CreateWallet() string {
+func (ws *Wallets) CreateWallet() core.Address {
 	wallet := core.NewKeyPair()
 	address := wallet.GenerateAddress()
 
@@ -36,7 +36,7 @@ func (ws *Wallets) CreateWallet() string {
 	return address
 }
 
-func (ws *Wallets) DeleteWallet(address string) error {
+func (ws *Wallets) DeleteWallet(address core.Address) error {
 	addresses := ws.GetAddresses()
 	for _, value := range addresses {
 		if value == address {
@@ -59,8 +59,8 @@ func (ws *Wallets) DeleteWallets() error {
 	return nil
 }
 
-func (ws *Wallets) GetAddresses() []string {
-	var addresses []string
+func (ws *Wallets) GetAddresses() []core.Address {
+	var addresses []core.Address
 
 	for address := range ws.Wallets {
 		addresses = append(addresses, address)
@@ -69,7 +69,7 @@ func (ws *Wallets) GetAddresses() []string {
 	return addresses
 }
 
-func (ws Wallets) GetWallet(address string) core.KeyPair {
+func (ws Wallets) GetWallet(address core.Address) core.KeyPair {
 	return *ws.Wallets[address]
 }
 

@@ -7,8 +7,9 @@ import (
 	"errors"
 	"log"
 
-	"github.com/dappley/go-dappley/storage"
 	"fmt"
+
+	"github.com/dappley/go-dappley/storage"
 )
 
 var tipKey = []byte("1")
@@ -21,8 +22,8 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string, db storage.Storage) (*Blockchain, error) {
-	genesis := NewGenesisBlock(address)
+func CreateBlockchain(address Address, db storage.Storage) (*Blockchain, error) {
+	genesis := NewGenesisBlock(address.Address)
 	updateDbWithNewBlock(db, genesis)
 	return GetBlockchain(db)
 }
@@ -33,7 +34,7 @@ func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	return initializeBlockChainWithBlockPool(tip,db), nil
+	return initializeBlockChainWithBlockPool(tip, db), nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
@@ -44,6 +45,7 @@ func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
 }
+
 //func (bc *Blockchain) TransactionPool() *TransactionPool {
 //	return bc.txPool
 //}
@@ -196,7 +198,7 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return initializeBlockChainWithBlockPool(bc.currentHash,bc.DB)
+	return initializeBlockChainWithBlockPool(bc.currentHash, bc.DB)
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -242,9 +244,9 @@ func (bc *Blockchain) String() string {
 	return buffer.String()
 }
 
-func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) (*Blockchain){
+func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
 	blockPool := NewBlockPool(10)
-	return &Blockchain{current, db,blockPool}
+	return &Blockchain{current, db, blockPool}
 }
 
 //record the new block in the database

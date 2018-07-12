@@ -8,15 +8,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dappley/go-dappley/logic"
 	"sync"
-	"github.com/dappley/go-dappley/network"
+
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/network"
 )
 
 // CLI responsible for processing command line arguments
 type CLI struct{}
-
 
 func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
@@ -57,17 +57,17 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 		printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 		nodeSetPortCmd := flag.NewFlagSet("setListeningPort", flag.ExitOnError)
-		addPeerCmd := flag.NewFlagSet("addPeer",flag.ExitOnError)
-		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock",flag.ExitOnError)
+		addPeerCmd := flag.NewFlagSet("addPeer", flag.ExitOnError)
+		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock", flag.ExitOnError)
 
-		getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
-		createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
-		sendFrom := sendCmd.String("from", "", "Source client address")
-		sendTo := sendCmd.String("to", "", "Destination client address")
+		getBalanceAddress := core.NewAddress(*getBalanceCmd.String("address", "", "The address to get balance for"))
+		createBlockchainAddress := core.NewAddress(*createBlockchainCmd.String("address", "", "The address to send genesis block reward to"))
+		sendFrom := core.NewAddress(*sendCmd.String("from", "", "Source client address"))
+		sendTo := core.NewAddress(*sendCmd.String("to", "", "Destination client address"))
 		sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 		tipAmount := sendCmd.Int("tip", 0, "Amount to tip")
-		nodePort := nodeSetPortCmd.Int("port", 12345,"Port to listen")
-		peerAddr := addPeerCmd.String("address","","peer ip4 address")
+		nodePort := nodeSetPortCmd.Int("port", 12345, "Port to listen")
+		peerAddr := addPeerCmd.String("address", "", "peer ip4 address")
 
 		var err error
 		switch args[0] {
@@ -99,7 +99,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 			log.Panic(err)
 		}
 
-		if nodeSetPortCmd.Parsed(){
+		if nodeSetPortCmd.Parsed() {
 			if *nodePort <= 0 {
 				nodeSetPortCmd.Usage()
 			}
@@ -107,7 +107,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 			err = node.Start(*nodePort)
 		}
 
-		if addPeerCmd.Parsed(){
+		if addPeerCmd.Parsed() {
 			if *peerAddr == "" {
 				addPeerCmd.Usage()
 			}
@@ -120,24 +120,24 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if getBalanceCmd.Parsed() {
-			if *getBalanceAddress == "" {
+			if getBalanceAddress.Address == "" {
 				getBalanceCmd.Usage()
 			}
-			balance, err := logic.GetBalance(*getBalanceAddress, dep.db)
+			balance, err := logic.GetBalance(getBalanceAddress, dep.db)
 			if err != nil {
 				log.Println(err)
 			}
 
-			fmt.Printf("Balance of '%s': %d\n", *getBalanceAddress, balance)
+			fmt.Printf("Balance of '%s': %d\n", getBalanceAddress, balance)
 
 		}
 
 		if createBlockchainCmd.Parsed() {
-			if *createBlockchainAddress == "" {
+			if createBlockchainAddress.Address == "" {
 				createBlockchainCmd.Usage()
 			}
 
-			_, err := logic.CreateBlockchain(*createBlockchainAddress, dep.db)
+			_, err := logic.CreateBlockchain(createBlockchainAddress, dep.db)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -168,11 +168,11 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if sendCmd.Parsed() {
-			if *sendFrom == "" || *sendTo == "" || *sendAmount <= 0 {
+			if sendFrom.Address == "" || sendTo.Address == "" || *sendAmount <= 0 {
 				sendCmd.Usage()
 			}
 
-			if err := logic.Send(*sendFrom, *sendTo, *sendAmount, int64(*tipAmount), dep.db); err != nil {
+			if err := logic.Send(sendFrom, sendTo, *sendAmount, int64(*tipAmount), dep.db); err != nil {
 				log.Println(err)
 			} else {
 				fmt.Println("Send Successful")

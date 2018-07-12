@@ -167,7 +167,7 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(from, to string, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
+func NewUTXOTransaction(from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
@@ -195,9 +195,9 @@ func NewUTXOTransaction(from, to string, amount int, keypair KeyPair, bc *Blockc
 	}
 
 	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to))
+	outputs = append(outputs, *NewTXOutput(amount, to.Address))
 	if acc > amount {
-		outputs = append(outputs, *NewTXOutput(acc-amount, from)) // a change
+		outputs = append(outputs, *NewTXOutput(acc-amount, from.Address)) // a change
 	}
 
 	tx := Transaction{nil, inputs, outputs, tip}

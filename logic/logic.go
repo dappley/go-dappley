@@ -34,8 +34,8 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, error) {
-	if !core.ValidateAddress(address) {
+func CreateBlockchain(address core.Address, db storage.Storage) (*core.Blockchain, error) {
+	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
@@ -48,7 +48,7 @@ func CreateBlockchain(address string, db storage.Storage) (*core.Blockchain, err
 }
 
 //create a wallet
-func CreateWallet() (string, error) {
+func CreateWallet() (core.Address, error) {
 	wallets, err := client.NewWallets()
 	address := wallets.CreateWallet()
 	wallets.SaveToFile()
@@ -57,8 +57,8 @@ func CreateWallet() (string, error) {
 }
 
 //get balance
-func GetBalance(address string, db storage.Storage) (int, error) {
-	if !core.ValidateAddress(address) {
+func GetBalance(address core.Address, db storage.Storage) (int, error) {
+	if !address.ValidateAddress() {
 		return 0, ErrInvalidAddress
 	}
 	//inject db here
@@ -69,7 +69,7 @@ func GetBalance(address string, db storage.Storage) (int, error) {
 	}
 
 	balance := 0
-	pubKeyHash := util.Base58Decode([]byte(address))
+	pubKeyHash := util.Base58Decode([]byte(address.Address))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	UTXOs, err := bc.FindUTXO(pubKeyHash)
 	if err != nil {
@@ -83,7 +83,7 @@ func GetBalance(address string, db storage.Storage) (int, error) {
 }
 
 //get all addresses
-func GetAllAddresses() ([]string, error) {
+func GetAllAddresses() ([]core.Address, error) {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return nil, err
@@ -94,11 +94,11 @@ func GetAllAddresses() ([]string, error) {
 	return addresses, err
 }
 
-func Send(from, to string, amount int, tip int64, db storage.Storage) error {
-	if !core.ValidateAddress(from) {
+func Send(from, to core.Address, amount int, tip int64, db storage.Storage) error {
+	if !from.ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
-	if !core.ValidateAddress(to) {
+	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
 
@@ -124,7 +124,7 @@ func Send(from, to string, amount int, tip int64, db storage.Storage) error {
 
 //delete wallet
 
-func DeleteWallet(address string) error {
+func DeleteWallet(address core.Address) error {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return err
