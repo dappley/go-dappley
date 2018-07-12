@@ -114,7 +114,7 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
 		// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
 		targetPeerAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerid)))
 		targetAddr := targetFullAddr.Decapsulate(targetPeerAddr)
-		fmt.Println(targetAddr)
+
 		// We have a peer ID and a targetAddr so we add it to the peerstore
 		// so LibP2P knows how to contact it
 		n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
@@ -152,8 +152,14 @@ func (n *Node) SendBlock(block *core.Block) error{
 		return err
 	}
 
+	//build a deppley message
+	dm := NewDepmsg(SyncBlock,bytes)
+	data, err :=proto.Marshal(dm.ToProto())
+	if err != nil {
+		return err
+	}
 	//log.Println("Sending Data Request Received:",bytes)
-	n.broadcast(bytes)
+	n.broadcast(data)
 	return nil
 }
 

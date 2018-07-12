@@ -77,6 +77,7 @@ func TestNetwork_SendBlock(t *testing.T){
 	b3:= node3.GetBlocks()
 	assert.NotEmpty(t, b3)
 	assert.Equal(t,*b1,*b3[0])
+
 }
 
 func mockBlockchain(t *testing.T) *core.Blockchain{

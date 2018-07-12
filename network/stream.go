@@ -10,6 +10,11 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
+)
+
+const(
+	SyncBlock = "SyncBlock"
 )
 
 type Stream struct{
@@ -20,7 +25,6 @@ type Stream struct{
 	dataCh   	chan []byte
 	quitRdCh 	chan bool
 	quitWrCh 	chan bool
-	rawData		[][]byte
 }
 
 func NewStream(s net.Stream, node *Node) *Stream{
@@ -31,7 +35,6 @@ func NewStream(s net.Stream, node *Node) *Stream{
 					make(chan []byte, 5), 	//TODO: Redefine the size of the channel
 					make(chan bool, 1), 		//two channels to stop
 					make(chan bool, 1),
-					nil,
 	}
 }
 
@@ -64,8 +67,6 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 
 		//prase data
 		s.parseData(bytes)
-
-		s.rawData = append(s.rawData, bytes)
 
 	}else{
 		//stop the stream
@@ -116,10 +117,26 @@ func (s *Stream) Send(data []byte){
 }
 
 func (s *Stream) parseData(data []byte){
-	s.addBlockToPool(data)
+	dmpb := &networkpb.Depmsg{}
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(data, dmpb); err!=nil{
+		log.Println(err)
+	}
+
+	dm := &Depmsg{}
+	dm.FromProto(dmpb)
+	switch(dm.GetCmd()){
+	case SyncBlock:
+		log.Print("Received SyncBlock command from:", s.remoteAddr)
+		s.addBlockToPool(dm.GetData())
+	default:
+		log.Print("Received invalid command from:", s.remoteAddr)
+	}
+
 }
 
 func (s *Stream) addBlockToPool(data []byte){
+
 	//create a block proto
 	blockpb := &corepb.Block{}
 
