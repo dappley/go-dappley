@@ -35,7 +35,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
-	wallet := wallets.GetWallet(addr1)
+	wallet := wallets.GetKeyPairByAddress(addr1)
 
 	//create a blockchain
 	assert.Equal(t, true, addr1.ValidateAddress())
@@ -129,7 +129,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
-	wallet := wallets.GetWallet(addr1)
+	wallet := wallets.GetKeyPairByAddress(addr1)
 
 	//create a blockchain
 	assert.Equal(t, true, addr1.ValidateAddress())
