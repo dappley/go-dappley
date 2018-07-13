@@ -1,0 +1,6 @@
+syntax = "proto3";
+package networkpb;
+
+message Peerlist {
+    repeated string peerlist = 1;
+}

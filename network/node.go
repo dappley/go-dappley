@@ -27,7 +27,7 @@ type Node struct{
 	blks 	 	[]*core.Block
 	blockpool 	[]*core.Block
 	streams  	map[peer.ID]*Stream
-	peerAddrs	[]ma.Multiaddr
+	peerlist	*Peerlist
 }
 
 var writeLoopCount = int(0)
@@ -36,14 +36,13 @@ var readLoopCount = int(0)
 
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node{
-
 	return &Node{nil,
 	nil,
 	bc,
 	nil,
 	nil,
 	make(map[peer.ID]*Stream, 10),
-	nil,
+	NewPeerlist(nil),
 	}
 }
 
@@ -131,15 +130,11 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
 		n.streamHandler(stream)
 
 		// Add the full addr to the peer list
-		n.addToPeerList(targetFullAddr)
+		n.peerlist.Add(targetFullAddr)
 
 	}
 
 	return nil
-}
-
-func (n *Node) addToPeerList(m ma.Multiaddr){
-	n.peerAddrs = append(n.peerAddrs, m)
 }
 
 func (n *Node) streamHandler(s net.Stream){
@@ -167,14 +162,14 @@ func (n *Node) SendBlock(block *core.Block) error{
 	if err != nil {
 		return err
 	}
-	log.Println("Sending Data Request Received:",bytes)
+	//log.Println("Sending Data Request Received:",bytes)
 	n.broadcast(data)
 	return nil
 }
 
 //broadcast data
 func (n *Node) broadcast(data []byte){
-	log.Println("Broadcasting to",len(n.streams), "peer(s)...")
+	//log.Println("Broadcasting to",len(n.streams), "peer(s)...")
 	for _,s := range n.streams{
 		s.Send(data)
 	}
