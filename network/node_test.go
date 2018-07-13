@@ -7,7 +7,6 @@ import (
 	"time"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/logic"
-	"os"
 )
 
 const(
@@ -95,7 +94,6 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 	assert.Nil(t, err)
 	bc,err := core.CreateBlockchain(addr,db)
 	assert.Nil(t, err)
-	os.Remove(blockchainDbFile)
 	return bc
 }
 
@@ -107,7 +105,7 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 	select{}
 }
 
-const node0_addr = "/ip4/127.0.0.1/tcp/10000/ipfs/QmWBn43QQsiqPq416VHwJNi42JpJS1yX6HZ8tR4AtR8Sz7"
+const node0_addr = "/ip4/127.0.0.1/tcp/10000/ipfs/QmRtBnqSBJ6a4yixnT765KGga7dxMH5wqU8FpzEj1ryyfx"
 
 func TestNetwork_node1(t *testing.T){
 	bc := mockBlockchain(t)
@@ -121,7 +119,7 @@ func TestNetwork_node1(t *testing.T){
 	b := core.GenerateMockBlock()
 	for{
 		node1.SendBlock(b)
-		time.Sleep(time.Millisecond*100)
+		time.Sleep(time.Second*10)
 	}
 }
 

@@ -27,6 +27,7 @@ type Node struct{
 	blks 	 	[]*core.Block
 	blockpool 	[]*core.Block
 	streams  	map[peer.ID]*Stream
+	peerlist	*Peerlist
 }
 
 var writeLoopCount = int(0)
@@ -35,13 +36,13 @@ var readLoopCount = int(0)
 
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node{
-
 	return &Node{nil,
 	nil,
 	bc,
 	nil,
 	nil,
 	make(map[peer.ID]*Stream, 10),
+	NewPeerlist(nil),
 	}
 }
 
@@ -63,7 +64,6 @@ func (n *Node) Start(listenPort int) error{
 func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 
 	opts := []libp2p.Option{
-		//libp2p.ListenAddrs(multiaddrs[0]),
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listenPort)),
 		//libp2p.Identity(priv),
 	}
@@ -126,9 +126,11 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
 		if err != nil {
 			return err
 		}
-
-		n.streamHandler(stream)
 		// Create a buffered stream so that read and write are non blocking.
+		n.streamHandler(stream)
+
+		// Add the full addr to the peer list
+		n.peerlist.Add(targetFullAddr)
 
 	}
 
@@ -160,14 +162,14 @@ func (n *Node) SendBlock(block *core.Block) error{
 	if err != nil {
 		return err
 	}
-	log.Println("Sending Data Request Received:",bytes)
+	//log.Println("Sending Data Request Received:",bytes)
 	n.broadcast(data)
 	return nil
 }
 
 //broadcast data
 func (n *Node) broadcast(data []byte){
-	log.Println("Broadcasting to",len(n.streams), "peer(s)...")
+	//log.Println("Broadcasting to",len(n.streams), "peer(s)...")
 	for _,s := range n.streams{
 		s.Send(data)
 	}
@@ -194,3 +196,4 @@ func (n *Node) addBlockToPool(data []byte){
 	//TODO: Delete this line. This line is solely for testing
 	n.blks = append(n.blks, block)
 }
+
