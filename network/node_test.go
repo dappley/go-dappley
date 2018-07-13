@@ -7,6 +7,8 @@ import (
 	"time"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/logic"
+	"os"
+	logger "github.com/sirupsen/logrus"
 )
 
 const(
@@ -18,12 +20,16 @@ const(
 	test_port6
 	test_port7
 	test_port8
-	test_port9
-	test_port10
-
 )
 
 const blockchainDbFile = "../bin/networktest.db"
+
+func TestMain(m *testing.M){
+
+	logger.SetLevel(logger.WarnLevel)
+	retCode := m.Run()
+	os.Exit(retCode)
+}
 
 func TestNetwork_Setup(t *testing.T) {
 

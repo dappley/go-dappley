@@ -4,9 +4,10 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/network/pb"
-	"log"
 	"github.com/libp2p/go-libp2p-peer"
 	"fmt"
+	logger "github.com/sirupsen/logrus"
+
 )
 
 type PeerList struct{
@@ -65,7 +66,7 @@ func NewPeerListStr(strs []string) *PeerList {
 	for _, str := range strs{
 		peer, err := CreatePeerFromString(str)
 		if err!= nil {
-			log.Println("Address Unrecognized:", str)
+			logger.Warn("Address Unrecognized:", str)
 		}
 		ps = append(ps, peer)
 	}

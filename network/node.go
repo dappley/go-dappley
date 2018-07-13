@@ -3,8 +3,6 @@ package network
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-host"
@@ -12,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
+	logger "github.com/sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
@@ -33,10 +32,6 @@ type Node struct{
 	streams   map[peer.ID]*Stream
 	peerlist  *PeerList
 }
-
-var writeLoopCount = int(0)
-var readLoopCount = int(0)
-
 
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node{
@@ -85,7 +80,7 @@ func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 	// by encapsulating both addresses:
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
-	log.Printf("Full Address is %s\n", fullAddr)
+	logger.Info("Full Address is %s\n", fullAddr)
 
 	return basicHost,fullAddr, nil
 }
@@ -138,7 +133,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error{
 
 func (n *Node) streamHandler(s net.Stream){
 	// Create a buffer stream for non blocking read and write.
-	log.Println("Stream Connected! Peer Addr:", s.Conn().RemoteMultiaddr())
+	logger.Info("Stream Connected! Peer Addr:", s.Conn().RemoteMultiaddr())
 	// Add  the peer list
 	n.peerlist.Add(&Peer{s.Conn().RemotePeer(),s.Conn().RemoteMultiaddr()})
 	//start stream
@@ -206,7 +201,7 @@ func (n *Node) addBlockToPool(data []byte){
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, blockpb); err!=nil{
-		log.Println(err)
+		logger.Warn(err)
 	}
 
 	//create an empty block
@@ -229,7 +224,7 @@ func (n *Node)addMultiPeers(data []byte){
 
 		//unmarshal byte to proto
 		if err := proto.Unmarshal(data, plpb); err != nil {
-			log.Println(err)
+			logger.Warn(err)
 		}
 
 		//create an empty peerlist
@@ -249,7 +244,6 @@ func (n *Node)addMultiPeers(data []byte){
 
 		//add streams for new peers
 		for _, p := range newpl.GetPeerlist() {
-			log.Println(p.peerid, ":", p.addr)
 			if !n.peerlist.IsInPeerlist(p){
 				n.AddStream(p.peerid, p.addr)
 			}

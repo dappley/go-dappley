@@ -4,12 +4,12 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/libp2p/go-libp2p-net"
 	"bufio"
-	"log"
 	"sync"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/network/pb"
 	"errors"
+	logger "github.com/sirupsen/logrus"
 )
 
 const(
@@ -76,17 +76,17 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 	bytes,err := readMsg(rw)
 
 	if err != nil {
-		log.Println(err)
+		logger.Warn(err)
 	}
 
 	//TODO: How to verify the integrity of the received message
 	//if the string is not empty
 	if len(bytes) > 1 {
 		//prase data
-		log.Println("Received Data:", bytes)
+		logger.Debug("Received Data:", bytes)
 		s.parseData(bytes)
 	}else{
-		log.Print("Read less than 1 byte. Stop Reading...")
+		logger.Debug("Read less than 1 byte. Stop Reading...")
 		//stop the stream
 		s.StopStream()
 	}
@@ -97,7 +97,7 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter) {
 	for {
 		select{
 		case <- s.quitRdCh:
-			log.Println("Stream ReadLoop Terminated!")
+			logger.Debug("Stream ReadLoop Terminated!")
 			return
 		default:
 			s.read(rw)
@@ -134,7 +134,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 			rw.Flush()
 			mutex.Unlock()
 		case <- s.quitWrCh:
-			log.Println("Stream Write Terminated!")
+			logger.Debug("Stream Write Terminated!")
 			return nil
 		}
 	}
@@ -142,7 +142,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 }
 
 func (s *Stream) StopStream(){
-	log.Println("Stream Terminated! Peer Addr:", s.remoteAddr)
+	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
 	s.quitRdCh <- true;
 	s.quitWrCh <- true;
 	s.stream.Close()
@@ -157,27 +157,27 @@ func (s *Stream) parseData(data []byte){
 
 	data,err := decodeMessage(data)
 	if err!=nil {
-		log.Println(err)
+		logger.Warn(err)
 		return
 	}
 
 	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, dmpb); err!=nil{
-		log.Println(err)
+		logger.Warn(err)
 	}
 
 	dm := &Dapmsg{}
 	dm.FromProto(dmpb)
 	switch(dm.GetCmd()){
 	case SyncBlock:
-		log.Print("Received",SyncBlock,"command from:", s.remoteAddr)
+		logger.Debug("Received",SyncBlock,"command from:", s.remoteAddr)
 		s.node.addBlockToPool(dm.GetData())
 	case SyncPeerList:
-		log.Print("Received",SyncPeerList,"command from:", s.remoteAddr)
+		logger.Debug("Received",SyncPeerList,"command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
 	default:
-		log.Print("Received invalid command from:", s.remoteAddr)
+		logger.Debug("Received invalid command from:", s.remoteAddr)
 	}
 
 }
