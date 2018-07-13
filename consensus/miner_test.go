@@ -108,7 +108,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
-	fmt.Println(bc)
+//	fmt.Println(bc)
 	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*2, 0)
 
 	teardown()
@@ -144,22 +144,42 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//check balance ; a:10, b:0
 	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
 
-	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
+	tx, err := core.NewUTXOTransaction(addr1, addr2, 4, wallet, bc, tip)
 	assert.Nil(t, err)
 
 	//a:15 b:5
 	core.GetTxnPoolInstance().Push(tx)
 	//a:20 b:10
-	core.GetTxnPoolInstance().Push(tx)
 
 	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
 	go miner.Start()
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
+		miner.Feed(time.Now().String())
+		time.Sleep(1 * time.Second)
+	}
+
+	core.GetTxnPoolInstance().Push(tx)
+	for i := 0; i < 1; i++ {
+		miner.Feed(time.Now().String())
+		time.Sleep(1 * time.Second)
+	}
+	tx2, err := core.NewUTXOTransaction(addr1, addr2, 11, wallet, bc, tip)
+	core.GetTxnPoolInstance().Push(tx2)
+	for i := 0; i < 1; i++ {
+		miner.Feed(time.Now().String())
+		time.Sleep(1 * time.Second)
+	}
+
+	miner.Stop()
+	go miner.Start()
+	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
-	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*3-sendAmount*2, sendAmount*2)
+
+	checkBalance(t, addr1.Address, addr2.Address, bc, 11, 19)
+	fmt.Println(bc)
 
 	teardown()
 
