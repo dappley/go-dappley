@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,35 +12,33 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 )
 
-const WalletFile = "../bin/client.dat"
+const WalletFile = "../bin/wallets.dat"
 
 type Wallets struct {
-	Wallets map[string]*core.Address
+	Wallets []Wallet
 }
 
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
-	wallets.Wallets = make(map[string]*core.Address)
 
 	err := wallets.LoadFromFile()
 
 	return &wallets, err
 }
 
-func (ws *Wallets) CreateWallet() string {
-	wallet := core.NewAddress()
-	address := fmt.Sprintf("%s", wallet.GetAddress())
+func (ws *Wallets) CreateWallet() core.Address {
+	wallet := NewWallet()
+	address := wallet.GetAddress()
 
-	ws.Wallets[address] = wallet
+	ws.Wallets = append(ws.Wallets, wallet)
 
 	return address
 }
 
-func (ws *Wallets) DeleteWallet(address string) error {
-	addresses := ws.GetAddresses()
-	for _, value := range addresses {
-		if value == address {
-			delete(ws.Wallets, address)
+func (ws *Wallets) DeleteWallet(key *core.KeyPair) error {
+	for i, value := range ws.Wallets {
+		if value.Key == key {
+			ws.Wallets = append(ws.Wallets[:i], ws.Wallets[i+1:]...)
 			return nil
 		}
 	}
@@ -54,24 +51,29 @@ func (ws *Wallets) DeleteWallets() error {
 	if len(ws.Wallets) == 0 {
 		return errors.New("no wallet yet")
 	}
-	for k := range ws.Wallets {
-		delete(ws.Wallets, k)
-	}
+	ws.Wallets = ws.Wallets[:0]
 	return nil
 }
 
-func (ws *Wallets) GetAddresses() []string {
-	var addresses []string
+func (ws *Wallets) GetAddresses() []core.Address {
+	var addresses []core.Address
 
-	for address := range ws.Wallets {
-		addresses = append(addresses, address)
+	for _, address := range ws.Wallets {
+		addresses = append(addresses, address.GetAddresses()...)
 	}
 
 	return addresses
 }
 
-func (ws Wallets) GetWallet(address string) core.Address {
-	return *ws.Wallets[address]
+func (ws Wallets) GetKeyPairByAddress(address core.Address) core.KeyPair {
+	for _, value := range ws.Wallets {
+
+		if value.ContainAddress(address) {
+			return *value.Key
+		}
+	}
+	return core.KeyPair{}
+
 }
 
 func (ws *Wallets) LoadFromFile() error {

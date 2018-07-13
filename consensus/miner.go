@@ -21,6 +21,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"container/heap"
 	"fmt"
+	"github.com/dappley/go-dappley/network"
 )
 
 type state int
@@ -42,6 +43,7 @@ type Miner struct {
 	exitCh           chan bool
 	messageCh        chan string
 	newBlockReceived bool
+	node             *network.Node
 }
 
 //create a new instance
@@ -55,6 +57,7 @@ func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus
 		consensus:    consensus,
 		exitCh:       make(chan bool, 1),
 		messageCh:    make(chan string, 128),
+		node:         network.NewNode(bc),
 	}
 }
 
@@ -101,19 +104,20 @@ func (miner *Miner) messageLoop() {
 	for {
 		fmt.Println("running")
 		select {
-		case msg:= <-miner.messageCh:
+		case msg := <-miner.messageCh:
 			fmt.Println(msg)
 		case block := <-miner.bc.BlockPool().BlockReceivedCh():
 			miner.newBlockReceived = true
 			miner.newBlock = block
 			miner.nextState = updateNewBlock
-			fmt.Println("block recieved: %h",block.GetHash())
+			fmt.Println("block recieved: %h", block.GetHash())
 		case <-miner.exitCh:
 			fmt.Println("quit Pow.")
 			return
 		}
 	}
 }
+
 //start mining
 func (pd *Miner) StartMining(signal chan bool) {
 Loop:
@@ -160,6 +164,7 @@ func (miner *Miner) mine() {
 
 	miner.consensus = NewProofOfWork(miner.bc)
 	miner.newBlock = miner.consensus.ProduceBlock(miner.coinBaseAddr, "", lastHash)
+	miner.node.SendBlock(miner.newBlock)
 }
 
 //update the blockchain with the new block

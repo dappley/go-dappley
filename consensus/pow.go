@@ -87,7 +87,7 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 	heap.Push(core.GetTxnPoolInstance(), cbtx)
 
 	//prepare the new block (without the correct nonce value)
-	blk := core.NewBlock(prevHash)
+	blk := core.NewBlock(core.GetTxnPoolInstance().GetSortedTransactions(),prevHash)
 
 	//find the nonce value
 	for nonce < maxNonce {
@@ -131,7 +131,6 @@ func (pow *ProofOfWork) Feed(msg string) {
 
 func (pow *ProofOfWork) Start() {
 	for {
-		fmt.Println("running")
 		select {
 		case msg:= <-pow.messageCh:
 			fmt.Println(msg)

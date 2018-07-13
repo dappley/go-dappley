@@ -7,56 +7,34 @@ import (
 	"errors"
 	"log"
 
+	"fmt"
+
 	"github.com/dappley/go-dappley/storage"
 )
-
-
 
 var tipKey = []byte("1")
 
 type Blockchain struct {
 	currentHash []byte
-	DB          *storage.LevelDB
-	blockPool *BlockPool
+	DB          storage.Storage
+	blockPool   *BlockPool
+	//txPool      *TransactionPool
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string, db storage.LevelDB) (*Blockchain, error) {
-
-	// if storage.DbExists(BlockchainDbFile) {
-	// 	err := errors.New("Database already exists.\n")
-	// 	return nil, err
-	// }
-
-	var tip []byte
-	genesis := NewGenesisBlock(address)
-
-	updateDbWithNewBlock(&db, genesis)
-
-	tip, err := db.Get(tipKey)
-	if err != nil {
-		return nil, err
-	}
-	blockPool := NewBlockPool(10)
-	return &Blockchain{tip, &db,blockPool}, nil
+func CreateBlockchain(address Address, db storage.Storage) (*Blockchain, error) {
+	genesis := NewGenesisBlock(address.Address)
+	updateDbWithNewBlock(db, genesis)
+	return GetBlockchain(db)
 }
 
-func GetBlockchain(db storage.LevelDB) (*Blockchain, error) {
-
-	//if storage.DbExists(BlockchainDbFile) == false {
-	//	err := errors.New("Designated database file not found.\n")
-	//	return nil, err
-	//}
+func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 	var tip []byte
-
 	tip, err := db.Get(tipKey)
 	if err != nil {
 		return nil, err
 	}
-
-	blockPool := NewBlockPool(10)
-
-	return &Blockchain{tip, &db,blockPool}, nil
+	return initializeBlockChainWithBlockPool(tip, db), nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
@@ -64,17 +42,13 @@ func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	bc.currentHash = newBlock.GetHash()
 }
 
-//record the new block in the database
-func updateDbWithNewBlock(db *storage.LevelDB, newBlock *Block) {
-	db.Put(newBlock.GetHash(), newBlock.Serialize())
-
-	db.Put(tipKey, newBlock.GetHash())
-
-}
 func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
 }
 
+//func (bc *Blockchain) TransactionPool() *TransactionPool {
+//	return bc.txPool
+//}
 func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
 	unspentOutputs := make(map[string][]int)
 	unspentTXs, err := bc.FindUnspentTransactions(pubKeyHash)
@@ -224,9 +198,7 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	blockPool := NewBlockPool(10)
-
-	return &Blockchain{bc.currentHash, bc.DB,blockPool}
+	return initializeBlockChainWithBlockPool(bc.currentHash, bc.DB)
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -246,4 +218,41 @@ func (bc *Blockchain) Next() (*Block, error) {
 
 func (bc *Blockchain) GetLastHash() ([]byte, error) {
 	return bc.DB.Get(tipKey)
+}
+
+func (bc *Blockchain) String() string {
+	var buffer bytes.Buffer
+
+	bci := bc.Iterator()
+	for {
+		block, err := bci.Next()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))
+		buffer.WriteString(fmt.Sprintf("Prev. block: %x\n", block.GetPrevHash()))
+		for _, tx := range block.GetTransactions() {
+			fmt.Println(tx)
+		}
+		buffer.WriteString(fmt.Sprintf("\n\n"))
+
+		if len(block.GetPrevHash()) == 0 {
+			break
+		}
+	}
+	return buffer.String()
+}
+
+func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
+	blockPool := NewBlockPool(10)
+	return &Blockchain{current, db, blockPool}
+}
+
+//record the new block in the database
+func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
+	db.Put(newBlock.GetHash(), newBlock.Serialize())
+
+	db.Put(tipKey, newBlock.GetHash())
+
 }

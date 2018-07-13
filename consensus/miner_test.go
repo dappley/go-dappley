@@ -4,12 +4,14 @@ import (
 	"os"
 	"testing"
 
+	"fmt"
+	"time"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/storage"
-	"time"
 )
 
 var sendAmount = int(5)
@@ -33,22 +35,21 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
-	wallet := wallets.GetWallet(addr1)
+	wallet := wallets.GetKeyPairByAddress(addr1)
 
 	//create a blockchain
-	assert.Equal(t, true, core.ValidateAddress(addr1))
+	assert.Equal(t, true, addr1.ValidateAddress())
 
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1, *db)
+	bc, err := core.CreateBlockchain(addr1, db)
 	assert.Nil(t, err)
 
 	assert.NotNil(t, bc)
 
-
 	//check balance
-	checkBalance(t, addr1, addr2, bc, mineReward, 0)
+	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
 
 	//create 2 transactions and start mining
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
@@ -56,7 +57,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	core.GetTxnPoolInstance().Push(tx)
 
-	miner := NewMiner(bc, addr1, NewProofOfWork(bc))
+	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
 	go miner.Start()
 	for i := 0; i < 3; i++ {
 		miner.Feed(time.Now().String())
@@ -65,7 +66,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	}
 	miner.Stop()
 
-	checkBalance(t, addr1, addr2, bc, mineReward*2-sendAmount, sendAmount)
+	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*2-sendAmount, sendAmount)
 
 	teardown()
 }
@@ -86,29 +87,29 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	assert.NotNil(t, addr2)
 
 	//create a blockchain
-	assert.Equal(t, true, core.ValidateAddress(addr1))
+	assert.Equal(t, true, addr1.ValidateAddress())
 
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1,*db)
+	bc, err := core.CreateBlockchain(addr1, db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-
 	//check balance
-	checkBalance(t, addr1, addr2, bc, mineReward, 0)
+	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
 
 	//create 2 transactions and start mining
 
-	miner := NewMiner(bc, addr1, NewProofOfWork(bc))
+	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
 	go miner.Start()
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
-	checkBalance(t, addr1, addr2, bc, mineReward*2, 0)
+	fmt.Println(bc)
+	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*2, 0)
 
 	teardown()
 }
@@ -128,22 +129,20 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	addr2 := wallets.CreateWallet()
 	assert.NotNil(t, addr2)
 
-	wallet := wallets.GetWallet(addr1)
+	wallet := wallets.GetKeyPairByAddress(addr1)
 
 	//create a blockchain
-	assert.Equal(t, true, core.ValidateAddress(addr1))
+	assert.Equal(t, true, addr1.ValidateAddress())
 
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
-	
-	bc, err := core.CreateBlockchain(addr1, *db)
+
+	bc, err := core.CreateBlockchain(addr1, db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	
-
 	//check balance ; a:10, b:0
-	checkBalance(t, addr1, addr2, bc, mineReward, 0)
+	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
 
 	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
@@ -153,14 +152,14 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//a:20 b:10
 	core.GetTxnPoolInstance().Push(tx)
 
-	miner := NewMiner(bc, addr1, NewProofOfWork(bc))
+	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
 	go miner.Start()
 	for i := 0; i < 2; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
-	checkBalance(t, addr1, addr2, bc, mineReward*3-sendAmount*2, sendAmount*2)
+	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*3-sendAmount*2, sendAmount*2)
 
 	teardown()
 

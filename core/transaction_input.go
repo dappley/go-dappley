@@ -1,10 +1,12 @@
 package core
 
-import(
+import (
 	"bytes"
-	"github.com/gogo/protobuf/proto"
+
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/gogo/protobuf/proto"
 )
+
 type TXInput struct {
 	Txid      []byte
 	Vout      int
@@ -19,17 +21,16 @@ func (in *TXInput) UsesKey(pubKeyHash []byte) bool {
 	return bytes.Compare(lockingHash, pubKeyHash) == 0
 }
 
-
-func (in *TXInput) ToProto() (proto.Message){
+func (in *TXInput) ToProto() proto.Message {
 	return &corepb.TXInput{
-		Txid:		in.Txid,
-		Vout:		int32(in.Vout),
-		Signature:	in.Signature,
-		PubKey:		in.PubKey,
+		Txid:      in.Txid,
+		Vout:      int32(in.Vout),
+		Signature: in.Signature,
+		PubKey:    in.PubKey,
 	}
 }
 
-func (in *TXInput) FromProto(pb proto.Message){
+func (in *TXInput) FromProto(pb proto.Message) {
 	in.Txid = pb.(*corepb.TXInput).Txid
 	in.Vout = int(pb.(*corepb.TXInput).Vout)
 	in.Signature = pb.(*corepb.TXInput).Signature

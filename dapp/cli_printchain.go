@@ -11,7 +11,7 @@ import (
 
 func (cli *CLI) printChain() {
 	db := storage.OpenDatabase(core.BlockchainDbFile)
-	bc, _ := core.GetBlockchain(*db)
+	bc, _ := core.GetBlockchain(db)
 	defer bc.DB.Close()
 
 	bci := bc.Iterator()

@@ -20,11 +20,11 @@ package logic
 
 import (
 	"errors"
+
 	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 )
 
 var (
@@ -33,10 +33,9 @@ var (
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
 )
 
-
 //create a blockchain
-func CreateBlockchain(address string, db storage.LevelDB) (*core.Blockchain, error) {
-	if !core.ValidateAddress(address) {
+func CreateBlockchain(address core.Address, db storage.Storage) (*core.Blockchain, error) {
+	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
@@ -49,7 +48,7 @@ func CreateBlockchain(address string, db storage.LevelDB) (*core.Blockchain, err
 }
 
 //create a wallet
-func CreateWallet() (string, error) {
+func CreateWallet() (core.Address, error) {
 	wallets, err := client.NewWallets()
 	address := wallets.CreateWallet()
 	wallets.SaveToFile()
@@ -58,8 +57,8 @@ func CreateWallet() (string, error) {
 }
 
 //get balance
-func GetBalance(address string, db storage.LevelDB) (int, error) {
-	if !core.ValidateAddress(address) {
+func GetBalance(address core.Address, db storage.Storage) (int, error) {
+	if !address.ValidateAddress() {
 		return 0, ErrInvalidAddress
 	}
 	//inject db here
@@ -70,7 +69,7 @@ func GetBalance(address string, db storage.LevelDB) (int, error) {
 	}
 
 	balance := 0
-	pubKeyHash := util.Base58Decode([]byte(address))
+	pubKeyHash := util.Base58Decode([]byte(address.Address))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	UTXOs, err := bc.FindUTXO(pubKeyHash)
 	if err != nil {
@@ -84,7 +83,7 @@ func GetBalance(address string, db storage.LevelDB) (int, error) {
 }
 
 //get all addresses
-func GetAllAddresses() ([]string, error) {
+func GetAllAddresses() ([]core.Address, error) {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return nil, err
@@ -95,11 +94,11 @@ func GetAllAddresses() ([]string, error) {
 	return addresses, err
 }
 
-func Send(from, to string, amount int, tip int64, db storage.LevelDB) error {
-	if !core.ValidateAddress(from) {
+func Send(from, to core.Address, amount int, tip int64, db storage.Storage) error {
+	if !from.ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
-	if !core.ValidateAddress(to) {
+	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
 
@@ -112,7 +111,7 @@ func Send(from, to string, amount int, tip int64, db storage.LevelDB) error {
 	if err != nil {
 		return err
 	}
-	wallet := wallets.GetWallet(from)
+	wallet := wallets.GetKeyPairByAddress(from)
 	tx, err := core.NewUTXOTransaction(from, to, amount, wallet, bc, tip)
 
 	if err != nil {
@@ -120,20 +119,17 @@ func Send(from, to string, amount int, tip int64, db storage.LevelDB) error {
 	}
 	core.GetTxnPoolInstance().Push(tx)
 
-	//TODO: miner should be separated from the sender
-	miner := consensus.NewMiner(bc, from, consensus.NewProofOfWork(bc))
-	miner.Start()
 	return err
 }
 
 //delete wallet
 
-func DeleteWallet(address string) error {
+func DeleteWallet(key *core.KeyPair) error {
 	wallets, err := client.NewWallets()
 	if err != nil {
 		return err
 	}
-	err = wallets.DeleteWallet(address)
+	err = wallets.DeleteWallet(key)
 	if err != nil {
 		return err
 	}
