@@ -15,10 +15,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
+	"time"
+	"math/rand"
 )
 
 const(
-	protocalName = "dappley/1.0.0"
+	protocalName 			= "dappley/1.0.0"
+	syncPeerTimeLimitMs 	= 1000
 )
 
 type Node struct{
@@ -219,32 +222,40 @@ func (n *Node) addBlockToPool(data []byte){
 }
 
 func (n *Node)addMultiPeers(data []byte){
-	//create a peerlist proto
-	plpb := &networkpb.Peerlist{}
 
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, plpb); err!=nil{
-		log.Println(err)
-	}
+	go func() {
+		//create a peerlist proto
+		plpb := &networkpb.Peerlist{}
 
-	//create an empty peerlist
-	pl := &PeerList{}
+		//unmarshal byte to proto
+		if err := proto.Unmarshal(data, plpb); err != nil {
+			log.Println(err)
+		}
 
-	//load the block with proto
-	pl.FromProto(plpb)
+		//create an empty peerlist
+		pl := &PeerList{}
 
-	//remove the node's own peer info from the list
-	newpl := &PeerList{[]*Peer{n.info}}
-	newpl = newpl.FindNewPeers(pl)
-	//find the new added peers
-	newpl = n.peerlist.FindNewPeers(newpl)
+		//load the block with proto
+		pl.FromProto(plpb)
 
-	//add streams for new peers
-	for _,p := range newpl.GetPeerlist(){
-		n.AddStream(p.peerid,p.addr)
-	}
+		//remove the node's own peer info from the list
+		newpl := &PeerList{[]*Peer{n.info}}
+		newpl = newpl.FindNewPeers(pl)
+		//find the new added peers
+		newpl = n.peerlist.FindNewPeers(newpl)
 
-	//add peers
-	n.peerlist.MergePeerlist(pl)
+		//wait for random time within the time limit
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(syncPeerTimeLimitMs)) )
 
+		//add streams for new peers
+		for _, p := range newpl.GetPeerlist() {
+			log.Println(p.peerid, ":", p.addr)
+			if !n.peerlist.IsInPeerlist(p){
+				n.AddStream(p.peerid, p.addr)
+			}
+		}
+
+		//add peers
+		n.peerlist.MergePeerlist(pl)
+	}()
 }

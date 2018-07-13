@@ -18,6 +18,8 @@ const(
 	test_port6
 	test_port7
 	test_port8
+	test_port9
+	test_port10
 
 )
 
@@ -117,7 +119,7 @@ func TestNode_SyncPeers(t *testing.T){
 	//node 1 broadcast syncpeers
 	node1.SyncPeers()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second*2)
 
 	//node2 should have node 3 as its peer
 	assert.True(t,node2.peerlist.IsInPeerlist(node3.GetInfo()))
