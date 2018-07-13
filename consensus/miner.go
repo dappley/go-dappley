@@ -18,9 +18,10 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"container/heap"
 	"fmt"
+
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 )
 

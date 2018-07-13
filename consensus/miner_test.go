@@ -29,35 +29,35 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, wallets)
 
-	addr1 := wallets.CreateWallet()
-	assert.NotNil(t, addr1)
+	wallet1 := wallets.CreateWallet()
+	assert.NotNil(t, wallet1)
 
-	addr2 := wallets.CreateWallet()
-	assert.NotNil(t, addr2)
+	wallet2 := wallets.CreateWallet()
+	assert.NotNil(t, wallet2)
 
-	wallet := wallets.GetKeyPairByAddress(addr1)
+	wallet := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 
 	//create a blockchain
-	assert.Equal(t, true, addr1.ValidateAddress())
+	assert.Equal(t, true, wallet1.GetAddress().ValidateAddress())
 
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1, db)
+	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.Nil(t, err)
 
 	assert.NotNil(t, bc)
 
 	//check balance
-	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
+	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward, 0)
 
 	//create 2 transactions and start mining
-	tx, err := core.NewUTXOTransaction(addr1, addr2, sendAmount, wallet, bc, tip)
+	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, tip)
 	assert.Nil(t, err)
 
 	core.GetTxnPoolInstance().Push(tx)
 
-	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
+	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
 	go miner.Start()
 	for i := 0; i < 3; i++ {
 		miner.Feed(time.Now().String())
@@ -66,7 +66,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	}
 	miner.Stop()
 
-	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*2-sendAmount, sendAmount)
+	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward*2-sendAmount, sendAmount)
 
 	teardown()
 }
@@ -80,36 +80,36 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	wallets, _ := client.NewWallets()
 	assert.NotNil(t, wallets)
 
-	addr1 := wallets.CreateWallet()
-	assert.NotNil(t, addr1)
+	wallet1 := wallets.CreateWallet()
+	assert.NotNil(t, wallet1)
 
-	addr2 := wallets.CreateWallet()
-	assert.NotNil(t, addr2)
+	wallet2 := wallets.CreateWallet()
+	assert.NotNil(t, wallet2)
 
 	//create a blockchain
-	assert.Equal(t, true, addr1.ValidateAddress())
+	assert.Equal(t, true, wallet1.GetAddress().ValidateAddress())
 
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1, db)
+	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//check balance
-	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
+	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward, 0)
 
 	//create 2 transactions and start mining
 
-	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
+	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
 	go miner.Start()
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
-//	fmt.Println(bc)
-	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward*2, 0)
+	//fmt.Println(bc)
+	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward*2, 0)
 
 	teardown()
 }
@@ -123,35 +123,35 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	wallets, _ := client.NewWallets()
 	assert.NotNil(t, wallets)
 
-	addr1 := wallets.CreateWallet()
-	assert.NotNil(t, addr1)
+	wallet1 := wallets.CreateWallet()
+	assert.NotNil(t, wallet1)
 
-	addr2 := wallets.CreateWallet()
-	assert.NotNil(t, addr2)
+	wallet2 := wallets.CreateWallet()
+	assert.NotNil(t, wallet2)
 
-	wallet := wallets.GetKeyPairByAddress(addr1)
+	wallet := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 
 	//create a blockchain
-	assert.Equal(t, true, addr1.ValidateAddress())
+	assert.Equal(t, true, wallet1.GetAddress().ValidateAddress())
 
 	db := storage.OpenDatabase(core.BlockchainDbFile)
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(addr1, db)
+	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//check balance ; a:10, b:0
-	checkBalance(t, addr1.Address, addr2.Address, bc, mineReward, 0)
+	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward, 0)
 
-	tx, err := core.NewUTXOTransaction(addr1, addr2, 4, wallet, bc, tip)
+	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), 4, wallet, bc, tip)
 	assert.Nil(t, err)
 
 	//a:15 b:5
 	core.GetTxnPoolInstance().Push(tx)
 	//a:20 b:10
 
-	miner := NewMiner(bc, addr1.Address, NewProofOfWork(bc))
+	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
 	go miner.Start()
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
@@ -163,7 +163,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
 	}
-	tx2, err := core.NewUTXOTransaction(addr1, addr2, 11, wallet, bc, tip)
+	tx2, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), 11, wallet, bc, tip)
 	core.GetTxnPoolInstance().Push(tx2)
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
@@ -178,8 +178,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	}
 	miner.Stop()
 
-	checkBalance(t, addr1.Address, addr2.Address, bc, 11, 19)
 	fmt.Println(bc)
+	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, 11, 19)
 
 	teardown()
 

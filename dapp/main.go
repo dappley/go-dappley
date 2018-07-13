@@ -22,10 +22,11 @@ type Dep struct {
 }
 
 func setup(db *storage.LevelDB) (string, *core.Blockchain) {
-	walletAddr, err := logic.CreateWallet()
+	wallet, err := logic.CreateWallet()
 	if err != nil {
 		log.Panic(err)
 	}
+	walletAddr := wallet.GetAddress()
 	blockchain, err := logic.CreateBlockchain(walletAddr, db)
 	if err != nil {
 		log.Panic(err)

@@ -62,10 +62,10 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock", flag.ExitOnError)
 		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
 
-		getBalanceAddress := core.NewAddress(*getBalanceCmd.String("address", "", "The address to get balance for"))
-		createBlockchainAddress := core.NewAddress(*createBlockchainCmd.String("address", "", "The address to send genesis block reward to"))
-		sendFrom := core.NewAddress(*sendCmd.String("from", "", "Source client address"))
-		sendTo := core.NewAddress(*sendCmd.String("to", "", "Destination client address"))
+		getBalanceAddressString := getBalanceCmd.String("address", "", "The address to get balance for")
+		createBlockchainAddressString := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
+		sendFrom := sendCmd.String("from", "", "Source client address")
+		sendTo := sendCmd.String("to", "", "Destination client address")
 		sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 		tipAmount := sendCmd.Int("tip", 0, "Amount to tip")
 		nodePort := nodeSetPortCmd.Int("port", 12345, "Port to listen")
@@ -126,9 +126,10 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if getBalanceCmd.Parsed() {
-			if getBalanceAddress.Address == "" {
+			if *getBalanceAddressString == "" {
 				getBalanceCmd.Usage()
 			}
+			getBalanceAddress := core.NewAddress(*getBalanceAddressString)
 			balance, err := logic.GetBalance(getBalanceAddress, dep.db)
 			if err != nil {
 				log.Println(err)
@@ -139,10 +140,10 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if createBlockchainCmd.Parsed() {
-			if createBlockchainAddress.Address == "" {
+			if *createBlockchainAddressString == "" {
 				createBlockchainCmd.Usage()
 			}
-
+			createBlockchainAddress := core.NewAddress(*createBlockchainAddressString)
 			_, err := logic.CreateBlockchain(createBlockchainAddress, dep.db)
 			if err != nil {
 				log.Println(err)
@@ -174,11 +175,12 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if sendCmd.Parsed() {
-			if sendFrom.Address == "" || sendTo.Address == "" || *sendAmount <= 0 {
+			if *sendFrom == "" || *sendTo == "" || *sendAmount <= 0 {
 				sendCmd.Usage()
 			}
-
-			if err := logic.Send(sendFrom, sendTo, *sendAmount, int64(*tipAmount), dep.db); err != nil {
+			sendFromAddress := core.NewAddress(*sendFrom)
+			sendToAddress := core.NewAddress(*sendTo)
+			if err := logic.Send(sendFromAddress, sendToAddress, *sendAmount, int64(*tipAmount), dep.db); err != nil {
 				log.Println(err)
 			} else {
 				fmt.Println("Send Successful")

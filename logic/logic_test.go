@@ -46,15 +46,16 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateWallet(t *testing.T) {
-	addr, err := CreateWallet()
+	wallet, err := CreateWallet()
 	assert.Nil(t, err)
-	assert.NotEmpty(t, addr)
+	assert.NotEmpty(t, wallet)
 }
 
 func TestCreateBlockchain(t *testing.T) {
 	//create a wallet address
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	wallet, err := CreateWallet()
+	assert.NotEmpty(t, wallet)
+	addr := wallet.GetAddress()
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr, databaseInstance)
@@ -72,8 +73,9 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 
 func TestGetBalance(t *testing.T) {
 	//create a wallet address
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	wallet, err := CreateWallet()
+	assert.NotEmpty(t, wallet)
+	addr := wallet.GetAddress()
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr, databaseInstance)
@@ -88,8 +90,9 @@ func TestGetBalance(t *testing.T) {
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//create a wallet address
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	wallet, err := CreateWallet()
+	assert.NotEmpty(t, wallet)
+	addr := wallet.GetAddress()
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr, databaseInstance)
@@ -110,8 +113,10 @@ func TestGetAllAddresses(t *testing.T) {
 	setup()
 	expected_res := []core.Address{}
 	//create a wallet address
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	wallet, err := CreateWallet()
+	assert.NotEmpty(t, wallet)
+	addr := wallet.GetAddress()
+
 	expected_res = append(expected_res, addr)
 
 	//create a blockchain
@@ -122,7 +127,8 @@ func TestGetAllAddresses(t *testing.T) {
 	//create 10 more addresses
 	for i := 0; i < 10; i++ {
 		//create a wallet address
-		addr, err = CreateWallet()
+		wallet, err = CreateWallet()
+		addr = wallet.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
 		expected_res = append(expected_res, addr)
@@ -147,31 +153,35 @@ func TestSend(t *testing.T) {
 	transferAmount := int(5)
 	tip := int64(5)
 	//create a wallet address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
+	wallet1, err := CreateWallet()
+	assert.NotEmpty(t, wallet1)
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr1, databaseInstance)
+	b, err := CreateBlockchain(wallet1.GetAddress(), databaseInstance)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
 	//The balance1 should be 10 after creating a blockchain
-	balance1, err := GetBalance(addr1, databaseInstance)
+	balance1, err := GetBalance(wallet1.GetAddress(), databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 	fmt.Println(balance1)
 	//Create a second wallet
-	addr2, err := CreateWallet()
-	assert.NotEmpty(t, addr2)
+	wallet2, err := CreateWallet()
+	assert.NotEmpty(t, wallet2)
 	assert.Nil(t, err)
+	addr1 := wallet1.GetAddress()
+	addr2 := wallet2.GetAddress()
 
 	//The balance2 should be 0
 	balance2, err := GetBalance(addr2, databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, balance2, 0)
+	fmt.Println(balance2)
 
-	//Send 5 coins from addr1 to addr2
+	//Send 5 coins from wallet1 to wallet2
 	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
+	assert.Nil(t, err)
 	miner := consensus.NewMiner(b, addr1.Address, consensus.NewProofOfWork(b))
 	go miner.Start()
 	for i := 0; i < 3; i++ {
@@ -180,17 +190,18 @@ func TestSend(t *testing.T) {
 	}
 	assert.Nil(t, err)
 	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
-	balance1, err = GetBalance(addr1, databaseInstance)
+	balance1, err = GetBalance(wallet1.GetAddress(), databaseInstance)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2*mineReward-transferAmount, balance1)
 
 	//the balance1 of the second wallet should be 5
-	balance2, err = GetBalance(addr2, databaseInstance)
+	balance2, err = GetBalance(wallet2.GetAddress(), databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, transferAmount, balance2)
 
 	miner.Stop()
+	fmt.Println(b)
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -224,8 +235,9 @@ func TestSendToInvalidAddress(t *testing.T) {
 	transferAmount := int(25)
 	tip := int64(5)
 	//create a wallet address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
+	wallet1, err := CreateWallet()
+	assert.NotEmpty(t, wallet1)
+	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr1, databaseInstance)
@@ -253,8 +265,9 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	//create wallets address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
+	wallet1, err := CreateWallet()
+	assert.NotEmpty(t, wallet1)
+	addr1 := wallet1.GetAddress()
 
 	addressList := []core.Address{addr1}
 
@@ -280,8 +293,9 @@ func TestSendInsufficientBalance(t *testing.T) {
 	transferAmount := int(25)
 
 	//create a wallet address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
+	wallet1, err := CreateWallet()
+	assert.NotEmpty(t, wallet1)
+	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr1, databaseInstance)
@@ -294,9 +308,10 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, balance1, mineReward)
 
 	//Create a second wallet
-	addr2, err := CreateWallet()
-	assert.NotEmpty(t, addr2)
+	wallet2, err := CreateWallet()
+	assert.NotEmpty(t, wallet2)
 	assert.Nil(t, err)
+	addr2 := wallet2.GetAddress()
 
 	//The balance should be 0
 	balance2, err := GetBalance(addr2, databaseInstance)
@@ -326,8 +341,9 @@ func TestProofOfWork_Start(t *testing.T) {
 	setup()
 
 	//create a wallet address
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	wallet, err := CreateWallet()
+	assert.NotEmpty(t, wallet)
+	addr := wallet.GetAddress()
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr, databaseInstance)

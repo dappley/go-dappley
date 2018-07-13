@@ -18,6 +18,12 @@
   revision = "fdfc19097e7ac6b57035062056f5b7b4638b8898"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/btcsuite/btcutil"
+  packages = ["base58"]
+  revision = "ab6388e0c60ae4834a1f57511e20c17b5f78be4b"
+
+[[projects]]
   name = "github.com/coreos/go-semver"
   packages = ["semver"]
   revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
@@ -139,6 +145,18 @@
     "ratelimit"
   ]
   revision = "b497e2f366b8624394fb2e89c10ab607bebdde0b"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/lestrrat/go-file-rotatelogs"
+  packages = ["."]
+  revision = "d3151e2a480fdcd05fb97102f5310a47d96274c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/lestrrat/go-strftime"
+  packages = ["."]
+  revision = "ba3bf9c1d0421aa146564a632931730344f1f9f1"
 
 [[projects]]
   name = "github.com/libp2p/go-addr-util"
@@ -403,6 +421,24 @@
   version = "v0.3.7"
 
 [[projects]]
+  name = "github.com/nebulasio/go-nebulas"
+  packages = [
+    "crypto",
+    "crypto/cipher",
+    "crypto/hash",
+    "crypto/keystore",
+    "crypto/keystore/secp256k1",
+    "crypto/keystore/secp256k1/bitelliptic",
+    "crypto/keystore/secp256k1/vrf",
+    "crypto/sha3",
+    "crypto/utils",
+    "util/byteutils",
+    "util/logging"
+  ]
+  revision = "7470724e2ed1f2f1e54af19e3ead477d324d542e"
+  version = "v1.0.6"
+
+[[projects]]
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
@@ -413,10 +449,22 @@
   version = "v1.0.2"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/rifflock/lfshook"
+  packages = ["."]
+  revision = "bf539943797a1f34c1f502d07de419b5238ae6c6"
+  version = "v2.3"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
@@ -521,7 +569,9 @@
   packages = [
     "blake2s",
     "blowfish",
+    "pbkdf2",
     "ripemd160",
+    "scrypt",
     "sha3",
     "ssh/terminal"
   ]
@@ -628,6 +678,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1a6df34b03ef81ed14fe513d32b4395392023ab33425ae90502ba8998eb14ee8"
+  inputs-digest = "2d14043afaf01cf9dac43ad8f1b895eb7e41f6a75c8e635b2dbfbc0359df60cc"
   solver-name = "gps-cdcl"
   solver-version = 1

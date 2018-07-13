@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"io/ioutil"
 	"log"
-	"os"
+
+	"crypto/elliptic"
 
 	"github.com/dappley/go-dappley/core"
-	"crypto/elliptic"
+	"github.com/dappley/go-dappley/storage"
 )
 
 const WalletFile = "../bin/wallets.dat"
@@ -21,18 +21,17 @@ type Wallets struct {
 func NewWallets() (*Wallets, error) {
 	wallets := Wallets{}
 
-	err := wallets.LoadFromFile()
+	err := wallets.LoadWalletFromFile()
 
 	return &wallets, err
 }
 
-func (ws *Wallets) CreateWallet() core.Address {
+func (ws *Wallets) CreateWallet() Wallet {
 	wallet := NewWallet()
-	address := wallet.GetAddress()
 
 	ws.Wallets = append(ws.Wallets, wallet)
 
-	return address
+	return wallet
 }
 
 func (ws *Wallets) DeleteWallet(key *core.KeyPair) error {
@@ -76,18 +75,12 @@ func (ws Wallets) GetKeyPairByAddress(address core.Address) core.KeyPair {
 
 }
 
-func (ws *Wallets) LoadFromFile() error {
-	if _, err := os.Stat(WalletFile); os.IsNotExist(err) {
-		ws.SaveToFile()
-	} else if err != nil {
-		return err
-	}
-
-	fileContent, err := ioutil.ReadFile(WalletFile)
+func (ws *Wallets) LoadWalletFromFile() error {
+	fileContent, err := storage.GetFileConnection(WalletFile)
 	if err != nil {
-		log.Panic(err)
+		ws.SaveWalletToFile()
+		fileContent, err = storage.GetFileConnection(WalletFile)
 	}
-
 	var wallets Wallets
 	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
@@ -102,7 +95,7 @@ func (ws *Wallets) LoadFromFile() error {
 }
 
 // SaveToFile saves wallets to a file
-func (ws Wallets) SaveToFile() {
+func (ws Wallets) SaveWalletToFile() {
 	var content bytes.Buffer
 
 	gob.Register(elliptic.P256())
@@ -111,9 +104,6 @@ func (ws Wallets) SaveToFile() {
 	if err != nil {
 		log.Panic(err)
 	}
+	storage.SaveToFile(WalletFile, content)
 
-	err = ioutil.WriteFile(WalletFile, content.Bytes(), 0644)
-	if err != nil {
-		log.Panic(err)
-	}
 }

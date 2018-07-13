@@ -48,12 +48,12 @@ func CreateBlockchain(address core.Address, db storage.Storage) (*core.Blockchai
 }
 
 //create a wallet
-func CreateWallet() (core.Address, error) {
+func CreateWallet() (client.Wallet, error) {
 	wallets, err := client.NewWallets()
-	address := wallets.CreateWallet()
-	wallets.SaveToFile()
+	wallet := wallets.CreateWallet()
+	wallets.SaveWalletToFile()
 
-	return address, err
+	return wallet, err
 }
 
 //get balance
@@ -133,7 +133,7 @@ func DeleteWallet(key *core.KeyPair) error {
 	if err != nil {
 		return err
 	}
-	wallets.SaveToFile()
+	wallets.SaveWalletToFile()
 	return err
 }
 
@@ -146,6 +146,6 @@ func DeleteWallets() error {
 	if err != nil {
 		return err
 	}
-	wallets.SaveToFile()
+	wallets.SaveWalletToFile()
 	return err
 }

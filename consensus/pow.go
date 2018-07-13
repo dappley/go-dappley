@@ -25,9 +25,10 @@ import (
 	"math"
 	"math/big"
 
+	"container/heap"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
-	"container/heap"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -35,12 +36,11 @@ var maxNonce int64 = math.MaxInt64
 const targetBits = int64(14)
 
 type ProofOfWork struct {
+	target *big.Int
 
-	target 		*big.Int
-
-	exitCh chan bool
-	messageCh chan string
-	chain *core.Blockchain
+	exitCh           chan bool
+	messageCh        chan string
+	chain            *core.Blockchain
 	newBlockReceived bool
 }
 
@@ -49,14 +49,13 @@ func NewProofOfWork(chain *core.Blockchain) *ProofOfWork {
 	target.Lsh(target, uint(256-targetBits))
 
 	p := &ProofOfWork{
-		target: target,
-	    exitCh:	make(chan bool, 1),
-	    messageCh: make(chan string, 128),
-	    chain: chain,
+		target:    target,
+		exitCh:    make(chan bool, 1),
+		messageCh: make(chan string, 128),
+		chain:     chain,
 	}
 	return p
 }
-
 
 func prepareData(nonce int64, blk *core.Block) []byte {
 	data := bytes.Join(
@@ -72,7 +71,7 @@ func prepareData(nonce int64, blk *core.Block) []byte {
 	return data
 }
 
-func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *core.Block{
+func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *core.Block {
 
 	var hashInt big.Int
 	var hash [32]byte
@@ -80,14 +79,14 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 
 	//add coinbase transaction to transaction pool
 
-	cbtx := core.NewCoinbaseTX(cbAddr,cbData)
+	cbtx := core.NewCoinbaseTX(cbAddr, cbData)
 	h := core.GetTxnPoolInstance()
 
 	heap.Init(h)
 	heap.Push(core.GetTxnPoolInstance(), cbtx)
 
 	//prepare the new block (without the correct nonce value)
-	blk := core.NewBlock(core.GetTxnPoolInstance().GetSortedTransactions(),prevHash)
+	blk := core.NewBlock(core.GetTxnPoolInstance().GetSortedTransactions(), prevHash)
 
 	//find the nonce value
 	for nonce < maxNonce {
@@ -132,7 +131,7 @@ func (pow *ProofOfWork) Feed(msg string) {
 func (pow *ProofOfWork) Start() {
 	for {
 		select {
-		case msg:= <-pow.messageCh:
+		case msg := <-pow.messageCh:
 			fmt.Println(msg)
 		case block := <-pow.chain.BlockPool().BlockReceivedCh():
 			pow.newBlockReceived = true
@@ -142,4 +141,3 @@ func (pow *ProofOfWork) Start() {
 		}
 	}
 }
-

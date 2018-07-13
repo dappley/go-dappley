@@ -18,9 +18,9 @@
 package core
 
 import (
-	"sync"
 	"container/heap"
 	"fmt"
+	"sync"
 )
 
 // An TransactionPool is a max-heap of Transactions.
@@ -37,8 +37,12 @@ var once sync.Once
 func (pool TransactionPool) Len() int { return len(pool.transactions) }
 
 //Compares Transaction Tips
-func (pool TransactionPool) Less(i, j int) bool { return pool.transactions[i].Tip > pool.transactions[j].Tip }
-func (pool TransactionPool) Swap(i, j int)      { pool.transactions[i], pool.transactions[j] = pool.transactions[j], pool.transactions[i] }
+func (pool TransactionPool) Less(i, j int) bool {
+	return pool.transactions[i].Tip > pool.transactions[j].Tip
+}
+func (pool TransactionPool) Swap(i, j int) {
+	pool.transactions[i], pool.transactions[j] = pool.transactions[j], pool.transactions[i]
+}
 
 //func NewTransactionPool(size int) (*TransactionPool) {
 //	txPool := &TransactionPool{
@@ -66,8 +70,8 @@ func GetTxnPoolInstance() *TransactionPool {
 	once.Do(func() {
 		//instance = &TransactionPool{}
 		instance = &TransactionPool{
-			messageCh:    make(chan string, 128),
-			size:         128,
+			messageCh: make(chan string, 128),
+			size:      128,
 		}
 	})
 	heap.Init(instance)
@@ -86,18 +90,18 @@ func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
 	return sortedTransactions
 }
 
-func (pool *TransactionPool) Start(){
+func (pool *TransactionPool) Start() {
 	go pool.messageLoop()
 }
 
-func (pool *TransactionPool) Stop(){
+func (pool *TransactionPool) Stop() {
 	pool.exitCh <- true
 }
 
 //todo: will change the input from string to transaction
-func (pool *TransactionPool) PushTransaction(msg string){
-//func (pool *TransactionPool) PushTransaction(tx *Transaction){
-//	pool.Push(tx)
+func (pool *TransactionPool) PushTransaction(msg string) {
+	//func (pool *TransactionPool) PushTransaction(tx *Transaction){
+	//	pool.Push(tx)
 	fmt.Println(msg)
 }
 
@@ -112,4 +116,3 @@ func (pool *TransactionPool) messageLoop() {
 		}
 	}
 }
-
