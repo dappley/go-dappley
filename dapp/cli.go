@@ -29,6 +29,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  setListeningPort -port PORT")
 	fmt.Println("  addPeer -address FULLADDRESS")
 	fmt.Println("  sendMockBlock")
+	fmt.Println("  syncPeers")
 	fmt.Println("  exit")
 }
 
@@ -59,6 +60,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		nodeSetPortCmd := flag.NewFlagSet("setListeningPort", flag.ExitOnError)
 		addPeerCmd := flag.NewFlagSet("addPeer", flag.ExitOnError)
 		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock", flag.ExitOnError)
+		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
 
 		getBalanceAddress := core.NewAddress(*getBalanceCmd.String("address", "", "The address to get balance for"))
 		createBlockchainAddress := core.NewAddress(*createBlockchainCmd.String("address", "", "The address to send genesis block reward to"))
@@ -117,6 +119,10 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		if sendMockBlockCmd.Parsed() {
 			b := core.GenerateMockBlock()
 			node.SendBlock(b)
+		}
+
+		if syncPeersCmd.Parsed() {
+			node.SyncPeers()
 		}
 
 		if getBalanceCmd.Parsed() {
