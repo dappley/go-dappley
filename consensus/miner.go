@@ -110,9 +110,7 @@ func (miner *Miner) messageLoop() {
 			miner.newBlockReceived = true
 			miner.newBlock = block
 			miner.nextState = updateNewBlock
-			fmt.Println("block recieved: %h", block.GetHash())
 		case <-miner.exitCh:
-			fmt.Println("quit Pow.")
 			return
 		}
 	}
