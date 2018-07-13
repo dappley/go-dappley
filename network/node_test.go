@@ -78,6 +78,10 @@ func TestNetwork_SendBlock(t *testing.T){
 	assert.NotEmpty(t, b3)
 	assert.Equal(t,*b1,*b3[0])
 
+/*	for _,s:=range node1.streams{
+		s.Send([]byte{4,2,3,1,4})
+	}
+	time.Sleep(time.Second)*/
 }
 
 func mockBlockchain(t *testing.T) *core.Blockchain{

@@ -17,7 +17,6 @@ import (
 
 const(
 	protocalName = "dappley/1.0.0"
- 	delimiter = 0x00
 )
 
 type Node struct{

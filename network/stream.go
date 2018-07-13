@@ -11,10 +11,18 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
+	"errors"
 )
 
 const(
+	delimiter = 0x00
+	startByte = 0x7E
+
 	SyncBlock = "SyncBlock"
+)
+
+var(
+	ErrInvalidMessageFormat = errors.New("Message format is invalid")
 )
 
 type Stream struct{
@@ -60,15 +68,11 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 	//TODO: How to verify the integrity of the received message
 	//if the string is not empty
 	if len(bytes) > 1 {
-
-		//get rid of the delimiter
-		bytes = bytes[:len(bytes)-1]
-		log.Println("Received Data:", bytes)
-
 		//prase data
+		log.Println("Received Data:", bytes)
 		s.parseData(bytes)
-
 	}else{
+
 		//stop the stream
 		s.StopStream()
 	}
@@ -86,6 +90,19 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter) {
 	}
 }
 
+func encodeMessage(data []byte) []byte{
+	startArr := []byte{startByte, startByte}
+	data = append(startArr,data...)
+	return append(data, delimiter)
+}
+
+func decodeMessage(data []byte) ([]byte,error){
+	if data[0]!=startByte || data[1]!=startByte || data[len(data)-1]!= delimiter {
+		return nil,ErrInvalidMessageFormat
+	}
+	return data[2:len(data)-1],nil
+}
+
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 	var mutex = &sync.Mutex{}
 	for{
@@ -93,7 +110,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 		case data := <- s.dataCh:
 			mutex.Lock()
 			//attach a delimiter byte of 0x00 to the end of the message
-			rw.WriteString(string(append(data, delimiter)))
+			rw.WriteString(string(encodeMessage(data)))
 			rw.Flush()
 			mutex.Unlock()
 		case <- s.quitWrCh:
@@ -117,6 +134,13 @@ func (s *Stream) Send(data []byte){
 }
 
 func (s *Stream) parseData(data []byte){
+
+	data,err := decodeMessage(data)
+	if err!=nil {
+		log.Println(err)
+		return
+	}
+
 	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, dmpb); err!=nil{
