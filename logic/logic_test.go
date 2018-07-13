@@ -165,7 +165,7 @@ func TestSend(t *testing.T) {
 	assert.NotEmpty(t, addr2)
 	assert.Nil(t, err)
 
-	//The balance1 should be 0
+	//The balance2 should be 0
 	balance2, err := GetBalance(addr2, databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, balance2, 0)

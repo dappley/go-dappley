@@ -19,7 +19,7 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Peerlist struct {
-	Peerlist             []string `protobuf:"bytes,1,rep,name=peerlist,proto3" json:"peerlist,omitempty"`
+	Peerlist             []*Peer  `protobuf:"bytes,1,rep,name=peerlist,proto3" json:"peerlist,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -29,7 +29,7 @@ func (m *Peerlist) Reset()         { *m = Peerlist{} }
 func (m *Peerlist) String() string { return proto.CompactTextString(m) }
 func (*Peerlist) ProtoMessage()    {}
 func (*Peerlist) Descriptor() ([]byte, []int) {
-	return fileDescriptor_peerlist_1838a8d1f7f952f1, []int{0}
+	return fileDescriptor_peerlist_f54f6cedf2875c20, []int{0}
 }
 func (m *Peerlist) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Peerlist.Unmarshal(m, b)
@@ -49,25 +49,74 @@ func (m *Peerlist) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Peerlist proto.InternalMessageInfo
 
-func (m *Peerlist) GetPeerlist() []string {
+func (m *Peerlist) GetPeerlist() []*Peer {
 	if m != nil {
 		return m.Peerlist
 	}
 	return nil
 }
 
-func init() {
-	proto.RegisterType((*Peerlist)(nil), "networkpb.Peerlist")
+type Peer struct {
+	Peerid               string   `protobuf:"bytes,1,opt,name=peerid,proto3" json:"peerid,omitempty"`
+	Addr                 string   `protobuf:"bytes,2,opt,name=addr,proto3" json:"addr,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func init() { proto.RegisterFile("network/pb/peerlist.proto", fileDescriptor_peerlist_1838a8d1f7f952f1) }
+func (m *Peer) Reset()         { *m = Peer{} }
+func (m *Peer) String() string { return proto.CompactTextString(m) }
+func (*Peer) ProtoMessage()    {}
+func (*Peer) Descriptor() ([]byte, []int) {
+	return fileDescriptor_peerlist_f54f6cedf2875c20, []int{1}
+}
+func (m *Peer) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Peer.Unmarshal(m, b)
+}
+func (m *Peer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Peer.Marshal(b, m, deterministic)
+}
+func (dst *Peer) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Peer.Merge(dst, src)
+}
+func (m *Peer) XXX_Size() int {
+	return xxx_messageInfo_Peer.Size(m)
+}
+func (m *Peer) XXX_DiscardUnknown() {
+	xxx_messageInfo_Peer.DiscardUnknown(m)
+}
 
-var fileDescriptor_peerlist_1838a8d1f7f952f1 = []byte{
-	// 84 bytes of a gzipped FileDescriptorProto
+var xxx_messageInfo_Peer proto.InternalMessageInfo
+
+func (m *Peer) GetPeerid() string {
+	if m != nil {
+		return m.Peerid
+	}
+	return ""
+}
+
+func (m *Peer) GetAddr() string {
+	if m != nil {
+		return m.Addr
+	}
+	return ""
+}
+
+func init() {
+	proto.RegisterType((*Peerlist)(nil), "networkpb.Peerlist")
+	proto.RegisterType((*Peer)(nil), "networkpb.Peer")
+}
+
+func init() { proto.RegisterFile("network/pb/peerlist.proto", fileDescriptor_peerlist_f54f6cedf2875c20) }
+
+var fileDescriptor_peerlist_f54f6cedf2875c20 = []byte{
+	// 128 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0xcc, 0x4b, 0x2d, 0x29,
 	0xcf, 0x2f, 0xca, 0xd6, 0x2f, 0x48, 0xd2, 0x2f, 0x48, 0x4d, 0x2d, 0xca, 0xc9, 0x2c, 0x2e, 0xd1,
-	0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x84, 0x4a, 0x15, 0x24, 0x29, 0xa9, 0x71, 0x71, 0x04,
-	0x40, 0x25, 0x85, 0xa4, 0xb8, 0x38, 0x60, 0x0a, 0x25, 0x18, 0x15, 0x98, 0x35, 0x38, 0x83, 0xe0,
-	0xfc, 0x24, 0x36, 0xb0, 0x4e, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xe3, 0x77, 0x49, 0x5c,
-	0x56, 0x00, 0x00, 0x00,
+	0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x84, 0x4a, 0x15, 0x24, 0x29, 0x99, 0x73, 0x71, 0x04,
+	0x40, 0x25, 0x85, 0xb4, 0xb9, 0x38, 0x60, 0x0a, 0x25, 0x18, 0x15, 0x98, 0x35, 0xb8, 0x8d, 0xf8,
+	0xf5, 0xe0, 0x2a, 0xf5, 0x40, 0xca, 0x82, 0xe0, 0x0a, 0x94, 0x8c, 0xb8, 0x58, 0x40, 0x22, 0x42,
+	0x62, 0x5c, 0x6c, 0x20, 0xb1, 0xcc, 0x14, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x28, 0x4f,
+	0x48, 0x88, 0x8b, 0x25, 0x31, 0x25, 0xa5, 0x48, 0x82, 0x09, 0x2c, 0x0a, 0x66, 0x27, 0xb1, 0x81,
+	0xad, 0x37, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0xab, 0xf1, 0x14, 0x84, 0x9b, 0x00, 0x00, 0x00,
 }

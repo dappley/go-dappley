@@ -16,7 +16,8 @@ const(
 	delimiter = 0x00
 	startByte = 0x7E
 
-	SyncBlock = "SyncBlock"
+	SyncBlock 		= "SyncBlock"
+	SyncPeerList 	= "SyncPeerList"
 )
 
 var(
@@ -170,8 +171,11 @@ func (s *Stream) parseData(data []byte){
 	dm.FromProto(dmpb)
 	switch(dm.GetCmd()){
 	case SyncBlock:
-		log.Print("Received SyncBlock command from:", s.remoteAddr)
+		log.Print("Received",SyncBlock,"command from:", s.remoteAddr)
 		s.node.addBlockToPool(dm.GetData())
+	case SyncPeerList:
+		log.Print("Received",SyncPeerList,"command from:", s.remoteAddr)
+		s.node.addMultiPeers(dm.GetData())
 	default:
 		log.Print("Received invalid command from:", s.remoteAddr)
 	}

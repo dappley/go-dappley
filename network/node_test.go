@@ -15,6 +15,10 @@ const(
 	test_port3
 	test_port4
 	test_port5
+	test_port6
+	test_port7
+	test_port8
+
 )
 
 const blockchainDbFile = "../bin/networktest.db"
@@ -37,7 +41,7 @@ func TestNetwork_Setup(t *testing.T) {
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
-	err = node1.AddStreamMultiAddr(node2.GetMultiaddr())
+	err = node1.AddStream(node2.GetPeerID(),node2.GetPeerMultiaddr())
 	assert.Nil(t, err)
 	assert.Len(t, node1.host.Network().Peerstore().Peers(), 2)
 }
@@ -54,14 +58,14 @@ func TestNetwork_SendBlock(t *testing.T){
 	node2 := NewNode(bc)
 	err = node2.Start(test_port4)
 	assert.Nil(t, err)
-	err = node2.AddStreamMultiAddr(node1.GetMultiaddr())
+	err = node2.AddStream(node1.GetPeerID(),node1.GetPeerMultiaddr())
 	assert.Nil(t, err)
 
 	//create node 3 and add node1 as a peer
 	node3 := NewNode(bc)
 	err = node3.Start(test_port5)
 	assert.Nil(t, err)
-	err = node3.AddStreamMultiAddr(node1.GetMultiaddr())
+	err = node3.AddStream(node1.GetPeerID(),node1.GetPeerMultiaddr())
 	assert.Nil(t, err)
 
 	//node 1 broadcast a block
@@ -84,6 +88,49 @@ func TestNetwork_SendBlock(t *testing.T){
 		s.Send([]byte{4,2,3,1,4})
 	}
 	time.Sleep(time.Second)*/
+}
+
+func TestNode_SyncPeers(t *testing.T){
+	bc := mockBlockchain(t)
+
+	//create node1
+	node1 := NewNode(bc)
+	err := node1.Start(test_port6)
+	assert.Nil(t, err)
+
+	//create node 2 and add node1 as a peer
+	node2 := NewNode(bc)
+	err = node2.Start(test_port7)
+	assert.Nil(t, err)
+	err = node2.AddStream(node1.GetPeerID(),node1.GetPeerMultiaddr())
+	assert.Nil(t, err)
+
+	//create node 3 and add node1 as a peer
+	node3 := NewNode(bc)
+	err = node3.Start(test_port8)
+	assert.Nil(t, err)
+	err = node3.AddStream(node1.GetPeerID(),node1.GetPeerMultiaddr())
+	assert.Nil(t, err)
+
+	time.Sleep(time.Second)
+
+	//node 1 broadcast syncpeers
+	node1.SyncPeers()
+
+	time.Sleep(time.Second)
+
+	//node2 should have node 3 as its peer
+	assert.True(t,node2.peerlist.IsInPeerlist(node3.GetInfo()))
+
+	//node3 should have node 2 as its peer
+	assert.True(t,node3.peerlist.IsInPeerlist(node2.GetInfo()))
+
+	time.Sleep(time.Second)
+
+	/*	for _,s:=range node1.streams{
+			s.Send([]byte{4,2,3,1,4})
+		}
+		time.Sleep(time.Second)*/
 }
 
 func mockBlockchain(t *testing.T) *core.Blockchain{

@@ -2,5 +2,10 @@ syntax = "proto3";
 package networkpb;
 
 message Peerlist {
-    repeated string peerlist = 1;
+    repeated Peer peerlist = 1;
+}
+
+message Peer {
+    string peerid = 1;
+    string addr = 2;
 }
