@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
+	"crypto/elliptic"
 )
 
 const WalletFile = "../bin/wallets.dat"
@@ -89,9 +89,7 @@ func (ws *Wallets) LoadFromFile() error {
 	}
 
 	var wallets Wallets
-//	gob.Register(elliptic.P256())
-	gob.Register(bitelliptic.S256())
-	//gob.Register(bitelliptic.BitCurve{})
+	gob.Register(elliptic.P256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallets)
 	if err != nil {
@@ -107,8 +105,7 @@ func (ws *Wallets) LoadFromFile() error {
 func (ws Wallets) SaveToFile() {
 	var content bytes.Buffer
 
-//	gob.Register(elliptic.P256())
-	gob.Register(bitelliptic.S256())
+	gob.Register(elliptic.P256())
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(ws)
 	if err != nil {
