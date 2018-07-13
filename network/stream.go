@@ -8,8 +8,6 @@ import (
 	"sync"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
 	"errors"
 )
@@ -56,10 +54,25 @@ func (s *Stream) startLoop(rw *bufio.ReadWriter){
 	go s.writeLoop(rw)
 }
 
+func readMsg(rw *bufio.ReadWriter) ([]byte,error){
+	bytes := []byte{}
+	for{
+		byte, err := rw.ReadByte()
+
+		if err!=nil {
+			return bytes,err
+		}
+		bytes = append(bytes, byte)
+		if byte == delimiter {
+			return bytes,nil
+		}
+
+	}
+}
 
 func (s *Stream) read(rw *bufio.ReadWriter){
 	//read stream with delimiter
-	bytes,err := rw.ReadBytes(delimiter)
+	bytes,err := readMsg(rw)
 
 	if err != nil {
 		log.Println(err)
@@ -72,10 +85,11 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 		log.Println("Received Data:", bytes)
 		s.parseData(bytes)
 	}else{
-
+		log.Print("Read less than 1 byte. Stop Reading...")
 		//stop the stream
 		s.StopStream()
 	}
+
 }
 
 func (s *Stream) readLoop(rw *bufio.ReadWriter) {
@@ -92,15 +106,20 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter) {
 
 func encodeMessage(data []byte) []byte{
 	startArr := []byte{startByte, startByte}
+	endArr:= []byte{startByte,startByte,delimiter}
 	data = append(startArr,data...)
-	return append(data, delimiter)
+	return append(data, endArr...)
 }
 
 func decodeMessage(data []byte) ([]byte,error){
-	if data[0]!=startByte || data[1]!=startByte || data[len(data)-1]!= delimiter {
+	if data[0]!=startByte ||
+		data[1]!=startByte ||
+		data[len(data)-3]!= startByte ||
+		data[len(data)-2]!= startByte ||
+		data[len(data)-1]!= delimiter {
 		return nil,ErrInvalidMessageFormat
 	}
-	return data[2:len(data)-1],nil
+	return data[2:len(data)-3],nil
 }
 
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
@@ -152,31 +171,10 @@ func (s *Stream) parseData(data []byte){
 	switch(dm.GetCmd()){
 	case SyncBlock:
 		log.Print("Received SyncBlock command from:", s.remoteAddr)
-		s.addBlockToPool(dm.GetData())
+		s.node.addBlockToPool(dm.GetData())
 	default:
 		log.Print("Received invalid command from:", s.remoteAddr)
 	}
 
 }
 
-func (s *Stream) addBlockToPool(data []byte){
-
-	//create a block proto
-	blockpb := &corepb.Block{}
-
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err!=nil{
-		log.Println(err)
-	}
-
-	//create an empty block
-	block := &core.Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	//add block to blockpool
-	s.node.bc.BlockPool().Push(block)
-	//TODO: Delete this line. This line is solely for testing
-	s.node.blks = append(s.node.blks, block)
-}

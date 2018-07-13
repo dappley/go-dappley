@@ -7,6 +7,7 @@ import (
 	"time"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/logic"
+	"os"
 )
 
 const(
@@ -16,6 +17,8 @@ const(
 	test_port4
 	test_port5
 )
+
+const blockchainDbFile = "../bin/networktest.db"
 
 func TestNetwork_Setup(t *testing.T) {
 
@@ -85,12 +88,14 @@ func TestNetwork_SendBlock(t *testing.T){
 }
 
 func mockBlockchain(t *testing.T) *core.Blockchain{
-	db := storage.OpenDatabase(core.BlockchainDbFile)
+	db := storage.OpenDatabase(blockchainDbFile)
 	defer db.Close()
+
 	addr,err := logic.CreateWallet()
 	assert.Nil(t, err)
 	bc,err := core.CreateBlockchain(addr,db)
 	assert.Nil(t, err)
+	os.Remove(blockchainDbFile)
 	return bc
 }
 
@@ -99,15 +104,10 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 
 	node1 := NewNode(bc)
 	node1.Start(test_port1)
-	b := core.GenerateMockBlock()
-	for{
-		node1.SendBlock(b)
-		time.Sleep(time.Second*15)
-	}
-
+	select{}
 }
 
-const node0_addr = "/ip4/127.0.0.1/tcp/12345/ipfs/QmfLn6BHjqWqQu6w4NE8VNXWLHEFVcrLmQFE3621H4fRqY"
+const node0_addr = "/ip4/127.0.0.1/tcp/10000/ipfs/QmWBn43QQsiqPq416VHwJNi42JpJS1yX6HZ8tR4AtR8Sz7"
 
 func TestNetwork_node1(t *testing.T){
 	bc := mockBlockchain(t)
@@ -121,7 +121,7 @@ func TestNetwork_node1(t *testing.T){
 	b := core.GenerateMockBlock()
 	for{
 		node1.SendBlock(b)
-		time.Sleep(time.Second*15)
+		time.Sleep(time.Millisecond*100)
 	}
 }
 

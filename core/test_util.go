@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/util"
+	"time"
 )
 
 func GenerateMockBlock() *Block{
@@ -9,7 +10,7 @@ func GenerateMockBlock() *Block{
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,
-		2,
+		time.Now().Unix(),
 	}
 
 	t1 := &Transaction{

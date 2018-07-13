@@ -13,6 +13,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/core/pb"
 )
 
 const(
@@ -20,11 +21,12 @@ const(
 )
 
 type Node struct{
-	host     host.Host
-	addr     ma.Multiaddr
-	bc       *core.Blockchain
-	blks 	 []*core.Block
-	streams  map[peer.ID]*Stream
+	host     	host.Host
+	addr     	ma.Multiaddr
+	bc       	*core.Blockchain
+	blks 	 	[]*core.Block
+	blockpool 	[]*core.Block
+	streams  	map[peer.ID]*Stream
 }
 
 var writeLoopCount = int(0)
@@ -37,6 +39,7 @@ func NewNode(bc *core.Blockchain) *Node{
 	return &Node{nil,
 	nil,
 	bc,
+	nil,
 	nil,
 	make(map[peer.ID]*Stream, 10),
 	}
@@ -157,15 +160,37 @@ func (n *Node) SendBlock(block *core.Block) error{
 	if err != nil {
 		return err
 	}
-	//log.Println("Sending Data Request Received:",bytes)
+	log.Println("Sending Data Request Received:",bytes)
 	n.broadcast(data)
 	return nil
 }
 
 //broadcast data
 func (n *Node) broadcast(data []byte){
-	//log.Println("Broadcasting to",len(n.streams), "peer(s)...")
+	log.Println("Broadcasting to",len(n.streams), "peer(s)...")
 	for _,s := range n.streams{
 		s.Send(data)
 	}
+}
+
+func (n *Node) addBlockToPool(data []byte){
+
+	//create a block proto
+	blockpb := &corepb.Block{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(data, blockpb); err!=nil{
+		log.Println(err)
+	}
+
+	//create an empty block
+	block := &core.Block{}
+
+	//load the block with proto
+	block.FromProto(blockpb)
+
+	//add block to blockpool. Make sure this is none blocking.
+	n.bc.BlockPool().Push(block)
+	//TODO: Delete this line. This line is solely for testing
+	n.blks = append(n.blks, block)
 }
