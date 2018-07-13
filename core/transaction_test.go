@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/dappley/go-dappley/util"
@@ -15,21 +14,17 @@ func getAoB(length int64) []byte {
 }
 
 func generateFakeTxInputs() []TXInput {
-
-	var a = []TXInput{
-		TXInput{getAoB(2), 10, getAoB(2), getAoB(2)},
-		TXInput{getAoB(2), 5, getAoB(2), getAoB(2)},
+	return []TXInput{
+		{getAoB(2), 10, getAoB(2), getAoB(2)},
+		{getAoB(2), 5, getAoB(2), getAoB(2)},
 	}
-	return a
 }
 
 func generateFakeTxOutputs() []TXOutput {
-
-	var a = []TXOutput{
-		TXOutput{1, getAoB(2)},
-		TXOutput{2, getAoB(2)},
+	return []TXOutput{
+		{1, getAoB(2)},
+		{2, getAoB(2)},
 	}
-	return a
 }
 
 func TestTranstionHeapOperations(t *testing.T) {
@@ -59,7 +54,6 @@ func TestTranstionHeapOperations(t *testing.T) {
 	}
 	txPool := GetTxnPoolInstance()
 
-	//heap.Init(h)
 	txPool.Push(t1)
 
 	assert.Equal(t, 1, txPool.Len())
@@ -69,10 +63,9 @@ func TestTranstionHeapOperations(t *testing.T) {
 	txPool.Push(t3)
 	txPool.Push(t4)
 	assert.Equal(t, 4, txPool.Len())
-	//var test_slice = []Transaction{}
+
 	for txPool.Len() > 0 {
-		var txnInterface = txPool.Pop()
-		fmt.Println(txnInterface.(Transaction).Tip)
+		txPool.Pop()
 	}
 	assert.Equal(t, 0, txPool.Len())
 
