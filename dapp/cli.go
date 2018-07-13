@@ -74,6 +74,8 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		var err error
 		switch args[0] {
 		case "getbalance":
+			fmt.Println(args[1:])
+			fmt.Println(getBalanceAddress)
 			err = getBalanceCmd.Parse(args[1:])
 		case "createblockchain":
 			err = createBlockchainCmd.Parse(args[1:])

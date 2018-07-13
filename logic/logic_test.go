@@ -201,7 +201,6 @@ func TestSend(t *testing.T) {
 	assert.Equal(t, transferAmount, balance2)
 
 	miner.Stop()
-	fmt.Println(b)
 	//teardown :clean up database amd files
 	teardown()
 }
