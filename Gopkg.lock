@@ -4,11 +4,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/agl/ed25519"
-  packages = [
-    ".",
-    "edwards25519",
-    "extra25519"
-  ]
+  packages = [".","edwards25519","extra25519"]
   revision = "5312a61534124124185d41f09206b9fef1d88403"
 
 [[projects]]
@@ -43,22 +39,13 @@
 
 [[projects]]
   name = "github.com/gogo/protobuf"
-  packages = [
-    "io",
-    "proto"
-  ]
+  packages = ["io","proto"]
   revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
   version = "v1.0.0"
 
 [[projects]]
   name = "github.com/golang/protobuf"
-  packages = [
-    "proto",
-    "ptypes",
-    "ptypes/any",
-    "ptypes/duration",
-    "ptypes/timestamp"
-  ]
+  packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
 
@@ -95,25 +82,12 @@
 [[projects]]
   branch = "master"
   name = "github.com/huin/goupnp"
-  packages = [
-    ".",
-    "dcps/internetgateway1",
-    "dcps/internetgateway2",
-    "httpu",
-    "scpd",
-    "soap",
-    "ssdp"
-  ]
+  packages = [".","dcps/internetgateway1","dcps/internetgateway2","httpu","scpd","soap","ssdp"]
   revision = "1395d1447324cbea88d249fbfcfd70ea878fdfca"
 
 [[projects]]
   name = "github.com/ipfs/go-log"
-  packages = [
-    ".",
-    "tracer",
-    "tracer/wire",
-    "writer"
-  ]
+  packages = [".","tracer","tracer/wire","writer"]
   revision = "5dc2060baaf8db344f31dafd852340b93811d03f"
   version = "v1.5.3"
 
@@ -138,12 +112,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/jbenet/goprocess"
-  packages = [
-    ".",
-    "context",
-    "periodic",
-    "ratelimit"
-  ]
+  packages = [".","context","periodic","ratelimit"]
   revision = "b497e2f366b8624394fb2e89c10ab607bebdde0b"
 
 [[projects]]
@@ -154,10 +123,7 @@
 
 [[projects]]
   name = "github.com/libp2p/go-conn-security"
-  packages = [
-    ".",
-    "insecure"
-  ]
+  packages = [".","insecure"]
   revision = "1f43a64c9d5d3796daca8d9e9dd2f2001272a706"
   version = "v0.1.5"
 
@@ -175,31 +141,19 @@
 
 [[projects]]
   name = "github.com/libp2p/go-libp2p"
-  packages = [
-    ".",
-    "config",
-    "p2p/host/basic",
-    "p2p/protocol/identify",
-    "p2p/protocol/identify/pb"
-  ]
+  packages = [".","config","p2p/host/basic","p2p/protocol/identify","p2p/protocol/identify/pb"]
   revision = "cdc6d1940763222a9f338a14903bb383384dc46c"
   version = "v6.0.5"
 
 [[projects]]
   name = "github.com/libp2p/go-libp2p-circuit"
-  packages = [
-    ".",
-    "pb"
-  ]
+  packages = [".","pb"]
   revision = "ee6dd9116af74cc17c03a199c258817543b0704b"
   version = "v2.1.5"
 
 [[projects]]
   name = "github.com/libp2p/go-libp2p-crypto"
-  packages = [
-    ".",
-    "pb"
-  ]
+  packages = [".","pb"]
   revision = "50487e0f0b4842e9e657317e689fbb8209fab2dc"
   version = "v1.6.2"
 
@@ -253,10 +207,7 @@
 
 [[projects]]
   name = "github.com/libp2p/go-libp2p-peerstore"
-  packages = [
-    ".",
-    "addr"
-  ]
+  packages = [".","addr"]
   revision = "49898a5f59ac4bea31b49d0c62ba214a6da16dbd"
   version = "v1.4.22"
 
@@ -268,10 +219,7 @@
 
 [[projects]]
   name = "github.com/libp2p/go-libp2p-secio"
-  packages = [
-    ".",
-    "pb"
-  ]
+  packages = [".","pb"]
   revision = "6cb371175c430ef0d98ed06c0b1de4df275a2b2d"
   version = "v2.0.4"
 
@@ -301,20 +249,13 @@
 
 [[projects]]
   name = "github.com/libp2p/go-msgio"
-  packages = [
-    ".",
-    "mpool"
-  ]
+  packages = [".","mpool"]
   revision = "fa984f54d57f20970aac9309a89a7ea40821f67c"
   version = "v0.0.3"
 
 [[projects]]
   name = "github.com/libp2p/go-reuseport"
-  packages = [
-    ".",
-    "poll",
-    "singlepoll"
-  ]
+  packages = [".","poll","singlepoll"]
   revision = "c2c3368efe65c8b85ddff6b278df5bef3ce235e2"
   version = "v0.1.16"
 
@@ -416,11 +357,7 @@
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
-  packages = [
-    ".",
-    "ext",
-    "log"
-  ]
+  packages = [".","ext","log"]
   revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
   version = "v1.0.2"
 
@@ -457,20 +394,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/syndtr/goleveldb"
-  packages = [
-    "leveldb",
-    "leveldb/cache",
-    "leveldb/comparer",
-    "leveldb/errors",
-    "leveldb/filter",
-    "leveldb/iterator",
-    "leveldb/journal",
-    "leveldb/memdb",
-    "leveldb/opt",
-    "leveldb/storage",
-    "leveldb/table",
-    "leveldb/util"
-  ]
+  packages = ["leveldb","leveldb/cache","leveldb/comparer","leveldb/errors","leveldb/filter","leveldb/iterator","leveldb/journal","leveldb/memdb","leveldb/opt","leveldb/storage","leveldb/table","leveldb/util"]
   revision = "0d5a0ceb10cf9ab89fdd744cc8c50a83134f6697"
 
 [[projects]]
@@ -544,60 +468,18 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = [
-    "context",
-    "html",
-    "html/atom",
-    "html/charset",
-    "http/httpguts",
-    "http2",
-    "http2/hpack",
-    "idna",
-    "internal/timeseries",
-    "trace"
-  ]
+  packages = ["context","html","html/atom","html/charset","http/httpguts","http2","http2/hpack","idna","internal/timeseries","trace"]
   revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = [
-    "cpu",
-    "unix",
-    "windows"
-  ]
+  packages = ["cpu","unix","windows"]
   revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [[projects]]
   name = "golang.org/x/text"
-  packages = [
-    "collate",
-    "collate/build",
-    "encoding",
-    "encoding/charmap",
-    "encoding/htmlindex",
-    "encoding/internal",
-    "encoding/internal/identifier",
-    "encoding/japanese",
-    "encoding/korean",
-    "encoding/simplifiedchinese",
-    "encoding/traditionalchinese",
-    "encoding/unicode",
-    "internal/colltab",
-    "internal/gen",
-    "internal/tag",
-    "internal/triegen",
-    "internal/ucd",
-    "internal/utf8internal",
-    "language",
-    "runes",
-    "secure/bidirule",
-    "transform",
-    "unicode/bidi",
-    "unicode/cldr",
-    "unicode/norm",
-    "unicode/rangetable"
-  ]
+  packages = ["collate","collate/build","encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
@@ -609,33 +491,7 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [
-    ".",
-    "balancer",
-    "balancer/base",
-    "balancer/roundrobin",
-    "codes",
-    "connectivity",
-    "credentials",
-    "encoding",
-    "encoding/proto",
-    "grpclog",
-    "internal",
-    "internal/backoff",
-    "internal/channelz",
-    "internal/grpcrand",
-    "keepalive",
-    "metadata",
-    "naming",
-    "peer",
-    "resolver",
-    "resolver/dns",
-    "resolver/passthrough",
-    "stats",
-    "status",
-    "tap",
-    "transport"
-  ]
+  packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","encoding/proto","grpclog","internal","internal/backoff","internal/channelz","internal/grpcrand","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
   revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
   version = "v1.13.0"
 
