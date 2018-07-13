@@ -30,7 +30,6 @@ import (
 
 	"crypto/rand"
 
-	//"github.com/nebulasio/go-nebulas/crypto/keystore/secp256k1/bitelliptic"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 )
 
