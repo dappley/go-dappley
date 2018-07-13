@@ -89,7 +89,7 @@ func (ws *Wallets) LoadFromFile() error {
 	}
 
 	var wallets Wallets
-	//gob.Register(elliptic.P256())
+//	gob.Register(elliptic.P256())
 	gob.Register(bitelliptic.S256())
 	//gob.Register(bitelliptic.BitCurve{})
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
@@ -107,7 +107,7 @@ func (ws *Wallets) LoadFromFile() error {
 func (ws Wallets) SaveToFile() {
 	var content bytes.Buffer
 
-	//gob.Register(elliptic.P256())
+//	gob.Register(elliptic.P256())
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(ws)
