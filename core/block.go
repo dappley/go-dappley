@@ -40,7 +40,7 @@ type Block struct {
 	transactions []*Transaction
 }
 
-func NewBlock(sortedTransactions []*Transaction,prevHash []byte) *Block {
+func NewBlock(transactions []*Transaction,prevHash []byte) *Block {
 	return &Block{
 		header: &BlockHeader{
 			hash:      []byte{},
@@ -48,7 +48,7 @@ func NewBlock(sortedTransactions []*Transaction,prevHash []byte) *Block {
 			nonce:     0,
 			timestamp: time.Now().Unix(),
 		},
-		transactions: sortedTransactions,
+		transactions: transactions,
 	}
 }
 
