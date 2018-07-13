@@ -2,14 +2,13 @@ package core
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"log"
 
 	"github.com/dappley/go-dappley/util"
-	"golang.org/x/crypto/ripemd160"
+	"github.com/dappley/go-dappley/crypto/hash"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 const version = byte(0x00)
@@ -37,18 +36,53 @@ func (w KeyPair) GenerateAddress() Address {
 	return NewAddress(fmt.Sprintf("%s", address))
 }
 
+//func HashPubKey(pubKey []byte) []byte {
+//	publicSHA256 := sha256.Sum256(pubKey)
+//
+//	RIPEMD160Hasher := ripemd160.New()
+//	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
+//	if err != nil {
+//		log.Panic(err)
+//	}
+//	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
+//
+//	return publicRIPEMD160
+//}
+
 func HashPubKey(pubKey []byte) []byte {
-	publicSHA256 := sha256.Sum256(pubKey)
 
-	RIPEMD160Hasher := ripemd160.New()
-	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
-	if err != nil {
-		log.Panic(err)
-	}
-	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
+	sha := hash.Sha3256(pubKey)
+	content := hash.Ripemd160(sha)
 
-	return publicRIPEMD160
+	//publicSHA256 := sha256.Sum256(pubKey)
+	//
+	//RIPEMD160Hasher := ripemd160.New()
+	//_, err := RIPEMD160Hasher.Write(publicSHA256[:])
+	//if err != nil {
+	//	log.Panic(err)
+	//}
+	//publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
+
+	return content
 }
+
+//func checksum(payload []byte) []byte {
+//	firstSHA := sha256.Sum256(payload)
+//	secondSHA := sha256.Sum256(firstSHA[:])
+//
+//	return secondSHA[:addressChecksumLen]
+//}
+//
+//func newKeyPair() (ecdsa.PrivateKey, []byte) {
+//	curve := elliptic.P256()
+//	private, err := ecdsa.GenerateKey(curve, rand.Reader)
+//	if err != nil {
+//		log.Panic(err)
+//	}
+//	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
+//
+//	return *private, pubKey
+//}
 
 func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
@@ -58,8 +92,10 @@ func checksum(payload []byte) []byte {
 }
 
 func newKeyPair() (ecdsa.PrivateKey, []byte) {
-	curve := elliptic.P256()
-	private, err := ecdsa.GenerateKey(curve, rand.Reader)
+
+	private, err := secp256k1.NewECDSAPrivateKey()
+	//curve := elliptic.P256()
+	//private, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		log.Panic(err)
 	}
