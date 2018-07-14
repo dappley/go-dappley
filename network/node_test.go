@@ -6,9 +6,9 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"time"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/logic"
 	"os"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/client"
 )
 
 const(
@@ -145,9 +145,14 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 	db := storage.OpenDatabase(blockchainDbFile)
 	defer db.Close()
 
-	addr,err := logic.CreateWallet()
+	wallets, err := client.NewWallets()
 	assert.Nil(t, err)
-	bc,err := core.CreateBlockchain(addr,db)
+	assert.NotNil(t, wallets)
+
+	wallet1 := wallets.CreateWallet()
+	assert.NotNil(t, wallet1)
+
+	bc,err := core.CreateBlockchain(wallet1.GetAddress(),db)
 	assert.Nil(t, err)
 	return bc
 }
