@@ -80,7 +80,7 @@ func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 	// by encapsulating both addresses:
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
-	logger.Info("Full Address is %s\n", fullAddr)
+	logger.Info("Full Address is ", fullAddr)
 
 	return basicHost,fullAddr, nil
 }

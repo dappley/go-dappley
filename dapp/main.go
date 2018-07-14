@@ -9,6 +9,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -51,6 +52,8 @@ func main() {
 	cli := CLI{}
 	signal := make(chan bool)
 	var waitGroup sync.WaitGroup
+	//set to debug level
+	logger.SetLevel(logger.DebugLevel)
 
 	//setup
 	db := storage.OpenDatabase(core.BlockchainDbFile)
