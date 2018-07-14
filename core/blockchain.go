@@ -14,6 +14,8 @@ import (
 
 var tipKey = []byte("1")
 
+const BlockPoolMaxSize = 100
+
 type Blockchain struct {
 	currentHash []byte
 	DB          storage.Storage
@@ -245,7 +247,7 @@ func (bc *Blockchain) String() string {
 }
 
 func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
-	blockPool := NewBlockPool(10)
+	blockPool := NewBlockPool(BlockPoolMaxSize)
 	return &Blockchain{current, db, blockPool}
 }
 

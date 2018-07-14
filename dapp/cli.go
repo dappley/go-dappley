@@ -91,6 +91,8 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 			err = addPeerCmd.Parse(args[1:])
 		case "sendMockBlock":
 			err = sendMockBlockCmd.Parse(args[1:])
+		case "syncPeers":
+			err = syncPeersCmd.Parse(args[1:])
 		case "exit":
 			signal <- true
 			os.Exit(1)

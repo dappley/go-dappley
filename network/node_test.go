@@ -160,22 +160,18 @@ func mockBlockchain(t *testing.T) *core.Blockchain{
 	select{}
 }
 
-const node0_addr = "/ip4/127.0.0.1/tcp/10000/ipfs/QmRtBnqSBJ6a4yixnT765KGga7dxMH5wqU8FpzEj1ryyfx"
+const node0_addr = "/ip4/127.0.0.1/tcp/12345/ipfs/QmRuJ1V6xtj2H2gVnGD8bqt9KTViSu7gcHGhjy5yEM3FZm"
 
 func TestNetwork_node1(t *testing.T){
 	bc := mockBlockchain(t)
-
+	logger.SetLevel(logger.DebugLevel)
 	node1 := NewNode(bc)
 	err := node1.Start(test_port2)
 	assert.Nil(t, err)
 	err = node1.AddStreamString(node0_addr)
 	assert.Nil(t, err)
 	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
-	b := core.GenerateMockBlock()
-	for{
-		node1.SendBlock(b)
-		time.Sleep(time.Second*10)
-	}
+	select{}
 }
 
 func TestNetwork_node2(t *testing.T){
