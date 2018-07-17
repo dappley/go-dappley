@@ -7,9 +7,12 @@ import (
 	"log"
 
 	"github.com/dappley/go-dappley/util"
-	"golang.org/x/crypto/ripemd160"
-	"crypto/elliptic"
+	//"crypto/rand"
+	//"crypto/elliptic"
 	"crypto/rand"
+	"crypto/elliptic"
+	"github.com/dappley/go-dappley/crypto/hash"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 const version = byte(0x00)
@@ -38,16 +41,10 @@ func (w KeyPair) GenerateAddress() Address {
 }
 
 func HashPubKey(pubKey []byte) []byte {
-	publicSHA256 := sha256.Sum256(pubKey)
 
-	RIPEMD160Hasher := ripemd160.New()
-	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
-	if err != nil {
-		log.Panic(err)
-	}
-	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
-
-	return publicRIPEMD160
+	sha := hash.Sha3256(pubKey)
+	content := hash.Ripemd160(sha)
+	return content
 }
 
 
@@ -59,11 +56,22 @@ func checksum(payload []byte) []byte {
 }
 
 func newKeyPair() (ecdsa.PrivateKey, []byte) {
+	private1, err1 := secp256k1.NewECDSAPrivateKey()
+	if err1 != nil {
+		log.Panic(err1)
+	}
+	fmt.Printf("\n Generating Private Key is \n")
+	fmt.Print(private1)
+	fmt.Printf("\n")
+
 	curve := elliptic.P256()
 	private, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		log.Panic(err)
 	}
+	fmt.Printf("\n Private Key is \n")
+	fmt.Print(private)
+	fmt.Printf("\n")
 	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
 
 	return *private, pubKey
