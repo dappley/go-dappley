@@ -422,6 +422,23 @@
 
 
 [[projects]]
+  name = "github.com/nebulasio/go-nebulas"
+  packages = [
+    "crypto",
+    "crypto/cipher",
+    "crypto/hash",
+    "crypto/keystore",
+    "crypto/keystore/secp256k1",
+    "crypto/keystore/secp256k1/bitelliptic",
+    "crypto/sha3",
+    "crypto/utils",
+    "util/byteutils",
+    "util/logging"
+  ]
+  revision = "7f78adb93fa34d2c4cc4b206d11b03ee84c8bd1c"
+  version = "v1.0.7"
+
+[[projects]]
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",

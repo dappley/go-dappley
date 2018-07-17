@@ -63,8 +63,8 @@ func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus
 }
 
 //start mining
-func (miner *Miner) Start() {
-	miner.stateLoop()
+func (miner *Miner) Start(signal chan bool) {
+	miner.stateLoop(signal)
 	miner.messageLoop()
 }
 
@@ -80,45 +80,7 @@ func (miner *Miner) FeedBlock(blk *core.Block) {
 	miner.bc.BlockPool().Push(blk)
 }
 
-func (miner *Miner) stateLoop() {
-
-Loop:
-	for {
-		switch miner.nextState {
-		case prepareTxPoolState:
-			miner.prepareTxPool()
-			miner.nextState = mineState
-
-		case mineState:
-			miner.mine()
-			miner.nextState = updateNewBlock
-		case updateNewBlock:
-			miner.updateNewBlock()
-			miner.nextState = cleanUpState
-		case cleanUpState:
-			miner.cleanUp()
-			break Loop
-		}
-	}
-}
-func (miner *Miner) messageLoop() {
-	for {
-		fmt.Println("running")
-		select {
-		case msg := <-miner.messageCh:
-			fmt.Println(msg)
-		case block := <-miner.bc.BlockPool().BlockReceivedCh():
-			miner.newBlockReceived = true
-			miner.newBlock = block
-			miner.nextState = updateNewBlock
-		case <-miner.exitCh:
-			return
-		}
-	}
-}
-
-//start mining
-func (pd *Miner) StartMining(signal chan bool) {
+func (pd *Miner) stateLoop(signal chan bool) {
 Loop:
 	for {
 		select {
@@ -141,6 +103,21 @@ Loop:
 				pd.cleanUp()
 				pd.nextState = prepareTxPoolState
 			}
+		}
+	}
+}
+func (miner *Miner) messageLoop() {
+	for {
+		fmt.Println("running")
+		select {
+		case msg := <-miner.messageCh:
+			fmt.Println(msg)
+		case block := <-miner.bc.BlockPool().BlockReceivedCh():
+			miner.newBlockReceived = true
+			miner.newBlock = block
+			miner.nextState = updateNewBlock
+		case <-miner.exitCh:
+			return
 		}
 	}
 }
