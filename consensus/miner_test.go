@@ -58,15 +58,16 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	go miner.Start()
-	for i := 0; i < 3; i++ {
+	signal := make(chan bool)
+	go miner.Start(signal)
+	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		miner.Feed("test test")
 		time.Sleep(1 * time.Second)
 	}
 	miner.Stop()
 
-	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward*2-sendAmount, sendAmount)
+	checkBalance(t, wallet2.GetAddress().Address, wallet2.GetAddress().Address, bc, sendAmount, sendAmount)
 
 	teardown()
 }
@@ -102,7 +103,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	//create 2 transactions and start mining
 
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	go miner.Start()
+	signal := make(chan bool)
+	go miner.Start(signal)
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
@@ -152,7 +154,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//a:20 b:10
 
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	go miner.Start()
+	signal := make(chan bool)
+	go miner.Start(signal)
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
@@ -171,7 +174,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	}
 
 	miner.Stop()
-	go miner.Start()
+	go miner.Start(signal)
 	for i := 0; i < 1; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)

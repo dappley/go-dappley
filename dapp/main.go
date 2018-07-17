@@ -46,7 +46,7 @@ func startNetwork(bc *core.Blockchain) *network.Node {
 
 func mining(blockchain *core.Blockchain, walletAddr string, signal chan bool) {
 	miner := consensus.NewMiner(blockchain, walletAddr, consensus.NewProofOfWork(blockchain))
-	miner.StartMining(signal)
+	miner.Start(signal)
 }
 
 func main() {
