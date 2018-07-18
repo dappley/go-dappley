@@ -82,6 +82,8 @@ func GetBalance(address core.Address, db storage.Storage) (int, error) {
 	return balance, nil
 }
 
+
+
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
 	wallets, err := client.NewWallets()
@@ -121,6 +123,35 @@ func Send(from, to core.Address, amount int, tip int64, db storage.Storage) erro
 
 	return err
 }
+
+//add balance
+func AddBalance(address core.Address, amount int, db storage.Storage) (error) {
+	if !address.ValidateAddress() {
+		return ErrInvalidAddress
+	}
+	//inject db here
+
+	bc, err := core.GetBlockchain(db)
+	if err != nil {
+		return err
+	}
+	wallets, err := client.NewWallets()
+	if err != nil {
+		return err
+	}
+	wallet := wallets.GetKeyPairByAddress(address)
+	tx, err := core.NewUTXOTransactionforAddBalance(address, amount, wallet, bc, 0)
+
+	if err != nil {
+		return err
+	}
+
+	core.GetTxnPoolInstance().Push(tx)
+
+	return err
+
+}
+
 
 //delete wallet
 
