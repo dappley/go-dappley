@@ -201,10 +201,10 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int{
 	//find how many blocks have been mined
-	numOfBlocksMined := 1
+	numOfBlocksMined := 0
 	blk, err := i.Next()
 	assert.Nil(t, err)
-	for blk.GetPrevHash()!=nil {
+	for blk!=nil {
 		numOfBlocksMined++
 		blk, err = i.Next()
 	}
