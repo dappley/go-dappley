@@ -214,6 +214,7 @@ func NewUTXOTransaction(from, to Address, amount int, keypair KeyPair, bc *Block
 	return tx, nil
 }
 
+//for add balance
 func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
