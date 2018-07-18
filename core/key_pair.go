@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log"
 
-	"crypto/elliptic"
-	"crypto/rand"
-
 	"github.com/dappley/go-dappley/util"
-	"golang.org/x/crypto/ripemd160"
+	//"crypto/rand"
+	//"crypto/elliptic"
+	"crypto/rand"
+	"crypto/elliptic"
+	"github.com/dappley/go-dappley/crypto/hash"
 )
 
 const version = byte(0x00)
@@ -39,17 +40,12 @@ func (w KeyPair) GenerateAddress() Address {
 }
 
 func HashPubKey(pubKey []byte) []byte {
-	publicSHA256 := sha256.Sum256(pubKey)
 
-	RIPEMD160Hasher := ripemd160.New()
-	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
-	if err != nil {
-		log.Panic(err)
-	}
-	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
-
-	return publicRIPEMD160
+	sha := hash.Sha3256(pubKey)
+	content := hash.Ripemd160(sha)
+	return content
 }
+
 
 func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)

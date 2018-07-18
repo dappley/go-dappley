@@ -23,6 +23,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  createblockchain -address ADDRESS")
 	fmt.Println("  createwallet")
 	fmt.Println("  getbalance -address ADDRESS")
+	fmt.Println("  addbalance -address ADDRESS -amount AMOUNT")
 	fmt.Println("  listaddresses")
 	fmt.Println("  printchain")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT")
@@ -55,6 +56,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)
 		createWalletCmd := flag.NewFlagSet("createwallet", flag.ExitOnError)
 		listAddressesCmd := flag.NewFlagSet("listaddresses", flag.ExitOnError)
+		addBalanceCmd := flag.NewFlagSet("addbalance", flag.ExitOnError)
 		sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 		printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 		nodeSetPortCmd := flag.NewFlagSet("setListeningPort", flag.ExitOnError)
@@ -63,10 +65,12 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
 
 		getBalanceAddressString := getBalanceCmd.String("address", "", "The address to get balance for")
+		addBalanceAddressString := addBalanceCmd.String("address", "", "The address to add balance for")
 		createBlockchainAddressString := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
 		sendFrom := sendCmd.String("from", "", "Source client address")
 		sendTo := sendCmd.String("to", "", "Destination client address")
 		sendAmount := sendCmd.Int("amount", 0, "Amount to send")
+		addAmount := addBalanceCmd.Int("amount", 0, "Amount to add")
 		tipAmount := sendCmd.Int("tip", 0, "Amount to tip")
 		nodePort := nodeSetPortCmd.Int("port", 12345, "Port to listen")
 		peerAddr := addPeerCmd.String("address", "", "peer ip4 address")
@@ -75,6 +79,8 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		switch args[0] {
 		case "getbalance":
 			err = getBalanceCmd.Parse(args[1:])
+		case "addbalance":
+			err = addBalanceCmd.Parse(args[1:])
 		case "createblockchain":
 			err = createBlockchainCmd.Parse(args[1:])
 		case "createwallet":
@@ -141,6 +147,20 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 
 		}
 
+		if addBalanceCmd.Parsed() {
+			if *addBalanceAddressString == "" || *addAmount <=0 {
+				addBalanceCmd.Usage()
+			}
+			addBalanceAddress := core.NewAddress(*addBalanceAddressString)
+			err := logic.AddBalance(addBalanceAddress, *addAmount, dep.db)
+			if err != nil {
+				log.Println(err)
+			}
+
+			fmt.Printf("Add Balance Amount %d for '%s'\n", *addAmount, addBalanceAddress, )
+
+		}
+
 		if createBlockchainCmd.Parsed() {
 			if *createBlockchainAddressString == "" {
 				createBlockchainCmd.Usage()
@@ -173,7 +193,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if printChainCmd.Parsed() {
-			cli.printChain()
+			cli.printChain(dep.db)
 		}
 
 		if sendCmd.Parsed() {

@@ -420,6 +420,7 @@
   revision = "2b032632ecab1e1b98c8d2391a4f6ab9a6c9e140"
   version = "v0.3.7"
 
+
 [[projects]]
   name = "github.com/nebulasio/go-nebulas"
   packages = [

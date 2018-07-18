@@ -23,9 +23,10 @@ import (
 
 	"time"
 
-	"github.com/nebulasio/go-nebulas/crypto"
-	"github.com/nebulasio/go-nebulas/crypto/keystore"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/crypto"
+	"github.com/dappley/go-dappley/crypto/keystore"
 )
 
 func TestKeystore_SetKeyPassphrase(t *testing.T) {

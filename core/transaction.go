@@ -213,6 +213,21 @@ func NewUTXOTransaction(from, to Address, amount int, keypair KeyPair, bc *Block
 	return tx, nil
 }
 
+//for add balance
+func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	// Build a list of outputs
+	outputs = append(outputs, *NewTXOutput(amount, to.Address))
+
+	tx := Transaction{nil, inputs, outputs, tip}
+	tx.ID = tx.Hash()
+	bc.SignTransaction(&tx, keypair.PrivateKey)
+
+	return tx, nil
+}
+
 // String returns a human-readable representation of a transaction
 func (tx Transaction) String() string {
 	var lines []string
