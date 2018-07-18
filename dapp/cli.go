@@ -193,7 +193,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		}
 
 		if printChainCmd.Parsed() {
-			cli.printChain()
+			cli.printChain(dep.db)
 		}
 
 		if sendCmd.Parsed() {
