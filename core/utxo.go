@@ -40,7 +40,8 @@ func GetAddressUTXOs (address string, db storage.LevelDB) (spendableOutputs, err
 	if err != nil {
 		return nil, err
 	}
-	return *spendableOutputs{}.Deserialize(aob), nil
+	ins := spendableOutputs{}
+	return *ins.Deserialize(aob), nil
 }
 
 func getStoredUtxoMap (db storage.LevelDB) spendableOutputs {
@@ -48,8 +49,9 @@ func getStoredUtxoMap (db storage.LevelDB) spendableOutputs {
 	if err != nil {
 		log.Panic(err)
 	}
-	umap := *spendableOutputs{}.Deserialize(res)
-	return umap
+	ins := spendableOutputs{}
+	umap := ins.Deserialize(res)
+	return *umap
 }
 
 // on new txn, outputs will be created which i will need to add to the spendableOutputs map
