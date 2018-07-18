@@ -164,7 +164,6 @@ func NewCoinbaseTX(to, data string) Transaction {
 		log.Panic(err)
 	}
 	data = fmt.Sprintf("%s - %x",data,randData)
-	fmt.Println(data)
 	txin := TXInput{[]byte{}, -1, nil, []byte(data)}
 	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
