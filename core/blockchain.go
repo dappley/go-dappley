@@ -232,7 +232,7 @@ func (bc *Blockchain) String() string {
 			fmt.Println(err)
 		}
 
-		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))
+		buffer.WriteString(fmt.Sprintf("============ Block %x [%d] ============\n", block.GetHash(),block.GetHeight()))
 		buffer.WriteString(fmt.Sprintf("Prev. block: %x\n", block.GetPrevHash()))
 		for _, tx := range block.GetTransactions() {
 			buffer.WriteString(tx.String())

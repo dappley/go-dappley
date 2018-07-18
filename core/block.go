@@ -38,11 +38,17 @@ type BlockHeader struct {
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
+	height       uint64
+	parent      *Block
 }
 
-func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
-	if prevHash == nil {
-		prevHash = []byte{}
+func NewBlock(transactions []*Transaction, parent *Block) *Block {
+
+	prevHash := []byte{}
+	var parentHeight uint64
+	parentHeight = 0
+	if parent != nil {
+		prevHash = parent.GetHash()
 	}
 
 	if transactions == nil {
@@ -55,6 +61,7 @@ func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
 			nonce:     0,
 			timestamp: time.Now().Unix(),
 		},
+		height:       parentHeight + 1,
 		transactions: transactions,
 	}
 }
@@ -125,6 +132,10 @@ func (b *Block) SetHash(hash Hash) {
 
 func (b *Block) GetHash() Hash {
 	return b.header.hash
+}
+
+func (b *Block) GetHeight() uint64 {
+	return b.height
 }
 
 func (b *Block) GetPrevHash() Hash {

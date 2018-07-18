@@ -191,7 +191,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 		wallet2.GetAddress()	:sendAmount+sendAmount2,					//balance should be the amount rcved from wallet1
 	}
 
-	//fmt.Println(bc.String())
+	fmt.Println(bc)
 	//getBalancePrint(bc, wallet1.GetAddress().Address)
 	//check balance
 	checkBalance(t,bc, expectedVal)

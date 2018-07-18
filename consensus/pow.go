@@ -85,8 +85,17 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 	heap.Init(h)
 	heap.Push(core.GetTxnPoolInstance(), cbtx)
 
+	parentBlockEncoded, err := pow.chain.DB.Get(prevHash)
+
+	//todo: err handling
+	if err != nil {
+		return nil
+	}
+
+	parentBlock := core.Deserialize(parentBlockEncoded)
+
 	//prepare the new block (without the correct nonce value)
-	blk := core.NewBlock(core.GetTxnPoolInstance().GetSortedTransactions(), prevHash)
+	blk := core.NewBlock(core.GetTxnPoolInstance().GetSortedTransactions(), parentBlock)
 
 	//find the nonce value
 	for nonce < maxNonce {

@@ -31,7 +31,7 @@ func NewGenesisBlock(address string) *Block {
 	txs = append(txs,&tx)
 
 	header := &BlockHeader{
-		hash: []byte{000},
+		hash: []byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 		prevHash: []byte{},
 		nonce:     0,
 		timestamp: time.Now().Unix(),

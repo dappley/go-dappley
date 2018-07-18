@@ -6,10 +6,32 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"time"
 )
 
+var header = &BlockHeader{
+	hash:      []byte{},
+	prevHash:  []byte{},
+	nonce:     0,
+	timestamp: time.Now().Unix(),
+}
+var blk = &Block{
+	header: header,
+}
+
+var header2 = &BlockHeader{
+	hash:      []byte{},
+	prevHash:  []byte{'a'},
+	nonce:     0,
+	timestamp: time.Now().Unix(),
+}
+var blk2 = &Block{
+	header: header2,
+}
+
 func TestDeserialize(t *testing.T) {
-	blockExpect1 := NewBlock([]*Transaction{&Transaction{}}, []byte{'a'})
+
+	blockExpect1 := NewBlock([]*Transaction{&Transaction{}}, blk2)
 	b1 := blockExpect1.Serialize()
 	block1 := Deserialize(b1)
 	assert.Equal(t, blockExpect1.transactions, block1.transactions)
@@ -21,7 +43,7 @@ func TestDeserialize(t *testing.T) {
 	assert.Equal(t, blockExpect2.transactions, block2.transactions)
 	assert.Equal(t, blockExpect2.header, block2.header)
 
-	blockExpect3 := NewBlock([]*Transaction{}, []byte{})
+	blockExpect3 := NewBlock([]*Transaction{}, blk)
 	b3 := blockExpect3.Serialize()
 	block3 := Deserialize(b3)
 	assert.Equal(t, blockExpect3.transactions, block3.transactions)
@@ -30,13 +52,13 @@ func TestDeserialize(t *testing.T) {
 }
 
 func TestSerialize(t *testing.T) {
-	block := NewBlock([]*Transaction{&Transaction{}}, []byte{'a'})
+	block := NewBlock([]*Transaction{&Transaction{}}, blk2)
 	b := block.Serialize()
 	assert.NotNil(t, b)
 }
 
 func TestHashTransactions(t *testing.T) {
-	block := NewBlock([]*Transaction{&Transaction{}}, []byte{'a'})
+	block := NewBlock([]*Transaction{&Transaction{}}, blk2)
 	hash := block.HashTransactions()
 	assert.NotNil(t, hash)
 }
@@ -46,12 +68,12 @@ func TestNewBlock(t *testing.T) {
 	assert.NotNil(t, block1.header.prevHash)
 	assert.NotNil(t, block1.transactions)
 
-	block2 := NewBlock(nil, []byte{})
+	block2 := NewBlock(nil, blk)
 	assert.NotNil(t, block2.header.prevHash)
 	assert.Equal(t, 0, len(block2.header.prevHash))
 	assert.NotNil(t, block2.transactions)
 
-	block3 := NewBlock(nil, []byte{'a'})
+	block3 := NewBlock(nil, blk2)
 	assert.NotNil(t, block3.header.prevHash)
 	assert.Equal(t, 1, len(block3.header.prevHash))
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])

@@ -22,8 +22,8 @@ func GenerateMockBlock() *Block{
 
 
 	return &Block{
-		bh1,
-		[]*Transaction{t1},
+		header: bh1,
+		transactions: []*Transaction{t1},
 	}
 }
 
