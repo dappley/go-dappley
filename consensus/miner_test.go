@@ -62,7 +62,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	miner.Stop()
-
+	signal <- true
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
