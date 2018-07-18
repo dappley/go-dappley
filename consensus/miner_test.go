@@ -1,10 +1,8 @@
 package consensus
 
 import (
-	"os"
 	"testing"
 
-	"fmt"
 	"time"
 
 	"github.com/dappley/go-dappley/client"
@@ -12,19 +10,19 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
-var sendAmount = int(5)
+var sendAmount = int(7)
+var sendAmount2 = int(6)
 var mineReward = int(10)
 var tip = int64(5)
 
-//mine one transaction
+
+//mine multiple transactions
 func TestMiner_SingleValidTx(t *testing.T) {
 
-	setup()
-
 	//create new wallet
-
 	wallets, err := client.NewWallets()
 	assert.Nil(t, err)
 	assert.NotNil(t, wallets)
@@ -38,91 +36,94 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	wallet := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 
 	//create a blockchain
-	assert.Equal(t, true, wallet1.GetAddress().ValidateAddress())
-
-	db := storage.OpenDatabase(core.BlockchainDbFile)
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.Nil(t, err)
-
 	assert.NotNil(t, bc)
 
-	//check balance
-	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward, 0)
-
-	//create 2 transactions and start mining
-	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, tip)
+	//create a transaction
+	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, 0)
 	assert.Nil(t, err)
 
+	//push the transaction to transaction pool
 	core.GetTxnPoolInstance().Push(tx)
 
+	//start a miner
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
 	signal := make(chan bool)
 	go miner.Start(signal)
-	for i := 0; i < 1; i++ {
-		miner.Feed(time.Now().String())
-		miner.Feed("test test")
-		time.Sleep(1 * time.Second)
+
+	//Make sure there are blocks have been mined
+	count := GetNumberOfBlocks(t, bc.Iterator())
+	for count < 2 {
+		time.Sleep(time.Millisecond*500)
+		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	miner.Stop()
 
-	checkBalance(t, wallet2.GetAddress().Address, wallet2.GetAddress().Address, bc, sendAmount, sendAmount)
+	//get the number of blocks
+	count = GetNumberOfBlocks(t, bc.Iterator())
+	//set the expected wallet value for all wallets
+	var expectedVal = map[core.Address]int{
+		wallet1.GetAddress()	:mineReward*count-sendAmount,  	//balance should be all mining rewards minus sendAmount
+		wallet2.GetAddress()	:sendAmount,					//balance should be the amount rcved from wallet1
+	}
 
-	teardown()
+	//check balance
+	checkBalance(t,bc, expectedVal)
 }
 
 //mine empty blocks
 func TestMiner_MineEmptyBlock(t *testing.T) {
 
-	setup()
-
 	//create new wallet
 	wallets, _ := client.NewWallets()
 	assert.NotNil(t, wallets)
 
-	wallet1 := wallets.CreateWallet()
-	assert.NotNil(t, wallet1)
+	cbWallet := wallets.CreateWallet()
+	assert.NotNil(t, cbWallet)
 
-	wallet2 := wallets.CreateWallet()
-	assert.NotNil(t, wallet2)
-
-	//create a blockchain
-	assert.Equal(t, true, wallet1.GetAddress().ValidateAddress())
-
-	db := storage.OpenDatabase(core.BlockchainDbFile)
+	//Create Blockchain
+	db := storage.NewRamStorage()
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
+	bc, err := core.CreateBlockchain(cbWallet.GetAddress(), db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	//check balance
-	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward, 0)
-
-	//create 2 transactions and start mining
-
-	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
+	//start a miner
+	miner := NewMiner(bc, cbWallet.GetAddress().Address, NewProofOfWork(bc))
 	signal := make(chan bool)
 	go miner.Start(signal)
-	for i := 0; i < 1; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
+
+	//Make sure at least 5 blocks mined
+	count := GetNumberOfBlocks(t, bc.Iterator())
+	for count < 5 {
+		count = GetNumberOfBlocks(t, bc.Iterator())
+		time.Sleep(time.Second)
 	}
 	miner.Stop()
-	//fmt.Println(bc)
-	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward*2, 0)
+	count = GetNumberOfBlocks(t, bc.Iterator())
 
-	teardown()
+	//set expected mining rewarded
+	var expectedVal = map[core.Address]int{
+		cbWallet.GetAddress()	: count * mineReward,
+	}
+
+	//check balance
+	checkBalance(t,bc, expectedVal)
+
 }
+
 
 //mine multiple transactions
 func TestMiner_MultipleValidTx(t *testing.T) {
 
-	setup()
-
 	//create new wallet
-	wallets, _ := client.NewWallets()
+	wallets, err := client.NewWallets()
+	assert.Nil(t, err)
 	assert.NotNil(t, wallets)
 
 	wallet1 := wallets.CreateWallet()
@@ -134,63 +135,89 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	wallet := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 
 	//create a blockchain
-	assert.Equal(t, true, wallet1.GetAddress().ValidateAddress())
-
-	db := storage.OpenDatabase(core.BlockchainDbFile)
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	//check balance ; a:10, b:0
-	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, mineReward, 0)
-
-	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), 4, wallet, bc, tip)
+	//create a transaction
+	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, 0)
 	assert.Nil(t, err)
 
-	//a:15 b:5
+	//push the transaction to transaction pool
 	core.GetTxnPoolInstance().Push(tx)
-	//a:20 b:10
 
+	//start a miner
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
 	signal := make(chan bool)
 	go miner.Start(signal)
-	for i := 0; i < 1; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
-	}
 
-	core.GetTxnPoolInstance().Push(tx)
-	for i := 0; i < 1; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
+	//Make sure there are blocks have been mined
+	count := GetNumberOfBlocks(t, bc.Iterator())
+	for count < 2 {
+		time.Sleep(time.Millisecond*500)
+		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
-	tx2, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), 11, wallet, bc, tip)
+	//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
+
+	//add second transation
+	tx2, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, wallet, bc, 0)
+	assert.Nil(t, err)
 	core.GetTxnPoolInstance().Push(tx2)
-	for i := 0; i < 1; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
+
+	//Make sure there are blocks have been mined
+	currCount := GetNumberOfBlocks(t, bc.Iterator())
+	//fmt.Println("currCount:",currCount)
+	//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
+	for count < currCount + 2 {
+		time.Sleep(time.Millisecond*500)
+		count = GetNumberOfBlocks(t, bc.Iterator())
+		//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
 	}
 
+	//stop mining
 	miner.Stop()
-	go miner.Start(signal)
-	for i := 0; i < 1; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
+
+	//get the number of blocks
+	count = GetNumberOfBlocks(t, bc.Iterator())
+	//set the expected wallet value for all wallets
+	var expectedVal = map[core.Address]int{
+		wallet1.GetAddress()	:mineReward*count-sendAmount-sendAmount2,  	//balance should be all mining rewards minus sendAmount
+		wallet2.GetAddress()	:sendAmount+sendAmount2,					//balance should be the amount rcved from wallet1
 	}
-	miner.Stop()
 
-	fmt.Println(bc)
-	checkBalance(t, wallet1.GetAddress().Address, wallet2.GetAddress().Address, bc, 11, 19)
+	//fmt.Println(bc.String())
+	//getBalancePrint(bc, wallet1.GetAddress().Address)
+	//check balance
+	checkBalance(t,bc, expectedVal)
 
-	teardown()
 
+}
+
+func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int{
+	//find how many blocks have been mined
+	numOfBlocksMined := 1
+	blk, err := i.Next()
+	assert.Nil(t, err)
+	for blk.GetPrevHash()!=nil {
+		numOfBlocksMined++
+		blk, err = i.Next()
+	}
+	return numOfBlocksMined
 }
 
 //TODO: test mining with invalid transactions
 func TestMiner_InvalidTransactions(t *testing.T) {
 
+}
+
+func printBalances(bc *core.Blockchain, addrs []core.Address) {
+	for _, addr := range addrs{
+		b, _ := getBalance(bc, addr.Address)
+		fmt.Println("addr", addr, ":", b)
+	}
 }
 
 //balance
@@ -210,26 +237,28 @@ func getBalance(bc *core.Blockchain, addr string) (int, error) {
 	return balance, nil
 }
 
-func setup() {
-	cleanUpDatabase()
+//balance
+func getBalancePrint(bc *core.Blockchain, addr string) (int, error) {
+
+	balance := 0
+	pubKeyHash := util.Base58Decode([]byte(addr))
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	UTXOs, err := bc.FindUTXO(pubKeyHash)
+	if err != nil {
+		return 0, err
+	}
+	fmt.Println(UTXOs)
+
+	for _, out := range UTXOs {
+		balance += out.Value
+	}
+	return balance, nil
 }
 
-func teardown() {
-	cleanUpDatabase()
-}
-
-func cleanUpDatabase() {
-	os.RemoveAll("../bin/blockchain.DB")
-	os.RemoveAll(client.WalletFile)
-}
-
-func checkBalance(t *testing.T, addr1, addr2 string, bc *core.Blockchain, addr1v, addr2v int) {
-	//check balance after transaction
-	balance1, err := getBalance(bc, addr1)
-	assert.Nil(t, err)
-	assert.Equal(t, addr1v, balance1)
-
-	balance2, err := getBalance(bc, addr2)
-	assert.Nil(t, err)
-	assert.Equal(t, addr2v, balance2)
+func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[core.Address]int) {
+	for addr, bal := range addrBals{
+		b, err := getBalance(bc, addr.Address)
+		assert.Nil(t, err)
+		assert.Equal(t, bal, b)
+	}
 }
