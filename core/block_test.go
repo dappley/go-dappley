@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"time"
+	"fmt"
 )
 
 var header = &BlockHeader{
@@ -20,8 +21,8 @@ var blk = &Block{
 }
 
 var header2 = &BlockHeader{
-	hash:      []byte{},
-	prevHash:  []byte{'a'},
+	hash:      []byte{'a'},
+	prevHash:  []byte{'e','c'},
 	nonce:     0,
 	timestamp: time.Now().Unix(),
 }
@@ -73,10 +74,14 @@ func TestNewBlock(t *testing.T) {
 	assert.Equal(t, 0, len(block2.header.prevHash))
 	assert.NotNil(t, block2.transactions)
 
+	fmt.Println(blk2.GetHash())
+
 	block3 := NewBlock(nil, blk2)
+	fmt.Println(block3.header.prevHash)
 	assert.NotNil(t, block3.header.prevHash)
 	assert.Equal(t, 1, len(block3.header.prevHash))
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
+	assert.Equal(t, uint64(1), block3.height)
 	assert.NotNil(t, block3.transactions)
 
 	block4 := NewBlock([]*Transaction{}, nil)

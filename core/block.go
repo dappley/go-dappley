@@ -26,6 +26,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
+	"fmt"
 )
 
 type BlockHeader struct {
@@ -45,12 +46,13 @@ type Block struct {
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
 	prevHash := []byte{}
-	var parentHeight uint64
-	parentHeight = 0
+	var height uint64
+	height = 0
 	if parent != nil {
 		prevHash = parent.GetHash()
+		height = parent.GetHeight() + 1
 	}
-
+	fmt.Println(prevHash)
 	if transactions == nil {
 		transactions = []*Transaction{}
 	}
@@ -61,7 +63,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 			nonce:     0,
 			timestamp: time.Now().Unix(),
 		},
-		height:       parentHeight + 1,
+		height:       height,
 		transactions: transactions,
 	}
 }
@@ -90,6 +92,7 @@ func (b *Block) Serialize() []byte {
 			Timestamp: b.header.timestamp,
 		},
 		Transactions: b.transactions,
+		Height: b.height,
 	}
 
 	err := encoder.Encode(bs)
@@ -123,6 +126,7 @@ func Deserialize(d []byte) *Block {
 			timestamp: bs.Header.Timestamp,
 		},
 		transactions: bs.Transactions,
+		height:bs.Height,
 	}
 }
 

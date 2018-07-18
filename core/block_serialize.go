@@ -27,4 +27,5 @@ type BlockHeaderStream struct {
 type BlockStream struct {
 	Header       *BlockHeaderStream
 	Transactions []*Transaction
+	Height       uint64
 }
