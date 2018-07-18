@@ -351,9 +351,25 @@
 
 [[projects]]
   name = "github.com/nebulasio/go-nebulas"
+<<<<<<< HEAD
   packages = ["util/byteutils"]
-  revision = "7f78adb93fa34d2c4cc4b206d11b03ee84c8bd1c"
-  version = "v1.0.7"
+=======
+<<<<<<< HEAD
+  packages = [
+    "crypto",
+    "crypto/cipher",
+    "crypto/hash",
+    "crypto/keystore",
+    "crypto/keystore/secp256k1",
+    "crypto/keystore/secp256k1/bitelliptic",
+    "crypto/sha3",
+    "crypto/utils",
+    "util/byteutils",
+    "util/logging"
+  ]
+  packages = ["crypto","crypto/cipher","crypto/hash","crypto/keystore","crypto/keystore/secp256k1","crypto/keystore/secp256k1/bitelliptic","crypto/keystore/secp256k1/vrf","crypto/sha3","crypto/utils","util/byteutils","util/logging"]
+  revision = "7470724e2ed1f2f1e54af19e3ead477d324d542e"
+  version = "v1.0.6"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -498,6 +514,11 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
+<<<<<<< HEAD
   inputs-digest = "3b3c8528f6fed5b2967e0ce9589da6c3e600643e3d306d8d62e3a30fbaca3b5c"
+=======
+  inputs-digest = "b6c6599a855a9aa9fa25abf73e3640676e3d89c4233b1e48e8dcdc7d28e666b5"
+
+>>>>>>> added utxoMapIndex const, added utxo map struct
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -78,6 +78,35 @@ Work: //TODO
 	return accumulated, unspentOutputs, nil
 }
 
+func (bc *Blockchain) SpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
+	//create map of { address: serialized UTXO }
+	unspentOutputs := make(map[string][]int)
+	unspentTXs, err := bc.FindUnspentTransactions(pubKeyHash)
+	if err != nil {
+		return 0, nil, err
+	}
+	accumulated := 0
+
+Work: //TODO
+	for _, tx := range unspentTXs {
+		txID := hex.EncodeToString(tx.ID)
+
+		for outIdx, out := range tx.Vout {
+			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
+				accumulated += out.Value
+				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
+
+				if accumulated >= amount {
+					break Work
+				}
+			}
+		}
+	}
+
+	return accumulated, unspentOutputs, nil
+}
+
+
 //TODO: optimize performance
 func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	bci := bc.Iterator()

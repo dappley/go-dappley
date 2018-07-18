@@ -7,45 +7,73 @@ import (
 	"github.com/dappley/go-dappley/storage"
 )
 
-var utxoKey = []byte("2")
+//map of key: wallet address, value: serialized UTXO minheap
+type spendableOutputs map[string]map[string][]byte
 
-// An Transactiondb_cache is a max-heap of Transactions.
-type UTXOCache []Transaction
-
-func (db_cache UTXOCache) Len() int { return len(db_cache) }
-//Compares Transaction Tips
-func (db_cache UTXOCache) Less(i, j int) bool { return db_cache[i].Tip > db_cache[j].Tip }
-func (db_cache UTXOCache) Swap(i, j int)      { db_cache[i], db_cache[j] = db_cache[j], db_cache[i] }
-
-func (db_cache *UTXOCache) Push(x interface{}) {
-	// Push and Pop use pointer receivers because they modify the slice's length,
-	// not just its contents.
-	*db_cache = append(*db_cache, x.(Transaction))
-}
-
-func (db_cache *UTXOCache) Pop() interface{} {
-	old := *db_cache
-	length := len(old)
-	last := old[length-1]
-	*db_cache = old[0 : length-1]
-	return last
-}
-
-func (db_cache *UTXOCache) GetDatabaseUTXO(db storage.LevelDB) []byte {
-	utxoArrayOfBytes, err := db.Get(utxoKey)
-	if err != nil {
-		log.Panic(err)
-	}
-	return utxoArrayOfBytes
-}
-
-func (db_cache *UTXOCache) Deserialize(d []byte) *UTXOCache {
-	var txndb_cache UTXOCache
+func (ucache *spendableOutputs) Deserialize(d []byte) *spendableOutputs {
+	var txo spendableOutputs
 	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&txndb_cache)
+	err := decoder.Decode(&txo)
 	if err != nil {
 		log.Panic(err)
 	}
-	return db_cache
+	return &txo
 }
 
+func (ucache *spendableOutputs) Serialize() []byte {
+	var encoded bytes.Buffer
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(ucache)
+	if err != nil {
+		log.Panic(err)
+	}
+	return encoded.Bytes()
+}
+
+func SaveAddressUTXOs (address string, serializedHeap []byte, db storage.LevelDB){
+	db.Put( []byte(address), serializedHeap )
+}
+
+func GetAddressUTXOs (address string, db storage.LevelDB) (spendableOutputs, error) {
+	aob, err := db.Get( []byte(address) )
+	if err != nil {
+		return nil, err
+	}
+	return *spendableOutputs{}.Deserialize(aob), nil
+}
+
+func getStoredUtxoMap (db storage.LevelDB) spendableOutputs {
+	res, err := db.Get([]byte(UtxoMapIndex))
+	if err != nil {
+		log.Panic(err)
+	}
+	umap := *spendableOutputs{}.Deserialize(res)
+	return umap
+}
+
+// on new txn, outputs will be created which i will need to add to the spendableOutputs map
+
+func AddSpendableOutputsAfterNewBlock (address string, blk Block, db storage.LevelDB) {
+	// to be implemented
+	//for _, v := range blk.transactions{
+	//	for _,va := range v.Vout{
+	//		//
+	//	}
+	//}
+}
+
+func ConsumeSpendableOutputs (address string, blk Block, db storage.LevelDB){
+	// to be implemented
+	//a := []TXOutput{}
+	//for _, v := range blk.transactions{
+	//	for _,vin := range v.Vin{
+	//		txn, err := Blockchain{}.FindTransaction(vin.Txid)
+	//		if err != nil {
+	//			log.Panic(err)
+	//		}
+	//
+	//	}
+	//}
+
+}
