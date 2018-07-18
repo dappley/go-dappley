@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/dappley/go-dappley/util"
-	"golang.org/x/crypto/ripemd160"
 	"crypto/elliptic"
 	"crypto/rand"
+
+	"github.com/dappley/go-dappley/util"
+	"golang.org/x/crypto/ripemd160"
 )
 
 const version = byte(0x00)
@@ -49,7 +50,6 @@ func HashPubKey(pubKey []byte) []byte {
 
 	return publicRIPEMD160
 }
-
 
 func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
