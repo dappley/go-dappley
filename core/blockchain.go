@@ -235,7 +235,7 @@ func (bc *Blockchain) String() string {
 		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))
 		buffer.WriteString(fmt.Sprintf("Prev. block: %x\n", block.GetPrevHash()))
 		for _, tx := range block.GetTransactions() {
-			fmt.Println(tx)
+			buffer.WriteString(tx.String())
 		}
 		buffer.WriteString(fmt.Sprintf("\n\n"))
 
@@ -256,5 +256,4 @@ func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(newBlock.GetHash(), newBlock.Serialize())
 
 	db.Put(tipKey, newBlock.GetHash())
-
 }

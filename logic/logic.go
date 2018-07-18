@@ -82,8 +82,6 @@ func GetBalance(address core.Address, db storage.Storage) (int, error) {
 	return balance, nil
 }
 
-
-
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
 	wallets, err := client.NewWallets()

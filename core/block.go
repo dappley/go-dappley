@@ -40,7 +40,14 @@ type Block struct {
 	transactions []*Transaction
 }
 
-func NewBlock(transactions []*Transaction,prevHash []byte) *Block {
+func NewBlock(transactions []*Transaction, prevHash []byte) *Block {
+	if prevHash == nil {
+		prevHash = []byte{}
+	}
+
+	if transactions == nil {
+		transactions = []*Transaction{}
+	}
 	return &Block{
 		header: &BlockHeader{
 			hash:      []byte{},
@@ -92,7 +99,15 @@ func Deserialize(d []byte) *Block {
 	if err != nil {
 		log.Panic(err)
 	}
-
+	if bs.Header.Hash == nil {
+		bs.Header.Hash = Hash{}
+	}
+	if bs.Header.PrevHash == nil {
+		bs.Header.PrevHash = Hash{}
+	}
+	if bs.Transactions == nil {
+		bs.Transactions = []*Transaction{}
+	}
 	return &Block{
 		header: &BlockHeader{
 			hash:      bs.Header.Hash,

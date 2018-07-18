@@ -17,7 +17,9 @@
 //
 package client
 
-import "github.com/dappley/go-dappley/core"
+import (
+	"github.com/dappley/go-dappley/core"
+)
 
 type Wallet struct {
 	Key       *core.KeyPair
