@@ -70,7 +70,6 @@ func (miner *Miner) Start(signal chan bool) {
 
 func (miner *Miner) Stop() {
 	miner.exitCh <- true
-	miner.exitCh <- true
 }
 
 func (miner *Miner) Feed(msg string) {

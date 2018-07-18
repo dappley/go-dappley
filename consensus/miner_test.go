@@ -61,8 +61,8 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		time.Sleep(time.Millisecond*500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
-	miner.Stop()
 	signal <- true
+	miner.Stop()
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -104,7 +104,9 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 		time.Sleep(time.Second)
 	}
+	signal <- true
 	miner.Stop()
+
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -178,6 +180,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	}
 
 	//stop mining
+	signal <- true
 	miner.Stop()
 
 	//get the number of blocks
