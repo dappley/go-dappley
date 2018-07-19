@@ -43,7 +43,7 @@ func TestDeserialize(t *testing.T) {
 	block2 := Deserialize(b2)
 	assert.Equal(t, blockExpect2.transactions, block2.transactions)
 	assert.Equal(t, blockExpect2.header, block2.header)
-
+	
 	blockExpect3 := NewBlock([]*Transaction{}, blk)
 	b3 := blockExpect3.Serialize()
 	block3 := Deserialize(b3)

@@ -261,7 +261,7 @@ func (bc *Blockchain) String() string {
 			fmt.Println(err)
 		}
 
-		buffer.WriteString(fmt.Sprintf("============ Block %x [%d] ============\n", block.GetHash(),block.GetHeight()))
+		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))
 		buffer.WriteString(fmt.Sprintf("Prev. block: %x\n", block.GetPrevHash()))
 		for _, tx := range block.GetTransactions() {
 			buffer.WriteString(tx.String())
@@ -283,6 +283,9 @@ func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Bloc
 //record the new block in the database
 func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(newBlock.GetHash(), newBlock.Serialize())
-
+	UpdateUtxoIndexAfterNewBlock(*newBlock, db)
+	//txoIndex := getStoredUtxoMap(db)
+	//fmt.Printf("%+v\n", "updateDbWithNewBlock")
+	//fmt.Printf("%+v\n", txoIndex)
 	db.Put(tipKey, newBlock.GetHash())
 }

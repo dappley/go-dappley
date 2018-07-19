@@ -3,4 +3,4 @@ package core
 
 const TransactionPoolLimit = 5
 const BlockchainDbFile = "../bin/blockchain.DB"
-const UtxoMapIndex = "utxo"
+const UtxoMapKey = "utxo"
