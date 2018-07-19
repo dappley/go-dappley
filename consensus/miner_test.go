@@ -64,7 +64,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
 	signal := make(chan bool)
 	go miner.Start(signal)
-
+	
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 2 {
