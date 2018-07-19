@@ -19,8 +19,6 @@
 package consensus
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"math"
 	"math/big"
@@ -28,7 +26,6 @@ import (
 	"container/heap"
 
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/util"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -57,24 +54,10 @@ func NewProofOfWork(chain *core.Blockchain) *ProofOfWork {
 	return p
 }
 
-func prepareData(nonce int64, blk *core.Block) []byte {
-	data := bytes.Join(
-		[][]byte{
-			blk.GetPrevHash(),
-			blk.HashTransactions(),
-			util.IntToHex(blk.GetTimestamp()),
-			util.IntToHex(targetBits),
-			util.IntToHex(nonce),
-		},
-		[]byte{},
-	)
-	return data
-}
-
 func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *core.Block {
 
 	var hashInt big.Int
-	var hash [32]byte
+	var hash core.Hash
 	nonce := int64(0)
 
 	//add coinbase transaction to transaction pool
@@ -99,8 +82,7 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 
 	//find the nonce value
 	for nonce < maxNonce {
-		data := prepareData(nonce, blk)
-		hash = sha256.Sum256(data)
+		hash = blk.CalculateHashWithNonce(nonce)
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {
@@ -111,7 +93,7 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 	}
 
 	//complete the block
-	blk.SetHash(hash[:])
+	blk.SetHash(hash)
 	blk.SetNonce(nonce)
 
 	return blk
@@ -120,11 +102,16 @@ func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *co
 func (pow *ProofOfWork) Validate(blk *core.Block) bool {
 	var hashInt big.Int
 
-	data := prepareData(blk.GetNonce(), blk)
-	hash := sha256.Sum256(data)
-	hashInt.SetBytes(hash[:])
+	hash := blk.CalculateHash()
+	hashInt.SetBytes(hash)
 
 	isValid := hashInt.Cmp(pow.target) == -1
+
+	if !isValid {
+		return isValid
+	}
+
+	isValid = blk.VerifyHash()
 
 	return isValid
 }

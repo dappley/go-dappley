@@ -163,5 +163,4 @@ func (miner *Miner) verifyTransactions() {
 			txnPool.Push(txn)
 		}
 	}
-
 }

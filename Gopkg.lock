@@ -147,18 +147,6 @@
   revision = "b497e2f366b8624394fb2e89c10ab607bebdde0b"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/lestrrat/go-file-rotatelogs"
-  packages = ["."]
-  revision = "d3151e2a480fdcd05fb97102f5310a47d96274c4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/lestrrat/go-strftime"
-  packages = ["."]
-  revision = "ba3bf9c1d0421aa146564a632931730344f1f9f1"
-
-[[projects]]
   name = "github.com/libp2p/go-addr-util"
   packages = ["."]
   revision = "56c6a7f748424cab4ff68da653ff01363e3cd745"
@@ -420,21 +408,9 @@
   revision = "2b032632ecab1e1b98c8d2391a4f6ab9a6c9e140"
   version = "v0.3.7"
 
-
 [[projects]]
   name = "github.com/nebulasio/go-nebulas"
-  packages = [
-    "crypto",
-    "crypto/cipher",
-    "crypto/hash",
-    "crypto/keystore",
-    "crypto/keystore/secp256k1",
-    "crypto/keystore/secp256k1/bitelliptic",
-    "crypto/sha3",
-    "crypto/utils",
-    "util/byteutils",
-    "util/logging"
-  ]
+  packages = ["util/byteutils"]
   revision = "7f78adb93fa34d2c4cc4b206d11b03ee84c8bd1c"
   version = "v1.0.7"
 
@@ -449,22 +425,10 @@
   version = "v1.0.2"
 
 [[projects]]
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
-
-[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/rifflock/lfshook"
-  packages = ["."]
-  revision = "bf539943797a1f34c1f502d07de419b5238ae6c6"
-  version = "v2.3"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
@@ -678,6 +642,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b6c6599a855a9aa9fa25abf73e3640676e3d89c4233b1e48e8dcdc7d28e666b5"
+  inputs-digest = "3b3c8528f6fed5b2967e0ce9589da6c3e600643e3d306d8d62e3a30fbaca3b5c"
   solver-name = "gps-cdcl"
   solver-version = 1

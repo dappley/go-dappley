@@ -27,6 +27,9 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"fmt"
+	"github.com/dappley/go-dappley/util"
+	"math/big"
+	"reflect"
 )
 
 type BlockHeader struct {
@@ -204,4 +207,30 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
 	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
+}
+
+func (b *Block) CalculateHash() Hash{
+	return b.CalculateHashWithNonce(b.GetNonce())
+}
+
+func (b *Block) CalculateHashWithNonce(nonce int64) Hash{
+	var hashInt big.Int
+
+	data := bytes.Join(
+		[][]byte{
+			b.GetPrevHash(),
+			b.HashTransactions(),
+			util.IntToHex(b.GetTimestamp()),
+			//util.IntToHex(targetBits),
+			util.IntToHex(nonce),
+		},
+		[]byte{},
+	)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+	return hashInt.Bytes()
+}
+
+func (b *Block) VerifyHash() bool{
+	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
 }

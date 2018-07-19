@@ -39,7 +39,9 @@ func (pool *BlockPool) BlockReceivedCh() chan *Block {
 }
 
 func (pool *BlockPool) Push(block *Block) {
-	pool.blockReceivedCh <- block
+	if block.VerifyHash(){
+		pool.blockReceivedCh <- block
+	}
 }
 
 func (pool *BlockPool) Start() {

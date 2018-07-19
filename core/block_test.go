@@ -135,3 +135,18 @@ func TestBlock_Proto(t *testing.T) {
 
 	assert.Equal(t, *b1, *b2)
 }
+
+func TestBlock_VerifyHash(t *testing.T) {
+	b1 := GenerateMockBlock()
+	fmt.Println(b1)
+
+	//The mocked block does not have correct hash value
+	assert.False(t,b1.VerifyHash())
+
+	//calculate correct hash value
+	hash := b1.CalculateHash()
+	b1.SetHash(hash)
+
+	//then this should be correct
+	assert.True(t,b1.VerifyHash())
+}
