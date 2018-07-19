@@ -54,7 +54,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, 0)
+	tx, err := core.NewUTXOTransaction(db,wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, 0)
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -155,7 +155,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, 0)
+	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, wallet, bc, 0)
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -175,8 +175,9 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
 
 	//add second transation
-	tx2, err := core.NewUTXOTransaction(wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, wallet, bc, 0)
+	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, wallet, bc, 0)
 	assert.Nil(t, err)
+
 	core.GetTxnPoolInstance().Push(tx2)
 
 	//Make sure there are blocks have been mined
@@ -195,7 +196,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
 	var expectedVal = map[core.Address]int{
-		wallet1.GetAddress()	:mineReward*count-sendAmount-sendAmount2,  	//balance should be all mining rewards minus sendAmount
+		wallet1.GetAddress()	:mineReward*(count+1)-sendAmount-sendAmount2,  	//balance should be all mining rewards minus sendAmount
 		wallet2.GetAddress()	:sendAmount+sendAmount2,					//balance should be the amount rcved from wallet1
 	}
 

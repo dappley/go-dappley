@@ -48,38 +48,8 @@ func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
 }
 
-//func (bc *Blockchain) TransactionPool() *TransactionPool {
-//	return bc.txPool
-//}
+
 func (bc *Blockchain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
-	unspentOutputs := make(map[string][]int)
-	unspentTXs, err := bc.FindUnspentTransactions(pubKeyHash)
-	if err != nil {
-		return 0, nil, err
-	}
-	accumulated := 0
-
-Work: //TODO
-	for _, tx := range unspentTXs {
-		txID := hex.EncodeToString(tx.ID)
-
-		for outIdx, out := range tx.Vout {
-			if out.IsLockedWithKey(pubKeyHash) && accumulated < amount {
-				accumulated += out.Value
-				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
-
-				if accumulated >= amount {
-					break Work
-				}
-			}
-		}
-	}
-
-	return accumulated, unspentOutputs, nil
-}
-
-func (bc *Blockchain) SpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int, error) {
-	//create map of { address: serialized UTXO }
 	unspentOutputs := make(map[string][]int)
 	unspentTXs, err := bc.FindUnspentTransactions(pubKeyHash)
 	if err != nil {
@@ -284,8 +254,5 @@ func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Bloc
 func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(newBlock.GetHash(), newBlock.Serialize())
 	UpdateUtxoIndexAfterNewBlock(*newBlock, db)
-	//txoIndex := getStoredUtxoMap(db)
-	//fmt.Printf("%+v\n", "updateDbWithNewBlock")
-	//fmt.Printf("%+v\n", txoIndex)
 	db.Put(tipKey, newBlock.GetHash())
 }

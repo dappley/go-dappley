@@ -112,7 +112,7 @@ func Send(from, to core.Address, amount int, tip int64, db storage.Storage) erro
 		return err
 	}
 	wallet := wallets.GetKeyPairByAddress(from)
-	tx, err := core.NewUTXOTransaction(from, to, amount, wallet, bc, tip)
+	tx, err := core.NewUTXOTransaction(db, from, to, amount, wallet, bc, tip)
 
 	if err != nil {
 		return err

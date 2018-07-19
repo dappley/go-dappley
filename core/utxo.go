@@ -5,12 +5,10 @@ import (
 	"encoding/gob"
 	"log"
 	"github.com/dappley/go-dappley/storage"
-	"fmt"
 	"strings"
 )
 
 //map of key: wallet address, value: serialized map
-type spendableOutputs map[string]txoIndex
 type txoIndex map[string][]TXOutputStored
 
 
@@ -23,6 +21,7 @@ func DeserializeUTXO(d []byte) *txoIndex {
 	}
 	return &txo
 }
+
 func (ucache *txoIndex) Serialize() []byte {
 	var encoded bytes.Buffer
 
@@ -34,9 +33,6 @@ func (ucache *txoIndex) Serialize() []byte {
 	return encoded.Bytes()
 }
 
-func SaveAddressUTXOs (address string, serializedHeap []byte, db storage.LevelDB){
-	db.Put( []byte(address), serializedHeap )
-}
 
 func GetAddressUTXOs (address []byte, db storage.Storage) []TXOutputStored {
 	umap := getStoredUtxoMap(db)
@@ -47,7 +43,6 @@ func getStoredUtxoMap (db storage.Storage) txoIndex {
 	res, err := db.Get([]byte(UtxoMapKey))
 
 	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
-		print("Map Key is invalid")
 		res1 := txoIndex{}
 		return res1
 	}
@@ -55,9 +50,11 @@ func getStoredUtxoMap (db storage.Storage) txoIndex {
 	return *umap
 }
 
-// on new txn, unspent outputs will be created which i will need to add to the spendableOutputs map
+
 func UpdateUtxoIndexAfterNewBlock(blk Block, db storage.Storage){
+	//add new outputs
 	AddSpendableOutputsAfterNewBlock(blk, db)
+	//remove expended outputs
 	ConsumeSpendableOutputsAfterNewBlock(blk, db)
 
 }
@@ -73,8 +70,6 @@ func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
 
 func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
 	txoIndex := getStoredUtxoMap(db)
-	fmt.Printf("%+v\n", txoIndex)
-
 	for _, txns := range blk.transactions{
 		for _,vin := range txns.Vin{
 			spentOutputTxnId, txnIndex, pubKey := vin.Txid, vin.Vout, string(vin.PubKey)

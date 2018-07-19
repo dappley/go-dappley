@@ -16,6 +16,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/storage"
 )
 
 const subsidy = 10
@@ -173,37 +174,39 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
+func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
+	var validOutputs []TXOutputStored
 
 	pubKeyHash := HashPubKey(keypair.PublicKey)
-	acc, validOutputs, err := bc.FindSpendableOutputs(pubKeyHash, amount)
-	if err != nil {
-		return Transaction{}, err
+	sum := 0
+
+	if(len(GetAddressUTXOs(pubKeyHash, db)) < 1){
+		return Transaction{}, ErrInsufficientFund
+	}
+	for _, v := range GetAddressUTXOs(pubKeyHash, db) {
+		sum += v.Value
+		validOutputs = append(validOutputs, v)
+		if sum >= amount {
+			break
+		}
 	}
 
-	if acc < amount {
+	if sum < amount {
 		return Transaction{}, ErrInsufficientFund
 	}
 
 	// Build a list of inputs
-	for txid, outs := range validOutputs {
-		txID, err := hex.DecodeString(txid)
-		if err != nil {
-			return Transaction{}, err
-		}
+	for _, out := range validOutputs {
+		input := TXInput{out.Txid, out.TxIndex, nil, keypair.PublicKey}
+		inputs = append(inputs, input)
 
-		for _, out := range outs {
-			input := TXInput{txID, out, nil, keypair.PublicKey}
-			inputs = append(inputs, input)
-		}
 	}
-
 	// Build a list of outputs
 	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-	if acc > amount {
-		outputs = append(outputs, *NewTXOutput(acc-amount, from.Address)) // a change
+	if sum > amount {
+		outputs = append(outputs, *NewTXOutput(sum-amount, from.Address)) // a change
 	}
 
 	tx := Transaction{nil, inputs, outputs, tip}
@@ -212,7 +215,6 @@ func NewUTXOTransaction(from, to Address, amount int, keypair KeyPair, bc *Block
 
 	return tx, nil
 }
-
 //for add balance
 func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
