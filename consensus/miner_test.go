@@ -10,13 +10,23 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	logger "github.com/sirupsen/logrus"
 	"fmt"
+	"os"
 )
 
 var sendAmount = int(7)
 var sendAmount2 = int(6)
 var mineReward = int(10)
 var tip = int64(5)
+
+
+func TestMain(m *testing.M){
+
+	logger.SetLevel(logger.WarnLevel)
+	retCode := m.Run()
+	os.Exit(retCode)
+}
 
 
 //mine multiple transactions
@@ -171,12 +181,10 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//Make sure there are blocks have been mined
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
-	//fmt.Println("currCount:",currCount)
-	//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
+
 	for count < currCount + 2 {
 		time.Sleep(time.Millisecond*500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
-		//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
 	}
 
 	//stop mining
@@ -191,8 +199,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 		wallet2.GetAddress()	:sendAmount+sendAmount2,					//balance should be the amount rcved from wallet1
 	}
 
-	fmt.Println(bc)
-	//getBalancePrint(bc, wallet1.GetAddress().Address)
 	//check balance
 	checkBalance(t,bc, expectedVal)
 

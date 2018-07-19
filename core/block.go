@@ -26,7 +26,6 @@ import (
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
-	"fmt"
 	"github.com/dappley/go-dappley/util"
 	"math/big"
 	"reflect"
@@ -55,7 +54,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 		prevHash = parent.GetHash()
 		height = parent.GetHeight() + 1
 	}
-	fmt.Println(prevHash)
+
 	if transactions == nil {
 		transactions = []*Transaction{}
 	}

@@ -19,10 +19,9 @@ package consensus
 
 import (
 	"container/heap"
-	"fmt"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
+	logger "github.com/sirupsen/logrus"
 )
 
 type state int
@@ -107,11 +106,12 @@ Loop:
 	}
 }
 func (miner *Miner) messageLoop() {
+	logger.Debug("Miner Message Loop Starts")
 	for {
-		fmt.Println("running")
+
 		select {
 		case msg := <-miner.messageCh:
-			fmt.Println(msg)
+			logger.Info(msg)
 		case block := <-miner.bc.BlockPool().BlockReceivedCh():
 			miner.newBlockReceived = true
 			miner.newBlock = block
