@@ -10,11 +10,17 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/storage"
+	"github.com/sirupsen/logrus"
 )
 
 var tipKey = []byte("1")
 
 const BlockPoolMaxSize = 100
+
+var(
+	ErrNotAbleToGetLastBlock 		= errors.New("ERROR: Not able to get last block in blockchain")
+	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
+)
 
 type Blockchain struct {
 	currentHash []byte
@@ -189,7 +195,12 @@ func (bc *Blockchain) Next() (*Block, error) {
 }
 
 func (bc *Blockchain) GetLastHash() ([]byte, error) {
-	return bc.DB.Get(tipKey)
+
+	data, err:= bc.DB.Get(tipKey)
+	if err!=nil{
+		logrus.Error(err)
+	}
+	return data, err
 }
 
 func (bc *Blockchain) String() string {
@@ -217,8 +228,9 @@ func (bc *Blockchain) String() string {
 }
 
 func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
-	blockPool := NewBlockPool(BlockPoolMaxSize)
-	return &Blockchain{current, db, blockPool}
+	bc := &Blockchain{current, db,nil}
+	bc.blockPool = NewBlockPool(BlockPoolMaxSize, bc)
+	return bc
 }
 
 //record the new block in the database
@@ -227,3 +239,16 @@ func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	UpdateUtxoIndexAfterNewBlock(*newBlock, db)
 	db.Put(tipKey, newBlock.GetHash())
 }
+
+func (bc *Blockchain) GetLastBlock() (*Block, error){
+	hash, err:= bc.GetLastHash()
+	if err != nil {
+		return nil, ErrNotAbleToGetLastBlockHash
+	}
+	v, err:=bc.DB.Get(hash)
+	if err != nil {
+		return nil, ErrNotAbleToGetLastBlock
+	}
+	return Deserialize(v),nil
+}
+

@@ -8,7 +8,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"os"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/client"
 )
 
 const(
@@ -33,11 +32,15 @@ func TestMain(m *testing.M){
 
 func TestNetwork_Setup(t *testing.T) {
 
-	bc := mockBlockchain(t)
+	db := storage.NewRamStorage()
+	defer db.Close()
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	bc,err := core.CreateBlockchain(addr,db)
+	assert.Nil(t, err)
 
 	//create node1
 	node1 := NewNode(bc)
-	err := node1.Start(test_port1)
+	err = node1.Start(test_port1)
 	assert.Nil(t, err)
 
 	//currently it should only have itself as its node
@@ -55,40 +58,50 @@ func TestNetwork_Setup(t *testing.T) {
 }
 
 func TestNetwork_SendBlock(t *testing.T){
-	bc := mockBlockchain(t)
 
-	//create node1
-	node1 := NewNode(bc)
-	err := node1.Start(test_port3)
+	var bcInputs = []struct{
+		addr 		core.Address
+		testPort 	int
+	}{
+		{core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"},test_port3},
+		{core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUx"},test_port4},
+		{core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUy"},test_port5},
+	}
+
+	var nodes []*Node
+
+	//setup each node
+	for _,input := range bcInputs{
+		db := storage.NewRamStorage()
+		defer db.Close()
+		bc, err := core.CreateBlockchain(input.addr, db)
+		assert.Nil(t, err)
+		n := NewNode(bc)
+		n.Start(input.testPort)
+		nodes = append(nodes, n)
+	}
+
+	//add node0 as a stream peer in node1 and node2
+	err := nodes[1].AddStream(nodes[0].GetPeerID(),nodes[0].GetPeerMultiaddr())
 	assert.Nil(t, err)
 
-	//create node 2 and add node1 as a peer
-	node2 := NewNode(bc)
-	err = node2.Start(test_port4)
-	assert.Nil(t, err)
-	err = node2.AddStream(node1.GetPeerID(),node1.GetPeerMultiaddr())
+	err = nodes[2].AddStream(nodes[0].GetPeerID(),nodes[0].GetPeerMultiaddr())
 	assert.Nil(t, err)
 
-	//create node 3 and add node1 as a peer
-	node3 := NewNode(bc)
-	err = node3.Start(test_port5)
-	assert.Nil(t, err)
-	err = node3.AddStream(node1.GetPeerID(),node1.GetPeerMultiaddr())
-	assert.Nil(t, err)
 
-	//node 1 broadcast a block
+	//node 0 broadcast a block
 	b1 := core.GenerateMockBlock()
-	node1.SendBlock(b1)
+	nodes[0].SendBlock(b1)
 
 	time.Sleep(time.Second)
 
 	//node2 receives the block
-	b2:= node2.GetBlocks()
+	b2:= nodes[1].GetBlocks()
 	assert.NotEmpty(t, b2)
 	assert.Equal(t,*b1,*b2[0])
 
 	//node3 receives the block
-	b3:= node3.GetBlocks()
+	b3:= nodes[2].GetBlocks()
 	assert.NotEmpty(t, b3)
 	assert.Equal(t,*b1,*b3[0])
 
@@ -99,11 +112,15 @@ func TestNetwork_SendBlock(t *testing.T){
 }
 
 func TestNode_SyncPeers(t *testing.T){
-	bc := mockBlockchain(t)
+	db := storage.NewRamStorage()
+	defer db.Close()
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	bc,err := core.CreateBlockchain(addr,db)
+	assert.Nil(t, err)
 
 	//create node1
 	node1 := NewNode(bc)
-	err := node1.Start(test_port6)
+	err = node1.Start(test_port6)
 	assert.Nil(t, err)
 
 	//create node 2 and add node1 as a peer
@@ -141,21 +158,6 @@ func TestNode_SyncPeers(t *testing.T){
 		time.Sleep(time.Second)*/
 }
 
-func mockBlockchain(t *testing.T) *core.Blockchain{
-	db := storage.OpenDatabase(blockchainDbFile)
-	defer db.Close()
-
-	wallets, err := client.NewWallets()
-	assert.Nil(t, err)
-	assert.NotNil(t, wallets)
-
-	wallet1 := wallets.CreateWallet()
-	assert.NotNil(t, wallet1)
-
-	bc,err := core.CreateBlockchain(wallet1.GetAddress(),db)
-	assert.Nil(t, err)
-	return bc
-}
 
 /*func TestNetwork_node0(t *testing.T){
 	bc := mockBlockchain(t)

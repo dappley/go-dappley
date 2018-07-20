@@ -24,6 +24,8 @@ func GenerateMockBlock() *Block{
 	return &Block{
 		header: bh1,
 		transactions: []*Transaction{t1},
+		height: 0,
+		parent: nil,
 	}
 }
 

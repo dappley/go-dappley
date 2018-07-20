@@ -19,13 +19,13 @@
 package consensus
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 
 	"container/heap"
 
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -128,10 +128,10 @@ func (pow *ProofOfWork) Start() {
 	for {
 		select {
 		case msg := <-pow.messageCh:
-			fmt.Println(msg)
+			logger.Info(msg)
 		case block := <-pow.chain.BlockPool().BlockReceivedCh():
 			pow.newBlockReceived = true
-			fmt.Println(block)
+			logger.Info(block)
 		case <-pow.exitCh:
 			return
 		}

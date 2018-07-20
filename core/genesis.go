@@ -40,5 +40,7 @@ func NewGenesisBlock(address string) *Block {
 		header: header,
 		transactions: txs,
 	}
+
+	b.SetHash(b.CalculateHash())
 	return b
 }

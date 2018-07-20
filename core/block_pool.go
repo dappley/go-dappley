@@ -19,17 +19,24 @@
 package core
 
 import "fmt"
+import (
+	"reflect"
+	logger "github.com/sirupsen/logrus"
+)
+
 
 type BlockPool struct {
 	blockReceivedCh chan *Block
 	size            int
 	exitCh          chan bool
+	bc 				*Blockchain
 }
 
-func NewBlockPool(size int) (*BlockPool) {
+func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
 		blockReceivedCh: make(chan *Block, size),
+		bc:				 bc,
 	}
 	return pool
 }
@@ -39,7 +46,11 @@ func (pool *BlockPool) BlockReceivedCh() chan *Block {
 }
 
 func (pool *BlockPool) Push(block *Block) {
-	if block.VerifyHash(){
+	lastBlk,err := pool.bc.GetLastBlock()
+	if err!=nil {
+		logger.Warn(err)
+	}
+	if verifyBlock(lastBlk, block){
 		pool.blockReceivedCh <- block
 	}
 }
@@ -66,4 +77,32 @@ func (pool *BlockPool) messageLoop() {
 
 func (pool *BlockPool) handleBlock(blk *Block) {
 	pool.Push(blk)
+}
+
+func verifyHeight(lastBlk, newblk *Block) bool{
+	return lastBlk.height + 1 == newblk.height
+}
+
+func verifyLastBlockHash(lastBlk, newblk *Block) bool{
+	return reflect.DeepEqual(lastBlk.GetHash(), newblk.GetPrevHash())
+}
+
+func verifyBlock(lastBlk, newblk *Block) bool{
+	if newblk.VerifyHash()==false{
+		return false
+	}
+
+	if verifyHeight(lastBlk, newblk)==false{
+		return false
+	}
+
+	if verifyLastBlockHash(lastBlk, newblk)==false{
+		return false
+	}
+
+	return true
+}
+
+func (pool *BlockPool) GetBlockchain() *Blockchain{
+	return pool.bc
 }

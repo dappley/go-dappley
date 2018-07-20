@@ -233,3 +233,4 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash{
 func (b *Block) VerifyHash() bool{
 	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
 }
+
