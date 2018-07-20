@@ -18,35 +18,48 @@
 
 package consensus
 
-/*
+import (
+	"testing"
+	"github.com/dappley/go-dappley/core"
+	"math/big"
+	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/storage"
+)
 
+func TestProofOfWork_ValidateDifficulty(t *testing.T) {
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
 
-func TestProofOfWork_Validate(t *testing.T) {
-	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	//create a block that has a hash value larger than the target
+	blk := core.GenerateMockBlock()
+	target := big.NewInt(1)
+	target.Lsh(target, uint(256-targetBits+1))
 
-	//create a blockchain
-	b, err := CreateBlockchain(addr)
+	blk.SetHash(target.Bytes())
 
-	pow := NewProofOfWork()
-	blk := pow.ProduceBlock(cbAddr, "", []byte{})
-	//hash :=blk.GetHash()
-	assert.True(t,pow.Validate(blk))
-	blk.SetNonce(blk.GetNonce()+1)
-	assert.False(t, pow.Validate(blk))
+	assert.False(t,pow.ValidateDifficulty(blk))
+
+	//create a block that has a hash value smaller than the target
+	target = big.NewInt(1)
+	target.Lsh(target, uint(256-targetBits-1))
+	blk.SetHash(target.Bytes())
+
+	assert.True(t,pow.ValidateDifficulty(blk))
 }
 
-func TestProofOfWork_Start(t *testing.T) {
-	pow := NewProofOfWork()
-	go pow.Start()
-	for i := 0; i < 3; i++ {
-		pow.Feed(time.Now().String())
-		pow.Feed("test test")
-		time.Sleep(1 * time.Second)
-	}
-	pow.Stop()
+func TestProofOfWork_verifyNonce(t *testing.T){
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	
 }
-
-
-*/

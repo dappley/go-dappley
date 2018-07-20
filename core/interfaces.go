@@ -14,8 +14,7 @@ package core
 type Hash []byte
 
 type Consensus interface{
-	ProduceBlock(string, string, []byte) *Block
-	Validate(*Block) bool
+	ValidateDifficulty(*Block) bool
 	Start()
 	Stop()
 }

@@ -182,14 +182,11 @@ func TestSend(t *testing.T) {
 	//Send 5 coins from wallet1 to wallet2
 	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
 	assert.Nil(t, err)
-	miner := consensus.NewMiner(b, addr1.Address, consensus.NewProofOfWork(b))
+	miner := consensus.NewMiner(consensus.NewProofOfWork(b,addr1.Address))
 
 	go miner.Start()
-	for i := 0; i < 3; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
-	}
-	assert.Nil(t, err)
+	time.Sleep(3 * time.Second)
+
 	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
 	balance1, err = GetBalance(wallet1.GetAddress(), databaseInstance)
 

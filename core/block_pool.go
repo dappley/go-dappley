@@ -26,7 +26,7 @@ import (
 
 type BlockPool struct {
 	blockReceivedCh chan *Block
-	blockUpdatedCh	chan bool
+	blockUpdatedCh	chan *Block
 	size            int
 	exitCh          chan bool
 	bc 				*Blockchain
@@ -36,7 +36,7 @@ func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
 		blockReceivedCh: make(chan *Block, size),
-		blockUpdatedCh:	 make(chan bool, 1),
+		blockUpdatedCh:	 make(chan *Block, size),
 		bc:				 bc,
 	}
 	return pool
@@ -46,7 +46,7 @@ func (pool *BlockPool) BlockReceivedCh() chan *Block {
 	return pool.blockReceivedCh
 }
 
-func (pool *BlockPool) BlockUpdateCh() chan bool {
+func (pool *BlockPool) BlockUpdateCh() chan *Block {
 	return pool.blockUpdatedCh
 }
 
@@ -81,8 +81,7 @@ func (pool *BlockPool) messageLoop() {
 }
 
 func (pool *BlockPool) handleBlock(blk *Block) {
-	pool.bc.UpdateNewBlock(blk)
-	pool.blockUpdatedCh <- true
+	pool.blockUpdatedCh <- blk
 }
 
 func verifyHeight(lastBlk, newblk *Block) bool{
