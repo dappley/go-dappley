@@ -18,7 +18,6 @@
 
 package core
 
-import "fmt"
 import (
 	"reflect"
 	logger "github.com/sirupsen/logrus"
@@ -27,6 +26,7 @@ import (
 
 type BlockPool struct {
 	blockReceivedCh chan *Block
+	blockUpdatedCh	chan bool
 	size            int
 	exitCh          chan bool
 	bc 				*Blockchain
@@ -36,6 +36,7 @@ func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
 		blockReceivedCh: make(chan *Block, size),
+		blockUpdatedCh:	 make(chan bool, 1),
 		bc:				 bc,
 	}
 	return pool
@@ -43,6 +44,10 @@ func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 
 func (pool *BlockPool) BlockReceivedCh() chan *Block {
 	return pool.blockReceivedCh
+}
+
+func (pool *BlockPool) BlockUpdateCh() chan bool {
+	return pool.blockUpdatedCh
 }
 
 func (pool *BlockPool) Push(block *Block) {
@@ -67,7 +72,7 @@ func (pool *BlockPool) messageLoop() {
 	for {
 		select {
 		case <-pool.exitCh:
-			fmt.Println("quit block pool")
+			logger.Info("BlockPool Exited")
 			return
 		case blk := <-pool.blockReceivedCh:
 			pool.handleBlock(blk)
@@ -76,7 +81,8 @@ func (pool *BlockPool) messageLoop() {
 }
 
 func (pool *BlockPool) handleBlock(blk *Block) {
-	pool.Push(blk)
+	pool.bc.UpdateNewBlock(blk)
+	pool.blockUpdatedCh <- true
 }
 
 func verifyHeight(lastBlk, newblk *Block) bool{
