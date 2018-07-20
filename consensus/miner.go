@@ -34,41 +34,44 @@ const (
 )
 
 type Miner struct {
-	bc           *core.Blockchain
-	newBlock     *core.Block
-	coinBaseAddr string
-	nextState    state
-	consensus    core.Consensus
+	bc           		*core.Blockchain
+	newBlock     		*core.Block
+	coinBaseAddr 		string
+	nextState    		state
+	consensus    		core.Consensus
 
-	exitCh           chan bool
-	messageCh        chan string
-	newBlockReceived bool
-	node             *network.Node
+	exitMsgLoopCh    	chan bool
+	exitStateLoopCh  	chan bool
+	messageCh        	chan string
+	newBlockReceived 	bool
+	node             	*network.Node
 }
 
 //create a new instance
 func NewMiner(bc *core.Blockchain, coinBaseAddr string, consensus core.Consensus) *Miner {
 
 	return &Miner{
-		bc:           bc,
-		newBlock:     nil,
-		coinBaseAddr: coinBaseAddr,
-		nextState:    prepareTxPoolState,
-		consensus:    consensus,
-		exitCh:       make(chan bool, 1),
-		messageCh:    make(chan string, 128),
-		node:         network.NewNode(bc),
+		bc:            		bc,
+		newBlock:      		nil,
+		coinBaseAddr:  		coinBaseAddr,
+		nextState:     		prepareTxPoolState,
+		consensus:     		consensus,
+		exitMsgLoopCh: 		make(chan bool, 1),
+		exitStateLoopCh: 	make(chan bool, 1),
+		messageCh:     		make(chan string, 128),
+		node:          		network.NewNode(bc),
 	}
 }
 
 //start mining
-func (miner *Miner) Start(signal chan bool) {
-	miner.stateLoop(signal)
+func (miner *Miner) Start() {
+	miner.stateLoop()
 	miner.messageLoop()
 }
 
 func (miner *Miner) Stop() {
-	miner.exitCh <- true
+	miner.exitMsgLoopCh <- true
+	miner.exitStateLoopCh <- true
 }
 
 func (miner *Miner) Feed(msg string) {
@@ -79,28 +82,28 @@ func (miner *Miner) FeedBlock(blk *core.Block) {
 	miner.bc.BlockPool().Push(blk)
 }
 
-func (pd *Miner) stateLoop(signal chan bool) {
+func (miner *Miner) stateLoop() {
 Loop:
 	for {
 		select {
-		case stop := <-signal:
+		case stop := <-miner.exitStateLoopCh:
 			if stop {
 				break Loop
 			}
 		default:
-			switch pd.nextState {
+			switch miner.nextState {
 			case prepareTxPoolState:
-				pd.prepareTxPool()
-				pd.nextState = mineState
+				miner.prepareTxPool()
+				miner.nextState = mineState
 			case mineState:
-				pd.mine()
-				pd.nextState = updateNewBlock
+				miner.mine()
+				miner.nextState = updateNewBlock
 			case updateNewBlock:
-				pd.updateNewBlock()
-				pd.nextState = cleanUpState
+				miner.updateNewBlock()
+				miner.nextState = cleanUpState
 			case cleanUpState:
-				pd.cleanUp()
-				pd.nextState = prepareTxPoolState
+				miner.cleanUp()
+				miner.nextState = prepareTxPoolState
 			}
 		}
 	}
@@ -116,7 +119,7 @@ func (miner *Miner) messageLoop() {
 			miner.newBlockReceived = true
 			miner.newBlock = block
 			miner.nextState = updateNewBlock
-		case <-miner.exitCh:
+		case <-miner.exitMsgLoopCh:
 			return
 		}
 	}

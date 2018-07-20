@@ -183,8 +183,8 @@ func TestSend(t *testing.T) {
 	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
 	assert.Nil(t, err)
 	miner := consensus.NewMiner(b, addr1.Address, consensus.NewProofOfWork(b))
-	signal := make(chan bool)
-	go miner.Start(signal)
+
+	go miner.Start()
 	for i := 0; i < 3; i++ {
 		miner.Feed(time.Now().String())
 		time.Sleep(1 * time.Second)
@@ -201,7 +201,6 @@ func TestSend(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, transferAmount, balance2)
 
-	signal<- true
 	miner.Stop()
 
 	//teardown :clean up database amd files

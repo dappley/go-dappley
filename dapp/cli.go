@@ -13,6 +13,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/consensus"
 )
 
 // CLI responsible for processing command line arguments
@@ -42,7 +43,7 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
+func (cli *CLI) Run(dep *Dep, miner *consensus.Miner, waitGroup sync.WaitGroup) {
 
 	cli.printUsage()
 	var node *network.Node
@@ -100,7 +101,7 @@ func (cli *CLI) Run(dep *Dep, signal chan bool, waitGroup sync.WaitGroup) {
 		case "syncPeers":
 			err = syncPeersCmd.Parse(args[1:])
 		case "exit":
-			signal <- true
+			miner.Stop()
 			os.Exit(1)
 		default:
 			cli.printUsage()

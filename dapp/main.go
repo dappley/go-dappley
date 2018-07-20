@@ -44,14 +44,8 @@ func startNetwork(bc *core.Blockchain) *network.Node {
 	return node
 }
 
-func mining(blockchain *core.Blockchain, walletAddr string, signal chan bool) {
-	miner := consensus.NewMiner(blockchain, walletAddr, consensus.NewProofOfWork(blockchain))
-	miner.Start(signal)
-}
-
 func main() {
 	cli := CLI{}
-	signal := make(chan bool)
 	var waitGroup sync.WaitGroup
 	//set to debug level
 	logger.SetLevel(logger.DebugLevel)
@@ -67,11 +61,12 @@ func main() {
 	}
 
 	waitGroup.Add(1)
+	miner := consensus.NewMiner(bc, addr, consensus.NewProofOfWork(bc))
 	go func() {
-		mining(bc, addr, signal)
+		miner.Start()
 		waitGroup.Done()
 	}()
 
-	cli.Run(input, signal, waitGroup)
+	cli.Run(input, miner, waitGroup)
 	waitGroup.Wait()
 }

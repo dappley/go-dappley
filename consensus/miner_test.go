@@ -62,8 +62,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	signal := make(chan bool)
-	go miner.Start(signal)
+	go miner.Start()
 	
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -71,8 +70,8 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		time.Sleep(time.Millisecond*500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
-	signal <- true
 	miner.Stop()
+
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -105,8 +104,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//start a miner
 	miner := NewMiner(bc, cbWallet.GetAddress().Address, NewProofOfWork(bc))
-	signal := make(chan bool)
-	go miner.Start(signal)
+	go miner.Start()
 
 	//Make sure at least 5 blocks mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -114,7 +112,6 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 		time.Sleep(time.Second)
 	}
-	signal <- true
 	miner.Stop()
 
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -163,8 +160,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//start a miner
 	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	signal := make(chan bool)
-	go miner.Start(signal)
+	go miner.Start()
 
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -189,7 +185,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	}
 
 	//stop mining
-	signal <- true
 	miner.Stop()
 
 	//get the number of blocks
