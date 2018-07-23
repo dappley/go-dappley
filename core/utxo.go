@@ -6,6 +6,7 @@ import (
 	"log"
 	"github.com/dappley/go-dappley/storage"
 	"strings"
+	"fmt"
 )
 
 //map of key: wallet address, value: serialized map
@@ -17,7 +18,7 @@ func DeserializeUTXO(d []byte) *txoIndex {
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&txo)
 	if err != nil {
-		log.Panic(err)
+		fmt.Printf("%+v\n", err.Error())
 	}
 	return &txo
 }
@@ -50,6 +51,10 @@ func getStoredUtxoMap (db storage.Storage) txoIndex {
 	return *umap
 }
 
+func initIndex() txoIndex{
+	ins := map[string][]TXOutputStored{}
+	return  ins
+}
 
 func UpdateUtxoIndexAfterNewBlock(blk Block, db storage.Storage){
 	//add new outputs
@@ -62,6 +67,12 @@ func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
 	txoIndex := getStoredUtxoMap(db)
 	for _, txn := range blk.transactions{
 		for index ,vout := range txn.Vout{
+			if(len(txoIndex)==0){
+				txoIndex = initIndex()
+			}
+			if txoIndex[string(vout.PubKeyHash)] == nil {
+				txoIndex[string(vout.PubKeyHash)] = []TXOutputStored{}
+			}
 			txoIndex[string(vout.PubKeyHash)] = append(txoIndex[string(vout.PubKeyHash)], TXOutputStored{vout.Value, txn.ID, index})
 		}
 	}
