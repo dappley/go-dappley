@@ -33,6 +33,7 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 	)
+	defer bc.DB.Close()
 	assert.Nil(t,err)
 	pow := NewProofOfWork(bc,cbAddr.Address)
 
@@ -59,6 +60,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 	)
+	defer bc.DB.Close()
 	assert.Nil(t,err)
 	pow := NewProofOfWork(bc,cbAddr.Address)
 
@@ -96,6 +98,7 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 	)
+	defer bc.DB.Close()
 	assert.Nil(t,err)
 	pow := NewProofOfWork(bc,cbAddr.Address)
 
