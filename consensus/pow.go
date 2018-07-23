@@ -92,9 +92,7 @@ func (pow *ProofOfWork) Start() {
 		for {
 			select {
 			case blk := <- pow.bc.BlockPool().BlockUpdateCh():
-				logger.Debug("PoW: Received a block from peer")
 				if pow.ValidateDifficulty(blk){
-					logger.Debug("PoW: The block has been verified")
 					pow.rollbackBlock(newBlock)
 					newBlock = blk
 					pow.nextState = updateNewBlockState
@@ -105,7 +103,6 @@ func (pow *ProofOfWork) Start() {
 			default:
 				switch pow.nextState {
 				case prepareBlockState:
-					logger.Debug("Pow State: prepareBlockState")
 					newBlock = pow.prepareBlock()
 					nonce = 0
 					pow.nextState = mineBlockState
@@ -123,7 +120,6 @@ func (pow *ProofOfWork) Start() {
 						pow.nextState = prepareBlockState
 					}
 				case updateNewBlockState:
-					logger.Debug("Pow State: updateNewBlockState")
 					pow.updateNewBlock(newBlock)
 					pow.nextState = prepareBlockState
 				}
