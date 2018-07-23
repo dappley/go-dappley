@@ -198,7 +198,7 @@ func (pow *ProofOfWork) rollbackBlock(blk *core.Block){
 	txnPool := core.GetTxnPoolInstance()
 	for _,tx := range blk.GetTransactions(){
 		if !tx.IsCoinbase() {
-			txnPool.Push(tx)
+			txnPool.Push(*tx)
 		}
 	}
 }

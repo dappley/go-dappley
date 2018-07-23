@@ -20,6 +20,7 @@ const BlockPoolMaxSize = 100
 var(
 	ErrNotAbleToGetLastBlock 		= errors.New("ERROR: Not able to get last block in blockchain")
 	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
+	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
 )
 
 type Blockchain struct {
@@ -75,7 +76,7 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 		}
 	}
 
-	return Transaction{}, errors.New("Transaction is not found")
+	return Transaction{}, ErrTransactionNotFound
 }
 
 //TODO: optimize performance
@@ -166,6 +167,9 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 
 	for _, vin := range tx.Vin {
 		prevTX, err := bc.FindTransaction(vin.Txid)
+		if err == ErrTransactionNotFound {
+			return false
+		}
 		if err != nil {
 			log.Panic(err)
 		}

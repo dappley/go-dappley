@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/storage"
 	"time"
+	"github.com/dappley/go-dappley/client"
 )
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
@@ -159,4 +160,49 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 	assert.Nil(t,err)
 	assert.Equal(t, newBlock,tailBlock)
 
+}
+
+func TestProofOfWork_rollbackBlock(t *testing.T){
+	wallets,err := client.NewWallets()
+	assert.Nil(t, err)
+	wallet1 := wallets.CreateWallet()
+	wallet2 := wallets.CreateWallet()
+
+	bc,err := core.CreateBlockchain(
+		wallet1.GetAddress(),
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,wallet1.GetAddress().Address)
+
+	//mock two transactions and push them to transaction pool
+	tx, err := core.NewUTXOTransaction(
+		bc.DB,
+		wallet1.GetAddress(),
+		wallet2.GetAddress(),
+		5,
+		wallets.GetKeyPairByAddress(wallet1.GetAddress()),
+		bc,
+		0)
+
+	txPool := core.GetTxnPoolInstance()
+	txPool.Push(tx)
+	txPool.Push(tx)
+	//The transaction pool should contain two transactions
+	assert.Equal(t,2, txPool.Len())
+
+	//Grab the transaction from the transaction pool and prepare a block
+	blk := pow.prepareBlock()
+
+	//Now the transaction pool should not have any transaction
+	assert.Equal(t,0, txPool.Len())
+
+	//rollback the block so that the transactions will go back to transaction pool
+	pow.rollbackBlock(blk)
+	assert.Equal(t,2, txPool.Len())
+
+	//the two transactions should stay the same
+	assert.Equal(t,tx,txPool.Pop())
+	assert.Equal(t,tx,txPool.Pop())
 }
