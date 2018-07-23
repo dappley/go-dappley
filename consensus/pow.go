@@ -27,8 +27,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
-	"fmt"
-	"reflect"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -99,12 +97,6 @@ func (pow *ProofOfWork) Start() {
 					logger.Debug("PoW: The block has been verified")
 					pow.rollbackBlock(newBlock)
 					newBlock = blk
-					a := newBlock.GetTransactions()[0].Vin[0].Txid
-
-					if reflect.DeepEqual(a, []uint8{}){
-						fmt.Println("Blk txid:", newBlock.GetTransactions()[0].Vin[0].Txid)
-					}
-
 					pow.nextState = updateNewBlockState
 				}
 			case <-pow.exitCh:

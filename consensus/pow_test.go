@@ -206,3 +206,77 @@ func TestProofOfWork_rollbackBlock(t *testing.T){
 	assert.Equal(t,tx,txPool.Pop())
 	assert.Equal(t,tx,txPool.Pop())
 }
+
+func TestProofOfWork_verifyNonce(t *testing.T){
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//prepare a block with correct nonce value
+	newBlock := pow.prepareBlock()
+	nonce := int64(0)
+	mineloop2:
+	for{
+		if hash, ok := pow.verifyNonce(nonce, newBlock); ok {
+			newBlock.SetHash(hash)
+			newBlock.SetNonce(nonce)
+			break mineloop2
+		}else{
+			nonce++
+		}
+	}
+
+	//check if the verifyNonce function returns true
+	_, ok := pow.verifyNonce(nonce, newBlock)
+	assert.True(t, ok)
+
+	//input a wrong nonce value, check if it returns false
+	_, ok = pow.verifyNonce(nonce-1, newBlock)
+	assert.False(t, ok)
+}
+
+func TestProofOfWork_verifyTransactions(t *testing.T){
+	wallets,err := client.NewWallets()
+	assert.Nil(t, err)
+	wallet1 := wallets.CreateWallet()
+	wallet2 := wallets.CreateWallet()
+
+	bc,err := core.CreateBlockchain(
+		wallet1.GetAddress(),
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,wallet1.GetAddress().Address)
+
+	//mock two transactions and push them to transaction pool
+	//the first transaction is a valid transaction
+	tx1, err := core.NewUTXOTransaction(
+		bc.DB,
+		wallet1.GetAddress(),
+		wallet2.GetAddress(),
+		5,
+		wallets.GetKeyPairByAddress(wallet1.GetAddress()),
+		bc,
+		0)
+
+	//the second transaction is not a valid transaction
+	tx2 := *core.MockTransaction()
+	//push the transactions to the transaction pool
+	txPool := core.GetTxnPoolInstance()
+	txPool.Push(tx1)
+	txPool.Push(tx2)
+
+	//verify the transactions
+	pow.verifyTransactions()
+
+	//the second transaction should be removed
+	assert.Equal(t, 1, txPool.Len())
+	//the remaining transaction should be the first one (the valid transaction)
+	assert.Equal(t, tx1, txPool.Pop())
+}
