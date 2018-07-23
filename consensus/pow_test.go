@@ -51,15 +51,3 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 
 	assert.True(t,pow.ValidateDifficulty(blk))
 }
-
-func TestProofOfWork_verifyNonce(t *testing.T){
-	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
-	bc,err := core.CreateBlockchain(
-		cbAddr,
-		storage.NewRamStorage(),
-	)
-	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,cbAddr.Address)
-
-	
-}
