@@ -67,7 +67,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	blkHeight := uint64(0)
 	loop:
 		for{
-			blk,err := bc.GetPreviousBlock()
+			blk,err := bc.GetLastBlock()
 			assert.Nil(t,err)
 			blkHeight = blk.GetHeight()
 			if blkHeight > 1 {
@@ -80,8 +80,80 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	time.Sleep(time.Second*2)
 
 	//there should be not block produced anymore
-	blk,err := bc.GetPreviousBlock()
+	blk,err := bc.GetLastBlock()
 	assert.Nil(t,err)
 	assert.Equal(t,blkHeight,blk.GetHeight())
+
+	//it should be able to start again
+	pow.Start()
+	time.Sleep(time.Second)
+	pow.Stop()
 }
 
+func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//start the pow process and wait for at least 1 block produced
+	pow.Start()
+	blkHeight := uint64(0)
+	loop:
+	for{
+		blk,err := bc.GetLastBlock()
+		assert.Nil(t,err)
+		blkHeight = blk.GetHeight()
+		if blkHeight > 1 {
+			break loop
+		}
+	}
+	//stop pow process
+	pow.Stop()
+
+	//prepare a new block
+	newBlock := pow.prepareBlock()
+	nonce := int64(0)
+	mineloop:
+		for{
+			if hash, ok := pow.verifyNonce(nonce, newBlock); ok {
+				newBlock.SetHash(hash)
+				newBlock.SetNonce(nonce)
+				break mineloop
+			}else{
+				nonce++
+			}
+		}
+
+	//start mining
+	pow.Start()
+	//push the prepared block to block pool
+	bc.BlockPool().Push(newBlock)
+	//the pow loop should stop current mining and go to updateNewBlockState. Wait until that happens
+	loop1:
+	for {
+		time.Sleep(time.Microsecond)
+		if pow.nextState == updateNewBlockState {
+			break loop1
+		}
+	}
+	//Wait until the loop updates the new block to the blockchain. Stop the loop after that happens
+	loop2:
+	for {
+		time.Sleep(time.Microsecond)
+		if pow.nextState != updateNewBlockState {
+			pow.Stop()
+			break loop2
+		}
+	}
+
+	//the tail block should be the block that we have pushed into blockpool
+	tailBlock,err := bc.GetLastBlock()
+
+	assert.Nil(t,err)
+	assert.Equal(t, newBlock,tailBlock)
+
+}

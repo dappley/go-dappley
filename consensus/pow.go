@@ -27,6 +27,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
+	"fmt"
+	"reflect"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -63,6 +65,10 @@ func NewProofOfWork(bc *core.Blockchain, cbAddr string) *ProofOfWork{
 	return p
 }
 
+func (pow *ProofOfWork) SetTargetBit(bit int){
+	target := big.NewInt(1)
+	pow.target = target.Lsh(target, uint(256-bit))
+}
 
 func (pow *ProofOfWork) ValidateDifficulty(blk *core.Block) bool {
 	var hashInt big.Int
@@ -83,19 +89,31 @@ func (pow *ProofOfWork) Start() {
 	go func() {
 		var newBlock *core.Block
 		nonce := int64(0)
+		logger.Info("PoW started...")
+		pow.nextState = prepareBlockState
 		for {
 			select {
 			case blk := <- pow.bc.BlockPool().BlockUpdateCh():
+				logger.Debug("PoW: Received a block from peer")
 				if pow.ValidateDifficulty(blk){
+					logger.Debug("PoW: The block has been verified")
 					pow.rollbackBlock(newBlock)
 					newBlock = blk
+					a := newBlock.GetTransactions()[0].Vin[0].Txid
+
+					if reflect.DeepEqual(a, []uint8{}){
+						fmt.Println("Blk txid:", newBlock.GetTransactions()[0].Vin[0].Txid)
+					}
+
 					pow.nextState = updateNewBlockState
 				}
 			case <-pow.exitCh:
+				logger.Info("PoW stopped...")
 				return
 			default:
 				switch pow.nextState {
 				case prepareBlockState:
+					logger.Debug("Pow State: prepareBlockState")
 					newBlock = pow.prepareBlock()
 					nonce = 0
 					pow.nextState = mineBlockState
@@ -109,8 +127,11 @@ func (pow *ProofOfWork) Start() {
 							nonce++
 							pow.nextState = mineBlockState
 						}
+					}else{
+						pow.nextState = prepareBlockState
 					}
 				case updateNewBlockState:
+					logger.Debug("Pow State: updateNewBlockState")
 					pow.updateNewBlock(newBlock)
 					pow.nextState = prepareBlockState
 				}
@@ -119,9 +140,13 @@ func (pow *ProofOfWork) Start() {
 	}()
 }
 
+func (pow *ProofOfWork) GetCurrentState() state{
+	return pow.nextState
+}
+
 func (pow *ProofOfWork) prepareBlock() *core.Block{
 
-	parentBlock,err := pow.bc.GetPreviousBlock()
+	parentBlock,err := pow.bc.GetLastBlock()
 	if err!=nil {
 		logger.Error(err)
 	}

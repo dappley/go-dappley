@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/storage"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 )
 
 var tipKey = []byte("1")
@@ -198,7 +198,7 @@ func (bc *Blockchain) GetLastHash() ([]byte, error) {
 
 	data, err:= bc.DB.Get(tipKey)
 	if err!=nil{
-		logrus.Error(err)
+		logger.Error(err)
 	}
 	return data, err
 }
@@ -230,6 +230,7 @@ func (bc *Blockchain) String() string {
 func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
 	bc := &Blockchain{current, db,nil}
 	bc.blockPool = NewBlockPool(BlockPoolMaxSize, bc)
+	bc.blockPool.Start()
 	return bc
 }
 
@@ -240,7 +241,7 @@ func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(tipKey, newBlock.GetHash())
 }
 
-func (bc *Blockchain) GetPreviousBlock() (*Block, error){
+func (bc *Blockchain) GetLastBlock() (*Block, error){
 	hash, err:= bc.GetLastHash()
 	if err != nil {
 		return nil, ErrNotAbleToGetLastBlockHash
