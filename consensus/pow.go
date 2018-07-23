@@ -121,7 +121,7 @@ func (pow *ProofOfWork) Start() {
 
 func (pow *ProofOfWork) prepareBlock() *core.Block{
 
-	parentBlock,err := pow.bc.GetLastBlock()
+	parentBlock,err := pow.bc.GetPreviousBlock()
 	if err!=nil {
 		logger.Error(err)
 	}

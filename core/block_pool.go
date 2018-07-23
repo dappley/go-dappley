@@ -51,7 +51,7 @@ func (pool *BlockPool) BlockUpdateCh() chan *Block {
 }
 
 func (pool *BlockPool) Push(block *Block) {
-	lastBlk,err := pool.bc.GetLastBlock()
+	lastBlk,err := pool.bc.GetPreviousBlock()
 	if err!=nil {
 		logger.Warn(err)
 	}

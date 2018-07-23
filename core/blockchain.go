@@ -240,7 +240,7 @@ func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(tipKey, newBlock.GetHash())
 }
 
-func (bc *Blockchain) GetLastBlock() (*Block, error){
+func (bc *Blockchain) GetPreviousBlock() (*Block, error){
 	hash, err:= bc.GetLastHash()
 	if err != nil {
 		return nil, ErrNotAbleToGetLastBlockHash

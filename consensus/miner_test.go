@@ -144,7 +144,6 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 }
 
-
 //mine multiple transactions
 func TestMiner_MultipleValidTx(t *testing.T) {
 

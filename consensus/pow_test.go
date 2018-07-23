@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/storage"
+	"time"
 )
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
@@ -51,3 +52,36 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 
 	assert.True(t,pow.ValidateDifficulty(blk))
 }
+
+func TestProofOfWork_StartAndStop(t *testing.T) {
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//start the pow process and wait for at least 1 block produced
+	pow.Start()
+	blkHeight := uint64(0)
+	loop:
+		for{
+			blk,err := bc.GetPreviousBlock()
+			assert.Nil(t,err)
+			blkHeight = blk.GetHeight()
+			if blkHeight > 1 {
+				break loop
+			}
+		}
+
+	//stop pow process and wait
+	pow.Stop()
+	time.Sleep(time.Second*2)
+
+	//there should be not block produced anymore
+	blk,err := bc.GetPreviousBlock()
+	assert.Nil(t,err)
+	assert.Equal(t,blkHeight,blk.GetHeight())
+}
+
