@@ -96,17 +96,17 @@ func verifyLastBlockHash(lastBlk, newblk *Block) bool{
 
 func verifyBlock(lastBlk, newblk *Block) bool{
 	if newblk.VerifyHash()==false{
-		logger.Debug("BlockPool: Verify Hash failed!")
+		logger.Info("BlockPool: Verify Hash failed!")
 		return false
 	}
 
 	if verifyHeight(lastBlk, newblk)==false{
-		logger.Debug("BlockPool: Verify Height failed!")
+		logger.Info("BlockPool: Verify Height failed!")
 		return false
 	}
 
 	if verifyLastBlockHash(lastBlk, newblk)==false{
-		logger.Debug("BlockPool: Verify Last Block Hash failed!")
+		logger.Info("BlockPool: Verify Last Block Hash failed!")
 		return false
 	}
 
