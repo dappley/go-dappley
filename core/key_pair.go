@@ -9,8 +9,9 @@ import (
 	"github.com/dappley/go-dappley/util"
 	//"crypto/rand"
 	//"crypto/elliptic"
-	"crypto/rand"
 	"crypto/elliptic"
+	"crypto/rand"
+
 	"github.com/dappley/go-dappley/crypto/hash"
 )
 
@@ -45,7 +46,6 @@ func HashPubKey(pubKey []byte) []byte {
 	content := hash.Ripemd160(sha)
 	return content
 }
-
 
 func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
