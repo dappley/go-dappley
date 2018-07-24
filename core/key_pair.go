@@ -7,8 +7,7 @@ import (
 	"log"
 
 	"github.com/dappley/go-dappley/util"
-	//"crypto/rand"
-	//"crypto/elliptic"
+
 	"crypto/elliptic"
 	"crypto/rand"
 
