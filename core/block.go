@@ -236,3 +236,11 @@ func (b *Block) VerifyHash() bool{
 	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
 }
 
+func (b *Block) VerifyTransactions(bc *Blockchain) bool{
+	for _,tx := range b.GetTransactions(){
+		if !bc.VerifyTransaction(*tx){
+			return false
+		}
+	}
+	return true
+}

@@ -39,6 +39,7 @@ func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 		blockUpdatedCh:	 make(chan *Block, size),
 		bc:				 bc,
 	}
+	bc.blockPool = pool
 	return pool
 }
 
@@ -57,8 +58,10 @@ func (pool *BlockPool) Push(block *Block) {
 		logger.Warn(err)
 	}
 	if verifyBlock(lastBlk, block){
-		logger.Debug("BlockPool: Block has been verified")
-		pool.blockReceivedCh <- block
+		if block.VerifyTransactions(pool.bc){
+			logger.Debug("BlockPool: Block has been verified")
+			pool.blockReceivedCh <- block
+		}
 	}
 }
 

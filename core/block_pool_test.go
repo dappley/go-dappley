@@ -95,5 +95,4 @@ func TestBlockPool_GetBlockchain(t *testing.T) {
 	hash2, err := newbc.GetLastHash()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t,hash1, hash2)
-
 }
