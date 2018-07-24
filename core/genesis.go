@@ -17,28 +17,29 @@
 //
 package core
 
-import (
-	"time"
-)
-
 const genesisCoinbaseData = "Hell world"
 
 
 func NewGenesisBlock(address string) *Block {
 	//return consensus.ProduceBlock(address, genesisCoinbaseData,[]byte{})
+
+	txin := TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
+	txout := NewTXOutput(subsidy, address)
 	txs := []*Transaction{}
-	tx := NewCoinbaseTX(address,genesisCoinbaseData)
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
+	tx.ID = tx.Hash()
 	txs = append(txs,&tx)
 
 	header := &BlockHeader{
 		hash: []byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 		prevHash: []byte{},
 		nonce:     0,
-		timestamp: time.Now().Unix(),
+		timestamp: 1532392928, //July 23,2018 17:42 PST
 	}
 	b := &Block{
 		header: header,
 		transactions: txs,
+		height:0,
 	}
 
 	b.SetHash(b.CalculateHash())
