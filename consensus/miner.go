@@ -21,10 +21,10 @@ import (
 	"github.com/dappley/go-dappley/core"
 )
 
-type state int
+type State int
 
 const (
-	prepareTxPoolState state = iota
+	prepareTxPoolState State = iota
 	mineState
 	updateNewBlock
 	cleanUpState

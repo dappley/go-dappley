@@ -280,3 +280,36 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 	//the remaining transaction should be the first one (the valid transaction)
 	assert.Equal(t, tx1, txPool.Pop())
 }
+
+/*func TestProofOfWork_testMiningSpeed(t *testing.T){
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//mine 10 blocks and calculate average time
+	for i:=14;i < 20;i++ {
+		pow.SetTargetBit(i)
+		pow.Start()
+		startTime := time.Now()
+		targetHeight := uint64((i-14)*10 +9)
+	loop:
+		for {
+			blk, err := bc.GetLastBlock()
+			assert.Nil(t, err)
+			if blk.GetHeight() > targetHeight {
+				break loop
+			}
+		}
+		fmt.Println("The average time for difficulty level",
+			i,
+			"is",
+			time.Now().Sub(startTime).Seconds(),
+			"seconds")
+		pow.Stop()
+	}
+}*/

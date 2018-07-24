@@ -48,7 +48,7 @@ func main() {
 	cli := CLI{}
 	var waitGroup sync.WaitGroup
 	//set to debug level
-	logger.SetLevel(logger.DebugLevel)
+	logger.SetLevel(logger.InfoLevel)
 
 	//setup
 	db := storage.OpenDatabase(core.BlockchainDbFile)

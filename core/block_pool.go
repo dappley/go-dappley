@@ -51,11 +51,13 @@ func (pool *BlockPool) BlockUpdateCh() chan *Block {
 }
 
 func (pool *BlockPool) Push(block *Block) {
+	logger.Debug("BlockPool: Has received a new block")
 	lastBlk,err := pool.bc.GetLastBlock()
 	if err!=nil {
 		logger.Warn(err)
 	}
 	if verifyBlock(lastBlk, block){
+		logger.Debug("BlockPool: Block has been verified")
 		pool.blockReceivedCh <- block
 	}
 }
@@ -94,14 +96,17 @@ func verifyLastBlockHash(lastBlk, newblk *Block) bool{
 
 func verifyBlock(lastBlk, newblk *Block) bool{
 	if newblk.VerifyHash()==false{
+		logger.Debug("BlockPool: Verify Hash failed!")
 		return false
 	}
 
 	if verifyHeight(lastBlk, newblk)==false{
+		logger.Debug("BlockPool: Verify Height failed!")
 		return false
 	}
 
 	if verifyLastBlockHash(lastBlk, newblk)==false{
+		logger.Debug("BlockPool: Verify Last Block Hash failed!")
 		return false
 	}
 

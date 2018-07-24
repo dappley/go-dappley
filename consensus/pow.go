@@ -34,18 +34,18 @@ var maxNonce int64 = math.MaxInt64
 const targetBits = int64(14)
 
 const (
-	prepareBlockState state = iota
+	prepareBlockState   State = iota
 	mineBlockState
 	updateNewBlockState
 )
 
 type ProofOfWork struct {
-	target 			*big.Int
-	exitCh           chan bool
-	bc               *core.Blockchain
-	nextState        state
-	cbAddr			 string
-	node 			*network.Node
+	target    *big.Int
+	exitCh    chan bool
+	bc        *core.Blockchain
+	nextState State
+	cbAddr    string
+	node      *network.Node
 }
 
 func NewProofOfWork(bc *core.Blockchain, cbAddr string) *ProofOfWork{
@@ -61,6 +61,10 @@ func NewProofOfWork(bc *core.Blockchain, cbAddr string) *ProofOfWork{
 		node: 			network.NewNode(bc),
 	}
 	return p
+}
+
+func (pow *ProofOfWork) GetNode() *network.Node{
+	return pow.node
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int){
@@ -88,13 +92,17 @@ func (pow *ProofOfWork) Start() {
 		var newBlock *core.Block
 		nonce := int64(0)
 		logger.Info("PoW started...")
+		newblkrcved := false
 		pow.nextState = prepareBlockState
 		for {
 			select {
 			case blk := <- pow.bc.BlockPool().BlockUpdateCh():
+				logger.Debug("PoW: Received a new block from peer!")
 				if pow.ValidateDifficulty(blk){
+					logger.Debug("PoW: Block has been validated!")
 					pow.rollbackBlock(newBlock)
 					newBlock = blk
+					newblkrcved = true
 					pow.nextState = updateNewBlockState
 				}
 			case <-pow.exitCh:
@@ -121,6 +129,13 @@ func (pow *ProofOfWork) Start() {
 					}
 				case updateNewBlockState:
 					pow.updateNewBlock(newBlock)
+					if !newblkrcved {
+						logger.Debug("PoW: Minted a new block")
+						pow.broadcastNewBlock(newBlock)
+					}else{
+						newblkrcved = false
+						logger.Debug("PoW: Add a rcved block to blockchain")
+					}
 					pow.nextState = prepareBlockState
 				}
 			}
@@ -128,7 +143,7 @@ func (pow *ProofOfWork) Start() {
 	}()
 }
 
-func (pow *ProofOfWork) GetCurrentState() state{
+func (pow *ProofOfWork) GetCurrentState() State {
 	return pow.nextState
 }
 
@@ -163,6 +178,9 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 
 func (pow *ProofOfWork) updateNewBlock(blk *core.Block){
 	pow.bc.UpdateNewBlock(blk)
+}
+
+func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 	//broadcast the block to other nodes
 	pow.node.SendBlock(blk)
 }

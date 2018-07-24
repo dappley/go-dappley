@@ -164,7 +164,7 @@ func (s *Stream) parseData(data []byte){
 	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, dmpb); err!=nil{
-		logger.Warn(err)
+		logger.Info(err)
 	}
 
 	dm := &Dapmsg{}
