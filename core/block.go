@@ -42,7 +42,6 @@ type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
 	height       uint64
-	parent      *Block
 }
 
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
@@ -174,6 +173,7 @@ func (b *Block) ToProto() proto.Message {
 	return &corepb.Block{
 		Header:       b.header.ToProto().(*corepb.BlockHeader),
 		Transactions: txArray,
+		Height: 	  b.height,
 	}
 }
 
@@ -190,6 +190,8 @@ func (b *Block) FromProto(pb proto.Message) {
 		txs = append(txs, tx)
 	}
 	b.transactions = txs
+
+	b.height = pb.(*corepb.Block).Height
 }
 
 func (bh *BlockHeader) ToProto() proto.Message {

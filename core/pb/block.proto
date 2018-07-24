@@ -6,6 +6,8 @@ import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 message Block{
     BlockHeader Header = 1;
     repeated Transaction Transactions = 2;
+    uint64 height = 3;
+    bytes parentHash = 4;
 }
 
 message BlockHeader{
