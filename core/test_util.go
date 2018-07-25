@@ -13,19 +13,21 @@ func GenerateMockBlock() *Block{
 		time.Now().Unix(),
 	}
 
-	t1 := &Transaction{
+	t1 := MockTransaction()
+
+	return &Block{
+		header:       bh1,
+		transactions: []*Transaction{t1},
+		height:       0,
+	}
+}
+
+func MockTransaction() *Transaction{
+	return &Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  MockTxInputs(),
 		Vout: MockTxOutputs(),
 		Tip:  5,
-	}
-
-
-	return &Block{
-		header: bh1,
-		transactions: []*Transaction{t1},
-		height: 0,
-		parent: nil,
 	}
 }
 

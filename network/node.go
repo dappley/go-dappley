@@ -186,12 +186,46 @@ func (n *Node) SyncPeers() error{
 	return nil
 }
 
+func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
+	//marshal the block to wire format
+	bytes, err :=proto.Marshal(block.ToProto())
+	if err != nil {
+		return err
+	}
+
+	//build a deppley message
+	dm := NewDapmsg(SyncBlock,bytes)
+	data, err :=proto.Marshal(dm.ToProto())
+	if err != nil {
+		return err
+	}
+	//log.Println("Sending Data Request Received:",bytes)
+	n.unicast(data,pid)
+	return nil
+}
+
+func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error{
+	//build a deppley message
+	dm := NewDapmsg(RequestBlock, hash)
+	data, err :=proto.Marshal(dm.ToProto())
+	if err != nil {
+		return err
+	}
+	//log.Println("Sending Data Request Received:",bytes)
+	n.unicast(data,pid)
+	return nil
+}
+
 //broadcast data
 func (n *Node) broadcast(data []byte){
-	//log.Println("Broadcasting to",len(n.streams), "peer(s)...")
 	for _,s := range n.streams{
 		s.Send(data)
 	}
+}
+
+//unicast data
+func (n *Node) unicast(data []byte, pid peer.ID){
+	n.streams[pid].Send(data)
 }
 
 func (n *Node) addBlockToPool(data []byte){
@@ -252,4 +286,14 @@ func (n *Node)addMultiPeers(data []byte){
 		//add peers
 		n.peerlist.MergePeerlist(pl)
 	}()
+}
+
+func (n *Node) sendRequestedBlock(data []byte, pid peer.ID){
+	blockBytes,err := n.bc.DB.Get(data)
+	if err != nil {
+		logger.Warn("Unable to get block data. Block request failed")
+		return
+	}
+	block := core.Deserialize(blockBytes)
+	n.SendBlockUnicast(block, pid)
 }

@@ -26,19 +26,23 @@ import (
 
 type BlockPool struct {
 	blockReceivedCh chan *Block
-	blockUpdatedCh	chan bool
+	blockUpdatedCh	chan *Block
 	size            int
 	exitCh          chan bool
 	bc 				*Blockchain
+	pool 			[]*Block
 }
 
 func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
 		blockReceivedCh: make(chan *Block, size),
-		blockUpdatedCh:	 make(chan bool, 1),
+		blockUpdatedCh:	 make(chan *Block, size),
+		exitCh: 		 make(chan bool, 1),
 		bc:				 bc,
+		pool:			 []*Block{},
 	}
+	bc.blockPool = pool
 	return pool
 }
 
@@ -46,18 +50,23 @@ func (pool *BlockPool) BlockReceivedCh() chan *Block {
 	return pool.blockReceivedCh
 }
 
-func (pool *BlockPool) BlockUpdateCh() chan bool {
+func (pool *BlockPool) BlockUpdateCh() chan *Block {
 	return pool.blockUpdatedCh
 }
 
 func (pool *BlockPool) Push(block *Block) {
+	logger.Debug("BlockPool: Has received a new block")
 	lastBlk,err := pool.bc.GetLastBlock()
 	if err!=nil {
 		logger.Warn(err)
 	}
 	if verifyBlock(lastBlk, block){
-		pool.blockReceivedCh <- block
+		if block.VerifyTransactions(pool.bc){
+			logger.Debug("BlockPool: Block has been verified")
+			pool.blockReceivedCh <- block
+		}
 	}
+
 }
 
 func (pool *BlockPool) Start() {
@@ -81,8 +90,7 @@ func (pool *BlockPool) messageLoop() {
 }
 
 func (pool *BlockPool) handleBlock(blk *Block) {
-	pool.bc.UpdateNewBlock(blk)
-	pool.blockUpdatedCh <- true
+	pool.blockUpdatedCh <- blk
 }
 
 func verifyHeight(lastBlk, newblk *Block) bool{
@@ -95,14 +103,17 @@ func verifyLastBlockHash(lastBlk, newblk *Block) bool{
 
 func verifyBlock(lastBlk, newblk *Block) bool{
 	if newblk.VerifyHash()==false{
+		logger.Info("BlockPool: Verify Hash failed!")
 		return false
 	}
 
 	if verifyHeight(lastBlk, newblk)==false{
+		logger.Info("BlockPool: Verify Height failed!")
 		return false
 	}
 
 	if verifyLastBlockHash(lastBlk, newblk)==false{
+		logger.Info("BlockPool: Verify Last Block Hash failed!")
 		return false
 	}
 

@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/sirupsen/logrus"
 )
 
 const invalidAddress = "Invalid Address"
@@ -182,14 +183,11 @@ func TestSend(t *testing.T) {
 	//Send 5 coins from wallet1 to wallet2
 	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
 	assert.Nil(t, err)
-	miner := consensus.NewMiner(b, addr1.Address, consensus.NewProofOfWork(b))
+	miner := consensus.NewMiner(consensus.NewProofOfWork(b,addr1.Address))
 
 	go miner.Start()
-	for i := 0; i < 3; i++ {
-		miner.Feed(time.Now().String())
-		time.Sleep(1 * time.Second)
-	}
-	assert.Nil(t, err)
+	time.Sleep(3 * time.Second)
+
 	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
 	balance1, err = GetBalance(wallet1.GetAddress(), databaseInstance)
 
@@ -335,6 +333,93 @@ func TestSendInsufficientBalance(t *testing.T) {
 
 	//teardown :clean up database amd files
 	teardown()
+}
+const testport = 10100
+
+func TestSyncBlocks(t *testing.T){
+	logrus.SetLevel(logrus.WarnLevel)
+	var pows []*consensus.ProofOfWork
+	var bcs []*core.Blockchain
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	//wait for mining for at least "targetHeight" blocks
+	targetHeight := uint64(4)
+	//num of nodes to be created in the test
+	numOfNodes := 4
+	for i := 0; i < numOfNodes; i++{
+
+		//create storage instance
+		db := storage.NewRamStorage()
+		defer db.Close()
+
+		//create blockchain instance
+		bc,err := core.CreateBlockchain(addr,db)
+		assert.Nil(t, err)
+		bcs = append(bcs, bc)
+
+		pow := consensus.NewProofOfWork(bcs[i],addr.Address)
+		pow.SetTargetBit(16)
+		pow.GetNode().Start(testport+i)
+		if i != 0 {
+			pow.GetNode().AddStream(
+				pows[0].GetNode().GetPeerID(),
+				pows[0].GetNode().GetPeerMultiaddr(),
+				)
+		}
+		pows = append(pows, pow)
+	}
+	//seed node broadcasts syncpeers
+	pows[0].GetNode().SyncPeers()
+
+	//wait for 2 seconds for syncing
+	time.Sleep(time.Second*2)
+
+	//count and is Stopped tracks the num of nodes that have been stopped
+	count := 0
+	isStopped := []bool{}
+	blkHeight := []uint64{}
+	//Start Mining and set average block time to 15 seconds (difficulty = 16)
+	for i := 0; i < numOfNodes; i++{
+		pows[i].Start()
+		isStopped = append(isStopped, false)
+		blkHeight = append(blkHeight, 0)
+	}
+
+	loop:
+		for {
+			for i := 0; i < numOfNodes; i++ {
+				blk, err := bcs[i].GetLastBlock()
+				assert.Nil(t, err)
+				if blk.GetHeight() > blkHeight[i] {
+					blkHeight[i]++
+					logrus.Info("BlkHeight:",blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
+				}
+				if blk.GetHeight() > targetHeight {
+					//count the number of nodes that have already stopped mining
+					if isStopped[i]==false{
+						//stop the first miner that reaches the target height
+						pows[i].Stop()
+						isStopped[i] = true
+						count++
+					}
+				}
+				//break the loop if all miners stop
+				if count >= numOfNodes {
+					break loop
+				}
+			}
+		}
+
+	//Check if all nodes have the same tail block
+	for i := 0; i < numOfNodes-1; i++{
+		blk0, err := bcs[i].GetLastBlock()
+		assert.Nil(t,err)
+		blk1, err := bcs[i+1].GetLastBlock()
+		assert.Nil(t,err)
+		assert.True(t, pows[i].ValidateDifficulty(blk0))
+		assert.True(t, pows[i+1].ValidateDifficulty(blk1))
+		assert.Equal(t,blk0.GetHash(),blk1.GetHash())
+	}
+
 }
 
 func setup() {

@@ -194,7 +194,7 @@ func (cli *CLI) Run(dep *Dep, miner *consensus.Miner, waitGroup sync.WaitGroup) 
 		}
 
 		if printChainCmd.Parsed() {
-			cli.printChain(dep.db)
+			fmt.Println(dep.bc)
 		}
 
 		if sendCmd.Parsed() {

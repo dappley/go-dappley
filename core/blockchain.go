@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/storage"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 )
 
 var tipKey = []byte("1")
@@ -20,6 +20,7 @@ const BlockPoolMaxSize = 100
 var(
 	ErrNotAbleToGetLastBlock 		= errors.New("ERROR: Not able to get last block in blockchain")
 	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
+	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
 )
 
 type Blockchain struct {
@@ -75,7 +76,7 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 		}
 	}
 
-	return Transaction{}, errors.New("Transaction is not found")
+	return Transaction{}, ErrTransactionNotFound
 }
 
 //TODO: optimize performance
@@ -166,6 +167,9 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 
 	for _, vin := range tx.Vin {
 		prevTX, err := bc.FindTransaction(vin.Txid)
+		if err == ErrTransactionNotFound {
+			return false
+		}
 		if err != nil {
 			log.Panic(err)
 		}
@@ -198,7 +202,7 @@ func (bc *Blockchain) GetLastHash() ([]byte, error) {
 
 	data, err:= bc.DB.Get(tipKey)
 	if err!=nil{
-		logrus.Error(err)
+		logger.Error(err)
 	}
 	return data, err
 }
@@ -230,6 +234,7 @@ func (bc *Blockchain) String() string {
 func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
 	bc := &Blockchain{current, db,nil}
 	bc.blockPool = NewBlockPool(BlockPoolMaxSize, bc)
+	bc.blockPool.Start()
 	return bc
 }
 

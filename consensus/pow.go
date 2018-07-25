@@ -26,92 +26,59 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/network"
 )
 
 var maxNonce int64 = math.MaxInt64
 
 const targetBits = int64(14)
 
-type ProofOfWork struct {
-	target *big.Int
+const (
+	prepareBlockState   State = iota
+	mineBlockState
+	updateNewBlockState
+)
 
-	exitCh           chan bool
-	messageCh        chan string
-	chain            *core.Blockchain
-	newBlockReceived bool
+type ProofOfWork struct {
+	target    *big.Int
+	exitCh    chan bool
+	bc        *core.Blockchain
+	nextState State
+	cbAddr    string
+	node      *network.Node
 }
 
-func NewProofOfWork(chain *core.Blockchain) *ProofOfWork {
+func NewProofOfWork(bc *core.Blockchain, cbAddr string) *ProofOfWork{
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
 	p := &ProofOfWork{
-		target:    target,
-		exitCh:    make(chan bool, 1),
-		messageCh: make(chan string, 128),
-		chain:     chain,
+		target: 		target,
+		exitCh: 		make(chan bool, 1),
+		bc:     		bc,
+		nextState:		prepareBlockState,
+		cbAddr: 		cbAddr,
+		node: 			network.NewNode(bc),
 	}
 	return p
 }
 
-func (pow *ProofOfWork) ProduceBlock(cbAddr, cbData string, prevHash []byte) *core.Block {
-
-	var hashInt big.Int
-	var hash core.Hash
-	nonce := int64(0)
-
-	//add coinbase transaction to transaction pool
-
-	cbtx := core.NewCoinbaseTX(cbAddr, cbData)
-	h := core.GetTxnPoolInstance()
-
-	heap.Init(h)
-	heap.Push(core.GetTxnPoolInstance(), cbtx)
-
-	parentBlockEncoded, err := pow.chain.DB.Get(prevHash)
-
-	//todo: err handling
-	if err != nil {
-		return nil
-	}
-
-	parentBlock := core.Deserialize(parentBlockEncoded)
-
-	//prepare the new block (without the correct nonce value)
-	blk := core.NewBlock(core.GetTxnPoolInstance().GetSortedTransactions(), parentBlock)
-
-	//find the nonce value
-	for nonce < maxNonce {
-		hash = blk.CalculateHashWithNonce(nonce)
-		hashInt.SetBytes(hash[:])
-
-		if hashInt.Cmp(pow.target) == -1 {
-			break
-		}
-
-		nonce++
-	}
-
-	//complete the block
-	blk.SetHash(hash)
-	blk.SetNonce(nonce)
-
-	return blk
+func (pow *ProofOfWork) GetNode() *network.Node{
+	return pow.node
 }
 
-func (pow *ProofOfWork) Validate(blk *core.Block) bool {
+func (pow *ProofOfWork) SetTargetBit(bit int){
+	target := big.NewInt(1)
+	pow.target = target.Lsh(target, uint(256-bit))
+}
+
+func (pow *ProofOfWork) ValidateDifficulty(blk *core.Block) bool {
 	var hashInt big.Int
 
-	hash := blk.CalculateHash()
+	hash := blk.GetHash()
 	hashInt.SetBytes(hash)
 
 	isValid := hashInt.Cmp(pow.target) == -1
-
-	if !isValid {
-		return isValid
-	}
-
-	isValid = blk.VerifyHash()
 
 	return isValid
 }
@@ -120,20 +87,124 @@ func (pow *ProofOfWork) Stop() {
 	pow.exitCh <- true
 }
 
-func (pow *ProofOfWork) Feed(msg string) {
-	pow.messageCh <- msg
+func (pow *ProofOfWork) Start() {
+	go func() {
+		var newBlock *core.Block
+		nonce := int64(0)
+		logger.Info("PoW started...")
+		newblkrcved := false
+		pow.nextState = prepareBlockState
+		for {
+			select {
+			case blk := <- pow.bc.BlockPool().BlockUpdateCh():
+				logger.Debug("PoW: Received a new block from peer!")
+				if pow.ValidateDifficulty(blk){
+					logger.Debug("PoW: Block has been validated!")
+					pow.rollbackBlock(newBlock)
+					newBlock = blk
+					newblkrcved = true
+					pow.nextState = updateNewBlockState
+				}
+			case <-pow.exitCh:
+				logger.Info("PoW stopped...")
+				return
+			default:
+				switch pow.nextState {
+				case prepareBlockState:
+					newBlock = pow.prepareBlock()
+					nonce = 0
+					pow.nextState = mineBlockState
+				case mineBlockState:
+					if nonce < maxNonce {
+						if hash, ok := pow.verifyNonce(nonce, newBlock); ok {
+							newBlock.SetHash(hash)
+							newBlock.SetNonce(nonce)
+							pow.nextState = updateNewBlockState
+						} else {
+							nonce++
+							pow.nextState = mineBlockState
+						}
+					}else{
+						pow.nextState = prepareBlockState
+					}
+				case updateNewBlockState:
+					pow.updateNewBlock(newBlock)
+					if !newblkrcved {
+						logger.Debug("PoW: Minted a new block")
+						pow.broadcastNewBlock(newBlock)
+					}else{
+						newblkrcved = false
+						logger.Debug("PoW: Add a rcved block to blockchain")
+					}
+					pow.nextState = prepareBlockState
+				}
+			}
+		}
+	}()
 }
 
-func (pow *ProofOfWork) Start() {
-	for {
-		select {
-		case msg := <-pow.messageCh:
-			logger.Info(msg)
-		case block := <-pow.chain.BlockPool().BlockReceivedCh():
-			pow.newBlockReceived = true
-			logger.Info(block)
-		case <-pow.exitCh:
-			return
+func (pow *ProofOfWork) GetCurrentState() State {
+	return pow.nextState
+}
+
+func (pow *ProofOfWork) prepareBlock() *core.Block{
+
+	parentBlock,err := pow.bc.GetLastBlock()
+	if err!=nil {
+		logger.Error(err)
+	}
+
+	//verify all transactions
+	pow.verifyTransactions()
+	//get all transactions
+	txs := core.GetTxnPoolInstance().GetSortedTransactions()
+	//add coinbase transaction to transaction pool
+	cbtx := core.NewCoinbaseTX(pow.cbAddr, "")
+	txs = append(txs, &cbtx)
+
+	//prepare the new block (without the correct nonce value)
+	return core.NewBlock(txs, parentBlock)
+}
+
+func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool){
+	var hashInt big.Int
+	var hash core.Hash
+
+	hash = blk.CalculateHashWithNonce(nonce)
+	hashInt.SetBytes(hash[:])
+
+	return hash, hashInt.Cmp(pow.target) == -1
+}
+
+func (pow *ProofOfWork) updateNewBlock(blk *core.Block){
+	pow.bc.UpdateNewBlock(blk)
+}
+
+func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
+	//broadcast the block to other nodes
+	pow.node.SendBlock(blk)
+}
+
+//verify transactions and remove invalid transactions
+func (pow *ProofOfWork) verifyTransactions() {
+	txnPool := core.GetTxnPoolInstance()
+	txnPoolLength := txnPool.Len()
+	for i := 0; i < txnPoolLength; i++ {
+		var txn = heap.Pop(txnPool).(core.Transaction)
+		if pow.bc.VerifyTransaction(txn) == true {
+			//Remove transaction from transaction pool if the transaction is not verified
+			txnPool.Push(txn)
+		}
+	}
+}
+
+//When a block mining process is interrupted, roll back the block and
+//return all transactions to the transaction pool
+func (pow *ProofOfWork) rollbackBlock(blk *core.Block){
+	txnPool := core.GetTxnPoolInstance()
+	for _,tx := range blk.GetTransactions(){
+		if !tx.IsCoinbase() {
+			txnPool.Push(*tx)
 		}
 	}
 }

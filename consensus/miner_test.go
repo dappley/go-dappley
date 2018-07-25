@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package consensus
 
 import (
@@ -61,8 +79,8 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	//start a miner
-	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	go miner.Start()
+	miner := NewMiner(NewProofOfWork(bc, wallet1.GetAddress().Address))
+	miner.Start()
 	
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -103,8 +121,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//start a miner
-	miner := NewMiner(bc, cbWallet.GetAddress().Address, NewProofOfWork(bc))
-	go miner.Start()
+	miner := NewMiner(NewProofOfWork(bc, cbWallet.GetAddress().Address))
+	miner.Start()
 
 	//Make sure at least 5 blocks mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -125,7 +143,6 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	checkBalance(t,bc, expectedVal)
 
 }
-
 
 //mine multiple transactions
 func TestMiner_MultipleValidTx(t *testing.T) {
@@ -159,16 +176,15 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	//start a miner
-	miner := NewMiner(bc, wallet1.GetAddress().Address, NewProofOfWork(bc))
-	go miner.Start()
+	miner := NewMiner(NewProofOfWork(bc, wallet1.GetAddress().Address))
+	miner.Start()
 
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
-	for count < 2 {
+	for count < 5 {
 		time.Sleep(time.Millisecond*500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
-	//printBalances(bc,[]core.Address{wallet1.GetAddress(),wallet2.GetAddress()})
 
 	//add second transation
 	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, wallet, bc, 0)
@@ -197,7 +213,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//check balance
 	checkBalance(t,bc, expectedVal)
-
 
 }
 

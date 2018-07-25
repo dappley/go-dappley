@@ -19,6 +19,8 @@ const(
 	test_port6
 	test_port7
 	test_port8
+	test_port9
+	test_port10
 )
 
 const blockchainDbFile = "../bin/networktest.db"
@@ -158,6 +160,39 @@ func TestNode_SyncPeers(t *testing.T){
 		time.Sleep(time.Second)*/
 }
 
+func TestNode_RequestBlockUnicast(t *testing.T) {
+
+	//set up two nodes
+	nodes := []*Node{}
+	for i:=0; i<2;i++{
+		db := storage.NewRamStorage()
+		defer db.Close()
+		addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+		bc,err := core.CreateBlockchain(addr,db)
+		assert.Nil(t, err)
+		//create node
+		node := NewNode(bc)
+		err = node.Start(test_port9+i)
+		assert.Nil(t, err)
+
+		if i!=0 {
+			err = node.AddStream(nodes[0].GetPeerID(),nodes[0].GetPeerMultiaddr())
+			assert.Nil(t, err)
+		}
+		nodes = append(nodes, node)
+	}
+	time.Sleep(time.Second)
+
+	//generate a block and store it in node0 blockchain
+	blk := core.GenerateMockBlock()
+	nodes[0].bc.DB.Put(blk.GetHash(),blk.Serialize())
+
+	//node1 request the block
+	nodes[1].RequestBlockUnicast(blk.GetHash(),nodes[0].GetPeerID())
+	time.Sleep(time.Second*2)
+	assert.Equal(t, blk, nodes[1].GetBlocks()[0])
+
+}
 
 /*func TestNetwork_node0(t *testing.T){
 	bc := mockBlockchain(t)

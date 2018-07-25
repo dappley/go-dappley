@@ -10,18 +10,22 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"errors"
 	logger "github.com/sirupsen/logrus"
+	"reflect"
 )
 
 const(
-	delimiter = 0x00
-	startByte = 0x7E
-
 	SyncBlock 		= "SyncBlock"
 	SyncPeerList 	= "SyncPeerList"
+	RequestBlock	= "RequestBlock"
 )
 
 var(
 	ErrInvalidMessageFormat = errors.New("Message format is invalid")
+)
+
+var(
+	startBytes = []byte{0x7E, 0x7E}
+	endBytes = []byte{0x7F, 0x7F, 0}
 )
 
 type Stream struct{
@@ -58,16 +62,15 @@ func (s *Stream) startLoop(rw *bufio.ReadWriter){
 func readMsg(rw *bufio.ReadWriter) ([]byte,error){
 	bytes := []byte{}
 	for{
-		byte, err := rw.ReadByte()
+		b, err := rw.ReadByte()
 
 		if err!=nil {
 			return bytes,err
 		}
-		bytes = append(bytes, byte)
-		if byte == delimiter {
+		bytes = append(bytes, b)
+		if containEndingBytes(bytes) {
 			return bytes,nil
 		}
-
 	}
 }
 
@@ -106,21 +109,30 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter) {
 }
 
 func encodeMessage(data []byte) []byte{
-	startArr := []byte{startByte, startByte}
-	endArr:= []byte{startByte,startByte,delimiter}
-	data = append(startArr,data...)
-	return append(data, endArr...)
+	ret := append(startBytes,data...)
+	ret = append(ret, endBytes...)
+	return ret
 }
 
 func decodeMessage(data []byte) ([]byte,error){
-	if data[0]!=startByte ||
-		data[1]!=startByte ||
-		data[len(data)-3]!= startByte ||
-		data[len(data)-2]!= startByte ||
-		data[len(data)-1]!= delimiter {
+	if !(containStartingBytes(data) && containEndingBytes(data)) {
 		return nil,ErrInvalidMessageFormat
 	}
 	return data[2:len(data)-3],nil
+}
+
+func containStartingBytes(data []byte) bool{
+	if len(data) < len(startBytes){
+		return false
+	}
+	return reflect.DeepEqual(data[0:len(startBytes)], startBytes)
+}
+
+func containEndingBytes(data []byte) bool{
+	if len(data) < len(endBytes){
+		return false
+	}
+	return 	reflect.DeepEqual(data[(len(data)-len(endBytes)):len(data)], endBytes)
 }
 
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
@@ -164,7 +176,7 @@ func (s *Stream) parseData(data []byte){
 	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, dmpb); err!=nil{
-		logger.Warn(err)
+		logger.Info(err)
 	}
 
 	dm := &Dapmsg{}
@@ -176,6 +188,9 @@ func (s *Stream) parseData(data []byte){
 	case SyncPeerList:
 		logger.Debug("Received",SyncPeerList,"command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
+	case RequestBlock:
+		logger.Debug("Received",RequestBlock,"command from:", s.remoteAddr)
+		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)
 	}

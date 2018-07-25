@@ -7,10 +7,7 @@ import (
 	"log"
 
 	"github.com/dappley/go-dappley/util"
-
-
 	"github.com/dappley/go-dappley/crypto/hash"
-
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
@@ -46,7 +43,6 @@ func HashPubKey(pubKey []byte) []byte {
 	return content
 
 	}
-
 
 func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)

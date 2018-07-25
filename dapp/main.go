@@ -48,7 +48,7 @@ func main() {
 	cli := CLI{}
 	var waitGroup sync.WaitGroup
 	//set to debug level
-	logger.SetLevel(logger.DebugLevel)
+	logger.SetLevel(logger.InfoLevel)
 
 	//setup
 	db := storage.OpenDatabase(core.BlockchainDbFile)
@@ -61,7 +61,7 @@ func main() {
 	}
 
 	waitGroup.Add(1)
-	miner := consensus.NewMiner(bc, addr, consensus.NewProofOfWork(bc))
+	miner := consensus.NewMiner(consensus.NewProofOfWork(bc, addr))
 	go func() {
 		miner.Start()
 		waitGroup.Done()

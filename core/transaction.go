@@ -177,7 +177,7 @@ func NewCoinbaseTX(to, data string) Transaction {
 		log.Panic(err)
 	}
 	data = fmt.Sprintf("%s - %x",data,randData)
-	txin := TXInput{[]byte{}, -1, nil, []byte(data)}
+	txin := TXInput{nil, -1, nil, []byte(data)}
 	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()
@@ -246,7 +246,7 @@ func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc
 func (tx Transaction) String() string {
 	var lines []string
 
-	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+	lines = append(lines, fmt.Sprintf("\n--- Transaction %x:", tx.ID))
 
 	for i, input := range tx.Vin {
 
@@ -262,6 +262,7 @@ func (tx Transaction) String() string {
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
 		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
 	}
+	lines = append(lines,"\n")
 
 	return strings.Join(lines, "\n")
 }

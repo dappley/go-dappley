@@ -18,35 +18,298 @@
 
 package consensus
 
-/*
+import (
+	"testing"
+	"github.com/dappley/go-dappley/core"
+	"math/big"
+	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/storage"
+	"time"
+	"github.com/dappley/go-dappley/client"
+)
 
+func TestProofOfWork_ValidateDifficulty(t *testing.T) {
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
 
-func TestProofOfWork_Validate(t *testing.T) {
-	var cbAddr = string("1JEye2HYHHbjrGv6RPHs9aU3Tt5ktWRVon")
-	addr, err := CreateWallet()
-	assert.NotEmpty(t, addr)
+	//create a block that has a hash value larger than the target
+	blk := core.GenerateMockBlock()
+	target := big.NewInt(1)
+	target.Lsh(target, uint(256-targetBits+1))
 
-	//create a blockchain
-	b, err := CreateBlockchain(addr)
+	blk.SetHash(target.Bytes())
 
-	pow := NewProofOfWork()
-	blk := pow.ProduceBlock(cbAddr, "", []byte{})
-	//hash :=blk.GetHash()
-	assert.True(t,pow.Validate(blk))
-	blk.SetNonce(blk.GetNonce()+1)
-	assert.False(t, pow.Validate(blk))
+	assert.False(t,pow.ValidateDifficulty(blk))
+
+	//create a block that has a hash value smaller than the target
+	target = big.NewInt(1)
+	target.Lsh(target, uint(256-targetBits-1))
+	blk.SetHash(target.Bytes())
+
+	assert.True(t,pow.ValidateDifficulty(blk))
 }
 
-func TestProofOfWork_Start(t *testing.T) {
-	pow := NewProofOfWork()
-	go pow.Start()
-	for i := 0; i < 3; i++ {
-		pow.Feed(time.Now().String())
-		pow.Feed("test test")
-		time.Sleep(1 * time.Second)
-	}
+func TestProofOfWork_StartAndStop(t *testing.T) {
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//start the pow process and wait for at least 1 block produced
+	pow.Start()
+	blkHeight := uint64(0)
+	loop:
+		for{
+			blk,err := bc.GetLastBlock()
+			assert.Nil(t,err)
+			blkHeight = blk.GetHeight()
+			if blkHeight > 1 {
+				break loop
+			}
+		}
+
+	//stop pow process and wait
+	pow.Stop()
+	time.Sleep(time.Second*2)
+
+	//there should be not block produced anymore
+	blk,err := bc.GetLastBlock()
+	assert.Nil(t,err)
+	assert.Equal(t,blkHeight,blk.GetHeight())
+
+	//it should be able to start again
+	pow.Start()
+	time.Sleep(time.Second)
 	pow.Stop()
 }
 
+func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
 
-*/
+	//start the pow process and wait for at least 1 block produced
+	pow.Start()
+	blkHeight := uint64(0)
+	loop:
+	for{
+		blk,err := bc.GetLastBlock()
+		assert.Nil(t,err)
+		blkHeight = blk.GetHeight()
+		if blkHeight > 1 {
+			break loop
+		}
+	}
+	//stop pow process
+	pow.Stop()
+
+	//prepare a new block
+	newBlock := pow.prepareBlock()
+	nonce := int64(0)
+	mineloop:
+		for{
+			if hash, ok := pow.verifyNonce(nonce, newBlock); ok {
+				newBlock.SetHash(hash)
+				newBlock.SetNonce(nonce)
+				break mineloop
+			}else{
+				nonce++
+			}
+		}
+
+	//start mining
+	pow.Start()
+	//push the prepared block to block pool
+	bc.BlockPool().Push(newBlock)
+	//the pow loop should stop current mining and go to updateNewBlockState. Wait until that happens
+	loop1:
+	for {
+		time.Sleep(time.Microsecond)
+		if pow.nextState == updateNewBlockState {
+			break loop1
+		}
+	}
+	//Wait until the loop updates the new block to the blockchain. Stop the loop after that happens
+	loop2:
+	for {
+		time.Sleep(time.Microsecond)
+		if pow.nextState != updateNewBlockState {
+			pow.Stop()
+			break loop2
+		}
+	}
+
+	//the tail block should be the block that we have pushed into blockpool
+	tailBlock,err := bc.GetLastBlock()
+
+	assert.Nil(t,err)
+	assert.Equal(t, newBlock,tailBlock)
+
+}
+
+func TestProofOfWork_rollbackBlock(t *testing.T){
+	wallets,err := client.NewWallets()
+	assert.Nil(t, err)
+	wallet1 := wallets.CreateWallet()
+	wallet2 := wallets.CreateWallet()
+
+	bc,err := core.CreateBlockchain(
+		wallet1.GetAddress(),
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,wallet1.GetAddress().Address)
+
+	//mock two transactions and push them to transaction pool
+	tx, err := core.NewUTXOTransaction(
+		bc.DB,
+		wallet1.GetAddress(),
+		wallet2.GetAddress(),
+		5,
+		wallets.GetKeyPairByAddress(wallet1.GetAddress()),
+		bc,
+		0)
+
+	txPool := core.GetTxnPoolInstance()
+	txPool.Push(tx)
+	txPool.Push(tx)
+	//The transaction pool should contain two transactions
+	assert.Equal(t,2, txPool.Len())
+
+	//Grab the transaction from the transaction pool and prepare a block
+	blk := pow.prepareBlock()
+
+	//Now the transaction pool should not have any transaction
+	assert.Equal(t,0, txPool.Len())
+
+	//rollback the block so that the transactions will go back to transaction pool
+	pow.rollbackBlock(blk)
+	assert.Equal(t,2, txPool.Len())
+
+	//the two transactions should stay the same
+	assert.Equal(t,tx,txPool.Pop())
+	assert.Equal(t,tx,txPool.Pop())
+}
+
+func TestProofOfWork_verifyNonce(t *testing.T){
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//prepare a block with correct nonce value
+	newBlock := pow.prepareBlock()
+	nonce := int64(0)
+	mineloop2:
+	for{
+		if hash, ok := pow.verifyNonce(nonce, newBlock); ok {
+			newBlock.SetHash(hash)
+			newBlock.SetNonce(nonce)
+			break mineloop2
+		}else{
+			nonce++
+		}
+	}
+
+	//check if the verifyNonce function returns true
+	_, ok := pow.verifyNonce(nonce, newBlock)
+	assert.True(t, ok)
+
+	//input a wrong nonce value, check if it returns false
+	_, ok = pow.verifyNonce(nonce-1, newBlock)
+	assert.False(t, ok)
+}
+
+func TestProofOfWork_verifyTransactions(t *testing.T){
+	wallets,err := client.NewWallets()
+	assert.Nil(t, err)
+	wallet1 := wallets.CreateWallet()
+	wallet2 := wallets.CreateWallet()
+
+	bc,err := core.CreateBlockchain(
+		wallet1.GetAddress(),
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,wallet1.GetAddress().Address)
+
+	//mock two transactions and push them to transaction pool
+	//the first transaction is a valid transaction
+	tx1, err := core.NewUTXOTransaction(
+		bc.DB,
+		wallet1.GetAddress(),
+		wallet2.GetAddress(),
+		5,
+		wallets.GetKeyPairByAddress(wallet1.GetAddress()),
+		bc,
+		0)
+
+	//the second transaction is not a valid transaction
+	tx2 := *core.MockTransaction()
+	//push the transactions to the transaction pool
+	txPool := core.GetTxnPoolInstance()
+	txPool.Push(tx1)
+	txPool.Push(tx2)
+
+	//verify the transactions
+	pow.verifyTransactions()
+
+	//the second transaction should be removed
+	assert.Equal(t, 1, txPool.Len())
+	//the remaining transaction should be the first one (the valid transaction)
+	assert.Equal(t, tx1, txPool.Pop())
+}
+
+/*func TestProofOfWork_testMiningSpeed(t *testing.T){
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc,err := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+	)
+	defer bc.DB.Close()
+	assert.Nil(t,err)
+	pow := NewProofOfWork(bc,cbAddr.Address)
+
+	//mine 10 blocks and calculate average time
+	for i:=14;i < 20;i++ {
+		pow.SetTargetBit(i)
+		pow.Start()
+		startTime := time.Now()
+		targetHeight := uint64((i-14)*10 +9)
+	loop:
+		for {
+			blk, err := bc.GetLastBlock()
+			assert.Nil(t, err)
+			if blk.GetHeight() > targetHeight {
+				break loop
+			}
+		}
+		fmt.Println("The average time for difficulty level",
+			i,
+			"is",
+			time.Now().Sub(startTime).Seconds(),
+			"seconds")
+		pow.Stop()
+	}
+}*/
