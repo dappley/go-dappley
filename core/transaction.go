@@ -3,7 +3,7 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-	//	"crypto/elliptic"
+
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
@@ -192,7 +192,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 	var outputs []TXOutput
 	var validOutputs []TXOutputStored
 
-	pubKeyHash := HashPubKey(keypair.PublicKey)
+	pubKeyHash, _ := HashPubKey(keypair.PublicKey)
 	sum := 0
 
 	if len(GetAddressUTXOs(pubKeyHash, db)) < 1 {

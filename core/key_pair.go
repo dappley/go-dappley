@@ -3,12 +3,13 @@ package core
 import (
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log"
 
-	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/util"
 )
 
 const version = byte(0x00)
@@ -25,7 +26,7 @@ func NewKeyPair() *KeyPair {
 }
 
 func (w KeyPair) GenerateAddress() Address {
-	pubKeyHash := HashPubKey(w.PublicKey)
+	pubKeyHash, _ := HashPubKey(w.PublicKey)
 
 	versionedPayload := append([]byte{version}, pubKeyHash...)
 	checksum := checksum(versionedPayload)
@@ -36,13 +37,16 @@ func (w KeyPair) GenerateAddress() Address {
 	return NewAddress(fmt.Sprintf("%s", address))
 }
 
-func HashPubKey(pubKey []byte) []byte {
-
+func HashPubKey(pubKey []byte) ([]byte, error) {
+	if pubKey == nil || len(pubKey) < 32 {
+		err := errors.New("pubkey not correct")
+		return nil, err
+	}
 	sha := hash.Sha3256(pubKey)
 	content := hash.Ripemd160(sha)
-	return content
+	return content, nil
 
-	}
+}
 
 func checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)

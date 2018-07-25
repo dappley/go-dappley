@@ -24,11 +24,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/util"
 	"math/big"
 	"reflect"
+
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
 )
 
 type BlockHeader struct {
@@ -93,7 +94,7 @@ func (b *Block) Serialize() []byte {
 			Timestamp: b.header.timestamp,
 		},
 		Transactions: b.transactions,
-		Height: b.height,
+		Height:       b.height,
 	}
 
 	err := encoder.Encode(bs)
@@ -127,7 +128,7 @@ func Deserialize(d []byte) *Block {
 			timestamp: bs.Header.Timestamp,
 		},
 		transactions: bs.Transactions,
-		height:bs.Height,
+		height:       bs.Height,
 	}
 }
 
@@ -173,7 +174,7 @@ func (b *Block) ToProto() proto.Message {
 	return &corepb.Block{
 		Header:       b.header.ToProto().(*corepb.BlockHeader),
 		Transactions: txArray,
-		Height: 	  b.height,
+		Height:       b.height,
 	}
 }
 
@@ -210,11 +211,11 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
 }
 
-func (b *Block) CalculateHash() Hash{
+func (b *Block) CalculateHash() Hash {
 	return b.CalculateHashWithNonce(b.GetNonce())
 }
 
-func (b *Block) CalculateHashWithNonce(nonce int64) Hash{
+func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 	var hashInt big.Int
 
 	data := bytes.Join(
@@ -232,13 +233,13 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash{
 	return hashInt.Bytes()
 }
 
-func (b *Block) VerifyHash() bool{
+func (b *Block) VerifyHash() bool {
 	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
 }
 
-func (b *Block) VerifyTransactions(bc *Blockchain) bool{
-	for _,tx := range b.GetTransactions(){
-		if !bc.VerifyTransaction(*tx){
+func (b *Block) VerifyTransactions(bc *Blockchain) bool {
+	for _, tx := range b.GetTransactions() {
+		if !bc.VerifyTransaction(*tx) {
 			return false
 		}
 	}
