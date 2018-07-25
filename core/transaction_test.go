@@ -3,10 +3,10 @@ package core
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/util"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func getAoB(length int64) []byte {
@@ -80,7 +80,10 @@ func TestTransaction_Proto(t *testing.T) {
 	}
 
 	pb := t1.ToProto()
-	mpb,err := proto.Marshal(pb)
+	var i interface{} = pb
+	_, correct := i.(proto.Message)
+	assert.Equal(t, true, correct)
+	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
 	newpb := &corepb.Transaction{}
@@ -90,5 +93,5 @@ func TestTransaction_Proto(t *testing.T) {
 	t2 := Transaction{}
 	t2.FromProto(newpb)
 
-	assert.Equal(t,t1,t2)
+	assert.Equal(t, t1, t2)
 }

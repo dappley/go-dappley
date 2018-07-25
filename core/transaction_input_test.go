@@ -2,9 +2,10 @@ package core
 
 import (
 	"testing"
+
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/core/pb"
 )
 
 func TestTXInput_Proto(t *testing.T) {
@@ -16,15 +17,18 @@ func TestTXInput_Proto(t *testing.T) {
 	}
 
 	pb := vin.ToProto()
-	mpb,err := proto.Marshal(pb)
+	var i interface{} = pb
+	_, correct := i.(proto.Message)
+	assert.Equal(t, true, correct)
+	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
 	newpb := &corepb.TXInput{}
-	err = proto.Unmarshal(mpb,newpb)
+	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 
 	vin2 := TXInput{}
 	vin2.FromProto(newpb)
 
-	assert.Equal(t,vin,vin2)
+	assert.Equal(t, vin, vin2)
 }

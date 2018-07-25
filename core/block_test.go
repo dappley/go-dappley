@@ -3,11 +3,12 @@ package core
 import (
 	"testing"
 
+	"fmt"
+	"time"
+
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"time"
-	"fmt"
 )
 
 var header = &BlockHeader{
@@ -22,7 +23,7 @@ var blk = &Block{
 
 var header2 = &BlockHeader{
 	hash:      []byte{'a'},
-	prevHash:  []byte{'e','c'},
+	prevHash:  []byte{'e', 'c'},
 	nonce:     0,
 	timestamp: time.Now().Unix(),
 }
@@ -43,7 +44,7 @@ func TestDeserialize(t *testing.T) {
 	block2 := Deserialize(b2)
 	assert.Equal(t, blockExpect2.transactions, block2.transactions)
 	assert.Equal(t, blockExpect2.header, block2.header)
-	
+
 	blockExpect3 := NewBlock([]*Transaction{}, blk)
 	b3 := blockExpect3.Serialize()
 	block3 := Deserialize(b3)
@@ -105,6 +106,9 @@ func TestBlockHeader_Proto(t *testing.T) {
 	}
 
 	pb := bh1.ToProto()
+	var i interface{} = pb
+	_, correct := i.(proto.Message)
+	assert.Equal(t, true, correct)
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
@@ -123,6 +127,9 @@ func TestBlock_Proto(t *testing.T) {
 	b1 := GenerateMockBlock()
 
 	pb := b1.ToProto()
+	var i interface{} = pb
+	_, correct := i.(proto.Message)
+	assert.Equal(t, true, correct)
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
@@ -141,12 +148,12 @@ func TestBlock_VerifyHash(t *testing.T) {
 	fmt.Println(b1)
 
 	//The mocked block does not have correct hash value
-	assert.False(t,b1.VerifyHash())
+	assert.False(t, b1.VerifyHash())
 
 	//calculate correct hash value
 	hash := b1.CalculateHash()
 	b1.SetHash(hash)
 
 	//then this should be correct
-	assert.True(t,b1.VerifyHash())
+	assert.True(t, b1.VerifyHash())
 }

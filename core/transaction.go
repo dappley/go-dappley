@@ -3,7 +3,7 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-//	"crypto/elliptic"
+	//	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
@@ -13,11 +13,12 @@ import (
 	"log"
 	"strings"
 
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"math/big"
+
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/storage"
+	"github.com/gogo/protobuf/proto"
 )
 
 const subsidy = 10
@@ -84,18 +85,18 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		txCopy.Vin[inID].PubKey = nil
 
 		privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
-		if (err != nil) {
+		if err != nil {
 			return
 		}
 
 		signature, error := secp256k1.Sign(txCopy.ID, privData)
-		if (error != nil) {
+		if error != nil {
 			return
 		}
 
 		tx.Vin[inID].Signature = signature
 
-		}
+	}
 }
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
@@ -133,7 +134,7 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	}
 
 	txCopy := tx.TrimmedCopy()
-//	curve := elliptic.P256()
+	//	curve := elliptic.P256()
 	curve := secp256k1.S256()
 
 	for inID, vin := range tx.Vin {
@@ -157,7 +158,7 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 
 		verifyResult, error1 = secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
-		if  error1 != nil || verifyResult == false {
+		if error1 != nil || verifyResult == false {
 			return false
 		}
 	}
@@ -176,7 +177,7 @@ func NewCoinbaseTX(to, data string) Transaction {
 	if err != nil {
 		log.Panic(err)
 	}
-	data = fmt.Sprintf("%s - %x",data,randData)
+	data = fmt.Sprintf("%s - %x", data, randData)
 	txin := TXInput{nil, -1, nil, []byte(data)}
 	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
@@ -194,7 +195,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 	pubKeyHash := HashPubKey(keypair.PublicKey)
 	sum := 0
 
-	if(len(GetAddressUTXOs(pubKeyHash, db)) < 1){
+	if len(GetAddressUTXOs(pubKeyHash, db)) < 1 {
 		return Transaction{}, ErrInsufficientFund
 	}
 	for _, v := range GetAddressUTXOs(pubKeyHash, db) {
@@ -227,6 +228,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 
 	return tx, nil
 }
+
 //for add balance
 func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
@@ -262,7 +264,7 @@ func (tx Transaction) String() string {
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
 		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
 	}
-	lines = append(lines,"\n")
+	lines = append(lines, "\n")
 
 	return strings.Join(lines, "\n")
 }
