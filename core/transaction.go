@@ -3,7 +3,7 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/elliptic"
+//	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
@@ -11,12 +11,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"strings"
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"math/big"
 )
 
 const subsidy = 10
@@ -82,14 +83,19 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
 
-		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
-		if err != nil {
-			log.Panic(err)
+		privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
+		if (err != nil) {
+			return
 		}
-		signature := append(r.Bytes(), s.Bytes()...)
+
+		signature, error := secp256k1.Sign(txCopy.ID, privData)
+		if (error != nil) {
+			return
+		}
 
 		tx.Vin[inID].Signature = signature
-	}
+
+		}
 }
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
@@ -112,6 +118,10 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 
 // Verify verifies signatures of Transaction inputs
 func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+
+	var verifyResult bool
+	var error1 error
+
 	if tx.IsCoinbase() {
 		return true
 	}
@@ -123,7 +133,8 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	}
 
 	txCopy := tx.TrimmedCopy()
-	curve := elliptic.P256()
+//	curve := elliptic.P256()
+	curve := secp256k1.S256()
 
 	for inID, vin := range tx.Vin {
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
@@ -132,12 +143,6 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
 
-		r := big.Int{}
-		s := big.Int{}
-		sigLen := len(vin.Signature)
-		r.SetBytes(vin.Signature[:(sigLen / 2)])
-		s.SetBytes(vin.Signature[(sigLen / 2):])
-
 		x := big.Int{}
 		y := big.Int{}
 		keyLen := len(vin.PubKey)
@@ -145,7 +150,14 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		y.SetBytes(vin.PubKey[(keyLen / 2):])
 
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
-		if ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) == false {
+		originPub, err := secp256k1.FromECDSAPublicKey(&rawPubKey)
+		if err != nil {
+			return false
+		}
+
+		verifyResult, error1 = secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+
+		if  error1 != nil || verifyResult == false {
 			return false
 		}
 	}

@@ -7,11 +7,11 @@ import (
 	"log"
 
 	"github.com/dappley/go-dappley/util"
-	//"crypto/rand"
-	//"crypto/elliptic"
-	"crypto/rand"
-	"crypto/elliptic"
+
+
 	"github.com/dappley/go-dappley/crypto/hash"
+
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 const version = byte(0x00)
@@ -44,7 +44,8 @@ func HashPubKey(pubKey []byte) []byte {
 	sha := hash.Sha3256(pubKey)
 	content := hash.Ripemd160(sha)
 	return content
-}
+
+	}
 
 
 func checksum(payload []byte) []byte {
@@ -55,8 +56,7 @@ func checksum(payload []byte) []byte {
 }
 
 func newKeyPair() (ecdsa.PrivateKey, []byte) {
-	curve := elliptic.P256()
-	private, err := ecdsa.GenerateKey(curve, rand.Reader)
+	private, err := secp256k1.NewECDSAPrivateKey()
 	if err != nil {
 		log.Panic(err)
 	}
