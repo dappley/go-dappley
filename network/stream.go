@@ -16,6 +16,7 @@ import (
 const(
 	SyncBlock 		= "SyncBlock"
 	SyncPeerList 	= "SyncPeerList"
+	RequestBlock	= "RequestBlock"
 )
 
 var(
@@ -187,6 +188,9 @@ func (s *Stream) parseData(data []byte){
 	case SyncPeerList:
 		logger.Debug("Received",SyncPeerList,"command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
+	case RequestBlock:
+		logger.Debug("Received",RequestBlock,"command from:", s.remoteAddr)
+		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)
 	}

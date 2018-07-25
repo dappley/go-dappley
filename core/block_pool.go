@@ -30,6 +30,7 @@ type BlockPool struct {
 	size            int
 	exitCh          chan bool
 	bc 				*Blockchain
+	pool 			[]*Block
 }
 
 func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
@@ -37,7 +38,9 @@ func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 		size:            size,
 		blockReceivedCh: make(chan *Block, size),
 		blockUpdatedCh:	 make(chan *Block, size),
+		exitCh: 		 make(chan bool, 1),
 		bc:				 bc,
+		pool:			 []*Block{},
 	}
 	bc.blockPool = pool
 	return pool
@@ -63,6 +66,7 @@ func (pool *BlockPool) Push(block *Block) {
 			pool.blockReceivedCh <- block
 		}
 	}
+
 }
 
 func (pool *BlockPool) Start() {
