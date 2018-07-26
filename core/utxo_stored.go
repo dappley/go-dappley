@@ -1,7 +1,7 @@
 package core
 
 
-type TXOutputStored struct {
+type UTXOutputStored struct {
 	Value      int
 	Txid      []byte
 	TxIndex	  int

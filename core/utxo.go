@@ -10,24 +10,24 @@ import (
 )
 
 //map of key: wallet address, value: serialized map
-type txoIndex map[string][]TXOutputStored
+type utxoIndex map[string][]UTXOutputStored
 
 
-func DeserializeUTXO(d []byte) *txoIndex {
-	var txo txoIndex
+func DeserializeUTXO(d []byte) *utxoIndex {
+	var utxo utxoIndex
 	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&txo)
+	err := decoder.Decode(&utxo)
 	if err != nil {
 		fmt.Printf("%+v\n", err.Error())
 	}
-	return &txo
+	return &utxo
 }
 
-func (ucache *txoIndex) Serialize() []byte {
+func (utxo *utxoIndex) Serialize() []byte {
 	var encoded bytes.Buffer
 
 	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(ucache)
+	err := enc.Encode(utxo)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -35,24 +35,24 @@ func (ucache *txoIndex) Serialize() []byte {
 }
 
 
-func GetAddressUTXOs (address []byte, db storage.Storage) []TXOutputStored {
+func GetAddressUTXOs (address []byte, db storage.Storage) []UTXOutputStored {
 	umap := getStoredUtxoMap(db)
 	return umap[string(address)]
 }
 
-func getStoredUtxoMap (db storage.Storage) txoIndex {
+func getStoredUtxoMap (db storage.Storage) utxoIndex {
 	res, err := db.Get([]byte(UtxoMapKey))
 
 	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
-		res1 := txoIndex{}
+		res1 := utxoIndex{}
 		return res1
 	}
 	umap := DeserializeUTXO(res)
 	return *umap
 }
 
-func initIndex() txoIndex{
-	ins := map[string][]TXOutputStored{}
+func initIndex() utxoIndex{
+	ins := map[string][]UTXOutputStored{}
 	return  ins
 }
 
@@ -64,19 +64,19 @@ func UpdateUtxoIndexAfterNewBlock(blk Block, db storage.Storage){
 
 }
 func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
-	txoIndex := getStoredUtxoMap(db)
+	utxoIndex := getStoredUtxoMap(db)
+	if len(utxoIndex)==0 {
+		utxoIndex = initIndex()
+	}
 	for _, txn := range blk.transactions{
 		for index ,vout := range txn.Vout{
-			if(len(txoIndex)==0){
-				txoIndex = initIndex()
+			if utxoIndex[string(vout.PubKeyHash)] == nil {
+				utxoIndex[string(vout.PubKeyHash)] = []UTXOutputStored{}
 			}
-			if txoIndex[string(vout.PubKeyHash)] == nil {
-				txoIndex[string(vout.PubKeyHash)] = []TXOutputStored{}
-			}
-			txoIndex[string(vout.PubKeyHash)] = append(txoIndex[string(vout.PubKeyHash)], TXOutputStored{vout.Value, txn.ID, index})
+			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, txn.ID, index})
 		}
 	}
-	db.Put([]byte(UtxoMapKey), txoIndex.Serialize())
+	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
 }
 
 func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){

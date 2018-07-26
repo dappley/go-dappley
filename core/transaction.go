@@ -190,7 +190,7 @@ func NewCoinbaseTX(to, data string) Transaction {
 func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
-	var validOutputs []TXOutputStored
+	var validOutputs []UTXOutputStored
 
 	pubKeyHash, _ := HashPubKey(keypair.PublicKey)
 	sum := 0
