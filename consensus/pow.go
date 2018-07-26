@@ -50,6 +50,8 @@ type ProofOfWork struct {
 	node      *network.Node
 }
 
+type stateFn func(int64, *core.Block) stateFn
+
 func NewProofOfWork(bc *core.Blockchain, cbAddr string) *ProofOfWork{
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
@@ -118,31 +120,33 @@ func (pow *ProofOfWork) Start() {
 					pow.nextState = mineBlockState
 				case mineBlockState:
 					if nonce < maxNonce {
-						if hash, ok := pow.verifyNonce(nonce, newBlock); ok {
-							newBlock.SetHash(hash)
-							newBlock.SetNonce(nonce)
+						if ok := pow.mineBlock(nonce, newBlock); ok {
 							pow.nextState = updateNewBlockState
 						} else {
 							nonce++
-							pow.nextState = mineBlockState
 						}
 					}else{
 						pow.nextState = prepareBlockState
 					}
 				case updateNewBlockState:
-					pow.updateNewBlock(newBlock)
-					if !newblkrcved {
-						logger.Debug("PoW: Minted a new block")
-						pow.broadcastNewBlock(newBlock)
-					}else{
-						newblkrcved = false
-						logger.Debug("PoW: Add a rcved block to blockchain")
-					}
+					pow.updateNewBlock(newBlock,!newblkrcved)
+					newblkrcved = false
 					pow.nextState = prepareBlockState
 				}
 			}
 		}
 	}()
+}
+
+
+//returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
+func (pow *ProofOfWork) mineBlock(nonce int64, newBlock *core.Block) bool{
+		hash, ok := pow.verifyNonce(nonce, newBlock)
+		if ok {
+			newBlock.SetHash(hash)
+			newBlock.SetNonce(nonce)
+		}
+		return ok
 }
 
 func (pow *ProofOfWork) GetCurrentState() State {
@@ -178,8 +182,14 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 	return hash, hashInt.Cmp(pow.target) == -1
 }
 
-func (pow *ProofOfWork) updateNewBlock(blk *core.Block){
+func (pow *ProofOfWork) updateNewBlock(blk *core.Block, isMinted bool){
 	pow.bc.UpdateNewBlock(blk)
+	if isMinted {
+		logger.Debug("PoW: Minted a new block")
+		pow.broadcastNewBlock(blk)
+	}else{
+		logger.Debug("PoW: Add a rcved block to blockchain")
+	}
 }
 
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
