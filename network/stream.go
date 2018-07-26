@@ -184,7 +184,7 @@ func (s *Stream) parseData(data []byte){
 	switch(dm.GetCmd()){
 	case SyncBlock:
 		logger.Debug("Received",SyncBlock,"command from:", s.remoteAddr)
-		s.node.addBlockToPool(dm.GetData())
+		s.node.addBlockToPool(dm.GetData(),s.peerID)
 	case SyncPeerList:
 		logger.Debug("Received",SyncPeerList,"command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())

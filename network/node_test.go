@@ -147,10 +147,10 @@ func TestNode_SyncPeers(t *testing.T){
 	time.Sleep(time.Second*2)
 
 	//node2 should have node 3 as its peer
-	assert.True(t,node2.peerlist.IsInPeerlist(node3.GetInfo()))
+	assert.True(t,node2.peerList.IsInPeerlist(node3.GetInfo()))
 
 	//node3 should have node 2 as its peer
-	assert.True(t,node3.peerlist.IsInPeerlist(node2.GetInfo()))
+	assert.True(t,node3.peerList.IsInPeerlist(node2.GetInfo()))
 
 	time.Sleep(time.Second)
 

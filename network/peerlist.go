@@ -50,7 +50,7 @@ func CreatePeerFromString(targetFullAddr string) (*Peer,error){
 	return CreatePeerFromMultiaddr(ma)
 }
 
-//create new peerlist with multiaddress
+//create new peerList with multiaddress
 func NewPeerList(p []*Peer) *PeerList {
 
 	pl := &PeerList{}
@@ -60,7 +60,7 @@ func NewPeerList(p []*Peer) *PeerList {
 	return pl
 }
 
-//create new peerlist with strings
+//create new peerList with strings
 func NewPeerListStr(strs []string) *PeerList {
 	ps := []*Peer{}
 	for _, str := range strs{
@@ -104,7 +104,7 @@ func (pl *PeerList) FindNewPeers(newpl *PeerList) *PeerList {
 	return retpl
 }
 
-//Get peerlist
+//Get peerList
 func (pl *PeerList) GetPeerlist() []*Peer {
 	return pl.peers
 }

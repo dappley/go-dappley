@@ -198,7 +198,7 @@ func (bc *Blockchain) Next() (*Block, error) {
 	return block, nil
 }
 
-func (bc *Blockchain) GetLastHash() ([]byte, error) {
+func (bc *Blockchain) GetTailHash() ([]byte, error) {
 
 	data, err:= bc.DB.Get(tipKey)
 	if err!=nil{
@@ -245,8 +245,8 @@ func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(tipKey, newBlock.GetHash())
 }
 
-func (bc *Blockchain) GetLastBlock() (*Block, error){
-	hash, err:= bc.GetLastHash()
+func (bc *Blockchain) GetTailBlock() (*Block, error){
+	hash, err:= bc.GetTailHash()
 	if err != nil {
 		return nil, ErrNotAbleToGetLastBlockHash
 	}
@@ -257,3 +257,11 @@ func (bc *Blockchain) GetLastBlock() (*Block, error){
 	return Deserialize(v),nil
 }
 
+func (bc *Blockchain) GetMaxHeight() int{
+	blk, error:= bc.GetTailBlock()
+	if error != nil{
+		return -1
+	}
+	return int(blk.GetHeight())
+
+}

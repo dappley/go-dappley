@@ -346,7 +346,6 @@ func TestSyncBlocks(t *testing.T){
 	//num of nodes to be created in the test
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++{
-
 		//create storage instance
 		db := storage.NewRamStorage()
 		defer db.Close()
@@ -359,14 +358,17 @@ func TestSyncBlocks(t *testing.T){
 		pow := consensus.NewProofOfWork(bcs[i],addr.Address)
 		pow.SetTargetBit(16)
 		pow.GetNode().Start(testport+i)
+
 		if i != 0 {
 			pow.GetNode().AddStream(
 				pows[0].GetNode().GetPeerID(),
 				pows[0].GetNode().GetPeerMultiaddr(),
 				)
 		}
+
 		pows = append(pows, pow)
 	}
+
 	//seed node broadcasts syncpeers
 	pows[0].GetNode().SyncPeers()
 
@@ -387,7 +389,7 @@ func TestSyncBlocks(t *testing.T){
 	loop:
 		for {
 			for i := 0; i < numOfNodes; i++ {
-				blk, err := bcs[i].GetLastBlock()
+				blk, err := bcs[i].GetTailBlock()
 				assert.Nil(t, err)
 				if blk.GetHeight() > blkHeight[i] {
 					blkHeight[i]++
@@ -411,9 +413,9 @@ func TestSyncBlocks(t *testing.T){
 
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++{
-		blk0, err := bcs[i].GetLastBlock()
+		blk0, err := bcs[i].GetTailBlock()
 		assert.Nil(t,err)
-		blk1, err := bcs[i+1].GetLastBlock()
+		blk1, err := bcs[i+1].GetTailBlock()
 		assert.Nil(t,err)
 		assert.True(t, pows[i].ValidateDifficulty(blk0))
 		assert.True(t, pows[i+1].ValidateDifficulty(blk1))

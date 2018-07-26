@@ -21,15 +21,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 )
 
-type State int
-
-const (
-	prepareTxPoolState State = iota
-	mineState
-	updateNewBlock
-	cleanUpState
-)
-
 type Miner struct {
 	consensus    		core.Consensus
 }

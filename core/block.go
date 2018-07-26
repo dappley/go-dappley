@@ -245,3 +245,21 @@ func (b *Block) VerifyTransactions(bc *Blockchain) bool {
 	}
 	return true
 }
+
+func VerifyParentBlockHash(parentBlk, childBlk *Block) bool{
+	if parentBlk == nil || childBlk == nil{
+		return false
+	}
+	return reflect.DeepEqual(parentBlk.GetHash(), childBlk.GetPrevHash())
+}
+
+func VerifyParentBlockHeight(parentBlk, childBlk *Block) bool{
+	if parentBlk == nil || childBlk == nil{
+		return false
+	}
+	return parentBlk.GetHeight() == childBlk.GetHeight()-1
+}
+
+func VerifyParentBlock(parentBlk, childBlk *Block) bool{
+	return VerifyParentBlockHash(parentBlk, childBlk) && VerifyParentBlockHeight(parentBlk, childBlk)
+}

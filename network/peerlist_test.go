@@ -25,7 +25,7 @@ func TestNewPeerlistStr(t *testing.T) {
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist
+	//create new peerList
 	pl := NewPeerListStr(strs)
 
 	//the duplicated address should be filtered out
@@ -38,7 +38,7 @@ func TestPeerlist_IsInPeerlist(t *testing.T) {
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUDBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUGBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl := NewPeerListStr(strs)
 	ps := []*Peer{}
 	for _, s := range strs{
@@ -63,7 +63,7 @@ func TestPeerlist_AddNonDuplicate(t *testing.T) {
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUTBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl := NewPeerListStr(strs)
 	newStr:= "/ip4/192.168.10.106/tcp/10000/ipfs/QmWvMUaBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
 
@@ -81,7 +81,7 @@ func TestPeerlist_AddNonDuplicate(t *testing.T) {
 	ps = append(ps, p)
 	pl.Add(p)
 
-	//the final peerlist should contain all 4 addresses
+	//the final peerList should contain all 4 addresses
 	assert.ElementsMatch(t,ps,pl.GetPeerlist())
 }
 
@@ -91,7 +91,7 @@ func TestPeerlist_AddDuplicate(t *testing.T) {
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl := NewPeerListStr(strs)
 	newStr:= "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
 	strs = append(strs, newStr)
@@ -106,7 +106,7 @@ func TestPeerlist_AddDuplicate(t *testing.T) {
 	//add the fourth address
 	pl.Add(ps[3])
 
-	//the final peerlist should contain all 4 addresses
+	//the final peerList should contain all 4 addresses
 	assert.ElementsMatch(t,ps[:3],pl.GetPeerlist())
 }
 
@@ -116,7 +116,7 @@ func TestPeerlist_MergePeerlist(t *testing.T) {
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvaUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvsUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl1 := NewPeerListStr(strs1)
 
 	strs2:= []string{
@@ -124,7 +124,7 @@ func TestPeerlist_MergePeerlist(t *testing.T) {
 		"/ip4/192.168.10.106/tcp/10000/ipfs/QmWgMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10001/ipfs/QmWvrUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl2 := NewPeerListStr(strs2)
 
 	pl1.MergePeerlist(pl2)
@@ -150,7 +150,7 @@ func TestPeerlist_FindNewPeers(t *testing.T) {
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWeMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl1 := NewPeerListStr(strs1)
 
 	strs2:= []string{
@@ -158,7 +158,7 @@ func TestPeerlist_FindNewPeers(t *testing.T) {
 		"/ip4/192.168.10.106/tcp/10000/ipfs/QmWjMUtBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.105/tcp/10001/ipfs/QmWqMUqBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-	//create new peerlist with 3 addrs
+	//create new peerList with 3 addrs
 	pl2 := NewPeerListStr(strs2)
 
 	retpl := pl1.FindNewPeers(pl2)

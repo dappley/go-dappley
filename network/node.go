@@ -30,7 +30,8 @@ type Node struct{
 	blks      []*core.Block
 	blockpool []*core.Block
 	streams   map[peer.ID]*Stream
-	peerlist  *PeerList
+	peerList  *PeerList
+	exitCh    chan bool
 }
 
 //create new Node instance
@@ -42,10 +43,12 @@ func NewNode(bc *core.Blockchain) *Node{
 	nil,
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
+	make(chan bool, 1),
 	}
 }
 
 func (n *Node) Start(listenPort int) error{
+
 	h,addr,err := createBasicHost(listenPort)
 	if err != nil {
 		return err
@@ -56,7 +59,22 @@ func (n *Node) Start(listenPort int) error{
 
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
+	n.StartRequestLoop()
 	return err
+}
+
+func  (n *Node) StartRequestLoop() {
+	go func(){
+		for{
+			select{
+			case <- n.exitCh:
+				return
+			case brPars := <-n.bc.BlockPool().BlockRequestCh():
+				n.RequestBlockUnicast(brPars.BlockHash,brPars.Pid)
+			}
+		}
+	}()
+
 }
 
 //create basic host. Returns host object, host address and error
@@ -126,7 +144,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error{
 	n.streamHandler(stream)
 
 	// Add the peer list
-	n.peerlist.Add(&Peer{peerid,targetAddr})
+	n.peerList.Add(&Peer{peerid,targetAddr})
 
 	return nil
 }
@@ -135,7 +153,7 @@ func (n *Node) streamHandler(s net.Stream){
 	// Create a buffer stream for non blocking read and write.
 	logger.Info("Stream Connected! Peer Addr:", s.Conn().RemoteMultiaddr())
 	// Add  the peer list
-	n.peerlist.Add(&Peer{s.Conn().RemotePeer(),s.Conn().RemoteMultiaddr()})
+	n.peerList.Add(&Peer{s.Conn().RemotePeer(),s.Conn().RemoteMultiaddr()})
 	//start stream
 	ns := NewStream(s, n)
 	n.streams[s.Conn().RemotePeer()] = ns
@@ -169,8 +187,8 @@ func (n *Node) SendBlock(block *core.Block) error{
 }
 
 func (n *Node) SyncPeers() error{
-	//marshal the peerlist to wire format
-	bytes, err :=proto.Marshal(n.peerlist.ToProto())
+	//marshal the peerList to wire format
+	bytes, err :=proto.Marshal(n.peerList.ToProto())
 	if err != nil {
 		return err
 	}
@@ -228,7 +246,7 @@ func (n *Node) unicast(data []byte, pid peer.ID){
 	n.streams[pid].Send(data)
 }
 
-func (n *Node) addBlockToPool(data []byte){
+func (n *Node) addBlockToPool(data []byte, pid peer.ID){
 
 	//create a block proto
 	blockpb := &corepb.Block{}
@@ -245,7 +263,7 @@ func (n *Node) addBlockToPool(data []byte){
 	block.FromProto(blockpb)
 
 	//add block to blockpool. Make sure this is none blocking.
-	n.bc.BlockPool().Push(block)
+	n.bc.BlockPool().Push(block, pid)
 	//TODO: Delete this line. This line is solely for testing
 	n.blks = append(n.blks, block)
 }
@@ -253,7 +271,7 @@ func (n *Node) addBlockToPool(data []byte){
 func (n *Node)addMultiPeers(data []byte){
 
 	go func() {
-		//create a peerlist proto
+		//create a peerList proto
 		plpb := &networkpb.Peerlist{}
 
 		//unmarshal byte to proto
@@ -261,7 +279,7 @@ func (n *Node)addMultiPeers(data []byte){
 			logger.Warn(err)
 		}
 
-		//create an empty peerlist
+		//create an empty peerList
 		pl := &PeerList{}
 
 		//load the block with proto
@@ -271,20 +289,20 @@ func (n *Node)addMultiPeers(data []byte){
 		newpl := &PeerList{[]*Peer{n.info}}
 		newpl = newpl.FindNewPeers(pl)
 		//find the new added peers
-		newpl = n.peerlist.FindNewPeers(newpl)
+		newpl = n.peerList.FindNewPeers(newpl)
 
 		//wait for random time within the time limit
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(syncPeerTimeLimitMs)) )
 
 		//add streams for new peers
 		for _, p := range newpl.GetPeerlist() {
-			if !n.peerlist.IsInPeerlist(p){
+			if !n.peerList.IsInPeerlist(p){
 				n.AddStream(p.peerid, p.addr)
 			}
 		}
 
 		//add peers
-		n.peerlist.MergePeerlist(pl)
+		n.peerList.MergePeerlist(pl)
 	}()
 }
 

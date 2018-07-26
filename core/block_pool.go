@@ -19,54 +19,126 @@
 package core
 
 import (
-	"reflect"
 	logger "github.com/sirupsen/logrus"
+	"github.com/libp2p/go-libp2p-peer"
 )
 
+type BlockRequestPars struct{
+	BlockHash 	Hash
+	Pid 		peer.ID
+}
+
+type RcvedBlock struct{
+	Block 	*Block
+	Pid 	peer.ID
+}
 
 type BlockPool struct {
-	blockReceivedCh chan *Block
-	blockUpdatedCh	chan *Block
+	blockReceivedCh chan *RcvedBlock
+	blockRequestCh  chan BlockRequestPars
 	size            int
 	exitCh          chan bool
-	bc 				*Blockchain
-	pool 			[]*Block
+	bc              *Blockchain
+	forkPool        []*Block
 }
 
 func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
-		blockReceivedCh: make(chan *Block, size),
-		blockUpdatedCh:	 make(chan *Block, size),
-		exitCh: 		 make(chan bool, 1),
-		bc:				 bc,
-		pool:			 []*Block{},
+		blockReceivedCh: make(chan *RcvedBlock, size),
+		blockRequestCh:  make(chan BlockRequestPars, 1),
+		exitCh:          make(chan bool, 1),
+		bc:              bc,
+		forkPool:        []*Block{},
 	}
 	bc.blockPool = pool
 	return pool
 }
 
-func (pool *BlockPool) BlockReceivedCh() chan *Block {
+func (pool *BlockPool) BlockReceivedCh() chan *RcvedBlock {
 	return pool.blockReceivedCh
 }
 
-func (pool *BlockPool) BlockUpdateCh() chan *Block {
-	return pool.blockUpdatedCh
+func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
+	return pool.blockRequestCh
 }
 
-func (pool *BlockPool) Push(block *Block) {
-	logger.Debug("BlockPool: Has received a new block")
-	lastBlk,err := pool.bc.GetLastBlock()
-	if err!=nil {
-		logger.Warn(err)
+func (pool *BlockPool) AddParentToForkPool(blk *Block)  {
+	pool.forkPool = append(pool.forkPool, blk)
+}
+
+func (pool *BlockPool) ForkPoolLen() int{
+	return len(pool.forkPool)
+}
+
+func (pool *BlockPool) GetForkPoolHeadBlk() *Block{
+	if len(pool.forkPool) > 0 {
+		return pool.forkPool[len(pool.forkPool)-1]
+	}else{
+		return nil
 	}
-	if verifyBlock(lastBlk, block){
-		if block.VerifyTransactions(pool.bc){
-			logger.Debug("BlockPool: Block has been verified")
-			pool.blockReceivedCh <- block
-		}
+}
+
+func (pool *BlockPool) GetForkPoolTailBlk() *Block{
+	if len(pool.forkPool) > 0 {
+		return pool.forkPool[0]
+	}else{
+		return nil
+	}
+}
+
+func (pool *BlockPool) ResetForkPool() {
+	pool.forkPool = []*Block{}
+}
+
+func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
+	if blk == nil {
+		return false
 	}
 
+	if pool.ForkPoolLen() == 0 {
+		return true
+	}
+
+	return VerifyParentBlock(blk, pool.GetForkPoolHeadBlk())
+}
+
+func (pool *BlockPool) IsTailOfFork(blk *Block) bool{
+	if blk == nil {
+		return false
+	}
+
+	if pool.ForkPoolLen() == 0 {
+		return true
+	}
+
+	return VerifyParentBlock(pool.GetForkPoolTailBlk(), blk)
+}
+
+func (pool *BlockPool) AddTailToForkPool(blk *Block){
+	pool.forkPool = append([]*Block{blk}, pool.forkPool...)
+}
+
+func (pool *BlockPool) Push(block *Block, pid peer.ID) {
+	logger.Debug("BlockPool: Has received a new block")
+
+	if !block.VerifyHash() {
+		logger.Info("BlockPool: Verify Hash failed!")
+		return
+	}
+
+	//TODO: Temporarily disable verify transaction since it only verifies transactions against it own transaction pool
+/*	if !block.VerifyTransactions(pool.bc){
+		logger.Info("BlockPool: Verify Transactions failed!")
+		return
+	}*/
+
+	logger.Debug("BlockPool: Block has been verified")
+	pool.blockReceivedCh <- &RcvedBlock{block,pid}
+}
+
+func (pool *BlockPool) RequestBlock(hash Hash, pid peer.ID){
+	pool.blockRequestCh <- BlockRequestPars{hash, pid}
 }
 
 func (pool *BlockPool) Start() {
@@ -83,41 +155,8 @@ func (pool *BlockPool) messageLoop() {
 		case <-pool.exitCh:
 			logger.Info("BlockPool Exited")
 			return
-		case blk := <-pool.blockReceivedCh:
-			pool.handleBlock(blk)
 		}
 	}
-}
-
-func (pool *BlockPool) handleBlock(blk *Block) {
-	pool.blockUpdatedCh <- blk
-}
-
-func verifyHeight(lastBlk, newblk *Block) bool{
-	return lastBlk.height + 1 == newblk.height
-}
-
-func verifyLastBlockHash(lastBlk, newblk *Block) bool{
-	return reflect.DeepEqual(lastBlk.GetHash(), newblk.GetPrevHash())
-}
-
-func verifyBlock(lastBlk, newblk *Block) bool{
-	if newblk.VerifyHash()==false{
-		logger.Info("BlockPool: Verify Hash failed!")
-		return false
-	}
-
-	if verifyHeight(lastBlk, newblk)==false{
-		logger.Info("BlockPool: Verify Height failed!")
-		return false
-	}
-
-	if verifyLastBlockHash(lastBlk, newblk)==false{
-		logger.Info("BlockPool: Verify Last Block Hash failed!")
-		return false
-	}
-
-	return true
 }
 
 func (pool *BlockPool) GetBlockchain() *Blockchain{

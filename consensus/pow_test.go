@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"time"
 	"github.com/dappley/go-dappley/client"
+	"github.com/libp2p/go-libp2p-peer"
 )
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
@@ -70,7 +71,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	blkHeight := uint64(0)
 	loop:
 		for{
-			blk,err := bc.GetLastBlock()
+			blk,err := bc.GetTailBlock()
 			assert.Nil(t,err)
 			blkHeight = blk.GetHeight()
 			if blkHeight > 1 {
@@ -83,7 +84,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	time.Sleep(time.Second*2)
 
 	//there should be not block produced anymore
-	blk,err := bc.GetLastBlock()
+	blk,err := bc.GetTailBlock()
 	assert.Nil(t,err)
 	assert.Equal(t,blkHeight,blk.GetHeight())
 
@@ -108,7 +109,7 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 	blkHeight := uint64(0)
 	loop:
 	for{
-		blk,err := bc.GetLastBlock()
+		blk,err := bc.GetTailBlock()
 		assert.Nil(t,err)
 		blkHeight = blk.GetHeight()
 		if blkHeight > 1 {
@@ -134,8 +135,9 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 
 	//start mining
 	pow.Start()
+	time.Sleep(time.Second)
 	//push the prepared block to block pool
-	bc.BlockPool().Push(newBlock)
+	bc.BlockPool().Push(newBlock,peer.ID("1"))
 	//the pow loop should stop current mining and go to updateNewBlockState. Wait until that happens
 	loop1:
 	for {
@@ -155,7 +157,7 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 	}
 
 	//the tail block should be the block that we have pushed into blockpool
-	tailBlock,err := bc.GetLastBlock()
+	tailBlock,err := bc.GetTailBlock()
 
 	assert.Nil(t,err)
 	assert.Equal(t, newBlock,tailBlock)
@@ -299,7 +301,7 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 		targetHeight := uint64((i-14)*10 +9)
 	loop:
 		for {
-			blk, err := bc.GetLastBlock()
+			blk, err := bc.GetTailBlock()
 			assert.Nil(t, err)
 			if blk.GetHeight() > targetHeight {
 				break loop

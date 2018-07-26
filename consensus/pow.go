@@ -33,6 +33,8 @@ var maxNonce int64 = math.MaxInt64
 
 const targetBits = int64(14)
 
+type State int
+
 const (
 	prepareBlockState   State = iota
 	mineBlockState
@@ -96,12 +98,12 @@ func (pow *ProofOfWork) Start() {
 		pow.nextState = prepareBlockState
 		for {
 			select {
-			case blk := <- pow.bc.BlockPool().BlockUpdateCh():
+			case blk := <- pow.bc.BlockPool().BlockReceivedCh():
 				logger.Debug("PoW: Received a new block from peer!")
-				if pow.ValidateDifficulty(blk){
+				if pow.ValidateDifficulty(blk.Block){
 					logger.Debug("PoW: Block has been validated!")
 					pow.rollbackBlock(newBlock)
-					newBlock = blk
+					newBlock = blk.Block
 					newblkrcved = true
 					pow.nextState = updateNewBlockState
 				}
@@ -149,7 +151,7 @@ func (pow *ProofOfWork) GetCurrentState() State {
 
 func (pow *ProofOfWork) prepareBlock() *core.Block{
 
-	parentBlock,err := pow.bc.GetLastBlock()
+	parentBlock,err := pow.bc.GetTailBlock()
 	if err!=nil {
 		logger.Error(err)
 	}
