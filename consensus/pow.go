@@ -255,7 +255,7 @@ func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender pe
 	isSuccessful := pow.bc.BlockPool().AddParentToFork(newblock)
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
-		if _, isFound := pow.bc.FindHeightInBlockchain(newblock.GetPrevHash()); isFound {
+		if pow.bc.IsInBlockchain(newblock.GetPrevHash()){
 			pow.newBlock.Rollback()
 			pow.nextState = mergeForkState
 		}else{

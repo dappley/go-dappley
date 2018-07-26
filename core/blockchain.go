@@ -11,7 +11,6 @@ import (
 
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"reflect"
 )
 
 var tipKey = []byte("1")
@@ -270,29 +269,21 @@ func (bc *Blockchain) HigherThanBlockchain(blk *Block) bool{
 	return blk.GetHeight() > bc.GetMaxHeight()
 }
 
-func (bc *Blockchain) FindHeightInBlockchain(hash Hash) (uint64, bool){
-	bci := bc.Iterator()
-	for{
-		block, err := bci.Next()
-		if err!= nil{
-			return 0, false
-		}
-		if reflect.DeepEqual(block.GetHash(), hash){
-			return block.GetHeight(), true
-		}
-		if block.GetHeight() == 0 {
-			return 0, false
-		}
-	}
-	return 0,false
+func (bc *Blockchain) IsInBlockchain(hash Hash) (bool){
+		_, err := bc.DB.Get(hash)
+	return err==nil
 }
 
 func (bc *Blockchain) MergeFork(){
 	forkParentHash := bc.BlockPool().GetForkPoolHeadBlk().GetPrevHash()
-	if _, isFound := bc.FindHeightInBlockchain(forkParentHash); isFound{
-
+	if !bc.IsInBlockchain(forkParentHash){
+		return
 	}
+	//find parent block
+	//rollback all child blocks after the parent block from tail to head
+	//add all blocks in fork from head to tail
 }
+
 
 
 

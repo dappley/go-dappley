@@ -45,7 +45,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	assert.False(t,bc.HigherThanBlockchain(blk))
 }
 
-func TestBlockchain_FindHeightInBlockchain(t *testing.T) {
+func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
@@ -57,10 +57,9 @@ func TestBlockchain_FindHeightInBlockchain(t *testing.T) {
 	blk.height = 1
 	bc.UpdateNewBlock(blk)
 
-	height, isFound := bc.FindHeightInBlockchain([]byte("hash1"))
-	assert.Equal(t,blk.height,height)
+	isFound := bc.IsInBlockchain([]byte("hash1"))
 	assert.True(t,isFound)
 
-	_, isFound = bc.FindHeightInBlockchain([]byte("hash2"))
+	isFound = bc.IsInBlockchain([]byte("hash2"))
 	assert.False(t,isFound)
 }
