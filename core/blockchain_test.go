@@ -18,3 +18,49 @@ func TestCreateBlockchain(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, blk.GetPrevHash())
 }
+
+func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc,err := CreateBlockchain(addr, s)
+	assert.Nil(t, err)
+
+	blk = GenerateMockBlock()
+	blk.height = 1
+	assert.True(t,bc.HigherThanBlockchain(blk))
+}
+
+func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc,err := CreateBlockchain(addr, s)
+	assert.Nil(t, err)
+
+	blk = GenerateMockBlock()
+	blk.height = 1
+	bc.UpdateNewBlock(blk)
+
+	assert.False(t,bc.HigherThanBlockchain(blk))
+}
+
+func TestBlockchain_FindHeightInBlockchain(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc,err := CreateBlockchain(addr, s)
+	assert.Nil(t, err)
+
+	blk = GenerateMockBlock()
+	blk.SetHash([]byte("hash1"))
+	blk.height = 1
+	bc.UpdateNewBlock(blk)
+
+	height, isFound := bc.FindHeightInBlockchain([]byte("hash1"))
+	assert.Equal(t,blk.height,height)
+	assert.True(t,isFound)
+
+	_, isFound = bc.FindHeightInBlockchain([]byte("hash2"))
+	assert.False(t,isFound)
+}

@@ -79,7 +79,9 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	//start a miner
-	miner := NewMiner(NewProofOfWork(bc, wallet1.GetAddress().Address))
+	pow:= NewProofOfWork()
+	pow.Setup(bc, wallet1.GetAddress().Address)
+	miner := NewMiner(pow)
 	miner.Start()
 	
 	//Make sure there are blocks have been mined
@@ -121,7 +123,9 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//start a miner
-	miner := NewMiner(NewProofOfWork(bc, cbWallet.GetAddress().Address))
+	pow := NewProofOfWork()
+	pow.Setup(bc, cbWallet.GetAddress().Address)
+	miner := NewMiner(pow)
 	miner.Start()
 
 	//Make sure at least 5 blocks mined
@@ -176,7 +180,9 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	core.GetTxnPoolInstance().Push(tx)
 
 	//start a miner
-	miner := NewMiner(NewProofOfWork(bc, wallet1.GetAddress().Address))
+	pow := NewProofOfWork()
+	pow.Setup(bc, wallet1.GetAddress().Address)
+	miner := NewMiner(pow)
 	miner.Start()
 
 	//Make sure there are blocks have been mined

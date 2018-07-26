@@ -16,6 +16,7 @@ type Hash []byte
 type Consensus interface{
 	ValidateDifficulty(*Block) bool
 	Start()
+	Setup(*Blockchain, string)
 	Stop()
 }
 

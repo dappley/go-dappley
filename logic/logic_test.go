@@ -183,7 +183,9 @@ func TestSend(t *testing.T) {
 	//Send 5 coins from wallet1 to wallet2
 	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
 	assert.Nil(t, err)
-	miner := consensus.NewMiner(consensus.NewProofOfWork(b,addr1.Address))
+	pow := consensus.NewProofOfWork()
+	pow.Setup(b,addr1.Address)
+	miner := consensus.NewMiner(pow)
 
 	go miner.Start()
 	time.Sleep(3 * time.Second)
@@ -355,7 +357,8 @@ func TestSyncBlocks(t *testing.T){
 		assert.Nil(t, err)
 		bcs = append(bcs, bc)
 
-		pow := consensus.NewProofOfWork(bcs[i],addr.Address)
+		pow := consensus.NewProofOfWork()
+		pow.Setup(bcs[i],addr.Address)
 		pow.SetTargetBit(16)
 		pow.GetNode().Start(testport+i)
 

@@ -27,6 +27,7 @@ import (
 	"time"
 	"github.com/dappley/go-dappley/client"
 	"github.com/libp2p/go-libp2p-peer"
+	"github.com/sirupsen/logrus"
 )
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
@@ -37,7 +38,8 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 	)
 	defer bc.DB.Close()
 	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,cbAddr.Address)
+	pow := NewProofOfWork()
+	pow.Setup(bc,cbAddr.Address)
 
 	//create a block that has a hash value larger than the target
 	blk := core.GenerateMockBlock()
@@ -64,7 +66,8 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	)
 	defer bc.DB.Close()
 	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,cbAddr.Address)
+	pow := NewProofOfWork()
+	pow.Setup(bc,cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -95,6 +98,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 }
 
 func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
+	logrus.SetLevel(logrus.WarnLevel)
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
 	bc,err := core.CreateBlockchain(
 		cbAddr,
@@ -102,7 +106,8 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 	)
 	defer bc.DB.Close()
 	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,cbAddr.Address)
+	pow := NewProofOfWork()
+	pow.Setup(bc,cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -133,11 +138,12 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 			}
 		}
 
-	//start mining
-	pow.Start()
-	time.Sleep(time.Second)
+
 	//push the prepared block to block pool
 	bc.BlockPool().Push(newBlock,peer.ID("1"))
+
+	//start mining
+	pow.Start()
 	//the pow loop should stop current mining and go to updateNewBlockState. Wait until that happens
 	loop1:
 	for {
@@ -176,7 +182,8 @@ func TestProofOfWork_rollbackBlock(t *testing.T){
 	)
 	defer bc.DB.Close()
 	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,wallet1.GetAddress().Address)
+	pow := NewProofOfWork()
+	pow.Setup(bc,wallet1.GetAddress().Address)
 
 	//mock two transactions and push them to transaction pool
 	tx, err := core.NewUTXOTransaction(
@@ -217,7 +224,8 @@ func TestProofOfWork_verifyNonce(t *testing.T){
 	)
 	defer bc.DB.Close()
 	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,cbAddr.Address)
+	pow := NewProofOfWork()
+	pow.Setup(bc,cbAddr.Address)
 
 	//prepare a block with correct nonce value
 	newBlock := pow.prepareBlock()
@@ -254,7 +262,8 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 	)
 	defer bc.DB.Close()
 	assert.Nil(t,err)
-	pow := NewProofOfWork(bc,wallet1.GetAddress().Address)
+	pow := NewProofOfWork()
+	pow.Setup(bc,wallet1.GetAddress().Address)
 
 	//mock two transactions and push them to transaction pool
 	//the first transaction is a valid transaction
@@ -282,6 +291,7 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 	//the remaining transaction should be the first one (the valid transaction)
 	assert.Equal(t, tx1, txPool.Pop())
 }
+
 
 /*func TestProofOfWork_testMiningSpeed(t *testing.T){
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}

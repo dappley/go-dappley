@@ -61,7 +61,9 @@ func main() {
 	}
 
 	waitGroup.Add(1)
-	miner := consensus.NewMiner(consensus.NewProofOfWork(bc, addr))
+	pow := consensus.NewProofOfWork()
+	pow.Setup(bc, addr)
+	miner := consensus.NewMiner(pow)
 	go func() {
 		miner.Start()
 		waitGroup.Done()

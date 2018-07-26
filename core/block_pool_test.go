@@ -29,7 +29,8 @@ func TestBlockPool_AddParentToForkPoolWhenEmpty(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	bp.AddParentToForkPool(blk1)
 
@@ -43,7 +44,8 @@ func TestBlockPool_AddParentToForkPool(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)
@@ -59,7 +61,8 @@ func TestBlockPool_AddTailToForkPoolWhenEmpty(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	bp.AddTailToForkPool(blk1)
 
@@ -73,7 +76,8 @@ func TestBlockPool_AddTailToForkPool(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)
@@ -89,7 +93,8 @@ func TestBlockPool_ForkPoolLen(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)
@@ -105,7 +110,8 @@ func TestBlockPool_GetForkPoolHeadBlk(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)
@@ -121,7 +127,8 @@ func TestBlockPool_GetForkPoolTailBlk(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)
@@ -137,7 +144,8 @@ func TestBlockPool_IsParentOfFork(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)
@@ -159,7 +167,8 @@ func TestBlockPool_IsTailOfFork(t *testing.T) {
 	bc, err:= CreateBlockchain(addr,db)
 	assert.Nil(t, err)
 
-	bp := NewBlockPool(10, bc)
+	bp := NewBlockPool(10)
+	bp.SetBlockchain(bc)
 	blk1 := GenerateMockBlock()
 	blk2 := GenerateMockBlock()
 	bp.forkPool = append(bp.forkPool, blk1)

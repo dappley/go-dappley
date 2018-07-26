@@ -42,17 +42,20 @@ type BlockPool struct {
 	forkPool        []*Block
 }
 
-func NewBlockPool(size int, bc *Blockchain) (*BlockPool) {
+func NewBlockPool(size int) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
 		blockReceivedCh: make(chan *RcvedBlock, size),
 		blockRequestCh:  make(chan BlockRequestPars, 1),
 		exitCh:          make(chan bool, 1),
-		bc:              bc,
+		bc:              nil,
 		forkPool:        []*Block{},
 	}
-	bc.blockPool = pool
 	return pool
+}
+
+func (pool *BlockPool) SetBlockchain(bc *Blockchain){
+	pool.bc = bc
 }
 
 func (pool *BlockPool) BlockReceivedCh() chan *RcvedBlock {
@@ -91,6 +94,11 @@ func (pool *BlockPool) ResetForkPool() {
 	pool.forkPool = []*Block{}
 }
 
+func (pool *BlockPool) ReInitializeForkPool(blk *Block){
+	pool.ResetForkPool()
+	pool.forkPool = append(pool.forkPool, blk)
+}
+
 func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
 	if blk == nil {
 		return false
@@ -100,7 +108,7 @@ func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
 		return true
 	}
 
-	return VerifyParentBlock(blk, pool.GetForkPoolHeadBlk())
+	return IsParentBlock(blk, pool.GetForkPoolHeadBlk())
 }
 
 func (pool *BlockPool) IsTailOfFork(blk *Block) bool{
@@ -112,11 +120,48 @@ func (pool *BlockPool) IsTailOfFork(blk *Block) bool{
 		return true
 	}
 
-	return VerifyParentBlock(pool.GetForkPoolTailBlk(), blk)
+	return IsParentBlock(pool.GetForkPoolTailBlk(), blk)
 }
 
 func (pool *BlockPool) AddTailToForkPool(blk *Block){
 	pool.forkPool = append([]*Block{blk}, pool.forkPool...)
+}
+
+func (pool *BlockPool) AddTailToFork(blk *Block) bool{
+
+	isTail := pool.IsTailOfFork(blk)
+	if isTail{
+		//only update if the block is higher than the current blockchain
+		if pool.bc.HigherThanBlockchain(blk) {
+			pool.AddTailToForkPool(blk)
+		}else{
+			//if the fork's max height is less than the blockchain, delete the fork
+			pool.ResetForkPool()
+		}
+	}
+	return isTail
+
+}
+
+//returns if the operation is successful
+func (pool *BlockPool) AddParentToFork(blk *Block) bool{
+
+	isParent := pool.IsParentOfFork(blk)
+	if isParent{
+		//check if fork's max height is still higher than the blockchain
+		if pool.GetForkPoolTailBlk().GetHeight() > pool.bc.GetMaxHeight() {
+			pool.AddParentToForkPool(blk)
+		}else{
+			//if the fork's max height is less than the blockchain, delete the fork
+			pool.ResetForkPool()
+		}
+	}
+	return isParent
+}
+
+
+func (pool *BlockPool) IsHigherThanFork(block *Block) bool{
+	return 	block.GetHeight() > pool.GetForkPoolTailBlk().GetHeight()
 }
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {
@@ -137,6 +182,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	pool.blockReceivedCh <- &RcvedBlock{block,pid}
 }
 
+//TODO: RequestChannel should be in PoW.go
 func (pool *BlockPool) RequestBlock(hash Hash, pid peer.ID){
 	pool.blockRequestCh <- BlockRequestPars{hash, pid}
 }

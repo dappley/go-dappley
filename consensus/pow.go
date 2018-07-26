@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
+	"github.com/libp2p/go-libp2p-peer"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -39,6 +40,7 @@ const (
 	prepareBlockState   State = iota
 	mineBlockState
 	updateNewBlockState
+	mergeForkState
 )
 
 type ProofOfWork struct {
@@ -48,32 +50,111 @@ type ProofOfWork struct {
 	nextState State
 	cbAddr    string
 	node      *network.Node
+	newBlock  *core.Block
+	newBlkRcvd bool
+	nonce	   int64
 }
 
-type stateFn func(int64, *core.Block) stateFn
-
-func NewProofOfWork(bc *core.Blockchain, cbAddr string) *ProofOfWork{
+func NewProofOfWork() *ProofOfWork{
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
 	p := &ProofOfWork{
 		target: 		target,
 		exitCh: 		make(chan bool, 1),
-		bc:     		bc,
+		bc:     		nil,
 		nextState:		prepareBlockState,
-		cbAddr: 		cbAddr,
-		node: 			network.NewNode(bc),
+		cbAddr: 		"",
+		node: 			nil,
+		newBlock:		nil,
+		newBlkRcvd:		false,
+		nonce:			0,
 	}
 	return p
+}
+
+func (pow *ProofOfWork) Setup(bc *core.Blockchain, cbAddr string){
+	pow.bc = bc
+	pow.cbAddr = cbAddr
+	pow.node = network.NewNode(bc)
 }
 
 func (pow *ProofOfWork) GetNode() *network.Node{
 	return pow.node
 }
 
+func (pow *ProofOfWork) GetCurrentState() State {
+	return pow.nextState
+}
+
 func (pow *ProofOfWork) SetTargetBit(bit int){
 	target := big.NewInt(1)
 	pow.target = target.Lsh(target, uint(256-bit))
+}
+
+func (pow *ProofOfWork) Start() {
+	go func() {
+		logger.Info("PoW started...")
+		pow.nextState = prepareBlockState
+		for {
+			select {
+			case rcvedblk := <- pow.bc.BlockPool().BlockReceivedCh():
+				pow.handleRcvdBlock(rcvedblk.Block, rcvedblk.Pid)
+			case <-pow.exitCh:
+				logger.Info("PoW stopped...")
+				return
+			default:
+				pow.runNextState()
+			}
+		}
+	}()
+}
+
+func (pow *ProofOfWork) Stop() {
+	pow.exitCh <- true
+}
+
+func (pow *ProofOfWork) runNextState(){
+	switch pow.nextState {
+	case prepareBlockState:
+		pow.newBlock = pow.prepareBlock()
+		pow.nextState = mineBlockState
+	case mineBlockState:
+		if pow.nonce < maxNonce {
+			if ok := pow.mineBlock(); ok {
+				pow.nextState = updateNewBlockState
+			}
+		}else{
+			pow.nextState = prepareBlockState
+		}
+	case updateNewBlockState:
+		pow.updateNewBlock()
+		pow.nextState = mergeForkState
+	case mergeForkState:
+		pow.checkAndAddForkToBlockchain()
+		pow.nextState = prepareBlockState
+	}
+}
+
+
+func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
+	logger.Debug("PoW: Received a new block from peer!")
+	if pow.ValidateDifficulty(blk){
+		logger.Debug("PoW: Block difficulty has been validated!")
+		tailBlock,err := pow.bc.GetTailBlock()
+		if err != nil {
+			logger.Warn("PoW: Get Tail Block failed! Err:", err)
+		}
+		if core.IsParentBlock(tailBlock, blk){
+			pow.rollbackBlock(pow.newBlock)
+			pow.newBlock = blk
+			pow.newBlkRcvd = true
+			pow.nextState = updateNewBlockState
+		}else{
+			pow.updateFork(blk, sender)
+			//pow.rollbackBlock(pow.newBlock)
+		}
+	}
 }
 
 func (pow *ProofOfWork) ValidateDifficulty(blk *core.Block) bool {
@@ -87,70 +168,15 @@ func (pow *ProofOfWork) ValidateDifficulty(blk *core.Block) bool {
 	return isValid
 }
 
-func (pow *ProofOfWork) Stop() {
-	pow.exitCh <- true
-}
-
-func (pow *ProofOfWork) Start() {
-	go func() {
-		var newBlock *core.Block
-		nonce := int64(0)
-		logger.Info("PoW started...")
-		newblkrcved := false
-		pow.nextState = prepareBlockState
-		for {
-			select {
-			case blk := <- pow.bc.BlockPool().BlockReceivedCh():
-				logger.Debug("PoW: Received a new block from peer!")
-				if pow.ValidateDifficulty(blk.Block){
-					logger.Debug("PoW: Block has been validated!")
-					pow.rollbackBlock(newBlock)
-					newBlock = blk.Block
-					newblkrcved = true
-					pow.nextState = updateNewBlockState
-				}
-			case <-pow.exitCh:
-				logger.Info("PoW stopped...")
-				return
-			default:
-				switch pow.nextState {
-				case prepareBlockState:
-					newBlock = pow.prepareBlock()
-					nonce = 0
-					pow.nextState = mineBlockState
-				case mineBlockState:
-					if nonce < maxNonce {
-						if ok := pow.mineBlock(nonce, newBlock); ok {
-							pow.nextState = updateNewBlockState
-						} else {
-							nonce++
-						}
-					}else{
-						pow.nextState = prepareBlockState
-					}
-				case updateNewBlockState:
-					pow.updateNewBlock(newBlock,!newblkrcved)
-					newblkrcved = false
-					pow.nextState = prepareBlockState
-				}
-			}
+//When a block mining process is interrupted, roll back the block and
+//return all transactions to the transaction pool
+func (pow *ProofOfWork) rollbackBlock(blk *core.Block){
+	txnPool := core.GetTxnPoolInstance()
+	for _,tx := range blk.GetTransactions(){
+		if !tx.IsCoinbase() {
+			txnPool.Push(*tx)
 		}
-	}()
-}
-
-
-//returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
-func (pow *ProofOfWork) mineBlock(nonce int64, newBlock *core.Block) bool{
-		hash, ok := pow.verifyNonce(nonce, newBlock)
-		if ok {
-			newBlock.SetHash(hash)
-			newBlock.SetNonce(nonce)
-		}
-		return ok
-}
-
-func (pow *ProofOfWork) GetCurrentState() State {
-	return pow.nextState
+	}
 }
 
 func (pow *ProofOfWork) prepareBlock() *core.Block{
@@ -168,8 +194,21 @@ func (pow *ProofOfWork) prepareBlock() *core.Block{
 	cbtx := core.NewCoinbaseTX(pow.cbAddr, "")
 	txs = append(txs, &cbtx)
 
+	pow.nonce = 0
 	//prepare the new block (without the correct nonce value)
 	return core.NewBlock(txs, parentBlock)
+}
+
+//returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
+func (pow *ProofOfWork) mineBlock() bool{
+		hash, ok := pow.verifyNonce(pow.nonce, pow.newBlock)
+		if ok {
+			pow.newBlock.SetHash(hash)
+			pow.newBlock.SetNonce(pow.nonce)
+		}else{
+			pow.nonce ++
+		}
+		return ok
 }
 
 func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool){
@@ -182,14 +221,15 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 	return hash, hashInt.Cmp(pow.target) == -1
 }
 
-func (pow *ProofOfWork) updateNewBlock(blk *core.Block, isMinted bool){
-	pow.bc.UpdateNewBlock(blk)
-	if isMinted {
+func (pow *ProofOfWork) updateNewBlock(){
+	pow.bc.UpdateNewBlock(pow.newBlock)
+	if !pow.newBlkRcvd {
 		logger.Debug("PoW: Minted a new block")
-		pow.broadcastNewBlock(blk)
+		pow.broadcastNewBlock(pow.newBlock)
 	}else{
 		logger.Debug("PoW: Add a rcved block to blockchain")
 	}
+	pow.newBlkRcvd = false
 }
 
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
@@ -210,13 +250,61 @@ func (pow *ProofOfWork) verifyTransactions() {
 	}
 }
 
-//When a block mining process is interrupted, roll back the block and
-//return all transactions to the transaction pool
-func (pow *ProofOfWork) rollbackBlock(blk *core.Block){
-	txnPool := core.GetTxnPoolInstance()
-	for _,tx := range blk.GetTransactions(){
-		if !tx.IsCoinbase() {
-			txnPool.Push(*tx)
+func (pow *ProofOfWork) updateFork(block *core.Block, pid peer.ID){
+	if pow.attemptToAddTailToFork(block){return}
+	if pow.attemptToAddParentToFork(block, pid){return}
+	if pow.attempToStartNewFork(block, pid){return}
+}
+
+func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
+	return pow.bc.BlockPool().AddTailToFork(newblock)
+}
+
+//returns true if successful
+func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender peer.ID) bool{
+
+	isSuccessful := pow.bc.BlockPool().AddParentToFork(newblock)
+	if isSuccessful{
+		//if the parent of the current fork is found in blockchain, merge the fork
+		if _, isFound := pow.bc.FindHeightInBlockchain(newblock.GetPrevHash()); isFound {
+			pow.rollbackBlock(pow.newBlock)
+			pow.nextState = mergeForkState
+		}else{
+			//if the fork could not be added to the current blockchain, ask for the head block's parent
+			pow.RequestBlock(newblock.GetPrevHash(), sender)
 		}
 	}
+	return isSuccessful
+}
+
+func (pow *ProofOfWork) attempToStartNewFork(newblock *core.Block, sender peer.ID) bool{
+	startNewFork := pow.bc.BlockPool().IsHigherThanFork(newblock)
+	if startNewFork{
+		pow.bc.BlockPool().ReInitializeForkPool(newblock)
+		pow.RequestBlock(newblock.GetPrevHash(),sender)
+	}
+	return startNewFork
+}
+
+//returns the height of the parent block
+func (pow *ProofOfWork) findParentBlockInBlockchain() int{
+	//TODO
+	return 0
+}
+
+func AddForkToBlockchain(bc *core.Blockchain){
+	//TODO
+}
+
+func (pow *ProofOfWork)checkAndAddForkToBlockchain() bool{
+	//If the returned height is equal or larger than 0, it means the parent is found in local blockchain
+	if pow.findParentBlockInBlockchain() >= 0 {
+		AddForkToBlockchain(pow.bc)
+		return true
+	}
+	return false
+}
+
+func (pow *ProofOfWork) RequestBlock(hash core.Hash, pid peer.ID){
+	pow.bc.BlockPool().RequestBlock(hash, pid)
 }

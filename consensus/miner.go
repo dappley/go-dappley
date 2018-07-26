@@ -33,6 +33,11 @@ func NewMiner(consensus core.Consensus) *Miner {
 	}
 }
 
+func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string){
+	miner.consensus.Setup(bc,cbAddr)
+}
+
+
 //start mining
 func (miner *Miner) Start() {
 	miner.consensus.Start()

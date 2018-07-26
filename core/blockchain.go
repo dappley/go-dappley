@@ -11,6 +11,7 @@ import (
 
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
+	"reflect"
 )
 
 var tipKey = []byte("1")
@@ -232,8 +233,8 @@ func (bc *Blockchain) String() string {
 }
 
 func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
-	bc := &Blockchain{current, db,nil}
-	bc.blockPool = NewBlockPool(BlockPoolMaxSize, bc)
+	bc := &Blockchain{current, db,NewBlockPool(BlockPoolMaxSize)}
+	bc.blockPool.SetBlockchain(bc)
 	bc.blockPool.Start()
 	return bc
 }
@@ -257,11 +258,39 @@ func (bc *Blockchain) GetTailBlock() (*Block, error){
 	return Deserialize(v),nil
 }
 
-func (bc *Blockchain) GetMaxHeight() int{
+func (bc *Blockchain) GetMaxHeight() uint64{
 	blk, error:= bc.GetTailBlock()
 	if error != nil{
-		return -1
+		return 0
 	}
-	return int(blk.GetHeight())
-
+	return blk.GetHeight()
 }
+
+func (bc *Blockchain) HigherThanBlockchain(blk *Block) bool{
+	return blk.GetHeight() > bc.GetMaxHeight()
+}
+
+func (bc *Blockchain) FindHeightInBlockchain(hash Hash) (uint64, bool){
+	bci := bc.Iterator()
+	for{
+		block, err := bci.Next()
+		if err!= nil{
+			return 0, false
+		}
+		if reflect.DeepEqual(block.GetHash(), hash){
+			return block.GetHeight(), true
+		}
+		if block.GetHeight() == 0 {
+			return 0, false
+		}
+	}
+	return 0,false
+}
+
+func (bc *Blockchain) MergeFork(){
+	forkParentHash := bc.BlockPool().GetForkPoolHeadBlk().GetPrevHash()
+	if _, isFound := bc.FindHeightInBlockchain(forkParentHash); isFound{
+
+	}
+}
+
