@@ -35,9 +35,9 @@ func (utxo *utxoIndex) Serialize() []byte {
 }
 
 
-func GetAddressUTXOs (address []byte, db storage.Storage) []UTXOutputStored {
+func GetAddressUTXOs (pubkey []byte, db storage.Storage) []UTXOutputStored {
 	umap := getStoredUtxoMap(db)
-	return umap[string(address)]
+	return umap[string(pubkey)]
 }
 
 func getStoredUtxoMap (db storage.Storage) utxoIndex {
@@ -51,16 +51,29 @@ func getStoredUtxoMap (db storage.Storage) utxoIndex {
 	return *umap
 }
 
+func GetStoredUtxoMap (db storage.Storage) utxoIndex {
+	res, err := db.Get([]byte(UtxoMapKey))
+
+	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
+		res1 := utxoIndex{}
+		return res1
+	}
+	umap := DeserializeUTXO(res)
+	return *umap
+}
+
+
 func initIndex() utxoIndex{
 	ins := map[string][]UTXOutputStored{}
 	return  ins
 }
 
 func UpdateUtxoIndexAfterNewBlock(blk Block, db storage.Storage){
-	//add new outputs
-	AddSpendableOutputsAfterNewBlock(blk, db)
 	//remove expended outputs
 	ConsumeSpendableOutputsAfterNewBlock(blk, db)
+	//add new outputs
+	AddSpendableOutputsAfterNewBlock(blk, db)
+
 
 }
 func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
@@ -80,16 +93,20 @@ func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
 }
 
 func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
-	txoIndex := getStoredUtxoMap(db)
+	utxoIndex := getStoredUtxoMap(db)
 	for _, txns := range blk.transactions{
 		for _,vin := range txns.Vin{
 			spentOutputTxnId, txnIndex, pubKey := vin.Txid, vin.Vout, string(vin.PubKey)
-			userUtxos := txoIndex[pubKey]
-			for index, userUtxo := range userUtxos{
-				if(userUtxo.TxIndex == txnIndex && bytes.Compare(userUtxo.Txid,spentOutputTxnId) ==0){
-					userUtxos = append(userUtxos[:index], userUtxos[index+1:]...)
+			userUtxos := utxoIndex[pubKey]
+			if(len(userUtxos)) > 0 {
+				for index, userUtxo := range userUtxos{
+					if(userUtxo.TxIndex == txnIndex && bytes.Compare(userUtxo.Txid,spentOutputTxnId) ==0){
+						userUtxos = append(userUtxos[:index], userUtxos[index+1:]...)
+					}
 				}
+				utxoIndex[pubKey] = userUtxos
 			}
 		}
 	}
+	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
 }

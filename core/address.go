@@ -11,6 +11,7 @@ type Address struct {
 	Address string
 }
 
+
 func NewAddress(addressString string) Address {
 	address := Address{}
 	address.Address = addressString

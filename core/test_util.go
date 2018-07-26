@@ -34,11 +34,11 @@ func MockTransaction() *Transaction{
 func MockTxInputs() []TXInput {
 	return []TXInput{
 		{util.GenerateRandomAoB(2),
-			10,
+			6,
 			util.GenerateRandomAoB(2),
 			util.GenerateRandomAoB(2)},
 		{util.GenerateRandomAoB(2),
-			5,
+			2,
 			util.GenerateRandomAoB(2),
 			util.GenerateRandomAoB(2)},
 	}
@@ -46,8 +46,8 @@ func MockTxInputs() []TXInput {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{1, util.GenerateRandomAoB(2)},
-		{2, util.GenerateRandomAoB(2)},
+		{5, util.GenerateRandomAoB(2)},
+		{7, util.GenerateRandomAoB(2)},
 	}
 }
 

@@ -13,14 +13,14 @@ func getAoB(length int64) []byte {
 	return util.GenerateRandomAoB(length)
 }
 
-func generateFakeTxInputs() []TXInput {
+func GenerateFakeTxInputs() []TXInput {
 	return []TXInput{
 		{getAoB(2), 10, getAoB(2), getAoB(2)},
 		{getAoB(2), 5, getAoB(2), getAoB(2)},
 	}
 }
 
-func generateFakeTxOutputs() []TXOutput {
+func GenerateFakeTxOutputs() []TXOutput {
 	return []TXOutput{
 		{1, getAoB(2)},
 		{2, getAoB(2)},
@@ -30,8 +30,8 @@ func generateFakeTxOutputs() []TXOutput {
 func TestTransaction_Proto(t *testing.T) {
 	t1 := Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  generateFakeTxInputs(),
-		Vout: generateFakeTxOutputs(),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
 		Tip:  5,
 	}
 
