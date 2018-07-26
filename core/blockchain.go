@@ -294,3 +294,6 @@ func (bc *Blockchain) MergeFork(){
 	}
 }
 
+
+
+

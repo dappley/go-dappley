@@ -263,3 +263,12 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool{
 func IsParentBlock(parentBlk, childBlk *Block) bool{
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
+
+func (b *Block) Rollback(){
+	txnPool := GetTxnPoolInstance()
+	for _,tx := range b.GetTransactions(){
+		if !tx.IsCoinbase() {
+			txnPool.Push(*tx)
+		}
+	}
+}

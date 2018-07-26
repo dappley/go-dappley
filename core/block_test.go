@@ -132,3 +132,14 @@ func TestBlock_VerifyHash(t *testing.T) {
 	//then this should be correct
 	assert.True(t, b1.VerifyHash())
 }
+
+
+func TestBlock_Rollback(t *testing.T) {
+	b := GenerateMockBlock()
+	tx := MockTransaction()
+	b.transactions = []*Transaction{tx}
+
+	b.Rollback()
+	txnPool := GetTxnPoolInstance()
+	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
+}

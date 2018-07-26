@@ -146,13 +146,12 @@ func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
 			logger.Warn("PoW: Get Tail Block failed! Err:", err)
 		}
 		if core.IsParentBlock(tailBlock, blk){
-			pow.rollbackBlock(pow.newBlock)
+			pow.newBlock.Rollback()
 			pow.newBlock = blk
 			pow.newBlkRcvd = true
 			pow.nextState = updateNewBlockState
 		}else{
 			pow.updateFork(blk, sender)
-			//pow.rollbackBlock(pow.newBlock)
 		}
 	}
 }
@@ -168,16 +167,6 @@ func (pow *ProofOfWork) ValidateDifficulty(blk *core.Block) bool {
 	return isValid
 }
 
-//When a block mining process is interrupted, roll back the block and
-//return all transactions to the transaction pool
-func (pow *ProofOfWork) rollbackBlock(blk *core.Block){
-	txnPool := core.GetTxnPoolInstance()
-	for _,tx := range blk.GetTransactions(){
-		if !tx.IsCoinbase() {
-			txnPool.Push(*tx)
-		}
-	}
-}
 
 func (pow *ProofOfWork) prepareBlock() *core.Block{
 
@@ -267,7 +256,7 @@ func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender pe
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if _, isFound := pow.bc.FindHeightInBlockchain(newblock.GetPrevHash()); isFound {
-			pow.rollbackBlock(pow.newBlock)
+			pow.newBlock.Rollback()
 			pow.nextState = mergeForkState
 		}else{
 			//if the fork could not be added to the current blockchain, ask for the head block's parent
