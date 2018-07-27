@@ -16,7 +16,7 @@ import (
 const(
 	SyncBlock 		= "SyncBlock"
 	SyncPeerList 	= "SyncPeerList"
-	RequestBlock	= "RequestBlock"
+	RequestBlock	= "requestBlock"
 )
 
 var(

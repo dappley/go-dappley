@@ -99,8 +99,8 @@ func (pow *ProofOfWork) Start() {
 		pow.nextState = prepareBlockState
 		for {
 			select {
-			case rcvedblk := <- pow.bc.BlockPool().BlockReceivedCh():
-				pow.handleRcvdBlock(rcvedblk.Block, rcvedblk.Pid)
+			case rcvedBlk := <- pow.bc.BlockPool().BlockReceivedCh():
+				pow.handleRcvdBlock(rcvedBlk.Block, rcvedBlk.Pid)
 			case <-pow.exitCh:
 				logger.Info("PoW stopped...")
 				return
@@ -139,7 +139,7 @@ func (pow *ProofOfWork) runNextState(){
 
 
 func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
-	logger.Debug("PoW: Received a new block. id:", pow.GetPeerMultiAddr())
+	logger.Debug("PoW: Received a new block. id:", pow.getPeerMultiAddr())
 	if pow.ValidateDifficulty(blk){
 		tailBlock,err := pow.bc.GetTailBlock()
 		if err != nil {
@@ -154,7 +154,7 @@ func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
 			pow.updateFork(blk, sender)
 		}
 	}else{
-		logger.Debug("PoW: Block Difficulty Invalid. id:", pow.GetPeerMultiAddr())
+		logger.Debug("PoW: Block Difficulty Invalid. id:", pow.getPeerMultiAddr())
 	}
 }
 
@@ -215,15 +215,15 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 func (pow *ProofOfWork) updateNewBlock(){
 	pow.bc.UpdateNewBlock(pow.newBlock)
 	if !pow.newBlkRcvd {
-		logger.Debug("PoW: Minted a new block. peer:", pow.GetPeerMultiAddr()," height:", pow.newBlock.GetHeight())
+		logger.Debug("PoW: Minted a new block. peer:", pow.getPeerMultiAddr()," height:", pow.newBlock.GetHeight())
 		pow.broadcastNewBlock(pow.newBlock)
 	}else{
-		logger.Debug("PoW: Add a rcved block to blockchain", pow.GetPeerMultiAddr())
+		logger.Debug("PoW: Add a rcved block to blockchain", pow.getPeerMultiAddr())
 	}
 	pow.newBlkRcvd = false
 }
 
-func (pow *ProofOfWork) GetPeerMultiAddr() multiaddr.Multiaddr{
+func (pow *ProofOfWork) getPeerMultiAddr() multiaddr.Multiaddr{
 	if pow.GetNode() != nil{
 		return pow.GetNode().GetPeerMultiaddr()
 	}
@@ -256,13 +256,13 @@ func (pow *ProofOfWork) updateFork(block *core.Block, pid peer.ID){
 }
 
 func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
-	return pow.bc.BlockPool().AddTailToFork(newblock)
+	return pow.bc.BlockPool().UpdateForkFromTail(newblock)
 }
 
 //returns true if successful
 func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender peer.ID) bool{
 
-	isSuccessful := pow.bc.BlockPool().AddParentToFork(newblock)
+	isSuccessful := pow.bc.BlockPool().UpdateForkFromHead(newblock)
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if pow.bc.IsInBlockchain(newblock.GetPrevHash()){
@@ -270,7 +270,7 @@ func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender pe
 			pow.nextState = mergeForkState
 		}else{
 			//if the fork could not be added to the current blockchain, ask for the head block's parent
-			pow.RequestBlock(newblock.GetPrevHash(), sender)
+			pow.requestBlock(newblock.GetPrevHash(), sender)
 		}
 	}
 	return isSuccessful
@@ -281,11 +281,11 @@ func (pow *ProofOfWork) attempToStartNewFork(newblock *core.Block, sender peer.I
 					pow.bc.HigherThanBlockchain(newblock)
 	if startNewFork{
 		pow.bc.BlockPool().ReInitializeForkPool(newblock)
-		pow.RequestBlock(newblock.GetPrevHash(),sender)
+		pow.requestBlock(newblock.GetPrevHash(),sender)
 	}
 	return startNewFork
 }
 
-func (pow *ProofOfWork) RequestBlock(hash core.Hash, pid peer.ID){
+func (pow *ProofOfWork) requestBlock(hash core.Hash, pid peer.ID){
 	pow.bc.BlockPool().RequestBlock(hash, pid)
 }

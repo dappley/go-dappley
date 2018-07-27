@@ -235,7 +235,6 @@ func (bc *Blockchain) String() string {
 func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
 	bc := &Blockchain{current, db,NewBlockPool(BlockPoolMaxSize)}
 	bc.blockPool.SetBlockchain(bc)
-	bc.blockPool.Start()
 	return bc
 }
 
