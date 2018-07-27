@@ -271,26 +271,33 @@ func (bc *Blockchain) HigherThanBlockchain(blk *Block) bool{
 }
 
 func (bc *Blockchain) IsInBlockchain(hash Hash) (bool){
-		_, err := bc.GetBlockByHash(hash)
+	_, err := bc.GetBlockByHash(hash)
 	return err==nil
 }
 
 func (bc *Blockchain) MergeFork(){
 	//find parent block
-	forkParentHash := bc.BlockPool().GetForkPoolHeadBlk().GetPrevHash()
+	forkHeadBlock := bc.BlockPool().GetForkPoolHeadBlk()
+	if forkHeadBlock == nil {
+		return
+	}
+	forkParentHash := forkHeadBlock.GetPrevHash()
 	if !bc.IsInBlockchain(forkParentHash){
 		return
 	}
 	//rollback all child blocks after the parent block from tail to head
 	bc.RollbackToABlock(forkParentHash)
+
 	//add all blocks in fork from head to tail
-	bc.AddForkToBlockchain()
+	bc.ConcatenateForkToBlockchain()
 }
 
-func (bc *Blockchain) AddForkToBlockchain(){
-	for _,blk := range bc.BlockPool().forkPool {
-		bc.UpdateNewBlock(blk)
-		//TODO: Remove transactions in current transaction pool
+func (bc *Blockchain) ConcatenateForkToBlockchain(){
+	if bc.BlockPool().ForkPoolLen() > 0 {
+		for i := bc.BlockPool().ForkPoolLen()-1; i>=0; i--{
+			bc.UpdateNewBlock(bc.BlockPool().forkPool[i])
+			//TODO: Remove transactions in current transaction pool
+		}
 	}
 }
 

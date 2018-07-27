@@ -131,7 +131,7 @@ func (pow *ProofOfWork) runNextState(){
 		pow.updateNewBlock()
 		pow.nextState = mergeForkState
 	case mergeForkState:
-		pow.checkAndAddForkToBlockchain()
+		pow.bc.MergeFork()
 		pow.nextState = prepareBlockState
 	}
 }

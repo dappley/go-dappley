@@ -38,6 +38,21 @@ func GenerateMockBlockchain(size int) *Blockchain{
 	return bc
 }
 
+//the first item is the tail of the fork
+func GenerateMockFork(size int, parent *Block) []*Block{
+	fork := []*Block{}
+	b := NewBlock(nil, parent)
+	b.SetHash(b.CalculateHash())
+	fork = append(fork, b)
+
+	for i:=1; i<size; i++{
+		b = NewBlock(nil, b)
+		b.SetHash(b.CalculateHash())
+		fork = append([]*Block{b}, fork...)
+	}
+	return fork
+}
+
 func MockTransaction() *Transaction{
 	return &Transaction{
 		ID:   util.GenerateRandomAoB(1),
