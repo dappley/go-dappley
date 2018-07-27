@@ -63,3 +63,27 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	isFound = bc.IsInBlockchain([]byte("hash2"))
 	assert.False(t,isFound)
 }
+
+func TestBlockchain_RollbackToABlock(t *testing.T) {
+	//create a mock blockchain with max height of 5
+	bc := GenerateMockBlockchain(5)
+	defer bc.DB.Close()
+
+	blk,err := bc.GetTailBlock()
+	assert.Nil(t,err)
+
+	//find the hash at height 3 (5-2)
+	for i:=0; i<2; i++{
+		blk,err = bc.GetBlockByHash(blk.GetPrevHash())
+		assert.Nil(t,err)
+	}
+
+	//rollback to height 3
+	bc.RollbackToABlock(blk.GetHash())
+
+	//the height 3 block should be the new tail block
+	newTailBlk,err := bc.GetTailBlock()
+	assert.Nil(t,err)
+	assert.Equal(t,blk.GetHash(),newTailBlk.GetHash())
+
+}

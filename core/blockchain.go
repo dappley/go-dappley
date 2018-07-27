@@ -18,7 +18,7 @@ var tipKey = []byte("1")
 const BlockPoolMaxSize = 100
 
 var(
-	ErrNotAbleToGetLastBlock 		= errors.New("ERROR: Not able to get last block in blockchain")
+	ErrBlockDoesNotExist			= errors.New("ERROR: Block does not exist in blockchain")
 	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
 	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
 )
@@ -34,6 +34,7 @@ type Blockchain struct {
 func CreateBlockchain(address Address, db storage.Storage) (*Blockchain, error) {
 	genesis := NewGenesisBlock(address.Address)
 	updateDbWithNewBlock(db, genesis)
+	db.Put(tipKey, genesis.GetHash())
 	return GetBlockchain(db)
 }
 
@@ -48,7 +49,7 @@ func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	updateDbWithNewBlock(bc.DB, newBlock)
-	bc.currentHash = newBlock.GetHash()
+	bc.SetTailBlockHash(newBlock.GetHash())
 }
 
 func (bc *Blockchain) BlockPool() *BlockPool {
@@ -242,7 +243,11 @@ func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Bloc
 func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
 	db.Put(newBlock.GetHash(), newBlock.Serialize())
 	UpdateUtxoIndexAfterNewBlock(*newBlock, db)
-	db.Put(tipKey, newBlock.GetHash())
+}
+
+func (bc *Blockchain) SetTailBlockHash(hash Hash){
+	bc.DB.Put(tipKey, hash)
+	bc.currentHash = hash
 }
 
 func (bc *Blockchain) GetTailBlock() (*Block, error){
@@ -250,16 +255,12 @@ func (bc *Blockchain) GetTailBlock() (*Block, error){
 	if err != nil {
 		return nil, ErrNotAbleToGetLastBlockHash
 	}
-	v, err:=bc.DB.Get(hash)
-	if err != nil {
-		return nil, ErrNotAbleToGetLastBlock
-	}
-	return Deserialize(v),nil
+	return bc.GetBlockByHash(hash)
 }
 
 func (bc *Blockchain) GetMaxHeight() uint64{
-	blk, error:= bc.GetTailBlock()
-	if error != nil{
+	blk, err:= bc.GetTailBlock()
+	if err != nil{
 		return 0
 	}
 	return blk.GetHeight()
@@ -270,7 +271,7 @@ func (bc *Blockchain) HigherThanBlockchain(blk *Block) bool{
 }
 
 func (bc *Blockchain) IsInBlockchain(hash Hash) (bool){
-		_, err := bc.DB.Get(hash)
+		_, err := bc.GetBlockByHash(hash)
 	return err==nil
 }
 
@@ -282,6 +283,45 @@ func (bc *Blockchain) MergeFork(){
 	//find parent block
 	//rollback all child blocks after the parent block from tail to head
 	//add all blocks in fork from head to tail
+}
+
+//returns true if successful
+func (bc *Blockchain) RollbackToABlock(hash Hash) bool{
+
+	if !bc.IsInBlockchain(hash){
+		return false
+	}
+
+	parentBlkHash, err:= bc.GetTailHash()
+	if err!= nil {
+		return false
+	}
+
+	//keep rolling back blocks until the block with the input hash
+	loop:
+	for {
+		if bytes.Compare(parentBlkHash, hash)==0 {
+			break loop
+		}
+		blk,err := bc.GetBlockByHash(parentBlkHash)
+		if err!=nil {
+			return false
+		}
+		parentBlkHash = blk.GetPrevHash()
+		blk.Rollback()
+	}
+
+	bc.SetTailBlockHash(parentBlkHash)
+
+	return true
+}
+
+func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error){
+	v, err:=bc.DB.Get(hash)
+	if err != nil {
+		return nil, ErrBlockDoesNotExist
+	}
+	return Deserialize(v),nil
 }
 
 

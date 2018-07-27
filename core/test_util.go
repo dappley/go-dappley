@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/dappley/go-dappley/util"
 	"time"
+	"github.com/dappley/go-dappley/storage"
 )
 
 func GenerateMockBlock() *Block{
@@ -20,6 +21,21 @@ func GenerateMockBlock() *Block{
 		transactions: []*Transaction{t1},
 		height:       0,
 	}
+}
+
+func GenerateMockBlockchain(size int) *Blockchain{
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc,_ := CreateBlockchain(addr, s)
+
+	for i:=0; i<size; i++{
+		tailBlk, _ := bc.GetTailBlock()
+		b:= NewBlock([]*Transaction{MockTransaction()},tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.UpdateNewBlock(b)
+	}
+	return bc
 }
 
 func MockTransaction() *Transaction{
