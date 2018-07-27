@@ -28,6 +28,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
 	"github.com/libp2p/go-libp2p-peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -138,9 +139,8 @@ func (pow *ProofOfWork) runNextState(){
 
 
 func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
-	logger.Debug("PoW: Received a new block from peer!")
+	logger.Debug("PoW: Received a new block. id:", pow.GetPeerMultiAddr())
 	if pow.ValidateDifficulty(blk){
-		logger.Debug("PoW: Block difficulty has been validated!")
 		tailBlock,err := pow.bc.GetTailBlock()
 		if err != nil {
 			logger.Warn("PoW: Get Tail Block failed! Err:", err)
@@ -153,6 +153,8 @@ func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
 		}else{
 			pow.updateFork(blk, sender)
 		}
+	}else{
+		logger.Debug("PoW: Block Difficulty Invalid. id:", pow.GetPeerMultiAddr())
 	}
 }
 
@@ -213,12 +215,19 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 func (pow *ProofOfWork) updateNewBlock(){
 	pow.bc.UpdateNewBlock(pow.newBlock)
 	if !pow.newBlkRcvd {
-		logger.Debug("PoW: Minted a new block")
+		logger.Debug("PoW: Minted a new block. peer:", pow.GetPeerMultiAddr()," height:", pow.newBlock.GetHeight())
 		pow.broadcastNewBlock(pow.newBlock)
 	}else{
-		logger.Debug("PoW: Add a rcved block to blockchain")
+		logger.Debug("PoW: Add a rcved block to blockchain", pow.GetPeerMultiAddr())
 	}
 	pow.newBlkRcvd = false
+}
+
+func (pow *ProofOfWork) GetPeerMultiAddr() multiaddr.Multiaddr{
+	if pow.GetNode() != nil{
+		return pow.GetNode().GetPeerMultiaddr()
+	}
+	return nil
 }
 
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
@@ -243,6 +252,7 @@ func (pow *ProofOfWork) updateFork(block *core.Block, pid peer.ID){
 	if pow.attemptToAddTailToFork(block){return}
 	if pow.attemptToAddParentToFork(block, pid){return}
 	if pow.attempToStartNewFork(block, pid){return}
+	logger.Debug("PoW: Block dumped")
 }
 
 func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
@@ -267,31 +277,13 @@ func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender pe
 }
 
 func (pow *ProofOfWork) attempToStartNewFork(newblock *core.Block, sender peer.ID) bool{
-	startNewFork := pow.bc.BlockPool().IsHigherThanFork(newblock)
+	startNewFork := pow.bc.BlockPool().IsHigherThanFork(newblock) &&
+					pow.bc.HigherThanBlockchain(newblock)
 	if startNewFork{
 		pow.bc.BlockPool().ReInitializeForkPool(newblock)
 		pow.RequestBlock(newblock.GetPrevHash(),sender)
 	}
 	return startNewFork
-}
-
-//returns the height of the parent block
-func (pow *ProofOfWork) findParentBlockInBlockchain() int{
-	//TODO
-	return 0
-}
-
-func AddForkToBlockchain(bc *core.Blockchain){
-	//TODO
-}
-
-func (pow *ProofOfWork)checkAndAddForkToBlockchain() bool{
-	//If the returned height is equal or larger than 0, it means the parent is found in local blockchain
-	if pow.findParentBlockInBlockchain() >= 0 {
-		AddForkToBlockchain(pow.bc)
-		return true
-	}
-	return false
 }
 
 func (pow *ProofOfWork) RequestBlock(hash core.Hash, pid peer.ID){

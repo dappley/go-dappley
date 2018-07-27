@@ -23,7 +23,6 @@ import (
 	"os"
 	"testing"
 
-	"fmt"
 	"time"
 
 	"github.com/dappley/go-dappley/client"
@@ -166,7 +165,7 @@ func TestSend(t *testing.T) {
 	balance1, err := GetBalance(wallet1.GetAddress(), databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
-	fmt.Println(balance1)
+
 	//Create a second wallet
 	wallet2, err := CreateWallet()
 	assert.NotEmpty(t, wallet2)
@@ -178,7 +177,6 @@ func TestSend(t *testing.T) {
 	balance2, err := GetBalance(addr2, databaseInstance)
 	assert.Nil(t, err)
 	assert.Equal(t, balance2, 0)
-	fmt.Println(balance2)
 
 	//Send 5 coins from wallet1 to wallet2
 	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
@@ -420,11 +418,66 @@ func TestSyncBlocks(t *testing.T){
 		assert.Nil(t,err)
 		blk1, err := bcs[i+1].GetTailBlock()
 		assert.Nil(t,err)
-		assert.True(t, pows[i].ValidateDifficulty(blk0))
-		assert.True(t, pows[i+1].ValidateDifficulty(blk1))
 		assert.Equal(t,blk0.GetHash(),blk1.GetHash())
 	}
 
+}
+
+const testport_fork = 10200
+
+func TestForkChoice(t *testing.T){
+	logrus.SetLevel(logrus.WarnLevel)
+	var pows []*consensus.ProofOfWork
+	var bcs []*core.Blockchain
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	//wait for mining for at least "targetHeight" blocks
+	//targetHeight := uint64(4)
+	//num of nodes to be created in the test
+	numOfNodes := 2
+	for i := 0; i < numOfNodes; i++{
+		//create storage instance
+		db := storage.NewRamStorage()
+		defer db.Close()
+
+		//create blockchain instance
+		bc,err := core.CreateBlockchain(addr,db)
+		assert.Nil(t, err)
+		bcs = append(bcs, bc)
+
+		pow := consensus.NewProofOfWork()
+		pow.Setup(bcs[i],addr.Address)
+		pow.SetTargetBit(16)
+		pow.GetNode().Start(testport_fork+i)
+		pows = append(pows, pow)
+	}
+
+	//start node0 first. the next node starts mining after the previous node is at least at height 5
+	for i:=0; i < numOfNodes; i++{
+		pows[i].Start()
+		//seed node broadcasts syncpeers
+		for bcs[i].GetMaxHeight() < 5 {}
+	}
+
+	for i:=0; i < numOfNodes; i++{
+		if i != 0 {
+			pows[i].GetNode().AddStream(
+				pows[0].GetNode().GetPeerID(),
+				pows[0].GetNode().GetPeerMultiaddr(),
+			)
+		}
+		pows[0].GetNode().SyncPeers()
+	}
+
+	time.Sleep(time.Second*5)
+
+	//Check if all nodes have the same tail block
+	for i := 0; i < numOfNodes-1; i++{
+		blk0, err := bcs[i].GetTailBlock()
+		assert.Nil(t,err)
+		blk1, err := bcs[i+1].GetTailBlock()
+		assert.Nil(t,err)
+		assert.Equal(t,blk0.GetHash(),blk1.GetHash())
+	}
 }
 
 func setup() {

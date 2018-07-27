@@ -165,7 +165,12 @@ func (n *Node) GetBlocks() []*core.Block { return n.blks }
 
 func (n *Node) GetInfo() *Peer { return n.info }
 
-func (n *Node) GetPeerMultiaddr() ma.Multiaddr {return n.info.addr}
+func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
+	if n.info == nil {
+		return nil
+	}
+	return n.info.addr
+}
 
 func (n *Node) GetPeerID() peer.ID {return n.info.peerid}
 

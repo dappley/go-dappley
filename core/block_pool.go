@@ -46,7 +46,7 @@ func NewBlockPool(size int) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
 		blockReceivedCh: make(chan *RcvedBlock, size),
-		blockRequestCh:  make(chan BlockRequestPars, 1),
+		blockRequestCh:  make(chan BlockRequestPars, size),
 		exitCh:          make(chan bool, 1),
 		bc:              nil,
 		forkPool:        []*Block{},
@@ -95,6 +95,7 @@ func (pool *BlockPool) ResetForkPool() {
 }
 
 func (pool *BlockPool) ReInitializeForkPool(blk *Block){
+	logger.Debug("Fork: Re-initilaize fork with the new block")
 	pool.ResetForkPool()
 	pool.forkPool = append(pool.forkPool, blk)
 }
@@ -105,7 +106,7 @@ func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
 	}
 
 	if pool.ForkPoolLen() == 0 {
-		return true
+		return false
 	}
 
 	return IsParentBlock(blk, pool.GetForkPoolHeadBlk())
@@ -117,7 +118,7 @@ func (pool *BlockPool) IsTailOfFork(blk *Block) bool{
 	}
 
 	if pool.ForkPoolLen() == 0 {
-		return true
+		return false
 	}
 
 	return IsParentBlock(pool.GetForkPoolTailBlk(), blk)
@@ -133,9 +134,11 @@ func (pool *BlockPool) AddTailToFork(blk *Block) bool{
 	if isTail{
 		//only update if the block is higher than the current blockchain
 		if pool.bc.HigherThanBlockchain(blk) {
+			logger.Debug("Fork: Add block to tail")
 			pool.AddTailToForkPool(blk)
 		}else{
 			//if the fork's max height is less than the blockchain, delete the fork
+			logger.Debug("Fork: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -150,9 +153,11 @@ func (pool *BlockPool) AddParentToFork(blk *Block) bool{
 	if isParent{
 		//check if fork's max height is still higher than the blockchain
 		if pool.GetForkPoolTailBlk().GetHeight() > pool.bc.GetMaxHeight() {
+			logger.Debug("Fork: Add block to head")
 			pool.AddParentToForkPool(blk)
 		}else{
 			//if the fork's max height is less than the blockchain, delete the fork
+			logger.Debug("Fork: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -161,7 +166,11 @@ func (pool *BlockPool) AddParentToFork(blk *Block) bool{
 
 
 func (pool *BlockPool) IsHigherThanFork(block *Block) bool{
-	return 	block.GetHeight() > pool.GetForkPoolTailBlk().GetHeight()
+	tailBlk := pool.GetForkPoolTailBlk()
+	if tailBlk == nil {
+		return true
+	}
+	return 	block.GetHeight() > tailBlk.GetHeight()
 }
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {

@@ -265,10 +265,12 @@ func IsParentBlock(parentBlk, childBlk *Block) bool{
 }
 
 func (b *Block) Rollback(){
-	txnPool := GetTxnPoolInstance()
-	for _,tx := range b.GetTransactions(){
-		if !tx.IsCoinbase() {
-			txnPool.Push(*tx)
+	if b!= nil {
+		txnPool := GetTxnPoolInstance()
+		for _,tx := range b.GetTransactions(){
+			if !tx.IsCoinbase() {
+				txnPool.Push(*tx)
+			}
 		}
 	}
 }

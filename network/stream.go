@@ -183,13 +183,13 @@ func (s *Stream) parseData(data []byte){
 	dm.FromProto(dmpb)
 	switch(dm.GetCmd()){
 	case SyncBlock:
-		logger.Debug("Received",SyncBlock,"command from:", s.remoteAddr)
+		logger.Debug("Received ",SyncBlock," command from:", s.remoteAddr)
 		s.node.addBlockToPool(dm.GetData(),s.peerID)
 	case SyncPeerList:
-		logger.Debug("Received",SyncPeerList,"command from:", s.remoteAddr)
+		logger.Debug("Received ",SyncPeerList," command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
 	case RequestBlock:
-		logger.Debug("Received",RequestBlock,"command from:", s.remoteAddr)
+		logger.Debug("Received ",RequestBlock," command from:", s.remoteAddr)
 		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)

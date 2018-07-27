@@ -276,6 +276,7 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) (bool){
 }
 
 func (bc *Blockchain) MergeFork(){
+
 	//find parent block
 	forkHeadBlock := bc.BlockPool().GetForkPoolHeadBlk()
 	if forkHeadBlock == nil {
@@ -285,11 +286,14 @@ func (bc *Blockchain) MergeFork(){
 	if !bc.IsInBlockchain(forkParentHash){
 		return
 	}
+
 	//rollback all child blocks after the parent block from tail to head
 	bc.RollbackToABlock(forkParentHash)
 
 	//add all blocks in fork from head to tail
 	bc.ConcatenateForkToBlockchain()
+
+	logger.Debug("Merge Fork!!")
 }
 
 func (bc *Blockchain) ConcatenateForkToBlockchain(){
@@ -299,6 +303,7 @@ func (bc *Blockchain) ConcatenateForkToBlockchain(){
 			//TODO: Remove transactions in current transaction pool
 		}
 	}
+	bc.BlockPool().ResetForkPool()
 }
 
 //returns true if successful
