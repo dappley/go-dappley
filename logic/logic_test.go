@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/sirupsen/logrus"
+	"reflect"
 )
 
 const invalidAddress = "Invalid Address"
@@ -472,12 +473,46 @@ func TestForkChoice(t *testing.T){
 
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++{
-		blk0, err := bcs[i].GetTailBlock()
+		assert.True(t, compareTwoBlockchains(bcs[0],bcs[i]))
+		/*		blk0, err := bcs[i].GetTailBlock()
 		assert.Nil(t,err)
 		blk1, err := bcs[i+1].GetTailBlock()
 		assert.Nil(t,err)
-		assert.Equal(t,blk0.GetHash(),blk1.GetHash())
+		assert.Equal(t,blk0.GetHash(),blk1.GetHash())*/
 	}
+}
+
+func TestCompare(t *testing.T){
+	bc1 := core.GenerateMockBlockchain(5)
+	bc2 := bc1
+	assert.True(t,compareTwoBlockchains(bc1,bc2))
+	bc3 := core.GenerateMockBlockchain(5)
+	assert.False(t,compareTwoBlockchains(bc1,bc3))
+}
+
+func compareTwoBlockchains(bc1, bc2 *core.Blockchain) bool{
+	if bc1 == nil || bc2 == nil {
+		return false
+	}
+
+	bci1 := bc1.Iterator()
+	bci2 := bc2.Iterator()
+	if bc1.GetMaxHeight() != bc2.GetMaxHeight(){
+		return false
+	}
+
+	loop:
+	for{
+		blk1,_ := bci1.Next()
+		blk2,_ := bci2.Next()
+		if blk1 == nil || blk2 == nil {
+			break loop
+		}
+		if !reflect.DeepEqual(blk1.GetHash(),blk2.GetHash()) {
+			return false
+		}
+	}
+	return true
 }
 
 func setup() {
