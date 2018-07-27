@@ -26,6 +26,8 @@ func GenerateFakeTxOutputs() []TXOutput {
 		{2, getAoB(2)},
 	}
 }
+
+//test IsCoinBase and NewCoinbaseTX function
 func TestIsCoinBase(t *testing.T) {
 	var t1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
@@ -35,6 +37,10 @@ func TestIsCoinBase(t *testing.T) {
 	}
 
 	assert.False(t, t1.IsCoinbase())
+
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "")
+
+	assert.True(t, t2.IsCoinbase())
 
 }
 
