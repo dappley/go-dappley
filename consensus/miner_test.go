@@ -263,24 +263,6 @@ func getBalance(bc *core.Blockchain, addr string) (int, error) {
 	return balance, nil
 }
 
-//balance
-func getBalancePrint(bc *core.Blockchain, addr string) (int, error) {
-
-	balance := 0
-	pubKeyHash := util.Base58Decode([]byte(addr))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	UTXOs, err := bc.FindUTXO(pubKeyHash)
-	if err != nil {
-		return 0, err
-	}
-	fmt.Println(UTXOs)
-
-	for _, out := range UTXOs {
-		balance += out.Value
-	}
-	return balance, nil
-}
-
 func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[core.Address]int) {
 	for addr, bal := range addrBals{
 		b, err := getBalance(bc, addr.Address)
