@@ -32,12 +32,12 @@ import (
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
-	bc,err := core.CreateBlockchain(
+	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
 	)
 	defer bc.DB.Close()
-	assert.Nil(t,err)
+
 	pow := NewProofOfWork()
 	pow.Setup(bc,cbAddr.Address)
 
@@ -60,12 +60,11 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 
 func TestProofOfWork_StartAndStop(t *testing.T) {
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
-	bc,err := core.CreateBlockchain(
+	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
 	)
 	defer bc.DB.Close()
-	assert.Nil(t,err)
 	pow := NewProofOfWork()
 	pow.Setup(bc,cbAddr.Address)
 
@@ -100,12 +99,11 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 	logrus.SetLevel(logrus.WarnLevel)
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
-	bc,err := core.CreateBlockchain(
+	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
 	)
 	defer bc.DB.Close()
-	assert.Nil(t,err)
 	pow := NewProofOfWork()
 	pow.Setup(bc,cbAddr.Address)
 
@@ -172,12 +170,11 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 
 func TestProofOfWork_verifyNonce(t *testing.T){
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
-	bc,err := core.CreateBlockchain(
+	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
 	)
 	defer bc.DB.Close()
-	assert.Nil(t,err)
 	pow := NewProofOfWork()
 	pow.Setup(bc,cbAddr.Address)
 
@@ -210,12 +207,12 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 	wallet1 := wallets.CreateWallet()
 	wallet2 := wallets.CreateWallet()
 
-	bc,err := core.CreateBlockchain(
+	bc := core.CreateBlockchain(
 		wallet1.GetAddress(),
 		storage.NewRamStorage(),
 	)
 	defer bc.DB.Close()
-	assert.Nil(t,err)
+
 	pow := NewProofOfWork()
 	pow.Setup(bc,wallet1.GetAddress().Address)
 

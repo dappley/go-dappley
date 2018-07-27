@@ -39,12 +39,9 @@ func CreateBlockchain(address core.Address, db storage.Storage) (*core.Blockchai
 		return nil, ErrInvalidAddress
 	}
 
-	bc, err := core.CreateBlockchain(address, db)
+	bc:= core.CreateBlockchain(address, db)
 
-	if err != nil {
-		return nil, err
-	}
-	return bc, err
+	return bc, nil
 }
 
 //create a wallet

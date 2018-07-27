@@ -37,12 +37,11 @@ func TestNetwork_Setup(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc,err := core.CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc := core.CreateBlockchain(addr,db)
 
 	//create node1
 	node1 := NewNode(bc)
-	err = node1.Start(test_port1)
+	err := node1.Start(test_port1)
 	assert.Nil(t, err)
 
 	//currently it should only have itself as its node
@@ -76,8 +75,7 @@ func TestNetwork_SendBlock(t *testing.T){
 	for _,input := range bcInputs{
 		db := storage.NewRamStorage()
 		defer db.Close()
-		bc, err := core.CreateBlockchain(input.addr, db)
-		assert.Nil(t, err)
+		bc := core.CreateBlockchain(input.addr, db)
 		n := NewNode(bc)
 		n.Start(input.testPort)
 		nodes = append(nodes, n)
@@ -117,12 +115,12 @@ func TestNode_SyncPeers(t *testing.T){
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc,err := core.CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc := core.CreateBlockchain(addr,db)
+
 
 	//create node1
 	node1 := NewNode(bc)
-	err = node1.Start(test_port6)
+	err := node1.Start(test_port6)
 	assert.Nil(t, err)
 
 	//create node 2 and add node1 as a peer
@@ -168,11 +166,11 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 		db := storage.NewRamStorage()
 		defer db.Close()
 		addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-		bc,err := core.CreateBlockchain(addr,db)
-		assert.Nil(t, err)
+		bc := core.CreateBlockchain(addr,db)
+
 		//create node
 		node := NewNode(bc)
-		err = node.Start(test_port9+i)
+		err := node.Start(test_port9+i)
 		assert.Nil(t, err)
 
 		if i!=0 {

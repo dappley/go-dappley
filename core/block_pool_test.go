@@ -11,8 +11,8 @@ func TestBlockPool_GetBlockchain(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
+
 	hash1, err:= bc.GetTailHash()
 	assert.Nil(t, err)
 	newbc := bc.blockPool.GetBlockchain()
@@ -26,8 +26,7 @@ func TestBlockPool_AddParentToForkPoolWhenEmpty(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc := CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -41,8 +40,8 @@ func TestBlockPool_AddParentToForkPool(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc := CreateBlockchain(addr,db)
+
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -58,8 +57,8 @@ func TestBlockPool_AddTailToForkPoolWhenEmpty(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
+
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -73,8 +72,7 @@ func TestBlockPool_AddTailToForkPool(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -90,8 +88,7 @@ func TestBlockPool_ForkPoolLen(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -107,8 +104,7 @@ func TestBlockPool_GetForkPoolHeadBlk(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -124,8 +120,7 @@ func TestBlockPool_GetForkPoolTailBlk(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -141,8 +136,7 @@ func TestBlockPool_IsParentOfFork(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -164,8 +158,7 @@ func TestBlockPool_IsTailOfFork(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc, err:= CreateBlockchain(addr,db)
-	assert.Nil(t, err)
+	bc:= CreateBlockchain(addr,db)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)

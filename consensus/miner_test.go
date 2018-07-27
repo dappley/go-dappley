@@ -67,8 +67,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
-	assert.Nil(t, err)
+	bc:= core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.NotNil(t, bc)
 
 	//create a transaction
@@ -118,8 +117,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(cbWallet.GetAddress(), db)
-	assert.Nil(t, err)
+	bc := core.CreateBlockchain(cbWallet.GetAddress(), db)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -168,8 +166,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	bc, err := core.CreateBlockchain(wallet1.GetAddress(), db)
-	assert.Nil(t, err)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db)
 	assert.NotNil(t, bc)
 
 	//create a transaction

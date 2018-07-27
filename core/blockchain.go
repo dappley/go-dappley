@@ -31,11 +31,12 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address Address, db storage.Storage) (*Blockchain, error) {
+func CreateBlockchain(address Address, db storage.Storage) *Blockchain {
 	genesis := NewGenesisBlock(address.Address)
-	updateDbWithNewBlock(db, genesis)
-	db.Put(tipKey, genesis.GetHash())
-	return GetBlockchain(db)
+	bc := &Blockchain{genesis.GetHash(), db,NewBlockPool(BlockPoolMaxSize)}
+	bc.blockPool.SetBlockchain(bc)
+	bc.updateDbWithNewBlock(genesis)
+	return bc
 }
 
 func GetBlockchain(db storage.Storage) (*Blockchain, error) {
@@ -44,12 +45,14 @@ func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	return initializeBlockChainWithBlockPool(tip, db), nil
+	bc := &Blockchain{tip, db,NewBlockPool(BlockPoolMaxSize)}
+	bc.blockPool.SetBlockchain(bc)
+	return bc, nil
 }
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
-	updateDbWithNewBlock(bc.DB, newBlock)
-	bc.SetTailBlockHash(newBlock.GetHash())
+	bc.updateDbWithNewBlock(newBlock)
+
 }
 
 func (bc *Blockchain) BlockPool() *BlockPool {
@@ -239,12 +242,13 @@ func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Bloc
 }
 
 //record the new block in the database
-func updateDbWithNewBlock(db storage.Storage, newBlock *Block) {
-	db.Put(newBlock.GetHash(), newBlock.Serialize())
-	UpdateUtxoIndexAfterNewBlock(*newBlock, db)
+func (bc *Blockchain) updateDbWithNewBlock(newBlock *Block) {
+	bc.DB.Put(newBlock.GetHash(), newBlock.Serialize())
+	UpdateUtxoIndexAfterNewBlock(*newBlock, bc.DB)
+	bc.setTailBlockHash(newBlock.GetHash())
 }
 
-func (bc *Blockchain) SetTailBlockHash(hash Hash){
+func (bc *Blockchain) setTailBlockHash(hash Hash){
 	bc.DB.Put(tipKey, hash)
 	bc.currentHash = hash
 }
@@ -331,7 +335,7 @@ func (bc *Blockchain) RollbackToABlock(hash Hash) bool{
 		blk.Rollback()
 	}
 
-	bc.SetTailBlockHash(parentBlkHash)
+	bc.setTailBlockHash(parentBlkHash)
 
 	return true
 }

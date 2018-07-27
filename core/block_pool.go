@@ -165,10 +165,10 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	}
 
 	//TODO: Temporarily disable verify transaction since it only verifies transactions against it own transaction pool
-/*	if !block.VerifyTransactions(pool.bc){
+	if !block.VerifyTransactions(pool.bc){
 		logger.Info("BlockPool: Verify Transactions failed!")
 		return
-	}*/
+	}
 
 	logger.Debug("BlockPool: Block has been verified")
 	pool.blockReceivedCh <- &RcvedBlock{block,pid}

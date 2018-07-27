@@ -352,8 +352,7 @@ func TestSyncBlocks(t *testing.T){
 		defer db.Close()
 
 		//create blockchain instance
-		bc,err := core.CreateBlockchain(addr,db)
-		assert.Nil(t, err)
+		bc := core.CreateBlockchain(addr,db)
 		bcs = append(bcs, bc)
 
 		pow := consensus.NewProofOfWork()
@@ -441,8 +440,7 @@ func TestForkChoice(t *testing.T){
 		defer db.Close()
 
 		//create blockchain instance
-		bc,err := core.CreateBlockchain(addr,db)
-		assert.Nil(t, err)
+		bc := core.CreateBlockchain(addr,db)
 		bcs = append(bcs, bc)
 
 		pow := consensus.NewProofOfWork()
