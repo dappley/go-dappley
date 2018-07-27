@@ -3,7 +3,6 @@ package core
 import (
 	"testing"
 
-	"fmt"
 	"time"
 
 	"github.com/dappley/go-dappley/core/pb"
@@ -49,10 +48,8 @@ func TestNewBlock(t *testing.T) {
 	assert.Equal(t, Hash(Hash{}), block2.header.prevHash)
 	assert.NotNil(t, block2.transactions)
 
-	fmt.Println(blk2.GetHash())
 
 	block3 := NewBlock(nil, blk2)
-	fmt.Println(block3.header.prevHash)
 	assert.NotNil(t, block3.header.prevHash)
 	assert.Equal(t, Hash(Hash{'a'}), block3.header.prevHash)
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
@@ -120,7 +117,6 @@ func TestBlock_Proto(t *testing.T) {
 
 func TestBlock_VerifyHash(t *testing.T) {
 	b1 := GenerateMockBlock()
-	fmt.Println(b1)
 
 	//The mocked block does not have correct hash value
 	assert.False(t, b1.VerifyHash())
