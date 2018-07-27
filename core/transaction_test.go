@@ -29,8 +29,8 @@ func GenerateFakeTxOutputs() []TXOutput {
 func TestIsCoinBase(t *testing.T) {
 	var t1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  generateFakeTxInputs(),
-		Vout: generateFakeTxOutputs(),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
 		Tip:  2,
 	}
 
