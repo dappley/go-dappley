@@ -51,18 +51,6 @@ func getStoredUtxoMap (db storage.Storage) utxoIndex {
 	return *umap
 }
 
-func GetStoredUtxoMap (db storage.Storage) utxoIndex {
-	res, err := db.Get([]byte(UtxoMapKey))
-
-	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
-		res1 := utxoIndex{}
-		return res1
-	}
-	umap := DeserializeUTXO(res)
-	return *umap
-}
-
-
 func initIndex() utxoIndex{
 	ins := map[string][]UTXOutputStored{}
 	return  ins

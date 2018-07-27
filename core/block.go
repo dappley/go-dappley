@@ -47,7 +47,7 @@ type Block struct {
 
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
-	prevHash := []byte{}
+	var prevHash []byte
 	var height uint64
 	height = 0
 	if parent != nil {
@@ -166,7 +166,7 @@ func (b *Block) GetTransactions() []*Transaction {
 
 func (b *Block) ToProto() proto.Message {
 
-	txArray := []*corepb.Transaction{}
+	var txArray []*corepb.Transaction
 	for _, tx := range b.transactions {
 		txArray = append(txArray, tx.ToProto().(*corepb.Transaction))
 	}
@@ -184,7 +184,7 @@ func (b *Block) FromProto(pb proto.Message) {
 	bh.FromProto(pb.(*corepb.Block).Header)
 	b.header = &bh
 
-	txs := []*Transaction{}
+	var txs []*Transaction
 	tx := &Transaction{}
 	for _, txpb := range pb.(*corepb.Block).Transactions {
 		tx.FromProto(txpb)

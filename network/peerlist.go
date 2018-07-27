@@ -62,7 +62,7 @@ func NewPeerList(p []*Peer) *PeerList {
 
 //create new peerList with strings
 func NewPeerListStr(strs []string) *PeerList {
-	ps := []*Peer{}
+	var ps []*Peer
 	for _, str := range strs{
 		peer, err := CreatePeerFromString(str)
 		if err!= nil {
@@ -144,8 +144,7 @@ func (p *Peer) FromProto(pb proto.Message) error{
 //convert to protobuf
 func (pl *PeerList) ToProto() proto.Message{
 
-
-	peerlist := []*networkpb.Peer{}
+	var peerlist []*networkpb.Peer
 	for i := range pl.peers{
 		peerlist = append(peerlist, pl.peers[i].ToProto().(*networkpb.Peer))
 	}

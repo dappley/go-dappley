@@ -60,7 +60,7 @@ func (s *Stream) startLoop(rw *bufio.ReadWriter){
 }
 
 func readMsg(rw *bufio.ReadWriter) ([]byte,error){
-	bytes := []byte{}
+	var bytes []byte
 	for{
 		b, err := rw.ReadByte()
 
@@ -132,7 +132,7 @@ func containEndingBytes(data []byte) bool{
 	if len(data) < len(endBytes){
 		return false
 	}
-	return 	reflect.DeepEqual(data[(len(data)-len(endBytes)):len(data)], endBytes)
+	return 	reflect.DeepEqual(data[(len(data)-len(endBytes)):], endBytes)
 }
 
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
@@ -155,8 +155,8 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 
 func (s *Stream) StopStream(){
 	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
-	s.quitRdCh <- true;
-	s.quitWrCh <- true;
+	s.quitRdCh <- true
+	s.quitWrCh <- true
 	s.stream.Close()
 	delete(s.node.streams, s.peerID)
 }
@@ -181,7 +181,7 @@ func (s *Stream) parseData(data []byte){
 
 	dm := &Dapmsg{}
 	dm.FromProto(dmpb)
-	switch(dm.GetCmd()){
+	switch(dm.GetCmd()) {
 	case SyncBlock:
 		logger.Debug("Received ",SyncBlock," command from:", s.remoteAddr)
 		s.node.addBlockToPool(dm.GetData(),s.peerID)

@@ -271,12 +271,12 @@ func (tx Transaction) String() string {
 
 func (tx *Transaction) ToProto() proto.Message {
 
-	vinArray := []*corepb.TXInput{}
+	var vinArray []*corepb.TXInput
 	for _, txin := range tx.Vin {
 		vinArray = append(vinArray, txin.ToProto().(*corepb.TXInput))
 	}
 
-	voutArray := []*corepb.TXOutput{}
+	var voutArray []*corepb.TXOutput
 	for _, txout := range tx.Vout {
 		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
 	}
@@ -293,7 +293,7 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*corepb.Transaction).ID
 	tx.Tip = pb.(*corepb.Transaction).Tip
 
-	vinArray := []TXInput{}
+	var vinArray []TXInput
 	txin := TXInput{}
 	for _, txinpb := range pb.(*corepb.Transaction).Vin {
 		txin.FromProto(txinpb)
@@ -301,7 +301,7 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	}
 	tx.Vin = vinArray
 
-	voutArray := []TXOutput{}
+	var voutArray []TXOutput
 	txout := TXOutput{}
 	for _, txoutpb := range pb.(*corepb.Transaction).Vout {
 		txout.FromProto(txoutpb)
