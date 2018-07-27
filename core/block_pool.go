@@ -71,17 +71,15 @@ func (pool *BlockPool) ForkPoolLen() int{
 func (pool *BlockPool) GetForkPoolHeadBlk() *Block{
 	if len(pool.forkPool) > 0 {
 		return pool.forkPool[len(pool.forkPool)-1]
-	}else{
-		return nil
 	}
+	return nil
 }
 
 func (pool *BlockPool) GetForkPoolTailBlk() *Block{
 	if len(pool.forkPool) > 0 {
 		return pool.forkPool[0]
-	}else{
-		return nil
 	}
+	return nil
 }
 
 func (pool *BlockPool) ResetForkPool() {
@@ -95,11 +93,7 @@ func (pool *BlockPool) ReInitializeForkPool(blk *Block){
 }
 
 func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
-	if blk == nil {
-		return false
-	}
-
-	if pool.ForkPoolLen() == 0 {
+	if blk == nil || pool.ForkPoolLen() == 0 {
 		return false
 	}
 
@@ -107,11 +101,7 @@ func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
 }
 
 func (pool *BlockPool) IsTailOfFork(blk *Block) bool{
-	if blk == nil {
-		return false
-	}
-
-	if pool.ForkPoolLen() == 0 {
+	if blk == nil || pool.ForkPoolLen() == 0 {
 		return false
 	}
 
