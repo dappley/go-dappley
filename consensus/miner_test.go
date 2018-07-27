@@ -246,6 +246,7 @@ func printBalances(bc *core.Blockchain, addrs []core.Address) {
 	}
 }
 
+
 //balance
 func getBalance(bc *core.Blockchain, addr string) (int, error) {
 
