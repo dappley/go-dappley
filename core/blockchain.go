@@ -284,6 +284,7 @@ func (bc *Blockchain) MergeFork(){
 	//rollback all child blocks after the parent block from tail to head
 	bc.RollbackToABlock(forkParentHash)
 	//add all blocks in fork from head to tail
+	bc.AddForkToBlockchain()
 }
 
 func (bc *Blockchain) AddForkToBlockchain(){

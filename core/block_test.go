@@ -1,6 +1,6 @@
 package core
 
-import (
+/*import (
 	"testing"
 
 	"time"
@@ -139,3 +139,4 @@ func TestBlock_Rollback(t *testing.T) {
 	txnPool := GetTxnPoolInstance()
 	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
 }
+*/

@@ -26,7 +26,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	bc,err := CreateBlockchain(addr, s)
 	assert.Nil(t, err)
 
-	blk = GenerateMockBlock()
+	blk := GenerateMockBlock()
 	blk.height = 1
 	assert.True(t,bc.HigherThanBlockchain(blk))
 }
@@ -38,7 +38,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	bc,err := CreateBlockchain(addr, s)
 	assert.Nil(t, err)
 
-	blk = GenerateMockBlock()
+	blk := GenerateMockBlock()
 	blk.height = 1
 	bc.UpdateNewBlock(blk)
 
@@ -52,7 +52,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	bc,err := CreateBlockchain(addr, s)
 	assert.Nil(t, err)
 
-	blk = GenerateMockBlock()
+	blk := GenerateMockBlock()
 	blk.SetHash([]byte("hash1"))
 	blk.height = 1
 	bc.UpdateNewBlock(blk)
@@ -80,6 +80,8 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 
 	//rollback to height 3
 	bc.RollbackToABlock(blk.GetHash())
+
+	cleanUpPool()
 
 	//the height 3 block should be the new tail block
 	newTailBlk,err := bc.GetTailBlock()
