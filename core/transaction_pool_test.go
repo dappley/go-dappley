@@ -54,19 +54,26 @@ func TestTxPoolPush(t *testing.T) {
 	heap.Push(txPool, t3)
 	heap.Push(txPool, t4)
 	assert.Equal(t, 4, txPool.Len())
+	cleanUpPool()
 }
 
 func TestTranstionPoolPop(t *testing.T) {
 	for _, tt := range popInputOrder {
 		var popOrder = []int64{}
 		txPool := GetTxnPoolInstance()
-		for _, t := range tt.order {
-			heap.Push(txPool, t)
+		for _, tx := range tt.order {
+			heap.Push(txPool, tx)
 		}
 		for txPool.Len() > 0 {
 			popOrder = append(popOrder, heap.Pop(txPool).(Transaction).Tip)
 		}
 		assert.Equal(t, expectPopOrder, popOrder)
 	}
+}
 
+func cleanUpPool() {
+	txPool := GetTxnPoolInstance()
+	for txPool.Len() > 0 {
+		heap.Pop(txPool)
+	}
 }
