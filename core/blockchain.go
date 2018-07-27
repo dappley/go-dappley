@@ -276,13 +276,21 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) (bool){
 }
 
 func (bc *Blockchain) MergeFork(){
+	//find parent block
 	forkParentHash := bc.BlockPool().GetForkPoolHeadBlk().GetPrevHash()
 	if !bc.IsInBlockchain(forkParentHash){
 		return
 	}
-	//find parent block
 	//rollback all child blocks after the parent block from tail to head
+	bc.RollbackToABlock(forkParentHash)
 	//add all blocks in fork from head to tail
+}
+
+func (bc *Blockchain) AddForkToBlockchain(){
+	for _,blk := range bc.BlockPool().forkPool {
+		bc.UpdateNewBlock(blk)
+		//TODO: Remove transactions in current transaction pool
+	}
 }
 
 //returns true if successful
