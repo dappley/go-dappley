@@ -60,6 +60,40 @@ func TestTrimmedCopy(t *testing.T) {
 	}
 }
 
+func TestVerify(t *testing.T) {
+	var prevTXs = map[string]Transaction{}
+
+	var t1 = Transaction{
+		ID:   util.GenerateRandomAoB(1),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  2,
+	}
+
+	var t2 = Transaction{
+		ID:   util.GenerateRandomAoB(1),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  5,
+	}
+	var t3 = Transaction{
+		ID:   util.GenerateRandomAoB(1),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  10,
+	}
+	var t4 = Transaction{
+		ID:   util.GenerateRandomAoB(1),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  20,
+	}
+	prevTXs[string(t1.ID)] = t2
+	prevTXs[string(t2.ID)] = t3
+	prevTXs[string(t3.ID)] = t4
+
+}
+
 //test IsCoinBase and NewCoinbaseTX function
 func TestIsCoinBase(t *testing.T) {
 	var t1 = Transaction{
