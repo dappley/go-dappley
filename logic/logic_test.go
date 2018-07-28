@@ -152,7 +152,7 @@ func TestSend(t *testing.T) {
 	setup()
 	mineReward := int(10)
 	transferAmount := int(5)
-	tip := int64(5)
+	tip := uint64(5)
 	//create a wallet address
 	wallet1, err := CreateWallet()
 	assert.NotEmpty(t, wallet1)
@@ -233,7 +233,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	mineReward := int(10)
 	//Transfer ammount
 	transferAmount := int(25)
-	tip := int64(5)
+	tip := uint64(5)
 	//create a wallet address
 	wallet1, err := CreateWallet()
 	assert.NotEmpty(t, wallet1)
@@ -285,7 +285,7 @@ func TestDeleteInvalidWallet(t *testing.T) {
 func TestSendInsufficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
-	tip := int64(5)
+	tip := uint64(5)
 
 	//this is internally set. Dont modify
 	mineReward := int(10)

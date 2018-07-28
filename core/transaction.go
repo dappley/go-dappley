@@ -31,7 +31,7 @@ type Transaction struct {
 	ID   []byte
 	Vin  []TXInput
 	Vout []TXOutput
-	Tip  int64
+	Tip  uint64
 }
 
 func (tx Transaction) IsCoinbase() bool {
@@ -187,7 +187,7 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
+func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 	var validOutputs []UTXOutputStored
@@ -230,7 +230,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 }
 
 //for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip int64) (Transaction, error) {
+func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 

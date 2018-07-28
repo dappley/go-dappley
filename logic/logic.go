@@ -91,7 +91,7 @@ func GetAllAddresses() ([]core.Address, error) {
 	return addresses, err
 }
 
-func Send(from, to core.Address, amount int, tip int64, db storage.Storage) error {
+func Send(from, to core.Address, amount int, tip uint64, db storage.Storage) error {
 	if !from.ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}

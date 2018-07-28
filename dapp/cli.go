@@ -203,7 +203,7 @@ func (cli *CLI) Run(dep *Dep, miner *consensus.Miner, waitGroup sync.WaitGroup) 
 			}
 			sendFromAddress := core.NewAddress(*sendFrom)
 			sendToAddress := core.NewAddress(*sendTo)
-			if err := logic.Send(sendFromAddress, sendToAddress, *sendAmount, int64(*tipAmount), dep.db); err != nil {
+			if err := logic.Send(sendFromAddress, sendToAddress, *sendAmount, uint64(*tipAmount), dep.db); err != nil {
 				log.Println(err)
 			} else {
 				fmt.Println("Send Successful")

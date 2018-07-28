@@ -22,7 +22,7 @@ type Transaction struct {
 	ID                   []byte      `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	Vin                  []*TXInput  `protobuf:"bytes,2,rep,name=Vin,proto3" json:"Vin,omitempty"`
 	Vout                 []*TXOutput `protobuf:"bytes,3,rep,name=Vout,proto3" json:"Vout,omitempty"`
-	Tip                  int64       `protobuf:"varint,4,opt,name=Tip,proto3" json:"Tip,omitempty"`
+	Tip                  uint64       `protobuf:"varint,4,opt,name=Tip,proto3" json:"Tip,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -73,7 +73,7 @@ func (m *Transaction) GetVout() []*TXOutput {
 	return nil
 }
 
-func (m *Transaction) GetTip() int64 {
+func (m *Transaction) GetTip() uint64 {
 	if m != nil {
 		return m.Tip
 	}

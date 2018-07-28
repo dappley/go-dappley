@@ -33,7 +33,7 @@ var t4 = Transaction{
 	Tip:  20,
 }
 
-var expectPopOrder = []int64{20, 10, 5, 2}
+var expectPopOrder = []uint64{20, 10, 5, 2}
 
 var popInputOrder = []struct {
 	order []Transaction
@@ -59,7 +59,7 @@ func TestTxPoolPush(t *testing.T) {
 
 func TestTranstionPoolPop(t *testing.T) {
 	for _, tt := range popInputOrder {
-		var popOrder = []int64{}
+		var popOrder = []uint64{}
 		txPool := GetTxnPoolInstance()
 		for _, tx := range tt.order {
 			heap.Push(txPool, tx)
