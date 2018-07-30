@@ -4,7 +4,15 @@ import (
 	"testing"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"os"
+	logger "github.com/sirupsen/logrus"
 )
+
+func TestMain(m *testing.M) {
+	logger.SetLevel(logger.WarnLevel)
+	retCode := m.Run()
+	os.Exit(retCode)
+}
 
 func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain

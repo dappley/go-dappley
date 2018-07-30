@@ -52,6 +52,7 @@ func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	bc.updateDbWithNewBlock(newBlock)
+	logger.Info("Blockchain: Updated A New Block! Height:",newBlock.GetHeight()," Hash:",hex.EncodeToString(newBlock.GetHash()))
 }
 
 func (bc *Blockchain) BlockPool() *BlockPool {
@@ -221,6 +222,7 @@ func (bc *Blockchain) String() string {
 		}
 
 		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))
+		buffer.WriteString(fmt.Sprintf("Height: %d\n", block.GetHeight()))
 		buffer.WriteString(fmt.Sprintf("Prev. block: %x\n", block.GetPrevHash()))
 		for _, tx := range block.GetTransactions() {
 			buffer.WriteString(tx.String())

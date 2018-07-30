@@ -17,7 +17,7 @@
 //
 package core
 
-const genesisCoinbaseData = "Hell world"
+const genesisCoinbaseData = "Hello world"
 
 
 func NewGenesisBlock(address string) *Block {
