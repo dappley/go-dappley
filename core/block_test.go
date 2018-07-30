@@ -1,6 +1,6 @@
 package core
 
-/*import (
+import (
 	"testing"
 
 	"time"
@@ -139,4 +139,22 @@ func TestBlock_Rollback(t *testing.T) {
 	txnPool := GetTxnPoolInstance()
 	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
 }
-*/
+
+func TestBlock_FindTransaction(t *testing.T) {
+	b := GenerateMockBlock()
+	tx := MockTransaction()
+	b.transactions = []*Transaction{tx}
+
+	assert.Equal(t, tx.ID, b.FindTransactionById(tx.ID).ID)
+}
+
+func TestBlock_FindTransactionNilInput(t *testing.T) {
+	b := GenerateMockBlock()
+	assert.Nil(t, b.FindTransactionById(nil))
+}
+
+func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
+	b := GenerateMockBlock()
+	tx := MockTransaction()
+	assert.Nil(t, b.FindTransactionById(tx.ID))
+}

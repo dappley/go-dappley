@@ -52,7 +52,6 @@ func GetBlockchain(db storage.Storage) (*Blockchain, error) {
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	bc.updateDbWithNewBlock(newBlock)
-
 }
 
 func (bc *Blockchain) BlockPool() *BlockPool {

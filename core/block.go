@@ -275,3 +275,12 @@ func (b *Block) Rollback(){
 		}
 	}
 }
+
+func (b *Block) FindTransactionById(txid []byte) *Transaction{
+	for _, tx := range b.GetTransactions() {
+		if bytes.Compare(tx.ID, txid) == 0 {
+			return tx
+		}
+	}
+	return nil
+}
