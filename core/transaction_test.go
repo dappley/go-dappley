@@ -110,6 +110,9 @@ func TestIsCoinBase(t *testing.T) {
 	assert.True(t, t2.IsCoinbase())
 
 }
+func createPrevTXs() {
+
+}
 
 func TestTransaction_Proto(t *testing.T) {
 	t1 := Transaction{

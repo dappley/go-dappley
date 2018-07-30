@@ -137,7 +137,6 @@ func TestBlock_Rollback(t *testing.T) {
 	txnPool := GetTxnPoolInstance()
 	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
 }
-<<<<<<< HEAD
 
 func TestBlock_FindTransaction(t *testing.T) {
 	b := GenerateMockBlock()
@@ -157,5 +156,3 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 	tx := MockTransaction()
 	assert.Nil(t, b.FindTransactionById(tx.ID))
 }
-=======
->>>>>>> fix block test case
