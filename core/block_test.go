@@ -40,14 +40,13 @@ func TestHashTransactions(t *testing.T) {
 
 func TestNewBlock(t *testing.T) {
 	block1 := NewBlock(nil, nil)
-	assert.NotNil(t, block1.header.prevHash)
+	assert.Nil(t, block1.header.prevHash)
 	assert.NotNil(t, block1.transactions)
 
 	block2 := NewBlock(nil, blk)
 	assert.NotNil(t, block2.header.prevHash)
 	assert.Equal(t, Hash(Hash{}), block2.header.prevHash)
 	assert.NotNil(t, block2.transactions)
-
 
 	block3 := NewBlock(nil, blk2)
 	assert.NotNil(t, block3.header.prevHash)
@@ -57,13 +56,13 @@ func TestNewBlock(t *testing.T) {
 	assert.NotNil(t, block3.transactions)
 
 	block4 := NewBlock([]*Transaction{}, nil)
-	assert.NotNil(t, block4.header.prevHash)
+	assert.Nil(t, block4.header.prevHash)
 	assert.NotNil(t, block4.transactions)
 	assert.Equal(t, []*Transaction{}, block4.transactions)
-	assert.Equal(t, Hash(Hash{}), block4.header.prevHash)
+	assert.Equal(t, Hash(nil), block4.header.prevHash)
 
 	block5 := NewBlock([]*Transaction{&Transaction{}}, nil)
-	assert.NotNil(t, block5.header.prevHash)
+	assert.Nil(t, block5.header.prevHash)
 	assert.Equal(t, []*Transaction{&Transaction{}}, block5.transactions)
 	assert.Equal(t, &Transaction{}, block5.transactions[0])
 	assert.NotNil(t, block5.transactions)
@@ -129,7 +128,6 @@ func TestBlock_VerifyHash(t *testing.T) {
 	assert.True(t, b1.VerifyHash())
 }
 
-
 func TestBlock_Rollback(t *testing.T) {
 	b := GenerateMockBlock()
 	tx := MockTransaction()
@@ -139,6 +137,7 @@ func TestBlock_Rollback(t *testing.T) {
 	txnPool := GetTxnPoolInstance()
 	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
 }
+<<<<<<< HEAD
 
 func TestBlock_FindTransaction(t *testing.T) {
 	b := GenerateMockBlock()
@@ -158,3 +157,5 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 	tx := MockTransaction()
 	assert.Nil(t, b.FindTransactionById(tx.ID))
 }
+=======
+>>>>>>> fix block test case
