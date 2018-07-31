@@ -4,7 +4,6 @@ import (
 	"sync"
 	"github.com/dappley/go-dappley/common/sorted"
 	"bytes"
-	"fmt"
 )
 
 type TransactionPoool struct {
