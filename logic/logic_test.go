@@ -181,7 +181,7 @@ func TestSend(t *testing.T) {
 	assert.Equal(t, balance2, 0)
 
 	//Send 5 coins from wallet1 to wallet2
-	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
+	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.Nil(t, err)
 	pow := consensus.NewProofOfWork()
 	pow.Setup(b,addr1.Address)
@@ -251,7 +251,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Equal(t, balance1, mineReward)
 
 	//Send 5 coins from addr1 to an invalid address
-	err = Send(addr1, core.NewAddress(invalidAddress), transferAmount, tip, databaseInstance)
+	err = Send(wallet1, core.NewAddress(invalidAddress), transferAmount, tip, b)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -320,7 +320,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, balance2, 0)
 
 	//Send 5 coins from addr1 to addr2
-	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
+	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10

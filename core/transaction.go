@@ -188,12 +188,12 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
+func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, senderKeyPair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 	var validOutputs []UTXOutputStored
 
-	pubKeyHash, _ := HashPubKey(keypair.PublicKey)
+	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
 	sum := 0
 
 	if len(GetAddressUTXOs(pubKeyHash, db)) < 1 {
@@ -213,7 +213,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 
 	// Build a list of inputs
 	for _, out := range validOutputs {
-		input := TXInput{out.Txid, out.TxIndex, nil, keypair.PublicKey}
+		input := TXInput{out.Txid, out.TxIndex, nil, senderKeyPair.PublicKey}
 		inputs = append(inputs, input)
 
 	}
@@ -225,7 +225,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 
 	tx := Transaction{nil, inputs, outputs, tip}
 	tx.ID = tx.Hash()
-	bc.SignTransaction(&tx, keypair.PrivateKey)
+	bc.SignTransaction(&tx, senderKeyPair.PrivateKey)
 
 	return tx, nil
 }

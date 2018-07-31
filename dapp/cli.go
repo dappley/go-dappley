@@ -12,6 +12,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/client"
 )
 
 // CLI responsible for processing command line arguments
@@ -41,7 +42,7 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run(bc *core.Blockchain, node *network.Node) {
+func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wallets) {
 
 	cli.printUsage()
 	loop:
@@ -193,7 +194,8 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node) {
 			}
 			sendFromAddress := core.NewAddress(*sendFrom)
 			sendToAddress := core.NewAddress(*sendTo)
-			if err := logic.Send(sendFromAddress, sendToAddress, *sendAmount, uint64(*tipAmount), bc.DB); err != nil {
+			senderWallet := wallets.GetWalletByAddress(sendFromAddress)
+			if err := logic.Send(senderWallet, sendToAddress, *sendAmount, uint64(*tipAmount), bc); err != nil {
 				log.Println(err)
 			} else {
 				fmt.Println("Send Successful")

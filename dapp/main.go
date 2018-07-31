@@ -8,6 +8,7 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/client"
 )
 
 const (
@@ -41,10 +42,10 @@ func main() {
 	}
 
 	//create wallet for mining
-	wallet, err := logic.CreateWallet()
-	if err != nil {
-		log.Panic(err)
-	}
+	wallets, err := client.NewWallets()
+	wallet := wallets.CreateWallet()
+	wallets.SaveWalletToFile()
+
 	walletAddr := wallet.GetAddress()
 
 	//start mining
@@ -55,5 +56,5 @@ func main() {
 	miner.Start()
 	defer miner.Stop()
 
-	cli.Run(bc, pow.GetNode())
+	cli.Run(bc, pow.GetNode(), wallets)
 }
