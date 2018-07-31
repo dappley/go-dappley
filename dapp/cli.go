@@ -195,10 +195,14 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 			sendFromAddress := core.NewAddress(*sendFrom)
 			sendToAddress := core.NewAddress(*sendTo)
 			senderWallet := wallets.GetWalletByAddress(sendFromAddress)
-			if err := logic.Send(senderWallet, sendToAddress, *sendAmount, uint64(*tipAmount), bc); err != nil {
-				log.Println(err)
-			} else {
-				fmt.Println("Send Successful")
+			if len(senderWallet.Addresses) == 0 {
+				logrus.Warn("Sender address could not be found in local wallet")
+			}else{
+				if err := logic.Send(senderWallet, sendToAddress, *sendAmount, uint64(*tipAmount), bc); err != nil {
+					log.Println(err)
+				} else {
+					fmt.Println("Send Successful")
+				}
 			}
 		}
 	}

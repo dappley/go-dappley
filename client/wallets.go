@@ -76,7 +76,6 @@ func (ws Wallets) GetKeyPairByAddress(address core.Address) core.KeyPair {
 
 func (ws Wallets) GetWalletByAddress(address core.Address) Wallet {
 	for _, wallet := range ws.Wallets {
-
 		if wallet.ContainAddress(address) {
 			return wallet
 		}
