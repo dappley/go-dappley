@@ -30,6 +30,7 @@ type Node struct {
 	bc        *core.Blockchain
 	blks      []*core.Block
 	blockpool []*core.Block
+	txnPool core.TransactionPoool
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
@@ -38,13 +39,14 @@ type Node struct {
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node {
 	return &Node{nil,
-		nil,
-		bc,
-		nil,
-		nil,
-		make(map[peer.ID]*Stream, 10),
-		NewPeerList(nil),
-		make(chan bool, 1),
+	nil,
+	bc,
+	nil,
+	nil,
+	core.TransactionPoool{},
+	make(map[peer.ID]*Stream, 10),
+	NewPeerList(nil),
+	make(chan bool, 1),
 	}
 }
 
@@ -216,7 +218,27 @@ func (n *Node) SyncPeers() error {
 	return nil
 }
 
-func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
+
+func (n *Node) BroadcastTxnCmd(txn *core.Transaction) error{
+	//marshal the Txn to wire format
+	bytes, err := proto.Marshal(txn.ToProto())
+	if err != nil {
+		return err
+	}
+
+	//build a deppley message
+	dm := NewDapmsg(BroadcastTxn,bytes)
+	data, err :=proto.Marshal(dm.ToProto())
+	if err != nil {
+		return err
+	}
+	//log.Println("Sending Data Request Received:",bytes)
+	n.broadcast(data)
+	return nil
+}
+
+func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
+
 	//marshal the block to wire format
 	bytes, err := proto.Marshal(block.ToProto())
 	if err != nil {
@@ -280,7 +302,28 @@ func (n *Node) addBlockToPool(data []byte, pid peer.ID) {
 	n.blks = append(n.blks, block)
 }
 
-func (n *Node) addMultiPeers(data []byte) {
+func (n *Node) addTxnToPool(data []byte){
+
+	//create a block proto
+	txnpb := &corepb.Transaction{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(data, txnpb); err!=nil{
+		logger.Warn(err)
+	}
+
+	//create an empty txn
+	txn := &core.Transaction{}
+
+	//load the txn with proto
+	txn.FromProto(txnpb)
+
+	//add txn to txnpool
+	n.txnPool.StructPush(txn)
+}
+
+
+func (n *Node)addMultiPeers(data []byte){
 
 	go func() {
 		//create a peerList proto

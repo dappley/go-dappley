@@ -62,6 +62,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		addPeerCmd := flag.NewFlagSet("addPeer", flag.ExitOnError)
 		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock", flag.ExitOnError)
 		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
+		broadcastMockTxnCmd:= flag.NewFlagSet("broadcastTxn", flag.ExitOnError)
 		setLoggerLevelCmd := flag.NewFlagSet("setLoggerLevel", flag.ExitOnError)
 
 		getBalanceAddressString := getBalanceCmd.String("address", "", "The address to get balance for")
@@ -97,6 +98,8 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 			err = sendMockBlockCmd.Parse(args[1:])
 		case "syncPeers":
 			err = syncPeersCmd.Parse(args[1:])
+		case "broadcastTxn":
+			err = broadcastMockTxnCmd.Parse(args[1:])
 		case "setLoggerLevel":
 			err = setLoggerLevelCmd.Parse(args[1:])
 		case "exit":
@@ -136,6 +139,11 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 
 		if syncPeersCmd.Parsed() {
 			node.SyncPeers()
+		}
+
+		if broadcastMockTxnCmd.Parsed() {
+			txn := core.MockTransaction()
+			node.BroadcastTxnCmd(txn)
 		}
 
 		if getBalanceCmd.Parsed() {
