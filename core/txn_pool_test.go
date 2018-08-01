@@ -64,3 +64,23 @@ func TestSlice(t *testing.T) {
 	assert.Equal(t, txnPool.transactions.Right().(Transaction).Tip, t2.Tip)
 	assert.Equal(t, txnPool.transactions.Left().(Transaction).Tip, t0.Tip)
 }
+
+func TestTransactionPool_TraverseDoNothing(t *testing.T) {
+	txPool := GenerateMockTransactionPool(5)
+
+	txPool.Traverse(func(tx Transaction) bool{
+		return true
+	})
+	assert.Equal(t,5,txPool.Len())
+}
+
+func TestTransactionPool_TraverseRemoveAllTx(t *testing.T) {
+	txPool := GenerateMockTransactionPool(5)
+	assert.Equal(t,5,txPool.Len())
+	txPool.Traverse(func(tx Transaction) bool{
+		return false
+	})
+	assert.Equal(t,0,txPool.Len())
+}
+
+

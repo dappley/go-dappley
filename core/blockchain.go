@@ -295,16 +295,17 @@ func (bc *Blockchain) MergeFork(){
 	bc.RollbackToABlock(forkParentHash)
 
 	//add all blocks in fork from head to tail
-	bc.ConcatenateForkToBlockchain()
+	bc.concatenateForkToBlockchain()
 
 	logger.Debug("Merge Fork!!")
 }
 
-func (bc *Blockchain) ConcatenateForkToBlockchain(){
+func (bc *Blockchain) concatenateForkToBlockchain(){
 	if bc.BlockPool().ForkPoolLen() > 0 {
 		for i := bc.BlockPool().ForkPoolLen()-1; i>=0; i--{
 			bc.UpdateNewBlock(bc.BlockPool().forkPool[i])
-			//TODO: Remove transactions in current transaction pool
+			//Remove transactions in current transaction pool
+			bc.BlockPool().forkPool[i].RemoveMinedTxFromTxPool()
 		}
 	}
 	bc.BlockPool().ResetForkPool()

@@ -78,6 +78,17 @@ func GetTxnPoolInstance() *TransactionPool {
 	return instance
 }
 
+//function f should return true if the transaction needs to be pushed back to the pool
+func (pool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
+	length := pool.Len()
+	for i := 0; i < length; i++ {
+		txn := heap.Pop(pool).(Transaction)
+		if txHandler(txn) {
+			pool.Push(txn)
+		}
+	}
+}
+
 func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
 	sortedTransactions := []*Transaction{}
 

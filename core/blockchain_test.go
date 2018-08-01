@@ -104,7 +104,7 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 	forkTailBlockHash := bc.BlockPool().forkPool[0].GetHash()
 
 	//add the fork to the end of the blockchain
-	bc.ConcatenateForkToBlockchain()
+	bc.concatenateForkToBlockchain()
 	//the highest block should have the height of 10
 	assert.Equal(t, uint64(10), bc.GetMaxHeight())
 	tailBlkHash,err := bc.GetTailHash()

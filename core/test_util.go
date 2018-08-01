@@ -83,3 +83,10 @@ func MockTxOutputs() []TXOutput {
 	}
 }
 
+func GenerateMockTransactionPool(numOfTxs int) *TransactionPool{
+	txPool := &TransactionPool{}
+	for i := 0; i < numOfTxs; i++ {
+		txPool.Push(*MockTransaction())
+	}
+	return txPool
+}
