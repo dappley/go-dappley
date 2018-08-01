@@ -22,8 +22,6 @@ import (
 	"math"
 	"math/big"
 
-	"container/heap"
-
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
@@ -238,14 +236,9 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 //verify transactions and remove invalid transactions
 func (pow *ProofOfWork) verifyTransactions() {
 	txnPool := core.GetTxnPoolInstance()
-	txnPoolLength := txnPool.Len()
-	for i := 0; i < txnPoolLength; i++ {
-		var txn = heap.Pop(txnPool).(core.Transaction)
-		if pow.bc.VerifyTransaction(txn) == true {
-			//Remove transaction from transaction pool if the transaction is not verified
-			txnPool.Push(txn)
-		}
-	}
+	txnPool.Traverse(func(tx core.Transaction) bool{
+		return pow.bc.VerifyTransaction(tx)
+	})
 }
 
 func (pow *ProofOfWork) updateFork(block *core.Block, pid peer.ID){
