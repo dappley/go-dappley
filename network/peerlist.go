@@ -11,7 +11,7 @@ import (
 )
 
 type PeerList struct {
-	peers [64]*Peer
+	peers []*Peer
 }
 
 type Peer struct {

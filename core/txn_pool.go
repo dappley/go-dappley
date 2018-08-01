@@ -1,9 +1,10 @@
 package core
 
 import (
-	"sync"
-	"github.com/dappley/go-dappley/common/sorted"
 	"bytes"
+	"sync"
+
+	"github.com/dappley/go-dappley/common/sorted"
 )
 
 type TransactionPoool struct {
@@ -15,7 +16,6 @@ type TransactionPoool struct {
 
 var instance23812531 *TransactionPoool
 var once23812531 sync.Once
-
 
 func CompareTransactionTips(a interface{}, b interface{}) int {
 	ai := a.(Transaction)
@@ -31,7 +31,7 @@ func CompareTransactionTips(a interface{}, b interface{}) int {
 
 func (s *TransactionPoool) StructDelete(txn interface{}) {
 	for k, v := range s.transactions.GetSliceContent() {
-		if bytes.Compare(v.(Transaction).ID, txn.(Transaction).ID) == 0  {
+		if bytes.Compare(v.(Transaction).ID, txn.(Transaction).ID) == 0 {
 
 			var content []interface{}
 			content = append(content, s.transactions.GetSliceContent()[k+1:]...)
@@ -41,10 +41,11 @@ func (s *TransactionPoool) StructDelete(txn interface{}) {
 		}
 	}
 }
+
 // Push a new value into slice
 func (s *TransactionPoool) StructPush(val interface{}) {
 	if s.transactions.Len() == 0 {
-		 s.transactions.AddSliceItem(val)
+		s.transactions.AddSliceItem(val)
 		return
 	}
 
@@ -52,7 +53,7 @@ func (s *TransactionPoool) StructPush(val interface{}) {
 	result, mid := 0, 0
 	for start <= end {
 		mid = (start + end) / 2
-		cmp:= s.transactions.GetSliceCmp()
+		cmp := s.transactions.GetSliceCmp()
 		result = cmp(s.transactions.Index(mid), val)
 		if result > 0 {
 			end = mid - 1
@@ -83,7 +84,7 @@ func GetTxnPoolInstance23812531() *TransactionPoool {
 		}
 	})
 
-	instance23812531.transactions = *sorted.NewSlice(CompareTransactionTips,instance23812531.StructDelete, instance23812531.StructPush)
+	instance23812531.transactions = *sorted.NewSlice(CompareTransactionTips, instance23812531.StructDelete, instance23812531.StructPush)
 
 	return instance23812531
 }
