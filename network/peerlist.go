@@ -10,6 +10,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var PEERLISTMAXSIZE = 20
+
 type PeerList struct {
 	peers []*Peer
 }
@@ -76,15 +78,17 @@ func NewPeerListStr(strs []string) *PeerList {
 //Add a multiadress.
 func (pl *PeerList) Add(p *Peer) {
 	//add only if it is not already existed in the list
-	if !pl.IsInPeerlist(p) {
+	if !pl.IsInPeerlist(p) && len(pl.peers) <= PEERLISTMAXSIZE {
 		pl.peers = append(pl.peers, p)
 	}
 }
 
 //add multiple addresses
 func (pl *PeerList) AddMultiple(ps []*Peer) {
-	for _, p := range ps {
-		pl.Add(p)
+	if (len(pl.peers) + len(ps)) <= PEERLISTMAXSIZE {
+		for _, p := range ps {
+			pl.Add(p)
+		}
 	}
 }
 
