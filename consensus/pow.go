@@ -215,10 +215,10 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 func (pow *ProofOfWork) updateNewBlock(){
 	pow.bc.UpdateNewBlock(pow.newBlock)
 	if !pow.newBlkRcvd {
-		logger.Debug("PoW: Minted a new block. peer:", pow.getPeerMultiAddr()," height:", pow.newBlock.GetHeight())
+		logger.Info("PoW: Minted a new block. height:", pow.newBlock.GetHeight())
 		pow.broadcastNewBlock(pow.newBlock)
 	}else{
-		logger.Debug("PoW: Add a rcved block to blockchain", pow.getPeerMultiAddr())
+		logger.Info("PoW: Received a new block. height:", pow.newBlock.GetHeight())
 	}
 	pow.newBlkRcvd = false
 }

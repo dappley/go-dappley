@@ -91,25 +91,15 @@ func GetAllAddresses() ([]core.Address, error) {
 	return addresses, err
 }
 
-func Send(from, to core.Address, amount int, tip uint64, db storage.Storage) error {
-	if !from.ValidateAddress() {
+func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, bc *core.Blockchain) error {
+	if !senderWallet.GetAddress().ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
 	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
 
-	bc, err := core.GetBlockchain(db)
-	if err != nil {
-		return err
-	}
-
-	wallets, err := client.NewWallets()
-	if err != nil {
-		return err
-	}
-	wallet := wallets.GetKeyPairByAddress(from)
-	tx, err := core.NewUTXOTransaction(db, from, to, amount, wallet, bc, tip)
+	tx, err := core.NewUTXOTransaction(bc.DB, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 
 	if err != nil {
 		return err

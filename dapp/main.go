@@ -2,37 +2,20 @@ package main
 
 import (
 	"log"
-	"sync"
-
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/client"
 )
 
 const (
 	listeningPort = 12321
 )
 
-type Dep struct {
-	db *storage.LevelDB
-	bc *core.Blockchain
-}
-
-func setup(db *storage.LevelDB) (string, *core.Blockchain) {
-	wallet, err := logic.CreateWallet()
-	if err != nil {
-		log.Panic(err)
-	}
-	walletAddr := wallet.GetAddress()
-	blockchain, err := logic.CreateBlockchain(walletAddr, db)
-	if err != nil {
-		log.Panic(err)
-	}
-	return walletAddr.Address, blockchain
-}
+const genesisAddr = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 
 func startNetwork(bc *core.Blockchain) *network.Node {
 	//start network
@@ -46,29 +29,32 @@ func startNetwork(bc *core.Blockchain) *network.Node {
 
 func main() {
 	cli := CLI{}
-	var waitGroup sync.WaitGroup
 	//set to debug level
 	logger.SetLevel(logger.InfoLevel)
 
 	//setup
-	db := storage.OpenDatabase(core.BlockchainDbFile)
+	//db := storage.OpenDatabase(core.BlockchainDbFile)
+	db := storage.NewRamStorage()
 	defer db.Close()
-	addr, bc := setup(db)
-
-	input := &Dep{
-		db,
-		bc,
+	bc, err := logic.CreateBlockchain(core.Address{genesisAddr}, db)
+	if err != nil {
+		log.Panic(err)
 	}
 
-	waitGroup.Add(1)
-	pow := consensus.NewProofOfWork()
-	pow.Setup(bc, addr)
-	miner := consensus.NewMiner(pow)
-	go func() {
-		miner.Start()
-		waitGroup.Done()
-	}()
+	//create wallet for mining
+	wallets, err := client.NewWallets()
+	wallet := wallets.CreateWallet()
+	wallets.SaveWalletToFile()
 
-	cli.Run(input, miner, waitGroup)
-	waitGroup.Wait()
+	walletAddr := wallet.GetAddress()
+
+	//start mining
+	pow := consensus.NewProofOfWork()
+	pow.Setup(bc, walletAddr.Address)
+	pow.SetTargetBit(20)
+	miner := consensus.NewMiner(pow)
+	miner.Start()
+	defer miner.Stop()
+
+	cli.Run(bc, pow.GetNode(), wallets)
 }

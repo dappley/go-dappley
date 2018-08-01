@@ -104,7 +104,7 @@ func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 	return basicHost,fullAddr, nil
 }
 
-func (n *Node) AddStreamString(targetFullAddr string) error{
+func (n *Node) AddStreamByString(targetFullAddr string) error{
 	addr, err:=ma.NewMultiaddr(targetFullAddr)
 	if err!= nil {
 		return err
