@@ -180,7 +180,7 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
 
-	return tx.Verify(prevTXs)
+	return tx.VerifySignatures(prevTXs)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {

@@ -119,7 +119,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 // Verify verifies signatures of Transaction inputs
-func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+func (tx *Transaction) VerifySignatures(prevTXs map[string]Transaction) bool {
 
 	var verifyResult bool
 	var error1 error
