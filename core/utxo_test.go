@@ -136,8 +136,8 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := UTXOutputStored{10,Txin[0].Txid,Txin[0].Vout}
-	utxo2 := UTXOutputStored{9,Txin[1].Txid,Txin[1].Vout}
+	utxo1 := UTXOutputStored{10,[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := UTXOutputStored{9,[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
 	utxoPool := utxoIndex{}
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2}
 

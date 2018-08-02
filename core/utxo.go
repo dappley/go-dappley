@@ -74,7 +74,7 @@ func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
 			if utxoIndex[string(vout.PubKeyHash)] == nil {
 				utxoIndex[string(vout.PubKeyHash)] = []UTXOutputStored{}
 			}
-			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, txn.ID, index})
+			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vout.PubKeyHash,txn.ID, index})
 		}
 	}
 	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
