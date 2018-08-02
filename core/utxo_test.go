@@ -132,3 +132,17 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 	assert.Equal(t, 8, sum)
 
 }
+
+func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
+	Txin := MockTxInputs()
+	Txin = append(Txin, MockTxInputs()...)
+	utxo1 := UTXOutputStored{10,Txin[0].Txid,Txin[0].Vout}
+	utxo2 := UTXOutputStored{9,Txin[1].Txid,Txin[1].Vout}
+	utxoPool := utxoIndex{}
+	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2}
+
+	assert.True(t, utxoPool.VerifyTransactionInput(Txin[0]))
+	assert.True(t, utxoPool.VerifyTransactionInput(Txin[1]))
+	assert.False(t, utxoPool.VerifyTransactionInput(Txin[2]))
+	assert.False(t, utxoPool.VerifyTransactionInput(Txin[3]))
+}

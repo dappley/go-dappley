@@ -51,7 +51,7 @@ func getStoredUtxoMap (db storage.Storage) utxoIndex {
 	return *umap
 }
 
-func initIndex() utxoIndex{
+func initIndex() utxoIndex {
 	ins := map[string][]UTXOutputStored{}
 	return  ins
 }
@@ -97,4 +97,15 @@ func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
 		}
 	}
 	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
+}
+
+func (utxo *utxoIndex) VerifyTransactionInput(txin TXInput) bool{
+	for _,utxoArray := range *utxo {
+		for _, u := range utxoArray{
+			if bytes.Compare(u.Txid,txin.Txid)==0 && u.TxIndex==txin.Vout{
+				return true
+			}
+		}
+	}
+	return false
 }

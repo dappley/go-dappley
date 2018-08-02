@@ -245,6 +245,17 @@ func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc
 	return tx, nil
 }
 
+//Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool utxoIndex) bool{
+	for _,vin := range tx.Vin{
+		if !utxoPool.VerifyTransactionInput(vin){
+			return false
+		}
+	}
+	return true
+}
+
+
 // String returns a human-readable representation of a transaction
 func (tx Transaction) String() string {
 	var lines []string
