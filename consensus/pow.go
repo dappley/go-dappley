@@ -235,7 +235,7 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 
 //verify transactions and remove invalid transactions
 func (pow *ProofOfWork) verifyTransactions() {
-	utxoPool := core.GetStoredUtxoMap(pow.bc.DB)
+	utxoPool := core.GetStoredUtxoMap(pow.bc.DB, core.UtxoMapKey)
 	txPool := core.GetTxnPoolInstance()
 	txPool.FilterAllTransactions(utxoPool)
 }

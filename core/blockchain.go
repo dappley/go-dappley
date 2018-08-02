@@ -224,7 +224,7 @@ func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Bloc
 //record the new block in the database
 func (bc *Blockchain) updateDbWithNewBlock(newBlock *Block) {
 	bc.DB.Put(newBlock.GetHash(), newBlock.Serialize())
-	UpdateUtxoIndexAfterNewBlock(*newBlock, bc.DB)
+	UpdateUtxoIndexAfterNewBlock(*newBlock, bc.DB, UtxoMapKey)
 	bc.setTailBlockHash(newBlock.GetHash())
 }
 
@@ -271,7 +271,7 @@ func (bc *Blockchain) MergeFork(){
 	}
 
 	//verify transactions in the fork
-	utxo := GetStoredUtxoMap(bc.DB)	//TODO: the utxo here should be the utxo at the fork height, not the current blockchain height
+	utxo := GetStoredUtxoMap(bc.DB, UtxoForkMapKey)	//TODO: the utxo here should be the utxo at the fork height, not the current blockchain height
 	if !bc.BlockPool().VerifyTransactions(utxo){
 		return
 	}
@@ -299,6 +299,7 @@ func (bc *Blockchain) concatenateForkToBlockchain(){
 //returns true if successful
 func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 
+	db := storage.NewRamStorage()
 	if !bc.IsInBlockchain(hash){
 		return false
 	}
@@ -308,6 +309,9 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 		return false
 	}
 
+	//create utxo pool copy
+	utxoIndex := CreateForkCopyOfUtxoIndex(db)
+
 	//keep rolling back blocks until the block with the input hash
 	loop:
 	for {
@@ -315,12 +319,17 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 			break loop
 		}
 		blk,err := bc.GetBlockByHash(parentBlkHash)
+		for _, txn := range blk.transactions{
+			RevertTxnUtxos(utxoIndex,*txn, *blk, db)
+		}
 		if err!=nil {
 			return false
 		}
 		parentBlkHash = blk.GetPrevHash()
 		blk.Rollback()
 	}
+	//save utxocopy to db
+	SaveToDb(utxoIndex, UtxoForkMapKey, db)
 
 	bc.setTailBlockHash(parentBlkHash)
 
@@ -334,7 +343,6 @@ func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error){
 	}
 	return Deserialize(v),nil
 }
-
 
 
 
