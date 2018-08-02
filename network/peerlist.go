@@ -66,19 +66,22 @@ func NewPeerList(p []*Peer) *PeerList {
 func NewPeerListStr(strs []string) *PeerList {
 	var ps []*Peer
 	for _, str := range strs {
+
 		peer, err := CreatePeerFromString(str)
+
 		if err != nil {
 			logger.Warn("Address Unrecognized:", str)
 		}
 		ps = append(ps, peer)
 	}
+
 	return NewPeerList(ps)
 }
 
 //Add a multiadress.
 func (pl *PeerList) Add(p *Peer) {
 	//add only if it is not already existed in the list
-	if !pl.IsInPeerlist(p) && len(pl.peers) <= PEERLISTMAXSIZE {
+	if !pl.IsInPeerlist(p) && (len(pl.peers) < PEERLISTMAXSIZE) {
 		pl.peers = append(pl.peers, p)
 	}
 }
@@ -115,7 +118,11 @@ func (pl *PeerList) GetPeerlist() []*Peer {
 
 //Check if a multiaddress is already existed in the list
 func (pl *PeerList) IsInPeerlist(p *Peer) bool {
+
 	for _, ps := range pl.peers {
+		fmt.Println("111111111")
+		fmt.Println(ps.peerid.String())
+		fmt.Println(p.peerid.String())
 		if ps.peerid.String() == p.peerid.String() {
 			return true
 		}
