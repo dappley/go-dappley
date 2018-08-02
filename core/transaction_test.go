@@ -148,7 +148,7 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
-	assert.False(t, tx.FindAllTxinsInUtxoPool(utxoPool))
+	assert.Nil(t, tx.FindAllTxinsInUtxoPool(utxoPool))
 	tx.Vin = Txin
-	assert.True(t, tx.FindAllTxinsInUtxoPool(utxoPool))
+	assert.NotNil(t, tx.FindAllTxinsInUtxoPool(utxoPool))
 }

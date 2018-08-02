@@ -239,9 +239,9 @@ func (b *Block) VerifyHash() bool {
 	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
 }
 
-func (b *Block) VerifyTransactions(bc *Blockchain) bool {
+func (b *Block) VerifyTransactions(utxo utxoIndex) bool {
 	for _, tx := range b.GetTransactions() {
-		if !bc.VerifyTransaction(*tx) {
+		if !tx.Verify(utxo) {
 			return false
 		}
 	}

@@ -36,16 +36,15 @@ func (utxo *utxoIndex) Serialize() []byte {
 
 
 func GetAddressUTXOs (pubkey []byte, db storage.Storage) []UTXOutputStored {
-	umap := getStoredUtxoMap(db)
+	umap := GetStoredUtxoMap(db)
 	return umap[string(pubkey)]
 }
 
-func getStoredUtxoMap (db storage.Storage) utxoIndex {
+func GetStoredUtxoMap(db storage.Storage) utxoIndex {
 	res, err := db.Get([]byte(UtxoMapKey))
 
 	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
-		res1 := utxoIndex{}
-		return res1
+		return utxoIndex{}
 	}
 	umap := DeserializeUTXO(res)
 	return *umap
@@ -65,7 +64,7 @@ func UpdateUtxoIndexAfterNewBlock(blk Block, db storage.Storage){
 
 }
 func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
-	utxoIndex := getStoredUtxoMap(db)
+	utxoIndex := GetStoredUtxoMap(db)
 	if len(utxoIndex)==0 {
 		utxoIndex = initIndex()
 	}
@@ -81,7 +80,7 @@ func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
 }
 
 func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
-	utxoIndex := getStoredUtxoMap(db)
+	utxoIndex := GetStoredUtxoMap(db)
 	for _, txns := range blk.transactions{
 		for _,vin := range txns.Vin{
 			spentOutputTxnId, txnIndex, pubKey := vin.Txid, vin.Vout, string(vin.PubKey)
@@ -99,13 +98,13 @@ func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
 	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
 }
 
-func (utxo *utxoIndex) VerifyTransactionInput(txin TXInput) bool{
+func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
 	for _,utxoArray := range *utxo {
 		for _, u := range utxoArray{
 			if bytes.Compare(u.Txid,txin.Txid)==0 && u.TxIndex==txin.Vout{
-				return true
+				return &u
 			}
 		}
 	}
-	return false
+	return nil
 }

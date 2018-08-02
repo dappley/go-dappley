@@ -162,7 +162,7 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 	tx.Sign(privKey, prevTXs)
 }
 
-func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
+/*func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 	if tx.IsCoinbase() {
 		return true
 	}
@@ -181,7 +181,7 @@ func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
 	}
 
 	return tx.VerifySignatures(prevTXs)
-}
+}*/
 
 func (bc *Blockchain) Iterator() *Blockchain {
 	return initializeBlockChainWithBlockPool(bc.currentHash, bc.DB)
@@ -290,6 +290,8 @@ func (bc *Blockchain) MergeFork(){
 	if !bc.IsInBlockchain(forkParentHash){
 		return
 	}
+
+	//TODO: verify transactions in the fork
 
 	//rollback all child blocks after the parent block from tail to head
 	bc.RollbackToABlock(forkParentHash)

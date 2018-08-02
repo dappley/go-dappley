@@ -235,10 +235,9 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 
 //verify transactions and remove invalid transactions
 func (pow *ProofOfWork) verifyTransactions() {
-	txnPool := core.GetTxnPoolInstance()
-	txnPool.Traverse(func(tx core.Transaction) bool{
-		return pow.bc.VerifyTransaction(tx)
-	})
+	utxoPool := core.GetStoredUtxoMap(pow.bc.DB)
+	txPool := core.GetTxnPoolInstance()
+	txPool.FilterAllTransactions(utxoPool)
 }
 
 func (pow *ProofOfWork) updateFork(block *core.Block, pid peer.ID){

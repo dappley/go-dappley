@@ -162,8 +162,13 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 
 	//the tail block should be the block that we have pushed into blockpool
 	tailBlock,err := bc.GetTailBlock()
-
 	assert.Nil(t,err)
+
+	for tailBlock.GetHeight() > 3 {
+		tailBlock,err = bc.GetBlockByHash(tailBlock.GetPrevHash())
+		assert.Nil(t,err)
+	}
+
 	assert.Equal(t, newBlock,tailBlock)
 
 }

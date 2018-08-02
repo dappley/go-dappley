@@ -118,8 +118,21 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
+//return true if the transaction is verified
+func (tx *Transaction) Verify(utxo utxoIndex) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	prevUtxos := tx.FindAllTxinsInUtxoPool(utxo)
+	if prevUtxos == nil {
+		return false
+	}
+	return tx.VerifySignatures(prevUtxos)
+}
+
 // Verify verifies signatures of Transaction inputs
-func (tx *Transaction) VerifySignatures(prevTXs map[string]Transaction) bool {
+func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	var verifyResult bool
 	var error1 error
@@ -129,7 +142,7 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]Transaction) bool {
 	}
 
 	for _, vin := range tx.Vin {
-		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+		if prevTXs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
 			log.Panic("ERROR: Previous transaction is not correct")
 		}
 	}
@@ -141,7 +154,7 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]Transaction) bool {
 	for inID, vin := range tx.Vin {
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+		txCopy.Vin[inID].PubKey = prevTx.PubKeyHash
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
 
@@ -246,13 +259,17 @@ func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc
 }
 
 //Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool utxoIndex) bool{
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool utxoIndex) map[string]TXOutput{
+	res := make(map[string]TXOutput)
 	for _,vin := range tx.Vin{
-		if !utxoPool.VerifyTransactionInput(vin){
-			return false
+		utxo := utxoPool.FindUtxoByTxinput(vin)
+		if utxo == nil {
+			return nil
 		}
+		txout := TXOutput{utxo.Value,utxo.PubKeyHash}
+		res[hex.EncodeToString(vin.Txid)] = txout
 	}
-	return true
+	return res
 }
 
 

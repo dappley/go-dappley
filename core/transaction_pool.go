@@ -89,6 +89,12 @@ func (pool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
 	}
 }
 
+func (pool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
+	pool.Traverse(func(tx Transaction) bool{
+		return tx.Verify(utxoPool)
+	})
+}
+
 func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
 	sortedTransactions := []*Transaction{}
 

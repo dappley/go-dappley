@@ -7,6 +7,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 
+	"fmt"
 )
 
 
@@ -141,8 +142,15 @@ func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	utxoPool := utxoIndex{}
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2}
 
-	assert.True(t, utxoPool.VerifyTransactionInput(Txin[0]))
-	assert.True(t, utxoPool.VerifyTransactionInput(Txin[1]))
-	assert.False(t, utxoPool.VerifyTransactionInput(Txin[2]))
-	assert.False(t, utxoPool.VerifyTransactionInput(Txin[3]))
+	assert.NotNil(t, utxoPool.FindUtxoByTxinput(Txin[0]))
+	assert.NotNil(t, utxoPool.FindUtxoByTxinput(Txin[1]))
+	assert.Nil(t, utxoPool.FindUtxoByTxinput(Txin[2]))
+	assert.Nil(t, utxoPool.FindUtxoByTxinput(Txin[3]))
+}
+
+func TestUpdateUtxoIndexAfterNewBlock(t *testing.T){
+	a := make(map[int]string)
+	fmt.Println(a[1])
+	assert.True(t, true)
+
 }
