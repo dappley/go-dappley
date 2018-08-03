@@ -8,6 +8,7 @@ import (
 
 func GenerateMockBlock() *Block{
 	bh1 := &BlockHeader{
+		int32(1),
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,

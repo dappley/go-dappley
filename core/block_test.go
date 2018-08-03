@@ -70,6 +70,7 @@ func TestNewBlock(t *testing.T) {
 
 func TestBlockHeader_Proto(t *testing.T) {
 	bh1 := BlockHeader{
+		int32(1),
 		[]byte("hash"),
 		[]byte("hash"),
 		1,

@@ -12,6 +12,7 @@ import (
 
 func GenerateUtxoMockBlockWithoutInputs() *Block{
 	bh1 := &BlockHeader{
+		int32(1),
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,
@@ -29,6 +30,7 @@ func GenerateUtxoMockBlockWithoutInputs() *Block{
 
 func GenerateUtxoMockBlockWithInputs() *Block{
 	bh1 := &BlockHeader{
+		int32(1),
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,

@@ -34,6 +34,7 @@ import (
 )
 
 type BlockHeader struct {
+	version int32
 	hash      Hash
 	prevHash  Hash
 	nonce     int64
@@ -44,12 +45,16 @@ type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
 	height       uint64
+	error string
+	checkFlag bool
 }
+
 
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
 	var prevHash []byte
 	var height uint64
+	var versionValue int32     //need set the version
 	height = 0
 	if parent != nil {
 		prevHash = parent.GetHash()
@@ -61,6 +66,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 	}
 	return &Block{
 		header: &BlockHeader{
+			version: versionValue,
 			hash:      []byte{},
 			prevHash:  prevHash,
 			nonce:     0,
@@ -89,6 +95,7 @@ func (b *Block) Serialize() []byte {
 
 	bs := &BlockStream{
 		Header: &BlockHeaderStream{
+			Version: b.header.version,
 			Hash:      b.header.hash,
 			PrevHash:  b.header.prevHash,
 			Nonce:     b.header.nonce,
@@ -118,11 +125,15 @@ func Deserialize(d []byte) *Block {
 	if bs.Header.PrevHash == nil {
 		bs.Header.PrevHash = Hash{}
 	}
+	if bs.Header.MerkleRoot == nil {
+		bs.Header.MerkleRoot = Hash{}
+	}
 	if bs.Transactions == nil {
 		bs.Transactions = []*Transaction{}
 	}
 	return &Block{
 		header: &BlockHeader{
+			version:	bs.Header.Version,
 			hash:      bs.Header.Hash,
 			prevHash:  bs.Header.PrevHash,
 			nonce:     bs.Header.Nonce,
@@ -145,6 +156,10 @@ func (b *Block) GetHeight() uint64 {
 	return b.height
 }
 
+func (b *Block) SetHeight(height uint64) {
+	b.height = height
+}
+
 func (b *Block) GetPrevHash() Hash {
 	return b.header.prevHash
 }
@@ -155,6 +170,14 @@ func (b *Block) SetNonce(nonce int64) {
 
 func (b *Block) GetNonce() int64 {
 	return b.header.nonce
+}
+
+func (b *Block) SetVersion(version int32) {
+	b.header.version = version
+}
+
+func (b *Block) GetVersion() int32 {
+	return b.header.version
 }
 
 func (b *Block) GetTimestamp() int64 {
@@ -199,6 +222,7 @@ func (b *Block) FromProto(pb proto.Message) {
 
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
+		Version: bh.version,
 		Hash:      bh.hash,
 		Prevhash:  bh.prevHash,
 		Nonce:     bh.nonce,
@@ -207,6 +231,7 @@ func (bh *BlockHeader) ToProto() proto.Message {
 }
 
 func (bh *BlockHeader) FromProto(pb proto.Message) {
+	bh.version = pb.(*corepb.BlockHeader).Version
 	bh.hash = pb.(*corepb.BlockHeader).Hash
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
