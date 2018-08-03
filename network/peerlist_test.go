@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -199,9 +198,7 @@ func TestPeerlist_AddMoreThanLimit(t *testing.T) {
 	}
 
 	pl1 := NewPeerListStr(strs1)
-	for _, peer := range pl1.peers {
-		fmt.Println(peer.peerid)
-	}
+
 	assert.Equal(t, 19, len(pl1.peers))
 	strs2 := []string{
 		"/ip4/192.168.10.131/tcp/10000/ipfs/QmWeMUMZeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
@@ -209,8 +206,6 @@ func TestPeerlist_AddMoreThanLimit(t *testing.T) {
 		"/ip4/192.168.10.123/tcp/10000/ipfs/QmWeMUMQeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
 	pl2 := NewPeerListStr(strs2)
-	pl1.AddMultiple(pl2.peers)
-	assert.Equal(t, 19, len(pl1.peers))
 
 	newStr1 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
 	newStr2 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUkBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
@@ -225,4 +220,89 @@ func TestPeerlist_AddMoreThanLimit(t *testing.T) {
 	pl1.Add(p2)
 
 	assert.Equal(t, 20, len(pl1.peers))
+
+	pl2.AddMultiple(pl1.peers)
+	assert.Equal(t, 20, len(pl2.peers))
+}
+
+func TestPeerList_IsFull(t *testing.T) {
+	strs1 := []string{
+		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.101/tcp/10000/ipfs/QmWeMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.102/tcp/10000/ipfs/QmWaMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.103/tcp/10000/ipfs/QmWdMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.104/tcp/10000/ipfs/QmWcMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWqMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.106/tcp/10000/ipfs/QmWqAUMBeWxwU4R3ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.107/tcp/10000/ipfs/QmWsMUMBeWxwU6R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.108/tcp/10000/ipfs/QmdhMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.111/tcp/10000/ipfs/QmakMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.112/tcp/10000/ipfs/QmWwMUMBeWxwU4R3ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.113/tcp/10000/ipfs/QmWzMUMBeWxwU4R6ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.114/tcp/10000/ipfs/QmWmMUMBeWxwU4R5ukBiKmSiGT5cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.115/tcp/10000/ipfs/QmWwMZMBeWxwU4R7ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.116/tcp/10000/ipfs/QmWwadMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.117/tcp/10000/ipfs/QmWwMUNBeWxwU4R6ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.118/tcp/10000/ipfs/QmWwMUMAeWxwU3R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.119/tcp/10000/ipfs/QmWwKUMBeWxwU4RrukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.120/tcp/10000/ipfs/QmWwMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	}
+	pl1 := NewPeerListStr(strs1)
+	assert.False(t, pl1.ListIsFull())
+
+	strs2 := []string{
+		"/ip4/192.168.10.131/tcp/10000/ipfs/QmWeMUMZeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.122/tcp/10000/ipfs/QmWeMUMKeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.123/tcp/10000/ipfs/QmWeMUMQeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	}
+	pl2 := NewPeerListStr(strs2)
+	pl1.AddMultiple(pl2.peers)
+	assert.True(t, pl1.ListIsFull())
+}
+
+func TestPeerList_RemoveOneIP(t *testing.T) {
+	strs1 := []string{
+		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.101/tcp/10000/ipfs/QmWeMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.102/tcp/10000/ipfs/QmWaMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.103/tcp/10000/ipfs/QmWdMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.104/tcp/10000/ipfs/QmWcMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWqMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.106/tcp/10000/ipfs/QmWqAUMBeWxwU4R3ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.107/tcp/10000/ipfs/QmWsMUMBeWxwU6R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.108/tcp/10000/ipfs/QmdhMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.111/tcp/10000/ipfs/QmakMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.112/tcp/10000/ipfs/QmWwMUMBeWxwU4R3ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.113/tcp/10000/ipfs/QmWzMUMBeWxwU4R6ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.114/tcp/10000/ipfs/QmWmMUMBeWxwU4R5ukBiKmSiGT5cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.115/tcp/10000/ipfs/QmWwMZMBeWxwU4R7ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.116/tcp/10000/ipfs/QmWwadMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.117/tcp/10000/ipfs/QmWwMUNBeWxwU4R6ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.118/tcp/10000/ipfs/QmWwMUMAeWxwU3R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.119/tcp/10000/ipfs/QmWwKUMBeWxwU4RrukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.120/tcp/10000/ipfs/QmWwMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	}
+
+	pl1 := NewPeerListStr(strs1)
+
+	assert.Equal(t, 19, len(pl1.peers))
+	newStr1 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
+	newStr2 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUkBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
+	p1, _ := CreatePeerFromString(newStr1)
+
+	pl1.Add(p1)
+
+	assert.Equal(t, 20, len(pl1.peers))
+
+	p2, _ := CreatePeerFromString(newStr2)
+
+	pl1.Add(p2)
+
+	assert.Equal(t, 20, len(pl1.peers))
+	pl1.RemoveOneIP(p2)
+	assert.Equal(t, 19, len(pl1.peers))
+	assert.False(t, pl1.IsInPeerlist(p2))
+	pl1.Add(p2)
+	assert.Equal(t, 20, len(pl1.peers))
+	assert.True(t, pl1.IsInPeerlist(p2))
 }

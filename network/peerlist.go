@@ -78,6 +78,20 @@ func NewPeerListStr(strs []string) *PeerList {
 	return NewPeerList(ps)
 }
 
+func (pl *PeerList) ListIsFull() bool {
+	if len(pl.peers) < PEERLISTMAXSIZE {
+		return false
+	}
+	return true
+}
+
+//remove old ip give space for new ip
+func (pl *PeerList) RemoveOneIP(p *Peer) {
+	if !pl.IsInPeerlist(p) {
+		pl.peers = append(pl.peers[:0], pl.peers[1:]...)
+	}
+}
+
 //Add a multiadress.
 func (pl *PeerList) Add(p *Peer) {
 	//add only if it is not already existed in the list
@@ -88,10 +102,8 @@ func (pl *PeerList) Add(p *Peer) {
 
 //add multiple addresses
 func (pl *PeerList) AddMultiple(ps []*Peer) {
-	if (len(pl.peers) + len(ps)) <= PEERLISTMAXSIZE {
-		for _, p := range ps {
-			pl.Add(p)
-		}
+	for _, p := range ps {
+		pl.Add(p)
 	}
 }
 

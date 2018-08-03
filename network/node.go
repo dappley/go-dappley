@@ -145,6 +145,9 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	n.streamHandler(stream)
 
 	// Add the peer list
+	if len(n.peerList.peers) >= PEERLISTMAXSIZE {
+		n.peerList.RemoveOneIP(&Peer{peerid, targetAddr})
+	}
 	n.peerList.Add(&Peer{peerid, targetAddr})
 
 	return nil
@@ -154,7 +157,10 @@ func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.Info("Stream Connected! Peer Addr:", s.Conn().RemoteMultiaddr())
 	// Add  the peer list
-	n.peerList.Add(&Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()})
+	if !n.peerList.ListIsFull() {
+		n.peerList.Add(&Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()})
+	}
+
 	//start stream
 	ns := NewStream(s, n)
 	n.streams[s.Conn().RemotePeer()] = ns
