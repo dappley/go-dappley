@@ -34,6 +34,7 @@ type Transaction struct {
 	Tip  uint64
 }
 
+
 func (tx Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
@@ -118,7 +119,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 // Verify verifies signatures of Transaction inputs
-func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+func (tx *Transaction) VerifySignatures(prevTXs map[string]Transaction) bool {
 
 	var verifyResult bool
 	var error1 error
@@ -187,12 +188,12 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
+func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, senderKeyPair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 	var validOutputs []UTXOutputStored
 
-	pubKeyHash, _ := HashPubKey(keypair.PublicKey)
+	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
 	sum := 0
 
 	if len(GetAddressUTXOs(pubKeyHash, db)) < 1 {
@@ -212,7 +213,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 
 	// Build a list of inputs
 	for _, out := range validOutputs {
-		input := TXInput{out.Txid, out.TxIndex, nil, keypair.PublicKey}
+		input := TXInput{out.Txid, out.TxIndex, nil, senderKeyPair.PublicKey}
 		inputs = append(inputs, input)
 
 	}
@@ -224,7 +225,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, keypai
 
 	tx := Transaction{nil, inputs, outputs, tip}
 	tx.ID = tx.Hash()
-	bc.SignTransaction(&tx, keypair.PrivateKey)
+	bc.SignTransaction(&tx, senderKeyPair.PrivateKey)
 
 	return tx, nil
 }

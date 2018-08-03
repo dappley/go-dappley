@@ -208,9 +208,9 @@ func TestNetwork_node1(t *testing.T){
 	node1 := NewNode(bc)
 	err := node1.Start(test_port2)
 	assert.Nil(t, err)
-	err = node1.AddStreamString(node0_addr)
+	err = node1.AddStreamByString(node0_addr)
 	assert.Nil(t, err)
-	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	//node1.AddStreamByString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
 	select{}
 }
 
@@ -219,8 +219,8 @@ func TestNetwork_node2(t *testing.T){
 
 	node1 := NewNode(bc)
 	node1.Start(test_port3)
-	node1.AddStreamString(node0_addr)
-	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	node1.AddStreamByString(node0_addr)
+	//node1.AddStreamByString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
 	select{}
 }
 
@@ -229,8 +229,8 @@ func TestNetwork_node3(t *testing.T){
 
 	node1 := NewNode(bc)
 	node1.Start(test_port4)
-	node1.AddStreamString(node0_addr)
-	//node1.AddStreamString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
+	node1.AddStreamByString(node0_addr)
+	//node1.AddStreamByString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
 	//select{}
 	b := core.GenerateMockBlock()
 	for{

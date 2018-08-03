@@ -186,8 +186,9 @@ func (b *Block) FromProto(pb proto.Message) {
 	b.header = &bh
 
 	var txs []*Transaction
-	tx := &Transaction{}
+
 	for _, txpb := range pb.(*corepb.Block).Transactions {
+		tx := &Transaction{}
 		tx.FromProto(txpb)
 		txs = append(txs, tx)
 	}

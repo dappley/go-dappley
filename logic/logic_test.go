@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"reflect"
 )
 
@@ -42,6 +42,7 @@ func TestMain(m *testing.M) {
 	setup()
 	databaseInstance = storage.OpenDatabase(core.BlockchainDbFile)
 	defer databaseInstance.Close()
+	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()
 	os.Exit(retCode)
 }
@@ -180,7 +181,7 @@ func TestSend(t *testing.T) {
 	assert.Equal(t, balance2, 0)
 
 	//Send 5 coins from wallet1 to wallet2
-	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
+	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.Nil(t, err)
 	pow := consensus.NewProofOfWork()
 	pow.Setup(b,addr1.Address)
@@ -250,7 +251,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Equal(t, balance1, mineReward)
 
 	//Send 5 coins from addr1 to an invalid address
-	err = Send(addr1, core.NewAddress(invalidAddress), transferAmount, tip, databaseInstance)
+	err = Send(wallet1, core.NewAddress(invalidAddress), transferAmount, tip, b)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -319,7 +320,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, balance2, 0)
 
 	//Send 5 coins from addr1 to addr2
-	err = Send(addr1, addr2, transferAmount, tip, databaseInstance)
+	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -338,7 +339,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 const testport = 10100
 
 func TestSyncBlocks(t *testing.T){
-	logrus.SetLevel(logrus.WarnLevel)
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -394,7 +394,7 @@ func TestSyncBlocks(t *testing.T){
 				assert.Nil(t, err)
 				if blk.GetHeight() > blkHeight[i] {
 					blkHeight[i]++
-					logrus.Info("BlkHeight:",blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
+					logger.Info("BlkHeight:",blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
 				}
 				if blk.GetHeight() > targetHeight {
 					//count the number of nodes that have already stopped mining
@@ -426,7 +426,6 @@ func TestSyncBlocks(t *testing.T){
 const testport_fork = 10200
 
 func TestForkChoice(t *testing.T){
-	logrus.SetLevel(logrus.WarnLevel)
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
