@@ -198,7 +198,7 @@ func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool{
 		if !pool.forkPool[i].VerifyTransactions(utxo){
 			return false
 		}
-		UpdateUtxoIndexAfterNewBlock(*pool.forkPool[i], pool.bc.DB, UtxoMapKey)
+		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey,pool.bc.DB)
 	}
 	return true
 }

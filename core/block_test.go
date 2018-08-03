@@ -8,6 +8,7 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/storage"
 )
 
 var header = &BlockHeader{
@@ -129,11 +130,12 @@ func TestBlock_VerifyHash(t *testing.T) {
 }
 
 func TestBlock_Rollback(t *testing.T) {
+	db:= storage.NewRamStorage()
 	b := GenerateMockBlock()
 	tx := MockTransaction()
 	b.transactions = []*Transaction{tx}
-
-	b.Rollback()
+	b.UpdateUtxoIndexAfterNewBlock(UtxoForkMapKey,db)
+	b.Rollback(db)
 	txnPool := GetTxnPoolInstance()
 	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
 }

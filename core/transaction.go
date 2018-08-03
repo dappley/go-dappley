@@ -215,10 +215,10 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, sender
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
 	sum := 0
 
-	if len(GetAddressUTXOs(pubKeyHash, db, UtxoMapKey)) < 1 {
+	if len(GetAddressUTXOs(UtxoMapKey, pubKeyHash, db)) < 1 {
 		return Transaction{}, ErrInsufficientFund
 	}
-	for _, v := range GetAddressUTXOs(pubKeyHash, db, UtxoMapKey) {
+	for _, v := range GetAddressUTXOs(UtxoMapKey,pubKeyHash, db) {
 		sum += v.Value
 		validOutputs = append(validOutputs, v)
 		if sum >= amount {

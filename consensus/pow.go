@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/dappley/go-dappley/storage"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -137,6 +138,7 @@ func (pow *ProofOfWork) runNextState(){
 
 
 func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
+	db:= storage.NewRamStorage()
 	logger.Debug("PoW: Received a new block. id:", pow.getPeerMultiAddr())
 	if pow.ValidateDifficulty(blk){
 		tailBlock,err := pow.bc.GetTailBlock()
@@ -144,7 +146,7 @@ func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
 			logger.Warn("PoW: Get Tail Block failed! Err:", err)
 		}
 		if core.IsParentBlock(tailBlock, blk){
-			pow.newBlock.Rollback()
+			pow.newBlock.Rollback(db)
 			pow.newBlock = blk
 			pow.newBlkRcvd = true
 			pow.nextState = updateNewBlockState
@@ -253,12 +255,12 @@ func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
 
 //returns true if successful
 func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender peer.ID) bool{
-
+	db := storage.NewRamStorage()
 	isSuccessful := pow.bc.BlockPool().UpdateForkFromHead(newblock)
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if pow.bc.IsInBlockchain(newblock.GetPrevHash()){
-			pow.newBlock.Rollback()
+			pow.newBlock.Rollback(db)
 			pow.nextState = mergeForkState
 		}else{
 			//if the fork could not be added to the current blockchain, ask for the head block's parent
