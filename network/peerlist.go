@@ -132,9 +132,6 @@ func (pl *PeerList) GetPeerlist() []*Peer {
 func (pl *PeerList) IsInPeerlist(p *Peer) bool {
 
 	for _, ps := range pl.peers {
-		fmt.Println("111111111")
-		fmt.Println(ps.peerid.String())
-		fmt.Println(p.peerid.String())
 		if ps.peerid.String() == p.peerid.String() {
 			return true
 		}

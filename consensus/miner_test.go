@@ -99,8 +99,6 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		wallet2.GetAddress()	:sendAmount,					//balance should be the amount rcved from wallet1
 	}
 
-	fmt.Println(getBalance(bc, wallet1.GetAddress().Address))
-	fmt.Println(getBalance(bc, wallet2.GetAddress().Address))
 	//check balance
 	checkBalance(t,bc, expectedVal)
 }
