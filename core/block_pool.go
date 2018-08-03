@@ -191,3 +191,14 @@ func (pool *BlockPool) addTailToForkPool(blk *Block){
 func (pool *BlockPool) addParentToForkPool(blk *Block)  {
 	pool.forkPool = append(pool.forkPool, blk)
 }
+
+//Verify all transactions in a fork
+func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool{
+	for i := pool.ForkPoolLen()-1; i>=0; i--{
+		if !pool.forkPool[i].VerifyTransactions(utxo){
+			return false
+		}
+		UpdateUtxoIndexAfterNewBlock(*pool.forkPool[i], pool.bc.DB)
+	}
+	return true
+}
