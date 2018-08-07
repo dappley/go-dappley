@@ -127,7 +127,7 @@ func (pool *BlockPool) UpdateForkFromTail(blk *Block) bool{
 }
 
 //returns if the operation is successful
-func (pool *BlockPool) UpdateForkFromHead(blk *Block) bool{
+func (pool *BlockPool) AddParentToFork(blk *Block) bool{
 
 	isParent := pool.IsParentOfFork(blk)
 	if isParent{

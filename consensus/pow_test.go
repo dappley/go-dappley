@@ -30,6 +30,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func TestProofOfWork_NewPoW(t *testing.T){
+	pow := NewProofOfWork()
+	assert.Equal(t,"",pow.cbAddr)
+	assert.Equal(t,false,pow.newBlkRcvd)
+	assert.Equal(t,prepareBlockState, pow.nextState)
+}
+
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
 	bc := core.CreateBlockchain(

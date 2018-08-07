@@ -256,7 +256,7 @@ func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
 //returns true if successful
 func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender peer.ID) bool{
 	db := storage.NewRamStorage()
-	isSuccessful := pow.bc.BlockPool().UpdateForkFromHead(newblock)
+	isSuccessful := pow.bc.BlockPool().AddParentToFork(newblock)
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if pow.bc.IsInBlockchain(newblock.GetPrevHash()){
