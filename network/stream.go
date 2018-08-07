@@ -55,6 +55,19 @@ func (s *Stream) Start(){
 	s.startLoop(rw)
 }
 
+
+func (s *Stream) StopStream(){
+	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
+	s.quitRdCh <- true
+	s.quitWrCh <- true
+	s.stream.Close()
+	delete(s.node.streams, s.peerID)
+}
+
+func (s *Stream) Send(data []byte){
+	s.dataCh <- data
+}
+
 func (s *Stream) startLoop(rw *bufio.ReadWriter){
 	go s.readLoop(rw)
 	go s.writeLoop(rw)
@@ -152,18 +165,6 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 		}
 	}
 	return nil
-}
-
-func (s *Stream) StopStream(){
-	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
-	s.quitRdCh <- true
-	s.quitWrCh <- true
-	s.stream.Close()
-	delete(s.node.streams, s.peerID)
-}
-
-func (s *Stream) Send(data []byte){
-	s.dataCh <- data
 }
 
 func (s *Stream) parseData(data []byte){
