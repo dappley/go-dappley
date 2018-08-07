@@ -8,6 +8,7 @@ import (
 	"strings"
 	"fmt"
 	"errors"
+	"github.com/jinzhu/copier"
 )
 
 //map of key: wallet address, value: serialized map
@@ -122,26 +123,26 @@ func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
 }
 
 //doesnt save to db
-func (utxoIndex utxoIndex) RevertTxnUtxos(blk Block, bc Blockchain, db storage.Storage){
+func (utxo utxoIndex) RevertTxnUtxos(blk Block, bc Blockchain, db storage.Storage){
 
 	for _, txn := range blk.GetTransactions() {
-		err1:= utxoIndex.RemoveTxnUtxosFromUtxoPool(*txn, db)
+		err1:= utxo.RemoveTxnUtxosFromUtxoPool(*txn, db)
 		if err1!=nil {
 			log.Panic(err1)
 		}
 
-		err2 := utxoIndex.AddBackTxnOutputToTxnPool(*txn, db, blk, bc)
+		err2 := utxo.AddBackTxnOutputToTxnPool(*txn, db, blk, bc)
 		if err2!=nil {
 			log.Panic(err2)
 		}
 	}
 }
 
-func (utxoIndex utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db storage.Storage) error {
+func (utxo utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db storage.Storage) error {
 
 	for _,out := range txns.Vout{
 		value, pubKey :=  out.Value, string(out.PubKeyHash)
-		userUtxos := utxoIndex[pubKey]
+		userUtxos := utxo[pubKey]
 
 		Stud:
 			for index, userUtxo := range userUtxos{
@@ -153,17 +154,17 @@ func (utxoIndex utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db stora
 					log.Panic("Address given has no utxos in index")
 				}
 			}
-			utxoIndex[pubKey] = userUtxos
+		utxo[pubKey] = userUtxos
 	}
 	return nil
 }
 
-func (utxoIndex utxoIndex) AddBackTxnOutputToTxnPool(txn Transaction, db storage.Storage, blk Block, bc Blockchain) error {
+func (utxo utxoIndex) AddBackTxnOutputToTxnPool(txn Transaction, db storage.Storage, blk Block, bc Blockchain) error {
 	for _, vin := range txn.Vin {
 
 		vout, voutIndex, err := getTXOFromTxIn(vin, blk.GetHash(), bc)
 		if err == nil {
-			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vin.PubKey,txn.ID, voutIndex})
+			utxo[string(vout.PubKeyHash)] = append(utxo[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vin.PubKey,txn.ID, voutIndex})
 		} else {
 			panic(err)
 		}
@@ -171,8 +172,8 @@ func (utxoIndex utxoIndex) AddBackTxnOutputToTxnPool(txn Transaction, db storage
 	return nil
 }
 
-func SaveToDb(utxoIndex utxoIndex, mapkey string ,db storage.Storage){
-	db.Put([]byte(mapkey), utxoIndex.Serialize())
+func SaveToDb(utxo utxoIndex, mapkey string ,db storage.Storage){
+	db.Put([]byte(mapkey), utxo.Serialize())
 }
 
 //block is passed in because i cant statically call FindTransactionById
@@ -185,15 +186,42 @@ func getTXOFromTxIn(in TXInput, blkStartIndex []byte, bc Blockchain) (TXOutput, 
 	return txn.Vout[in.Vout], in.Vout, nil
 }
 
-func CreateForkCopyOfUtxoIndex(db storage.Storage) utxoIndex {
-	utxoIndex := GetStoredUtxoMap(db, UtxoMapKey)
 
-	if len(utxoIndex)==0 {
-		utxoIndex = initIndex()
+func (utxo utxoIndex) DeepCopy (db storage.Storage) utxoIndex {
+	utxocopy := utxoIndex{}
+	copier.Copy(&utxo, &utxocopy)
+	if len(utxocopy)==0 {
+		utxocopy = initIndex()
 	}
-	emptyForkIndex(db)
-	SaveToDb(utxoIndex, UtxoForkMapKey, db)
-	return utxoIndex
+	return utxocopy
+}
+
+//input db and block hash, output utxoindex state @block hash block
+func (bc Blockchain) RevertToBlockHash(db storage.Storage, hash []byte) (utxoIndex, error ){
+	index := GetStoredUtxoMap(db, UtxoMapKey)
+	deepCopy := index.DeepCopy(db)
+	bci := bc.Iterator()
+
+	for {
+		block, err := bci.Next()
+
+		if bytes.Compare(block.GetHash(), hash) == 0 {
+			break
+		}
+
+		if err != nil {
+			return utxoIndex{}, err
+		}
+
+		if len(block.GetPrevHash()) == 0 {
+			return utxoIndex{}, ErrBlockDoesNotExist
+		}
+
+		deepCopy.RevertTxnUtxos(*block, bc, db)
+
+	}
+
+	return deepCopy, nil
 }
 
 func emptyForkIndex(db storage.Storage){

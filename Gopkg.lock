@@ -116,6 +116,12 @@
   revision = "b497e2f366b8624394fb2e89c10ab607bebdde0b"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/copier"
+  packages = ["."]
+  revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
+
+[[projects]]
   name = "github.com/libp2p/go-addr-util"
   packages = ["."]
   revision = "56c6a7f748424cab4ff68da653ff01363e3cd745"
@@ -179,7 +185,7 @@
   name = "github.com/libp2p/go-libp2p-loggables"
   packages = ["."]
   revision = "825bdca6800792bf8013c54670072023f58f2770"
-version = "v1.1.18"
+  version = "v1.1.18"
 
 [[projects]]
   name = "github.com/libp2p/go-libp2p-metrics"
@@ -490,6 +496,6 @@ version = "v1.1.18"
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3b3c8528f6fed5b2967e0ce9589da6c3e600643e3d306d8d62e3a30fbaca3b5c"
+  inputs-digest = "267fa7ee8794b3760151b0012cb1894cbabe0410dbffe48baccdf58ac0cb6c3f"
   solver-name = "gps-cdcl"
   solver-version = 1

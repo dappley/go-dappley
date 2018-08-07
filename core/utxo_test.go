@@ -135,7 +135,7 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 	assert.Equal(t, 8, sum)
 }
 
-func TestRevertUtxos(t *testing.T){
+func TestCopyAndRevertUtxosInRam(t *testing.T){
 
 	db :=  storage.NewRamStorage()
 	defer db.Close()
@@ -154,24 +154,20 @@ func TestRevertUtxos(t *testing.T){
 	//expect address2 to have 2 utxos totaling $8
 	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
 
-	utxoindex := GetStoredUtxoMap(db, UtxoMapKey)
 	//rollback to block 1, address 1 has a $5 utxo and a $7 utxo, total $12, and addr2 has nothing
-	utxoindex.RevertTxnUtxos(*blk2,*bc, db)
-	SaveToDb(utxoindex, UtxoMapKey, db)
+	deepCopy, err:= bc.RevertToBlockHash(db, blk1.GetHash())
+	if err !=nil{
+		panic(err)
+	}
 
-	assert.Equal(t, 2, len(GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
-	assert.Equal(t, 5,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
-	assert.Equal(t, 7,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[1].Value)
-	assert.Equal(t, 0, len(GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
-
-	//rollback to genesis block, addr1 and addr2 both have nothing
-	utxoindex.RevertTxnUtxos(*blk1,*bc, db)
-	SaveToDb(utxoindex, UtxoMapKey,db  )
-
-	assert.Equal(t, 0, len(GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
-	assert.Equal(t, 0, len(GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
+	assert.Equal(t, 2, len(deepCopy["address1"]))
+	assert.Equal(t, 5,  deepCopy["address1"][0].Value)
+	assert.Equal(t, 7,  deepCopy["address1"][1].Value)
+	assert.Equal(t, 0,  len(deepCopy["address2"]))
 
 }
+
+
 
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()
