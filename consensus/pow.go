@@ -32,7 +32,7 @@ import (
 
 var maxNonce int64 = math.MaxInt64
 
-const targetBits = int64(14)
+const targetBits = 14
 
 type State int
 
@@ -56,11 +56,8 @@ type ProofOfWork struct {
 }
 
 func NewProofOfWork() *ProofOfWork{
-	target := big.NewInt(1)
-	target.Lsh(target, uint(256-targetBits))
-
 	p := &ProofOfWork{
-		target: 		target,
+		target: 		nil,
 		exitCh: 		make(chan bool, 1),
 		bc:     		nil,
 		nextState:		prepareBlockState,
@@ -70,6 +67,7 @@ func NewProofOfWork() *ProofOfWork{
 		newBlkRcvd:		false,
 		nonce:			0,
 	}
+	p.SetTargetBit(targetBits)
 	return p
 }
 
@@ -88,6 +86,9 @@ func (pow *ProofOfWork) GetCurrentState() State {
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int){
+	if bit <= 0 || bit > 256 {
+		return
+	}
 	target := big.NewInt(1)
 	pow.target = target.Lsh(target, uint(256-bit))
 }
