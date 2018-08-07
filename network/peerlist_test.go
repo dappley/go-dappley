@@ -388,32 +388,72 @@ func TestPeerlist_MergePeerlist(t *testing.T) {
 }
 
 func TestPeerlist_FindNewPeers(t *testing.T) {
-	strs1 := []string{
-		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWeMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	tests := []struct{
+		name 		string
+		peerStr1	[]string
+		peerStr2	[]string
+		expStr 		[]string
+	}{
+		{
+			name:		"NonOverlapping",
+			peerStr1: 	[]string{
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			peerStr2:	[]string{
+				"/ip4/192.168.10.106/tcp/10000/ipfs/QmWgMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			expStr:		[]string{
+				"/ip4/192.168.10.106/tcp/10000/ipfs/QmWgMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+		},
+		{
+			name:		"Overlapping",
+			peerStr1: 	[]string{
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvaUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			peerStr2:	[]string{
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"/ip4/192.168.10.106/tcp/10000/ipfs/QmWgMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			expStr:		[]string{
+				"/ip4/192.168.10.106/tcp/10000/ipfs/QmWgMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+		},
+		{
+			name:		"CompletelyOverlapping",
+			peerStr1: 	[]string{
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvaUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			peerStr2:	[]string{
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			expStr:		[]string{
+			},
+		},
+		{
+			name:		"NoInput",
+			peerStr1: 	[]string{
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvaUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			peerStr2:	[]string{
+			},
+			expStr:		[]string{
+			},
+		},
 	}
-	//create new peerList with 3 addrs
-	pl1 := NewPeerListStr(strs1)
 
-	strs2 := []string{
-		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.106/tcp/10000/ipfs/QmWjMUtBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.105/tcp/10001/ipfs/QmWqMUqBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	for _,tt := range tests {
+		t.Run(tt.name, func(t *testing.T){
+			pl1 := NewPeerListStr(tt.peerStr1)
+			pl2 := NewPeerListStr(tt.peerStr2)
+			pl3 := pl1.FindNewPeers(pl2)
+			expectedPl := NewPeerListStr(tt.expStr)
+			assert.ElementsMatch(t, expectedPl.GetPeerlist(), pl3.GetPeerlist())
+		})
 	}
-	//create new peerList with 3 addrs
-	pl2 := NewPeerListStr(strs2)
-
-	retpl := pl1.FindNewPeers(pl2)
-
-	//expected result. The repeated address should be filtered out
-	expectedStrs := []string{
-		"/ip4/192.168.10.106/tcp/10000/ipfs/QmWjMUtBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.105/tcp/10001/ipfs/QmWqMUqBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-	}
-	expectedPl := NewPeerListStr(expectedStrs)
-
-	assert.ElementsMatch(t, expectedPl.GetPeerlist(), retpl.GetPeerlist())
 }
 
 func TestPeerlist_AddMoreThanLimit(t *testing.T) {
