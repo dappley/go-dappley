@@ -36,22 +36,21 @@ func (utxo *utxoIndex) Serialize() []byte {
 
 
 func GetAddressUTXOs (pubkey []byte, db storage.Storage) []UTXOutputStored {
-	umap := getStoredUtxoMap(db)
+	umap := GetStoredUtxoMap(db)
 	return umap[string(pubkey)]
 }
 
-func getStoredUtxoMap (db storage.Storage) utxoIndex {
+func GetStoredUtxoMap(db storage.Storage) utxoIndex {
 	res, err := db.Get([]byte(UtxoMapKey))
 
 	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
-		res1 := utxoIndex{}
-		return res1
+		return utxoIndex{}
 	}
 	umap := DeserializeUTXO(res)
 	return *umap
 }
 
-func initIndex() utxoIndex{
+func initIndex() utxoIndex {
 	ins := map[string][]UTXOutputStored{}
 	return  ins
 }
@@ -65,7 +64,7 @@ func UpdateUtxoIndexAfterNewBlock(blk Block, db storage.Storage){
 
 }
 func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
-	utxoIndex := getStoredUtxoMap(db)
+	utxoIndex := GetStoredUtxoMap(db)
 	if len(utxoIndex)==0 {
 		utxoIndex = initIndex()
 	}
@@ -74,14 +73,14 @@ func AddSpendableOutputsAfterNewBlock (blk Block, db storage.Storage) {
 			if utxoIndex[string(vout.PubKeyHash)] == nil {
 				utxoIndex[string(vout.PubKeyHash)] = []UTXOutputStored{}
 			}
-			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, txn.ID, index})
+			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vout.PubKeyHash,txn.ID, index})
 		}
 	}
 	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
 }
 
 func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
-	utxoIndex := getStoredUtxoMap(db)
+	utxoIndex := GetStoredUtxoMap(db)
 	for _, txns := range blk.transactions{
 		for _,vin := range txns.Vin{
 			spentOutputTxnId, txnIndex, pubKey := vin.Txid, vin.Vout, string(vin.PubKey)
@@ -97,4 +96,15 @@ func ConsumeSpendableOutputsAfterNewBlock (blk Block, db storage.Storage){
 		}
 	}
 	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
+}
+
+func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
+	for _,utxoArray := range *utxo {
+		for _, u := range utxoArray{
+			if bytes.Compare(u.Txid,txin.Txid)==0 && u.TxIndex==txin.Vout{
+				return &u
+			}
+		}
+	}
+	return nil
 }

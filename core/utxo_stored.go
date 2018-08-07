@@ -2,8 +2,9 @@ package core
 
 
 type UTXOutputStored struct {
-	Value      int
-	Txid      []byte
-	TxIndex	  int
+	Value      	int
+	PubKeyHash 	[]byte
+	Txid      	[]byte
+	TxIndex	  	int
 }
 

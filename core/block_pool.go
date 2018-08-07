@@ -165,7 +165,8 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	}
 
 	//TODO: Temporarily disable verify transaction since it only verifies transactions against it own transaction pool
-	if !block.VerifyTransactions(pool.bc){
+	utxoPool := GetStoredUtxoMap(pool.bc.DB)
+	if !block.VerifyTransactions(utxoPool){
 		logger.Info("BlockPool: Verify Transactions failed!")
 		return
 	}
@@ -189,4 +190,15 @@ func (pool *BlockPool) addTailToForkPool(blk *Block){
 
 func (pool *BlockPool) addParentToForkPool(blk *Block)  {
 	pool.forkPool = append(pool.forkPool, blk)
+}
+
+//Verify all transactions in a fork
+func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool{
+	for i := pool.ForkPoolLen()-1; i>=0; i--{
+		if !pool.forkPool[i].VerifyTransactions(utxo){
+			return false
+		}
+		UpdateUtxoIndexAfterNewBlock(*pool.forkPool[i], pool.bc.DB)
+	}
+	return true
 }

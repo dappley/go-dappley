@@ -55,6 +55,36 @@ func GenerateMockFork(size int, parent *Block) []*Block{
 	return fork
 }
 
+//the first item is the tail of the fork
+func GenerateMockForkWithValidTx(size int, parent *Block) []*Block{
+	fork := []*Block{}
+	b := NewBlock(nil, parent)
+	b.SetHash(b.CalculateHash())
+	fork = append(fork, b)
+
+	for i:=1; i<size; i++{
+		b = NewBlock([]*Transaction{MockTransaction()}, b)
+		b.SetHash(b.CalculateHash())
+		fork = append([]*Block{b}, fork...)
+	}
+	return fork
+}
+
+//the first item is the tail of the fork
+func GenerateMockForkWithInvalidTx(size int, parent *Block) []*Block{
+	fork := []*Block{}
+	b := NewBlock(nil, parent)
+	b.SetHash(b.CalculateHash())
+	fork = append(fork, b)
+
+	for i:=1; i<size; i++{
+		b = NewBlock([]*Transaction{MockTransaction()}, b)
+		b.SetHash(b.CalculateHash())
+		fork = append([]*Block{b}, fork...)
+	}
+	return fork
+}
+
 func MockTransaction() *Transaction{
 	return &Transaction{
 		ID:   util.GenerateRandomAoB(1),
@@ -84,3 +114,10 @@ func MockTxOutputs() []TXOutput {
 	}
 }
 
+func GenerateMockTransactionPool(numOfTxs int) *TransactionPool{
+	txPool := &TransactionPool{}
+	for i := 0; i < numOfTxs; i++ {
+		txPool.Push(*MockTransaction())
+	}
+	return txPool
+}

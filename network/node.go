@@ -3,7 +3,13 @@ package network
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
+
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-host"
 	"github.com/libp2p/go-libp2p-net"
@@ -11,19 +17,14 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
-	"time"
-	"math/rand"
 )
 
-const(
-	protocalName 			= "dappley/1.0.0"
-	syncPeerTimeLimitMs 	= 1000
+const (
+	protocalName        = "dappley/1.0.0"
+	syncPeerTimeLimitMs = 1000
 )
 
-type Node struct{
+type Node struct {
 	host      host.Host
 	info      *Peer
 	bc        *core.Blockchain
@@ -35,21 +36,21 @@ type Node struct{
 }
 
 //create new Node instance
-func NewNode(bc *core.Blockchain) *Node{
+func NewNode(bc *core.Blockchain) *Node {
 	return &Node{nil,
-	nil,
-	bc,
-	nil,
-	nil,
-	make(map[peer.ID]*Stream, 10),
-	NewPeerList(nil),
-	make(chan bool, 1),
+		nil,
+		bc,
+		nil,
+		nil,
+		make(map[peer.ID]*Stream, 10),
+		NewPeerList(nil),
+		make(chan bool, 1),
 	}
 }
 
-func (n *Node) Start(listenPort int) error{
+func (n *Node) Start(listenPort int) error {
 
-	h,addr,err := createBasicHost(listenPort)
+	h, addr, err := createBasicHost(listenPort)
 	if err != nil {
 		return err
 	}
@@ -63,15 +64,15 @@ func (n *Node) Start(listenPort int) error{
 	return err
 }
 
-func  (n *Node) StartRequestLoop() {
+func (n *Node) StartRequestLoop() {
 
-	go func(){
-		for{
-			select{
-			case <- n.exitCh:
+	go func() {
+		for {
+			select {
+			case <-n.exitCh:
 				return
 			case brPars := <-n.bc.BlockPool().BlockRequestCh():
-				n.RequestBlockUnicast(brPars.BlockHash,brPars.Pid)
+				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
 			}
 		}
 	}()
@@ -79,7 +80,7 @@ func  (n *Node) StartRequestLoop() {
 }
 
 //create basic host. Returns host object, host address and error
-func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
+func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error) {
 
 	opts := []libp2p.Option{
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listenPort)),
@@ -101,20 +102,19 @@ func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error){
 	fullAddr := addr.Encapsulate(hostAddr)
 	logger.Info("Full Address is ", fullAddr)
 
-	return basicHost,fullAddr, nil
+	return basicHost, fullAddr, nil
 }
 
-func (n *Node) AddStreamByString(targetFullAddr string) error{
-	addr, err:=ma.NewMultiaddr(targetFullAddr)
-	if err!= nil {
+func (n *Node) AddStreamByString(targetFullAddr string) error {
+	addr, err := ma.NewMultiaddr(targetFullAddr)
+	if err != nil {
 		return err
 	}
 	return n.AddStreamMultiAddr(addr)
 }
 
-
 //AddStreamMultiAddr stream to the targetFullAddr address. If the targetFullAddr is nil, the node goes to listening mode
-func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
+func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error {
 
 	//If there is a target address, connect to that address
 	if targetFullAddr != nil {
@@ -125,13 +125,13 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error{
 		}
 
 		//Add Stream
-		n.AddStream(peerInfo.peerid,peerInfo.addr)
+		n.AddStream(peerInfo.peerid, peerInfo.addr)
 	}
 
 	return nil
 }
 
-func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error{
+func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	// We have a peer ID and a targetAddr so we add it to the peerstore
 	// so LibP2P knows how to contact it
 	n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
@@ -145,16 +145,22 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error{
 	n.streamHandler(stream)
 
 	// Add the peer list
-	n.peerList.Add(&Peer{peerid,targetAddr})
+	if len(n.peerList.peers) >= PEERLISTMAXSIZE {
+		n.peerList.RemoveOneIP(&Peer{peerid, targetAddr})
+	}
+	n.peerList.Add(&Peer{peerid, targetAddr})
 
 	return nil
 }
 
-func (n *Node) streamHandler(s net.Stream){
+func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.Info("Stream Connected! Peer Addr:", s.Conn().RemoteMultiaddr())
 	// Add  the peer list
-	n.peerList.Add(&Peer{s.Conn().RemotePeer(),s.Conn().RemoteMultiaddr()})
+	if !n.peerList.ListIsFull() {
+		n.peerList.Add(&Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()})
+	}
+
 	//start stream
 	ns := NewStream(s, n)
 	n.streams[s.Conn().RemotePeer()] = ns
@@ -172,18 +178,18 @@ func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
 	return n.info.addr
 }
 
-func (n *Node) GetPeerID() peer.ID {return n.info.peerid}
+func (n *Node) GetPeerID() peer.ID { return n.info.peerid }
 
-func (n *Node) SendBlock(block *core.Block) error{
+func (n *Node) SendBlock(block *core.Block) error {
 	//marshal the block to wire format
-	bytes, err :=proto.Marshal(block.ToProto())
+	bytes, err := proto.Marshal(block.ToProto())
 	if err != nil {
 		return err
 	}
 
 	//build a deppley message
-	dm := NewDapmsg(SyncBlock,bytes)
-	data, err :=proto.Marshal(dm.ToProto())
+	dm := NewDapmsg(SyncBlock, bytes)
+	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
 	}
@@ -192,16 +198,16 @@ func (n *Node) SendBlock(block *core.Block) error{
 	return nil
 }
 
-func (n *Node) SyncPeers() error{
+func (n *Node) SyncPeers() error {
 	//marshal the peerList to wire format
-	bytes, err :=proto.Marshal(n.peerList.ToProto())
+	bytes, err := proto.Marshal(n.peerList.ToProto())
 	if err != nil {
 		return err
 	}
 
 	//build a deppley message
-	dm := NewDapmsg(SyncPeerList,bytes)
-	data, err :=proto.Marshal(dm.ToProto())
+	dm := NewDapmsg(SyncPeerList, bytes)
+	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
 	}
@@ -210,55 +216,55 @@ func (n *Node) SyncPeers() error{
 	return nil
 }
 
-func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
+func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 	//marshal the block to wire format
-	bytes, err :=proto.Marshal(block.ToProto())
+	bytes, err := proto.Marshal(block.ToProto())
 	if err != nil {
 		return err
 	}
 
 	//build a deppley message
-	dm := NewDapmsg(SyncBlock,bytes)
-	data, err :=proto.Marshal(dm.ToProto())
+	dm := NewDapmsg(SyncBlock, bytes)
+	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
 	}
 	//log.Println("Sending Data Request Received:",bytes)
-	n.unicast(data,pid)
+	n.unicast(data, pid)
 	return nil
 }
 
-func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error{
+func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 	dm := NewDapmsg(RequestBlock, hash)
-	data, err :=proto.Marshal(dm.ToProto())
+	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
 	}
 	//log.Println("Sending Data Request Received:",bytes)
-	n.unicast(data,pid)
+	n.unicast(data, pid)
 	return nil
 }
 
 //broadcast data
-func (n *Node) broadcast(data []byte){
-	for _,s := range n.streams{
+func (n *Node) broadcast(data []byte) {
+	for _, s := range n.streams {
 		s.Send(data)
 	}
 }
 
 //unicast data
-func (n *Node) unicast(data []byte, pid peer.ID){
+func (n *Node) unicast(data []byte, pid peer.ID) {
 	n.streams[pid].Send(data)
 }
 
-func (n *Node) addBlockToPool(data []byte, pid peer.ID){
+func (n *Node) addBlockToPool(data []byte, pid peer.ID) {
 
 	//create a block proto
 	blockpb := &corepb.Block{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err!=nil{
+	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
 
@@ -274,7 +280,7 @@ func (n *Node) addBlockToPool(data []byte, pid peer.ID){
 	n.blks = append(n.blks, block)
 }
 
-func (n *Node)addMultiPeers(data []byte){
+func (n *Node) addMultiPeers(data []byte) {
 
 	go func() {
 		//create a peerList proto
@@ -298,11 +304,11 @@ func (n *Node)addMultiPeers(data []byte){
 		newpl = n.peerList.FindNewPeers(newpl)
 
 		//wait for random time within the time limit
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(syncPeerTimeLimitMs)) )
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(syncPeerTimeLimitMs)))
 
 		//add streams for new peers
 		for _, p := range newpl.GetPeerlist() {
-			if !n.peerList.IsInPeerlist(p){
+			if !n.peerList.IsInPeerlist(p) {
 				n.AddStream(p.peerid, p.addr)
 			}
 		}
@@ -312,8 +318,8 @@ func (n *Node)addMultiPeers(data []byte){
 	}()
 }
 
-func (n *Node) sendRequestedBlock(data []byte, pid peer.ID){
-	blockBytes,err := n.bc.DB.Get(data)
+func (n *Node) sendRequestedBlock(data []byte, pid peer.ID) {
+	blockBytes, err := n.bc.DB.Get(data)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
 		return

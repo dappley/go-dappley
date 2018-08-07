@@ -264,9 +264,9 @@ func (b *Block) VerifyHash() bool {
 	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
 }
 
-func (b *Block) VerifyTransactions(bc *Blockchain) bool {
+func (b *Block) VerifyTransactions(utxo utxoIndex) bool {
 	for _, tx := range b.GetTransactions() {
-		if !bc.VerifyTransaction(*tx) {
+		if !tx.Verify(utxo) {
 			return false
 		}
 	}
@@ -307,6 +307,17 @@ func (b *Block) FindTransactionById(txid []byte) *Transaction{
 		if bytes.Compare(tx.ID, txid) == 0 {
 			return tx
 		}
+
 	}
 	return nil
+}
+
+//remove the transactions in a blook from the transaction pool
+func (b *Block) RemoveMinedTxFromTxPool(){
+	txPool := GetTxnPoolInstance()
+	txPool.Traverse(func(tx Transaction) bool{
+		//if the transaction in the transaction pool is not found in the block, keep it in the pool
+		//if the transaction in the transaction pool is found in the block. remove it from the pool
+		return b.FindTransactionById(tx.ID) == nil
+	})
 }

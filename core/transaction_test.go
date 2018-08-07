@@ -110,9 +110,6 @@ func TestIsCoinBase(t *testing.T) {
 	assert.True(t, t2.IsCoinbase())
 
 }
-func createPrevTXs() {
-
-}
 
 func TestTransaction_Proto(t *testing.T) {
 	t1 := Transaction{
@@ -137,4 +134,21 @@ func TestTransaction_Proto(t *testing.T) {
 	t2.FromProto(newpb)
 
 	assert.Equal(t, t1, t2)
+}
+
+func TestTransaction_FindTxInUtxoPool(t *testing.T) {
+	//prepare utxo pool
+	Txin := MockTxInputs()
+	Txin2 := MockTxInputs()
+	utxo1 := UTXOutputStored{10,[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := UTXOutputStored{9,[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxo3 := UTXOutputStored{9,[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
+	utxo4 := UTXOutputStored{9,[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
+	utxoPool := utxoIndex{}
+	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2, utxo3, utxo4}
+
+	tx := MockTransaction()
+	assert.Nil(t, tx.FindAllTxinsInUtxoPool(utxoPool))
+	tx.Vin = Txin
+	assert.NotNil(t, tx.FindAllTxinsInUtxoPool(utxoPool))
 }

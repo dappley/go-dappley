@@ -7,6 +7,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 
+	"fmt"
 )
 
 
@@ -132,5 +133,26 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 		sum += utxo.Value
 	}
 	assert.Equal(t, 8, sum)
+
+}
+
+func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
+	Txin := MockTxInputs()
+	Txin = append(Txin, MockTxInputs()...)
+	utxo1 := UTXOutputStored{10,[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := UTXOutputStored{9,[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxoPool := utxoIndex{}
+	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2}
+
+	assert.NotNil(t, utxoPool.FindUtxoByTxinput(Txin[0]))
+	assert.NotNil(t, utxoPool.FindUtxoByTxinput(Txin[1]))
+	assert.Nil(t, utxoPool.FindUtxoByTxinput(Txin[2]))
+	assert.Nil(t, utxoPool.FindUtxoByTxinput(Txin[3]))
+}
+
+func TestUpdateUtxoIndexAfterNewBlock(t *testing.T){
+	a := make(map[int]string)
+	fmt.Println(a[1])
+	assert.True(t, true)
 
 }

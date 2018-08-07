@@ -162,27 +162,6 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 	tx.Sign(privKey, prevTXs)
 }
 
-func (bc *Blockchain) VerifyTransaction(tx Transaction) bool {
-	if tx.IsCoinbase() {
-		return true
-	}
-
-	prevTXs := make(map[string]Transaction)
-
-	for _, vin := range tx.Vin {
-		prevTX, err := bc.FindTransaction(vin.Txid)
-		if err == ErrTransactionNotFound {
-			return false
-		}
-		if err != nil {
-			log.Panic(err)
-		}
-		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
-	}
-
-	return tx.VerifySignatures(prevTXs)
-}
-
 func (bc *Blockchain) Iterator() *Blockchain {
 	return initializeBlockChainWithBlockPool(bc.currentHash, bc.DB)
 }
@@ -291,27 +270,34 @@ func (bc *Blockchain) MergeFork(){
 		return
 	}
 
+	//verify transactions in the fork
+	utxo := GetStoredUtxoMap(bc.DB)	//TODO: the utxo here should be the utxo at the fork height, not the current blockchain height
+	if !bc.BlockPool().VerifyTransactions(utxo){
+		return
+	}
+
 	//rollback all child blocks after the parent block from tail to head
-	bc.RollbackToABlock(forkParentHash)
+	bc.RollbackToABlockHeight(forkParentHash)
 
 	//add all blocks in fork from head to tail
-	bc.ConcatenateForkToBlockchain()
+	bc.concatenateForkToBlockchain()
 
 	logger.Debug("Merge Fork!!")
 }
 
-func (bc *Blockchain) ConcatenateForkToBlockchain(){
+func (bc *Blockchain) concatenateForkToBlockchain(){
 	if bc.BlockPool().ForkPoolLen() > 0 {
 		for i := bc.BlockPool().ForkPoolLen()-1; i>=0; i--{
 			bc.UpdateNewBlock(bc.BlockPool().forkPool[i])
-			//TODO: Remove transactions in current transaction pool
+			//Remove transactions in current transaction pool
+			bc.BlockPool().forkPool[i].RemoveMinedTxFromTxPool()
 		}
 	}
 	bc.BlockPool().ResetForkPool()
 }
 
 //returns true if successful
-func (bc *Blockchain) RollbackToABlock(hash Hash) bool{
+func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 
 	if !bc.IsInBlockchain(hash){
 		return false
