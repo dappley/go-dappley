@@ -286,59 +286,6 @@ func TestPeerList_Add(t *testing.T){
 
 }
 
-func TestPeerlist_AddNonDuplicate(t *testing.T) {
-	strs := []string{
-		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUDBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUTBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-	}
-	//create new peerList with 3 addrs
-	pl := NewPeerListStr(strs)
-	newStr := "/ip4/192.168.10.106/tcp/10000/ipfs/QmWvMUaBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
-
-	ps := []*Peer{}
-	for _, s := range strs {
-		p, err := CreatePeerFromString(s)
-		assert.Nil(t, err)
-		ps = append(ps, p)
-		//any of the 3 addresses above should be contained in the list
-		assert.True(t, pl.IsInPeerlist(p))
-	}
-	//add the fourth address
-	p, err := CreatePeerFromString(newStr)
-	assert.Nil(t, err)
-	ps = append(ps, p)
-	pl.Add(p)
-
-	//the final peerList should contain all 4 addresses
-	assert.ElementsMatch(t, ps, pl.GetPeerlist())
-}
-
-func TestPeerlist_AddDuplicate(t *testing.T) {
-	strs := []string{
-		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUABeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-	}
-	//create new peerList with 3 addrs
-	pl := NewPeerListStr(strs)
-	newStr := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
-	strs = append(strs, newStr)
-	ps := []*Peer{}
-	for _, s := range strs {
-		p, err := CreatePeerFromString(s)
-		assert.Nil(t, err)
-		ps = append(ps, p)
-		//any of the 3 addresses above should be contained in the list
-		assert.True(t, pl.IsInPeerlist(p))
-	}
-	//add the fourth address
-	pl.Add(ps[3])
-
-	//the final peerList should contain all 4 addresses
-	assert.ElementsMatch(t, ps[:3], pl.GetPeerlist())
-}
-
 func TestPeerlist_MergePeerlist(t *testing.T) {
 	strs1 := []string{
 		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
