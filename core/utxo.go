@@ -23,7 +23,6 @@ type UTXOutputStored struct {
 }
 
 
-
 func DeserializeUTXO(d []byte) *utxoIndex {
 	var utxo utxoIndex
 	decoder := gob.NewDecoder(bytes.NewReader(d))
@@ -131,6 +130,10 @@ func (utxo utxoIndex) RevertTxnUtxos(blk Block, bc Blockchain, db storage.Storag
 			log.Panic(err1)
 		}
 
+		if txn.IsCoinbase(){
+			continue
+		}
+
 		err2 := utxo.AddBackTxnOutputToTxnPool(*txn, db, blk, bc)
 		if err2!=nil {
 			log.Panic(err2)
@@ -161,7 +164,6 @@ func (utxo utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db storage.St
 
 func (utxo utxoIndex) AddBackTxnOutputToTxnPool(txn Transaction, db storage.Storage, blk Block, bc Blockchain) error {
 	for _, vin := range txn.Vin {
-
 		vout, voutIndex, err := getTXOFromTxIn(vin, blk.GetHash(), bc)
 		if err == nil {
 			utxo[string(vout.PubKeyHash)] = append(utxo[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vin.PubKey,txn.ID, voutIndex})

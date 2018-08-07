@@ -314,7 +314,10 @@ func (bc *Blockchain) MergeFork(){
 	}
 
 	//verify transactions in the fork
-	utxo := GetStoredUtxoMap(bc.DB, UtxoForkMapKey)	//TODO: the utxo here should be the utxo at the fork height, not the current blockchain height
+	utxo, err := bc.RevertToBlockHash(bc.DB, forkParentHash)
+	if err!=nil {
+		logger.Warn(err)
+	}
 	if !bc.BlockPool().VerifyTransactions(utxo){
 		return
 	}

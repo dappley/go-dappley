@@ -115,7 +115,7 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 
 func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
-	bc := GenerateMockBlockchain(5)
+	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.DB.Close()
 	blk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
@@ -145,7 +145,7 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 
 func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
-	bc := GenerateMockBlockchain(5)
+	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.DB.Close()
 	blk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
