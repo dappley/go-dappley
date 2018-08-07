@@ -71,8 +71,9 @@ func NewPeerListStr(strs []string) *PeerList {
 
 		if err != nil {
 			logger.Warn("Address Unrecognized:", str)
+		}else{
+			ps = append(ps, peer)
 		}
-		ps = append(ps, peer)
 	}
 
 	return NewPeerList(ps)

@@ -64,17 +64,92 @@ func TestPeerlist_FromProto(t *testing.T) {
 }
 
 func TestNewPeerlistStr(t *testing.T) {
-	//two duplicated addresses
-	strs := []string{
-		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUNBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-	}
-	//create new peerList
-	pl := NewPeerListStr(strs)
 
-	//the duplicated address should be filtered out
-	assert.Equal(t, 2, len(pl.GetPeerlist()))
+	type retFormat struct{
+		peerid  string
+		addr	string
+	}
+
+	//create a test struct that contains all possible inputs and its expected output
+	tests:=[]struct{
+		name			string
+		addrs			[]string
+		expectedAddr	[]retFormat
+	}{
+		{
+			name:			"normal_input",
+			addrs:			[]string{
+								"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUNBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+								"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+							},
+			expectedAddr:	[]retFormat{
+								{
+									peerid: "<peer.ID WvMUNB>",
+									addr:	"/ip4/127.0.0.1/tcp/10000",
+								},
+								{
+									peerid: "<peer.ID WvMUMB>",
+									addr:	"/ip4/192.168.10.110/tcp/10000",
+								},
+							},
+		},
+		{
+			name:			"duplicated_input",
+			addrs:			[]string{
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
+			expectedAddr:	[]retFormat{
+				{
+					peerid: "<peer.ID WvMUMB>",
+					addr:	"/ip4/192.168.10.110/tcp/10000",
+				},
+			},
+		},
+		{
+			name:			"invalid_input",
+			addrs:			[]string{
+				"T8cDqmkfrXCb2qTVHpofJ",
+			},
+			expectedAddr:	[]retFormat{
+			},
+		},
+		{
+			name:			"partially_invalid_input",
+			addrs:			[]string{
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"T8cDqmkfrXCb2qTVHpofJ",
+			},
+			expectedAddr:	[]retFormat{
+				{
+					peerid: "<peer.ID WvMUMB>",
+					addr:	"/ip4/192.168.10.110/tcp/10000",
+				},
+			},
+		},
+		{
+			name:			"no_input",
+			addrs:			[]string{
+			},
+			expectedAddr:	[]retFormat{
+			},
+		},
+	}
+
+	for _,tt := range tests{
+		t.Run(tt.name,func(t *testing.T){
+			pl:=NewPeerListStr(tt.addrs)
+			if len(tt.expectedAddr) == 0 {
+				assert.Empty(t,pl.peers)
+			}else{
+				for i,peer := range pl.GetPeerlist(){
+					assert.Equal(t,tt.expectedAddr[i].peerid,peer.peerid.String())
+					assert.Equal(t,tt.expectedAddr[i].addr, peer.addr.String())
+				}
+			}
+		})
+	}
+
 }
 
 func TestPeerlist_IsInPeerlist(t *testing.T) {
