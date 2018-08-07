@@ -14,6 +14,30 @@ type retFormat struct{
 	addr	string
 }
 
+func TestPeer_ToProto(t *testing.T){
+	peerid, _ := peer.IDB58Decode("QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ")
+	addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/10000")
+	p := &Peer{peerid,addr}
+	pb := &networkpb.Peer{
+		Peerid: "QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		Addr:	"/ip4/127.0.0.1/tcp/10000",
+	}
+	assert.Equal(t,pb,p.ToProto())
+}
+
+func TestPeer_FromProto(t *testing.T){
+	peerid, _ := peer.IDB58Decode("QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ")
+	addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/10000")
+	p1 := &Peer{peerid,addr}
+	pb := &networkpb.Peer{
+		Peerid: "QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		Addr:	"/ip4/127.0.0.1/tcp/10000",
+	}
+	p2 := &Peer{}
+	p2.FromProto(pb)
+	assert.Equal(t,p1,p2)
+}
+
 func TestPeerlist_ToProto(t *testing.T) {
 	strs := []string{
 		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
