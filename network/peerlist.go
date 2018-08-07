@@ -132,8 +132,16 @@ func (pl *PeerList) GetPeerlist() []*Peer {
 //Check if a multiaddress is already existed in the list
 func (pl *PeerList) IsInPeerlist(p *Peer) bool {
 
+	if p == nil {
+		return false
+	}
+
+	if p.addr == nil || p.peerid == "" {
+		return false
+	}
+
 	for _, ps := range pl.peers {
-		if ps.peerid.String() == p.peerid.String() {
+		if ps.peerid.String() == p.peerid.String() || ps.addr.String() == p.addr.String() {
 			return true
 		}
 	}

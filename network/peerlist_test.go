@@ -9,6 +9,11 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
+type retFormat struct{
+	peerid  string
+	addr	string
+}
+
 func TestPeerlist_ToProto(t *testing.T) {
 	strs := []string{
 		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
@@ -66,11 +71,6 @@ func TestPeerlist_FromProto(t *testing.T) {
 }
 
 func TestNewPeerlistStr(t *testing.T) {
-
-	type retFormat struct{
-		peerid  string
-		addr	string
-	}
 
 	//create a test struct that contains all possible inputs and its expected output
 	tests:=[]struct{
@@ -184,6 +184,18 @@ func TestPeerlist_IsInPeerlist(t *testing.T) {
 			expected:	false,
 		},
 		{
+			name:		"OnlyPidInPeerList",
+			pid:		"QmWvMUNBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/192.168.10.106/tcp/10000",
+			expected:	true,
+		},
+		{
+			name:		"OnlyAddrNotInPeerList",
+			pid:		"QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/127.0.0.1/tcp/10000",
+			expected:	true,
+		},
+		{
 			name: 		"NoInput",
 			pid:		"",
 			addr: 		"",
@@ -208,6 +220,70 @@ func TestPeerlist_IsInPeerlist(t *testing.T) {
 			assert.Equal(t,tt.expected,pl.IsInPeerlist(p))
 		})
 	}
+}
+
+func TestPeerList_Add(t *testing.T){
+	//create a peer list
+	strs := []string{
+		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUDBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	}
+	pl := NewPeerListStr(strs)
+
+	tests := []struct{
+		name 		string
+		pid 		string
+		addr 		string
+		expected	retFormat
+	}{
+		{
+			name:		"normal",
+			pid:		"QmWvMUSBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/192.168.10.110/tcp/10000",
+			expected:	retFormat{
+				peerid: "<peer.ID WvMUSB>",
+				addr:	"/ip4/192.168.10.110/tcp/10000",
+			},
+		},
+		{
+			name:		"duplicated",
+			pid:		"QmWvMUDBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/127.0.0.1/tcp/10000",
+			expected:	retFormat{
+				peerid: "<peer.ID WvMUSB>",
+				addr:	"/ip4/192.168.10.110/tcp/10000",
+			},
+		},
+		{
+			name:		"duplicated_pid",
+			pid:		"QmWvMUDBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/127.0.0.2/tcp/10000",
+			expected:	retFormat{
+				peerid: "<peer.ID WvMUSB>",
+				addr:	"/ip4/192.168.10.110/tcp/10000",
+			},
+		},
+		{
+			name:		"duplicated_addr",
+			pid:		"QmWsMUDBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/127.0.0.1/tcp/10000",
+			expected:	retFormat{
+				peerid: "<peer.ID WvMUSB>",
+				addr:	"/ip4/192.168.10.110/tcp/10000",
+			},
+		},
+	}
+
+	for _,tt := range tests{
+		t.Run(tt.name,func(t *testing.T){
+			peerid, _ := peer.IDB58Decode(tt.pid)
+			addr, _ := multiaddr.NewMultiaddr(tt.addr)
+			p := &Peer{peerid,addr}
+			pl.Add(p)
+			assert.Equal(t, tt.expected.peerid, pl.peers[len(pl.peers)-1].peerid.String())
+			assert.Equal(t, tt.expected.addr, pl.peers[len(pl.peers)-1].addr.String())
+		})
+	}
+
 }
 
 func TestPeerlist_AddNonDuplicate(t *testing.T) {
@@ -359,10 +435,9 @@ func TestPeerlist_AddMoreThanLimit(t *testing.T) {
 	}
 	pl2 := NewPeerListStr(strs2)
 
-	newStr1 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
+	newStr1 := "/ip4/192.168.10.121/tcp/10000/ipfs/QmNvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
 	newStr2 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUkBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
 	p1, _ := CreatePeerFromString(newStr1)
-
 	pl1.Add(p1)
 
 	assert.Equal(t, 20, len(pl1.peers))
@@ -438,8 +513,8 @@ func TestPeerList_RemoveOneIP(t *testing.T) {
 	pl1 := NewPeerListStr(strs1)
 
 	assert.Equal(t, 19, len(pl1.peers))
-	newStr1 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
-	newStr2 := "/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUkBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
+	newStr1 := "/ip4/192.168.10.121/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
+	newStr2 := "/ip4/192.168.10.122/tcp/10000/ipfs/QmWvMUkBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
 	p1, _ := CreatePeerFromString(newStr1)
 
 	pl1.Add(p1)
