@@ -4,19 +4,63 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 func TestPeerlist_ToProto(t *testing.T) {
 	strs := []string{
 		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvFUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvGUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 	}
-
 	pl := NewPeerListStr(strs)
-	pl1 := NewPeerList(nil)
-	pl1.FromProto(pl.ToProto())
-	assert.ElementsMatch(t, pl.GetPeerlist(), pl1.GetPeerlist())
+
+	plpb := &networkpb.Peerlist{
+		Peerlist:  []*networkpb.Peer{
+			{
+				Peerid: "QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				Addr:   "/ip4/127.0.0.1/tcp/10000",
+			},
+			{
+				Peerid: "QmWvFUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				Addr:   "/ip4/192.168.10.110/tcp/10000",
+			},
+			{
+				Peerid: "QmWvGUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				Addr:   "/ip4/192.168.10.105/tcp/10000",
+			},
+		},
+	}
+	assert.Equal(t, plpb, pl.ToProto())
+}
+
+func TestPeerlist_FromProto(t *testing.T) {
+	strs := []string{
+		"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvFUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+		"/ip4/192.168.10.105/tcp/10000/ipfs/QmWvGUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+	}
+	pl := NewPeerListStr(strs)
+
+	plpb := &networkpb.Peerlist{
+		Peerlist:  []*networkpb.Peer{
+			{
+				Peerid: "QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				Addr:   "/ip4/127.0.0.1/tcp/10000",
+			},
+			{
+				Peerid: "QmWvFUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				Addr:   "/ip4/192.168.10.110/tcp/10000",
+			},
+			{
+				Peerid: "QmWvGUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				Addr:   "/ip4/192.168.10.105/tcp/10000",
+			},
+		},
+	}
+	pl1 := &PeerList{}
+	pl1.FromProto(plpb)
+	assert.Equal(t, pl, pl1)
 }
 
 func TestNewPeerlistStr(t *testing.T) {
