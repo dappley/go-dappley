@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/libp2p/go-libp2p-peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 func TestPeerlist_ToProto(t *testing.T) {
@@ -79,19 +81,19 @@ func TestNewPeerlistStr(t *testing.T) {
 		{
 			name:			"normal_input",
 			addrs:			[]string{
-								"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUNBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-								"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
-							},
+				"/ip4/127.0.0.1/tcp/10000/ipfs/QmWvMUNBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+				"/ip4/192.168.10.110/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			},
 			expectedAddr:	[]retFormat{
-								{
-									peerid: "<peer.ID WvMUNB>",
-									addr:	"/ip4/127.0.0.1/tcp/10000",
-								},
-								{
-									peerid: "<peer.ID WvMUMB>",
-									addr:	"/ip4/192.168.10.110/tcp/10000",
-								},
-							},
+				{
+					peerid: "<peer.ID WvMUNB>",
+					addr:	"/ip4/127.0.0.1/tcp/10000",
+				},
+				{
+					peerid: "<peer.ID WvMUMB>",
+					addr:	"/ip4/192.168.10.110/tcp/10000",
+				},
+			},
 		},
 		{
 			name:			"duplicated_input",
@@ -136,9 +138,11 @@ func TestNewPeerlistStr(t *testing.T) {
 		},
 	}
 
+	//run tests
 	for _,tt := range tests{
 		t.Run(tt.name,func(t *testing.T){
 			pl:=NewPeerListStr(tt.addrs)
+			//if the expectedAddr is empty, it means the peerlist is expected to be empty
 			if len(tt.expectedAddr) == 0 {
 				assert.Empty(t,pl.peers)
 			}else{
@@ -160,21 +164,50 @@ func TestPeerlist_IsInPeerlist(t *testing.T) {
 	}
 	//create new peerList with 3 addrs
 	pl := NewPeerListStr(strs)
-	ps := []*Peer{}
-	for _, s := range strs {
-		p, err := CreatePeerFromString(s)
-		assert.Nil(t, err)
-		ps = append(ps, p)
-		//any of the 3 addresses above should be contained in the list
-		assert.True(t, pl.IsInPeerlist(p))
+
+	tests := []struct{
+		name 		string
+		pid 		string
+		addr		string
+		expected	bool
+	}{
+		{
+			name:		"InPeerList",
+			pid:		"QmWvMUNBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr: 		"/ip4/127.0.0.1/tcp/10000",
+			expected:	true,
+		},
+		{
+			name:		"NotInPeerList",
+			pid:		"QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
+			addr:		"/ip4/192.168.10.106/tcp/10000",
+			expected:	false,
+		},
+		{
+			name: 		"NoInput",
+			pid:		"",
+			addr: 		"",
+			expected:	false,
+		},
+		{
+			name: 		"InvalidInput",
+			pid:		"dfdf",
+			addr:		"dfdf",
+			expected:	false,
+		},
 	}
 
-	//create a new multiaddress
-	newStr := "/ip4/192.168.10.106/tcp/10000/ipfs/QmWvMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ"
-	p, err := CreatePeerFromString(newStr)
-	assert.Nil(t, err)
-	//it should not be in the list
-	assert.False(t, pl.IsInPeerlist(p))
+	for _,tt := range tests{
+		t.Run(tt.name, func(t *testing.T){
+			peerid, _ := peer.IDB58Decode(tt.pid)
+			addr, _ := multiaddr.NewMultiaddr(tt.addr)
+			p := &Peer{
+				peerid: peerid,
+				addr:	addr,
+			}
+			assert.Equal(t,tt.expected,pl.IsInPeerlist(p))
+		})
+	}
 }
 
 func TestPeerlist_AddNonDuplicate(t *testing.T) {
