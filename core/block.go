@@ -33,6 +33,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+const (
+	BlockVersion = 1
+)
+
 type BlockHeader struct {
 	version int32
 	hash      Hash
@@ -45,7 +49,6 @@ type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
 	height       uint64
-	error string
 	checkFlag bool
 }
 
@@ -55,6 +58,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 	var prevHash []byte
 	var height uint64
 	var versionValue int32     //need set the version
+	versionValue = BlockVersion
 	height = 0
 	if parent != nil {
 		prevHash = parent.GetHash()
