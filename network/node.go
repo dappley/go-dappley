@@ -17,11 +17,16 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+	"errors"
 )
 
 const (
 	protocalName        = "dappley/1.0.0"
 	syncPeerTimeLimitMs = 1000
+)
+
+var (
+	ErrDapMsgNoCmd = errors.New("ERROR: Dappley message has no command input")
 )
 
 type Node struct {
@@ -182,76 +187,65 @@ func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
 
 func (n *Node) GetPeerID() peer.ID { return n.info.peerid }
 
-func (n *Node) SendBlock(block *core.Block) error {
-	//marshal the block to wire format
-	bytes, err := proto.Marshal(block.ToProto())
-	if err != nil {
-		return err
+func prepareData(msgData proto.Message, cmd string) ([]byte, error){
+
+	if cmd == "" {
+		return nil, ErrDapMsgNoCmd
+	}
+
+	bytes := []byte{}
+	var err error
+
+	if msgData!=nil {
+		//marshal the block to wire format
+		bytes, err = proto.Marshal(msgData)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	//build a deppley message
-	dm := NewDapmsg(SyncBlock, bytes)
+	dm := NewDapmsg(cmd, bytes)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (n *Node) SendBlock(block *core.Block) error {
+	data,err := prepareData(block.ToProto(), SyncBlock)
+	if err!=nil {
 		return err
 	}
-	//log.Println("Sending Data Request Received:",bytes)
 	n.broadcast(data)
 	return nil
 }
 
 func (n *Node) SyncPeers() error {
-	//marshal the peerList to wire format
-	bytes, err := proto.Marshal(n.peerList.ToProto())
-	if err != nil {
+	data,err := prepareData(n.peerList.ToProto(), SyncPeerList)
+	if err!=nil {
 		return err
 	}
-
-	//build a deppley message
-	dm := NewDapmsg(SyncPeerList, bytes)
-	data, err := proto.Marshal(dm.ToProto())
-	if err != nil {
-		return err
-	}
-	//log.Println("Sending Data Request Received:",bytes)
 	n.broadcast(data)
 	return nil
 }
 
 
 func (n *Node) BroadcastTxnCmd(txn *core.Transaction) error{
-	//marshal the Txn to wire format
-	bytes, err := proto.Marshal(txn.ToProto())
-	if err != nil {
+	data,err := prepareData(txn.ToProto(), BroadcastTxn)
+	if err!=nil {
 		return err
 	}
-
-	//build a deppley message
-	dm := NewDapmsg(BroadcastTxn,bytes)
-	data, err :=proto.Marshal(dm.ToProto())
-	if err != nil {
-		return err
-	}
-	//log.Println("Sending Data Request Received:",bytes)
 	n.broadcast(data)
 	return nil
 }
 
 func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
-
-	//marshal the block to wire format
-	bytes, err := proto.Marshal(block.ToProto())
-	if err != nil {
+	data,err := prepareData(block.ToProto(), SyncBlock)
+	if err!=nil {
 		return err
 	}
-
-	//build a deppley message
-	dm := NewDapmsg(SyncBlock, bytes)
-	data, err := proto.Marshal(dm.ToProto())
-	if err != nil {
-		return err
-	}
-	//log.Println("Sending Data Request Received:",bytes)
 	n.unicast(data, pid)
 	return nil
 }
@@ -263,7 +257,6 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	//log.Println("Sending Data Request Received:",bytes)
 	n.unicast(data, pid)
 	return nil
 }
@@ -361,8 +354,8 @@ func (n *Node)addMultiPeers(data []byte){
 	}()
 }
 
-func (n *Node) sendRequestedBlock(data []byte, pid peer.ID) {
-	blockBytes, err := n.bc.DB.Get(data)
+func (n *Node) sendRequestedBlock(hash []byte, pid peer.ID) {
+	blockBytes, err := n.bc.DB.Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
 		return
