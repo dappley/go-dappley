@@ -71,10 +71,10 @@ func NewProofOfWork() *ProofOfWork{
 	return p
 }
 
-func (pow *ProofOfWork) Setup(bc *core.Blockchain, cbAddr string){
-	pow.bc = bc
+func (pow *ProofOfWork) Setup(node *network.Node, cbAddr string){
+	pow.bc = node.GetBlockchain()
 	pow.cbAddr = cbAddr
-	pow.node = network.NewNode(bc)
+	pow.node = node
 }
 
 func (pow *ProofOfWork) GetNode() *network.Node{

@@ -18,23 +18,23 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/network"
 )
 
 type Miner struct {
-	consensus    		core.Consensus
+	consensus    		Consensus
 }
 
 //create a new instance
-func NewMiner(consensus core.Consensus) *Miner {
+func NewMiner(consensus Consensus) *Miner {
 
 	return &Miner{
 		consensus:     		consensus,
 	}
 }
 
-func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string){
-	miner.consensus.Setup(bc,cbAddr)
+func (miner *Miner) Setup(node *network.Node, cbAddr string){
+	miner.consensus.Setup(node,cbAddr)
 }
 
 

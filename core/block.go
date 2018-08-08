@@ -47,6 +47,8 @@ type Block struct {
 	height       uint64
 }
 
+type Hash []byte
+
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
 	var prevHash []byte

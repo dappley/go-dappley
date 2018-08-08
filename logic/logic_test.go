@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	logger "github.com/sirupsen/logrus"
 	"reflect"
+	"github.com/dappley/go-dappley/network"
 )
 
 const invalidAddress = "Invalid Address"
@@ -162,6 +163,7 @@ func TestSend(t *testing.T) {
 	b, err := CreateBlockchain(wallet1.GetAddress(), databaseInstance)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
+	node := network.NewNode(b)
 
 	//The balance1 should be 10 after creating a blockchain
 	balance1, err := GetBalance(wallet1.GetAddress(), databaseInstance)
@@ -184,7 +186,7 @@ func TestSend(t *testing.T) {
 	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.Nil(t, err)
 	pow := consensus.NewProofOfWork()
-	pow.Setup(b,addr1.Address)
+	pow.Setup(node,addr1.Address)
 	miner := consensus.NewMiner(pow)
 
 	go miner.Start()
@@ -356,7 +358,7 @@ func TestSyncBlocks(t *testing.T){
 		bcs = append(bcs, bc)
 
 		pow := consensus.NewProofOfWork()
-		pow.Setup(bcs[i],addr.Address)
+		pow.Setup(network.NewNode(bcs[i]),addr.Address)
 		pow.SetTargetBit(16)
 		pow.GetNode().Start(testport+i)
 
@@ -443,7 +445,7 @@ func TestForkChoice(t *testing.T){
 		bcs = append(bcs, bc)
 
 		pow := consensus.NewProofOfWork()
-		pow.Setup(bcs[i],addr.Address)
+		pow.Setup(network.NewNode(bcs[i]),addr.Address)
 		pow.SetTargetBit(16)
 		pow.GetNode().Start(testport_fork+i)
 		pows = append(pows, pow)

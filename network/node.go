@@ -34,7 +34,6 @@ type Node struct {
 	info      *Peer
 	bc        *core.Blockchain
 	blks      []*core.Block
-	blockpool []*core.Block
 	txnPool core.TransactionPoool
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
@@ -47,13 +46,14 @@ func NewNode(bc *core.Blockchain) *Node {
 	nil,
 	bc,
 	nil,
-	nil,
 	core.TransactionPoool{},
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
 	}
 }
+
+func (n *Node) GetBlockchain() *core.Blockchain{return n.bc}
 
 func (n *Node) Start(listenPort int) error {
 

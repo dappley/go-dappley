@@ -31,6 +31,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"fmt"
 	"os"
+	"github.com/dappley/go-dappley/network"
 )
 
 var sendAmount = int(7)
@@ -79,7 +80,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	pow:= NewProofOfWork()
-	pow.Setup(bc, wallet1.GetAddress().Address)
+	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
 	miner := NewMiner(pow)
 	miner.Start()
 	
@@ -122,7 +123,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//start a miner
 	pow := NewProofOfWork()
-	pow.Setup(bc, cbWallet.GetAddress().Address)
+	pow.Setup(network.NewNode(bc), cbWallet.GetAddress().Address)
 	miner := NewMiner(pow)
 	miner.Start()
 
@@ -178,7 +179,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//start a miner
 	pow := NewProofOfWork()
-	pow.Setup(bc, wallet1.GetAddress().Address)
+	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
 	miner := NewMiner(pow)
 	miner.Start()
 

@@ -9,14 +9,19 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
+package consensus
 
-type Hash []byte
+import (
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/core"
+)
+
+
 
 type Consensus interface{
-	ValidateDifficulty(*Block) bool
+	ValidateDifficulty(block *core.Block) bool
 	Start()
-	Setup(*Blockchain, string)
+	Setup(*network.Node, string)
 	Stop()
 }
 
