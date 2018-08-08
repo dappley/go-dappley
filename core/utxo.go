@@ -134,7 +134,7 @@ func (utxo utxoIndex) RevertTxnUtxos(blk Block, bc Blockchain, db storage.Storag
 			continue
 		}
 
-		err2 := utxo.AddBackTxnOutputToTxnPool(*txn, db, blk, bc)
+		err2 := utxo.AddBackTxnOutputToUtxoPool(*txn, db, blk, bc)
 		if err2!=nil {
 			log.Panic(err2)
 		}
@@ -162,7 +162,7 @@ func (utxo utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db storage.St
 	return nil
 }
 
-func (utxo utxoIndex) AddBackTxnOutputToTxnPool(txn Transaction, db storage.Storage, blk Block, bc Blockchain) error {
+func (utxo utxoIndex) AddBackTxnOutputToUtxoPool(txn Transaction, db storage.Storage, blk Block, bc Blockchain) error {
 	for _, vin := range txn.Vin {
 		vout, voutIndex, err := getTXOFromTxIn(vin, blk.GetHash(), bc)
 		if err == nil {
