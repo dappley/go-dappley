@@ -33,6 +33,16 @@ var blk2 = &Block{
 	header: header2,
 }
 
+var header3 = &BlockHeader{
+	hash:      []byte{'a'},
+	prevHash:  []byte{'e', 'c'},
+	nonce:     0,
+	timestamp: 0,
+}
+var blk3 = &Block{
+	header: header3,
+}
+
 func TestHashTransactions(t *testing.T) {
 	block := NewBlock([]*Transaction{&Transaction{}}, blk2)
 	hash := block.HashTransactions()
@@ -200,4 +210,12 @@ func TestIsParentBlockHeight(t *testing.T) {
 	assert.False(t, IsParentBlockHeight(parentBlock, nil))
 	assert.False(t, IsParentBlockHeight(nil, childBlock))
 	assert.False(t, IsParentBlockHeight(childBlock, parentBlock))
+}
+func TestCalculateHashWithNonce(t *testing.T) {
+	block := NewBlock([]*Transaction{&Transaction{}}, blk3)
+	block.header.timestamp = 0
+	expectHash1 := Hash{0xd6, 0xfa, 0xaf, 0x6f, 0x75, 0x2b, 0x2f, 0x83, 0x18, 0x97, 0xba, 0xd0, 0xf7, 0xee, 0xfc, 0x47, 0x13, 0xc9, 0xb7, 0x8e, 0x68, 0x48, 0x9d, 0xe7, 0xce, 0x9e, 0x2e, 0x33, 0x88, 0x9a, 0xfe, 0x86}
+	assert.Equal(t, Hash(expectHash1), block.CalculateHashWithNonce(1))
+	expectHash2 := Hash{0xea, 0x77, 0xba, 0x86, 0x27, 0xf3, 0xb2, 0x4f, 0x79, 0x60, 0x21, 0x69, 0xfe, 0xf7, 0x8b, 0x7a, 0x93, 0x1b, 0xb5, 0x6d, 0xbf, 0x21, 0xe7, 0xf7, 0x94, 0x51, 0x97, 0x82, 0x63, 0x8c, 0x60, 0x4d}
+	assert.Equal(t, Hash(expectHash2), block.CalculateHashWithNonce(2))
 }
