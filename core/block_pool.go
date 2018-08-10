@@ -34,7 +34,6 @@ type RcvedBlock struct{
 }
 
 type BlockPool struct {
-	blockReceivedCh chan *RcvedBlock
 	blockRequestCh  chan BlockRequestPars
 	size            int
 	bc              *Blockchain
@@ -44,7 +43,6 @@ type BlockPool struct {
 func NewBlockPool(size int) (*BlockPool) {
 	pool := &BlockPool{
 		size:            size,
-		blockReceivedCh: make(chan *RcvedBlock, size),
 		blockRequestCh:  make(chan BlockRequestPars, size),
 		bc:              nil,
 		forkPool:        []*Block{},
@@ -56,15 +54,11 @@ func (pool *BlockPool) SetBlockchain(bc *Blockchain){
 	pool.bc = bc
 }
 
-func (pool *BlockPool) BlockReceivedCh() chan *RcvedBlock {
-	return pool.blockReceivedCh
-}
-
 func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
 }
 
-func (pool *BlockPool) ForkPoolLen() int{
+func (pool *BlockPool) forkPoolLen() int{
 	return len(pool.forkPool)
 }
 
@@ -93,7 +87,7 @@ func (pool *BlockPool) ReInitializeForkPool(blk *Block){
 }
 
 func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
-	if blk == nil || pool.ForkPoolLen() == 0 {
+	if blk == nil || pool.forkPoolLen() == 0 {
 		return false
 	}
 
@@ -101,14 +95,30 @@ func (pool *BlockPool) IsParentOfFork(blk *Block) bool{
 }
 
 func (pool *BlockPool) IsTailOfFork(blk *Block) bool{
-	if blk == nil || pool.ForkPoolLen() == 0 {
+	if blk == nil || pool.forkPoolLen() == 0 {
 		return false
 	}
 
 	return IsParentBlock(pool.GetForkPoolTailBlk(), blk)
 }
 
-func (pool *BlockPool) UpdateForkFromTail(blk *Block) bool{
+
+func (pool *BlockPool) GetBlockchain() *Blockchain{
+	return pool.bc
+}
+
+//Verify all transactions in a fork
+func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool{
+	for i := pool.forkPoolLen()-1; i>=0; i--{
+		if !pool.forkPool[i].VerifyTransactions(utxo){
+			return false
+		}
+		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.DB)
+	}
+	return true
+}
+
+func (pool *BlockPool) updateForkFromTail(blk *Block) bool{
 
 	isTail := pool.IsTailOfFork(blk)
 	if isTail{
@@ -126,7 +136,7 @@ func (pool *BlockPool) UpdateForkFromTail(blk *Block) bool{
 }
 
 //returns if the operation is successful
-func (pool *BlockPool) AddParentToFork(blk *Block) bool{
+func (pool *BlockPool) addParentToFork(blk *Block) bool{
 
 	isParent := pool.IsParentOfFork(blk)
 	if isParent{
@@ -197,13 +207,13 @@ func (pool *BlockPool) updateFork(block *Block, pid peer.ID){
 }
 
 func (pool *BlockPool) attemptToAddTailToFork(newblock *Block) bool{
-	return pool.UpdateForkFromTail(newblock)
+	return pool.updateForkFromTail(newblock)
 }
 
 //returns true if successful
 func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID) bool{
 
-	isSuccessful := pool.AddParentToFork(newblock)
+	isSuccessful := pool.addParentToFork(newblock)
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if pool.bc.IsInBlockchain(newblock.GetPrevHash()){
@@ -211,7 +221,7 @@ func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID)
 			pool.bc.MergeFork()
 		}else{
 			//if the fork could not be added to the current blockchain, ask for the head block's parent
-			pool.RequestBlock(newblock.GetPrevHash(), sender)
+			pool.requestBlock(newblock.GetPrevHash(), sender)
 		}
 	}
 	return isSuccessful
@@ -222,18 +232,14 @@ func (pool *BlockPool) attempToStartNewFork(newblock *Block, sender peer.ID) boo
 		pool.bc.HigherThanBlockchain(newblock)
 	if startNewFork{
 		pool.ReInitializeForkPool(newblock)
-		pool.RequestBlock(newblock.GetPrevHash(),sender)
+		pool.requestBlock(newblock.GetPrevHash(),sender)
 	}
 	return startNewFork
 }
 
 //TODO: RequestChannel should be in PoW.go
-func (pool *BlockPool) RequestBlock(hash Hash, pid peer.ID){
+func (pool *BlockPool) requestBlock(hash Hash, pid peer.ID){
 	pool.blockRequestCh <- BlockRequestPars{hash, pid}
-}
-
-func (pool *BlockPool) GetBlockchain() *Blockchain{
-	return pool.bc
 }
 
 func (pool *BlockPool) addTailToForkPool(blk *Block){
@@ -244,13 +250,3 @@ func (pool *BlockPool) addParentToForkPool(blk *Block)  {
 	pool.forkPool = append(pool.forkPool, blk)
 }
 
-//Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool{
-	for i := pool.ForkPoolLen()-1; i>=0; i--{
-		if !pool.forkPool[i].VerifyTransactions(utxo){
-			return false
-		}
-		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.DB)
-	}
-	return true
-}

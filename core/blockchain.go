@@ -337,8 +337,8 @@ func (bc *Blockchain) MergeFork(){
 }
 
 func (bc *Blockchain) concatenateForkToBlockchain(){
-	if bc.BlockPool().ForkPoolLen() > 0 {
-		for i := bc.BlockPool().ForkPoolLen()-1; i>=0; i--{
+	if bc.BlockPool().forkPoolLen() > 0 {
+		for i := bc.BlockPool().forkPoolLen()-1; i>=0; i--{
 			bc.UpdateNewBlock(bc.BlockPool().forkPool[i])
 			//Remove transactions in current transaction pool
 			bc.BlockPool().forkPool[i].RemoveMinedTxFromTxPool()

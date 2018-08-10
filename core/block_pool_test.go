@@ -97,7 +97,7 @@ func TestBlockPool_ForkPoolLen(t *testing.T) {
 	bp.forkPool = append(bp.forkPool, blk1)
 	bp.forkPool = append(bp.forkPool, blk2)
 
-	assert.Equal(t,2, bp.ForkPoolLen())
+	assert.Equal(t,2, bp.forkPoolLen())
 }
 
 func TestBlockPool_GetForkPoolHeadBlk(t *testing.T) {
@@ -186,11 +186,11 @@ func TestBlockPool_UpdateForkFromHeadLowerHeight(t *testing.T) {
 	blk2 := NewBlock(nil, blk)
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.AddParentToFork(blk))
+	assert.True(t, pool.addParentToFork(blk))
 	//however the fork should be empty since blk2's height is lower than the current blockchain
 	assert.Empty(t, pool.forkPool)
 	//this will be failed since blk is not blk's parent
-	assert.False(t, pool.AddParentToFork(blk))
+	assert.False(t, pool.addParentToFork(blk))
 
 }
 
@@ -206,7 +206,7 @@ func TestBlockPool_UpdateForkFromHeadHigherHeight(t *testing.T) {
 	blk.height = 7
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.AddParentToFork(blk))
+	assert.True(t, pool.addParentToFork(blk))
 	//however the fork should not be empty since blk2's height is higher than the current blockchain
 	assert.NotEmpty(t, pool.forkPool)
 }
@@ -221,11 +221,11 @@ func TestBlockPool_UpdateForkFromTailLowerHeight(t *testing.T) {
 	blk2 := NewBlock(nil, blk)
 	pool.forkPool = append(pool.forkPool, blk)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.UpdateForkFromTail(blk2))
+	assert.True(t, pool.updateForkFromTail(blk2))
 	//however the fork should be empty since blk2's height is lower than the current blockchain
 	assert.Empty(t, pool.forkPool)
 	//this will be failed since blk2 is not blk2's parent
-	assert.False(t, pool.UpdateForkFromTail(blk2))
+	assert.False(t, pool.updateForkFromTail(blk2))
 
 }
 
@@ -241,7 +241,7 @@ func TestBlockPool_UpdateForkFromTailHigherHeight(t *testing.T) {
 	blk.height = 7
 	pool.forkPool = append(pool.forkPool, blk)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.UpdateForkFromTail(blk2))
+	assert.True(t, pool.updateForkFromTail(blk2))
 	//however the fork should not be empty since blk2's height is higher than the current blockchain
 	assert.NotEmpty(t, pool.forkPool)
 }
