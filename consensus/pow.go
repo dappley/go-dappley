@@ -25,9 +25,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
-	"github.com/libp2p/go-libp2p-peer"
-	"github.com/multiformats/go-multiaddr"
-	"github.com/dappley/go-dappley/storage"
 )
 
 var maxNonce int64 = math.MaxInt64
@@ -99,8 +96,6 @@ func (pow *ProofOfWork) Start() {
 		pow.nextState = prepareBlockState
 		for {
 			select {
-			case rcvedBlk := <- pow.bc.BlockPool().BlockReceivedCh():
-				pow.handleRcvdBlock(rcvedBlk.Block, rcvedBlk.Pid)
 			case <-pow.exitCh:
 				logger.Info("PoW stopped...")
 				return
@@ -137,27 +132,6 @@ func (pow *ProofOfWork) runNextState(){
 	}
 }
 
-
-func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
-	db:= storage.NewRamStorage()
-	logger.Debug("PoW: Received a new block. id:", pow.getPeerMultiAddr())
-	if pow.ValidateDifficulty(blk){
-		tailBlock,err := pow.bc.GetTailBlock()
-		if err != nil {
-			logger.Warn("PoW: Get Tail Block failed! Err:", err)
-		}
-		if core.IsParentBlock(tailBlock, blk){
-			pow.newBlock.Rollback(db)
-			pow.newBlock = blk
-			pow.newBlkRcvd = true
-			pow.nextState = updateNewBlockState
-		}else{
-			pow.updateFork(blk, sender)
-		}
-	}else{
-		logger.Debug("PoW: Block Difficulty Invalid. id:", pow.getPeerMultiAddr())
-	}
-}
 
 func (pow *ProofOfWork) ValidateDifficulty(blk *core.Block) bool {
 	var hashInt big.Int
@@ -224,13 +198,6 @@ func (pow *ProofOfWork) updateNewBlock(){
 	pow.newBlkRcvd = false
 }
 
-func (pow *ProofOfWork) getPeerMultiAddr() multiaddr.Multiaddr{
-	if pow.GetNode() != nil{
-		return pow.GetNode().GetPeerMultiaddr()
-	}
-	return nil
-}
-
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 	//broadcast the block to other nodes
 	pow.node.SendBlock(blk)
@@ -243,44 +210,7 @@ func (pow *ProofOfWork) verifyTransactions() {
 	txPool.FilterAllTransactions(utxoPool)
 }
 
-func (pow *ProofOfWork) updateFork(block *core.Block, pid peer.ID){
-	if pow.attemptToAddTailToFork(block){return}
-	if pow.attemptToAddParentToFork(block, pid){return}
-	if pow.attempToStartNewFork(block, pid){return}
-	logger.Debug("PoW: Block dumped")
-}
-
-func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
-	return pow.bc.BlockPool().UpdateForkFromTail(newblock)
-}
-
-//returns true if successful
-func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender peer.ID) bool{
-	db := storage.NewRamStorage()
-	isSuccessful := pow.bc.BlockPool().AddParentToFork(newblock)
-	if isSuccessful{
-		//if the parent of the current fork is found in blockchain, merge the fork
-		if pow.bc.IsInBlockchain(newblock.GetPrevHash()){
-			pow.newBlock.Rollback(db)
-			pow.nextState = mergeForkState
-		}else{
-			//if the fork could not be added to the current blockchain, ask for the head block's parent
-			pow.requestBlock(newblock.GetPrevHash(), sender)
-		}
-	}
-	return isSuccessful
-}
-
-func (pow *ProofOfWork) attempToStartNewFork(newblock *core.Block, sender peer.ID) bool{
-	startNewFork := pow.bc.BlockPool().IsHigherThanFork(newblock) &&
-					pow.bc.HigherThanBlockchain(newblock)
-	if startNewFork{
-		pow.bc.BlockPool().ReInitializeForkPool(newblock)
-		pow.requestBlock(newblock.GetPrevHash(),sender)
-	}
-	return startNewFork
-}
-
-func (pow *ProofOfWork) requestBlock(hash core.Hash, pid peer.ID){
-	pow.bc.BlockPool().RequestBlock(hash, pid)
+func (pow *ProofOfWork) StartNewBlockMinting(){
+	pow.newBlock.Rollback()
+	pow.nextState = prepareBlockState
 }

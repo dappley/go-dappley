@@ -350,7 +350,6 @@ func (bc *Blockchain) concatenateForkToBlockchain(){
 //returns true if successful
 func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 
-	db := storage.NewRamStorage()
 	if !bc.IsInBlockchain(hash){
 		return false
 	}
@@ -359,7 +358,6 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 	if err!= nil {
 		return false
 	}
-
 
 	//keep rolling back blocks until the block with the input hash
 	loop:
@@ -373,7 +371,7 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 			return false
 		}
 		parentBlkHash = blk.GetPrevHash()
-		blk.Rollback(db)
+		blk.Rollback()
 	}
 	bc.setTailBlockHash(parentBlkHash)
 

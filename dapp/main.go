@@ -42,7 +42,8 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	//node := network.NewNode(bc)
+
+	node := network.NewNode(bc)
 
 	//create wallet for mining
 	wallets, err := client.NewWallets()
@@ -52,10 +53,10 @@ func main() {
 	walletAddr := wallet.GetAddress()
 
 	//start mining
-	pow.Setup(nil, walletAddr.Address)
+	pow.Setup(node, walletAddr.Address)
 	pow.SetTargetBit(20)
 	pow.Start()
 	defer pow.Stop()
 
-	cli.Run(bc, nil, wallets)
+	cli.Run(bc, node, wallets)
 }

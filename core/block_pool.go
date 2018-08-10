@@ -123,7 +123,6 @@ func (pool *BlockPool) UpdateForkFromTail(blk *Block) bool{
 		}
 	}
 	return isTail
-
 }
 
 //returns if the operation is successful
@@ -164,15 +163,68 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 		return
 	}
 
-	//TODO: Temporarily disable verify transaction since it only verifies transactions against it own transaction pool
-	utxoPool := GetStoredUtxoMap(pool.bc.DB, UtxoMapKey)
-	if !block.VerifyTransactions(utxoPool){
-		logger.Info("BlockPool: Verify Transactions failed!")
-		return
-	}
+	//TODO: Verify double spending transactions in the same block
 
 	logger.Debug("BlockPool: Block has been verified")
-	pool.blockReceivedCh <- &RcvedBlock{block,pid}
+	pool.handleRcvdBlock(block, pid)
+}
+
+func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID){
+
+	logger.Debug("BlockPool: Received a new block. id:", sender.String())
+	if pool.bc.consensus.ValidateDifficulty(blk){
+		tailBlock,err := pool.bc.GetTailBlock()
+		if err != nil {
+			logger.Warn("PoW: Get Tail Block failed! Err:", err)
+		}
+		if IsParentBlock(tailBlock, blk){
+			pool.bc.consensus.StartNewBlockMinting()
+			pool.bc.UpdateNewBlock(blk)
+			//TODO: Might want to relay the block to other nodes
+		}else{
+			pool.updateFork(blk, sender)
+		}
+	}else{
+		logger.Debug("PoW: Block Difficulty Invalid. id:", sender.String())
+	}
+}
+
+func (pool *BlockPool) updateFork(block *Block, pid peer.ID){
+	if pool.attemptToAddTailToFork(block){return}
+	if pool.attemptToAddParentToFork(block, pid){return}
+	if pool.attempToStartNewFork(block, pid){return}
+	logger.Debug("PoW: Block dumped")
+}
+
+func (pool *BlockPool) attemptToAddTailToFork(newblock *Block) bool{
+	return pool.UpdateForkFromTail(newblock)
+}
+
+//returns true if successful
+func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID) bool{
+
+	isSuccessful := pool.AddParentToFork(newblock)
+	if isSuccessful{
+		//if the parent of the current fork is found in blockchain, merge the fork
+		if pool.bc.IsInBlockchain(newblock.GetPrevHash()){
+			pool.bc.consensus.StartNewBlockMinting()
+			pool.bc.MergeFork()
+		}else{
+			//if the fork could not be added to the current blockchain, ask for the head block's parent
+			pool.RequestBlock(newblock.GetPrevHash(), sender)
+		}
+	}
+	return isSuccessful
+}
+
+func (pool *BlockPool) attempToStartNewFork(newblock *Block, sender peer.ID) bool{
+	startNewFork := pool.IsHigherThanFork(newblock) &&
+		pool.bc.HigherThanBlockchain(newblock)
+	if startNewFork{
+		pool.ReInitializeForkPool(newblock)
+		pool.RequestBlock(newblock.GetPrevHash(),sender)
+	}
+	return startNewFork
 }
 
 //TODO: RequestChannel should be in PoW.go

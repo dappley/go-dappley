@@ -147,7 +147,7 @@ func TestBlock_Rollback(t *testing.T) {
 	tx := MockTransaction()
 	b.transactions = []*Transaction{tx}
 	b.UpdateUtxoIndexAfterNewBlock(UtxoForkMapKey, db)
-	b.Rollback(db)
+	b.Rollback()
 	txnPool := GetTxnPoolInstance()
 	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
 }

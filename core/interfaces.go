@@ -15,5 +15,6 @@ type Consensus interface{
 	ValidateDifficulty(block *Block) bool
 	Start()
 	Stop()
+	StartNewBlockMinting()
 }
 

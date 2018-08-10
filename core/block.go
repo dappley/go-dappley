@@ -31,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/storage"
 )
 
 type BlockHeader struct {
@@ -269,7 +268,7 @@ func IsParentBlock(parentBlk, childBlk *Block) bool{
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
 
-func (b *Block) Rollback(db storage.Storage){
+func (b *Block) Rollback(){
 	if b!= nil {
 		txnPool := GetTxnPoolInstance()
 		for _,tx := range b.GetTransactions(){
