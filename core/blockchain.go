@@ -27,25 +27,36 @@ type Blockchain struct {
 	currentHash []byte
 	DB          storage.Storage
 	blockPool   *BlockPool
+	consensus 	Consensus
 	//txPool      *TransactionPool
 }
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address Address, db storage.Storage) *Blockchain {
+func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) *Blockchain {
 	genesis := NewGenesisBlock(address.Address)
-	bc := &Blockchain{genesis.GetHash(), db,NewBlockPool(BlockPoolMaxSize)}
+	bc := &Blockchain{
+		genesis.GetHash(),
+		db,
+		NewBlockPool(BlockPoolMaxSize),
+		consensus,
+	}
 	bc.blockPool.SetBlockchain(bc)
 	bc.updateDbWithNewBlock(genesis)
 	return bc
 }
 
-func GetBlockchain(db storage.Storage) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
 		return nil, err
 	}
-	bc := &Blockchain{tip, db,NewBlockPool(BlockPoolMaxSize)}
+	bc := &Blockchain{
+		tip,
+		db,
+		NewBlockPool(BlockPoolMaxSize),
+		consensus,
+	}
 	bc.blockPool.SetBlockchain(bc)
 	return bc, nil
 }
@@ -191,7 +202,7 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return initializeBlockChainWithBlockPool(bc.currentHash, bc.DB)
+	return &Blockchain{bc.currentHash, bc.DB,nil,bc.consensus}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -256,12 +267,6 @@ func (bc *Blockchain) String() string {
 		}
 	}
 	return buffer.String()
-}
-
-func initializeBlockChainWithBlockPool(current []byte, db storage.Storage) *Blockchain {
-	bc := &Blockchain{current, db,NewBlockPool(BlockPoolMaxSize)}
-	bc.blockPool.SetBlockchain(bc)
-	return bc
 }
 
 //record the new block in the database

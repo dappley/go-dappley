@@ -34,12 +34,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus) (*core.Blockchain, error) {
 	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc:= core.CreateBlockchain(address, db)
+	bc:= core.CreateBlockchain(address, db, consensus)
 
 	return bc, nil
 }
@@ -60,7 +60,7 @@ func GetBalance(address core.Address, db storage.Storage) (int, error) {
 	}
 	//inject db here
 
-	bc, err := core.GetBlockchain(db)
+	bc, err := core.GetBlockchain(db,nil )
 	if err != nil {
 		return 0, err
 	}
@@ -116,7 +116,7 @@ func AddBalance(address core.Address, amount int, db storage.Storage) (error) {
 	}
 	//inject db here
 
-	bc, err := core.GetBlockchain(db)
+	bc, err := core.GetBlockchain(db,nil)
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ func TestNetwork_Setup(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := core.CreateBlockchain(addr,db)
+	bc := core.CreateBlockchain(addr,db,nil)
 
 	//create node1
 	node1 := NewNode(bc)
@@ -77,7 +77,7 @@ func TestNetwork_SendBlock(t *testing.T){
 	for _,input := range bcInputs{
 		db := storage.NewRamStorage()
 		defer db.Close()
-		bc := core.CreateBlockchain(input.addr, db)
+		bc := core.CreateBlockchain(input.addr, db,nil)
 		n := NewNode(bc)
 		n.Start(input.testPort)
 		nodes = append(nodes, n)
@@ -117,7 +117,7 @@ func TestNode_SyncPeers(t *testing.T){
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := core.CreateBlockchain(addr,db)
+	bc := core.CreateBlockchain(addr,db,nil)
 
 
 	//create node1
@@ -168,7 +168,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 		db := storage.NewRamStorage()
 		defer db.Close()
 		addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-		bc := core.CreateBlockchain(addr,db)
+		bc := core.CreateBlockchain(addr,db,nil)
 
 		//create node
 		node := NewNode(bc)

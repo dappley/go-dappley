@@ -36,7 +36,9 @@ func main() {
 	//db := storage.OpenDatabase(core.BlockchainDbFile)
 	db := storage.NewRamStorage()
 	defer db.Close()
-	bc, err := logic.CreateBlockchain(core.Address{genesisAddr}, db)
+
+	pow := consensus.NewProofOfWork()
+	bc, err := logic.CreateBlockchain(core.Address{genesisAddr}, db, pow)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -50,7 +52,6 @@ func main() {
 	walletAddr := wallet.GetAddress()
 
 	//start mining
-	pow := consensus.NewProofOfWork()
 	pow.Setup(nil, walletAddr.Address)
 	pow.SetTargetBit(20)
 	pow.Start()

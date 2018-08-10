@@ -72,14 +72,16 @@ func TestProofOfWork_SetTargetBit(t *testing.T) {
 }
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
+
+	pow := NewProofOfWork()
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
+		pow,
 	)
 	defer bc.DB.Close()
 
-	pow := NewProofOfWork()
 	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//create a block that has a hash value larger than the target
@@ -100,13 +102,16 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 }
 
 func TestProofOfWork_StartAndStop(t *testing.T) {
+
+	pow := NewProofOfWork()
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
+		pow,
 	)
 	defer bc.DB.Close()
-	pow := NewProofOfWork()
+
 	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
@@ -138,14 +143,17 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 }
 
 func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
+
+	pow := NewProofOfWork()
 	logrus.SetLevel(logrus.WarnLevel)
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
+		pow,
 	)
 	defer bc.DB.Close()
-	pow := NewProofOfWork()
+
 	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
@@ -215,13 +223,16 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 }
 
 func TestProofOfWork_verifyNonce(t *testing.T){
+
+	pow := NewProofOfWork()
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
+		pow,
 	)
 	defer bc.DB.Close()
-	pow := NewProofOfWork()
+
 	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//prepare a block with correct nonce value
@@ -248,6 +259,8 @@ func TestProofOfWork_verifyNonce(t *testing.T){
 }
 
 func TestProofOfWork_verifyTransactions(t *testing.T){
+
+	pow := NewProofOfWork()
 	wallets,err := client.NewWallets()
 	assert.Nil(t, err)
 	wallet1 := wallets.CreateWallet()
@@ -256,10 +269,10 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 	bc := core.CreateBlockchain(
 		wallet1.GetAddress(),
 		storage.NewRamStorage(),
+		pow,
 	)
 	defer bc.DB.Close()
 
-	pow := NewProofOfWork()
 	pow.Setup(network.NewNode(bc),wallet1.GetAddress().Address)
 
 	//mock two transactions and push them to transaction pool

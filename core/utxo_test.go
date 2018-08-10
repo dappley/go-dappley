@@ -140,7 +140,7 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	db :=  storage.NewRamStorage()
 	defer db.Close()
 	addr1 := Address{"testaddress"}
-	bc := CreateBlockchain(addr1, db)
+	bc := CreateBlockchain(addr1, db, nil)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs()
 	blk2 := GenerateUtxoMockBlockWithInputs()

@@ -60,7 +60,7 @@ func TestCreateBlockchain(t *testing.T) {
 	addr := core.Address{"1111Wmg1ZRnhjUs6TvbV"}
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	b, err := CreateBlockchain(addr, databaseInstance, nil)
 	assert.Nil(t, b)
 	assert.Equal(t, err, errors.New("ERROR: Address is invalid"))
 }
@@ -68,7 +68,7 @@ func TestCreateBlockchain(t *testing.T) {
 //create a blockchain with invalid address
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	//create a blockchain with an invalid address
-	b, err := CreateBlockchain(core.NewAddress(invalidAddress), databaseInstance)
+	b, err := CreateBlockchain(core.NewAddress(invalidAddress), databaseInstance, nil)
 	assert.Equal(t, err, ErrInvalidAddress)
 	assert.Nil(t, b)
 }
@@ -80,7 +80,7 @@ func TestGetBalance(t *testing.T) {
 	addr := wallet.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	b, err := CreateBlockchain(addr, databaseInstance,nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
@@ -97,7 +97,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	addr := wallet.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	b, err := CreateBlockchain(addr, databaseInstance,nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
@@ -122,7 +122,7 @@ func TestGetAllAddresses(t *testing.T) {
 	expected_res = append(expected_res, addr)
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	b, err := CreateBlockchain(addr, databaseInstance,nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
@@ -158,8 +158,9 @@ func TestSend(t *testing.T) {
 	wallet1, err := CreateWallet()
 	assert.NotEmpty(t, wallet1)
 
+	pow := consensus.NewProofOfWork()
 	//create a blockchain
-	b, err := CreateBlockchain(wallet1.GetAddress(), databaseInstance)
+	b, err := CreateBlockchain(wallet1.GetAddress(), databaseInstance,pow)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 	node := network.NewNode(b)
@@ -184,7 +185,6 @@ func TestSend(t *testing.T) {
 	//Send 5 coins from wallet1 to wallet2
 	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.Nil(t, err)
-	pow := consensus.NewProofOfWork()
 	pow.Setup(node, addr1.Address)
 
 	pow.Start()
@@ -241,7 +241,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr1, databaseInstance)
+	b, err := CreateBlockchain(addr1, databaseInstance,nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
@@ -299,7 +299,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr1, databaseInstance)
+	b, err := CreateBlockchain(addr1, databaseInstance,nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
@@ -353,10 +353,10 @@ func TestSyncBlocks(t *testing.T) {
 		defer db.Close()
 
 		//create blockchain instance
-		bc := core.CreateBlockchain(addr, db)
+		pow := consensus.NewProofOfWork()
+		bc := core.CreateBlockchain(addr, db, pow)
 		bcs = append(bcs, bc)
 
-		pow := consensus.NewProofOfWork()
 		pow.Setup(network.NewNode(bcs[i]), addr.Address)
 		pow.SetTargetBit(16)
 		pow.GetNode().Start(testport + i)
@@ -439,11 +439,11 @@ func TestForkChoice(t *testing.T) {
 		db := storage.NewRamStorage()
 		defer db.Close()
 
+		pow := consensus.NewProofOfWork()
 		//create blockchain instance
-		bc := core.CreateBlockchain(addr, db)
+		bc := core.CreateBlockchain(addr, db, pow)
 		bcs = append(bcs, bc)
 
-		pow := consensus.NewProofOfWork()
 		pow.Setup(network.NewNode(bcs[i]), addr.Address)
 		pow.SetTargetBit(16)
 		pow.GetNode().Start(testport_fork + i)
