@@ -186,9 +186,8 @@ func TestSend(t *testing.T) {
 	assert.Nil(t, err)
 	pow := consensus.NewProofOfWork()
 	pow.Setup(node, addr1.Address)
-	miner := consensus.NewMiner(pow)
 
-	go miner.Start()
+	pow.Start()
 	time.Sleep(3 * time.Second)
 
 	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
@@ -202,7 +201,7 @@ func TestSend(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, transferAmount, balance2)
 
-	miner.Stop()
+	pow.Stop()
 
 	//teardown :clean up database amd files
 	teardown()

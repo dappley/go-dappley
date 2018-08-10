@@ -53,9 +53,8 @@ func main() {
 	pow := consensus.NewProofOfWork()
 	pow.Setup(nil, walletAddr.Address)
 	pow.SetTargetBit(20)
-	miner := consensus.NewMiner(pow)
-	miner.Start()
-	defer miner.Stop()
+	pow.Start()
+	defer pow.Stop()
 
 	cli.Run(bc, nil, wallets)
 }
