@@ -186,11 +186,11 @@ func TestBlockPool_UpdateForkFromHeadLowerHeight(t *testing.T) {
 	blk2 := NewBlock(nil, blk)
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.UpdateForkFromHead(blk))
+	assert.True(t, pool.AddParentToFork(blk))
 	//however the fork should be empty since blk2's height is lower than the current blockchain
 	assert.Empty(t, pool.forkPool)
 	//this will be failed since blk is not blk's parent
-	assert.False(t, pool.UpdateForkFromHead(blk))
+	assert.False(t, pool.AddParentToFork(blk))
 
 }
 
@@ -206,7 +206,7 @@ func TestBlockPool_UpdateForkFromHeadHigherHeight(t *testing.T) {
 	blk.height = 7
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.UpdateForkFromHead(blk))
+	assert.True(t, pool.AddParentToFork(blk))
 	//however the fork should not be empty since blk2's height is higher than the current blockchain
 	assert.NotEmpty(t, pool.forkPool)
 }

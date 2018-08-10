@@ -11,12 +11,9 @@
 //
 package core
 
-type Hash []byte
-
 type Consensus interface{
-	ValidateDifficulty(*Block) bool
+	ValidateDifficulty(block *Block) bool
 	Start()
-	Setup(*Blockchain, string)
 	Stop()
 }
 

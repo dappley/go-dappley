@@ -28,7 +28,48 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/network"
 )
+
+func TestProofOfWork_NewPoW(t *testing.T){
+	pow := NewProofOfWork()
+	assert.Equal(t,"",pow.cbAddr)
+	assert.Equal(t,false,pow.newBlkRcvd)
+	assert.Equal(t,prepareBlockState, pow.nextState)
+}
+
+func TestProofOfWork_Setup(t *testing.T) {
+	pow := NewProofOfWork()
+	bc := core.GenerateMockBlockchain(5)
+	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+	pow.Setup(network.NewNode(bc), cbAddr)
+	assert.Equal(t,bc,pow.bc)
+	assert.Equal(t,cbAddr,pow.cbAddr)
+}
+
+func TestProofOfWork_SetTargetBit(t *testing.T) {
+	tests := []struct{
+		name 	 string
+		bit 	 int
+		expected int
+	}{{"regular",16,16},
+	{"zero",0,16},
+	{"negative",-5,16},
+	{"above256",257,16},
+	{"regular2",18,18},
+	{"equalTo256",256,256},
+	}
+
+	pow := NewProofOfWork()
+	for _,tt := range tests{
+		t.Run(tt.name,func(t *testing.T){
+			pow.SetTargetBit(tt.bit)
+			target := big.NewInt(1)
+			target.Lsh(target,uint(256-tt.expected))
+			assert.Equal(t,target,pow.target)
+		})
+	}
+}
 
 func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
@@ -39,7 +80,7 @@ func TestProofOfWork_ValidateDifficulty(t *testing.T) {
 	defer bc.DB.Close()
 
 	pow := NewProofOfWork()
-	pow.Setup(bc,cbAddr.Address)
+	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//create a block that has a hash value larger than the target
 	blk := core.GenerateMockBlock()
@@ -66,7 +107,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	)
 	defer bc.DB.Close()
 	pow := NewProofOfWork()
-	pow.Setup(bc,cbAddr.Address)
+	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -105,7 +146,7 @@ func TestProofOfWork_ReceiveBlockFromPeers(t *testing.T) {
 	)
 	defer bc.DB.Close()
 	pow := NewProofOfWork()
-	pow.Setup(bc,cbAddr.Address)
+	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -181,7 +222,7 @@ func TestProofOfWork_verifyNonce(t *testing.T){
 	)
 	defer bc.DB.Close()
 	pow := NewProofOfWork()
-	pow.Setup(bc,cbAddr.Address)
+	pow.Setup(network.NewNode(bc),cbAddr.Address)
 
 	//prepare a block with correct nonce value
 	newBlock := pow.prepareBlock()
@@ -219,7 +260,7 @@ func TestProofOfWork_verifyTransactions(t *testing.T){
 	defer bc.DB.Close()
 
 	pow := NewProofOfWork()
-	pow.Setup(bc,wallet1.GetAddress().Address)
+	pow.Setup(network.NewNode(bc),wallet1.GetAddress().Address)
 
 	//mock two transactions and push them to transaction pool
 	//the first transaction is a valid transaction

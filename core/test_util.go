@@ -40,6 +40,22 @@ func GenerateMockBlockchain(size int) *Blockchain{
 	return bc
 }
 
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain{
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s)
+
+	for i:=0; i<size; i++{
+		tailBlk, _ := bc.GetTailBlock()
+		cbtx := NewCoinbaseTX(addr.Address,"")
+		b:= NewBlock([]*Transaction{&cbtx},tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.UpdateNewBlock(b)
+	}
+	return bc
+}
+
 //the first item is the tail of the fork
 func GenerateMockFork(size int, parent *Block) []*Block{
 	fork := []*Block{}

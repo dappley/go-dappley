@@ -10,6 +10,12 @@ import (
 	"fmt"
 )
 
+var 	bh1 = &BlockHeader{
+	[]byte("hash"),
+	nil,
+	1,
+	time.Now().Unix(),
+}
 
 func GenerateUtxoMockBlockWithoutInputs() *Block{
 	bh1 := &BlockHeader{
@@ -19,12 +25,20 @@ func GenerateUtxoMockBlockWithoutInputs() *Block{
 		1,
 		time.Now().Unix(),
 	}
+var 	bh2 = &BlockHeader{
+	[]byte("hash1"),
+	[]byte("hash"),
+	1,
+	time.Now().Unix(),
+}
+func GenerateUtxoMockBlockWithoutInputs() *Block{
+
 
 	t1 := MockUtxoTransactionWithoutInputs()
 	return &Block{
 		header:       bh1,
 		transactions: []*Transaction{t1},
-		height:       0,
+		height:       1,
 	}
 }
 
@@ -42,7 +56,7 @@ func GenerateUtxoMockBlockWithInputs() *Block{
 	return &Block{
 		header:       bh1,
 		transactions: []*Transaction{t1},
-		height:       0,
+		height:       2,
 	}
 }
 
@@ -92,15 +106,14 @@ func MockUtxoOutputsWithInputs() []TXOutput {
 	}
 }
 
-
-
 func TestAddSpendableOutputsAfterNewBlock(t *testing.T){
 	db :=  storage.NewRamStorage()
 	defer db.Close()
 	blk := GenerateUtxoMockBlockWithoutInputs()
 
-	AddSpendableOutputsAfterNewBlock(*blk, db)
-	myUtxos := GetAddressUTXOs([]byte("address1"), db)
+	blk.AddSpendableOutputsAfterNewBlock(UtxoMapKey, db)
+	myUtxos := GetAddressUTXOs(UtxoMapKey, []byte("address1"), db)
+
 	assert.Equal(t, 5, myUtxos[0].Value )
 	assert.Equal(t, 7, myUtxos[1].Value )
 }
@@ -110,31 +123,66 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 	defer db.Close()
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs()
-	AddSpendableOutputsAfterNewBlock(*blk1, db)
+
+	blk1.AddSpendableOutputsAfterNewBlock(UtxoMapKey, db)
 	//address 1 is given a $5 utxo and a $7 utxo, total $12
 
 	blk2 := GenerateUtxoMockBlockWithInputs()
 	//consume utxos first, not adding new utxos yet
-	ConsumeSpendableOutputsAfterNewBlock(*blk2, db)
+
+	blk2.ConsumeSpendableOutputsAfterNewBlock(UtxoMapKey,db)
 	//address1 gives address2 $8, $12 - $8 = $4 but address1 has no utxos left at this point new(change) utxo hasnt been added
-	assert.Equal(t, 0, len( GetAddressUTXOs([]byte("address1"), db)))
+	assert.Equal(t, 0, len( GetAddressUTXOs(UtxoMapKey, []byte("address1"), db)))
 
 	//add utxos for above block accordingly;
-	AddSpendableOutputsAfterNewBlock(*blk2, db)
+	blk2.AddSpendableOutputsAfterNewBlock(UtxoMapKey,db)
 
 	//expect address1 to have 1 utxo of $4
-	assert.Equal(t, 1, len( GetAddressUTXOs([]byte("address1"), db)))
-	assert.Equal(t, 4,  GetAddressUTXOs([]byte("address1"), db)[0].Value)
+	assert.Equal(t, 1, len( GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
+	assert.Equal(t, 4,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
 
 	//expect address2 to have 2 utxos totaling $8
-	assert.Equal(t, 2, len( GetAddressUTXOs([]byte("address2"), db)))
+	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
 	sum := 0
-	for _, utxo := range GetAddressUTXOs([]byte("address2"),db) {
+	for _, utxo := range GetAddressUTXOs(UtxoMapKey, []byte("address2"),db) {
 		sum += utxo.Value
 	}
 	assert.Equal(t, 8, sum)
+}
+
+func TestCopyAndRevertUtxosInRam(t *testing.T){
+
+	db :=  storage.NewRamStorage()
+	defer db.Close()
+	addr1 := Address{"testaddress"}
+	bc := CreateBlockchain(addr1, db)
+
+	blk1 := GenerateUtxoMockBlockWithoutInputs()
+	blk2 := GenerateUtxoMockBlockWithInputs()
+
+	bc.UpdateNewBlock(blk1)
+	bc.UpdateNewBlock(blk2)
+	//expect address1 to have 1 utxo of $4
+	assert.Equal(t, 1, len(GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
+	assert.Equal(t, 4,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
+
+	//expect address2 to have 2 utxos totaling $8
+	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
+
+	//rollback to block 1, address 1 has a $5 utxo and a $7 utxo, total $12, and addr2 has nothing
+	deepCopy, err:= bc.GetUtxoStateAtBlockHash(db, blk1.GetHash())
+	if err !=nil{
+		panic(err)
+	}
+
+	assert.Equal(t, 2, len(deepCopy["address1"]))
+	assert.Equal(t, 5,  deepCopy["address1"][0].Value)
+	assert.Equal(t, 7,  deepCopy["address1"][1].Value)
+	assert.Equal(t, 0,  len(deepCopy["address2"]))
 
 }
+
+
 
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()

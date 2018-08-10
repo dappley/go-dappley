@@ -10,6 +10,15 @@ import (
 
 const BlockchainDbFile = "../bin/blockchain.DB"
 
+func TestLevelDB_DbExists(t *testing.T) {
+	setup()
+	assert.False(t, DbExists(BlockchainDbFile))
+	ldb := OpenDatabase(BlockchainDbFile)
+	ldb.Put([]byte("a"), []byte("1"))
+	assert.True(t, DbExists(BlockchainDbFile))
+	teardown()
+}
+
 //put key value pairs into database and read later
 func TestLevelDB_PutAndGet(t *testing.T) {
 

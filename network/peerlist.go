@@ -71,8 +71,9 @@ func NewPeerListStr(strs []string) *PeerList {
 
 		if err != nil {
 			logger.Warn("Address Unrecognized:", str)
+		}else{
+			ps = append(ps, peer)
 		}
-		ps = append(ps, peer)
 	}
 
 	return NewPeerList(ps)
@@ -131,11 +132,16 @@ func (pl *PeerList) GetPeerlist() []*Peer {
 //Check if a multiaddress is already existed in the list
 func (pl *PeerList) IsInPeerlist(p *Peer) bool {
 
+	if p == nil {
+		return false
+	}
+
+	if p.addr == nil || p.peerid == "" {
+		return false
+	}
+
 	for _, ps := range pl.peers {
-		fmt.Println("111111111")
-		fmt.Println(ps.peerid.String())
-		fmt.Println(p.peerid.String())
-		if ps.peerid.String() == p.peerid.String() {
+		if ps.peerid.String() == p.peerid.String() || ps.addr.String() == p.addr.String() {
 			return true
 		}
 	}

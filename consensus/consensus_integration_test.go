@@ -31,6 +31,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"fmt"
 	"os"
+	"github.com/dappley/go-dappley/network"
 )
 
 var sendAmount = int(7)
@@ -79,9 +80,8 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	pow:= NewProofOfWork()
-	pow.Setup(bc, wallet1.GetAddress().Address)
-	miner := NewMiner(pow)
-	miner.Start()
+	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
+	pow.Start()
 	
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -89,7 +89,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		time.Sleep(time.Millisecond*500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
-	miner.Stop()
+	pow.Stop()
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -122,9 +122,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//start a miner
 	pow := NewProofOfWork()
-	pow.Setup(bc, cbWallet.GetAddress().Address)
-	miner := NewMiner(pow)
-	miner.Start()
+	pow.Setup(network.NewNode(bc), cbWallet.GetAddress().Address)
+	pow.Start()
 
 	//Make sure at least 5 blocks mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -132,7 +131,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 		time.Sleep(time.Second)
 	}
-	miner.Stop()
+	pow.Stop()
 
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
@@ -178,9 +177,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//start a miner
 	pow := NewProofOfWork()
-	pow.Setup(bc, wallet1.GetAddress().Address)
-	miner := NewMiner(pow)
-	miner.Start()
+	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
+	pow.Start()
 
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -204,7 +202,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	}
 
 	//stop mining
-	miner.Stop()
+	pow.Stop()
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())

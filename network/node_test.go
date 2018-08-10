@@ -8,6 +8,8 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"os"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/gogo/protobuf/proto"
 )
 
 const(
@@ -190,6 +192,54 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	time.Sleep(time.Second*2)
 	assert.Equal(t, blk, nodes[1].GetBlocks()[0])
 
+}
+
+func TestNode_prepareData(t *testing.T){
+
+	tests := []struct{
+		name  		string
+		msgData 	proto.Message
+		cmd 		string
+		retData 	[]byte
+		retErr 		error
+	}{
+		{
+			name: 		"CorrectProtoMsg",
+			msgData:	&networkpb.Peer{Peerid: "pid",Addr:"addr"},
+			cmd:		SyncPeerList,
+			retData:    []byte{10,12,83,121,110,99,80,101,101,114,76,105,115,116,18,11,10,3,112,105,100,18,4,97,100,100,114},
+			retErr: 	nil,
+		},
+		{
+			name: 		"NoDataInput",
+			msgData:	nil,
+			cmd:		SyncPeerList,
+			retData:    []byte{10,12,83,121,110,99,80,101,101,114,76,105,115,116},
+			retErr: 	nil,
+		},
+		{
+			name: 		"NoCmdInput",
+			msgData:	&networkpb.Peer{Peerid: "pid",Addr:"addr"},
+			cmd:		"",
+			retData:    nil,
+			retErr: 	ErrDapMsgNoCmd,
+		},
+		{
+			name: 		"NoInput",
+			msgData:	nil,
+			cmd:		"",
+			retData:    nil,
+			retErr: 	ErrDapMsgNoCmd,
+		},
+	}
+
+	for _,tt := range tests{
+		t.Run(tt.name,func(t *testing.T){
+			data,err := prepareData(tt.msgData,tt.cmd)
+			assert.Equal(t,tt.retData,data)
+			assert.Equal(t,tt.retErr,err)
+		})
+	}
 }
 
 /*func TestNetwork_node0(t *testing.T){

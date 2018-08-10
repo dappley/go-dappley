@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/storage"
 )
 
 const (
@@ -52,6 +53,8 @@ type Block struct {
 	checkFlag bool
 }
 
+
+type Hash []byte
 
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
@@ -128,9 +131,6 @@ func Deserialize(d []byte) *Block {
 	}
 	if bs.Header.PrevHash == nil {
 		bs.Header.PrevHash = Hash{}
-	}
-	if bs.Header.MerkleRoot == nil {
-		bs.Header.MerkleRoot = Hash{}
 	}
 	if bs.Transactions == nil {
 		bs.Transactions = []*Transaction{}
@@ -295,7 +295,7 @@ func IsParentBlock(parentBlk, childBlk *Block) bool{
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
 
-func (b *Block) Rollback(){
+func (b *Block) Rollback(db storage.Storage){
 	if b!= nil {
 		txnPool := GetTxnPoolInstance()
 		for _,tx := range b.GetTransactions(){
@@ -316,7 +316,7 @@ func (b *Block) FindTransactionById(txid []byte) *Transaction{
 	return nil
 }
 
-//remove the transactions in a blook from the transaction pool
+//remove the transactions in a block from the transaction pool
 func (b *Block) RemoveMinedTxFromTxPool(){
 	txPool := GetTxnPoolInstance()
 	txPool.Traverse(func(tx Transaction) bool{

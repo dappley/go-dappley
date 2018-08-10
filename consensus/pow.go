@@ -27,11 +27,12 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/dappley/go-dappley/storage"
 )
 
 var maxNonce int64 = math.MaxInt64
 
-const targetBits = int64(14)
+const targetBits = 14
 
 type State int
 
@@ -55,11 +56,8 @@ type ProofOfWork struct {
 }
 
 func NewProofOfWork() *ProofOfWork{
-	target := big.NewInt(1)
-	target.Lsh(target, uint(256-targetBits))
-
 	p := &ProofOfWork{
-		target: 		target,
+		target: 		nil,
 		exitCh: 		make(chan bool, 1),
 		bc:     		nil,
 		nextState:		prepareBlockState,
@@ -69,13 +67,14 @@ func NewProofOfWork() *ProofOfWork{
 		newBlkRcvd:		false,
 		nonce:			0,
 	}
+	p.SetTargetBit(targetBits)
 	return p
 }
 
-func (pow *ProofOfWork) Setup(bc *core.Blockchain, cbAddr string){
-	pow.bc = bc
+func (pow *ProofOfWork) Setup(node *network.Node, cbAddr string){
+	pow.bc = node.GetBlockchain()
 	pow.cbAddr = cbAddr
-	pow.node = network.NewNode(bc)
+	pow.node = node
 }
 
 func (pow *ProofOfWork) GetNode() *network.Node{
@@ -87,6 +86,9 @@ func (pow *ProofOfWork) GetCurrentState() State {
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int){
+	if bit <= 0 || bit > 256 {
+		return
+	}
 	target := big.NewInt(1)
 	pow.target = target.Lsh(target, uint(256-bit))
 }
@@ -137,6 +139,7 @@ func (pow *ProofOfWork) runNextState(){
 
 
 func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
+	db:= storage.NewRamStorage()
 	logger.Debug("PoW: Received a new block. id:", pow.getPeerMultiAddr())
 	if pow.ValidateDifficulty(blk){
 		tailBlock,err := pow.bc.GetTailBlock()
@@ -144,7 +147,7 @@ func (pow *ProofOfWork) handleRcvdBlock(blk *core.Block, sender peer.ID){
 			logger.Warn("PoW: Get Tail Block failed! Err:", err)
 		}
 		if core.IsParentBlock(tailBlock, blk){
-			pow.newBlock.Rollback()
+			pow.newBlock.Rollback(db)
 			pow.newBlock = blk
 			pow.newBlkRcvd = true
 			pow.nextState = updateNewBlockState
@@ -235,7 +238,7 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 
 //verify transactions and remove invalid transactions
 func (pow *ProofOfWork) verifyTransactions() {
-	utxoPool := core.GetStoredUtxoMap(pow.bc.DB)
+	utxoPool := core.GetStoredUtxoMap(pow.bc.DB, core.UtxoMapKey)
 	txPool := core.GetTxnPoolInstance()
 	txPool.FilterAllTransactions(utxoPool)
 }
@@ -253,12 +256,12 @@ func (pow *ProofOfWork) attemptToAddTailToFork(newblock *core.Block) bool{
 
 //returns true if successful
 func (pow *ProofOfWork) attemptToAddParentToFork(newblock *core.Block, sender peer.ID) bool{
-
-	isSuccessful := pow.bc.BlockPool().UpdateForkFromHead(newblock)
+	db := storage.NewRamStorage()
+	isSuccessful := pow.bc.BlockPool().AddParentToFork(newblock)
 	if isSuccessful{
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if pow.bc.IsInBlockchain(newblock.GetPrevHash()){
-			pow.newBlock.Rollback()
+			pow.newBlock.Rollback(db)
 			pow.nextState = mergeForkState
 		}else{
 			//if the fork could not be added to the current blockchain, ask for the head block's parent

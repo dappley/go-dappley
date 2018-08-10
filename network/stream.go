@@ -17,6 +17,7 @@ const(
 	SyncBlock 		= "SyncBlock"
 	SyncPeerList 	= "SyncPeerList"
 	RequestBlock	= "requestBlock"
+	BroadcastTxn 	= "BroadcastTxn"
 )
 
 var(
@@ -52,6 +53,19 @@ func NewStream(s net.Stream, node *Node) *Stream{
 func (s *Stream) Start(){
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw)
+}
+
+
+func (s *Stream) StopStream(){
+	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
+	s.quitRdCh <- true
+	s.quitWrCh <- true
+	s.stream.Close()
+	delete(s.node.streams, s.peerID)
+}
+
+func (s *Stream) Send(data []byte){
+	s.dataCh <- data
 }
 
 func (s *Stream) startLoop(rw *bufio.ReadWriter){
@@ -153,18 +167,6 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 	return nil
 }
 
-func (s *Stream) StopStream(){
-	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
-	s.quitRdCh <- true
-	s.quitWrCh <- true
-	s.stream.Close()
-	delete(s.node.streams, s.peerID)
-}
-
-func (s *Stream) Send(data []byte){
-	s.dataCh <- data
-}
-
 func (s *Stream) parseData(data []byte){
 
 	data,err := decodeMessage(data)
@@ -191,9 +193,12 @@ func (s *Stream) parseData(data []byte){
 	case RequestBlock:
 		logger.Debug("Received ",RequestBlock," command from:", s.remoteAddr)
 		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
+		case BroadcastTxn:
+		logger.Debug("Received ", BroadcastTxn," command from:", s.remoteAddr)
+		s.node.addTxnToPool(dm.GetData())
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)
 	}
-
+	
 }
 

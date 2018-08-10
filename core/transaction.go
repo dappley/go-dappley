@@ -35,6 +35,12 @@ type Transaction struct {
 }
 
 
+type TxnIndex struct{
+	BlockId []byte
+	BlockIndex int
+}
+
+
 func (tx Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
@@ -209,10 +215,10 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, sender
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
 	sum := 0
 
-	if len(GetAddressUTXOs(pubKeyHash, db)) < 1 {
+	if len(GetAddressUTXOs(UtxoMapKey, pubKeyHash, db)) < 1 {
 		return Transaction{}, ErrInsufficientFund
 	}
-	for _, v := range GetAddressUTXOs(pubKeyHash, db) {
+	for _, v := range GetAddressUTXOs(UtxoMapKey,pubKeyHash, db) {
 		sum += v.Value
 		validOutputs = append(validOutputs, v)
 		if sum >= amount {
