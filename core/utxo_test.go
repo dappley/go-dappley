@@ -155,7 +155,7 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
 
 	//rollback to block 1, address 1 has a $5 utxo and a $7 utxo, total $12, and addr2 has nothing
-	deepCopy, err:= bc.RevertToBlockHash(db, blk1.GetHash())
+	deepCopy, err:= bc.GetUtxoStateAtBlockHash(db, blk1.GetHash())
 	if err !=nil{
 		panic(err)
 	}

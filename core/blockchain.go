@@ -314,7 +314,7 @@ func (bc *Blockchain) MergeFork(){
 	}
 
 	//verify transactions in the fork
-	utxo, err := bc.RevertToBlockHash(bc.DB, forkParentHash)
+	utxo, err := bc.GetUtxoStateAtBlockHash(bc.DB, forkParentHash)
 	if err!=nil {
 		logger.Warn(err)
 	}

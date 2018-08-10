@@ -107,7 +107,7 @@ func (blk Block) ConsumeSpendableOutputsAfterNewBlock ( mapkey string,db storage
 			}
 		}
 	}
-	SaveToDb(utxoIndex,UtxoMapKey, db)
+	utxoIndex.SetUtxoPoolInDb(db)
 }
 
 func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
@@ -174,8 +174,9 @@ func (utxo utxoIndex) AddBackTxnOutputToUtxoPool(txn Transaction, db storage.Sto
 	return nil
 }
 
-func SaveToDb(utxo utxoIndex, mapkey string ,db storage.Storage){
-	db.Put([]byte(mapkey), utxo.Serialize())
+//set utxopool
+func (utxo utxoIndex) SetUtxoPoolInDb(db storage.Storage){
+	db.Put([]byte(UtxoMapKey), utxo.Serialize())
 }
 
 //block is passed in because i cant statically call FindTransactionById
@@ -199,7 +200,7 @@ func (utxo utxoIndex) DeepCopy (db storage.Storage) utxoIndex {
 }
 
 //input db and block hash, output utxoindex state @block hash block
-func (bc Blockchain) RevertToBlockHash(db storage.Storage, hash []byte) (utxoIndex, error ){
+func (bc Blockchain) GetUtxoStateAtBlockHash(db storage.Storage, hash []byte) (utxoIndex, error ){
 	index := GetStoredUtxoMap(db, UtxoMapKey)
 	deepCopy := index.DeepCopy(db)
 	bci := bc.Iterator()
@@ -226,9 +227,5 @@ func (bc Blockchain) RevertToBlockHash(db storage.Storage, hash []byte) (utxoInd
 	return deepCopy, nil
 }
 
-func emptyForkIndex(db storage.Storage){
-	utxoIndex := utxoIndex{}
-	SaveToDb(utxoIndex, UtxoForkMapKey, db)
-}
 
 
