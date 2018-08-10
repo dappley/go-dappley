@@ -25,14 +25,15 @@ import (
 
 	"time"
 
+	"reflect"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
-	logger "github.com/sirupsen/logrus"
-	"reflect"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 const invalidAddress = "Invalid Address"
@@ -51,19 +52,17 @@ func TestMain(m *testing.M) {
 func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet()
 	assert.Nil(t, err)
-	assert.NotEmpty(t, wallet)
+	assert.Equal(t, len(wallet.Addresses[0].Address), 34)
 }
 
 func TestCreateBlockchain(t *testing.T) {
 	//create a wallet address
-	wallet, err := CreateWallet()
-	assert.NotEmpty(t, wallet)
-	addr := wallet.GetAddress()
+	addr := core.Address{"1111Wmg1ZRnhjUs6TvbV"}
 
 	//create a blockchain
 	b, err := CreateBlockchain(addr, databaseInstance)
-	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.Nil(t, b)
+	assert.Equal(t, err, errors.New("ERROR: Address is invalid"))
 }
 
 //create a blockchain with invalid address
@@ -186,7 +185,7 @@ func TestSend(t *testing.T) {
 	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.Nil(t, err)
 	pow := consensus.NewProofOfWork()
-	pow.Setup(node,addr1.Address)
+	pow.Setup(node, addr1.Address)
 	miner := consensus.NewMiner(pow)
 
 	go miner.Start()
@@ -338,9 +337,10 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//teardown :clean up database amd files
 	teardown()
 }
+
 const testport = 10100
 
-func TestSyncBlocks(t *testing.T){
+func TestSyncBlocks(t *testing.T) {
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -348,25 +348,25 @@ func TestSyncBlocks(t *testing.T){
 	targetHeight := uint64(4)
 	//num of nodes to be created in the test
 	numOfNodes := 4
-	for i := 0; i < numOfNodes; i++{
+	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
 		db := storage.NewRamStorage()
 		defer db.Close()
 
 		//create blockchain instance
-		bc := core.CreateBlockchain(addr,db)
+		bc := core.CreateBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
 		pow := consensus.NewProofOfWork()
-		pow.Setup(network.NewNode(bcs[i]),addr.Address)
+		pow.Setup(network.NewNode(bcs[i]), addr.Address)
 		pow.SetTargetBit(16)
-		pow.GetNode().Start(testport+i)
+		pow.GetNode().Start(testport + i)
 
 		if i != 0 {
 			pow.GetNode().AddStream(
 				pows[0].GetNode().GetPeerID(),
 				pows[0].GetNode().GetPeerMultiaddr(),
-				)
+			)
 		}
 
 		pows = append(pows, pow)
@@ -376,58 +376,58 @@ func TestSyncBlocks(t *testing.T){
 	pows[0].GetNode().SyncPeers()
 
 	//wait for 2 seconds for syncing
-	time.Sleep(time.Second*2)
+	time.Sleep(time.Second * 2)
 
 	//count and is Stopped tracks the num of nodes that have been stopped
 	count := 0
 	isStopped := []bool{}
 	blkHeight := []uint64{}
 	//Start Mining and set average block time to 15 seconds (difficulty = 16)
-	for i := 0; i < numOfNodes; i++{
+	for i := 0; i < numOfNodes; i++ {
 		pows[i].Start()
 		isStopped = append(isStopped, false)
 		blkHeight = append(blkHeight, 0)
 	}
 
-	loop:
-		for {
-			for i := 0; i < numOfNodes; i++ {
-				blk, err := bcs[i].GetTailBlock()
-				assert.Nil(t, err)
-				if blk.GetHeight() > blkHeight[i] {
-					blkHeight[i]++
-					logger.Info("BlkHeight:",blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
-				}
-				if blk.GetHeight() > targetHeight {
-					//count the number of nodes that have already stopped mining
-					if isStopped[i]==false{
-						//stop the first miner that reaches the target height
-						pows[i].Stop()
-						isStopped[i] = true
-						count++
-					}
-				}
-				//break the loop if all miners stop
-				if count >= numOfNodes {
-					break loop
+loop:
+	for {
+		for i := 0; i < numOfNodes; i++ {
+			blk, err := bcs[i].GetTailBlock()
+			assert.Nil(t, err)
+			if blk.GetHeight() > blkHeight[i] {
+				blkHeight[i]++
+				logger.Info("BlkHeight:", blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
+			}
+			if blk.GetHeight() > targetHeight {
+				//count the number of nodes that have already stopped mining
+				if isStopped[i] == false {
+					//stop the first miner that reaches the target height
+					pows[i].Stop()
+					isStopped[i] = true
+					count++
 				}
 			}
+			//break the loop if all miners stop
+			if count >= numOfNodes {
+				break loop
+			}
 		}
+	}
 
 	//Check if all nodes have the same tail block
-	for i := 0; i < numOfNodes-1; i++{
+	for i := 0; i < numOfNodes-1; i++ {
 		blk0, err := bcs[i].GetTailBlock()
-		assert.Nil(t,err)
+		assert.Nil(t, err)
 		blk1, err := bcs[i+1].GetTailBlock()
-		assert.Nil(t,err)
-		assert.Equal(t,blk0.GetHash(),blk1.GetHash())
+		assert.Nil(t, err)
+		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
 	}
 
 }
 
 const testport_fork = 10200
 
-func TestForkChoice(t *testing.T){
+func TestForkChoice(t *testing.T) {
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -435,30 +435,31 @@ func TestForkChoice(t *testing.T){
 	//targetHeight := uint64(4)
 	//num of nodes to be created in the test
 	numOfNodes := 2
-	for i := 0; i < numOfNodes; i++{
+	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
 		db := storage.NewRamStorage()
 		defer db.Close()
 
 		//create blockchain instance
-		bc := core.CreateBlockchain(addr,db)
+		bc := core.CreateBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
 		pow := consensus.NewProofOfWork()
-		pow.Setup(network.NewNode(bcs[i]),addr.Address)
+		pow.Setup(network.NewNode(bcs[i]), addr.Address)
 		pow.SetTargetBit(16)
-		pow.GetNode().Start(testport_fork+i)
+		pow.GetNode().Start(testport_fork + i)
 		pows = append(pows, pow)
 	}
 
 	//start node0 first. the next node starts mining after the previous node is at least at height 5
-	for i:=0; i < numOfNodes; i++{
+	for i := 0; i < numOfNodes; i++ {
 		pows[i].Start()
 		//seed node broadcasts syncpeers
-		for bcs[i].GetMaxHeight() < 5 {}
+		for bcs[i].GetMaxHeight() < 5 {
+		}
 	}
 
-	for i:=0; i < numOfNodes; i++{
+	for i := 0; i < numOfNodes; i++ {
 		if i != 0 {
 			pows[i].GetNode().AddStream(
 				pows[0].GetNode().GetPeerID(),
@@ -468,46 +469,46 @@ func TestForkChoice(t *testing.T){
 		pows[0].GetNode().SyncPeers()
 	}
 
-	time.Sleep(time.Second*5)
+	time.Sleep(time.Second * 5)
 
 	//Check if all nodes have the same tail block
-	for i := 0; i < numOfNodes-1; i++{
-		assert.True(t, compareTwoBlockchains(bcs[0],bcs[i]))
+	for i := 0; i < numOfNodes-1; i++ {
+		assert.True(t, compareTwoBlockchains(bcs[0], bcs[i]))
 		/*		blk0, err := bcs[i].GetTailBlock()
-		assert.Nil(t,err)
-		blk1, err := bcs[i+1].GetTailBlock()
-		assert.Nil(t,err)
-		assert.Equal(t,blk0.GetHash(),blk1.GetHash())*/
+				assert.Nil(t,err)
+				blk1, err := bcs[i+1].GetTailBlock()
+				assert.Nil(t,err)
+				assert.Equal(t,blk0.GetHash(),blk1.GetHash())*/
 	}
 }
 
-func TestCompare(t *testing.T){
+func TestCompare(t *testing.T) {
 	bc1 := core.GenerateMockBlockchain(5)
 	bc2 := bc1
-	assert.True(t,compareTwoBlockchains(bc1,bc2))
+	assert.True(t, compareTwoBlockchains(bc1, bc2))
 	bc3 := core.GenerateMockBlockchain(5)
-	assert.False(t,compareTwoBlockchains(bc1,bc3))
+	assert.False(t, compareTwoBlockchains(bc1, bc3))
 }
 
-func compareTwoBlockchains(bc1, bc2 *core.Blockchain) bool{
+func compareTwoBlockchains(bc1, bc2 *core.Blockchain) bool {
 	if bc1 == nil || bc2 == nil {
 		return false
 	}
 
 	bci1 := bc1.Iterator()
 	bci2 := bc2.Iterator()
-	if bc1.GetMaxHeight() != bc2.GetMaxHeight(){
+	if bc1.GetMaxHeight() != bc2.GetMaxHeight() {
 		return false
 	}
 
-	loop:
-	for{
-		blk1,_ := bci1.Next()
-		blk2,_ := bci2.Next()
+loop:
+	for {
+		blk1, _ := bci1.Next()
+		blk2, _ := bci2.Next()
 		if blk1 == nil || blk2 == nil {
 			break loop
 		}
-		if !reflect.DeepEqual(blk1.GetHash(),blk2.GetHash()) {
+		if !reflect.DeepEqual(blk1.GetHash(), blk2.GetHash()) {
 			return false
 		}
 	}
