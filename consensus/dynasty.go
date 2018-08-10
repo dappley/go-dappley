@@ -22,30 +22,23 @@ func (dynasty *Dynasty) AddMultipleMiners(miners []string){
 	dynasty.miners = append(dynasty.miners, miners...)
 }
 
-//return next mint time by unix time
-func (dynasty *Dynasty) GetNextMintTime(miner string, now int64) int64{
+func (dynasty *Dynasty) IsMyTurn(miner string, now int64) bool{
 	index := dynasty.GetMinerIndex(miner)
-	return dynasty.GetNextMintTimeByIndex(index, now)
+	return dynasty.isMyTurnByIndex(index, now)
 }
 
-//return next mint time by unix time
-func (dynasty *Dynasty) GetNextMintTimeByIndex(minerIndex int, now int64) int64{
-	if minerIndex < 0 || minerIndex >= maxProducers{
-		return -1
+func (dynasty *Dynasty) isMyTurnByIndex(minerIndex int, now int64) bool{
+	if minerIndex < 0 {
+		return false
 	}
 
-	if now <=0 {
-		return -1
+	dynastyTimeElapsed := int(now % dynastyTime)
+
+	if dynastyTimeElapsed/timeBetweenBlock == minerIndex && dynastyTimeElapsed%timeBetweenBlock == 0 {
+		return true
 	}
 
-	dynastyTimeElapsed := now % dynastyTime
-	dynastyBeginTime := now - dynastyTimeElapsed
-
-	if int(dynastyTimeElapsed) < timeBetweenBlock * minerIndex{
-		return dynastyBeginTime + int64(timeBetweenBlock * minerIndex)
-	}else{
-		return dynastyBeginTime + int64(timeBetweenBlock * minerIndex) + dynastyTime
-	}
+	return false
 }
 
 //find the index of the miner. If not found, return -1
