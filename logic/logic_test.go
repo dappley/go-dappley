@@ -60,7 +60,7 @@ func TestCreateBlockchain(t *testing.T) {
 	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 
 	//create a blockchain
-	_, err := CreateBlockchain(addr, databaseInstance)
+	_, err := CreateBlockchain(addr, databaseInstance, nil)
 	assert.Nil(t, err)
 }
 
