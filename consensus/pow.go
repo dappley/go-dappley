@@ -48,7 +48,6 @@ type ProofOfWork struct {
 	cbAddr    string
 	node      *network.Node
 	newBlock  *core.Block
-	newBlkRcvd bool
 	nonce	   int64
 }
 
@@ -61,7 +60,6 @@ func NewProofOfWork() *ProofOfWork{
 		cbAddr: 		"",
 		node: 			nil,
 		newBlock:		nil,
-		newBlkRcvd:		false,
 		nonce:			0,
 	}
 	p.SetTargetBit(targetBits)
@@ -189,13 +187,8 @@ func (pow *ProofOfWork) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bo
 
 func (pow *ProofOfWork) updateNewBlock(){
 	pow.bc.UpdateNewBlock(pow.newBlock)
-	if !pow.newBlkRcvd {
-		logger.Info("PoW: Minted a new block. height:", pow.newBlock.GetHeight())
-		pow.broadcastNewBlock(pow.newBlock)
-	}else{
-		logger.Info("PoW: Received a new block. height:", pow.newBlock.GetHeight())
-	}
-	pow.newBlkRcvd = false
+	logger.Info("PoW: Minted a new block. height:", pow.newBlock.GetHeight())
+	pow.broadcastNewBlock(pow.newBlock)
 }
 
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){

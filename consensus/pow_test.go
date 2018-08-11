@@ -34,7 +34,6 @@ import (
 func TestProofOfWork_NewPoW(t *testing.T){
 	pow := NewProofOfWork()
 	assert.Equal(t,"",pow.cbAddr)
-	assert.Equal(t,false,pow.newBlkRcvd)
 	assert.Equal(t,prepareBlockState, pow.nextState)
 }
 
