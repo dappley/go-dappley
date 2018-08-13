@@ -124,11 +124,11 @@ func (pool *BlockPool) updateForkFromTail(blk *Block) bool{
 	if isTail{
 		//only update if the block is higher than the current blockchain
 		if pool.bc.HigherThanBlockchain(blk) {
-			logger.Debug("Fork: Add block to tail")
+			logger.Debug("BlockPool: Add block to tail")
 			pool.addTailToForkPool(blk)
 		}else{
 			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("Fork: Fork height too low. Dump the fork...")
+			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -142,17 +142,16 @@ func (pool *BlockPool) addParentToFork(blk *Block) bool{
 	if isParent{
 		//check if fork's max height is still higher than the blockchain
 		if pool.GetForkPoolTailBlk().GetHeight() > pool.bc.GetMaxHeight() {
-			logger.Debug("Fork: Add block to head")
+			logger.Debug("BlockPool: Add block to head")
 			pool.addParentToForkPool(blk)
 		}else{
 			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("Fork: Fork height too low. Dump the fork...")
+			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
 	return isParent
 }
-
 
 func (pool *BlockPool) IsHigherThanFork(block *Block) bool{
 	if block == nil {
@@ -182,12 +181,13 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID){
 
 	logger.Debug("BlockPool: Received a new block. id:", sender.String())
-	if pool.bc.consensus.ValidateDifficulty(blk){
+	if pool.bc.consensus.Validate(blk){
 		tailBlock,err := pool.bc.GetTailBlock()
 		if err != nil {
-			logger.Warn("PoW: Get Tail Block failed! Err:", err)
+			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
 		}
 		if IsParentBlock(tailBlock, blk){
+			logger.Info("BlockPool: Add received block to blockchain. id:", sender.String())
 			pool.bc.consensus.StartNewBlockMinting()
 			pool.bc.UpdateNewBlock(blk)
 			//TODO: Might want to relay the block to other nodes
@@ -195,7 +195,7 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID){
 			pool.updateFork(blk, sender)
 		}
 	}else{
-		logger.Debug("PoW: Block Difficulty Invalid. id:", sender.String())
+		logger.Debug("BlockPool: Consensus validity check fails. id:", sender.String())
 	}
 }
 
@@ -203,7 +203,7 @@ func (pool *BlockPool) updateFork(block *Block, pid peer.ID){
 	if pool.attemptToAddTailToFork(block){return}
 	if pool.attemptToAddParentToFork(block, pid){return}
 	if pool.attempToStartNewFork(block, pid){return}
-	logger.Debug("PoW: Block dumped")
+	logger.Debug("BlockPool: Block dumped")
 }
 
 func (pool *BlockPool) attemptToAddTailToFork(newblock *Block) bool{

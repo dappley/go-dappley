@@ -12,7 +12,7 @@
 package core
 
 type Consensus interface{
-	ValidateDifficulty(block *Block) bool
+	Validate(block *Block) bool
 	Start()
 	Stop()
 	StartNewBlockMinting()

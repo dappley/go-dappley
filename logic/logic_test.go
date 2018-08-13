@@ -265,8 +265,6 @@ func TestDeleteInvalidWallet(t *testing.T) {
 
 	addressList := []core.Address{addr1}
 
-	println(addr1.Address)
-
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
