@@ -133,7 +133,6 @@ func TestGetAllAddresses(t *testing.T) {
 	//get all addresses
 	addrs, err := GetAllAddresses()
 	assert.Nil(t, err)
-	assert.NotNil(t, addrs)
 
 	//the length should be equal
 	assert.Equal(t, len(expected_res), len(addrs))
