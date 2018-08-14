@@ -238,7 +238,7 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 }
 
 func (b *Block) VerifyHash() bool {
-	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
+	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
 
 func (b *Block) VerifyTransactions(utxo utxoIndex) bool {

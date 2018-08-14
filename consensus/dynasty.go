@@ -1,18 +1,44 @@
 package consensus
 
 type Dynasty struct{
-	miners 		[]string
+	miners 			[]string
+	maxProducers 	int
+	timeBetweenBlk 	int
+	dynastyTime 	int
 }
 
 const (
-	maxProducers 		= 3
-	timeBetweenBlock 	= 15
-	dynastyTime 		= maxProducers*timeBetweenBlock
+	defaultMaxProducers     = 3
+	defaultTimeBetweenBlock = 15
+	defaultDynastyTime      = defaultMaxProducers * defaultTimeBetweenBlock
 )
 
-func NewDynasty() *Dynasty{return &Dynasty{}}
+func NewDynasty() *Dynasty{
+	return &Dynasty{
+		maxProducers:   defaultMaxProducers,
+		timeBetweenBlk: defaultTimeBetweenBlock,
+		dynastyTime:    defaultDynastyTime,
+	}
+}
 
-func NewDynastyWithMiners(miners []string) *Dynasty{return &Dynasty{miners}}
+func NewDynastyWithMiners(miners []string) *Dynasty{
+	return &Dynasty{
+		miners:         miners,
+		maxProducers:   defaultMaxProducers,
+		timeBetweenBlk: defaultTimeBetweenBlock,
+		dynastyTime:    defaultDynastyTime,
+	}
+}
+
+func (dynasty *Dynasty) SetMaxProducers(maxProducers int){
+	dynasty.maxProducers = maxProducers
+	dynasty.dynastyTime = maxProducers * dynasty.timeBetweenBlk
+}
+
+func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int){
+	dynasty.timeBetweenBlk = timeBetweenBlk
+	dynasty.dynastyTime = dynasty.maxProducers * timeBetweenBlk
+}
 
 func (dynasty *Dynasty) AddMiner(miner string){
 	dynasty.miners = append(dynasty.miners, miner)
@@ -32,9 +58,9 @@ func (dynasty *Dynasty) isMyTurnByIndex(minerIndex int, now int64) bool{
 		return false
 	}
 
-	dynastyTimeElapsed := int(now % dynastyTime)
+	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
 
-	if dynastyTimeElapsed/timeBetweenBlock == minerIndex && dynastyTimeElapsed%timeBetweenBlock == 0 {
+	if dynastyTimeElapsed/dynasty.timeBetweenBlk == minerIndex && dynastyTimeElapsed%dynasty.timeBetweenBlk == 0 {
 		return true
 	}
 

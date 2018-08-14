@@ -67,3 +67,42 @@ func TestMiner_SetTargetBit(t *testing.T) {
 		})
 	}
 }
+
+
+func TestMiner_ValidateDifficulty(t *testing.T) {
+
+	miner := NewMiner()
+
+	//create a block that has a hash value larger than the target
+	blk := core.GenerateMockBlock()
+	target := big.NewInt(1)
+	target.Lsh(target, uint(256-defaulttargetBits+1))
+
+	blk.SetHash(target.Bytes())
+
+	assert.False(t,miner.Validate(blk))
+
+	//create a block that has a hash value smaller than the target
+	target = big.NewInt(1)
+	target.Lsh(target, uint(256-defaulttargetBits-1))
+	blk.SetHash(target.Bytes())
+
+	assert.True(t,miner.Validate(blk))
+}
+
+func TestMiner_Start(t *testing.T) {
+	miner := NewMiner()
+	cbAddr := "17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"
+	bc:=core.CreateBlockchain(
+		core.Address{cbAddr},
+		storage.NewRamStorage(),
+		nil,
+	)
+	retCh := make(chan(*MinedBlock),0)
+	miner.Setup(bc,cbAddr,retCh)
+	miner.Start()
+	blk := <- retCh
+	assert.True(t,blk.isValid)
+	assert.True(t,blk.block.VerifyHash())
+	assert.True(t,miner.Validate(blk.block))
+}

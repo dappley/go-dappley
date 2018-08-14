@@ -180,14 +180,14 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 
 func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID){
 
-	logger.Debug("BlockPool: Received a new block. id:", sender.String())
+	logger.Debug("BlockPool: Received a new block.Sender id:", sender.String())
 	if pool.bc.consensus.Validate(blk){
 		tailBlock,err := pool.bc.GetTailBlock()
 		if err != nil {
 			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
 		}
 		if IsParentBlock(tailBlock, blk){
-			logger.Info("BlockPool: Add received block to blockchain. id:", sender.String())
+			logger.Info("BlockPool: Add received block to blockchain. Sender id:", sender.String())
 			pool.bc.consensus.StartNewBlockMinting()
 			pool.bc.UpdateNewBlock(blk)
 			//TODO: Might want to relay the block to other nodes
@@ -195,7 +195,7 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID){
 			pool.updateFork(blk, sender)
 		}
 	}else{
-		logger.Debug("BlockPool: Consensus validity check fails. id:", sender.String())
+		logger.Warn("BlockPool: Consensus validity check fails.Sender id:", sender.String())
 	}
 }
 

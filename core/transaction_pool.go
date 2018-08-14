@@ -78,7 +78,7 @@ func GetTxnPoolInstance() *TransactionPool {
 	return instance
 }
 
-//function f should return true if the transaction needs to be pushed back to the pool
+//function txHandler should return true if the transaction needs to be pushed back to the pool
 func (pool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
 	length := pool.Len()
 	for i := 0; i < length; i++ {

@@ -19,15 +19,10 @@
 package consensus
 
 import (
-	"math"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network"
 )
-
-var maxNonce int64 = math.MaxInt64
-
-const targetBits = 14
 
 type ProofOfWork struct {
 	bc 			*core.Blockchain
@@ -62,11 +57,9 @@ func (pow *ProofOfWork) SetTargetBit(bit int){
 }
 
 func (pow *ProofOfWork) Start() {
-
-	pow.miner.Start()
-
 	go func() {
 		logger.Info("PoW started...")
+		pow.miner.Start()
 		for {
 			select {
 			case <-pow.exitCh:
@@ -94,6 +87,10 @@ func (pow *ProofOfWork) Validate(blk *core.Block) bool {
 
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block){
 	logger.Info("PoW: Minted a new block. height:", newBlock.GetHeight())
+	if !newBlock.VerifyHash(){
+		logger.Warn("hash verification is wrong")
+
+	}
 	pow.bc.UpdateNewBlock(newBlock)
 	pow.broadcastNewBlock(newBlock)
 }
@@ -105,5 +102,4 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 
 func (pow *ProofOfWork) StartNewBlockMinting(){
 	pow.miner.Stop()
-	pow.miner.Start()
 }

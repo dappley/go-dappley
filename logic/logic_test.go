@@ -331,6 +331,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 const testport = 10100
 
 func TestSyncBlocks(t *testing.T) {
+
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -372,7 +373,7 @@ func TestSyncBlocks(t *testing.T) {
 	count := 0
 	isStopped := []bool{}
 	blkHeight := []uint64{}
-	//Start Mining and set average block time to 15 seconds (difficulty = 16)
+	//Start Mining and set average block time to 5 seconds (difficulty = 16)
 	for i := 0; i < numOfNodes; i++ {
 		pows[i].Start()
 		isStopped = append(isStopped, false)
@@ -388,7 +389,7 @@ loop:
 				blkHeight[i]++
 				logger.Info("BlkHeight:", blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
 			}
-			if blk.GetHeight() > targetHeight {
+			if blk.GetHeight() >= targetHeight {
 				//count the number of nodes that have already stopped mining
 				if isStopped[i] == false {
 					//stop the first miner that reaches the target height
@@ -404,11 +405,15 @@ loop:
 		}
 	}
 
+	time.Sleep(time.Second*2)
+
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
 		blk0, err := bcs[i].GetTailBlock()
+		assert.Equal(t,targetHeight,blk0.GetHeight())
 		assert.Nil(t, err)
 		blk1, err := bcs[i+1].GetTailBlock()
+		assert.Equal(t,targetHeight,blk1.GetHeight())
 		assert.Nil(t, err)
 		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
 	}
@@ -464,11 +469,6 @@ func TestForkChoice(t *testing.T) {
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
 		assert.True(t, compareTwoBlockchains(bcs[0], bcs[i]))
-		/*		blk0, err := bcs[i].GetTailBlock()
-				assert.Nil(t,err)
-				blk1, err := bcs[i+1].GetTailBlock()
-				assert.Nil(t,err)
-				assert.Equal(t,blk0.GetHash(),blk1.GetHash())*/
 	}
 }
 

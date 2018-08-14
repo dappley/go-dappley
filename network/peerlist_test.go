@@ -7,6 +7,7 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/sirupsen/logrus"
 )
 
 type retFormat struct{
@@ -96,6 +97,7 @@ func TestPeerlist_FromProto(t *testing.T) {
 
 func TestNewPeerlistStr(t *testing.T) {
 
+	logrus.SetLevel(logrus.ErrorLevel)
 	//create a test struct that contains all possible inputs and its expected output
 	tests:=[]struct{
 		name			string

@@ -4,16 +4,14 @@ import (
 	"math/big"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+	"math"
 )
 
 const defaulttargetBits = 14
 
 type State int
 
-const (
-	prepareBlockState   State = iota
-	mineBlockState
-)
+var maxNonce int64 = math.MaxInt64
 
 type MinedBlock struct{
 	block 		*core.Block
@@ -24,7 +22,6 @@ type Miner struct{
 	target    	*big.Int
 	exitCh    	chan bool
 	bc        	*core.Blockchain
-	nextState 	State
 	cbAddr    	string
 	newBlock  	*MinedBlock
 	nonce	   	int64
@@ -36,9 +33,8 @@ func NewMiner() *Miner{
 		target: 		nil,
 		exitCh: 		make(chan bool, 1),
 		bc:     		nil,
-		nextState:		prepareBlockState,
 		cbAddr: 		"",
-		newBlock:		nil,
+		newBlock:		&MinedBlock{nil,false},
 		nonce:			0,
 	}
 	m.SetTargetBit(defaulttargetBits)
@@ -61,27 +57,35 @@ func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan(*Mine
 
 func (miner *Miner) Start() {
 	go func() {
-		logger.Debug("Miner: Start Mining A Block...")
-		miner.nextState = prepareBlockState
+		logger.Info("Miner: Start Mining A Block...")
+		miner.resetExitCh()
+		miner.prepare()
+		nonce := int64(0)
+		hashLoop:
 		for {
 			select {
 			case <-miner.exitCh:
-				logger.Debug("Miner: Mining Ends...")
-
-				return
+				break hashLoop
 			default:
-				miner.runNextState()
+				if nonce < maxNonce {
+					if ok := miner.mineBlock(nonce); ok {
+						break hashLoop
+					} else {
+						nonce++
+					}
+				} else {
+					break hashLoop
+				}
 			}
 		}
+		miner.returnBlk()
+		logger.Info("Miner: Mining Ends...")
 	}()
 }
 
 func (miner *Miner) Stop() {
-	miner.exitCh <- true
-	if !miner.newBlock.isValid {
-		miner.newBlock.block.Rollback()
-	}else{
-		miner.retChan <- miner.newBlock
+	if len(miner.exitCh) == 0{
+		miner.exitCh <- true
 	}
 }
 
@@ -96,26 +100,24 @@ func (miner *Miner) Validate(blk *core.Block) bool {
 	return isValid
 }
 
+func (miner *Miner) prepare(){
+	miner.newBlock = miner.prepareBlock()
+}
 
-func (miner *Miner) runNextState(){
-	switch miner.nextState {
-	case prepareBlockState:
-		miner.newBlock = &MinedBlock{}
-		miner.newBlock.block = miner.prepareBlock()
-		miner.newBlock.isValid = false
-		miner.nextState = mineBlockState
-	case mineBlockState:
-		if miner.nonce < maxNonce {
-			if ok := miner.mineBlock(); ok {
-				miner.Stop()
-			}
-		}else{
-			miner.Stop()
-		}
+func (miner *Miner) returnBlk(){
+	if !miner.newBlock.isValid {
+		miner.newBlock.block.Rollback()
+	}
+	miner.retChan <- miner.newBlock
+}
+
+func (miner *Miner) resetExitCh(){
+	if len(miner.exitCh)>0 {
+		<-miner.exitCh
 	}
 }
 
-func (miner *Miner) prepareBlock() *core.Block{
+func (miner *Miner) prepareBlock() *MinedBlock{
 
 	parentBlock,err := miner.bc.GetTailBlock()
 	if err!=nil {
@@ -132,18 +134,16 @@ func (miner *Miner) prepareBlock() *core.Block{
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)
-	return core.NewBlock(txs, parentBlock)
+	return &MinedBlock{core.NewBlock(txs, parentBlock),false}
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
-func (miner *Miner) mineBlock() bool{
-	hash, ok := miner.verifyNonce(miner.nonce, miner.newBlock.block)
+func (miner *Miner) mineBlock(nonce int64) bool{
+	hash, ok := miner.verifyNonce(nonce, miner.newBlock.block)
 	if ok {
 		miner.newBlock.block.SetHash(hash)
-		miner.newBlock.block.SetNonce(miner.nonce)
+		miner.newBlock.block.SetNonce(nonce)
 		miner.newBlock.isValid = true
-	}else{
-		miner.nonce ++
 	}
 	return ok
 }
