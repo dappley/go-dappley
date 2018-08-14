@@ -217,6 +217,47 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 }
 
+func TestProofOfWork_StartAndStop(t *testing.T) {
+
+	pow := NewProofOfWork()
+	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	bc := core.CreateBlockchain(
+		cbAddr,
+		storage.NewRamStorage(),
+		pow,
+	)
+	defer bc.DB.Close()
+
+	pow.Setup(network.NewNode(bc),cbAddr.Address)
+
+	//start the pow process and wait for at least 1 block produced
+	pow.Start()
+	blkHeight := uint64(0)
+loop:
+	for{
+		blk,err := bc.GetTailBlock()
+		assert.Nil(t,err)
+		blkHeight = blk.GetHeight()
+		if blkHeight > 1 {
+			break loop
+		}
+	}
+
+	//stop pow process and wait
+	pow.Stop()
+	time.Sleep(time.Second*2)
+
+	//there should be not block produced anymore
+	blk,err := bc.GetTailBlock()
+	assert.Nil(t,err)
+	assert.Equal(t,blkHeight,blk.GetHeight())
+
+	//it should be able to start again
+	pow.Start()
+	time.Sleep(time.Second)
+	pow.Stop()
+}
+
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int{
 	//find how many blocks have been mined
 	numOfBlocksMined := 0
