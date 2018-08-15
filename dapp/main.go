@@ -9,6 +9,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/client"
+	"fmt"
 )
 
 const (
@@ -37,8 +38,9 @@ func main() {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	pow := consensus.NewProofOfWork()
-	bc, err := logic.CreateBlockchain(core.Address{genesisAddr}, db, pow)
+	conss := consensus.NewDpos()
+	conss.SetDynasty(consensus.NewDynasty())
+	bc, err := logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -53,10 +55,11 @@ func main() {
 	walletAddr := wallet.GetAddress()
 
 	//start mining
-	pow.Setup(node, walletAddr.Address)
-	pow.SetTargetBit(20)
-	pow.Start()
-	defer pow.Stop()
+	conss.Setup(node, walletAddr.Address)
+	fmt.Println("Miner Address is", walletAddr.Address)
+	conss.SetTargetBit(18)
+	conss.Start()
+	defer conss.Stop()
 
-	cli.Run(bc, node, wallets)
+	cli.Run(bc, node, wallets, conss.GetDynasty())
 }

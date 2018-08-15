@@ -12,7 +12,7 @@ type Dpos struct{
 	mintBlkCh chan(*MinedBlock)
 	node      core.NetService
 	quitCh    chan(bool)
-	dynasty   Dynasty
+	dynasty   *Dynasty
 }
 
 func NewDpos() *Dpos{
@@ -35,8 +35,12 @@ func (dpos *Dpos) SetTargetBit(bit int){
 	dpos.miner.SetTargetBit(bit)
 }
 
-func (dpos *Dpos) SetDynasty(dynasty Dynasty){
+func (dpos *Dpos) SetDynasty(dynasty *Dynasty){
 	dpos.dynasty = dynasty
+}
+
+func (dpos *Dpos) GetDynasty() *Dynasty{
+	return dpos.dynasty
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool{
@@ -46,22 +50,23 @@ func (dpos *Dpos) Validate(block *core.Block) bool{
 
 func (dpos *Dpos) Start(){
 	go func(){
+		logger.Info("Dpos Starts...")
 		ticker := time.NewTicker(time.Second).C
 		for{
 			select{
 			case now := <- ticker:
 				if dpos.dynasty.IsMyTurn(dpos.miner.cbAddr, now.Unix()){
-					logger.Info("Dpos: My Turn to Mint!",dpos.node.GetPeerID())
+					logger.Info("Dpos: My Turn to Mint!")
 					dpos.miner.Start()
 				}
 			case minedBlk := <- dpos.mintBlkCh:
 				if minedBlk.isValid {
-					logger.Info("Dpos: A Block has been mined!",dpos.node.GetPeerID())
+					logger.Info("Dpos: A Block has been mined!")
 					dpos.updateNewBlock(minedBlk.block)
 					dpos.bc.MergeFork()
 				}
 			case <-dpos.quitCh:
-				logger.Info("Dpos: Dpos Stops!",dpos.node.GetPeerID())
+				logger.Info("Dpos: Dpos Stops!")
 				return
 			}
 		}

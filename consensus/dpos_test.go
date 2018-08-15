@@ -48,10 +48,10 @@ func TestDpos_Start(t *testing.T) {
 	dpos.Setup(node, cbAddr.Address)
 
 	miners := []string{cbAddr.Address}
-	dynasty := NewDynastyWithMiners(miners)
+	dynasty := NewDynastyWithProducers(miners)
 	dynasty.SetTimeBetweenBlk(2)
 	dynasty.SetMaxProducers(2)
-	dpos.SetDynasty(*dynasty)
+	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)
 
@@ -69,14 +69,14 @@ func TestDpos_MultipleMiners(t *testing.T){
 		"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 	}
-	dynasty := NewDynastyWithMiners(miners)
+	dynasty := NewDynastyWithProducers(miners)
 	dynasty.SetTimeBetweenBlk(5)
 	dynasty.SetMaxProducers(len(miners))
 	dposArray := []*Dpos{}
 	var firstNode *network.Node
 	for i:=0;i<len(miners);i++{
 		dpos := NewDpos()
-		dpos.SetDynasty(*dynasty)
+		dpos.SetDynasty(dynasty)
 		dpos.SetTargetBit(14)
 		bc := core.CreateBlockchain(core.Address{miners[0]},storage.NewRamStorage(),dpos)
 		node := network.NewNode(bc)

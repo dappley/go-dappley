@@ -7,10 +7,10 @@ import (
 
 func TestDynasty_NewDynasty(t *testing.T) {
 	dynasty := NewDynasty()
-	assert.Empty(t,dynasty.miners)
+	assert.Empty(t,dynasty.producers)
 }
 
-func TestDynasty_NewDynastyWithMiners(t *testing.T) {
+func TestDynasty_NewDynastyWithProducers(t *testing.T) {
 	tests := []struct{
 		name 		string
 		input 		[]string
@@ -46,13 +46,13 @@ func TestDynasty_NewDynastyWithMiners(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= NewDynastyWithMiners(tt.input)
-			assert.Equal(t, tt.expected, dynasty.miners)
+			dynasty:= NewDynastyWithProducers(tt.input)
+			assert.Equal(t, tt.expected, dynasty.producers)
 		})
 	}
 }
 
-func TestDynasty_AddMiner(t *testing.T) {
+func TestDynasty_AddProducer(t *testing.T) {
 	tests := []struct{
 		name 		string
 		maxPeers    int
@@ -89,13 +89,13 @@ func TestDynasty_AddMiner(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynasty()
 			dynasty.SetMaxProducers(tt.maxPeers)
-			dynasty.AddMiner(tt.input)
-			assert.Equal(t, tt.expected, dynasty.miners)
+			dynasty.AddProducer(tt.input)
+			assert.Equal(t, tt.expected, dynasty.producers)
 		})
 	}
 }
 
-func TestDynasty_AddMultipleMiners(t *testing.T) {
+func TestDynasty_AddMultipleProducers(t *testing.T) {
 	tests := []struct{
 		name 		string
 		maxPeers    int
@@ -150,22 +150,22 @@ func TestDynasty_AddMultipleMiners(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynasty()
 			dynasty.SetMaxProducers(tt.maxPeers)
-			dynasty.AddMultipleMiners(tt.input)
-			assert.Equal(t, tt.expected, dynasty.miners)
+			dynasty.AddMultipleProducers(tt.input)
+			assert.Equal(t, tt.expected, dynasty.producers)
 		})
 	}
 }
 
 func TestDynasty_GetMinerIndex(t *testing.T) {
 	tests := []struct{
-		name 			string
-		initialMiners 	[]string
-		miner 			string
-		expected		int
+		name             string
+		initialProducers []string
+		miner            string
+		expected         int
 	}{
 		{
 			name: 			"minerCouldBeFound",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
@@ -174,7 +174,7 @@ func TestDynasty_GetMinerIndex(t *testing.T) {
 		},
 		{
 			name: 			"minerCouldNotBeFound",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
@@ -183,7 +183,7 @@ func TestDynasty_GetMinerIndex(t *testing.T) {
 		},
 		{
 			name: 			"EmptyInput",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
@@ -194,8 +194,8 @@ func TestDynasty_GetMinerIndex(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= NewDynastyWithMiners(tt.initialMiners)
-			index := dynasty.GetMinerIndex(tt.miner)
+			dynasty:= NewDynastyWithProducers(tt.initialProducers)
+			index := dynasty.GetProducerIndex(tt.miner)
 			assert.Equal(t, tt.expected, index)
 		})
 	}
@@ -251,69 +251,69 @@ func TestDynasty_IsMyTurnByIndex(t *testing.T) {
 
 func TestDynasty_IsMyTurn(t *testing.T) {
 	tests := []struct{
-		name 			string
-		initialMiners 	[]string
-		miner 			string
-		index 			int
-		now 			int64
-		expected		bool
+		name             string
+		initialProducers []string
+		producer         string
+		index            int
+		now              int64
+		expected         bool
 	}{
 		{
 			name: 			"IsMyTurn",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner: 			"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct",
-			now: 			75,
-			expected:		true,
+			producer: "1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct",
+			now:      75,
+			expected: true,
 		},
 		{
 			name: 			"NotMyTurn",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner: 			"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-			now: 			61,
-			expected:		false,
+			producer: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			now:      61,
+			expected: false,
 		},
 		{
 			name: 			"EmptyInput",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner: 			"",
-			now: 			61,
-			expected:		false,
+			producer: "",
+			now:      61,
+			expected: false,
 		},
 		{
 			name: 			"InvalidNowInput",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner: 			"m2",
-			now: 			0,
-			expected:		false,
+			producer: "m2",
+			now:      0,
+			expected: false,
 		},
 		{
 			name: 			"minerNotFoundInDynasty",
-			initialMiners:	[]string{
+			initialProducers:	[]string{
 				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner: 			"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2cf",
-			now: 			90,
-			expected:		false,
+			producer: "1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2cf",
+			now:      90,
+			expected: false,
 		},
 	}
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= NewDynastyWithMiners(tt.initialMiners)
-			nextMintTime := dynasty.IsMyTurn(tt.miner, tt.now)
+			dynasty:= NewDynastyWithProducers(tt.initialProducers)
+			nextMintTime := dynasty.IsMyTurn(tt.producer, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
 	}

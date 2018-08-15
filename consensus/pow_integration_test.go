@@ -176,7 +176,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//push the transaction to transaction pool
 	core.GetTxnPoolInstance().StructPush(tx)
 
-	//start a miner
+	//start a producer
 	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
 	pow.Start()
 

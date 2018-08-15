@@ -3,10 +3,10 @@ package consensus
 import "github.com/dappley/go-dappley/core"
 
 type Dynasty struct{
-	miners 			[]string
-	maxProducers 	int
-	timeBetweenBlk 	int
-	dynastyTime 	int
+	producers      []string
+	maxProducers   int
+	timeBetweenBlk int
+	dynastyTime    int
 }
 
 const (
@@ -17,80 +17,87 @@ const (
 
 func NewDynasty() *Dynasty{
 	return &Dynasty{
-		miners: 		[]string{},
+		producers:      []string{},
 		maxProducers:   defaultMaxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    defaultDynastyTime,
 	}
 }
 
-func NewDynastyWithMiners(miners []string) *Dynasty{
-	validMiners := []string{}
-	for _,miner := range miners{
-		if IsMinerAddressValid(miner){
-			validMiners = append(validMiners, miner)
+func NewDynastyWithProducers(producers []string) *Dynasty{
+	validProducers := []string{}
+	for _, producer := range producers {
+		if IsProducerAddressValid(producer){
+			validProducers = append(validProducers, producer)
 		}
 	}
 	return &Dynasty{
-		miners:         validMiners,
-		maxProducers:   len(validMiners),
+		producers:      validProducers,
+		maxProducers:   len(validProducers),
 		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    len(validMiners)*defaultTimeBetweenBlk,
+		dynastyTime:    len(validProducers)*defaultTimeBetweenBlk,
 	}
 }
 
 func (dynasty *Dynasty) SetMaxProducers(maxProducers int){
-	dynasty.maxProducers = maxProducers
-	dynasty.dynastyTime = maxProducers * dynasty.timeBetweenBlk
+	if maxProducers >=0 {
+		dynasty.maxProducers = maxProducers
+		dynasty.dynastyTime = maxProducers * dynasty.timeBetweenBlk
+	}
+	if maxProducers < len(dynasty.producers){
+		dynasty.producers = dynasty.producers[:maxProducers]
+	}
 }
 
 func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int){
-	dynasty.timeBetweenBlk = timeBetweenBlk
-	dynasty.dynastyTime = dynasty.maxProducers * timeBetweenBlk
-}
-
-func (dynasty *Dynasty) AddMiner(miner string){
-	if IsMinerAddressValid(miner) && len(dynasty.miners) < dynasty.maxProducers{
-		dynasty.miners = append(dynasty.miners, miner)
+	if timeBetweenBlk > 0 {
+		dynasty.timeBetweenBlk = timeBetweenBlk
+		dynasty.dynastyTime = dynasty.maxProducers * timeBetweenBlk
 	}
 }
 
-func (dynasty *Dynasty) AddMultipleMiners(miners []string){
-	for _, miner := range miners{
-		dynasty.AddMiner(miner)
+func (dynasty *Dynasty) AddProducer(producer string){
+	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers{
+		dynasty.producers = append(dynasty.producers, producer)
 	}
 }
 
-func (dynasty *Dynasty) IsMyTurn(miner string, now int64) bool{
-	index := dynasty.GetMinerIndex(miner)
+func (dynasty *Dynasty) AddMultipleProducers(producers []string){
+	for _, producer := range producers {
+		dynasty.AddProducer(producer)
+	}
+}
+
+func (dynasty *Dynasty) IsMyTurn(producer string, now int64) bool{
+	index := dynasty.GetProducerIndex(producer)
 	return dynasty.isMyTurnByIndex(index, now)
 }
 
-func (dynasty *Dynasty) isMyTurnByIndex(minerIndex int, now int64) bool{
-	if minerIndex < 0 {
+func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool{
+	if producerIndex < 0 {
 		return false
 	}
 
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
 
-	if dynastyTimeElapsed/dynasty.timeBetweenBlk == minerIndex && dynastyTimeElapsed%dynasty.timeBetweenBlk == 0 {
+	if dynastyTimeElapsed/dynasty.timeBetweenBlk == producerIndex && dynastyTimeElapsed%dynasty.timeBetweenBlk == 0 {
 		return true
 	}
 
 	return false
 }
 
-//find the index of the miner. If not found, return -1
-func (dynasty *Dynasty) GetMinerIndex(miner string) int{
-	for i,m := range dynasty.miners {
-		if miner == m {
+//find the index of the producer. If not found, return -1
+func (dynasty *Dynasty) GetProducerIndex(producer string) int{
+	for i,m := range dynasty.producers {
+		if producer == m {
 			return i
 		}
 	}
 	return -1
 }
 
-func IsMinerAddressValid(miner string) bool{
-	addr := core.Address{miner}
+func IsProducerAddressValid(producer string) bool{
+	addr := core.Address{producer}
 	return addr.ValidateAddress()
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/consensus"
 )
 
 // CLI responsible for processing command line arguments
@@ -31,6 +32,8 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  sendMockBlock")
 	fmt.Println("  syncPeers")
 	fmt.Println("  setLoggerLevel -level LEVEL")
+	fmt.Println("  addProducer -address PRODUCERADDRESS")
+	fmt.Println("  setMaxProducers -max MAXPRODUCERS")
 	fmt.Println("  exit")
 }
 
@@ -42,7 +45,7 @@ func (cli *CLI) validateArgs() {
 }
 
 // Run parses command line arguments and processes commands
-func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wallets) {
+func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wallets, dynasty *consensus.Dynasty) {
 
 	cli.printUsage()
 	loop:
@@ -64,6 +67,8 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
 		broadcastMockTxnCmd:= flag.NewFlagSet("broadcastTxn", flag.ExitOnError)
 		setLoggerLevelCmd := flag.NewFlagSet("setLoggerLevel", flag.ExitOnError)
+		addProducerCmd := flag.NewFlagSet("addProducer", flag.ExitOnError)
+		setMaxProducersCmd := flag.NewFlagSet("setMaxProducers", flag.ExitOnError)
 
 		getBalanceAddressString := getBalanceCmd.String("address", "", "The address to get balance for")
 		addBalanceAddressString := addBalanceCmd.String("address", "", "The address to add balance for")
@@ -75,6 +80,8 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		nodePort := nodeSetPortCmd.Int("port", 12345, "Port to listen")
 		peerAddr := addPeerCmd.String("address", "", "peer ip4 address")
 		loggerLevel := setLoggerLevelCmd.Int("level", 4, "0:Panic 1:Fatal 2:Error 3:Warning 4:Info 5:Debug")
+		producerAddr := addProducerCmd.String("address", "", "producer address")
+		maxProducers := setMaxProducersCmd.Int("max",3,"maximum producers")
 
 		var err error
 		switch args[0] {
@@ -102,6 +109,10 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 			err = broadcastMockTxnCmd.Parse(args[1:])
 		case "setLoggerLevel":
 			err = setLoggerLevelCmd.Parse(args[1:])
+		case "addProducer":
+			err = addProducerCmd.Parse(args[1:])
+		case "setMaxProducers":
+			err = setMaxProducersCmd.Parse(args[1:])
 		case "exit":
 			break loop;
 		default:
@@ -109,6 +120,14 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		}
 		if err != nil {
 			log.Panic(err)
+		}
+
+		if setMaxProducersCmd.Parsed() {
+			dynasty.SetMaxProducers(*maxProducers)
+		}
+
+		if addProducerCmd.Parsed() {
+			dynasty.AddProducer(*producerAddr)
 		}
 
 		if setLoggerLevelCmd.Parsed() {
