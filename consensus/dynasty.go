@@ -1,5 +1,7 @@
 package consensus
 
+import "github.com/dappley/go-dappley/core"
+
 type Dynasty struct{
 	miners 			[]string
 	maxProducers 	int
@@ -15,6 +17,7 @@ const (
 
 func NewDynasty() *Dynasty{
 	return &Dynasty{
+		miners: 		[]string{},
 		maxProducers:   defaultMaxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    defaultDynastyTime,
@@ -22,11 +25,17 @@ func NewDynasty() *Dynasty{
 }
 
 func NewDynastyWithMiners(miners []string) *Dynasty{
+	validMiners := []string{}
+	for _,miner := range miners{
+		if IsMinerAddressValid(miner){
+			validMiners = append(validMiners, miner)
+		}
+	}
 	return &Dynasty{
-		miners:         miners,
-		maxProducers:   defaultMaxProducers,
+		miners:         validMiners,
+		maxProducers:   len(validMiners),
 		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultDynastyTime,
+		dynastyTime:    len(validMiners)*defaultTimeBetweenBlk,
 	}
 }
 
@@ -41,11 +50,15 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int){
 }
 
 func (dynasty *Dynasty) AddMiner(miner string){
-	dynasty.miners = append(dynasty.miners, miner)
+	if IsMinerAddressValid(miner) && len(dynasty.miners) < dynasty.maxProducers{
+		dynasty.miners = append(dynasty.miners, miner)
+	}
 }
 
 func (dynasty *Dynasty) AddMultipleMiners(miners []string){
-	dynasty.miners = append(dynasty.miners, miners...)
+	for _, miner := range miners{
+		dynasty.AddMiner(miner)
+	}
 }
 
 func (dynasty *Dynasty) IsMyTurn(miner string, now int64) bool{
@@ -75,4 +88,9 @@ func (dynasty *Dynasty) GetMinerIndex(miner string) int{
 		}
 	}
 	return -1
+}
+
+func IsMinerAddressValid(miner string) bool{
+	addr := core.Address{miner}
+	return addr.ValidateAddress()
 }

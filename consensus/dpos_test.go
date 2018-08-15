@@ -108,6 +108,4 @@ func TestDpos_MultipleMiners(t *testing.T){
 	for i:=0;i<len(miners);i++{
 		assert.True(t, dposArray[i].bc.GetMaxHeight()>=3)
 	}
-
-
 }
