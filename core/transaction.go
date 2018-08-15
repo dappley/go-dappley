@@ -176,15 +176,12 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 		originPub, err := secp256k1.FromECDSAPublicKey(&rawPubKey)
 		if err != nil {
-			panic("something is wrong1")
 			return false
 		}
 
 		verifyResult, error1 = secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if error1 != nil || verifyResult == false {
-			panic("something is wrong2")
-
 			return false
 		}
 	}
