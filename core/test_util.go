@@ -132,7 +132,13 @@ func MockTxOutputs() []TXOutput {
 func GenerateMockTransactionPool(numOfTxs int) *TransactionPool{
 	txPool := &TransactionPool{}
 	for i := 0; i < numOfTxs; i++ {
-		txPool.Push(*MockTransaction())
+		txPool.Transactions.StructPush(*MockTransaction())
 	}
 	return txPool
+}
+
+func CleanTxnPoolBeforeTest(){
+	for _,v := range GetTxnPoolInstance().Transactions.Get() {
+		GetTxnPoolInstance().Transactions.StructDelete(v)
+	}
 }

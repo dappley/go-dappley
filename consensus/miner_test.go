@@ -33,6 +33,7 @@ func TestMiner_VerifyNonce(t *testing.T){
 		}else{
 			nonce++
 		}
+
 	}
 
 	//check if the verifyNonce function returns true

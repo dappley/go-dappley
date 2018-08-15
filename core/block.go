@@ -273,15 +273,16 @@ func (b *Block) Rollback(){
 		txnPool := GetTxnPoolInstance()
 		for _,tx := range b.GetTransactions(){
 			if !tx.IsCoinbase() {
-				txnPool.Push(*tx)
+				txnPool.Transactions.StructPush(*tx)
 			}
 		}
 	}
 }
 
 func (b *Block) FindTransactionById(txid []byte) *Transaction{
-	for _, tx := range b.GetTransactions() {
+	for _, tx := range b.transactions {
 		if bytes.Compare(tx.ID, txid) == 0 {
+
 			return tx
 		}
 
@@ -298,3 +299,4 @@ func (b *Block) RemoveMinedTxFromTxPool(){
 		return b.FindTransactionById(tx.ID) == nil
 	})
 }
+

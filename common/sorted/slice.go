@@ -88,10 +88,10 @@ func (s *Slice) Del(val interface{}) {
 	}
 }
 
-func (s *Slice) GetSliceContent() []interface{} {
+func (s *Slice) Get() []interface{} {
 	return s.content
 }
-func (s *Slice) SetSliceContent(slice []interface{}) {
+func (s *Slice) Set(slice []interface{}) {
 	s.content = slice
 }
 

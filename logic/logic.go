@@ -100,11 +100,12 @@ func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, b
 	}
 
 	tx, err := core.NewUTXOTransaction(bc.DB, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
+	core.GetTxnPoolInstance().ConditionalAdd(tx)
 
 	if err != nil {
 		return err
 	}
-	core.GetTxnPoolInstance().Push(tx)
+
 
 	return err
 }
@@ -131,7 +132,7 @@ func AddBalance(address core.Address, amount int, db storage.Storage) (error) {
 		return err
 	}
 
-	core.GetTxnPoolInstance().Push(tx)
+	core.GetTxnPoolInstance().StructPush(tx)
 
 	return err
 

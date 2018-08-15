@@ -125,7 +125,7 @@ func (miner *Miner) prepareBlock() *MinedBlock{
 	}
 
 	//verify all transactions
-	miner.verifyTransactions()
+	//miner.verifyTransactions()
 	//get all transactions
 	txs := core.GetTxnPoolInstance().GetSortedTransactions()
 	//add coinbase transaction to transaction pool

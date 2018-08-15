@@ -5,17 +5,18 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/common/sorted"
+	"fmt"
 )
 
-type TransactionPoool struct {
+type TransactionPool struct {
 	messageCh    chan string
 	exitCh       chan bool
 	size         int
-	transactions sorted.Slice
+	Transactions sorted.Slice
 }
 
-var instance23812531 *TransactionPoool
-var once23812531 sync.Once
+var instance *TransactionPool
+var once sync.Once
 
 func CompareTransactionTips(a interface{}, b interface{}) int {
 	ai := a.(Transaction)
@@ -29,32 +30,32 @@ func CompareTransactionTips(a interface{}, b interface{}) int {
 	}
 }
 
-func (s *TransactionPoool) StructDelete(txn interface{}) {
-	for k, v := range s.transactions.GetSliceContent() {
+func (s *TransactionPool) StructDelete(txn interface{}) {
+	for k, v := range s.Transactions.Get() {
 		if bytes.Compare(v.(Transaction).ID, txn.(Transaction).ID) == 0 {
 
 			var content []interface{}
-			content = append(content, s.transactions.GetSliceContent()[k+1:]...)
-			content = append(s.transactions.GetSliceContent()[0:k], content...)
-			s.transactions.SetSliceContent(content)
+			content = append(content, s.Transactions.Get()[k+1:]...)
+			content = append(s.Transactions.Get()[0:k], content...)
+			s.Transactions.Set(content)
 			return
 		}
 	}
 }
 
 // Push a new value into slice
-func (s *TransactionPoool) StructPush(val interface{}) {
-	if s.transactions.Len() == 0 {
-		s.transactions.AddSliceItem(val)
+func (s *TransactionPool) StructPush(val interface{}) {
+	if s.Transactions.Len() == 0 {
+		s.Transactions.AddSliceItem(val)
 		return
 	}
 
-	start, end := 0, s.transactions.Len()-1
+	start, end := 0, s.Transactions.Len()-1
 	result, mid := 0, 0
 	for start <= end {
 		mid = (start + end) / 2
-		cmp := s.transactions.GetSliceCmp()
-		result = cmp(s.transactions.Index(mid), val)
+		cmp := s.Transactions.GetSliceCmp()
+		result = cmp(s.Transactions.Index(mid), val)
 		if result > 0 {
 			end = mid - 1
 		} else if result < 0 {
@@ -65,26 +66,94 @@ func (s *TransactionPoool) StructPush(val interface{}) {
 	}
 	content := []interface{}{val}
 	if result > 0 {
-		content = append(content, s.transactions.GetSliceContent()[mid:]...)
-		content = append(s.transactions.GetSliceContent()[0:mid], content...)
+		content = append(content, s.Transactions.Get()[mid:]...)
+		content = append(s.Transactions.Get()[0:mid], content...)
 	} else {
-		content = append(content, s.transactions.GetSliceContent()[mid+1:]...)
-		content = append(s.transactions.GetSliceContent()[0:mid+1], content...)
+		content = append(content, s.Transactions.Get()[mid+1:]...)
+		content = append(s.Transactions.Get()[0:mid+1], content...)
 
 	}
-	s.transactions.SetSliceContent(content)
+	s.Transactions.Set(content)
 }
 
-func GetTxnPoolInstance23812531() *TransactionPoool {
-	once23812531.Do(func() {
-		//instance = &TransactionPool{}
-		instance23812531 = &TransactionPoool{
+func GetTxnPoolInstance() *TransactionPool {
+	once.Do(func() {
+		instance = &TransactionPool{
 			messageCh: make(chan string, 128),
 			size:      128,
 		}
+		instance.Transactions = *sorted.NewSlice(CompareTransactionTips, instance.StructDelete, instance.StructPush)
 	})
-
-	instance23812531.transactions = *sorted.NewSlice(CompareTransactionTips, instance23812531.StructDelete, instance23812531.StructPush)
-
-	return instance23812531
+	return instance
 }
+
+//function f should return true if the transaction needs to be pushed back to the pool
+func (pool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
+
+	for _,v := range pool.Transactions.Get(){
+		txn := v.(Transaction)
+		if !txHandler(txn) {
+			pool.Transactions.StructDelete(txn)
+		}
+	}
+}
+
+func (pool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
+	pool.Traverse(func(tx Transaction) bool{
+		return tx.Verify(utxoPool)
+	})
+}
+
+//need to optimize
+func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
+	sortedTransactions := []*Transaction{}
+	for GetTxnPoolInstance().Transactions.Len() > 0 {
+		txn:= GetTxnPoolInstance().Transactions.PopRight().(Transaction)
+		sortedTransactions = append(sortedTransactions, &txn)
+	}
+	return sortedTransactions
+}
+
+func (pool *TransactionPool) ConditionalAdd(tx Transaction){
+	//get smallest tip txn
+
+	if(pool.Transactions.Len() >= TransactionPoolLimit){
+		compareTx:= pool.Transactions.PopLeft().(Transaction)
+		greaterThanLeastTip:= tx.Tip > compareTx.Tip
+		if(greaterThanLeastTip){
+			pool.Transactions.StructPush(tx)
+		}else{// do nothing, push back popped tx
+			pool.Transactions.StructPush(compareTx)
+		}
+	}else{
+		pool.Transactions.StructPush(tx)
+	}
+}
+
+func (pool *TransactionPool) Start() {
+	go pool.messageLoop()
+}
+
+func (pool *TransactionPool) Stop() {
+	pool.exitCh <- true
+}
+
+//todo: will change the input from string to transaction
+func (pool *TransactionPool) PushTransaction(msg string) {
+	//func (pool *TransactionPool) PushTransaction(tx *Transaction){
+	//	pool.Push(tx)
+	fmt.Println(msg)
+}
+
+func (pool *TransactionPool) messageLoop() {
+	for {
+		select {
+		case <-pool.exitCh:
+			fmt.Println("Quit Transaction Pool")
+			return
+		case msg := <-pool.messageCh:
+			pool.PushTransaction(msg)
+		}
+	}
+}
+

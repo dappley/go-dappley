@@ -126,6 +126,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 
 //return true if the transaction is verified
 func (tx *Transaction) Verify(utxo utxoIndex) bool {
+
 	if tx.IsCoinbase() {
 		return true
 	}
@@ -149,7 +150,7 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
-			log.Panic("ERROR: Previous transaction is not correct")
+			fmt.Println("ERROR: Previous transaction is not correct")
 		}
 	}
 
@@ -158,12 +159,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 	curve := secp256k1.S256()
 
 	for inID, vin := range tx.Vin {
-		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		prevTxOut := prevTXs[hex.EncodeToString(vin.Txid)]
+		if bytes.Compare(prevTxOut.PubKeyHash, vin.PubKey) != 0 {
+			return false
+		}
 		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTx.PubKeyHash
+		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
-
 		x := big.Int{}
 		y := big.Int{}
 		keyLen := len(vin.PubKey)
@@ -173,12 +176,15 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 		originPub, err := secp256k1.FromECDSAPublicKey(&rawPubKey)
 		if err != nil {
+			panic("something is wrong1")
 			return false
 		}
 
 		verifyResult, error1 = secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if error1 != nil || verifyResult == false {
+			panic("something is wrong2")
+
 			return false
 		}
 	}

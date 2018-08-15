@@ -149,7 +149,7 @@ func TestBlock_Rollback(t *testing.T) {
 	b.UpdateUtxoIndexAfterNewBlock(UtxoForkMapKey, db)
 	b.Rollback()
 	txnPool := GetTxnPoolInstance()
-	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
+	assert.ElementsMatch(t, tx.ID, txnPool.Transactions.Right().(Transaction).ID)
 }
 
 func TestBlock_FindTransaction(t *testing.T) {
@@ -172,23 +172,25 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 }
 
 func TestBlock_RemoveMinedTxFromTxPool(t *testing.T) {
+	CleanTxnPoolBeforeTest()
 	txPool := GetTxnPoolInstance()
 	tx1 := MockTransaction()
 	tx2 := MockTransaction()
 	tx3 := MockTransaction()
 	tx4 := MockTransaction()
-	txPool.Push(*tx1)
-	txPool.Push(*tx2)
-	txPool.Push(*tx4)
+	txPool.Transactions.StructPush(*tx1)
+	txPool.Transactions.StructPush(*tx2)
+	txPool.Transactions.StructPush(*tx4)
 
 	//The transaction pool now has transactions tx1,tx2 and tx4
 	//The block has transactions tx1, tx2, tx3
 	blk := NewBlock([]*Transaction{tx1, tx2, tx3}, nil)
+
 	blk.RemoveMinedTxFromTxPool()
 
 	//now the transaction pool should only has tx4 in there
-	assert.Equal(t, 1, txPool.Len())
-	tx := txPool.Pop().(Transaction)
+	assert.Equal(t, 1, txPool.Transactions.Len())
+	tx := txPool.Transactions.PopRight().(Transaction)
 	assert.Equal(t, *tx4, tx)
 }
 

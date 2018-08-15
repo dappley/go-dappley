@@ -34,7 +34,7 @@ type Node struct {
 	info      *Peer
 	bc        *core.Blockchain
 	blks      []*core.Block
-	txnPool core.TransactionPoool
+	txnPool core.TransactionPool
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
@@ -46,7 +46,7 @@ func NewNode(bc *core.Blockchain) *Node {
 	nil,
 	bc,
 	nil,
-	core.TransactionPoool{},
+	core.TransactionPool{},
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
