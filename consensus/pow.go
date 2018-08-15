@@ -21,14 +21,13 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/network"
 )
 
 type ProofOfWork struct {
 	bc 			*core.Blockchain
 	miner 		*Miner
 	mintBlkChan	chan(*MinedBlock)
-	node    	*network.Node
+	node    	core.NetService
 	exitCh 		chan(bool)
 }
 
@@ -42,14 +41,10 @@ func NewProofOfWork() *ProofOfWork{
 	return p
 }
 
-func (pow *ProofOfWork) Setup(node *network.Node, cbAddr string){
+func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string){
 	pow.bc = node.GetBlockchain()
 	pow.node = node
 	pow.miner.Setup(pow.bc, cbAddr, pow.mintBlkChan)
-}
-
-func (pow *ProofOfWork) GetNode() *network.Node{
-	return pow.node
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int){

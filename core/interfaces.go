@@ -11,10 +11,18 @@
 //
 package core
 
+import "github.com/libp2p/go-libp2p-peer"
+
 type Consensus interface{
 	Validate(block *Block) bool
 	Start()
 	Stop()
 	StartNewBlockMinting()
+}
+
+type NetService interface{
+	SendBlock(block *Block) error
+	GetPeerID() peer.ID
+	GetBlockchain() *Blockchain
 }
 

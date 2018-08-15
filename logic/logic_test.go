@@ -339,6 +339,7 @@ func TestSyncBlocks(t *testing.T) {
 	targetHeight := uint64(4)
 	//num of nodes to be created in the test
 	numOfNodes := 4
+	var firstNode *network.Node
 	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
 		db := storage.NewRamStorage()
@@ -349,14 +350,17 @@ func TestSyncBlocks(t *testing.T) {
 		bc := core.CreateBlockchain(addr, db, pow)
 		bcs = append(bcs, bc)
 
-		pow.Setup(network.NewNode(bcs[i]), addr.Address)
+		n := network.NewNode(bcs[i])
+		pow.Setup(n, addr.Address)
 		pow.SetTargetBit(16)
-		pow.GetNode().Start(testport + i)
+		n.Start(testport + i)
 
-		if i != 0 {
-			pow.GetNode().AddStream(
-				pows[0].GetNode().GetPeerID(),
-				pows[0].GetNode().GetPeerMultiaddr(),
+		if i == 0{
+			firstNode = n
+		}else {
+			n.AddStream(
+				firstNode.GetPeerID(),
+				firstNode.GetPeerMultiaddr(),
 			)
 		}
 
@@ -364,7 +368,7 @@ func TestSyncBlocks(t *testing.T) {
 	}
 
 	//seed node broadcasts syncpeers
-	pows[0].GetNode().SyncPeers()
+	firstNode.SyncPeers()
 
 	//wait for 2 seconds for syncing
 	time.Sleep(time.Second * 2)
@@ -387,7 +391,6 @@ loop:
 			assert.Nil(t, err)
 			if blk.GetHeight() > blkHeight[i] {
 				blkHeight[i]++
-				logger.Info("BlkHeight:", blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
 			}
 			if blk.GetHeight() >= targetHeight {
 				//count the number of nodes that have already stopped mining
@@ -430,6 +433,7 @@ func TestForkChoice(t *testing.T) {
 	//targetHeight := uint64(4)
 	//num of nodes to be created in the test
 	numOfNodes := 2
+	nodes := []*network.Node{}
 	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
 		db := storage.NewRamStorage()
@@ -440,10 +444,12 @@ func TestForkChoice(t *testing.T) {
 		bc := core.CreateBlockchain(addr, db, pow)
 		bcs = append(bcs, bc)
 
-		pow.Setup(network.NewNode(bcs[i]), addr.Address)
+		n := network.NewNode(bcs[i])
+		pow.Setup(n, addr.Address)
 		pow.SetTargetBit(16)
-		pow.GetNode().Start(testport_fork + i)
+		n.Start(testport_fork + i)
 		pows = append(pows, pow)
+		nodes = append(nodes,n)
 	}
 
 	//start node0 first. the next node starts mining after the previous node is at least at height 5
@@ -456,12 +462,12 @@ func TestForkChoice(t *testing.T) {
 
 	for i := 0; i < numOfNodes; i++ {
 		if i != 0 {
-			pows[i].GetNode().AddStream(
-				pows[0].GetNode().GetPeerID(),
-				pows[0].GetNode().GetPeerMultiaddr(),
+			nodes[i].AddStream(
+				nodes[0].GetPeerID(),
+				nodes[0].GetPeerMultiaddr(),
 			)
 		}
-		pows[0].GetNode().SyncPeers()
+		nodes[0].SyncPeers()
 	}
 
 	time.Sleep(time.Second * 5)

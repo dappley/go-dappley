@@ -3,7 +3,6 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core"
 	"time"
-	"github.com/dappley/go-dappley/network"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -11,7 +10,7 @@ type Dpos struct{
 	bc        *core.Blockchain
 	miner     *Miner
 	mintBlkCh chan(*MinedBlock)
-	node      *network.Node
+	node      core.NetService
 	quitCh    chan(bool)
 	dynasty   Dynasty
 }
@@ -26,7 +25,7 @@ func NewDpos() *Dpos{
 	return dpos
 }
 
-func (dpos *Dpos) Setup(node *network.Node, cbAddr string){
+func (dpos *Dpos) Setup(node core.NetService, cbAddr string){
 	dpos.bc = node.GetBlockchain()
 	dpos.node = node
 	dpos.miner.Setup(dpos.bc, cbAddr, dpos.mintBlkCh)

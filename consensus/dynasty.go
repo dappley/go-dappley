@@ -8,15 +8,15 @@ type Dynasty struct{
 }
 
 const (
-	defaultMaxProducers     = 3
-	defaultTimeBetweenBlock = 15
-	defaultDynastyTime      = defaultMaxProducers * defaultTimeBetweenBlock
+	defaultMaxProducers   = 3
+	defaultTimeBetweenBlk = 15
+	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
 )
 
 func NewDynasty() *Dynasty{
 	return &Dynasty{
 		maxProducers:   defaultMaxProducers,
-		timeBetweenBlk: defaultTimeBetweenBlock,
+		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    defaultDynastyTime,
 	}
 }
@@ -25,7 +25,7 @@ func NewDynastyWithMiners(miners []string) *Dynasty{
 	return &Dynasty{
 		miners:         miners,
 		maxProducers:   defaultMaxProducers,
-		timeBetweenBlk: defaultTimeBetweenBlock,
+		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    defaultDynastyTime,
 	}
 }

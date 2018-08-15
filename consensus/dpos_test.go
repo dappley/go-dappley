@@ -73,6 +73,7 @@ func TestDpos_MultipleMiners(t *testing.T){
 	dynasty.SetTimeBetweenBlk(5)
 	dynasty.SetMaxProducers(len(miners))
 	dposArray := []*Dpos{}
+	var firstNode *network.Node
 	for i:=0;i<len(miners);i++{
 		dpos := NewDpos()
 		dpos.SetDynasty(*dynasty)
@@ -80,14 +81,16 @@ func TestDpos_MultipleMiners(t *testing.T){
 		bc := core.CreateBlockchain(core.Address{miners[0]},storage.NewRamStorage(),dpos)
 		node := network.NewNode(bc)
 		node.Start(21200+i)
-		if i!=0{
-			node.AddStream(dposArray[0].node.GetPeerID(),dposArray[0].node.GetPeerMultiaddr())
+		if i==0{
+			firstNode = node
+		}else{
+			node.AddStream(firstNode.GetPeerID(),firstNode.GetPeerMultiaddr())
 		}
 		dpos.Setup(node, miners[i])
 		dposArray = append(dposArray, dpos)
 	}
 
-	dposArray[0].node.SyncPeers()
+	firstNode.SyncPeers()
 
 	for i:=0;i<len(miners);i++{
 		dposArray[i].Start()
