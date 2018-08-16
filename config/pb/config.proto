@@ -1,0 +1,10 @@
+syntax = "proto3";
+package configpb;
+
+message Config{
+    DynastyConfig dynastyConfig=1;
+}
+
+message DynastyConfig{
+    repeated string producers =1;
+}

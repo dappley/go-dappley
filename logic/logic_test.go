@@ -37,12 +37,13 @@ import (
 )
 
 const invalidAddress = "Invalid Address"
+const BlockchainDbFile = "../bin/blockchain.DB"
 
 var databaseInstance *storage.LevelDB
 
 func TestMain(m *testing.M) {
 	setup()
-	databaseInstance = storage.OpenDatabase(core.BlockchainDbFile)
+	databaseInstance = storage.OpenDatabase(BlockchainDbFile)
 	defer databaseInstance.Close()
 	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()

@@ -8,6 +8,10 @@ import (
 	"fmt"
 )
 
+const UtxoMapKey = "utxo"
+const UtxoForkMapKey = "utxoFork"
+const TransactionPoolLimit = 5
+
 type TransactionPool struct {
 	messageCh    chan string
 	exitCh       chan bool
