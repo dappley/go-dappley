@@ -14,9 +14,12 @@ type TXOutput struct {
 }
 
 func (out *TXOutput) Lock(address []byte) {
+	out.PubKeyHash = HashAddress(address)
+}
+
+func HashAddress(address []byte) []byte{
 	pubKeyHash := util.Base58Decode(address)
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	out.PubKeyHash = pubKeyHash
+	return pubKeyHash[1 : len(pubKeyHash)-4]
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {

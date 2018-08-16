@@ -300,3 +300,12 @@ func (b *Block) RemoveMinedTxFromTxPool(){
 	})
 }
 
+func (b *Block) GetCoinbaseTransaction() *Transaction{
+	//the coinbase transaction is usually placed at the end of all transactions
+	for i:=len(b.transactions)-1;i>=0;i--{
+		if b.transactions[i].IsCoinbase(){
+			return b.transactions[i]
+		}
+	}
+	return nil
+}

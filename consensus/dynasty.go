@@ -1,6 +1,9 @@
 package consensus
 
-import "github.com/dappley/go-dappley/core"
+import (
+	"github.com/dappley/go-dappley/core"
+	"bytes"
+)
 
 type Dynasty struct{
 	producers      []string
@@ -77,14 +80,18 @@ func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool{
 	if producerIndex < 0 {
 		return false
 	}
-
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
 
-	if dynastyTimeElapsed/dynasty.timeBetweenBlk == producerIndex && dynastyTimeElapsed%dynasty.timeBetweenBlk == 0 {
-		return true
-	}
+	return dynastyTimeElapsed == producerIndex * dynasty.timeBetweenBlk
+}
 
-	return false
+func (dynasty *Dynasty) ProducerAtATime(time int64) string{
+	if time < 0{
+		return ""
+	}
+	dynastyTimeElapsed := int(time % int64(dynasty.dynastyTime))
+	index := dynastyTimeElapsed/dynasty.timeBetweenBlk
+	return dynasty.producers[index]
 }
 
 //find the index of the producer. If not found, return -1
@@ -95,6 +102,27 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int{
 		}
 	}
 	return -1
+}
+
+func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool{
+
+	if block == nil {
+		return false
+	}
+
+	producer := dynasty.ProducerAtATime(block.GetTimestamp())
+	producerHash := core.HashAddress([]byte(producer))
+
+	cbtx := block.GetCoinbaseTransaction()
+	if cbtx==nil {
+		return false
+	}
+
+	if len(cbtx.Vout) == 0{
+		return false
+	}
+
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash)==0
 }
 
 func IsProducerAddressValid(producer string) bool{

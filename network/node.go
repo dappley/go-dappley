@@ -34,7 +34,7 @@ type Node struct {
 	info      *Peer
 	bc        *core.Blockchain
 	blks      []*core.Block
-	txnPool core.TransactionPool
+	txnPool   core.TransactionPool
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool

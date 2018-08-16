@@ -24,6 +24,30 @@ func GenerateMockBlock() *Block{
 	}
 }
 
+func FakeNewBlockWithTimestamp(t int64,transactions []*Transaction, parent *Block) *Block{
+	var prevHash []byte
+	var height uint64
+	height = 0
+	if parent != nil {
+		prevHash = parent.GetHash()
+		height = parent.GetHeight() + 1
+	}
+
+	if transactions == nil {
+		transactions = []*Transaction{}
+	}
+	return &Block{
+		header: &BlockHeader{
+			hash:      []byte{},
+			prevHash:  prevHash,
+			nonce:     0,
+			timestamp: t,
+		},
+		height:       height,
+		transactions: transactions,
+	}
+}
+
 func GenerateMockBlockchain(size int) *Blockchain{
 	//create a new block chain
 	s := storage.NewRamStorage()

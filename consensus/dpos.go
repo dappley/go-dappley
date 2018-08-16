@@ -44,8 +44,7 @@ func (dpos *Dpos) GetDynasty() *Dynasty{
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool{
-	//TODO: Need to validate producer
-	return dpos.miner.Validate(block)
+	return dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block)
 }
 
 func (dpos *Dpos) Start(){
