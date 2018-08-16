@@ -25,6 +25,32 @@ func TestLoadConfigFromFile(t *testing.T){
 						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 					},
 				},
+				ConsensusConfig{
+					minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+				},
+				NodeConfig{
+					port: 5,
+					seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
+				},
+			},
+		},
+		{
+			name: 		"EmptySeed",
+			content: 	noSeedContent(),
+			expected:	&Config{
+				DynastyConfig{
+					producers: 	[]string{
+						"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
+					},
+				},
+				ConsensusConfig{
+					minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+				},
+				NodeConfig{
+					port: 5,
+					seed: "",
+				},
 			},
 		},
 		{
@@ -38,6 +64,12 @@ func TestLoadConfigFromFile(t *testing.T){
 			expected:	&Config{
 				DynastyConfig{
 					producers: 	[]string(nil),
+				},
+				ConsensusConfig{
+					minerAddr: "",
+				},
+				NodeConfig{
+					port: 0,
 				},
 			},
 		},
@@ -62,5 +94,28 @@ func fakeFileContent() string{
 			"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 			"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 		]
+	}
+	consensusConfig{
+		minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7"
+	}
+	nodeConfig{
+		port: 5
+		seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs"
+	}`
+}
+
+func noSeedContent() string{
+	return `
+	dynastyConfig{
+		producers: [
+			"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+		]
+	}
+	consensusConfig{
+		minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7"
+	}
+	nodeConfig{
+		port: 5
 	}`
 }

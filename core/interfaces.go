@@ -18,6 +18,8 @@ type Consensus interface{
 	Start()
 	Stop()
 	StartNewBlockMinting()
+	Setup(NetService, string)
+	SetTargetBit(int)
 }
 
 type NetService interface{

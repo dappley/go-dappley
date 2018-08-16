@@ -9,11 +9,22 @@ import (
 )
 
 type Config struct{
-	dynastyConfig DynastyConfig
+	dynastyConfig	DynastyConfig
+	consensusConfig ConsensusConfig
+	nodeConfig 		NodeConfig
 }
 
 type DynastyConfig struct{
 	producers []string
+}
+
+type ConsensusConfig struct{
+	minerAddr 	string
+}
+
+type NodeConfig struct{
+	port 		uint32
+	seed 		string
 }
 
 type BlockchainConfig struct{
@@ -42,6 +53,29 @@ func LoadConfigFromFile(filename string) *Config{
 		dynastyConfig.producers = pb.DynastyConfig.Producers
 	}
 
-	return &Config{dynastyConfig}
+	consensusConfig := ConsensusConfig{}
+	if pb.ConsensusConfig != nil{
+		consensusConfig.minerAddr = pb.ConsensusConfig.MinerAddr
+	}
+
+	nodeConfig := NodeConfig{}
+	if pb.NodeConfig != nil{
+		nodeConfig.port = pb.NodeConfig.Port
+		nodeConfig.seed = pb.NodeConfig.Seed
+	}
+
+	return &Config{
+		dynastyConfig,
+		consensusConfig,
+		nodeConfig,
+	}
 }
 
+func (config *Config) GetDynastyConfig() *DynastyConfig{return &config.dynastyConfig}
+func (config *Config) GetConsensusConfig() *ConsensusConfig{return &config.consensusConfig}
+func (config *Config) GetNodeConfig() *NodeConfig{return &config.nodeConfig}
+
+func (dynastyConfig *DynastyConfig)GetProducers() []string{return dynastyConfig.producers}
+func (consensusConfig *ConsensusConfig)GetMinerAddr() string{return consensusConfig.minerAddr}
+func (nodeConfig *NodeConfig)GetListeningPort() uint32{return nodeConfig.port}
+func (nodeConfig *NodeConfig)GetSeed() string{return nodeConfig.seed}
