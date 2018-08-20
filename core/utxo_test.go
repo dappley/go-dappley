@@ -11,6 +11,7 @@ import (
 )
 
 var 	bh1 = &BlockHeader{
+	int32(1),
 	[]byte("hash"),
 	nil,
 	1,
@@ -26,6 +27,7 @@ func GenerateUtxoMockBlockWithoutInputs() *Block{
 		time.Now().Unix(),
 	}
 var 	bh2 = &BlockHeader{
+	int32(1),
 	[]byte("hash1"),
 	[]byte("hash"),
 	1,
@@ -181,8 +183,6 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	assert.Equal(t, 0,  len(deepCopy["address2"]))
 
 }
-
-
 
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()
