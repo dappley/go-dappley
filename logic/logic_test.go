@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet()
 	assert.Nil(t, err)
-	assert.Equal(t, len(wallet.Addresses[0].Address), 34)
+	assert.Equal(t, 34, len(wallet.Addresses[0].Address))
 }
 
 func TestCreateBlockchain(t *testing.T) {
@@ -69,7 +69,7 @@ func TestCreateBlockchain(t *testing.T) {
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	//create a blockchain with an invalid address
 	b, err := CreateBlockchain(core.NewAddress(invalidAddress), databaseInstance, nil)
-	assert.Equal(t, err, ErrInvalidAddress)
+	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Nil(t, b)
 }
 
@@ -84,7 +84,7 @@ func TestGetBalance(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance, err := GetBalance(addr, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance, 10)
+	assert.Equal(t, 10, balance)
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
@@ -98,11 +98,11 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"), databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, 0)
+	assert.Equal(t, 0, balance1)
 
 	balance2, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"), databaseInstance)
 	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 }
 
 func TestGetAllAddresses(t *testing.T) {
@@ -174,7 +174,7 @@ func TestSend(t *testing.T) {
 	//The balance2 should be 0
 	balance2, err := GetBalance(addr2, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 
 	//Send 5 coins from wallet1 to wallet2
 	err = Send(wallet1, addr2, transferAmount, tip, b)
@@ -242,7 +242,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 
 	//Send 5 coins from addr1 to an invalid address
 	err = Send(wallet1, core.NewAddress(invalidAddress), transferAmount, tip, b)
@@ -251,7 +251,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//the balance of the first wallet should be still be 10
 	balance1, err = GetBalance(addr1, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -298,7 +298,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 
 	//Create a second wallet
 	wallet2, err := CreateWallet()
@@ -309,7 +309,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//The balance should be 0
 	balance2, err := GetBalance(addr2, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 
 	//Send 5 coins from addr1 to addr2
 	err = Send(wallet1, addr2, transferAmount, tip, b)
@@ -318,12 +318,12 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//the balance of the first wallet should be still be 10
 	balance1, err = GetBalance(addr1, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 
 	//the balance of the second wallet should be 0
 	balance2, err = GetBalance(addr2, databaseInstance)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 
 	//teardown :clean up database amd files
 	teardown()
@@ -414,10 +414,10 @@ loop:
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
 		blk0, err := bcs[i].GetTailBlock()
-		assert.Equal(t,targetHeight,blk0.GetHeight())
+		assert.Equal(t, targetHeight, blk0.GetHeight())
 		assert.Nil(t, err)
 		blk1, err := bcs[i+1].GetTailBlock()
-		assert.Equal(t,targetHeight,blk1.GetHeight())
+		assert.Equal(t, targetHeight, blk1.GetHeight())
 		assert.Nil(t, err)
 		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
 	}
