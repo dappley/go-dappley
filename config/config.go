@@ -25,6 +25,7 @@ type ConsensusConfig struct{
 type NodeConfig struct{
 	port 		uint32
 	seed 		string
+	dbPath 		string
 }
 
 type BlockchainConfig struct{
@@ -62,6 +63,7 @@ func LoadConfigFromFile(filename string) *Config{
 	if pb.NodeConfig != nil{
 		nodeConfig.port = pb.NodeConfig.Port
 		nodeConfig.seed = pb.NodeConfig.Seed
+		nodeConfig.dbPath = pb.NodeConfig.DbPath
 	}
 
 	return &Config{
@@ -79,3 +81,4 @@ func (dynastyConfig *DynastyConfig)GetProducers() []string{return dynastyConfig.
 func (consensusConfig *ConsensusConfig)GetMinerAddr() string{return consensusConfig.minerAddr}
 func (nodeConfig *NodeConfig)GetListeningPort() uint32{return nodeConfig.port}
 func (nodeConfig *NodeConfig)GetSeed() string{return nodeConfig.seed}
+func (nodeConfig *NodeConfig)GetDbPath() string{return nodeConfig.dbPath}

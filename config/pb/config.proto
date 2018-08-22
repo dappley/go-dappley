@@ -18,4 +18,5 @@ message ConsensusConfig{
 message NodeConfig{
     uint32 port = 1;
     string seed = 2;
+    string dbPath = 3;
 }

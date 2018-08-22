@@ -31,6 +31,7 @@ func TestLoadConfigFromFile(t *testing.T){
 				NodeConfig{
 					port: 5,
 					seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
+					dbPath: "dbPath",
 				},
 			},
 		},
@@ -101,6 +102,7 @@ func fakeFileContent() string{
 	nodeConfig{
 		port: 5
 		seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs"
+		dbPath: "dbPath"
 	}`
 }
 

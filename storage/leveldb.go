@@ -56,7 +56,7 @@ func (ldb *LevelDB) Close() error {
 
 func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	val, err := ldb.db.Get(key, nil)
-	if err != nil && err != leveldb.ErrNotFound {
+	if err != nil {
 		return nil, err
 	}
 	return val, nil

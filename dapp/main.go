@@ -16,7 +16,6 @@ import (
 const (
     genesisAddr = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	configFilePath 	= "conf/default.conf"
-	BlockchainDbFile = "clidb.db"
 )
 
 func main() {
@@ -35,7 +34,7 @@ func main() {
 	}
 
 	//setup
-	db := storage.OpenDatabase(BlockchainDbFile)
+	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
 
 	//creat blockchain
