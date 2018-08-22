@@ -54,6 +54,7 @@ func NewNode(bc *core.Blockchain) *Node {
 }
 
 func (n *Node) GetBlockchain() *core.Blockchain{return n.bc}
+func (n *Node) GetPeerList() *PeerList{return n.peerList}
 
 func (n *Node) Start(listenPort int) error {
 

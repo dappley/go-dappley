@@ -1,4 +1,4 @@
-package logic
+package rpc
 
 import (
 	"log"
@@ -7,34 +7,50 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
 	port = ":50051"
 )
 
-// server is used to implement helloworld.GreeterServer.
-type server struct{}
+// Server is used to implement helloworld.GreeterServer.
+type Server struct{
+	node *network.Node
+}
+
+func NewGrpcServer(node *network.Node) *Server{
+	return &Server{node}
+}
 
 // SayHello implements helloworld.GreeterServer
-func (s *server) RpcCreateWallet(ctx context.Context, in *rpc.CreateWalletRequest) (*rpc.CreateWalletReply, error) {
-	return &rpc.CreateWalletReply{Message: "Hello " + in.Name}, nil
+func (s *Server) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
+	return &rpcpb.CreateWalletResponse{Message: "Hello " + in.Name}, nil
 }
 
-func (s *server) RpcGetBalance(ctx context.Context, in *rpc.GetBalanceRequest) (*rpc.GetBalanceReply, error) {
-	return &rpc.GetBalanceReply{Message: "Hello " + in.Name}, nil
+func (s *Server) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
+	return &rpcpb.GetBalanceResponse{Message: "Hello " + in.Name}, nil
 }
 
-func (s *server) RpcSend(ctx context.Context, in *rpc.SendRequest) (*rpc.SendReply, error) {
-	return &rpc.SendReply{Message: "Hello " + in.Name}, nil
+func (s *Server) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
+	return &rpcpb.SendResponse{Message: "Hello " + in.Name}, nil
 }
 
-func startRPC() {
+func (s *Server) RpcGetPeerList(ctx context.Context, in *rpcpb.GetPeerListRequest) (*rpcpb.GetPeerListResponse, error) {
+	return &rpcpb.GetPeerListResponse{
+		PeerList:s.node.GetPeerList().ToProto().(*networkpb.Peerlist),
+	}, nil
+}
+
+func StartRpc(srv rpcpb.ConnectServer) {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	rpc.RegisterConnectServer(s, &server{})
-	s.Serve(lis)
+	rpcpb.RegisterConnectServer(s, srv)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %s", err)
+	}
 }
