@@ -34,7 +34,7 @@ func TestServer_StartRPC(t *testing.T) {
 	defer conn.Close()
 
 	c := rpcpb.NewConnectClient(conn)
-	response, err := c.RpcGetPeerList(context.Background(),&rpcpb.GetPeerListRequest{})
+	response, err := c.RpcGetPeerInfo(context.Background(),&rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
 
 	ret := &network.PeerList{}

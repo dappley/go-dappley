@@ -10,7 +10,7 @@ service Connect {
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
-  rpc RpcGetPeerList (GetPeerListRequest) returns (GetPeerListResponse) {}
+  rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
 }
 
 // The request message 
@@ -30,7 +30,7 @@ message SendRequest {
   int64 ammount = 4;
 }
 
-message GetPeerListRequest {}
+message GetPeerInfoRequest {}
 
 // The response message 
 
@@ -48,6 +48,6 @@ message SendResponse {
   string message = 1;
 }
 
-message GetPeerListResponse {
+message GetPeerInfoResponse {
   networkpb.Peerlist peerList = 1;
 }

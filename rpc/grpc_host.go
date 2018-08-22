@@ -37,8 +37,8 @@ func (s *Server) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.Sen
 	return &rpcpb.SendResponse{Message: "Hello " + in.Name}, nil
 }
 
-func (s *Server) RpcGetPeerList(ctx context.Context, in *rpcpb.GetPeerListRequest) (*rpcpb.GetPeerListResponse, error) {
-	return &rpcpb.GetPeerListResponse{
+func (s *Server) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
+	return &rpcpb.GetPeerInfoResponse{
 		PeerList:s.node.GetPeerList().ToProto().(*networkpb.Peerlist),
 	}, nil
 }
