@@ -2,8 +2,6 @@ syntax = "proto3";
 
 option objc_class_prefix = "HLW";
 
-package logic;
-
 // The greeting service definition.
 service Connect {
   // Sends a greeting
