@@ -6,16 +6,17 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/config"
 	"flag"
+	"github.com/dappley/go-dappley/storage"
 )
 
 const (
     genesisAddr = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	configFilePath 	= "conf/default.conf"
+	BlockchainDbFile = "clidb.db"
 )
 
 func main() {
@@ -34,8 +35,7 @@ func main() {
 	}
 
 	//setup
-	//db := storage.OpenDatabase(core.BlockchainDbFile)
-	db := storage.NewRamStorage()
+	db := storage.OpenDatabase(BlockchainDbFile)
 	defer db.Close()
 
 	//creat blockchain
