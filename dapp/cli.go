@@ -8,12 +8,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/consensus"
 )
 
 // CLI responsible for processing command line arguments
@@ -48,7 +48,7 @@ func (cli *CLI) validateArgs() {
 func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wallets, dynasty *consensus.Dynasty) {
 
 	cli.printUsage()
-	loop:
+loop:
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Enter command: ")
@@ -65,7 +65,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		addPeerCmd := flag.NewFlagSet("addPeer", flag.ExitOnError)
 		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock", flag.ExitOnError)
 		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
-		broadcastMockTxnCmd:= flag.NewFlagSet("broadcastTxn", flag.ExitOnError)
+		broadcastMockTxnCmd := flag.NewFlagSet("broadcastTxn", flag.ExitOnError)
 		setLoggerLevelCmd := flag.NewFlagSet("setLoggerLevel", flag.ExitOnError)
 		addProducerCmd := flag.NewFlagSet("addProducer", flag.ExitOnError)
 		setMaxProducersCmd := flag.NewFlagSet("setMaxProducers", flag.ExitOnError)
@@ -81,7 +81,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		peerAddr := addPeerCmd.String("address", "", "peer ip4 address")
 		loggerLevel := setLoggerLevelCmd.Int("level", 4, "0:Panic 1:Fatal 2:Error 3:Warning 4:Info 5:Debug")
 		producerAddr := addProducerCmd.String("address", "", "producer address")
-		maxProducers := setMaxProducersCmd.Int("max",3,"maximum producers")
+		maxProducers := setMaxProducersCmd.Int("max", 3, "maximum producers")
 
 		var err error
 		switch args[0] {
@@ -114,7 +114,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		case "setMaxProducers":
 			err = setMaxProducersCmd.Parse(args[1:])
 		case "exit":
-			break loop;
+			break loop
 		default:
 			cli.printUsage()
 		}
@@ -131,7 +131,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		}
 
 		if setLoggerLevelCmd.Parsed() {
-			if *loggerLevel < 0 || *loggerLevel > 5{
+			if *loggerLevel < 0 || *loggerLevel > 5 {
 				nodeSetPortCmd.Usage()
 			}
 			logrus.SetLevel((logrus.Level)(*loggerLevel))
@@ -180,7 +180,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 		}
 
 		if addBalanceCmd.Parsed() {
-			if *addBalanceAddressString == "" || *addAmount <=0 {
+			if *addBalanceAddressString == "" || *addAmount <= 0 {
 				addBalanceCmd.Usage()
 			}
 			addBalanceAddress := core.NewAddress(*addBalanceAddressString)
@@ -189,7 +189,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 				log.Println(err)
 			}
 
-			fmt.Printf("Add Balance Amount %d for '%s'\n", *addAmount, addBalanceAddress, )
+			fmt.Printf("Add Balance Amount %d for '%s'\n", *addAmount, addBalanceAddress)
 
 		}
 
@@ -224,7 +224,7 @@ func (cli *CLI) Run(bc *core.Blockchain, node *network.Node, wallets *client.Wal
 			senderWallet := wallets.GetWalletByAddress(sendFromAddress)
 			if len(senderWallet.Addresses) == 0 {
 				logrus.Warn("Sender address could not be found in local wallet")
-			}else{
+			} else {
 				if err := logic.Send(senderWallet, sendToAddress, *sendAmount, uint64(*tipAmount), bc); err != nil {
 					log.Println(err)
 				} else {

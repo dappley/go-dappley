@@ -20,7 +20,6 @@ package logic
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 
@@ -421,54 +420,6 @@ loop:
 		assert.Nil(t, err)
 		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
 	}
-
-}
-
-func TestDataTransaction(t *testing.T) {
-	// logger.SetLevel(logger.InfoLevel)
-	var pows []*consensus.ProofOfWork
-	var bcs []*core.Blockchain
-	addr := core.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	numOfNodes := 2
-	nodes := []*network.Node{}
-	for i := 0; i < numOfNodes; i++ {
-		//create storage instance
-		db := storage.NewRamStorage()
-		defer db.Close()
-
-		pow := consensus.NewProofOfWork()
-		bc := core.GenerateMockBlockchainWithCoinbaseTxOnlyWithConsensus(10000*(1-i), pow)
-		bcs = append(bcs, bc)
-		n := network.NewNode(bc)
-		pow.Setup(n, addr.Address)
-		pow.SetTargetBit(0)
-		n.Start(testport_fork + i)
-		pows = append(pows, pow)
-		nodes = append(nodes, n)
-	}
-
-	time.Sleep(time.Second * 5)
-	for i := 0; i < numOfNodes; i++ {
-		if i != 0 {
-			fmt.Println(nodes[0].GetPeerID())
-			fmt.Println(nodes[0].GetPeerMultiaddr())
-			nodes[i].AddStream(
-				nodes[0].GetPeerID(),
-				nodes[0].GetPeerMultiaddr(),
-			)
-
-		}
-		nodes[0].SyncPeers()
-	}
-	tailBlock, _ := nodes[0].GetBlockchain().GetTailBlock()
-	nodes[0].SendBlock(tailBlock)
-	for int(bcs[0].GetMaxHeight()) < 10000 || int(bcs[1].GetMaxHeight()) < 10000 {
-	}
-	for i := 0; i < numOfNodes-1; i++ {
-		assert.True(t, compareTwoBlockchains(bcs[0], bcs[i]))
-	}
-	assert.Equal(t, int(bcs[0].GetMaxHeight()), 10000)
-	assert.Equal(t, int(bcs[1].GetMaxHeight()), 10000)
 
 }
 
