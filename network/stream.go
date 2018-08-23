@@ -18,6 +18,7 @@ const(
 	SyncPeerList 	= "SyncPeerList"
 	RequestBlock	= "requestBlock"
 	BroadcastTxn 	= "BroadcastTxn"
+	TestMsgRadiation = "TestMsgRadiation"
 )
 
 var(
@@ -38,6 +39,7 @@ type Stream struct{
 	quitRdCh 	chan bool
 	quitWrCh 	chan bool
 }
+
 
 func NewStream(s net.Stream, node *Node) *Stream{
 	return &Stream{	node,
@@ -101,6 +103,7 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 	if len(bytes) > 1 {
 		//prase data
 		logger.Debug("Received Data:", bytes)
+
 		s.parseData(bytes)
 	}else{
 		logger.Debug("Read less than 1 byte. Stop Reading...")
@@ -166,10 +169,10 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 	}
 	return nil
 }
-
+//should parse and relay
 func (s *Stream) parseData(data []byte){
 
-	data,err := decodeMessage(data)
+	dataDecoded,err := decodeMessage(data)
 	if err!=nil {
 		logger.Warn(err)
 		return
@@ -177,23 +180,24 @@ func (s *Stream) parseData(data []byte){
 
 	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, dmpb); err!=nil{
+	if err := proto.Unmarshal(dataDecoded, dmpb); err!=nil{
 		logger.Info(err)
 	}
 
 	dm := &Dapmsg{}
 	dm.FromProto(dmpb)
+
 	switch(dm.GetCmd()) {
 	case SyncBlock:
 		logger.Debug("Received ",SyncBlock," command from:", s.remoteAddr)
-		s.node.addBlockToPool(dm.GetData(),s.peerID)
+		s.node.syncBlockHandler(dm.GetData(),s.peerID)
 	case SyncPeerList:
 		logger.Debug("Received ",SyncPeerList," command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
 	case RequestBlock:
 		logger.Debug("Received ",RequestBlock," command from:", s.remoteAddr)
 		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
-		case BroadcastTxn:
+	case BroadcastTxn:
 		logger.Debug("Received ", BroadcastTxn," command from:", s.remoteAddr)
 		s.node.addTxnToPool(dm.GetData())
 	default:

@@ -38,6 +38,7 @@ type Node struct {
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
+	recentlyRcvedDapMessages map[string]int
 }
 
 //create new Node instance
@@ -50,6 +51,7 @@ func NewNode(bc *core.Blockchain) *Node {
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
+	make(map[string]int),
 	}
 }
 
@@ -205,7 +207,7 @@ func prepareData(msgData proto.Message, cmd string) ([]byte, error){
 		}
 	}
 
-	//build a deppley message
+	//build a dappley message
 	dm := NewDapmsg(cmd, bytes)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
@@ -274,8 +276,16 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 	n.streams[pid].Send(data)
 }
 
-func (n *Node) addBlockToPool(data []byte, pid peer.ID) {
+func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
+	//add block to blockpool. Make sure this is none blocking.
+	n.bc.BlockPool().Push(block, pid)
+	//TODO: Delete this line. This line is solely for testing
+	n.blks = append(n.blks, block)
 
+}
+
+
+func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block{
 	//create a block proto
 	blockpb := &corepb.Block{}
 
@@ -290,10 +300,12 @@ func (n *Node) addBlockToPool(data []byte, pid peer.ID) {
 	//load the block with proto
 	block.FromProto(blockpb)
 
-	//add block to blockpool. Make sure this is none blocking.
-	n.bc.BlockPool().Push(block, pid)
-	//TODO: Delete this line. This line is solely for testing
-	n.blks = append(n.blks, block)
+	return block
+}
+func (n *Node) syncBlockHandler(data []byte, pid peer.ID){
+	blk := n.getFromProtoBlockMsg(data)
+	n.addBlockToPool(blk, pid)
+	n.broadcast(data)
 }
 
 func (n *Node) addTxnToPool(data []byte){

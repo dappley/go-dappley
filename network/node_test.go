@@ -10,6 +10,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
+	"bytes"
 )
 
 const(
@@ -236,7 +237,8 @@ func TestNode_prepareData(t *testing.T){
 	for _,tt := range tests{
 		t.Run(tt.name,func(t *testing.T){
 			data,err := prepareData(tt.msgData,tt.cmd)
-			assert.Equal(t,tt.retData,data)
+			//dapley msgs returned contains timestamp of when it was created. We only check the non-timestamp contents to make sure it is there.
+			assert.Equal(t,true, bytes.Contains(data,tt.retData))
 			assert.Equal(t,tt.retErr,err)
 		})
 	}

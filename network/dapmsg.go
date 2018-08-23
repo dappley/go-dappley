@@ -24,6 +24,10 @@ func (dm *Dapmsg) GetData() []byte{
 	return dm.data
 }
 
+func (dm *Dapmsg) GetTimestamp() int64{
+	return dm.unixTimeRecvd
+}
+
 func (dm *Dapmsg) ToProto() proto.Message{
 	return &networkpb.Dapmsg{
 		Cmd: dm.cmd,
