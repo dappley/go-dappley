@@ -1,12 +1,13 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/util"
 	"time"
+
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 )
 
-func GenerateMockBlock() *Block{
+func GenerateMockBlock() *Block {
 	bh1 := &BlockHeader{
 		[]byte("hash"),
 		[]byte("prevhash"),
@@ -19,12 +20,12 @@ func GenerateMockBlock() *Block{
 
 	return &Block{
 		header:       bh1,
-		transactions: []*Transaction{t1,t2},
+		transactions: []*Transaction{t1, t2},
 		height:       0,
 	}
 }
 
-func FakeNewBlockWithTimestamp(t int64,transactions []*Transaction, parent *Block) *Block{
+func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Block) *Block {
 	var prevHash []byte
 	var height uint64
 	height = 0
@@ -48,31 +49,47 @@ func FakeNewBlockWithTimestamp(t int64,transactions []*Transaction, parent *Bloc
 	}
 }
 
-func GenerateMockBlockchain(size int) *Blockchain{
+func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s,nil)
+	bc := CreateBlockchain(addr, s, nil)
 
-	for i:=0; i<size; i++{
+	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		b:= NewBlock([]*Transaction{MockTransaction()},tailBlk)
+		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.UpdateNewBlock(b)
 	}
 	return bc
 }
 
-func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain{
+func GenerateMockBlockchainWithCoinbaseTxOnlyWithConsensus(size int, consensus Consensus) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s,nil)
+	bc := CreateBlockchain(addr, s, consensus)
 
-	for i:=0; i<size; i++{
+	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr.Address,"")
-		b:= NewBlock([]*Transaction{&cbtx},tailBlk)
+		cbtx := NewCoinbaseTX(addr.Address, "")
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.UpdateNewBlock(b)
+	}
+	return bc
+}
+
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil)
+
+	for i := 0; i < size; i++ {
+		tailBlk, _ := bc.GetTailBlock()
+		cbtx := NewCoinbaseTX(addr.Address, "")
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.UpdateNewBlock(b)
 	}
@@ -80,13 +97,13 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain{
 }
 
 //the first item is the tail of the fork
-func GenerateMockFork(size int, parent *Block) []*Block{
+func GenerateMockFork(size int, parent *Block) []*Block {
 	fork := []*Block{}
 	b := NewBlock(nil, parent)
 	b.SetHash(b.CalculateHash())
 	fork = append(fork, b)
 
-	for i:=1; i<size; i++{
+	for i := 1; i < size; i++ {
 		b = NewBlock(nil, b)
 		b.SetHash(b.CalculateHash())
 		fork = append([]*Block{b}, fork...)
@@ -95,13 +112,13 @@ func GenerateMockFork(size int, parent *Block) []*Block{
 }
 
 //the first item is the tail of the fork
-func GenerateMockForkWithValidTx(size int, parent *Block) []*Block{
+func GenerateMockForkWithValidTx(size int, parent *Block) []*Block {
 	fork := []*Block{}
 	b := NewBlock(nil, parent)
 	b.SetHash(b.CalculateHash())
 	fork = append(fork, b)
 
-	for i:=1; i<size; i++{
+	for i := 1; i < size; i++ {
 		b = NewBlock([]*Transaction{MockTransaction()}, b)
 		b.SetHash(b.CalculateHash())
 		fork = append([]*Block{b}, fork...)
@@ -110,13 +127,13 @@ func GenerateMockForkWithValidTx(size int, parent *Block) []*Block{
 }
 
 //the first item is the tail of the fork
-func GenerateMockForkWithInvalidTx(size int, parent *Block) []*Block{
+func GenerateMockForkWithInvalidTx(size int, parent *Block) []*Block {
 	fork := []*Block{}
 	b := NewBlock(nil, parent)
 	b.SetHash(b.CalculateHash())
 	fork = append(fork, b)
 
-	for i:=1; i<size; i++{
+	for i := 1; i < size; i++ {
 		b = NewBlock([]*Transaction{MockTransaction()}, b)
 		b.SetHash(b.CalculateHash())
 		fork = append([]*Block{b}, fork...)
@@ -124,7 +141,7 @@ func GenerateMockForkWithInvalidTx(size int, parent *Block) []*Block{
 	return fork
 }
 
-func MockTransaction() *Transaction{
+func MockTransaction() *Transaction {
 	return &Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  MockTxInputs(),
@@ -153,7 +170,7 @@ func MockTxOutputs() []TXOutput {
 	}
 }
 
-func GenerateMockTransactionPool(numOfTxs int) *TransactionPool{
+func GenerateMockTransactionPool(numOfTxs int) *TransactionPool {
 	txPool := &TransactionPool{}
 	for i := 0; i < numOfTxs; i++ {
 		txPool.Transactions.StructPush(*MockTransaction())
@@ -161,8 +178,8 @@ func GenerateMockTransactionPool(numOfTxs int) *TransactionPool{
 	return txPool
 }
 
-func CleanTxnPoolBeforeTest(){
-	for _,v := range GetTxnPoolInstance().Transactions.Get() {
+func CleanTxnPoolBeforeTest() {
+	for _, v := range GetTxnPoolInstance().Transactions.Get() {
 		GetTxnPoolInstance().Transactions.StructDelete(v)
 	}
 }
