@@ -1,16 +1,16 @@
 package main
 
 import (
-	"log"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/config"
 	"flag"
 	"github.com/dappley/go-dappley/storage"
+	"log"
+	"github.com/dappley/go-dappley/logic"
 )
 
 const (
@@ -39,9 +39,12 @@ func main() {
 
 	//creat blockchain
 	conss, dynasty := initConsensus(conf)
-	bc, err := logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
-	if err != nil {
-		log.Panic(err)
+	bc,err := core.GetBlockchain(db,conss)
+	if err !=nil {
+		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 
 	node, err := initNode(conf,bc)
