@@ -28,6 +28,7 @@ func (dm *Dapmsg) ToProto() proto.Message{
 	return &networkpb.Dapmsg{
 		Cmd: dm.cmd,
 		Data: dm.data,
+		UnixTimeRecvd: dm.unixTimeRecvd,
 	}
 }
 
