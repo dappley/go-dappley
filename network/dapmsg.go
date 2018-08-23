@@ -3,15 +3,17 @@ package network
 import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/network/pb"
+	"time"
 )
 
 type Dapmsg struct{
 	cmd 	string
 	data 	[]byte
+	unixTimeRecvd int64
 }
 
 func NewDapmsg(cmd string, data []byte) *Dapmsg {
-	return &Dapmsg{cmd, data,}
+	return &Dapmsg{cmd, data, time.Now().Unix()}
 }
 
 func (dm *Dapmsg) GetCmd() string{
@@ -32,4 +34,5 @@ func (dm *Dapmsg) ToProto() proto.Message{
 func (dm *Dapmsg) FromProto(pb proto.Message){
 	dm.cmd = pb.(*networkpb.Dapmsg).Cmd
 	dm.data = pb.(*networkpb.Dapmsg).Data
+	dm.unixTimeRecvd =pb.(*networkpb.Dapmsg).UnixTimeRecvd
 }
