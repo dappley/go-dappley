@@ -84,8 +84,6 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//rollback to height 3
 	bc.RollbackToABlockHeight(blk.GetHash())
 
-	cleanUpPool()
-
 	//the height 3 block should be the new tail block
 	newTailBlk,err := bc.GetTailBlock()
 	assert.Nil(t,err)
@@ -140,7 +138,6 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	assert.Nil(t, err)
 	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
 
-	cleanUpPool()
 }
 
 func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
@@ -170,6 +167,4 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	newTailBlkHash,err := bc.GetTailHash()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t,tailBlkHash,newTailBlkHash)
-
-	cleanUpPool()
 }

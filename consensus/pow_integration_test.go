@@ -77,7 +77,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	core.GetTxnPoolInstance().StructPush(tx)
+	bc.TxnPool().StructPush(tx)
 
 	//start a miner
 	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
@@ -174,7 +174,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	core.GetTxnPoolInstance().StructPush(tx)
+	bc.TxnPool().StructPush(tx)
 
 	//start a producer
 	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
@@ -191,7 +191,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, wallet, bc, 0)
 	assert.Nil(t, err)
 
-	core.GetTxnPoolInstance().StructPush(tx2)
+	bc.TxnPool().StructPush(tx2)
 
 	//Make sure there are blocks have been mined
 	currCount := GetNumberOfBlocks(t, bc.Iterator())

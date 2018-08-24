@@ -45,7 +45,7 @@ var popInputOrder = []struct {
 
 //transaction pool push function
 func TestTxPoolPush(t *testing.T) {
-	txPool := GetTxnPoolInstance()
+	txPool := NewTxnPool()
 	txPool.Transactions.StructPush(t1)
 	assert.Equal(t, 1, txPool.Transactions.Len())
 	txPool.Transactions.StructPush(t2)
@@ -53,13 +53,12 @@ func TestTxPoolPush(t *testing.T) {
 	txPool.Transactions.StructPush(t3)
 	txPool.Transactions.StructPush(t4)
 	assert.Equal(t, 4, txPool.Transactions.Len())
-	cleanUpPool()
 }
 
 func TestTranstionPoolPop(t *testing.T) {
 	for _, tt := range popInputOrder {
 		var popOrder = []uint64{}
-		txPool := GetTxnPoolInstance()
+		txPool := NewTxnPool()
 		for _, tx := range tt.order {
 			txPool.Transactions.StructPush(tx)
 		}
@@ -67,13 +66,6 @@ func TestTranstionPoolPop(t *testing.T) {
 			popOrder = append(popOrder, txPool.Transactions.PopRight().(Transaction).Tip)
 		}
 		assert.Equal(t, expectPopOrder, popOrder)
-	}
-}
-
-func cleanUpPool() {
-	txPool := GetTxnPoolInstance()
-	for txPool.Transactions.Len() > 0 {
-		txPool.Transactions.PopRight()
 	}
 }
 

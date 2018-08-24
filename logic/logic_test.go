@@ -550,7 +550,7 @@ func TestAddBalance(t *testing.T) {
 			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
 
 			// Add `addAmount` to the balance of the new wallet
-			err = AddBalance(testAddr, tc.addAmount, store)
+			err = AddBalance(testAddr, tc.addAmount, b)
 			assert.Equal(t, err, tc.expectedErr)
 
 			// Start mining to approve the transaction
@@ -589,9 +589,9 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			// Create a coinbase wallet address
 			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 			// Create a blockchain
-			CreateBlockchain(addr, store, nil)
-
-			err := AddBalance(core.Address{tc.address}, 8, store)
+			bc, err := CreateBlockchain(addr, store, nil)
+			assert.Nil(t, err)
+			err = AddBalance(core.Address{tc.address}, 8, bc)
 			assert.Equal(t, ErrInvalidAddress, err)
 		})
 	}

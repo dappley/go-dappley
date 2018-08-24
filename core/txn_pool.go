@@ -89,13 +89,6 @@ func NewTxnPool() *TransactionPool{
 	return txnPool
 }
 
-func GetTxnPoolInstance() *TransactionPool {
-	once.Do(func() {
-		instance = NewTxnPool()
-	})
-	return instance
-}
-
 func (txnPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction){
 	for _,tx := range txs {
 		txnPool.StructDelete(*tx)
@@ -122,8 +115,8 @@ func (txnPool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
 //need to optimize
 func (txnPool *TransactionPool) GetSortedTransactions() []*Transaction {
 	sortedTransactions := []*Transaction{}
-	for GetTxnPoolInstance().Transactions.Len() > 0 {
-		txn:= GetTxnPoolInstance().Transactions.PopRight().(Transaction)
+	for txnPool.Transactions.Len() > 0 {
+		txn:= txnPool.Transactions.PopRight().(Transaction)
 		sortedTransactions = append(sortedTransactions, &txn)
 	}
 	return sortedTransactions

@@ -128,7 +128,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	//verify all transactions
 	//miner.verifyTransactions()
 	//get all transactions
-	txs := core.GetTxnPoolInstance().GetSortedTransactions()
+	txs := miner.bc.TxnPool().GetSortedTransactions()
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(miner.cbAddr, "")
 	txs = append(txs, &cbtx)
@@ -162,6 +162,6 @@ func (miner *Miner) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool) 
 //verify transactions and remove invalid transactions
 func (miner *Miner) verifyTransactions() {
 	utxoPool := core.GetStoredUtxoMap(miner.bc.DB, core.UtxoMapKey)
-	txPool := core.GetTxnPoolInstance()
+	txPool := miner.bc.TxnPool()
 	txPool.FilterAllTransactions(utxoPool)
 }

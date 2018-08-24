@@ -184,7 +184,7 @@ loop:
 				addBalanceCmd.Usage()
 			}
 			addBalanceAddress := core.NewAddress(*addBalanceAddressString)
-			err := logic.AddBalance(addBalanceAddress, *addAmount, bc.DB)
+			err := logic.AddBalance(addBalanceAddress, *addAmount, bc)
 			if err != nil {
 				log.Println(err)
 			}

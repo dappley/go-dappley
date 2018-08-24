@@ -178,8 +178,3 @@ func GenerateMockTransactionPool(numOfTxs int) *TransactionPool {
 	return txPool
 }
 
-func CleanTxnPoolBeforeTest() {
-	for _, v := range GetTxnPoolInstance().Transactions.Get() {
-		GetTxnPoolInstance().Transactions.StructDelete(v)
-	}
-}
