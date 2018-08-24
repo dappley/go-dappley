@@ -28,6 +28,7 @@ import (
 )
 
 var (
+	ErrInvalidAddAmount     = errors.New("ERROR: Amount is invalid (must be > 0)")
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
@@ -115,6 +116,11 @@ func AddBalance(address core.Address, amount int, db storage.Storage) (error) {
 	if !address.ValidateAddress() {
 		return ErrInvalidAddress
 	}
+
+	if amount <= 0 {
+		return ErrInvalidAddAmount
+	}
+
 	//inject db here
 
 	bc, err := core.GetBlockchain(db,nil)
