@@ -107,7 +107,7 @@ func (miner *Miner) prepare() {
 
 func (miner *Miner) returnBlk() {
 	if !miner.newBlock.isValid {
-		miner.newBlock.block.Rollback()
+		miner.newBlock.block.Rollback(miner.bc.TxnPool())
 	}
 	miner.retChan <- miner.newBlock
 }

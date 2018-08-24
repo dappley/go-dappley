@@ -80,13 +80,18 @@ func (s *TransactionPool) StructPush(val interface{}) {
 	s.Transactions.Set(content)
 }
 
+func NewTxnPool() *TransactionPool{
+	txnPool := &TransactionPool{
+		messageCh: make(chan string, 128),
+		size:      128,
+	}
+	txnPool.Transactions = *sorted.NewSlice(CompareTransactionTips, txnPool.StructDelete, txnPool.StructPush)
+	return txnPool
+}
+
 func GetTxnPoolInstance() *TransactionPool {
 	once.Do(func() {
-		instance = &TransactionPool{
-			messageCh: make(chan string, 128),
-			size:      128,
-		}
-		instance.Transactions = *sorted.NewSlice(CompareTransactionTips, instance.StructDelete, instance.StructPush)
+		instance = NewTxnPool()
 	})
 	return instance
 }

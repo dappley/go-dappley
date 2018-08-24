@@ -27,8 +27,8 @@ type Blockchain struct {
 	currentHash []byte
 	DB          storage.Storage
 	blockPool   *BlockPool
-	consensus 	Consensus
-	//txPool      *TransactionPool
+	consensus   Consensus
+	txnPool     *TransactionPool
 }
 
 // CreateBlockchain creates a new blockchain DB
@@ -39,6 +39,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
+		NewTxnPool(),
 	}
 	bc.blockPool.SetBlockchain(bc)
 	bc.updateDbWithNewBlock(genesis)
@@ -56,6 +57,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
+		NewTxnPool(), //TODO: Need to retrieve transaction pool from db
 	}
 	bc.blockPool.SetBlockchain(bc)
 	return bc, nil
@@ -68,6 +70,10 @@ func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 
 func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
+}
+
+func (bc *Blockchain) TxnPool() *TransactionPool {
+	return bc.txnPool
 }
 
 //TODO: optimize performance
@@ -202,7 +208,7 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.currentHash, bc.DB,nil,bc.consensus}
+	return &Blockchain{bc.currentHash, bc.DB,nil,bc.consensus,nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -371,7 +377,7 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 			return false
 		}
 		parentBlkHash = blk.GetPrevHash()
-		blk.Rollback()
+		blk.Rollback(bc.txnPool)
 	}
 	bc.setTailBlockHash(parentBlkHash)
 
