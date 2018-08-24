@@ -347,7 +347,7 @@ func (bc *Blockchain) concatenateForkToBlockchain(){
 		for i := bc.BlockPool().forkPoolLen()-1; i>=0; i--{
 			bc.UpdateNewBlock(bc.BlockPool().forkPool[i])
 			//Remove transactions in current transaction pool
-			bc.BlockPool().forkPool[i].RemoveMinedTxFromTxPool()
+			bc.TxnPool().RemoveMultipleTransactions(bc.BlockPool().forkPool[i].GetTransactions())
 		}
 	}
 	bc.BlockPool().ResetForkPool()

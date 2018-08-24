@@ -34,32 +34,32 @@ func CompareTransactionTips(a interface{}, b interface{}) int {
 	}
 }
 
-func (s *TransactionPool) StructDelete(txn interface{}) {
-	for k, v := range s.Transactions.Get() {
+func (txnPool *TransactionPool) StructDelete(txn interface{}) {
+	for k, v := range txnPool.Transactions.Get() {
 		if bytes.Compare(v.(Transaction).ID, txn.(Transaction).ID) == 0 {
 
 			var content []interface{}
-			content = append(content, s.Transactions.Get()[k+1:]...)
-			content = append(s.Transactions.Get()[0:k], content...)
-			s.Transactions.Set(content)
+			content = append(content, txnPool.Transactions.Get()[k+1:]...)
+			content = append(txnPool.Transactions.Get()[0:k], content...)
+			txnPool.Transactions.Set(content)
 			return
 		}
 	}
 }
 
 // Push a new value into slice
-func (s *TransactionPool) StructPush(val interface{}) {
-	if s.Transactions.Len() == 0 {
-		s.Transactions.AddSliceItem(val)
+func (txnPool *TransactionPool) StructPush(val interface{}) {
+	if txnPool.Transactions.Len() == 0 {
+		txnPool.Transactions.AddSliceItem(val)
 		return
 	}
 
-	start, end := 0, s.Transactions.Len()-1
+	start, end := 0, txnPool.Transactions.Len()-1
 	result, mid := 0, 0
 	for start <= end {
 		mid = (start + end) / 2
-		cmp := s.Transactions.GetSliceCmp()
-		result = cmp(s.Transactions.Index(mid), val)
+		cmp := txnPool.Transactions.GetSliceCmp()
+		result = cmp(txnPool.Transactions.Index(mid), val)
 		if result > 0 {
 			end = mid - 1
 		} else if result < 0 {
@@ -70,14 +70,14 @@ func (s *TransactionPool) StructPush(val interface{}) {
 	}
 	content := []interface{}{val}
 	if result > 0 {
-		content = append(content, s.Transactions.Get()[mid:]...)
-		content = append(s.Transactions.Get()[0:mid], content...)
+		content = append(content, txnPool.Transactions.Get()[mid:]...)
+		content = append(txnPool.Transactions.Get()[0:mid], content...)
 	} else {
-		content = append(content, s.Transactions.Get()[mid+1:]...)
-		content = append(s.Transactions.Get()[0:mid+1], content...)
+		content = append(content, txnPool.Transactions.Get()[mid+1:]...)
+		content = append(txnPool.Transactions.Get()[0:mid+1], content...)
 
 	}
-	s.Transactions.Set(content)
+	txnPool.Transactions.Set(content)
 }
 
 func NewTxnPool() *TransactionPool{
@@ -96,25 +96,31 @@ func GetTxnPoolInstance() *TransactionPool {
 	return instance
 }
 
-//function f should return true if the transaction needs to be pushed back to the pool
-func (pool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
+func (txnPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction){
+	for _,tx := range txs {
+		txnPool.StructDelete(*tx)
+	}
+}
 
-	for _,v := range pool.Transactions.Get(){
+//function f should return true if the transaction needs to be pushed back to the pool
+func (txnPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
+
+	for _,v := range txnPool.Transactions.Get(){
 		txn := v.(Transaction)
 		if !txHandler(txn) {
-			pool.Transactions.StructDelete(txn)
+			txnPool.Transactions.StructDelete(txn)
 		}
 	}
 }
 
-func (pool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
-	pool.Traverse(func(tx Transaction) bool{
+func (txnPool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
+	txnPool.Traverse(func(tx Transaction) bool{
 		return tx.Verify(utxoPool)
 	})
 }
 
 //need to optimize
-func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
+func (txnPool *TransactionPool) GetSortedTransactions() []*Transaction {
 	sortedTransactions := []*Transaction{}
 	for GetTxnPoolInstance().Transactions.Len() > 0 {
 		txn:= GetTxnPoolInstance().Transactions.PopRight().(Transaction)
@@ -123,45 +129,45 @@ func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
 	return sortedTransactions
 }
 
-func (pool *TransactionPool) ConditionalAdd(tx Transaction){
+func (txnPool *TransactionPool) ConditionalAdd(tx Transaction){
 	//get smallest tip txn
 
-	if(pool.Transactions.Len() >= TransactionPoolLimit){
-		compareTx:= pool.Transactions.PopLeft().(Transaction)
+	if(txnPool.Transactions.Len() >= TransactionPoolLimit){
+		compareTx:= txnPool.Transactions.PopLeft().(Transaction)
 		greaterThanLeastTip:= tx.Tip > compareTx.Tip
 		if(greaterThanLeastTip){
-			pool.Transactions.StructPush(tx)
+			txnPool.Transactions.StructPush(tx)
 		}else{// do nothing, push back popped tx
-			pool.Transactions.StructPush(compareTx)
+			txnPool.Transactions.StructPush(compareTx)
 		}
 	}else{
-		pool.Transactions.StructPush(tx)
+		txnPool.Transactions.StructPush(tx)
 	}
 }
 
-func (pool *TransactionPool) Start() {
-	go pool.messageLoop()
+func (txnPool *TransactionPool) Start() {
+	go txnPool.messageLoop()
 }
 
-func (pool *TransactionPool) Stop() {
-	pool.exitCh <- true
+func (txnPool *TransactionPool) Stop() {
+	txnPool.exitCh <- true
 }
 
 //todo: will change the input from string to transaction
-func (pool *TransactionPool) PushTransaction(msg string) {
-	//func (pool *TransactionPool) PushTransaction(tx *Transaction){
-	//	pool.Push(tx)
+func (txnPool *TransactionPool) PushTransaction(msg string) {
+	//func (txnPool *TransactionPool) PushTransaction(tx *Transaction){
+	//	txnPool.Push(tx)
 	fmt.Println(msg)
 }
 
-func (pool *TransactionPool) messageLoop() {
+func (txnPool *TransactionPool) messageLoop() {
 	for {
 		select {
-		case <-pool.exitCh:
+		case <-txnPool.exitCh:
 			fmt.Println("Quit Transaction Pool")
 			return
-		case msg := <-pool.messageCh:
-			pool.PushTransaction(msg)
+		case msg := <-txnPool.messageCh:
+			txnPool.PushTransaction(msg)
 		}
 	}
 }

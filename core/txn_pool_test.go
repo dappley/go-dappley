@@ -76,3 +76,18 @@ func cleanUpPool() {
 		txPool.Transactions.PopRight()
 	}
 }
+
+func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
+	txnPool := NewTxnPool()
+	totalTx:=5
+	txs := []*Transaction{}
+	for i:=0 ;i<totalTx;i++{
+		tx := MockTransaction()
+		txs = append(txs, tx)
+		txnPool.StructPush(*tx)
+	}
+	txnPool.RemoveMultipleTransactions(txs)
+
+	assert.Equal(t,0,txnPool.Transactions.Len())
+
+}
