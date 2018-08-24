@@ -559,8 +559,7 @@ func TestAddBalance(t *testing.T) {
 			pow.SetTargetBit(0)
 			pow.Start()
 
-			time.Sleep(1 * time.Second)
-
+			for b.GetMaxHeight()<=1{}
 			pow.Stop()
 
 			// The wallet balance should be the expected difference

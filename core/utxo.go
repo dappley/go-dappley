@@ -11,6 +11,8 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+const UtxoMapKey = "utxo"
+const UtxoForkMapKey = "utxoFork"
 //map of key: wallet address, value: serialized map
 type utxoIndex map[string][]UTXOutputStored
 

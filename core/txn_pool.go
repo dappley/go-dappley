@@ -2,14 +2,11 @@ package core
 
 import (
 	"bytes"
-	"sync"
-
 	"github.com/dappley/go-dappley/common/sorted"
 	"fmt"
 )
 
-const UtxoMapKey = "utxo"
-const UtxoForkMapKey = "utxoFork"
+
 const TransactionPoolLimit = 5
 
 type TransactionPool struct {
@@ -18,9 +15,6 @@ type TransactionPool struct {
 	size         int
 	Transactions sorted.Slice
 }
-
-var instance *TransactionPool
-var once sync.Once
 
 func CompareTransactionTips(a interface{}, b interface{}) int {
 	ai := a.(Transaction)
