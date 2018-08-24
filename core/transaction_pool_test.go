@@ -45,7 +45,7 @@ var popInputOrder = []struct {
 
 //transaction pool push function
 func TestTxPoolPush(t *testing.T) {
-	txPool := NewTxnPool()
+	txPool := NewTransactionPool()
 	txPool.Transactions.StructPush(t1)
 	assert.Equal(t, 1, txPool.Transactions.Len())
 	txPool.Transactions.StructPush(t2)
@@ -58,7 +58,7 @@ func TestTxPoolPush(t *testing.T) {
 func TestTranstionPoolPop(t *testing.T) {
 	for _, tt := range popInputOrder {
 		var popOrder = []uint64{}
-		txPool := NewTxnPool()
+		txPool := NewTransactionPool()
 		for _, tx := range tt.order {
 			txPool.Transactions.StructPush(tx)
 		}
@@ -70,16 +70,16 @@ func TestTranstionPoolPop(t *testing.T) {
 }
 
 func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
-	txnPool := NewTxnPool()
+	txPool := NewTransactionPool()
 	totalTx:=5
 	txs := []*Transaction{}
 	for i:=0 ;i<totalTx;i++{
 		tx := MockTransaction()
 		txs = append(txs, tx)
-		txnPool.StructPush(*tx)
+		txPool.StructPush(*tx)
 	}
-	txnPool.RemoveMultipleTransactions(txs)
+	txPool.RemoveMultipleTransactions(txs)
 
-	assert.Equal(t,0,txnPool.Transactions.Len())
+	assert.Equal(t,0, txPool.Transactions.Len())
 
 }

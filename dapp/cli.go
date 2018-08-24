@@ -65,7 +65,7 @@ loop:
 		addPeerCmd := flag.NewFlagSet("addPeer", flag.ExitOnError)
 		sendMockBlockCmd := flag.NewFlagSet("sendMockBlock", flag.ExitOnError)
 		syncPeersCmd := flag.NewFlagSet("syncPeers", flag.ExitOnError)
-		broadcastMockTxnCmd := flag.NewFlagSet("broadcastTxn", flag.ExitOnError)
+		broadcastMockTxCmd := flag.NewFlagSet("broadcastTx", flag.ExitOnError)
 		setLoggerLevelCmd := flag.NewFlagSet("setLoggerLevel", flag.ExitOnError)
 		addProducerCmd := flag.NewFlagSet("addProducer", flag.ExitOnError)
 		setMaxProducersCmd := flag.NewFlagSet("setMaxProducers", flag.ExitOnError)
@@ -105,8 +105,8 @@ loop:
 			err = sendMockBlockCmd.Parse(args[1:])
 		case "syncPeers":
 			err = syncPeersCmd.Parse(args[1:])
-		case "broadcastTxn":
-			err = broadcastMockTxnCmd.Parse(args[1:])
+		case "broadcastTx":
+			err = broadcastMockTxCmd.Parse(args[1:])
 		case "setLoggerLevel":
 			err = setLoggerLevelCmd.Parse(args[1:])
 		case "addProducer":
@@ -160,9 +160,9 @@ loop:
 			node.SyncPeers()
 		}
 
-		if broadcastMockTxnCmd.Parsed() {
-			txn := core.MockTransaction()
-			node.BroadcastTxnCmd(txn)
+		if broadcastMockTxCmd.Parsed() {
+			tx := core.MockTransaction()
+			node.BroadcastTxCmd(tx)
 		}
 
 		if getBalanceCmd.Parsed() {

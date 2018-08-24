@@ -47,7 +47,7 @@ func GenerateUtxoMockBlockWithInputs() *Block{
 
 func MockUtxoTransactionWithoutInputs() *Transaction{
 	return &Transaction{
-		ID:  []byte("txn1"),
+		ID:  []byte("tx1"),
 		Vin:  []TXInput{},
 		Vout: MockUtxoOutputsWithoutInputs(),
 		Tip:  5,
@@ -56,7 +56,7 @@ func MockUtxoTransactionWithoutInputs() *Transaction{
 
 func MockUtxoTransactionWithInputs() *Transaction{
 	return &Transaction{
-		ID:   []byte("txn2"),
+		ID:   []byte("tx2"),
 		Vin:  MockUtxoInputs(),
 		Vout: MockUtxoOutputsWithInputs(),
 		Tip:  5,
@@ -65,11 +65,11 @@ func MockUtxoTransactionWithInputs() *Transaction{
 
 func MockUtxoInputs() []TXInput {
 	return []TXInput{
-		{[]byte("txn1"),
+		{[]byte("tx1"),
 			0,
 			util.GenerateRandomAoB(2),
 			[]byte("address1")},
-		{[]byte("txn1"),
+		{[]byte("tx1"),
 			1,
 			util.GenerateRandomAoB(2),
 			[]byte("address1")},

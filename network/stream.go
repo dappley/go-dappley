@@ -14,10 +14,10 @@ import (
 )
 
 const(
-	SyncBlock 		= "SyncBlock"
-	SyncPeerList 	= "SyncPeerList"
-	RequestBlock	= "requestBlock"
-	BroadcastTxn 	= "BroadcastTxn"
+	SyncBlock        = "SyncBlock"
+	SyncPeerList     = "SyncPeerList"
+	RequestBlock     = "requestBlock"
+	BroadcastTx      = "BroadcastTx"
 	TestMsgRadiation = "TestMsgRadiation"
 )
 
@@ -197,9 +197,9 @@ func (s *Stream) parseData(data []byte){
 	case RequestBlock:
 		logger.Debug("Received ",RequestBlock," command from:", s.remoteAddr)
 		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
-	case BroadcastTxn:
-		logger.Debug("Received ", BroadcastTxn," command from:", s.remoteAddr)
-		s.node.addTxnToPool(dm.GetData())
+	case BroadcastTx:
+		logger.Debug("Received ", BroadcastTx," command from:", s.remoteAddr)
+		s.node.addTxToPool(dm.GetData())
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)
 	}

@@ -34,7 +34,6 @@ type Node struct {
 	info      *Peer
 	bc        *core.Blockchain
 	blks      []*core.Block
-	txnPool   core.TransactionPool
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
@@ -47,7 +46,6 @@ func NewNode(bc *core.Blockchain) *Node {
 	nil,
 	bc,
 	nil,
-	core.TransactionPool{},
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
@@ -235,8 +233,8 @@ func (n *Node) SyncPeers() error {
 }
 
 
-func (n *Node) BroadcastTxnCmd(txn *core.Transaction) error{
-	data,err := prepareData(txn.ToProto(), BroadcastTxn)
+func (n *Node) BroadcastTxCmd(tx *core.Transaction) error{
+	data,err := prepareData(tx.ToProto(), BroadcastTx)
 	if err!=nil {
 		return err
 	}
@@ -308,24 +306,24 @@ func (n *Node) syncBlockHandler(data []byte, pid peer.ID){
 	n.broadcast(data)
 }
 
-func (n *Node) addTxnToPool(data []byte){
+func (n *Node) addTxToPool(data []byte){
 
 	//create a block proto
-	txnpb := &corepb.Transaction{}
+	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, txnpb); err!=nil{
+	if err := proto.Unmarshal(data, txpb); err!=nil{
 		logger.Warn(err)
 	}
 
-	//create an empty txn
-	txn := &core.Transaction{}
+	//create an empty tx
+	tx := &core.Transaction{}
 
-	//load the txn with proto
-	txn.FromProto(txnpb)
+	//load the tx with proto
+	tx.FromProto(txpb)
 
-	//add txn to txnpool
-	n.txnPool.StructPush(txn)
+	//add tx to txpool
+	n.bc.TxPool().StructPush(tx)
 }
 
 

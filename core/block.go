@@ -268,11 +268,11 @@ func IsParentBlock(parentBlk, childBlk *Block) bool{
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
 
-func (b *Block) Rollback(txnPool *TransactionPool){
+func (b *Block) Rollback(txPool *TransactionPool){
 	if b!= nil {
 		for _,tx := range b.GetTransactions(){
 			if !tx.IsCoinbase() {
-				txnPool.Transactions.StructPush(*tx)
+				txPool.Transactions.StructPush(*tx)
 			}
 		}
 	}

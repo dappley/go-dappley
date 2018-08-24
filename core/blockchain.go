@@ -28,7 +28,7 @@ type Blockchain struct {
 	DB          storage.Storage
 	blockPool   *BlockPool
 	consensus   Consensus
-	txnPool     *TransactionPool
+	txPool      *TransactionPool
 }
 
 // CreateBlockchain creates a new blockchain DB
@@ -39,7 +39,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
-		NewTxnPool(),
+		NewTransactionPool(),
 	}
 	bc.blockPool.SetBlockchain(bc)
 	bc.updateDbWithNewBlock(genesis)
@@ -57,7 +57,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
-		NewTxnPool(), //TODO: Need to retrieve transaction pool from db
+		NewTransactionPool(), //TODO: Need to retrieve transaction pool from db
 	}
 	bc.blockPool.SetBlockchain(bc)
 	return bc, nil
@@ -72,8 +72,8 @@ func (bc *Blockchain) BlockPool() *BlockPool {
 	return bc.blockPool
 }
 
-func (bc *Blockchain) TxnPool() *TransactionPool {
-	return bc.txnPool
+func (bc *Blockchain) TxPool() *TransactionPool {
+	return bc.txPool
 }
 
 //TODO: optimize performance
@@ -101,7 +101,7 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 }
 
 
-func (bc *Blockchain) FindTransactionFromIndexBlock(txnID []byte, blockId []byte) (Transaction, error) {
+func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte) (Transaction, error) {
 	println("as")
 
 	bci := bc.Iterator()
@@ -114,7 +114,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txnID []byte, blockId []byte
 		}
 
 		for _, tx := range block.GetTransactions() {
-			if bytes.Compare(tx.ID, txnID) == 0 {
+			if bytes.Compare(tx.ID, txID) == 0 {
 				return *tx, nil
 			}
 		}
@@ -347,7 +347,7 @@ func (bc *Blockchain) concatenateForkToBlockchain(){
 		for i := bc.BlockPool().forkPoolLen()-1; i>=0; i--{
 			bc.UpdateNewBlock(bc.BlockPool().forkPool[i])
 			//Remove transactions in current transaction pool
-			bc.TxnPool().RemoveMultipleTransactions(bc.BlockPool().forkPool[i].GetTransactions())
+			bc.TxPool().RemoveMultipleTransactions(bc.BlockPool().forkPool[i].GetTransactions())
 		}
 	}
 	bc.BlockPool().ResetForkPool()
@@ -377,7 +377,7 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 			return false
 		}
 		parentBlkHash = blk.GetPrevHash()
-		blk.Rollback(bc.txnPool)
+		blk.Rollback(bc.txPool)
 	}
 	bc.setTailBlockHash(parentBlkHash)
 

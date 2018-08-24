@@ -35,7 +35,7 @@ type Transaction struct {
 }
 
 
-type TxnIndex struct{
+type TxIndex struct{
 	BlockId []byte
 	BlockIndex int
 }
