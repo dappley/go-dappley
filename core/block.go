@@ -289,15 +289,6 @@ func (b *Block) FindTransactionById(txid []byte) *Transaction{
 	return nil
 }
 
-//remove the transactions in a block from the transaction pool
-func (b *Block) RemoveMinedTxFromTxPool(){
-	txPool := GetTxnPoolInstance()
-	txPool.Traverse(func(tx Transaction) bool{
-		//if the transaction in the transaction pool is not found in the block, keep it in the pool
-		//if the transaction in the transaction pool is found in the block. remove it from the pool
-		return b.FindTransactionById(tx.ID) == nil
-	})
-}
 
 func (b *Block) GetCoinbaseTransaction() *Transaction{
 	//the coinbase transaction is usually placed at the end of all transactions
