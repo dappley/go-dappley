@@ -42,7 +42,7 @@ func TestServer_StartRPC(t *testing.T) {
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
 	grpcServer := NewGrpcServer(node)
-	go StartRpc(grpcServer)
+	grpcServer.Start()
 
 	time.Sleep(time.Millisecond*100)
 	//prepare grpc client

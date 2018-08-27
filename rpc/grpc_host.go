@@ -19,14 +19,13 @@
 package rpc
 
 import (
-	"log"
-	"net"
-
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
+	"net"
+	"log"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -61,14 +60,16 @@ func (s *Server) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoReques
 	}, nil
 }
 
-func StartRpc(srv rpcpb.ConnectServer) {
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	rpcpb.RegisterConnectServer(s, srv)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %s", err)
-	}
+func (s *Server) Start() {
+	go func(){
+		lis, err := net.Listen("tcp", port)
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+		}
+		srv := grpc.NewServer()
+		rpcpb.RegisterConnectServer(srv, s)
+		if err := srv.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %s", err)
+		}
+	}()
 }
