@@ -34,11 +34,12 @@ const (
 
 // Server is used to implement helloworld.GreeterServer.
 type Server struct{
-	node *network.Node
+	srv 	*grpc.Server
+	node 	*network.Node
 }
 
 func NewGrpcServer(node *network.Node) *Server{
-	return &Server{node}
+	return &Server{grpc.NewServer(),node}
 }
 
 // SayHello implements helloworld.GreeterServer
@@ -72,4 +73,8 @@ func (s *Server) Start() {
 			log.Fatalf("failed to serve: %s", err)
 		}
 	}()
+}
+
+func (s *Server) Stop() {
+	s.srv.Stop()
 }
