@@ -43,6 +43,7 @@ const subsidy = 10
 
 var (
 	ErrInsufficientFund = errors.New("ERROR: The balance is insufficient")
+	ErrInvalidAddAmount     = errors.New("ERROR: Amount is invalid (must be > 0)")
 )
 
 type Transaction struct {
@@ -265,22 +266,29 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, sender
 
 	tx := Transaction{nil, inputs, outputs, tip}
 	tx.ID = tx.Hash()
-	bc.SignTransaction(&tx, senderKeyPair.PrivateKey)
+	prevTXs := bc.GetPrevTransactions(tx)
+	tx.Sign(senderKeyPair.PrivateKey, prevTXs)
 
 	return tx, nil
 }
 
 //for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
+func NewUTXOTransactionforAddBalance(to Address, amount int, keyPair KeyPair, bc *Blockchain) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
+
+	// Validate amount
+	if amount <= 0 {
+		return Transaction{}, ErrInvalidAddAmount
+	}
 
 	// Build a list of outputs
 	outputs = append(outputs, *NewTXOutput(amount, to.Address))
 
-	tx := Transaction{nil, inputs, outputs, tip}
+	tx := Transaction{nil, inputs, outputs, 0}
 	tx.ID = tx.Hash()
-	bc.SignTransaction(&tx, keypair.PrivateKey)
+	prevTxs := bc.GetPrevTransactions(tx)
+	tx.Sign(keyPair.PrivateKey, prevTxs)
 
 	return tx, nil
 }

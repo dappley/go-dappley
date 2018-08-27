@@ -126,7 +126,7 @@ func AddBalance(address core.Address, amount int, bc *core.Blockchain) (error) {
 		return err
 	}
 	wallet := wallets.GetKeyPairByAddress(address)
-	tx, err := core.NewUTXOTransactionforAddBalance(address, amount, wallet, bc, 0)
+	tx, err := core.NewUTXOTransactionforAddBalance(address, amount, wallet, bc)
 
 	if err != nil {
 		return err

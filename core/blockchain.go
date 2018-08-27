@@ -20,7 +20,6 @@ package core
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"log"
@@ -211,7 +210,7 @@ func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
 	return UTXOs, nil
 }
 
-func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey) {
+func (bc *Blockchain) GetPrevTransactions(tx Transaction) map[string]Transaction {
 	prevTXs := make(map[string]Transaction)
 
 	for _, vin := range tx.Vin {
@@ -221,8 +220,7 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 		}
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
-
-	tx.Sign(privKey, prevTXs)
+	return prevTXs
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
