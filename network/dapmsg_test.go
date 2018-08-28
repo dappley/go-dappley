@@ -25,15 +25,17 @@ import (
 )
 
 func TestDapmsg_ToProto(t *testing.T) {
-	msg :=Dapmsg{"cmd", []byte{1,2,3,4}, 11111111}
-	retMsg := &networkpb.Dapmsg{Cmd: "cmd",Data: []byte{1,2,3,4}, UnixTimeRecvd: 11111111}
+	new := networkpb.Peer{}
+	msg :=Dapmsg{"cmd", []byte{1,2,3,4}, 11111111, new.Addr, Unicast}
+	retMsg := &networkpb.Dapmsg{Cmd: "cmd",Data: []byte{1,2,3,4}, UnixTimeRecvd: 11111111, From: new.Addr, UniOrBroadcast:Unicast}
 
 	assert.Equal(t,msg.ToProto(),retMsg)
 }
 
 func TestDapmsg_FromProto(t *testing.T) {
-	msg :=Dapmsg{"cmd", []byte{1,2,3,4}, 11111111}
-	retMsg := &networkpb.Dapmsg{Cmd: "cmd",Data: []byte{1,2,3,4}, UnixTimeRecvd:11111111}
+	new := networkpb.Peer{}
+	msg :=Dapmsg{"cmd", []byte{1,2,3,4}, 11111111, new.Addr, Unicast}
+	retMsg := &networkpb.Dapmsg{Cmd: "cmd",Data: []byte{1,2,3,4}, UnixTimeRecvd:11111111, From: new.Addr, UniOrBroadcast:Unicast}
 	msg2 := Dapmsg{}
 	msg2.FromProto(retMsg)
 

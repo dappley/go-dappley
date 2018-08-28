@@ -34,6 +34,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"bytes"
 )
 
 const InvalidAddress = "Invalid Address"
@@ -72,9 +73,9 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a blockchain with an invalid address
-	b, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil)
+	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil)
 	assert.Equal(t, ErrInvalidAddress, err)
-	assert.Nil(t, b)
+	assert.Nil(t, bc)
 }
 
 func TestGetBalance(t *testing.T) {
@@ -85,9 +86,9 @@ func TestGetBalance(t *testing.T) {
 	//create a wallet address
 	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 	//create a blockchain
-	b, err := CreateBlockchain(addr, store, nil)
+	bc, err := CreateBlockchain(addr, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
 	balance, err := GetBalance(addr, store)
@@ -103,9 +104,9 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//create a wallet address
 	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 	//create a blockchain
-	b, err := CreateBlockchain(addr, store, nil)
+	bc, err := CreateBlockchain(addr, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"), store)
@@ -133,9 +134,9 @@ func TestGetAllAddresses(t *testing.T) {
 	expected_res = append(expected_res, addr)
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, store, nil)
+	bc, err := CreateBlockchain(addr, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//create 10 more addresses
 	for i := 0; i < 10; i++ {
@@ -175,10 +176,10 @@ func TestSend(t *testing.T) {
 
 	pow := consensus.NewProofOfWork()
 	//create a blockchain
-	b, err := CreateBlockchain(wallet1.GetAddress(), store, pow)
+	bc, err := CreateBlockchain(wallet1.GetAddress(), store, pow)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
-	node := network.NewNode(b)
+	assert.NotNil(t, bc)
+	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//The balance1 should be 10 after creating a blockchain
 	balance1, err := GetBalance(wallet1.GetAddress(), store)
@@ -198,7 +199,7 @@ func TestSend(t *testing.T) {
 	assert.Equal(t, 0, balance2)
 
 	//Send 5 coins from wallet1 to wallet2
-	err = Send(wallet1, addr2, transferAmount, tip, b)
+	err = Send(wallet1, addr2, transferAmount, tip, bc)
 	assert.Nil(t, err)
 	pow.Setup(node, addr1.Address)
 
@@ -261,9 +262,9 @@ func TestSendToInvalidAddress(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr1, store, nil)
+	bc, err := CreateBlockchain(addr1, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(addr1, store)
@@ -363,7 +364,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 const testport = 10100
 
 func TestSyncBlocks(t *testing.T) {
-
+	logger.SetLevel(logger.DebugLevel)
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -422,7 +423,7 @@ loop:
 			blk, err := bcs[i].GetTailBlock()
 			assert.Nil(t, err)
 			if blk.GetHeight() > blkHeight[i] {
-				blkHeight[i]++
+				blkHeight[i] = blk.GetHeight()
 			}
 			if blk.GetHeight() >= targetHeight {
 				//count the number of nodes that have already stopped mining
@@ -438,9 +439,22 @@ loop:
 				break loop
 			}
 		}
+
 	}
 
-	time.Sleep(time.Second * 2)
+	//Leave time to work out forks and sync
+
+	for {
+		tailhash0, _ := bcs[0].GetTailHash()
+		tailhash1, _ := bcs[1].GetTailHash()
+		tailhash2, _ := bcs[2].GetTailHash()
+		tailhash3, _ := bcs[3].GetTailHash()
+		if bytes.Compare(tailhash0, tailhash1) == 0 && bytes.Compare(tailhash1, tailhash2) == 0 && bytes.Compare(tailhash2, tailhash3) == 0 {
+			break
+		}
+		time.Sleep(time.Second * 1)
+
+	}
 
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
@@ -452,7 +466,72 @@ loop:
 		assert.Nil(t, err)
 		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
 	}
+}
 
+const testport_msg_relay = 19999
+
+
+func TestBlockMsgRelay(t *testing.T) {
+	var pows []*consensus.ProofOfWork
+	var bcs []*core.Blockchain
+	var nodes []*network.Node
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+
+	numOfNodes := 4
+	for i := 0; i < numOfNodes; i++ {
+		//create storage instance
+		db := storage.NewRamStorage()
+		defer db.Close()
+
+		//create blockchain instance
+		pow := consensus.NewProofOfWork()
+		bc := core.CreateBlockchain(addr, db, pow)
+		bcs = append(bcs, bc)
+
+		n := network.NewNode(bcs[i])
+		if i==0{
+			pow.Setup(n, addr.Address)
+			pow.SetTargetBit(16)
+		}
+		n.Start(testport_msg_relay + 10*i)
+
+		nodes = append(nodes, n)
+		pows = append(pows, pow)
+	}
+	pows[0].Start()
+	time.Sleep(time.Second*2)
+	for i := 0; i < len(nodes); i++ {
+		nodes[i].AddStream(
+			nodes[i+1].GetPeerID(),
+			nodes[i+1].GetPeerMultiaddr(),
+		)
+		if i == (len(nodes) - 2) {
+			break
+		}
+	}
+
+	time.Sleep(time.Second*3)
+
+
+	//firstNode Starts Mining
+	tailBlock, _:= bcs[0].GetTailBlock()
+	nodes[0].SendBlock(tailBlock)
+	for {
+		//break when all nodes have synced first blocks
+		logger.Debug(len(nodes[0].GetBlocks()) , len(nodes[1].GetBlocks()) , len(nodes[2].GetBlocks()) , len(nodes[3].GetBlocks()) )
+		if(len(nodes[0].GetBlocks()) >= 1 && len(nodes[1].GetBlocks()) >= 1 && len(nodes[2].GetBlocks()) >= 1 && len(nodes[3].GetBlocks()) >= 1){
+			pows[0].Stop()
+			break
+		}
+	}
+	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
+	heights := []int{0,0,0,0} //keep track of each node's blockchain height
+	for i := 0; i < len(nodes); i++ {
+		for _, _ = range *nodes[i].GetRecentlyRcvedDapMessages() {
+			heights[i]++
+		}
+		assert.Equal(t, heights[i], len(nodes[i].GetBlocks()))
+	}
 }
 
 const testport_fork = 10200
@@ -544,22 +623,22 @@ func TestAddBalance(t *testing.T) {
 			pow := consensus.NewProofOfWork()
 
 			// Create a blockchain
-			b, err := CreateBlockchain(addr, store, pow)
+			bc, err := CreateBlockchain(addr, store, pow)
 
 			// Create a new wallet address for testing
 			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
 
 			// Add `addAmount` to the balance of the new wallet
-			err = AddBalance(testAddr, tc.addAmount, b)
+			err = AddBalance(testAddr, tc.addAmount, bc)
 			assert.Equal(t, err, tc.expectedErr)
 
 			// Start mining to approve the transaction
-			node := network.NewNode(b)
+			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
 			pow.Setup(node, addr.Address)
 			pow.SetTargetBit(0)
 			pow.Start()
 
-			for b.GetMaxHeight()<=1{}
+			for bc.GetMaxHeight()<=1{}
 			pow.Stop()
 
 			// The wallet balance should be the expected difference

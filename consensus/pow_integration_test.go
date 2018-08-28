@@ -321,8 +321,8 @@ func getBalancePrint(bc *core.Blockchain, addr string) (int, error) {
 
 func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[core.Address]int) {
 	for addr, bal := range addrBals{
-		b, err := getBalance(bc, addr.Address)
+		bc, err := getBalance(bc, addr.Address)
 		assert.Nil(t, err)
-		assert.Equal(t, bal, b)
+		assert.Equal(t, bal, bc)
 	}
 }
