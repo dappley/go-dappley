@@ -364,7 +364,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 const testport = 10100
 
 func TestSyncBlocks(t *testing.T) {
-	logger.SetLevel(logger.DebugLevel)
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
