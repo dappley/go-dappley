@@ -272,7 +272,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Equal(t, mineReward, balance1)
 
 	//Send 5 coins from addr1 to an invalid address
-	err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, b)
+	err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, bc)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -371,7 +371,7 @@ func TestSyncBlocks(t *testing.T) {
 	//wait for mining for at least "targetHeight" blocks
 	targetHeight := uint64(4)
 	//num of nodes to be created in the test
-	numOfNodes := 4
+	numOfNodes := 3
 	var firstNode *network.Node
 	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
@@ -448,8 +448,7 @@ loop:
 		tailhash0, _ := bcs[0].GetTailHash()
 		tailhash1, _ := bcs[1].GetTailHash()
 		tailhash2, _ := bcs[2].GetTailHash()
-		tailhash3, _ := bcs[3].GetTailHash()
-		if bytes.Compare(tailhash0, tailhash1) == 0 && bytes.Compare(tailhash1, tailhash2) == 0 && bytes.Compare(tailhash2, tailhash3) == 0 {
+		if bytes.Compare(tailhash0, tailhash1) == 0 && bytes.Compare(tailhash1, tailhash2) == 0  {
 			break
 		}
 		time.Sleep(time.Second * 1)
