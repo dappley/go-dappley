@@ -37,6 +37,8 @@ const(
 	RequestBlock     = "requestBlock"
 	BroadcastTx      = "BroadcastTx"
 	TestMsgRadiation = "TestMsgRadiation"
+	Unicast = 0
+	Broadcast = 1
 )
 
 var(
@@ -207,8 +209,10 @@ func (s *Stream) parseData(data []byte){
 
 	switch(dm.GetCmd()) {
 	case SyncBlock:
-		logger.Debug("Received ",SyncBlock," command from:", s.remoteAddr)
-		s.node.syncBlockHandler(dm.GetData(),s.peerID)
+
+		logger.Debug(s.node.GetPeerMultiaddr() , " (", s.node.info.peerid ,") Received ", SyncBlock," command from:", dm.from)
+		s.node.syncBlockHandler(dm,s.peerID)
+
 	case SyncPeerList:
 		logger.Debug("Received ",SyncPeerList," command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())

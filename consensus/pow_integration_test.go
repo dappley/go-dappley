@@ -80,7 +80,9 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	bc.TxPool().StructPush(tx)
 
 	//start a miner
-	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
+	n:= network.FakeNodeWithPidAndAddr(bc, "asd", "test")
+	pow.Setup(n, wallet1.GetAddress().Address)
+
 	pow.Start()
 	
 	//Make sure there are blocks have been mined
@@ -122,7 +124,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//start a miner
-	pow.Setup(network.NewNode(bc), cbWallet.GetAddress().Address)
+	n:= network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pow.Setup(n, cbWallet.GetAddress().Address)
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -177,7 +180,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	bc.TxPool().StructPush(tx)
 
 	//start a producer
-	pow.Setup(network.NewNode(bc), wallet1.GetAddress().Address)
+	n:= network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pow.Setup(n, wallet1.GetAddress().Address)
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -227,8 +231,8 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		pow,
 	)
 	defer bc.DB.Close()
-
-	pow.Setup(network.NewNode(bc),cbAddr.Address)
+	n:=network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pow.Setup(n,cbAddr.Address)
 
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -309,8 +313,6 @@ func getBalancePrint(bc *core.Blockchain, addr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	fmt.Println(UTXOs)
-
 	for _, out := range UTXOs {
 		balance += out.Value
 	}
