@@ -36,7 +36,6 @@ const(
 	SyncPeerList     = "SyncPeerList"
 	RequestBlock     = "requestBlock"
 	BroadcastTx      = "BroadcastTx"
-	TestMsgRadiation = "TestMsgRadiation"
 	Unicast = 0
 	Broadcast = 1
 )
