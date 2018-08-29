@@ -198,8 +198,9 @@ func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.Info( n.GetPeerMultiaddr()," Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
 	// Add  the peer list
-	if !n.peerList.ListIsFull() {
-		n.peerList.Add(&Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()})
+	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
+	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
+		n.peerList.Add(peer)
 	}
 
 	//start stream
