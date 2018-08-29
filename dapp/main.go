@@ -23,7 +23,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/config"
 	"flag"
 	"github.com/dappley/go-dappley/storage"
@@ -43,7 +42,6 @@ func main() {
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 	flag.Parse()
 
-	cli := CLI{}
 	//set to debug level
 	logger.SetLevel(logger.InfoLevel)
 	conf := config.LoadConfigFromFile(filePath)
@@ -57,7 +55,7 @@ func main() {
 	defer db.Close()
 
 	//creat blockchain
-	conss, dynasty := initConsensus(conf)
+	conss, _ := initConsensus(conf)
 	bc,err := core.GetBlockchain(db,conss)
 	if err !=nil {
 		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
@@ -76,9 +74,6 @@ func main() {
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 
-	//create wallets
-	wallets, err := client.NewWallets()
-
 	//start mining
 	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
 	conss.Setup(node, minerAddr)
@@ -87,7 +82,7 @@ func main() {
 	conss.Start()
 	defer conss.Stop()
 
-	cli.Run(bc, node, wallets, dynasty)
+	select{}
 }
 
 func initConsensus(conf *config.Config) (core.Consensus, *consensus.Dynasty){
