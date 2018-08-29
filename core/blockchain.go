@@ -294,6 +294,7 @@ func (bc *Blockchain) String() string {
 //record the new block in the database
 func (bc *Blockchain) updateDbWithNewBlock(newBlock *Block) {
 	bc.DB.Put(newBlock.GetHash(), newBlock.Serialize())
+	logger.Debug("Saved block in DB, has hash of: " , newBlock.GetHash())
 	bc.setTailBlockHash(newBlock.GetHash())
 	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.DB)
 }

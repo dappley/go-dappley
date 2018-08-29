@@ -34,7 +34,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"bytes"
 )
 
 const InvalidAddress = "Invalid Address"
@@ -361,115 +360,11 @@ func TestSendInsufficientBalance(t *testing.T) {
 	teardown()
 }
 
-const testport = 10100
-
-func TestSyncBlocks(t *testing.T) {
-	var pows []*consensus.ProofOfWork
-	var bcs []*core.Blockchain
-	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	//wait for mining for at least "targetHeight" blocks
-	targetHeight := uint64(4)
-	//num of nodes to be created in the test
-	numOfNodes := 3
-	var firstNode *network.Node
-	for i := 0; i < numOfNodes; i++ {
-		//create storage instance
-		db := storage.NewRamStorage()
-		defer db.Close()
-
-		//create blockchain instance
-		pow := consensus.NewProofOfWork()
-		bc := core.CreateBlockchain(addr, db, pow)
-		bcs = append(bcs, bc)
-
-		n := network.NewNode(bcs[i])
-		pow.Setup(n, addr.Address)
-		pow.SetTargetBit(16)
-		n.Start(testport + i)
-
-		if i == 0 {
-			firstNode = n
-		} else {
-			n.AddStream(
-				firstNode.GetPeerID(),
-				firstNode.GetPeerMultiaddr(),
-			)
-		}
-
-		pows = append(pows, pow)
-	}
-
-	//seed node broadcasts syncpeers
-	firstNode.SyncPeers()
-
-	//wait for 2 seconds for syncing
-	time.Sleep(time.Second * 2)
-
-	//count and is Stopped tracks the num of nodes that have been stopped
-	count := 0
-	isStopped := []bool{}
-	blkHeight := []uint64{}
-	//Start Mining and set average block time to 5 seconds (difficulty = 16)
-	for i := 0; i < numOfNodes; i++ {
-		pows[i].Start()
-		isStopped = append(isStopped, false)
-		blkHeight = append(blkHeight, 0)
-	}
-
-loop:
-	for {
-		for i := 0; i < numOfNodes; i++ {
-			blk, err := bcs[i].GetTailBlock()
-			assert.Nil(t, err)
-			if blk.GetHeight() > blkHeight[i] {
-				blkHeight[i] = blk.GetHeight()
-			}
-			if blk.GetHeight() >= targetHeight {
-				//count the number of nodes that have already stopped mining
-				if isStopped[i] == false {
-					//stop the first miner that reaches the target height
-					pows[i].Stop()
-					isStopped[i] = true
-					count++
-				}
-			}
-			//break the loop if all miners stop
-			if count >= numOfNodes {
-				break loop
-			}
-		}
-
-	}
-
-	//Leave time to work out forks and sync
-
-	for {
-		tailhash0, _ := bcs[0].GetTailHash()
-		tailhash1, _ := bcs[1].GetTailHash()
-		tailhash2, _ := bcs[2].GetTailHash()
-		if bytes.Compare(tailhash0, tailhash1) == 0 && bytes.Compare(tailhash1, tailhash2) == 0  {
-			break
-		}
-		time.Sleep(time.Second * 1)
-
-	}
-
-	//Check if all nodes have the same tail block
-	for i := 0; i < numOfNodes-1; i++ {
-		blk0, err := bcs[i].GetTailBlock()
-		assert.Equal(t, targetHeight, blk0.GetHeight())
-		assert.Nil(t, err)
-		blk1, err := bcs[i+1].GetTailBlock()
-		assert.Equal(t, targetHeight, blk1.GetHeight())
-		assert.Nil(t, err)
-		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
-	}
-}
-
 const testport_msg_relay = 19999
 
 
 func TestBlockMsgRelay(t *testing.T) {
+	setup()
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
@@ -487,17 +382,18 @@ func TestBlockMsgRelay(t *testing.T) {
 		bcs = append(bcs, bc)
 
 		n := network.NewNode(bcs[i])
-		if i==0{
+
+		if(i == 0){
 			pow.Setup(n, addr.Address)
 			pow.SetTargetBit(16)
 		}
-		n.Start(testport_msg_relay + 10*i)
+
+		n.Start(testport_msg_relay + 100*i)
 
 		nodes = append(nodes, n)
 		pows = append(pows, pow)
 	}
-	pows[0].Start()
-	time.Sleep(time.Second*2)
+
 	for i := 0; i < len(nodes); i++ {
 		nodes[i].AddStream(
 			nodes[i+1].GetPeerID(),
@@ -508,27 +404,19 @@ func TestBlockMsgRelay(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second*3)
-
-
 	//firstNode Starts Mining
-	tailBlock, _:= bcs[0].GetTailBlock()
-	nodes[0].SendBlock(tailBlock)
-	for {
-		//break when all nodes have synced first blocks
-		logger.Debug(len(nodes[0].GetBlocks()) , len(nodes[1].GetBlocks()) , len(nodes[2].GetBlocks()) , len(nodes[3].GetBlocks()) )
-		if(len(nodes[0].GetBlocks()) >= 1 && len(nodes[1].GetBlocks()) >= 1 && len(nodes[2].GetBlocks()) >= 1 && len(nodes[3].GetBlocks()) >= 1){
-			pows[0].Stop()
-			break
-		}
-	}
+
+	pows[0].Start()
+	time.Sleep(time.Second*3)
+	pows[0].Stop()
+	time.Sleep(time.Second*3)
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0,0,0,0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
 		for _, _ = range *nodes[i].GetRecentlyRcvedDapMessages() {
 			heights[i]++
 		}
-		assert.Equal(t, heights[i], len(nodes[i].GetBlocks()))
+		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 	}
 }
 

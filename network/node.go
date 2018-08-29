@@ -226,6 +226,7 @@ func (n *Node) RelayDapMsg(dm Dapmsg){
 	bytes, _ := proto.Marshal(msgData)
 	n.broadcast(bytes)
 }
+
 func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int) ([]byte, error){
 	if cmd == "" {
 		return nil, ErrDapMsgNoCmd
@@ -244,7 +245,9 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, n.info.peerid, uniOrBroadcast)
-
+	if dm.cmd == SyncBlock {
+		n.cacheDapMsg(*dm)
+	}
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return nil, err
@@ -346,10 +349,14 @@ func (n *Node) syncBlockHandler(dm *Dapmsg, pid peer.ID){
 		return
 	}
 	n.RelayDapMsg(*dm)
-	n.recentlyRcvedDapMsgs[dm.GetKey()] = 1
+	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
 	n.addBlockToPool(blk, pid)
 
+}
+
+func (n *Node) cacheDapMsg(dm Dapmsg) {
+	n.recentlyRcvedDapMsgs[dm.GetKey()] = 1
 }
 
 func (n *Node) addTxToPool(data []byte){

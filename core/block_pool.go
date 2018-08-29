@@ -178,8 +178,6 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 }
 
 func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
-
-	logger.Debug("BlockPool: Received a new block.Sender id:", sender.String())
 	if pool.bc.consensus.Validate(blk) {
 		tailBlock, err := pool.bc.GetTailBlock()
 		if err != nil {
