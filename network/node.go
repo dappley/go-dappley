@@ -106,7 +106,7 @@ func (n *Node) StartRequestLoop() {
 			select {
 			case <-n.exitCh:
 				return
-			case brPars := <-n.bc.BlockPool().BlockRequestCh():
+			case brPars := <-n.bc.GetBlockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
 			}
 		}
@@ -319,7 +319,7 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
-	n.bc.BlockPool().Push(block, pid)
+	n.bc.GetBlockPool().Push(block, pid)
 	//TODO: Delete this line. This line is solely for testing
 	n.blks = append(n.blks, block)
 
@@ -376,7 +376,7 @@ func (n *Node) addTxToPool(data []byte){
 	tx.FromProto(txpb)
 
 	//add tx to txpool
-	n.bc.TxPool().StructPush(tx)
+	n.bc.GetTxPool().StructPush(tx)
 }
 
 
@@ -419,7 +419,7 @@ func (n *Node)addMultiPeers(data []byte){
 }
 
 func (n *Node) sendRequestedBlock(hash []byte, pid peer.ID) {
-	blockBytes, err := n.bc.DB.Get(hash)
+	blockBytes, err := n.bc.GetDb().Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
 		return

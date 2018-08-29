@@ -188,7 +188,7 @@ loop:
 				getBalanceCmd.Usage()
 			}
 			getBalanceAddress := core.NewAddress(*getBalanceAddressString)
-			balance, err := logic.GetBalance(getBalanceAddress, bc.DB)
+			balance, err := logic.GetBalance(getBalanceAddress, bc.GetDb())
 			if err != nil {
 				log.Println(err)
 			}

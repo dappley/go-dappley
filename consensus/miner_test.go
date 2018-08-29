@@ -35,7 +35,7 @@ func TestMiner_VerifyNonce(t *testing.T){
 		storage.NewRamStorage(),
 		nil,
 	)
-	defer bc.DB.Close()
+	defer bc.GetDb().Close()
 
 	miner.Setup(bc,cbAddr.Address, nil)
 

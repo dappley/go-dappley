@@ -100,8 +100,8 @@ func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, b
 		return ErrInvalidRcverAddress
 	}
 
-	tx, err := core.NewUTXOTransaction(bc.DB, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
-	bc.TxPool().ConditionalAdd(tx)
+	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
+	bc.GetTxPool().ConditionalAdd(tx)
 
 	if err != nil {
 		return err
@@ -132,7 +132,7 @@ func AddBalance(address core.Address, amount int, bc *core.Blockchain) (error) {
 		return err
 	}
 
-	bc.TxPool().StructPush(tx)
+	bc.GetTxPool().StructPush(tx)
 
 	return err
 

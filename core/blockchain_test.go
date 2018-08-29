@@ -88,7 +88,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//create a mock blockchain with max height of 5
 	bc := GenerateMockBlockchain(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 
 	blk,err := bc.GetTailBlock()
 	assert.Nil(t,err)
@@ -113,11 +113,11 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
 	bc := GenerateMockBlockchain(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 	tailBlk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
-	bc.BlockPool().forkPool = GenerateMockFork(5,tailBlk)
-	forkTailBlockHash := bc.BlockPool().forkPool[0].GetHash()
+	bc.GetBlockPool().forkPool = GenerateMockFork(5,tailBlk)
+	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
 
 	//add the fork to the end of the blockchain
 	bc.concatenateForkToBlockchain()
@@ -132,7 +132,7 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
 	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 	blk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -143,10 +143,10 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	}
 
 	//generate a fork that is forked from height 3
-	bc.BlockPool().forkPool = GenerateMockFork(5,blk)
+	bc.GetBlockPool().forkPool = GenerateMockFork(5,blk)
 
 	//get the last fork hash
-	forkTailBlockHash := bc.BlockPool().forkPool[0].GetHash()
+	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
 
 	bc.MergeFork()
 
@@ -161,7 +161,7 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
 	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 	blk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -175,7 +175,7 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	//generate a fork that is forked from height 3
-	bc.BlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
+	bc.GetBlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
 
 	//the merge should fail since the transactions are invalid
 	bc.MergeFork()

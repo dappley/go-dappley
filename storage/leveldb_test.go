@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const BlockchainDbFile = "../bin/blockchain.DB"
+const BlockchainDbFile = "../bin/blockchain.db"
 
 func TestLevelDB_DbExists(t *testing.T) {
 	setup()
@@ -63,7 +63,7 @@ func TestLevelDB_Close(t *testing.T) {
 
 	setup()
 	//create new database
-	ldb := OpenDatabase("../bin/test.DB")
+	ldb := OpenDatabase("../bin/test.db")
 
 	//put new values in
 	ldb.Put([]byte("a"), []byte("1"))

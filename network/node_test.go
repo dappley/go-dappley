@@ -204,7 +204,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 
 	//generate a block and store it in node0 blockchain
 	blk := core.GenerateMockBlock()
-	nodes[0].bc.DB.Put(blk.GetHash(),blk.Serialize())
+	nodes[0].bc.GetDb().Put(blk.GetHash(),blk.Serialize())
 
 	//node1 request the block
 	nodes[1].RequestBlockUnicast(blk.GetHash(),nodes[0].GetPeerID())

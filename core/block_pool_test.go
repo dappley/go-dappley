@@ -33,7 +33,7 @@ func TestBlockPool_GetBlockchain(t *testing.T) {
 
 	hash1, err:= bc.GetTailHash()
 	assert.Nil(t, err)
-	newbc := bc.blockPool.GetBlockchain()
+	newbc := bc.GetBlockPool().GetBlockchain()
 
 	hash2, err := newbc.GetTailHash()
 	assert.Nil(t, err)

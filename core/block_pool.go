@@ -112,7 +112,7 @@ func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool {
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
-		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.DB)
+		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.GetDb())
 	}
 	return true
 }
@@ -123,11 +123,11 @@ func (pool *BlockPool) updateForkFromTail(blk *Block) bool {
 	if isTail {
 		//only update if the block is higher than the current blockchain
 		if pool.bc.HigherThanBlockchain(blk) {
-			logger.Debug("BlockPool: Add block to tail")
+			logger.Debug("GetBlockPool: Add block to tail")
 			pool.addTailToForkPool(blk)
 		} else {
 			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
+			logger.Debug("GetBlockPool: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -141,11 +141,11 @@ func (pool *BlockPool) addParentToFork(blk *Block) bool {
 	if isParent {
 		//check if fork's max height is still higher than the blockchain
 		if pool.GetForkPoolTailBlk().GetHeight() > pool.bc.GetMaxHeight() {
-			logger.Debug("BlockPool: Add block to head")
+			logger.Debug("GetBlockPool: Add block to head")
 			pool.addParentToForkPool(blk)
 		} else {
 			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
+			logger.Debug("GetBlockPool: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -164,28 +164,30 @@ func (pool *BlockPool) IsHigherThanFork(block *Block) bool {
 }
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {
-	logger.Debug("BlockPool: Has received a new block")
+	logger.Debug("GetBlockPool: Has received a new block")
 
 	if !block.VerifyHash() {
-		logger.Info("BlockPool: Verify Hash failed!")
+		logger.Info("GetBlockPool: Verify Hash failed!")
 		return
 	}
 
 	//TODO: Verify double spending transactions in the same block
 
-	logger.Debug("BlockPool: Block has been verified")
+	logger.Debug("GetBlockPool: Block has been verified")
 	pool.handleRcvdBlock(block, pid)
 }
 
 func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
-	if pool.bc.consensus.Validate(blk) {
+
+	logger.Debug("GetBlockPool: Received a new block.Sender id:", sender.String())
+	if pool.bc.GetConsensus().Validate(blk) {
 		tailBlock, err := pool.bc.GetTailBlock()
 		if err != nil {
-			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
+			logger.Warn("GetBlockPool: Get Tail Block failed! Err:", err)
 		}
 		if IsParentBlock(tailBlock, blk) {
-			logger.Info("BlockPool: Add received block to blockchain. Sender id:", sender.String())
-			pool.bc.consensus.StartNewBlockMinting()
+			logger.Info("GetBlockPool: Add received block to blockchain. Sender id:", sender.String())
+			pool.bc.GetConsensus().StartNewBlockMinting()
 			pool.bc.UpdateNewBlock(blk)
 			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {
 				pool.bc.MergeFork()
@@ -195,7 +197,7 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 			pool.updateFork(blk, sender)
 		}
 	} else {
-		logger.Warn("BlockPool: Consensus validity check fails.Sender id:", sender.String())
+		logger.Warn("GetBlockPool: Consensus validity check fails.Sender id:", sender.String())
 	}
 }
 
@@ -209,7 +211,7 @@ func (pool *BlockPool) updateFork(block *Block, pid peer.ID) {
 	if pool.attempToStartNewFork(block, pid) {
 		return
 	}
-	logger.Debug("BlockPool: Block dumped")
+	logger.Debug("GetBlockPool: Block dumped")
 }
 
 func (pool *BlockPool) attemptToAddTailToFork(newblock *Block) bool {
@@ -223,7 +225,7 @@ func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID)
 	if isSuccessful {
 		//if the parent of the current fork is found in blockchain, merge the fork
 		if pool.bc.IsInBlockchain(newblock.GetPrevHash()) {
-			pool.bc.consensus.StartNewBlockMinting()
+			pool.bc.GetConsensus().StartNewBlockMinting()
 			pool.bc.MergeFork()
 		} else {
 			//if the fork could not be added to the current blockchain, ask for the head block's parent
