@@ -50,6 +50,7 @@ func TestLoadConfigFromFile(t *testing.T){
 					port: 5,
 					seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
 					dbPath: "dbPath",
+					rpcPort: 200,
 				},
 			},
 		},
@@ -121,6 +122,7 @@ func fakeFileContent() string{
 		port: 5
 		seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs"
 		dbPath: "dbPath"
+		rpcPort: 200
 	}`
 }
 
