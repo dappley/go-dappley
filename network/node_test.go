@@ -161,7 +161,7 @@ func TestNode_SyncPeers(t *testing.T){
 	time.Sleep(time.Second)
 
 	//node 1 broadcast syncpeers
-	node1.SyncPeers()
+	node1.SyncPeersBlockcast()
 
 	time.Sleep(time.Second*2)
 

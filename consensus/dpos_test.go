@@ -108,7 +108,7 @@ func TestDpos_MultipleMiners(t *testing.T){
 		dposArray = append(dposArray, dpos)
 	}
 
-	firstNode.SyncPeers()
+	firstNode.SyncPeersBlockcast()
 
 	for i:=0;i<len(miners);i++{
 		dposArray[i].Start()

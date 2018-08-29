@@ -175,7 +175,7 @@ loop:
 		}
 
 		if syncPeersCmd.Parsed() {
-			node.SyncPeers()
+			node.SyncPeersBlockcast()
 		}
 
 		if broadcastMockTxCmd.Parsed() {

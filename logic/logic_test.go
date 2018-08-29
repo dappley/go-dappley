@@ -464,7 +464,7 @@ func TestForkChoice(t *testing.T) {
 				nodes[0].GetPeerMultiaddr(),
 			)
 		}
-		nodes[0].SyncPeers()
+		nodes[0].SyncPeersBlockcast()
 	}
 
 	time.Sleep(time.Second * 5)

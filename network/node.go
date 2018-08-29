@@ -197,16 +197,17 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.Info( n.GetPeerMultiaddr()," Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
-	// Add  the peer list
+
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
 		n.peerList.Add(peer)
-	}
+		//start stream
+		ns := NewStream(s, n)
+		n.streams[s.Conn().RemotePeer()] = ns
+		ns.Start()
 
-	//start stream
-	ns := NewStream(s, n)
-	n.streams[s.Conn().RemotePeer()] = ns
-	ns.Start()
+		n.SyncPeersUnicast(peer.peerid)
+	}
 }
 
 func (n *Node) GetBlocks() []*core.Block { return n.blks }
@@ -265,7 +266,7 @@ func (n *Node) SendBlock(block *core.Block) error {
 	return nil
 }
 
-func (n *Node) SyncPeers() error {
+func (n *Node) SyncPeersBlockcast() error {
 	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
 	if err!=nil {
 		return err
@@ -274,6 +275,14 @@ func (n *Node) SyncPeers() error {
 	return nil
 }
 
+func (n *Node) SyncPeersUnicast(pid peer.ID) error {
+	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Unicast)
+	if err!=nil {
+		return err
+	}
+	n.unicast(data, pid)
+	return nil
+}
 
 
 func (n *Node) BroadcastTxCmd(txn *core.Transaction) error{
