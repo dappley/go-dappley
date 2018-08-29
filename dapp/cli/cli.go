@@ -10,13 +10,15 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"context"
 	"log"
+	"github.com/gogo/protobuf/proto"
 )
 
 //command names
 const(
-	cliGetBalance 		= "getBalance"
-	cliGetPeerInfo		= "getPeerInfo"
-	cliExit				= "exit"
+	cliGetBlockchainInfo	= "getBlockchainInfo"
+	cliGetBalance 			= "getBalance"
+	cliGetPeerInfo			= "getPeerInfo"
+	cliExit					= "exit"
 )
 
 //flag names
@@ -32,6 +34,7 @@ const(
 
 //list of commands
 var cmdList = []string{
+	cliGetBlockchainInfo,
 	cliGetBalance,
 	cliGetPeerInfo,
 	cliExit,
@@ -39,23 +42,25 @@ var cmdList = []string{
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
-	cliGetBalance	: {flagPars{
+	cliGetBlockchainInfo 	:{},
+	cliGetBalance			:{flagPars{
 		flagAddress,
 		"",
 		valueTypeString,
 		"Get the balance of the input address",
 
 	}},
-	cliGetPeerInfo	: {},
+	cliGetPeerInfo			:{},
 }
 
 //map the callback function to each command
 var cmdHandlers = map[string]commandHandlers{
-	cliGetBalance	:	getBalanceCommandHandler,
-	cliGetPeerInfo	:	getPeerInfoCommandHandler,
+	cliGetBlockchainInfo	: getBlockchainInfoCommandHandler,
+	cliGetBalance			: getBalanceCommandHandler,
+	cliGetPeerInfo			: getPeerInfoCommandHandler,
 }
 
-type commandHandlers func(*grpc.ClientConn, cmdFlags)
+type commandHandlers func(rpcpb.ConnectClient, cmdFlags)
 
 type flagPars struct{
 	name 		string
@@ -81,6 +86,7 @@ func main(){
 	printUsage()
 	conn := initRpcClient(rpcPort)
 	defer conn.Close()
+	client:= rpcpb.NewConnectClient(conn)
 
 	cmdFlagSetList := map[string]*flag.FlagSet{}
 	//set up flagset for each command
@@ -128,7 +134,7 @@ func main(){
 				continue
 			}
 			if cmd.Parsed() {
-				cmdHandlers[cmdName](conn, cmdFlagValues[cmdName])
+				cmdHandlers[cmdName](client, cmdFlagValues[cmdName])
 			}
 		}
 	}
@@ -136,28 +142,37 @@ func main(){
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("  getBalance -address ADDRESS")
-	fmt.Println("  getPeerInfo")
-	fmt.Println("  exit")
+	for _,cmd := range cmdList{
+		fmt.Println(" ", cmd)
+	}
 }
 
-func getBalanceCommandHandler(conn *grpc.ClientConn, flags cmdFlags){
+func getBlockchainInfoCommandHandler(client rpcpb.ConnectClient, flags cmdFlags){
+	response,err  := client.RpcGetBlockchainInfo(context.Background(),&rpcpb.GetBlockchainInfoRequest{})
+	if err!=nil {
+		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func getBalanceCommandHandler(client rpcpb.ConnectClient, flags cmdFlags){
 	//TODO
 	fmt.Println("getBalance!")
 	fmt.Println(*(flags[flagAddress].(*string)))
 }
 
-func getPeerInfoCommandHandler(conn *grpc.ClientConn, flags cmdFlags){
-	c := rpcpb.NewConnectClient(conn)
-	response,err  := c.RpcGetPeerInfo(context.Background(),&rpcpb.GetPeerInfoRequest{})
+func getPeerInfoCommandHandler(client rpcpb.ConnectClient, flags cmdFlags){
+
+	response,err  := client.RpcGetPeerInfo(context.Background(),&rpcpb.GetPeerInfoRequest{})
 	if err!=nil {
 		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
 		return
 	}
-	fmt.Println(response)
+	fmt.Println(proto.MarshalTextString(response))
 }
 
-func initRpcClient(port int) *grpc.ClientConn{
+func initRpcClient(port int)*grpc.ClientConn{
 	//prepare grpc client
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(fmt.Sprint(":",port), grpc.WithInsecure())
