@@ -6,6 +6,10 @@ import (
 	"os"
 	"flag"
 	"strings"
+	"google.golang.org/grpc"
+	"github.com/dappley/go-dappley/rpc/pb"
+	"context"
+	"log"
 )
 
 //command names
@@ -13,6 +17,11 @@ const(
 	cliGetBalance 		= "getBalance"
 	cliGetPeerInfo		= "getPeerInfo"
 	cliExit				= "exit"
+)
+
+//flag names
+const(
+	flagAddress			= "address"
 )
 
 //type enum
@@ -31,7 +40,7 @@ var cmdList = []string{
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
 	cliGetBalance	: {flagPars{
-		"address",
+		flagAddress,
 		"",
 		valueTypeString,
 		"Get the balance of the input address",
@@ -46,7 +55,7 @@ var cmdHandlers = map[string]commandHandlers{
 	cliGetPeerInfo	:	getPeerInfoCommandHandler,
 }
 
-type commandHandlers func()
+type commandHandlers func(*grpc.ClientConn, cmdFlags)
 
 type flagPars struct{
 	name 		string
@@ -56,12 +65,15 @@ type flagPars struct{
 }
 
 type valueType int
-
+//map key: flag name   map value: flag value
+type cmdFlags map[string]interface{}
 
 
 func main(){
 
 	printUsage()
+	conn := initRpcClient()
+	defer conn.Close()
 
 	cmdFlagSetList := map[string]*flag.FlagSet{}
 	//set up flagset for each command
@@ -70,10 +82,10 @@ func main(){
 		cmdFlagSetList[cmd] = fs
 	}
 
-	cmdFlagValues := map[string]map[string]interface{}{}
+	cmdFlagValues := map[string]cmdFlags{}
 	//set up flags for each command
 	for cmd, pars := range cmdFlagsMap {
-		cmdFlagValues[cmd] = map[string]interface{}{}
+		cmdFlagValues[cmd] = cmdFlags{}
 		for _,par := range pars{
 			switch par.valueType{
 			case valueTypeInt:
@@ -109,7 +121,7 @@ func main(){
 				continue
 			}
 			if cmd.Parsed() {
-				cmdHandlers[cmdName]()
+				cmdHandlers[cmdName](conn, cmdFlagValues[cmdName])
 			}
 		}
 	}
@@ -122,10 +134,27 @@ func printUsage() {
 	fmt.Println("  exit")
 }
 
-func getBalanceCommandHandler(){
+func getBalanceCommandHandler(conn *grpc.ClientConn, flags cmdFlags){
 	fmt.Println("getBalance!")
+	fmt.Println(*(flags[flagAddress].(*string)))
 }
 
-func getPeerInfoCommandHandler(){
-	fmt.Println("getPeerInfo!")
+func getPeerInfoCommandHandler(conn *grpc.ClientConn, flags cmdFlags){
+	c := rpcpb.NewConnectClient(conn)
+	response,err  := c.RpcGetPeerInfo(context.Background(),&rpcpb.GetPeerInfoRequest{})
+	if err!=nil {
+		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
+		return
+	}
+	fmt.Println(response)
+}
+
+func initRpcClient() *grpc.ClientConn{
+	//prepare grpc client
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(":50051", grpc.WithInsecure())
+	if err != nil{
+		log.Panic("ERROR: Not able to connect to RPC server. ERR:",err)
+	}
+	return conn
 }
