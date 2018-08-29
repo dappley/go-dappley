@@ -62,6 +62,13 @@ func (s *Server) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoReques
 	}, nil
 }
 
+func (s *Server) RpcGetBlockchainInfo(context.Context, *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error){
+	return &rpcpb.GetBlockchainInfoResponse{
+		TailBlockHash: 	s.node.GetBlockchain().GetTailBlockHash(),
+		BlockHeight:	s.node.GetBlockchain().GetMaxHeight(),
+	}, nil
+}
+
 func (s *Server) Start(port uint32) {
 	go func(){
 		if port == 0{

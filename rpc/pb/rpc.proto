@@ -4,13 +4,12 @@ import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
 
 option objc_class_prefix = "HLW";
 
-// The greeting service definition.
 service Connect {
-  // Sends a greeting
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
+  rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
 }
 
 // The request message 
@@ -32,6 +31,8 @@ message SendRequest {
 
 message GetPeerInfoRequest {}
 
+message GetBlockchainInfoRequest {}
+
 // The response message 
 
 message CreateWalletResponse {
@@ -50,4 +51,9 @@ message SendResponse {
 
 message GetPeerInfoResponse {
   networkpb.Peerlist peerList = 1;
+}
+
+message GetBlockchainInfoResponse {
+  bytes   tailBlockHash = 1;
+  uint64  blockHeight = 2;
 }
