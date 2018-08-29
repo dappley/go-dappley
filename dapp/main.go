@@ -29,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"log"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/rpc"
 )
 
 const (
@@ -69,6 +70,11 @@ func main() {
 	if err!= nil{
 		return
 	}
+
+	//start rpc server
+	server := rpc.NewGrpcServer(node)
+	server.Start(conf.GetNodeConfig().GetRpcPort())
+	defer server.Stop()
 
 	//create wallets
 	wallets, err := client.NewWallets()
