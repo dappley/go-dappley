@@ -71,8 +71,15 @@ type cmdFlags map[string]interface{}
 
 func main(){
 
+	var rpcPort int
+	flag.IntVar(&rpcPort, "p", 50050, "RPC server port")
+	flag.Parse()
+	if rpcPort <= 0 {
+		log.Panic("rpc port is invalid")
+	}
+
 	printUsage()
-	conn := initRpcClient()
+	conn := initRpcClient(rpcPort)
 	defer conn.Close()
 
 	cmdFlagSetList := map[string]*flag.FlagSet{}
@@ -135,6 +142,7 @@ func printUsage() {
 }
 
 func getBalanceCommandHandler(conn *grpc.ClientConn, flags cmdFlags){
+	//TODO
 	fmt.Println("getBalance!")
 	fmt.Println(*(flags[flagAddress].(*string)))
 }
@@ -149,10 +157,10 @@ func getPeerInfoCommandHandler(conn *grpc.ClientConn, flags cmdFlags){
 	fmt.Println(response)
 }
 
-func initRpcClient() *grpc.ClientConn{
+func initRpcClient(port int) *grpc.ClientConn{
 	//prepare grpc client
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":50051", grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":",port), grpc.WithInsecure())
 	if err != nil{
 		log.Panic("ERROR: Not able to connect to RPC server. ERR:",err)
 	}
