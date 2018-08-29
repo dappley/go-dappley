@@ -26,6 +26,7 @@ import (
 	"golang.org/x/net/context"
 	"time"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
 func TestNewGrpcServer(t *testing.T) {
@@ -42,13 +43,13 @@ func TestServer_StartRPC(t *testing.T) {
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
 	server := NewGrpcServer(node)
-	server.Start()
+	server.Start(defaultRpcPort)
 	defer server.Stop()
 
 	time.Sleep(time.Millisecond*100)
 	//prepare grpc client
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(port, grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":",defaultRpcPort), grpc.WithInsecure())
 	assert.Nil(t, err)
 	defer conn.Close()
 

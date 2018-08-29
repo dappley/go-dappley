@@ -26,10 +26,11 @@ import (
 	"net"
 	"log"
 	"google.golang.org/grpc"
+	"fmt"
 )
 
 const (
-	port = ":50051"
+	defaultRpcPort = 50051
 )
 
 // Server is used to implement helloworld.GreeterServer.
@@ -61,9 +62,12 @@ func (s *Server) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoReques
 	}, nil
 }
 
-func (s *Server) Start() {
+func (s *Server) Start(port uint32) {
 	go func(){
-		lis, err := net.Listen("tcp", port)
+		if port == 0{
+			port = defaultRpcPort
+		}
+		lis, err := net.Listen("tcp", fmt.Sprint(":",port))
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
 		}
