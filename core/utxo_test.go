@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
@@ -64,7 +82,7 @@ func GenerateUtxoMockBlockWithInputs() *Block{
 
 func MockUtxoTransactionWithoutInputs() *Transaction{
 	return &Transaction{
-		ID:  []byte("txn1"),
+		ID:  []byte("tx1"),
 		Vin:  []TXInput{},
 		Vout: MockUtxoOutputsWithoutInputs(),
 		Tip:  5,
@@ -73,7 +91,7 @@ func MockUtxoTransactionWithoutInputs() *Transaction{
 
 func MockUtxoTransactionWithInputs() *Transaction{
 	return &Transaction{
-		ID:   []byte("txn2"),
+		ID:   []byte("tx2"),
 		Vin:  MockUtxoInputs(),
 		Vout: MockUtxoOutputsWithInputs(),
 		Tip:  5,
@@ -82,11 +100,11 @@ func MockUtxoTransactionWithInputs() *Transaction{
 
 func MockUtxoInputs() []TXInput {
 	return []TXInput{
-		{[]byte("txn1"),
+		{[]byte("tx1"),
 			0,
 			util.GenerateRandomAoB(2),
 			[]byte("address1")},
-		{[]byte("txn1"),
+		{[]byte("tx1"),
 			1,
 			util.GenerateRandomAoB(2),
 			[]byte("address1")},
@@ -157,7 +175,7 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	db :=  storage.NewRamStorage()
 	defer db.Close()
 	addr1 := Address{"testaddress"}
-	bc := CreateBlockchain(addr1, db)
+	bc := CreateBlockchain(addr1, db, nil)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs()
 	blk2 := GenerateUtxoMockBlockWithInputs()

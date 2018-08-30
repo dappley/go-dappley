@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
@@ -11,6 +29,8 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+const UtxoMapKey = "utxo"
+const UtxoForkMapKey = "utxoFork"
 //map of key: wallet address, value: serialized map
 type utxoIndex map[string][]UTXOutputStored
 
@@ -78,12 +98,12 @@ func (blk Block) AddSpendableOutputsAfterNewBlock (mapkey string, db storage.Sto
 	if len(utxoIndex)==0 {
 		utxoIndex = initIndex()
 	}
-	for _, txn := range blk.transactions{
-		for index ,vout := range txn.Vout{
+	for _, tx := range blk.transactions{
+		for index ,vout := range tx.Vout{
 			if utxoIndex[string(vout.PubKeyHash)] == nil {
 				utxoIndex[string(vout.PubKeyHash)] = []UTXOutputStored{}
 			}
-			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vout.PubKeyHash,txn.ID, index})
+			utxoIndex[string(vout.PubKeyHash)] = append(utxoIndex[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vout.PubKeyHash, tx.ID, index})
 		}
 	}
 	db.Put([]byte(UtxoMapKey), utxoIndex.Serialize())
@@ -92,13 +112,13 @@ func (blk Block) AddSpendableOutputsAfterNewBlock (mapkey string, db storage.Sto
 
 func (blk Block) ConsumeSpendableOutputsAfterNewBlock ( mapkey string,db storage.Storage){
 	utxoIndex := GetStoredUtxoMap(db,mapkey)
-	for _, txns := range blk.transactions{
-		for _,vin := range txns.Vin{
-			spentOutputTxnId, txnIndex, pubKey := vin.Txid, vin.Vout, string(vin.PubKey)
+	for _, txs := range blk.transactions{
+		for _,vin := range txs.Vin{
+			spentOutputTxId, txIndex, pubKey := vin.Txid, vin.Vout, string(vin.PubKey)
 			userUtxos := utxoIndex[pubKey]
 			if(len(userUtxos)) > 0 {
 				for index, userUtxo := range userUtxos{
-					if(userUtxo.TxIndex == txnIndex && bytes.Compare(userUtxo.Txid,spentOutputTxnId) ==0){
+					if(userUtxo.TxIndex == txIndex && bytes.Compare(userUtxo.Txid, spentOutputTxId) ==0){
 						userUtxos = append(userUtxos[:index], userUtxos[index+1:]...)
 					}
 				}
@@ -122,28 +142,28 @@ func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
 }
 
 //doesnt save to db
-func (utxo utxoIndex) RevertTxnUtxos(blk Block, bc Blockchain, db storage.Storage){
+func (utxo utxoIndex) RevertTxUtxos(blk Block, bc Blockchain, db storage.Storage){
 
-	for _, txn := range blk.GetTransactions() {
-		err1:= utxo.RemoveTxnUtxosFromUtxoPool(*txn, db)
+	for _, tx := range blk.GetTransactions() {
+		err1:= utxo.RemoveTxUtxosFromUtxoPool(*tx, db)
 		if err1!=nil {
 			log.Panic(err1)
 		}
 
-		if txn.IsCoinbase(){
+		if tx.IsCoinbase(){
 			continue
 		}
 
-		err2 := utxo.AddBackTxnOutputToUtxoPool(*txn, db, blk, bc)
+		err2 := utxo.AddBackTxOutputToUtxoPool(*tx, db, blk, bc)
 		if err2!=nil {
 			log.Panic(err2)
 		}
 	}
 }
 
-func (utxo utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db storage.Storage) error {
+func (utxo utxoIndex) RemoveTxUtxosFromUtxoPool(txs Transaction, db storage.Storage) error {
 
-	for _,out := range txns.Vout{
+	for _,out := range txs.Vout{
 		value, pubKey :=  out.Value, string(out.PubKeyHash)
 		userUtxos := utxo[pubKey]
 
@@ -162,11 +182,11 @@ func (utxo utxoIndex) RemoveTxnUtxosFromUtxoPool(txns Transaction, db storage.St
 	return nil
 }
 
-func (utxo utxoIndex) AddBackTxnOutputToUtxoPool(txn Transaction, db storage.Storage, blk Block, bc Blockchain) error {
-	for _, vin := range txn.Vin {
+func (utxo utxoIndex) AddBackTxOutputToUtxoPool(tx Transaction, db storage.Storage, blk Block, bc Blockchain) error {
+	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOFromTxIn(vin, blk.GetHash(), bc)
 		if err == nil {
-			utxo[string(vout.PubKeyHash)] = append(utxo[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vin.PubKey,txn.ID, voutIndex})
+			utxo[string(vout.PubKeyHash)] = append(utxo[string(vout.PubKeyHash)], UTXOutputStored{vout.Value, vin.PubKey, tx.ID, voutIndex})
 		} else {
 			panic(err)
 		}
@@ -182,11 +202,11 @@ func (utxo utxoIndex) SetUtxoPoolInDb(db storage.Storage){
 //block is passed in because i cant statically call FindTransactionById
 
 func getTXOFromTxIn(in TXInput, blkStartIndex []byte, bc Blockchain) (TXOutput, int, error){
-	txn, err := bc.FindTransaction(in.Txid)
+	tx, err := bc.FindTransaction(in.Txid)
 	if err != nil {
-		return  TXOutput{}, 0, errors.New("txInput refers to nonexisting txn")
+		return  TXOutput{}, 0, errors.New("txInput refers to nonexisting tx")
 	}
-	return txn.Vout[in.Vout], in.Vout, nil
+	return tx.Vout[in.Vout], in.Vout, nil
 }
 
 
@@ -220,7 +240,7 @@ func (bc Blockchain) GetUtxoStateAtBlockHash(db storage.Storage, hash []byte) (u
 			return utxoIndex{}, ErrBlockDoesNotExist
 		}
 
-		deepCopy.RevertTxnUtxos(*block, bc, db)
+		deepCopy.RevertTxUtxos(*block, bc, db)
 
 	}
 

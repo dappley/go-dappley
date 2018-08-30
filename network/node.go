@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package network
 
 import (
@@ -27,6 +45,7 @@ const (
 
 var (
 	ErrDapMsgNoCmd = errors.New("ERROR: Dappley message has no command input")
+	ErrIsInPeerlist= errors.New("ERROR: Peer already exists in peerlist")
 )
 
 type Node struct {
@@ -34,10 +53,10 @@ type Node struct {
 	info      *Peer
 	bc        *core.Blockchain
 	blks      []*core.Block
-	txnPool core.TransactionPoool
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
+	recentlyRcvedDapMsgs map[string]int
 }
 
 //create new Node instance
@@ -46,14 +65,23 @@ func NewNode(bc *core.Blockchain) *Node {
 	nil,
 	bc,
 	nil,
-	core.TransactionPoool{},
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
+	make(map[string]int),
 	}
 }
 
+func (n *Node) isNetworkRadiation (dapmsg Dapmsg) bool {
+	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == 1{
+		return true
+	}
+	return false
+}
+
 func (n *Node) GetBlockchain() *core.Blockchain{return n.bc}
+func (n *Node) GetPeerList() *PeerList{return n.peerList}
+func (n *Node) GetRecentlyRcvedDapMessages() *map[string]int {return &n.recentlyRcvedDapMsgs}
 
 func (n *Node) Start(listenPort int) error {
 
@@ -78,7 +106,7 @@ func (n *Node) StartRequestLoop() {
 			select {
 			case <-n.exitCh:
 				return
-			case brPars := <-n.bc.BlockPool().BlockRequestCh():
+			case brPars := <-n.bc.GetBlockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
 			}
 		}
@@ -141,6 +169,12 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error {
 func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	// We have a peer ID and a targetAddr so we add it to the peerstore
 	// so LibP2P knows how to contact it
+	p:= Peer{peerid, targetAddr}
+	if n.peerList.IsInPeerlist(&p){
+		logger.Debug(targetAddr.String()+" is already in peerlist of " + n.GetPeerMultiaddr().String())
+		return ErrIsInPeerlist
+	}
+
 	n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
 
 	// make a new stream
@@ -162,16 +196,18 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
-	logger.Info("Stream Connected! Peer Addr:", s.Conn().RemoteMultiaddr())
-	// Add  the peer list
-	if !n.peerList.ListIsFull() {
-		n.peerList.Add(&Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()})
-	}
+	logger.Info( n.GetPeerMultiaddr()," Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
 
-	//start stream
-	ns := NewStream(s, n)
-	n.streams[s.Conn().RemotePeer()] = ns
-	ns.Start()
+	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
+	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
+		n.peerList.Add(peer)
+		//start stream
+		ns := NewStream(s, n)
+		n.streams[s.Conn().RemotePeer()] = ns
+		ns.Start()
+
+		n.SyncPeersUnicast(peer.peerid)
+	}
 }
 
 func (n *Node) GetBlocks() []*core.Block { return n.blks }
@@ -187,8 +223,13 @@ func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
 
 func (n *Node) GetPeerID() peer.ID { return n.info.peerid }
 
-func prepareData(msgData proto.Message, cmd string) ([]byte, error){
+func (n *Node) RelayDapMsg(dm Dapmsg){
+	msgData := dm.ToProto()
+	bytes, _ := proto.Marshal(msgData)
+	n.broadcast(bytes)
+}
 
+func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int) ([]byte, error){
 	if cmd == "" {
 		return nil, ErrDapMsgNoCmd
 	}
@@ -204,8 +245,11 @@ func prepareData(msgData proto.Message, cmd string) ([]byte, error){
 		}
 	}
 
-	//build a deppley message
-	dm := NewDapmsg(cmd, bytes)
+	//build a dappley message
+	dm := NewDapmsg(cmd, bytes, n.info.peerid, uniOrBroadcast)
+	if dm.cmd == SyncBlock {
+		n.cacheDapMsg(*dm)
+	}
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return nil, err
@@ -214,7 +258,7 @@ func prepareData(msgData proto.Message, cmd string) ([]byte, error){
 }
 
 func (n *Node) SendBlock(block *core.Block) error {
-	data,err := prepareData(block.ToProto(), SyncBlock)
+	data,err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err!=nil {
 		return err
 	}
@@ -222,8 +266,8 @@ func (n *Node) SendBlock(block *core.Block) error {
 	return nil
 }
 
-func (n *Node) SyncPeers() error {
-	data,err := prepareData(n.peerList.ToProto(), SyncPeerList)
+func (n *Node) SyncPeersBlockcast() error {
+	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
 	if err!=nil {
 		return err
 	}
@@ -231,9 +275,18 @@ func (n *Node) SyncPeers() error {
 	return nil
 }
 
+func (n *Node) SyncPeersUnicast(pid peer.ID) error {
+	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Unicast)
+	if err!=nil {
+		return err
+	}
+	n.unicast(data, pid)
+	return nil
+}
 
-func (n *Node) BroadcastTxnCmd(txn *core.Transaction) error{
-	data,err := prepareData(txn.ToProto(), BroadcastTxn)
+
+func (n *Node) BroadcastTxCmd(txn *core.Transaction) error{
+	data,err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast)
 	if err!=nil {
 		return err
 	}
@@ -242,7 +295,7 @@ func (n *Node) BroadcastTxnCmd(txn *core.Transaction) error{
 }
 
 func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
-	data,err := prepareData(block.ToProto(), SyncBlock)
+	data,err := n.prepareData(block.ToProto(), SyncBlock, Unicast)
 	if err!=nil {
 		return err
 	}
@@ -252,7 +305,8 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
 
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
-	dm := NewDapmsg(RequestBlock, hash)
+
+	dm := NewDapmsg(RequestBlock, hash, n.info.peerid, Unicast)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -273,8 +327,16 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 	n.streams[pid].Send(data)
 }
 
-func (n *Node) addBlockToPool(data []byte, pid peer.ID) {
+func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
+	//add block to blockpool. Make sure this is none blocking.
+	n.bc.GetBlockPool().Push(block, pid)
+	//TODO: Delete this line. This line is solely for testing
+	n.blks = append(n.blks, block)
 
+}
+
+
+func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block{
 	//create a block proto
 	blockpb := &corepb.Block{}
 
@@ -289,30 +351,42 @@ func (n *Node) addBlockToPool(data []byte, pid peer.ID) {
 	//load the block with proto
 	block.FromProto(blockpb)
 
-	//add block to blockpool. Make sure this is none blocking.
-	n.bc.BlockPool().Push(block, pid)
-	//TODO: Delete this line. This line is solely for testing
-	n.blks = append(n.blks, block)
+	return block
+}
+func (n *Node) syncBlockHandler(dm *Dapmsg, pid peer.ID){
+	if(n.isNetworkRadiation(*dm)){
+		logger.Debug(n.GetPeerMultiaddr(), " (", n.info.peerid, ") already received ",dm.GetKey(), " before")
+		return
+	}
+	n.RelayDapMsg(*dm)
+	n.cacheDapMsg(*dm)
+	blk := n.getFromProtoBlockMsg(dm.GetData())
+	n.addBlockToPool(blk, pid)
+
 }
 
-func (n *Node) addTxnToPool(data []byte){
+func (n *Node) cacheDapMsg(dm Dapmsg) {
+	n.recentlyRcvedDapMsgs[dm.GetKey()] = 1
+}
+
+func (n *Node) addTxToPool(data []byte){
 
 	//create a block proto
-	txnpb := &corepb.Transaction{}
+	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, txnpb); err!=nil{
+	if err := proto.Unmarshal(data, txpb); err!=nil{
 		logger.Warn(err)
 	}
 
-	//create an empty txn
-	txn := &core.Transaction{}
+	//create an empty tx
+	tx := &core.Transaction{}
 
-	//load the txn with proto
-	txn.FromProto(txnpb)
+	//load the tx with proto
+	tx.FromProto(txpb)
 
-	//add txn to txnpool
-	n.txnPool.StructPush(txn)
+	//add tx to txpool
+	n.bc.GetTxPool().StructPush(tx)
 }
 
 
@@ -344,7 +418,7 @@ func (n *Node)addMultiPeers(data []byte){
 
 		//add streams for new peers
 		for _, p := range newpl.GetPeerlist() {
-			if !n.peerList.IsInPeerlist(p) {
+			if !n.peerList.IsInPeerlist(p) && p.peerid!=n.info.peerid{
 				n.AddStream(p.peerid, p.addr)
 			}
 		}
@@ -355,7 +429,7 @@ func (n *Node)addMultiPeers(data []byte){
 }
 
 func (n *Node) sendRequestedBlock(hash []byte, pid peer.ID) {
-	blockBytes, err := n.bc.DB.Get(hash)
+	blockBytes, err := n.bc.GetDb().Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
 		return

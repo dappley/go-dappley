@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package network
 
 import (
@@ -14,10 +32,12 @@ import (
 )
 
 const(
-	SyncBlock 		= "SyncBlock"
-	SyncPeerList 	= "SyncPeerList"
-	RequestBlock	= "requestBlock"
-	BroadcastTxn 	= "BroadcastTxn"
+	SyncBlock        = "SyncBlock"
+	SyncPeerList     = "SyncPeerList"
+	RequestBlock     = "requestBlock"
+	BroadcastTx      = "BroadcastTx"
+	Unicast = 0
+	Broadcast = 1
 )
 
 var(
@@ -38,6 +58,7 @@ type Stream struct{
 	quitRdCh 	chan bool
 	quitWrCh 	chan bool
 }
+
 
 func NewStream(s net.Stream, node *Node) *Stream{
 	return &Stream{	node,
@@ -101,6 +122,7 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 	if len(bytes) > 1 {
 		//prase data
 		logger.Debug("Received Data:", bytes)
+
 		s.parseData(bytes)
 	}else{
 		logger.Debug("Read less than 1 byte. Stop Reading...")
@@ -166,10 +188,10 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error{
 	}
 	return nil
 }
-
+//should parse and relay
 func (s *Stream) parseData(data []byte){
 
-	data,err := decodeMessage(data)
+	dataDecoded,err := decodeMessage(data)
 	if err!=nil {
 		logger.Warn(err)
 		return
@@ -177,28 +199,32 @@ func (s *Stream) parseData(data []byte){
 
 	dmpb := &networkpb.Dapmsg{}
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, dmpb); err!=nil{
+	if err := proto.Unmarshal(dataDecoded, dmpb); err!=nil{
 		logger.Info(err)
 	}
 
 	dm := &Dapmsg{}
 	dm.FromProto(dmpb)
+
 	switch(dm.GetCmd()) {
 	case SyncBlock:
-		logger.Debug("Received ",SyncBlock," command from:", s.remoteAddr)
-		s.node.addBlockToPool(dm.GetData(),s.peerID)
+
+		logger.Debug(s.node.GetPeerMultiaddr() , " (", s.node.info.peerid ,") Received ", SyncBlock," command from:", dm.from)
+		s.node.syncBlockHandler(dm,s.peerID)
+
 	case SyncPeerList:
 		logger.Debug("Received ",SyncPeerList," command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
 	case RequestBlock:
 		logger.Debug("Received ",RequestBlock," command from:", s.remoteAddr)
 		s.node.sendRequestedBlock(dm.GetData(),s.peerID)
-		case BroadcastTxn:
-		logger.Debug("Received ", BroadcastTxn," command from:", s.remoteAddr)
-		s.node.addTxnToPool(dm.GetData())
+	case BroadcastTx:
+		logger.Debug("Received ", BroadcastTx," command from:", s.remoteAddr)
+		s.node.addTxToPool(dm.GetData())
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)
 	}
 	
 }
+
 

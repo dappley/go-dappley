@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
@@ -11,11 +29,11 @@ func TestBlockPool_GetBlockchain(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	hash1, err:= bc.GetTailHash()
 	assert.Nil(t, err)
-	newbc := bc.blockPool.GetBlockchain()
+	newbc := bc.GetBlockPool().GetBlockchain()
 
 	hash2, err := newbc.GetTailHash()
 	assert.Nil(t, err)
@@ -26,7 +44,7 @@ func TestBlockPool_AddParentToForkPoolWhenEmpty(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := CreateBlockchain(addr,db)
+	bc := CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -40,7 +58,7 @@ func TestBlockPool_AddParentToForkPool(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := CreateBlockchain(addr,db)
+	bc := CreateBlockchain(addr,db,nil)
 
 
 	bp := NewBlockPool(10)
@@ -57,7 +75,7 @@ func TestBlockPool_AddTailToForkPoolWhenEmpty(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 
 	bp := NewBlockPool(10)
@@ -72,7 +90,7 @@ func TestBlockPool_AddTailToForkPool(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -88,7 +106,7 @@ func TestBlockPool_ForkPoolLen(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -97,14 +115,14 @@ func TestBlockPool_ForkPoolLen(t *testing.T) {
 	bp.forkPool = append(bp.forkPool, blk1)
 	bp.forkPool = append(bp.forkPool, blk2)
 
-	assert.Equal(t,2, bp.ForkPoolLen())
+	assert.Equal(t,2, bp.forkPoolLen())
 }
 
 func TestBlockPool_GetForkPoolHeadBlk(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -120,7 +138,7 @@ func TestBlockPool_GetForkPoolTailBlk(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -136,7 +154,7 @@ func TestBlockPool_IsParentOfFork(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -158,7 +176,7 @@ func TestBlockPool_IsTailOfFork(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc:= CreateBlockchain(addr,db)
+	bc:= CreateBlockchain(addr,db,nil)
 
 	bp := NewBlockPool(10)
 	bp.SetBlockchain(bc)
@@ -186,11 +204,11 @@ func TestBlockPool_UpdateForkFromHeadLowerHeight(t *testing.T) {
 	blk2 := NewBlock(nil, blk)
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.AddParentToFork(blk))
+	assert.True(t, pool.addParentToFork(blk))
 	//however the fork should be empty since blk2's height is lower than the current blockchain
 	assert.Empty(t, pool.forkPool)
 	//this will be failed since blk is not blk's parent
-	assert.False(t, pool.AddParentToFork(blk))
+	assert.False(t, pool.addParentToFork(blk))
 
 }
 
@@ -206,7 +224,7 @@ func TestBlockPool_UpdateForkFromHeadHigherHeight(t *testing.T) {
 	blk.height = 7
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.AddParentToFork(blk))
+	assert.True(t, pool.addParentToFork(blk))
 	//however the fork should not be empty since blk2's height is higher than the current blockchain
 	assert.NotEmpty(t, pool.forkPool)
 }
@@ -221,11 +239,11 @@ func TestBlockPool_UpdateForkFromTailLowerHeight(t *testing.T) {
 	blk2 := NewBlock(nil, blk)
 	pool.forkPool = append(pool.forkPool, blk)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.UpdateForkFromTail(blk2))
+	assert.True(t, pool.updateForkFromTail(blk2))
 	//however the fork should be empty since blk2's height is lower than the current blockchain
 	assert.Empty(t, pool.forkPool)
 	//this will be failed since blk2 is not blk2's parent
-	assert.False(t, pool.UpdateForkFromTail(blk2))
+	assert.False(t, pool.updateForkFromTail(blk2))
 
 }
 
@@ -241,7 +259,7 @@ func TestBlockPool_UpdateForkFromTailHigherHeight(t *testing.T) {
 	blk.height = 7
 	pool.forkPool = append(pool.forkPool, blk)
 	//this will be successful since blk is blk2's parent
-	assert.True(t, pool.UpdateForkFromTail(blk2))
+	assert.True(t, pool.updateForkFromTail(blk2))
 	//however the fork should not be empty since blk2's height is higher than the current blockchain
 	assert.NotEmpty(t, pool.forkPool)
 }

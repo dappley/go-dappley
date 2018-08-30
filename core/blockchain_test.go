@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
@@ -18,7 +36,7 @@ func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s)
+	bc:= CreateBlockchain(addr, s,nil)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk,err := bc.Next()
@@ -30,7 +48,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s)
+	bc:= CreateBlockchain(addr, s,nil)
 	blk := GenerateMockBlock()
 	blk.height = 1
 	assert.True(t,bc.HigherThanBlockchain(blk))
@@ -40,7 +58,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s)
+	bc:= CreateBlockchain(addr, s,nil)
 
 	blk := GenerateMockBlock()
 	blk.height = 1
@@ -53,7 +71,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s)
+	bc:= CreateBlockchain(addr, s,nil)
 
 	blk := GenerateMockBlock()
 	blk.SetHash([]byte("hash1"))
@@ -70,7 +88,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//create a mock blockchain with max height of 5
 	bc := GenerateMockBlockchain(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 
 	blk,err := bc.GetTailBlock()
 	assert.Nil(t,err)
@@ -84,8 +102,6 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//rollback to height 3
 	bc.RollbackToABlockHeight(blk.GetHash())
 
-	cleanUpPool()
-
 	//the height 3 block should be the new tail block
 	newTailBlk,err := bc.GetTailBlock()
 	assert.Nil(t,err)
@@ -97,11 +113,11 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
 	bc := GenerateMockBlockchain(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 	tailBlk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
-	bc.BlockPool().forkPool = GenerateMockFork(5,tailBlk)
-	forkTailBlockHash := bc.BlockPool().forkPool[0].GetHash()
+	bc.GetBlockPool().forkPool = GenerateMockFork(5,tailBlk)
+	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
 
 	//add the fork to the end of the blockchain
 	bc.concatenateForkToBlockchain()
@@ -116,7 +132,7 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
 	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 	blk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -127,10 +143,10 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	}
 
 	//generate a fork that is forked from height 3
-	bc.BlockPool().forkPool = GenerateMockFork(5,blk)
+	bc.GetBlockPool().forkPool = GenerateMockFork(5,blk)
 
 	//get the last fork hash
-	forkTailBlockHash := bc.BlockPool().forkPool[0].GetHash()
+	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
 
 	bc.MergeFork()
 
@@ -140,13 +156,12 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	assert.Nil(t, err)
 	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
 
-	cleanUpPool()
 }
 
 func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	//mock a blockchain and a fork whose parent is the tail of the blockchain
 	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
-	defer bc.DB.Close()
+	defer bc.db.Close()
 	blk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
 
@@ -160,7 +175,7 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	//generate a fork that is forked from height 3
-	bc.BlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
+	bc.GetBlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
 
 	//the merge should fail since the transactions are invalid
 	bc.MergeFork()
@@ -170,6 +185,4 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	newTailBlkHash,err := bc.GetTailHash()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t,tailBlkHash,newTailBlkHash)
-
-	cleanUpPool()
 }

@@ -36,83 +36,94 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const invalidAddress = "Invalid Address"
-
-var databaseInstance *storage.LevelDB
+const InvalidAddress = "Invalid Address"
 
 func TestMain(m *testing.M) {
 	setup()
-	databaseInstance = storage.OpenDatabase(core.BlockchainDbFile)
-	defer databaseInstance.Close()
 	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()
+	teardown()
 	os.Exit(retCode)
 }
 
 func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet()
 	assert.Nil(t, err)
-	assert.Equal(t, len(wallet.Addresses[0].Address), 34)
+	assert.Equal(t, 34, len(wallet.Addresses[0].Address))
 }
 
 func TestCreateBlockchain(t *testing.T) {
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+
 	//create a wallet address
-	addr := core.Address{"1111Wmg1ZRnhjUs6TvbV"}
+	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
-	assert.Nil(t, b)
-	assert.Equal(t, err, errors.New("ERROR: Address is invalid"))
+	_, err := CreateBlockchain(addr, store, nil)
+	assert.Nil(t, err)
 }
 
 //create a blockchain with invalid address
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+
 	//create a blockchain with an invalid address
-	b, err := CreateBlockchain(core.NewAddress(invalidAddress), databaseInstance)
-	assert.Equal(t, err, ErrInvalidAddress)
-	assert.Nil(t, b)
+	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil)
+	assert.Equal(t, ErrInvalidAddress, err)
+	assert.Nil(t, bc)
 }
 
 func TestGetBalance(t *testing.T) {
-	//create a wallet address
-	wallet, err := CreateWallet()
-	assert.NotEmpty(t, wallet)
-	addr := wallet.GetAddress()
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
 
+	//create a wallet address
+	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	bc, err := CreateBlockchain(addr, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
-	balance, err := GetBalance(addr, databaseInstance)
+	balance, err := GetBalance(addr, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance, 10)
+	assert.Equal(t, 10, balance)
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
-	//create a wallet address
-	wallet, err := CreateWallet()
-	assert.NotEmpty(t, wallet)
-	addr := wallet.GetAddress()
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
 
+	//create a wallet address
+	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	bc, err := CreateBlockchain(addr, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
-	balance1, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"), databaseInstance)
+	balance1, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"), store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, 0)
+	assert.Equal(t, 0, balance1)
 
-	balance2, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"), databaseInstance)
+	balance2, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"), store)
 	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 }
 
 func TestGetAllAddresses(t *testing.T) {
 	setup()
+
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+
 	expected_res := []core.Address{}
 	//create a wallet address
 	wallet, err := CreateWallet()
@@ -122,9 +133,9 @@ func TestGetAllAddresses(t *testing.T) {
 	expected_res = append(expected_res, addr)
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr, databaseInstance)
+	bc, err := CreateBlockchain(addr, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//create 10 more addresses
 	for i := 0; i < 10; i++ {
@@ -139,7 +150,6 @@ func TestGetAllAddresses(t *testing.T) {
 	//get all addresses
 	addrs, err := GetAllAddresses()
 	assert.Nil(t, err)
-	assert.NotNil(t, addrs)
 
 	//the length should be equal
 	assert.Equal(t, len(expected_res), len(addrs))
@@ -151,6 +161,11 @@ func TestGetAllAddresses(t *testing.T) {
 func TestSend(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+
 	mineReward := int(10)
 	transferAmount := int(5)
 	tip := uint64(5)
@@ -158,14 +173,15 @@ func TestSend(t *testing.T) {
 	wallet1, err := CreateWallet()
 	assert.NotEmpty(t, wallet1)
 
+	pow := consensus.NewProofOfWork()
 	//create a blockchain
-	b, err := CreateBlockchain(wallet1.GetAddress(), databaseInstance)
+	bc, err := CreateBlockchain(wallet1.GetAddress(), store, pow)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
-	node := network.NewNode(b)
+	assert.NotNil(t, bc)
+	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//The balance1 should be 10 after creating a blockchain
-	balance1, err := GetBalance(wallet1.GetAddress(), databaseInstance)
+	balance1, err := GetBalance(wallet1.GetAddress(), store)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
@@ -177,27 +193,26 @@ func TestSend(t *testing.T) {
 	addr2 := wallet2.GetAddress()
 
 	//The balance2 should be 0
-	balance2, err := GetBalance(addr2, databaseInstance)
+	balance2, err := GetBalance(addr2, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 
 	//Send 5 coins from wallet1 to wallet2
-	err = Send(wallet1, addr2, transferAmount, tip, b)
+	err = Send(wallet1, addr2, transferAmount, tip, bc)
 	assert.Nil(t, err)
-	pow := consensus.NewProofOfWork()
 	pow.Setup(node, addr1.Address)
 
 	pow.Start()
 	time.Sleep(3 * time.Second)
 
 	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
-	balance1, err = GetBalance(wallet1.GetAddress(), databaseInstance)
+	balance1, err = GetBalance(wallet1.GetAddress(), store)
 
 	assert.Nil(t, err)
 	assert.True(t, 2*mineReward-transferAmount < balance1)
 
 	//the balance1 of the second wallet should be 5
-	balance2, err = GetBalance(wallet2.GetAddress(), databaseInstance)
+	balance2, err = GetBalance(wallet2.GetAddress(), store)
 	assert.Nil(t, err)
 	assert.Equal(t, transferAmount, balance2)
 
@@ -230,6 +245,11 @@ func TestDeleteWallets(t *testing.T) {
 func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+
 	//this is internally set. Dont modify
 	mineReward := int(10)
 	//Transfer ammount
@@ -241,23 +261,23 @@ func TestSendToInvalidAddress(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr1, databaseInstance)
+	bc, err := CreateBlockchain(addr1, store, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, b)
+	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
-	balance1, err := GetBalance(addr1, databaseInstance)
+	balance1, err := GetBalance(addr1, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 
 	//Send 5 coins from addr1 to an invalid address
-	err = Send(wallet1, core.NewAddress(invalidAddress), transferAmount, tip, b)
+	err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, bc)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
-	balance1, err = GetBalance(addr1, databaseInstance)
+	balance1, err = GetBalance(addr1, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 	//teardown :clean up database amd files
 	teardown()
 }
@@ -272,8 +292,6 @@ func TestDeleteInvalidWallet(t *testing.T) {
 
 	addressList := []core.Address{addr1}
 
-	println(addr1.Address)
-
 	list, err := GetAllAddresses()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
@@ -286,6 +304,11 @@ func TestDeleteInvalidWallet(t *testing.T) {
 func TestSendInsufficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
+
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+
 	tip := uint64(5)
 
 	//this is internally set. Dont modify
@@ -299,14 +322,14 @@ func TestSendInsufficientBalance(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	b, err := CreateBlockchain(addr1, databaseInstance)
+	b, err := CreateBlockchain(addr1, store, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, b)
 
 	//The balance should be 10 after creating a blockchain
-	balance1, err := GetBalance(addr1, databaseInstance)
+	balance1, err := GetBalance(addr1, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 
 	//Create a second wallet
 	wallet2, err := CreateWallet()
@@ -315,37 +338,38 @@ func TestSendInsufficientBalance(t *testing.T) {
 	addr2 := wallet2.GetAddress()
 
 	//The balance should be 0
-	balance2, err := GetBalance(addr2, databaseInstance)
+	balance2, err := GetBalance(addr2, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 
 	//Send 5 coins from addr1 to addr2
 	err = Send(wallet1, addr2, transferAmount, tip, b)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
-	balance1, err = GetBalance(addr1, databaseInstance)
+	balance1, err = GetBalance(addr1, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance1, mineReward)
+	assert.Equal(t, mineReward, balance1)
 
 	//the balance of the second wallet should be 0
-	balance2, err = GetBalance(addr2, databaseInstance)
+	balance2, err = GetBalance(addr2, store)
 	assert.Nil(t, err)
-	assert.Equal(t, balance2, 0)
+	assert.Equal(t, 0, balance2)
 
 	//teardown :clean up database amd files
 	teardown()
 }
 
-const testport = 10100
+const testport_msg_relay = 19999
 
-func TestSyncBlocks(t *testing.T) {
+
+func TestBlockMsgRelay(t *testing.T) {
+	setup()
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
+	var nodes []*network.Node
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	//wait for mining for at least "targetHeight" blocks
-	targetHeight := uint64(4)
-	//num of nodes to be created in the test
+
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
@@ -353,75 +377,47 @@ func TestSyncBlocks(t *testing.T) {
 		defer db.Close()
 
 		//create blockchain instance
-		bc := core.CreateBlockchain(addr, db)
+		pow := consensus.NewProofOfWork()
+		bc := core.CreateBlockchain(addr, db, pow)
 		bcs = append(bcs, bc)
 
-		pow := consensus.NewProofOfWork()
-		pow.Setup(network.NewNode(bcs[i]), addr.Address)
-		pow.SetTargetBit(16)
-		pow.GetNode().Start(testport + i)
+		n := network.NewNode(bcs[i])
 
-		if i != 0 {
-			pow.GetNode().AddStream(
-				pows[0].GetNode().GetPeerID(),
-				pows[0].GetNode().GetPeerMultiaddr(),
-			)
+		if(i == 0){
+			pow.Setup(n, addr.Address)
+			pow.SetTargetBit(16)
 		}
 
+		n.Start(testport_msg_relay + 100*i)
+
+		nodes = append(nodes, n)
 		pows = append(pows, pow)
 	}
 
-	//seed node broadcasts syncpeers
-	pows[0].GetNode().SyncPeers()
-
-	//wait for 2 seconds for syncing
-	time.Sleep(time.Second * 2)
-
-	//count and is Stopped tracks the num of nodes that have been stopped
-	count := 0
-	isStopped := []bool{}
-	blkHeight := []uint64{}
-	//Start Mining and set average block time to 15 seconds (difficulty = 16)
-	for i := 0; i < numOfNodes; i++ {
-		pows[i].Start()
-		isStopped = append(isStopped, false)
-		blkHeight = append(blkHeight, 0)
-	}
-
-loop:
-	for {
-		for i := 0; i < numOfNodes; i++ {
-			blk, err := bcs[i].GetTailBlock()
-			assert.Nil(t, err)
-			if blk.GetHeight() > blkHeight[i] {
-				blkHeight[i]++
-				logger.Info("BlkHeight:", blkHeight[i], " Node:", pows[i].GetNode().GetPeerMultiaddr())
-			}
-			if blk.GetHeight() > targetHeight {
-				//count the number of nodes that have already stopped mining
-				if isStopped[i] == false {
-					//stop the first miner that reaches the target height
-					pows[i].Stop()
-					isStopped[i] = true
-					count++
-				}
-			}
-			//break the loop if all miners stop
-			if count >= numOfNodes {
-				break loop
-			}
+	for i := 0; i < len(nodes); i++ {
+		nodes[i].AddStream(
+			nodes[i+1].GetPeerID(),
+			nodes[i+1].GetPeerMultiaddr(),
+		)
+		if i == (len(nodes) - 2) {
+			break
 		}
 	}
 
-	//Check if all nodes have the same tail block
-	for i := 0; i < numOfNodes-1; i++ {
-		blk0, err := bcs[i].GetTailBlock()
-		assert.Nil(t, err)
-		blk1, err := bcs[i+1].GetTailBlock()
-		assert.Nil(t, err)
-		assert.Equal(t, blk0.GetHash(), blk1.GetHash())
-	}
+	//firstNode Starts Mining
 
+	pows[0].Start()
+	time.Sleep(time.Second*3)
+	pows[0].Stop()
+	time.Sleep(time.Second*3)
+	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
+	heights := []int{0,0,0,0} //keep track of each node's blockchain height
+	for i := 0; i < len(nodes); i++ {
+		for _, _ = range *nodes[i].GetRecentlyRcvedDapMessages() {
+			heights[i]++
+		}
+		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
+	}
 }
 
 const testport_fork = 10200
@@ -434,20 +430,23 @@ func TestForkChoice(t *testing.T) {
 	//targetHeight := uint64(4)
 	//num of nodes to be created in the test
 	numOfNodes := 2
+	nodes := []*network.Node{}
 	for i := 0; i < numOfNodes; i++ {
 		//create storage instance
 		db := storage.NewRamStorage()
 		defer db.Close()
 
+		pow := consensus.NewProofOfWork()
 		//create blockchain instance
-		bc := core.CreateBlockchain(addr, db)
+		bc := core.CreateBlockchain(addr, db, pow)
 		bcs = append(bcs, bc)
 
-		pow := consensus.NewProofOfWork()
-		pow.Setup(network.NewNode(bcs[i]), addr.Address)
+		n := network.NewNode(bcs[i])
+		pow.Setup(n, addr.Address)
 		pow.SetTargetBit(16)
-		pow.GetNode().Start(testport_fork + i)
+		n.Start(testport_fork + i)
 		pows = append(pows, pow)
+		nodes = append(nodes, n)
 	}
 
 	//start node0 first. the next node starts mining after the previous node is at least at height 5
@@ -460,12 +459,12 @@ func TestForkChoice(t *testing.T) {
 
 	for i := 0; i < numOfNodes; i++ {
 		if i != 0 {
-			pows[i].GetNode().AddStream(
-				pows[0].GetNode().GetPeerID(),
-				pows[0].GetNode().GetPeerMultiaddr(),
+			nodes[i].AddStream(
+				nodes[0].GetPeerID(),
+				nodes[0].GetPeerMultiaddr(),
 			)
 		}
-		pows[0].GetNode().SyncPeers()
+		nodes[0].SyncPeersBlockcast()
 	}
 
 	time.Sleep(time.Second * 5)
@@ -473,11 +472,6 @@ func TestForkChoice(t *testing.T) {
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
 		assert.True(t, compareTwoBlockchains(bcs[0], bcs[i]))
-		/*		blk0, err := bcs[i].GetTailBlock()
-				assert.Nil(t,err)
-				blk1, err := bcs[i+1].GetTailBlock()
-				assert.Nil(t,err)
-				assert.Equal(t,blk0.GetHash(),blk1.GetHash())*/
 	}
 }
 
@@ -487,6 +481,84 @@ func TestCompare(t *testing.T) {
 	assert.True(t, compareTwoBlockchains(bc1, bc2))
 	bc3 := core.GenerateMockBlockchain(5)
 	assert.False(t, compareTwoBlockchains(bc1, bc3))
+}
+
+
+// Integration test for adding balance
+func TestAddBalance(t *testing.T) {
+	testCases := []struct {
+		name  string
+		addAmount  int
+		expectedDiff  int
+		expectedErr  error
+	}{
+		{"Add 5", 5, 5, nil},
+		{"Add zero", 0, 0, ErrInvalidAddAmount},
+		{"Add negative", -7, 0, ErrInvalidAddAmount},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create storage
+			store := storage.NewRamStorage()
+			defer store.Close()
+
+			// Create a coinbase address
+			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+
+			// Create a pow consensus
+			pow := consensus.NewProofOfWork()
+
+			// Create a blockchain
+			bc, err := CreateBlockchain(addr, store, pow)
+
+			// Create a new wallet address for testing
+			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
+
+			// Add `addAmount` to the balance of the new wallet
+			err = AddBalance(testAddr, tc.addAmount, bc)
+			assert.Equal(t, err, tc.expectedErr)
+
+			// Start mining to approve the transaction
+			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
+			pow.Setup(node, addr.Address)
+			pow.SetTargetBit(0)
+			pow.Start()
+
+			for bc.GetMaxHeight()<=1{}
+			pow.Stop()
+
+			// The wallet balance should be the expected difference
+			balance, err := GetBalance(testAddr, store)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expectedDiff, balance)
+		})
+	}
+}
+
+// Integration test for adding balance to invalid address
+func TestAddBalanceWithInvalidAddress(t *testing.T) {
+	testCases := []struct {
+		name  string
+		address  string
+	}{
+		{"Invalid char in address", InvalidAddress},
+		{"Invalid checksum address", "1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create storage
+			store := storage.NewRamStorage()
+			defer store.Close()
+
+			// Create a coinbase wallet address
+			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+			// Create a blockchain
+			bc, err := CreateBlockchain(addr, store, nil)
+			assert.Nil(t, err)
+			err = AddBalance(core.Address{tc.address}, 8, bc)
+			assert.Equal(t, ErrInvalidAddress, err)
+		})
+	}
 }
 
 func compareTwoBlockchains(bc1, bc2 *core.Blockchain) bool {
@@ -523,6 +595,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll("../bin/blockchain.DB")
 	os.RemoveAll(client.WalletFile)
 }

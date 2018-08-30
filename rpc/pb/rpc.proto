@@ -1,0 +1,59 @@
+syntax = "proto3";
+package rpcpb;
+import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
+
+option objc_class_prefix = "HLW";
+
+service Connect {
+  rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
+  rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
+  rpc RpcSend (SendRequest) returns (SendResponse) {}
+  rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
+  rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
+}
+
+// The request message 
+message CreateWalletRequest {
+  string name = 1;
+}
+
+message GetBalanceRequest {
+  string name = 1;
+  string address = 2;
+}
+
+message SendRequest {
+  string name = 1;
+  string from = 2;
+  string to = 3;
+  int64 ammount = 4;
+}
+
+message GetPeerInfoRequest {}
+
+message GetBlockchainInfoRequest {}
+
+// The response message 
+
+message CreateWalletResponse {
+  string message = 1;
+  string address = 2;
+}
+
+message GetBalanceResponse {
+  string message = 1;
+  int64 ammount = 2;
+}
+
+message SendResponse {
+  string message = 1;
+}
+
+message GetPeerInfoResponse {
+  networkpb.Peerlist peerList = 1;
+}
+
+message GetBlockchainInfoResponse {
+  bytes   tailBlockHash = 1;
+  uint64  blockHeight = 2;
+}

@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
@@ -152,9 +170,9 @@ func TestBlock_Rollback(t *testing.T) {
 	tx := MockTransaction()
 	b.transactions = []*Transaction{tx}
 	b.UpdateUtxoIndexAfterNewBlock(UtxoForkMapKey, db)
-	b.Rollback(db)
-	txnPool := GetTxnPoolInstance()
-	assert.ElementsMatch(t, tx.ID, txnPool.Pop().(Transaction).ID)
+	txPool := NewTransactionPool()
+	b.Rollback(txPool)
+	assert.ElementsMatch(t, tx.ID, txPool.Transactions.Right().(Transaction).ID)
 }
 
 func TestBlock_FindTransaction(t *testing.T) {
@@ -174,27 +192,6 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 	b := GenerateMockBlock()
 	tx := MockTransaction()
 	assert.Nil(t, b.FindTransactionById(tx.ID))
-}
-
-func TestBlock_RemoveMinedTxFromTxPool(t *testing.T) {
-	txPool := GetTxnPoolInstance()
-	tx1 := MockTransaction()
-	tx2 := MockTransaction()
-	tx3 := MockTransaction()
-	tx4 := MockTransaction()
-	txPool.Push(*tx1)
-	txPool.Push(*tx2)
-	txPool.Push(*tx4)
-
-	//The transaction pool now has transactions tx1,tx2 and tx4
-	//The block has transactions tx1, tx2, tx3
-	blk := NewBlock([]*Transaction{tx1, tx2, tx3}, nil)
-	blk.RemoveMinedTxFromTxPool()
-
-	//now the transaction pool should only has tx4 in there
-	assert.Equal(t, 1, txPool.Len())
-	tx := txPool.Pop().(Transaction)
-	assert.Equal(t, *tx4, tx)
 }
 
 func TestIsParentBlockHash(t *testing.T) {

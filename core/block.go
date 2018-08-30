@@ -31,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/storage"
 )
 
 const (
@@ -265,7 +264,7 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 }
 
 func (b *Block) VerifyHash() bool {
-	return reflect.DeepEqual(b.GetHash(), b.CalculateHash())
+	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
 
 func (b *Block) VerifyTransactions(utxo utxoIndex) bool {
@@ -295,20 +294,20 @@ func IsParentBlock(parentBlk, childBlk *Block) bool{
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
 
-func (b *Block) Rollback(db storage.Storage){
+func (b *Block) Rollback(txPool *TransactionPool){
 	if b!= nil {
-		txnPool := GetTxnPoolInstance()
 		for _,tx := range b.GetTransactions(){
 			if !tx.IsCoinbase() {
-				txnPool.Push(*tx)
+				txPool.Transactions.StructPush(*tx)
 			}
 		}
 	}
 }
 
 func (b *Block) FindTransactionById(txid []byte) *Transaction{
-	for _, tx := range b.GetTransactions() {
+	for _, tx := range b.transactions {
 		if bytes.Compare(tx.ID, txid) == 0 {
+
 			return tx
 		}
 
@@ -316,12 +315,13 @@ func (b *Block) FindTransactionById(txid []byte) *Transaction{
 	return nil
 }
 
-//remove the transactions in a block from the transaction pool
-func (b *Block) RemoveMinedTxFromTxPool(){
-	txPool := GetTxnPoolInstance()
-	txPool.Traverse(func(tx Transaction) bool{
-		//if the transaction in the transaction pool is not found in the block, keep it in the pool
-		//if the transaction in the transaction pool is found in the block. remove it from the pool
-		return b.FindTransactionById(tx.ID) == nil
-	})
+
+func (b *Block) GetCoinbaseTransaction() *Transaction{
+	//the coinbase transaction is usually placed at the end of all transactions
+	for i:=len(b.transactions)-1;i>=0;i--{
+		if b.transactions[i].IsCoinbase(){
+			return b.transactions[i]
+		}
+	}
+	return nil
 }

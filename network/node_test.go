@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package network
 
 import (
@@ -10,6 +28,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
+	"bytes"
 )
 
 const(
@@ -39,7 +58,7 @@ func TestNetwork_Setup(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := core.CreateBlockchain(addr,db)
+	bc := core.CreateBlockchain(addr,db,nil)
 
 	//create node1
 	node1 := NewNode(bc)
@@ -77,8 +96,8 @@ func TestNetwork_SendBlock(t *testing.T){
 	for _,input := range bcInputs{
 		db := storage.NewRamStorage()
 		defer db.Close()
-		bc := core.CreateBlockchain(input.addr, db)
-		n := NewNode(bc)
+		bc := core.CreateBlockchain(input.addr, db,nil)
+		n := FakeNodeWithPidAndAddr(bc,"asd", "asd")
 		n.Start(input.testPort)
 		nodes = append(nodes, n)
 	}
@@ -117,7 +136,7 @@ func TestNode_SyncPeers(t *testing.T){
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := core.CreateBlockchain(addr,db)
+	bc := core.CreateBlockchain(addr,db,nil)
 
 
 	//create node1
@@ -142,7 +161,7 @@ func TestNode_SyncPeers(t *testing.T){
 	time.Sleep(time.Second)
 
 	//node 1 broadcast syncpeers
-	node1.SyncPeers()
+	node1.SyncPeersBlockcast()
 
 	time.Sleep(time.Second*2)
 
@@ -168,7 +187,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 		db := storage.NewRamStorage()
 		defer db.Close()
 		addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-		bc := core.CreateBlockchain(addr,db)
+		bc := core.CreateBlockchain(addr,db,nil)
 
 		//create node
 		node := NewNode(bc)
@@ -185,7 +204,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 
 	//generate a block and store it in node0 blockchain
 	blk := core.GenerateMockBlock()
-	nodes[0].bc.DB.Put(blk.GetHash(),blk.Serialize())
+	nodes[0].bc.GetDb().Put(blk.GetHash(),blk.Serialize())
 
 	//node1 request the block
 	nodes[1].RequestBlockUnicast(blk.GetHash(),nodes[0].GetPeerID())
@@ -195,7 +214,6 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 }
 
 func TestNode_prepareData(t *testing.T){
-
 	tests := []struct{
 		name  		string
 		msgData 	proto.Message
@@ -232,11 +250,12 @@ func TestNode_prepareData(t *testing.T){
 			retErr: 	ErrDapMsgNoCmd,
 		},
 	}
-
+	n:= FakeNodeWithPidAndAddr(nil,"asd", "test")
 	for _,tt := range tests{
 		t.Run(tt.name,func(t *testing.T){
-			data,err := prepareData(tt.msgData,tt.cmd)
-			assert.Equal(t,tt.retData,data)
+			data,err := n.prepareData(tt.msgData,tt.cmd, Unicast)
+			//dapley msgs returned contains timestamp of when it was created. We only check the non-timestamp contents to make sure it is there.
+			assert.Equal(t,true, bytes.Contains(data,tt.retData))
 			assert.Equal(t,tt.retErr,err)
 		})
 	}

@@ -1,7 +1,24 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
-	"container/heap"
 	"testing"
 
 	"github.com/dappley/go-dappley/util"
@@ -46,34 +63,41 @@ var popInputOrder = []struct {
 
 //transaction pool push function
 func TestTxPoolPush(t *testing.T) {
-	txPool := GetTxnPoolInstance()
-	heap.Push(txPool, t1)
-	assert.Equal(t, 1, txPool.Len())
-	heap.Push(txPool, t2)
-	assert.Equal(t, 2, txPool.Len())
-	heap.Push(txPool, t3)
-	heap.Push(txPool, t4)
-	assert.Equal(t, 4, txPool.Len())
-	cleanUpPool()
+	txPool := NewTransactionPool()
+	txPool.Transactions.StructPush(t1)
+	assert.Equal(t, 1, txPool.Transactions.Len())
+	txPool.Transactions.StructPush(t2)
+	assert.Equal(t, 2, txPool.Transactions.Len())
+	txPool.Transactions.StructPush(t3)
+	txPool.Transactions.StructPush(t4)
+	assert.Equal(t, 4, txPool.Transactions.Len())
 }
 
 func TestTranstionPoolPop(t *testing.T) {
 	for _, tt := range popInputOrder {
 		var popOrder = []uint64{}
-		txPool := GetTxnPoolInstance()
+		txPool := NewTransactionPool()
 		for _, tx := range tt.order {
-			heap.Push(txPool, tx)
+			txPool.Transactions.StructPush(tx)
 		}
-		for txPool.Len() > 0 {
-			popOrder = append(popOrder, heap.Pop(txPool).(Transaction).Tip)
+		for txPool.Transactions.Len() > 0 {
+			popOrder = append(popOrder, txPool.Transactions.PopRight().(Transaction).Tip)
 		}
 		assert.Equal(t, expectPopOrder, popOrder)
 	}
 }
 
-func cleanUpPool() {
-	txPool := GetTxnPoolInstance()
-	for txPool.Len() > 0 {
-		heap.Pop(txPool)
+func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
+	txPool := NewTransactionPool()
+	totalTx:=5
+	txs := []*Transaction{}
+	for i:=0 ;i<totalTx;i++{
+		tx := MockTransaction()
+		txs = append(txs, tx)
+		txPool.StructPush(*tx)
 	}
+	txPool.RemoveMultipleTransactions(txs)
+
+	assert.Equal(t,0, txPool.Transactions.Len())
+
 }

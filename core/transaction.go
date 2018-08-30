@@ -1,3 +1,21 @@
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+
 package core
 
 import (
@@ -25,6 +43,7 @@ const subsidy = 10
 
 var (
 	ErrInsufficientFund = errors.New("ERROR: The balance is insufficient")
+	ErrInvalidAddAmount     = errors.New("ERROR: Amount is invalid (must be > 0)")
 )
 
 type Transaction struct {
@@ -35,7 +54,7 @@ type Transaction struct {
 }
 
 
-type TxnIndex struct{
+type TxIndex struct{
 	BlockId []byte
 	BlockIndex int
 }
@@ -126,6 +145,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 
 //return true if the transaction is verified
 func (tx *Transaction) Verify(utxo utxoIndex) bool {
+
 	if tx.IsCoinbase() {
 		return true
 	}
@@ -149,7 +169,7 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
-			log.Panic("ERROR: Previous transaction is not correct")
+			fmt.Println("ERROR: Previous transaction is not correct")
 		}
 	}
 
@@ -158,12 +178,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 	curve := secp256k1.S256()
 
 	for inID, vin := range tx.Vin {
-		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		prevTxOut := prevTXs[hex.EncodeToString(vin.Txid)]
+		if bytes.Compare(prevTxOut.PubKeyHash, vin.PubKey) != 0 {
+			return false
+		}
 		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTx.PubKeyHash
+		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
-
 		x := big.Int{}
 		y := big.Int{}
 		keyLen := len(vin.PubKey)
@@ -244,22 +266,29 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, sender
 
 	tx := Transaction{nil, inputs, outputs, tip}
 	tx.ID = tx.Hash()
-	bc.SignTransaction(&tx, senderKeyPair.PrivateKey)
+	prevTXs := bc.GetPrevTransactions(tx)
+	tx.Sign(senderKeyPair.PrivateKey, prevTXs)
 
 	return tx, nil
 }
 
 //for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount int, keypair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
+func NewUTXOTransactionforAddBalance(to Address, amount int, keyPair KeyPair, bc *Blockchain) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
+
+	// Validate amount
+	if amount <= 0 {
+		return Transaction{}, ErrInvalidAddAmount
+	}
 
 	// Build a list of outputs
 	outputs = append(outputs, *NewTXOutput(amount, to.Address))
 
-	tx := Transaction{nil, inputs, outputs, tip}
+	tx := Transaction{nil, inputs, outputs, 0}
 	tx.ID = tx.Hash()
-	bc.SignTransaction(&tx, keypair.PrivateKey)
+	prevTxs := bc.GetPrevTransactions(tx)
+	tx.Sign(keyPair.PrivateKey, prevTxs)
 
 	return tx, nil
 }

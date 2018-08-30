@@ -45,3 +45,5 @@ func NewGenesisBlock(address string) *Block {
 	b.SetHash(b.CalculateHash())
 	return b
 }
+
+

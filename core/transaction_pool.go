@@ -15,121 +15,165 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
+
 package core
 
 import (
-	"container/heap"
+	"bytes"
+	"github.com/dappley/go-dappley/common/sorted"
 	"fmt"
-	"sync"
 )
 
-// An TransactionPool is a max-heap of Transactions.
+
+const TransactionPoolLimit = 5
+
 type TransactionPool struct {
 	messageCh    chan string
 	exitCh       chan bool
 	size         int
-	transactions []Transaction
+	Transactions sorted.Slice
 }
 
-var instance *TransactionPool
-var once sync.Once
-
-func (pool TransactionPool) Len() int { return len(pool.transactions) }
-
-//Compares Transaction Tips
-func (pool TransactionPool) Less(i, j int) bool {
-	return pool.transactions[i].Tip > pool.transactions[j].Tip
-}
-func (pool TransactionPool) Swap(i, j int) {
-	pool.transactions[i], pool.transactions[j] = pool.transactions[j], pool.transactions[i]
+func NewTransactionPool() *TransactionPool{
+	txPool := &TransactionPool{
+		messageCh: make(chan string, 128),
+		size:      128,
+	}
+	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, txPool.StructDelete, txPool.StructPush)
+	return txPool
 }
 
-//func NewTransactionPool(size int) (*TransactionPool) {
-//	txPool := &TransactionPool{
-//		messageCh:    make(chan string, size),
-//		size:         size,
-//	}
-//	heap.Init(txPool)
-//	return txPool
-//}
-func (pool *TransactionPool) Push(x interface{}) {
-	// Push and Pop use pointer receivers because they modify the slice's length,
-	// not just its contents.
-	pool.transactions = append(pool.transactions, x.(Transaction))
+func CompareTransactionTips(a interface{}, b interface{}) int {
+	ai := a.(Transaction)
+	bi := b.(Transaction)
+	if ai.Tip < bi.Tip {
+		return -1
+	} else if ai.Tip > bi.Tip {
+		return 1
+	} else {
+		return 0
+	}
 }
 
-func (pool *TransactionPool) Pop() interface{} {
-	old := pool.transactions
-	length := len(old)
-	last := old[length-1]
-	pool.transactions = old[0 : length-1]
-	return last
-}
+func (txPool *TransactionPool) StructDelete(tx interface{}) {
+	for k, v := range txPool.Transactions.Get() {
+		if bytes.Compare(v.(Transaction).ID, tx.(Transaction).ID) == 0 {
 
-func GetTxnPoolInstance() *TransactionPool {
-	once.Do(func() {
-		//instance = &TransactionPool{}
-		instance = &TransactionPool{
-			messageCh: make(chan string, 128),
-			size:      128,
-		}
-	})
-	heap.Init(instance)
-	return instance
-}
-
-//function f should return true if the transaction needs to be pushed back to the pool
-func (pool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
-	length := pool.Len()
-	for i := 0; i < length; i++ {
-		txn := heap.Pop(pool).(Transaction)
-		if txHandler(txn) {
-			pool.Push(txn)
+			var content []interface{}
+			content = append(content, txPool.Transactions.Get()[k+1:]...)
+			content = append(txPool.Transactions.Get()[0:k], content...)
+			txPool.Transactions.Set(content)
+			return
 		}
 	}
 }
 
-func (pool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
-	pool.Traverse(func(tx Transaction) bool{
+// Push a new value into slice
+func (txPool *TransactionPool) StructPush(val interface{}) {
+	if txPool.Transactions.Len() == 0 {
+		txPool.Transactions.AddSliceItem(val)
+		return
+	}
+
+	start, end := 0, txPool.Transactions.Len()-1
+	result, mid := 0, 0
+	for start <= end {
+		mid = (start + end) / 2
+		cmp := txPool.Transactions.GetSliceCmp()
+		result = cmp(txPool.Transactions.Index(mid), val)
+		if result > 0 {
+			end = mid - 1
+		} else if result < 0 {
+			start = mid + 1
+		} else {
+			break
+		}
+	}
+	content := []interface{}{val}
+	if result > 0 {
+		content = append(content, txPool.Transactions.Get()[mid:]...)
+		content = append(txPool.Transactions.Get()[0:mid], content...)
+	} else {
+		content = append(content, txPool.Transactions.Get()[mid+1:]...)
+		content = append(txPool.Transactions.Get()[0:mid+1], content...)
+
+	}
+	txPool.Transactions.Set(content)
+}
+
+
+func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction){
+	for _,tx := range txs {
+		txPool.StructDelete(*tx)
+	}
+}
+
+//function f should return true if the transaction needs to be pushed back to the pool
+func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
+
+	for _,v := range txPool.Transactions.Get(){
+		tx := v.(Transaction)
+		if !txHandler(tx) {
+			txPool.Transactions.StructDelete(tx)
+		}
+	}
+}
+
+func (txPool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
+	txPool.Traverse(func(tx Transaction) bool{
 		return tx.Verify(utxoPool)
 	})
 }
 
-func (pool *TransactionPool) GetSortedTransactions() []*Transaction {
+//need to optimize
+func (txPool *TransactionPool) GetSortedTransactions() []*Transaction {
 	sortedTransactions := []*Transaction{}
-
-	for GetTxnPoolInstance().Len() > 0 {
-		if len(sortedTransactions) < TransactionPoolLimit {
-			var transaction = heap.Pop(GetTxnPoolInstance()).(Transaction)
-			sortedTransactions = append(sortedTransactions, &transaction)
-		}
+	for txPool.Transactions.Len() > 0 {
+		tx := txPool.Transactions.PopRight().(Transaction)
+		sortedTransactions = append(sortedTransactions, &tx)
 	}
 	return sortedTransactions
 }
 
-func (pool *TransactionPool) Start() {
-	go pool.messageLoop()
+func (txPool *TransactionPool) ConditionalAdd(tx Transaction){
+	//get smallest tip tx
+
+	if(txPool.Transactions.Len() >= TransactionPoolLimit){
+		compareTx:= txPool.Transactions.PopLeft().(Transaction)
+		greaterThanLeastTip:= tx.Tip > compareTx.Tip
+		if(greaterThanLeastTip){
+			txPool.Transactions.StructPush(tx)
+		}else{// do nothing, push back popped tx
+			txPool.Transactions.StructPush(compareTx)
+		}
+	}else{
+		txPool.Transactions.StructPush(tx)
+	}
 }
 
-func (pool *TransactionPool) Stop() {
-	pool.exitCh <- true
+func (txPool *TransactionPool) Start() {
+	go txPool.messageLoop()
+}
+
+func (txPool *TransactionPool) Stop() {
+	txPool.exitCh <- true
 }
 
 //todo: will change the input from string to transaction
-func (pool *TransactionPool) PushTransaction(msg string) {
-	//func (pool *TransactionPool) PushTransaction(tx *Transaction){
-	//	pool.Push(tx)
+func (txPool *TransactionPool) PushTransaction(msg string) {
+	//func (txPool *TransactionPool) PushTransaction(tx *Transaction){
+	//	txPool.Push(tx)
 	fmt.Println(msg)
 }
 
-func (pool *TransactionPool) messageLoop() {
+func (txPool *TransactionPool) messageLoop() {
 	for {
 		select {
-		case <-pool.exitCh:
+		case <-txPool.exitCh:
 			fmt.Println("Quit Transaction Pool")
 			return
-		case msg := <-pool.messageCh:
-			pool.PushTransaction(msg)
+		case msg := <-txPool.messageCh:
+			txPool.PushTransaction(msg)
 		}
 	}
 }
