@@ -125,7 +125,7 @@ func main(){
 
 		cmd := cmdFlagSetList[cmdName]
 		if cmd == nil {
-			fmt.Println("\nERROR:", cmdName, "is an invalid command\n")
+			fmt.Println("\nERROR:", cmdName, "is an invalid command")
 			printUsage()
 		}else{
 			err := cmd.Parse(args[1:])
