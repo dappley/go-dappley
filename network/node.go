@@ -418,7 +418,7 @@ func (n *Node)addMultiPeers(data []byte){
 
 		//add streams for new peers
 		for _, p := range newpl.GetPeerlist() {
-			if !n.peerList.IsInPeerlist(p) {
+			if !n.peerList.IsInPeerlist(p) && p.peerid!=n.info.peerid{
 				n.AddStream(p.peerid, p.addr)
 			}
 		}
