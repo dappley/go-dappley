@@ -209,7 +209,7 @@ func (s *Stream) parseData(data []byte){
 	switch(dm.GetCmd()) {
 	case SyncBlock:
 
-		logger.Debug(s.node.GetPeerMultiaddr() , " (", s.node.info.peerid ,") Received ", SyncBlock," command from:", dm.from)
+		logger.Debug(s.node.GetPeerMultiaddr() , " (", s.node.info.peerid ,") Received ", SyncBlock," command from:", dm.key)
 		s.node.syncBlockHandler(dm,s.peerID)
 
 	case SyncPeerList:
