@@ -77,16 +77,16 @@ func NewNode(bc *core.Blockchain) *Node {
 	}
 }
 
-func (n *Node) isNetworkRadiation (dapmsg Dapmsg) bool {
+func (n *Node) isNetworkRadiation (dapmsg DapMsg) bool {
 	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == true{
 		return true
 	}
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain{return n.bc}
-func (n *Node) GetPeerList() *PeerList{return n.peerList}
-func (n *Node) GetRecentlyRcvedDapMessages() *map[string]bool {return &n.recentlyRcvedDapMsgs}
+func (n *Node) GetBlockchain() *core.Blockchain           {return n.bc}
+func (n *Node) GetPeerList() *PeerList                    {return n.peerList}
+func (n *Node) GetRecentlyRcvedDapMsgs() *map[string]bool {return &n.recentlyRcvedDapMsgs}
 
 func (n *Node) Start(listenPort int) error {
 
@@ -228,7 +228,7 @@ func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
 
 func (n *Node) GetPeerID() peer.ID { return n.info.peerid }
 
-func (n *Node) RelayDapMsg(dm Dapmsg){
+func (n *Node) RelayDapMsg(dm DapMsg){
 	msgData := dm.ToProto()
 	bytes, _ := proto.Marshal(msgData)
 	n.broadcast(bytes)
@@ -358,7 +358,7 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block{
 
 	return block
 }
-func (n *Node) syncBlockHandler(dm *Dapmsg, pid peer.ID){
+func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID){
 	if(n.isNetworkRadiation(*dm)){
 		logger.Debug(n.GetPeerMultiaddr(), " (", n.info.peerid, ") already received ",dm.GetKey(), " before")
 		return
@@ -370,7 +370,7 @@ func (n *Node) syncBlockHandler(dm *Dapmsg, pid peer.ID){
 
 }
 
-func (n *Node) cacheDapMsg(dm Dapmsg) {
+func (n *Node) cacheDapMsg(dm DapMsg) {
 	n.recentlyRcvedDapMsgs[dm.GetKey()] = true
 }
 

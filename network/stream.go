@@ -203,7 +203,7 @@ func (s *Stream) parseData(data []byte){
 		logger.Info(err)
 	}
 
-	dm := &Dapmsg{}
+	dm := &DapMsg{}
 	dm.FromProto(dmpb)
 
 	switch(dm.GetCmd()) {

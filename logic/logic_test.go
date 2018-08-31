@@ -411,7 +411,7 @@ func TestBlockMsgRelay(t *testing.T) {
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0,0,0,0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
-		for _,_ = range *nodes[i].GetRecentlyRcvedDapMessages() {
+		for _,_ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
 			heights[i]++
 		}
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
