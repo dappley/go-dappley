@@ -42,6 +42,7 @@ import (
 const (
 	protocalName        = "dappley/1.0.0"
 	syncPeerTimeLimitMs = 1000
+	MaxMsgCountBeforeReset = 999
 )
 
 var (

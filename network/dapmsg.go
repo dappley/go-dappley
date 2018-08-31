@@ -34,7 +34,7 @@ type Dapmsg struct{
 }
 
 func NewDapmsg(cmd string, data []byte, from string, uniOrBroadcast int, counter *uint64) *Dapmsg {
-	if *counter > uint64(999){
+	if *counter > uint64(MaxMsgCountBeforeReset){
 		*counter = 0
 	}
 	*counter++
