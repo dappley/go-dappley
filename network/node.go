@@ -429,7 +429,7 @@ func (n *Node)addMultiPeers(data []byte){
 		}
 
 		//add peers
-		n.peerList.MergePeerlist(pl)
+		n.peerList.MergePeerlist(newpl)
 	}()
 }
 
