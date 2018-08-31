@@ -11,6 +11,7 @@ import (
 	"context"
 	"log"
 	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc/metadata"
 )
 
 //command names
@@ -60,7 +61,7 @@ var cmdHandlers = map[string]commandHandlers{
 	cliGetPeerInfo			: getPeerInfoCommandHandler,
 }
 
-type commandHandlers func(rpcpb.ConnectClient, cmdFlags)
+type commandHandlers func(context.Context,rpcpb.ConnectClient, cmdFlags)
 
 type flagPars struct{
 	name 		string
@@ -134,7 +135,9 @@ func main(){
 				continue
 			}
 			if cmd.Parsed() {
-				cmdHandlers[cmdName](client, cmdFlagValues[cmdName])
+				md := metadata.Pairs("password", "password")
+				ctx := metadata.NewOutgoingContext(context.Background(), md)
+				cmdHandlers[cmdName](ctx, client, cmdFlagValues[cmdName])
 			}
 		}
 	}
@@ -147,8 +150,8 @@ func printUsage() {
 	}
 }
 
-func getBlockchainInfoCommandHandler(client rpcpb.ConnectClient, flags cmdFlags){
-	response,err  := client.RpcGetBlockchainInfo(context.Background(),&rpcpb.GetBlockchainInfoRequest{})
+func getBlockchainInfoCommandHandler(ctx context.Context, client rpcpb.ConnectClient, flags cmdFlags){
+	response,err  := client.RpcGetBlockchainInfo(ctx,&rpcpb.GetBlockchainInfoRequest{})
 	if err!=nil {
 		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
 		return
@@ -156,15 +159,15 @@ func getBlockchainInfoCommandHandler(client rpcpb.ConnectClient, flags cmdFlags)
 	fmt.Println(proto.MarshalTextString(response))
 }
 
-func getBalanceCommandHandler(client rpcpb.ConnectClient, flags cmdFlags){
+func getBalanceCommandHandler(ctx context.Context, client rpcpb.ConnectClient, flags cmdFlags){
 	//TODO
 	fmt.Println("getBalance!")
 	fmt.Println(*(flags[flagAddress].(*string)))
 }
 
-func getPeerInfoCommandHandler(client rpcpb.ConnectClient, flags cmdFlags){
+func getPeerInfoCommandHandler(ctx context.Context, client rpcpb.ConnectClient, flags cmdFlags){
 
-	response,err  := client.RpcGetPeerInfo(context.Background(),&rpcpb.GetPeerInfoRequest{})
+	response,err  := client.RpcGetPeerInfo(ctx,&rpcpb.GetPeerInfoRequest{})
 	if err!=nil {
 		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
 		return

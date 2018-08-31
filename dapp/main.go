@@ -32,8 +32,9 @@ import (
 )
 
 const (
-    genesisAddr = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+    genesisAddr 	= "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	configFilePath 	= "conf/default.conf"
+	defaultPassword = "password"
 )
 
 func main() {
@@ -70,7 +71,7 @@ func main() {
 	}
 
 	//start rpc server
-	server := rpc.NewGrpcServer(node)
+	server := rpc.NewGrpcServer(node,defaultPassword)
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 

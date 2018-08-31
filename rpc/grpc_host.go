@@ -19,28 +19,34 @@
 package rpc
 
 import (
+	"net"
+	"log"
+	"fmt"
+
 	"golang.org/x/net/context"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
-	"net"
-	"log"
 	"google.golang.org/grpc"
-	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
 	defaultRpcPort = 50051
+	passwordToken  = "password"
 )
 
 // Server is used to implement helloworld.GreeterServer.
 type Server struct{
-	srv 	*grpc.Server
-	node 	*network.Node
+	srv 		*grpc.Server
+	node 		*network.Node
+	password	string
 }
 
-func NewGrpcServer(node *network.Node) *Server{
-	return &Server{grpc.NewServer(),node}
+func NewGrpcServer(node *network.Node, adminPassword string) *Server{
+	return &Server{grpc.NewServer(),node,adminPassword}
 }
 
 // SayHello implements helloworld.GreeterServer
@@ -78,12 +84,24 @@ func (s *Server) Start(port uint32) {
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
 		}
-		srv := grpc.NewServer()
+
+		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterConnectServer(srv, s)
 		if err := srv.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %s", err)
 		}
 	}()
+}
+
+func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	meta, ok := metadata.FromIncomingContext(ctx)
+	if !ok || len(meta[passwordToken]) != 1 {
+		return nil, status.Errorf(codes.Unauthenticated, "No Password")
+	}
+	if meta[passwordToken][0] != s.password {
+		return nil, status.Errorf(codes.Unauthenticated, "Invalid Password")
+	}
+	return handler(ctx, req)
 }
 
 func (s *Server) Stop() {

@@ -27,12 +27,14 @@ import (
 	"time"
 	"github.com/stretchr/testify/assert"
 	"fmt"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestNewGrpcServer(t *testing.T) {
 	node := network.NewNode(nil)
-	grpcServer := NewGrpcServer(node)
+	grpcServer := NewGrpcServer(node, "password")
 	assert.Equal(t,node,grpcServer.node)
+	assert.Equal(t,"password",grpcServer.password)
 }
 
 //integration test
@@ -42,7 +44,7 @@ func TestServer_StartRPC(t *testing.T) {
 	addr := "/ip4/127.0.0.1/tcp/10000"
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
-	server := NewGrpcServer(node)
+	server := NewGrpcServer(node,"temp")
 	server.Start(defaultRpcPort)
 	defer server.Stop()
 
@@ -54,7 +56,9 @@ func TestServer_StartRPC(t *testing.T) {
 	defer conn.Close()
 
 	c := rpcpb.NewConnectClient(conn)
-	response, err := c.RpcGetPeerInfo(context.Background(),&rpcpb.GetPeerInfoRequest{})
+	md := metadata.Pairs("password", "temp")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	response, err := c.RpcGetPeerInfo(ctx,&rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
 
 	ret := &network.PeerList{}
