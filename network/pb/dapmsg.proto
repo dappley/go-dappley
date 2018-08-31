@@ -5,6 +5,7 @@ message Dapmsg {
     string cmd = 1;
     bytes data = 2; 
     int64 unixTimeRecvd = 3;
-    string from = 4;
+    string key = 4;
     int64 uniOrBroadcast = 5;
+    uint64 counter = 6;
 }

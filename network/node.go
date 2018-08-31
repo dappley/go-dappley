@@ -36,6 +36,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 	"errors"
+	"strconv"
 )
 
 const (
@@ -56,11 +57,13 @@ type Node struct {
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
-	recentlyRcvedDapMsgs map[string]int
+	recentlyRcvedDapMsgs map[string]bool
+	dapMsgBroadcastCounter *uint64
 }
 
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node {
+	placeholder:=uint64(0)
 	return &Node{nil,
 	nil,
 	bc,
@@ -68,12 +71,13 @@ func NewNode(bc *core.Blockchain) *Node {
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
-	make(map[string]int),
+	make(map[string]bool),
+	&placeholder,
 	}
 }
 
 func (n *Node) isNetworkRadiation (dapmsg Dapmsg) bool {
-	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == 1{
+	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == true{
 		return true
 	}
 	return false
@@ -81,7 +85,7 @@ func (n *Node) isNetworkRadiation (dapmsg Dapmsg) bool {
 
 func (n *Node) GetBlockchain() *core.Blockchain{return n.bc}
 func (n *Node) GetPeerList() *PeerList{return n.peerList}
-func (n *Node) GetRecentlyRcvedDapMessages() *map[string]int {return &n.recentlyRcvedDapMsgs}
+func (n *Node) GetRecentlyRcvedDapMessages() *map[string]bool {return &n.recentlyRcvedDapMsgs}
 
 func (n *Node) Start(listenPort int) error {
 
@@ -246,7 +250,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	}
 
 	//build a dappley message
-	dm := NewDapmsg(cmd, bytes, n.info.peerid, uniOrBroadcast)
+	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter,10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
 		n.cacheDapMsg(*dm)
 	}
@@ -306,7 +310,7 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 
-	dm := NewDapmsg(RequestBlock, hash, n.info.peerid, Unicast)
+	dm := NewDapmsg(RequestBlock, hash, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter,10), Unicast, n.dapMsgBroadcastCounter)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -366,7 +370,7 @@ func (n *Node) syncBlockHandler(dm *Dapmsg, pid peer.ID){
 }
 
 func (n *Node) cacheDapMsg(dm Dapmsg) {
-	n.recentlyRcvedDapMsgs[dm.GetKey()] = 1
+	n.recentlyRcvedDapMsgs[dm.GetKey()] = true
 }
 
 func (n *Node) addTxToPool(data []byte){
