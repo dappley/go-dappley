@@ -55,7 +55,7 @@ func TestServer_StartRPC(t *testing.T) {
 	assert.Nil(t, err)
 	defer conn.Close()
 
-	c := rpcpb.NewConnectClient(conn)
+	c := rpcpb.NewRpcServiceClient(conn)
 	md := metadata.Pairs("password", "temp")
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	response, err := c.RpcGetPeerInfo(ctx,&rpcpb.GetPeerInfoRequest{})

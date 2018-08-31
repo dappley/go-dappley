@@ -4,12 +4,16 @@ import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
 
 option objc_class_prefix = "HLW";
 
-service Connect {
+service RpcService {
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
+}
+
+service AdminService{
+  rpc RpcAddPeer(AddPeerRequest) returns (AddPeerResponse) {}
 }
 
 // The request message 
@@ -32,6 +36,10 @@ message SendRequest {
 message GetPeerInfoRequest {}
 
 message GetBlockchainInfoRequest {}
+
+message AddPeerRequest {
+  string fullAddress = 1;
+}
 
 // The response message 
 
@@ -56,4 +64,8 @@ message GetPeerInfoResponse {
 message GetBlockchainInfoResponse {
   bytes   tailBlockHash = 1;
   uint64  blockHeight = 2;
+}
+
+message AddPeerResponse {
+  string status = 1;
 }

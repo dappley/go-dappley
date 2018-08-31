@@ -22,15 +22,15 @@ import (
 	"net"
 	"log"
 	"fmt"
+	"strings"
 
 	"golang.org/x/net/context"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/network/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
 )
 
 const (
@@ -49,32 +49,6 @@ func NewGrpcServer(node *network.Node, adminPassword string) *Server{
 	return &Server{grpc.NewServer(),node,adminPassword}
 }
 
-// SayHello implements helloworld.GreeterServer
-func (s *Server) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	return &rpcpb.CreateWalletResponse{Message: "Hello " + in.Name}, nil
-}
-
-func (s *Server) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
-	return &rpcpb.GetBalanceResponse{Message: "Hello " + in.Name}, nil
-}
-
-func (s *Server) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
-	return &rpcpb.SendResponse{Message: "Hello " + in.Name}, nil
-}
-
-func (s *Server) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
-	return &rpcpb.GetPeerInfoResponse{
-		PeerList:s.node.GetPeerList().ToProto().(*networkpb.Peerlist),
-	}, nil
-}
-
-func (s *Server) RpcGetBlockchainInfo(context.Context, *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error){
-	return &rpcpb.GetBlockchainInfoResponse{
-		TailBlockHash: 	s.node.GetBlockchain().GetTailBlockHash(),
-		BlockHeight:	s.node.GetBlockchain().GetMaxHeight(),
-	}, nil
-}
-
 func (s *Server) Start(port uint32) {
 	go func(){
 		if port == 0{
@@ -86,7 +60,8 @@ func (s *Server) Start(port uint32) {
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
-		rpcpb.RegisterConnectServer(srv, s)
+		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
 		if err := srv.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %s", err)
 		}
@@ -94,12 +69,14 @@ func (s *Server) Start(port uint32) {
 }
 
 func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	meta, ok := metadata.FromIncomingContext(ctx)
-	if !ok || len(meta[passwordToken]) != 1 {
-		return nil, status.Errorf(codes.Unauthenticated, "No Password")
-	}
-	if meta[passwordToken][0] != s.password {
-		return nil, status.Errorf(codes.Unauthenticated, "Invalid Password")
+	if strings.Contains(info.FullMethod,"rpcpb.AdminService") {
+		meta, ok := metadata.FromIncomingContext(ctx)
+		if !ok || len(meta[passwordToken]) != 1 {
+			return nil, status.Errorf(codes.Unauthenticated, "No Password")
+		}
+		if meta[passwordToken][0] != s.password {
+			return nil, status.Errorf(codes.Unauthenticated, "Invalid Password")
+		}
 	}
 	return handler(ctx, req)
 }
