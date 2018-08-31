@@ -19,10 +19,14 @@ package rpc
 
 import (
 	"context"
+	"errors"
 
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/logic"
 )
 
 type RpcService struct{
@@ -39,7 +43,21 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 }
 
 func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
-	return &rpcpb.SendResponse{Message: "Hello " + in.Name}, nil
+	sendFromAddress := core.NewAddress(in.From)
+	sendToAddress := core.NewAddress(in.To)
+	localWallets, err := client.NewWallets()
+	if err != nil {
+		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
+	}
+	senderWallet := localWallets.GetWalletByAddress(sendFromAddress)
+	if len(senderWallet.Addresses) == 0 {
+		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
+	}
+	err = logic.Send(senderWallet, sendToAddress, int(in.Amount), 0, rpcSerivce.node.GetBlockchain())
+	if err != nil {
+		return &rpcpb.SendResponse{Message: "Error sending"}, err
+	}
+	return &rpcpb.SendResponse{Message: "Sent"}, nil
 }
 
 func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
