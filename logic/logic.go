@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	ErrInvalidAddAmount     = errors.New("ERROR: Amount is invalid (must be > 0)")
+	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
@@ -118,7 +118,7 @@ func AddBalance(address core.Address, amount int, bc *core.Blockchain) (error) {
 	}
 
 	if amount <= 0 {
-		return ErrInvalidAddAmount
+		return ErrInvalidAmount
 	}
 
 	wallets, err := client.NewWallets()

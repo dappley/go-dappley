@@ -43,7 +43,7 @@ const subsidy = 10
 
 var (
 	ErrInsufficientFund = errors.New("ERROR: The balance is insufficient")
-	ErrInvalidAddAmount     = errors.New("ERROR: Amount is invalid (must be > 0)")
+	ErrInvalidAmount    = errors.New("ERROR: Amount is invalid (must be > 0)")
 )
 
 type Transaction struct {
@@ -279,7 +279,7 @@ func NewUTXOTransactionforAddBalance(to Address, amount int, keyPair KeyPair, bc
 
 	// Validate amount
 	if amount <= 0 {
-		return Transaction{}, ErrInvalidAddAmount
+		return Transaction{}, ErrInvalidAmount
 	}
 
 	// Build a list of outputs

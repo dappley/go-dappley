@@ -186,8 +186,8 @@ func TestNewUTXOTransactionforAddBalance(t *testing.T) {
 	}{
 		{"Add 13", 13, Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(13, receiverAddr)}, 0}, nil},
 		{"Add 1", 1, Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(1, receiverAddr)}, 0}, nil},
-		{"Add 0", 0, Transaction{}, ErrInvalidAddAmount},
-		{"Add -1", -1, Transaction{}, ErrInvalidAddAmount},
+		{"Add 0", 0, Transaction{}, ErrInvalidAmount},
+		{"Add -1", -1, Transaction{}, ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -492,8 +492,8 @@ func TestAddBalance(t *testing.T) {
 		expectedErr  error
 	}{
 		{"Add 5", 5, 5, nil},
-		{"Add zero", 0, 0, ErrInvalidAddAmount},
-		{"Add negative", -7, 0, ErrInvalidAddAmount},
+		{"Add zero", 0, 0, ErrInvalidAmount},
+		{"Add negative", -7, 0, ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
