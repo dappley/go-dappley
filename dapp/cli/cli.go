@@ -36,6 +36,7 @@ const(
 	cliGetBlockchainInfo	= "getBlockchainInfo"
 	cliGetBalance 			= "getBalance"
 	cliGetPeerInfo			= "getPeerInfo"
+	cliSend 				= "send"
 	cliAddPeer 				= "addPeer"
 
 	cliUnlockAdmin			= "unlockAdminCLIs"
@@ -45,6 +46,9 @@ const(
 //flag names
 const(
 	flagAddress			= "address"
+	flagToAddress		= "to"
+	flagFromAddress		= "from"
+	flagAmount			= "amount"
 	flagPeerFullAddr    = "peerFullAddr"
 	flagPassword 		= "password"
 )
@@ -68,6 +72,7 @@ var cmdList = []string{
 	cliGetBlockchainInfo,
 	cliGetBalance,
 	cliGetPeerInfo,
+	cliSend,
 	cliAddPeer,
 
 	cliUnlockAdmin,
@@ -83,6 +88,26 @@ var cmdFlagsMap = map[string][]flagPars{
 		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 
 	}},
+	cliSend	: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"Sender's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"Receiver's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagAmount,
+			0,
+			valueTypeInt,
+			"The amount to send from the sender to the receiver.",
+		},
+	},
 	cliAddPeer		:{flagPars{
 		flagPeerFullAddr,
 		"",
@@ -103,6 +128,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBlockchainInfo	: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance			: {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo			: {rpcService, getPeerInfoCommandHandler},
+	cliSend					: {rpcService, sendCommandHandler},
 	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
 	cliUnlockAdmin			: {nonRpcService, unlockAdminRpcCommandHandler},
 }
@@ -223,6 +249,19 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 	response,err  := client.(rpcpb.RpcServiceClient).RpcGetPeerInfo(ctx,&rpcpb.GetPeerInfoRequest{})
 	if err!=nil {
 		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	response, err  := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
+		From: *(flags[flagFromAddress].(*string)),
+		To: *(flags[flagToAddress].(*string)),
+		Amount: int64(*(flags[flagAmount].(*int))),
+	})
+	if err!=nil {
+		fmt.Println("ERROR: Send failed. ERR:", err)
 		return
 	}
 	fmt.Println(proto.MarshalTextString(response))
