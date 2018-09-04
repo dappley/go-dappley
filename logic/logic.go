@@ -99,6 +99,9 @@ func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, b
 	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
+	if amount <= 0 {
+		return ErrInvalidAmount
+	}
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 	bc.GetTxPool().ConditionalAdd(tx)

@@ -159,66 +159,91 @@ func TestGetAllAddresses(t *testing.T) {
 
 //test send
 func TestSend(t *testing.T) {
-	//setup: clean up database and files
-	setup()
+	const mineReward = 10
+	testCases := []struct {
+		name  string
+		transferAmount  int
+		tipAmount  int
+		expectedTransfer  int
+		expectedTip  int
+		expectedErr  error
+	}{
+		{"Send with no tip", 7, 0, 7, 0, nil},
+		{"Send with tips", 6, 2, 6, 2, nil},
+		{"Send with negative tips", 8, -2, 8, 0, nil},
+		{"Send zero with no tip", 0, 0, 0, 0, ErrInvalidAmount},
+		{"Send zero with tips", 0, 2, 0, 0, ErrInvalidAmount},
+		{"Send negative", -7, 0, 0, 0, ErrInvalidAmount},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 
-	// Create storage
-	store := storage.NewRamStorage()
-	defer store.Close()
+			// Create storage
+			store := storage.NewRamStorage()
+			defer store.Close()
 
-	mineReward := int(10)
-	transferAmount := int(5)
-	tip := uint64(5)
-	//create a wallet address
-	wallet1, err := CreateWallet()
-	assert.NotEmpty(t, wallet1)
+			// Create a wallet address
+			senderWallet, err := CreateWallet()
+			if err != nil {
+				panic(err)
+			}
 
-	pow := consensus.NewProofOfWork()
-	//create a blockchain
-	bc, err := CreateBlockchain(wallet1.GetAddress(), store, pow)
-	assert.Nil(t, err)
-	assert.NotNil(t, bc)
-	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
+			// Create a PoW blockchain with the sender wallet's address as the coinbase address
+			// i.e. sender's wallet would have mineReward amount after blockchain created
+			pow := consensus.NewProofOfWork()
+			bc, err := CreateBlockchain(senderWallet.GetAddress(), store, pow)
+			if err != nil {
+				panic(err)
+			}
 
-	//The balance1 should be 10 after creating a blockchain
-	balance1, err := GetBalance(wallet1.GetAddress(), store)
-	assert.Nil(t, err)
-	assert.Equal(t, mineReward, balance1)
+			node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
-	//Create a second wallet
-	wallet2, err := CreateWallet()
-	assert.NotEmpty(t, wallet2)
-	assert.Nil(t, err)
-	addr1 := wallet1.GetAddress()
-	addr2 := wallet2.GetAddress()
+			// Create a receiver wallet; Balance is 0 initially
+			receiverWallet, err := CreateWallet()
+			if err != nil {
+				panic(err)
+			}
 
-	//The balance2 should be 0
-	balance2, err := GetBalance(addr2, store)
-	assert.Nil(t, err)
-	assert.Equal(t, 0, balance2)
+			// Send coins from senderWallet to receiverWallet
+			err = Send(senderWallet, receiverWallet.GetAddress(), tc.transferAmount, uint64(tc.tipAmount), bc)
+			assert.Equal(t, tc.expectedErr, err)
 
-	//Send 5 coins from wallet1 to wallet2
-	err = Send(wallet1, addr2, transferAmount, tip, bc)
-	assert.Nil(t, err)
-	pow.Setup(node, addr1.Address)
+			// Create a miner wallet; Balance is 0 initially
+			minerWallet, err := CreateWallet()
+			if err != nil {
+				panic(err)
+			}
 
-	pow.Start()
-	time.Sleep(3 * time.Second)
+			// Make sender the miner and mine for 1 block (which should include the transaction)
+			pow.Setup(node, minerWallet.GetAddress().Address)
+			pow.Start()
+			for bc.GetMaxHeight() < 1 {
+			}
+			pow.Stop()
 
-	//send function creates utxo results in 1 mineReward, adding unto the blockchain creation is 3*mineReward
-	balance1, err = GetBalance(wallet1.GetAddress(), store)
+			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
+			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
+			if err != nil {
+				panic(err)
+			}
+			assert.Equal(t, mineReward - tc.expectedTransfer, senderBalance)
 
-	assert.Nil(t, err)
-	assert.True(t, 2*mineReward-transferAmount < balance1)
+			// Balance of the receiver's wallet should be the amount transferred
+			receiverBalance, err := GetBalance(receiverWallet.GetAddress(), store)
+			if err != nil {
+				panic(err)
+			}
+			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 
-	//the balance1 of the second wallet should be 5
-	balance2, err = GetBalance(wallet2.GetAddress(), store)
-	assert.Nil(t, err)
-	assert.Equal(t, transferAmount, balance2)
+			// Balance of the miner's wallet should be the amount tipped + mineReward
+			minerBalance, err := GetBalance(minerWallet.GetAddress(), store)
+			if err != nil {
+				panic(err)
+			}
+			assert.Equal(t, mineReward, minerBalance)
 
-	pow.Stop()
-	//teardown :clean up database amd files
-	teardown()
+		})
+	}
 }
 
 func TestDeleteWallets(t *testing.T) {
