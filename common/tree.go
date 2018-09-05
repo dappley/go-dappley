@@ -70,6 +70,12 @@ func (t *Tree) NewNode(index interface{}, value interface{}) (*Node, error){
 	}
 	return &Node{[]Entry{Entry{index,value}}, nil, nil, 1, t}, nil
 }
+func NewNode(index interface{}, value interface{}) (*Node, error){
+	if index == nil || value == nil {
+		return nil, ErrCantCreateEmptyNode
+	}
+	return &Node{[]Entry{Entry{index,value}}, nil, nil, 1, nil}, nil
+}
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
 	t := &Tree{nil, 0 , nil, false, nil}
@@ -97,6 +103,15 @@ func (t *Tree) RecursiveFind (parent *Node, index interface{}) {
 		}
 	}
 }
+
+func (t *Tree) RecursiveActionBasedOnCallback (parent *Node, doSmth func(node *Node)) {
+	//recurse through tree starting from parent and do something with nodes
+	doSmth(parent)
+	for i:=0;i< len(parent.Children);i++  {
+		t.RecursiveActionBasedOnCallback(parent.Children[i], doSmth)
+	}
+}
+
 
 //Search from root, use if you have no closer known nodes upstream
 func (t *Tree) Get(parent *Node, index interface{}){
@@ -142,3 +157,4 @@ func (t *Tree) setHeightPostMerge(tree *Tree, mergeIndex interface{}) {
 		t.MaxHeight = tree.MaxHeight + t.Found.Height
 	}
 }
+
