@@ -29,53 +29,55 @@ type Entry struct{
 	value interface{}
 }
 
-
 var (
 	ErrNodeNotFound = errors.New("ERROR: Node not found in tree")
 	ErrCantCreateEmptyNode = errors.New("ERROR: Node index and value must not be empty")
-
 )
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
-type node struct {
+type Node struct {
 	Entries []Entry
-	Parent *node
-	Children []*node
+	Parent *Node
+	Children []*Node
 	Height uint
+	tree *Tree
 }
 
 type Tree struct {
-	Root *node
+	Root *Node
 	MaxHeight uint
-	Found *node
+	Found *Node
 	Searching bool
+	Leafs []*Node
 }
 type Test struct {
 	Num uint
 }
 
 
-func (n *node) hasChildren() bool{
+func (n *Node) hasChildren() bool{
 	if len(n.Children) > 0 {
 		return true
 	}
 	return false
 }
 
-func (t *Tree) NewNode(index interface{}, value interface{}) (*node, error){
+func (t *Tree) NewNode(index interface{}, value interface{}) (*Node, error){
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &node{[]Entry{Entry{index,value,}}, nil, nil, 1}, nil
+	return &Node{[]Entry{Entry{index,value}}, nil, nil, 1, t}, nil
 }
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
-	r := node{[]Entry{Entry{rootNodeIndex,rootNodeValue,}}, nil, nil, 1}
-	return &Tree{&r, r.Height , nil, false}
+	t := &Tree{nil, 0 , nil, false, nil}
+	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t}
+	t.Root = &r
+	return t
 }
 
 
-func (t *Tree) RecursiveFind (parent *node, index interface{}) {
+func (t *Tree) RecursiveFind (parent *Node, index interface{}) {
 	if !parent.hasChildren() ||  t.Searching == false {
 		logger.Debug(parent.Entries[0].key," has no children")
 		return
@@ -94,7 +96,7 @@ func (t *Tree) RecursiveFind (parent *node, index interface{}) {
 }
 
 //Search from root, use if you have no closer known nodes upstream
-func (t *Tree) Get(parent *node, index interface{}){
+func (t *Tree) Get(parent *Node, index interface{}){
 	t.Searching = true
 	if t.Root.Entries[0].key == index{
 		logger.Debug("found! ", index, ", is root")
@@ -104,17 +106,18 @@ func (t *Tree) Get(parent *node, index interface{}){
 	t.RecursiveFind(parent, index)
 }
 
-func (t *Tree) SearchParentNodeAndAddChild( startNode *node, parentIndex interface{} , childIndex interface{}, childValue interface{}){
+func (t *Tree) SearchParentNodeAndAddChild( startNode *Node, parentIndex interface{} , childIndex interface{}, childValue interface{}){
 	child,_ := t.NewNode(childIndex, childValue)
 	t.Get(t.Root, parentIndex)
 	parent := t.Found
 	parent.AddChild(child)
 }
 
-func (parent *node) AddChild(child *node){
+func (parent *Node) AddChild(child *Node){
 	parent.Children = append(parent.Children, child)
 	parent.Entries = append(parent.Entries, child.Entries[0])
 	child.Parent = parent
+	parent.tree.Leafs = append(parent.tree.Leafs, child)
 }
 
 //attach a tree's root node to a specific node of another tree through node index

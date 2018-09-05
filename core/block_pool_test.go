@@ -321,3 +321,14 @@ func TestBlockPool_ReInitializeForkPool(t *testing.T) {
 
 	assert.Empty(t,pool.forkPool)
 }
+
+func TestBlockPoolCache(t *testing.T){
+	bp:= NewBlockPool(5)
+	assert.Equal(t, 0, bp.cache.Len())
+	mockblk :=&Block{}
+	bp.cache.Add("asd", mockblk )
+	assert.Equal(t, 1, bp.cache.Len())
+	bp.cache.Remove("asd")
+	assert.Equal(t, 0, bp.cache.Len())
+
+}

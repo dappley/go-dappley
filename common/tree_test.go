@@ -30,7 +30,7 @@ func setupIntTree() *Tree{
 	parent := tree.Root
 	//add 100000 nodes unto the tree
 	for i:=1;i<100000;i++  {
-		newNode := node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1}
+		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
 		if(getBool()){
@@ -40,6 +40,8 @@ func setupIntTree() *Tree{
 	}
 	return tree
 }
+
+
 func setupAlphabetTree() *Tree{
 	alphabets:= "abcdefghijklmnopqrstuvwxyz"
 	alphabetSlice := strings.Split(alphabets, "")
@@ -47,7 +49,7 @@ func setupAlphabetTree() *Tree{
 	parent := tree.Root
 	//add 26 nodes unto the tree
 	for i:=1;i< len(alphabetSlice);i++  {
-		newNode := node{[]Entry{Entry{alphabetSlice[i],alphabetSlice[i]}},parent,nil, parent.Height+1}
+		newNode := Node{[]Entry{Entry{alphabetSlice[i],alphabetSlice[i]}},parent,nil, parent.Height+1, tree}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
 		if(getBool()){
