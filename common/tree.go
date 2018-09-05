@@ -22,6 +22,7 @@ package common
 import (
 	"errors"
 	logger "github.com/sirupsen/logrus"
+	"github.com/hashicorp/golang-lru"
 )
 
 type Entry struct{
@@ -33,6 +34,7 @@ var (
 	ErrNodeNotFound = errors.New("ERROR: Node not found in tree")
 	ErrCantCreateEmptyNode = errors.New("ERROR: Node index and value must not be empty")
 )
+const LeafsSize = 32
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
 type Node struct {
@@ -48,7 +50,7 @@ type Tree struct {
 	MaxHeight uint
 	Found *Node
 	Searching bool
-	Leafs []*Node
+	leafs *lru.Cache
 }
 type Test struct {
 	Num uint
@@ -73,15 +75,16 @@ func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
 	t := &Tree{nil, 0 , nil, false, nil}
 	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t}
 	t.Root = &r
+	t.leafs,_ = lru.New(LeafsSize)
 	return t
 }
 
 
 func (t *Tree) RecursiveFind (parent *Node, index interface{}) {
-	if !parent.hasChildren() ||  t.Searching == false {
-		logger.Debug(parent.Entries[0].key," has no children")
+	if !parent.hasChildren() || t.Searching == false{
 		return
 	}
+
 	for i:=0;i< len(parent.Children);i++  {
 		if parent.Children[i].Entries[0].key == index{
 			logger.Debug("found! ", index, " under ", parent.Entries[0].key)
@@ -117,14 +120,24 @@ func (parent *Node) AddChild(child *Node){
 	parent.Children = append(parent.Children, child)
 	parent.Entries = append(parent.Entries, child.Entries[0])
 	child.Parent = parent
-	parent.tree.Leafs = append(parent.tree.Leafs, child)
+	//remove index from leafs if was leaf
+	if len(parent.Children) == 1 && parent.tree.leafs.Contains(parent.Entries[0].key){
+		parent.tree.leafs.Remove(parent.Entries[0].key)
+	}
+	parent.tree.leafs.Add(child.Entries[0].key, child)
 }
 
 //attach a tree's root node to a specific node of another tree through node index
 func (t *Tree) appendTree(tree *Tree, mergeIndex interface{}) {
+
+	logger.Debug("index search: ", mergeIndex, t.MaxHeight)
 	t.Get(t.Root, mergeIndex)
 	t.Found.AddChild(tree.Root)
-	//is higher than original tree after appending
+	t.setHeightPostMerge(tree, mergeIndex)
+}
+
+func (t *Tree) setHeightPostMerge(tree *Tree, mergeIndex interface{}) {
+	//if is new tree is higher than original tree after appending
 	if tree.MaxHeight + t.Found.Height > t.MaxHeight{
 		t.MaxHeight = tree.MaxHeight + t.Found.Height
 	}

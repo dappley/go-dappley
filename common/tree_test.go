@@ -23,6 +23,8 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"strings"
+	"math/rand"
+	"time"
 )
 
 func setupIntTree() *Tree{
@@ -30,6 +32,7 @@ func setupIntTree() *Tree{
 	parent := tree.Root
 	//add 100000 nodes unto the tree
 	for i:=1;i<100000;i++  {
+
 		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
@@ -49,12 +52,10 @@ func setupAlphabetTree() *Tree{
 	parent := tree.Root
 	//add 26 nodes unto the tree
 	for i:=1;i< len(alphabetSlice);i++  {
-		newNode := Node{[]Entry{Entry{alphabetSlice[i],alphabetSlice[i]}},parent,nil, parent.Height+1, tree}
-		parent.Children = append(parent.Children, &newNode)
-		//if is true, create a new branch, else build existing branch
+		newNode,_ := tree.NewNode(alphabetSlice[i], alphabetSlice[i])
+		parent.AddChild(newNode)
 		if(getBool()){
-			parent = &newNode
-			tree.MaxHeight++
+			parent = newNode
 		}
 	}
 	return tree
@@ -80,28 +81,43 @@ func Test_SearchParentNodeAndAddChild(t *testing.T){
 
 }
 
-func Test_appendTree(t *testing.T){
-
-	mergeIndex := 99980
-	mergeHeight := mergeIndex+1 //0 based index offset
-
+func Test_TreeHeightAndGetNodesAfterAppendTree(t *testing.T){
 	t1 := setupIntTree()
-	t2 := setupAlphabetTree()
-	t1.appendTree(t2, mergeIndex)
+	t1heightB4Merge := t1.MaxHeight
 
+	mergeHeight := int(t1.MaxHeight) - 10
+
+	t2 := setupAlphabetTree()
+
+	t1.appendTree(t2, mergeHeight)
+
+	//test addition of new nodes from t2
 	t1.Get(t1.Root, "b")
 	assert.Equal(t, "b", t1.Found.Entries[0].value )
 	t1.Get(t1.Root, "y")
 	assert.Equal(t, "y", t1.Found.Entries[0].value )
 
+	//test height after merging t2
+	t2heightAfterMerge := uint(t1.Found.Height)+t2.MaxHeight
+	if t2heightAfterMerge > t1heightB4Merge{
+		assert.Equal(t, t1.MaxHeight, t2heightAfterMerge)
+	}
+	assert.Equal(t, t1.MaxHeight, t1heightB4Merge)
 
-	assert.Equal(t, uint(mergeHeight)+t2.MaxHeight , t1.MaxHeight)
+}
+
+func Test_TreeLeafs(t *testing.T){
+	tree:=setupAlphabetTree()
+	//cached leaf nodes should not have any children
+	for _,v := range tree.leafs.Keys(){
+		val, _ := tree.leafs.Get(v)
+		assert.Equal(t, 0, len(val.(*Node).Children))
+	}
 }
 
 func getBool() bool {
-	//rand.Seed(time.Now().UnixNano())
-	//return rand.Intn(10) >= 5
-	return true
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(10) >= 5
 }
 
 
