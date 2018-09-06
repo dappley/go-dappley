@@ -22,8 +22,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"log"
-
 	"fmt"
 
 	"github.com/dappley/go-dappley/storage"
@@ -247,19 +245,6 @@ func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
 	}
 
 	return UTXOs, nil
-}
-
-func (bc *Blockchain) GetPrevTransactions(tx Transaction) map[string]Transaction {
-	prevTXs := make(map[string]Transaction)
-
-	for _, vin := range tx.Vin {
-		prevTX, err := bc.FindTransaction(vin.Txid)
-		if err != nil {
-			log.Panic(err)
-		}
-		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
-	}
-	return prevTXs
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
