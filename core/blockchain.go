@@ -104,6 +104,14 @@ func (bc *Blockchain) GetTxPool() *TransactionPool {
 	return bc.txPool
 }
 
+func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error){
+	rawBytes, err:=bc.db.Get(hash)
+	if err != nil {
+		return nil, ErrBlockDoesNotExist
+	}
+	return Deserialize(rawBytes),nil
+}
+
 func (bc *Blockchain) SetStorage(db storage.Storage) {
 	bc.db = db
 }
@@ -415,14 +423,6 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 	bc.setTailBlockHash(parentBlkHash)
 
 	return true
-}
-
-func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error){
-	v, err:=bc.db.Get(hash)
-	if err != nil {
-		return nil, ErrBlockDoesNotExist
-	}
-	return Deserialize(v),nil
 }
 
 
