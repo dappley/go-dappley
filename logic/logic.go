@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	ErrInvalidAddAmount     = errors.New("ERROR: Amount is invalid (must be > 0)")
+	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
@@ -99,6 +99,9 @@ func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, b
 	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
+	if amount <= 0 {
+		return ErrInvalidAmount
+	}
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 	bc.GetTxPool().ConditionalAdd(tx)
@@ -118,7 +121,7 @@ func AddBalance(address core.Address, amount int, bc *core.Blockchain) (error) {
 	}
 
 	if amount <= 0 {
-		return ErrInvalidAddAmount
+		return ErrInvalidAmount
 	}
 
 	wallets, err := client.NewWallets()

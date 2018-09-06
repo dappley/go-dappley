@@ -32,8 +32,10 @@ import (
 )
 
 const (
-    genesisAddr = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+    genesisAddr 	= "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	configFilePath 	= "conf/default.conf"
+	genesisFilePath = "conf/genesis.conf"
+	defaultPassword = "password"
 )
 
 func main() {
@@ -44,6 +46,14 @@ func main() {
 
 	//set to debug level
 	logger.SetLevel(logger.InfoLevel)
+
+	//load genesis file information
+	genesisConf := config.LoadConfigFromFile(genesisFilePath)
+	if genesisConf== nil{
+		logger.Error("ERROR: Cannot load genesis configurations from file!Exiting...")
+		return
+	}
+	//load config file information
 	conf := config.LoadConfigFromFile(filePath)
 	if conf== nil{
 		logger.Error("ERROR: Cannot load configurations from file!Exiting...")
@@ -55,7 +65,7 @@ func main() {
 	defer db.Close()
 
 	//creat blockchain
-	conss, _ := initConsensus(conf)
+	conss, _ := initConsensus(genesisConf)
 	bc,err := core.GetBlockchain(db,conss)
 	if err !=nil {
 		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
@@ -70,7 +80,7 @@ func main() {
 	}
 
 	//start rpc server
-	server := rpc.NewGrpcServer(node)
+	server := rpc.NewGrpcServer(node,defaultPassword)
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 

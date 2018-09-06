@@ -388,7 +388,7 @@ func (bc *Blockchain) MergeFork(){
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain()
 
-	logger.Debug("Merge Fork!!")
+	logger.Debug("Merged Fork!!")
 }
 
 func (bc *Blockchain) concatenateForkToBlockchain(){

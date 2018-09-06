@@ -21,6 +21,8 @@ package core
 import (
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
+	"github.com/hashicorp/golang-lru"
+	"github.com/dappley/go-dappley/crypto/byteutils"
 )
 
 type BlockRequestPars struct {
@@ -38,6 +40,17 @@ type BlockPool struct {
 	size           int
 	bc             *Blockchain
 	forkPool       []*Block
+	cache		*lru.Cache
+}
+
+type linkedBlock struct {
+	block      *Block
+	chain      *Blockchain
+	hash       byteutils.Hash
+	parentHash byteutils.Hash
+
+	parentBlock *linkedBlock
+	childBlocks map[byteutils.HexHash]*linkedBlock
 }
 
 func NewBlockPool(size int) *BlockPool {
@@ -47,6 +60,12 @@ func NewBlockPool(size int) *BlockPool {
 		bc:             nil,
 		forkPool:       []*Block{},
 	}
+	pool.cache,_ = lru.NewWithEvict(size, func(key interface{}, value interface{}) {
+		treenode := value.(*Block)
+		if treenode != nil {
+			//remove treenode
+		}
+	})
 	return pool
 }
 
@@ -208,7 +227,7 @@ func (pool *BlockPool) updateFork(block *Block, pid peer.ID) {
 	if pool.attemptToAddParentToFork(block, pid) {
 		return
 	}
-	if pool.attempToStartNewFork(block, pid) {
+	if pool.attemptToStartNewFork(block, pid) {
 		return
 	}
 	logger.Debug("GetBlockPool: Block dumped")
@@ -235,7 +254,7 @@ func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID)
 	return isSuccessful
 }
 
-func (pool *BlockPool) attempToStartNewFork(newblock *Block, sender peer.ID) bool {
+func (pool *BlockPool) attemptToStartNewFork(newblock *Block, sender peer.ID) bool {
 	startNewFork := pool.IsHigherThanFork(newblock) &&
 		pool.bc.HigherThanBlockchain(newblock)
 	if startNewFork {
