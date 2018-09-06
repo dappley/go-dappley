@@ -141,7 +141,7 @@ func (pool *BlockPool) updateForkFromTail(blk *Block) bool {
 	isTail := pool.IsTailOfFork(blk)
 	if isTail {
 		//only update if the block is higher than the current blockchain
-		if pool.bc.HigherThanBlockchain(blk) {
+		if pool.bc.IsHigherThanBlockchain(blk) {
 			logger.Debug("GetBlockPool: Add block to tail")
 			pool.addTailToForkPool(blk)
 		} else {
@@ -256,7 +256,7 @@ func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID)
 
 func (pool *BlockPool) attemptToStartNewFork(newblock *Block, sender peer.ID) bool {
 	startNewFork := pool.IsHigherThanFork(newblock) &&
-		pool.bc.HigherThanBlockchain(newblock)
+		pool.bc.IsHigherThanBlockchain(newblock)
 	if startNewFork {
 		pool.ReInitializeForkPool(newblock)
 		pool.requestBlock(newblock.GetPrevHash(), sender)

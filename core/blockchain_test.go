@@ -51,7 +51,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	bc:= CreateBlockchain(addr, s,nil)
 	blk := GenerateMockBlock()
 	blk.height = 1
-	assert.True(t,bc.HigherThanBlockchain(blk))
+	assert.True(t,bc.IsHigherThanBlockchain(blk))
 }
 
 func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
@@ -64,7 +64,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	blk.height = 1
 	bc.UpdateNewBlock(blk)
 
-	assert.False(t,bc.HigherThanBlockchain(blk))
+	assert.False(t,bc.IsHigherThanBlockchain(blk))
 }
 
 func TestBlockchain_IsInBlockchain(t *testing.T) {

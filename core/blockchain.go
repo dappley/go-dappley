@@ -32,9 +32,9 @@ var tipKey = []byte("1")
 
 const BlockPoolMaxSize = 100
 
-var(
-	ErrBlockDoesNotExist			= errors.New("ERROR: Block does not exist in blockchain")
-	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
+var (
+	ErrBlockDoesNotExist   = errors.New("ERROR: Block does not exist in blockchain")
+	ErrTransactionNotFound = errors.New("ERROR: Transaction not found")
 )
 
 type Blockchain struct {
@@ -79,7 +79,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 
 func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
 	bc.updateDbWithNewBlock(newBlock)
-	logger.Info("Blockchain: Updated A New Block! Height:",newBlock.GetHeight()," Hash:",hex.EncodeToString(newBlock.GetHash()))
+	logger.Info("Blockchain: Updated A New Block! Height:", newBlock.GetHeight(), " Hash:", hex.EncodeToString(newBlock.GetHash()))
 }
 
 func (bc *Blockchain) GetDb() storage.Storage {
@@ -102,12 +102,12 @@ func (bc *Blockchain) GetTxPool() *TransactionPool {
 	return bc.txPool
 }
 
-func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error){
-	rawBytes, err:=bc.db.Get(hash)
+func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
+	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
 		return nil, ErrBlockDoesNotExist
 	}
-	return Deserialize(rawBytes),nil
+	return Deserialize(rawBytes), nil
 }
 
 func (bc *Blockchain) SetStorage(db storage.Storage) {
@@ -153,7 +153,6 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 
 	return Transaction{}, ErrTransactionNotFound
 }
-
 
 func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte) (Transaction, error) {
 	println("as")
@@ -248,7 +247,7 @@ func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db,nil,bc.consensus,nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -309,39 +308,39 @@ func (bc *Blockchain) String() string {
 //record the new block in the database
 func (bc *Blockchain) updateDbWithNewBlock(newBlock *Block) {
 	bc.db.Put(newBlock.GetHash(), newBlock.Serialize())
-	logger.Debug("Saved block in DB, has hash of: " , newBlock.GetHash())
+	logger.Debug("Saved block in DB, has hash of: ", newBlock.GetHash())
 	bc.setTailBlockHash(newBlock.GetHash())
 	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
 }
 
-func (bc *Blockchain) setTailBlockHash(hash Hash){
+func (bc *Blockchain) setTailBlockHash(hash Hash) {
 	bc.db.Put(tipKey, hash)
 	bc.tailBlockHash = hash
 }
 
-func (bc *Blockchain) GetTailBlock() (*Block, error){
+func (bc *Blockchain) GetTailBlock() (*Block, error) {
 	hash := bc.GetTailBlockHash()
 	return bc.GetBlockByHash(hash)
 }
 
-func (bc *Blockchain) GetMaxHeight() uint64{
-	blk, err:= bc.GetTailBlock()
-	if err != nil{
+func (bc *Blockchain) GetMaxHeight() uint64 {
+	blk, err := bc.GetTailBlock()
+	if err != nil {
 		return 0
 	}
 	return blk.GetHeight()
 }
 
-func (bc *Blockchain) HigherThanBlockchain(blk *Block) bool{
+func (bc *Blockchain) IsHigherThanBlockchain(blk *Block) bool {
 	return blk.GetHeight() > bc.GetMaxHeight()
 }
 
-func (bc *Blockchain) IsInBlockchain(hash Hash) (bool){
+func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	_, err := bc.GetBlockByHash(hash)
-	return err==nil
+	return err == nil
 }
 
-func (bc *Blockchain) MergeFork(){
+func (bc *Blockchain) MergeFork() {
 
 	//find parent block
 	forkHeadBlock := bc.GetBlockPool().GetForkPoolHeadBlk()
@@ -349,16 +348,16 @@ func (bc *Blockchain) MergeFork(){
 		return
 	}
 	forkParentHash := forkHeadBlock.GetPrevHash()
-	if !bc.IsInBlockchain(forkParentHash){
+	if !bc.IsInBlockchain(forkParentHash) {
 		return
 	}
 
 	//verify transactions in the fork
 	utxo, err := bc.GetUtxoStateAtBlockHash(bc.db, forkParentHash)
-	if err!=nil {
+	if err != nil {
 		logger.Warn(err)
 	}
-	if !bc.GetBlockPool().VerifyTransactions(utxo){
+	if !bc.GetBlockPool().VerifyTransactions(utxo) {
 		return
 	}
 
@@ -371,9 +370,9 @@ func (bc *Blockchain) MergeFork(){
 	logger.Debug("Merged Fork!!")
 }
 
-func (bc *Blockchain) concatenateForkToBlockchain(){
+func (bc *Blockchain) concatenateForkToBlockchain() {
 	if bc.GetBlockPool().forkPoolLen() > 0 {
-		for i := bc.GetBlockPool().forkPoolLen()-1; i>=0; i--{
+		for i := bc.GetBlockPool().forkPoolLen() - 1; i >= 0; i-- {
 			bc.UpdateNewBlock(bc.GetBlockPool().forkPool[i])
 			//Remove transactions in current transaction pool
 			bc.GetTxPool().RemoveMultipleTransactions(bc.GetBlockPool().forkPool[i].GetTransactions())
@@ -383,23 +382,23 @@ func (bc *Blockchain) concatenateForkToBlockchain(){
 }
 
 //returns true if successful
-func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
+func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool {
 
-	if !bc.IsInBlockchain(hash){
+	if !bc.IsInBlockchain(hash) {
 		return false
 	}
 
 	parentBlkHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
-	loop:
+loop:
 	for {
-		if bytes.Compare(parentBlkHash, hash)==0 {
+		if bytes.Compare(parentBlkHash, hash) == 0 {
 			break loop
 		}
-		blk,err := bc.GetBlockByHash(parentBlkHash)
+		blk, err := bc.GetBlockByHash(parentBlkHash)
 
-		if err!=nil {
+		if err != nil {
 			return false
 		}
 		parentBlkHash = blk.GetPrevHash()
@@ -409,6 +408,3 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 
 	return true
 }
-
-
-
