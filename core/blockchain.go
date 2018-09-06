@@ -36,7 +36,6 @@ const BlockPoolMaxSize = 100
 
 var(
 	ErrBlockDoesNotExist			= errors.New("ERROR: Block does not exist in blockchain")
-	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
 	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
 )
 
@@ -289,15 +288,6 @@ func (bc *Blockchain) NextFromIndex(indexHash []byte) (*Block, error) {
 	return block, nil
 }
 
-func (bc *Blockchain) GetTailHash() ([]byte, error) {
-
-	data, err:= bc.db.Get(tipKey)
-	if err!=nil{
-		logger.Error(err)
-	}
-	return data, err
-}
-
 func (bc *Blockchain) String() string {
 	var buffer bytes.Buffer
 
@@ -337,10 +327,7 @@ func (bc *Blockchain) setTailBlockHash(hash Hash){
 }
 
 func (bc *Blockchain) GetTailBlock() (*Block, error){
-	hash, err:= bc.GetTailHash()
-	if err != nil {
-		return nil, ErrNotAbleToGetLastBlockHash
-	}
+	hash := bc.GetTailBlockHash()
 	return bc.GetBlockByHash(hash)
 }
 
@@ -409,10 +396,7 @@ func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool{
 		return false
 	}
 
-	parentBlkHash, err:= bc.GetTailHash()
-	if err!= nil {
-		return false
-	}
+	parentBlkHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
 	loop:

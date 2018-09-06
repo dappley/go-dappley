@@ -31,12 +31,10 @@ func TestBlockPool_GetBlockchain(t *testing.T) {
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 	bc:= CreateBlockchain(addr,db,nil)
 
-	hash1, err:= bc.GetTailHash()
-	assert.Nil(t, err)
+	hash1 := bc.GetTailBlockHash()
 	newbc := bc.GetBlockPool().GetBlockchain()
 
-	hash2, err := newbc.GetTailHash()
-	assert.Nil(t, err)
+	hash2 := newbc.GetTailBlockHash()
 	assert.ElementsMatch(t,hash1, hash2)
 }
 

@@ -123,8 +123,7 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 	bc.concatenateForkToBlockchain()
 	//the highest block should have the height of 10
 	assert.Equal(t, uint64(10), bc.GetMaxHeight())
-	tailBlkHash,err := bc.GetTailHash()
-	assert.Nil(t, err)
+	tailBlkHash := bc.GetTailBlockHash()
 	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
 
 }
@@ -152,8 +151,7 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 
 	//the highest block should have the height of 8 -> 3+5
 	assert.Equal(t, uint64(8), bc.GetMaxHeight())
-	tailBlkHash,err := bc.GetTailHash()
-	assert.Nil(t, err)
+	tailBlkHash := bc.GetTailBlockHash()
 	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
 
 }
@@ -171,8 +169,7 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 		assert.Nil(t,err)
 	}
 
-	tailBlkHash,err := bc.GetTailHash()
-	assert.Nil(t, err)
+	tailBlkHash := bc.GetTailBlockHash()
 
 	//generate a fork that is forked from height 3
 	bc.GetBlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
@@ -182,7 +179,6 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 
 	//the highest block should have the height of 5
 	assert.Equal(t, uint64(5), bc.GetMaxHeight())
-	newTailBlkHash,err := bc.GetTailHash()
-	assert.Nil(t, err)
+	newTailBlkHash := bc.GetTailBlockHash()
 	assert.ElementsMatch(t,tailBlkHash,newTailBlkHash)
 }
