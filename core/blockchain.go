@@ -360,8 +360,7 @@ func (bc *Blockchain) MergeFork() {
 		return
 	}
 
-	//rollback all child blocks after the parent block from tail to head
-	bc.RollbackToABlockHeight(forkParentHash)
+	bc.Rollback(forkParentHash)
 
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain()
@@ -380,19 +379,19 @@ func (bc *Blockchain) concatenateForkToBlockchain() {
 	bc.GetBlockPool().ResetForkPool()
 }
 
-//returns true if successful
-func (bc *Blockchain) RollbackToABlockHeight(hash Hash) bool {
+//rollback the blockchain to a block with the targetHash
+func (bc *Blockchain) Rollback(targetHash Hash) bool {
 
-	if !bc.IsInBlockchain(hash) {
+	if !bc.IsInBlockchain(targetHash) {
 		return false
 	}
 
 	parentBlkHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
-loop:
+	loop:
 	for {
-		if bytes.Compare(parentBlkHash, hash) == 0 {
+		if bytes.Compare(parentBlkHash, targetHash) == 0 {
 			break loop
 		}
 		blk, err := bc.GetBlockByHash(parentBlkHash)
