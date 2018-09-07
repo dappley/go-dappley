@@ -146,7 +146,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	//verify all transactions
 	//miner.verifyTransactions()
 	//get all transactions
-	txs := miner.bc.GetTxPool().GetSortedTransactions()
+	txs := miner.bc.GetTxPool().PopSortedTransactions()
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(miner.cbAddr, "")
 	txs = append(txs, &cbtx)
