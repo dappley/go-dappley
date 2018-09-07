@@ -22,7 +22,7 @@ type Block struct {
 	Header               *BlockHeader   `protobuf:"bytes,1,opt,name=Header,proto3" json:"Header,omitempty"`
 	Transactions         []*Transaction `protobuf:"bytes,2,rep,name=Transactions,proto3" json:"Transactions,omitempty"`
 	Height               uint64         `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
-//	ParentHash           []byte         `protobuf:"bytes,4,opt,name=parentHash,proto3" json:"parentHash,omitempty"`
+	ParentHash           []byte         `protobuf:"bytes,4,opt,name=parentHash,proto3" json:"parentHash,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
 	XXX_unrecognized     []byte         `json:"-"`
 	XXX_sizecache        int32          `json:"-"`
@@ -73,19 +73,18 @@ func (m *Block) GetHeight() uint64 {
 	return 0
 }
 
-//func (m *Block) GetParentHash() []byte {
-//	if m != nil {
-//		return m.ParentHash
-//	}
-//	return nil
-//}
+func (m *Block) GetParentHash() []byte {
+	if m != nil {
+		return m.ParentHash
+	}
+	return nil
+}
 
 type BlockHeader struct {
-	Version              int32    `protobuf:"varint,1,opt,name=Version,proto3" json:"Version,omitempty"`
-	Hash                 []byte   `protobuf:"bytes,2,opt,name=Hash,proto3" json:"Hash,omitempty"`
-	Prevhash             []byte   `protobuf:"bytes,3,opt,name=Prevhash,proto3" json:"Prevhash,omitempty"`
-	Nonce                int64    `protobuf:"varint,4,opt,name=Nonce,proto3" json:"Nonce,omitempty"`
-	Timestamp            int64    `protobuf:"varint,5,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
+	Hash                 []byte   `protobuf:"bytes,1,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	Prevhash             []byte   `protobuf:"bytes,2,opt,name=Prevhash,proto3" json:"Prevhash,omitempty"`
+	Nonce                int64    `protobuf:"varint,3,opt,name=Nonce,proto3" json:"Nonce,omitempty"`
+	Timestamp            int64    `protobuf:"varint,4,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`

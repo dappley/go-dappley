@@ -27,11 +27,11 @@ import (
 
 func GenerateMockBlock() *Block {
 	bh1 := &BlockHeader{
-		int32(BlockVersion),
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,
 		time.Now().Unix(),
+		nil,
 	}
 
 	t1 := MockTransaction()

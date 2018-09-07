@@ -51,6 +51,10 @@ func (pow *ProofOfWork) SetTargetBit(bit int){
 	pow.miner.SetTargetBit(bit)
 }
 
+func (pow *ProofOfWork) SetKey(key string){
+	pow.miner.SetPrivKey(key)
+}
+
 func (pow *ProofOfWork) Start() {
 	go func() {
 		logger.Info("PoW started...")
@@ -98,4 +102,8 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 
 func (pow *ProofOfWork) StartNewBlockMinting(){
 	pow.miner.Stop()
+}
+
+func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool{
+	return true
 }

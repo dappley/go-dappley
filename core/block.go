@@ -31,18 +31,17 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"encoding/hex"
 )
 
-const (
-	BlockVersion = 1
-)
 
 type BlockHeader struct {
-	version int32
 	hash      Hash
 	prevHash  Hash
 	nonce     int64
 	timestamp int64
+	sign Hash
 }
 
 type Block struct {
@@ -59,8 +58,6 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
 	var prevHash []byte
 	var height uint64
-	var versionValue int32     //need set the version
-	versionValue = BlockVersion
 	height = 0
 	if parent != nil {
 		prevHash = parent.GetHash()
@@ -72,11 +69,11 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 	}
 	return &Block{
 		header: &BlockHeader{
-			version: versionValue,
 			hash:      []byte{},
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: time.Now().Unix(),
+			sign: nil,
 		},
 		height:       height,
 		transactions: transactions,
@@ -101,7 +98,6 @@ func (b *Block) Serialize() []byte {
 
 	bs := &BlockStream{
 		Header: &BlockHeaderStream{
-			Version: b.header.version,
 			Hash:      b.header.hash,
 			PrevHash:  b.header.prevHash,
 			Nonce:     b.header.nonce,
@@ -136,7 +132,6 @@ func Deserialize(d []byte) *Block {
 	}
 	return &Block{
 		header: &BlockHeader{
-			version:	bs.Header.Version,
 			hash:      bs.Header.Hash,
 			prevHash:  bs.Header.PrevHash,
 			nonce:     bs.Header.Nonce,
@@ -155,12 +150,13 @@ func (b *Block) GetHash() Hash {
 	return b.header.hash
 }
 
-func (b *Block) GetHeight() uint64 {
-	return b.height
+func (b *Block) GetSign() Hash {
+	return b.header.sign
 }
 
-func (b *Block) SetHeight(height uint64) {
-	b.height = height
+
+func (b *Block) GetHeight() uint64 {
+	return b.height
 }
 
 func (b *Block) GetPrevHash() Hash {
@@ -173,14 +169,6 @@ func (b *Block) SetNonce(nonce int64) {
 
 func (b *Block) GetNonce() int64 {
 	return b.header.nonce
-}
-
-func (b *Block) SetVersion(version int32) {
-	b.header.version = version
-}
-
-func (b *Block) GetVersion() int32 {
-	return b.header.version
 }
 
 func (b *Block) GetTimestamp() int64 {
@@ -225,7 +213,6 @@ func (b *Block) FromProto(pb proto.Message) {
 
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
-		Version: bh.version,
 		Hash:      bh.hash,
 		Prevhash:  bh.prevHash,
 		Nonce:     bh.nonce,
@@ -234,7 +221,6 @@ func (bh *BlockHeader) ToProto() proto.Message {
 }
 
 func (bh *BlockHeader) FromProto(pb proto.Message) {
-	bh.version = pb.(*corepb.BlockHeader).Version
 	bh.hash = pb.(*corepb.BlockHeader).Hash
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
@@ -242,12 +228,26 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 }
 
 func (b *Block) CalculateHash() Hash {
-	return b.CalculateHashWithNonce(b.GetNonce())
+	return b.CalculateHashWithoutNonce()
+}
+
+func (b *Block) CalculateHashWithoutNonce() Hash {
+	var hashInt big.Int
+	data := bytes.Join(
+		[][]byte{
+			b.GetPrevHash(),
+			b.HashTransactions(),
+			util.IntToHex(b.GetTimestamp()),
+		},
+		[]byte{},
+	)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+	return hashInt.Bytes()
 }
 
 func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 	var hashInt big.Int
-
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -263,6 +263,22 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 	return hashInt.Bytes()
 }
 
+func (b *Block) SignBlock(key string, data []byte) bool {
+	if len(key) <= 0 {
+		return false
+	}
+	privData, err := hex.DecodeString(key)
+	if err != nil {
+		return false
+	}
+	signature, error := secp256k1.Sign(data, privData)
+	if error != nil {
+		return false
+	}
+	b.header.sign = signature
+	return true
+}
+
 func (b *Block) VerifyHash() bool {
 	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
@@ -275,6 +291,8 @@ func (b *Block) VerifyTransactions(utxo utxoIndex) bool {
 	}
 	return true
 }
+
+
 
 func IsParentBlockHash(parentBlk, childBlk *Block) bool{
 	if parentBlk == nil || childBlk == nil{

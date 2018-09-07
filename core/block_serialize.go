@@ -18,10 +18,8 @@
 package core
 
 type BlockHeaderStream struct {
-	Version int32
 	Hash      Hash
 	PrevHash  Hash
-	MerkleRoot Hash
 	Nonce     int64
 	Timestamp int64
 }
@@ -30,6 +28,4 @@ type BlockStream struct {
 	Header       *BlockHeaderStream
 	Transactions []*Transaction
 	Height       uint64
-	Error		string
-	CheckFlag bool
 }

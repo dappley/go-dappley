@@ -29,27 +29,19 @@ import (
 )
 
 var 	bh1 = &BlockHeader{
-	int32(1),
 	[]byte("hash"),
 	nil,
 	1,
 	time.Now().Unix(),
+	nil,
 }
 
-func GenerateUtxoMockBlockWithoutInputs() *Block{
-	bh1 := &BlockHeader{
-		int32(1),
-		[]byte("hash"),
-		[]byte("prevhash"),
-		1,
-		time.Now().Unix(),
-	}
 var 	bh2 = &BlockHeader{
-	int32(1),
 	[]byte("hash1"),
 	[]byte("hash"),
 	1,
 	time.Now().Unix(),
+	nil,
 }
 func GenerateUtxoMockBlockWithoutInputs() *Block{
 
@@ -64,17 +56,10 @@ func GenerateUtxoMockBlockWithoutInputs() *Block{
 
 
 func GenerateUtxoMockBlockWithInputs() *Block{
-	bh1 := &BlockHeader{
-		int32(1),
-		[]byte("hash"),
-		[]byte("prevhash"),
-		1,
-		time.Now().Unix(),
-	}
 
 	t1 := MockUtxoTransactionWithInputs()
 	return &Block{
-		header:       bh1,
+		header:       bh2,
 		transactions: []*Transaction{t1},
 		height:       2,
 	}
@@ -201,6 +186,8 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	assert.Equal(t, 0,  len(deepCopy["address2"]))
 
 }
+
+
 
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()

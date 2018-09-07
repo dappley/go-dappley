@@ -22,6 +22,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"time"
 	logger "github.com/sirupsen/logrus"
+	"encoding/hex"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 type Dpos struct{
@@ -51,6 +53,10 @@ func (dpos *Dpos) Setup(node core.NetService, cbAddr string){
 
 func (dpos *Dpos) SetTargetBit(bit int){
 	dpos.miner.SetTargetBit(bit)
+}
+
+func (dpos *Dpos) SetKey(key string){
+	dpos.miner.SetPrivKey(key)
 }
 
 func (dpos *Dpos) SetDynasty(dynasty *Dynasty){
@@ -104,4 +110,39 @@ func (dpos *Dpos) updateNewBlock(newBlock *core.Block){
 	dpos.bc.UpdateNewBlock(newBlock)
 	dpos.node.SendBlock(newBlock)
 }
+
+func (dpos *Dpos) VerifyBlock(block *core.Block) bool{
+	hash := block.GetHash()
+	sign := block.GetSign()
+	privData, err := hex.DecodeString(dpos.miner.key)
+
+	if hash == nil {
+		logger.Info("DPoS: block hash empty!")
+		return false
+	}
+	if sign == nil {
+		logger.Info("DPoS: block signature empty!")
+		return false
+	}
+	if err != nil {
+		logger.Info("DPoS: miner key error!")
+		return false
+	}
+
+	pubkey, err := secp256k1.GetPublicKey(privData)
+	if err != nil {
+		logger.Info("DPoS: get pub key error!")
+		return false
+	}
+
+	verified, error := secp256k1.Verify(hash, sign, pubkey)
+	if error != nil {
+		logger.Info("DPoS: verify key error!")
+		return false
+	}
+
+
+	return verified
+
+	}
 

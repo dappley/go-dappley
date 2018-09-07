@@ -13,6 +13,7 @@ message DynastyConfig{
 
 message ConsensusConfig{
     string minerAddr = 1;
+    string privKey = 2;
 }
 
 message NodeConfig{

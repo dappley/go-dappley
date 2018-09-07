@@ -38,6 +38,7 @@ type DynastyConfig struct{
 
 type ConsensusConfig struct{
 	minerAddr 	string
+	privKey string
 }
 
 type NodeConfig struct{
@@ -99,6 +100,7 @@ func (config *Config) GetNodeConfig() *NodeConfig{return &config.nodeConfig}
 
 func (dynastyConfig *DynastyConfig)GetProducers() []string{return dynastyConfig.producers}
 func (consensusConfig *ConsensusConfig)GetMinerAddr() string{return consensusConfig.minerAddr}
+func (consensusConfig *ConsensusConfig)GetMinerPrivKey() string{return consensusConfig.privKey}
 func (nodeConfig *NodeConfig)GetListeningPort() uint32{return nodeConfig.port}
 func (nodeConfig *NodeConfig)GetSeed() string{return nodeConfig.seed}
 func (nodeConfig *NodeConfig)GetDbPath() string{return nodeConfig.dbPath}
