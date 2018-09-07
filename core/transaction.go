@@ -296,7 +296,7 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount, keyPair 
 	var outputs []TXOutput
 
 	// Validate amount
-	if amount.Cmp(common.NewAmount(0)) <= 0 {
+	if amount.Validate() != nil || amount.IsZero() {
 		return Transaction{}, ErrInvalidAmount
 	}
 

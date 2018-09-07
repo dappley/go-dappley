@@ -100,7 +100,7 @@ func Send(senderWallet client.Wallet, to core.Address, amount *common.Amount, ti
 	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
-	if amount.Cmp(common.NewAmount(0)) <= 0 {
+	if amount.Validate() != nil || amount.IsZero() {
 		return ErrInvalidAmount
 	}
 
@@ -121,7 +121,7 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 		return ErrInvalidAddress
 	}
 
-	if amount.Cmp(common.NewAmount(0)) <= 0 {
+	if amount.Validate() != nil || amount.IsZero() {
 		return ErrInvalidAmount
 	}
 

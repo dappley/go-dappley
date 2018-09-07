@@ -117,3 +117,7 @@ func (a *Amount) Times(b uint64) *Amount {
 func (a *Amount) Cmp(b *Amount) int {
 	return a.BigInt().Cmp(b.BigInt())
 }
+
+func (a *Amount) IsZero() bool {
+	return a.Cmp(NewAmount(0)) == 0
+}
