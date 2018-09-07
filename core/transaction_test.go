@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/pb"
@@ -41,8 +42,8 @@ func GenerateFakeTxInputs() []TXInput {
 
 func GenerateFakeTxOutputs() []TXOutput {
 	return []TXOutput{
-		{1, getAoB(2)},
-		{2, getAoB(2)},
+		{common.NewAmount(1), getAoB(2)},
+		{common.NewAmount(2), getAoB(2)},
 	}
 }
 
@@ -159,10 +160,10 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	//prepare utxo pool
 	Txin := MockTxInputs()
 	Txin2 := MockTxInputs()
-	utxo1 := UTXOutputStored{10,[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
-	utxo2 := UTXOutputStored{9,[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
-	utxo3 := UTXOutputStored{9,[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
-	utxo4 := UTXOutputStored{9,[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
+	utxo1 := UTXOutputStored{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxo3 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
+	utxo4 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
 	utxoPool := utxoIndex{}
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2, utxo3, utxo4}
 
@@ -180,14 +181,13 @@ func TestNewUTXOTransactionforAddBalance(t *testing.T) {
 	}
 	testCases := []struct {
 		name string
-		amount	int
+		amount	*common.Amount
 		tx	Transaction
 		expectedErr error
 	}{
-		{"Add 13", 13, Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(13, receiverAddr)}, 0}, nil},
-		{"Add 1", 1, Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(1, receiverAddr)}, 0}, nil},
-		{"Add 0", 0, Transaction{}, ErrInvalidAmount},
-		{"Add -1", -1, Transaction{}, ErrInvalidAmount},
+		{"Add 13", common.NewAmount(13), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(13), receiverAddr)}, 0}, nil},
+		{"Add 1", common.NewAmount(1), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(1), receiverAddr)}, 0}, nil},
+		{"Add 0", common.NewAmount(0), Transaction{}, ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

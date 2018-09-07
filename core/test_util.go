@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"time"
 
 	"github.com/dappley/go-dappley/storage"
@@ -183,8 +184,8 @@ func MockTxInputs() []TXInput {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{5, util.GenerateRandomAoB(2)},
-		{7, util.GenerateRandomAoB(2)},
+		{common.NewAmount(5), util.GenerateRandomAoB(2)},
+		{common.NewAmount(7), util.GenerateRandomAoB(2)},
 	}
 }
 

@@ -29,7 +29,7 @@ message GetBalanceRequest {
 message SendRequest {
   string from = 1;
   string to = 2;
-  int64 amount = 3;
+  bytes amount = 3;
 }
 
 message GetPeerInfoRequest {}

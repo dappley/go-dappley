@@ -5,7 +5,7 @@ message Transaction{
     bytes ID = 1;
     repeated TXInput Vin = 2;
     repeated TXOutput Vout = 3;
-    int64 Tip = 4;
+    uint64 Tip = 4;
 }
 
 message TXInput{
@@ -16,6 +16,6 @@ message TXInput{
 }
 
 message TXOutput{
-    int32 Value = 1;
+    bytes Value = 1;
     bytes PubKeyHash = 2;
 }

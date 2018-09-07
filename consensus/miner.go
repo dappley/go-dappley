@@ -150,6 +150,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(miner.cbAddr, "")
 	txs = append(txs, &cbtx)
+	// TODO: add tips to txs
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)

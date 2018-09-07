@@ -21,6 +21,7 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/dappley/go-dappley/common"
 	"log"
 	"github.com/dappley/go-dappley/storage"
 	"strings"
@@ -35,7 +36,7 @@ const UtxoForkMapKey = "utxoFork"
 type utxoIndex map[string][]UTXOutputStored
 
 type UTXOutputStored struct {
-	Value      int
+	Value      *common.Amount
 	PubKeyHash  []byte
 	Txid      []byte
 	TxIndex	  int

@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"github.com/dappley/go-dappley/common"
 
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/network/pb"
@@ -45,8 +46,9 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
 	sendFromAddress := core.NewAddress(in.From)
 	sendToAddress := core.NewAddress(in.To)
+	sendAmount := common.NewAmountFromBytes(in.Amount)
 
-	if in.Amount <= 0 {
+	if sendAmount.Cmp(common.NewAmount(0)) <= 0 {
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
 
@@ -60,7 +62,7 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	err = logic.Send(senderWallet, sendToAddress, int(in.Amount), 0, rpcSerivce.node.GetBlockchain())
+	err = logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcSerivce.node.GetBlockchain())
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error sending"}, err
 	}
