@@ -103,11 +103,11 @@ func (bc *Blockchain) GetTailBlock() (*Block, error) {
 }
 
 func (bc *Blockchain) GetMaxHeight() uint64 {
-	blk, err := bc.GetTailBlock()
+	block, err := bc.GetTailBlock()
 	if err != nil {
 		return 0
 	}
-	return blk.GetHeight()
+	return block.GetHeight()
 }
 
 func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
@@ -126,11 +126,11 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
 }
 
-func (bc *Blockchain) AddBlockToTail(newBlock *Block) {
-	logger.Info("Blockchain: Updated A New Block! Height:", newBlock.GetHeight(), " Hash:", hex.EncodeToString(newBlock.GetHash()))
-	bc.AddBlockToDatabase(newBlock)
-	bc.setTailBlockHash(newBlock.GetHash())
-	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
+func (bc *Blockchain) AddBlockToTail(block *Block) {
+	logger.Info("Blockchain: Updated A New Block! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+	bc.AddBlockToDatabase(block)
+	bc.setTailBlockHash(block.GetHash())
+	block.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
 }
 
 //TODO: optimize performance
@@ -309,12 +309,12 @@ func (bc *Blockchain) String() string {
 }
 
 //record the new block in the database
-func (bc *Blockchain) AddBlockToDatabase(newBlock *Block) {
-	bc.db.Put(newBlock.GetHash(), newBlock.Serialize())
+func (bc *Blockchain) AddBlockToDatabase(block *Block) {
+	bc.db.Put(block.GetHash(), block.Serialize())
 }
 
-func (bc *Blockchain) IsHigherThanBlockchain(blk *Block) bool {
-	return blk.GetHeight() > bc.GetMaxHeight()
+func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
+	return block.GetHeight() > bc.GetMaxHeight()
 }
 
 func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
@@ -369,23 +369,23 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 		return false
 	}
 
-	parentBlkHash := bc.GetTailBlockHash()
+	parentblockHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
 loop:
 	for {
-		if bytes.Compare(parentBlkHash, targetHash) == 0 {
+		if bytes.Compare(parentblockHash, targetHash) == 0 {
 			break loop
 		}
-		blk, err := bc.GetBlockByHash(parentBlkHash)
+		block, err := bc.GetBlockByHash(parentblockHash)
 
 		if err != nil {
 			return false
 		}
-		parentBlkHash = blk.GetPrevHash()
-		blk.Rollback(bc.txPool)
+		parentblockHash = block.GetPrevHash()
+		block.Rollback(bc.txPool)
 	}
-	bc.setTailBlockHash(parentBlkHash)
+	bc.setTailBlockHash(parentblockHash)
 
 	return true
 }
