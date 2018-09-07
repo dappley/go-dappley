@@ -91,7 +91,7 @@ func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block){
 		logger.Warn("hash verification is wrong")
 
 	}
-	pow.bc.UpdateNewBlock(newBlock)
+	pow.bc.AddBlockToTail(newBlock)
 	pow.broadcastNewBlock(newBlock)
 }
 

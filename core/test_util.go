@@ -78,7 +78,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 		tailBlk, _ := bc.GetTailBlock()
 		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk)
 		b.SetHash(b.CalculateHash())
-		bc.UpdateNewBlock(b)
+		bc.AddBlockToTail(b)
 	}
 	return bc
 }
@@ -94,7 +94,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnlyWithConsensus(size int, consensus C
 		cbtx := NewCoinbaseTX(addr.Address, "")
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
-		bc.UpdateNewBlock(b)
+		bc.AddBlockToTail(b)
 	}
 	return bc
 }
@@ -110,7 +110,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 		cbtx := NewCoinbaseTX(addr.Address, "")
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
-		bc.UpdateNewBlock(b)
+		bc.AddBlockToTail(b)
 	}
 	return bc
 }

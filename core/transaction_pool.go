@@ -126,7 +126,7 @@ func (txPool *TransactionPool) FilterAllTransactions(utxoPool utxoIndex) {
 }
 
 //need to optimize
-func (txPool *TransactionPool) GetSortedTransactions() []*Transaction {
+func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
 	sortedTransactions := []*Transaction{}
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.Transactions.PopRight().(Transaction)

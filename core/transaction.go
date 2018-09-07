@@ -266,10 +266,23 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, sender
 
 	tx := Transaction{nil, inputs, outputs, tip}
 	tx.ID = tx.Hash()
-	prevTXs := bc.GetPrevTransactions(tx)
+	prevTXs := tx.GetPrevTransactions(bc)
 	tx.Sign(senderKeyPair.PrivateKey, prevTXs)
 
 	return tx, nil
+}
+
+func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transaction {
+	prevTXs := make(map[string]Transaction)
+
+	for _, vin := range tx.Vin {
+		prevTX, err := bc.FindTransaction(vin.Txid)
+		if err != nil {
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+	return prevTXs
 }
 
 //for add balance
@@ -287,7 +300,7 @@ func NewUTXOTransactionforAddBalance(to Address, amount int, keyPair KeyPair, bc
 
 	tx := Transaction{nil, inputs, outputs, 0}
 	tx.ID = tx.Hash()
-	prevTxs := bc.GetPrevTransactions(tx)
+	prevTxs := tx.GetPrevTransactions(bc)
 	tx.Sign(keyPair.PrivateKey, prevTxs)
 
 	return tx, nil

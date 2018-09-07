@@ -165,8 +165,8 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	blk1 := GenerateUtxoMockBlockWithoutInputs()
 	blk2 := GenerateUtxoMockBlockWithInputs()
 
-	bc.UpdateNewBlock(blk1)
-	bc.UpdateNewBlock(blk2)
+	bc.AddBlockToTail(blk1)
+	bc.AddBlockToTail(blk2)
 	//expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len(GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
 	assert.Equal(t, 4,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
