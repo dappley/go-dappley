@@ -77,13 +77,6 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 	return bc, nil
 }
 
-func (bc *Blockchain) AddBlockToTail(newBlock *Block) {
-	logger.Info("Blockchain: Updated A New Block! Height:", newBlock.GetHeight(), " Hash:", hex.EncodeToString(newBlock.GetHash()))
-	bc.AddBlockToDatabase(newBlock)
-	bc.setTailBlockHash(newBlock.GetHash())
-	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
-}
-
 func (bc *Blockchain) GetDb() storage.Storage {
 	return bc.db
 }
@@ -104,6 +97,19 @@ func (bc *Blockchain) GetTxPool() *TransactionPool {
 	return bc.txPool
 }
 
+func (bc *Blockchain) GetTailBlock() (*Block, error) {
+	hash := bc.GetTailBlockHash()
+	return bc.GetBlockByHash(hash)
+}
+
+func (bc *Blockchain) GetMaxHeight() uint64 {
+	blk, err := bc.GetTailBlock()
+	if err != nil {
+		return 0
+	}
+	return blk.GetHeight()
+}
+
 func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
@@ -112,24 +118,19 @@ func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
 	return Deserialize(rawBytes), nil
 }
 
-func (bc *Blockchain) SetStorage(db storage.Storage) {
-	bc.db = db
-}
-
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
 	bc.tailBlockHash = tailBlockHash
-}
-
-func (bc *Blockchain) SetBlockPool(blockPool *BlockPool) {
-	bc.blockPool = blockPool
 }
 
 func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
 }
 
-func (bc *Blockchain) SetTxPool(txPool *TransactionPool) {
-	bc.txPool = txPool
+func (bc *Blockchain) AddBlockToTail(newBlock *Block) {
+	logger.Info("Blockchain: Updated A New Block! Height:", newBlock.GetHeight(), " Hash:", hex.EncodeToString(newBlock.GetHash()))
+	bc.AddBlockToDatabase(newBlock)
+	bc.setTailBlockHash(newBlock.GetHash())
+	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
 }
 
 //TODO: optimize performance
@@ -312,24 +313,6 @@ func (bc *Blockchain) AddBlockToDatabase(newBlock *Block) {
 	bc.db.Put(newBlock.GetHash(), newBlock.Serialize())
 }
 
-func (bc *Blockchain) setTailBlockHash(hash Hash) {
-	bc.db.Put(tipKey, hash)
-	bc.tailBlockHash = hash
-}
-
-func (bc *Blockchain) GetTailBlock() (*Block, error) {
-	hash := bc.GetTailBlockHash()
-	return bc.GetBlockByHash(hash)
-}
-
-func (bc *Blockchain) GetMaxHeight() uint64 {
-	blk, err := bc.GetTailBlock()
-	if err != nil {
-		return 0
-	}
-	return blk.GetHeight()
-}
-
 func (bc *Blockchain) IsHigherThanBlockchain(blk *Block) bool {
 	return blk.GetHeight() > bc.GetMaxHeight()
 }
@@ -389,7 +372,7 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	parentBlkHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
-	loop:
+loop:
 	for {
 		if bytes.Compare(parentBlkHash, targetHash) == 0 {
 			break loop
@@ -405,4 +388,9 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	bc.setTailBlockHash(parentBlkHash)
 
 	return true
+}
+
+func (bc *Blockchain) setTailBlockHash(hash Hash) {
+	bc.db.Put(tipKey, hash)
+	bc.tailBlockHash = hash
 }
