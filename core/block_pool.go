@@ -207,7 +207,7 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 		if IsParentBlock(tailBlock, blk) {
 			logger.Info("GetBlockPool: Add received block to blockchain. Sender id:", sender.String())
 			pool.bc.GetConsensus().StartNewBlockMinting()
-			pool.bc.UpdateNewBlock(blk)
+			pool.bc.AddBlockToTail(blk)
 			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {
 				pool.bc.MergeFork()
 			}

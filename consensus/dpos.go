@@ -101,7 +101,7 @@ func (dpos *Dpos) StartNewBlockMinting(){
 
 func (dpos *Dpos) updateNewBlock(newBlock *core.Block){
 	logger.Info("DPoS: Minted a new block. height:", newBlock.GetHeight())
-	dpos.bc.UpdateNewBlock(newBlock)
+	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.SendBlock(newBlock)
 }
 

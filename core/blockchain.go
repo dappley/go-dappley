@@ -56,7 +56,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 		NewTransactionPool(),
 	}
 	bc.blockPool.SetBlockchain(bc)
-	bc.updateDbWithNewBlock(genesis)
+	bc.AddBlockToTail(genesis)
 	return bc
 }
 
@@ -77,9 +77,11 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 	return bc, nil
 }
 
-func (bc *Blockchain) UpdateNewBlock(newBlock *Block) {
-	bc.updateDbWithNewBlock(newBlock)
+func (bc *Blockchain) AddBlockToTail(newBlock *Block) {
 	logger.Info("Blockchain: Updated A New Block! Height:", newBlock.GetHeight(), " Hash:", hex.EncodeToString(newBlock.GetHash()))
+	bc.AddBlockToDatabase(newBlock)
+	bc.setTailBlockHash(newBlock.GetHash())
+	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
 }
 
 func (bc *Blockchain) GetDb() storage.Storage {
@@ -306,11 +308,8 @@ func (bc *Blockchain) String() string {
 }
 
 //record the new block in the database
-func (bc *Blockchain) updateDbWithNewBlock(newBlock *Block) {
+func (bc *Blockchain) AddBlockToDatabase(newBlock *Block) {
 	bc.db.Put(newBlock.GetHash(), newBlock.Serialize())
-	logger.Debug("Saved block in DB, has hash of: ", newBlock.GetHash())
-	bc.setTailBlockHash(newBlock.GetHash())
-	newBlock.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
 }
 
 func (bc *Blockchain) setTailBlockHash(hash Hash) {
@@ -373,7 +372,7 @@ func (bc *Blockchain) MergeFork() {
 func (bc *Blockchain) concatenateForkToBlockchain() {
 	if bc.GetBlockPool().forkPoolLen() > 0 {
 		for i := bc.GetBlockPool().forkPoolLen() - 1; i >= 0; i-- {
-			bc.UpdateNewBlock(bc.GetBlockPool().forkPool[i])
+			bc.AddBlockToTail(bc.GetBlockPool().forkPool[i])
 			//Remove transactions in current transaction pool
 			bc.GetTxPool().RemoveMultipleTransactions(bc.GetBlockPool().forkPool[i].GetTransactions())
 		}
