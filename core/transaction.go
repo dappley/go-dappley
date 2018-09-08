@@ -21,9 +21,8 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-
-	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
@@ -210,18 +209,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string) Transaction {
+func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	randData := make([]byte, 20)
-	_, err := rand.Read(randData)
-	if err != nil {
-		log.Panic(err)
-	}
-	data = fmt.Sprintf("%s - %x", data, randData)
-	txin := TXInput{nil, -1, nil, []byte(data)}
+	txin := TXInput{nil, -1, bh, []byte(data)}
 	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()

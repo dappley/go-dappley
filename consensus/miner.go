@@ -148,7 +148,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	//get all transactions
 	txs := miner.bc.GetTxPool().PopSortedTransactions()
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.cbAddr, "")
+	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight())
 	txs = append(txs, &cbtx)
 	// TODO: add tips to txs
 

@@ -57,7 +57,7 @@ func TestTrimmedCopy(t *testing.T) {
 
 	t2 := t1.TrimmedCopy()
 
-	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "")
+	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
 	t4 := t3.TrimmedCopy()
 	assert.Equal(t, t1.ID, t2.ID)
 	assert.Equal(t, t1.Tip, t2.Tip)
@@ -114,7 +114,19 @@ func TestVerify(t *testing.T) {
 
 }
 
-//test IsCoinBase and NewCoinbaseTX function
+func TestNewCoinbaseTX(t *testing.T) {
+	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+
+	assert.Equal(t, t1, t2)
+
+	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 1)
+
+	assert.NotEqual(t, t1, t3)
+	assert.NotEqual(t, t1.ID, t3.ID)
+}
+
+//test IsCoinBase function
 func TestIsCoinBase(t *testing.T) {
 	var t1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
@@ -125,7 +137,7 @@ func TestIsCoinBase(t *testing.T) {
 
 	assert.False(t, t1.IsCoinbase())
 
-	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "")
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
 
 	assert.True(t, t2.IsCoinbase())
 
