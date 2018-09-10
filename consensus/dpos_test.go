@@ -84,8 +84,12 @@ func TestDpos_Start(t *testing.T) {
 func TestDpos_MultipleMiners(t *testing.T){
 
 	miners := []string{
-		"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		"15wLk1iJ46vump5apz5VA2EFzkLwPhHeVy",
+		"13wqqYnGJRVsqDPUBywjZV9nggksJBvS7G",
+	}
+	keystrs := []string{
+		"660cf2b6a4fa834f139a10ddd4733132fa828448d5a0c2ad66c0d70a356186bc",
+		"ed64fc3bc97db4006c3e1fae80115f140325f5d0acb8768e01f84acde1624d1c",
 	}
 	dynasty := NewDynastyWithProducers(miners)
 	dynasty.SetTimeBetweenBlk(5)
@@ -105,6 +109,7 @@ func TestDpos_MultipleMiners(t *testing.T){
 			node.AddStream(firstNode.GetPeerID(),firstNode.GetPeerMultiaddr())
 		}
 		dpos.Setup(node, miners[i])
+		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
 
