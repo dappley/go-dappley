@@ -34,6 +34,7 @@ var 	bh1 = &BlockHeader{
 	nil,
 	1,
 	time.Now().Unix(),
+	0,
 }
 
 var 	bh2 = &BlockHeader{
@@ -41,6 +42,7 @@ var 	bh2 = &BlockHeader{
 	[]byte("hash"),
 	1,
 	time.Now().Unix(),
+	1,
 }
 func GenerateUtxoMockBlockWithoutInputs() *Block{
 
@@ -49,7 +51,6 @@ func GenerateUtxoMockBlockWithoutInputs() *Block{
 	return &Block{
 		header:       bh1,
 		transactions: []*Transaction{t1},
-		height:       1,
 	}
 }
 
@@ -60,7 +61,6 @@ func GenerateUtxoMockBlockWithInputs() *Block{
 	return &Block{
 		header:       bh2,
 		transactions: []*Transaction{t1},
-		height:       2,
 	}
 }
 

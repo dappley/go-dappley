@@ -118,11 +118,7 @@ func (s *Stream) read(rw *bufio.ReadWriter){
 	}
 
 	//TODO: How to verify the integrity of the received message
-	//if the string is not empty
 	if len(bytes) > 1 {
-		//prase data
-		logger.Debug("Received Data:", bytes)
-
 		s.parseData(bytes)
 	}else{
 		logger.Debug("Read less than 1 byte. Stop Reading...")
@@ -208,10 +204,8 @@ func (s *Stream) parseData(data []byte){
 
 	switch(dm.GetCmd()) {
 	case SyncBlock:
-
 		logger.Debug(s.node.GetPeerMultiaddr() , " (", s.node.info.peerid ,") Received ", SyncBlock," command from:", dm.key)
 		s.node.syncBlockHandler(dm,s.peerID)
-
 	case SyncPeerList:
 		logger.Debug("Received ",SyncPeerList," command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())

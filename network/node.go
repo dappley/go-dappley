@@ -253,6 +253,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter,10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
+		logger.Debug("caching block msg with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -262,7 +263,8 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	return data, nil
 }
 
-func (n *Node) SendBlock(block *core.Block) error {
+func (n *Node) BroadcastBlock(block *core.Block) error {
+	logger.Debug("sent block: ", string(block.GetHash()), ", ", string(block.GetPrevHash()), ", ", block.GetTimestamp(), ", ", block.GetHeight())
 	data,err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err!=nil {
 		return err
@@ -271,7 +273,7 @@ func (n *Node) SendBlock(block *core.Block) error {
 	return nil
 }
 
-func (n *Node) SyncPeersBlockcast() error {
+func (n *Node) SyncPeersBroadcast() error {
 	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
 	if err!=nil {
 		return err
@@ -366,8 +368,10 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID){
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	n.addBlockToPool(blk, pid)
+	logger.Debug("asdsd2391",blk.GetHeight())
+	logger.Debug("received block: ", string(blk.GetHash()), ", ", string(blk.GetPrevHash()), ", ", blk.GetTimestamp(), ", ", blk.GetHeight())
 
+	n.addBlockToPool(blk, pid)
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {

@@ -30,7 +30,7 @@ type Consensus interface{
 }
 
 type NetService interface{
-	SendBlock(block *Block) error
+	BroadcastBlock(block *Block) error
 	GetPeerID() peer.ID
 	GetBlockchain() *Blockchain
 }

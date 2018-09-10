@@ -35,11 +35,11 @@ func NewGenesisBlock(address string) *Block {
 		prevHash: []byte{},
 		nonce:     0,
 		timestamp: 1532392928, //July 23,2018 17:42 PST
+		height:0,
 	}
 	b := &Block{
 		header: header,
 		transactions: txs,
-		height:0,
 	}
 
 	b.SetHash(b.CalculateHash())

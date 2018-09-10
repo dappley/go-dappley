@@ -38,12 +38,12 @@ type BlockHeader struct {
 	prevHash  Hash
 	nonce     int64
 	timestamp int64
+	height       uint64
 }
 
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
-	height       uint64
 }
 
 type Hash []byte
@@ -52,7 +52,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
 	var prevHash []byte
 	var height uint64
-	height = 0
+	height = 1
 	if parent != nil {
 		prevHash = parent.GetHash()
 		height = parent.GetHeight() + 1
@@ -67,8 +67,8 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: time.Now().Unix(),
+			height: height,
 		},
-		height:       height,
 		transactions: transactions,
 	}
 }
@@ -95,9 +95,9 @@ func (b *Block) Serialize() []byte {
 			PrevHash:  b.header.prevHash,
 			Nonce:     b.header.nonce,
 			Timestamp: b.header.timestamp,
+			Height: b.header.height,
 		},
 		Transactions: b.transactions,
-		Height:       b.height,
 	}
 
 	err := encoder.Encode(bs)
@@ -129,9 +129,9 @@ func Deserialize(d []byte) *Block {
 			prevHash:  bs.Header.PrevHash,
 			nonce:     bs.Header.Nonce,
 			timestamp: bs.Header.Timestamp,
+			height:	   bs.Header.Height,
 		},
 		transactions: bs.Transactions,
-		height:       bs.Height,
 	}
 }
 
@@ -144,7 +144,7 @@ func (b *Block) GetHash() Hash {
 }
 
 func (b *Block) GetHeight() uint64 {
-	return b.height
+	return b.header.height
 }
 
 func (b *Block) GetPrevHash() Hash {
@@ -177,7 +177,6 @@ func (b *Block) ToProto() proto.Message {
 	return &corepb.Block{
 		Header:       b.header.ToProto().(*corepb.BlockHeader),
 		Transactions: txArray,
-		Height:       b.height,
 	}
 }
 
@@ -195,9 +194,8 @@ func (b *Block) FromProto(pb proto.Message) {
 		txs = append(txs, tx)
 	}
 	b.transactions = txs
+	}
 
-	b.height = pb.(*corepb.Block).Height
-}
 
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
@@ -205,6 +203,8 @@ func (bh *BlockHeader) ToProto() proto.Message {
 		Prevhash:  bh.prevHash,
 		Nonce:     bh.nonce,
 		Timestamp: bh.timestamp,
+		Height: bh.height,
+
 	}
 }
 
@@ -213,6 +213,7 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
 	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
+	bh.height =  pb.(*corepb.BlockHeader).Height
 }
 
 func (b *Block) CalculateHash() Hash {
@@ -265,6 +266,10 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool{
 }
 
 func IsParentBlock(parentBlk, childBlk *Block) bool{
+
+	//logger.Debug("is parent block?" , IsParentBlockHash(parentBlk, childBlk) , IsParentBlockHeight(parentBlk, childBlk))
+	//logger.Debug("parent block height: " , parentBlk.GetHeight() , "child block height: ", childBlk.GetHeight())
+
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
 

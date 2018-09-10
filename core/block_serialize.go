@@ -22,10 +22,10 @@ type BlockHeaderStream struct {
 	PrevHash  Hash
 	Nonce     int64
 	Timestamp int64
+	Height       uint64
 }
 
 type BlockStream struct {
 	Header       *BlockHeaderStream
 	Transactions []*Transaction
-	Height       uint64
 }

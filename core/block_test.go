@@ -84,7 +84,7 @@ func TestNewBlock(t *testing.T) {
 	assert.Equal(t, expectBlock3Hash, block3.header.prevHash)
 	assert.Equal(t, Hash(Hash{'a'}), block3.header.prevHash)
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
-	assert.Equal(t, uint64(1), block3.height)
+	assert.Equal(t, uint64(1), block3.header.height)
 	assert.Equal(t, emptyTransaction, block3.transactions)
 
 	block4 := NewBlock([]*Transaction{}, nil)
@@ -105,6 +105,7 @@ func TestBlockHeader_Proto(t *testing.T) {
 		[]byte("hash"),
 		1,
 		2,
+		0,
 	}
 
 	pb := bh1.ToProto()
