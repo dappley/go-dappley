@@ -18,17 +18,18 @@
 package main
 
 import (
-	"fmt"
 	"bufio"
-	"os"
-	"flag"
-	"strings"
-	"google.golang.org/grpc"
-	"github.com/dappley/go-dappley/rpc/pb"
 	"context"
-	"log"
+	"flag"
+	"fmt"
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"log"
+	"os"
+	"strings"
 )
 
 //command names
@@ -255,10 +256,11 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	fmt.Println(common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes())
 	response, err  := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
 		From: *(flags[flagFromAddress].(*string)),
 		To: *(flags[flagToAddress].(*string)),
-		Amount: int64(*(flags[flagAmount].(*int))),
+		Amount: common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
 	})
 	if err!=nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)

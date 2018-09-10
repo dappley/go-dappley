@@ -20,6 +20,7 @@ package logic
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/common"
 	"os"
 	"testing"
 
@@ -92,7 +93,7 @@ func TestGetBalance(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance, err := GetBalance(addr, store)
 	assert.Nil(t, err)
-	assert.Equal(t, 10, balance)
+	assert.Equal(t, common.NewAmount(10), balance)
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
@@ -110,11 +111,11 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//The balance should be 10 after creating a blockchain
 	balance1, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"), store)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, balance1)
+	assert.Equal(t, common.NewAmount(0), balance1)
 
 	balance2, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"), store)
 	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
-	assert.Equal(t, 0, balance2)
+	assert.Equal(t, common.NewAmount(0), balance2)
 }
 
 func TestGetAllAddresses(t *testing.T) {
@@ -159,21 +160,19 @@ func TestGetAllAddresses(t *testing.T) {
 
 //test send
 func TestSend(t *testing.T) {
-	const mineReward = 10
+	var mineReward = common.NewAmount(10)
 	testCases := []struct {
 		name  string
-		transferAmount  int
-		tipAmount  int
-		expectedTransfer  int
-		expectedTip  int
+		transferAmount  *common.Amount
+		tipAmount  uint64
+		expectedTransfer  *common.Amount
+		expectedTip  uint64
 		expectedErr  error
 	}{
-		{"Send with no tip", 7, 0, 7, 0, nil},
-		{"Send with tips", 6, 2, 6, 2, nil},
-		{"Send with negative tips", 8, -2, 8, 0, nil},
-		{"Send zero with no tip", 0, 0, 0, 0, ErrInvalidAmount},
-		{"Send zero with tips", 0, 2, 0, 0, ErrInvalidAmount},
-		{"Send negative", -7, 0, 0, 0, ErrInvalidAmount},
+		{"Send with no tip", common.NewAmount(7), 0, common.NewAmount(7), 0, nil},
+		{"Send with tips", common.NewAmount(6), 2, common.NewAmount(6), 2, nil},
+		{"Send zero with no tip", common.NewAmount(0), 0, common.NewAmount(0), 0, ErrInvalidAmount},
+		{"Send zero with tips", common.NewAmount(0), 2, common.NewAmount(0), 0, ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -226,7 +225,8 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward - tc.expectedTransfer, senderBalance)
+			expectedBalance, _ := mineReward.Sub(tc.expectedTransfer)
+			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the receiver's wallet should be the amount transferred
 			receiverBalance, err := GetBalance(receiverWallet.GetAddress(), store)
@@ -275,9 +275,9 @@ func TestSendToInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//this is internally set. Dont modify
-	mineReward := int(10)
+	mineReward := common.NewAmount(10)
 	//Transfer ammount
-	transferAmount := int(25)
+	transferAmount := common.NewAmount(25)
 	tip := uint64(5)
 	//create a wallet address
 	wallet1, err := CreateWallet()
@@ -336,9 +336,9 @@ func TestSendInsufficientBalance(t *testing.T) {
 	tip := uint64(5)
 
 	//this is internally set. Dont modify
-	mineReward := int(10)
+	mineReward := common.NewAmount(10)
 	//Transfer ammount is larger than the balance
-	transferAmount := int(25)
+	transferAmount := common.NewAmount(25)
 
 	//create a wallet address
 	wallet1, err := CreateWallet()
@@ -364,7 +364,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//The balance should be 0
 	balance2, err := GetBalance(addr2, store)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, balance2)
+	assert.Equal(t, common.NewAmount(0), balance2)
 
 	//Send 5 coins from addr1 to addr2
 	err = Send(wallet1, addr2, transferAmount, tip, b)
@@ -378,7 +378,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//the balance of the second wallet should be 0
 	balance2, err = GetBalance(addr2, store)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, balance2)
+	assert.Equal(t, common.NewAmount(0), balance2)
 
 	//teardown :clean up database amd files
 	teardown()
@@ -512,13 +512,12 @@ func TestCompare(t *testing.T) {
 func TestAddBalance(t *testing.T) {
 	testCases := []struct {
 		name  string
-		addAmount  int
-		expectedDiff  int
+		addAmount  *common.Amount
+		expectedDiff  *common.Amount
 		expectedErr  error
 	}{
-		{"Add 5", 5, 5, nil},
-		{"Add zero", 0, 0, ErrInvalidAmount},
-		{"Add negative", -7, 0, ErrInvalidAmount},
+		{"Add 5", common.NewAmount(5), common.NewAmount(5), nil},
+		{"Add zero", common.NewAmount(0), common.NewAmount(0), ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -579,7 +578,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			// Create a blockchain
 			bc, err := CreateBlockchain(addr, store, nil)
 			assert.Nil(t, err)
-			err = AddBalance(core.Address{tc.address}, 8, bc)
+			err = AddBalance(core.Address{tc.address}, common.NewAmount(8), bc)
 			assert.Equal(t, ErrInvalidAddress, err)
 		})
 	}

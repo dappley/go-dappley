@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"testing"
 	"github.com/dappley/go-dappley/storage"
 	"time"
@@ -98,16 +99,16 @@ func MockUtxoInputs() []TXInput {
 
 func MockUtxoOutputsWithoutInputs() []TXOutput {
 	return []TXOutput{
-		{5, []byte("address1")},
-		{7, []byte("address1")},
+		{common.NewAmount(5), []byte("address1")},
+		{common.NewAmount(7), []byte("address1")},
 	}
 }
 
 func MockUtxoOutputsWithInputs() []TXOutput {
 	return []TXOutput{
-		{4, []byte("address1")},
-		{5, []byte("address2")},
-		{3, []byte("address2")},
+		{common.NewAmount(4), []byte("address1")},
+		{common.NewAmount(5), []byte("address2")},
+		{common.NewAmount(3), []byte("address2")},
 	}
 }
 
@@ -119,8 +120,8 @@ func TestAddSpendableOutputsAfterNewBlock(t *testing.T){
 	blk.AddSpendableOutputsAfterNewBlock(UtxoMapKey, db)
 	myUtxos := GetAddressUTXOs(UtxoMapKey, []byte("address1"), db)
 
-	assert.Equal(t, 5, myUtxos[0].Value )
-	assert.Equal(t, 7, myUtxos[1].Value )
+	assert.Equal(t, common.NewAmount(5), myUtxos[0].Value )
+	assert.Equal(t, common.NewAmount(7), myUtxos[1].Value )
 }
 
 func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
@@ -144,15 +145,15 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 
 	//expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len( GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
-	assert.Equal(t, 4,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
+	assert.Equal(t, common.NewAmount(4),  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
 
 	//expect address2 to have 2 utxos totaling $8
 	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
-	sum := 0
+	sum := common.NewAmount(0)
 	for _, utxo := range GetAddressUTXOs(UtxoMapKey, []byte("address2"),db) {
-		sum += utxo.Value
+		sum = sum.Add(utxo.Value)
 	}
-	assert.Equal(t, 8, sum)
+	assert.Equal(t, common.NewAmount(8), sum)
 }
 
 func TestCopyAndRevertUtxosInRam(t *testing.T){
@@ -169,7 +170,7 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	bc.AddBlockToTail(blk2)
 	//expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len(GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
-	assert.Equal(t, 4,  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
+	assert.Equal(t, common.NewAmount(4),  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
 
 	//expect address2 to have 2 utxos totaling $8
 	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
@@ -181,8 +182,8 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	}
 
 	assert.Equal(t, 2, len(deepCopy["address1"]))
-	assert.Equal(t, 5,  deepCopy["address1"][0].Value)
-	assert.Equal(t, 7,  deepCopy["address1"][1].Value)
+	assert.Equal(t, common.NewAmount(5),  deepCopy["address1"][0].Value)
+	assert.Equal(t, common.NewAmount(7),  deepCopy["address1"][1].Value)
 	assert.Equal(t, 0,  len(deepCopy["address2"]))
 
 }
@@ -192,8 +193,8 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := UTXOutputStored{10,[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
-	utxo2 := UTXOutputStored{9,[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxo1 := UTXOutputStored{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
 	utxoPool := utxoIndex{}
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2}
 

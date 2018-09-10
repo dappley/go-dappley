@@ -376,8 +376,8 @@ func TestDynasty_ValidateProducer(t *testing.T) {
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
 
-	cbtx := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD","")
-	cbtxInvalidProducer := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBGjWk9yTWmMkhcoDD","")
+	cbtx := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD","", 0)
+	cbtxInvalidProducer := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBGjWk9yTWmMkhcoDD","", 0)
 
 	tests := []struct{
 		name 		string

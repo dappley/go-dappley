@@ -21,9 +21,8 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-
-	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
@@ -33,13 +32,14 @@ import (
 
 	"math/big"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 )
 
-const subsidy = 10
+var subsidy = common.NewAmount(10)
 
 var (
 	ErrInsufficientFund = errors.New("ERROR: The balance is insufficient")
@@ -209,18 +209,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string) Transaction {
+func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	randData := make([]byte, 20)
-	_, err := rand.Read(randData)
-	if err != nil {
-		log.Panic(err)
-	}
-	data = fmt.Sprintf("%s - %x", data, randData)
-	txin := TXInput{nil, -1, nil, []byte(data)}
+	txin := TXInput{nil, -1, bh, []byte(data)}
 	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()
@@ -229,26 +225,26 @@ func NewCoinbaseTX(to, data string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, senderKeyPair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
+func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amount, senderKeyPair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 	var validOutputs []UTXOutputStored
 
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
-	sum := 0
+	sum := common.NewAmount(0)
 
 	if len(GetAddressUTXOs(UtxoMapKey, pubKeyHash, db)) < 1 {
 		return Transaction{}, ErrInsufficientFund
 	}
 	for _, v := range GetAddressUTXOs(UtxoMapKey,pubKeyHash, db) {
-		sum += v.Value
+		sum = sum.Add(v.Value)
 		validOutputs = append(validOutputs, v)
-		if sum >= amount {
+		if sum.Cmp(amount) >= 0 {
 			break
 		}
 	}
 
-	if sum < amount {
+	if sum.Cmp(amount) < 0 { // TODO: add tips
 		return Transaction{}, ErrInsufficientFund
 	}
 
@@ -260,8 +256,12 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount int, sender
 	}
 	// Build a list of outputs
 	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-	if sum > amount {
-		outputs = append(outputs, *NewTXOutput(sum-amount, from.Address)) // a change
+	if sum.Cmp(amount) > 0 {
+		change, err := sum.Sub(amount)
+		if err != nil {
+			log.Panic(err)
+		}
+		outputs = append(outputs, *NewTXOutput(change, from.Address))
 	}
 
 	tx := Transaction{nil, inputs, outputs, tip}
@@ -286,12 +286,12 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 }
 
 //for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount int, keyPair KeyPair, bc *Blockchain) (Transaction, error) {
+func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount, keyPair KeyPair, bc *Blockchain) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
 	// Validate amount
-	if amount <= 0 {
+	if amount.Validate() != nil || amount.IsZero() {
 		return Transaction{}, ErrInvalidAmount
 	}
 

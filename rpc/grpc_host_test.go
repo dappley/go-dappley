@@ -20,6 +20,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/common"
 	"os"
 	"testing"
 	"time"
@@ -117,7 +118,7 @@ func TestRpcSend(t *testing.T) {
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From: senderWallet.GetAddress().Address,
 		To: receiverWallet.GetAddress().Address,
-		Amount: 7,
+		Amount: common.NewAmount(7).Bytes(),
 	})
 	assert.Nil(t, err)
 
@@ -131,8 +132,8 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	assert.Equal(t, 13, senderBalance) // mining reward (10) + remaining (10-7)
-	assert.Equal(t, 7, receiverBalance)
+	assert.Equal(t, common.NewAmount(13), senderBalance) // mining reward (10) + remaining (10-7)
+	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
 	os.RemoveAll(client.WalletFile)
 }

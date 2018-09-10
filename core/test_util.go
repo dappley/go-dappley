@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"time"
 
 	"github.com/dappley/go-dappley/storage"
@@ -91,7 +92,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnlyWithConsensus(size int, consensus C
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr.Address, "")
+		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight())
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockToTail(b)
@@ -107,7 +108,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr.Address, "")
+		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight())
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockToTail(b)
@@ -184,8 +185,8 @@ func MockTxInputs() []TXInput {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{5, util.GenerateRandomAoB(2)},
-		{7, util.GenerateRandomAoB(2)},
+		{common.NewAmount(5), util.GenerateRandomAoB(2)},
+		{common.NewAmount(7), util.GenerateRandomAoB(2)},
 	}
 }
 

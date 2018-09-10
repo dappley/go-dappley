@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"testing"
 
 	"time"
@@ -34,10 +35,9 @@ import (
 	"github.com/dappley/go-dappley/network"
 )
 
-var sendAmount = int(7)
-var sendAmount2 = int(6)
-var mineReward = int(10)
-var tip = int64(5)
+var sendAmount = common.NewAmount(7)
+var sendAmount2 = common.NewAmount(6)
+var mineReward = common.NewAmount(10)
 
 
 func TestMain(m *testing.M){
@@ -96,9 +96,13 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
-	var expectedVal = map[core.Address]int{
-		wallet1.GetAddress()	:mineReward*count-sendAmount,  	//balance should be all mining rewards minus sendAmount
-		wallet2.GetAddress()	:sendAmount,					//balance should be the amount rcved from wallet1
+	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount)
+	if err != nil {
+		panic(err)
+	}
+	var expectedVal = map[core.Address]*common.Amount{
+		wallet1.GetAddress(): remaining,	//balance should be all mining rewards minus sendAmount
+		wallet2.GetAddress(): sendAmount,	//balance should be the amount rcved from wallet1
 	}
 
 	//check balance
@@ -139,8 +143,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
-	var expectedVal = map[core.Address]int{
-		cbWallet.GetAddress()	: count * mineReward,
+	var expectedVal = map[core.Address]*common.Amount{
+		cbWallet.GetAddress()	: mineReward.Times(uint64(count)),
 	}
 
 	//check balance
@@ -191,7 +195,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
-	//add second transation
+	//add second transaction
 	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, wallet, bc, 0)
 	assert.Nil(t, err)
 
@@ -211,9 +215,10 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
-	var expectedVal = map[core.Address]int{
-		wallet1.GetAddress()	:mineReward*(count+1)-sendAmount-sendAmount2,  	//balance should be all mining rewards minus sendAmount
-		wallet2.GetAddress()	:sendAmount+sendAmount2,					//balance should be the amount rcved from wallet1
+	remaining, err := mineReward.Times(uint64(count+1)).Sub(sendAmount.Add(sendAmount2))
+	var expectedVal = map[core.Address]*common.Amount{
+		wallet1.GetAddress(): remaining,					//balance should be all mining rewards minus sendAmount
+		wallet2.GetAddress(): sendAmount.Add(sendAmount2),	//balance should be the amount rcved from wallet1
 	}
 
 	//check balance
@@ -287,39 +292,23 @@ func printBalances(bc *core.Blockchain, addrs []core.Address) {
 }
 
 //balance
-func getBalance(bc *core.Blockchain, addr string) (int, error) {
+func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
-	balance := 0
+	balance := common.NewAmount(0)
 	pubKeyHash := util.Base58Decode([]byte(addr))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	UTXOs, err := bc.FindUTXO(pubKeyHash)
 	if err != nil {
-		return 0, err
+		return balance, err
 	}
 
 	for _, out := range UTXOs {
-		balance += out.Value
+		balance = balance.Add(out.Value)
 	}
 	return balance, nil
 }
 
-//balance
-func getBalancePrint(bc *core.Blockchain, addr string) (int, error) {
-
-	balance := 0
-	pubKeyHash := util.Base58Decode([]byte(addr))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	UTXOs, err := bc.FindUTXO(pubKeyHash)
-	if err != nil {
-		return 0, err
-	}
-	for _, out := range UTXOs {
-		balance += out.Value
-	}
-	return balance, nil
-}
-
-func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[core.Address]int) {
+func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[core.Address]*common.Amount) {
 	for addr, bal := range addrBals{
 		bc, err := getBalance(bc, addr.Address)
 		assert.Nil(t, err)

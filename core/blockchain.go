@@ -127,8 +127,8 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) {
-	logger.Info("Blockchain: Updated A New Block! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
-	bc.AddBlockToDatabase(block)
+	logger.Info("Blockchain: Added A New Block To Tail! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+	bc.AddBlockToDb(block)
 	bc.setTailBlockHash(block.GetHash())
 	block.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
 }
@@ -309,7 +309,7 @@ func (bc *Blockchain) String() string {
 }
 
 //record the new block in the database
-func (bc *Blockchain) AddBlockToDatabase(block *Block) {
+func (bc *Blockchain) AddBlockToDb(block *Block) {
 	bc.db.Put(block.GetHash(), block.Serialize())
 }
 

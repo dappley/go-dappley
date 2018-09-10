@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/pb"
@@ -28,7 +29,7 @@ import (
 
 func TestTXOutput_Proto(t *testing.T) {
 	vout := TXOutput{
-		1,
+		common.NewAmount(1),
 		[]byte("PubKeyHash"),
 	}
 

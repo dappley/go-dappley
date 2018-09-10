@@ -20,6 +20,7 @@ package logic
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/common"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
@@ -55,27 +56,27 @@ func CreateWallet() (client.Wallet, error) {
 }
 
 //get balance
-func GetBalance(address core.Address, db storage.Storage) (int, error) {
+func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
 	if !address.ValidateAddress() {
-		return 0, ErrInvalidAddress
+		return common.NewAmount(0), ErrInvalidAddress
 	}
 	//inject db here
 
 	bc, err := core.GetBlockchain(db,nil )
 	if err != nil {
-		return 0, err
+		return common.NewAmount(0), err
 	}
 
-	balance := 0
+	balance := common.NewAmount(0)
 	pubKeyHash := util.Base58Decode([]byte(address.Address))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	UTXOs, err := bc.FindUTXO(pubKeyHash)
 	if err != nil {
-		return 0, err
+		return balance, err
 	}
 
 	for _, out := range UTXOs {
-		balance += out.Value
+		balance = balance.Add(out.Value)
 	}
 	return balance, nil
 }
@@ -92,14 +93,14 @@ func GetAllAddresses() ([]core.Address, error) {
 	return addresses, err
 }
 
-func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, bc *core.Blockchain) error {
+func Send(senderWallet client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain) error {
 	if !senderWallet.GetAddress().ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
 	if !to.ValidateAddress() {
 		return ErrInvalidRcverAddress
 	}
-	if amount <= 0 {
+	if amount.Validate() != nil || amount.IsZero() {
 		return ErrInvalidAmount
 	}
 
@@ -115,12 +116,12 @@ func Send(senderWallet client.Wallet, to core.Address, amount int, tip uint64, b
 }
 
 //add balance
-func AddBalance(address core.Address, amount int, bc *core.Blockchain) (error) {
+func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain) (error) {
 	if !address.ValidateAddress() {
 		return ErrInvalidAddress
 	}
 
-	if amount <= 0 {
+	if amount.Validate() != nil || amount.IsZero() {
 		return ErrInvalidAmount
 	}
 
