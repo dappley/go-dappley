@@ -256,7 +256,6 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	fmt.Println(common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes())
 	response, err  := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
 		From: *(flags[flagFromAddress].(*string)),
 		To: *(flags[flagToAddress].(*string)),
