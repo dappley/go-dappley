@@ -33,6 +33,8 @@ type Entry struct{
 var (
 	ErrNodeNotFound = errors.New("ERROR: Node not found in tree")
 	ErrCantCreateEmptyNode = errors.New("ERROR: Node index and value must not be empty")
+	ErrChildNodeAlreadyHasParent = errors.New("ERROR: Adding parent to node already with parent")
+
 )
 const LeafsSize = 32
 
@@ -43,6 +45,7 @@ type Node struct {
 	Children []*Node
 	Height uint
 	tree *Tree
+	isOnMainBranch bool
 }
 
 type Tree struct {
@@ -64,22 +67,26 @@ func (n *Node) hasChildren() bool{
 	return false
 }
 
-func (t *Tree) NewNode(index interface{}, value interface{}) (*Node, error){
+func (t *Tree) NewNode(index interface{}, value interface{}, height uint) (*Node, error){
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Node{[]Entry{Entry{index,value}}, nil, nil, 1, t}, nil
+	return &Node{[]Entry{Entry{index,value}}, nil, nil, height, t, true}, nil
 }
-func NewNode(index interface{}, value interface{}) (*Node, error){
-	if index == nil || value == nil {
-		return nil, ErrCantCreateEmptyNode
+
+func (n *Node) AddParent(parent *Node) error{
+	if n.Parent != nil {
+		return ErrChildNodeAlreadyHasParent
+
 	}
-	return &Node{[]Entry{Entry{index,value}}, nil, nil, 1, nil}, nil
+	n.tree.Root = parent
+	parent.AddChild(n)
+	return nil
 }
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
-	t := &Tree{nil, 0 , nil, false, nil}
-	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t}
+	t := &Tree{nil, 1 , nil, false, nil}
+	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t, true}
 	t.Root = &r
 	t.leafs,_ = lru.New(LeafsSize)
 	return t
@@ -104,11 +111,11 @@ func (t *Tree) RecursiveFind (parent *Node, index interface{}) {
 	}
 }
 
-func (t *Tree) RecursiveActionBasedOnCallback (parent *Node, doSmth func(node *Node)) {
+func (t *Tree) RecurseThroughTreeAndDoCallback (parent *Node, doSmth func(node *Node)) {
 	//recurse through tree starting from parent and do something with nodes
 	doSmth(parent)
 	for i:=0;i< len(parent.Children);i++  {
-		t.RecursiveActionBasedOnCallback(parent.Children[i], doSmth)
+		t.RecurseThroughTreeAndDoCallback(parent.Children[i], doSmth)
 	}
 }
 
@@ -125,36 +132,57 @@ func (t *Tree) Get(parent *Node, index interface{}){
 }
 
 func (t *Tree) SearchParentNodeAndAddChild( startNode *Node, parentIndex interface{} , childIndex interface{}, childValue interface{}){
-	child,_ := t.NewNode(childIndex, childValue)
+	child,_ := t.NewNode(childIndex, childValue, 0)
 	t.Get(t.Root, parentIndex)
 	parent := t.Found
+	child.Height = parent.Height+1
 	parent.AddChild(child)
 }
 
 func (parent *Node) AddChild(child *Node){
+
 	parent.Children = append(parent.Children, child)
 	parent.Entries = append(parent.Entries, child.Entries[0])
 	child.Parent = parent
 	//remove index from leafs if was leaf
-	if len(parent.Children) == 1 && parent.tree.leafs.Contains(parent.Entries[0].key){
-		parent.tree.leafs.Remove(parent.Entries[0].key)
+	parentKey:=parent.Entries[0].key
+	child.Height = parent.Height+1
+	if child.Height > child.tree.MaxHeight {
+		child.tree.MaxHeight = child.Height
 	}
-	parent.tree.leafs.Add(child.Entries[0].key, child)
+	treeLeaves :=parent.tree.leafs
+	if len(parent.Children) > 0 && treeLeaves.Contains(parentKey){
+		treeLeaves.Remove(parent.Entries[0].key)
+	}
+	treeLeaves.Add(child.Entries[0].key, child)
+
 }
 
+
+func (n *Node) GetValue() interface{}{
+	return n.Entries[0].value
+}
+
+func (n *Node) GetKey() interface{}{
+	return n.Entries[0].key
+}
 //attach a tree's root node to a specific node of another tree through node index
-func (t *Tree) appendTree(tree *Tree, mergeIndex interface{}) {
-
-	logger.Debug("index search: ", mergeIndex, t.MaxHeight)
-	t.Get(t.Root, mergeIndex)
-	t.Found.AddChild(tree.Root)
-	t.setHeightPostMerge(tree, mergeIndex)
-}
-
-func (t *Tree) setHeightPostMerge(tree *Tree, mergeIndex interface{}) {
-	//if is new tree is higher than original tree after appending
-	if tree.MaxHeight + t.Found.Height > t.MaxHeight{
-		t.MaxHeight = tree.MaxHeight + t.Found.Height
+func (t1 *Tree) appendTree(t2 *Tree, mergeIndex interface{}) {
+	logger.Debug("index search: ", mergeIndex, t1.MaxHeight, t2.MaxHeight)
+	t1.Get(t1.Root, mergeIndex)
+	t1.Found.AddChild(t2.Root)
+	t2.RecurseThroughTreeAndDoCallback(t2.Root, func(node *Node) {
+		node.Height = node.Parent.Height+1
+		node.tree = t1
+		if node.Height > node.tree.MaxHeight {
+			node.tree.MaxHeight = node.Height
+		}
+	})
+	//append t2 leafs to t1
+	for _,key := range t2.leafs.Keys() {
+		val,_:=  t2.leafs.Get(key)
+		t1.leafs.Add(key,val)
 	}
 }
+
 
