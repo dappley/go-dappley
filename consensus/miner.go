@@ -173,9 +173,12 @@ func (miner *Miner) mineBlock(nonce int64) bool {
 		hash =  miner.newBlock.block.CalculateHashWithoutNonce()
 		miner.newBlock.block.SetHash(hash)
 		miner.newBlock.block.SetNonce(nonce)
-		signed  := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
-		if !signed {
-			return false
+		keystring := miner.GetPrivKey()
+		if len(keystring) >0 {
+			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
+			if !signed {
+				return false
+			}
 		}
 		miner.newBlock.isValid = true
 		}

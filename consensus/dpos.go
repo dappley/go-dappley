@@ -22,9 +22,17 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"time"
 	logger "github.com/sirupsen/logrus"
-	"encoding/hex"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"fmt"
+	"github.com/dappley/go-dappley/crypto/hash"
+	"crypto/sha256"
+	"github.com/dappley/go-dappley/util"
+	"strings"
+	"errors"
 )
+
+const version = byte(0x00)
+const addressChecksumLen = 4
 
 type Dpos struct{
 	bc        *core.Blockchain
@@ -65,6 +73,10 @@ func (dpos *Dpos) SetDynasty(dynasty *Dynasty){
 
 func (dpos *Dpos) GetDynasty() *Dynasty{
 	return dpos.dynasty
+}
+
+func (dpos *Dpos) GetBlockChain() *core.Blockchain{
+	return dpos.bc
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool{
@@ -111,12 +123,45 @@ func (dpos *Dpos) updateNewBlock(newBlock *core.Block){
 	dpos.node.BroadcastBlock(newBlock)
 }
 
-func (dpos *Dpos) VerifyBlock(block *core.Block) bool{
-	hash := block.GetHash()
-	sign := block.GetSign()
-	privData, err := hex.DecodeString(dpos.miner.key)
+func GenerateAddress(data []byte) string{
 
-	if hash == nil {
+	pubKeyHash, _ := HashPubKey(data)
+
+	versionedPayload := append([]byte{version}, pubKeyHash...)
+	checksum := checksum(versionedPayload)
+
+	fullPayload := append(versionedPayload, checksum...)
+	address := util.Base58Encode(fullPayload)
+	//15KciXJD9vLhhJQjqDuAgPs83r7sCi9YYK
+
+	return string(fmt.Sprintf("%s", address))
+	}
+
+func HashPubKey(pubKey []byte) ([]byte, error) {
+	if pubKey == nil || len(pubKey) < 32 {
+		err := errors.New("pubkey not correct")
+		return nil, err
+	}
+	sha := hash.Sha3256(pubKey)
+	content := hash.Ripemd160(sha)
+	return content, nil
+
+	}
+
+func checksum(payload []byte) []byte {
+	firstSHA := sha256.Sum256(payload)
+	secondSHA := sha256.Sum256(firstSHA[:])
+
+	return secondSHA[:addressChecksumLen]
+}
+
+func (dpos *Dpos) VerifyBlock(block *core.Block) bool{
+	hash1 := block.GetHash()
+	sign := block.GetSign()
+
+	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
+
+	if hash1 == nil {
 		logger.Info("DPoS: block hash empty!")
 		return false
 	}
@@ -124,25 +169,20 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool{
 		logger.Info("DPoS: block signature empty!")
 		return false
 	}
-	if err != nil {
-		logger.Info("DPoS: miner key error!")
-		return false
-	}
 
-	pubkey, err := secp256k1.GetPublicKey(privData)
+	pubkey, err := secp256k1.RecoverECDSAPublicKey(hash1, sign)
 	if err != nil {
 		logger.Info("DPoS: get pub key error!")
 		return false
 	}
 
-	verified, error := secp256k1.Verify(hash, sign, pubkey)
-	if error != nil {
-		logger.Info("DPoS: verify key error!")
-		return false
+	address := GenerateAddress(pubkey[1:])
+
+	if strings.Compare(address, producer) == 0 {
+		return true
 	}
 
-
-	return verified
+	return false
 
 	}
 

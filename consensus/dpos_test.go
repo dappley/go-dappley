@@ -88,12 +88,12 @@ func TestDpos_MultipleMiners(t *testing.T){
 			)
 
 	miners := []string{
-		"15wLk1iJ46vump5apz5VA2EFzkLwPhHeVy",
-		"13wqqYnGJRVsqDPUBywjZV9nggksJBvS7G",
+		"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
+		"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
 	}
 	keystrs := []string{
-		"660cf2b6a4fa834f139a10ddd4733132fa828448d5a0c2ad66c0d70a356186bc",
-		"ed64fc3bc97db4006c3e1fae80115f140325f5d0acb8768e01f84acde1624d1c",
+		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
+		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
 	dynasty := NewDynastyWithProducers(miners)
 	dynasty.SetTimeBetweenBlk(timeBetweenBlock)

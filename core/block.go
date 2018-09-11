@@ -35,6 +35,7 @@ import (
 	"encoding/hex"
 )
 
+
 type BlockHeader struct {
 	hash      Hash
 	prevHash  Hash
@@ -47,8 +48,6 @@ type BlockHeader struct {
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
-	height       uint64
-	checkFlag bool
 }
 
 
@@ -102,7 +101,7 @@ func (b *Block) Serialize() []byte {
 			PrevHash:  b.header.prevHash,
 			Nonce:     b.header.nonce,
 			Timestamp: b.header.timestamp,
-			Sign: b.header.sign
+			Sign: b.header.sign,
 			Height: b.header.height,
 		},
 		Transactions: b.transactions,
@@ -141,7 +140,6 @@ func Deserialize(d []byte) *Block {
 			height:	   bs.Header.Height,
 		},
 		transactions: bs.Transactions,
-		height:       bs.Height,
 	}
 }
 
@@ -192,7 +190,6 @@ func (b *Block) ToProto() proto.Message {
 	return &corepb.Block{
 		Header:       b.header.ToProto().(*corepb.BlockHeader),
 		Transactions: txArray,
-		Height:       b.height,
 	}
 }
 
@@ -275,13 +272,15 @@ func (b *Block) SignBlock(key string, data []byte) bool {
 		return false
 	}
 	privData, err := hex.DecodeString(key)
+
 	if err != nil {
 		return false
 	}
-	signature, error := secp256k1.Sign(data, privData)
-	if error != nil {
+	signature, err := secp256k1.Sign(data, privData)
+	if err != nil {
 		return false
 	}
+
 	b.header.sign = signature
 	return true
 }
