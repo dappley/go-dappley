@@ -20,9 +20,10 @@ package logic
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/common"
 	"os"
 	"testing"
+
+	"github.com/dappley/go-dappley/common"
 
 	"time"
 
@@ -161,12 +162,12 @@ func TestGetAllAddresses(t *testing.T) {
 func TestSend(t *testing.T) {
 	var mineReward = common.NewAmount(10)
 	testCases := []struct {
-		name  string
-		transferAmount  *common.Amount
-		tipAmount  uint64
-		expectedTransfer  *common.Amount
-		expectedTip  uint64
-		expectedErr  error
+		name             string
+		transferAmount   *common.Amount
+		tipAmount        uint64
+		expectedTransfer *common.Amount
+		expectedTip      uint64
+		expectedErr      error
 	}{
 		{"Send with no tip", common.NewAmount(7), 0, common.NewAmount(7), 0, nil},
 		{"Send with tips", common.NewAmount(6), 2, common.NewAmount(6), 2, nil},
@@ -218,6 +219,7 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
+			time.Sleep(time.Millisecond * 500)
 
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
@@ -385,7 +387,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 
 const testport_msg_relay = 19999
 
-
 func TestBlockMsgRelay(t *testing.T) {
 	setup()
 	var pows []*consensus.ProofOfWork
@@ -406,7 +407,7 @@ func TestBlockMsgRelay(t *testing.T) {
 
 		n := network.NewNode(bcs[i])
 
-		if(i == 0){
+		if i == 0 {
 			pow.Setup(n, addr.Address)
 			pow.SetTargetBit(16)
 		}
@@ -430,17 +431,17 @@ func TestBlockMsgRelay(t *testing.T) {
 	//firstNode Starts Mining
 
 	pows[0].Start()
-	time.Sleep(time.Second*3)
+	time.Sleep(time.Second * 3)
 
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
-	heights := []int{0,0,0,0} //keep track of each node's blockchain height
+	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
-		for _,_ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
+		for _, _ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
 			heights[i]++
 		}
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
-		}
+	}
 }
 
 func TestBlockMsgMeshRelay(t *testing.T) {
@@ -463,7 +464,7 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 
 		n := network.NewNode(bcs[i])
 
-		if(i == 0){
+		if i == 0 {
 			pow.Setup(n, addr.Address)
 			pow.SetTargetBit(16)
 		}
@@ -475,7 +476,7 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 	}
 
 	for i := 0; i < len(nodes); i++ {
-		for j := 0; j < len(nodes); j++{
+		for j := 0; j < len(nodes); j++ {
 			if i != j {
 				nodes[i].AddStream(
 					nodes[j].GetPeerID(),
@@ -488,12 +489,12 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 	//firstNode Starts Mining
 
 	pows[0].Start()
-	time.Sleep(time.Second*3)
+	time.Sleep(time.Second * 3)
 
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
-	heights := []int{0,0,0,0} //keep track of each node's blockchain height
+	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
-		for _,_ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
+		for _, _ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
 			heights[i]++
 		}
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
@@ -564,13 +565,12 @@ func TestCompare(t *testing.T) {
 	assert.False(t, compareTwoBlockchains(bc1, bc3))
 }
 
-
 // Integration test for adding balance
 func TestAddBalance(t *testing.T) {
 	testCases := []struct {
-		name  string
-		addAmount  *common.Amount
-		expectedDiff  *common.Amount
+		name         string
+		addAmount    *common.Amount
+		expectedDiff *common.Amount
 		expectedErr  error
 	}{
 		{"Add 5", common.NewAmount(5), common.NewAmount(5), nil},
@@ -604,7 +604,8 @@ func TestAddBalance(t *testing.T) {
 			pow.SetTargetBit(0)
 			pow.Start()
 
-			for bc.GetMaxHeight()<=1{}
+			for bc.GetMaxHeight() <= 1 {
+			}
 			pow.Stop()
 
 			// The wallet balance should be the expected difference
@@ -618,8 +619,8 @@ func TestAddBalance(t *testing.T) {
 // Integration test for adding balance to invalid address
 func TestAddBalanceWithInvalidAddress(t *testing.T) {
 	testCases := []struct {
-		name  string
-		address  string
+		name    string
+		address string
 	}{
 		{"Invalid char in address", InvalidAddress},
 		{"Invalid checksum address", "1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"},
