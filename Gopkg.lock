@@ -80,13 +80,8 @@
   revision = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8"
 
 [[projects]]
-  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
   name = "github.com/hashicorp/golang-lru"
-  packages = [
-    ".",
-    "simplelru",
-  ]
-  pruneopts = "UT"
+  packages = [".","simplelru"]
   revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
   version = "v0.5.0"
 
@@ -507,35 +502,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-<<<<<<< HEAD
-  input-imports = [
-    "github.com/btcsuite/btcutil/base58",
-    "github.com/gogo/protobuf/proto",
-    "github.com/golang/protobuf/proto",
-    "github.com/hashicorp/golang-lru",
-    "github.com/jinzhu/copier",
-    "github.com/libp2p/go-libp2p",
-    "github.com/libp2p/go-libp2p-host",
-    "github.com/libp2p/go-libp2p-net",
-    "github.com/libp2p/go-libp2p-peer",
-    "github.com/libp2p/go-libp2p-peerstore",
-    "github.com/multiformats/go-multiaddr",
-    "github.com/nebulasio/go-nebulas/util/byteutils",
-    "github.com/satori/go.uuid",
-    "github.com/sirupsen/logrus",
-    "github.com/stretchr/testify/assert",
-    "github.com/syndtr/goleveldb/leveldb",
-    "golang.org/x/crypto/ripemd160",
-    "golang.org/x/crypto/scrypt",
-    "golang.org/x/crypto/sha3",
-    "golang.org/x/net/context",
-    "google.golang.org/grpc",
-    "google.golang.org/grpc/codes",
-    "google.golang.org/grpc/metadata",
-    "google.golang.org/grpc/status",
-  ]
-=======
   inputs-digest = "e749487c0e7243bc11b01dd1088ad3c68a6eff530dd4932b5d9801f7671ee4b2"
->>>>>>> extract blockheight from block to blockheader, refactor debug msgs to be more useful, refactor dpos_multiminer test to be more logical:
   solver-name = "gps-cdcl"
   solver-version = 1

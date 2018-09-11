@@ -31,10 +31,14 @@ import (
 var tipKey = []byte("1")
 
 const BlockPoolMaxSize = 100
+const LengthForBlockToBeConsideredHistory = 100
 
-var (
-	ErrBlockDoesNotExist   = errors.New("ERROR: Block does not exist in blockchain")
-	ErrTransactionNotFound = errors.New("ERROR: Transaction not found")
+
+var(
+	ErrBlockDoesNotExist			= errors.New("ERROR: Block does not exist in blockchain")
+	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
+	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
+	ErrDuplicatedBlock			    = errors.New("ERROR: Block already exists in blockchain")
 )
 
 type Blockchain struct {
@@ -158,14 +162,11 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 }
 
 func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte) (Transaction, error) {
-	println("as")
-
 	bci := bc.Iterator()
 
 	for {
 		block, err := bci.NextFromIndex(blockId)
 		if err != nil {
-			println("1")
 			return Transaction{}, err
 		}
 
@@ -176,7 +177,6 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 		}
 
 		if len(block.GetPrevHash()) == 0 {
-			println("2")
 			break
 		}
 	}
