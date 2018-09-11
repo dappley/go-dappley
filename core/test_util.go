@@ -33,6 +33,7 @@ func GenerateMockBlock() *Block {
 		1,
 		time.Now().Unix(),
 		nil,
+		0,
 	}
 
 	t1 := MockTransaction()
@@ -41,7 +42,6 @@ func GenerateMockBlock() *Block {
 	return &Block{
 		header:       bh1,
 		transactions: []*Transaction{t1, t2},
-		height:       0,
 	}
 }
 
@@ -63,8 +63,9 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: t,
+			sign: nil,
+			height:height,
 		},
-		height:       height,
 		transactions: transactions,
 	}
 }

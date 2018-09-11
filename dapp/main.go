@@ -44,8 +44,7 @@ func main() {
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 	flag.Parse()
 
-	//set to debug level
-	logger.SetLevel(logger.InfoLevel)
+	logger.SetLevel(logger.DebugLevel)
 
 	//load genesis file information
 	genesisConf := config.LoadConfigFromFile(genesisFilePath)

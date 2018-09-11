@@ -165,7 +165,7 @@ func TestBlockPool_IsParentOfFork(t *testing.T) {
 	assert.False(t, bp.IsParentOfFork(blk3))
 
 	blk3.SetHash(blk2.GetPrevHash())
-	blk2.height = blk3.height + 1
+	blk2.header.height = blk3.header.height + 1
 
 	assert.True(t, bp.IsParentOfFork(blk3))
 }
@@ -187,7 +187,7 @@ func TestBlockPool_IsTailOfFork(t *testing.T) {
 	assert.False(t, bp.IsParentOfFork(blk3))
 
 	blk1.SetHash(blk3.GetPrevHash())
-	blk3.height = blk1.height + 1
+	blk3.header.height = blk1.header.height + 1
 
 	assert.True(t, bp.IsTailOfFork(blk3))
 }
@@ -218,8 +218,8 @@ func TestBlockPool_UpdateForkFromHeadHigherHeight(t *testing.T) {
 	blk := NewBlock(nil,nil)
 	blk.SetHash(blk.CalculateHash())
 	blk2 := NewBlock(nil,blk)
-	blk2.height = 8
-	blk.height = 7
+	blk2.header.height = 8
+	blk.header.height = 7
 	pool.forkPool = append(pool.forkPool, blk2)
 	//this will be successful since blk is blk2's parent
 	assert.True(t, pool.addParentToFork(blk))
@@ -253,8 +253,8 @@ func TestBlockPool_UpdateForkFromTailHigherHeight(t *testing.T) {
 	blk := NewBlock(nil,nil)
 	blk.SetHash(blk.CalculateHash())
 	blk2 := NewBlock(nil,blk)
-	blk2.height = 8
-	blk.height = 7
+	blk2.header.height = 8
+	blk.header.height = 7
 	pool.forkPool = append(pool.forkPool, blk)
 	//this will be successful since blk is blk2's parent
 	assert.True(t, pool.updateForkFromTail(blk2))
@@ -265,11 +265,11 @@ func TestBlockPool_UpdateForkFromTailHigherHeight(t *testing.T) {
 func TestBlockPool_IsHigherThanForkSameHeight(t *testing.T) {
 	pool := NewBlockPool(5)
 	blk := NewBlock(nil,nil)
-	blk.height = 5
+	blk.header.height = 5
 	pool.forkPool = append(pool.forkPool, blk)
 
 	blk2 := NewBlock(nil,nil)
-	blk2.height = 5
+	blk2.header.height = 5
 
 	assert.False(t, pool.IsHigherThanFork(blk2))
 }
@@ -277,11 +277,11 @@ func TestBlockPool_IsHigherThanForkSameHeight(t *testing.T) {
 func TestBlockPool_IsHigherThanForkHigherHeight(t *testing.T) {
 	pool := NewBlockPool(5)
 	blk := NewBlock(nil,nil)
-	blk.height = 5
+	blk.header.height = 5
 	pool.forkPool = append(pool.forkPool, blk)
 
 	blk2 := NewBlock(nil,nil)
-	blk2.height = 6
+	blk2.header.height = 6
 
 	assert.True(t, pool.IsHigherThanFork(blk2))
 }
@@ -289,11 +289,11 @@ func TestBlockPool_IsHigherThanForkHigherHeight(t *testing.T) {
 func TestBlockPool_IsHigherThanForkLowerHeight(t *testing.T) {
 	pool := NewBlockPool(5)
 	blk := NewBlock(nil,nil)
-	blk.height = 5
+	blk.header.height = 5
 	pool.forkPool = append(pool.forkPool, blk)
 
 	blk2 := NewBlock(nil,nil)
-	blk2.height = 4
+	blk2.header.height = 4
 
 	assert.False(t, pool.IsHigherThanFork(blk2))
 }
@@ -312,7 +312,7 @@ func TestBlockPool_IsHigherThanForkEmptyPool(t *testing.T) {
 func TestBlockPool_ReInitializeForkPool(t *testing.T) {
 	pool := NewBlockPool(5)
 	blk := NewBlock(nil,nil)
-	blk.height = 5
+	blk.header.height = 5
 	pool.forkPool = append(pool.forkPool, blk)
 
 	pool.ResetForkPool()

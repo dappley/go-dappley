@@ -25,13 +25,14 @@ import (
 	"strings"
 	"math/rand"
 	"time"
+	logger "github.com/sirupsen/logrus"
 )
 
 func setupIntTree() *Tree{
 	tree:= NewTree(0,0)
 	parent := tree.Root
-	//add 100000 nodes unto the tree
-	for i:=1;i<100000;i++  {
+	//add 10000 nodes unto the tree
+	for i:=1;i<10000;i++  {
 
 		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree}
 		parent.Children = append(parent.Children, &newNode)
@@ -45,7 +46,7 @@ func setupIntTree() *Tree{
 }
 
 
-func setupAlphabetTree() *Tree{
+func setupAlphabetTree() (*Tree, int){
 	alphabets:= "abcdefghijklmnopqrstuvwxyz"
 	alphabetSlice := strings.Split(alphabets, "")
 	tree:= NewTree("a","a")
@@ -58,12 +59,12 @@ func setupAlphabetTree() *Tree{
 			parent = newNode
 		}
 	}
-	return tree
+	return tree, len(alphabetSlice)
 }
 func Test_RecursiveFind(t *testing.T){
 	tree := setupIntTree()
 	//run find lots of times
-	for i:=50000; i<50500;i++ {
+	for i:=5000; i<5050;i++ {
 		tree.Get(tree.Root, i)
 		assert.Equal(t, i, tree.Found.Entries[0].value)
 	}
@@ -73,11 +74,11 @@ func Test_SearchParentNodeAndAddChild(t *testing.T){
 	tree := setupIntTree()
 	//add child {asd:asd} to 90000 block
 	tree.SearchParentNodeAndAddChild(
-		tree.Root,90000, "asd", "asd")
+		tree.Root,9000, "asd", "asd")
 
 	tree.Get(tree.Root, "asd")
 	assert.Equal(t, "asd", tree.Found.Entries[0].value)
-	assert.Equal(t, 90000, tree.Found.Parent.Entries[0].value)
+	assert.Equal(t, 9000, tree.Found.Parent.Entries[0].value)
 
 }
 
@@ -87,7 +88,7 @@ func Test_TreeHeightAndGetNodesAfterAppendTree(t *testing.T){
 
 	mergeHeight := int(t1.MaxHeight) - 10
 
-	t2 := setupAlphabetTree()
+	t2, _ := setupAlphabetTree()
 
 	t1.appendTree(t2, mergeHeight)
 
@@ -107,12 +108,22 @@ func Test_TreeHeightAndGetNodesAfterAppendTree(t *testing.T){
 }
 
 func Test_TreeLeafs(t *testing.T){
-	tree:=setupAlphabetTree()
+	tree,_:=setupAlphabetTree()
 	//cached leaf nodes should not have any children
 	for _,v := range tree.leafs.Keys(){
 		val, _ := tree.leafs.Get(v)
 		assert.Equal(t, 0, len(val.(*Node).Children))
 	}
+}
+
+func Test_RecursiveActionBasedOnCallback(t *testing.T){
+	tree,nodesToAdd:=setupAlphabetTree()
+	counter:=0
+	tree.RecursiveActionBasedOnCallback(tree.Root, func(node *Node) {
+		logger.Debug(node)
+		counter++
+	})
+	assert.Equal(t, nodesToAdd, counter)
 }
 
 func getBool() bool {

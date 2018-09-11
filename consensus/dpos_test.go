@@ -82,6 +82,10 @@ func TestDpos_Start(t *testing.T) {
 }
 
 func TestDpos_MultipleMiners(t *testing.T){
+	const ( timeBetweenBlock = 2
+			dposRounds = 3
+			bufferTime = 1
+			)
 
 	miners := []string{
 		"15wLk1iJ46vump5apz5VA2EFzkLwPhHeVy",
@@ -92,7 +96,7 @@ func TestDpos_MultipleMiners(t *testing.T){
 		"ed64fc3bc97db4006c3e1fae80115f140325f5d0acb8768e01f84acde1624d1c",
 	}
 	dynasty := NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(5)
+	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
 	dynasty.SetMaxProducers(len(miners))
 	dposArray := []*Dpos{}
 	var firstNode *network.Node
@@ -113,22 +117,21 @@ func TestDpos_MultipleMiners(t *testing.T){
 		dposArray = append(dposArray, dpos)
 	}
 
-	firstNode.SyncPeersBlockcast()
+	firstNode.SyncPeersBroadcast()
 
 	for i:=0;i<len(miners);i++{
 		dposArray[i].Start()
 	}
 
-	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*2+1))
+	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds+bufferTime))
 
 	for i:=0;i<len(miners);i++{
 		dposArray[i].Stop()
 	}
 
-
 	time.Sleep(time.Second)
 
 	for i:=0;i<len(miners);i++{
-		assert.True(t, dposArray[i].bc.GetMaxHeight()>=3)
+		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock) , dposArray[i].bc.GetMaxHeight())
 	}
 }

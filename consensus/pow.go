@@ -97,7 +97,7 @@ func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block){
 
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
 	//broadcast the block to other nodes
-	pow.node.SendBlock(blk)
+	pow.node.BroadcastBlock(blk)
 }
 
 func (pow *ProofOfWork) StartNewBlockMinting(){

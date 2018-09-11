@@ -112,7 +112,7 @@ func TestNetwork_SendBlock(t *testing.T){
 
 	//node 0 broadcast a block
 	b1 := core.GenerateMockBlock()
-	nodes[0].SendBlock(b1)
+	nodes[0].BroadcastBlock(b1)
 
 	time.Sleep(time.Second)
 
@@ -161,7 +161,7 @@ func TestNode_SyncPeers(t *testing.T){
 	time.Sleep(time.Second)
 
 	//node 1 broadcast syncpeers
-	node1.SyncPeersBlockcast()
+	node1.SyncPeersBroadcast()
 
 	time.Sleep(time.Second*2)
 
@@ -303,7 +303,7 @@ func TestNetwork_node3(t *testing.T){
 	//select{}
 	b := core.GenerateMockBlock()
 	for{
-		node1.SendBlock(b)
+		node1.BroadcastBlock(b)
 		time.Sleep(time.Second*15)
 	}
 }*/

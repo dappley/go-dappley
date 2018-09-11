@@ -73,23 +73,23 @@ func (dpos *Dpos) Validate(block *core.Block) bool{
 
 func (dpos *Dpos) Start(){
 	go func(){
-		logger.Info("Dpos Starts...")
+		logger.Info("Dpos Starts...",dpos.node.GetPeerID())
 		ticker := time.NewTicker(time.Second).C
 		for{
 			select{
 			case now := <- ticker:
 				if dpos.dynasty.IsMyTurn(dpos.miner.cbAddr, now.Unix()){
-					logger.Info("Dpos: My Turn to Mint!")
+					logger.Info("Dpos: My Turn to Mint! I am ", dpos.node.GetPeerID())
 					dpos.miner.Start()
 				}
 			case minedBlk := <- dpos.mintBlkCh:
 				if minedBlk.isValid {
-					logger.Info("Dpos: A Block has been mined!")
+					logger.Info("Dpos: A Block has been mined! ",dpos.node.GetPeerID())
 					dpos.updateNewBlock(minedBlk.block)
 					dpos.bc.MergeFork()
 				}
 			case <-dpos.quitCh:
-				logger.Info("Dpos: Dpos Stops!")
+				logger.Info("Dpos: Dpos Stops! ", dpos.node.GetPeerID())
 				return
 			}
 		}
@@ -108,7 +108,7 @@ func (dpos *Dpos) StartNewBlockMinting(){
 func (dpos *Dpos) updateNewBlock(newBlock *core.Block){
 	logger.Info("DPoS: Minted a new block. height:", newBlock.GetHeight())
 	dpos.bc.AddBlockToTail(newBlock)
-	dpos.node.SendBlock(newBlock)
+	dpos.node.BroadcastBlock(newBlock)
 }
 
 func (dpos *Dpos) VerifyBlock(block *core.Block) bool{

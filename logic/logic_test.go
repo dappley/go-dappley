@@ -33,15 +33,15 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/sirupsen/logrus"
 )
 
 const InvalidAddress = "Invalid Address"
 
 func TestMain(m *testing.M) {
 	setup()
-	logger.SetLevel(logger.WarnLevel)
+	logrus.SetLevel(logrus.WarnLevel)
 	retCode := m.Run()
 	teardown()
 	os.Exit(retCode)
@@ -68,8 +68,8 @@ func TestCreateBlockchain(t *testing.T) {
 
 //create a blockchain with invalid address
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
-	// Create storage
 	store := storage.NewRamStorage()
+	// Create storage
 	defer store.Close()
 
 	//create a blockchain with an invalid address
@@ -444,6 +444,64 @@ func TestBlockMsgRelay(t *testing.T) {
 		}
 }
 
+func TestBlockMsgMeshRelay(t *testing.T) {
+	setup()
+	var pows []*consensus.ProofOfWork
+	var bcs []*core.Blockchain
+	var nodes []*network.Node
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+
+	numOfNodes := 4
+	for i := 0; i < numOfNodes; i++ {
+		//create storage instance
+		db := storage.NewRamStorage()
+		defer db.Close()
+
+		//create blockchain instance
+		pow := consensus.NewProofOfWork()
+		bc := core.CreateBlockchain(addr, db, pow)
+		bcs = append(bcs, bc)
+
+		n := network.NewNode(bcs[i])
+
+		if(i == 0){
+			pow.Setup(n, addr.Address)
+			pow.SetTargetBit(16)
+		}
+
+		n.Start(testport_msg_relay + 100*i)
+
+		nodes = append(nodes, n)
+		pows = append(pows, pow)
+	}
+
+	for i := 0; i < len(nodes); i++ {
+		for j := 0; j < len(nodes); j++{
+			if i != j {
+				nodes[i].AddStream(
+					nodes[j].GetPeerID(),
+					nodes[j].GetPeerMultiaddr(),
+				)
+			}
+		}
+	}
+
+	//firstNode Starts Mining
+
+	pows[0].Start()
+	time.Sleep(time.Second*3)
+
+	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
+	heights := []int{0,0,0,0} //keep track of each node's blockchain height
+	for i := 0; i < len(nodes); i++ {
+		for _,_ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
+			heights[i]++
+		}
+		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
+
+	}
+}
+
 const testport_fork = 10200
 
 func TestForkChoice(t *testing.T) {
@@ -488,7 +546,7 @@ func TestForkChoice(t *testing.T) {
 				nodes[0].GetPeerMultiaddr(),
 			)
 		}
-		nodes[0].SyncPeersBlockcast()
+		nodes[0].SyncPeersBroadcast()
 	}
 
 	time.Sleep(time.Second * 5)

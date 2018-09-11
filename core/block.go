@@ -35,13 +35,13 @@ import (
 	"encoding/hex"
 )
 
-
 type BlockHeader struct {
 	hash      Hash
 	prevHash  Hash
 	nonce     int64
 	timestamp int64
 	sign Hash
+	height       uint64
 }
 
 type Block struct {
@@ -74,8 +74,8 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 			nonce:     0,
 			timestamp: time.Now().Unix(),
 			sign: nil,
+			height: height,
 		},
-		height:       height,
 		transactions: transactions,
 	}
 }
@@ -102,9 +102,10 @@ func (b *Block) Serialize() []byte {
 			PrevHash:  b.header.prevHash,
 			Nonce:     b.header.nonce,
 			Timestamp: b.header.timestamp,
+			Sign: b.header.sign
+			Height: b.header.height,
 		},
 		Transactions: b.transactions,
-		Height:       b.height,
 	}
 
 	err := encoder.Encode(bs)
@@ -136,6 +137,8 @@ func Deserialize(d []byte) *Block {
 			prevHash:  bs.Header.PrevHash,
 			nonce:     bs.Header.Nonce,
 			timestamp: bs.Header.Timestamp,
+			sign: bs.Header.Sign,
+			height:	   bs.Header.Height,
 		},
 		transactions: bs.Transactions,
 		height:       bs.Height,
@@ -156,7 +159,7 @@ func (b *Block) GetSign() Hash {
 
 
 func (b *Block) GetHeight() uint64 {
-	return b.height
+	return b.header.height
 }
 
 func (b *Block) GetPrevHash() Hash {
@@ -207,9 +210,8 @@ func (b *Block) FromProto(pb proto.Message) {
 		txs = append(txs, tx)
 	}
 	b.transactions = txs
+	}
 
-	b.height = pb.(*corepb.Block).Height
-}
 
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
@@ -217,6 +219,9 @@ func (bh *BlockHeader) ToProto() proto.Message {
 		Prevhash:  bh.prevHash,
 		Nonce:     bh.nonce,
 		Timestamp: bh.timestamp,
+		Sign: bh.sign,
+		Height: bh.height,
+
 	}
 }
 
@@ -225,6 +230,8 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
 	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
+	bh.sign =  pb.(*corepb.BlockHeader).Sign
+	bh.height =  pb.(*corepb.BlockHeader).Height
 }
 
 func (b *Block) CalculateHash() Hash {
@@ -291,8 +298,6 @@ func (b *Block) VerifyTransactions(utxo utxoIndex) bool {
 	}
 	return true
 }
-
-
 
 func IsParentBlockHash(parentBlk, childBlk *Block) bool{
 	if parentBlk == nil || childBlk == nil{
