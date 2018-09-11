@@ -33,6 +33,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/consensus"
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewGrpcServer(t *testing.T) {
@@ -72,6 +73,7 @@ func TestServer_StartRPC(t *testing.T) {
 
 //integration test
 func TestRpcSend(t *testing.T) {
+	logrus.SetLevel(logrus.WarnLevel)
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
