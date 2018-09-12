@@ -22,7 +22,7 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/gogo/protobuf/proto"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 )
 
@@ -55,16 +55,16 @@ type BlockchainConfig struct {
 func LoadConfigFromFile(filename string) *Config {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logrus.Warn(errors.New("Could Not Read Config File"))
-		logrus.Warn(err)
+		logger.Warn(errors.New("Could Not Read Config File"))
+		logger.Warn(err)
 		return nil
 	}
 
 	pb := &configpb.Config{}
 	err = proto.UnmarshalText(string(bytes), pb)
 	if err != nil {
-		logrus.Warn(errors.New("Could Not Parse Config File"))
-		logrus.Warn(err)
+		logger.Warn(errors.New("Could Not Parse Config File"))
+		logger.Warn(err)
 		return nil
 	}
 

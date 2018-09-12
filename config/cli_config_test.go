@@ -19,7 +19,7 @@
 package config
 
 import (
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestLoadCliConfigFromFile(t *testing.T) {
-	logrus.SetLevel(logrus.ErrorLevel)
+	logger.SetLevel(logger.ErrorLevel)
 	tests := []struct {
 		name     string
 		content  string

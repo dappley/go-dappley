@@ -5,7 +5,7 @@ import (
 
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/gogo/protobuf/proto"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 )
 
@@ -20,16 +20,16 @@ func (cliConfig *CliConfig) GetAdminPassword() string { return cliConfig.passwor
 func LoadCliConfigFromFile(filename string) *CliConfig {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logrus.Warn(errors.New("Could Not Read CLI Config File"))
-		logrus.Warn(err)
+		logger.Warn(errors.New("Could Not Read CLI Config File"))
+		logger.Warn(err)
 		return nil
 	}
 
 	pb := &configpb.CliConfig{}
 	err = proto.UnmarshalText(string(bytes), pb)
 	if err != nil {
-		logrus.Warn(errors.New("Could Not Parse CLI Config File"))
-		logrus.Warn(err)
+		logger.Warn(errors.New("Could Not Parse CLI Config File"))
+		logger.Warn(err)
 		return nil
 	}
 
