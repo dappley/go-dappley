@@ -19,15 +19,15 @@
 package client
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
-	"log"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
+	"encoding/gob"
+	"bytes"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
+	logger "github.com/sirupsen/logrus"
 )
+
 
 const WalletFile = "../bin/wallets.dat"
 
@@ -35,12 +35,43 @@ type Wallets struct {
 	Wallets []Wallet
 }
 
-func NewWallets() (*Wallets, error) {
-	wallets := Wallets{}
+func LoadWalletFromFile(filePath string) (*Wallets, error) {
 
-	err := wallets.LoadWalletFromFile()
+	fileContent, err := storage.GetFileConnection(filePath)
 
-	return &wallets, err
+	ws := &Wallets{}
+	if err != nil {
+		ws.SaveWalletToFile(filePath)
+		fileContent, err = storage.GetFileConnection(filePath)
+	}
+	var wallets Wallets
+
+	gob.Register(bitelliptic.S256())
+	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
+	err = decoder.Decode(&wallets)
+	if err != nil {
+		logger.Error("Wallets: Load wallets failed!")
+		logger.Error(err)
+	}
+
+	ws.Wallets = wallets.Wallets
+
+	return ws, nil
+}
+
+// SaveToFile saves wallets to a file
+func (ws Wallets) SaveWalletToFile(filePath string) {
+	var content bytes.Buffer
+
+	gob.Register(bitelliptic.S256())
+	encoder := gob.NewEncoder(&content)
+	err := encoder.Encode(ws)
+	if err != nil {
+		logger.Error("Wallets: save wallets to file failed!")
+		logger.Error(err)
+	}
+	storage.SaveToFile(filePath, content)
+
 }
 
 func (ws *Wallets) CreateWallet() Wallet {
@@ -101,36 +132,4 @@ func (ws Wallets) GetWalletByAddress(address core.Address) Wallet {
 	return Wallet{}
 }
 
-func (ws *Wallets) LoadWalletFromFile() error {
-	fileContent, err := storage.GetFileConnection(WalletFile)
-	if err != nil {
-		ws.SaveWalletToFile()
-		fileContent, err = storage.GetFileConnection(WalletFile)
-	}
-	var wallets Wallets
 
-	gob.Register(bitelliptic.S256())
-	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
-	err = decoder.Decode(&wallets)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	ws.Wallets = wallets.Wallets
-
-	return nil
-}
-
-// SaveToFile saves wallets to a file
-func (ws Wallets) SaveWalletToFile() {
-	var content bytes.Buffer
-
-	gob.Register(bitelliptic.S256())
-	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(ws)
-	if err != nil {
-		log.Panic(err)
-	}
-	storage.SaveToFile(WalletFile, content)
-
-}

@@ -48,9 +48,9 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 
 //create a wallet
 func CreateWallet() (client.Wallet, error) {
-	wallets, err := client.NewWallets()
+	wallets,err := client.LoadWalletFromFile(client.WalletFile)
 	wallet := wallets.CreateWallet()
-	wallets.SaveWalletToFile()
+	wallets.SaveWalletToFile(client.WalletFile)
 
 	return wallet, err
 }
@@ -73,7 +73,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
-	wallets, err := client.NewWallets()
+	wallets, err := client.LoadWalletFromFile(client.WalletFile)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +114,9 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 		return ErrInvalidAmount
 	}
 
-	wallets, err := client.NewWallets()
-	if err != nil {
-		return err
-	}
+	wallets,err := client.LoadWalletFromFile(client.WalletFile)
 	wallet := wallets.GetKeyPairByAddress(address)
+
 	tx, err := core.NewUTXOTransactionforAddBalance(address, amount, wallet, bc)
 
 	if err != nil {
@@ -134,7 +132,7 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 //delete wallet
 
 func DeleteWallet(key *core.KeyPair) error {
-	wallets, err := client.NewWallets()
+	wallets, err := client.LoadWalletFromFile(client.WalletFile)
 	if err != nil {
 		return err
 	}
@@ -142,12 +140,12 @@ func DeleteWallet(key *core.KeyPair) error {
 	if err != nil {
 		return err
 	}
-	wallets.SaveWalletToFile()
+	wallets.SaveWalletToFile(client.WalletFile)
 	return err
 }
 
 func DeleteWallets() error {
-	wallets, err := client.NewWallets()
+	wallets, err := client.LoadWalletFromFile(client.WalletFile)
 	if err != nil {
 		return err
 	}
@@ -155,6 +153,6 @@ func DeleteWallets() error {
 	if err != nil {
 		return err
 	}
-	wallets.SaveWalletToFile()
+	wallets.SaveWalletToFile(client.WalletFile)
 	return err
 }
