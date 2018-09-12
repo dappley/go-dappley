@@ -19,17 +19,18 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/common"
 	"testing"
-	"github.com/dappley/go-dappley/storage"
 	"time"
+
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 
 	"fmt"
 )
 
-var 	bh1 = &BlockHeader{
+var bh1 = &BlockHeader{
 	[]byte("hash"),
 	nil,
 	1,
@@ -37,15 +38,21 @@ var 	bh1 = &BlockHeader{
 	0,
 }
 
-var 	bh2 = &BlockHeader{
+var bh2 = &BlockHeader{
 	[]byte("hash1"),
 	[]byte("hash"),
 	1,
 	time.Now().Unix(),
 	1,
 }
-func GenerateUtxoMockBlockWithoutInputs() *Block{
 
+// Padding address to 32 Byte
+var address1Bytes = []byte("address1000000000000000000000000")
+var address2Bytes = []byte("address2000000000000000000000000")
+var address1Hash, _ = HashPubKey(address1Bytes)
+var address2Hash, _ = HashPubKey(address2Bytes)
+
+func GenerateUtxoMockBlockWithoutInputs() *Block {
 
 	t1 := MockUtxoTransactionWithoutInputs()
 	return &Block{
@@ -54,8 +61,7 @@ func GenerateUtxoMockBlockWithoutInputs() *Block{
 	}
 }
 
-
-func GenerateUtxoMockBlockWithInputs() *Block{
+func GenerateUtxoMockBlockWithInputs() *Block {
 
 	t1 := MockUtxoTransactionWithInputs()
 	return &Block{
@@ -64,16 +70,16 @@ func GenerateUtxoMockBlockWithInputs() *Block{
 	}
 }
 
-func MockUtxoTransactionWithoutInputs() *Transaction{
+func MockUtxoTransactionWithoutInputs() *Transaction {
 	return &Transaction{
-		ID:  []byte("tx1"),
+		ID:   []byte("tx1"),
 		Vin:  []TXInput{},
 		Vout: MockUtxoOutputsWithoutInputs(),
 		Tip:  5,
 	}
 }
 
-func MockUtxoTransactionWithInputs() *Transaction{
+func MockUtxoTransactionWithInputs() *Transaction {
 	return &Transaction{
 		ID:   []byte("tx2"),
 		Vin:  MockUtxoInputs(),
@@ -87,43 +93,43 @@ func MockUtxoInputs() []TXInput {
 		{[]byte("tx1"),
 			0,
 			util.GenerateRandomAoB(2),
-			[]byte("address1")},
+			address1Bytes},
 		{[]byte("tx1"),
 			1,
 			util.GenerateRandomAoB(2),
-			[]byte("address1")},
+			address1Bytes},
 	}
 }
 
 func MockUtxoOutputsWithoutInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), []byte("address1")},
-		{common.NewAmount(7), []byte("address1")},
+		{common.NewAmount(5), address1Hash},
+		{common.NewAmount(7), address1Hash},
 	}
 }
 
 func MockUtxoOutputsWithInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(4), []byte("address1")},
-		{common.NewAmount(5), []byte("address2")},
-		{common.NewAmount(3), []byte("address2")},
+		{common.NewAmount(4), address1Hash},
+		{common.NewAmount(5), address2Hash},
+		{common.NewAmount(3), address2Hash},
 	}
 }
 
-func TestAddSpendableOutputsAfterNewBlock(t *testing.T){
-	db :=  storage.NewRamStorage()
+func TestAddSpendableOutputsAfterNewBlock(t *testing.T) {
+	db := storage.NewRamStorage()
 	defer db.Close()
 	blk := GenerateUtxoMockBlockWithoutInputs()
 
 	blk.AddSpendableOutputsAfterNewBlock(UtxoMapKey, db)
-	myUtxos := GetAddressUTXOs(UtxoMapKey, []byte("address1"), db)
+	myUtxos := GetAddressUTXOs(UtxoMapKey, address1Hash, db)
 
-	assert.Equal(t, common.NewAmount(5), myUtxos[0].Value )
-	assert.Equal(t, common.NewAmount(7), myUtxos[1].Value )
+	assert.Equal(t, common.NewAmount(5), myUtxos[0].Value)
+	assert.Equal(t, common.NewAmount(7), myUtxos[1].Value)
 }
 
-func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
-	db :=  storage.NewRamStorage()
+func TestConsumeSpentOutputsAfterNewBlock(t *testing.T) {
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs()
@@ -134,29 +140,29 @@ func TestConsumeSpentOutputsAfterNewBlock(t *testing.T){
 	blk2 := GenerateUtxoMockBlockWithInputs()
 	//consume utxos first, not adding new utxos yet
 
-	blk2.ConsumeSpendableOutputsAfterNewBlock(UtxoMapKey,db)
+	blk2.ConsumeSpendableOutputsAfterNewBlock(UtxoMapKey, db)
 	//address1 gives address2 $8, $12 - $8 = $4 but address1 has no utxos left at this point new(change) utxo hasnt been added
-	assert.Equal(t, 0, len( GetAddressUTXOs(UtxoMapKey, []byte("address1"), db)))
+	assert.Equal(t, 0, len(GetAddressUTXOs(UtxoMapKey, address1Hash, db)))
 
 	//add utxos for above block accordingly;
-	blk2.AddSpendableOutputsAfterNewBlock(UtxoMapKey,db)
+	blk2.AddSpendableOutputsAfterNewBlock(UtxoMapKey, db)
 
 	//expect address1 to have 1 utxo of $4
-	assert.Equal(t, 1, len( GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
-	assert.Equal(t, common.NewAmount(4),  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
+	assert.Equal(t, 1, len(GetAddressUTXOs(UtxoMapKey, address1Hash, db)))
+	assert.Equal(t, common.NewAmount(4), GetAddressUTXOs(UtxoMapKey, address1Hash, db)[0].Value)
 
 	//expect address2 to have 2 utxos totaling $8
-	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
+	assert.Equal(t, 2, len(GetAddressUTXOs(UtxoMapKey, address2Hash, db)))
 	sum := common.NewAmount(0)
-	for _, utxo := range GetAddressUTXOs(UtxoMapKey, []byte("address2"),db) {
+	for _, utxo := range GetAddressUTXOs(UtxoMapKey, address2Hash, db) {
 		sum = sum.Add(utxo.Value)
 	}
 	assert.Equal(t, common.NewAmount(8), sum)
 }
 
-func TestCopyAndRevertUtxosInRam(t *testing.T){
+func TestCopyAndRevertUtxosInRam(t *testing.T) {
 
-	db :=  storage.NewRamStorage()
+	db := storage.NewRamStorage()
 	defer db.Close()
 	addr1 := Address{"testaddress"}
 	bc := CreateBlockchain(addr1, db, nil)
@@ -167,26 +173,24 @@ func TestCopyAndRevertUtxosInRam(t *testing.T){
 	bc.AddBlockToTail(blk1)
 	bc.AddBlockToTail(blk2)
 	//expect address1 to have 1 utxo of $4
-	assert.Equal(t, 1, len(GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)))
-	assert.Equal(t, common.NewAmount(4),  GetAddressUTXOs(UtxoMapKey,[]byte("address1"), db)[0].Value)
+	assert.Equal(t, 1, len(GetAddressUTXOs(UtxoMapKey, address1Hash, db)))
+	assert.Equal(t, common.NewAmount(4), GetAddressUTXOs(UtxoMapKey, address1Hash, db)[0].Value)
 
 	//expect address2 to have 2 utxos totaling $8
-	assert.Equal(t, 2, len( GetAddressUTXOs(UtxoMapKey,[]byte("address2"), db)))
+	assert.Equal(t, 2, len(GetAddressUTXOs(UtxoMapKey, address2Hash, db)))
 
 	//rollback to block 1, address 1 has a $5 utxo and a $7 utxo, total $12, and addr2 has nothing
-	deepCopy, err:= bc.GetUtxoStateAtBlockHash(db, blk1.GetHash())
-	if err !=nil{
+	deepCopy, err := bc.GetUtxoStateAtBlockHash(db, blk1.GetHash())
+	if err != nil {
 		panic(err)
 	}
 
-	assert.Equal(t, 2, len(deepCopy["address1"]))
-	assert.Equal(t, common.NewAmount(5),  deepCopy["address1"][0].Value)
-	assert.Equal(t, common.NewAmount(7),  deepCopy["address1"][1].Value)
-	assert.Equal(t, 0,  len(deepCopy["address2"]))
+	assert.Equal(t, 2, len(deepCopy[string(address1Hash)]))
+	assert.Equal(t, common.NewAmount(5), deepCopy[string(address1Hash)][0].Value)
+	assert.Equal(t, common.NewAmount(7), deepCopy[string(address1Hash)][1].Value)
+	assert.Equal(t, 0, len(deepCopy[string(address2Hash)]))
 
 }
-
-
 
 func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin := MockTxInputs()
@@ -202,7 +206,7 @@ func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	assert.Nil(t, utxoPool.FindUtxoByTxinput(Txin[3]))
 }
 
-func TestUpdateUtxoIndexAfterNewBlock(t *testing.T){
+func TestUpdateUtxoIndexAfterNewBlock(t *testing.T) {
 	a := make(map[int]string)
 	fmt.Println(a[1])
 	assert.True(t, true)
