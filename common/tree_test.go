@@ -109,6 +109,13 @@ func Test_TreeLeafs(t *testing.T){
 	}
 }
 
+func Test_TreeHighestLeaf(t *testing.T){
+	//logger.SetLevel(logger.DebugLevel)
+	tree,_:=setupAlphabetTree()
+	//cached leaf nodes should not have any children
+	assert.Equal(t, tree.MaxHeight, tree.highestLeaf.Height)
+}
+
 
 func Test_AddParent(t *testing.T){
 	tree,_:=setupAlphabetTree()

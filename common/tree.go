@@ -54,6 +54,7 @@ type Tree struct {
 	Found *Node
 	Searching bool
 	leafs *lru.Cache
+	highestLeaf *Node
 }
 type Test struct {
 	Num uint
@@ -85,7 +86,7 @@ func (n *Node) AddParent(parent *Node) error{
 }
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
-	t := &Tree{nil, 1 , nil, false, nil}
+	t := &Tree{nil, 1 , nil, false, nil,nil}
 	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t, true}
 	t.Root = &r
 	t.leafs,_ = lru.New(LeafsSize)
@@ -99,8 +100,8 @@ func (t *Tree) RecursiveFind (parent *Node, index interface{}) {
 	}
 
 	for i:=0;i< len(parent.Children);i++  {
-		if parent.Children[i].Entries[0].key == index{
-			logger.Debug("found! ", index, " under ", parent.Entries[0].key)
+		if parent.Children[i].GetKey() == index{
+			logger.Debug("found! ", index, " under ", parent.GetKey())
 			t.Searching = false
 			t.Found = parent.Children[i]
 		}else{
@@ -123,7 +124,7 @@ func (t *Tree) RecurseThroughTreeAndDoCallback (parent *Node, doSmth func(node *
 //Search from root, use if you have no closer known nodes upstream
 func (t *Tree) Get(parent *Node, index interface{}){
 	t.Searching = true
-	if t.Root.Entries[0].key == index{
+	if t.Root.GetKey() == index{
 		logger.Debug("found! ", index, ", is root")
 		t.Found = t.Root
 		return
@@ -145,17 +146,18 @@ func (parent *Node) AddChild(child *Node){
 	parent.Entries = append(parent.Entries, child.Entries[0])
 	child.Parent = parent
 	//remove index from leafs if was leaf
-	parentKey:=parent.Entries[0].key
+	parentKey:=parent.GetKey()
 	child.Height = parent.Height+1
 	if child.Height > child.tree.MaxHeight {
 		child.tree.MaxHeight = child.Height
+		child.tree.highestLeaf = child
 	}
-	treeLeaves :=parent.tree.leafs
-	if len(parent.Children) > 0 && treeLeaves.Contains(parentKey){
-		treeLeaves.Remove(parent.Entries[0].key)
+	leaves :=parent.tree.leafs
+	///if parent was leaf, update new leaf state
+	if len(parent.Children) > 0 && leaves.Contains(parentKey){
+		leaves.Remove(parent.GetKey())
 	}
-	treeLeaves.Add(child.Entries[0].key, child)
-
+	leaves.Add(child.GetKey(), child)
 }
 
 
@@ -176,6 +178,7 @@ func (t1 *Tree) appendTree(t2 *Tree, mergeIndex interface{}) {
 		node.tree = t1
 		if node.Height > node.tree.MaxHeight {
 			node.tree.MaxHeight = node.Height
+			node.tree.highestLeaf = node
 		}
 	})
 	//append t2 leafs to t1
