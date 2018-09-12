@@ -502,7 +502,7 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 	}
 }
 
-const testport_msg_relay_port = 21200
+const testport_msg_relay_port = 21202
 func TestBlockMsgWithDpos(t *testing.T) {
 
 	miners := []string{
