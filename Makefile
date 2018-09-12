@@ -6,7 +6,7 @@ dep:
 test:
 	for f in ./*/; do \
 		if [ "$$f" != "./bin/" -a  "$$f" != "./vendor/" ]; then \
-			cd $$f; go test; cd ..; \
+			cd $$f; go test ./...; cd ..; \
 		fi \
 	done
 
