@@ -74,12 +74,8 @@ func (wm WalletManager) SaveWalletToFile(filePath string) {
 
 }
 
-func (wm *WalletManager) CreateWallet() Wallet {
-	wallet := NewWallet()
-
+func (wm *WalletManager) AddWallet(wallet Wallet){
 	wm.Wallets = append(wm.Wallets, wallet)
-
-	return wallet
 }
 
 func (wm *WalletManager) DeleteWallet(key *core.KeyPair) error {

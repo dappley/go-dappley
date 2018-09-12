@@ -56,11 +56,10 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	//create new wallet
 	wallets := &client.WalletManager{}
 
-	wallet1 := wallets.CreateWallet()
-	assert.NotNil(t, wallet1)
-
-	wallet2 := wallets.CreateWallet()
-	assert.NotNil(t, wallet2)
+	wallet := client.NewWallet()
+	wallet2 := client.NewWallet()
+	wallets.AddWallet(wallet)
+	wallets.AddWallet(wallet2)
 
 	wallet := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 
@@ -113,23 +112,24 @@ func TestMiner_SingleValidTx(t *testing.T) {
 func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//create new wallet
-	wallets := &client.WalletManager{}
+	walletManager := &client.WalletManager{}
 
-	cbWallet := wallets.CreateWallet()
-	assert.NotNil(t, cbWallet)
+	wallet := client.NewWallet()
+	walletManager.AddWallet(wallet)
+	assert.NotNil(t, wallet)
 
 	//Create Blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(cbWallet.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow)
 	assert.NotNil(t, bc)
 
 	//start a miner
-	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
-	pow.Setup(n, cbWallet.GetAddress().Address)
-	pow.Start()
+
+	n:= network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pow.Setup(n, wallet.GetAddress().Address)
 
 	//Make sure at least 5 blocks mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -156,11 +156,10 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//create new wallet
 	wallets := &client.WalletManager{}
 
-	wallet1 := wallets.CreateWallet()
-	assert.NotNil(t, wallet1)
-
-	wallet2 := wallets.CreateWallet()
-	assert.NotNil(t, wallet2)
+	wallet := client.NewWallet()
+	wallet2 := client.NewWallet()
+	wallets.AddWallet(wallet)
+	wallets.AddWallet(wallet2)
 
 	wallet := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 

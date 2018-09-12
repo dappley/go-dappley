@@ -48,9 +48,10 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 
 //create a wallet
 func CreateWallet() (client.Wallet, error) {
-	wallets,err := client.LoadWalletFromFile(client.WalletFile)
-	wallet := wallets.CreateWallet()
-	wallets.SaveWalletToFile(client.WalletFile)
+	wm,err := client.LoadWalletFromFile(client.WalletFile)
+	wallet := client.NewWallet()
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile(client.WalletFile)
 
 	return wallet, err
 }
