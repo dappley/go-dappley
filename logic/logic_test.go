@@ -35,13 +35,14 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/sirupsen/logrus"
 )
 
 const InvalidAddress = "Invalid Address"
 
 func TestMain(m *testing.M) {
 	setup()
-	//logger.SetLevel(logger.WarnLevel)
+	logrus.SetLevel(logrus.WarnLevel)
 	retCode := m.Run()
 	teardown()
 	os.Exit(retCode)
