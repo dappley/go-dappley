@@ -130,30 +130,3 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 
 }
 
-//delete wallet
-
-func DeleteWallet(key *core.KeyPair) error {
-	wallets, err := client.LoadWalletFromFile(client.WalletFile)
-	if err != nil {
-		return err
-	}
-	err = wallets.DeleteWallet(key)
-	if err != nil {
-		return err
-	}
-	wallets.SaveWalletToFile(client.WalletFile)
-	return err
-}
-
-func DeleteWallets() error {
-	wallets, err := client.LoadWalletFromFile(client.WalletFile)
-	if err != nil {
-		return err
-	}
-	err = wallets.DeleteWallets()
-	if err != nil {
-		return err
-	}
-	wallets.SaveWalletToFile(client.WalletFile)
-	return err
-}

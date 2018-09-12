@@ -244,25 +244,6 @@ func TestSend(t *testing.T) {
 	}
 }
 
-func TestDeleteWallets(t *testing.T) {
-	//create wallets address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
-
-	addr2, err := CreateWallet()
-	assert.NotEmpty(t, addr2)
-
-	addr3, err := CreateWallet()
-	assert.NotEmpty(t, addr3)
-
-	err = DeleteWallets()
-	assert.Nil(t, err)
-
-	list, err := GetAllAddresses()
-	assert.Nil(t, err)
-	assert.Empty(t, list)
-}
-
 //test send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files

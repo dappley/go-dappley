@@ -19,7 +19,6 @@
 package client
 
 import (
-	"errors"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"encoding/gob"
@@ -76,26 +75,6 @@ func (wm WalletManager) SaveWalletToFile(filePath string) {
 
 func (wm *WalletManager) AddWallet(wallet Wallet){
 	wm.Wallets = append(wm.Wallets, wallet)
-}
-
-func (wm *WalletManager) DeleteWallet(key *core.KeyPair) error {
-	for i, value := range wm.Wallets {
-		if value.Key == key {
-			wm.Wallets = append(wm.Wallets[:i], wm.Wallets[i+1:]...)
-			return nil
-		}
-	}
-
-	return errors.New("wallet is not exist")
-
-}
-
-func (wm *WalletManager) DeleteWallets() error {
-	if len(wm.Wallets) == 0 {
-		return errors.New("no wallet yet")
-	}
-	wm.Wallets = wm.Wallets[:0]
-	return nil
 }
 
 func (wm *WalletManager) GetAddresses() []core.Address {
