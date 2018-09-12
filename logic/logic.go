@@ -57,7 +57,7 @@ func CreateWallet() (client.Wallet, error) {
 
 //get balance
 func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
-	pubKeyHash, valid := address.GetHashPubKey()
+	pubKeyHash, valid := address.GetPubKeyHash()
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}

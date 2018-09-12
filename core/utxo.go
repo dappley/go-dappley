@@ -117,7 +117,6 @@ func (blk Block) ConsumeSpendableOutputsAfterNewBlock(mapkey string, db storage.
 		}
 
 		for _, vin := range txs.Vin {
-			// Modified by liwanghong
 			// Key in utxoIndex is PubkeyHash
 			spentOutputTxId, txIndex := vin.Txid, vin.Vout
 			pubKeyHash, _ := HashPubKey(vin.PubKey)
@@ -174,9 +173,6 @@ func (utxo utxoIndex) RemoveTxUtxosFromUtxoPool(txs Transaction, db storage.Stor
 
 	Stud:
 		for index, userUtxo := range userUtxos {
-			// Modified by liwanghong
-			// Must compare VoutIndex and TrasactionId other than value
-			// if userUtxo.Value == value {
 			if userUtxo.TxIndex == outIndex && bytes.Compare(userUtxo.Txid, txs.ID) == 0 {
 				//remove utxo from index
 				userUtxos = append(userUtxos[:index], userUtxos[index+1:]...)

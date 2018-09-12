@@ -20,13 +20,13 @@ package core
 
 import (
 	"bytes"
+
 	"github.com/dappley/go-dappley/util"
 )
 
 type Address struct {
 	Address string
 }
-
 
 func NewAddress(addressString string) Address {
 	address := Address{}
@@ -49,7 +49,7 @@ func (a Address) ValidateAddress() bool {
 	return bytes.Compare(actualChecksum, targetChecksum) == 0
 }
 
-func (a Address) GetHashPubKey() ([]byte, bool) {
+func (a Address) GetPubKeyHash() ([]byte, bool) {
 	pubKeyHash := util.Base58Decode([]byte(a.Address))
 
 	if len(pubKeyHash) < addressChecksumLen {
