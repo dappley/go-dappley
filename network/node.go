@@ -365,6 +365,7 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID){
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
+	logger.Debug("received block: ", string(blk.GetHash()), ", with parent: ", string(blk.GetPrevHash()), ", timestamp: ", blk.GetTimestamp(), ", height: ", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
