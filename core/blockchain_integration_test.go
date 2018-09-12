@@ -39,10 +39,10 @@ func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
 	}
 
 	//generate a fork that is forked from height 3
-	bc.GetBlockPool().forkPool = GenerateMockFork(5,blk)
+	bc.SetBlockPool(GenerateBlockPoolWithFakeFork(5,blk))
 
 	//get the last fork hash
-	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
+	forkTailBlockHash := bc.GetBlockPool().GetForkPool()[0].GetHash()
 
 	bc.MergeFork()
 
@@ -69,7 +69,7 @@ func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
 	tailBlkHash := bc.GetTailBlockHash()
 
 	//generate a fork that is forked from height 3
-	bc.GetBlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
+	bc.SetBlockPool(GenerateBlockPoolwithFakeForkWithInvalidTx(5,blk))
 
 	//the merge should fail since the transactions are invalid
 	bc.MergeFork()
