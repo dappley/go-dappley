@@ -73,9 +73,9 @@ func TestMiner_SetTargetBit(t *testing.T) {
 		bit 	 int
 		expected int
 	}{{"regular",16,16},
-		{"zero",0,16},
-		{"negative",-5,16},
-		{"above256",257,16},
+		{"zero",0,0},
+		{"negative",-5,0},
+		{"above256",257,0},
 		{"regular2",18,18},
 		{"equalTo256",256,256},
 	}
