@@ -88,13 +88,9 @@ func (wm *WalletManager) GetAddresses() []core.Address {
 }
 
 func (wm WalletManager) GetKeyPairByAddress(address core.Address) core.KeyPair {
-	for _, value := range wm.Wallets {
 
-		if value.ContainAddress(address) {
-			return *value.Key
-		}
-	}
-	return core.KeyPair{}
+	wallet := wm.GetWalletByAddress(address)
+	return *wallet.Key
 
 }
 
