@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 func TestMiner_SingleValidTx(t *testing.T) {
 
 	//create new wallet
-	wallets := &client.Wallets{}
+	wallets := &client.WalletManager{}
 
 	wallet1 := wallets.CreateWallet()
 	assert.NotNil(t, wallet1)
@@ -113,7 +113,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//create new wallet
-	wallets := &client.Wallets{}
+	wallets := &client.WalletManager{}
 
 	cbWallet := wallets.CreateWallet()
 	assert.NotNil(t, cbWallet)
@@ -154,7 +154,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//create new wallet
-	wallets := &client.Wallets{}
+	wallets := &client.WalletManager{}
 
 	wallet1 := wallets.CreateWallet()
 	assert.NotNil(t, wallet1)

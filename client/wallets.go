@@ -31,61 +31,61 @@ import (
 
 const WalletFile = "../bin/wallets.dat"
 
-type Wallets struct {
+type WalletManager struct {
 	Wallets []Wallet
 }
 
-func LoadWalletFromFile(filePath string) (*Wallets, error) {
+func LoadWalletFromFile(filePath string) (*WalletManager, error) {
 
 	fileContent, err := storage.GetFileConnection(filePath)
 
-	ws := &Wallets{}
+	wm := &WalletManager{}
 	if err != nil {
-		ws.SaveWalletToFile(filePath)
+		wm.SaveWalletToFile(filePath)
 		fileContent, err = storage.GetFileConnection(filePath)
 	}
-	var wallets Wallets
+	var wallets WalletManager
 
 	gob.Register(bitelliptic.S256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallets)
 	if err != nil {
-		logger.Error("Wallets: Load wallets failed!")
+		logger.Error("WalletManager: Load wallets failed!")
 		logger.Error(err)
 	}
 
-	ws.Wallets = wallets.Wallets
+	wm.Wallets = wallets.Wallets
 
-	return ws, nil
+	return wm, nil
 }
 
 // SaveToFile saves wallets to a file
-func (ws Wallets) SaveWalletToFile(filePath string) {
+func (wm WalletManager) SaveWalletToFile(filePath string) {
 	var content bytes.Buffer
 
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(ws)
+	err := encoder.Encode(wm)
 	if err != nil {
-		logger.Error("Wallets: save wallets to file failed!")
+		logger.Error("WalletManager: save wallets to file failed!")
 		logger.Error(err)
 	}
 	storage.SaveToFile(filePath, content)
 
 }
 
-func (ws *Wallets) CreateWallet() Wallet {
+func (wm *WalletManager) CreateWallet() Wallet {
 	wallet := NewWallet()
 
-	ws.Wallets = append(ws.Wallets, wallet)
+	wm.Wallets = append(wm.Wallets, wallet)
 
 	return wallet
 }
 
-func (ws *Wallets) DeleteWallet(key *core.KeyPair) error {
-	for i, value := range ws.Wallets {
+func (wm *WalletManager) DeleteWallet(key *core.KeyPair) error {
+	for i, value := range wm.Wallets {
 		if value.Key == key {
-			ws.Wallets = append(ws.Wallets[:i], ws.Wallets[i+1:]...)
+			wm.Wallets = append(wm.Wallets[:i], wm.Wallets[i+1:]...)
 			return nil
 		}
 	}
@@ -94,26 +94,26 @@ func (ws *Wallets) DeleteWallet(key *core.KeyPair) error {
 
 }
 
-func (ws *Wallets) DeleteWallets() error {
-	if len(ws.Wallets) == 0 {
+func (wm *WalletManager) DeleteWallets() error {
+	if len(wm.Wallets) == 0 {
 		return errors.New("no wallet yet")
 	}
-	ws.Wallets = ws.Wallets[:0]
+	wm.Wallets = wm.Wallets[:0]
 	return nil
 }
 
-func (ws *Wallets) GetAddresses() []core.Address {
+func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
-	for _, address := range ws.Wallets {
+	for _, address := range wm.Wallets {
 		addresses = append(addresses, address.GetAddresses()...)
 	}
 
 	return addresses
 }
 
-func (ws Wallets) GetKeyPairByAddress(address core.Address) core.KeyPair {
-	for _, value := range ws.Wallets {
+func (wm WalletManager) GetKeyPairByAddress(address core.Address) core.KeyPair {
+	for _, value := range wm.Wallets {
 
 		if value.ContainAddress(address) {
 			return *value.Key
@@ -123,8 +123,8 @@ func (ws Wallets) GetKeyPairByAddress(address core.Address) core.KeyPair {
 
 }
 
-func (ws Wallets) GetWalletByAddress(address core.Address) Wallet {
-	for _, wallet := range ws.Wallets {
+func (wm WalletManager) GetWalletByAddress(address core.Address) Wallet {
+	for _, wallet := range wm.Wallets {
 		if wallet.ContainAddress(address) {
 			return wallet
 		}
