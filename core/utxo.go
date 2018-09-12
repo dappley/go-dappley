@@ -34,7 +34,7 @@ import (
 const UtxoMapKey = "utxo"
 const UtxoForkMapKey = "utxoFork"
 
-//map of key: wallet address, value: serialized map
+//map of key: wallet public key hash, value: serialized map
 type utxoIndex map[string][]UTXOutputStored
 
 type UTXOutputStored struct {
