@@ -16,41 +16,48 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package consensus
+package config
 
 import (
-	"testing"
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/network"
+	"io/ioutil"
+	"os"
+	"testing"
 )
 
-func TestNewDpos(t *testing.T) {
-	dpos := NewDpos()
-	assert.Equal(t,1, cap(dpos.mintBlkCh))
-	assert.Equal(t,1, cap(dpos.quitCh))
-	assert.Nil(t,dpos.node)
-}
-
-func TestDpos_Setup(t *testing.T) {
-	dpos := NewDpos()
-	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.Address{cbAddr},storage.NewRamStorage(),dpos)
-	node := network.NewNode(bc)
-
-	dpos.Setup(node, cbAddr)
-
-	assert.Equal(t, bc, dpos.bc)
-	assert.Equal(t, node, dpos.node)
-}
-
-func TestDpos_Stop(t *testing.T) {
-	dpos := NewDpos()
-	dpos.Stop()
-	select{
-	case <-dpos.quitCh:
-	default:
-		t.Error("Failed!")
+func TestLoadCliConfigFromFile(t *testing.T) {
+	logger.SetLevel(logger.ErrorLevel)
+	tests := []struct {
+		name     string
+		content  string
+		expected *CliConfig
+	}{
+		{
+			name:    "CorrectFileContent",
+			content: fakeCliFileContent(),
+			expected: &CliConfig{
+				port:     5,
+				password: "password",
+			},
+		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename := tt.name + "_cliconfig.conf"
+			ioutil.WriteFile(filename, []byte(tt.content), 0644)
+			defer os.Remove(filename)
+			configContent := LoadCliConfigFromFile(filename)
+			assert.Equal(t, tt.expected, configContent)
+		})
+	}
+
+}
+
+func fakeCliFileContent() string {
+	return `
+	port: 5,
+	password: "password"
+	`
 }

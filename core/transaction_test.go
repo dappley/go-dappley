@@ -176,7 +176,7 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	utxo2 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
 	utxo3 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
 	utxo4 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
-	utxoPool := utxoIndex{}
+	utxoPool := UtxoIndex{}
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()

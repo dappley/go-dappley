@@ -29,6 +29,8 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"bytes"
+	"github.com/golang/mock/gomock"
+	"github.com/dappley/go-dappley/core/mock"
 )
 
 const(
@@ -41,10 +43,7 @@ const(
 	test_port7
 	test_port8
 	test_port9
-	test_port10
 )
-
-const blockchainDbFile = "../bin/networktest.db"
 
 func TestMain(m *testing.M){
 
@@ -81,55 +80,42 @@ func TestNetwork_Setup(t *testing.T) {
 
 func TestNetwork_SendBlock(t *testing.T){
 
-	var bcInputs = []struct{
-		addr 		core.Address
-		testPort 	int
-	}{
-		{core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"},test_port3},
-		{core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUx"},test_port4},
-		{core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUy"},test_port5},
-	}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-	var nodes []*Node
+	//setup node 0
+	db0 := storage.NewRamStorage()
+	defer db0.Close()
+	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil)
+	mockBp0 := core_mock.NewMockBlockPoolInterface(mockCtrl)
+	mockBp0.EXPECT().SetBlockchain(bc0)
+	bc0.SetBlockPool(mockBp0)
 
-	//setup each node
-	for _,input := range bcInputs{
-		db := storage.NewRamStorage()
-		defer db.Close()
-		bc := core.CreateBlockchain(input.addr, db,nil)
-		n := FakeNodeWithPidAndAddr(bc,"asd", "asd")
-		n.Start(input.testPort)
-		nodes = append(nodes, n)
-	}
+	n0 := FakeNodeWithPidAndAddr(bc0,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10000")
 
+	//setup node 1
+	db1 := storage.NewRamStorage()
+	defer db1.Close()
+	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil)
+	mockBp1 := core_mock.NewMockBlockPoolInterface(mockCtrl)
+	mockBp1.EXPECT().SetBlockchain(bc1)
+	bc1.SetBlockPool(mockBp1)
+	n1 := FakeNodeWithPidAndAddr(bc1,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10001")
+
+	n0.Start(test_port3)
+	mockBp0.EXPECT().BlockRequestCh()
+	n1.Start(test_port4)
+	mockBp1.EXPECT().BlockRequestCh()
 	//add node0 as a stream peer in node1 and node2
-	err := nodes[1].AddStream(nodes[0].GetPeerID(),nodes[0].GetPeerMultiaddr())
+	err := n1.AddStream(n0.GetPeerID(),n0.GetPeerMultiaddr())
 	assert.Nil(t, err)
-
-	err = nodes[2].AddStream(nodes[0].GetPeerID(),nodes[0].GetPeerMultiaddr())
-	assert.Nil(t, err)
-
 
 	//node 0 broadcast a block
-	b1 := core.GenerateMockBlock()
-	nodes[0].BroadcastBlock(b1)
+	blk := core.GenerateMockBlock()
+	n0.BroadcastBlock(blk)
 
+	mockBp1.EXPECT().Push(blk, n0.GetPeerID())
 	time.Sleep(time.Second)
-
-	//node2 receives the block
-	b2:= nodes[1].GetBlocks()
-	assert.NotEmpty(t, b2)
-	assert.Equal(t,*b1,*b2[0])
-
-	//node3 receives the block
-	b3:= nodes[2].GetBlocks()
-	assert.NotEmpty(t, b3)
-	assert.Equal(t,*b1,*b3[0])
-
-/*	for _,s:=range node1.streams{
-		s.Send([]byte{4,2,3,1,4})
-	}
-	time.Sleep(time.Second)*/
 }
 
 func TestNode_SyncPeers(t *testing.T){
@@ -173,44 +159,49 @@ func TestNode_SyncPeers(t *testing.T){
 
 	time.Sleep(time.Second)
 
-	/*	for _,s:=range node1.streams{
-			s.Send([]byte{4,2,3,1,4})
-		}
-		time.Sleep(time.Second)*/
 }
 
 func TestNode_RequestBlockUnicast(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-	//set up two nodes
-	nodes := []*Node{}
-	for i:=0; i<2;i++{
-		db := storage.NewRamStorage()
-		defer db.Close()
-		addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-		bc := core.CreateBlockchain(addr,db,nil)
+	//setup node 0
+	db0 := storage.NewRamStorage()
+	defer db0.Close()
+	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil)
+	mockBp0 := core_mock.NewMockBlockPoolInterface(mockCtrl)
+	mockBp0.EXPECT().SetBlockchain(bc0)
+	bc0.SetBlockPool(mockBp0)
 
-		//create node
-		node := NewNode(bc)
-		err := node.Start(test_port9+i)
-		assert.Nil(t, err)
+	n0 := FakeNodeWithPidAndAddr(bc0,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10000")
 
-		if i!=0 {
-			err = node.AddStream(nodes[0].GetPeerID(),nodes[0].GetPeerMultiaddr())
-			assert.Nil(t, err)
-		}
-		nodes = append(nodes, node)
-	}
-	time.Sleep(time.Second)
+	//setup node 1
+	db1 := storage.NewRamStorage()
+	defer db1.Close()
+	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil)
+	mockBp1 := core_mock.NewMockBlockPoolInterface(mockCtrl)
+	mockBp1.EXPECT().SetBlockchain(bc1)
+	bc1.SetBlockPool(mockBp1)
+	n1 := FakeNodeWithPidAndAddr(bc1,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10000")
+
+	n0.Start(test_port9)
+	mockBp0.EXPECT().BlockRequestCh()
+	n1.Start(test_port5)
+	mockBp1.EXPECT().BlockRequestCh()
+
+	//add node0 as a stream peer in node1 and node2
+	err := n1.AddStream(n0.GetPeerID(),n0.GetPeerMultiaddr())
+	assert.Nil(t, err)
 
 	//generate a block and store it in node0 blockchain
 	blk := core.GenerateMockBlock()
-	nodes[0].bc.GetDb().Put(blk.GetHash(),blk.Serialize())
+	n0.bc.GetDb().Put(blk.GetHash(),blk.Serialize())
 
 	//node1 request the block
-	nodes[1].RequestBlockUnicast(blk.GetHash(),nodes[0].GetPeerID())
-	time.Sleep(time.Second*2)
-	assert.Equal(t, blk, nodes[1].GetBlocks()[0])
+	n1.RequestBlockUnicast(blk.GetHash(),n0.GetPeerID())
+	mockBp1.EXPECT().Push(blk, n0.GetPeerID())
 
+	time.Sleep(time.Second)
 }
 
 func TestNode_prepareData(t *testing.T){
@@ -260,50 +251,3 @@ func TestNode_prepareData(t *testing.T){
 		})
 	}
 }
-
-/*func TestNetwork_node0(t *testing.T){
-	bc := mockBlockchain(t)
-
-	node1 := NewNode(bc)
-	node1.Start(test_port1)
-	select{}
-}
-
-const node0_addr = "/ip4/127.0.0.1/tcp/12345/ipfs/QmRuJ1V6xtj2H2gVnGD8bqt9KTViSu7gcHGhjy5yEM3FZm"
-
-func TestNetwork_node1(t *testing.T){
-	bc := mockBlockchain(t)
-	logger.SetLevel(logger.DebugLevel)
-	node1 := NewNode(bc)
-	err := node1.Start(test_port2)
-	assert.Nil(t, err)
-	err = node1.AddStreamByString(node0_addr)
-	assert.Nil(t, err)
-	//node1.AddStreamByString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
-	select{}
-}
-
-func TestNetwork_node2(t *testing.T){
-	bc := mockBlockchain(t)
-
-	node1 := NewNode(bc)
-	node1.Start(test_port3)
-	node1.AddStreamByString(node0_addr)
-	//node1.AddStreamByString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
-	select{}
-}
-
-func TestNetwork_node3(t *testing.T){
-	bc := mockBlockchain(t)
-
-	node1 := NewNode(bc)
-	node1.Start(test_port4)
-	node1.AddStreamByString(node0_addr)
-	//node1.AddStreamByString("/ip4/192.168.10.90/tcp/10200/ipfs/QmQMzVX4XqCYPNbdAzsSDXNWijKQnoRNbDXQsgto7ZRyod")
-	//select{}
-	b := core.GenerateMockBlock()
-	for{
-		node1.BroadcastBlock(b)
-		time.Sleep(time.Second*15)
-	}
-}*/

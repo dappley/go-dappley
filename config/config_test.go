@@ -19,26 +19,26 @@
 package config
 
 import (
-	"testing"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
-	"github.com/stretchr/testify/assert"
-	"github.com/sirupsen/logrus"
+	"testing"
 )
 
-func TestLoadConfigFromFile(t *testing.T){
-	logrus.SetLevel(logrus.ErrorLevel)
-	tests := []struct{
-		name 		string
-		content 	string
-		expected	*Config
+func TestLoadConfigFromFile(t *testing.T) {
+	logger.SetLevel(logger.ErrorLevel)
+	tests := []struct {
+		name     string
+		content  string
+		expected *Config
 	}{
 		{
-			name: 		"CorrectFileContent",
-			content: 	fakeFileContent(),
-			expected:	&Config{
+			name:    "CorrectFileContent",
+			content: fakeFileContent(),
+			expected: &Config{
 				DynastyConfig{
-					producers: 	[]string{
+					producers: []string{
 						"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 					},
@@ -47,19 +47,19 @@ func TestLoadConfigFromFile(t *testing.T){
 					minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 				},
 				NodeConfig{
-					port: 5,
-					seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
-					dbPath: "dbPath",
+					port:    5,
+					seed:    "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
+					dbPath:  "dbPath",
 					rpcPort: 200,
 				},
 			},
 		},
 		{
-			name: 		"EmptySeed",
-			content: 	noSeedContent(),
-			expected:	&Config{
+			name:    "EmptySeed",
+			content: noSeedContent(),
+			expected: &Config{
 				DynastyConfig{
-					producers: 	[]string{
+					producers: []string{
 						"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 					},
@@ -74,16 +74,16 @@ func TestLoadConfigFromFile(t *testing.T){
 			},
 		},
 		{
-			name: 		"WrongFileContent",
-			content: 	"WrongFileContent",
-			expected:	nil,
+			name:     "WrongFileContent",
+			content:  "WrongFileContent",
+			expected: nil,
 		},
 		{
-			name: 		"EmptyFile",
-			content: 	"",
-			expected:	&Config{
+			name:    "EmptyFile",
+			content: "",
+			expected: &Config{
 				DynastyConfig{
-					producers: 	[]string(nil),
+					producers: []string(nil),
 				},
 				ConsensusConfig{
 					minerAddr: "",
@@ -95,8 +95,8 @@ func TestLoadConfigFromFile(t *testing.T){
 		},
 	}
 
-	for _,tt := range tests {
-		t.Run(tt.name, func(t *testing.T){
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			filename := tt.name + "_config.conf"
 			ioutil.WriteFile(filename, []byte(tt.content), 0644)
 			defer os.Remove(filename)
@@ -107,7 +107,7 @@ func TestLoadConfigFromFile(t *testing.T){
 
 }
 
-func fakeFileContent() string{
+func fakeFileContent() string {
 	return `
 	dynastyConfig{
 		producers: [
@@ -126,7 +126,7 @@ func fakeFileContent() string{
 	}`
 }
 
-func noSeedContent() string{
+func noSeedContent() string {
 	return `
 	dynastyConfig{
 		producers: [

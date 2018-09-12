@@ -45,7 +45,7 @@ var(
 type Blockchain struct {
 	tailBlockHash []byte
 	db            storage.Storage
-	blockPool     *BlockPool
+	blockPool     BlockPoolInterface
 	consensus     Consensus
 	txPool        *TransactionPool
 	forkTree	  *common.Tree
@@ -95,7 +95,7 @@ func (bc *Blockchain) GetTailBlockHash() Hash {
 	return bc.tailBlockHash
 }
 
-func (bc *Blockchain) GetBlockPool() *BlockPool {
+func (bc *Blockchain) GetBlockPool() BlockPoolInterface {
 	return bc.blockPool
 }
 
@@ -134,6 +134,11 @@ func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
 
 func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
+}
+
+func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
+	bc.blockPool = blockPool
+	bc.blockPool.SetBlockchain(bc)
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) {
@@ -358,11 +363,11 @@ func (bc *Blockchain) MergeFork() {
 }
 
 func (bc *Blockchain) concatenateForkToBlockchain() {
-	if bc.GetBlockPool().forkPoolLen() > 0 {
-		for i := bc.GetBlockPool().forkPoolLen() - 1; i >= 0; i-- {
-			bc.AddBlockToTail(bc.GetBlockPool().forkPool[i])
+	if bc.GetBlockPool().ForkPoolLen() > 0 {
+		for i := bc.GetBlockPool().ForkPoolLen() - 1; i >= 0; i-- {
+			bc.AddBlockToTail(bc.GetBlockPool().GetForkPool()[i])
 			//Remove transactions in current transaction pool
-			bc.GetTxPool().RemoveMultipleTransactions(bc.GetBlockPool().forkPool[i].GetTransactions())
+			bc.GetTxPool().RemoveMultipleTransactions(bc.GetBlockPool().GetForkPool()[i].GetTransactions())
 		}
 	}
 	bc.GetBlockPool().ResetForkPool()

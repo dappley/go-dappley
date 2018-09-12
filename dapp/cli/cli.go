@@ -18,7 +18,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -29,7 +28,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"log"
 	"os"
-	"strings"
+	"github.com/dappley/go-dappley/config"
 )
 
 //command names
@@ -39,9 +38,6 @@ const(
 	cliGetPeerInfo			= "getPeerInfo"
 	cliSend 				= "send"
 	cliAddPeer 				= "addPeer"
-
-	cliUnlockAdmin			= "unlockAdminCLIs"
-	cliExit					= "exit"
 )
 
 //flag names
@@ -51,7 +47,6 @@ const(
 	flagFromAddress		= "from"
 	flagAmount			= "amount"
 	flagPeerFullAddr    = "peerFullAddr"
-	flagPassword 		= "password"
 )
 
 type valueType int
@@ -65,7 +60,6 @@ type serviceType int
 const(
 	rpcService = iota
 	adminRpcService
-	nonRpcService
 )
 
 //list of commands
@@ -75,9 +69,6 @@ var cmdList = []string{
 	cliGetPeerInfo,
 	cliSend,
 	cliAddPeer,
-
-	cliUnlockAdmin,
-	cliExit,
 }
 
 //configure input parameters/flags for each command
@@ -115,13 +106,6 @@ var cmdFlagsMap = map[string][]flagPars{
 		valueTypeString,
 		"Full Address. Eg. /ip4/127.0.0.1/tcp/12345/ipfs/QmT5oB6xHSunc64Aojoxa6zg9uH31ajiAVyNfCdBZiwFTV",
 	}},
-
-	cliUnlockAdmin		:{flagPars{
-		flagPassword,
-		"",
-		valueTypeString,
-		"Password To Unlock Admin CLIs",
-	}},
 }
 
 //map the callback function to each command
@@ -131,7 +115,6 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo			: {rpcService, getPeerInfoCommandHandler},
 	cliSend					: {rpcService, sendCommandHandler},
 	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
-	cliUnlockAdmin			: {nonRpcService, unlockAdminRpcCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -139,7 +122,7 @@ type commandHandlersWithType struct {
 	cmdHandler 		commandHandler
 }
 
-type commandHandler func(ctx context.Context,client interface{},flags cmdFlags)
+type commandHandler func(ctx context.Context, client interface{},flags cmdFlags)
 
 type flagPars struct{
 	name         string
@@ -152,23 +135,31 @@ type flagPars struct{
 //map key: flag name   map defaultValue: flag defaultValue
 type cmdFlags map[string]interface{}
 
-var password = ""
+
 
 func main(){
 
-	var rpcPort int
-	flag.IntVar(&rpcPort, "p", 50050, "RPC server port")
+	var filePath string
+	flag.StringVar(&filePath, "f", "default.conf", "CLI config file path")
 	flag.Parse()
-	if rpcPort <= 0 {
-		log.Panic("rpc port is invalid")
-	}
 
-	printUsage()
-	conn := initRpcClient(rpcPort)
+	cliConfig := config.LoadCliConfigFromFile(filePath)
+
+	conn := initRpcClient(int(cliConfig.GetRpcPort()))
 	defer conn.Close()
 	clients := map[serviceType]interface{}{
 		rpcService:      rpcpb.NewRpcServiceClient(conn),
 		adminRpcService: rpcpb.NewAdminServiceClient(conn),
+	}
+	args := os.Args[1:]
+
+	if len(args) < 1 {
+		printUsage()
+		return
+	}
+
+	if args[0] == "-f" {
+		args = args[2:]
 	}
 
 	cmdFlagSetList := map[string]*flag.FlagSet{}
@@ -192,36 +183,24 @@ func main(){
 		}
 	}
 
-	for{
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("> ")
-		text, _ := reader.ReadString('\n')
-		args := strings.Fields(text)
-		if len(args)==0 {
-			continue
-		}
+	cmdName := args[0]
 
-		cmdName := args[0]
-		if cmdName == cliExit {
+	cmd := cmdFlagSetList[cmdName]
+	if cmd == nil {
+		fmt.Println("\nERROR:", cmdName, "is an invalid command")
+		printUsage()
+	}else{
+		err := cmd.Parse(args[1:])
+		if err!= nil{
 			return
 		}
-
-		cmd := cmdFlagSetList[cmdName]
-		if cmd == nil {
-			fmt.Println("\nERROR:", cmdName, "is an invalid command")
-			printUsage()
-		}else{
-			err := cmd.Parse(args[1:])
-			if err!= nil{
-				continue
-			}
-			if cmd.Parsed() {
-				md := metadata.Pairs("password", password)
-				ctx := metadata.NewOutgoingContext(context.Background(), md)
-				cmdHandlers[cmdName].cmdHandler(ctx, clients[cmdHandlers[cmdName].serviceType], cmdFlagValues[cmdName])
-			}
+		if cmd.Parsed() {
+			md := metadata.Pairs("password", cliConfig.GetAdminPassword())
+			ctx := metadata.NewOutgoingContext(context.Background(), md)
+			cmdHandlers[cmdName].cmdHandler(ctx, clients[cmdHandlers[cmdName].serviceType], cmdFlagValues[cmdName])
 		}
 	}
+
 }
 
 func printUsage() {
@@ -278,10 +257,6 @@ func addPeerCommandHandler(ctx context.Context, client interface{}, flags cmdFla
 		return
 	}
 	fmt.Println(proto.MarshalTextString(response))
-}
-
-func unlockAdminRpcCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	password = *(flags[flagPassword].(*string))
 }
 
 func initRpcClient(port int)*grpc.ClientConn{
