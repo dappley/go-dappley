@@ -25,16 +25,15 @@ import (
 	"strings"
 	"math/rand"
 	"time"
-	logger "github.com/sirupsen/logrus"
 )
 
-func setupIntTree() *Tree{
+func setupIntTree() (*Tree, int) {
 	tree:= NewTree(0,0)
 	parent := tree.Root
+	len := 10000
 	//add 10000 nodes unto the tree
-	for i:=1;i<10000;i++  {
-
-		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree}
+	for i:=1;i<len;i++  {
+		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree, true}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
 		if(getBool()){
@@ -42,9 +41,8 @@ func setupIntTree() *Tree{
 			tree.MaxHeight++
 		}
 	}
-	return tree
+	return tree, len
 }
-
 
 func setupAlphabetTree() (*Tree, int){
 	alphabets:= "abcdefghijklmnopqrstuvwxyz"
@@ -53,7 +51,7 @@ func setupAlphabetTree() (*Tree, int){
 	parent := tree.Root
 	//add 26 nodes unto the tree
 	for i:=1;i< len(alphabetSlice);i++  {
-		newNode,_ := tree.NewNode(alphabetSlice[i], alphabetSlice[i])
+		newNode,_ := tree.NewNode(alphabetSlice[i], alphabetSlice[i], parent.Height+1)
 		parent.AddChild(newNode)
 		if(getBool()){
 			parent = newNode
@@ -61,8 +59,9 @@ func setupAlphabetTree() (*Tree, int){
 	}
 	return tree, len(alphabetSlice)
 }
+
 func Test_RecursiveFind(t *testing.T){
-	tree := setupIntTree()
+	tree,_ := setupIntTree()
 	//run find lots of times
 	for i:=5000; i<5050;i++ {
 		tree.Get(tree.Root, i)
@@ -71,7 +70,7 @@ func Test_RecursiveFind(t *testing.T){
 }
 
 func Test_SearchParentNodeAndAddChild(t *testing.T){
-	tree := setupIntTree()
+	tree,_ := setupIntTree()
 	//add child {asd:asd} to 90000 block
 	tree.SearchParentNodeAndAddChild(
 		tree.Root,9000, "asd", "asd")
@@ -83,44 +82,54 @@ func Test_SearchParentNodeAndAddChild(t *testing.T){
 }
 
 func Test_TreeHeightAndGetNodesAfterAppendTree(t *testing.T){
-	t1 := setupIntTree()
-	t1heightB4Merge := t1.MaxHeight
-
-	mergeHeight := int(t1.MaxHeight) - 10
-
+	//logger.SetLevel(logger.DebugLevel)
+	t1, len := setupIntTree()
 	t2, _ := setupAlphabetTree()
+	oldt1height := t1.MaxHeight
+	t2height := t2.MaxHeight
+	mergeIndex := len - 10
 
-	t1.appendTree(t2, mergeHeight)
-
-	//test addition of new nodes from t2
-	t1.Get(t1.Root, "b")
-	assert.Equal(t, "b", t1.Found.Entries[0].value )
-	t1.Get(t1.Root, "y")
-	assert.Equal(t, "y", t1.Found.Entries[0].value )
+	t1.appendTree(t2, mergeIndex)
 
 	//test height after merging t2
-	t2heightAfterMerge := uint(t1.Found.Height)+t2.MaxHeight
-	if t2heightAfterMerge > t1heightB4Merge{
-		assert.Equal(t, t1.MaxHeight, t2heightAfterMerge)
+	if t1.Found.Height + t2height > oldt1height {
+		assert.Equal(t,t1.Found.Height + t2height, t1.MaxHeight)
 	}
-	assert.Equal(t, t1.MaxHeight, t1heightB4Merge)
 
 }
 
 func Test_TreeLeafs(t *testing.T){
+	//logger.SetLevel(logger.DebugLevel)
 	tree,_:=setupAlphabetTree()
 	//cached leaf nodes should not have any children
 	for _,v := range tree.leafs.Keys(){
 		val, _ := tree.leafs.Get(v)
 		assert.Equal(t, 0, len(val.(*Node).Children))
+		assert.Equal(t, true, val.(*Node).Height != 1)
 	}
 }
 
-func Test_RecursiveActionBasedOnCallback(t *testing.T){
+
+func Test_AddParent(t *testing.T){
+	tree,_:=setupAlphabetTree()
+	nodeToAdd,_:= tree.NewNode("asd","asd", 0)
+	//check root case
+	child:= tree.Root
+	child.AddParent(nodeToAdd)
+	assert.Equal(t, nodeToAdd.Entries[0].key ,tree.Root.Entries[0].key)
+
+	//check invalid case
+	tree.Get(tree.Root, "u")
+	nodeToAdd2,_:= tree.NewNode(11,11, 0)
+	err := tree.Found.AddParent(nodeToAdd2)
+	assert.Equal(t, err, ErrChildNodeAlreadyHasParent)
+
+}
+
+func Test_RecurseThroughTreeAndDoCallback(t *testing.T){
 	tree,nodesToAdd:=setupAlphabetTree()
 	counter:=0
-	tree.RecursiveActionBasedOnCallback(tree.Root, func(node *Node) {
-		logger.Debug(node)
+	tree.RecurseThroughTreeAndDoCallback(tree.Root, func(node *Node) {
 		counter++
 	})
 	assert.Equal(t, nodesToAdd, counter)
