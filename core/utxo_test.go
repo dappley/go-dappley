@@ -193,7 +193,7 @@ func TestUtxoIndex_VerifyTransactionInput(t *testing.T) {
 	Txin = append(Txin, MockTxInputs()...)
 	utxo1 := UTXOutputStored{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
 	utxo2 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
-	utxoPool := utxoIndex{}
+	utxoPool := UtxoIndex{}
 	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2}
 
 	assert.NotNil(t, utxoPool.FindUtxoByTxinput(Txin[0]))

@@ -33,7 +33,7 @@ import (
 const UtxoMapKey = "utxo"
 const UtxoForkMapKey = "utxoFork"
 //map of key: wallet address, value: serialized map
-type utxoIndex map[string][]UTXOutputStored
+type UtxoIndex map[string][]UTXOutputStored
 
 type UTXOutputStored struct {
 	Value      *common.Amount
@@ -44,8 +44,8 @@ type UTXOutputStored struct {
 }
 
 
-func DeserializeUTXO(d []byte) *utxoIndex {
-	var utxo utxoIndex
+func DeserializeUTXO(d []byte) *UtxoIndex {
+	var utxo UtxoIndex
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&utxo)
 	if err != nil {
@@ -54,7 +54,7 @@ func DeserializeUTXO(d []byte) *utxoIndex {
 	return &utxo
 }
 
-func (utxo *utxoIndex) Serialize() []byte {
+func (utxo *UtxoIndex) Serialize() []byte {
 	var encoded bytes.Buffer
 
 	enc := gob.NewEncoder(&encoded)
@@ -71,17 +71,17 @@ func GetAddressUTXOs (mapkey string, pubkey []byte, db storage.Storage ) []UTXOu
 	return umap[string(pubkey)]
 }
 
-func GetStoredUtxoMap(db storage.Storage, mapkey string) utxoIndex {
+func GetStoredUtxoMap(db storage.Storage, mapkey string) UtxoIndex {
 	res, err := db.Get([]byte(mapkey))
 
 	if err != nil && strings.Contains(err.Error(), "Key is invalid") {
-		return utxoIndex{}
+		return UtxoIndex{}
 	}
 	umap := DeserializeUTXO(res)
 	return *umap
 }
 
-func initIndex() utxoIndex {
+func initIndex() UtxoIndex {
 	ins := map[string][]UTXOutputStored{}
 	return  ins
 }
@@ -131,7 +131,7 @@ func (blk Block) ConsumeSpendableOutputsAfterNewBlock ( mapkey string,db storage
 	utxoIndex.SetUtxoPoolInDb(db)
 }
 
-func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
+func (utxo *UtxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
 	for _,utxoArray := range *utxo {
 		for _, u := range utxoArray{
 			if bytes.Compare(u.Txid,txin.Txid)==0 && u.TxIndex==txin.Vout{
@@ -143,7 +143,7 @@ func (utxo *utxoIndex) FindUtxoByTxinput(txin TXInput) *UTXOutputStored{
 }
 
 //doesnt save to db
-func (utxo utxoIndex) RevertTxUtxos(blk Block, bc Blockchain, db storage.Storage){
+func (utxo UtxoIndex) RevertTxUtxos(blk Block, bc Blockchain, db storage.Storage){
 
 	for _, tx := range blk.GetTransactions() {
 		err1:= utxo.RemoveTxUtxosFromUtxoPool(*tx, db)
@@ -162,7 +162,7 @@ func (utxo utxoIndex) RevertTxUtxos(blk Block, bc Blockchain, db storage.Storage
 	}
 }
 
-func (utxo utxoIndex) RemoveTxUtxosFromUtxoPool(txs Transaction, db storage.Storage) error {
+func (utxo UtxoIndex) RemoveTxUtxosFromUtxoPool(txs Transaction, db storage.Storage) error {
 
 	for _,out := range txs.Vout{
 		value, pubKey :=  out.Value, string(out.PubKeyHash)
@@ -183,7 +183,7 @@ func (utxo utxoIndex) RemoveTxUtxosFromUtxoPool(txs Transaction, db storage.Stor
 	return nil
 }
 
-func (utxo utxoIndex) AddBackTxOutputToUtxoPool(tx Transaction, db storage.Storage, blk Block, bc Blockchain) error {
+func (utxo UtxoIndex) AddBackTxOutputToUtxoPool(tx Transaction, db storage.Storage, blk Block, bc Blockchain) error {
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOFromTxIn(vin, blk.GetHash(), bc)
 		if err == nil {
@@ -196,7 +196,7 @@ func (utxo utxoIndex) AddBackTxOutputToUtxoPool(tx Transaction, db storage.Stora
 }
 
 //set utxopool
-func (utxo utxoIndex) SetUtxoPoolInDb(db storage.Storage){
+func (utxo UtxoIndex) SetUtxoPoolInDb(db storage.Storage){
 	db.Put([]byte(UtxoMapKey), utxo.Serialize())
 }
 
@@ -211,8 +211,8 @@ func getTXOFromTxIn(in TXInput, blkStartIndex []byte, bc Blockchain) (TXOutput, 
 }
 
 
-func (utxo utxoIndex) DeepCopy (db storage.Storage) utxoIndex {
-	utxocopy := utxoIndex{}
+func (utxo UtxoIndex) DeepCopy (db storage.Storage) UtxoIndex {
+	utxocopy := UtxoIndex{}
 	copier.Copy(&utxo, &utxocopy)
 	if len(utxocopy)==0 {
 		utxocopy = initIndex()
@@ -221,7 +221,7 @@ func (utxo utxoIndex) DeepCopy (db storage.Storage) utxoIndex {
 }
 
 //input db and block hash, output utxoindex state @block hash block
-func (bc Blockchain) GetUtxoStateAtBlockHash(db storage.Storage, hash []byte) (utxoIndex, error ){
+func (bc Blockchain) GetUtxoStateAtBlockHash(db storage.Storage, hash []byte) (UtxoIndex, error ){
 	index := GetStoredUtxoMap(db, UtxoMapKey)
 	deepCopy := index.DeepCopy(db)
 	bci := bc.Iterator()
@@ -234,11 +234,11 @@ func (bc Blockchain) GetUtxoStateAtBlockHash(db storage.Storage, hash []byte) (u
 		}
 
 		if err != nil {
-			return utxoIndex{}, err
+			return UtxoIndex{}, err
 		}
 
 		if len(block.GetPrevHash()) == 0 {
-			return utxoIndex{}, ErrBlockDoesNotExist
+			return UtxoIndex{}, ErrBlockDoesNotExist
 		}
 
 		deepCopy.RevertTxUtxos(*block, bc, db)

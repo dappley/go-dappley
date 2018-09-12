@@ -116,8 +116,8 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 	defer bc.db.Close()
 	tailBlk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
-	bc.GetBlockPool().forkPool = GenerateMockFork(5,tailBlk)
-	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
+	bc.SetBlockPool(GenerateBlockPoolWithFakeFork(5, tailBlk))
+	forkTailBlockHash := bc.GetBlockPool().GetForkPool()[0].GetHash()
 
 	//add the fork to the end of the blockchain
 	bc.concatenateForkToBlockchain()

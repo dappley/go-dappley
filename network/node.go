@@ -54,7 +54,6 @@ type Node struct {
 	host      host.Host
 	info      *Peer
 	bc        *core.Blockchain
-	blks      []*core.Block
 	streams   map[peer.ID]*Stream
 	peerList  *PeerList
 	exitCh    chan bool
@@ -68,7 +67,6 @@ func NewNode(bc *core.Blockchain) *Node {
 	return &Node{nil,
 	nil,
 	bc,
-	nil,
 	make(map[peer.ID]*Stream, 10),
 	NewPeerList(nil),
 	make(chan bool, 1),
@@ -215,7 +213,6 @@ func (n *Node) streamHandler(s net.Stream) {
 	}
 }
 
-func (n *Node) GetBlocks() []*core.Block { return n.blks }
 
 func (n *Node) GetInfo() *Peer { return n.info }
 
@@ -264,7 +261,10 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("sent block: ", string(block.GetHash()), ", ", string(block.GetPrevHash()), ", ", block.GetTimestamp(), ", ", block.GetHeight())
+	logger.Debug("Node: BroadcastBlock: Hash:", string(block.GetHash()),
+		", PrevHash: ", string(block.GetPrevHash()),
+		", TimeStamp:", block.GetTimestamp(),
+		", Height:", block.GetHeight())
 	data,err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err!=nil {
 		return err
@@ -337,9 +337,6 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
 	n.bc.GetBlockPool().Push(block, pid)
-	//TODO: Delete this line. This line is solely for testing
-	n.blks = append(n.blks, block)
-
 }
 
 
@@ -368,8 +365,6 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID){
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("asdsd2391",blk.GetHeight())
-	logger.Debug("received block: ", string(blk.GetHash()), ", ", string(blk.GetPrevHash()), ", ", blk.GetTimestamp(), ", ", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }

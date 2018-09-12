@@ -116,7 +116,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 }
 
 //the first item is the tail of the fork
-func GenerateMockFork(size int, parent *Block) []*Block {
+func GenerateBlockPoolWithFakeFork(size int, parent *Block) *BlockPool {
 	fork := []*Block{}
 	b := NewBlock(nil, parent)
 	b.SetHash(b.CalculateHash())
@@ -127,7 +127,10 @@ func GenerateMockFork(size int, parent *Block) []*Block {
 		b.SetHash(b.CalculateHash())
 		fork = append([]*Block{b}, fork...)
 	}
-	return fork
+
+	bp := NewBlockPool(100)
+	bp.forkPool = fork
+	return bp
 }
 
 //the first item is the tail of the fork
@@ -146,7 +149,7 @@ func GenerateMockForkWithValidTx(size int, parent *Block) []*Block {
 }
 
 //the first item is the tail of the fork
-func GenerateMockForkWithInvalidTx(size int, parent *Block) []*Block {
+func GenerateBlockPoolwithFakeForkWithInvalidTx(size int, parent *Block) *BlockPool {
 	fork := []*Block{}
 	b := NewBlock(nil, parent)
 	b.SetHash(b.CalculateHash())
@@ -157,7 +160,9 @@ func GenerateMockForkWithInvalidTx(size int, parent *Block) []*Block {
 		b.SetHash(b.CalculateHash())
 		fork = append([]*Block{b}, fork...)
 	}
-	return fork
+	bp := NewBlockPool(100)
+	bp.forkPool = fork
+	return bp
 }
 
 func MockTransaction() *Transaction {
