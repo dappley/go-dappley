@@ -97,9 +97,9 @@ func main() {
 
 func initConsensus(conf *config.Config) (core.Consensus, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewProofOfWork()
+	conss := consensus.NewDpos()
 	dynasty := consensus.NewDynastyWithProducers(conf.GetDynastyConfig().GetProducers())
-	//conss.SetDynasty(dynasty)
+	conss.SetDynasty(dynasty)
 	conss.SetTargetBit(18)
 	return conss, dynasty
 }
