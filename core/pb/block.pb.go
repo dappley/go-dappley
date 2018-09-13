@@ -3,9 +3,11 @@
 
 package corepb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import "github.com/golang/protobuf/proto"
+import "fmt"
+import (
+	"math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -77,7 +79,8 @@ type BlockHeader struct {
 	Prevhash             []byte   `protobuf:"bytes,2,opt,name=Prevhash,proto3" json:"Prevhash,omitempty"`
 	Nonce                int64    `protobuf:"varint,3,opt,name=Nonce,proto3" json:"Nonce,omitempty"`
 	Timestamp            int64    `protobuf:"varint,4,opt,name=Timestamp,proto3" json:"Timestamp,omitempty"`
-	Height               uint64   `protobuf:"varint,5,opt,name=height,proto3" json:"height,omitempty"`
+	Sign                 []byte   `protobuf:"bytes,5,opt,name=Sign,proto3" json:"Sign,omitempty"`
+	Height               uint64   `protobuf:"varint,6,opt,name=height,proto3" json:"height,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -110,6 +113,13 @@ var xxx_messageInfo_BlockHeader proto.InternalMessageInfo
 func (m *BlockHeader) GetHash() []byte {
 	if m != nil {
 		return m.Hash
+	}
+	return nil
+}
+
+func (m *BlockHeader) GetSign() []byte {
+	if m != nil {
+		return m.Sign
 	}
 	return nil
 }

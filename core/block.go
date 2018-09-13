@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"log"
 	"time"
+	logger "github.com/sirupsen/logrus"
 
 	"math/big"
 	"reflect"
@@ -31,13 +32,17 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"encoding/hex"
 )
+
 
 type BlockHeader struct {
 	hash      Hash
 	prevHash  Hash
 	nonce     int64
 	timestamp int64
+	sign Hash
 	height       uint64
 }
 
@@ -67,6 +72,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: time.Now().Unix(),
+			sign: nil,
 			height: height,
 		},
 		transactions: transactions,
@@ -95,6 +101,7 @@ func (b *Block) Serialize() []byte {
 			PrevHash:  b.header.prevHash,
 			Nonce:     b.header.nonce,
 			Timestamp: b.header.timestamp,
+			Sign: b.header.sign,
 			Height: b.header.height,
 		},
 		Transactions: b.transactions,
@@ -129,6 +136,7 @@ func Deserialize(d []byte) *Block {
 			prevHash:  bs.Header.PrevHash,
 			nonce:     bs.Header.Nonce,
 			timestamp: bs.Header.Timestamp,
+			sign: bs.Header.Sign,
 			height:	   bs.Header.Height,
 		},
 		transactions: bs.Transactions,
@@ -142,6 +150,11 @@ func (b *Block) SetHash(hash Hash) {
 func (b *Block) GetHash() Hash {
 	return b.header.hash
 }
+
+func (b *Block) GetSign() Hash {
+	return b.header.sign
+}
+
 
 func (b *Block) GetHeight() uint64 {
 	return b.header.height
@@ -203,6 +216,7 @@ func (bh *BlockHeader) ToProto() proto.Message {
 		Prevhash:  bh.prevHash,
 		Nonce:     bh.nonce,
 		Timestamp: bh.timestamp,
+		Sign: bh.sign,
 		Height: bh.height,
 
 	}
@@ -213,16 +227,31 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
 	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
+	bh.sign =  pb.(*corepb.BlockHeader).Sign
 	bh.height =  pb.(*corepb.BlockHeader).Height
 }
 
 func (b *Block) CalculateHash() Hash {
-	return b.CalculateHashWithNonce(b.GetNonce())
+	return b.CalculateHashWithoutNonce()
+}
+
+func (b *Block) CalculateHashWithoutNonce() Hash {
+	var hashInt big.Int
+	data := bytes.Join(
+		[][]byte{
+			b.GetPrevHash(),
+			b.HashTransactions(),
+			util.IntToHex(b.GetTimestamp()),
+		},
+		[]byte{},
+	)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+	return hashInt.Bytes()
 }
 
 func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 	var hashInt big.Int
-
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -236,6 +265,27 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 	hash := sha256.Sum256(data)
 	hashInt.SetBytes(hash[:])
 	return hashInt.Bytes()
+}
+
+func (b *Block) SignBlock(key string, data []byte) bool {
+	if len(key) <= 0 {
+		logger.Warn("Block: key length not enough for signature!")
+		return false
+	}
+	privData, err := hex.DecodeString(key)
+
+	if err != nil {
+		logger.Warn("Block: private key decode error for signature!")
+		return false
+	}
+	signature, err := secp256k1.Sign(data, privData)
+	if err != nil {
+		logger.Warn("Block: signature caculation error!")
+		return false
+	}
+
+	b.header.sign = signature
+	return true
 }
 
 func (b *Block) VerifyHash() bool {
@@ -266,10 +316,6 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool{
 }
 
 func IsParentBlock(parentBlk, childBlk *Block) bool{
-
-	//logger.Debug("is parent block?" , IsParentBlockHash(parentBlk, childBlk) , IsParentBlockHeight(parentBlk, childBlk))
-	//logger.Debug("parent block height: " , parentBlk.GetHeight() , "child block height: ", childBlk.GetHeight())
-
 	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
 }
 
