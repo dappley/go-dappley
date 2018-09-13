@@ -47,10 +47,11 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 }
 
 //create a wallet
-func CreateWallet() (client.Wallet, error) {
-	wallets, err := client.NewWallets()
-	wallet := wallets.CreateWallet()
-	wallets.SaveWalletToFile()
+func CreateWallet() (*client.Wallet, error) {
+	wm,err := client.LoadWalletFromFile()
+	wallet := client.NewWallet()
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile()
 
 	return wallet, err
 }
@@ -73,7 +74,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
-	wallets, err := client.NewWallets()
+	wallets, err := client.LoadWalletFromFile()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func GetAllAddresses() ([]core.Address, error) {
 	return addresses, err
 }
 
-func Send(senderWallet client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain) error {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain) error {
 	if !senderWallet.GetAddress().ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
@@ -114,12 +115,7 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 		return ErrInvalidAmount
 	}
 
-	wallets, err := client.NewWallets()
-	if err != nil {
-		return err
-	}
-	wallet := wallets.GetKeyPairByAddress(address)
-	tx, err := core.NewUTXOTransactionforAddBalance(address, amount, wallet, bc)
+	tx, err := core.NewUTXOTransactionforAddBalance(address, amount)
 
 	if err != nil {
 		return err
@@ -131,30 +127,3 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 
 }
 
-//delete wallet
-
-func DeleteWallet(key *core.KeyPair) error {
-	wallets, err := client.NewWallets()
-	if err != nil {
-		return err
-	}
-	err = wallets.DeleteWallet(key)
-	if err != nil {
-		return err
-	}
-	wallets.SaveWalletToFile()
-	return err
-}
-
-func DeleteWallets() error {
-	wallets, err := client.NewWallets()
-	if err != nil {
-		return err
-	}
-	err = wallets.DeleteWallets()
-	if err != nil {
-		return err
-	}
-	wallets.SaveWalletToFile()
-	return err
-}

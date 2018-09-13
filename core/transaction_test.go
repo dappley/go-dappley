@@ -26,7 +26,6 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"crypto/ecdsa"
 )
 
 func getAoB(length int64) []byte {
@@ -187,10 +186,6 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 
 func TestNewUTXOTransactionforAddBalance(t *testing.T) {
 	receiverAddr := "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"
-	receiverKeyPair := 	KeyPair{
-		PrivateKey: ecdsa.PrivateKey{},
-		PublicKey: []uint8{0x5c, 0x7b, 0x4e, 0x64, 0x19, 0x37, 0xaf, 0x2a, 0x9c, 0x56, 0x84, 0x3, 0x6e, 0x13, 0x3d, 0x92, 0x4, 0x94, 0x32, 0x23, 0xea, 0xe3, 0xcb, 0x6d, 0xf8, 0xb5, 0xf2, 0x92, 0x11, 0x61, 0xd, 0x9, 0xc1, 0x5b, 0x56, 0x17, 0x1d, 0x91, 0xf9, 0x53, 0x76, 0x1a, 0xce, 0x7a, 0x5c, 0xae, 0xe1, 0xc5, 0xa3, 0xbb, 0xcb, 0xd2, 0x5b, 0x6f, 0xf3, 0x4e, 0x1, 0x3b, 0xc1, 0xf8, 0x39, 0xe, 0x90, 0x6},
-	}
 	testCases := []struct {
 		name string
 		amount	*common.Amount
@@ -203,7 +198,7 @@ func TestNewUTXOTransactionforAddBalance(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tx, err := NewUTXOTransactionforAddBalance(Address{receiverAddr}, tc.amount, receiverKeyPair, &Blockchain{})
+			tx, err := NewUTXOTransactionforAddBalance(Address{receiverAddr}, tc.amount)
 			if tc.expectedErr == nil {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.tx.Vin, tx.Vin)

@@ -52,7 +52,7 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
 
-	localWallets, err := client.NewWallets()
+	localWallets, err := client.LoadWalletFromFile()
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
 	}

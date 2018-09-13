@@ -21,7 +21,6 @@ package rpc
 import (
 	"fmt"
 	"github.com/dappley/go-dappley/common"
-	"os"
 	"testing"
 	"time"
 	"google.golang.org/grpc"
@@ -77,7 +76,7 @@ func TestRpcSend(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	os.RemoveAll(client.WalletFile)
+	client.RemoveWalletFile()
 
 	// Create wallets
 	senderWallet, err := logic.CreateWallet()
@@ -129,6 +128,8 @@ func TestRpcSend(t *testing.T) {
 	for bc.GetMaxHeight() < 1 {}
 	pow.Stop()
 
+	time.Sleep(100 * time.Millisecond)
+
 	// Check balance
 	senderBalance, err := logic.GetBalance(senderWallet.GetAddress(), store)
 	assert.Nil(t, err)
@@ -137,5 +138,5 @@ func TestRpcSend(t *testing.T) {
 	assert.Equal(t, common.NewAmount(13), senderBalance) // mining reward (10) + remaining (10-7)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
-	os.RemoveAll(client.WalletFile)
+	client.RemoveWalletFile()
 }

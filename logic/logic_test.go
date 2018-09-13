@@ -137,7 +137,7 @@ func TestGetAllAddresses(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//create 10 more addresses
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 2; i++ {
 		//create a wallet address
 		wallet, err = CreateWallet()
 		addr = wallet.GetAddress()
@@ -242,25 +242,6 @@ func TestSend(t *testing.T) {
 
 		})
 	}
-}
-
-func TestDeleteWallets(t *testing.T) {
-	//create wallets address
-	addr1, err := CreateWallet()
-	assert.NotEmpty(t, addr1)
-
-	addr2, err := CreateWallet()
-	assert.NotEmpty(t, addr2)
-
-	addr3, err := CreateWallet()
-	assert.NotEmpty(t, addr3)
-
-	err = DeleteWallets()
-	assert.Nil(t, err)
-
-	list, err := GetAllAddresses()
-	assert.Nil(t, err)
-	assert.Empty(t, list)
 }
 
 //test send to invalid address
@@ -722,5 +703,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(client.WalletFile)
+	client.RemoveWalletFile()
 }
