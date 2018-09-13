@@ -19,21 +19,22 @@
 package main
 
 import (
+	"flag"
+	"log"
+
+	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
-	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/config"
-	"flag"
-	"github.com/dappley/go-dappley/storage"
-	"log"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
+	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
-    genesisAddr 	= "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	configFilePath 	= "conf/default.conf"
+	genesisAddr     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+	configFilePath  = "conf/default.conf"
 	genesisFilePath = "conf/genesis.conf"
 	defaultPassword = "password"
 )
@@ -48,13 +49,13 @@ func main() {
 
 	//load genesis file information
 	genesisConf := config.LoadConfigFromFile(genesisFilePath)
-	if genesisConf== nil{
+	if genesisConf == nil {
 		logger.Error("ERROR: Cannot load genesis configurations from file!Exiting...")
 		return
 	}
 	//load config file information
 	conf := config.LoadConfigFromFile(filePath)
-	if conf== nil{
+	if conf == nil {
 		logger.Error("ERROR: Cannot load configurations from file!Exiting...")
 		return
 	}
@@ -65,21 +66,21 @@ func main() {
 
 	//creat blockchain
 	conss, _ := initConsensus(genesisConf)
-	bc,err := core.GetBlockchain(db,conss)
-	if err !=nil {
+	bc, err := core.GetBlockchain(db, conss)
+	if err != nil {
 		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
 		if err != nil {
 			log.Panic(err)
 		}
 	}
 
-	node, err := initNode(conf,bc)
-	if err!= nil{
+	node, err := initNode(conf, bc)
+	if err != nil {
 		return
 	}
 
 	//start rpc server
-	server := rpc.NewGrpcServer(node,defaultPassword)
+	server := rpc.NewGrpcServer(node, defaultPassword)
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 
@@ -92,25 +93,25 @@ func main() {
 	conss.Start()
 	defer conss.Stop()
 
-	select{}
+	select {}
 }
 
-func initConsensus(conf *config.Config) (core.Consensus, *consensus.Dynasty){
+func initConsensus(conf *config.Config) (core.Consensus, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewDpos()
+	conss := consensus.NewProofOfWork()
 	dynasty := consensus.NewDynastyWithProducers(conf.GetDynastyConfig().GetProducers())
-	conss.SetDynasty(dynasty)
-	conss.SetTargetBit(0)
+	//conss.SetDynasty(dynasty)
+	conss.SetTargetBit(18)
 	return conss, dynasty
 }
 
-func initNode(conf *config.Config,bc *core.Blockchain) (*network.Node, error){
+func initNode(conf *config.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
 	node := network.NewNode(bc)
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetListeningPort()
 	err := node.Start(int(port))
-	if err!=nil {
+	if err != nil {
 		logger.Error(err)
 		logger.Error("ERROR: Invalid Port!Exiting...")
 		return nil, err
@@ -119,5 +120,5 @@ func initNode(conf *config.Config,bc *core.Blockchain) (*network.Node, error){
 	if seed != "" {
 		node.AddStreamByString(seed)
 	}
-	return node,nil
+	return node, nil
 }

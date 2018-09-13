@@ -20,12 +20,12 @@ package logic
 
 import (
 	"errors"
+
 	"github.com/dappley/go-dappley/common"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/util"
 )
 
 var (
@@ -41,7 +41,7 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 		return nil, ErrInvalidAddress
 	}
 
-	bc:= core.CreateBlockchain(address, db, consensus)
+	bc := core.CreateBlockchain(address, db, consensus)
 
 	return bc, nil
 }
@@ -57,27 +57,17 @@ func CreateWallet() (client.Wallet, error) {
 
 //get balance
 func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
-	if !address.ValidateAddress() {
+	pubKeyHash, valid := address.GetPubKeyHash()
+	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
-	}
-	//inject db here
-
-	bc, err := core.GetBlockchain(db,nil )
-	if err != nil {
-		return common.NewAmount(0), err
 	}
 
 	balance := common.NewAmount(0)
-	pubKeyHash := util.Base58Decode([]byte(address.Address))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	UTXOs, err := bc.FindUTXO(pubKeyHash)
-	if err != nil {
-		return balance, err
-	}
-
-	for _, out := range UTXOs {
+	utxos := core.GetAddressUTXOs(core.UtxoMapKey, pubKeyHash, db)
+	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}
+
 	return balance, nil
 }
 
@@ -111,12 +101,11 @@ func Send(senderWallet client.Wallet, to core.Address, amount *common.Amount, ti
 		return err
 	}
 
-
 	return err
 }
 
 //add balance
-func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain) (error) {
+func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain) error {
 	if !address.ValidateAddress() {
 		return ErrInvalidAddress
 	}
@@ -141,7 +130,6 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 	return err
 
 }
-
 
 //delete wallet
 

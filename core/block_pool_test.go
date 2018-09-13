@@ -113,7 +113,7 @@ func TestBlockPool_ForkPoolLen(t *testing.T) {
 	bp.forkPool = append(bp.forkPool, blk1)
 	bp.forkPool = append(bp.forkPool, blk2)
 
-	assert.Equal(t,2, bp.forkPoolLen())
+	assert.Equal(t,2, bp.ForkPoolLen())
 }
 
 func TestBlockPool_GetForkPoolHeadBlk(t *testing.T) {

@@ -19,10 +19,10 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/crypto/byteutils"
+	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
-	"github.com/hashicorp/golang-lru"
-	"github.com/dappley/go-dappley/crypto/byteutils"
 )
 
 type BlockRequestPars struct {
@@ -40,7 +40,7 @@ type BlockPool struct {
 	size           int
 	bc             *Blockchain
 	forkPool       []*Block
-	cache		*lru.Cache
+	cache          *lru.Cache
 }
 
 type linkedBlock struct {
@@ -60,7 +60,7 @@ func NewBlockPool(size int) *BlockPool {
 		bc:             nil,
 		forkPool:       []*Block{},
 	}
-	pool.cache,_ = lru.NewWithEvict(size, func(key interface{}, value interface{}) {
+	pool.cache, _ = lru.NewWithEvict(size, func(key interface{}, value interface{}) {
 		treenode := value.(*Block)
 		if treenode != nil {
 			//remove treenode
@@ -77,7 +77,9 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
 }
 
-func (pool *BlockPool) forkPoolLen() int {
+func (pool *BlockPool) GetForkPool() []*Block { return pool.forkPool }
+
+func (pool *BlockPool) ForkPoolLen() int {
 	return len(pool.forkPool)
 }
 
@@ -106,7 +108,7 @@ func (pool *BlockPool) ReInitializeForkPool(blk *Block) {
 }
 
 func (pool *BlockPool) IsParentOfFork(blk *Block) bool {
-	if blk == nil || pool.forkPoolLen() == 0 {
+	if blk == nil || pool.ForkPoolLen() == 0 {
 		return false
 	}
 
@@ -114,7 +116,7 @@ func (pool *BlockPool) IsParentOfFork(blk *Block) bool {
 }
 
 func (pool *BlockPool) IsTailOfFork(blk *Block) bool {
-	if blk == nil || pool.forkPoolLen() == 0 {
+	if blk == nil || pool.ForkPoolLen() == 0 {
 		return false
 	}
 
@@ -126,11 +128,13 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 }
 
 //Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo utxoIndex) bool {
-	for i := pool.forkPoolLen() - 1; i >= 0; i-- {
+func (pool *BlockPool) VerifyTransactions(utxo UtxoIndex) bool {
+	for i := pool.ForkPoolLen() - 1; i >= 0; i-- {
+		logger.Info("Start Verify")
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
+		logger.Info("Verifyed a block. Height: ", i)
 		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.GetDb())
 	}
 	return true
@@ -142,11 +146,11 @@ func (pool *BlockPool) updateForkFromTail(blk *Block) bool {
 	if isTail {
 		//only update if the block is higher than the current blockchain
 		if pool.bc.IsHigherThanBlockchain(blk) {
-			logger.Debug("GetBlockPool: Add block to tail")
+			logger.Debug("BlockPool: Add block to tail")
 			pool.addTailToForkPool(blk)
 		} else {
 			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("GetBlockPool: Fork height too low. Dump the fork...")
+			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -160,11 +164,11 @@ func (pool *BlockPool) addParentToFork(blk *Block) bool {
 	if isParent {
 		//check if fork's max height is still higher than the blockchain
 		if pool.GetForkPoolTailBlk().GetHeight() > pool.bc.GetMaxHeight() {
-			logger.Debug("GetBlockPool: Add block to head")
+			logger.Debug("BlockPool: Add block to head")
 			pool.addParentToForkPool(blk)
 		} else {
 			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("GetBlockPool: Fork height too low. Dump the fork...")
+			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
 			pool.ResetForkPool()
 		}
 	}
@@ -183,10 +187,10 @@ func (pool *BlockPool) IsHigherThanFork(block *Block) bool {
 }
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {
-	logger.Debug("GetBlockPool: Has received a new block")
+	logger.Debug("BlockPool: Has received a new block")
 
 	if !block.VerifyHash() {
-		logger.Info("GetBlockPool: Verify Hash failed!")
+		logger.Info("BlockPool: Verify Hash failed!")
 		return
 	}
 
@@ -196,23 +200,24 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	}
 	//TODO: Verify double spending transactions in the same block
 
-	logger.Debug("GetBlockPool: Block has been verified")
+	logger.Debug("BlockPool: Block has been verified")
 	pool.handleRcvdBlock(block, pid)
 }
 
 func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 
-	logger.Debug("GetBlockPool: Received a new block.Sender id:", sender.String())
+	logger.Debug("BlockPool: Received a new block.Sender id:", sender.String())
 	if pool.bc.GetConsensus().Validate(blk) {
 		tailBlock, err := pool.bc.GetTailBlock()
 		if err != nil {
-			logger.Warn("GetBlockPool: Get Tail Block failed! Err:", err)
+			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
 		}
-		if IsParentBlock(tailBlock, blk) || pool.GetBlockchain().GetMaxHeight() == 0{
+		if IsParentBlock(tailBlock, blk) || pool.GetBlockchain().GetMaxHeight() == 0 {
 			logger.Info("GetBlockPool: Add received block to blockchain. Sender id:", sender.String())
 			pool.bc.GetConsensus().StartNewBlockMinting()
 			pool.bc.AddBlockToTail(blk)
 			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {
+				logger.Info("BlockPool: Start merge process")
 				pool.bc.MergeFork()
 			}
 			//TODO: Might want to relay the block to other nodes
@@ -220,7 +225,7 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 			pool.updateFork(blk, sender)
 		}
 	} else {
-		logger.Warn("GetBlockPool: Consensus validity check fails.Sender id:", sender.String())
+		logger.Warn("BlockPool: Consensus validity check fails.Sender id:", sender.String())
 	}
 }
 
@@ -235,7 +240,7 @@ func (pool *BlockPool) updateFork(block *Block, pid peer.ID) {
 	if pool.attemptToStartNewFork(block, pid) {
 		return
 	}
-	logger.Debug("GetBlockPool: Block dumped")
+	logger.Debug("BlockPool: Block dumped")
 }
 
 func (pool *BlockPool) attemptToAddTailToFork(newblock *Block) bool {

@@ -116,8 +116,8 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 	defer bc.db.Close()
 	tailBlk,err:= bc.GetTailBlock()
 	assert.Nil(t, err)
-	bc.GetBlockPool().forkPool = GenerateMockFork(5,tailBlk)
-	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
+	bc.SetBlockPool(GenerateBlockPoolWithFakeFork(5, tailBlk))
+	forkTailBlockHash := bc.GetBlockPool().GetForkPool()[0].GetHash()
 
 	//add the fork to the end of the blockchain
 	bc.concatenateForkToBlockchain()
@@ -126,59 +126,4 @@ func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 	tailBlkHash := bc.GetTailBlockHash()
 	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
 
-}
-
-func TestBlockchain_MergeForkCoinbaseTxOnly(t *testing.T) {
-	//mock a blockchain and a fork whose parent is the tail of the blockchain
-	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
-	defer bc.db.Close()
-	blk,err:= bc.GetTailBlock()
-	assert.Nil(t, err)
-
-	//find the hash at height 3 (5-2)
-	for i:=0; i<2; i++{
-		blk,err = bc.GetBlockByHash(blk.GetPrevHash())
-		assert.Nil(t,err)
-	}
-
-	//generate a fork that is forked from height 3
-	bc.GetBlockPool().forkPool = GenerateMockFork(5,blk)
-
-	//get the last fork hash
-	forkTailBlockHash := bc.GetBlockPool().forkPool[0].GetHash()
-
-	bc.MergeFork()
-
-	//the highest block should have the height of 8 -> 3+5
-	assert.Equal(t, uint64(8), bc.GetMaxHeight())
-	tailBlkHash := bc.GetTailBlockHash()
-	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
-
-}
-
-func TestBlockchain_MergeForkInvalidTransaction(t *testing.T) {
-	//mock a blockchain and a fork whose parent is the tail of the blockchain
-	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
-	defer bc.db.Close()
-	blk,err:= bc.GetTailBlock()
-	assert.Nil(t, err)
-
-	//find the hash at height 3 (5-2)
-	for i:=0; i<2; i++{
-		blk,err = bc.GetBlockByHash(blk.GetPrevHash())
-		assert.Nil(t,err)
-	}
-
-	tailBlkHash := bc.GetTailBlockHash()
-
-	//generate a fork that is forked from height 3
-	bc.GetBlockPool().forkPool = GenerateMockForkWithInvalidTx(5,blk)
-
-	//the merge should fail since the transactions are invalid
-	bc.MergeFork()
-
-	//the highest block should have the height of 5
-	assert.Equal(t, uint64(5), bc.GetMaxHeight())
-	newTailBlkHash := bc.GetTailBlockHash()
-	assert.ElementsMatch(t,tailBlkHash,newTailBlkHash)
 }

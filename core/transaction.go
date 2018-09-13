@@ -144,7 +144,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 //return true if the transaction is verified
-func (tx *Transaction) Verify(utxo utxoIndex) bool {
+func (tx *Transaction) Verify(utxo UtxoIndex) bool {
 
 	if tx.IsCoinbase() {
 		return true
@@ -307,7 +307,7 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount, keyPair 
 }
 
 //Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool utxoIndex) map[string]TXOutput{
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UtxoIndex) map[string]TXOutput{
 	res := make(map[string]TXOutput)
 	for _,vin := range tx.Vin{
 		utxo := utxoPool.FindUtxoByTxinput(vin)
