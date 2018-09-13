@@ -33,23 +33,29 @@ const WalletFile = "../bin/Wallets.dat"
 const walletConfigFilePath = "../client/wallet.conf"
 
 type WalletManager struct {
-	Wallets  []*Wallet
-	filePath string
+	Wallets  	[]*Wallet
+	fileLoader 	storage.FileStorage
 }
 
-func LoadWalletFromFile() (*WalletManager, error) {
-
-	wm := &WalletManager{}
-
+func GetWalletFilePath() string{
 	conf := LoadWalletConfigFromFile(walletConfigFilePath)
+	if conf == nil {
+		return ""
+	}
+	return conf.GetFilePath()
+}
 
-	wm.filePath = conf.GetFilePath()
+func NewWalletManager(fileLoader storage.FileStorage) (*WalletManager, error) {
 
-	fileContent, err := storage.GetFileConnection(wm.filePath)
+	wm := &WalletManager{
+		fileLoader: fileLoader,
+	}
+
+	fileContent, err := wm.fileLoader.GetFileConnection()
 
 	if err != nil {
 		wm.SaveWalletToFile()
-		fileContent, err = storage.GetFileConnection(wm.filePath)
+		fileContent, err = wm.fileLoader.GetFileConnection()
 	}
 	var wallets WalletManager
 
@@ -77,7 +83,7 @@ func (wm *WalletManager) SaveWalletToFile() {
 		logger.Error("WalletManager: save Wallets to file failed!")
 		logger.Error(err)
 	}
-	storage.SaveToFile(wm.filePath, content)
+	wm.fileLoader.SaveToFile(content)
 }
 
 func RemoveWalletFile(){

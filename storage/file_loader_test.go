@@ -23,16 +23,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"os"
 )
 
 const testFile = "../bin/test.dat"
 
-func TestSaveToFile(t *testing.T) {
-	SaveToFile(testFile, bytes.Buffer{})
+func TestFileLoader_SaveToFile(t *testing.T) {
+	os.Remove(testFile)
+	fl := NewFileLoader(testFile)
+	expected := bytes.NewBufferString("test")
+	fl.SaveToFile(*expected)
+	ret, err := fl.GetFileConnection()
+	assert.Nil(t, err)
+	assert.Equal(t, expected.Bytes(), ret)
 }
 
-func TestGetFileConnection(t *testing.T) {
-	fileContent, err := GetFileConnection(testFile)
-	assert.Nil(t, err)
-	assert.NotNil(t, fileContent)
-}

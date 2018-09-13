@@ -48,7 +48,8 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 
 //create a wallet
 func CreateWallet() (*client.Wallet, error) {
-	wm,err := client.LoadWalletFromFile()
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm,err := client.NewWalletManager(fl)
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
@@ -74,12 +75,13 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
-	wallets, err := client.LoadWalletFromFile()
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm,err := client.NewWalletManager(fl)
 	if err != nil {
 		return nil, err
 	}
 
-	addresses := wallets.GetAddresses()
+	addresses := wm.GetAddresses()
 
 	return addresses, err
 }

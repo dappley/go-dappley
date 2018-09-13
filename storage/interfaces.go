@@ -17,10 +17,17 @@
 //
 package storage
 
+import "bytes"
+
 type Storage interface {
 	Close() error
 
 	Get(key []byte) ([]byte, error)
 
 	Put(key []byte, val []byte)
+}
+
+type FileStorage interface {
+	GetFileConnection() ([]byte, error)
+	SaveToFile(buffer bytes.Buffer)
 }
