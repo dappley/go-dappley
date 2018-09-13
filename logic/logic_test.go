@@ -479,6 +479,11 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 
 const testport_msg_relay_port = 21202
 func TestBlockMsgWithDpos(t *testing.T) {
+	const (
+		timeBetweenBlock= 2
+		dposRounds= 3
+		bufferTime= 1
+	)
 
 	miners := []string{
 		"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
@@ -489,7 +494,7 @@ func TestBlockMsgWithDpos(t *testing.T) {
 		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
 	dynasty := consensus.NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(5)
+	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
 	dynasty.SetMaxProducers(len(miners))
 	dposArray := []*consensus.Dpos{}
 	var firstNode *network.Node
@@ -517,7 +522,7 @@ func TestBlockMsgWithDpos(t *testing.T) {
 	}
 
 
-	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*2+1))
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
@@ -526,7 +531,7 @@ func TestBlockMsgWithDpos(t *testing.T) {
 	time.Sleep(time.Second)
 
 	for i := 0; i < len(miners); i++ {
-		assert.True(t, dposArray[i].GetBlockChain().GetMaxHeight() >= 3)
+		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), dposArray[i].GetBlockChain().GetMaxHeight())
 	}
 }
 

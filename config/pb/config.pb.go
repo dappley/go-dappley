@@ -112,7 +112,7 @@ func (m *DynastyConfig) GetProducers() []string {
 
 type ConsensusConfig struct {
 	MinerAddr            string   `protobuf:"bytes,1,opt,name=minerAddr,proto3" json:"minerAddr,omitempty"`
-	PrivKey            string   `protobuf:"bytes,1,opt,name=privKey,proto3" json:"privKey,omitempty"`
+	PrivKey            string   `protobuf:"bytes,2,opt,name=privKey,proto3" json:"privKey,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`

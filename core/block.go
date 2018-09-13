@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"log"
 	"time"
+	logger "github.com/sirupsen/logrus"
 
 	"math/big"
 	"reflect"
@@ -268,15 +269,18 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 
 func (b *Block) SignBlock(key string, data []byte) bool {
 	if len(key) <= 0 {
+		logger.Warn("Block: key length not enough for signature!")
 		return false
 	}
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
+		logger.Warn("Block: private key decode error for signature!")
 		return false
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
+		logger.Warn("Block: signature caculation error!")
 		return false
 	}
 

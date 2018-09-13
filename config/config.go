@@ -26,13 +26,13 @@ import (
 	"io/ioutil"
 )
 
-type Config struct{
-	dynastyConfig	DynastyConfig
+type Config struct {
+	dynastyConfig   DynastyConfig
 	consensusConfig ConsensusConfig
-	nodeConfig 		NodeConfig
+	nodeConfig      NodeConfig
 }
 
-type DynastyConfig struct{
+type DynastyConfig struct {
 	producers []string
 }
 
@@ -41,20 +41,20 @@ type ConsensusConfig struct{
 	privKey string
 }
 
-type NodeConfig struct{
-	port 		uint32
-	seed 		string
-	dbPath 		string
-	rpcPort 	uint32
+type NodeConfig struct {
+	port    uint32
+	seed    string
+	dbPath  string
+	rpcPort uint32
 }
 
-type BlockchainConfig struct{
-	blockchainDBFile 		string
-	transactionPoolLimit 	int
+type BlockchainConfig struct {
+	blockchainDBFile     string
+	transactionPoolLimit int
 }
 
-func LoadConfigFromFile(filename string) *Config{
-	bytes, err:=ioutil.ReadFile(filename)
+func LoadConfigFromFile(filename string) *Config {
+	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		logger.Warn(errors.New("Could Not Read Config File"))
 		logger.Warn(err)
@@ -70,17 +70,17 @@ func LoadConfigFromFile(filename string) *Config{
 	}
 
 	dynastyConfig := DynastyConfig{}
-	if pb.DynastyConfig != nil{
+	if pb.DynastyConfig != nil {
 		dynastyConfig.producers = pb.DynastyConfig.Producers
 	}
 
 	consensusConfig := ConsensusConfig{}
-	if pb.ConsensusConfig != nil{
+	if pb.ConsensusConfig != nil {
 		consensusConfig.minerAddr = pb.ConsensusConfig.MinerAddr
 	}
 
 	nodeConfig := NodeConfig{}
-	if pb.NodeConfig != nil{
+	if pb.NodeConfig != nil {
 		nodeConfig.port = pb.NodeConfig.Port
 		nodeConfig.seed = pb.NodeConfig.Seed
 		nodeConfig.dbPath = pb.NodeConfig.DbPath
@@ -94,9 +94,9 @@ func LoadConfigFromFile(filename string) *Config{
 	}
 }
 
-func (config *Config) GetDynastyConfig() *DynastyConfig{return &config.dynastyConfig}
-func (config *Config) GetConsensusConfig() *ConsensusConfig{return &config.consensusConfig}
-func (config *Config) GetNodeConfig() *NodeConfig{return &config.nodeConfig}
+func (config *Config) GetDynastyConfig() *DynastyConfig     { return &config.dynastyConfig }
+func (config *Config) GetConsensusConfig() *ConsensusConfig { return &config.consensusConfig }
+func (config *Config) GetNodeConfig() *NodeConfig           { return &config.nodeConfig }
 
 func (dynastyConfig *DynastyConfig)GetProducers() []string{return dynastyConfig.producers}
 func (consensusConfig *ConsensusConfig)GetMinerAddr() string{return consensusConfig.minerAddr}
