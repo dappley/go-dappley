@@ -28,6 +28,6 @@ type Storage interface {
 }
 
 type FileStorage interface {
-	GetFileConnection() ([]byte, error)
+	ReadFromFile() ([]byte, error)
 	SaveToFile(buffer bytes.Buffer)
 }

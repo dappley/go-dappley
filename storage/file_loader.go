@@ -35,7 +35,7 @@ func NewFileLoader(filePath string) *FileLoader{
 	}
 }
 
-func (fl *FileLoader) GetFileConnection() ([]byte, error) {
+func (fl *FileLoader) ReadFromFile() ([]byte, error) {
 
 	if _, err := os.Stat(fl.filePath); os.IsNotExist(err) {
 		return nil, err

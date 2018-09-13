@@ -33,7 +33,7 @@ func TestFileLoader_SaveToFile(t *testing.T) {
 	fl := NewFileLoader(testFile)
 	expected := bytes.NewBufferString("test")
 	fl.SaveToFile(*expected)
-	ret, err := fl.GetFileConnection()
+	ret, err := fl.ReadFromFile()
 	assert.Nil(t, err)
 	assert.Equal(t, expected.Bytes(), ret)
 }

@@ -51,11 +51,11 @@ func NewWalletManager(fileLoader storage.FileStorage) (*WalletManager, error) {
 		fileLoader: fileLoader,
 	}
 
-	fileContent, err := wm.fileLoader.GetFileConnection()
+	fileContent, err := wm.fileLoader.ReadFromFile()
 
 	if err != nil {
 		wm.SaveWalletToFile()
-		fileContent, err = wm.fileLoader.GetFileConnection()
+		fileContent, err = wm.fileLoader.ReadFromFile()
 	}
 	var wallets WalletManager
 
