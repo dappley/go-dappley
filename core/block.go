@@ -50,14 +50,13 @@ type Block struct {
 	transactions []*Transaction
 }
 
-
 type Hash []byte
 
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 
 	var prevHash []byte
 	var height uint64
-	height = 0
+	height = 1
 	if parent != nil {
 		prevHash = parent.GetHash()
 		height = parent.GetHeight() + 1
