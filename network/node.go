@@ -24,6 +24,9 @@ import (
 	"math/rand"
 	"time"
 
+	"errors"
+	"strconv"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
@@ -35,56 +38,54 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-	"errors"
-	"strconv"
 )
 
 const (
-	protocalName        = "dappley/1.0.0"
-	syncPeerTimeLimitMs = 1000
+	protocalName           = "dappley/1.0.0"
+	syncPeerTimeLimitMs    = 1000
 	MaxMsgCountBeforeReset = 999
 )
 
 var (
-	ErrDapMsgNoCmd = errors.New("ERROR: Dappley message has no command input")
-	ErrIsInPeerlist= errors.New("ERROR: Peer already exists in peerlist")
+	ErrDapMsgNoCmd  = errors.New("ERROR: Dappley message has no command input")
+	ErrIsInPeerlist = errors.New("ERROR: Peer already exists in peerlist")
 )
 
 type Node struct {
-	host      host.Host
-	info      *Peer
-	bc        *core.Blockchain
-	streams   map[peer.ID]*Stream
-	peerList  *PeerList
-	exitCh    chan bool
-	recentlyRcvedDapMsgs map[string]bool
+	host                   host.Host
+	info                   *Peer
+	bc                     *core.Blockchain
+	streams                map[peer.ID]*Stream
+	peerList               *PeerList
+	exitCh                 chan bool
+	recentlyRcvedDapMsgs   map[string]bool
 	dapMsgBroadcastCounter *uint64
 }
 
 //create new Node instance
 func NewNode(bc *core.Blockchain) *Node {
-	placeholder:=uint64(0)
+	placeholder := uint64(0)
 	return &Node{nil,
-	nil,
-	bc,
-	make(map[peer.ID]*Stream, 10),
-	NewPeerList(nil),
-	make(chan bool, 1),
-	make(map[string]bool),
-	&placeholder,
+		nil,
+		bc,
+		make(map[peer.ID]*Stream, 10),
+		NewPeerList(nil),
+		make(chan bool, 1),
+		make(map[string]bool),
+		&placeholder,
 	}
 }
 
-func (n *Node) isNetworkRadiation (dapmsg DapMsg) bool {
-	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == true{
+func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
+	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == true {
 		return true
 	}
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain           {return n.bc}
-func (n *Node) GetPeerList() *PeerList                    {return n.peerList}
-func (n *Node) GetRecentlyRcvedDapMsgs() *map[string]bool {return &n.recentlyRcvedDapMsgs}
+func (n *Node) GetBlockchain() *core.Blockchain           { return n.bc }
+func (n *Node) GetPeerList() *PeerList                    { return n.peerList }
+func (n *Node) GetRecentlyRcvedDapMsgs() *map[string]bool { return &n.recentlyRcvedDapMsgs }
 
 func (n *Node) Start(listenPort int) error {
 
@@ -172,9 +173,9 @@ func (n *Node) AddStreamMultiAddr(targetFullAddr ma.Multiaddr) error {
 func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	// We have a peer ID and a targetAddr so we add it to the peerstore
 	// so LibP2P knows how to contact it
-	p:= Peer{peerid, targetAddr}
-	if n.peerList.IsInPeerlist(&p){
-		logger.Debug(targetAddr.String()+" is already in peerlist of " + n.GetPeerMultiaddr().String())
+	p := Peer{peerid, targetAddr}
+	if n.peerList.IsInPeerlist(&p) {
+		logger.Debug(targetAddr.String() + " is already in peerlist of " + n.GetPeerMultiaddr().String())
 		return ErrIsInPeerlist
 	}
 
@@ -199,7 +200,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
-	logger.Info( n.GetPeerMultiaddr()," Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
+	logger.Info(n.GetPeerMultiaddr(), " Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
 
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
@@ -213,7 +214,6 @@ func (n *Node) streamHandler(s net.Stream) {
 	}
 }
 
-
 func (n *Node) GetInfo() *Peer { return n.info }
 
 func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
@@ -225,13 +225,13 @@ func (n *Node) GetPeerMultiaddr() ma.Multiaddr {
 
 func (n *Node) GetPeerID() peer.ID { return n.info.peerid }
 
-func (n *Node) RelayDapMsg(dm DapMsg){
+func (n *Node) RelayDapMsg(dm DapMsg) {
 	msgData := dm.ToProto()
 	bytes, _ := proto.Marshal(msgData)
 	n.broadcast(bytes)
 }
 
-func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int) ([]byte, error){
+func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int) ([]byte, error) {
 	if cmd == "" {
 		return nil, ErrDapMsgNoCmd
 	}
@@ -239,7 +239,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	bytes := []byte{}
 	var err error
 
-	if msgData!=nil {
+	if msgData != nil {
 		//marshal the block to wire format
 		bytes, err = proto.Marshal(msgData)
 		if err != nil {
@@ -248,7 +248,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	}
 
 	//build a dappley message
-	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter,10), uniOrBroadcast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
 		logger.Debug("caching block msg with key ", dm.key)
 		n.cacheDapMsg(*dm)
@@ -261,12 +261,9 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("Node: BroadcastBlock: Hash:", string(block.GetHash()),
-		", PrevHash: ", string(block.GetPrevHash()),
-		", TimeStamp:", block.GetTimestamp(),
-		", Height:", block.GetHeight())
-	data,err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
-	if err!=nil {
+	logger.Debug("sent block: ", string(block.GetHash()), ", ", string(block.GetPrevHash()), ", ", block.GetTimestamp(), ", ", block.GetHeight())
+	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
+	if err != nil {
 		return err
 	}
 	n.broadcast(data)
@@ -274,8 +271,8 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 }
 
 func (n *Node) SyncPeersBroadcast() error {
-	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
-	if err!=nil {
+	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
+	if err != nil {
 		return err
 	}
 	n.broadcast(data)
@@ -283,27 +280,26 @@ func (n *Node) SyncPeersBroadcast() error {
 }
 
 func (n *Node) SyncPeersUnicast(pid peer.ID) error {
-	data,err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Unicast)
-	if err!=nil {
+	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Unicast)
+	if err != nil {
 		return err
 	}
 	n.unicast(data, pid)
 	return nil
 }
 
-
-func (n *Node) BroadcastTxCmd(txn *core.Transaction) error{
-	data,err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast)
-	if err!=nil {
+func (n *Node) BroadcastTxCmd(txn *core.Transaction) error {
+	data, err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast)
+	if err != nil {
 		return err
 	}
 	n.broadcast(data)
 	return nil
 }
 
-func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
-	data,err := n.prepareData(block.ToProto(), SyncBlock, Unicast)
-	if err!=nil {
+func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
+	data, err := n.prepareData(block.ToProto(), SyncBlock, Unicast)
+	if err != nil {
 		return err
 	}
 	n.unicast(data, pid)
@@ -313,7 +309,7 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error{
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 
-	dm := NewDapmsg(RequestBlock, hash, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter,10), Unicast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(RequestBlock, hash, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), Unicast, n.dapMsgBroadcastCounter)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -339,8 +335,7 @@ func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	n.bc.GetBlockPool().Push(block, pid)
 }
 
-
-func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block{
+func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 	//create a block proto
 	blockpb := &corepb.Block{}
 
@@ -357,15 +352,18 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block{
 
 	return block
 }
-func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID){
-	if(n.isNetworkRadiation(*dm)){
-		logger.Debug(n.GetPeerMultiaddr(), " (", n.info.peerid, ") already received ",dm.GetKey(), " before")
+func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
+	if n.isNetworkRadiation(*dm) {
+		logger.Debug(n.GetPeerMultiaddr(), " (", n.info.peerid, ") already received ", dm.GetKey(), " before")
 		return
 	}
+
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("received block: ", string(blk.GetHash()), ", with parent: ", string(blk.GetPrevHash()), ", timestamp: ", blk.GetTimestamp(), ", height: ", blk.GetHeight())
+	logger.Info("Node: Start synchronize", blk.GetHeight())
+	logger.Debug("asdsd2391", blk.GetHeight())
+	logger.Debug("received block: ", string(blk.GetHash()), ", ", string(blk.GetPrevHash()), ", ", blk.GetTimestamp(), ", ", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
@@ -374,13 +372,13 @@ func (n *Node) cacheDapMsg(dm DapMsg) {
 	n.recentlyRcvedDapMsgs[dm.GetKey()] = true
 }
 
-func (n *Node) addTxToPool(data []byte){
+func (n *Node) addTxToPool(data []byte) {
 
 	//create a block proto
 	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, txpb); err!=nil{
+	if err := proto.Unmarshal(data, txpb); err != nil {
 		logger.Warn(err)
 	}
 
@@ -394,8 +392,7 @@ func (n *Node) addTxToPool(data []byte){
 	n.bc.GetTxPool().StructPush(tx)
 }
 
-
-func (n *Node)addMultiPeers(data []byte){
+func (n *Node) addMultiPeers(data []byte) {
 
 	go func() {
 		//create a peerList proto
@@ -423,7 +420,7 @@ func (n *Node)addMultiPeers(data []byte){
 
 		//add streams for new peers
 		for _, p := range newpl.GetPeerlist() {
-			if !n.peerList.IsInPeerlist(p) && p.peerid!=n.info.peerid{
+			if !n.peerList.IsInPeerlist(p) && p.peerid != n.info.peerid {
 				n.AddStream(p.peerid, p.addr)
 			}
 		}

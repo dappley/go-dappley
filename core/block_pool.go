@@ -19,10 +19,10 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/crypto/byteutils"
+	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
-	"github.com/hashicorp/golang-lru"
-	"github.com/dappley/go-dappley/crypto/byteutils"
 )
 
 type BlockRequestPars struct {
@@ -40,7 +40,7 @@ type BlockPool struct {
 	size           int
 	bc             *Blockchain
 	forkPool       []*Block
-	cache		*lru.Cache
+	cache          *lru.Cache
 }
 
 type linkedBlock struct {
@@ -60,7 +60,7 @@ func NewBlockPool(size int) *BlockPool {
 		bc:             nil,
 		forkPool:       []*Block{},
 	}
-	pool.cache,_ = lru.NewWithEvict(size, func(key interface{}, value interface{}) {
+	pool.cache, _ = lru.NewWithEvict(size, func(key interface{}, value interface{}) {
 		treenode := value.(*Block)
 		if treenode != nil {
 			//remove treenode
@@ -77,7 +77,7 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
 }
 
-func (pool *BlockPool) GetForkPool() []*Block {return pool.forkPool}
+func (pool *BlockPool) GetForkPool() []*Block { return pool.forkPool }
 
 func (pool *BlockPool) ForkPoolLen() int {
 	return len(pool.forkPool)
@@ -130,9 +130,11 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 //Verify all transactions in a fork
 func (pool *BlockPool) VerifyTransactions(utxo UtxoIndex) bool {
 	for i := pool.ForkPoolLen() - 1; i >= 0; i-- {
+		logger.Info("Start Verify")
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
+		logger.Info("Verifyed a block. Height: ", i)
 		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.GetDb())
 	}
 	return true
@@ -206,11 +208,12 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 		if err != nil {
 			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
 		}
-		if IsParentBlock(tailBlock, blk) || pool.GetBlockchain().GetMaxHeight() == 0{
-			logger.Info("BlockPool: Add received block to blockchain. Sender id:", sender.String())
+		if IsParentBlock(tailBlock, blk) || pool.GetBlockchain().GetMaxHeight() == 0 {
+			logger.Info("GetBlockPool: Add received block to blockchain. Sender id:", sender.String())
 			pool.bc.GetConsensus().StartNewBlockMinting()
 			pool.bc.AddBlockToTail(blk)
 			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {
+				logger.Info("BlockPool: Start merge process")
 				pool.bc.MergeFork()
 			}
 			//TODO: Might want to relay the block to other nodes
