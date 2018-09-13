@@ -194,6 +194,10 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 		return
 	}
 
+	if !(pool.bc.GetConsensus().VerifyBlock(block)) {
+		logger.Info("GetBlockPool: Verify Signature failed!")
+		return
+	}
 	//TODO: Verify double spending transactions in the same block
 
 	logger.Debug("BlockPool: Block has been verified")

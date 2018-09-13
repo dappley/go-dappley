@@ -87,6 +87,7 @@ func main() {
 	//start mining
 	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
 	conss.Setup(node, minerAddr)
+	conss.SetKey(conf.GetConsensusConfig().GetMinerPrivKey())
 	logger.Info("Miner Address is ", minerAddr)
 
 	conss.Start()
@@ -100,7 +101,7 @@ func initConsensus(conf *config.Config) (core.Consensus, *consensus.Dynasty) {
 	conss := consensus.NewDpos()
 	dynasty := consensus.NewDynastyWithProducers(conf.GetDynastyConfig().GetProducers())
 	conss.SetDynasty(dynasty)
-	conss.SetTargetBit(18)
+	conss.SetTargetBit(0)
 	return conss, dynasty
 }
 
