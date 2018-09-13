@@ -44,7 +44,7 @@ func (a Address) ValidateAddress() bool {
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
 	version := pubKeyHash[0]
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
-	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
+	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
 
 	return bytes.Compare(actualChecksum, targetChecksum) == 0
 }
@@ -58,7 +58,7 @@ func (a Address) GetPubKeyHash() ([]byte, bool) {
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
 	version := pubKeyHash[0]
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
-	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
+	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
 
 	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
 		return pubKeyHash, true

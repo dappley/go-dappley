@@ -47,7 +47,7 @@ func (w KeyPair) GenerateAddress() Address {
 	pubKeyHash, _ := HashPubKey(w.PublicKey)
 
 	versionedPayload := append([]byte{version}, pubKeyHash...)
-	checksum := checksum(versionedPayload)
+	checksum := Checksum(versionedPayload)
 
 	fullPayload := append(versionedPayload, checksum...)
 	address := util.Base58Encode(fullPayload)
@@ -66,7 +66,7 @@ func HashPubKey(pubKey []byte) ([]byte, error) {
 
 }
 
-func checksum(payload []byte) []byte {
+func Checksum(payload []byte) []byte {
 	firstSHA := sha256.Sum256(payload)
 	secondSHA := sha256.Sum256(firstSHA[:])
 
