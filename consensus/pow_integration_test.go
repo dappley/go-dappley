@@ -291,7 +291,8 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	balance := common.NewAmount(0)
 	pubKeyHash := util.Base58Decode([]byte(addr))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	utxos := core.GetAddressUTXOs(core.UtxoMapKey, pubKeyHash, bc.GetDb())
+	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}
