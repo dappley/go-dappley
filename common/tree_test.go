@@ -113,7 +113,7 @@ func Test_TreeHighestLeaf(t *testing.T){
 	//logger.SetLevel(logger.DebugLevel)
 	tree,_:=setupAlphabetTree()
 	//cached leaf nodes should not have any children
-	assert.Equal(t, tree.MaxHeight, tree.highestLeaf.Height)
+	assert.Equal(t, tree.MaxHeight, tree.HighestLeaf.Height)
 }
 
 
@@ -140,6 +140,26 @@ func Test_RecurseThroughTreeAndDoCallback(t *testing.T){
 		counter++
 	})
 	assert.Equal(t, nodesToAdd, counter)
+}
+
+func Test_findCommonParent(t *testing.T){
+	tree,_:=setupAlphabetTree()
+	tree.Get(tree.Root, "u")
+	n1 := tree.Found
+	tree.Get(tree.Root, "j")
+	n2 := tree.Found
+	commonRootNode := tree.findCommonParent(n1,n2)
+	assert.Equal(t, true, commonRootNode.Height < n1.Height)
+	assert.Equal(t, true, commonRootNode.Height < n2.Height)
+
+	tree.Get(commonRootNode, n1.GetKey())
+	t1 := tree.Found
+	tree.Get(commonRootNode, n2.GetKey())
+	t2 := tree.Found
+
+	assert.Equal(t, true, t1 == n1)
+	assert.Equal(t, true, t2 == n2)
+
 }
 
 func getBool() bool {
