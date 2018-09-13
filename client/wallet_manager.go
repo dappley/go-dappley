@@ -28,8 +28,6 @@ import (
 	"os"
 )
 
-
-const WalletFile = "../bin/Wallets.dat"
 const walletConfigFilePath = "../client/wallet.conf"
 
 type WalletManager struct {
@@ -45,11 +43,13 @@ func GetWalletFilePath() string{
 	return conf.GetFilePath()
 }
 
-func NewWalletManager(fileLoader storage.FileStorage) (*WalletManager, error) {
-
-	wm := &WalletManager{
+func NewWalletManager(fileLoader storage.FileStorage) *WalletManager{
+	return &WalletManager{
 		fileLoader: fileLoader,
 	}
+}
+
+func (wm *WalletManager) LoadFromFile() error{
 
 	fileContent, err := wm.fileLoader.ReadFromFile()
 
@@ -57,7 +57,7 @@ func NewWalletManager(fileLoader storage.FileStorage) (*WalletManager, error) {
 		wm.SaveWalletToFile()
 		fileContent, err = wm.fileLoader.ReadFromFile()
 	}
-	var wallets WalletManager
+	var wallets []*Wallet
 
 	gob.Register(bitelliptic.S256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
@@ -65,11 +65,12 @@ func NewWalletManager(fileLoader storage.FileStorage) (*WalletManager, error) {
 	if err != nil {
 		logger.Error("WalletManager: Load Wallets failed!")
 		logger.Error(err)
+		return err
 	}
 
-	wm.Wallets = wallets.Wallets
+	wm.Wallets = wallets
 
-	return wm, nil
+	return nil
 }
 
 // SaveToFile saves Wallets to a file
@@ -78,7 +79,7 @@ func (wm *WalletManager) SaveWalletToFile() {
 
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(wm)
+	err := encoder.Encode(wm.Wallets)
 	if err != nil {
 		logger.Error("WalletManager: save Wallets to file failed!")
 		logger.Error(err)
@@ -98,8 +99,8 @@ func (wm *WalletManager) AddWallet(wallet *Wallet){
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
-	for _, address := range wm.Wallets {
-		addresses = append(addresses, address.GetAddresses()...)
+	for _, wallet := range wm.Wallets {
+		addresses = append(addresses, wallet.GetAddresses()...)
 	}
 
 	return addresses

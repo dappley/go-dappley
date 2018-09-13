@@ -54,7 +54,8 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 	}
 
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm,err := client.NewWalletManager(fl)
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
 
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
