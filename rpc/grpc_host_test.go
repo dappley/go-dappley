@@ -128,6 +128,8 @@ func TestRpcSend(t *testing.T) {
 	for bc.GetMaxHeight() < 1 {}
 	pow.Stop()
 
+	time.Sleep(100 * time.Millisecond)
+
 	// Check balance
 	senderBalance, err := logic.GetBalance(senderWallet.GetAddress(), store)
 	assert.Nil(t, err)
