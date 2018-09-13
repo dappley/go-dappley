@@ -55,7 +55,7 @@ func TestCreateWallet(t *testing.T) {
 }
 
 func TestCreateBlockchain(t *testing.T) {
-	// Create storage
+
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -70,7 +70,6 @@ func TestCreateBlockchain(t *testing.T) {
 //create a blockchain with invalid address
 func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	store := storage.NewRamStorage()
-	// Create storage
 	defer store.Close()
 
 	//create a blockchain with an invalid address
@@ -80,7 +79,6 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 }
 
 func TestGetBalance(t *testing.T) {
-	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -98,7 +96,7 @@ func TestGetBalance(t *testing.T) {
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
-	// Create storage
+
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -122,7 +120,6 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 func TestGetAllAddresses(t *testing.T) {
 	setup()
 
-	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -178,7 +175,6 @@ func TestSend(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			// Create storage
 			store := storage.NewRamStorage()
 			defer store.Close()
 
@@ -272,7 +268,6 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
-	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -331,7 +326,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 
-	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -397,7 +391,7 @@ func TestBlockMsgRelay(t *testing.T) {
 
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++ {
-		//create storage instance
+
 		db := storage.NewRamStorage()
 		defer db.Close()
 
@@ -454,7 +448,6 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++ {
-		//create storage instance
 		db := storage.NewRamStorage()
 		defer db.Close()
 
@@ -515,7 +508,6 @@ func TestForkChoice(t *testing.T) {
 	numOfNodes := 2
 	nodes := []*network.Node{}
 	for i := 0; i < numOfNodes; i++ {
-		//create storage instance
 		db := storage.NewRamStorage()
 		defer db.Close()
 
@@ -579,7 +571,7 @@ func TestAddBalance(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create storage
+
 			store := storage.NewRamStorage()
 			defer store.Close()
 
@@ -628,7 +620,6 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create storage
 			store := storage.NewRamStorage()
 			defer store.Close()
 
