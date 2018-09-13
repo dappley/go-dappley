@@ -112,6 +112,7 @@ func (m *DynastyConfig) GetProducers() []string {
 
 type ConsensusConfig struct {
 	MinerAddr            string   `protobuf:"bytes,1,opt,name=minerAddr,proto3" json:"minerAddr,omitempty"`
+	PrivKey            string   `protobuf:"bytes,1,opt,name=privKey,proto3" json:"privKey,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -144,6 +145,12 @@ var xxx_messageInfo_ConsensusConfig proto.InternalMessageInfo
 func (m *ConsensusConfig) GetMinerAddr() string {
 	if m != nil {
 		return m.MinerAddr
+	}
+	return ""
+}
+func (m *ConsensusConfig) GetPrivKey() string {
+	if m != nil {
+		return m.PrivKey
 	}
 	return ""
 }

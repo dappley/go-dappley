@@ -35,6 +35,7 @@ var bh1 = &BlockHeader{
 	nil,
 	1,
 	time.Now().Unix(),
+	nil,
 	0,
 }
 
@@ -43,6 +44,7 @@ var bh2 = &BlockHeader{
 	[]byte("hash"),
 	1,
 	time.Now().Unix(),
+	nil,
 	1,
 }
 
