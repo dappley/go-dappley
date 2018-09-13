@@ -64,7 +64,7 @@ func main() {
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
 
-	//creat blockchain
+	//create blockchain
 	conss, _ := initConsensus(genesisConf)
 	bc, err := core.GetBlockchain(db, conss)
 	if err != nil {

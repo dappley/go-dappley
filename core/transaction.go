@@ -286,7 +286,7 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 }
 
 //for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount, keyPair KeyPair, bc *Blockchain) (Transaction, error) {
+func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
 
@@ -300,8 +300,6 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount, keyPair 
 
 	tx := Transaction{nil, inputs, outputs, 0}
 	tx.ID = tx.Hash()
-	prevTxs := tx.GetPrevTransactions(bc)
-	tx.Sign(keyPair.PrivateKey, prevTxs)
 
 	return tx, nil
 }

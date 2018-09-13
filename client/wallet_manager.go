@@ -25,23 +25,31 @@ import (
 	"bytes"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	logger "github.com/sirupsen/logrus"
+	"os"
 )
 
 
-const WalletFile = "../bin/wallets.dat"
+const WalletFile = "../bin/Wallets.dat"
+const walletConfigFilePath = "../client/wallet.conf"
 
 type WalletManager struct {
-	Wallets []Wallet
+	Wallets  []*Wallet
+	filePath string
 }
 
-func LoadWalletFromFile(filePath string) (*WalletManager, error) {
-
-	fileContent, err := storage.GetFileConnection(filePath)
+func LoadWalletFromFile() (*WalletManager, error) {
 
 	wm := &WalletManager{}
+
+	conf := LoadWalletConfigFromFile(walletConfigFilePath)
+
+	wm.filePath = conf.GetFilePath()
+
+	fileContent, err := storage.GetFileConnection(wm.filePath)
+
 	if err != nil {
-		wm.SaveWalletToFile(filePath)
-		fileContent, err = storage.GetFileConnection(filePath)
+		wm.SaveWalletToFile()
+		fileContent, err = storage.GetFileConnection(wm.filePath)
 	}
 	var wallets WalletManager
 
@@ -49,7 +57,7 @@ func LoadWalletFromFile(filePath string) (*WalletManager, error) {
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&wallets)
 	if err != nil {
-		logger.Error("WalletManager: Load wallets failed!")
+		logger.Error("WalletManager: Load Wallets failed!")
 		logger.Error(err)
 	}
 
@@ -58,22 +66,26 @@ func LoadWalletFromFile(filePath string) (*WalletManager, error) {
 	return wm, nil
 }
 
-// SaveToFile saves wallets to a file
-func (wm WalletManager) SaveWalletToFile(filePath string) {
+// SaveToFile saves Wallets to a file
+func (wm *WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
 
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(wm)
 	if err != nil {
-		logger.Error("WalletManager: save wallets to file failed!")
+		logger.Error("WalletManager: save Wallets to file failed!")
 		logger.Error(err)
 	}
-	storage.SaveToFile(filePath, content)
-
+	storage.SaveToFile(wm.filePath, content)
 }
 
-func (wm *WalletManager) AddWallet(wallet Wallet){
+func RemoveWalletFile(){
+	conf := LoadWalletConfigFromFile(walletConfigFilePath)
+	os.Remove(conf.GetFilePath())
+}
+
+func (wm *WalletManager) AddWallet(wallet *Wallet){
 	wm.Wallets = append(wm.Wallets, wallet)
 }
 
@@ -87,20 +99,23 @@ func (wm *WalletManager) GetAddresses() []core.Address {
 	return addresses
 }
 
-func (wm WalletManager) GetKeyPairByAddress(address core.Address) core.KeyPair {
+func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {
 
 	wallet := wm.GetWalletByAddress(address)
-	return *wallet.Key
+	if wallet == nil {
+		return nil
+	}
+	return wallet.Key
 
 }
 
-func (wm WalletManager) GetWalletByAddress(address core.Address) Wallet {
+func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 	for _, wallet := range wm.Wallets {
 		if wallet.ContainAddress(address) {
 			return wallet
 		}
 	}
-	return Wallet{}
+	return nil
 }
 
 

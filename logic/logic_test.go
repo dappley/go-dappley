@@ -137,7 +137,7 @@ func TestGetAllAddresses(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//create 10 more addresses
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 2; i++ {
 		//create a wallet address
 		wallet, err = CreateWallet()
 		addr = wallet.GetAddress()
@@ -649,5 +649,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(client.WalletFile)
+	client.RemoveWalletFile()
 }
