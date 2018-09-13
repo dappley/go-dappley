@@ -119,7 +119,7 @@ func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
 	}
 }
 
-func (txPool *TransactionPool) FilterAllTransactions(utxoPool UtxoIndex) {
+func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
 	txPool.Traverse(func(tx Transaction) bool{
 		return tx.Verify(utxoPool) // TODO: also check if amount is valid
 	})

@@ -128,14 +128,15 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 }
 
 //Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo UtxoIndex) bool {
+func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex) bool {
 	for i := pool.ForkPoolLen() - 1; i >= 0; i-- {
 		logger.Info("Start Verify")
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
 		logger.Info("Verifyed a block. Height: ", i, "Have ", i, "block left")
-		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.GetDb())
+		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
+		utxoIndex.Update(pool.forkPool[i], pool.bc.GetDb())
 	}
 	return true
 }

@@ -20,11 +20,9 @@ package core
 
 import (
 	"testing"
-
 	"time"
 
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -161,11 +159,9 @@ func TestBlock_VerifyHash(t *testing.T) {
 }
 
 func TestBlock_Rollback(t *testing.T) {
-	db := storage.NewRamStorage()
 	b := GenerateMockBlock()
 	tx := MockTransaction()
 	b.transactions = []*Transaction{tx}
-	b.UpdateUtxoIndexAfterNewBlock(UtxoForkMapKey, db)
 	txPool := NewTransactionPool()
 	b.Rollback(txPool)
 	assert.ElementsMatch(t, tx.ID, txPool.Transactions.Right().(Transaction).ID)

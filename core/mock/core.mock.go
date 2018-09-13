@@ -305,7 +305,7 @@ func (mr *MockBlockPoolInterfaceMockRecorder) GetBlockchain() *gomock.Call {
 }
 
 // VerifyTransactions mocks base method
-func (m *MockBlockPoolInterface) VerifyTransactions(utxo core.UtxoIndex) bool {
+func (m *MockBlockPoolInterface) VerifyTransactions(utxo core.UTXOIndex) bool {
 	ret := m.ctrl.Call(m, "VerifyTransactions", utxo)
 	ret0, _ := ret[0].(bool)
 	return ret0

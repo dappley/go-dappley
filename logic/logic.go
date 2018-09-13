@@ -66,7 +66,8 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	}
 
 	balance := common.NewAmount(0)
-	utxos := core.GetAddressUTXOs(core.UtxoMapKey, pubKeyHash, db)
+	utxoIndex := core.LoadUTXOIndex(db)
+	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}

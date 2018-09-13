@@ -145,7 +145,8 @@ func (bc *Blockchain) AddBlockToTail(block *Block) {
 	logger.Info("Blockchain: Added A New Block To Tail! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
 	bc.AddBlockToDb(block)
 	bc.setTailBlockHash(block.GetHash())
-	block.UpdateUtxoIndexAfterNewBlock(UtxoMapKey, bc.db)
+	utxoIndex := LoadUTXOIndex(bc.db)
+	utxoIndex.Update(block, bc.db)
 }
 
 //TODO: optimize performance
@@ -346,7 +347,7 @@ func (bc *Blockchain) MergeFork() {
 	}
 
 	//verify transactions in the fork
-	utxo, err := bc.GetUtxoStateAtBlockHash(bc.db, forkParentHash)
+	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
 		logger.Warn(err)
 	}

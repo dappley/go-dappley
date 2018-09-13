@@ -171,12 +171,12 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	//prepare utxo pool
 	Txin := MockTxInputs()
 	Txin2 := MockTxInputs()
-	utxo1 := UTXOutputStored{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
-	utxo2 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
-	utxo3 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
-	utxo4 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
-	utxoPool := UtxoIndex{}
-	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2, utxo3, utxo4}
+	utxo1 := &UTXO{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxo3 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
+	utxo4 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
+	utxoPool := UTXOIndex{}
+	utxoPool["addr1"] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	assert.Nil(t, tx.FindAllTxinsInUtxoPool(utxoPool))

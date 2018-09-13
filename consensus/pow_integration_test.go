@@ -171,7 +171,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	pow := NewProofOfWork()
 	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow)
 	assert.NotNil(t, bc)
-
 	//create a transaction
 	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, bc, 0)
 	assert.Nil(t, err)
