@@ -33,7 +33,7 @@ func setupIntTree() (*Tree, int) {
 	len := 10000
 	//add 10000 nodes unto the tree
 	for i:=1;i<len;i++  {
-		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree, true}
+		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
 		if(getBool()){
@@ -148,7 +148,7 @@ func Test_findCommonParent(t *testing.T){
 	n1 := tree.Found
 	tree.Get(tree.Root, "j")
 	n2 := tree.Found
-	commonRootNode := tree.findCommonParent(n1,n2)
+	commonRootNode := tree.FindCommonParent(n1,n2)
 	assert.Equal(t, true, commonRootNode.Height < n1.Height)
 	assert.Equal(t, true, commonRootNode.Height < n2.Height)
 

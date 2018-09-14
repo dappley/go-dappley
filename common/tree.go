@@ -45,7 +45,6 @@ type Node struct {
 	Children []*Node
 	Height uint64
 	tree *Tree
-	isOnMainBranch bool
 }
 
 type Tree struct {
@@ -69,7 +68,7 @@ func (t *Tree) NewNode(index interface{}, value interface{}, height uint64) (*No
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Node{[]Entry{Entry{index,value}}, nil, nil, height, t, true}, nil
+	return &Node{[]Entry{Entry{index,value}}, nil, nil, height, t}, nil
 }
 
 func (n *Node) AddParent(parent *Node) error{
@@ -84,7 +83,7 @@ func (n *Node) AddParent(parent *Node) error{
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
 	t := &Tree{nil, 1 , nil, false, nil,nil}
-	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t, true}
+	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t}
 	t.Root = &r
 	t.leafs,_ = lru.New(LeafsSize)
 	return t
@@ -185,7 +184,7 @@ func (t1 *Tree) appendTree(t2 *Tree, mergeIndex interface{}) {
 	}
 }
 
-func (t *Tree) findCommonParent(n1 *Node, n2 *Node) *Node {
+func (t *Tree) FindCommonParent(n1 *Node, n2 *Node) *Node {
 	tipNode := n1
 	laggingNode := n2
 	if n1.Height < n2.Height {
