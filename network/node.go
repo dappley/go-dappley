@@ -261,7 +261,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("Node: BroadcastBlock: Hash:", block.GetHash(),", Height:", block.GetHeight())
+	logger.Debug("Node: BroadcastBlock: Hash:", block.GetHash(), ", Height:", block.GetHeight())
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err != nil {
 		return err
@@ -361,7 +361,7 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
+	logger.Info("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
