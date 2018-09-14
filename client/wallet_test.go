@@ -15,19 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package storage
+package client
 
-import "bytes"
+import (
+	"testing"
+	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/core"
+)
 
-type Storage interface {
-	Close() error
+func TestWallet_ContainAddress(t *testing.T) {
+	wallet := NewWallet()
+	tests := []struct{
+		name 	 string
+		input    core.Address
+		expected bool
+	}{{"contains address",wallet.GetAddress(), true},
+	  {"does not contain address",core.Address{},false},
+	}
 
-	Get(key []byte) ([]byte, error)
+	for _,tt := range tests{
+		t.Run(tt.name,func(t *testing.T){
 
-	Put(key []byte, val []byte)
-}
-
-type FileStorage interface {
-	ReadFromFile() ([]byte, error)
-	SaveToFile(buffer bytes.Buffer)
+			assert.Equal(t,tt.expected, wallet.ContainAddress(tt.input))
+		})
+	}
 }

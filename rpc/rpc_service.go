@@ -28,6 +28,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/storage"
 )
 
 type RpcService struct{
@@ -52,12 +53,15 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
 
-	localWallets, err := client.LoadWalletFromFile()
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
 	}
 
-	senderWallet := localWallets.GetWalletByAddress(sendFromAddress)
+	senderWallet := wm.GetWalletByAddress(sendFromAddress)
 	if len(senderWallet.Addresses) == 0 {
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}

@@ -48,7 +48,9 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 
 //create a wallet
 func CreateWallet() (*client.Wallet, error) {
-	wm,err := client.LoadWalletFromFile()
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
@@ -64,7 +66,8 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	}
 
 	balance := common.NewAmount(0)
-	utxos := core.GetAddressUTXOs(core.UtxoMapKey, pubKeyHash, db)
+	utxoIndex := core.LoadUTXOIndex(db)
+	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}
@@ -74,12 +77,14 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
-	wallets, err := client.LoadWalletFromFile()
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
 	if err != nil {
 		return nil, err
 	}
 
-	addresses := wallets.GetAddresses()
+	addresses := wm.GetAddresses()
 
 	return addresses, err
 }

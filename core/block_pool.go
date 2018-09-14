@@ -128,14 +128,15 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 }
 
 //Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo UtxoIndex) bool {
+func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex) bool {
 	for i := pool.ForkPoolLen() - 1; i >= 0; i-- {
 		logger.Info("Start Verify")
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
 		logger.Info("Verifyed a block. Height: ", i, "Have ", i, "block left")
-		pool.forkPool[i].UpdateUtxoIndexAfterNewBlock(UtxoMapKey, pool.bc.GetDb())
+		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
+		utxoIndex.Update(pool.forkPool[i], pool.bc.GetDb())
 	}
 	return true
 }
@@ -212,8 +213,8 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 		if err != nil {
 			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
 		}
-		if IsParentBlock(tailBlock, blk) || pool.GetBlockchain().GetMaxHeight() == 0 {
-			logger.Info("GetBlockPool: Add received block to blockchain. Sender id:", sender.String())
+		if IsParentBlock(tailBlock, blk) {
+			logger.Info("BlockPool: Add received block to blockchain. Sender id:", sender.String())
 			pool.bc.GetConsensus().StartNewBlockMinting()
 			pool.bc.AddBlockToTail(blk)
 			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {

@@ -197,7 +197,7 @@ func (miner *Miner) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool) 
 
 //verify transactions and remove invalid transactions
 func (miner *Miner) verifyTransactions() {
-	utxoPool := core.GetStoredUtxoMap(miner.bc.GetDb(), core.UtxoMapKey)
+	utxoPool := core.LoadUTXOIndex(miner.bc.GetDb())
 	txPool := miner.bc.GetTxPool()
 	txPool.FilterAllTransactions(utxoPool)
 }

@@ -144,7 +144,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 //return true if the transaction is verified
-func (tx *Transaction) Verify(utxo UtxoIndex) bool {
+func (tx *Transaction) Verify(utxo UTXOIndex) bool {
 
 	if tx.IsCoinbase() {
 		return true
@@ -228,15 +228,16 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amount, senderKeyPair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
 	var inputs []TXInput
 	var outputs []TXOutput
-	var validOutputs []UTXOutputStored
+	var validOutputs []*UTXO
 
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
 	sum := common.NewAmount(0)
+	senderUTXOs := LoadUTXOIndex(db).GetUTXOsByPubKey(pubKeyHash)
 
-	if len(GetAddressUTXOs(UtxoMapKey, pubKeyHash, db)) < 1 {
+	if len(senderUTXOs) < 1 {
 		return Transaction{}, ErrInsufficientFund
 	}
-	for _, v := range GetAddressUTXOs(UtxoMapKey,pubKeyHash, db) {
+	for _, v := range senderUTXOs {
 		sum = sum.Add(v.Value)
 		validOutputs = append(validOutputs, v)
 		if sum.Cmp(amount) >= 0 {
@@ -305,10 +306,10 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transac
 }
 
 //Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UtxoIndex) map[string]TXOutput{
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) map[string]TXOutput{
 	res := make(map[string]TXOutput)
 	for _,vin := range tx.Vin{
-		utxo := utxoPool.FindUtxoByTxinput(vin)
+		utxo := utxoPool.FindUTXO(vin.Txid, vin.Vout)
 		if utxo == nil {
 			return nil
 		}

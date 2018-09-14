@@ -115,8 +115,17 @@ func TestVerify(t *testing.T) {
 
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	expectVin := TXInput{nil, -1, []byte{0,0,0,0,0,0,0,0}, []byte("Reward to '13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F'")}
+	expectVout := TXOutput{common.NewAmount(10), []byte{0x1c, 0x11, 0xfe, 0x6b, 0x98, 0x1, 0x56, 0xc5, 0x83, 0xec, 0xb1, 0xfc, 0x32, 0xdb, 0x28, 0x79, 0xb, 0x52, 0xeb, 0x2d}}
+	assert.Equal(t, 1, len(t1.Vin))
+	assert.Equal(t, expectVin, t1.Vin[0])
+	assert.Equal(t, 1, len(t1.Vout))
+	assert.Equal(t, expectVout, t1.Vout[0])
+	assert.Equal(t, uint64(0), t1.Tip)
+
 	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
 
+	// Assert that NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
 	assert.Equal(t, t1, t2)
 
 	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 1)
@@ -171,12 +180,12 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	//prepare utxo pool
 	Txin := MockTxInputs()
 	Txin2 := MockTxInputs()
-	utxo1 := UTXOutputStored{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
-	utxo2 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
-	utxo3 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
-	utxo4 := UTXOutputStored{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
-	utxoPool := UtxoIndex{}
-	utxoPool["addr1"] = []UTXOutputStored{utxo1, utxo2, utxo3, utxo4}
+	utxo1 := &UTXO{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxo3 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
+	utxo4 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
+	utxoPool := UTXOIndex{}
+	utxoPool["addr1"] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	assert.Nil(t, tx.FindAllTxinsInUtxoPool(utxoPool))

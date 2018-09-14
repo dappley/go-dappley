@@ -28,30 +28,36 @@ import (
 	"os"
 )
 
-
-const WalletFile = "../bin/Wallets.dat"
 const walletConfigFilePath = "../client/wallet.conf"
 
 type WalletManager struct {
-	Wallets  []*Wallet
-	filePath string
+	Wallets  	[]*Wallet
+	fileLoader 	storage.FileStorage
 }
 
-func LoadWalletFromFile() (*WalletManager, error) {
-
-	wm := &WalletManager{}
-
+func GetWalletFilePath() string{
 	conf := LoadWalletConfigFromFile(walletConfigFilePath)
+	if conf == nil {
+		return ""
+	}
+	return conf.GetFilePath()
+}
 
-	wm.filePath = conf.GetFilePath()
+func NewWalletManager(fileLoader storage.FileStorage) *WalletManager{
+	return &WalletManager{
+		fileLoader: fileLoader,
+	}
+}
 
-	fileContent, err := storage.GetFileConnection(wm.filePath)
+func (wm *WalletManager) LoadFromFile() error{
+
+	fileContent, err := wm.fileLoader.ReadFromFile()
 
 	if err != nil {
 		wm.SaveWalletToFile()
-		fileContent, err = storage.GetFileConnection(wm.filePath)
+		fileContent, err = wm.fileLoader.ReadFromFile()
 	}
-	var wallets WalletManager
+	var wallets []*Wallet
 
 	gob.Register(bitelliptic.S256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
@@ -59,11 +65,12 @@ func LoadWalletFromFile() (*WalletManager, error) {
 	if err != nil {
 		logger.Error("WalletManager: Load Wallets failed!")
 		logger.Error(err)
+		return err
 	}
 
-	wm.Wallets = wallets.Wallets
+	wm.Wallets = wallets
 
-	return wm, nil
+	return nil
 }
 
 // SaveToFile saves Wallets to a file
@@ -72,12 +79,12 @@ func (wm *WalletManager) SaveWalletToFile() {
 
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(wm)
+	err := encoder.Encode(wm.Wallets)
 	if err != nil {
 		logger.Error("WalletManager: save Wallets to file failed!")
 		logger.Error(err)
 	}
-	storage.SaveToFile(wm.filePath, content)
+	wm.fileLoader.SaveToFile(content)
 }
 
 func RemoveWalletFile(){
@@ -92,8 +99,8 @@ func (wm *WalletManager) AddWallet(wallet *Wallet){
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
-	for _, address := range wm.Wallets {
-		addresses = append(addresses, address.GetAddresses()...)
+	for _, wallet := range wm.Wallets {
+		addresses = append(addresses, wallet.GetAddresses()...)
 	}
 
 	return addresses

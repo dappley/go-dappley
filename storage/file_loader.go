@@ -23,17 +23,28 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"github.com/davecgh/go-spew/spew"
 )
 
-func GetFileConnection(file string) ([]byte, error) {
+type FileLoader struct{
+	filePath string
+}
 
-	if _, err := os.Stat(file); os.IsNotExist(err) {
+func NewFileLoader(filePath string) *FileLoader{
+	return &FileLoader{
+		filePath: filePath,
+	}
+}
+
+func (fl *FileLoader) ReadFromFile() ([]byte, error) {
+
+	if _, err := os.Stat(fl.filePath); os.IsNotExist(err) {
 		return nil, err
 	} else if err != nil {
 		log.Panic(err)
 	}
 
-	fileContent, err := ioutil.ReadFile(file)
+	fileContent, err := ioutil.ReadFile(fl.filePath)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -41,9 +52,9 @@ func GetFileConnection(file string) ([]byte, error) {
 
 }
 
-func SaveToFile(file string, buffer bytes.Buffer) {
-
-	err := ioutil.WriteFile(file, buffer.Bytes(), 0644)
+func (fl *FileLoader) SaveToFile(buffer bytes.Buffer) {
+	spew.Dump(buffer.Bytes())
+	err := ioutil.WriteFile(fl.filePath, buffer.Bytes(), 0644)
 	if err != nil {
 		log.Panic(err)
 	}

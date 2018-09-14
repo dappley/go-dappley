@@ -50,7 +50,7 @@ type BlockPoolInterface interface {
 	IsParentOfFork(blk *Block) bool
 	IsTailOfFork(blk *Block) bool
 	GetBlockchain() *Blockchain
-	VerifyTransactions(utxo UtxoIndex) bool
+	VerifyTransactions(utxo UTXOIndex) bool
 	IsHigherThanFork(block *Block) bool
 	Push(block *Block, pid peer.ID)
 }
