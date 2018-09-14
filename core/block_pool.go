@@ -134,7 +134,7 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex) bool {
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
-		logger.Info("Verifyed a block. Height: ", i, "Have ", i, "block left")
+		logger.Info("Verifyed a block. Height: ", pool.forkPool[i].GetHeight(), "Have ", i, "block left")
 		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
 		utxoIndex.Update(pool.forkPool[i], pool.bc.GetDb())
 	}
