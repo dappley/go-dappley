@@ -414,9 +414,10 @@ func TestBlockMsgRelay(t *testing.T) {
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
-		for _, _ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
+		nodes[i].GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
 			heights[i]++
-		}
+			return true
+		})
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
 	}
@@ -471,9 +472,10 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
-		for _, _ = range *nodes[i].GetRecentlyRcvedDapMsgs() {
+		nodes[i].GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
 			heights[i]++
-		}
+			return true
+		})
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
 	}
@@ -541,6 +543,7 @@ func TestBlockMsgWithDpos(t *testing.T) {
 const testport_fork = 10200
 
 func TestForkChoice(t *testing.T) {
+
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
