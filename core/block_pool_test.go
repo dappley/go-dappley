@@ -322,20 +322,20 @@ func TestBlockPool_ReInitializeForkPool(t *testing.T) {
 
 func TestLRUCacheWithIntKeyAndValue(t *testing.T){
 	bp:= NewBlockPool(5)
-	assert.Equal(t, 0, bp.cache.Len())
+	assert.Equal(t, 0, bp.blkCache.Len())
 	const addCount = 200
 	for i:=0;i < addCount; i++ {
-		if bp.cache.Len() == BlockPoolLRUCacheLimit{
-			bp.cache.RemoveOldest()
+		if bp.blkCache.Len() == BlockPoolLRUCacheLimit{
+			bp.blkCache.RemoveOldest()
 		}
-		bp.cache.Add(i, i )
+		bp.blkCache.Add(i, i )
 	}
-	//test cache is full
-	assert.Equal(t, BlockPoolLRUCacheLimit, bp.cache.Len())
-	//test cache contains last added key
-	assert.Equal(t, true, bp.cache.Contains(199))
-	//test cache oldest key = addcount - BlockPoolLRUCacheLimit
-	assert.Equal(t, addCount - BlockPoolLRUCacheLimit, bp.cache.Keys()[0])
+	//test blkCache is full
+	assert.Equal(t, BlockPoolLRUCacheLimit, bp.blkCache.Len())
+	//test blkCache contains last added key
+	assert.Equal(t, true, bp.blkCache.Contains(199))
+	//test blkCache oldest key = addcount - BlockPoolLRUCacheLimit
+	assert.Equal(t, addCount - BlockPoolLRUCacheLimit, bp.blkCache.Keys()[0])
 }
 
 
