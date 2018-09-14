@@ -46,8 +46,9 @@ func (rs *RamStorage) Get(key []byte) ([]byte, error){
 	return nil, ErrKeyInvalid
 }
 
-func (rs *RamStorage) Put(key []byte, val []byte){
+func (rs *RamStorage) Put(key []byte, val []byte) error{
 	rs.data.Store(string(key),val)
+	return nil
 }
 
 func (rs *RamStorage) Close() error{

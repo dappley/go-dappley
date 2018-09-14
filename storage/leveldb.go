@@ -62,10 +62,12 @@ func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	return val, nil
 }
 
-func (ldb *LevelDB) Put(key []byte, val []byte) {
-	if err := ldb.db.Put(key, val, nil); err != nil {
-		logger.Panic(err)
+func (ldb *LevelDB) Put(key []byte, val []byte) error {
+	err := ldb.db.Put(key, val, nil)
+	if err != nil {
+		logger.Error(err)
 	}
+	return err
 
 }
 
