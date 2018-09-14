@@ -43,7 +43,7 @@ import (
 const (
 	protocalName           = "dappley/1.0.0"
 	syncPeerTimeLimitMs    = 1000
-	MaxMsgCountBeforeReset = 999
+	MaxMsgCountBeforeReset = 999999
 )
 
 var (
@@ -250,7 +250,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
-		logger.Debug("caching block msg with key ", dm.key)
+		logger.Debug("Node: Caching block msg with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -261,7 +261,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("sent block: ", string(block.GetHash()), ", ", string(block.GetPrevHash()), ", ", block.GetTimestamp(), ", ", block.GetHeight())
+	logger.Debug("Node: BroadcastBlock: Hash:", block.GetHash(),", Height:", block.GetHeight())
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err != nil {
 		return err
@@ -354,16 +354,14 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 }
 func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
-		logger.Debug(n.GetPeerMultiaddr(), " (", n.info.peerid, ") already received ", dm.GetKey(), " before")
+		logger.Debug("Node: Already received ", dm.GetKey(), " before")
 		return
 	}
 
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Info("Node: Start synchronize", blk.GetHeight())
-	logger.Debug("asdsd2391", blk.GetHeight())
-	logger.Debug("received block: ", string(blk.GetHash()), ", ", string(blk.GetPrevHash()), ", ", blk.GetTimestamp(), ", ", blk.GetHeight())
+	logger.Debug("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }

@@ -209,8 +209,8 @@ func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 		if err != nil {
 			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
 		}
-		if IsParentBlock(tailBlock, blk) || pool.GetBlockchain().GetMaxHeight() == 0 {
-			logger.Info("GetBlockPool: Add received block to blockchain. Sender id:", sender.String())
+		if IsParentBlock(tailBlock, blk) {
+			logger.Info("BlockPool: Add received block to blockchain. Sender id:", sender.String())
 			pool.bc.GetConsensus().StartNewBlockMinting()
 			pool.bc.AddBlockToTail(blk)
 			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {

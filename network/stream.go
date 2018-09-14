@@ -82,6 +82,7 @@ func (s *Stream) StopStream() {
 	s.quitWrCh <- true
 	s.stream.Close()
 	delete(s.node.streams, s.peerID)
+	s.node.peerList.DeletePeer(&Peer{s.peerID, s.remoteAddr})
 }
 
 func (s *Stream) Send(data []byte) {
@@ -204,16 +205,16 @@ func (s *Stream) parseData(data []byte) {
 
 	switch dm.GetCmd() {
 	case SyncBlock:
-		logger.Debug(s.node.GetPeerMultiaddr(), " (", s.node.info.peerid, ") Received ", SyncBlock, " command from:", dm.key)
+		logger.Debug("Stream: Received ", SyncBlock, " command from:", dm.key)
 		s.node.syncBlockHandler(dm, s.peerID)
 	case SyncPeerList:
-		logger.Debug("Received ", SyncPeerList, " command from:", s.remoteAddr)
+		logger.Debug("Stream: Received ", SyncPeerList, " command from:", s.remoteAddr)
 		s.node.addMultiPeers(dm.GetData())
 	case RequestBlock:
-		logger.Debug("Received ", RequestBlock, " command from:", s.remoteAddr)
+		logger.Debug("Stream: Received ", RequestBlock, " command from:", s.remoteAddr)
 		s.node.sendRequestedBlock(dm.GetData(), s.peerID)
 	case BroadcastTx:
-		logger.Debug("Received ", BroadcastTx, " command from:", s.remoteAddr)
+		logger.Debug("Stream: Received ", BroadcastTx, " command from:", s.remoteAddr)
 		s.node.addTxToPool(dm.GetData())
 	default:
 		logger.Debug("Received invalid command from:", s.remoteAddr)
