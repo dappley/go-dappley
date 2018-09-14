@@ -479,6 +479,65 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 	}
 }
 
+const testport_msg_relay_port = 21202
+func TestBlockMsgWithDpos(t *testing.T) {
+	const (
+		timeBetweenBlock= 2
+		dposRounds= 3
+		bufferTime= 1
+	)
+
+	miners := []string{
+		"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
+		"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+	}
+	keystrs := []string{
+		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
+		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+	}
+	dynasty := consensus.NewDynastyWithProducers(miners)
+	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
+	dynasty.SetMaxProducers(len(miners))
+	dposArray := []*consensus.Dpos{}
+	var firstNode *network.Node
+	for i := 0; i < len(miners); i++ {
+		dpos := consensus.NewDpos()
+		dpos.SetDynasty(dynasty)
+		dpos.SetTargetBit(0)        //gennerate a block every round
+		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos)
+		node := network.NewNode(bc)
+		node.Start(testport_msg_relay_port + i)
+		if i == 0 {
+			firstNode = node
+		} else {
+			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
+		}
+		dpos.Setup(node, miners[i])
+		dpos.SetKey(keystrs[i])
+		dposArray = append(dposArray, dpos)
+	}
+
+	firstNode.SyncPeersBroadcast()
+
+	for i := 0; i < len(miners); i++ {
+		dposArray[i].Start()
+	}
+
+
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
+
+	for i := 0; i < len(miners); i++ {
+		dposArray[i].Stop()
+	}
+
+	time.Sleep(time.Second)
+
+	for i := 0; i < len(miners); i++ {
+		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), dposArray[i].GetBlockChain().GetMaxHeight())
+	}
+}
+
+
 const testport_fork = 10200
 
 func TestForkChoice(t *testing.T) {

@@ -22,11 +22,14 @@ import "github.com/libp2p/go-libp2p-peer"
 
 type Consensus interface{
 	Validate(block *Block) bool
+	VerifyBlock(block *Block) bool
 	Start()
 	Stop()
 	StartNewBlockMinting()
 	Setup(NetService, string)
 	SetTargetBit(int)
+	SetKey(string)
+
 }
 
 type NetService interface{

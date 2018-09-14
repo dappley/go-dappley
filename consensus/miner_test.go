@@ -29,7 +29,9 @@ import (
 func TestMiner_VerifyNonce(t *testing.T){
 
 	miner := NewMiner()
-	cbAddr := core.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	miner.SetTargetBit(14)
+	cbAddr := core.Address{"1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"}
+	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
@@ -38,6 +40,7 @@ func TestMiner_VerifyNonce(t *testing.T){
 	defer bc.GetDb().Close()
 
 	miner.Setup(bc,cbAddr.Address, nil)
+	miner.SetPrivKey(keystr)
 
 	//prepare a block with correct nonce value
 	newBlock := core.NewBlock(nil,nil)
@@ -47,6 +50,7 @@ func TestMiner_VerifyNonce(t *testing.T){
 		if hash, ok := miner.verifyNonce(nonce, newBlock); ok {
 			newBlock.SetHash(hash)
 			newBlock.SetNonce(nonce)
+			newBlock.SignBlock(miner.key, hash)
 			break mineloop2
 		}else{
 			nonce++
@@ -69,9 +73,9 @@ func TestMiner_SetTargetBit(t *testing.T) {
 		bit 	 int
 		expected int
 	}{{"regular",16,16},
-		{"zero",0,16},
-		{"negative",-5,16},
-		{"above256",257,16},
+		{"zero",0,0},
+		{"negative",-5,0},
+		{"above256",257,0},
 		{"regular2",18,18},
 		{"equalTo256",256,256},
 	}
@@ -111,7 +115,8 @@ func TestMiner_ValidateDifficulty(t *testing.T) {
 
 func TestMiner_Start(t *testing.T) {
 	miner := NewMiner()
-	cbAddr := "17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"
+	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
+	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc:=core.CreateBlockchain(
 		core.Address{cbAddr},
 		storage.NewRamStorage(),
@@ -119,6 +124,7 @@ func TestMiner_Start(t *testing.T) {
 	)
 	retCh := make(chan(*MinedBlock),0)
 	miner.Setup(bc,cbAddr,retCh)
+	miner.SetPrivKey(keystr)
 	miner.Start()
 	blk := <- retCh
 	assert.True(t,blk.isValid)

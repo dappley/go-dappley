@@ -54,3 +54,4 @@ func TestDpos_Stop(t *testing.T) {
 		t.Error("Failed!")
 	}
 }
+
