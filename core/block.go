@@ -308,6 +308,11 @@ func IsParentBlockHash(parentBlk, childBlk *Block) bool{
 	return reflect.DeepEqual(parentBlk.GetHash(), childBlk.GetPrevHash())
 }
 
+func IsHashEqual(h1 Hash , h2 Hash) bool{
+
+	return reflect.DeepEqual(h1, h2)
+}
+
 func IsParentBlockHeight(parentBlk, childBlk *Block) bool{
 	if parentBlk == nil || childBlk == nil{
 		return false
@@ -349,4 +354,8 @@ func (b *Block) GetCoinbaseTransaction() *Transaction{
 		}
 	}
 	return nil
+}
+
+func (b *Block) hashString() string {
+	return string(b.GetHash())
 }
