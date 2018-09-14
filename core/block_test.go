@@ -103,6 +103,7 @@ func TestBlockHeader_Proto(t *testing.T) {
 		[]byte("hash"),
 		1,
 		2,
+		nil,
 		0,
 	}
 

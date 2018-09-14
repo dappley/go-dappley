@@ -147,3 +147,7 @@ func IsProducerAddressValid(producer string) bool{
 	addr := core.Address{producer}
 	return addr.ValidateAddress()
 }
+
+func (dynasty *Dynasty) GetDynastyTime() int{
+	return dynasty.dynastyTime
+}

@@ -36,8 +36,9 @@ type DynastyConfig struct {
 	producers []string
 }
 
-type ConsensusConfig struct {
-	minerAddr string
+type ConsensusConfig struct{
+	minerAddr 	string
+	privKey string
 }
 
 type NodeConfig struct {
@@ -97,9 +98,10 @@ func (config *Config) GetDynastyConfig() *DynastyConfig     { return &config.dyn
 func (config *Config) GetConsensusConfig() *ConsensusConfig { return &config.consensusConfig }
 func (config *Config) GetNodeConfig() *NodeConfig           { return &config.nodeConfig }
 
-func (dynastyConfig *DynastyConfig) GetProducers() []string   { return dynastyConfig.producers }
-func (consensusConfig *ConsensusConfig) GetMinerAddr() string { return consensusConfig.minerAddr }
-func (nodeConfig *NodeConfig) GetListeningPort() uint32       { return nodeConfig.port }
-func (nodeConfig *NodeConfig) GetSeed() string                { return nodeConfig.seed }
-func (nodeConfig *NodeConfig) GetDbPath() string              { return nodeConfig.dbPath }
-func (nodeConfig *NodeConfig) GetRpcPort() uint32             { return nodeConfig.rpcPort }
+func (dynastyConfig *DynastyConfig)GetProducers() []string{return dynastyConfig.producers}
+func (consensusConfig *ConsensusConfig)GetMinerAddr() string{return consensusConfig.minerAddr}
+func (consensusConfig *ConsensusConfig)GetMinerPrivKey() string{return consensusConfig.privKey}
+func (nodeConfig *NodeConfig)GetListeningPort() uint32{return nodeConfig.port}
+func (nodeConfig *NodeConfig)GetSeed() string{return nodeConfig.seed}
+func (nodeConfig *NodeConfig)GetDbPath() string{return nodeConfig.dbPath}
+func (nodeConfig *NodeConfig)GetRpcPort() uint32{return nodeConfig.rpcPort}
