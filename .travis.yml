@@ -26,4 +26,4 @@ install:
 
 script:
 - make build
-- go test ./... -tags=integration
+- make testall
