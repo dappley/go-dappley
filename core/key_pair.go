@@ -23,8 +23,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
-
+	
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"

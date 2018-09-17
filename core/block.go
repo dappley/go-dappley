@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"log"
 	"time"
 	logger "github.com/sirupsen/logrus"
 

@@ -27,7 +27,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"math/big"
@@ -180,13 +179,8 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	for inID, vin := range tx.Vin {
 		prevTxOut := prevTXs[hex.EncodeToString(vin.Txid)]
-		vinPubKey, err := HashPubKey(vin.PubKey)
-		if (err != nil) {
-			logger.Error(err)
-			return false
-		}
-
-		if bytes.Compare(prevTxOut.PubKeyHash, vinPubKey) != 0 {
+		
+		if bytes.Compare(prevTxOut.PubKeyHash, vin.PubKey) != 0 {
 			logger.Error("ERROR: Vout Vin public key mismatch")
 			return false
 		}
