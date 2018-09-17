@@ -43,23 +43,18 @@ type Node struct {
 	Entries []Entry
 	Parent *Node
 	Children []*Node
-	Height uint
+	Height uint64
 	tree *Tree
-	isOnMainBranch bool
 }
 
 type Tree struct {
 	Root *Node
-	MaxHeight uint
+	MaxHeight uint64
 	Found *Node
 	Searching bool
 	leafs *lru.Cache
-	highestLeaf *Node
+	HighestLeaf *Node
 }
-type Test struct {
-	Num uint
-}
-
 
 func (n *Node) hasChildren() bool{
 	if len(n.Children) > 0 {
@@ -68,11 +63,12 @@ func (n *Node) hasChildren() bool{
 	return false
 }
 
-func (t *Tree) NewNode(index interface{}, value interface{}, height uint) (*Node, error){
+
+func (t *Tree) NewNode(index interface{}, value interface{}, height uint64) (*Node, error){
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Node{[]Entry{Entry{index,value}}, nil, nil, height, t, true}, nil
+	return &Node{[]Entry{Entry{index,value}}, nil, nil, height, t}, nil
 }
 
 func (n *Node) AddParent(parent *Node) error{
@@ -87,7 +83,7 @@ func (n *Node) AddParent(parent *Node) error{
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree{
 	t := &Tree{nil, 1 , nil, false, nil,nil}
-	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t, true}
+	r := Node{[]Entry{Entry{rootNodeIndex,rootNodeValue}}, nil, nil, 1, t}
 	t.Root = &r
 	t.leafs,_ = lru.New(LeafsSize)
 	return t
@@ -150,7 +146,7 @@ func (parent *Node) AddChild(child *Node){
 	child.Height = parent.Height+1
 	if child.Height > child.tree.MaxHeight {
 		child.tree.MaxHeight = child.Height
-		child.tree.highestLeaf = child
+		child.tree.HighestLeaf = child
 	}
 	leaves :=parent.tree.leafs
 	///if parent was leaf, update new leaf state
@@ -178,7 +174,7 @@ func (t1 *Tree) appendTree(t2 *Tree, mergeIndex interface{}) {
 		node.tree = t1
 		if node.Height > node.tree.MaxHeight {
 			node.tree.MaxHeight = node.Height
-			node.tree.highestLeaf = node
+			node.tree.HighestLeaf = node
 		}
 	})
 	//append t2 leafs to t1
@@ -186,6 +182,44 @@ func (t1 *Tree) appendTree(t2 *Tree, mergeIndex interface{}) {
 		val,_:=  t2.leafs.Get(key)
 		t1.leafs.Add(key,val)
 	}
+}
+
+func (t *Tree) FindCommonParent(n1 *Node, n2 *Node) *Node {
+	tipNode := n1
+	laggingNode := n2
+	if n1.Height < n2.Height {
+		tipNode = n2
+		laggingNode = n1
+	}
+	for {
+		if tipNode.Height > laggingNode.Height{
+			tipNode = tipNode.Parent
+		}else{
+			break
+		}
+	}
+	//check 2 nodes are at equal height
+
+	if tipNode.Height != laggingNode.Height{
+		logger.Debug("Tree: findCommonParent Logic Error. ", tipNode.Height, laggingNode.Height)
+		return nil
+	}
+
+	for {
+
+		if tipNode.GetKey() != laggingNode.GetKey(){
+			tipNode = tipNode.Parent
+			laggingNode = laggingNode.Parent
+			if tipNode.Height != laggingNode.Height{
+				logger.Debug("Tree: findCommonParent Logic Error: node at the same heights have different heights ", tipNode.Height, laggingNode.Height)
+				return nil
+			}
+
+		}else{
+			return tipNode.Parent
+		}
+	}
+
 }
 
 

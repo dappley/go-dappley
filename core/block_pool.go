@@ -19,11 +19,12 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/common"
 )
+const BlockPoolLRUCacheLimit = 128
 
 type BlockRequestPars struct {
 	BlockHash Hash
@@ -40,18 +41,11 @@ type BlockPool struct {
 	size           int
 	bc             *Blockchain
 	forkPool       []*Block
-	cache          *lru.Cache
+	blkCache       *lru.Cache //cache of full blks
+	nodeCache       *lru.Cache //cache of tree nodes that contain blk header as value
+
 }
 
-type linkedBlock struct {
-	block      *Block
-	chain      *Blockchain
-	hash       byteutils.Hash
-	parentHash byteutils.Hash
-
-	parentBlock *linkedBlock
-	childBlocks map[byteutils.HexHash]*linkedBlock
-}
 
 func NewBlockPool(size int) *BlockPool {
 	pool := &BlockPool{
@@ -60,12 +54,9 @@ func NewBlockPool(size int) *BlockPool {
 		bc:             nil,
 		forkPool:       []*Block{},
 	}
-	pool.cache, _ = lru.NewWithEvict(size, func(key interface{}, value interface{}) {
-		treenode := value.(*Block)
-		if treenode != nil {
-			//remove treenode
-		}
-	})
+	pool.blkCache,_ = lru.New(BlockPoolLRUCacheLimit)
+	pool.nodeCache,_ = lru.New(BlockPoolLRUCacheLimit)
+
 	return pool
 }
 
@@ -134,7 +125,7 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex) bool {
 		if !pool.forkPool[i].VerifyTransactions(utxo) {
 			return false
 		}
-		logger.Info("Verifyed a block. Height: ", i, "Have ", i, "block left")
+		logger.Info("Verifyed a block. Height: ", pool.forkPool[i].GetHeight(), "Have ", i, "block left")
 		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
 		utxoIndex.Update(pool.forkPool[i], pool.bc.GetDb())
 	}
@@ -195,81 +186,133 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 		return
 	}
 
+	if !(pool.bc.GetConsensus().VerifyBlock(block)) {
+		logger.Warn("GetBlockPool: Verify Signature failed!")
+		return
+	}
 	//TODO: Verify double spending transactions in the same block
 
 	logger.Debug("BlockPool: Block has been verified")
-	pool.handleRcvdBlock(block, pid)
+	pool.handleRecvdBlock(block, pid)
+}
+func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
+	logger.Debug("BlockPool: Received a new block: ", blk.hashString(), " From Sender: ", sender.String())
+	node,_ := pool.bc.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
+
+	blkCache := pool.blkCache
+	nodeCache := pool.nodeCache
+	if blkCache.Contains(blk.hashString()){
+		logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.hashString(), " returning")
+		return
+	}
+	if pool.bc.IsInBlockchain(blk.GetHash()){
+		logger.Debug("BlockPool: Blockchain already contains blk: ", blk.hashString(), " returning")
+		return
+	}
+
+	//TODO: verify
+	if   true {
+		logger.Debug("BlockPool: Adding node key to bpcache: ", blk.hashString())
+		nodeCache.Add(node.GetKey(), node)
+		blkCache.Add(blk.hashString(), blk)
+	}else{
+		logger.Debug("BlockPool: Block: ", blk.hashString(), " did not pass verification process, discarding block")
+		return
+	}
+
+	//build partial tree in bpcache
+	forkParent := pool.updatePoolNodeCache(node)
+	//attach above partial tree to forktree
+	if ok := pool.updateForkTree(forkParent, sender); ok == true {
+		//build forkchain based on highest leaf in tree
+		pool.updateForkPool()
+		//merge forkchain into blockchain
+		pool.bc.MergeFork()
+	}
+
 }
 
-func (pool *BlockPool) handleRcvdBlock(blk *Block, sender peer.ID) {
 
-	logger.Debug("BlockPool: Received a new block.Sender id:", sender.String())
-	if pool.bc.GetConsensus().Validate(blk) {
-		tailBlock, err := pool.bc.GetTailBlock()
-		if err != nil {
-			logger.Warn("BlockPool: Get Tail Block failed! Err:", err)
-		}
-		if IsParentBlock(tailBlock, blk) {
-			logger.Info("BlockPool: Add received block to blockchain. Sender id:", sender.String())
-			pool.bc.GetConsensus().StartNewBlockMinting()
-			pool.bc.AddBlockToTail(blk)
-			if IsParentBlock(blk, pool.GetForkPoolHeadBlk()) {
-				logger.Info("BlockPool: Start merge process")
-				pool.bc.MergeFork()
+func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
+	// try to link children
+	nodeCache:= pool.nodeCache
+	for _,key := range nodeCache.Keys() {
+		if possibleChild,ok:= nodeCache.Get(key); ok == true {
+			if possibleChild.(*common.Node).Parent == node{
+				logger.Debug("BlockPool: Block: ", node.GetKey(), " found child Block: ", key, " in BlockPool blkCache, adding child")
+				node.AddChild(possibleChild.(*common.Node))
 			}
-			//TODO: Might want to relay the block to other nodes
-		} else {
-			pool.updateFork(blk, sender)
-		}
-	} else {
-		logger.Warn("BlockPool: Consensus validity check fails.Sender id:", sender.String())
-	}
-}
-
-func (pool *BlockPool) updateFork(block *Block, pid peer.ID) {
-
-	if pool.attemptToAddTailToFork(block) {
-		return
-	}
-	if pool.attemptToAddParentToFork(block, pid) {
-		return
-	}
-	if pool.attemptToStartNewFork(block, pid) {
-		return
-	}
-	logger.Debug("BlockPool: Block dumped")
-}
-
-func (pool *BlockPool) attemptToAddTailToFork(newblock *Block) bool {
-	return pool.updateForkFromTail(newblock)
-}
-
-//returns true if successful
-func (pool *BlockPool) attemptToAddParentToFork(newblock *Block, sender peer.ID) bool {
-
-	isSuccessful := pool.addParentToFork(newblock)
-	if isSuccessful {
-		//if the parent of the current fork is found in blockchain, merge the fork
-		if pool.bc.IsInBlockchain(newblock.GetPrevHash()) {
-			pool.bc.GetConsensus().StartNewBlockMinting()
-			pool.bc.MergeFork()
-		} else {
-			//if the fork could not be added to the current blockchain, ask for the head block's parent
-			pool.requestBlock(newblock.GetPrevHash(), sender)
 		}
 	}
-	return isSuccessful
+	//link parents and ancestors
+	for {
+		if parent,ok:= nodeCache.Get(string(node.GetValue().(*BlockHeader).prevHash)); ok == true {
+			logger.Debug("BlockPool: Block: ", node.GetKey(), " found parent: ", node.GetValue().(*BlockHeader).prevHash, " in BlockPool blkCache, adding parent")
+			//parent found in blkCache
+			node.AddParent(parent.(*common.Node))
+			node = parent.(*common.Node)
+		}else{
+			logger.Debug("BlockPool: Block: ", node.GetKey(), " no more parent found in BlockPool blkCache")
+			break
+		}
+	}
+
+	logger.Debug("BlockPool: Block: ", node.GetKey(), " finished updating BlockPoolCache")
+	return node
 }
 
-func (pool *BlockPool) attemptToStartNewFork(newblock *Block, sender peer.ID) bool {
-	startNewFork := pool.IsHigherThanFork(newblock) &&
-		pool.bc.IsHigherThanBlockchain(newblock)
-	if startNewFork {
-		pool.ReInitializeForkPool(newblock)
-		pool.requestBlock(newblock.GetPrevHash(), sender)
+func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
+
+	bc := pool.bc
+	tree := bc.forkTree
+
+	// parent exists on tree, add node to tree
+	prevhash := node.GetValue().(*BlockHeader).prevHash
+	if tree.Get(tree.Root, string(prevhash)); tree.Found != nil {
+		logger.Debug("BlockPool: Block: ", node.GetKey(), " being added as child to parent ", node.Parent.GetKey())
+		tree.Found.AddChild(node)
+		pool.nodeCache.Remove(node)
+		return true
+	}else{
+		// parent doesnt exist on tree, download parent from sender
+		logger.Debug("BlockPool: Block: ", node.GetKey(), " parent not found, proceeding to download parent: ", node.GetValue().(*BlockHeader).prevHash, " from ", sender)
+		pool.requestBlock(node.GetValue().(*BlockHeader).prevHash, sender)
+		return false
 	}
-	return startNewFork
 }
+
+func (pool *BlockPool) updateForkPool() {
+	tree := pool.bc.forkTree
+	forkTailNode := tree.HighestLeaf
+	bc := pool.bc
+	tree.Get(tree.Root, string(bc.GetTailBlockHash()))
+	bcTailInTree := tree.Found
+	tree.FindCommonParent(forkTailNode, bcTailInTree)
+	forkParentHash :=tree.Found.GetValue().(*BlockHeader).hash
+
+	if tree.Found != nil {
+		pool.ResetForkPool()
+		for  {
+			if IsHashEqual(forkTailNode.GetValue().(*BlockHeader).hash , forkParentHash ){
+				break
+			}
+			blk := pool.getBlkFromBlkCache(string(forkTailNode.GetValue().(BlockHeader).hash))
+			pool.forkPool = append(pool.forkPool, blk)
+			//is going to be merged so remove from blkcache
+			pool.blkCache.Remove(blk.hashString())
+			forkTailNode = forkTailNode.Parent
+		}
+	}
+}
+
+func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
+	if val,ok:= pool.blkCache.Get(hashString); ok == true {
+		return val.(*Block)
+	}
+	return nil
+
+}
+
 
 //TODO: RequestChannel should be in PoW.go
 func (pool *BlockPool) requestBlock(hash Hash, pid peer.ID) {

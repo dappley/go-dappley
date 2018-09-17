@@ -14,7 +14,8 @@ func TestLevelDB_DbExists(t *testing.T) {
 	setup()
 	assert.False(t, DbExists(BlockchainDbFile))
 	ldb := OpenDatabase(BlockchainDbFile)
-	ldb.Put([]byte("a"), []byte("1"))
+	err := ldb.Put([]byte("a"), []byte("1"))
+	assert.Nil(t, err)
 	assert.True(t, DbExists(BlockchainDbFile))
 	teardown()
 }
@@ -27,11 +28,14 @@ func TestLevelDB_PutAndGet(t *testing.T) {
 	//use default path
 	ldb := OpenDatabase(BlockchainDbFile)
 
-	ldb.Put([]byte("a"), []byte("1"))
+	err := ldb.Put([]byte("a"), []byte("1"))
+	assert.Nil(t, err)
 
-	ldb.Put([]byte("b"), []byte("2"))
+	err = ldb.Put([]byte("b"), []byte("2"))
+	assert.Nil(t, err)
 
-	ldb.Put([]byte("c"), []byte("3"))
+	err = ldb.Put([]byte("c"), []byte("3"))
+	assert.Nil(t, err)
 
 	val, err := ldb.Get([]byte("a"))
 	assert.Nil(t, err)
@@ -46,7 +50,8 @@ func TestLevelDB_PutAndGet(t *testing.T) {
 	assert.Equal(t, val, []byte("3"))
 
 	//modify value and compare
-	ldb.Put([]byte("c"), []byte("5"))
+	err = ldb.Put([]byte("c"), []byte("5"))
+	assert.Nil(t, err)
 
 	val, err = ldb.Get([]byte("c"))
 	assert.Nil(t, err)
@@ -66,7 +71,8 @@ func TestLevelDB_Close(t *testing.T) {
 	ldb := OpenDatabase("../bin/test.db")
 
 	//put new values in
-	ldb.Put([]byte("a"), []byte("1"))
+	err := ldb.Put([]byte("a"), []byte("1"))
+	assert.Nil(t, err)
 
 	//Currently we should be able to read it
 	val, err := ldb.Get([]byte("a"))

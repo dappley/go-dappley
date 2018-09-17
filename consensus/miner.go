@@ -26,7 +26,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const defaulttargetBits = 14
+const defaulttargetBits = 0
 
 type State int
 
@@ -42,6 +42,7 @@ type Miner struct {
 	exitCh   chan bool
 	bc       *core.Blockchain
 	cbAddr   string
+	key string
 	newBlock *MinedBlock
 	nonce    int64
 	retChan  chan (*MinedBlock)
@@ -61,12 +62,20 @@ func NewMiner() *Miner {
 }
 
 func (miner *Miner) SetTargetBit(bit int) {
-	if bit <= 0 || bit > 256 {
+	if bit < 0 || bit > 256 {
 		return
 	}
 	target := big.NewInt(1)
 	miner.target = target.Lsh(target, uint(256-bit))
 }
+
+func (miner *Miner) SetPrivKey(key string) {
+	miner.key = key
+}
+func (miner *Miner) GetPrivKey() (string) {
+	return miner.key
+}
+
 
 func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*MinedBlock)) {
 	miner.bc = bc
@@ -161,10 +170,18 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 func (miner *Miner) mineBlock(nonce int64) bool {
 	hash, ok := miner.verifyNonce(nonce, miner.newBlock.block)
 	if ok {
+		hash =  miner.newBlock.block.CalculateHashWithoutNonce()
 		miner.newBlock.block.SetHash(hash)
 		miner.newBlock.block.SetNonce(nonce)
+		keystring := miner.GetPrivKey()
+		if len(keystring) >0 {
+			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
+			if !signed {
+				return false
+			}
+		}
 		miner.newBlock.isValid = true
-	}
+		}
 	return ok
 }
 

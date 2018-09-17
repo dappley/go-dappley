@@ -19,11 +19,11 @@ package storage
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"os"
 
+	logger "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
-	"fmt"
 )
 
 var (
@@ -41,7 +41,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 
 	db1, err := leveldb.OpenFile(fp, nil)
 	if err != nil {
-		log.Panic(ErrLevelDbNotAbleToOpenFile)
+		logger.Panic(ErrLevelDbNotAbleToOpenFile)
 	}
 
 	return &LevelDB{
@@ -62,10 +62,12 @@ func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	return val, nil
 }
 
-func (ldb *LevelDB) Put(key []byte, val []byte) {
-	if err := ldb.db.Put(key, val, nil); err != nil {
-		log.Panic(err)
+func (ldb *LevelDB) Put(key []byte, val []byte) error {
+	err := ldb.db.Put(key, val, nil)
+	if err != nil {
+		logger.Error(err)
 	}
+	return err
 
 }
 

@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"github.com/davecgh/go-spew/spew"
 )
 
 type FileLoader struct{
@@ -53,7 +52,6 @@ func (fl *FileLoader) ReadFromFile() ([]byte, error) {
 }
 
 func (fl *FileLoader) SaveToFile(buffer bytes.Buffer) {
-	spew.Dump(buffer.Bytes())
 	err := ioutil.WriteFile(fl.filePath, buffer.Bytes(), 0644)
 	if err != nil {
 		log.Panic(err)

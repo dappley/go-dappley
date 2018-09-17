@@ -33,6 +33,7 @@ var bh1 = &BlockHeader{
 	nil,
 	1,
 	time.Now().Unix(),
+	nil,
 	0,
 }
 
@@ -41,6 +42,7 @@ var bh2 = &BlockHeader{
 	[]byte("hash"),
 	1,
 	time.Now().Unix(),
+	nil,
 	1,
 }
 
@@ -166,15 +168,22 @@ func TestUpdate(t *testing.T) {
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := make(UTXOIndex)
 	utxoIndex.Update(blk, db)
-	utxoIndex = LoadUTXOIndex(db)
+	utxoIndexInDB := LoadUTXOIndex(db)
 
-	assert.Equal(t, 2, len(utxoIndex[string(address1Hash)]))
-	assert.Equal(t, blk.transactions[0].ID, utxoIndex[string(address1Hash)][0].Txid)
-	assert.Equal(t, 0, utxoIndex[string(address1Hash)][0].TxIndex)
-	assert.Equal(t, blk.transactions[0].Vout[0].Value, utxoIndex[string(address1Hash)][0].Value)
-	assert.Equal(t, blk.transactions[0].ID, utxoIndex[string(address1Hash)][1].Txid)
-	assert.Equal(t, 1, utxoIndex[string(address1Hash)][1].TxIndex)
-	assert.Equal(t, blk.transactions[0].Vout[1].Value, utxoIndex[string(address1Hash)][1].Value)
+	// Assert that both the original instance and the database copy are updated correctly
+	for _, index := range []UTXOIndex{utxoIndex, utxoIndexInDB} {
+		assert.Equal(t, 2, len(index[string(address1Hash)]))
+		assert.Equal(t, blk.transactions[0].ID, index[string(address1Hash)][0].Txid)
+		assert.Equal(t, 0, index[string(address1Hash)][0].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[0].Value, index[string(address1Hash)][0].Value)
+		assert.Equal(t, blk.transactions[0].ID, index[string(address1Hash)][1].Txid)
+		assert.Equal(t, 1, index[string(address1Hash)][1].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[1].Value, index[string(address1Hash)][1].Value)
+	}
+}
+
+func TestUpdate_Failed(t *testing.T) {
+	// TODO: mock storage that returns error on put
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {

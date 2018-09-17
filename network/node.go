@@ -38,6 +38,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+	"sync"
 )
 
 const (
@@ -58,7 +59,7 @@ type Node struct {
 	streams                map[peer.ID]*Stream
 	peerList               *PeerList
 	exitCh                 chan bool
-	recentlyRcvedDapMsgs   map[string]bool
+	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 }
 
@@ -71,13 +72,13 @@ func NewNode(bc *core.Blockchain) *Node {
 		make(map[peer.ID]*Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
-		make(map[string]bool),
+		&sync.Map{},
 		&placeholder,
 	}
 }
 
 func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
-	if n.recentlyRcvedDapMsgs[dapmsg.GetKey()] == true {
+	if _,value := n.recentlyRcvedDapMsgs.Load(dapmsg.GetKey()); value == true {
 		return true
 	}
 	return false
@@ -85,7 +86,7 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 
 func (n *Node) GetBlockchain() *core.Blockchain           { return n.bc }
 func (n *Node) GetPeerList() *PeerList                    { return n.peerList }
-func (n *Node) GetRecentlyRcvedDapMsgs() *map[string]bool { return &n.recentlyRcvedDapMsgs }
+func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
 
 func (n *Node) Start(listenPort int) error {
 
@@ -261,7 +262,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("Node: BroadcastBlock: Hash:", block.GetHash(),", Height:", block.GetHeight())
+	logger.Debug("Node: BroadcastBlock: Hash:", block.GetHash(), ", Height:", block.GetHeight())
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err != nil {
 		return err
@@ -361,13 +362,13 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
+	logger.Info("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {
-	n.recentlyRcvedDapMsgs[dm.GetKey()] = true
+	n.recentlyRcvedDapMsgs.Store(dm.GetKey(), true)
 }
 
 func (n *Node) addTxToPool(data []byte) {
