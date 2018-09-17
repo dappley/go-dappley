@@ -21,7 +21,6 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core"
 	"bytes"
-	logger "github.com/sirupsen/logrus"
 )
 
 type Dynasty struct{
@@ -97,7 +96,6 @@ func (dynasty *Dynasty) IsMyTurn(producer string, now int64) bool{
 
 func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool{
 	if producerIndex < 0 {
-		logger.Debug("Your are not producer")
 		return false
 	}
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
