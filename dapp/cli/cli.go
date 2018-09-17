@@ -29,6 +29,7 @@ import (
 	"log"
 	"os"
 	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/util"
 )
 
 //command names
@@ -38,6 +39,7 @@ const(
 	cliGetPeerInfo			= "getPeerInfo"
 	cliSend 				= "send"
 	cliAddPeer 				= "addPeer"
+	clicreateWallet			= "createWallet"
 )
 
 //flag names
@@ -69,6 +71,7 @@ var cmdList = []string{
 	cliGetPeerInfo,
 	cliSend,
 	cliAddPeer,
+	clicreateWallet,
 }
 
 //configure input parameters/flags for each command
@@ -115,6 +118,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo			: {rpcService, getPeerInfoCommandHandler},
 	cliSend					: {rpcService, sendCommandHandler},
 	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
+	clicreateWallet			:{rpcService, createWalletCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -223,6 +227,43 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	//TODO
 	fmt.Println("getBalance!")
 	fmt.Println(*(flags[flagAddress].(*string)))
+}
+
+func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	prompter := util.NewTerminalPrompter()
+	passphrase:= getPassPhrase(prompter, "Please input the password: ", true)
+	fmt.Println(passphrase)
+	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&rpcpb.CreateWalletRequest{})
+	if err!=nil {
+		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
+		return
+	}
+	if (response.Message == "Create Wallet: Error") {
+		fmt.Println("Error: Create Wallet failed. ERR: Fail to create address!")
+	}
+	fmt.Println("Create Wallet, the address is ",response.Address)
+}
+
+// getPassPhrase get passphrase from consle
+func getPassPhrase(prompter *util.TerminalPrompter, prompt string, confirmation bool) string {
+	if prompt != "" {
+		fmt.Println(prompt)
+	}
+	passphrase, err := prompter.PromptPassphrase("Password: ")
+	if err != nil {
+		fmt.Println("Failed to read password: %v", err)
+	}
+	if confirmation {
+		confirm, err := prompter.PromptPassphrase("Repeat password: ")
+		if err != nil {
+			fmt.Println("Failed to read password confirmation: %v", err)
+		}
+		if passphrase != confirm {
+			fmt.Println("password do not match")
+			return ""
+		}
+	}
+	return passphrase
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

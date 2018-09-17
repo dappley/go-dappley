@@ -24,6 +24,7 @@ import (
 type Wallet struct {
 	Key       *core.KeyPair
 	Addresses []core.Address
+	Passphrase []byte
 }
 
 func NewWallet() *Wallet {

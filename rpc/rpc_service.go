@@ -29,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
+	"fmt"
 )
 
 type RpcService struct{
@@ -37,7 +38,17 @@ type RpcService struct{
 
 // SayHello implements helloworld.GreeterServer
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	return &rpcpb.CreateWalletResponse{Message: "Hello " + in.Name}, nil
+	wallet,err := logic.CreateWallet()
+	msg := ""
+	if err != nil {
+		msg = "Create Wallet: Error"
+	}
+	addr := wallet.GetAddress().Address
+	fmt.Println(addr)
+	msg = "Create Wallet: "
+	return &rpcpb.CreateWalletResponse{
+		Message: msg,
+		Address: addr}, nil
 }
 
 func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
