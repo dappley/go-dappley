@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/codes"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -56,14 +57,14 @@ func (s *Server) Start(port uint32) {
 		}
 		lis, err := net.Listen("tcp", fmt.Sprint(":",port))
 		if err != nil {
-			log.Fatalf("failed to listen: %v", err)
+			logger.Fatalf("failed to listen: %v", err)
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
 		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
 		if err := srv.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %s", err)
+			logger.Fatalf("failed to serve: %s", err)
 		}
 	}()
 }

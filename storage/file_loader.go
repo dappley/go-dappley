@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	logger "github.com/sirupsen/logrus"
 )
 
 type FileLoader struct{
@@ -40,12 +41,12 @@ func (fl *FileLoader) ReadFromFile() ([]byte, error) {
 	if _, err := os.Stat(fl.filePath); os.IsNotExist(err) {
 		return nil, err
 	} else if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 
 	fileContent, err := ioutil.ReadFile(fl.filePath)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	return fileContent, nil
 
@@ -54,6 +55,6 @@ func (fl *FileLoader) ReadFromFile() ([]byte, error) {
 func (fl *FileLoader) SaveToFile(buffer bytes.Buffer) {
 	err := ioutil.WriteFile(fl.filePath, buffer.Bytes(), 0644)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 }

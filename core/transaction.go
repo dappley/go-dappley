@@ -37,6 +37,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10)
@@ -71,7 +72,7 @@ func (tx Transaction) Serialize() []byte {
 	enc := gob.NewEncoder(&encoded)
 	err := enc.Encode(tx)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 
 	return encoded.Bytes()
@@ -97,7 +98,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
-			log.Panic("ERROR: Previous transaction is not correct")
+			logger.Panic("ERROR: Previous transaction is not correct")
 		}
 	}
 
@@ -169,7 +170,7 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
-			fmt.Println("ERROR: Previous transaction is not correct")
+			logger.Error("ERROR: Previous transaction is not correct")
 		}
 	}
 
@@ -179,7 +180,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	for inID, vin := range tx.Vin {
 		prevTxOut := prevTXs[hex.EncodeToString(vin.Txid)]
-		if bytes.Compare(prevTxOut.PubKeyHash, vin.PubKey) != 0 {
+		vinPubKey, err := HashPubKey(vin.PubKey)
+		if (err != nil) {
+			logger.Error(err)
+			return false
+		}
+
+		if bytes.Compare(prevTxOut.PubKeyHash, vinPubKey) != 0 {
+			logger.Error("ERROR: Vout Vin public key mismatch")
 			return false
 		}
 		txCopy.Vin[inID].Signature = nil
@@ -195,12 +203,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 		originPub, err := secp256k1.FromECDSAPublicKey(&rawPubKey)
 		if err != nil {
+			logger.Error(err)
 			return false
 		}
 
 		verifyResult, error1 = secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if error1 != nil || verifyResult == false {
+			logger.Error(error1)
 			return false
 		}
 	}
@@ -260,7 +270,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amo
 	if sum.Cmp(amount) > 0 {
 		change, err := sum.Sub(amount)
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 		outputs = append(outputs, *NewTXOutput(change, from.Address))
 	}
@@ -279,7 +289,7 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 	for _, vin := range tx.Vin {
 		prevTX, err := bc.FindTransaction(vin.Txid)
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
