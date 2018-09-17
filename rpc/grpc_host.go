@@ -20,7 +20,6 @@ package rpc
 
 import (
 	"net"
-	"log"
 	"fmt"
 	"strings"
 
