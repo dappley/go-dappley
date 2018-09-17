@@ -137,7 +137,8 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	assert.Equal(t, mineReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7)), senderBalance) // mining reward (10) + remaining (10-7)
+	sendLeftBalance, err := mineReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
+	assert.Equal(t, sendLeftBalance, senderBalance) // mining reward (10) * (height + 1) - sendBalance (7)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
 	client.RemoveWalletFile()
