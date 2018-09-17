@@ -21,7 +21,6 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
 	"math/big"
 	"math/rand"
 	logger "github.com/sirupsen/logrus"

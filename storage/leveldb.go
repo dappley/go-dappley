@@ -19,7 +19,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	logger "github.com/sirupsen/logrus"

@@ -21,7 +21,6 @@ package storage
 import (
 	"bytes"
 	"io/ioutil"
-	"log"
 	"os"
 	logger "github.com/sirupsen/logrus"
 )
