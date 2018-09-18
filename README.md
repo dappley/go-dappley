@@ -33,11 +33,64 @@ cd github.com/dappley/go-dappley
 make
 ```
 
-## Running dapp
+## Running Dapp
 The executable is located in the ```dapp``` folder. Run the following command to bring up a full node in the network.
 ``` bash
 cd dapp
 ./dapp
+```
+
+## Running Multiple Nodes On A Machine
+###Start a seed node
+``` bash
+cd $GOPATH/src/github.com/dappley/go-dappley/dapp
+./dapp -f conf/seed.conf
+```
+
+###Start a peer node 
+``` bash
+./dapp -f conf/node.conf
+```
+
+## Running Mutiple Nodes On Multiple Machines
+###Start a seed node
+1. On your first machine, run `ifconfig` to find your ip address.
+``` bash
+ifconfig
+```
+
+2. Run the following command to start your seed node.
+``` bash
+cd $GOPATH/src/github.com/dappley/go-dappley/dapp
+./dapp -f conf/seed.conf
+```
+
+###Start a peer node 
+1. On your second machine, first go to your node.conf file
+``` bash
+cd $GOPATH/src/github.com/dappley/go-dappley/dapp/conf
+vim node.conf
+```
+
+2. Modify the ip address of your seed node. Replace `<seed node ip address>` with your seed node's ip address that you have found in the previous step
+```
+consensusConfig{
+    minerAddr: "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+    privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+}
+
+nodeConfig{
+    port:   12346
+    seed:   "/ip4/<seed node ip address>/tcp/12345/ipfs/QmNzA9rsEcM5nAzX9PzTrabJsGiifzaUU85Qe78HSDzSSE"
+    dbPath: "../bin/node.db"
+    rpcPort: 50052
+}
+```
+
+3. Start your peer node
+``` bash
+cd ../
+./dapp -f conf/node.conf
 ```
 
 ## Contribution
