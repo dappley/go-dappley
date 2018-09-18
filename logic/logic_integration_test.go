@@ -34,6 +34,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testport_msg_relay = 19999
+const testport_msg_relay_port = 21202
+const testport_fork = 10200
+
 //test send
 func TestSend(t *testing.T) {
 	var mineReward = common.NewAmount(10)
@@ -64,12 +68,7 @@ func TestSend(t *testing.T) {
 
 			// Create a PoW blockchain with the sender wallet's address as the coinbase address
 			// i.e. sender's wallet would have mineReward amount after blockchain created
-			pow := consensus.NewProofOfWork()
-			bc, err := CreateBlockchain(senderWallet.GetAddress(), store, pow)
-			if err != nil {
-				panic(err)
-			}
-
+			bc, pow := createBlockchain(senderWallet.GetAddress(), store)
 			node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 			// Create a receiver wallet; Balance is 0 initially
@@ -223,7 +222,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 	teardown()
 }
 
-const testport_msg_relay = 19999
 
 func TestBlockMsgRelay(t *testing.T) {
 	setup()
@@ -239,31 +237,17 @@ func TestBlockMsgRelay(t *testing.T) {
 		defer db.Close()
 
 		//create blockchain instance
-		pow := consensus.NewProofOfWork()
-		bc := core.CreateBlockchain(addr, db, pow)
+		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
-		n := network.NewNode(bcs[i])
+		node := setupNode(addr, pow, bc, testport_msg_relay + 100*i)
 
-		if i == 0 {
-			pow.Setup(n, addr.Address)
-			pow.SetTargetBit(16)
-		}
-
-		n.Start(testport_msg_relay + 100*i)
-
-		nodes = append(nodes, n)
+		nodes = append(nodes, node)
 		pows = append(pows, pow)
 	}
-
-	for i := 0; i < len(nodes); i++ {
-		nodes[i].AddStream(
-			nodes[i+1].GetPeerID(),
-			nodes[i+1].GetPeerMultiaddr(),
-		)
-		if i == (len(nodes) - 2) {
-			break
-		}
+	//each node connects to the subsequent node only
+	for i := 0; i < len(nodes)-1; i++ {
+		connectNodes(nodes[i], nodes[i+1])
 	}
 
 	//firstNode Starts Mining
@@ -283,6 +267,7 @@ func TestBlockMsgRelay(t *testing.T) {
 	}
 }
 
+
 func TestBlockMsgMeshRelay(t *testing.T) {
 	setup()
 	var pows []*consensus.ProofOfWork
@@ -292,34 +277,24 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++ {
+		//init db for each node we want
 		db := storage.NewRamStorage()
 		defer db.Close()
+		bc, pow := createBlockchain(addr, db)
+		//init node based on blockchain
+		node := setupNode(addr, pow ,bc, testport_msg_relay + 100*i)
 
-		//create blockchain instance
-		pow := consensus.NewProofOfWork()
-		bc := core.CreateBlockchain(addr, db, pow)
+		//index each node and service
 		bcs = append(bcs, bc)
-
-		n := network.NewNode(bcs[i])
-
-		if i == 0 {
-			pow.Setup(n, addr.Address)
-			pow.SetTargetBit(16)
-		}
-
-		n.Start(testport_msg_relay + 100*i)
-
-		nodes = append(nodes, n)
+		nodes = append(nodes, node)
 		pows = append(pows, pow)
 	}
 
+	//each node connects to every other node
 	for i := 0; i < len(nodes); i++ {
 		for j := 0; j < len(nodes); j++ {
 			if i != j {
-				nodes[i].AddStream(
-					nodes[j].GetPeerID(),
-					nodes[j].GetPeerMultiaddr(),
-				)
+				connectNodes(nodes[i], nodes[j])
 			}
 		}
 	}
@@ -341,7 +316,8 @@ func TestBlockMsgMeshRelay(t *testing.T) {
 	}
 }
 
-const testport_msg_relay_port = 21202
+
+
 func TestBlockMsgWithDpos(t *testing.T) {
 	const (
 		timeBetweenBlock= 2
@@ -400,7 +376,6 @@ func TestBlockMsgWithDpos(t *testing.T) {
 }
 
 
-const testport_fork = 10200
 
 func TestForkChoice(t *testing.T) {
 
@@ -416,17 +391,15 @@ func TestForkChoice(t *testing.T) {
 		db := storage.NewRamStorage()
 		defer db.Close()
 
-		pow := consensus.NewProofOfWork()
-		//create blockchain instance
-		bc := core.CreateBlockchain(addr, db, pow)
+		bc,pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
-		n := network.NewNode(bcs[i])
-		pow.Setup(n, addr.Address)
+		node := network.NewNode(bcs[i])
+		pow.Setup(node, addr.Address)
 		pow.SetTargetBit(16)
-		n.Start(testport_fork + i)
+		node.Start(testport_fork + i)
 		pows = append(pows, pow)
-		nodes = append(nodes, n)
+		nodes = append(nodes, node)
 	}
 
 	//start node0 first. the next node starts mining after the previous node is at least at height 5
@@ -475,17 +448,13 @@ func TestAddBalance(t *testing.T) {
 			// Create a coinbase address
 			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 
-			// Create a pow consensus
-			pow := consensus.NewProofOfWork()
-
-			// Create a blockchain
-			bc, err := CreateBlockchain(addr, store, pow)
+			bc, pow := createBlockchain(addr, store)
 
 			// Create a new wallet address for testing
 			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
 
 			// Add `addAmount` to the balance of the new wallet
-			err = AddBalance(testAddr, tc.addAmount, bc)
+			err := AddBalance(testAddr, tc.addAmount, bc)
 			assert.Equal(t, err, tc.expectedErr)
 
 			// Start mining to approve the transaction
@@ -529,4 +498,25 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			assert.Equal(t, ErrInvalidAddress, err)
 		})
 	}
+}
+
+
+func connectNodes (node1 *network.Node, node2 *network.Node){
+	node1.AddStream(
+		node2.GetPeerID(),
+		node2.GetPeerMultiaddr(),
+	)
+}
+
+func setupNode(addr core.Address ,pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node{
+	node := network.NewNode(bc)
+	pow.Setup(node, addr.Address)
+	pow.SetTargetBit(16)
+	node.Start(port)
+	return node
+}
+
+func createBlockchain (addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
+	pow := consensus.NewProofOfWork()
+	return core.CreateBlockchain(addr, db, pow), pow
 }
