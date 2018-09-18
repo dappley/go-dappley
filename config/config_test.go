@@ -24,77 +24,56 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/config/pb"
 )
 
-func TestLoadConfigFromFile(t *testing.T) {
+func TestLoadConfig(t *testing.T) {
 	logger.SetLevel(logger.ErrorLevel)
 	tests := []struct {
 		name     string
 		content  string
-		expected *Config
+		expected proto.Message
 	}{
 		{
 			name:    "CorrectFileContent",
 			content: fakeFileContent(),
-			expected: &Config{
-				DynastyConfig{
-					producers: []string{
-						"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
-						"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					},
+			expected: &configpb.Config{
+				ConsensusConfig: &configpb.ConsensusConfig{
+					MinerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					PrivKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
-				ConsensusConfig{
-					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
-				},
-				NodeConfig{
-					port:    5,
-					seed:    "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
-					dbPath:  "dbPath",
-					rpcPort: 200,
+				NodeConfig: &configpb.NodeConfig{
+					Port:    5,
+					Seed:    "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
+					DbPath:  "dbPath",
+					RpcPort: 200,
 				},
 			},
 		},
 		{
 			name:    "EmptySeed",
 			content: noSeedContent(),
-			expected: &Config{
-				DynastyConfig{
-					producers: []string{
-						"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-					},
+			expected: &configpb.Config{
+				ConsensusConfig: &configpb.ConsensusConfig{
+					MinerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					PrivKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
-				ConsensusConfig{
-					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
-				},
-				NodeConfig{
-					port: 5,
-					seed: "",
+				NodeConfig: &configpb.NodeConfig{
+					Port: 5,
+					Seed: "",
 				},
 			},
 		},
 		{
-			name:     "WrongFileContent",
-			content:  "WrongFileContent",
-			expected: nil,
+			name:    "WrongFileContent",
+			content: "WrongFileContent",
+			expected: &configpb.Config{},
 		},
 		{
 			name:    "EmptyFile",
 			content: "",
-			expected: &Config{
-				DynastyConfig{
-					producers: []string(nil),
-				},
-				ConsensusConfig{
-					minerAddr: "",
-					privKey: "",
-				},
-				NodeConfig{
-					port: 0,
-				},
-			},
+			expected: &configpb.Config{},
 		},
 	}
 
@@ -103,21 +82,15 @@ func TestLoadConfigFromFile(t *testing.T) {
 			filename := tt.name + "_config.conf"
 			ioutil.WriteFile(filename, []byte(tt.content), 0644)
 			defer os.Remove(filename)
-			configContent := LoadConfigFromFile(filename)
-			assert.Equal(t, tt.expected, configContent)
+			config := &configpb.Config{}
+			LoadConfig(filename, config)
+			assert.Equal(t, tt.expected, config)
 		})
 	}
-
 }
 
 func fakeFileContent() string {
 	return `
-	dynastyConfig{
-		producers: [
-			"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
-			"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG"
-		]
-	}
 	consensusConfig{
 					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
 					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
@@ -132,12 +105,6 @@ func fakeFileContent() string {
 
 func noSeedContent() string {
 	return `
-	dynastyConfig{
-		producers: [
-			"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-			"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-		]
-	}
 	consensusConfig{
 						minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
 					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
