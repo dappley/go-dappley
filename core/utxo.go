@@ -54,7 +54,7 @@ func deserializeUTXOIndex(d []byte) UTXOIndex {
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&index)
 	if err != nil {
-		logger.Error(fmt.Errorf("failed to deserialize UTXOIndex: %v", err))
+		logger.Panicf("failed to deserialize UTXOIndex: %v", err)
 	}
 	return index
 }

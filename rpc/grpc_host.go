@@ -56,7 +56,7 @@ func (s *Server) Start(port uint32) {
 		}
 		lis, err := net.Listen("tcp", fmt.Sprint(":",port))
 		if err != nil {
-			logger.Fatalf("failed to listen: %v", err)
+			logger.Panicf("failed to listen: %v", err)
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))

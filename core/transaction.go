@@ -97,7 +97,8 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
-			logger.Panic("ERROR: Previous transaction is not correct")
+			logger.Error("ERROR: Previous transaction is not correct")
+			return
 		}
 	}
 
@@ -112,11 +113,13 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 
 		privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 		if err != nil {
+			logger.Error("ERROR: Get private key failed", err)
 			return
 		}
 
-		signature, error := secp256k1.Sign(txCopy.ID, privData)
-		if error != nil {
+		signature, err := secp256k1.Sign(txCopy.ID, privData)
+		if err != nil {
+			logger.Error("ERROR: Sign transaction.Id failed", err)
 			return
 		}
 
@@ -170,6 +173,7 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
 			logger.Error("ERROR: Previous transaction is not correct")
+			return false
 		}
 	}
 
