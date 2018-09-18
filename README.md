@@ -41,19 +41,19 @@ cd dapp
 ```
 
 ## Running Multiple Nodes On A Machine
-###Start a seed node
+### Start a seed node
 ``` bash
 cd $GOPATH/src/github.com/dappley/go-dappley/dapp
 ./dapp -f conf/seed.conf
 ```
 
-###Start a peer node 
+### Start a peer node 
 ``` bash
 ./dapp -f conf/node.conf
 ```
 
 ## Running Mutiple Nodes On Multiple Machines
-###Start a seed node
+### Start a seed node
 1. On your first machine, run `ifconfig` to find your ip address.
 ``` bash
 ifconfig
@@ -65,7 +65,7 @@ cd $GOPATH/src/github.com/dappley/go-dappley/dapp
 ./dapp -f conf/seed.conf
 ```
 
-###Start a peer node 
+### Start a peer node 
 1. On your second machine, first go to your node.conf file
 ``` bash
 cd $GOPATH/src/github.com/dappley/go-dappley/dapp/conf
