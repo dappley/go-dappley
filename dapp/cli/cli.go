@@ -231,9 +231,11 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
 	prompter := util.NewTerminalPrompter()
-	passphrase:= getPassPhrase(prompter, "Please input the password: ", true)
+	passphrase:= prompter.GetPassPhrase("Please input the password: ",true)
 	fmt.Println(passphrase)
-	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&rpcpb.CreateWalletRequest{})
+	walletRequest := rpcpb.CreateWalletRequest{}
+	walletRequest.SetPassphrase(passphrase)
+	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
 	if err!=nil {
 		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
 		return
@@ -242,28 +244,6 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 		fmt.Println("Error: Create Wallet failed. ERR: Fail to create address!")
 	}
 	fmt.Println("Create Wallet, the address is ",response.Address)
-}
-
-// getPassPhrase get passphrase from consle
-func getPassPhrase(prompter *util.TerminalPrompter, prompt string, confirmation bool) string {
-	if prompt != "" {
-		fmt.Println(prompt)
-	}
-	passphrase, err := prompter.PromptPassphrase("Password: ")
-	if err != nil {
-		fmt.Println("Failed to read password: %v", err)
-	}
-	if confirmation {
-		confirm, err := prompter.PromptPassphrase("Repeat password: ")
-		if err != nil {
-			fmt.Println("Failed to read password confirmation: %v", err)
-		}
-		if passphrase != confirm {
-			fmt.Println("password do not match")
-			return ""
-		}
-	}
-	return passphrase
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

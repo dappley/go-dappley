@@ -29,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/sirupsen/logrus"
 	"fmt"
 )
 
@@ -38,8 +39,17 @@ type RpcService struct{
 
 // SayHello implements helloworld.GreeterServer
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	wallet,err := logic.CreateWallet()
+	passPhrase := in.Passphrase
+	fmt.Println(passPhrase)
 	msg := ""
+	if len(passPhrase) ==0 {
+		logrus.Error("CreateWallet: Password is empty!")
+		msg = "Create Wallet: Error"
+		return &rpcpb.CreateWalletResponse{
+			Message: msg,
+			Address: ""}, nil
+	}
+	wallet,err := logic.CreateWalletWithpassphrase(passPhrase)
 	if err != nil {
 		msg = "Create Wallet: Error"
 	}

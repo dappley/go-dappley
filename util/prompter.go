@@ -125,3 +125,25 @@ func (p *TerminalPrompter) AppendHistory(command string) {
 func (p *TerminalPrompter) SetWordCompleter(completer liner.WordCompleter) {
 	p.liner.SetWordCompleter(completer)
 }
+
+// getPassPhrase get passphrase from consle
+func (p *TerminalPrompter) GetPassPhrase(prompt string, confirmation bool) string {
+	if prompt != "" {
+		fmt.Println(prompt)
+	}
+	passphrase, err := p.PromptPassphrase("Password: ")
+	if err != nil {
+		fmt.Println("Failed to read password: %v", err)
+	}
+	if confirmation {
+		confirm, err := p.PromptPassphrase("Repeat password: ")
+		if err != nil {
+			fmt.Println("Failed to read password confirmation: %v", err)
+		}
+		if passphrase != confirm {
+			fmt.Println("password do not match")
+			return ""
+		}
+	}
+	return passphrase
+}
