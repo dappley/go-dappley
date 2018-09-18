@@ -149,6 +149,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	balance1, err := GetBalance(addr1, store)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
+	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
 	err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, bc, node)
@@ -202,6 +203,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	balance2, err := GetBalance(addr2, store)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
+	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//Send 5 coins from addr1 to addr2
 	err = Send(wallet1, addr2, transferAmount, tip, bc, node)
