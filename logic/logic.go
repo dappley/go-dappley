@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/network"
 )
 
 var (
@@ -89,7 +90,7 @@ func GetAllAddresses() ([]core.Address, error) {
 	return addresses, err
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain) error {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) error {
 	if !senderWallet.GetAddress().ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
@@ -102,7 +103,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 	bc.GetTxPool().ConditionalAdd(tx)
-
+	node.TxBroadcast(&tx)
 	if err != nil {
 		return err
 	}
