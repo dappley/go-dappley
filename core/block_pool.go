@@ -103,7 +103,7 @@ func (pool *BlockPool) IsParentOfFork(blk *Block) bool {
 		return false
 	}
 
-	return IsParentBlock(blk, pool.GetForkPoolHeadBlk())
+	return blk.IsParentBlock(pool.GetForkPoolHeadBlk())
 }
 
 func (pool *BlockPool) IsTailOfFork(blk *Block) bool {
@@ -111,7 +111,7 @@ func (pool *BlockPool) IsTailOfFork(blk *Block) bool {
 		return false
 	}
 
-	return IsParentBlock(pool.GetForkPoolTailBlk(), blk)
+	return pool.GetForkPoolTailBlk().IsParentBlock(blk)
 }
 
 func (pool *BlockPool) GetBlockchain() *Blockchain {
