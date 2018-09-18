@@ -267,8 +267,8 @@ func TestBlockMsgRelay(t *testing.T) {
 	}
 }
 
-
-func TestBlockMsgMeshRelay(t *testing.T) {
+// Test if network radiation bounces forever
+func TestBlockMsgRelayMeshNetwork(t *testing.T) {
 	setup()
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
