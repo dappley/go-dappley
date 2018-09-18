@@ -46,6 +46,7 @@ type NodeConfig struct {
 	seed    string
 	dbPath  string
 	rpcPort uint32
+	keyPath string
 }
 
 type BlockchainConfig struct {
@@ -77,6 +78,7 @@ func LoadConfigFromFile(filename string) *Config {
 	consensusConfig := ConsensusConfig{}
 	if pb.ConsensusConfig != nil {
 		consensusConfig.minerAddr = pb.ConsensusConfig.MinerAddr
+		consensusConfig.privKey = pb.ConsensusConfig.PrivKey
 	}
 
 	nodeConfig := NodeConfig{}
@@ -85,6 +87,7 @@ func LoadConfigFromFile(filename string) *Config {
 		nodeConfig.seed = pb.NodeConfig.Seed
 		nodeConfig.dbPath = pb.NodeConfig.DbPath
 		nodeConfig.rpcPort = pb.NodeConfig.RpcPort
+		nodeConfig.keyPath = pb.NodeConfig.KeyPath
 	}
 
 	return &Config{
@@ -105,3 +108,4 @@ func (nodeConfig *NodeConfig)GetListeningPort() uint32{return nodeConfig.port}
 func (nodeConfig *NodeConfig)GetSeed() string{return nodeConfig.seed}
 func (nodeConfig *NodeConfig)GetDbPath() string{return nodeConfig.dbPath}
 func (nodeConfig *NodeConfig)GetRpcPort() uint32{return nodeConfig.rpcPort}
+func (nodeConfig *NodeConfig)GetKeyPath() string{return nodeConfig.keyPath}

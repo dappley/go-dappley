@@ -22,6 +22,7 @@ message NodeConfig{
     string dbPath = 3;
     uint32 rpcPort = 4;
     string password = 5;
+    string keyPath = 6;
 }
 
 message CliConfig{
