@@ -298,8 +298,6 @@ func (pool *BlockPool) updateForkPool() {
 			}
 			blk := pool.getBlkFromBlkCache(string(forkTailNode.GetValue().(BlockHeader).hash))
 			pool.forkPool = append(pool.forkPool, blk)
-			//is going to be merged so remove from blkcache
-			pool.blkCache.Remove(blk.hashString())
 			forkTailNode = forkTailNode.Parent
 		}
 	}
