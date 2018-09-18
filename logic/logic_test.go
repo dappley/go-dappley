@@ -46,7 +46,11 @@ func TestMain(m *testing.M) {
 func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet()
 	assert.Nil(t, err)
-	assert.Equal(t, 34, len(wallet.Addresses[0].Address))
+	expectedLength := 34
+	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey);hash[0] < 10{
+		expectedLength = 33
+	}
+	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
 }
 
 func TestCreateBlockchain(t *testing.T) {
