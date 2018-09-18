@@ -77,6 +77,7 @@ func LoadConfigFromFile(filename string) *Config {
 	consensusConfig := ConsensusConfig{}
 	if pb.ConsensusConfig != nil {
 		consensusConfig.minerAddr = pb.ConsensusConfig.MinerAddr
+		consensusConfig.privKey = pb.ConsensusConfig.PrivKey
 	}
 
 	nodeConfig := NodeConfig{}

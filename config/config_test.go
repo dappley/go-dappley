@@ -39,12 +39,13 @@ func TestLoadConfigFromFile(t *testing.T) {
 			expected: &Config{
 				DynastyConfig{
 					producers: []string{
-						"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
+						"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
+						"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
 					},
 				},
 				ConsensusConfig{
-					minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
 				NodeConfig{
 					port:    5,
@@ -60,12 +61,13 @@ func TestLoadConfigFromFile(t *testing.T) {
 			expected: &Config{
 				DynastyConfig{
 					producers: []string{
-						"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+						"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
 						"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 					},
 				},
 				ConsensusConfig{
-					minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
 				NodeConfig{
 					port: 5,
@@ -87,6 +89,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 				},
 				ConsensusConfig{
 					minerAddr: "",
+					privKey: "",
 				},
 				NodeConfig{
 					port: 0,
@@ -111,12 +114,13 @@ func fakeFileContent() string {
 	return `
 	dynastyConfig{
 		producers: [
-			"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-			"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+			"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
+			"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG"
 		]
 	}
 	consensusConfig{
-		minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7"
+					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
 	nodeConfig{
 		port: 5
@@ -130,12 +134,13 @@ func noSeedContent() string {
 	return `
 	dynastyConfig{
 		producers: [
-			"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
 			"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 		]
 	}
 	consensusConfig{
-		minerAddr: "1MeSBgufmzwpiJNLemUe1emxAussBnz7a7"
+						minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
 	nodeConfig{
 		port: 5
