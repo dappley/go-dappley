@@ -110,6 +110,13 @@ func initNode(conf *config.Config, bc *core.Blockchain) (*network.Node, error) {
 	node := network.NewNode(bc)
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetListeningPort()
+	keyPath := nodeConfig.GetKeyPath()
+	if keyPath!="" {
+		err := node.LoadNetworkKeyFromFile(keyPath)
+		if err!= nil {
+			logger.Error(err)
+		}
+	}
 	err := node.Start(int(port))
 	if err != nil {
 		logger.Error(err)
