@@ -41,16 +41,7 @@ type NetService interface{
 type BlockPoolInterface interface {
 	SetBlockchain(bc *Blockchain)
 	BlockRequestCh() chan BlockRequestPars
-	GetForkPool() []*Block
-	ForkPoolLen() int
-	GetForkPoolHeadBlk() *Block
-	GetForkPoolTailBlk() *Block
-	ResetForkPool()
-	ReInitializeForkPool(blk *Block)
-	IsParentOfFork(blk *Block) bool
-	IsTailOfFork(blk *Block) bool
 	GetBlockchain() *Blockchain
-	VerifyTransactions(utxo UTXOIndex) bool
-	IsHigherThanFork(block *Block) bool
+	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
 	Push(block *Block, pid peer.ID)
 }

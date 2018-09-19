@@ -106,7 +106,7 @@ func (index UTXOIndex) GetUTXOsByPubKey(pubkey []byte) []*UTXO {
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (index *UTXOIndex) Update(newBlk *Block, db storage.Storage) error {
+func (index *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) error {
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := index.deepCopy()
 

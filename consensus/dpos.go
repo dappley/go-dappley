@@ -95,7 +95,6 @@ func (dpos *Dpos) Start(){
 				if minedBlk.isValid {
 					logger.Info("Dpos: A Block has been mined! ",dpos.node.GetPeerID())
 					dpos.updateNewBlock(minedBlk.block)
-					dpos.bc.MergeFork()
 				}
 			case <-dpos.quitCh:
 				logger.Info("Dpos: Dpos Stops! ", dpos.node.GetPeerID())

@@ -167,7 +167,7 @@ func TestUpdate(t *testing.T) {
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := make(UTXOIndex)
-	utxoIndex.Update(blk, db)
+	utxoIndex.BuildForkUtxoIndex(blk, db)
 	utxoIndexInDB := LoadUTXOIndex(db)
 
 	// Assert that both the original instance and the database copy are updated correctly

@@ -68,115 +68,24 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
 }
 
-func (pool *BlockPool) GetForkPool() []*Block { return pool.forkPool }
-
-func (pool *BlockPool) ForkPoolLen() int {
-	return len(pool.forkPool)
-}
-
-func (pool *BlockPool) GetForkPoolHeadBlk() *Block {
-	if len(pool.forkPool) > 0 {
-		return pool.forkPool[len(pool.forkPool)-1]
-	}
-	return nil
-}
-
-func (pool *BlockPool) GetForkPoolTailBlk() *Block {
-	if len(pool.forkPool) > 0 {
-		return pool.forkPool[0]
-	}
-	return nil
-}
-
-func (pool *BlockPool) ResetForkPool() {
-	pool.forkPool = []*Block{}
-}
-
-func (pool *BlockPool) ReInitializeForkPool(blk *Block) {
-	logger.Debug("Fork: Re-initilaize fork with the new block")
-	pool.ResetForkPool()
-	pool.forkPool = append(pool.forkPool, blk)
-}
-
-func (pool *BlockPool) IsParentOfFork(blk *Block) bool {
-	if blk == nil || pool.ForkPoolLen() == 0 {
-		return false
-	}
-
-	return blk.IsParentBlock(pool.GetForkPoolHeadBlk())
-}
-
-func (pool *BlockPool) IsTailOfFork(blk *Block) bool {
-	if blk == nil || pool.ForkPoolLen() == 0 {
-		return false
-	}
-
-	return pool.GetForkPoolTailBlk().IsParentBlock(blk)
-}
-
 func (pool *BlockPool) GetBlockchain() *Blockchain {
 	return pool.bc
 }
 
 //Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex) bool {
-	for i := pool.ForkPoolLen() - 1; i >= 0; i-- {
+func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
+	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.Info("Start Verify")
-		if !pool.forkPool[i].VerifyTransactions(utxo) {
+		if !forkBlks[i].VerifyTransactions(utxo) {
 			return false
 		}
 		logger.Info("Verifyed a block. Height: ", pool.forkPool[i].GetHeight(), "Have ", i, "block left")
 		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
-		utxoIndex.Update(pool.forkPool[i], pool.bc.GetDb())
+		utxoIndex.BuildForkUtxoIndex(pool.forkPool[i], pool.bc.GetDb())
 	}
 	return true
 }
 
-func (pool *BlockPool) updateForkFromTail(blk *Block) bool {
-
-	isTail := pool.IsTailOfFork(blk)
-	if isTail {
-		//only update if the block is higher than the current blockchain
-		if pool.bc.IsHigherThanBlockchain(blk) {
-			logger.Debug("BlockPool: Add block to tail")
-			pool.addTailToForkPool(blk)
-		} else {
-			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
-			pool.ResetForkPool()
-		}
-	}
-	return isTail
-}
-
-//returns if the operation is successful
-func (pool *BlockPool) addParentToFork(blk *Block) bool {
-
-	isParent := pool.IsParentOfFork(blk)
-	if isParent {
-		//check if fork's max height is still higher than the blockchain
-		if pool.GetForkPoolTailBlk().GetHeight() > pool.bc.GetMaxHeight() {
-			logger.Debug("BlockPool: Add block to head")
-			pool.addParentToForkPool(blk)
-		} else {
-			//if the fork's max height is less than the blockchain, delete the fork
-			logger.Debug("BlockPool: Fork height too low. Dump the fork...")
-			pool.ResetForkPool()
-		}
-	}
-	return isParent
-}
-
-func (pool *BlockPool) IsHigherThanFork(block *Block) bool {
-	if block == nil {
-		return false
-	}
-	tailBlk := pool.GetForkPoolTailBlk()
-	if tailBlk == nil {
-		return true
-	}
-	return block.GetHeight() > tailBlk.GetHeight()
-}
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	logger.Debug("BlockPool: Has received a new block")
@@ -195,6 +104,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	logger.Debug("BlockPool: Block has been verified")
 	pool.handleRecvdBlock(block, pid)
 }
+
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 	logger.Debug("BlockPool: Received a new block: ", blk.hashString(), " From Sender: ", sender.String())
 	node,_ := pool.bc.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
@@ -235,9 +145,9 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 	//attach above partial tree to forktree
 	if ok := pool.updateForkTree(forkParent, sender); ok == true {
 		//build forkchain based on highest leaf in tree
-		pool.updateForkPool()
+		forkBlks := pool.getForkBlks()
 		//merge forkchain into blockchain
-		pool.bc.MergeFork()
+		pool.bc.MergeFork(forkBlks)
 	}
 
 }
@@ -291,7 +201,8 @@ func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
 	}
 }
 
-func (pool *BlockPool) updateForkPool() {
+func (pool *BlockPool) getForkBlks() []*Block {
+	var forkblks []*Block
 	tree := pool.bc.forkTree
 	forkTailNode := tree.HighestLeaf
 	bc := pool.bc
@@ -301,16 +212,17 @@ func (pool *BlockPool) updateForkPool() {
 	forkParentHash :=tree.Found.GetValue().(*BlockHeader).hash
 
 	if tree.Found != nil {
-		pool.ResetForkPool()
+		logger.Debug("Blockpool: no common parent found between fork tail and bc tail")
 		for  {
 			if IsHashEqual(forkTailNode.GetValue().(*BlockHeader).hash , forkParentHash ){
 				break
 			}
 			blk := pool.getBlkFromBlkCache(string(forkTailNode.GetValue().(BlockHeader).hash))
-			pool.forkPool = append(pool.forkPool, blk)
+			forkblks = append(forkblks, blk)
 			forkTailNode = forkTailNode.Parent
 		}
 	}
+	return forkblks
 }
 
 func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {

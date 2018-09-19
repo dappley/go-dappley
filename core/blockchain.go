@@ -166,7 +166,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 	}
 
 	utxoIndex := LoadUTXOIndex(bc.db)
-	utxoIndex.Update(block, bc.db)
+	utxoIndex.BuildForkUtxoIndex(block, bc.db)
 
 	logger.Info("Blockchain: Added A New Block To Tail! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
 
@@ -362,10 +362,10 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	return err == nil
 }
 
-func (bc *Blockchain) MergeFork() {
+func (bc *Blockchain) MergeFork(forkBlks []*Block) {
 
 	//find parent block
-	forkHeadBlock := bc.GetBlockPool().GetForkPoolHeadBlk()
+	forkHeadBlock := forkBlks[len(forkBlks)-1]
 	if forkHeadBlock == nil {
 		return
 	}
@@ -379,17 +379,18 @@ func (bc *Blockchain) MergeFork() {
 	if err != nil {
 		logger.Warn(err)
 	}
-	if !bc.GetBlockPool().VerifyTransactions(utxo) {
+	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
 		return
 	}
 
 	bc.Rollback(forkParentHash)
 
 	//add all blocks in fork from head to tail
-	bc.concatenateForkToBlockchain()
+	bc.concatenateForkToBlockchain(forkBlks)
 
 	logger.Debug("Merged Fork!!")
 }
+
 
 func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
 	err := bc.AddBlockToTail(blk)
@@ -400,18 +401,17 @@ func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
 	bc.GetTxPool().RemoveMultipleTransactions(blk.GetTransactions())
 }
 
-func (bc *Blockchain) concatenateForkToBlockchain() {
-	if bc.GetBlockPool().ForkPoolLen() > 0 {
-		for i := bc.GetBlockPool().ForkPoolLen() - 1; i >= 0; i-- {
-			err := bc.AddBlockToTail(bc.GetBlockPool().GetForkPool()[i])
+func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {
+	if len(forkBlks) > 0 {
+		for i :=  len(forkBlks) - 1; i >= 0; i-- {
+			err := bc.AddBlockToTail(forkBlks[i])
 			if err!=nil {
 				logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
 			}
 			//Remove transactions in current transaction pool
-			bc.GetTxPool().RemoveMultipleTransactions(bc.GetBlockPool().GetForkPool()[i].GetTransactions())
+			bc.GetTxPool().RemoveMultipleTransactions(forkBlks[i].GetTransactions())
 		}
 	}
-	bc.GetBlockPool().ResetForkPool()
 }
 
 //rollback the blockchain to a block with the targetHash

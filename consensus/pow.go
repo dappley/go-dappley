@@ -67,7 +67,6 @@ func (pow *ProofOfWork) Start() {
 			case minedBlk := <- pow.mintBlkChan:
 				if minedBlk.isValid {
 					pow.updateNewBlock(minedBlk.block)
-					pow.bc.MergeFork()
 				}
 				pow.miner.Start()
 			}

@@ -109,21 +109,4 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 
 }
 
-func TestBlockchain_ConcatenateForkToBlockchain(t *testing.T) {
 
-	//mock a blockchain and a fork whose parent is the tail of the blockchain
-	bc := GenerateMockBlockchain(5)
-	defer bc.db.Close()
-	tailBlk,err:= bc.GetTailBlock()
-	assert.Nil(t, err)
-	bc.SetBlockPool(GenerateBlockPoolWithFakeFork(5, tailBlk))
-	forkTailBlockHash := bc.GetBlockPool().GetForkPool()[0].GetHash()
-
-	//add the fork to the end of the blockchain
-	bc.concatenateForkToBlockchain()
-	//the highest block should have the height of 10
-	assert.Equal(t, uint64(10), bc.GetMaxHeight())
-	tailBlkHash := bc.GetTailBlockHash()
-	assert.ElementsMatch(t,forkTailBlockHash,tailBlkHash)
-
-}
