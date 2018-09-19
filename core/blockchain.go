@@ -87,6 +87,13 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 		nil,
 	}
 	bc.blockPool.SetBlockchain(bc)
+
+	tailBlock, err := bc.GetTailBlock()
+	if err != nil {
+		return nil, err
+	}
+	tree:=common.NewTree(tailBlock.GetHash(), tailBlock)
+	bc.forkTree = tree
 	return bc, nil
 }
 
