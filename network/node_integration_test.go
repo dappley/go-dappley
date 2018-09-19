@@ -27,7 +27,7 @@ import (
 	"time"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/mock/gomock"
-	"github.com/dappley/go-dappley/core/mock"
+	core_mock "github.com/dappley/go-dappley/core/mock"
 )
 
 const(
