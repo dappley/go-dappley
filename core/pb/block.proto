@@ -14,5 +14,6 @@ message BlockHeader{
     bytes Prevhash = 2;
     int64 Nonce = 3;
     int64 Timestamp = 4;
-    uint64 Height = 5;
+    bytes Sign = 5;
+    uint64 Height = 6;
 }

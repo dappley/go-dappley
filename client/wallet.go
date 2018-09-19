@@ -48,13 +48,13 @@ func NewWalletWithPassphrase(passphrase string) *Wallet {
 	cipher := cipher.NewCipher(uint8(Algorithm))
 	pass := []byte(passphrase)
 	addressData := []byte(wallet.Addresses[0].Address)
+	fmt.Println(wallet.Addresses[0].Address)
 
 	passBytes,err := cipher.Encrypt(addressData, pass)
 	if err != nil {
 		Logger.Error("New Wallet: Encrypt Error!")
 		return nil
 	}
-	fmt.Println(passBytes)
 	wallet.Passphrase = passBytes
 
 	return wallet

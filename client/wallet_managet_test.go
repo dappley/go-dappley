@@ -65,6 +65,19 @@ func TestWalletManager_SaveWalletToFile(t *testing.T) {
 
 }
 
+func TestWalletManager_SaveWalletToFile_with_passphrase(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockStorage := storage_mock.NewMockFileStorage(mockCtrl)
+	mockStorage.EXPECT().SaveToFile(gomock.Any())
+	wm := NewWalletManager(mockStorage)
+	wallet := NewWalletWithPassphrase("passphrase")
+	wm.Wallets = append(wm.Wallets, wallet)
+	wm.SaveWalletToFile()
+
+}
+
 func TestWalletManager_AddWallet(t *testing.T) {
 	wm := NewWalletManager(nil)
 	wallet := NewWallet()
@@ -76,6 +89,13 @@ func TestWalletManager_AddWallet(t *testing.T) {
 func TestWallet_GetAddresses(t *testing.T) {
 	wm := NewWalletManager(nil)
 	wallet := NewWallet()
+	wm.Wallets = append(wm.Wallets, wallet)
+	assert.Equal(t, wallet.GetAddresses(),wm.GetAddresses())
+}
+
+func TestWallet_GetAddresses_with_passphrase(t *testing.T) {
+	wm := NewWalletManager(nil)
+	wallet := NewWalletWithPassphrase("passphrase")
 	wm.Wallets = append(wm.Wallets, wallet)
 	assert.Equal(t, wallet.GetAddresses(),wm.GetAddresses())
 }

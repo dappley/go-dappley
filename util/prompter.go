@@ -133,12 +133,12 @@ func (p *TerminalPrompter) GetPassPhrase(prompt string, confirmation bool) strin
 	}
 	passphrase, err := p.PromptPassphrase("Password: ")
 	if err != nil {
-		fmt.Println("Failed to read password: %v", err)
+		fmt.Printf("Failed to read password: %v \n", err)
 	}
 	if confirmation {
 		confirm, err := p.PromptPassphrase("Repeat password: ")
 		if err != nil {
-			fmt.Println("Failed to read password confirmation: %v", err)
+			fmt.Printf("Failed to read password confirmation: %v \n", err)
 		}
 		if passphrase != confirm {
 			fmt.Println("password do not match")
