@@ -40,7 +40,6 @@ type BlockPool struct {
 	blockRequestCh chan BlockRequestPars
 	size           int
 	bc             *Blockchain
-	forkPool       []*Block
 	blkCache       *lru.Cache //cache of full blks
 	nodeCache       *lru.Cache //cache of tree nodes that contain blk header as value
 
@@ -52,7 +51,6 @@ func NewBlockPool(size int) *BlockPool {
 		size:           size,
 		blockRequestCh: make(chan BlockRequestPars, size),
 		bc:             nil,
-		forkPool:       []*Block{},
 	}
 	pool.blkCache,_ = lru.New(BlockPoolLRUCacheLimit)
 	pool.nodeCache,_ = lru.New(BlockPoolLRUCacheLimit)
@@ -79,9 +77,9 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 		if !forkBlks[i].VerifyTransactions(utxo) {
 			return false
 		}
-		logger.Info("Verifyed a block. Height: ", pool.forkPool[i].GetHeight(), "Have ", i, "block left")
+		logger.Info("Verifyed a block. Height: ", forkBlks[i].GetHeight(), "Have ", i, "block left")
 		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
-		utxoIndex.BuildForkUtxoIndex(pool.forkPool[i], pool.bc.GetDb())
+		utxoIndex.BuildForkUtxoIndex(forkBlks[i], pool.bc.GetDb())
 	}
 	return true
 }
@@ -239,10 +237,3 @@ func (pool *BlockPool) requestBlock(hash Hash, pid peer.ID) {
 	pool.blockRequestCh <- BlockRequestPars{hash, pid}
 }
 
-func (pool *BlockPool) addTailToForkPool(blk *Block) {
-	pool.forkPool = append([]*Block{blk}, pool.forkPool...)
-}
-
-func (pool *BlockPool) addParentToForkPool(blk *Block) {
-	pool.forkPool = append(pool.forkPool, blk)
-}
