@@ -19,7 +19,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	logger "github.com/sirupsen/logrus"
@@ -50,7 +49,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 }
 
 func (ldb *LevelDB) Close() error {
-	fmt.Println("closing database")
+	logger.Info("closing database")
 	return ldb.db.Close()
 }
 

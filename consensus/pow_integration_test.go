@@ -27,7 +27,6 @@ import (
 
 	"time"
 
-	"fmt"
 	"os"
 
 	"github.com/dappley/go-dappley/client"
@@ -128,7 +127,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 
 	//start a miner
 
-	n:= network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, wallet.GetAddress().Address)
 	pow.Start()
 
@@ -281,7 +280,7 @@ func TestMiner_InvalidTransactions(t *testing.T) {
 func printBalances(bc *core.Blockchain, addrs []core.Address) {
 	for _, addr := range addrs {
 		b, _ := getBalance(bc, addr.Address)
-		fmt.Println("addr", addr, ":", b)
+		logger.Debug("addr", addr, ":", b)
 	}
 }
 

@@ -124,11 +124,13 @@ func TestRpcSend(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Check balance
+	minedReward := common.NewAmount(10)
 	senderBalance, err := logic.GetBalance(senderWallet.GetAddress(), store)
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	assert.Equal(t, common.NewAmount(13), senderBalance) // mining reward (10) + remaining (10-7)
+	leftBalance,_ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
+	assert.Equal(t, leftBalance, senderBalance) // minedReward * (blockHeight + 1) - (Send Balance)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
 	client.RemoveWalletFile()

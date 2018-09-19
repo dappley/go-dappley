@@ -24,9 +24,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/common"
 )
 
 var tipKey = []byte("1")
@@ -34,12 +34,11 @@ var tipKey = []byte("1")
 const BlockPoolMaxSize = 100
 const LengthForBlockToBeConsideredHistory = 100
 
-
-var(
-	ErrBlockDoesNotExist			= errors.New("ERROR: Block does not exist in blockchain")
-	ErrNotAbleToGetLastBlockHash 	= errors.New("ERROR: Not able to get last block hash in blockchain")
-	ErrTransactionNotFound			= errors.New("ERROR: Transaction not found")
-	ErrDuplicatedBlock			    = errors.New("ERROR: Block already exists in blockchain")
+var (
+	ErrBlockDoesNotExist         = errors.New("ERROR: Block does not exist in blockchain")
+	ErrNotAbleToGetLastBlockHash = errors.New("ERROR: Not able to get last block hash in blockchain")
+	ErrTransactionNotFound       = errors.New("ERROR: Transaction not found")
+	ErrDuplicatedBlock           = errors.New("ERROR: Block already exists in blockchain")
 )
 
 type Blockchain struct {
@@ -48,13 +47,13 @@ type Blockchain struct {
 	blockPool     BlockPoolInterface
 	consensus     Consensus
 	txPool        *TransactionPool
-	forkTree	  *common.Tree
+	forkTree      *common.Tree
 }
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) *Blockchain {
 	genesis := NewGenesisBlock(address.Address)
-	tree:=common.NewTree(genesis.GetHash(), genesis)
+	tree := common.NewTree(genesis.GetHash(), genesis)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
@@ -327,7 +326,7 @@ func (bc *Blockchain) String() string {
 	for {
 		block, err := bci.Next()
 		if err != nil {
-			fmt.Println(err)
+			logger.Error(err)
 		}
 
 		buffer.WriteString(fmt.Sprintf("============ Block %x ============\n", block.GetHash()))

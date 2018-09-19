@@ -20,10 +20,10 @@ package core
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/common/sorted"
-	"fmt"
-)
 
+	"github.com/dappley/go-dappley/common/sorted"
+	logger "github.com/sirupsen/logrus"
+)
 
 const TransactionPoolLimit = 5
 
@@ -34,7 +34,7 @@ type TransactionPool struct {
 	Transactions sorted.Slice
 }
 
-func NewTransactionPool() *TransactionPool{
+func NewTransactionPool() *TransactionPool {
 	txPool := &TransactionPool{
 		messageCh: make(chan string, 128),
 		size:      128,
@@ -101,17 +101,16 @@ func (txPool *TransactionPool) StructPush(val interface{}) {
 	txPool.Transactions.Set(content)
 }
 
-
-func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction){
-	for _,tx := range txs {
+func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
+	for _, tx := range txs {
 		txPool.StructDelete(*tx)
 	}
 }
 
 //function f should return true if the transaction needs to be pushed back to the pool
-func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
+func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
 
-	for _,v := range txPool.Transactions.Get(){
+	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
 		if !txHandler(tx) {
 			txPool.Transactions.StructDelete(tx)
@@ -120,7 +119,7 @@ func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool){
 }
 
 func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
-	txPool.Traverse(func(tx Transaction) bool{
+	txPool.Traverse(func(tx Transaction) bool {
 		return tx.Verify(utxoPool) // TODO: also check if amount is valid
 	})
 }
@@ -135,18 +134,18 @@ func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
 	return sortedTransactions
 }
 
-func (txPool *TransactionPool) ConditionalAdd(tx Transaction){
+func (txPool *TransactionPool) ConditionalAdd(tx Transaction) {
 	//get smallest tip tx
 
-	if(txPool.Transactions.Len() >= TransactionPoolLimit){
-		compareTx:= txPool.Transactions.PopLeft().(Transaction)
-		greaterThanLeastTip:= tx.Tip > compareTx.Tip
-		if(greaterThanLeastTip){
+	if txPool.Transactions.Len() >= TransactionPoolLimit {
+		compareTx := txPool.Transactions.PopLeft().(Transaction)
+		greaterThanLeastTip := tx.Tip > compareTx.Tip
+		if greaterThanLeastTip {
 			txPool.Transactions.StructPush(tx)
-		}else{// do nothing, push back popped tx
+		} else { // do nothing, push back popped tx
 			txPool.Transactions.StructPush(compareTx)
 		}
-	}else{
+	} else {
 		txPool.Transactions.StructPush(tx)
 	}
 }
@@ -163,18 +162,17 @@ func (txPool *TransactionPool) Stop() {
 func (txPool *TransactionPool) PushTransaction(msg string) {
 	//func (txPool *TransactionPool) PushTransaction(tx *Transaction){
 	//	txPool.Push(tx)
-	fmt.Println(msg)
+	logger.Info(msg)
 }
 
 func (txPool *TransactionPool) messageLoop() {
 	for {
 		select {
 		case <-txPool.exitCh:
-			fmt.Println("Quit Transaction Pool")
+			logger.Info("Quit Transaction Pool")
 			return
 		case msg := <-txPool.messageCh:
 			txPool.PushTransaction(msg)
 		}
 	}
 }
-

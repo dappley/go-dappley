@@ -20,7 +20,6 @@ package main
 
 import (
 	"flag"
-	"log"
 
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/consensus"
@@ -75,12 +74,13 @@ func main() {
 	if err != nil {
 		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
 		if err != nil {
-			log.Panic(err)
+			logger.Panic(err)
 		}
 	}
 
 	node, err := initNode(conf, bc)
 	if err != nil {
+		logger.Error("ERROR: initNode failed! Exiting...")
 		return
 	}
 
@@ -125,7 +125,6 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	err := node.Start(int(port))
 	if err != nil {
 		logger.Error(err)
-		logger.Error("ERROR: Invalid Port!Exiting...")
 		return nil, err
 	}
 	seed := nodeConfig.GetSeed()

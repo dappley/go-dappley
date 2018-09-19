@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"log"
 	"time"
 	logger "github.com/sirupsen/logrus"
 
@@ -109,7 +108,7 @@ func (b *Block) Serialize() []byte {
 
 	err := encoder.Encode(bs)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	return result.Bytes()
 }
@@ -119,7 +118,7 @@ func Deserialize(d []byte) *Block {
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&bs)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	if bs.Header.Hash == nil {
 		bs.Header.Hash = Hash{}

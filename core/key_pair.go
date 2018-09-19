@@ -23,11 +23,11 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
-
+	
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	logger "github.com/sirupsen/logrus"
 )
 
 const version = byte(0x00)
@@ -75,7 +75,7 @@ func Checksum(payload []byte) []byte {
 func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	private, err := secp256k1.NewECDSAPrivateKey()
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
 

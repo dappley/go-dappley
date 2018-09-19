@@ -21,9 +21,9 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
 	"math/big"
 	"math/rand"
+	logger "github.com/sirupsen/logrus"
 )
 
 var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
@@ -84,7 +84,7 @@ func IntToHex(num int64) []byte {
 	buff := new(bytes.Buffer)
 	err := binary.Write(buff, binary.BigEndian, num)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 	}
 
 	return buff.Bytes()
