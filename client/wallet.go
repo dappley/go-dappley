@@ -23,7 +23,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/cipher"
 	Logger "github.com/sirupsen/logrus"
-	"fmt"
 )
 
 const Algorithm = 1 << 4
@@ -48,7 +47,6 @@ func NewWalletWithPassphrase(passphrase string) *Wallet {
 	cipher := cipher.NewCipher(uint8(Algorithm))
 	pass := []byte(passphrase)
 	addressData := []byte(wallet.Addresses[0].Address)
-	fmt.Println(wallet.Addresses[0].Address)
 
 	passBytes,err := cipher.Encrypt(addressData, pass)
 	if err != nil {

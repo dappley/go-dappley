@@ -67,8 +67,6 @@ func CreateWalletWithpassphrase(passphrase string) (*client.Wallet, error) {
 	wallet := client.NewWalletWithPassphrase(passphrase)
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
-
-
 	wm.LoadFromFile()
 
 	return wallet, err
