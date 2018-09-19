@@ -26,6 +26,8 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	logger "github.com/sirupsen/logrus"
 	"os"
+	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/client/pb"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -36,7 +38,8 @@ type WalletManager struct {
 }
 
 func GetWalletFilePath() string{
-	conf := LoadWalletConfigFromFile(walletConfigFilePath)
+	conf := &walletpb.WalletConfig{}
+	config.LoadConfig(walletConfigFilePath, conf)
 	if conf == nil {
 		return ""
 	}
@@ -88,7 +91,11 @@ func (wm *WalletManager) SaveWalletToFile() {
 }
 
 func RemoveWalletFile(){
-	conf := LoadWalletConfigFromFile(walletConfigFilePath)
+	conf := &walletpb.WalletConfig{}
+	config.LoadConfig(walletConfigFilePath, conf)
+	if conf == nil {
+		return
+	}
 	os.Remove(conf.GetFilePath())
 }
 
