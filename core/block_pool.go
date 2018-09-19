@@ -182,12 +182,12 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	logger.Debug("BlockPool: Has received a new block")
 
 	if !block.VerifyHash() {
-		logger.Info("BlockPool: Verify Hash failed!")
+		logger.Debug("BlockPool: Verify Hash failed!")
 		return
 	}
 
 	if !(pool.bc.GetConsensus().VerifyBlock(block)) {
-		logger.Warn("GetBlockPool: Verify Signature failed!")
+		logger.Debug("GetBlockPool: Verify Signature failed!")
 		return
 	}
 	//TODO: Verify double spending transactions in the same block
@@ -219,7 +219,17 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 		logger.Debug("BlockPool: Block: ", blk.hashString(), " did not pass verification process, discarding block")
 		return
 	}
+	bcTailBlk , err := pool.GetBlockchain().GetTailBlock()
+	if err != nil{
+		nodeCache.Remove(node.GetKey())
+		blkCache.Remove(blk.hashString())
+		return
+	}
 
+	if bcTailBlk.IsParentBlock(blk){
+		pool.bc.AddBlockToBlockchainTail(blk)
+		return
+	}
 	//build partial tree in bpcache
 	forkParent := pool.updatePoolNodeCache(node)
 	//attach above partial tree to forktree

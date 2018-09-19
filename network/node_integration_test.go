@@ -185,7 +185,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 
 	//generate a block and store it in node0 blockchain
 	blk := core.GenerateMockBlock()
-	err := n0.bc.GetDb().Put(blk.GetHash(),blk.Serialize())
+	err = n0.bc.GetDb().Put(blk.GetHash(),blk.Serialize())
 	assert.Nil(t, err)
 
 	//node1 request the block

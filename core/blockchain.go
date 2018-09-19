@@ -385,6 +385,15 @@ func (bc *Blockchain) MergeFork() {
 	logger.Debug("Merged Fork!!")
 }
 
+func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
+	err := bc.AddBlockToTail(blk)
+	if err!=nil {
+		logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
+	}
+	//Remove transactions in current transaction pool
+	bc.GetTxPool().RemoveMultipleTransactions(blk.GetTransactions())
+}
+
 func (bc *Blockchain) concatenateForkToBlockchain() {
 	if bc.GetBlockPool().ForkPoolLen() > 0 {
 		for i := bc.GetBlockPool().ForkPoolLen() - 1; i >= 0; i-- {
