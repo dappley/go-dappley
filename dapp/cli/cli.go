@@ -29,6 +29,7 @@ import (
 	"log"
 	"os"
 	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/config/pb"
 )
 
@@ -39,6 +40,7 @@ const(
 	cliGetPeerInfo			= "getPeerInfo"
 	cliSend 				= "send"
 	cliAddPeer 				= "addPeer"
+	clicreateWallet			= "createWallet"
 )
 
 //flag names
@@ -70,6 +72,7 @@ var cmdList = []string{
 	cliGetPeerInfo,
 	cliSend,
 	cliAddPeer,
+	clicreateWallet,
 }
 
 //configure input parameters/flags for each command
@@ -116,6 +119,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo			: {rpcService, getPeerInfoCommandHandler},
 	cliSend					: {rpcService, sendCommandHandler},
 	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
+	clicreateWallet			:{rpcService, createWalletCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -225,6 +229,23 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	//TODO
 	fmt.Println("getBalance!")
 	fmt.Println(*(flags[flagAddress].(*string)))
+}
+
+func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	prompter := util.NewTerminalPrompter()
+	passphrase:= prompter.GetPassPhrase("Please input the password: ",true)
+	fmt.Println(passphrase)
+	walletRequest := rpcpb.CreateWalletRequest{}
+	walletRequest.SetPassphrase(passphrase)
+	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
+	if err!=nil {
+		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
+		return
+	}
+	if (response.Message == "Create Wallet: Error") {
+		fmt.Println("Error: Create Wallet failed. ERR: Fail to create address!")
+	}
+	fmt.Println("Create Wallet, the address is ",response.Address)
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

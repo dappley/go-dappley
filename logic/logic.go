@@ -59,6 +59,19 @@ func CreateWallet() (*client.Wallet, error) {
 	return wallet, err
 }
 
+//create a wallet with passphrase
+func CreateWalletWithpassphrase(passphrase string) (*client.Wallet, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	wallet := client.NewWalletWithPassphrase(passphrase)
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile()
+	wm.LoadFromFile()
+
+	return wallet, err
+}
+
 //get balance
 func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
 	pubKeyHash, valid := address.GetPubKeyHash()

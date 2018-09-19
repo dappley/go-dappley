@@ -17,19 +17,44 @@
 //
 package client
 
+
+
 import (
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/crypto/cipher"
+	Logger "github.com/sirupsen/logrus"
 )
+
+const Algorithm = 1 << 4
 
 type Wallet struct {
 	Key       *core.KeyPair
 	Addresses []core.Address
+	Passphrase []byte
 }
 
 func NewWallet() *Wallet {
 	wallet := &Wallet{}
 	wallet.Key = core.NewKeyPair()
 	wallet.Addresses = append(wallet.Addresses, wallet.Key.GenerateAddress())
+	return wallet
+}
+
+func NewWalletWithPassphrase(passphrase string) *Wallet {
+	wallet := &Wallet{}
+	wallet.Key = core.NewKeyPair()
+	wallet.Addresses = append(wallet.Addresses, wallet.Key.GenerateAddress())
+	cipher := cipher.NewCipher(uint8(Algorithm))
+	pass := []byte(passphrase)
+	addressData := []byte(wallet.Addresses[0].Address)
+
+	passBytes,err := cipher.Encrypt(addressData, pass)
+	if err != nil {
+		Logger.Error("New Wallet: Encrypt Error!")
+		return nil
+	}
+	wallet.Passphrase = passBytes
+
 	return wallet
 }
 
