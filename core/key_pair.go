@@ -51,7 +51,6 @@ func (w KeyPair) GenerateAddress() Address {
 
 	fullPayload := append(versionedPayload, checksum...)
 	address := util.Base58Encode(fullPayload)
-
 	return NewAddress(fmt.Sprintf("%s", address))
 }
 

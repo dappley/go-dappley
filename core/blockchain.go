@@ -64,7 +64,10 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 		tree,
 	}
 	bc.blockPool.SetBlockchain(bc)
-	bc.AddBlockToTail(genesis)
+	err := bc.AddBlockToTail(genesis)
+	if err!=nil {
+		logger.Warn("Blockchain: Add Genesis Block Failed During Blockchain Creation!")
+	}
 	return bc
 }
 
@@ -141,12 +144,27 @@ func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
 	bc.blockPool.SetBlockchain(bc)
 }
 
-func (bc *Blockchain) AddBlockToTail(block *Block) {
-	logger.Info("Blockchain: Added A New Block To Tail! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
-	bc.AddBlockToDb(block)
-	bc.setTailBlockHash(block.GetHash())
+func (bc *Blockchain) AddBlockToTail(block *Block) error{
+
+	//TODO: AddBlockToDb and SetTailBlockHash database operations need to be atomic
+	err := bc.AddBlockToDb(block)
+	if err!= nil{
+		logger.Warn("Blockchain: Add Block To Database Failed! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+		return err
+	}
+
+	err = bc.setTailBlockHash(block.GetHash())
+	if err!= nil{
+		logger.Warn("Blockchain: Set Tail Block Hash Failed! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+		return err
+	}
+
 	utxoIndex := LoadUTXOIndex(bc.db)
 	utxoIndex.Update(block, bc.db)
+
+	logger.Info("Blockchain: Added A New Block To Tail! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+
+	return nil
 }
 
 //TODO: optimize performance
@@ -321,8 +339,12 @@ func (bc *Blockchain) String() string {
 }
 
 //record the new block in the database
-func (bc *Blockchain) AddBlockToDb(block *Block) {
-	bc.db.Put(block.GetHash(), block.Serialize())
+func (bc *Blockchain) AddBlockToDb(block *Block) error{
+	err := bc.db.Put(block.GetHash(), block.Serialize())
+	if err!=nil {
+		logger.Warn("Blockchain: Add Block To Database Failed!")
+	}
+	return err
 }
 
 func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
@@ -363,10 +385,22 @@ func (bc *Blockchain) MergeFork() {
 	logger.Debug("Merged Fork!!")
 }
 
+func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
+	err := bc.AddBlockToTail(blk)
+	if err!=nil {
+		logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
+	}
+	//Remove transactions in current transaction pool
+	bc.GetTxPool().RemoveMultipleTransactions(blk.GetTransactions())
+}
+
 func (bc *Blockchain) concatenateForkToBlockchain() {
 	if bc.GetBlockPool().ForkPoolLen() > 0 {
 		for i := bc.GetBlockPool().ForkPoolLen() - 1; i >= 0; i-- {
-			bc.AddBlockToTail(bc.GetBlockPool().GetForkPool()[i])
+			err := bc.AddBlockToTail(bc.GetBlockPool().GetForkPool()[i])
+			if err!=nil {
+				logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
+			}
 			//Remove transactions in current transaction pool
 			bc.GetTxPool().RemoveMultipleTransactions(bc.GetBlockPool().GetForkPool()[i].GetTransactions())
 		}
@@ -384,7 +418,7 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	parentblockHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
-loop:
+	loop:
 	for {
 		if bytes.Compare(parentblockHash, targetHash) == 0 {
 			break loop
@@ -397,12 +431,22 @@ loop:
 		parentblockHash = block.GetPrevHash()
 		block.Rollback(bc.txPool)
 	}
-	bc.setTailBlockHash(parentblockHash)
+
+	err := bc.setTailBlockHash(parentblockHash)
+	if err != nil {
+		logger.Error("Blockchain: Not Able To Set Tail Block Hash During RollBack!")
+		return false
+	}
 
 	return true
 }
 
-func (bc *Blockchain) setTailBlockHash(hash Hash) {
-	bc.db.Put(tipKey, hash)
+func (bc *Blockchain) setTailBlockHash(hash Hash) error{
+	err := bc.db.Put(tipKey, hash)
+	if err!= nil{
+		logger.Error("Blockchain: Set Tail Block Hash Failed!")
+		return err
+	}
 	bc.tailBlockHash = hash
+	return nil
 }

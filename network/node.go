@@ -279,7 +279,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
-		logger.Debug("Node: Caching block msg with key ", dm.key)
+		logger.Debug("Node: ",n.info.peerid," broadcasting block with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -301,6 +301,15 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 
 func (n *Node) SyncPeersBroadcast() error {
 	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
+	if err != nil {
+		return err
+	}
+	n.broadcast(data)
+	return nil
+}
+
+func (n *Node) TxBroadcast(tx *core.Transaction) error {
+	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast)
 	if err != nil {
 		return err
 	}
@@ -383,14 +392,14 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 }
 func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
-		logger.Debug("Node: Already received ", dm.GetKey(), " before")
+		logger.Debug("Node: ", n.GetPeerID() ," Already received ", dm.GetKey(), " before")
 		return
 	}
 
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Info("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
+	logger.Debug("Node: ", n.GetPeerID() ," Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
@@ -414,9 +423,8 @@ func (n *Node) addTxToPool(data []byte) {
 
 	//load the tx with proto
 	tx.FromProto(txpb)
-
 	//add tx to txpool
-	n.bc.GetTxPool().StructPush(tx)
+	n.bc.GetTxPool().ConditionalAdd(*tx)
 }
 
 func (n *Node) addMultiPeers(data []byte) {

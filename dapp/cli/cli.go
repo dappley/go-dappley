@@ -30,6 +30,7 @@ import (
 	"os"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/util"
+	"github.com/dappley/go-dappley/config/pb"
 )
 
 //command names
@@ -147,9 +148,10 @@ func main(){
 	flag.StringVar(&filePath, "f", "default.conf", "CLI config file path")
 	flag.Parse()
 
-	cliConfig := config.LoadCliConfigFromFile(filePath)
+	cliConfig := &configpb.CliConfig{}
+	config.LoadConfig(filePath, cliConfig)
 
-	conn := initRpcClient(int(cliConfig.GetRpcPort()))
+	conn := initRpcClient(int(cliConfig.GetPort()))
 	defer conn.Close()
 	clients := map[serviceType]interface{}{
 		rpcService:      rpcpb.NewRpcServiceClient(conn),
@@ -199,7 +201,7 @@ func main(){
 			return
 		}
 		if cmd.Parsed() {
-			md := metadata.Pairs("password", cliConfig.GetAdminPassword())
+			md := metadata.Pairs("password", cliConfig.GetPassword())
 			ctx := metadata.NewOutgoingContext(context.Background(), md)
 			cmdHandlers[cmdName].cmdHandler(ctx, clients[cmdHandlers[cmdName].serviceType], cmdFlagValues[cmdName])
 		}
