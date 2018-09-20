@@ -226,9 +226,18 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	//TODO
-	fmt.Println("getBalance!")
-	fmt.Println(*(flags[flagAddress].(*string)))
+	prompter := util.NewTerminalPrompter()
+	passphrase:= prompter.GetPassPhrase("Please input the password: ",false)
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Address = *(flags[flagAddress].(*string))
+	getBalanceRequest.Passphrase = passphrase
+	response, err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err!=nil {
+		fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
+		return
+	}
+	fmt.Println(response)
+
 }
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

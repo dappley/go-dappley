@@ -62,7 +62,22 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 }
 
 func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
-	return &rpcpb.GetBalanceResponse{Message: "Hello " + in.Name}, nil
+	pass := in.Passphrase
+	address := in.Address
+	fmt.Println(pass+address)
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return &rpcpb.GetBalanceResponse {Message: "GetBalance : Error loading local wallets"}, err
+	}
+	Wallet := wm.GetWalletByAddress(core.NewAddress(address))
+	fmt.Println(Wallet)
+
+	//db := storage.OpenDatabase(core.BlockchainDbFile)
+	//defer db.Close()
+
+	return &rpcpb.GetBalanceResponse{}, nil
 }
 
 func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {

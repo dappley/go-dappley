@@ -89,6 +89,23 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	return balance, nil
 }
 
+//get balance
+func GetBalanceWithPassphrase(address core.Address, passphrase string, db storage.Storage) (*common.Amount, error) {
+	pubKeyHash, valid := address.GetPubKeyHash()
+	if valid == false {
+		return common.NewAmount(0), ErrInvalidAddress
+	}
+
+	balance := common.NewAmount(0)
+	utxoIndex := core.LoadUTXOIndex(db)
+	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
+	for _, out := range utxos {
+		balance = balance.Add(out.Value)
+	}
+
+	return balance, nil
+}
+
 //get all addresses
 func GetAllAddresses() ([]core.Address, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())

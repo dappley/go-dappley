@@ -70,7 +70,7 @@ func (m *CreateWalletRequest) SetPassphrase(passphrase string) {
 }
 
 type GetBalanceRequest struct {
-	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Passphrase           string   `protobuf:"bytes,1,opt,name=name,proto3" json:"passphrase,omitempty"`
 	Address              string   `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
