@@ -33,6 +33,10 @@ message SendRequest {
   bytes amount = 3;
 }
 
+message GetWalletAddressRequest {
+  string name = 1;
+}
+
 message GetPeerInfoRequest {}
 
 message GetBlockchainInfoRequest {}
@@ -69,3 +73,9 @@ message GetBlockchainInfoResponse {
 message AddPeerResponse {
   string status = 1;
 }
+
+message GetWalletResponse {
+  string message = 1;
+  string address = 2;
+}
+
