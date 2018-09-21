@@ -30,7 +30,6 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
-	"fmt"
 )
 
 type RpcService struct{
@@ -40,7 +39,6 @@ type RpcService struct{
 // SayHello implements helloworld.GreeterServer
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
 	passPhrase := in.Passphrase
-	fmt.Println(passPhrase)
 	msg := ""
 	if len(passPhrase) ==0 {
 		logrus.Error("CreateWallet: Password is empty!")
