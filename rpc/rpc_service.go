@@ -64,7 +64,6 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	pass := in.Passphrase
 	address := in.Address
-	fmt.Println("Print pass and address:"+ pass+" "+address)
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
@@ -81,7 +80,7 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	getbalanceResp := rpcpb.GetBalanceResponse{}
 	amount, err := logic.GetBalance(wallet.GetAddress(), rpcSerivce.node.GetBlockchain().GetDb())
 	if err != nil {
-		getbalanceResp.Message = "Get Balance Failed!"
+		getbalanceResp.Message = "Failed to get balance from blockchain"
 		return &getbalanceResp, nil
 	}
 	getbalanceResp.Amount = amount.Int64()
