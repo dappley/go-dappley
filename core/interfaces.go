@@ -29,7 +29,7 @@ type Consensus interface{
 	Setup(NetService, string)
 	SetTargetBit(int)
 	SetKey(string)
-
+	CheckDoubleMint(*Block) bool
 }
 
 type NetService interface{

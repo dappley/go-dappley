@@ -79,6 +79,9 @@ func (pow *ProofOfWork) Stop() {
 	pow.miner.Stop()
 }
 
+func (pow *ProofOfWork) CheckDoubleMint(blk *core.Block) bool {
+	return false
+}
 
 func (pow *ProofOfWork) Validate(blk *core.Block) bool {
 	return pow.miner.Validate(blk)
