@@ -226,6 +226,13 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	if len(*(flags[flagAddress].(*string))) == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli getBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
+		fmt.Println()
+		return
+	}
+
 	prompter := util.NewTerminalPrompter()
 	passphrase:= prompter.GetPassPhrase("Please input the password: ",false)
 	getBalanceRequest := rpcpb.GetBalanceRequest{}
@@ -236,8 +243,13 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
 		return
 	}
-	fmt.Println(response)
+	if response.Message == "Get Balance" {
+		fmt.Printf("The balance is: %d\n", response.Amount)
+	} else {
+		fmt.Println(response.Message)
+	}
 
+	return
 }
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
@@ -283,6 +295,7 @@ func addPeerCommandHandler(ctx context.Context, client interface{}, flags cmdFla
 	req := &rpcpb.AddPeerRequest{
 		FullAddress:  *(flags[flagPeerFullAddr].(*string)),
 	}
+	fmt.Println(*(flags[flagPeerFullAddr].(*string)))
 	response,err  := client.(rpcpb.AdminServiceClient).RpcAddPeer(ctx,req)
 	if err!=nil {
 		fmt.Println("ERROR: AddPeer failed. ERR:", err)

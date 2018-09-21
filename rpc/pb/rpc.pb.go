@@ -101,9 +101,9 @@ func (m *GetBalanceRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBalanceRequest proto.InternalMessageInfo
 
-func (m *GetBalanceRequest) GetName() string {
+func (m *GetBalanceRequest) GetPassphrase() string {
 	if m != nil {
-		return m.Name
+		return m.Passphrase
 	}
 	return ""
 }
