@@ -54,7 +54,6 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 		msg = "Create Wallet: Error"
 	}
 	addr := wallet.GetAddress().Address
-	fmt.Println(addr)
 	msg = "Create Wallet: "
 	return &rpcpb.CreateWalletResponse{
 		Message: msg,
