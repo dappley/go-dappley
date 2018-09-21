@@ -1,6 +1,7 @@
 all: dep build test
 
 testall:
+    go clean -testcache
 	for f in ./*/; do \
         if [ "$$f" != "./bin/" -a  "$$f" != "./vendor/" ]; then \
             cd $$f; go test -tags=integration ./... ; cd ..; \
