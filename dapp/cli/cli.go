@@ -41,6 +41,7 @@ const(
 	cliSend 				= "send"
 	cliAddPeer 				= "addPeer"
 	clicreateWallet			= "createWallet"
+	cligetWalletAddress		= "getWalletAddress"
 )
 
 //flag names
@@ -73,6 +74,7 @@ var cmdList = []string{
 	cliSend,
 	cliAddPeer,
 	clicreateWallet,
+	cligetWalletAddress,
 }
 
 //configure input parameters/flags for each command
@@ -120,6 +122,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliSend					: {rpcService, sendCommandHandler},
 	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
 	clicreateWallet			:{rpcService, createWalletCommandHandler},
+	cligetWalletAddress			:{rpcService, getWalletAddressCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -226,17 +229,65 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	//TODO
-	fmt.Println("getBalance!")
-	fmt.Println(*(flags[flagAddress].(*string)))
+	if len(*(flags[flagAddress].(*string))) == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli getBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
+		fmt.Println()
+		return
+	}
+
+	prompter := util.NewTerminalPrompter()
+	passphrase:= prompter.GetPassPhrase("Please input the password: ",false)
+	if passphrase == "" {
+		fmt.Println("Password Empty!")
+		return
+	}
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Address = *(flags[flagAddress].(*string))
+	getBalanceRequest.Passphrase = passphrase
+	response, err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err!=nil {
+		fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
+		return
+	}
+	if response.Message == "Get Balance" {
+		fmt.Printf("The balance is: %d\n", response.Amount)
+	} else {
+		fmt.Println(response.Message)
+	}
+
+	return
 }
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
 	prompter := util.NewTerminalPrompter()
 	passphrase:= prompter.GetPassPhrase("Please input the password: ",true)
-	fmt.Println(passphrase)
+	if passphrase == "" {
+		fmt.Println("Password Empty!")
+		return
+	}
 	walletRequest := rpcpb.CreateWalletRequest{}
-	walletRequest.SetPassphrase(passphrase)
+	walletRequest.Passphrase = passphrase
+	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
+	if err!=nil {
+		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
+		return
+	}
+	if (response.Message == "Create Wallet: Error") {
+		fmt.Println("Error: Create Wallet failed. ERR: Fail to create address!")
+	}
+	fmt.Println("Create Wallet, the address is ",response.Address)
+}
+
+func getWalletAddressCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	prompter := util.NewTerminalPrompter()
+	passphrase:= prompter.GetPassPhrase("Please input the password: ",true)
+	if passphrase == "" {
+		fmt.Println("Password Empty!")
+		return
+	}
+	walletRequest := rpcpb.CreateWalletRequest{}
+	walletRequest.Passphrase= passphrase
 	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
 	if err!=nil {
 		fmt.Println("ERROR: Create Wallet failed. ERR:", err)

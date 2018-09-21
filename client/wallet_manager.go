@@ -28,6 +28,8 @@ import (
 	"os"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/client/pb"
+	"github.com/dappley/go-dappley/crypto/cipher"
+	"errors"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -130,6 +132,29 @@ func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 		}
 	}
 	return nil
+}
+
+func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
+
+	wallet := wm.GetWalletByAddress(address)
+	if wallet == nil {
+		return nil, errors.New("Address not in the wallets!")
+	}
+	cipher := cipher.NewCipher(uint8(Algorithm)) //verify if the passphrase is correct
+	if len(password) ==0 {
+		return nil, errors.New("Password Empty!")
+	}
+	passbyte := []byte(password)
+	addr, err := cipher.Decrypt(wallet.Passphrase, passbyte)
+	if err != nil {
+		return nil, errors.New("Password does not match!")
+	}
+	addStr := string(addr[:])
+	if address.Address == addStr {
+		return wallet, nil
+	} else {
+		return nil, errors.New("Password does not match!")
+	}
 }
 
 

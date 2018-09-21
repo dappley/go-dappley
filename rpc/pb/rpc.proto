@@ -23,7 +23,7 @@ message CreateWalletRequest {
 }
 
 message GetBalanceRequest {
-  string name = 1;
+  string passphrase = 1;
   string address = 2;
 }
 
