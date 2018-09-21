@@ -20,13 +20,14 @@ package consensus
 
 import (
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+	"strings"
+	"time"
 )
 
 const version = byte(0x00)
@@ -39,6 +40,7 @@ type Dpos struct {
 	node      core.NetService
 	quitCh    chan (bool)
 	dynasty   *Dynasty
+	slot	*lru.Cache
 }
 
 func NewDpos() *Dpos {
@@ -48,6 +50,12 @@ func NewDpos() *Dpos {
 		node:      nil,
 		quitCh:    make(chan (bool), 1),
 	}
+
+	slot, err := lru.New(128)
+	if err != nil {
+		logger.Panic(err)
+	}
+	dpos.slot = slot
 	return dpos
 }
 
@@ -77,8 +85,13 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
-func (dpos *Dpos) Validate(block *core.Block) bool {
-	return dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block)
+
+func (dpos *Dpos) Validate(block *core.Block) bool{
+	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block)
+	if pass {
+		dpos.slot.Add(block.GetTimestamp(), block)
+	}
+	return pass
 }
 
 func (dpos *Dpos) Start() {
@@ -110,7 +123,17 @@ func (dpos *Dpos) Stop() {
 	dpos.miner.Stop()
 }
 
-func (dpos *Dpos) StartNewBlockMinting() {
+
+func (dpos *Dpos) CheckDoubleMint(block *core.Block) bool {
+	if preBlock, exist := dpos.slot.Get(block.GetTimestamp()); exist {
+		if !core.IsHashEqual(preBlock.(*core.Block).GetHash(), block.GetHash()) {
+			logger.Warn("Someone is trying to mint multiple blocks at the same time!")
+			return true
+		}
+	}
+	return false
+}
+func (dpos *Dpos) StartNewBlockMinting(){
 	dpos.miner.Stop()
 }
 func (dpos *Dpos) FullyStop() bool {

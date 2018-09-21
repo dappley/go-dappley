@@ -81,6 +81,7 @@ func (pow *ProofOfWork) Stop() {
 func (pow *ProofOfWork) FullyStop() bool {
 	v := <-pow.miner.exitCh
 	return v
+
 }
 
 func (pow *ProofOfWork) Validate(blk *core.Block) bool {
