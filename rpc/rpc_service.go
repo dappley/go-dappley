@@ -74,8 +74,6 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		return &rpcpb.GetBalanceResponse {Message: err.Error()}, err
 	}
 
-	//db := storage.OpenDatabase(core.BlockchainDbFile)
-	//defer db.Close()
 	getbalanceResp := rpcpb.GetBalanceResponse{}
 	amount, err := logic.GetBalance(wallet.GetAddress(), rpcSerivce.node.GetBlockchain().GetDb())
 	if err != nil {
