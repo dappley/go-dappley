@@ -72,13 +72,13 @@ func (index UTXOIndex) serialize() []byte {
 
 // LoadUTXOIndex returns the UTXOIndex fetched from db.
 func LoadUTXOIndex(db storage.Storage) UTXOIndex {
-	res, err := db.Get([]byte(utxoMapKey))
+	utxoBytes, err := db.Get([]byte(utxoMapKey))
 
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() {
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
 		return NewUTXOIndex()
 	}
-	umap := deserializeUTXOIndex(res)
-	return umap
+	
+	return deserializeUTXOIndex(utxoBytes)
 }
 
 // Save stores the index to db
