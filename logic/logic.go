@@ -59,18 +59,37 @@ func CreateWallet() (*client.Wallet, error) {
 	return wallet, err
 }
 
+//get wallet
+func GetWallet() (*client.Wallet, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if len(wm.Wallets) >0 {
+		return wm.Wallets[0], err
+	} else {
+		return nil, err
+	}
+	}
+
 //create a wallet with passphrase
 func CreateWalletWithpassphrase(passphrase string) (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
-	wallet := client.NewWalletWithPassphrase(passphrase)
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-	wm.LoadFromFile()
+	if wm.Wallets != nil {
 
-	return wallet, err
-}
+		wallet := client.NewWalletWithPassphrase(passphrase)
+		wm.AddWallet(wallet)
+		wm.SaveWalletToFile()
+		return wallet, err
+
+	} else {
+		wallet := client.NewWalletWithPassphrase(passphrase)
+		wm.AddWallet(wallet)
+		wm.SaveWalletToFile()
+		return wallet, err
+	}
+	}
 
 //get balance
 func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {

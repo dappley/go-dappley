@@ -36,23 +36,38 @@ type RpcService struct{
 	node *network.Node
 }
 
-// SayHello implements helloworld.GreeterServer
+// Create Wallet Response
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	passPhrase := in.Passphrase
 	msg := ""
-	if len(passPhrase) ==0 {
-		logrus.Error("CreateWallet: Password is empty!")
-		msg = "Create Wallet: Error"
-		return &rpcpb.CreateWalletResponse{
-			Message: msg,
-			Address: ""}, nil
+	addr := ""
+	if in.Name == "createNewWallet" {
+		wallet, err := logic.GetWallet()
+		if err != nil {
+			msg = err.Error()
+		}
+		if wallet != nil {
+			msg = "WalletExists"
+		} else
+		{
+			msg = "NewWallet"
+		}
+
+	} else {
+		passPhrase := in.Passphrase
+		if len(passPhrase) == 0 {
+			logrus.Error("CreateWallet: Password is empty!")
+			msg = "Create Wallet: Error"
+			return &rpcpb.CreateWalletResponse{
+				Message: msg,
+				Address: ""}, nil
+		}
+		wallet, err := logic.CreateWalletWithpassphrase(passPhrase)
+		if err != nil {
+			msg = "Create Wallet: Error"
+		}
+		addr = wallet.GetAddress().Address
+		msg = "Create Wallet: "
 	}
-	wallet,err := logic.CreateWalletWithpassphrase(passPhrase)
-	if err != nil {
-		msg = "Create Wallet: Error"
-	}
-	addr := wallet.GetAddress().Address
-	msg = "Create Wallet: "
 	return &rpcpb.CreateWalletResponse{
 		Message: msg,
 		Address: addr}, nil
