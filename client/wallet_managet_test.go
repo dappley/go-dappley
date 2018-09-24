@@ -112,6 +112,18 @@ func TestWalletManager_GetWalletByAddress(t *testing.T) {
 	assert.Equal(t, wallet, wm.GetWalletByAddress(wallet.GetAddress()))
 }
 
+func TestWalletManager_GetWalletByAddress_withPassphrase(t *testing.T) {
+	wm := NewWalletManager(nil)
+	wallet := NewWalletWithPassphrase("password")
+	wm.Wallets = append(wm.Wallets, wallet)
+	wallet1, err := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "password")
+	wallet2, err1 := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "none")
+	assert.NotEqual(t, wallet2, wallet)
+	assert.NotEqual(t, err1, nil)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, wallet, wallet1)
+}
+
 func TestWalletManager_GetWalletByUnfoundAddress(t *testing.T) {
 	wm := NewWalletManager(nil)
 	wallet := NewWallet()

@@ -226,18 +226,64 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	//TODO
-	fmt.Println("getBalance!")
-	fmt.Println(*(flags[flagAddress].(*string)))
+	if len(*(flags[flagAddress].(*string))) == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli getBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
+		fmt.Println()
+		return
+	}
+
+	prompter := util.NewTerminalPrompter()
+	passphrase:= prompter.GetPassPhrase("Please input the password: ",false)
+	if passphrase == "" {
+		fmt.Println("Password Empty!")
+		return
+	}
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Address = *(flags[flagAddress].(*string))
+	getBalanceRequest.Passphrase = passphrase
+	response, err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err!=nil {
+		fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
+		return
+	}
+	if response.Message == "Get Balance" {
+		fmt.Printf("The balance is: %d\n", response.Amount)
+	} else {
+		fmt.Println(response.Message)
+	}
+
+	return
 }
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	prompter := util.NewTerminalPrompter()
-	passphrase:= prompter.GetPassPhrase("Please input the password: ",true)
-	fmt.Println(passphrase)
 	walletRequest := rpcpb.CreateWalletRequest{}
-	walletRequest.SetPassphrase(passphrase)
+	walletRequest.Name = "createNewWallet"
 	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
+	prompter := util.NewTerminalPrompter()
+	passphrase := ""
+	if err != nil {
+		fmt.Printf("Error: Create Wallet failed. %v\n", err.Error())
+	}
+	if response.Message == "WalletExists" {
+		passphrase = prompter.GetPassPhrase("Please input the password: ",false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	} else if response.Message == "NewWallet" {
+		passphrase = prompter.GetPassPhrase("Please input the password for generating a new wallet: ",true)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	}  else {
+		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+	}
+
+	walletRequest = rpcpb.CreateWalletRequest{}
+	walletRequest.Passphrase = passphrase
+	response,err  = client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
 	if err!=nil {
 		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
 		return

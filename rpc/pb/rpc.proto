@@ -23,7 +23,7 @@ message CreateWalletRequest {
 }
 
 message GetBalanceRequest {
-  string name = 1;
+  string passphrase = 1;
   string address = 2;
 }
 
@@ -31,6 +31,10 @@ message SendRequest {
   string from = 1;
   string to = 2;
   bytes amount = 3;
+}
+
+message GetWalletAddressRequest {
+  string name = 1;
 }
 
 message GetPeerInfoRequest {}
@@ -69,3 +73,9 @@ message GetBlockchainInfoResponse {
 message AddPeerResponse {
   string status = 1;
 }
+
+message GetWalletResponse {
+  string message = 1;
+  string address = 2;
+}
+
