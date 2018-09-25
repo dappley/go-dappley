@@ -110,10 +110,6 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 	blkCache := pool.blkCache
 	nodeCache := pool.nodeCache
 
-	if pool.bc.consensus.CheckDoubleMint(blk){
-		return
-	}
-
 	//TODO: verify
 	if   pool.bc.consensus.Validate(blk) {
 		if blkCache.Contains(blk.hashString()){

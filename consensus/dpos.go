@@ -87,7 +87,7 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 
 
 func (dpos *Dpos) Validate(block *core.Block) bool{
-	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block)
+	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block) && !dpos.CheckDoubleMint(block)
 	if pass {
 		dpos.slot.Add(block.GetTimestamp(), block)
 	}
