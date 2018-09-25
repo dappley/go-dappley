@@ -258,6 +258,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 		dpos.SetTargetBit(0)        //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
+		bcs = append(bcs, bc)
 		node := network.NewNode(bc)
 		node.Start(testport_msg_relay_port + i)
 		if i == 0 {
@@ -276,7 +277,9 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 
 	//firstNode Starts Mining
 	dposArray[0].Start()
-	time.Sleep(time.Second * 6)
+	for bcs[0].GetMaxHeight() < 5{
+
+	}
 
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
@@ -325,6 +328,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 
 		dpos.SetTargetBit(0)        //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
+		bcs = append(bcs, bc)
+
 		node := network.NewNode(bc)
 		node.Start(testport_msg_relay_port + i)
 		if i == 0 {
