@@ -254,7 +254,7 @@ func TestBlockMsgRelay(t *testing.T) {
 	//firstNode Starts Mining
 
 	pows[0].Start()
-	for bcs[0].GetMaxHeight() < 5 {
+	for bcs[0].GetMaxHeight() < 6 {
 	}
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height

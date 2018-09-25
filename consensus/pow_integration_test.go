@@ -207,7 +207,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//stop mining
 	pow.Stop()
 	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 10 {
+	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
 	}
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
