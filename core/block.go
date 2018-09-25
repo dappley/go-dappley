@@ -33,6 +33,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/crypto/sha3"
+	"math/big"
 )
 
 
@@ -250,6 +251,7 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 }
 
 func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
+	var hashInt big.Int
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -260,10 +262,9 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 		},
 		[]byte{},
 	)
-
-	hasher := sha3.New256()
-	hasher.Write(data)
-	return hasher.Sum(nil)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+	return hashInt.Bytes()
 }
 
 func (b *Block) SignBlock(key string, data []byte) bool {
