@@ -86,10 +86,12 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 2 {
-		time.Sleep(time.Millisecond * 500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
+	currentTime := time.Now().UTC().Unix()
+	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
+	}
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -135,10 +137,11 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 5 {
 		count = GetNumberOfBlocks(t, bc.Iterator())
-		time.Sleep(time.Second)
 	}
 	pow.Stop()
-
+	currentTime := time.Now().UTC().Unix()
+	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 10 {
+	}
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -185,7 +188,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 5 {
-		time.Sleep(time.Millisecond * 500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
@@ -199,13 +201,14 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
 
 	for count < currCount+2 {
-		time.Sleep(time.Millisecond * 500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
 	//stop mining
 	pow.Stop()
-
+	currentTime := time.Now().UTC().Unix()
+	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 10 {
+	}
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -247,8 +250,9 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	time.Sleep(time.Second * 2)
-
+	currentTime := time.Now().UTC().Unix()
+	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 2 {
+	}
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)
@@ -256,7 +260,6 @@ loop:
 
 	//it should be able to start again
 	pow.Start()
-	time.Sleep(time.Second)
 	pow.Stop()
 }
 

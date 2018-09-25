@@ -108,7 +108,12 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Stop()
 	}
 
-	time.Sleep(time.Second)
+	for i := 0; i < len(miners); i++ {
+		v := dposArray[i].FullyStop()
+		currentTime := time.Now().UTC().Unix()
+		for !v && time.Now().UTC().Unix()-currentTime < 20 {
+		}
+	}
 
 	for i := 0; i < len(miners); i++ {
 		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bc.GetMaxHeight())
