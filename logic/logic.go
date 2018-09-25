@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/network"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -34,6 +35,7 @@ var (
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
+	ErrPasswordNotMatch		= errors.New("ERROR: Password not correct!")
 )
 
 //create a blockchain
@@ -72,19 +74,31 @@ func GetWallet() (*client.Wallet, error) {
 	}
 
 //create a wallet with passphrase
-func CreateWalletWithpassphrase(passphrase string) (*client.Wallet, error) {
+func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
-	if wm.Wallets != nil {
+	if err != nil {
+		return nil, err
+	}
 
-		wallet := client.NewWalletWithPassphrase(passphrase)
+	if len(wm.Wallets) >0 && wm.PassPhrase != nil {
+		err = bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+		if err != nil {
+			return nil, ErrPasswordNotMatch
+		}
+		wallet := client.NewWallet()
 		wm.AddWallet(wallet)
 		wm.SaveWalletToFile()
 		return wallet, err
 
 	} else {
-		wallet := client.NewWalletWithPassphrase(passphrase)
+		passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		wm.PassPhrase = passBytes
+		wallet := client.NewWallet()
 		wm.AddWallet(wallet)
 		wm.SaveWalletToFile()
 		return wallet, err

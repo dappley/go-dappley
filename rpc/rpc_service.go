@@ -56,17 +56,23 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 		passPhrase := in.Passphrase
 		if len(passPhrase) == 0 {
 			logrus.Error("CreateWallet: Password is empty!")
-			msg = "Create Wallet: Error"
+			msg = "Create Wallet Error: Password Empty!"
 			return &rpcpb.CreateWalletResponse{
 				Message: msg,
 				Address: ""}, nil
 		}
 		wallet, err := logic.CreateWalletWithpassphrase(passPhrase)
 		if err != nil {
-			msg = "Create Wallet: Error"
+			msg = "Create Wallet Error: Password not correct!"
+			addr = ""
+		} else if wallet != nil {
+			addr = wallet.GetAddress().Address
+			msg = "Create Wallet: "
+
+		} else {
+			msg = "Create Wallet Error: Wallet Empty!"
+			addr = ""
 		}
-		addr = wallet.GetAddress().Address
-		msg = "Create Wallet: "
 	}
 	return &rpcpb.CreateWalletResponse{
 		Message: msg,
@@ -82,6 +88,7 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	if err != nil {
 		return &rpcpb.GetBalanceResponse {Message: "GetBalance : Error loading local wallets"}, err
 	}
+
 	wallet,err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
 	if err != nil {
 		return &rpcpb.GetBalanceResponse {Message: err.Error()}, err

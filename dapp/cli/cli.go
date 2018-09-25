@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/config/pb"
+	"strings"
 )
 
 //command names
@@ -244,7 +245,11 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	getBalanceRequest.Passphrase = passphrase
 	response, err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
 	if err!=nil {
-		fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
+		if strings.Contains(err.Error(), "Password does not match!" ) {
+			fmt.Printf("ERROR: Get balance failed. Password does not match!\n")
+		} else {
+			fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
+			}
 		return
 	}
 	if response.Message == "Get Balance" {
@@ -263,7 +268,13 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
 	if err != nil {
-		fmt.Printf("Error: Create Wallet failed. %v\n", err.Error())
+
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Create Wallet Failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Create Wallet failed. %v\n", err.Error())
+		}
+		return
 	}
 	if response.Message == "WalletExists" {
 		passphrase = prompter.GetPassPhrase("Please input the password: ",false)
@@ -283,15 +294,21 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 
 	walletRequest = rpcpb.CreateWalletRequest{}
 	walletRequest.Passphrase = passphrase
+	walletRequest.Name = "createWallet"
 	response,err  = client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
 	if err!=nil {
 		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
 		return
 	}
-	if (response.Message == "Create Wallet: Error") {
-		fmt.Println("Error: Create Wallet failed. ERR: Fail to create address!")
+	if  strings.Contains(response.Message, "Error") {
+		fmt.Println(response.Message)
+		return
 	}
-	fmt.Println("Create Wallet, the address is ",response.Address)
+	if len(response.Address) > 0 {
+		fmt.Println("Create Wallet, the address is ",response.Address)
+	}
+	return
+
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

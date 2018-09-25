@@ -28,8 +28,8 @@ import (
 	"os"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/client/pb"
-	"github.com/dappley/go-dappley/crypto/cipher"
 	"errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -37,6 +37,12 @@ const walletConfigFilePath = "../client/wallet.conf"
 type WalletManager struct {
 	Wallets  	[]*Wallet
 	fileLoader 	storage.FileStorage
+	PassPhrase []byte
+}
+
+type WalletData struct {
+	Wallets  	[]*Wallet
+	PassPhrase []byte
 }
 
 func GetWalletFilePath() string{
@@ -62,18 +68,19 @@ func (wm *WalletManager) LoadFromFile() error{
 		wm.SaveWalletToFile()
 		fileContent, err = wm.fileLoader.ReadFromFile()
 	}
-	var wallets []*Wallet
 
+	var walletdata *WalletData
 	gob.Register(bitelliptic.S256())
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
-	err = decoder.Decode(&wallets)
+	err = decoder.Decode(&walletdata)
 	if err != nil {
 		logger.Error("WalletManager: Load Wallets failed!")
 		logger.Error(err)
 		return err
 	}
 
-	wm.Wallets = wallets
+	wm.Wallets = walletdata.Wallets
+	wm.PassPhrase = walletdata.PassPhrase
 
 	return nil
 }
@@ -84,7 +91,10 @@ func (wm *WalletManager) SaveWalletToFile() {
 
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(wm.Wallets)
+	walletdata := WalletData{}
+	walletdata.Wallets = wm.Wallets
+	walletdata.PassPhrase = wm.PassPhrase
+	err := encoder.Encode(walletdata)
 	if err != nil {
 		logger.Error("WalletManager: save Wallets to file failed!")
 		logger.Error(err)
@@ -140,17 +150,8 @@ func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, 
 	if wallet == nil {
 		return nil, errors.New("Address not in the wallets!")
 	}
-	cipher := cipher.NewCipher(uint8(Algorithm)) //verify if the passphrase is correct
-	if len(password) ==0 {
-		return nil, errors.New("Password Empty!")
-	}
-	passbyte := []byte(password)
-	addr, err := cipher.Decrypt(wallet.Passphrase, passbyte)
-	if err != nil {
-		return nil, errors.New("Password does not match!")
-	}
-	addStr := string(addr[:])
-	if address.Address == addStr {
+	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+	if err == nil {
 		return wallet, nil
 	} else {
 		return nil, errors.New("Password does not match!")
