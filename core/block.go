@@ -235,7 +235,6 @@ func (b *Block) CalculateHash() Hash {
 }
 
 func (b *Block) CalculateHashWithoutNonce() Hash {
-	//var hashInt big.Int
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -251,7 +250,6 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 }
 
 func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
-	//var hashInt big.Int
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
