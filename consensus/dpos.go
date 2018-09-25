@@ -19,81 +19,82 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"time"
-	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"fmt"
-	"github.com/dappley/go-dappley/util"
 	"strings"
+	"time"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/util"
+	logger "github.com/sirupsen/logrus"
 )
 
 const version = byte(0x00)
 const addressChecksumLen = 4
 
-type Dpos struct{
+type Dpos struct {
 	bc        *core.Blockchain
 	miner     *Miner
-	mintBlkCh chan(*MinedBlock)
+	mintBlkCh chan (*MinedBlock)
 	node      core.NetService
-	quitCh    chan(bool)
+	quitCh    chan (bool)
 	dynasty   *Dynasty
 }
 
-func NewDpos() *Dpos{
+func NewDpos() *Dpos {
 	dpos := &Dpos{
 		miner:     NewMiner(),
-		mintBlkCh: make(chan(*MinedBlock),1),
+		mintBlkCh: make(chan (*MinedBlock), 1),
 		node:      nil,
-		quitCh:    make(chan(bool),1),
+		quitCh:    make(chan (bool), 1),
 	}
 	return dpos
 }
 
-func (dpos *Dpos) Setup(node core.NetService, cbAddr string){
+func (dpos *Dpos) Setup(node core.NetService, cbAddr string) {
 	dpos.bc = node.GetBlockchain()
 	dpos.node = node
 	dpos.miner.Setup(dpos.bc, cbAddr, dpos.mintBlkCh)
 }
 
-func (dpos *Dpos) SetTargetBit(bit int){
+func (dpos *Dpos) SetTargetBit(bit int) {
 	dpos.miner.SetTargetBit(bit)
 }
 
-func (dpos *Dpos) SetKey(key string){
+func (dpos *Dpos) SetKey(key string) {
 	dpos.miner.SetPrivKey(key)
 }
 
-func (dpos *Dpos) SetDynasty(dynasty *Dynasty){
+func (dpos *Dpos) SetDynasty(dynasty *Dynasty) {
 	dpos.dynasty = dynasty
 }
 
-func (dpos *Dpos) GetDynasty() *Dynasty{
+func (dpos *Dpos) GetDynasty() *Dynasty {
 	return dpos.dynasty
 }
 
-func (dpos *Dpos) GetBlockChain() *core.Blockchain{
+func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
-func (dpos *Dpos) Validate(block *core.Block) bool{
+func (dpos *Dpos) Validate(block *core.Block) bool {
 	return dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block)
 }
 
-func (dpos *Dpos) Start(){
-	go func(){
-		logger.Info("Dpos Starts...",dpos.node.GetPeerID())
+func (dpos *Dpos) Start() {
+	go func() {
+		logger.Info("Dpos Starts...", dpos.node.GetPeerID())
 		ticker := time.NewTicker(time.Second).C
-		for{
-			select{
-			case now := <- ticker:
-				if dpos.dynasty.IsMyTurn(dpos.miner.cbAddr, now.Unix()){
+		for {
+			select {
+			case now := <-ticker:
+				if dpos.dynasty.IsMyTurn(dpos.miner.cbAddr, now.Unix()) {
 					logger.Info("Dpos: My Turn to Mint! I am ", dpos.node.GetPeerID())
 					dpos.miner.Start()
 				}
-			case minedBlk := <- dpos.mintBlkCh:
+			case minedBlk := <-dpos.mintBlkCh:
 				if minedBlk.isValid {
-					logger.Info("Dpos: A Block has been mined! ",dpos.node.GetPeerID())
+					logger.Info("Dpos: A Block has been mined! ", dpos.node.GetPeerID())
 					dpos.updateNewBlock(minedBlk.block)
 				}
 			case <-dpos.quitCh:
@@ -109,17 +110,21 @@ func (dpos *Dpos) Stop() {
 	dpos.miner.Stop()
 }
 
-func (dpos *Dpos) StartNewBlockMinting(){
+func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.miner.Stop()
 }
+func (dpos *Dpos) FullyStop() bool {
+	v := <-dpos.miner.exitCh
+	return v
+}
 
-func (dpos *Dpos) updateNewBlock(newBlock *core.Block){
+func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
 	logger.Info("DPoS: Minted a new block. height:", newBlock.GetHeight())
 	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.BroadcastBlock(newBlock)
 }
 
-func GenerateAddress(pubkey []byte) string{
+func GenerateAddress(pubkey []byte) string {
 
 	pubKeyHash, _ := core.HashPubKey(pubkey[1:])
 
@@ -131,9 +136,9 @@ func GenerateAddress(pubkey []byte) string{
 	//15KciXJD9vLhhJQjqDuAgPs83r7sCi9YYK
 
 	return string(fmt.Sprintf("%s", address))
-	}
+}
 
-func (dpos *Dpos) VerifyBlock(block *core.Block) bool{
+func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 	hash1 := block.GetHash()
 	sign := block.GetSign()
 
@@ -162,5 +167,4 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool{
 
 	return false
 
-	}
-
+}
