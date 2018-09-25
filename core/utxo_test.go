@@ -19,6 +19,8 @@
 package core
 
 import (
+	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -123,17 +125,17 @@ func TestAddUTXO(t *testing.T) {
 	defer db.Close()
 
 	txout := TXOutput{common.NewAmount(5), address1Hash}
-	utxoIndex := make(UTXOIndex)
+	utxoIndex := NewUTXOIndex()
 
 	utxoIndex.addUTXO(txout, []byte{1}, 0)
 
-	addr1UTXOs := utxoIndex[string(address1Hash)]
+	addr1UTXOs := utxoIndex.index[string(address1Hash)]
 	assert.Equal(t, 1, len(addr1UTXOs))
 	assert.Equal(t, txout.Value, addr1UTXOs[0].Value)
 	assert.Equal(t, []byte{1}, addr1UTXOs[0].Txid)
 	assert.Equal(t, 0, addr1UTXOs[0].TxIndex)
 
-	addr2UTXOs := utxoIndex["address2"]
+	addr2UTXOs := utxoIndex.index["address2"]
 	assert.Equal(t, 0, len(addr2UTXOs))
 }
 
@@ -141,24 +143,24 @@ func TestRemoveUTXO(t *testing.T){
 	db :=  storage.NewRamStorage()
 	defer db.Close()
 
-	utxoIndex := make(UTXOIndex)
+	utxoIndex := NewUTXOIndex()
 
-	utxoIndex[string(address1Hash)] = append(utxoIndex[string(address1Hash)], &UTXO{common.NewAmount(5), address1Hash, []byte{1}, 0})
-	utxoIndex[string(address1Hash)] = append(utxoIndex[string(address1Hash)], &UTXO{common.NewAmount(2), address1Hash, []byte{1}, 1})
-	utxoIndex[string(address1Hash)] = append(utxoIndex[string(address1Hash)], &UTXO{common.NewAmount(2), address1Hash, []byte{2}, 0})
-	utxoIndex[string(address2Hash)] = append(utxoIndex[string(address2Hash)], &UTXO{common.NewAmount(4), address2Hash, []byte{1}, 2})
+	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)], &UTXO{common.NewAmount(5), address1Hash, []byte{1}, 0})
+	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)], &UTXO{common.NewAmount(2), address1Hash, []byte{1}, 1})
+	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)], &UTXO{common.NewAmount(2), address1Hash, []byte{2}, 0})
+	utxoIndex.index[string(address2Hash)] = append(utxoIndex.index[string(address2Hash)], &UTXO{common.NewAmount(4), address2Hash, []byte{1}, 2})
 
 	err := utxoIndex.removeUTXO([]byte{1}, 0)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(utxoIndex[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoIndex[string(address2Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
+	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
 
 	err = utxoIndex.removeUTXO([]byte{2}, 1)  // Does not exists
 
 	assert.NotNil(t, err)
-	assert.Equal(t, 2, len(utxoIndex[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoIndex[string(address2Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
+	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
 }
 
 func TestUpdate(t *testing.T) {
@@ -166,19 +168,19 @@ func TestUpdate(t *testing.T) {
 	defer db.Close()
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
-	utxoIndex := make(UTXOIndex)
+	utxoIndex := NewUTXOIndex()
 	utxoIndex.BuildForkUtxoIndex(blk, db)
 	utxoIndexInDB := LoadUTXOIndex(db)
 
 	// Assert that both the original instance and the database copy are updated correctly
 	for _, index := range []UTXOIndex{utxoIndex, utxoIndexInDB} {
-		assert.Equal(t, 2, len(index[string(address1Hash)]))
-		assert.Equal(t, blk.transactions[0].ID, index[string(address1Hash)][0].Txid)
-		assert.Equal(t, 0, index[string(address1Hash)][0].TxIndex)
-		assert.Equal(t, blk.transactions[0].Vout[0].Value, index[string(address1Hash)][0].Value)
-		assert.Equal(t, blk.transactions[0].ID, index[string(address1Hash)][1].Txid)
-		assert.Equal(t, 1, index[string(address1Hash)][1].TxIndex)
-		assert.Equal(t, blk.transactions[0].Vout[1].Value, index[string(address1Hash)][1].Value)
+		assert.Equal(t, 2, len(index.index[string(address1Hash)]))
+		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash)][0].Txid)
+		assert.Equal(t, 0, index.index[string(address1Hash)][0].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[0].Value, index.index[string(address1Hash)][0].Value)
+		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash)][1].Txid)
+		assert.Equal(t, 1, index.index[string(address1Hash)][1].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[1].Value, index.index[string(address1Hash)][1].Value)
 	}
 }
 
@@ -199,6 +201,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	bc.AddBlockToTail(blk1)
 	bc.AddBlockToTail(blk2)
 
+	fmt.Println("a")
 	utxoIndex := LoadUTXOIndex(db)
 	addr1UTXOs := utxoIndex.GetUTXOsByPubKey(address1Hash)
 	addr2UTXOs := utxoIndex.GetUTXOsByPubKey(address2Hash)
@@ -208,17 +211,19 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 
 	// Expect address2 to have 2 utxos totaling $8
 	assert.Equal(t, 2, len(addr2UTXOs))
+	fmt.Println("12")
 
 	// Rollback to blk1, address1 has a $5 utxo and a $7 utxo, total $12, and address2 has nothing
 	indexSnapshot, err := GetUTXOIndexAtBlockHash(db, bc, blk1.GetHash())
 	if err !=nil {
 		panic(err)
 	}
+	fmt.Println("123")
 
-	assert.Equal(t, 2, len(indexSnapshot[string(address1Hash)]))
-	assert.Equal(t, common.NewAmount(5),  indexSnapshot[string(address1Hash)][0].Value)
-	assert.Equal(t, common.NewAmount(7),  indexSnapshot[string(address1Hash)][1].Value)
-	assert.Equal(t, 0,  len(indexSnapshot[string(address2Hash)]))
+	assert.Equal(t, 2, len(indexSnapshot.index[string(address1Hash)]))
+	assert.Equal(t, common.NewAmount(5),  indexSnapshot.index[string(address1Hash)][0].Value)
+	assert.Equal(t, common.NewAmount(7),  indexSnapshot.index[string(address1Hash)][1].Value)
+	assert.Equal(t, 0,  len(indexSnapshot.index[string(address2Hash)]))
 }
 
 func TestFindUTXO(t *testing.T) {
@@ -226,11 +231,62 @@ func TestFindUTXO(t *testing.T) {
 	Txin = append(Txin, MockTxInputs()...)
 	utxo1 := &UTXO{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
 	utxo2 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
-	utxoIndex := make(UTXOIndex)
-	utxoIndex["addr1"] = []*UTXO{utxo1, utxo2}
+	utxoIndex := NewUTXOIndex()
+	utxoIndex.index["addr1"] = []*UTXO{utxo1, utxo2}
 
 	assert.Equal(t, utxo1, utxoIndex.FindUTXO(Txin[0].Txid, Txin[0].Vout))
 	assert.Equal(t, utxo2, utxoIndex.FindUTXO(Txin[1].Txid, Txin[1].Vout))
 	assert.Nil(t, utxoIndex.FindUTXO(Txin[2].Txid, Txin[2].Vout))
 	assert.Nil(t, utxoIndex.FindUTXO(Txin[3].Txid, Txin[3].Vout))
+}
+
+func TestConcurrentUTXOindexReadWrite(t *testing.T){
+	index := NewUTXOIndex()
+
+	var readOps uint64
+	var addOps uint64
+	var deleteOps uint64
+	const concurrentUsers = 10
+	exists := false
+
+
+	// start 10 goroutines to execute repeated
+	// reads and writes, once per millisecond in
+	// each goroutine.
+	for r := 0; r < concurrentUsers; r++ {
+		go func() {
+			for {
+				//perform a read
+					index.GetUTXOsByPubKey([]byte("asd"))
+					atomic.AddUint64(&readOps, 1)
+				//perform a write
+					if !exists {
+						index.addUTXO(TXOutput{},[]byte("asd"),65)
+						atomic.AddUint64(&addOps, 1)
+						exists = true
+
+					}else{
+						index.removeUTXO([]byte("asd"), 65)
+						atomic.AddUint64(&deleteOps, 1)
+						exists = false
+					}
+
+				time.Sleep(time.Millisecond*1)
+			}
+		}()
+	}
+
+	time.Sleep(time.Second* 1)
+
+	//if processing power is not a limiting factor, we expect the max number of reads @1000read/sec * 10 concurrent threads = 10k reads
+	//realistically we get a bit less than that, but should still be much greater than the baseline number of 5k
+	baselineReads := uint64(concurrentUsers * 1000 / 2  )
+	maxReads := uint64(concurrentUsers * 1000 )
+	baselineWrites := uint64(concurrentUsers *1000 / 2 / 2)
+	maxWrites := uint64(concurrentUsers * 1000 / 2)
+
+	assert.True(t, maxReads > readOps && readOps > baselineReads)
+	assert.True(t, maxWrites > addOps && addOps > baselineWrites )
+	assert.True(t, maxWrites > deleteOps && deleteOps > baselineWrites )
+
 }
