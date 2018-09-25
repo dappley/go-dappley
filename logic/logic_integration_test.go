@@ -21,6 +21,7 @@
 package logic
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -93,7 +94,9 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			time.Sleep(time.Millisecond * 500)
+			currentTime := time.Now().UTC().Unix()
+			for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
+			}
 
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
@@ -115,7 +118,7 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward, minerBalance)
+			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()), minerBalance)
 
 		})
 	}
@@ -222,7 +225,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 	teardown()
 }
 
-
 func TestBlockMsgRelay(t *testing.T) {
 	setup()
 	var pows []*consensus.ProofOfWork
@@ -240,7 +242,7 @@ func TestBlockMsgRelay(t *testing.T) {
 		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
-		node := setupNode(addr, pow, bc, testport_msg_relay + 100*i)
+		node := setupNode(addr, pow, bc, testport_msg_relay+100*i)
 
 		nodes = append(nodes, node)
 		pows = append(pows, pow)
@@ -253,8 +255,8 @@ func TestBlockMsgRelay(t *testing.T) {
 	//firstNode Starts Mining
 
 	pows[0].Start()
-	time.Sleep(time.Second * 6)
-
+	for bcs[0].GetMaxHeight() < 6 {
+	}
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -262,6 +264,7 @@ func TestBlockMsgRelay(t *testing.T) {
 			heights[i]++
 			return true
 		})
+		fmt.Println(i)
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
 	}
@@ -282,7 +285,7 @@ func TestBlockMsgRelayMeshNetwork(t *testing.T) {
 		defer db.Close()
 		bc, pow := createBlockchain(addr, db)
 		//init node based on blockchain
-		node := setupNode(addr, pow ,bc, testport_msg_relay + 100*i)
+		node := setupNode(addr, pow, bc, testport_msg_relay+100*i)
 
 		//index each node and service
 		bcs = append(bcs, bc)
@@ -302,7 +305,8 @@ func TestBlockMsgRelayMeshNetwork(t *testing.T) {
 	//firstNode Starts Mining
 
 	pows[0].Start()
-	time.Sleep(time.Second * 6)
+	for bcs[0].GetMaxHeight() < 5 {
+	}
 
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
@@ -316,13 +320,11 @@ func TestBlockMsgRelayMeshNetwork(t *testing.T) {
 	}
 }
 
-
-
 func TestBlockMsgWithDpos(t *testing.T) {
 	const (
-		timeBetweenBlock= 2
-		dposRounds= 3
-		bufferTime= 1
+		timeBetweenBlock = 2
+		dposRounds       = 3
+		bufferTime       = 1
 	)
 
 	miners := []string{
@@ -341,7 +343,7 @@ func TestBlockMsgWithDpos(t *testing.T) {
 	for i := 0; i < len(miners); i++ {
 		dpos := consensus.NewDpos()
 		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0)        //gennerate a block every round
+		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos)
 		node := network.NewNode(bc)
 		node.Start(testport_msg_relay_port + i)
@@ -361,21 +363,22 @@ func TestBlockMsgWithDpos(t *testing.T) {
 		dposArray[i].Start()
 	}
 
-
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
 	}
 
-	time.Sleep(time.Second)
+	for i := 0; i < len(miners); i++ {
+		v := dposArray[i].FullyStop()
+		for !v {
+		}
+	}
 
 	for i := 0; i < len(miners); i++ {
 		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), dposArray[i].GetBlockChain().GetMaxHeight())
 	}
 }
-
-
 
 func TestForkChoice(t *testing.T) {
 
@@ -391,7 +394,7 @@ func TestForkChoice(t *testing.T) {
 		db := storage.NewRamStorage()
 		defer db.Close()
 
-		bc,pow := createBlockchain(addr, db)
+		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
 		node := network.NewNode(bcs[i])
@@ -420,7 +423,10 @@ func TestForkChoice(t *testing.T) {
 		nodes[0].SyncPeersBroadcast()
 	}
 
-	time.Sleep(time.Second * 5)
+	currentTime := time.Now().UTC().Unix()
+
+	for !compareTwoBlockchains(bcs[0], bcs[numOfNodes-1]) && time.Now().UTC().Unix()-currentTime <= 5 {
+	}
 
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
@@ -500,15 +506,14 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 	}
 }
 
-
-func connectNodes (node1 *network.Node, node2 *network.Node){
+func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.AddStream(
 		node2.GetPeerID(),
 		node2.GetPeerMultiaddr(),
 	)
 }
 
-func setupNode(addr core.Address ,pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node{
+func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	node := network.NewNode(bc)
 	pow.Setup(node, addr.Address)
 	pow.SetTargetBit(16)
@@ -516,7 +521,7 @@ func setupNode(addr core.Address ,pow *consensus.ProofOfWork, bc *core.Blockchai
 	return node
 }
 
-func createBlockchain (addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
+func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
 	pow := consensus.NewProofOfWork()
 	return core.CreateBlockchain(addr, db, pow), pow
 }

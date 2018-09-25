@@ -22,11 +22,12 @@ package consensus
 
 import (
 	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/network"
 	"time"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDpos_Start(t *testing.T) {
@@ -34,7 +35,7 @@ func TestDpos_Start(t *testing.T) {
 	dpos := NewDpos()
 	cbAddr := core.Address{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := core.CreateBlockchain(cbAddr,storage.NewRamStorage(),dpos)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos)
 	node := network.NewNode(bc)
 	node.Start(21100)
 	dpos.Setup(node, cbAddr.Address)
@@ -47,20 +48,22 @@ func TestDpos_Start(t *testing.T) {
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)
-
+	//wait for the block gets mined
+	currentTime := time.Now().UTC().Unix()
 	dpos.Start()
 	//wait for the block gets mined
-	time.Sleep(time.Second*6)
+	for bc.GetMaxHeight() <= 0 && time.Now().UTC().Unix()-currentTime < 50 {
+	}
 	dpos.Stop()
 
-	assert.True(t, bc.GetMaxHeight()>=1)
+	assert.True(t, bc.GetMaxHeight() >= 1)
 }
 
 func TestDpos_MultipleMiners(t *testing.T) {
 	const (
-		timeBetweenBlock= 2
-		dposRounds= 3
-		bufferTime= 1
+		timeBetweenBlock = 2
+		dposRounds       = 3
+		bufferTime       = 1
 	)
 
 	miners := []string{
@@ -105,7 +108,12 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Stop()
 	}
 
-	time.Sleep(time.Second)
+	for i := 0; i < len(miners); i++ {
+		v := dposArray[i].FullyStop()
+		currentTime := time.Now().UTC().Unix()
+		for !v && time.Now().UTC().Unix()-currentTime < 20 {
+		}
+	}
 
 	for i := 0; i < len(miners); i++ {
 		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bc.GetMaxHeight())
