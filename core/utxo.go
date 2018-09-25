@@ -84,7 +84,7 @@ func (index UTXOIndex) serialize() []byte {
 func LoadUTXOIndex(db storage.Storage) UTXOIndex {
 	res, err := db.Get([]byte(utxoMapKey))
 
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() {
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || res == nil{
 		return NewUTXOIndex()
 	}
 	umap := deserializeUTXOIndex(res)
