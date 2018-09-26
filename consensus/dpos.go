@@ -114,7 +114,7 @@ func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.miner.Stop()
 }
 func (dpos *Dpos) FullyStop() bool {
-	v := <-dpos.miner.exitCh
+	v := dpos.miner.stop
 	return v
 }
 
