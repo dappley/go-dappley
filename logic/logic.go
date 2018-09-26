@@ -28,6 +28,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/network"
 	"golang.org/x/crypto/bcrypt"
+	logger "github.com/sirupsen/logrus"
 )
 
 var (
@@ -98,6 +99,7 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 			return nil, err
 		}
 		wm.PassPhrase = passBytes
+		logger.Info("Wallet password set!")
 		wallet := client.NewWallet()
 		wm.AddWallet(wallet)
 		wm.SaveWalletToFile()
