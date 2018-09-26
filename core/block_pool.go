@@ -19,10 +19,10 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/common"
 )
 const BlockPoolLRUCacheLimit = 128
 
@@ -104,29 +104,33 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 }
 
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
-	logger.Debug("BlockPool: Received a new block: ", blk.hashString(), " From Sender: ", sender.String())
+	logger.Debug("BlockPool: Received a new block: ", blk.GetHash(), " From Sender: ", sender.String())
 	node,_ := pool.bc.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
 
 	blkCache := pool.blkCache
 	nodeCache := pool.nodeCache
-	if blkCache.Contains(blk.hashString()){
-		logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.hashString(), " returning")
-		return
-	}
-	if pool.bc.IsInBlockchain(blk.GetHash()){
-		logger.Debug("BlockPool: Blockchain already contains blk: ", blk.hashString(), " returning")
+
+	if   pool.bc.consensus.Validate(blk) {
+		if blkCache.Contains(blk.hashString()){
+			logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.GetHash(), " returning")
+			return
+		}else{
+			logger.Debug("BlockPool: Adding blk key to blockcache: ", blk.GetHash())
+			blkCache.Add(blk.hashString(), blk)
+		}
+
+		if pool.bc.IsInBlockchain(blk.GetHash()){
+			logger.Debug("BlockPool: Blockchain already contains blk: ", blk.GetHash(), " returning")
+			return
+		}else{
+			logger.Debug("BlockPool: Adding node key to nodecache: ", blk.GetHash())
+			nodeCache.Add(node.GetKey(), node)
+		}
+	}else{
+		logger.Debug("BlockPool: Block: ", blk.GetHash(), " did not pass consensus validation, discarding block")
 		return
 	}
 
-	//TODO: verify
-	if   true {
-		logger.Debug("BlockPool: Adding node key to bpcache: ", blk.hashString())
-		nodeCache.Add(node.GetKey(), node)
-		blkCache.Add(blk.hashString(), blk)
-	}else{
-		logger.Debug("BlockPool: Block: ", blk.hashString(), " did not pass verification process, discarding block")
-		return
-	}
 	bcTailBlk , err := pool.GetBlockchain().GetTailBlock()
 	if err != nil{
 		nodeCache.Remove(node.GetKey())
@@ -157,25 +161,23 @@ func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
 	for _,key := range nodeCache.Keys() {
 		if possibleChild,ok:= nodeCache.Get(key); ok == true {
 			if possibleChild.(*common.Node).Parent == node{
-				logger.Debug("BlockPool: Block: ", node.GetKey(), " found child Block: ", key, " in BlockPool blkCache, adding child")
+				logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " found child Block: ", possibleChild.(*common.Node).GetValue().(*BlockHeader).hash, " in BlockPool blkCache, adding child")
 				node.AddChild(possibleChild.(*common.Node))
 			}
 		}
 	}
-	//link parents and ancestors
-	for {
-		if parent,ok:= nodeCache.Get(string(node.GetValue().(*BlockHeader).prevHash)); ok == true {
-			logger.Debug("BlockPool: Block: ", node.GetKey(), " found parent: ", node.GetValue().(*BlockHeader).prevHash, " in BlockPool blkCache, adding parent")
-			//parent found in blkCache
-			node.AddParent(parent.(*common.Node))
-			node = parent.(*common.Node)
-		}else{
-			logger.Debug("BlockPool: Block: ", node.GetKey(), " no more parent found in BlockPool blkCache")
-			break
-		}
+	//link parent
+	if parent,ok:= nodeCache.Get(string(node.GetValue().(*BlockHeader).prevHash)); ok == true {
+		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " found parent: ", node.GetValue().(*BlockHeader).prevHash, " in BlockPool blkCache, adding parent")
+		//parent found in blkCache
+		node.AddParent(parent.(*common.Node))
+		node = parent.(*common.Node)
+	}else{
+		logger.Debug("BlockPool: Block: ",  node.GetValue().(*BlockHeader).hash, " no more parent found in BlockPool blkCache")
 	}
 
-	logger.Debug("BlockPool: Block: ", node.GetKey(), " finished updating BlockPoolCache")
+
+	logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " finished updating BlockPoolCache")
 	return node
 }
 
@@ -186,14 +188,15 @@ func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
 
 	// parent exists on tree, add node to tree
 	prevhash := node.GetValue().(*BlockHeader).prevHash
+
 	if tree.Get(tree.Root, string(prevhash)); tree.Found != nil {
-		logger.Debug("BlockPool: Block: ", node.GetKey(), " being added as child to parent ", node.Parent.GetKey())
+		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " being added as child to parent ", node.Parent.GetValue().(*BlockHeader).hash)
 		tree.Found.AddChild(node)
 		pool.nodeCache.Remove(node)
 		return true
 	}else{
 		// parent doesnt exist on tree, download parent from sender
-		logger.Debug("BlockPool: Block: ", node.GetKey(), " parent not found, proceeding to download parent: ", node.GetValue().(*BlockHeader).prevHash, " from ", sender)
+		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " parent not found, proceeding to download parent: ", node.GetValue().(*BlockHeader).prevHash, " from ", sender)
 		pool.requestBlock(node.GetValue().(*BlockHeader).prevHash, sender)
 		return false
 	}

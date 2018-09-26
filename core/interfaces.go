@@ -29,7 +29,6 @@ type Consensus interface{
 	Setup(NetService, string)
 	SetTargetBit(int)
 	SetKey(string)
-
 }
 
 type NetService interface{

@@ -53,7 +53,7 @@ type Blockchain struct {
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) *Blockchain {
 	genesis := NewGenesisBlock(address.Address)
-	tree := common.NewTree(genesis.GetHash(), genesis)
+	tree := common.NewTree(genesis.GetHash(), genesis.header)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
@@ -65,7 +65,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 	bc.blockPool.SetBlockchain(bc)
 	err := bc.AddBlockToTail(genesis)
 	if err!=nil {
-		logger.Warn("Blockchain: Add Genesis Block Failed During Blockchain Creation!")
+		logger.Panic("Blockchain: Add Genesis Block Failed During Blockchain Creation!")
 	}
 	return bc
 }
@@ -91,7 +91,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 	if err != nil {
 		return nil, err
 	}
-	tree:=common.NewTree(tailBlock.GetHash(), tailBlock)
+	tree:=common.NewTree(tailBlock.GetHash(), tailBlock.header)
 	bc.forkTree = tree
 	return bc, nil
 }
