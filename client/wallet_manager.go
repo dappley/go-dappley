@@ -115,6 +115,7 @@ func (wm *WalletManager) AddWallet(wallet *Wallet){
 	wm.Wallets = append(wm.Wallets, wallet)
 }
 
+
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
@@ -123,6 +124,21 @@ func (wm *WalletManager) GetAddresses() []core.Address {
 	}
 
 	return addresses
+}
+
+func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, error) {
+	var addresses []string
+
+	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+	if err != nil {
+		return nil, errors.New("Password not correct!")
+	}
+	for _, wallet := range wm.Wallets {
+		address := wallet.GetAddresses()[0].Address
+		addresses = append(addresses, address)
+	}
+
+	return addresses, nil
 }
 
 func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {

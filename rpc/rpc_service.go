@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 type RpcService struct{
@@ -146,4 +147,56 @@ func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcSerivce.node.GetBlockchain().GetMaxHeight(),
 	}, nil
+}
+
+func (rpcSerivce *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb.GetWalletAddressRequest) (*rpcpb.GetWalletAddressResponse, error) {
+
+	pass := in.Passphrase
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return &rpcpb.GetWalletAddressResponse {Message: "ListWalletAddresses: Error loading local wallets"}, err
+	}
+	addressList, err := wm.GetAddressesWithPassphrase(pass)
+	if err != nil {
+		if strings.Contains(err.Error(), "Password not correct") {
+			return &rpcpb.GetWalletAddressResponse {Message: "ListWalletAddresses: Password not correct"}, nil
+		} else {
+			return &rpcpb.GetWalletAddressResponse {Message: err.Error()}, err
+		}
+	}
+	getWalletAddress := rpcpb.GetWalletAddressResponse{}
+	getWalletAddress.Address = addressList
+
+	return &getWalletAddress, nil
+}
+
+func (rpcSerivce *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBalanceRequest) (*rpcpb.AddBalanceResponse, error) {
+	sendToAddress := core.NewAddress(in.Address)
+	sendAmount := common.NewAmountFromBytes(in.Amount)
+	if sendAmount.Validate() != nil || sendAmount.IsZero() {
+		return &rpcpb.AddBalanceResponse{Message: "Invalid send amount (must be >0)"}, nil
+	}
+
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return &rpcpb.AddBalanceResponse{Message: "Error loading local wallets"}, err
+	}
+
+	receiverWallet := wm.GetWalletByAddress(sendToAddress)
+	if receiverWallet == nil {
+		return &rpcpb.AddBalanceResponse{Message: "Address not found in the wallet!"}, nil
+	} else {
+		err = logic.AddBalance(sendToAddress, sendAmount, rpcSerivce.node.GetBlockchain())
+		if err != nil {
+			return &rpcpb.AddBalanceResponse{Message: "Add balance failed, " + err.Error()}, nil
+		} else {
+			addBalanceResponse := rpcpb.AddBalanceResponse{}
+			addBalanceResponse.Message = "Add balance succeed!"
+			return &addBalanceResponse, nil
+		}
+	}
 }
