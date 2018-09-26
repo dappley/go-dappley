@@ -129,7 +129,7 @@ func (dpos *Dpos) Stop() {
 
 
 func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
-	if _ , exist := dpos.Slot.Get(block.GetTimestamp()); exist {
+	if _ , exist := dpos.slot.Get(block.GetTimestamp()); exist {
 		logger.Debug("Someone is minting when they are not supposed to!")
 		return true
 	}
