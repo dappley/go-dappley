@@ -27,17 +27,20 @@ import (
 	"errors"
 	"strconv"
 
+	"encoding/base64"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-host"
 	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"sync"
 )
 
@@ -61,6 +64,7 @@ type Node struct {
 	exitCh                 chan bool
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
+	privKey                crypto.PrivKey
 }
 
 //create new Node instance
@@ -74,23 +78,24 @@ func NewNode(bc *core.Blockchain) *Node {
 		make(chan bool, 1),
 		&sync.Map{},
 		&placeholder,
+		nil,
 	}
 }
 
 func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
-	if _,value := n.recentlyRcvedDapMsgs.Load(dapmsg.GetKey()); value == true {
+	if _, value := n.recentlyRcvedDapMsgs.Load(dapmsg.GetKey()); value == true {
 		return true
 	}
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain           { return n.bc }
-func (n *Node) GetPeerList() *PeerList                    { return n.peerList }
+func (n *Node) GetBlockchain() *core.Blockchain    { return n.bc }
+func (n *Node) GetPeerList() *PeerList             { return n.peerList }
 func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
 
 func (n *Node) Start(listenPort int) error {
 
-	h, addr, err := createBasicHost(listenPort)
+	h, addr, err := createBasicHost(listenPort, n.privKey)
 	if err != nil {
 		return err
 	}
@@ -119,12 +124,35 @@ func (n *Node) StartRequestLoop() {
 
 }
 
+//LoadNetworkKeyFromFile reads the network privatekey from a file
+func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	data, err := base64.StdEncoding.DecodeString(string(bytes))
+	if err != nil {
+		return err
+	}
+
+	n.privKey, err = crypto.UnmarshalPrivateKey(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 //create basic host. Returns host object, host address and error
-func createBasicHost(listenPort int) (host.Host, ma.Multiaddr, error) {
+func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiaddr, error) {
 
 	opts := []libp2p.Option{
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listenPort)),
-		//libp2p.Identity(priv),
+	}
+
+	if priv != nil {
+		opts = append(opts, libp2p.Identity(priv))
 	}
 
 	basicHost, err := libp2p.New(context.Background(), opts...)
@@ -251,7 +279,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
-		logger.Debug("Node: Caching block msg with key ", dm.key)
+		logger.Debug("Node: ",n.info.peerid," broadcasting block with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -273,6 +301,15 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 
 func (n *Node) SyncPeersBroadcast() error {
 	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
+	if err != nil {
+		return err
+	}
+	n.broadcast(data)
+	return nil
+}
+
+func (n *Node) TxBroadcast(tx *core.Transaction) error {
+	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast)
 	if err != nil {
 		return err
 	}
@@ -355,14 +392,14 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 }
 func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
-		logger.Debug("Node: Already received ", dm.GetKey(), " before")
+		logger.Debug("Node: ", n.GetPeerID() ," Already received ", dm.GetKey(), " before")
 		return
 	}
 
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Info("Node: Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
+	logger.Debug("Node: ", n.GetPeerID() ," Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
@@ -386,9 +423,8 @@ func (n *Node) addTxToPool(data []byte) {
 
 	//load the tx with proto
 	tx.FromProto(txpb)
-
 	//add tx to txpool
-	n.bc.GetTxPool().StructPush(tx)
+	n.bc.GetTxPool().ConditionalAdd(*tx)
 }
 
 func (n *Node) addMultiPeers(data []byte) {

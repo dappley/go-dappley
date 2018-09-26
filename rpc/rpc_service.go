@@ -29,6 +29,8 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/sirupsen/logrus"
+	"fmt"
 )
 
 type RpcService struct{
@@ -37,7 +39,26 @@ type RpcService struct{
 
 // SayHello implements helloworld.GreeterServer
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	return &rpcpb.CreateWalletResponse{Message: "Hello " + in.Name}, nil
+	passPhrase := in.Passphrase
+	fmt.Println(passPhrase)
+	msg := ""
+	if len(passPhrase) ==0 {
+		logrus.Error("CreateWallet: Password is empty!")
+		msg = "Create Wallet: Error"
+		return &rpcpb.CreateWalletResponse{
+			Message: msg,
+			Address: ""}, nil
+	}
+	wallet,err := logic.CreateWalletWithpassphrase(passPhrase)
+	if err != nil {
+		msg = "Create Wallet: Error"
+	}
+	addr := wallet.GetAddress().Address
+	fmt.Println(addr)
+	msg = "Create Wallet: "
+	return &rpcpb.CreateWalletResponse{
+		Message: msg,
+		Address: addr}, nil
 }
 
 func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
@@ -66,7 +87,7 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	err = logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcSerivce.node.GetBlockchain())
+	err = logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcSerivce.node.GetBlockchain(), rpcSerivce.node)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error sending"}, err
 	}

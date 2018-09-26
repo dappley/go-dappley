@@ -24,34 +24,34 @@ import (
 )
 
 type ProofOfWork struct {
-	bc 			*core.Blockchain
-	miner 		*Miner
-	mintBlkChan	chan(*MinedBlock)
-	node    	core.NetService
-	exitCh 		chan(bool)
+	bc          *core.Blockchain
+	miner       *Miner
+	mintBlkChan chan (*MinedBlock)
+	node        core.NetService
+	exitCh      chan (bool)
 }
 
-func NewProofOfWork() *ProofOfWork{
+func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:			NewMiner(),
-		mintBlkChan: 	make(chan(*MinedBlock),1),
-		node: 			nil,
-		exitCh: 		make(chan(bool),1),
+		miner:       NewMiner(),
+		mintBlkChan: make(chan (*MinedBlock), 1),
+		node:        nil,
+		exitCh:      make(chan (bool), 1),
 	}
 	return p
 }
 
-func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string){
+func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
 	pow.bc = node.GetBlockchain()
 	pow.node = node
 	pow.miner.Setup(pow.bc, cbAddr, pow.mintBlkChan)
 }
 
-func (pow *ProofOfWork) SetTargetBit(bit int){
+func (pow *ProofOfWork) SetTargetBit(bit int) {
 	pow.miner.SetTargetBit(bit)
 }
 
-func (pow *ProofOfWork) SetKey(key string){
+func (pow *ProofOfWork) SetKey(key string) {
 	pow.miner.SetPrivKey(key)
 }
 
@@ -64,10 +64,9 @@ func (pow *ProofOfWork) Start() {
 			case <-pow.exitCh:
 				logger.Info("PoW stopped...")
 				return
-			case minedBlk := <- pow.mintBlkChan:
+			case minedBlk := <-pow.mintBlkChan:
 				if minedBlk.isValid {
 					pow.updateNewBlock(minedBlk.block)
-					pow.bc.MergeFork()
 				}
 				pow.miner.Start()
 			}
@@ -79,15 +78,18 @@ func (pow *ProofOfWork) Stop() {
 	pow.exitCh <- true
 	pow.miner.Stop()
 }
-
+func (pow *ProofOfWork) FullyStop() bool {
+	v := <-pow.miner.exitCh
+	return v
+}
 
 func (pow *ProofOfWork) Validate(blk *core.Block) bool {
 	return pow.miner.Validate(blk)
 }
 
-func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block){
+func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
 	logger.Info("PoW: Minted a new block. height:", newBlock.GetHeight())
-	if !newBlock.VerifyHash(){
+	if !newBlock.VerifyHash() {
 		logger.Warn("hash verification is wrong")
 
 	}
@@ -95,15 +97,15 @@ func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block){
 	pow.broadcastNewBlock(newBlock)
 }
 
-func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block){
+func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block) {
 	//broadcast the block to other nodes
 	pow.node.BroadcastBlock(blk)
 }
 
-func (pow *ProofOfWork) StartNewBlockMinting(){
+func (pow *ProofOfWork) StartNewBlockMinting() {
 	pow.miner.Stop()
 }
 
-func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool{
+func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool {
 	return true
 }

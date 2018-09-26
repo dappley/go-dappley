@@ -27,6 +27,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 // The request message
 type CreateWalletRequest struct {
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Passphrase			string 	`protobuf:"bytes,2,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -61,6 +62,11 @@ func (m *CreateWalletRequest) GetName() string {
 		return m.Name
 	}
 	return ""
+}
+
+func (m *CreateWalletRequest) SetPassphrase(passphrase string) {
+	m.Passphrase = passphrase
+	return
 }
 
 type GetBalanceRequest struct {

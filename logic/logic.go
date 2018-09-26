@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/network"
 )
 
 var (
@@ -54,6 +55,19 @@ func CreateWallet() (*client.Wallet, error) {
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
+
+	return wallet, err
+}
+
+//create a wallet with passphrase
+func CreateWalletWithpassphrase(passphrase string) (*client.Wallet, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	wallet := client.NewWalletWithPassphrase(passphrase)
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile()
+	wm.LoadFromFile()
 
 	return wallet, err
 }
@@ -89,7 +103,7 @@ func GetAllAddresses() ([]core.Address, error) {
 	return addresses, err
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain) error {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) error {
 	if !senderWallet.GetAddress().ValidateAddress() {
 		return ErrInvalidSenderAddress
 	}
@@ -102,7 +116,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 	bc.GetTxPool().ConditionalAdd(tx)
-
+	node.TxBroadcast(&tx)
 	if err != nil {
 		return err
 	}

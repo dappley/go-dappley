@@ -2,13 +2,8 @@ syntax = "proto3";
 package configpb;
 
 message Config{
-    DynastyConfig   dynastyConfig = 1;
-    ConsensusConfig consensusConfig = 2;
-    NodeConfig      nodeConfig = 3;
-}
-
-message DynastyConfig{
-    repeated string producers =1;
+    ConsensusConfig consensusConfig = 1;
+    NodeConfig      nodeConfig = 2;
 }
 
 message ConsensusConfig{
@@ -21,7 +16,11 @@ message NodeConfig{
     string seed = 2;
     string dbPath = 3;
     uint32 rpcPort = 4;
-    string password = 5;
+    string keyPath = 5;
+}
+
+message DynastyConfig{
+    repeated string producers =1;
 }
 
 message CliConfig{

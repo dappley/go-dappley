@@ -20,89 +20,22 @@ package config
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/config/pb"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 )
 
-type Config struct {
-	dynastyConfig   DynastyConfig
-	consensusConfig ConsensusConfig
-	nodeConfig      NodeConfig
-}
-
-type DynastyConfig struct {
-	producers []string
-}
-
-type ConsensusConfig struct{
-	minerAddr 	string
-	privKey string
-}
-
-type NodeConfig struct {
-	port    uint32
-	seed    string
-	dbPath  string
-	rpcPort uint32
-}
-
-type BlockchainConfig struct {
-	blockchainDBFile     string
-	transactionPoolLimit int
-}
-
-func LoadConfigFromFile(filename string) *Config {
+func LoadConfig(filename string, pb proto.Message) {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		logger.Warn(errors.New("Could Not Read Config File"))
 		logger.Warn(err)
-		return nil
+		return
 	}
 
-	pb := &configpb.Config{}
 	err = proto.UnmarshalText(string(bytes), pb)
 	if err != nil {
 		logger.Warn(errors.New("Could Not Parse Config File"))
 		logger.Warn(err)
-		return nil
-	}
-
-	dynastyConfig := DynastyConfig{}
-	if pb.DynastyConfig != nil {
-		dynastyConfig.producers = pb.DynastyConfig.Producers
-	}
-
-	consensusConfig := ConsensusConfig{}
-	if pb.ConsensusConfig != nil {
-		consensusConfig.minerAddr = pb.ConsensusConfig.MinerAddr
-		consensusConfig.privKey = pb.ConsensusConfig.PrivKey
-	}
-
-	nodeConfig := NodeConfig{}
-	if pb.NodeConfig != nil {
-		nodeConfig.port = pb.NodeConfig.Port
-		nodeConfig.seed = pb.NodeConfig.Seed
-		nodeConfig.dbPath = pb.NodeConfig.DbPath
-		nodeConfig.rpcPort = pb.NodeConfig.RpcPort
-	}
-
-	return &Config{
-		dynastyConfig,
-		consensusConfig,
-		nodeConfig,
 	}
 }
-
-func (config *Config) GetDynastyConfig() *DynastyConfig     { return &config.dynastyConfig }
-func (config *Config) GetConsensusConfig() *ConsensusConfig { return &config.consensusConfig }
-func (config *Config) GetNodeConfig() *NodeConfig           { return &config.nodeConfig }
-
-func (dynastyConfig *DynastyConfig)GetProducers() []string{return dynastyConfig.producers}
-func (consensusConfig *ConsensusConfig)GetMinerAddr() string{return consensusConfig.minerAddr}
-func (consensusConfig *ConsensusConfig)GetMinerPrivKey() string{return consensusConfig.privKey}
-func (nodeConfig *NodeConfig)GetListeningPort() uint32{return nodeConfig.port}
-func (nodeConfig *NodeConfig)GetSeed() string{return nodeConfig.seed}
-func (nodeConfig *NodeConfig)GetDbPath() string{return nodeConfig.dbPath}
-func (nodeConfig *NodeConfig)GetRpcPort() uint32{return nodeConfig.rpcPort}

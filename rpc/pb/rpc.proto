@@ -19,6 +19,7 @@ service AdminService{
 // The request message 
 message CreateWalletRequest {
   string name = 1;
+  string passphrase = 2;
 }
 
 message GetBalanceRequest {

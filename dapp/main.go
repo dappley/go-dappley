@@ -29,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/config/pb"
 )
 
 const (
@@ -47,13 +48,17 @@ func main() {
 	logger.SetLevel(logger.DebugLevel)
 
 	//load genesis file information
-	genesisConf := config.LoadConfigFromFile(genesisFilePath)
+	genesisConf := &configpb.DynastyConfig{}
+	config.LoadConfig(genesisFilePath, genesisConf)
+
 	if genesisConf == nil {
 		logger.Error("ERROR: Cannot load genesis configurations from file!Exiting...")
 		return
 	}
+
 	//load config file information
-	conf := config.LoadConfigFromFile(filePath)
+	conf := &configpb.Config{}
+	config.LoadConfig(filePath, conf)
 	if conf == nil {
 		logger.Error("ERROR: Cannot load configurations from file!Exiting...")
 		return
@@ -87,7 +92,7 @@ func main() {
 	//start mining
 	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
 	conss.Setup(node, minerAddr)
-	conss.SetKey(conf.GetConsensusConfig().GetMinerPrivKey())
+	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
 	logger.Info("Miner Address is ", minerAddr)
 
 	conss.Start()
@@ -96,20 +101,27 @@ func main() {
 	select {}
 }
 
-func initConsensus(conf *config.Config) (core.Consensus, *consensus.Dynasty) {
+func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dynasty) {
 	//set up consensus
 	conss := consensus.NewDpos()
-	dynasty := consensus.NewDynastyWithProducers(conf.GetDynastyConfig().GetProducers())
+	dynasty := consensus.NewDynastyWithProducers(conf.GetProducers())
 	conss.SetDynasty(dynasty)
 	conss.SetTargetBit(0)
 	return conss, dynasty
 }
 
-func initNode(conf *config.Config, bc *core.Blockchain) (*network.Node, error) {
+func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
 	node := network.NewNode(bc)
 	nodeConfig := conf.GetNodeConfig()
-	port := nodeConfig.GetListeningPort()
+	port := nodeConfig.GetPort()
+	keyPath := nodeConfig.GetKeyPath()
+	if keyPath!="" {
+		err := node.LoadNetworkKeyFromFile(keyPath)
+		if err!= nil {
+			logger.Error(err)
+		}
+	}
 	err := node.Start(int(port))
 	if err != nil {
 		logger.Error(err)

@@ -72,13 +72,13 @@ func (index UTXOIndex) serialize() []byte {
 
 // LoadUTXOIndex returns the UTXOIndex fetched from db.
 func LoadUTXOIndex(db storage.Storage) UTXOIndex {
-	res, err := db.Get([]byte(utxoMapKey))
+	utxoBytes, err := db.Get([]byte(utxoMapKey))
 
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() {
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
 		return NewUTXOIndex()
 	}
-	umap := deserializeUTXOIndex(res)
-	return umap
+	
+	return deserializeUTXOIndex(utxoBytes)
 }
 
 // Save stores the index to db
@@ -106,7 +106,7 @@ func (index UTXOIndex) GetUTXOsByPubKey(pubkey []byte) []*UTXO {
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (index *UTXOIndex) Update(newBlk *Block, db storage.Storage) error {
+func (index *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) error {
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := index.deepCopy()
 
