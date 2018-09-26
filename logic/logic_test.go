@@ -25,12 +25,13 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 
+	"reflect"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 	logger "github.com/sirupsen/logrus"
-	"reflect"
+	"github.com/stretchr/testify/assert"
 )
 
 const InvalidAddress = "Invalid Address"
@@ -47,7 +48,7 @@ func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet()
 	assert.Nil(t, err)
 	expectedLength := 34
-	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey);hash[0] < 10{
+	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey); hash[0] < 10 {
 		expectedLength = 33
 	}
 	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
@@ -57,7 +58,7 @@ func TestCreateWalletWithPassphrase(t *testing.T) {
 	wallet, err := CreateWalletWithpassphrase("passpass")
 	assert.Nil(t, err)
 	expectedLength := 34
-	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey);hash[0] < 10{
+	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey); hash[0] < 10 {
 		expectedLength = 33
 	}
 	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
@@ -187,12 +188,12 @@ func TestDeleteInvalidWallet(t *testing.T) {
 func TestCompare(t *testing.T) {
 	bc1 := core.GenerateMockBlockchain(5)
 	bc2 := bc1
-	assert.True(t, compareTwoBlockchains(bc1, bc2))
+	assert.True(t, isSameBlockChain(bc1, bc2))
 	bc3 := core.GenerateMockBlockchain(5)
-	assert.False(t, compareTwoBlockchains(bc1, bc3))
+	assert.False(t, isSameBlockChain(bc1, bc3))
 }
 
-func compareTwoBlockchains(bc1, bc2 *core.Blockchain) bool {
+func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
 	if bc1 == nil || bc2 == nil {
 		return false
 	}
