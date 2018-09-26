@@ -80,7 +80,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	//start a miner
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "test")
 	pow.Setup(n, wallet1.GetAddress().Address)
-
+	pow.SetKey("")
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -132,6 +132,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, wallet.GetAddress().Address)
 	pow.Start()
+	pow.SetKey("")
+
 
 	//Make sure at least 5 blocks mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -184,6 +186,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, wallet1.GetAddress().Address)
 	pow.Start()
+	pow.SetKey("")
 
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
@@ -234,6 +237,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, cbAddr.Address)
+	pow.SetKey("")
 
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
