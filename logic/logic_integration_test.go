@@ -547,7 +547,7 @@ func TestDoubleMint(t *testing.T) {
 	for i:=0; i < len(nodes)-1; i++{
 		totalSent += bcs[i].GetMaxHeight()
 	}
-	for _, _ = range dposArray[3].Slot.Keys(){
+	for _, _ = range dposArray[3].GetSlot().Keys(){
 		height++
 	}
 

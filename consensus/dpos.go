@@ -40,7 +40,7 @@ type Dpos struct {
 	node      core.NetService
 	quitCh    chan (bool)
 	dynasty   *Dynasty
-	Slot      *lru.Cache
+	slot      *lru.Cache
 }
 
 func NewDpos() *Dpos {
@@ -55,8 +55,12 @@ func NewDpos() *Dpos {
 	if err != nil {
 		logger.Panic(err)
 	}
-	dpos.Slot = slot
+	dpos.slot = slot
 	return dpos
+}
+
+func (dpos *Dpos) GetSlot() *lru.Cache {
+	return dpos.slot
 }
 
 func (dpos *Dpos) Setup(node core.NetService, cbAddr string) {
@@ -89,7 +93,7 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 func (dpos *Dpos) Validate(block *core.Block) bool{
 	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block) && !dpos.isDoubleMint(block)
 	if pass {
-		dpos.Slot.Add(block.GetTimestamp(), block)
+		dpos.slot.Add(block.GetTimestamp(), block)
 	}
 	return pass
 }
