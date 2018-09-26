@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
@@ -15,18 +17,31 @@ const (
 	defaultPassword = "password"
 )
 
+type fileInfo struct {
+	path          string
+	maxHight      int
+	differentFrom int
+}
+
 func main() {
 	var filePath string
-	wordPtr := flag.String("word", "foo", "a string")
-	flag.StringVar(&filePath, "filePath", "default.db", "a string var")
-	maxHeightBuffer := flag.Int("maxHeight", 100, "an int")
-	maxHeight := *maxHeightBuffer
-	fmt.Println(filePath)
-	fmt.Println(maxHeight)
-	fmt.Println(*wordPtr)
+
+	numberBuffer := flag.Int("number", 1, "an int")
+
+	flag.Parse()
+
+	number := *numberBuffer
+
+	for i := 1; i <= number; i++ {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter text: ")
+		text, _ := reader.ReadString('\n')
+		fmt.Println(text)
+	}
+
 	db := storage.OpenDatabase(filePath)
 	defer db.Close()
-	generateNewBlockChain(maxHeight, db)
+	//generateNewBlockChain(maxHeight, db)
 }
 
 func generateNewBlockChain(size int, db storage.Storage) *core.Blockchain {
