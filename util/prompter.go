@@ -93,7 +93,9 @@ func (p *TerminalPrompter) PromptPassphrase(prompt string) (passwd string, err e
 		return p.liner.PasswordPrompt(prompt)
 	}
 
-	fmt.Print(prompt)
+	if prompt != "" {
+		fmt.Print(prompt)
+	}
 	passwd, err = p.liner.Prompt("")
 	fmt.Println()
 	return passwd, err
@@ -131,7 +133,7 @@ func (p *TerminalPrompter) GetPassPhrase(prompt string, confirmation bool) strin
 	if prompt != "" {
 		fmt.Println(prompt)
 	}
-	passphrase, err := p.PromptPassphrase("Password: ")
+	passphrase, err := p.PromptPassphrase("")
 	if err != nil {
 		fmt.Printf("Failed to read password: %v \n", err)
 	}
@@ -141,7 +143,7 @@ func (p *TerminalPrompter) GetPassPhrase(prompt string, confirmation bool) strin
 			fmt.Printf("Failed to read password confirmation: %v \n", err)
 		}
 		if passphrase != confirm {
-			fmt.Println("password do not match")
+			fmt.Println("password do not match!")
 			return ""
 		}
 	}

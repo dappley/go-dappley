@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/storage/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/core"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestWalletManager_LoadFromFileExists(t *testing.T) {
@@ -72,7 +73,7 @@ func TestWalletManager_SaveWalletToFile_with_passphrase(t *testing.T) {
 	mockStorage := storage_mock.NewMockFileStorage(mockCtrl)
 	mockStorage.EXPECT().SaveToFile(gomock.Any())
 	wm := NewWalletManager(mockStorage)
-	wallet := NewWalletWithPassphrase("passphrase")
+	wallet := NewWallet()
 	wm.Wallets = append(wm.Wallets, wallet)
 	wm.SaveWalletToFile()
 
@@ -93,13 +94,6 @@ func TestWallet_GetAddresses(t *testing.T) {
 	assert.Equal(t, wallet.GetAddresses(),wm.GetAddresses())
 }
 
-func TestWallet_GetAddresses_with_passphrase(t *testing.T) {
-	wm := NewWalletManager(nil)
-	wallet := NewWalletWithPassphrase("passphrase")
-	wm.Wallets = append(wm.Wallets, wallet)
-	assert.Equal(t, wallet.GetAddresses(),wm.GetAddresses())
-}
-
 func TestWallet_GetAddressesNoWallet(t *testing.T) {
 	wm := NewWalletManager(nil)
 	assert.Equal(t,[]core.Address(nil),wm.GetAddresses())
@@ -110,6 +104,21 @@ func TestWalletManager_GetWalletByAddress(t *testing.T) {
 	wallet := NewWallet()
 	wm.Wallets = append(wm.Wallets, wallet)
 	assert.Equal(t, wallet, wm.GetWalletByAddress(wallet.GetAddress()))
+}
+
+func TestWalletManager_GetWalletByAddress_withPassphrase(t *testing.T) {
+	wm := NewWalletManager(nil)
+	passPhrase, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	assert.Equal(t, err, nil)
+	wm.PassPhrase = passPhrase
+	wallet := NewWallet()
+	wm.Wallets = append(wm.Wallets, wallet)
+	wallet1, err := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "password")
+	wallet2, err1 := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "none")
+	assert.NotEqual(t, wallet2, wallet)
+	assert.NotEqual(t, err1, nil)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, wallet, wallet1)
 }
 
 func TestWalletManager_GetWalletByUnfoundAddress(t *testing.T) {

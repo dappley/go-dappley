@@ -722,9 +722,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ab6e2e8e5b93ccb37cebf0b3ad0b14f9ecd279198d40d936d652e378871ef3f0"
+  digest = "1:be7198d0051c2c3e237b6bffbb20a2988b2f50c80bfb37eb83ac5f9b0e346942"
   name = "golang.org/x/crypto"
   packages = [
+    "bcrypt",
     "blake2s",
     "blowfish",
     "pbkdf2",
@@ -867,6 +868,7 @@
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/syndtr/goleveldb/leveldb",
+    "golang.org/x/crypto/bcrypt",
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/scrypt",
     "golang.org/x/crypto/sha3",

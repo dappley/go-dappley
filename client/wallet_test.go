@@ -35,26 +35,8 @@ func TestWallet_ContainAddress(t *testing.T) {
 
 	for _,tt := range tests{
 		t.Run(tt.name,func(t *testing.T){
-
 			assert.Equal(t,tt.expected, wallet.ContainAddress(tt.input))
 		})
 	}
 }
 
-func TestWallet_ContainAddress_with_passphrase(t *testing.T) {
-	wallet := NewWalletWithPassphrase("password")
-	tests := []struct{
-		name 	 string
-		input    core.Address
-		expected bool
-	}{{"contains address",wallet.GetAddress(), true},
-		{"does not contain address",core.Address{},false},
-	}
-
-	for _,tt := range tests{
-		t.Run(tt.name,func(t *testing.T){
-
-			assert.Equal(t,tt.expected, wallet.ContainAddress(tt.input))
-		})
-	}
-}

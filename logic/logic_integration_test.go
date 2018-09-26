@@ -21,6 +21,7 @@
 package logic
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -264,6 +265,7 @@ func TestBlockMsgRelay(t *testing.T) {
 			heights[i]++
 			return true
 		})
+		fmt.Println(i)
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
 	}
@@ -370,8 +372,7 @@ func TestBlockMsgWithDpos(t *testing.T) {
 
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i].FullyStop()
-		currentTime := time.Now().UTC().Unix()
-		for !v && time.Now().UTC().Unix()-currentTime < 20 {
+		for !v {
 		}
 	}
 
