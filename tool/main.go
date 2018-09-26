@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
@@ -31,12 +32,21 @@ func main() {
 	flag.Parse()
 
 	number := *numberBuffer
+	files := make([]fileInfo, number)
 
-	for i := 1; i <= number; i++ {
+	for i := 0; i < number; i++ {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Enter text: ")
+		fmt.Printf("Enter file name for %d: /n", i+1)
 		text, _ := reader.ReadString('\n')
-		fmt.Println(text)
+		files[i].path = text
+		fmt.Printf("Enter max height for %d: /n", i+1)
+		height, _ := reader.ReadString('\n')
+		iheight, _ := strconv.Atoi(height)
+		files[i].maxHight = iheight
+		fmt.Printf("Enter a different starting height for %d: /n", i+1)
+		different, _ := reader.ReadString('\n')
+		idifferent, _ := strconv.Atoi(different)
+		files[i].differentFrom = idifferent
 	}
 
 	db := storage.OpenDatabase(filePath)
