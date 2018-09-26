@@ -19,10 +19,10 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/common"
 )
 const BlockPoolLRUCacheLimit = 128
 
@@ -109,24 +109,29 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 
 	blkCache := pool.blkCache
 	nodeCache := pool.nodeCache
-	if blkCache.Contains(blk.hashString()){
-		logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.hashString(), " returning")
-		return
-	}
-	if pool.bc.IsInBlockchain(blk.GetHash()){
-		logger.Debug("BlockPool: Blockchain already contains blk: ", blk.hashString(), " returning")
+
+	//TODO: verify
+	if   pool.bc.consensus.Validate(blk) {
+		if blkCache.Contains(blk.hashString()){
+			logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.hashString(), " returning")
+			return
+		}else{
+			logger.Debug("BlockPool: Adding blk key to blockcache: ", blk.hashString())
+			blkCache.Add(blk.hashString(), blk)
+		}
+
+		if pool.bc.IsInBlockchain(blk.GetHash()){
+			logger.Debug("BlockPool: Blockchain already contains blk: ", blk.hashString(), " returning")
+			return
+		}else{
+			logger.Debug("BlockPool: Adding node key to nodecache: ", blk.hashString())
+			nodeCache.Add(node.GetKey(), node)
+		}
+	}else{
+		logger.Debug("BlockPool: Block: ", blk.hashString(), " did not pass consensus validation, discarding block")
 		return
 	}
 
-	//TODO: verify
-	if   true {
-		logger.Debug("BlockPool: Adding node key to bpcache: ", blk.hashString())
-		nodeCache.Add(node.GetKey(), node)
-		blkCache.Add(blk.hashString(), blk)
-	}else{
-		logger.Debug("BlockPool: Block: ", blk.hashString(), " did not pass verification process, discarding block")
-		return
-	}
 	bcTailBlk , err := pool.GetBlockchain().GetTailBlock()
 	if err != nil{
 		nodeCache.Remove(node.GetKey())
