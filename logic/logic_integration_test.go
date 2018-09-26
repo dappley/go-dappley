@@ -489,6 +489,73 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 	}
 }
 
+func TestDoubleMint(t *testing.T) {
+	const (
+		timeBetweenBlock = 1
+		dposRounds= 2
+		bufferTime= 0
+	)
+	setup()
+	var dposArray []*consensus.Dpos
+	var bcs []*core.Blockchain
+	var nodes []*network.Node
+	var receivingNode *network.Node
+
+	producerAddrs := []string{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
+	producerKey := []string{"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"}
+	numOfConcurrentDynasties := 4
+	for i:=0; i< numOfConcurrentDynasties;i++ {
+
+		dynasty := consensus.NewDynastyWithProducers(producerAddrs)
+		dynasty.SetTimeBetweenBlk(timeBetweenBlock)
+		dynasty.SetMaxProducers(1)
+
+		dpos := consensus.NewDpos()
+		dpos.SetDynasty(dynasty)
+		dpos.SetTargetBit(0)
+
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
+		bcs = append(bcs, bc)
+
+		node := network.NewNode(bc)
+		node.Start(testport_msg_relay_port + i)
+		nodes = append(nodes, node)
+
+		dpos.Setup(node, producerAddrs[0])
+		dpos.SetKey(producerKey[0])
+		dposArray = append(dposArray, dpos)
+
+		if i ==numOfConcurrentDynasties-1 {
+			receivingNode = node
+		}
+	}
+
+	//each node connects to the receiving node
+	for i := 0; i < len(nodes)-1; i++ {
+		nodes[i].AddStream(receivingNode.GetPeerID(), receivingNode.GetPeerMultiaddr())
+	}
+
+	for i:=0;i< len(dposArray) - 1;i++  {
+		dposArray[i].Start()
+	}
+
+	time.Sleep(time.Second * time.Duration(5))
+
+	//expect receiving node to have # of entries in dpos slot cache equal to their blockchain height
+	height := uint64(0)
+	totalSent := uint64(0)
+	for i:=0; i < len(nodes)-1; i++{
+		totalSent += bcs[i].GetMaxHeight()
+	}
+	for _, _ = range dposArray[3].Slot.Keys(){
+		height++
+	}
+
+	assert.True(t, totalSent > height )
+	assert.Equal(t, height, bcs[3].GetMaxHeight())
+	}
+
+
 func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.AddStream(
 		node2.GetPeerID(),
@@ -499,7 +566,7 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	node := network.NewNode(bc)
 	pow.Setup(node, addr.Address)
-	pow.SetTargetBit(16)
+	pow.SetTargetBit(12)
 	node.Start(port)
 	return node
 }

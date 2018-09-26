@@ -40,7 +40,7 @@ type Dpos struct {
 	node      core.NetService
 	quitCh    chan (bool)
 	dynasty   *Dynasty
-	slot	*lru.Cache
+	Slot      *lru.Cache
 }
 
 func NewDpos() *Dpos {
@@ -55,7 +55,7 @@ func NewDpos() *Dpos {
 	if err != nil {
 		logger.Panic(err)
 	}
-	dpos.slot = slot
+	dpos.Slot = slot
 	return dpos
 }
 
@@ -87,9 +87,9 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 
 
 func (dpos *Dpos) Validate(block *core.Block) bool{
-	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block) && !dpos.CheckDoubleMint(block)
+	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block) && !dpos.isDoubleMint(block)
 	if pass {
-		dpos.slot.Add(block.GetTimestamp(), block)
+		dpos.Slot.Add(block.GetTimestamp(), block)
 	}
 	return pass
 }
@@ -124,12 +124,10 @@ func (dpos *Dpos) Stop() {
 }
 
 
-func (dpos *Dpos) CheckDoubleMint(block *core.Block) bool {
-	if preBlock, exist := dpos.slot.Get(block.GetTimestamp()); exist {
-		if !core.IsHashEqual(preBlock.(*core.Block).GetHash(), block.GetHash()) {
-			logger.Warn("Someone is trying to mint multiple blocks at the same time!")
-			return true
-		}
+func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
+	if _ , exist := dpos.Slot.Get(block.GetTimestamp()); exist {
+		logger.Debug("Someone is minting when they are not supposed to!")
+		return true
 	}
 	return false
 }
