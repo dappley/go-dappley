@@ -21,20 +21,27 @@ import (
 	"context"
 	"errors"
 	"github.com/dappley/go-dappley/common"
-
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/core"
+
+	"fmt"
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
-	"fmt"
 )
 
-type RpcService struct{
+const RpcVersion = "1.0.0"
+
+type RpcService struct {
 	node *network.Node
+}
+
+func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVersionRequest) (*rpcpb.GetVersionResponse, error) {
+	return &rpcpb.GetVersionResponse{Message: "Test", Version: RpcVersion}, nil
 }
 
 // SayHello implements helloworld.GreeterServer
@@ -42,14 +49,14 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 	passPhrase := in.Passphrase
 	fmt.Println(passPhrase)
 	msg := ""
-	if len(passPhrase) ==0 {
+	if len(passPhrase) == 0 {
 		logrus.Error("CreateWallet: Password is empty!")
 		msg = "Create Wallet: Error"
 		return &rpcpb.CreateWalletResponse{
 			Message: msg,
 			Address: ""}, nil
 	}
-	wallet,err := logic.CreateWalletWithpassphrase(passPhrase)
+	wallet, err := logic.CreateWalletWithpassphrase(passPhrase)
 	if err != nil {
 		msg = "Create Wallet: Error"
 	}
@@ -101,9 +108,17 @@ func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetP
 	}, nil
 }
 
-func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error){
+func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcSerivce.node.GetBlockchain().GetMaxHeight(),
 	}, nil
+}
+
+func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
+	return &rpcpb.GetUTXOResponse{Message: "Test"}, nil
+}
+
+func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
+	return &rpcpb.GetBlockchainInfoResponse{Message: "Test"}, nil
 }

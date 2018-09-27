@@ -1,15 +1,19 @@
 syntax = "proto3";
 package rpcpb;
 import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
+import "github.com/dappley/go-dappley/core/pb/block.proto";
 
 option objc_class_prefix = "HLW";
 
 service RpcService {
+  rpc RpcGetVersion (GetVersionRequest) returns (GetVersionResponse) {}
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
+  rpc RpcGetUTXO(GetUTXORequest) returns (GetUTXOResponse) {}
+  rpc RpcGetBlocks(GetBlocksRequest) returns (GetBlocksResponse) {}
 }
 
 service AdminService{
@@ -68,4 +72,39 @@ message GetBlockchainInfoResponse {
 
 message AddPeerResponse {
   string status = 1;
+}
+
+message GetVersionRequest {
+  string version = 1;
+}
+
+message GetVersionResponse {
+  string message = 1;
+  string version = 2;
+}
+
+message GetUTXORequest {
+  string address = 1;
+}
+
+message GetUTXOResponse {
+  string message = 1;
+  repeated UTXO utxos = 2;  
+}
+
+message UTXO {
+  int64   amount = 1;
+  bytes   publishKeyHash = 2;
+  bytes   txid = 3;
+  uint32  txIndex = 4;
+}
+
+message GetBlocksRequest {
+  bytes startBlockHash = 1;
+  bytes stopBlockHash = 2; 
+}
+
+message GetBlocksResponse {
+  string message = 1;
+  repeated corepb.Block blocks = 2;
 }
