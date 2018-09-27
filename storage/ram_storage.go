@@ -20,11 +20,6 @@ package storage
 
 import (
 	"sync"
-	"errors"
-)
-
-var (
-	ErrKeyInvalid = errors.New("Key is invalid")
 )
 
 

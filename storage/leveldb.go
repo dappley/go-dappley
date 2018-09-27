@@ -31,6 +31,7 @@ var (
 
 type LevelDB struct {
 	db *leveldb.DB
+	batch *leveldb.Batch
 }
 
 //Create a new database instance
@@ -55,10 +56,10 @@ func (ldb *LevelDB) Close() error {
 
 func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 	val, err := ldb.db.Get(key, nil)
-	if err != nil {
-		return nil, err
+	if err != nil && err == leveldb.ErrNotFound {
+		return nil, ErrKeyInvalid
 	}
-	return val, nil
+	return val, err
 }
 
 func (ldb *LevelDB) Put(key []byte, val []byte) error {
