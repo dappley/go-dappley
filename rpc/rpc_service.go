@@ -20,11 +20,9 @@ package rpc
 import (
 	"context"
 	"errors"
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/rpc/pb"
-
 	"fmt"
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
@@ -120,5 +118,5 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 }
 
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
-	return &rpcpb.GetBlockchainInfoResponse{Message: "Test"}, nil
+	return &rpcpb.GetBlocksResponse{Message: "Test"}, nil
 }
