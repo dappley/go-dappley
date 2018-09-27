@@ -37,22 +37,30 @@ func main() {
 
 	for i := 0; i < number; i++ {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("Enter file name for %d: \n", i+1)
+		//enter filename
+		fmt.Printf("Enter file name for blockchain%d: \n", i+1)
 		text, _ := reader.ReadString('\n')
 		text = strings.TrimSuffix(text, "\n")
 		db := storage.OpenDatabase(text)
 		defer db.Close()
 		files[i].db = db
-		fmt.Printf("Enter max height for %d: \n", i+1)
+		//enter blockchain height
+		fmt.Printf("Enter max height for blockchain%d: \n", i+1)
 		height, _ := reader.ReadString('\n')
 		height = strings.TrimSuffix(height, "\n")
 		iheight, _ := strconv.Atoi(height)
 		files[i].height = iheight
-		fmt.Printf("Enter a different starting height for %d: \n", i+1)
+		//enter height of blockchain have different with other block (0 means no different)
+		fmt.Printf("Enter a different starting height for blockchain%d(0 for no different): \n", i+1)
 		different, _ := reader.ReadString('\n')
 		different = strings.TrimSuffix(different, "\n")
 		idifferent, _ := strconv.Atoi(different)
-		files[i].differentFrom = idifferent
+		if iheight <= idifferent || idifferent < 1 {
+			files[i].differentFrom = iheight
+		} else {
+			files[i].differentFrom = idifferent
+		}
+
 	}
 
 	generateNewBlockChain(files)
@@ -65,21 +73,42 @@ func generateNewBlockChain(files []fileInfo) {
 		bc := core.CreateBlockchain(addr, files[i].db, nil)
 		bcs[i] = bc
 	}
-
-	// for i := 0; i < files[0].height; i++ {
-	// 	tailBlk, _ := bcs[0].GetTailBlock()
-	// 	b := core.NewBlock([]*core.Transaction{core.MockTransaction()}, tailBlk)
-	// 	b.SetHash(b.CalculateHash())
-	// 	bc.AddBlockToTail(b)
-	// }
-}
-
-func getMaxHeight(files []fileInfo) int {
-	max := 0
-	for i := 0; i < len(files); i++ {
-		if max < files[i].height {
-			max = files[i].height
+	max, index := getMaxHeightOfDifferentStart(files)
+	for i := 0; i < max; i++ {
+		tailBlk, _ := bcs[index].GetTailBlock()
+		b := core.NewBlock([]*core.Transaction{core.MockTransaction()}, tailBlk)
+		b.SetHash(b.CalculateHash())
+		for idx := 0; idx < len(files); idx++ {
+			if files[idx].differentFrom >= i {
+				bcs[idx].AddBlockToTail(b)
+			}
 		}
 	}
-	return max
+
+	for i := 0; i < len(files); i++ {
+		makeBlockChainToSize(bcs[i], files[i].height)
+		fmt.Println(bcs[i].GetMaxHeight())
+	}
+
+}
+
+func getMaxHeightOfDifferentStart(files []fileInfo) (int, int) {
+	max := 0
+	index := 0
+	for i := 0; i < len(files); i++ {
+		if max < files[i].differentFrom {
+			max = files[i].differentFrom
+			index = i
+		}
+	}
+	return max, index
+}
+
+func makeBlockChainToSize(bc *core.Blockchain, size int) {
+	for bc.GetMaxHeight() < uint64(size) {
+		tailBlk, _ := bc.GetTailBlock()
+		b := core.NewBlock([]*core.Transaction{core.MockTransaction()}, tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.AddBlockToTail(b)
+	}
 }
