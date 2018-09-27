@@ -46,6 +46,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 
 	return &LevelDB{
 		db: db1,
+		batch: nil,
 	}
 }
 
@@ -63,12 +64,30 @@ func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 }
 
 func (ldb *LevelDB) Put(key []byte, val []byte) error {
+	if ldb.batch != nil {
+		ldb.batch.Put(key, val)
+		return nil
+	}
 	err := ldb.db.Put(key, val, nil)
 	if err != nil {
 		logger.Error(err)
 	}
 	return err
+}
 
+func (ldb *LevelDB) EnableBatch() {
+	ldb.batch = new(leveldb.Batch)
+}
+
+func (ldb *LevelDB) Flush() error {
+	if ldb.batch != nil {
+		return ldb.db.Write(ldb.batch, nil)
+	}
+	return nil
+}
+
+func (ldb *LevelDB) DisableBatch() {
+	ldb.batch = nil
 }
 
 func DbExists(dbFilePath string) bool {

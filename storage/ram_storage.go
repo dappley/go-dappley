@@ -25,11 +25,16 @@ import (
 
 type RamStorage struct{
 	data *sync.Map
+	isBatchEnabled bool
+	batchLock	sync.Mutex
+	batchData   map[string][]byte
 }
 
 func NewRamStorage() *RamStorage{
 	return &RamStorage{
-		data:new(sync.Map),
+		data: new(sync.Map),
+		isBatchEnabled: false,
+		batchData: make(map[string][]byte),
 	}
 }
 
@@ -42,6 +47,12 @@ func (rs *RamStorage) Get(key []byte) ([]byte, error){
 }
 
 func (rs *RamStorage) Put(key []byte, val []byte) error{
+	if rs.isBatchEnabled {
+		rs.batchLock.Lock()
+		defer rs.batchLock.Unlock()
+		rs.batchData[string(key)] = val
+		return nil
+	}
 	rs.data.Store(string(key),val)
 	return nil
 }
@@ -52,6 +63,37 @@ func (rs *RamStorage) Close() error{
 		return true
 	})
 	return nil
+}
+
+// EnableBatch enable batch write.
+func (rs *RamStorage) EnableBatch() {
+	rs.isBatchEnabled = true
+}
+
+// Flush write and flush pending batch write.
+func (rs *RamStorage) Flush() error {
+	rs.batchLock.Lock()
+	defer rs.batchLock.Unlock()
+
+	if !rs.isBatchEnabled {
+		return nil
+	}
+
+	for k, v := range rs.batchData {
+		rs.data.Store(string(k), v)
+	}
+
+	rs.batchData = make(map[string][]byte)
+
+	return nil
+}
+
+// DisableBatch disable batch write.
+func (rs *RamStorage) DisableBatch() {
+	rs.batchLock.Lock()
+	defer rs.batchLock.Unlock()
+	rs.batchData = make(map[string][]byte)
+	rs.isBatchEnabled = false
 }
 
 

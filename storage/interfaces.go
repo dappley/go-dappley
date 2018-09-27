@@ -32,6 +32,15 @@ type Storage interface {
 	Get(key []byte) ([]byte, error)
 
 	Put(key []byte, val []byte) error
+
+	// EnableBatch enable batch write.
+	EnableBatch()
+
+	// DisableBatch disable batch write.
+	DisableBatch()
+
+	// Flush write and flush pending batch write.
+	Flush() error
 }
 
 type FileStorage interface {
