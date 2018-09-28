@@ -28,6 +28,8 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/network"
 	"golang.org/x/crypto/bcrypt"
+	logger "github.com/sirupsen/logrus"
+	"strings"
 )
 
 var (
@@ -50,10 +52,33 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 }
 
 //create a wallet
+func CreateTestWallet() (*client.Wallet, error) {
+	path := strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
+	fl := storage.NewFileLoader(path)
+	wm := client.NewWalletManager(fl)
+	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	wm.PassPhrase = passBytes
+	err = wm.LoadFromFile()
+	wallet := client.NewWallet()
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile()
+
+	return wallet, err
+}
+
+//create a wallet
 func CreateWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	wm.PassPhrase = passBytes
+	err = wm.LoadFromFile()
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
@@ -98,6 +123,7 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 			return nil, err
 		}
 		wm.PassPhrase = passBytes
+		logger.Info("Wallet password set!")
 		wallet := client.NewWallet()
 		wm.AddWallet(wallet)
 		wm.SaveWalletToFile()
@@ -123,8 +149,9 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 }
 
 //get all addresses
-func GetAllAddresses() ([]core.Address, error) {
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
+func GetAllAddressesFromTest() ([]core.Address, error) {
+	path := strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
+	fl := storage.NewFileLoader(path)
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 	if err != nil {

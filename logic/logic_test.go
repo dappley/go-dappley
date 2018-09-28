@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateWallet(t *testing.T) {
-	wallet, err := CreateWallet()
+	wallet, err := CreateTestWallet()
 	assert.Nil(t, err)
 	expectedLength := 34
 	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey); hash[0] < 10 {
@@ -136,7 +136,7 @@ func TestGetAllAddresses(t *testing.T) {
 
 	expected_res := []core.Address{}
 	//create a wallet address
-	wallet, err := CreateWallet()
+	wallet, err := CreateTestWallet()
 	assert.NotEmpty(t, wallet)
 	addr := wallet.GetAddress()
 
@@ -150,7 +150,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create 10 more addresses
 	for i := 0; i < 2; i++ {
 		//create a wallet address
-		wallet, err = CreateWallet()
+		wallet, err = CreateTestWallet()
 		addr = wallet.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
@@ -158,7 +158,7 @@ func TestGetAllAddresses(t *testing.T) {
 	}
 
 	//get all addresses
-	addrs, err := GetAllAddresses()
+	addrs, err := GetAllAddressesFromTest()
 	assert.Nil(t, err)
 
 	//the length should be equal
@@ -171,13 +171,13 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	//create wallets address
-	wallet1, err := CreateWallet()
+	wallet1, err := CreateTestWallet()
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
 	addressList := []core.Address{addr1}
 
-	list, err := GetAllAddresses()
+	list, err := GetAllAddressesFromTest()
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
 
@@ -228,4 +228,5 @@ func teardown() {
 
 func cleanUpDatabase() {
 	client.RemoveWalletFile()
+	client.RemoveTestWalletFile()
 }

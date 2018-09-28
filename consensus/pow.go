@@ -38,6 +38,7 @@ func NewProofOfWork() *ProofOfWork {
 		node:        nil,
 		exitCh:      make(chan (bool), 1),
 	}
+	p.SetKey("")
 	return p
 }
 
