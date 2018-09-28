@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const TestDbFile = "../bin/testleveldb.db"
+const testDbFile = "../bin/testleveldb.db"
 
 func TestMain(m *testing.M) {
 	logger.SetLevel(logger.WarnLevel)
@@ -19,18 +19,18 @@ func TestMain(m *testing.M) {
 }
 
 func TestLevelDB_DbExists(t *testing.T) {
-	assert.False(t, DbExists(TestDbFile))
-	ldb := OpenDatabase(TestDbFile)
+	assert.False(t, DbExists(testDbFile))
+	ldb := OpenDatabase(testDbFile)
 	defer ldb.Close()
 	err := ldb.Put([]byte("a"), []byte("1"))
 	assert.Nil(t, err)
-	assert.True(t, DbExists(TestDbFile))
+	assert.True(t, DbExists(testDbFile))
 }
 
 //put key value pairs into database and read later
 func TestLevelDB_PutAndGet(t *testing.T) {
 	//use default path
-	ldb := OpenDatabase(TestDbFile)
+	ldb := OpenDatabase(testDbFile)
 	defer ldb.Close()
 
 	err := ldb.Put([]byte("a"), []byte("1"))
@@ -69,7 +69,7 @@ func TestLevelDB_PutAndGet(t *testing.T) {
 //Test if database access after closing will result in error
 func TestLevelDB_Close(t *testing.T) {
 	//create new database
-	ldb := OpenDatabase(TestDbFile)
+	ldb := OpenDatabase(testDbFile)
 
 	//put new values in
 	err := ldb.Put([]byte("a"), []byte("1"))
@@ -86,7 +86,7 @@ func TestLevelDB_Close(t *testing.T) {
 }
 
 func TestLevelDB_BatchWrite(t *testing.T) {
-	ldb := OpenDatabase(TestDbFile)
+	ldb := OpenDatabase(testDbFile)
 	defer ldb.Close()
 
 	ldb.EnableBatch()
@@ -124,5 +124,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(TestDbFile)
+	os.RemoveAll(testDbFile)
 }
