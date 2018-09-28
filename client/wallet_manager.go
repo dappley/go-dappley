@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/client/pb"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
+	"strings"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -111,9 +112,19 @@ func RemoveWalletFile(){
 	os.Remove(conf.GetFilePath())
 }
 
+func RemoveTestWalletFile(){
+	conf := &walletpb.WalletConfig{}
+	config.LoadConfig(walletConfigFilePath, conf)
+	if conf == nil {
+		return
+	}
+	os.Remove(strings.Replace(conf.GetFilePath(),"wallets","wallets_test",-1))
+}
+
 func (wm *WalletManager) AddWallet(wallet *Wallet){
 	wm.Wallets = append(wm.Wallets, wallet)
 }
+
 
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
@@ -123,6 +134,21 @@ func (wm *WalletManager) GetAddresses() []core.Address {
 	}
 
 	return addresses
+}
+
+func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, error) {
+	var addresses []string
+
+	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+	if err != nil {
+		return nil, errors.New("Password not correct!")
+	}
+	for _, wallet := range wm.Wallets {
+		address := wallet.GetAddresses()[0].Address
+		addresses = append(addresses, address)
+	}
+
+	return addresses, nil
 }
 
 func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {
@@ -145,17 +171,18 @@ func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 }
 
 func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
-
-	wallet := wm.GetWalletByAddress(address)
-	if wallet == nil {
-		return nil, errors.New("Address not in the wallets!")
-	}
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err == nil {
-		return wallet, nil
+		wallet := wm.GetWalletByAddress(address)
+		if wallet == nil {
+			return nil, errors.New("Address not in the wallets!")
+		} else {
+			return wallet, nil
+		}
 	} else {
 		return nil, errors.New("Password does not match!")
 	}
+
 }
 
 

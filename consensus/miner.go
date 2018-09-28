@@ -180,6 +180,7 @@ func (miner *Miner) mineBlock(nonce int64) bool {
 		if len(keystring) > 0 {
 			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
 			if !signed {
+				logger.Warn("Miner Key= ",miner.GetPrivKey())
 				return false
 			}
 		}
