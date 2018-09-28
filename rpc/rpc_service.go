@@ -81,29 +81,46 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 }
 
 func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
-	pass := in.Passphrase
-	address := in.Address
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
-	if err != nil {
-		return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
-	}
+	msg := ""
+	if in.Name == "getWallet" {
+		wallet, err := logic.GetWallet()
+		if err != nil {
+			msg = err.Error()
+		}
+		if wallet != nil {
+			msg = "WalletExists"
+		} else {
+			msg = "NoWallet"
+		}
+		return &rpcpb.GetBalanceResponse{Message: msg}, nil
+	} else if in.Name == "getBalance" {
+		pass := in.Passphrase
+		address := in.Address
+		msg = "Get Balance"
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		if err != nil {
+			return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
+		}
 
-	wallet, err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
-	if err != nil {
-		return &rpcpb.GetBalanceResponse{Message: err.Error()}, err
-	}
+		wallet, err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
+		if err != nil {
+			return &rpcpb.GetBalanceResponse{Message: err.Error()}, err
+		}
 
-	getbalanceResp := rpcpb.GetBalanceResponse{}
-	amount, err := logic.GetBalance(wallet.GetAddress(), rpcSerivce.node.GetBlockchain().GetDb())
-	if err != nil {
-		getbalanceResp.Message = "Failed to get balance from blockchain"
+		getbalanceResp := rpcpb.GetBalanceResponse{}
+		amount, err := logic.GetBalance(wallet.GetAddress(), rpcSerivce.node.GetBlockchain().GetDb())
+		if err != nil {
+			getbalanceResp.Message = "Failed to get balance from blockchain"
+			return &getbalanceResp, nil
+		}
+		getbalanceResp.Amount = amount.Int64()
+		getbalanceResp.Message = msg
 		return &getbalanceResp, nil
+	} else {
+		return &rpcpb.GetBalanceResponse{Message: "GetBalance Error: not recognize the command!"}, nil
 	}
-	getbalanceResp.Amount = amount.Int64()
-	getbalanceResp.Message = "Get Balance"
-	return &getbalanceResp, nil
 }
 
 func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {

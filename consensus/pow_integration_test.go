@@ -226,7 +226,6 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, cbAddr.Address)
-	pow.SetKey("")
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()

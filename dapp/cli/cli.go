@@ -255,16 +255,36 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		return
 	}
 
-	prompter := util.NewTerminalPrompter()
-	passphrase:= prompter.GetPassPhrase("Please input the password: ",false)
-	if passphrase == "" {
-		fmt.Println("Password Empty!")
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Name = "getWallet"
+
+	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err != nil {
+		fmt.Println("ERROR: Get Balance failed. ERR:", err)
 		return
 	}
-	getBalanceRequest := rpcpb.GetBalanceRequest{}
+
+	passphrase := ""
+	if response.Message == "WalletExists" {
+		prompter := util.NewTerminalPrompter()
+		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	} else if response.Message == "NoWallet" {
+		fmt.Println("Please use cli createWallet to generate a wallet first!")
+		return
+	}  else {
+		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+		return
+	}
+
+	getBalanceRequest = rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Name = "getBalance"
 	getBalanceRequest.Address = *(flags[flagAddress].(*string))
 	getBalanceRequest.Passphrase = passphrase
-	response, err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	response, err  = client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
 	if err!=nil {
 		if strings.Contains(err.Error(), "Password does not match!" ) {
 			fmt.Printf("ERROR: Get balance failed. Password does not match!\n")
