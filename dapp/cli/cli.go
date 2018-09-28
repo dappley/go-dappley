@@ -268,7 +268,9 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	if err!=nil {
 		if strings.Contains(err.Error(), "Password does not match!" ) {
 			fmt.Printf("ERROR: Get balance failed. Password does not match!\n")
-		} else {
+		 } else if strings.Contains(err.Error(), "Address not in the wallets" ) {
+			fmt.Printf("ERROR: Get balance failed. Address not found in the wallet!\n")
+		}  else {
 			fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
 			}
 		return
@@ -284,7 +286,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
 	walletRequest := rpcpb.CreateWalletRequest{}
-	walletRequest.Name = "createNewWallet"
+	walletRequest.Name = "getWallet"
 	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
@@ -333,18 +335,37 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 }
 
 func listAddressesCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	prompter := util.NewTerminalPrompter()
-	passphrase:= prompter.GetPassPhrase("Please input the wallet password: ",false)
-	if passphrase == "" {
-		fmt.Println("Password Empty!")
+
+	listAddressesRequest := rpcpb.GetWalletAddressRequest{}
+	listAddressesRequest.Name = "getWallet"
+
+	response,err  := client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
+	if err != nil {
+		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
 		return
 	}
 
-	listAddressesRequest := rpcpb.GetWalletAddressRequest{}
+	passphrase := ""
+	if response.Message == "WalletExists" {
+		prompter := util.NewTerminalPrompter()
+		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	} else if response.Message == "NoWallet" {
+		fmt.Println("Please use cli createWallet to generate a wallet first!")
+		return
+	}  else {
+		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+		return
+	}
+
+	listAddressesRequest = rpcpb.GetWalletAddressRequest{}
 	listAddressesRequest.Passphrase = passphrase
 	listAddressesRequest.Name = "listAddresses"
 
-	response,err  := client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
+	response,err  = client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
 	if err!=nil {
 		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
 		return
@@ -359,7 +380,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 				i := 1
 				fmt.Println("The address list:")
 				for _, addr := range Addresses {
-					fmt.Printf("Address[%d]:%s\n", i, addr)
+					fmt.Printf("Address[%d]: %s\n", i, addr)
 					i++
 				}
 			}
@@ -377,7 +398,7 @@ func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	}
 		amount := int64(*(flags[flagAmountBalance].(*int)))
 		if amount <=0 {
-			fmt.Println("Add balance error! the amount must be greater than zero!")
+			fmt.Println("Add balance error! The amount must be greater than zero!")
 			return
 		}
 

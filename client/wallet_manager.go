@@ -161,17 +161,18 @@ func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 }
 
 func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
-
-	wallet := wm.GetWalletByAddress(address)
-	if wallet == nil {
-		return nil, errors.New("Address not in the wallets!")
-	}
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err == nil {
-		return wallet, nil
+		wallet := wm.GetWalletByAddress(address)
+		if wallet == nil {
+			return nil, errors.New("Address not in the wallets!")
+		} else {
+			return wallet, nil
+		}
 	} else {
 		return nil, errors.New("Password does not match!")
 	}
+
 }
 
 

@@ -22,18 +22,18 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/common"
 
-	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
 
-type RpcService struct{
+type RpcService struct {
 	node *network.Node
 }
 
@@ -41,19 +41,17 @@ type RpcService struct{
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
 	msg := ""
 	addr := ""
-	if in.Name == "createNewWallet" {
+	if in.Name == "getWallet" {
 		wallet, err := logic.GetWallet()
 		if err != nil {
 			msg = err.Error()
 		}
 		if wallet != nil {
 			msg = "WalletExists"
-		} else
-		{
+		} else {
 			msg = "NewWallet"
 		}
-
-	} else {
+	} else if in.Name == "createWallet" {
 		passPhrase := in.Passphrase
 		if len(passPhrase) == 0 {
 			logrus.Error("CreateWallet: Password is empty!")
@@ -74,6 +72,8 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 			msg = "Create Wallet Error: Wallet Empty!"
 			addr = ""
 		}
+	} else {
+		msg = "Error: not recognize the command!"
 	}
 	return &rpcpb.CreateWalletResponse{
 		Message: msg,
@@ -87,12 +87,12 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 	if err != nil {
-		return &rpcpb.GetBalanceResponse {Message: "GetBalance : Error loading local wallets"}, err
+		return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
 	}
 
-	wallet,err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
+	wallet, err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
 	if err != nil {
-		return &rpcpb.GetBalanceResponse {Message: err.Error()}, err
+		return &rpcpb.GetBalanceResponse{Message: err.Error()}, err
 	}
 
 	getbalanceResp := rpcpb.GetBalanceResponse{}
@@ -142,7 +142,7 @@ func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetP
 	}, nil
 }
 
-func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error){
+func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcSerivce.node.GetBlockchain().GetMaxHeight(),
@@ -151,25 +151,45 @@ func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcSerivce *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb.GetWalletAddressRequest) (*rpcpb.GetWalletAddressResponse, error) {
 
-	pass := in.Passphrase
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
-	if err != nil {
-		return &rpcpb.GetWalletAddressResponse {Message: "ListWalletAddresses: Error loading local wallets"}, err
-	}
-	addressList, err := wm.GetAddressesWithPassphrase(pass)
-	if err != nil {
-		if strings.Contains(err.Error(), "Password not correct") {
-			return &rpcpb.GetWalletAddressResponse {Message: "ListWalletAddresses: Password not correct"}, nil
-		} else {
-			return &rpcpb.GetWalletAddressResponse {Message: err.Error()}, err
+	if in.Name == "getWallet" {
+		msg := ""
+		wallet, err := logic.GetWallet()
+		if err != nil {
+			msg = err.Error()
 		}
-	}
-	getWalletAddress := rpcpb.GetWalletAddressResponse{}
-	getWalletAddress.Address = addressList
+		if wallet != nil {
+			msg = "WalletExists"
+		} else {
+			msg = "NoWallet"
+		}
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Message = msg
+		return &getWalletAddress, nil
+	} else if in.Name == "listAddresses" {
+		pass := in.Passphrase
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		if err != nil {
+			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
+		}
 
-	return &getWalletAddress, nil
+		addressList, err := wm.GetAddressesWithPassphrase(pass)
+		if err != nil {
+			if strings.Contains(err.Error(), "Password not correct") {
+				return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Password not correct"}, nil
+			} else {
+				return &rpcpb.GetWalletAddressResponse{Message: err.Error()}, err
+			}
+		}
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Address = addressList
+		return &getWalletAddress, nil
+	} else {
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Message = "Error: not recognize the command!"
+		return &getWalletAddress, nil
+	}
 }
 
 func (rpcSerivce *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBalanceRequest) (*rpcpb.AddBalanceResponse, error) {
