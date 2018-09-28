@@ -280,7 +280,7 @@ func (b *Block) SignBlock(key string, data []byte) bool {
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
-		logger.Warn("Block: signature calculation error!, %v\n", err.Error())
+		logger.Warn("Block: signature calculation error!, ", err.Error())
 		return false
 	}
 
