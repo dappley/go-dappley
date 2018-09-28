@@ -70,6 +70,7 @@ func TestRpcSend(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	client.RemoveWalletFile()
+	client.RemoveTestWalletFile()
 
 	// Create wallets
 	senderWallet, err := logic.CreateWallet()
@@ -134,4 +135,5 @@ func TestRpcSend(t *testing.T) {
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
 	client.RemoveWalletFile()
+	client.RemoveTestWalletFile()
 }

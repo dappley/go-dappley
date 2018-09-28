@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/client/pb"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
+	"strings"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -109,6 +110,15 @@ func RemoveWalletFile(){
 		return
 	}
 	os.Remove(conf.GetFilePath())
+}
+
+func RemoveTestWalletFile(){
+	conf := &walletpb.WalletConfig{}
+	config.LoadConfig(walletConfigFilePath, conf)
+	if conf == nil {
+		return
+	}
+	os.Remove(strings.Replace(conf.GetFilePath(),"wallets","wallets_test",-1))
 }
 
 func (wm *WalletManager) AddWallet(wallet *Wallet){
