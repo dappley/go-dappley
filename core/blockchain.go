@@ -151,24 +151,49 @@ func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error{
-
-	//TODO: AddBlockToDb and SetTailBlockHash database operations need to be atomic
 	err := bc.AddBlockToDb(block)
 	if err!= nil{
 		logger.Warn("Blockchain: Add Block To Database Failed! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
 		return err
 	}
 
+	// Atomically set tail block hash and update UTXO index in db
+	bc.db.EnableBatch()
+	defer bc.db.DisableBatch()
+
 	err = bc.setTailBlockHash(block.GetHash())
-	if err!= nil{
-		logger.Warn("Blockchain: Set Tail Block Hash Failed! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+	if err != nil{
+		logger.WithFields(logger.Fields{
+			"height": block.GetHeight(),
+			"hash": hex.EncodeToString(block.GetHash()),
+		}).Error("Blockchain: Set tail block hash failed!")
 		return err
 	}
 
 	utxoIndex := LoadUTXOIndex(bc.db)
-	utxoIndex.BuildForkUtxoIndex(block, bc.db)
+	err = utxoIndex.BuildForkUtxoIndex(block, bc.db)
+	if err != nil{
+		logger.WithFields(logger.Fields{
+			"height": block.GetHeight(),
+			"hash": hex.EncodeToString(block.GetHash()),
+		}).Error("Blockchain: Update UTXO index failed!")
+		return err
+	}
 
-	logger.Info("Blockchain: Added A New Block To Tail! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+	// Flush batch changes to storage
+	err = bc.db.Flush()
+	if err != nil{
+		logger.WithFields(logger.Fields{
+			"height": block.GetHeight(),
+			"hash": hex.EncodeToString(block.GetHash()),
+		}).Error("Blockchain: Cannot add block to tail - Update tail and UTXO index failed!")
+		return err
+	}
+
+	logger.WithFields(logger.Fields{
+		"height": block.GetHeight(),
+		"hash": hex.EncodeToString(block.GetHash()),
+	}).Info("Blockchain: Added A New Block To Tail!")
 
 	return nil
 }

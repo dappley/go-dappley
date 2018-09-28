@@ -25,8 +25,6 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 
-	"time"
-
 	"os"
 
 	"github.com/dappley/go-dappley/client"
@@ -89,9 +87,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
-	}
+	core.WaitFullyStop(pow, 20)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -139,9 +135,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 10 {
-	}
+	core.WaitFullyStop(pow, 20)
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -206,9 +200,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//stop mining
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
-	}
+	core.WaitFullyStop(pow, 20)
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -250,9 +242,7 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 2 {
-	}
+	core.WaitFullyStop(pow, 20)
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)

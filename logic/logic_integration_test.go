@@ -94,10 +94,7 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			currentTime := time.Now().UTC().Unix()
-			for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
-			}
-
+			core.WaitFullyStop(pow, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
 			if err != nil {
@@ -225,12 +222,11 @@ func TestSendInsufficientBalance(t *testing.T) {
 	teardown()
 }
 
-
 func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	const (
-		timeBetweenBlock= 1
-		dposRounds= 2
-		bufferTime= 0
+		timeBetweenBlock = 1
+		dposRounds       = 2
+		bufferTime       = 0
 	)
 	setup()
 	var dposArray []*consensus.Dpos
@@ -238,14 +234,13 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	var nodes []*network.Node
 	var firstNode *network.Node
 
-	validProducerAddr:= "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-
 
 	producerAddrs := []string{}
 	producerKey := []string{}
 	numOfNodes := 4
-	for i:=0; i< numOfNodes;i++ {
+	for i := 0; i < numOfNodes; i++ {
 		producerAddrs = append(producerAddrs, validProducerAddr)
 		producerKey = append(producerKey, validProducerKey)
 	}
@@ -256,7 +251,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDpos()
 		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0)        //gennerate a block every round
+		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
 		bcs = append(bcs, bc)
 		node := network.NewNode(bc)
@@ -297,9 +292,9 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 // Test if network radiation bounces forever
 func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	const (
-		timeBetweenBlock= 1
-		dposRounds= 2
-		bufferTime= 0
+		timeBetweenBlock = 1
+		dposRounds       = 2
+		bufferTime       = 0
 	)
 	setup()
 	var dposArray []*consensus.Dpos
@@ -308,13 +303,13 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 
 	var firstNode *network.Node
 
-	validProducerAddr:= "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	producerAddrs := []string{}
 	producerKey := []string{}
 	numOfNodes := 4
-	for i:=0; i< numOfNodes;i++ {
+	for i := 0; i < numOfNodes; i++ {
 		producerAddrs = append(producerAddrs, validProducerAddr)
 		producerKey = append(producerKey, validProducerKey)
 	}
@@ -326,7 +321,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		dpos := consensus.NewDpos()
 		dpos.SetDynasty(dynasty)
 
-		dpos.SetTargetBit(0)        //gennerate a block every round
+		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
 		bcs = append(bcs, bc)
 
@@ -352,7 +347,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	}
 
 	//firstNode Starts Mining
-	for i:=0;i< len(dposArray);i++  {
+	for i := 0; i < len(dposArray); i++ {
 		dposArray[i].Start()
 	}
 
@@ -412,13 +407,12 @@ func TestForkChoice(t *testing.T) {
 	}
 
 	currentTime := time.Now().UTC().Unix()
-
-	for !compareTwoBlockchains(bcs[0], bcs[numOfNodes-1]) && time.Now().UTC().Unix()-currentTime <= 5 {
+	for !core.IsTimeOut(currentTime, int64(6)) {
 	}
 
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
-		assert.True(t, compareTwoBlockchains(bcs[0], bcs[i]))
+		assert.True(t, isSameBlockChain(bcs[0], bcs[i]))
 	}
 }
 
@@ -497,8 +491,8 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 func TestDoubleMint(t *testing.T) {
 	const (
 		timeBetweenBlock = 1
-		dposRounds= 2
-		bufferTime= 0
+		dposRounds       = 2
+		bufferTime       = 0
 	)
 	setup()
 	var dposArray []*consensus.Dpos
@@ -509,7 +503,7 @@ func TestDoubleMint(t *testing.T) {
 	producerAddrs := []string{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
 	producerKey := []string{"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"}
 	numOfConcurrentDynasties := 4
-	for i:=0; i< numOfConcurrentDynasties;i++ {
+	for i := 0; i < numOfConcurrentDynasties; i++ {
 
 		dynasty := consensus.NewDynastyWithProducers(producerAddrs)
 		dynasty.SetTimeBetweenBlk(timeBetweenBlock)
@@ -530,7 +524,7 @@ func TestDoubleMint(t *testing.T) {
 		dpos.SetKey(producerKey[0])
 		dposArray = append(dposArray, dpos)
 
-		if i ==numOfConcurrentDynasties-1 {
+		if i == numOfConcurrentDynasties-1 {
 			receivingNode = node
 		}
 	}
@@ -540,7 +534,7 @@ func TestDoubleMint(t *testing.T) {
 		nodes[i].AddStream(receivingNode.GetPeerID(), receivingNode.GetPeerMultiaddr())
 	}
 
-	for i:=0;i< len(dposArray) - 1;i++  {
+	for i := 0; i < len(dposArray)-1; i++ {
 		dposArray[i].Start()
 	}
 
@@ -549,17 +543,16 @@ func TestDoubleMint(t *testing.T) {
 	//expect receiving node to have # of entries in dpos slot cache equal to their blockchain height
 	height := uint64(0)
 	totalSent := uint64(0)
-	for i:=0; i < len(nodes)-1; i++{
+	for i := 0; i < len(nodes)-1; i++ {
 		totalSent += bcs[i].GetMaxHeight()
 	}
-	for _, _ = range dposArray[3].GetSlot().Keys(){
+	for _, _ = range dposArray[3].GetSlot().Keys() {
 		height++
 	}
 
-	assert.True(t, totalSent > height )
+	assert.True(t, totalSent > height)
 	assert.Equal(t, height, bcs[3].GetMaxHeight())
-	}
-
+}
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.AddStream(

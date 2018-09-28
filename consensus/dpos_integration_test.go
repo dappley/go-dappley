@@ -52,7 +52,7 @@ func TestDpos_Start(t *testing.T) {
 	currentTime := time.Now().UTC().Unix()
 	dpos.Start()
 	//wait for the block gets mined
-	for bc.GetMaxHeight() <= 0 && time.Now().UTC().Unix()-currentTime < 50 {
+	for bc.GetMaxHeight() <= 0 && !core.IsTimeOut(currentTime, int64(50)) {
 	}
 	dpos.Stop()
 
@@ -109,10 +109,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	}
 
 	for i := 0; i < len(miners); i++ {
-		v := dposArray[i].FullyStop()
-		currentTime := time.Now().UTC().Unix()
-		for !v && time.Now().UTC().Unix()-currentTime < 20 {
-		}
+		v := dposArray[i]
+		core.WaitFullyStop(v, 20)
 	}
 
 	for i := 0; i < len(miners); i++ {

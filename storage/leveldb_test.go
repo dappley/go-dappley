@@ -1,32 +1,37 @@
 package storage
 
 import (
+	"os"
 	"testing"
 
-	"os"
-
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-const BlockchainDbFile = "../bin/blockchain.db"
+const testDbFile = "../bin/testleveldb.db"
+
+func TestMain(m *testing.M) {
+	logger.SetLevel(logger.WarnLevel)
+	setup()
+	retCode := m.Run()
+	teardown()
+	os.Exit(retCode)
+}
 
 func TestLevelDB_DbExists(t *testing.T) {
-	setup()
-	assert.False(t, DbExists(BlockchainDbFile))
-	ldb := OpenDatabase(BlockchainDbFile)
+	assert.False(t, DbExists(testDbFile))
+	ldb := OpenDatabase(testDbFile)
+	defer ldb.Close()
 	err := ldb.Put([]byte("a"), []byte("1"))
 	assert.Nil(t, err)
-	assert.True(t, DbExists(BlockchainDbFile))
-	teardown()
+	assert.True(t, DbExists(testDbFile))
 }
 
 //put key value pairs into database and read later
 func TestLevelDB_PutAndGet(t *testing.T) {
-
-	setup()
-
 	//use default path
-	ldb := OpenDatabase(BlockchainDbFile)
+	ldb := OpenDatabase(testDbFile)
+	defer ldb.Close()
 
 	err := ldb.Put([]byte("a"), []byte("1"))
 	assert.Nil(t, err)
@@ -59,16 +64,12 @@ func TestLevelDB_PutAndGet(t *testing.T) {
 
 	err = ldb.Close()
 	assert.Nil(t, err)
-
-	teardown()
 }
 
 //Test if database access after closing will result in error
 func TestLevelDB_Close(t *testing.T) {
-
-	setup()
 	//create new database
-	ldb := OpenDatabase("../bin/test.db")
+	ldb := OpenDatabase(testDbFile)
 
 	//put new values in
 	err := ldb.Put([]byte("a"), []byte("1"))
@@ -82,8 +83,36 @@ func TestLevelDB_Close(t *testing.T) {
 	//Close the database
 	err = ldb.Close()
 	assert.Nil(t, err)
+}
 
-	teardown()
+func TestLevelDB_BatchWrite(t *testing.T) {
+	ldb := OpenDatabase(testDbFile)
+	defer ldb.Close()
+
+	ldb.EnableBatch()
+	ldb.Put([]byte("1"), []byte("a"))
+	ldb.Put([]byte("1"), []byte("c")) // batch on same key
+	ldb.Put([]byte("2"), []byte("1234"))
+
+	// Not written to storage before flushing
+	_, err := ldb.Get([]byte("1"))
+	assert.Equal(t, ErrKeyInvalid, err)
+	_, err = ldb.Get([]byte("2"))
+	assert.Equal(t, ErrKeyInvalid, err)
+
+	err = ldb.Flush()
+	assert.Nil(t, err)
+
+	// Should be able to read the value after flush
+	v1, err := ldb.Get([]byte("1"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("c"), v1)
+	v2, err := ldb.Get([]byte("2"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("1234"), v2)
+
+
+	ldb.DisableBatch()
 }
 
 func setup() {
@@ -95,5 +124,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	os.RemoveAll(BlockchainDbFile)
+	os.RemoveAll(testDbFile)
 }
