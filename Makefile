@@ -7,10 +7,6 @@ testall:
         fi \
     done
 
-release:
-    cd dapp; go build -tags=release
-    cd dapp/cli; go build -tags=release
-
 dep:
 	dep ensure -v
 
