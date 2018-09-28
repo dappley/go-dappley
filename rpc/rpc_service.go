@@ -30,8 +30,6 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"strings"
 )
 
@@ -45,17 +43,17 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
 
 	if len(clientProtoVersions) != 3 {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ""}, nil
+		return &rpcpb.GetVersionResponse{ProtoVersionNotSupport, ProtoVersion, ""}, nil
 	}
 
 	serverProtoVersions := strings.Split(ProtoVersion, ".")
 
 	// Major version must equal
 	if serverProtoVersions[0] != clientProtoVersions[0] {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ""}, nil
+		return &rpcpb.GetVersionResponse{ProtoVersionNotSupport, ProtoVersion, ""}, nil
 	}
 
-	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion}, nil
+	return &rpcpb.GetVersionResponse{OK, ProtoVersion, ""}, nil
 }
 
 // SayHello implements helloworld.GreeterServer
@@ -131,7 +129,7 @@ func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
-	publicKeyHash, err = core.Address(in.Address).GetPubKeyHash()
+	publicKeyHash, err := core.Address(in.Address).GetPubKeyHash()
 	if err == false {
 		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
 	}
