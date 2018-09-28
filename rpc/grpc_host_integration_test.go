@@ -73,11 +73,11 @@ func TestRpcSend(t *testing.T) {
 	client.RemoveTestWalletFile()
 
 	// Create wallets
-	senderWallet, err := logic.CreateWallet()
+	senderWallet, err := logic.CreateTestWallet()
 	if err != nil {
 		panic(err)
 	}
-	receiverWallet, err := logic.CreateWallet()
+	receiverWallet, err := logic.CreateTestWallet()
 	if err != nil {
 		panic(err)
 	}
