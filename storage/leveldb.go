@@ -19,6 +19,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	logger "github.com/sirupsen/logrus"
@@ -81,6 +82,7 @@ func (ldb *LevelDB) EnableBatch() {
 
 func (ldb *LevelDB) Flush() error {
 	if ldb.batch != nil {
+		logger.Debug(fmt.Sprintf("leveldb: flushing %d operations to storage", ldb.batch.Len()))
 		return ldb.db.Write(ldb.batch, nil)
 	}
 	return nil
