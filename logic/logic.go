@@ -69,6 +69,23 @@ func CreateTestWallet() (*client.Wallet, error) {
 	return wallet, err
 }
 
+//create a wallet
+func CreateWallet() (*client.Wallet, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	wm.PassPhrase = passBytes
+	err = wm.LoadFromFile()
+	wallet := client.NewWallet()
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile()
+
+	return wallet, err
+}
+
 //get wallet
 func GetWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
