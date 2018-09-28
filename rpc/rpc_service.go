@@ -43,17 +43,17 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
 
 	if len(clientProtoVersions) != 3 {
-		return &rpcpb.GetVersionResponse{ProtoVersionNotSupport, ProtoVersion, ""}, nil
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
 	}
 
 	serverProtoVersions := strings.Split(ProtoVersion, ".")
 
 	// Major version must equal
 	if serverProtoVersions[0] != clientProtoVersions[0] {
-		return &rpcpb.GetVersionResponse{ProtoVersionNotSupport, ProtoVersion, ""}, nil
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
 	}
 
-	return &rpcpb.GetVersionResponse{OK, ProtoVersion, ""}, nil
+	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
 }
 
 // SayHello implements helloworld.GreeterServer
@@ -129,7 +129,7 @@ func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
-	publicKeyHash, err := core.Address(in.Address).GetPubKeyHash()
+	publicKeyHash, err := core.NewAddress(in.Address).GetPubKeyHash()
 	if err == false {
 		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
 	}
@@ -137,12 +137,20 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxos := utxoIndex.GetUTXOsByPubKey(publicKeyHash)
 	response := rpcpb.GetUTXOResponse{ErrorCode: OK}
 	for _, utxo := range utxos {
-		response.Utxos = append(response.Utxos, &rpcpb.UTXO{utxo.Value.BigInt().Int64(), utxo.PubKeyHash, utxo.Txid, uint32(utxo.TxIndex)})
+		response.Utxos = append(
+			response.Utxos,
+			&rpcpb.UTXO{
+				Amount:utxo.Value.BigInt().Int64(),
+				PublicKeyHash:utxo.PubKeyHash,
+				Txid:utxo.Txid,
+				TxIndex:uint32(utxo.TxIndex)
+			}
+		)
 	}
 
 	return &response, nil
 }
 
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
-	return &rpcpb.GetBlocksResponse{Message: "Test"}, nil
+	return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
 }
