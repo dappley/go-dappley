@@ -30,16 +30,32 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"strings"
 )
 
-const RpcVersion = "1.0.0"
+const ProtoVersion = "1.0.0"
 
 type RpcService struct {
 	node *network.Node
 }
 
 func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVersionRequest) (*rpcpb.GetVersionResponse, error) {
-	return &rpcpb.GetVersionResponse{Message: "Test", Version: RpcVersion}, nil
+	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
+
+	if len(clientProtoVersions) != 3 {
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ""}, nil
+	}
+
+	serverProtoVersions := strings.Split(ProtoVersion, ".")
+
+	// Major version must equal
+	if serverProtoVersions[0] != clientProtoVersions[0] {
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ""}, nil
+	}
+
+	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion}, nil
 }
 
 // SayHello implements helloworld.GreeterServer
@@ -114,7 +130,19 @@ func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 }
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
-	return &rpcpb.GetUTXOResponse{Message: "Test"}, nil
+	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	publicKeyHash, err = core.Address(in.Address).GetPubKeyHash()
+	if err == false {
+		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
+	}
+
+	utxos := utxoIndex.GetUTXOsByPubKey(publicKeyHash)
+	response := rpcpb.GetUTXOResponse{ErrorCode: OK}
+	for _, utxo := range utxos {
+		response.Utxos = append(response.Utxos, &rpcpb.UTXO{utxo.Value.BigInt().Int64(), utxo.PubKeyHash, utxo.Txid, uint32(utxo.TxIndex)})
+	}
+
+	return &response, nil
 }
 
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {

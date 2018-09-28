@@ -75,27 +75,28 @@ message AddPeerResponse {
 }
 
 message GetVersionRequest {
-  string version = 1;
+  string protoVersion = 1;
 }
 
 message GetVersionResponse {
-  string message = 1;
-  string version = 2;
+  uint32 errorCode = 1;
+  string protoVersion = 2;
+  string serverVersion = 3;
 }
 
 message GetUTXORequest {
-  string address = 1;
+  string address = 1;  //
 }
 
 message GetUTXOResponse {
-  string message = 1;
+  uint32 errorCode = 1;
   repeated UTXO utxos = 2;  
 }
 
 message UTXO {
-  int64   amount = 1;
-  bytes   publishKeyHash = 2;
-  bytes   txid = 3;
+  int64   amount = 1;   
+  bytes   publicKeyHash = 2;
+  bytes   txid = 3;     
   uint32  txIndex = 4;
 }
 
@@ -105,6 +106,6 @@ message GetBlocksRequest {
 }
 
 message GetBlocksResponse {
-  string message = 1;
+  uint32 errorCode = 1;
   repeated corepb.Block blocks = 2;
 }
