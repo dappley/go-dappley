@@ -140,11 +140,11 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		response.Utxos = append(
 			response.Utxos,
 			&rpcpb.UTXO{
-				Amount:utxo.Value.BigInt().Int64(),
-				PublicKeyHash:utxo.PubKeyHash,
-				Txid:utxo.Txid,
-				TxIndex:uint32(utxo.TxIndex)
-			}
+				Amount:        utxo.Value.BigInt().Int64(),
+				PublicKeyHash: utxo.PubKeyHash,
+				Txid:          utxo.Txid,
+				TxIndex:       uint32(utxo.TxIndex),
+			},
 		)
 	}
 
