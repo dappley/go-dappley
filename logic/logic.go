@@ -25,8 +25,8 @@ import (
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/storage"
 	"golang.org/x/crypto/bcrypt"
 	logger "github.com/sirupsen/logrus"
 	"strings"
@@ -37,7 +37,7 @@ var (
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
-	ErrPasswordNotMatch		= errors.New("ERROR: Password not correct!")
+	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct!")
 )
 
 //create a blockchain
@@ -91,12 +91,12 @@ func GetWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
-	if len(wm.Wallets) >0 {
+	if len(wm.Wallets) > 0 {
 		return wm.Wallets[0], err
 	} else {
 		return nil, err
 	}
-	}
+}
 
 //create a wallet with passphrase
 func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
@@ -107,7 +107,7 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 		return nil, err
 	}
 
-	if len(wm.Wallets) >0 && wm.PassPhrase != nil {
+	if len(wm.Wallets) > 0 && wm.PassPhrase != nil {
 		err = bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 		if err != nil {
 			return nil, ErrPasswordNotMatch
@@ -129,7 +129,7 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 		wm.SaveWalletToFile()
 		return wallet, err
 	}
-	}
+}
 
 //get balance
 func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
@@ -140,7 +140,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 	balance := common.NewAmount(0)
 	utxoIndex := core.LoadUTXOIndex(db)
-	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
+	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}
@@ -205,4 +205,3 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 	return err
 
 }
-

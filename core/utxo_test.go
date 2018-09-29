@@ -119,7 +119,7 @@ func MockUtxoOutputsWithInputs() []TXOutput {
 }
 
 func TestAddUTXO(t *testing.T) {
-	db :=  storage.NewRamStorage()
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	txout := TXOutput{common.NewAmount(5), address1Hash}
@@ -137,8 +137,8 @@ func TestAddUTXO(t *testing.T) {
 	assert.Equal(t, 0, len(addr2UTXOs))
 }
 
-func TestRemoveUTXO(t *testing.T){
-	db :=  storage.NewRamStorage()
+func TestRemoveUTXO(t *testing.T) {
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	utxoIndex := make(UTXOIndex)
@@ -154,7 +154,7 @@ func TestRemoveUTXO(t *testing.T){
 	assert.Equal(t, 2, len(utxoIndex[string(address1Hash)]))
 	assert.Equal(t, 1, len(utxoIndex[string(address2Hash)]))
 
-	err = utxoIndex.removeUTXO([]byte{2}, 1)  // Does not exists
+	err = utxoIndex.removeUTXO([]byte{2}, 1) // Does not exists
 
 	assert.NotNil(t, err)
 	assert.Equal(t, 2, len(utxoIndex[string(address1Hash)]))
@@ -162,7 +162,7 @@ func TestRemoveUTXO(t *testing.T){
 }
 
 func TestUpdate(t *testing.T) {
-	db :=  storage.NewRamStorage()
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
@@ -187,45 +187,45 @@ func TestUpdate_Failed(t *testing.T) {
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {
-	db :=  storage.NewRamStorage()
+	db := storage.NewRamStorage()
 	defer db.Close()
 
 	coinbaseAddr := Address{"testaddress"}
 	bc := CreateBlockchain(coinbaseAddr, db, nil)
 
-	blk1 := GenerateUtxoMockBlockWithoutInputs()  // contains 2 UTXOs for address1
-	blk2 := GenerateUtxoMockBlockWithInputs()  // contains tx that transfers address1's UTXOs to address2 with a change
+	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
+	blk2 := GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change
 
 	bc.AddBlockToTail(blk1)
 	bc.AddBlockToTail(blk2)
 
 	utxoIndex := LoadUTXOIndex(db)
-	addr1UTXOs := utxoIndex.GetUTXOsByPubKey(address1Hash)
-	addr2UTXOs := utxoIndex.GetUTXOsByPubKey(address2Hash)
+	addr1UTXOs := utxoIndex.GetUTXOsByPubKeyHash(address1Hash)
+	addr2UTXOs := utxoIndex.GetUTXOsByPubKeyHash(address2Hash)
 	// Expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len(addr1UTXOs))
-	assert.Equal(t, common.NewAmount(4),  addr1UTXOs[0].Value)
+	assert.Equal(t, common.NewAmount(4), addr1UTXOs[0].Value)
 
 	// Expect address2 to have 2 utxos totaling $8
 	assert.Equal(t, 2, len(addr2UTXOs))
 
 	// Rollback to blk1, address1 has a $5 utxo and a $7 utxo, total $12, and address2 has nothing
 	indexSnapshot, err := GetUTXOIndexAtBlockHash(db, bc, blk1.GetHash())
-	if err !=nil {
+	if err != nil {
 		panic(err)
 	}
 
 	assert.Equal(t, 2, len(indexSnapshot[string(address1Hash)]))
-	assert.Equal(t, common.NewAmount(5),  indexSnapshot[string(address1Hash)][0].Value)
-	assert.Equal(t, common.NewAmount(7),  indexSnapshot[string(address1Hash)][1].Value)
-	assert.Equal(t, 0,  len(indexSnapshot[string(address2Hash)]))
+	assert.Equal(t, common.NewAmount(5), indexSnapshot[string(address1Hash)][0].Value)
+	assert.Equal(t, common.NewAmount(7), indexSnapshot[string(address1Hash)][1].Value)
+	assert.Equal(t, 0, len(indexSnapshot[string(address2Hash)]))
 }
 
 func TestFindUTXO(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := &UTXO{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
+	utxo1 := &UTXO{common.NewAmount(10), []byte("addr1"), Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9), []byte("addr1"), Txin[1].Txid, Txin[1].Vout}
 	utxoIndex := make(UTXOIndex)
 	utxoIndex["addr1"] = []*UTXO{utxo1, utxo2}
 
