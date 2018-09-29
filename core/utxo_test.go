@@ -19,6 +19,9 @@
 package core
 
 import (
+	"errors"
+	"github.com/dappley/go-dappley/storage/mocks"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 
@@ -183,7 +186,16 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpdate_Failed(t *testing.T) {
-	// TODO: mock storage that returns error on put
+	db := new(mocks.Storage)
+
+	simulatedFailure := errors.New("simulated storage failure")
+	db.On("Put", mock.Anything, mock.Anything).Return(simulatedFailure)
+
+	blk := GenerateUtxoMockBlockWithoutInputs()
+	utxoIndex := make(UTXOIndex)
+	err := utxoIndex.BuildForkUtxoIndex(blk, db)
+	assert.Equal(t, simulatedFailure, err)
+	assert.Equal(t, 0, len(utxoIndex[string(address1Hash)]))
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {

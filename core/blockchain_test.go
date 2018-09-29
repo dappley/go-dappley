@@ -19,11 +19,15 @@
 package core
 
 import (
-	"testing"
+	"encoding/hex"
+	"errors"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
-	"os"
+	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"os"
+	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -109,4 +113,53 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 
 }
 
+func TestBlockchain_AddBlockToTail(t *testing.T) {
 
+	// Serialized data of an empty UTXOIndex (generated using `hex.EncodeToString(UTXOIndex{}.serialize())`)
+	serializedUTXOIndex, _ := hex.DecodeString("1aff87040101095554584f496e64657801ff8800010c01ff8600000dff8502010" +
+		"2ff860001ff8200003bff81030102ff82000104010556616c756501ff8400010a5075624b657948617368010a00010454786964010a" +
+		"0001075478496e64657801040000000aff83050102ff8a0000000fff8b05010103496e7401ff8c00000004ff880000")
+
+	db := new(mocks.Storage)
+
+	// Storage will allow blockchain creation to succeed
+	db.On("Put", mock.Anything, mock.Anything).Return(nil)
+	db.On("Get", []byte("utxo")).Return(serializedUTXOIndex, nil)
+	db.On("EnableBatch").Return()
+	db.On("DisableBatch").Return()
+	db.On("Flush").Return(nil).Once()
+
+	// Create a blockchain for testing
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := &Blockchain{Hash{}, db, nil, nil, nil, nil}
+
+	// Add genesis block
+	genesis := NewGenesisBlock(addr.Address)
+	err := bc.AddBlockToTail(genesis)
+
+	// Expect batch write was used
+	db.AssertCalled(t, "EnableBatch")
+	db.AssertCalled(t, "Flush")
+	db.AssertCalled(t, "DisableBatch")
+
+	// Expect no error when adding genesis block
+	assert.Nil(t, err)
+	// Expect that blockchain tail is genesis block
+	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
+
+	// Simulate a failure when flushing new block to storage
+	simulatedFailure := errors.New("simulated storage failure")
+	db.On("Flush").Return(simulatedFailure)
+
+	// Add new block
+	blk := GenerateMockBlock()
+	blk.SetHash([]byte("hash1"))
+	blk.header.height = 1
+	err = bc.AddBlockToTail(blk)
+
+	// Expect the simulated error when adding new block
+	assert.Equal(t, simulatedFailure, err)
+	// Expect that genesis block is still the blockchain tail
+	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
+
+}

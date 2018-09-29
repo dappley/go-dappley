@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/jinzhu/copier"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
@@ -158,10 +159,12 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 	}
 
 	// Atomically set tail block hash and update UTXO index in db
-	bc.db.EnableBatch()
-	defer bc.db.DisableBatch()
+	bcTemp := bc.deepCopy()
 
-	err = bc.setTailBlockHash(block.GetHash())
+	bcTemp.db.EnableBatch()
+	defer bcTemp.db.DisableBatch()
+
+	err = bcTemp.setTailBlockHash(block.GetHash())
 	if err != nil{
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -170,8 +173,8 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 		return err
 	}
 
-	utxoIndex := LoadUTXOIndex(bc.db)
-	err = utxoIndex.BuildForkUtxoIndex(block, bc.db)
+	utxoIndex := LoadUTXOIndex(bcTemp.db)
+	err = utxoIndex.BuildForkUtxoIndex(block, bcTemp.db)
 	if err != nil{
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -181,7 +184,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 	}
 
 	// Flush batch changes to storage
-	err = bc.db.Flush()
+	err = bcTemp.db.Flush()
 	if err != nil{
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -189,6 +192,9 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 		}).Error("Blockchain: Cannot add block to tail - Update tail and UTXO index failed!")
 		return err
 	}
+
+	// Assign changes to receiver
+	*bc = *bcTemp
 
 	logger.WithFields(logger.Fields{
 		"height": block.GetHeight(),
@@ -480,4 +486,10 @@ func (bc *Blockchain) setTailBlockHash(hash Hash) error{
 	}
 	bc.tailBlockHash = hash
 	return nil
+}
+
+func (bc *Blockchain) deepCopy() *Blockchain {
+	newCopy := &Blockchain{}
+	copier.Copy(&newCopy, &bc)
+	return newCopy
 }
