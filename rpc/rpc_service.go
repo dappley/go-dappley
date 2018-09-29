@@ -154,3 +154,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
 	return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
 }
+
+func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
+	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
+}

@@ -2,6 +2,7 @@ syntax = "proto3";
 package rpcpb;
 import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
 import "github.com/dappley/go-dappley/core/pb/block.proto";
+import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 
 option objc_class_prefix = "HLW";
 
@@ -14,6 +15,7 @@ service RpcService {
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
   rpc RpcGetUTXO(GetUTXORequest) returns (GetUTXOResponse) {}
   rpc RpcGetBlocks(GetBlocksRequest) returns (GetBlocksResponse) {}
+  rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
 }
 
 service AdminService{
@@ -85,7 +87,7 @@ message GetVersionResponse {
 }
 
 message GetUTXORequest {
-  string address = 1;  //
+  string address = 1;  //wallet address
 }
 
 message GetUTXOResponse {
@@ -101,11 +103,19 @@ message UTXO {
 }
 
 message GetBlocksRequest {
-  bytes startBlockHash = 1;
-  bytes stopBlockHash = 2; 
+  repeated bytes startBlockHashs = 1;  // Query start block hashes, sorted descending by height.
+  bytes stopBlockHash = 2;   // Query end block hash, default is empty bytes
 }
 
 message GetBlocksResponse {
   uint32 errorCode = 1;
   repeated corepb.Block blocks = 2;
+}
+
+message SendTransactionRequest {
+  corepb.Transaction transactions = 1;
+}
+
+message SendTransactionResponse {
+  uint32 errorCode = 1;
 }
