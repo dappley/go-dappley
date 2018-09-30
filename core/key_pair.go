@@ -23,11 +23,13 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	
+
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
+	"math/big"
+	"math/bits"
 )
 
 const version = byte(0x00)
@@ -77,7 +79,22 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	if err != nil {
 		logger.Panic(err)
 	}
-	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
+	pubKey := append(publicRawBytes(private.PublicKey.X), publicRawBytes(private.PublicKey.Y)...)
 
 	return *private, pubKey
+}
+
+func publicRawBytes(x *big.Int) []byte {
+	intBits := x.Bits()
+	s := bits.UintSize / 8
+	buf := make([]byte, len(intBits)*s)
+	i := len(buf)
+	for _, d := range intBits {
+		for j := 0; j < s; j++ {
+			i--
+			buf[i] = byte(d)
+			d >>= 8
+		}
+	}
+	return buf
 }
