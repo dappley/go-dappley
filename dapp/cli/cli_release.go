@@ -1,0 +1,487 @@
+// +build release
+
+// Copyright (C) 2018 go-dappley authors
+//
+// This file is part of the go-dappley library.
+//
+// the go-dappley library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// the go-dappley library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
+//
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"log"
+	"os"
+	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/util"
+	"github.com/dappley/go-dappley/config/pb"
+	"strings"
+)
+
+//command names
+const(
+	cliGetBlockchainInfo	= "getBlockchainInfo"
+	cliGetBalance 			= "getBalance"
+	cliGetPeerInfo			= "getPeerInfo"
+	cliSend 				= "send"
+	cliAddPeer 				= "addPeer"
+	clicreateWallet			= "createWallet"
+	cliListAddresses		= "listAddresses"
+	//cliaddBalance			= "addBalance"
+)
+
+//flag names
+const(
+	flagAddress			= "address"
+	flagAddressBalance	= "address"
+	flagAmountBalance	= "amount"
+	flagToAddress		= "to"
+	flagFromAddress		= "from"
+	flagAmount			= "amount"
+	flagPeerFullAddr    = "peerFullAddr"
+)
+
+type valueType int
+//type enum
+const(
+	valueTypeInt = iota
+	valueTypeString
+)
+
+type serviceType int
+const(
+	rpcService = iota
+	adminRpcService
+)
+
+//list of commands
+var cmdList = []string{
+	cliGetBlockchainInfo,
+	cliGetBalance,
+	cliGetPeerInfo,
+	cliSend,
+	cliAddPeer,
+	clicreateWallet,
+	cliListAddresses,
+//	cliaddBalance,
+}
+
+//configure input parameters/flags for each command
+var cmdFlagsMap = map[string][]flagPars{
+	cliGetBalance	:{	flagPars{
+		flagAddress,
+		"",
+		valueTypeString,
+		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+
+	}},
+	//cliaddBalance	:{
+	//	flagPars{
+	//		flagAddressBalance,
+	//		"",
+	//		valueTypeString,
+	//		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",},
+	//	flagPars{
+	//		flagAmountBalance,
+	//		0,
+	//		valueTypeInt,
+	//		"The amount to add to the receiver.",
+	//	},
+	//},
+	cliSend	: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"Sender's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"Receiver's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagAmount,
+			0,
+			valueTypeInt,
+			"The amount to send from the sender to the receiver.",
+		},
+	},
+	cliAddPeer		:{flagPars{
+		flagPeerFullAddr,
+		"",
+		valueTypeString,
+		"Full Address. Eg. /ip4/127.0.0.1/tcp/12345/ipfs/QmT5oB6xHSunc64Aojoxa6zg9uH31ajiAVyNfCdBZiwFTV",
+	}},
+}
+
+//map the callback function to each command
+var cmdHandlers = map[string]commandHandlersWithType{
+	cliGetBlockchainInfo	: {rpcService, getBlockchainInfoCommandHandler},
+	cliGetBalance			: {rpcService, getBalanceCommandHandler},
+	cliGetPeerInfo			: {rpcService, getPeerInfoCommandHandler},
+	cliSend					: {rpcService, sendCommandHandler},
+	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
+	clicreateWallet			:{rpcService, createWalletCommandHandler},
+	cliListAddresses		:{rpcService, listAddressesCommandHandler},
+	//cliaddBalance		:{rpcService, addBalanceCommandHandler},
+}
+
+type commandHandlersWithType struct {
+	serviceType		serviceType
+	cmdHandler 		commandHandler
+}
+
+type commandHandler func(ctx context.Context, client interface{},flags cmdFlags)
+
+type flagPars struct{
+	name         string
+	defaultValue interface{}
+	valueType    valueType
+	usage        string
+}
+
+
+//map key: flag name   map defaultValue: flag defaultValue
+type cmdFlags map[string]interface{}
+
+
+
+func main(){
+
+	var filePath string
+	flag.StringVar(&filePath, "f", "default.conf", "CLI config file path")
+	flag.Parse()
+
+	cliConfig := &configpb.CliConfig{}
+	config.LoadConfig(filePath, cliConfig)
+
+	conn := initRpcClient(int(cliConfig.GetPort()))
+	defer conn.Close()
+	clients := map[serviceType]interface{}{
+		rpcService:      rpcpb.NewRpcServiceClient(conn),
+		adminRpcService: rpcpb.NewAdminServiceClient(conn),
+	}
+	args := os.Args[1:]
+
+	if len(args) < 1 {
+		printUsage()
+		return
+	}
+
+	if args[0] == "-f" {
+		args = args[2:]
+	}
+
+	cmdFlagSetList := map[string]*flag.FlagSet{}
+	//set up flagset for each command
+	for _, cmd := range cmdList{
+		fs := flag.NewFlagSet(cmd,flag.ContinueOnError)
+		cmdFlagSetList[cmd] = fs
+	}
+
+	cmdFlagValues := map[string]cmdFlags{}
+	//set up flags for each command
+	for cmd, pars := range cmdFlagsMap {
+		cmdFlagValues[cmd] = cmdFlags{}
+		for _,par := range pars{
+			switch par.valueType{
+			case valueTypeInt:
+				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Int(par.name,par.defaultValue.(int),par.usage)
+			case valueTypeString:
+				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].String(par.name,par.defaultValue.(string),par.usage)
+			}
+		}
+	}
+
+	cmdName := args[0]
+
+	cmd := cmdFlagSetList[cmdName]
+	if cmd == nil {
+		fmt.Println("\nERROR:", cmdName, "is an invalid command")
+		printUsage()
+	}else{
+		err := cmd.Parse(args[1:])
+		if err!= nil{
+			return
+		}
+		if cmd.Parsed() {
+			md := metadata.Pairs("password", cliConfig.GetPassword())
+			ctx := metadata.NewOutgoingContext(context.Background(), md)
+			cmdHandlers[cmdName].cmdHandler(ctx, clients[cmdHandlers[cmdName].serviceType], cmdFlagValues[cmdName])
+		}
+	}
+
+}
+
+func printUsage() {
+	fmt.Println("Usage:")
+	for _,cmd := range cmdList{
+		fmt.Println(" ", cmd)
+	}
+}
+
+func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBlockchainInfo(ctx,&rpcpb.GetBlockchainInfoRequest{})
+	if err!=nil {
+		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	if len(*(flags[flagAddress].(*string))) == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli getBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
+		fmt.Println()
+		return
+	}
+
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Name = "getWallet"
+
+	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err != nil {
+		fmt.Println("ERROR: Get Balance failed. ERR:", err)
+		return
+	}
+
+	passphrase := ""
+	if response.Message == "WalletExists" {
+		prompter := util.NewTerminalPrompter()
+		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	} else if response.Message == "NoWallet" {
+		fmt.Println("Please use cli createWallet to generate a wallet first!")
+		return
+	}  else {
+		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+		return
+	}
+
+	getBalanceRequest = rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Name = "getBalance"
+	getBalanceRequest.Address = *(flags[flagAddress].(*string))
+	getBalanceRequest.Passphrase = passphrase
+	response, err  = client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err!=nil {
+		if strings.Contains(err.Error(), "Password does not match!" ) {
+			fmt.Printf("ERROR: Get balance failed. Password does not match!\n")
+		} else if strings.Contains(err.Error(), "Address not in the wallets" ) {
+			fmt.Printf("ERROR: Get balance failed. Address not found in the wallet!\n")
+		}  else {
+			fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
+		}
+		return
+	}
+	if response.Message == "Get Balance" {
+		fmt.Printf("The balance is: %d\n", response.Amount)
+	} else {
+		fmt.Println(response.Message)
+	}
+
+	return
+}
+
+func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	walletRequest := rpcpb.CreateWalletRequest{}
+	walletRequest.Name = "getWallet"
+	response,err  := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
+	prompter := util.NewTerminalPrompter()
+	passphrase := ""
+	if err != nil {
+
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Create Wallet Failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Create Wallet failed. %v\n", err.Error())
+		}
+		return
+	}
+	if response.Message == "WalletExists" {
+		passphrase = prompter.GetPassPhrase("Please input the password: ",false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	} else if response.Message == "NewWallet" {
+		passphrase = prompter.GetPassPhrase("Please input the password for generating a new wallet: ",true)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	}  else {
+		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+	}
+
+	walletRequest = rpcpb.CreateWalletRequest{}
+	walletRequest.Passphrase = passphrase
+	walletRequest.Name = "createWallet"
+	response,err  = client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx,&walletRequest)
+	if err!=nil {
+		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
+		return
+	}
+	if  strings.Contains(response.Message, "Error") {
+		fmt.Println(response.Message)
+		return
+	}
+	if len(response.Address) > 0 {
+		fmt.Println("Create Wallet, the address is ",response.Address)
+	}
+	return
+
+}
+
+func listAddressesCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+
+	listAddressesRequest := rpcpb.GetWalletAddressRequest{}
+	listAddressesRequest.Name = "getWallet"
+
+	response,err  := client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
+	if err != nil {
+		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
+		return
+	}
+
+	passphrase := ""
+	if response.Message == "WalletExists" {
+		prompter := util.NewTerminalPrompter()
+		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+	} else if response.Message == "NoWallet" {
+		fmt.Println("Please use cli createWallet to generate a wallet first!")
+		return
+	}  else {
+		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+		return
+	}
+
+	listAddressesRequest = rpcpb.GetWalletAddressRequest{}
+	listAddressesRequest.Passphrase = passphrase
+	listAddressesRequest.Name = "listAddresses"
+
+	response,err  = client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
+	if err!=nil {
+		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
+		return
+	} else {
+		if strings.Contains(response.Message, "Password not correct") {
+			fmt.Println("ERROR: Get Wallet Addresses failed, password not correct!")
+		} else {
+			Addresses := response.Address
+			if len(Addresses) == 0 {
+				fmt.Println("The addresses in the wallet is empty!")
+			} else {
+				i := 1
+				fmt.Println("The address list:")
+				for _, addr := range Addresses {
+					fmt.Printf("Address[%d]: %s\n", i, addr)
+					i++
+				}
+			}
+		}
+		return
+	}
+}
+
+//func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+//	if len(*(flags[flagAddressBalance].(*string))) == 0 {
+//		printUsage()
+//		fmt.Println("\n Example: cli addBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -amount 15")
+//		fmt.Println()
+//		return
+//	}
+//	amount := int64(*(flags[flagAmountBalance].(*int)))
+//	if amount <=0 {
+//		fmt.Println("Add balance error! The amount must be greater than zero!")
+//		return
+//	}
+//
+//	if len(*(flags[flagAddressBalance].(*string))) != 34 {
+//		fmt.Println("Add balance error!The length of address must be 34!")
+//		return
+//	}
+//
+//	addBalanceRequest := rpcpb.AddBalanceRequest{}
+//	addBalanceRequest.Address = *(flags[flagAddressBalance].(*string))
+//	addBalanceRequest.Amount = common.NewAmount(uint64(*(flags[flagAmountBalance].(*int)))).Bytes()
+//
+//	response,err  := client.(rpcpb.RpcServiceClient).RpcAddBalance(ctx,&addBalanceRequest)
+//	if err!=nil {
+//		fmt.Println("Add balance error!: ERR:", err)
+//		return
+//	}
+//	fmt.Println(response.Message)
+//	//	fmt.Println(proto.MarshalTextString(response))
+//}
+
+func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	response,err  := client.(rpcpb.RpcServiceClient).RpcGetPeerInfo(ctx,&rpcpb.GetPeerInfoRequest{})
+	if err!=nil {
+		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	response, err  := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
+		From: *(flags[flagFromAddress].(*string)),
+		To: *(flags[flagToAddress].(*string)),
+		Amount: common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+	})
+	if err!=nil {
+		fmt.Println("ERROR: Send failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func addPeerCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	req := &rpcpb.AddPeerRequest{
+		FullAddress:  *(flags[flagPeerFullAddr].(*string)),
+	}
+	response,err  := client.(rpcpb.AdminServiceClient).RpcAddPeer(ctx,req)
+	if err!=nil {
+		fmt.Println("ERROR: AddPeer failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func initRpcClient(port int)*grpc.ClientConn{
+	//prepare grpc client
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(fmt.Sprint(":",port), grpc.WithInsecure())
+	if err != nil{
+		log.Panic("ERROR: Not able to connect to RPC server. ERR:",err)
+	}
+	return conn
+}
