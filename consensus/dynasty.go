@@ -22,6 +22,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"bytes"
 	"github.com/pkg/errors"
+	Logger "github.com/sirupsen/logrus"
 )
 
 type Dynasty struct{
@@ -97,17 +98,18 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int){
 }
 
 func (dynasty *Dynasty) AddProducer(producer string) error{
-	ok := false
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
-			ok = true
+			return errors.New("Producer already in the producer list！")
 		}
 	}
-	if ok {
-		return errors.New("Producer already in the producer list！")
-	}
+
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers{
 		dynasty.producers = append(dynasty.producers, producer)
+		Logger.Info("Current Producers:")
+		for _, producerIt := range dynasty.producers {
+			Logger.Info(producerIt)
+		}
 		return nil
 	} else {
 		if !IsProducerAddressValid(producer) {
