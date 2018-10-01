@@ -46,6 +46,7 @@ const(
 	clicreateWallet			= "createWallet"
 	cliListAddresses		= "listAddresses"
 	cliaddBalance			= "addBalance"
+	cliaddProducer			= "addProducer"
 )
 
 //flag names
@@ -57,6 +58,7 @@ const(
 	flagFromAddress		= "from"
 	flagAmount			= "amount"
 	flagPeerFullAddr    = "peerFullAddr"
+	flagProducerAddr    = "address"
 )
 
 type valueType int
@@ -82,12 +84,20 @@ var cmdList = []string{
 	clicreateWallet,
 	cliListAddresses,
 	cliaddBalance,
+	cliaddProducer,
 }
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
 	cliGetBalance	:{	flagPars{
 		flagAddress,
+		"",
+		valueTypeString,
+		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+
+	}},
+	cliaddProducer	:{	flagPars{
+		flagProducerAddr,
 		"",
 		valueTypeString,
 		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
@@ -144,6 +154,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	clicreateWallet			:{rpcService, createWalletCommandHandler},
 	cliListAddresses		:{rpcService, listAddressesCommandHandler},
 	cliaddBalance		:{rpcService, addBalanceCommandHandler},
+	cliaddProducer		:{rpcService, cliaddProducerCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -439,7 +450,6 @@ func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		return
 	}
 	fmt.Println(response.Message)
-//	fmt.Println(proto.MarshalTextString(response))
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
@@ -449,6 +459,32 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 		return
 	}
 	fmt.Println(proto.MarshalTextString(response))
+}
+
+func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+
+	if len(*(flags[flagProducerAddr].(*string))) == 0 {
+		printUsage()
+		fmt.Println("\n Example: cli addProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
+		fmt.Println()
+		return
+	}
+
+	if len(*(flags[flagProducerAddr].(*string))) != 34 {
+		fmt.Println("The length of address must be 34!")
+		return
+	}
+
+	response,err  := client.(rpcpb.RpcServiceClient).RpcAddProducer(ctx,&rpcpb.AddProducerRequest{
+		Name: "addProducer",
+		Address: *(flags[flagProducerAddr].(*string)),
+	})
+
+	if err!=nil {
+		fmt.Println("ERROR: Add producer failed. ERR:", err)
+		return
+	}
+	fmt.Println(response.Message)
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

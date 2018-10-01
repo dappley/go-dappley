@@ -21,6 +21,7 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core"
 	"bytes"
+	"github.com/pkg/errors"
 )
 
 type Dynasty struct{
@@ -31,7 +32,7 @@ type Dynasty struct{
 }
 
 const (
-	defaultMaxProducers   = 3
+	defaultMaxProducers   = 5
 	defaultTimeBetweenBlk = 15
 	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
 )
@@ -58,6 +59,24 @@ func NewDynastyWithProducers(producers []string) *Dynasty{
 		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    len(validProducers)*defaultTimeBetweenBlk,
 	}
+
+	}
+
+func NewDynastyWithConfigProducers(producers []string) *Dynasty{
+	validProducers := []string{}
+	for _, producer := range producers {
+		if IsProducerAddressValid(producer) {
+			validProducers = append(validProducers, producer)
+		}
+	}
+
+	return &Dynasty{
+		producers:      validProducers,
+		maxProducers:   defaultMaxProducers,
+		timeBetweenBlk: defaultTimeBetweenBlk,
+		dynastyTime:    defaultMaxProducers*defaultTimeBetweenBlk,
+	}
+
 }
 
 func (dynasty *Dynasty) SetMaxProducers(maxProducers int){
@@ -77,9 +96,26 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int){
 	}
 }
 
-func (dynasty *Dynasty) AddProducer(producer string){
+func (dynasty *Dynasty) AddProducer(producer string) error{
+	ok := false
+	for _, producerNow := range dynasty.producers {
+		if producerNow == producer {
+			ok = true
+		}
+	}
+	if ok {
+		return errors.New("Producer already in the producer list！")
+	}
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers{
 		dynasty.producers = append(dynasty.producers, producer)
+		return nil
+	} else {
+		if !IsProducerAddressValid(producer) {
+			return errors.New("The address of producers not valid！")
+		} else {
+			return errors.New("The number of producers reaches the maximum！")
+		}
+
 	}
 }
 
