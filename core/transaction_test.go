@@ -184,8 +184,8 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	utxo2 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
 	utxo3 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
 	utxo4 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
-	utxoPool := NewUTXOIndex()
-	utxoPool.index["addr1"] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+	utxoPool := UTXOIndex{}
+	utxoPool["addr1"] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	assert.Nil(t, tx.FindAllTxinsInUtxoPool(utxoPool))

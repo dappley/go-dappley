@@ -1,3 +1,5 @@
+// +build !release
+
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
