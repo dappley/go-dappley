@@ -94,7 +94,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	}
 
 	if !(pool.bc.GetConsensus().VerifyBlock(block)) {
-		logger.Debug("GetBlockPool: Verify Signature failed!")
+		logger.Debug("BlockPool: Verify Signature failed!")
 		return
 	}
 	//TODO: Verify double spending transactions in the same block
@@ -109,10 +109,6 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 
 	blkCache := pool.blkCache
 	nodeCache := pool.nodeCache
-
-	if pool.bc.consensus.CheckDoubleMint(blk){
-		return
-	}
 
 	if   pool.bc.consensus.Validate(blk) {
 		if blkCache.Contains(blk.hashString()){

@@ -53,12 +53,10 @@ type Transaction struct {
 	Tip  uint64
 }
 
-
-type TxIndex struct{
-	BlockId []byte
+type TxIndex struct {
+	BlockId    []byte
 	BlockIndex int
 }
-
 
 func (tx Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
@@ -183,8 +181,8 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	for inID, vin := range tx.Vin {
 		prevTxOut := prevTXs[hex.EncodeToString(vin.Txid)]
-		
-		if bytes.Compare(prevTxOut.PubKeyHash, vin.PubKey) != 0 {
+		vinPubKeyHash, _ := HashPubKey(vin.PubKey)
+		if bytes.Compare(prevTxOut.PubKeyHash, vinPubKeyHash) != 0 {
 			logger.Error("ERROR: Vout Vin public key mismatch")
 			return false
 		}
@@ -240,7 +238,7 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amo
 
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
 	sum := common.NewAmount(0)
-	senderUTXOs := LoadUTXOIndex(db).GetUTXOsByPubKey(pubKeyHash)
+	senderUTXOs := LoadUTXOIndex(db).GetUTXOsByPubKeyHash(pubKeyHash)
 
 	if len(senderUTXOs) < 1 {
 		return Transaction{}, ErrInsufficientFund
@@ -314,19 +312,18 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transac
 }
 
 //Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) map[string]TXOutput{
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) map[string]TXOutput {
 	res := make(map[string]TXOutput)
-	for _,vin := range tx.Vin{
+	for _, vin := range tx.Vin {
 		utxo := utxoPool.FindUTXO(vin.Txid, vin.Vout)
 		if utxo == nil {
 			return nil
 		}
-		txout := TXOutput{utxo.Value,utxo.PubKeyHash}
+		txout := TXOutput{utxo.Value, utxo.PubKeyHash}
 		res[hex.EncodeToString(vin.Txid)] = txout
 	}
 	return res
 }
-
 
 // String returns a human-readable representation of a transaction
 func (tx Transaction) String() string {

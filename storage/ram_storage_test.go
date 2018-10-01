@@ -101,3 +101,31 @@ func TestRamStorage_IndependantStorage(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("b"), v2)
 }
+
+func TestRamStorage_BatchWrite(t *testing.T) {
+	rs := NewRamStorage()
+	rs.EnableBatch()
+	rs.Put([]byte("1"), []byte("a"))
+	rs.Put([]byte("1"), []byte("c")) // batch on same key
+	rs.Put([]byte("2"), []byte("1234"))
+
+	// Not written to storage before flushing
+	_, err := rs.Get([]byte("1"))
+	assert.Equal(t, ErrKeyInvalid, err)
+	_, err = rs.Get([]byte("2"))
+	assert.Equal(t, ErrKeyInvalid, err)
+
+	err = rs.Flush()
+	assert.Nil(t, err)
+
+	// Should be able to read the value after flush
+	v1, err := rs.Get([]byte("1"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("c"), v1)
+	v2, err := rs.Get([]byte("2"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("1234"), v2)
+
+
+	rs.DisableBatch()
+}

@@ -20,7 +20,7 @@ package core
 
 import "github.com/libp2p/go-libp2p-peer"
 
-type Consensus interface{
+type Consensus interface {
 	Validate(block *Block) bool
 	VerifyBlock(block *Block) bool
 	Start()
@@ -29,10 +29,10 @@ type Consensus interface{
 	Setup(NetService, string)
 	SetTargetBit(int)
 	SetKey(string)
-	CheckDoubleMint(*Block) bool
+	FullyStop() bool
 }
 
-type NetService interface{
+type NetService interface {
 	BroadcastBlock(block *Block) error
 	GetPeerID() peer.ID
 	GetBlockchain() *Blockchain

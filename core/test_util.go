@@ -19,8 +19,9 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/common"
 	"time"
+
+	"github.com/dappley/go-dappley/common"
 
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -63,8 +64,8 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: t,
-			sign: nil,
-			height:height,
+			sign:      nil,
+			height:    height,
 		},
 		transactions: transactions,
 	}
@@ -131,6 +132,10 @@ func GenerateMockForkWithValidTx(size int, parent *Block) []*Block {
 	}
 	return fork
 }
+func GenerateMockTransactionForkWithValidSignature(db *storage.RamStorage, address1, address2 Address, sendAmount *common.Amount, keyPair KeyPair, bc *Blockchain) Transaction {
+	tx, _ := NewUTXOTransaction(db, address1, address2, sendAmount, keyPair, bc, 0)
+	return tx
+}
 
 func MockTransaction() *Transaction {
 	return &Transaction{
@@ -169,3 +174,12 @@ func GenerateMockTransactionPool(numOfTxs int) *TransactionPool {
 	return txPool
 }
 
+func WaitFullyStop(consensus Consensus, timeOut int) {
+	currentTime := time.Now().UTC().Unix()
+	for !consensus.FullyStop() && !IsTimeOut(currentTime, int64(timeOut)) {
+	}
+}
+
+func IsTimeOut(start, timeOut int64) bool {
+	return time.Now().UTC().Unix()-start > timeOut
+}

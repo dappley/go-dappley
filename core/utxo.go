@@ -23,7 +23,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/jinzhu/copier"
 	logger "github.com/sirupsen/logrus"
@@ -35,11 +34,7 @@ import (
 const utxoMapKey = "utxo"
 
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
-type UTXOIndex struct {
-	index map[string][]*UTXO
-	mutex *sync.Mutex
-}
-
+type UTXOIndex map[string][]*UTXO
 
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
@@ -51,29 +46,24 @@ type UTXO struct {
 
 // NewUTXOIndex initializes an UTXOIndex instance
 func NewUTXOIndex() UTXOIndex {
-	var mutex = &sync.Mutex{}
-	return UTXOIndex{make(map[string][]*UTXO), mutex}
+	return make(map[string][]*UTXO)
 }
 
 func deserializeUTXOIndex(d []byte) UTXOIndex {
 	index := NewUTXOIndex()
-	index.mutex.Lock()
-	defer index.mutex.Unlock()
 	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&index.index)
+	err := decoder.Decode(&index)
 	if err != nil {
 		logger.Panicf("failed to deserialize UTXOIndex: %v", err)
 	}
-
 	return index
 }
 
 func (index UTXOIndex) serialize() []byte {
 	var encoded bytes.Buffer
-	index.mutex.Lock()
-	defer index.mutex.Unlock()
+
 	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(index.index)
+	err := enc.Encode(index)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -82,44 +72,36 @@ func (index UTXOIndex) serialize() []byte {
 
 // LoadUTXOIndex returns the UTXOIndex fetched from db.
 func LoadUTXOIndex(db storage.Storage) UTXOIndex {
-	res, err := db.Get([]byte(utxoMapKey))
+	utxoBytes, err := db.Get([]byte(utxoMapKey))
 
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || res == nil{
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
 		return NewUTXOIndex()
 	}
-	umap := deserializeUTXOIndex(res)
-	return umap
+
+	return deserializeUTXOIndex(utxoBytes)
 }
 
 // Save stores the index to db
 func (index UTXOIndex) Save(mapkey string, db storage.Storage) error {
-	err := db.Put([]byte(mapkey), index.serialize())
-	return err
+	return db.Put([]byte(mapkey), index.serialize())
 }
 
 // FindUTXO returns the UTXO instance of the corresponding TXOutput in the transaction (identified by txid and vout)
 // if the TXOutput is unspent. Otherwise, it returns nil.
 func (index UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
-	index.mutex.Lock()
-	defer index.mutex.Unlock()
-	for _, utxoArray := range index.index {
+	for _, utxoArray := range index {
 		for _, u := range utxoArray {
 			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
 				return u
 			}
 		}
 	}
-
 	return nil
 }
 
-// GetUTXOsByPubKey returns all current UTXOs identified by pubkey.
-func (index UTXOIndex) GetUTXOsByPubKey(pubkey []byte) []*UTXO {
-	index.mutex.Lock()
-	defer index.mutex.Unlock()
-	utxos := index.index[string(pubkey)]
-	return utxos
-
+// GetUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
+func (index UTXOIndex) GetUTXOsByPubKeyHash(pubkey []byte) []*UTXO {
+	return index[string(pubkey)]
 }
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
@@ -169,22 +151,20 @@ func (index UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.Sto
 		if err != nil {
 			logger.Panic(err)
 		}
+
 		if tx.IsCoinbase() {
 			continue
 		}
 
 		err = index.unspendVinsInTx(tx, bc)
-
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
-
 }
 
 // excludeVoutsInTx undoes the spending of UTXO in a transaction.
 func (index UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) error {
-
 	for i := range tx.Vout {
 		err := index.removeUTXO(tx.ID, i)
 		if err != nil {
@@ -196,14 +176,12 @@ func (index UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) err
 
 // unspendVinsInTx includes UTXO the UTXOIndex as a result of undoing the spending of UTXO in a transaction.
 func (index UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
-
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, bc)
 		if err != nil {
 			return err
 		}
 		index.addUTXO(vout, tx.ID, voutIndex)
-
 	}
 	return nil
 }
@@ -211,57 +189,48 @@ func (index UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 // addUTXO adds an unspent TXOutput to index
 func (index UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	u := newUTXO(txout, txid, vout)
-	index.mutex.Lock()
-	defer index.mutex.Unlock()
-	index.index[string(u.PubKeyHash)] = append(index.index[string(u.PubKeyHash)], u)
-
+	index[string(u.PubKeyHash)] = append(index[string(u.PubKeyHash)], u)
 }
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (index UTXOIndex) removeUTXO(txid []byte, vout int) error {
-	index.mutex.Lock()
-	defer index.mutex.Unlock()
-
-	for _, utxoArray := range index.index {
+	for _, utxoArray := range index {
 		for i, u := range utxoArray {
 			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
-					userUTXOs := index.index[string(u.PubKeyHash)]
-					index.index[string(u.PubKeyHash)] = append(userUTXOs[:i], userUTXOs[i+1:]...)
-					return nil
+				userUTXOs := index[string(u.PubKeyHash)]
+				index[string(u.PubKeyHash)] = append(userUTXOs[:i], userUTXOs[i+1:]...)
+				return nil
 			}
 		}
 	}
-
-	return errors.New("UTXO: utxo not found when trying to remove from cache")
+	return errors.New("UTXO: txOutput is not an UTXO")
 }
 
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	tx, err := bc.FindTransaction(in.Txid)
 	if err != nil {
-		return  TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
+		return TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
 
-
 func (index UTXOIndex) deepCopy() UTXOIndex {
 	utxocopy := NewUTXOIndex()
 	copier.Copy(&utxocopy, &index)
-	if len(utxocopy.index)==0 {
+	if len(utxocopy) == 0 {
 		utxocopy = NewUTXOIndex()
 	}
 	return utxocopy
 }
 
 // GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error){
+func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error) {
 	index := LoadUTXOIndex(db)
 	deepCopy := index.deepCopy()
 	bci := bc.Iterator()
 
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
 	// in the block, until the block hash matches.
-
 	for {
 		block, err := bci.Next()
 

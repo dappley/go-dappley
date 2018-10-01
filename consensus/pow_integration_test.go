@@ -25,8 +25,6 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 
-	"time"
-
 	"os"
 
 	"github.com/dappley/go-dappley/client"
@@ -86,10 +84,10 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 2 {
-		time.Sleep(time.Millisecond * 500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
+	core.WaitFullyStop(pow, 20)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -135,10 +133,9 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 5 {
 		count = GetNumberOfBlocks(t, bc.Iterator())
-		time.Sleep(time.Second)
 	}
 	pow.Stop()
-
+	core.WaitFullyStop(pow, 20)
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -185,7 +182,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//Make sure there are blocks have been mined
 	count := GetNumberOfBlocks(t, bc.Iterator())
 	for count < 5 {
-		time.Sleep(time.Millisecond * 500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
@@ -199,13 +195,12 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
 
 	for count < currCount+2 {
-		time.Sleep(time.Millisecond * 500)
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
 	//stop mining
 	pow.Stop()
-
+	core.WaitFullyStop(pow, 20)
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -231,7 +226,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, cbAddr.Address)
-
+	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
 	blkHeight := uint64(0)
@@ -247,8 +242,7 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	time.Sleep(time.Second * 2)
-
+	core.WaitFullyStop(pow, 20)
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)
@@ -256,7 +250,6 @@ loop:
 
 	//it should be able to start again
 	pow.Start()
-	time.Sleep(time.Second)
 	pow.Stop()
 }
 
@@ -291,7 +284,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	pubKeyHash := util.Base58Decode([]byte(addr))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
-	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
+	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}

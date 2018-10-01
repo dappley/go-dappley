@@ -25,7 +25,6 @@ import (
 	"time"
 	logger "github.com/sirupsen/logrus"
 
-	"math/big"
 	"reflect"
 
 	"github.com/dappley/go-dappley/core/pb"
@@ -33,6 +32,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/crypto/sha3"
+	"math/big"
 )
 
 
@@ -235,7 +236,6 @@ func (b *Block) CalculateHash() Hash {
 }
 
 func (b *Block) CalculateHashWithoutNonce() Hash {
-	var hashInt big.Int
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -244,9 +244,10 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 		},
 		[]byte{},
 	)
-	hash := sha256.Sum256(data)
-	hashInt.SetBytes(hash[:])
-	return hashInt.Bytes()
+
+	hasher := sha3.New256()
+	hasher.Write(data)
+	return hasher.Sum(nil)
 }
 
 func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
@@ -279,7 +280,7 @@ func (b *Block) SignBlock(key string, data []byte) bool {
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
-		logger.Warn("Block: signature caculation error!")
+		logger.Warn("Block: signature calculation error!, ", err.Error())
 		return false
 	}
 

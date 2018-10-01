@@ -22,47 +22,105 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/common"
 
-	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/sirupsen/logrus"
-	"fmt"
+	"strings"
 )
 
-type RpcService struct{
+type RpcService struct {
 	node *network.Node
 }
 
-// SayHello implements helloworld.GreeterServer
+// Create Wallet Response
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	passPhrase := in.Passphrase
-	fmt.Println(passPhrase)
 	msg := ""
-	if len(passPhrase) ==0 {
-		logrus.Error("CreateWallet: Password is empty!")
-		msg = "Create Wallet: Error"
-		return &rpcpb.CreateWalletResponse{
-			Message: msg,
-			Address: ""}, nil
+	addr := ""
+	if in.Name == "getWallet" {
+		wallet, err := logic.GetWallet()
+		if err != nil {
+			msg = err.Error()
+		}
+		if wallet != nil {
+			msg = "WalletExists"
+		} else {
+			msg = "NewWallet"
+		}
+	} else if in.Name == "createWallet" {
+		passPhrase := in.Passphrase
+		if len(passPhrase) == 0 {
+			logrus.Error("CreateWallet: Password is empty!")
+			msg = "Create Wallet Error: Password Empty!"
+			return &rpcpb.CreateWalletResponse{
+				Message: msg,
+				Address: ""}, nil
+		}
+		wallet, err := logic.CreateWalletWithpassphrase(passPhrase)
+		if err != nil {
+			msg = "Create Wallet Error: Password not correct!"
+			addr = ""
+		} else if wallet != nil {
+			addr = wallet.GetAddress().Address
+			msg = "Create Wallet: "
+
+		} else {
+			msg = "Create Wallet Error: Wallet Empty!"
+			addr = ""
+		}
+	} else {
+		msg = "Error: not recognize the command!"
 	}
-	wallet,err := logic.CreateWalletWithpassphrase(passPhrase)
-	if err != nil {
-		msg = "Create Wallet: Error"
-	}
-	addr := wallet.GetAddress().Address
-	fmt.Println(addr)
-	msg = "Create Wallet: "
 	return &rpcpb.CreateWalletResponse{
 		Message: msg,
 		Address: addr}, nil
 }
 
 func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
-	return &rpcpb.GetBalanceResponse{Message: "Hello " + in.Name}, nil
+	msg := ""
+	if in.Name == "getWallet" {
+		wallet, err := logic.GetWallet()
+		if err != nil {
+			msg = err.Error()
+		}
+		if wallet != nil {
+			msg = "WalletExists"
+		} else {
+			msg = "NoWallet"
+		}
+		return &rpcpb.GetBalanceResponse{Message: msg}, nil
+	} else if in.Name == "getBalance" {
+		pass := in.Passphrase
+		address := in.Address
+		msg = "Get Balance"
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		if err != nil {
+			return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
+		}
+
+		wallet, err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
+		if err != nil {
+			return &rpcpb.GetBalanceResponse{Message: err.Error()}, err
+		}
+
+		getbalanceResp := rpcpb.GetBalanceResponse{}
+		amount, err := logic.GetBalance(wallet.GetAddress(), rpcSerivce.node.GetBlockchain().GetDb())
+		if err != nil {
+			getbalanceResp.Message = "Failed to get balance from blockchain"
+			return &getbalanceResp, nil
+		}
+		getbalanceResp.Amount = amount.Int64()
+		getbalanceResp.Message = msg
+		return &getbalanceResp, nil
+	} else {
+		return &rpcpb.GetBalanceResponse{Message: "GetBalance Error: not recognize the command!"}, nil
+	}
 }
 
 func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -101,9 +159,81 @@ func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetP
 	}, nil
 }
 
-func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error){
+func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcSerivce.node.GetBlockchain().GetMaxHeight(),
 	}, nil
+}
+
+func (rpcSerivce *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb.GetWalletAddressRequest) (*rpcpb.GetWalletAddressResponse, error) {
+
+	if in.Name == "getWallet" {
+		msg := ""
+		wallet, err := logic.GetWallet()
+		if err != nil {
+			msg = err.Error()
+		}
+		if wallet != nil {
+			msg = "WalletExists"
+		} else {
+			msg = "NoWallet"
+		}
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Message = msg
+		return &getWalletAddress, nil
+	} else if in.Name == "listAddresses" {
+		pass := in.Passphrase
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		if err != nil {
+			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
+		}
+
+		addressList, err := wm.GetAddressesWithPassphrase(pass)
+		if err != nil {
+			if strings.Contains(err.Error(), "Password not correct") {
+				return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Password not correct"}, nil
+			} else {
+				return &rpcpb.GetWalletAddressResponse{Message: err.Error()}, err
+			}
+		}
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Address = addressList
+		return &getWalletAddress, nil
+	} else {
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Message = "Error: not recognize the command!"
+		return &getWalletAddress, nil
+	}
+}
+
+func (rpcSerivce *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBalanceRequest) (*rpcpb.AddBalanceResponse, error) {
+	sendToAddress := core.NewAddress(in.Address)
+	sendAmount := common.NewAmountFromBytes(in.Amount)
+	if sendAmount.Validate() != nil || sendAmount.IsZero() {
+		return &rpcpb.AddBalanceResponse{Message: "Invalid send amount (must be >0)"}, nil
+	}
+
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return &rpcpb.AddBalanceResponse{Message: "Error loading local wallets"}, err
+	}
+
+	receiverWallet := wm.GetWalletByAddress(sendToAddress)
+	if receiverWallet == nil {
+		return &rpcpb.AddBalanceResponse{Message: "Address not found in the wallet!"}, nil
+	} else {
+		err = logic.AddBalance(sendToAddress, sendAmount, rpcSerivce.node.GetBlockchain())
+		if err != nil {
+			return &rpcpb.AddBalanceResponse{Message: "Add balance failed, " + err.Error()}, nil
+		} else {
+			addBalanceResponse := rpcpb.AddBalanceResponse{}
+			addBalanceResponse.Message = "Add balance succeed!"
+			return &addBalanceResponse, nil
+		}
+	}
 }
