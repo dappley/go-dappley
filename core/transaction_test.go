@@ -113,11 +113,11 @@ func TestVerify(t *testing.T) {
 
 	// test verifying coinbase transactions
 	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5)
-	var t6 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	// test valid coinbase transaction
 	assert.True(t, t5.Verify(UTXOIndex{}, 5))
+	// test coinbase transaction with incorrect blockHeight
 	assert.False(t, t5.Verify(UTXOIndex{}, 10))
-	assert.False(t, t6.Verify(UTXOIndex{}, 0))
-
+	// test coinbase transaction with incorrect subsidy
 	txin := TXInput{nil, -1, nil, []byte(nil)}
 	txout := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
 	var t7 = Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}

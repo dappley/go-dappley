@@ -148,15 +148,9 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
-		// return false if output value of Coinbase transaction is not default
 		if tx.Vout[0].Value != subsidy {
 			return false
 		}
-		// return false if block height is invalid
-		if blockHeight <= 0 {
-			return false
-		}
-		//verify signature of the transaction
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 		if blockHeight != bh {
 			return false
