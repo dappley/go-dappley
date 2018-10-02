@@ -111,6 +111,18 @@ func TestVerify(t *testing.T) {
 	prevTXs[string(t2.ID)] = t3
 	prevTXs[string(t3.ID)] = t4
 
+	// test verifying coinbase transactions
+	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5)
+	var t6 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	assert.True(t, t5.Verify(UTXOIndex{}, 5))
+	assert.False(t, t5.Verify(UTXOIndex{}, 10))
+	assert.False(t, t6.Verify(UTXOIndex{}, 0))
+
+	txin := TXInput{nil, -1, nil, []byte(nil)}
+	txout := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
+	var t7 = Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
+	assert.False(t, t7.Verify(UTXOIndex{}, 5))
+
 }
 
 func TestNewCoinbaseTX(t *testing.T) {

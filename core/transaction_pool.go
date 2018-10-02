@@ -120,7 +120,8 @@ func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
 
 func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
 	txPool.Traverse(func(tx Transaction) bool {
-		return tx.Verify(utxoPool) // TODO: also check if amount is valid
+		return tx.Verify(utxoPool, 0) // all transactions in transaction pool have no blockHeight
+		// TODO: also check if amount is valid
 	})
 }
 

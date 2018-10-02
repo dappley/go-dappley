@@ -59,7 +59,7 @@ type TxIndex struct {
 }
 
 func (tx Transaction) IsCoinbase() bool {
-	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
+	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1 && len(tx.Vout) == 1
 }
 
 // Serialize returns a serialized Transaction
@@ -144,10 +144,23 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
-//return true if the transaction is verified
-func (tx *Transaction) Verify(utxo UTXOIndex) bool {
+// Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
+func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
+		// return false if output value of Coinbase transaction is not default
+		if tx.Vout[0].Value != subsidy {
+			return false
+		}
+		// return false if block height is invalid
+		if blockHeight <= 0 {
+			return false
+		}
+		//verify signature of the transaction
+		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
+		if blockHeight != bh {
+			return false
+		}
 		return true
 	}
 
@@ -158,7 +171,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex) bool {
 	return tx.VerifySignatures(prevUtxos)
 }
 
-// Verify verifies signatures of Transaction inputs
+// VerifySignatures verifies signatures of Transaction inputs
 func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 
 	var verifyResult bool
