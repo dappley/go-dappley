@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"encoding/binary"
 )
 
 func getAoB(length int64) []byte {
@@ -118,7 +119,9 @@ func TestVerify(t *testing.T) {
 	// test coinbase transaction with incorrect blockHeight
 	assert.False(t, t5.Verify(UTXOIndex{}, 10))
 	// test coinbase transaction with incorrect subsidy
-	txin := TXInput{nil, -1, nil, []byte(nil)}
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, 5)
+	txin := TXInput{nil, -1, bh, []byte(nil)}
 	txout := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
 	var t7 = Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	assert.False(t, t7.Verify(UTXOIndex{}, 5))
