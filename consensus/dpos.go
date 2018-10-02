@@ -190,6 +190,7 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 		return true
 	}
 
+	logger.Warn("DPoS: Address is not current producer's")
 	return false
 
 }
