@@ -21,7 +21,6 @@
 package logic
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -272,7 +271,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 
 	//firstNode Starts Mining
 	dposArray[0].Start()
-	for bcs[0].GetMaxHeight() < 5{
+	for bcs[0].GetMaxHeight() < 5 {
 
 	}
 
@@ -283,7 +282,6 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 			heights[i]++
 			return true
 		})
-		fmt.Println(i)
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
 	}
