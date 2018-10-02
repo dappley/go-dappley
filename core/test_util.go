@@ -132,7 +132,7 @@ func GenerateMockForkWithValidTx(size int, parent *Block) []*Block {
 	}
 	return fork
 }
-func GenerateMockTransactionForkWithValidSignature(db *storage.RamStorage, address1, address2 Address, sendAmount *common.Amount, keyPair KeyPair, bc *Blockchain) Transaction {
+func GenerateMockTransactionForkWithValidSignature(db storage.Storage, address1, address2 Address, sendAmount *common.Amount, keyPair KeyPair, bc *Blockchain) Transaction {
 	tx, _ := NewUTXOTransaction(db, address1, address2, sendAmount, keyPair, bc, 0)
 	return tx
 }

@@ -19,14 +19,18 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/common"
+	"bytes"
+	"crypto/ecdsa"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/util"
+	"encoding/binary"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"encoding/binary"
+
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/util"
 )
 
 func getAoB(length int64) []byte {
@@ -78,6 +82,95 @@ func TestTrimmedCopy(t *testing.T) {
 		assert.Equal(t, t3.Vin[index].Txid, vin.Txid)
 		assert.Equal(t, t3.Vin[index].Vout, vin.Vout)
 	}
+}
+
+func TestSign(t *testing.T) {
+	// Fake a key pair
+	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
+	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
+	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
+	pubKeyHash, _ := HashPubKey(pubKey)
+	address := KeyPair{*privKey, pubKey}.GenerateAddress()
+
+	// Previous transactions containing UTXO of the address
+	prevTXs := map[string]Transaction{
+		"01": NewCoinbaseTX(address.Address, "", 1),
+		"02": NewCoinbaseTX(address.Address, "", 2),
+		"03": {
+			[]byte{3},
+			[]TXInput{},
+			[]TXOutput{
+				*NewTXOutput(common.NewAmount(3), address.Address),
+				*NewTXOutput(common.NewAmount(4), address.Address),
+				*NewTXOutput(common.NewAmount(6), address.Address),
+			},
+			0,
+		},
+	}
+
+	// New transaction to be signed (paid from the fake account)
+	txin := []TXInput{
+		{[]byte{1}, 0, nil, pubKeyHash},
+		{[]byte{3}, 0, nil, pubKeyHash},
+		{[]byte{3}, 2, nil, pubKeyHash},
+	}
+	txout := []TXOutput{
+		{common.NewAmount(19), pubKeyHash},
+	}
+	tx := Transaction{nil, txin, txout, 0}
+
+	// Sign the transaction
+	tx.Sign(*privKey, prevTXs)
+
+	// Assert that the signatures were created by the fake key pair
+	for i, vin := range tx.Vin {
+		if assert.NotNil(t, vin.Signature) {
+			txCopy := tx.TrimmedCopy()
+			txCopy.Vin[i].Signature = nil
+			txCopy.Vin[i].PubKey = pubKeyHash
+
+			verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
+			assert.Nil(t, err)
+			assert.True(t, verified)
+		}
+	}
+}
+
+func TestSign_Invalid(t *testing.T) {
+	// Fake a key pair
+	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
+	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
+	pubKeyHash, _ := HashPubKey(pubKey)
+	address := KeyPair{*privKey, pubKey}.GenerateAddress()
+
+	// Previous transactions containing UTXO of the address
+	prevTXs := map[string]Transaction{"01": NewCoinbaseTX(address.Address, "", 1)}
+
+	// New transaction to be signed (paid from the fake account)
+	txin := []TXInput{{[]byte{1}, 0, nil, pubKeyHash}}
+	txin1 := append(txin, TXInput{[]byte{1}, 1, nil, pubKeyHash}) // Invalid
+	txin2 := append(txin, TXInput{[]byte{3}, 2, nil, pubKeyHash}) // Invalid
+	txout := []TXOutput{{common.NewAmount(16), pubKeyHash}}
+
+	tests := []struct {
+		name string
+		tx	Transaction
+		privKey ecdsa.PrivateKey
+	}{
+		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey},
+		{"Previous tx not found", Transaction{nil, txin2, txout, 0}, *privKey},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.tx.Sign(tt.privKey, prevTXs)
+
+			// Assert that the signatures are still nil
+			for _, vin := range tt.tx.Vin {
+				assert.Nil(t, vin.Signature)
+			}
+		})
+	}
+
 }
 
 func TestVerify(t *testing.T) {

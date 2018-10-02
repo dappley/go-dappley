@@ -89,6 +89,7 @@ func (tx *Transaction) Hash() []byte {
 
 // Sign signs each input of a Transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+	// TODO: make Sign() return error
 	if tx.IsCoinbase() {
 		return
 	}
@@ -96,6 +97,10 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
 			logger.Error("ERROR: Previous transaction is not correct")
+			return
+		}
+		if vin.Vout >= len(prevTXs[hex.EncodeToString(vin.Txid)].Vout) {
+			logger.Error("ERROR: Input of the transaction not found in previous transactions")
 			return
 		}
 	}
