@@ -34,6 +34,18 @@ func (m *MockConsensus) EXPECT() *MockConsensusMockRecorder {
 	return m.recorder
 }
 
+// CheckDoubleMint mocks base method
+func (m *MockConsensus) CheckDoubleMint(arg0 *core.Block) bool {
+	ret := m.ctrl.Call(m, "CheckDoubleMint", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CheckDoubleMint indicates an expected call of CheckDoubleMint
+func (mr *MockConsensusMockRecorder) CheckDoubleMint(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDoubleMint", reflect.TypeOf((*MockConsensus)(nil).CheckDoubleMint), arg0)
+}
+
 // SetKey mocks base method
 func (m *MockConsensus) SetKey(arg0 string) {
 	m.ctrl.Call(m, "SetKey", arg0)

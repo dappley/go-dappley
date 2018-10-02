@@ -22,12 +22,12 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/util"
-	"github.com/hashicorp/golang-lru"
-	logger "github.com/sirupsen/logrus"
-	"strings"
 	"time"
+	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"fmt"
+	"github.com/dappley/go-dappley/util"
+	"strings"
 )
 
 const version = byte(0x00)
