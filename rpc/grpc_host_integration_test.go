@@ -73,11 +73,11 @@ func TestRpcSend(t *testing.T) {
 	client.RemoveTestWalletFile()
 
 	// Create wallets
-	senderWallet, err := logic.CreateWallet()
+	senderWallet, err := logic. CreateWalletWithPathPassword(logic.GetClientTestWalletFilePath(), "test")
 	if err != nil {
 		panic(err)
 	}
-	receiverWallet, err := logic.CreateWallet()
+	receiverWallet, err := logic. CreateWalletWithPathPassword(logic.GetClientTestWalletFilePath(), "test")
 	if err != nil {
 		panic(err)
 	}
@@ -114,6 +114,7 @@ func TestRpcSend(t *testing.T) {
 		From: senderWallet.GetAddress().Address,
 		To: receiverWallet.GetAddress().Address,
 		Amount: common.NewAmount(7).Bytes(),
+		Walletpath: logic.GetClientTestWalletFilePath(),
 	})
 	assert.Nil(t, err)
 

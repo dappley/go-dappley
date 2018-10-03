@@ -132,7 +132,11 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
 
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	if len(in.Walletpath) == 0 {
+		return &rpcpb.SendResponse{Message: "Wallet path empty error"}, core.ErrInvalidAmount
+	}
+
+	fl := storage.NewFileLoader(in.Walletpath)
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 
