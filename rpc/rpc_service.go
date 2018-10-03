@@ -163,6 +163,32 @@ func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetP
 	}, nil
 }
 
+func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
+	if len(in.Address) == 0 {
+		return &rpcpb.AddProducerResponse{
+			Message: "Error: Address is empty!",
+			}, nil
+	}
+	if in.Name == "addProducer" {
+		err := rpcSerivce.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+		if err == nil {
+			return &rpcpb.AddProducerResponse{
+				Message: "Add producer sucessfully!",
+			}, nil
+		} else {
+			return &rpcpb.AddProducerResponse{
+				Message: "Error: Add producer failed! "+err.Error(),
+			}, nil
+		}
+	} else {
+		return &rpcpb.AddProducerResponse{
+			Message: "Error: Command not recognized!",
+		}, nil
+	}
+
+	return &rpcpb.AddProducerResponse{}, nil
+}
+
 func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),

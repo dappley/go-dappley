@@ -6,6 +6,7 @@ option objc_class_prefix = "HLW";
 
 service RpcService {
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
+  rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
   rpc RpcAddBalance (AddBalanceRequest) returns (AddBalanceResponse) {}
   rpc RpcGetWalletAddress (GetWalletAddressRequest) returns (GetWalletAddressResponse) {}
@@ -24,6 +25,11 @@ message CreateWalletRequest {
   string passphrase = 2;
 }
 
+message AddProducerRequest {
+  string name = 1;
+  string address = 2;
+}
+
 message GetBalanceRequest {
   string name = 1;
   string passphrase = 2;
@@ -39,7 +45,7 @@ message SendRequest {
   string from = 1;
   string to = 2;
   bytes amount = 3;
-  string walletpath = 4;
+  string Walletpath = 4;
 }
 
 message GetWalletAddressRequest {
@@ -60,6 +66,10 @@ message AddPeerRequest {
 message CreateWalletResponse {
   string message = 1;
   string address = 2;
+}
+
+message AddProducerResponse {
+  string message = 1;
 }
 
 message GetBalanceResponse {

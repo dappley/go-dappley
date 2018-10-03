@@ -18,7 +18,9 @@
 
 package core
 
-import "github.com/libp2p/go-libp2p-peer"
+import (
+	"github.com/libp2p/go-libp2p-peer"
+)
 
 type Consensus interface {
 	Validate(block *Block) bool
@@ -30,6 +32,7 @@ type Consensus interface {
 	SetTargetBit(int)
 	SetKey(string)
 	FullyStop() bool
+	AddProducer(string) error
 }
 
 type NetService interface {
