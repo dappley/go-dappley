@@ -19,6 +19,8 @@
 package core
 
 import (
+	"encoding/hex"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
@@ -103,7 +105,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 }
 
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
-	logger.Debug("BlockPool: Received a new block: ", blk.GetHash(), " From Sender: ", sender.String())
+	logger.Debug("BlockPool: Received a new block: ", hex.EncodeToString(blk.GetHash()), " From Sender: ", sender.String())
 	node, _ := pool.bc.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
 
 	blkCache := pool.blkCache
@@ -114,19 +116,19 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 			logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.GetHash(), " returning")
 			return
 		} else {
-			logger.Debug("BlockPool: Adding blk key to blockcache: ", blk.GetHash())
+			logger.Debug("BlockPool: Adding blk key to blockcache: ", hex.EncodeToString(blk.GetHash()))
 			blkCache.Add(blk.hashString(), blk)
 		}
 
 		if pool.bc.IsInBlockchain(blk.GetHash()) {
-			logger.Debug("BlockPool: Blockchain already contains blk: ", blk.GetHash(), " returning")
+			logger.Debug("BlockPool: Blockchain already contains blk: ", hex.EncodeToString(blk.GetHash()), " returning")
 			return
 		} else {
-			logger.Debug("BlockPool: Adding node key to nodecache: ", blk.GetHash())
+			logger.Debug("BlockPool: Adding node key to nodecache: ", hex.EncodeToString(blk.GetHash()))
 			nodeCache.Add(node.GetKey(), node)
 		}
 	} else {
-		logger.Debug("BlockPool: Block: ", blk.GetHash(), " did not pass consensus validation, discarding block")
+		logger.Debug("BlockPool: Block: ", hex.EncodeToString(blk.GetHash()), " did not pass consensus validation, discarding block")
 		return
 	}
 
@@ -160,22 +162,22 @@ func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
 	for _, key := range nodeCache.Keys() {
 		if possibleChild, ok := nodeCache.Get(key); ok == true {
 			if possibleChild.(*common.Node).Parent == node {
-				logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " found child Block: ", possibleChild.(*common.Node).GetValue().(*BlockHeader).hash, " in BlockPool blkCache, adding child")
+				logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " found child Block: ", hex.EncodeToString(possibleChild.(*common.Node).GetValue().(*BlockHeader).hash), " in BlockPool blkCache, adding child")
 				node.AddChild(possibleChild.(*common.Node))
 			}
 		}
 	}
 	//link parent
 	if parent, ok := nodeCache.Get(string(node.GetValue().(*BlockHeader).prevHash)); ok == true {
-		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " found parent: ", node.GetValue().(*BlockHeader).prevHash, " in BlockPool blkCache, adding parent")
+		logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " found parent: ", hex.EncodeToString(node.GetValue().(*BlockHeader).prevHash), " in BlockPool blkCache, adding parent")
 		//parent found in blkCache
 		node.AddParent(parent.(*common.Node))
 		node = parent.(*common.Node)
 	} else {
-		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " no more parent found in BlockPool blkCache")
+		logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " no more parent found in BlockPool blkCache")
 	}
 
-	logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " finished updating BlockPoolCache")
+	logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " finished updating BlockPoolCache")
 	return node
 }
 
@@ -187,13 +189,13 @@ func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
 	// parent exists on tree, add node to tree
 	prevhash := node.GetValue().(*BlockHeader).prevHash
 	if tree.Get(tree.Root, string(prevhash)); tree.Found != nil {
-		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " being added as child to parent ", node.Parent.GetValue().(*BlockHeader).hash)
+		logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " being added as child to parent ", hex.EncodeToString(node.Parent.GetValue().(*BlockHeader).hash))
 		tree.Found.AddChild(node)
 		pool.nodeCache.Remove(node)
 		return true
 	} else {
 		// parent doesnt exist on tree, download parent from sender
-		logger.Debug("BlockPool: Block: ", node.GetValue().(*BlockHeader).hash, " parent not found, proceeding to download parent: ", node.GetValue().(*BlockHeader).prevHash, " from ", sender)
+		logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " parent not found, proceeding to download parent: ", hex.EncodeToString(node.GetValue().(*BlockHeader).prevHash), " from ", sender)
 		pool.requestBlock(node.GetValue().(*BlockHeader).prevHash, sender)
 		return false
 	}

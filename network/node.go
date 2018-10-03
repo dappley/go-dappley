@@ -28,6 +28,10 @@ import (
 	"strconv"
 
 	"encoding/base64"
+	"encoding/hex"
+	"io/ioutil"
+	"sync"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
@@ -40,8 +44,6 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"sync"
 )
 
 const (
@@ -279,7 +281,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
-		logger.Debug("Node: ",n.info.peerid," broadcasting block with key ", dm.key)
+		logger.Debug("Node: ", n.info.peerid, " broadcasting block with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -392,14 +394,14 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 }
 func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
-		logger.Debug("Node: ", n.GetPeerID() ," Already received ", dm.GetKey(), " before")
+		logger.Debug("Node: ", n.GetPeerID(), " Already received ", dm.GetKey(), " before")
 		return
 	}
 
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("Node: ", n.GetPeerID() ," Received Block: Hash:", blk.GetHash(), ", Height:", blk.GetHeight())
+	logger.Debug("Node: ", n.GetPeerID(), " Received Block: Hash:", hex.EncodeToString(blk.GetHash()), ", Height:", blk.GetHeight())
 
 	n.addBlockToPool(blk, pid)
 }
