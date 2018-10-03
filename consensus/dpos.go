@@ -87,10 +87,7 @@ func (dpos *Dpos) GetDynasty() *Dynasty {
 
 func (dpos *Dpos) AddProducer(producer string) error {
 	err := dpos.dynasty.AddProducer(producer)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (dpos *Dpos) GetBlockChain() *core.Blockchain {
