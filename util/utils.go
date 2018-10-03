@@ -102,3 +102,11 @@ func GenerateRandomAoB(length int64) []byte {
 	rand.Read(token)
 	return token
 }
+
+//func GetClientWalletFilePath() string {
+//	return client.GetWalletFilePath()
+//}
+//
+//func GetClientTestWalletFilePath() string {
+//	return strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
+//}
