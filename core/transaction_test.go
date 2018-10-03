@@ -110,9 +110,9 @@ func TestSign(t *testing.T) {
 
 	// New transaction to be signed (paid from the fake account)
 	txin := []TXInput{
-		{[]byte{1}, 0, nil, pubKeyHash},
-		{[]byte{3}, 0, nil, pubKeyHash},
-		{[]byte{3}, 2, nil, pubKeyHash},
+		{[]byte{1}, 0, nil, pubKey},
+		{[]byte{3}, 0, nil, pubKey},
+		{[]byte{3}, 2, nil, pubKey},
 	}
 	txout := []TXOutput{
 		{common.NewAmount(19), pubKeyHash},
@@ -149,9 +149,9 @@ func TestSign_Invalid(t *testing.T) {
 	prevTXs := map[string]Transaction{"01": NewCoinbaseTX(address.Address, "", 1)}
 
 	// New transaction to be signed (paid from the fake account)
-	txin := []TXInput{{[]byte{1}, 0, nil, pubKeyHash}}
-	txin1 := append(txin, TXInput{[]byte{1}, 1, nil, pubKeyHash}) // Invalid
-	txin2 := append(txin, TXInput{[]byte{3}, 2, nil, pubKeyHash}) // Invalid
+	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
+	txin1 := append(txin, TXInput{[]byte{1}, 1, nil, pubKey}) // Invalid
+	txin2 := append(txin, TXInput{[]byte{3}, 2, nil, pubKey}) // Invalid
 	txout := []TXOutput{{common.NewAmount(16), pubKeyHash}}
 
 	tests := []struct {
@@ -166,7 +166,7 @@ func TestSign_Invalid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.tx.Sign(tt.privKey, prevTXs)
-			assert.Equal(t, err, tt.expectedErr)
+			assert.Equal(t, tt.expectedErr, err)
 
 			// Assert that the signatures are still nil
 			for _, vin := range tt.tx.Vin {
@@ -223,6 +223,64 @@ func TestVerify(t *testing.T) {
 	var t7 = Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	assert.False(t, t7.Verify(UTXOIndex{}, 5))
 
+}
+
+func TestVerifySignatures(t *testing.T) {
+	// Fake a key pair
+	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
+	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
+	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
+	pubKeyHash, _ := HashPubKey(pubKey)
+	address := KeyPair{*privKey, pubKey}.GenerateAddress()
+
+	// Fake a wrong key pair
+	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))
+	wrongPrivKeyByte, _ := secp256k1.FromECDSAPrivateKey(wrongPrivKey)
+	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
+	wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
+
+	// UTXO form previous transactions
+	prevTXOutputs := map[string]TXOutput{
+		"01": *NewTXOutput(common.NewAmount(3), address.Address),
+		"02": *NewTXOutput(common.NewAmount(4), address.Address),
+		"03": *NewTXOutput(common.NewAmount(4), wrongAddress.Address),
+	}
+
+	// Prepare a transaction to be verified
+	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
+	txin1 := append(txin, TXInput{[]byte{2}, 1, nil, pubKey})
+	txin2 := append(txin, TXInput{[]byte{0}, 2, nil, pubKey}) // Invalid
+	txin3 := append(txin, TXInput{[]byte{3}, 2, nil, pubKey}) // Invalid
+	txin4 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // Invalid
+	txout := []TXOutput{{common.NewAmount(7), pubKey}}
+
+	tests := []struct {
+		name string
+		tx	Transaction
+		signWith []byte
+		ok bool
+	}{
+		{"normal", Transaction{nil, txin1, txout, 0}, privKeyByte, true},
+		{"previous tx not found", Transaction{nil, txin2, txout, 0}, privKeyByte, false},
+		{"public key mismatch", Transaction{nil, txin3, txout, 0}, wrongPrivKeyByte, false},
+		{"public key mismatch2", Transaction{nil, txin4, txout, 0}, privKeyByte, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Generate signatures for all tx inputs
+			for i := range tt.tx.Vin {
+				txCopy := tt.tx.TrimmedCopy()
+				txCopy.Vin[i].Signature = nil
+				txCopy.Vin[i].PubKey = pubKeyHash
+				signature, _ := secp256k1.Sign(txCopy.Hash(), privKeyByte)
+				tt.tx.Vin[i].Signature = signature
+			}
+
+			// Verify the signatures
+			result := tt.tx.VerifySignatures(prevTXOutputs)
+			assert.Equal(t, tt.ok, result)
+		})
+	}
 }
 
 func TestNewCoinbaseTX(t *testing.T) {

@@ -172,7 +172,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 }
 
 // VerifySignatures verifies signatures of Transaction inputs
-func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
+func (tx *Transaction) VerifySignatures(prevTXOutputs map[string]TXOutput) bool {
 
 	var verifyResult bool
 	var error1 error
@@ -182,8 +182,8 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 	}
 
 	for _, vin := range tx.Vin {
-		if prevTXs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
-			logger.Error("ERROR: Previous transaction is not correct")
+		if prevTXOutputs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
+			logger.Error("Previous transaction is invalid")
 			return false
 		}
 	}
@@ -193,14 +193,14 @@ func (tx *Transaction) VerifySignatures(prevTXs map[string]TXOutput) bool {
 	curve := secp256k1.S256()
 
 	for inID, vin := range tx.Vin {
-		prevTxOut := prevTXs[hex.EncodeToString(vin.Txid)]
+		prevTXOut := prevTXOutputs[hex.EncodeToString(vin.Txid)]
 		vinPubKeyHash, _ := HashPubKey(vin.PubKey)
-		if bytes.Compare(prevTxOut.PubKeyHash, vinPubKeyHash) != 0 {
-			logger.Error("ERROR: Vout Vin public key mismatch")
+		if bytes.Compare(prevTXOut.PubKeyHash, vinPubKeyHash) != 0 {
+			logger.Error("Vout Vin public key mismatch")
 			return false
 		}
 		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
+		txCopy.Vin[inID].PubKey = prevTXOut.PubKeyHash
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
 		x := big.Int{}
