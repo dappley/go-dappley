@@ -25,7 +25,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const TransactionPoolLimit = 5
+const TransactionPoolLimit = 128
 
 type TransactionPool struct {
 	messageCh    chan string
