@@ -140,10 +140,8 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	forkParent := pool.updatePoolNodeCache(node)
 
 	if bcTailBlk.IsParentBlock(blk) {
-		// pool.blockchain.AddBlockToBlockchainTail(blk)
-		forkBlks := pool.getForkBlks()
-		//merge forkchain into blockchain
-		pool.blockchain.MergeFork(forkBlks)
+		pool.blockchain.AddBlockToBlockchainTail(blk)
+		return
 	}
 
 	//attach above partial tree to forktree
