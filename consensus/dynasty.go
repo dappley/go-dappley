@@ -21,7 +21,7 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core"
 	"bytes"
-	"github.com/pkg/errors"
+	"errors"
 	Logger "github.com/sirupsen/logrus"
 )
 
@@ -117,8 +117,7 @@ func (dynasty *Dynasty) AddProducer(producer string) error{
 		} else {
 			return errors.New("The number of producers reaches the maximum！")
 		}
-
-	}
+		}
 }
 
 func (dynasty *Dynasty) AddMultipleProducers(producers []string){

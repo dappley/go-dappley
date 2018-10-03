@@ -29,7 +29,7 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -54,7 +54,7 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 	} else if in.Name == "createWallet" {
 		passPhrase := in.Passphrase
 		if len(passPhrase) == 0 {
-			logrus.Error("CreateWallet: Password is empty!")
+			logger.Error("CreateWallet: Password is empty!")
 			msg = "Create Wallet Error: Password Empty!"
 			return &rpcpb.CreateWalletResponse{
 				Message: msg,
