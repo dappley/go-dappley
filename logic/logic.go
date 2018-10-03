@@ -53,43 +53,8 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 	return bc, nil
 }
 
-//create a wallet
-func CreateTestWallet() (*client.Wallet, error) {
-	path := strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
-	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
-	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-	wm.PassPhrase = passBytes
-	err = wm.LoadFromFile()
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-
-	return wallet, err
-}
-
-//create a wallet
-func CreateWallet() (*client.Wallet, error) {
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-	wm.PassPhrase = passBytes
-	err = wm.LoadFromFile()
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-
-	return wallet, err
-}
-
 //create a wallet from path
-func CreateWalletWithPath(path string, password string) (*client.Wallet, error) {
+func CreateWalletWithPathPassword(path string, password string) (*client.Wallet, error) {
 	if len(path) == 0 {
 		return nil, ErrPathEmpty
 	}
