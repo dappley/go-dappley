@@ -292,7 +292,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("Node: BroadcastBlock: Hash:", block.GetHash(), ", Height:", block.GetHeight())
+	logger.Debug("Node: BroadcastBlock: Hash:", hex.EncodeToString(block.GetHash()), ", Height:", block.GetHeight())
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
 	if err != nil {
 		return err
