@@ -120,18 +120,20 @@ func TestSign(t *testing.T) {
 	tx := Transaction{nil, txin, txout, 0}
 
 	// Sign the transaction
-	tx.Sign(*privKey, prevTXs)
+	err := tx.Sign(*privKey, prevTXs)
 
-	// Assert that the signatures were created by the fake key pair
-	for i, vin := range tx.Vin {
-		if assert.NotNil(t, vin.Signature) {
-			txCopy := tx.TrimmedCopy()
-			txCopy.Vin[i].Signature = nil
-			txCopy.Vin[i].PubKey = pubKeyHash
+	if assert.Nil(t, err) {
+		// Assert that the signatures were created by the fake key pair
+		for i, vin := range tx.Vin {
+			if assert.NotNil(t, vin.Signature) {
+				txCopy := tx.TrimmedCopy()
+				txCopy.Vin[i].Signature = nil
+				txCopy.Vin[i].PubKey = pubKeyHash
 
-			verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
-			assert.Nil(t, err)
-			assert.True(t, verified)
+				verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
+				assert.Nil(t, err)
+				assert.True(t, verified)
+			}
 		}
 	}
 }
@@ -156,13 +158,15 @@ func TestSign_Invalid(t *testing.T) {
 		name string
 		tx	Transaction
 		privKey ecdsa.PrivateKey
+		expectedErr error
 	}{
-		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey},
-		{"Previous tx not found", Transaction{nil, txin2, txout, 0}, *privKey},
+		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey, ErrTXInputNotFound},
+		{"Previous tx not found", Transaction{nil, txin2, txout, 0}, *privKey, ErrTXInputNotFound},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.tx.Sign(tt.privKey, prevTXs)
+			err := tt.tx.Sign(tt.privKey, prevTXs)
+			assert.Equal(t, err, tt.expectedErr)
 
 			// Assert that the signatures are still nil
 			for _, vin := range tt.tx.Vin {
