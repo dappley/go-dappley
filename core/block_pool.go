@@ -39,9 +39,9 @@ type RcvedBlock struct {
 type BlockPool struct {
 	blockRequestCh chan BlockRequestPars
 	size           int
-	bc             *Blockchain
+	blockchain     *Blockchain
 	blkCache       *lru.Cache //cache of full blks
-	nodeCache       *lru.Cache //cache of tree nodes that contain blk header as value
+	nodeCache      *lru.Cache //cache of tree nodes that contain blk header as value
 
 }
 
@@ -50,7 +50,7 @@ func NewBlockPool(size int) *BlockPool {
 	pool := &BlockPool{
 		size:           size,
 		blockRequestCh: make(chan BlockRequestPars, size),
-		bc:             nil,
+		blockchain:     nil,
 	}
 	pool.blkCache,_ = lru.New(BlockPoolLRUCacheLimit)
 	pool.nodeCache,_ = lru.New(BlockPoolLRUCacheLimit)
@@ -59,7 +59,7 @@ func NewBlockPool(size int) *BlockPool {
 }
 
 func (pool *BlockPool) SetBlockchain(bc *Blockchain) {
-	pool.bc = bc
+	pool.blockchain = bc
 }
 
 func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
@@ -67,7 +67,7 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 }
 
 func (pool *BlockPool) GetBlockchain() *Blockchain {
-	return pool.bc
+	return pool.blockchain
 }
 
 //Verify all transactions in a fork
@@ -78,8 +78,8 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 			return false
 		}
 		logger.Info("Verifyed a block. Height: ", forkBlks[i].GetHeight(), "Have ", i, "block left")
-		utxoIndex := LoadUTXOIndex(pool.bc.GetDb())
-		utxoIndex.BuildForkUtxoIndex(forkBlks[i], pool.bc.GetDb())
+		utxoIndex := LoadUTXOIndex(pool.blockchain.GetDb())
+		utxoIndex.BuildForkUtxoIndex(forkBlks[i], pool.blockchain.GetDb())
 	}
 	return true
 }
@@ -93,7 +93,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 		return
 	}
 
-	if !(pool.bc.GetConsensus().VerifyBlock(block)) {
+	if !(pool.blockchain.GetConsensus().VerifyBlock(block)) {
 		logger.Debug("BlockPool: Verify Signature failed!")
 		return
 	}
@@ -105,12 +105,12 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 	logger.Debug("BlockPool: Received a new block: ", blk.GetHash(), " From Sender: ", sender.String())
-	node,_ := pool.bc.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
+	node,_ := pool.blockchain.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
 
 	blkCache := pool.blkCache
 	nodeCache := pool.nodeCache
 
-	if   pool.bc.consensus.Validate(blk) {
+	if   pool.blockchain.consensus.Validate(blk) {
 		if blkCache.Contains(blk.hashString()){
 			logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.GetHash(), " returning")
 			return
@@ -119,7 +119,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 			blkCache.Add(blk.hashString(), blk)
 		}
 
-		if pool.bc.IsInBlockchain(blk.GetHash()){
+		if pool.blockchain.IsInBlockchain(blk.GetHash()){
 			logger.Debug("BlockPool: Blockchain already contains blk: ", blk.GetHash(), " returning")
 			return
 		}else{
@@ -139,7 +139,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 	}
 
 	if bcTailBlk.IsParentBlock(blk){
-		pool.bc.AddBlockToBlockchainTail(blk)
+		pool.blockchain.AddBlockToBlockchainTail(blk)
 		return
 	}
 	//build partial tree in bpcache
@@ -149,7 +149,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID)  {
 		//build forkchain based on highest leaf in tree
 		forkBlks := pool.getForkBlks()
 		//merge forkchain into blockchain
-		pool.bc.MergeFork(forkBlks)
+		pool.blockchain.MergeFork(forkBlks)
 	}
 
 }
@@ -183,7 +183,7 @@ func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
 
 func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
 
-	bc := pool.bc
+	bc := pool.blockchain
 	tree := bc.forkTree
 
 	// parent exists on tree, add node to tree
@@ -204,16 +204,16 @@ func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
 
 func (pool *BlockPool) getForkBlks() []*Block {
 	var forkblks []*Block
-	tree := pool.bc.forkTree
+	tree := pool.blockchain.forkTree
 	forkTailNode := tree.HighestLeaf
-	bc := pool.bc
+	bc := pool.blockchain
 	tree.Get(tree.Root, string(bc.GetTailBlockHash()))
 	bcTailInTree := tree.Found
 	tree.FindCommonParent(forkTailNode, bcTailInTree)
 	forkParentHash :=tree.Found.GetValue().(*BlockHeader).hash
 
 	if tree.Found != nil {
-		logger.Debug("Blockpool: no common parent found between fork tail and bc tail")
+		logger.Debug("Blockpool: no common parent found between fork tail and blockchain tail")
 		for  {
 			if IsHashEqual(forkTailNode.GetValue().(*BlockHeader).hash , forkParentHash ){
 				break
