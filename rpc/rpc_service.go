@@ -29,7 +29,7 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -54,7 +54,7 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 	} else if in.Name == "createWallet" {
 		passPhrase := in.Passphrase
 		if len(passPhrase) == 0 {
-			logrus.Error("CreateWallet: Password is empty!")
+			logger.Error("CreateWallet: Password is empty!")
 			msg = "Create Wallet Error: Password Empty!"
 			return &rpcpb.CreateWalletResponse{
 				Message: msg,
@@ -157,6 +157,32 @@ func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetP
 	return &rpcpb.GetPeerInfoResponse{
 		PeerList: rpcSerivce.node.GetPeerList().ToProto().(*networkpb.Peerlist),
 	}, nil
+}
+
+func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
+	if len(in.Address) == 0 {
+		return &rpcpb.AddProducerResponse{
+			Message: "Error: Address is empty!",
+			}, nil
+	}
+	if in.Name == "addProducer" {
+		err := rpcSerivce.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+		if err == nil {
+			return &rpcpb.AddProducerResponse{
+				Message: "Add producer sucessfully!",
+			}, nil
+		} else {
+			return &rpcpb.AddProducerResponse{
+				Message: "Error: Add producer failed! "+err.Error(),
+			}, nil
+		}
+	} else {
+		return &rpcpb.AddProducerResponse{
+			Message: "Error: Command not recognized!",
+		}, nil
+	}
+
+	return &rpcpb.AddProducerResponse{}, nil
 }
 
 func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {

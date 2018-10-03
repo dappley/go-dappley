@@ -230,7 +230,7 @@ func TestDynasty_IsMyTurnByIndex(t *testing.T) {
 		{
 			name: 		"isMyTurn",
 			index:		2,
-			now: 		75,
+			now: 		105,
 			expected:	true,
 		},
 		{
