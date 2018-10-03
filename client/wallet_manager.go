@@ -31,6 +31,7 @@ import (
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"strings"
+	"sync"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -39,6 +40,7 @@ type WalletManager struct {
 	Wallets  	[]*Wallet
 	fileLoader 	storage.FileStorage
 	PassPhrase []byte
+	mutex sync.Mutex
 }
 
 type WalletData struct {
@@ -63,6 +65,8 @@ func NewWalletManager(fileLoader storage.FileStorage) *WalletManager{
 
 func (wm *WalletManager) LoadFromFile() error{
 
+	wm.mutex.Lock()
+	defer wm.mutex.Unlock()
 	fileContent, err := wm.fileLoader.ReadFromFile()
 
 	if err != nil {
@@ -89,7 +93,8 @@ func (wm *WalletManager) LoadFromFile() error{
 // SaveToFile saves Wallets to a file
 func (wm *WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
-
+	wm.mutex.Lock()
+	defer 	wm.mutex.Unlock()
 	gob.Register(bitelliptic.S256())
 	encoder := gob.NewEncoder(&content)
 	walletdata := WalletData{}
@@ -99,7 +104,8 @@ func (wm *WalletManager) SaveWalletToFile() {
 	if err != nil {
 		logger.Error("WalletManager: save Wallets to file failed!")
 		logger.Error(err)
-	}
+		}
+
 	wm.fileLoader.SaveToFile(content)
 }
 
@@ -122,12 +128,17 @@ func RemoveTestWalletFile(){
 }
 
 func (wm *WalletManager) AddWallet(wallet *Wallet){
+	wm.mutex.Lock()
 	wm.Wallets = append(wm.Wallets, wallet)
+	wm.mutex.Unlock()
 }
 
 
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
+
+	wm.mutex.Lock()
+	defer 	wm.mutex.Unlock()
 
 	for _, wallet := range wm.Wallets {
 		addresses = append(addresses, wallet.GetAddresses()...)
@@ -143,10 +154,12 @@ func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, 
 	if err != nil {
 		return nil, errors.New("Password not correct!")
 	}
+	wm.mutex.Lock()
 	for _, wallet := range wm.Wallets {
 		address := wallet.GetAddresses()[0].Address
 		addresses = append(addresses, address)
 	}
+	wm.mutex.Unlock()
 
 	return addresses, nil
 }
@@ -162,6 +175,9 @@ func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair
 }
 
 func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
+	wm.mutex.Lock()
+	defer 	wm.mutex.Unlock()
+
 	for _, wallet := range wm.Wallets {
 		if wallet.ContainAddress(address) {
 			return wallet
@@ -171,6 +187,9 @@ func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 }
 
 func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
+	wm.mutex.Lock()
+	defer 	wm.mutex.Unlock()
+
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err == nil {
 		wallet := wm.GetWalletByAddress(address)
