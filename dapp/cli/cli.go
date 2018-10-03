@@ -34,6 +34,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/config/pb"
 	"strings"
+	"github.com/dappley/go-dappley/logic"
 )
 
 //command names
@@ -456,6 +457,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		From: *(flags[flagFromAddress].(*string)),
 		To: *(flags[flagToAddress].(*string)),
 		Amount: common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+		Walletpath: logic.GetClientWalletFilePath(),
 	})
 	if err!=nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
