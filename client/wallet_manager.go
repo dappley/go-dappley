@@ -32,6 +32,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"strings"
 	"sync"
+	"time"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -41,6 +42,8 @@ type WalletManager struct {
 	fileLoader 	storage.FileStorage
 	PassPhrase []byte
 	mutex sync.Mutex
+	timer time.Timer
+	Locked bool
 }
 
 type WalletData struct {
@@ -60,7 +63,7 @@ func GetWalletFilePath() string{
 func NewWalletManager(fileLoader storage.FileStorage) *WalletManager{
 	return &WalletManager{
 		fileLoader: fileLoader,
-	}
+		}
 }
 
 func (wm *WalletManager) LoadFromFile() error{
@@ -136,9 +139,6 @@ func (wm *WalletManager) AddWallet(wallet *Wallet){
 
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
-
-	wm.mutex.Lock()
-	defer 	wm.mutex.Unlock()
 
 	for _, wallet := range wm.Wallets {
 		addresses = append(addresses, wallet.GetAddresses()...)

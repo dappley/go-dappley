@@ -70,6 +70,7 @@ func CreateWalletWithPathPassword(path string, password string) (*client.Wallet,
 		return nil, err
 	}
 	wm.PassPhrase = passBytes
+	wm.Locked = true
 	err = wm.LoadFromFile()
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
@@ -118,6 +119,7 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 		logger.Info("Wallet password set!")
 		wallet := client.NewWallet()
 		wm.AddWallet(wallet)
+		wm.Locked = true
 		wm.SaveWalletToFile()
 		return wallet, err
 	}
