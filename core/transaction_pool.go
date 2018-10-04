@@ -39,7 +39,7 @@ func NewTransactionPool() *TransactionPool {
 		messageCh: make(chan string, 128),
 		size:      128,
 	}
-	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, txPool.StructDelete)
+	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips)
 	return txPool
 }
 
@@ -80,7 +80,7 @@ func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
 		if !txHandler(tx) {
-			txPool.Transactions.StructDelete(tx)
+			txPool.StructDelete(tx)
 		}
 	}
 }

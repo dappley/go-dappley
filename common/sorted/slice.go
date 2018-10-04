@@ -21,21 +21,16 @@ package sorted
 // Cmp function, a < b -> -1, a == b -> 0, a > b -> 1
 type Cmp func(a interface{}, b interface{}) int
 
-type StructDelete func (a interface{})
-
 // Slice is a sorted array
 type Slice struct {
 	content []interface{}
 	cmp     Cmp
-	StructDelete StructDelete
-
 }
 
 // NewSlice return a new slice
-func NewSlice(cmp Cmp, structDelete StructDelete) *Slice {
+func NewSlice(cmp Cmp) *Slice {
 	return &Slice{
 		cmp: cmp,
-		StructDelete: structDelete,
 	}
 }
 
