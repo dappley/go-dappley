@@ -38,7 +38,7 @@ func testCmp(a interface{}, b interface{}) int {
 
 
 func TestSlice(t *testing.T) {
-	slice := NewSlice(testCmp, func(a interface{}) {}, func(a interface{}) {})
+	slice := NewSlice(testCmp, func(a interface{}) {})
 	slice.Push(3)
 	slice.Push(2)
 	slice.Push(4)

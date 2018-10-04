@@ -64,12 +64,12 @@ var popInputOrder = []struct {
 //transaction pool push function
 func TestTxPoolPush(t *testing.T) {
 	txPool := NewTransactionPool()
-	txPool.Transactions.StructPush(t1)
+	txPool.Push(t1)
 	assert.Equal(t, 1, txPool.Transactions.Len())
-	txPool.Transactions.StructPush(t2)
+	txPool.Push(t2)
 	assert.Equal(t, 2, txPool.Transactions.Len())
-	txPool.Transactions.StructPush(t3)
-	txPool.Transactions.StructPush(t4)
+	txPool.Push(t3)
+	txPool.Push(t4)
 	assert.Equal(t, 4, txPool.Transactions.Len())
 }
 
@@ -78,7 +78,7 @@ func TestTranstionPoolPop(t *testing.T) {
 		var popOrder = []uint64{}
 		txPool := NewTransactionPool()
 		for _, tx := range tt.order {
-			txPool.Transactions.StructPush(tx)
+			txPool.Transactions.Push(tx)
 		}
 		for txPool.Transactions.Len() > 0 {
 			popOrder = append(popOrder, txPool.Transactions.PopRight().(Transaction).Tip)
@@ -94,7 +94,7 @@ func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
 	for i:=0 ;i<totalTx;i++{
 		tx := MockTransaction()
 		txs = append(txs, tx)
-		txPool.StructPush(*tx)
+		txPool.Push(*tx)
 	}
 	txPool.RemoveMultipleTransactions(txs)
 

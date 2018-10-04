@@ -23,23 +23,19 @@ type Cmp func(a interface{}, b interface{}) int
 
 type StructDelete func (a interface{})
 
-type StructPush func (a interface{})
-
 // Slice is a sorted array
 type Slice struct {
 	content []interface{}
 	cmp     Cmp
 	StructDelete StructDelete
-	StructPush StructPush
 
 }
 
 // NewSlice return a new slice
-func NewSlice(cmp Cmp, structDelete StructDelete, structPush StructPush) *Slice {
+func NewSlice(cmp Cmp, structDelete StructDelete) *Slice {
 	return &Slice{
 		cmp: cmp,
 		StructDelete: structDelete,
-		StructPush: structPush,
 	}
 }
 
