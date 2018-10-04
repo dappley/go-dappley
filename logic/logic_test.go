@@ -228,5 +228,4 @@ func teardown() {
 
 func cleanUpDatabase() {
 	client.RemoveWalletFile()
-	client.RemoveTestWalletFile()
 }
