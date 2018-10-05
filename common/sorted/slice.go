@@ -21,16 +21,21 @@ package sorted
 // Cmp function, a < b -> -1, a == b -> 0, a > b -> 1
 type Cmp func(a interface{}, b interface{}) int
 
+// Equal returns true if a and b are deemed the same, false otherwise
+type Equal func(a interface{}, b interface{}) bool
+
 // Slice is a sorted array
 type Slice struct {
 	content []interface{}
 	cmp     Cmp
+	eq		Equal
 }
 
 // NewSlice return a new slice
-func NewSlice(cmp Cmp) *Slice {
+func NewSlice(cmp Cmp, eq Equal) *Slice {
 	return &Slice{
 		cmp: cmp,
+		eq: eq,
 	}
 }
 
@@ -69,7 +74,7 @@ func (s *Slice) Push(val interface{}) {
 // Del the given value
 func (s *Slice) Del(val interface{}) {
 	for k, v := range s.content {
-		if v == val {
+		if s.eq(v, val) {
 			var content []interface{}
 			content = append(content, s.content[k+1:]...)
 			content = append(s.content[0:k], content...)

@@ -39,7 +39,7 @@ func NewTransactionPool() *TransactionPool {
 		messageCh: make(chan string, 128),
 		size:      128,
 	}
-	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips)
+	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, match)
 	return txPool
 }
 
@@ -55,22 +55,14 @@ func CompareTransactionTips(a interface{}, b interface{}) int {
 	}
 }
 
-func (txPool *TransactionPool) StructDelete(tx interface{}) {
-	for k, v := range txPool.Transactions.Get() {
-		if bytes.Compare(v.(Transaction).ID, tx.(Transaction).ID) == 0 {
-
-			var content []interface{}
-			content = append(content, txPool.Transactions.Get()[k+1:]...)
-			content = append(txPool.Transactions.Get()[0:k], content...)
-			txPool.Transactions.Set(content)
-			return
-		}
-	}
+// match returns true if a and b are Transactions and they have the same ID, false otherwise
+func match(a interface{}, b interface{}) bool {
+	return bytes.Compare(a.(Transaction).ID, b.(Transaction).ID) == 0
 }
 
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	for _, tx := range txs {
-		txPool.StructDelete(*tx)
+		txPool.Transactions.Del(*tx)
 	}
 }
 
@@ -80,7 +72,7 @@ func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
 		if !txHandler(tx) {
-			txPool.StructDelete(tx)
+			txPool.Transactions.Del(tx)
 		}
 	}
 }
