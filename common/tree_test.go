@@ -33,7 +33,7 @@ func setupIntTree() (*Tree, int) {
 	len := 10000
 	//add 10000 nodes unto the tree
 	for i := 1; i < len; i++ {
-		newNode := Node{[]Entry{Entry{i, i}}, parent, nil, parent.Height + 1, tree}
+		newNode := Node{Entry{i, i}, parent, nil, parent.Height + 1, tree}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
 		if getBool() {
@@ -65,7 +65,7 @@ func Test_RecursiveFind(t *testing.T) {
 	//run find lots of times
 	for i := 5000; i < 5050; i++ {
 		tree.Get(tree.Root, i)
-		assert.Equal(t, i, tree.Found.entries[0].value)
+		assert.Equal(t, i, tree.Found.entry.value)
 	}
 }
 
@@ -93,7 +93,7 @@ func Test_AddParent(t *testing.T) {
 	//check root case
 	child := tree.Root
 	child.AddParent(nodeToAdd)
-	assert.Equal(t, nodeToAdd.entries[0].key, tree.Root.entries[0].key)
+	assert.Equal(t, nodeToAdd.entry.key, tree.Root.entry.key)
 
 	//check invalid case
 	tree.Get(tree.Root, "u")

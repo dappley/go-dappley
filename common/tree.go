@@ -40,7 +40,7 @@ const LeafsSize = 32
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
 type Node struct {
-	entries  []Entry
+	entry    Entry
 	Parent   *Node
 	Children []*Node
 	Height   uint64
@@ -66,7 +66,6 @@ func (n *Node) hasChildren() bool {
 func (parent *Node) AddChild(child *Node) {
 
 	parent.Children = append(parent.Children, child)
-	parent.entries = append(parent.entries, child.entries[0])
 	child.Parent = parent
 	//remove index from leafs if was leaf
 	parentKey := parent.GetKey()
@@ -84,11 +83,11 @@ func (parent *Node) AddChild(child *Node) {
 }
 
 func (n *Node) GetValue() interface{} {
-	return n.entries[0].value
+	return n.entry.value
 }
 
 func (n *Node) GetKey() interface{} {
-	return n.entries[0].key
+	return n.entry.key
 }
 
 func (n *Node) AddParent(parent *Node) error {
@@ -105,7 +104,7 @@ func (n *Node) AddParent(parent *Node) error {
 
 func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree {
 	t := &Tree{nil, 1, nil, false, nil, nil}
-	r := Node{[]Entry{Entry{rootNodeIndex, rootNodeValue}}, nil, nil, 1, t}
+	r := Node{Entry{rootNodeIndex, rootNodeValue}, nil, nil, 1, t}
 	t.Root = &r
 	t.leafs, _ = lru.New(LeafsSize)
 	return t
@@ -115,7 +114,7 @@ func (t *Tree) NewNode(index interface{}, value interface{}, height uint64) (*No
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Node{[]Entry{Entry{index, value}}, nil, nil, height, t}, nil
+	return &Node{Entry{index, value}, nil, nil, height, t}, nil
 }
 
 func (t *Tree) RecursiveFind(parent *Node, index interface{}) {
