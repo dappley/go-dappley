@@ -149,8 +149,6 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 	//attach above partial tree to forktree
 	if ok := pool.updateForkTree(forkParent, sender); ok == true {
-		forkBlks := pool.getForkBlks()
-		pool.blockchain.MergeFork(forkBlks)
 	}
 
 }
@@ -229,30 +227,6 @@ func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
 		pool.requestBlock(node.GetValue().(*BlockHeader).prevHash, sender)
 		return false
 	}
-}
-
-func (pool *BlockPool) getForkBlks() []*Block {
-	var forkblks []*Block
-	tree := pool.blockchain.forkTree
-	forkTailNode := tree.HighestLeaf
-	bc := pool.blockchain
-	tree.Get(tree.Root, string(bc.GetTailBlockHash()))
-	bcTailInTree := tree.Found
-	tree.FindCommonParent(forkTailNode, bcTailInTree)
-	forkParentHash := tree.Found.GetValue().(*BlockHeader).hash
-
-	if tree.Found != nil {
-		logger.Debug("Blockpool: no common parent found between fork tail and blockchain tail")
-		for {
-			if IsHashEqual(forkTailNode.GetValue().(*BlockHeader).hash, forkParentHash) {
-				break
-			}
-			blk := pool.getBlkFromBlkCache(string(forkTailNode.GetValue().(BlockHeader).hash))
-			forkblks = append(forkblks, blk)
-			forkTailNode = forkTailNode.Parent
-		}
-	}
-	return forkblks
 }
 
 func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {

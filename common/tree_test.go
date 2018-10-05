@@ -16,27 +16,27 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-
 package common
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"strings"
 	"math/rand"
+	"strings"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func setupIntTree() (*Tree, int) {
-	tree:= NewTree(0,0)
+	tree := NewTree(0, 0)
 	parent := tree.Root
 	len := 10000
 	//add 10000 nodes unto the tree
-	for i:=1;i<len;i++  {
-		newNode := Node{[]Entry{Entry{i,i}},parent,nil, parent.Height+1, tree}
+	for i := 1; i < len; i++ {
+		newNode := Node{[]Entry{Entry{i, i}}, parent, nil, parent.Height + 1, tree}
 		parent.Children = append(parent.Children, &newNode)
 		//if is true, create a new branch, else build existing branch
-		if(getBool()){
+		if getBool() {
 			parent = &newNode
 			tree.MaxHeight++
 		}
@@ -44,121 +44,62 @@ func setupIntTree() (*Tree, int) {
 	return tree, len
 }
 
-func setupAlphabetTree() (*Tree, int){
-	alphabets:= "abcdefghijklmnopqrstuvwxyz"
+func setupAlphabetTree() (*Tree, int) {
+	alphabets := "abcdefghijklmnopqrstuvwxyz"
 	alphabetSlice := strings.Split(alphabets, "")
-	tree:= NewTree("a","a")
+	tree := NewTree("a", "a")
 	parent := tree.Root
 	//add 26 nodes unto the tree
-	for i:=1;i< len(alphabetSlice);i++  {
-		newNode,_ := tree.NewNode(alphabetSlice[i], alphabetSlice[i], parent.Height+1)
+	for i := 1; i < len(alphabetSlice); i++ {
+		newNode, _ := tree.NewNode(alphabetSlice[i], alphabetSlice[i], parent.Height+1)
 		parent.AddChild(newNode)
-		if(getBool()){
+		if getBool() {
 			parent = newNode
 		}
 	}
 	return tree, len(alphabetSlice)
 }
 
-func Test_RecursiveFind(t *testing.T){
-	tree,_ := setupIntTree()
+func Test_RecursiveFind(t *testing.T) {
+	tree, _ := setupIntTree()
 	//run find lots of times
-	for i:=5000; i<5050;i++ {
+	for i := 5000; i < 5050; i++ {
 		tree.Get(tree.Root, i)
 		assert.Equal(t, i, tree.Found.Entries[0].value)
 	}
 }
 
-func Test_SearchParentNodeAndAddChild(t *testing.T){
-	tree,_ := setupIntTree()
-	//add child {asd:asd} to 90000 block
-	tree.SearchParentNodeAndAddChild(
-		tree.Root,9000, "asd", "asd")
-
-	tree.Get(tree.Root, "asd")
-	assert.Equal(t, "asd", tree.Found.Entries[0].value)
-	assert.Equal(t, 9000, tree.Found.Parent.Entries[0].value)
-
-}
-
-func Test_TreeHeightAndGetNodesAfterAppendTree(t *testing.T){
+func Test_TreeLeafs(t *testing.T) {
 	//logger.SetLevel(logger.DebugLevel)
-	t1, len := setupIntTree()
-	t2, _ := setupAlphabetTree()
-	oldt1height := t1.MaxHeight
-	t2height := t2.MaxHeight
-	mergeIndex := len - 10
-
-	t1.appendTree(t2, mergeIndex)
-
-	//test height after merging t2
-	if t1.Found.Height + t2height > oldt1height {
-		assert.Equal(t,t1.Found.Height + t2height, t1.MaxHeight)
-	}
-
-}
-
-func Test_TreeLeafs(t *testing.T){
-	//logger.SetLevel(logger.DebugLevel)
-	tree,_:=setupAlphabetTree()
+	tree, _ := setupAlphabetTree()
 	//cached leaf nodes should not have any children
-	for _,v := range tree.leafs.Keys(){
+	for _, v := range tree.leafs.Keys() {
 		val, _ := tree.leafs.Get(v)
 		assert.Equal(t, 0, len(val.(*Node).Children))
 		assert.Equal(t, true, val.(*Node).Height != 1)
 	}
 }
 
-func Test_TreeHighestLeaf(t *testing.T){
+func Test_TreeHighestLeaf(t *testing.T) {
 	//logger.SetLevel(logger.DebugLevel)
-	tree,_:=setupAlphabetTree()
+	tree, _ := setupAlphabetTree()
 	//cached leaf nodes should not have any children
 	assert.Equal(t, tree.MaxHeight, tree.HighestLeaf.Height)
 }
 
-
-func Test_AddParent(t *testing.T){
-	tree,_:=setupAlphabetTree()
-	nodeToAdd,_:= tree.NewNode("asd","asd", 0)
+func Test_AddParent(t *testing.T) {
+	tree, _ := setupAlphabetTree()
+	nodeToAdd, _ := tree.NewNode("asd", "asd", 0)
 	//check root case
-	child:= tree.Root
+	child := tree.Root
 	child.AddParent(nodeToAdd)
-	assert.Equal(t, nodeToAdd.Entries[0].key ,tree.Root.Entries[0].key)
+	assert.Equal(t, nodeToAdd.Entries[0].key, tree.Root.Entries[0].key)
 
 	//check invalid case
 	tree.Get(tree.Root, "u")
-	nodeToAdd2,_:= tree.NewNode(11,11, 0)
+	nodeToAdd2, _ := tree.NewNode(11, 11, 0)
 	err := tree.Found.AddParent(nodeToAdd2)
 	assert.Equal(t, err, ErrChildNodeAlreadyHasParent)
-
-}
-
-func Test_RecurseThroughTreeAndDoCallback(t *testing.T){
-	tree,nodesToAdd:=setupAlphabetTree()
-	counter:=0
-	tree.RecurseThroughTreeAndDoCallback(tree.Root, func(node *Node) {
-		counter++
-	})
-	assert.Equal(t, nodesToAdd, counter)
-}
-
-func Test_findCommonParent(t *testing.T){
-	tree,_:=setupAlphabetTree()
-	tree.Get(tree.Root, "u")
-	n1 := tree.Found
-	tree.Get(tree.Root, "j")
-	n2 := tree.Found
-	commonRootNode := tree.FindCommonParent(n1,n2)
-	assert.Equal(t, true, commonRootNode.Height < n1.Height)
-	assert.Equal(t, true, commonRootNode.Height < n2.Height)
-
-	tree.Get(commonRootNode, n1.GetKey())
-	t1 := tree.Found
-	tree.Get(commonRootNode, n2.GetKey())
-	t2 := tree.Found
-
-	assert.Equal(t, true, t1 == n1)
-	assert.Equal(t, true, t2 == n2)
 
 }
 
@@ -166,5 +107,3 @@ func getBool() bool {
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(10) >= 5
 }
-
-
