@@ -54,7 +54,7 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 }
 
 //create a wallet from path
-func CreateWalletWithPathPassword(path string, password string) (*client.Wallet, error) {
+func CreateWallet(path string, password string) (*client.Wallet, error) {
 	if len(path) == 0 {
 		return nil, ErrPathEmpty
 	}

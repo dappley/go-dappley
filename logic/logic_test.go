@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateWallet(t *testing.T) {
-	wallet, err := CreateWalletWithPathPassword(GetClientTestWalletFilePath(), "test")
+	wallet, err := CreateWallet(GetClientTestWalletFilePath(), "test")
 	assert.Nil(t, err)
 	expectedLength := 34
 	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey); hash[0] < 10 {
@@ -136,7 +136,7 @@ func TestGetAllAddresses(t *testing.T) {
 
 	expected_res := []core.Address{}
 	//create a wallet address
-	wallet, err := CreateWalletWithPathPassword(GetClientTestWalletFilePath(), "test")
+	wallet, err := CreateWallet(GetClientTestWalletFilePath(), "test")
 	assert.NotEmpty(t, wallet)
 	addr := wallet.GetAddress()
 
@@ -150,7 +150,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create 10 more addresses
 	for i := 0; i < 2; i++ {
 		//create a wallet address
-		wallet, err = CreateWalletWithPathPassword(GetClientTestWalletFilePath(), "test")
+		wallet, err = CreateWallet(GetClientTestWalletFilePath(), "test")
 		addr = wallet.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
@@ -171,7 +171,7 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()
 	//create wallets address
-	wallet1, err := CreateWalletWithPathPassword(GetClientTestWalletFilePath(), "test")
+	wallet1, err := CreateWallet(GetClientTestWalletFilePath(), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
