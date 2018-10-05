@@ -157,7 +157,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 func (pool *BlockPool) getBlocksByHashs(hashs []string) []*Block {
 	blkCache := pool.blkCache
 	var blocks []*Block
-	for i := len(hashs) - 1; i > 0; i-- {
+	for i := len(hashs) - 1; i >= 0; i-- {
 		block, _ := blkCache.Get(hashs[i])
 		blocks = append(blocks, block.(*Block))
 	}

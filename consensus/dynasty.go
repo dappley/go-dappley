@@ -19,13 +19,14 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"bytes"
 	"errors"
+
+	"github.com/dappley/go-dappley/core"
 	Logger "github.com/sirupsen/logrus"
 )
 
-type Dynasty struct{
+type Dynasty struct {
 	producers      []string
 	maxProducers   int
 	timeBetweenBlk int
@@ -38,7 +39,7 @@ const (
 	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
 )
 
-func NewDynasty() *Dynasty{
+func NewDynasty() *Dynasty {
 	return &Dynasty{
 		producers:      []string{},
 		maxProducers:   defaultMaxProducers,
@@ -47,10 +48,10 @@ func NewDynasty() *Dynasty{
 	}
 }
 
-func NewDynastyWithProducers(producers []string) *Dynasty{
+func NewDynastyWithProducers(producers []string) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
-		if IsProducerAddressValid(producer){
+		if IsProducerAddressValid(producer) {
 			validProducers = append(validProducers, producer)
 		}
 	}
@@ -58,12 +59,12 @@ func NewDynastyWithProducers(producers []string) *Dynasty{
 		producers:      validProducers,
 		maxProducers:   len(validProducers),
 		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    len(validProducers)*defaultTimeBetweenBlk,
+		dynastyTime:    len(validProducers) * defaultTimeBetweenBlk,
 	}
 
-	}
+}
 
-func NewDynastyWithConfigProducers(producers []string) *Dynasty{
+func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
 		if IsProducerAddressValid(producer) {
@@ -75,36 +76,36 @@ func NewDynastyWithConfigProducers(producers []string) *Dynasty{
 		producers:      validProducers,
 		maxProducers:   defaultMaxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultMaxProducers*defaultTimeBetweenBlk,
+		dynastyTime:    defaultMaxProducers * defaultTimeBetweenBlk,
 	}
 
 }
 
-func (dynasty *Dynasty) SetMaxProducers(maxProducers int){
-	if maxProducers >=0 {
+func (dynasty *Dynasty) SetMaxProducers(maxProducers int) {
+	if maxProducers >= 0 {
 		dynasty.maxProducers = maxProducers
 		dynasty.dynastyTime = maxProducers * dynasty.timeBetweenBlk
 	}
-	if maxProducers < len(dynasty.producers){
+	if maxProducers < len(dynasty.producers) {
 		dynasty.producers = dynasty.producers[:maxProducers]
 	}
 }
 
-func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int){
+func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 	if timeBetweenBlk > 0 {
 		dynasty.timeBetweenBlk = timeBetweenBlk
 		dynasty.dynastyTime = dynasty.maxProducers * timeBetweenBlk
 	}
 }
 
-func (dynasty *Dynasty) AddProducer(producer string) error{
+func (dynasty *Dynasty) AddProducer(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
 			return errors.New("Producer already in the producer list！")
 		}
 	}
 
-	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers{
+	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
 		Logger.Info("Current Producers:")
 		for _, producerIt := range dynasty.producers {
@@ -117,41 +118,41 @@ func (dynasty *Dynasty) AddProducer(producer string) error{
 		} else {
 			return errors.New("The number of producers reaches the maximum！")
 		}
-		}
+	}
 }
 
-func (dynasty *Dynasty) AddMultipleProducers(producers []string){
+func (dynasty *Dynasty) AddMultipleProducers(producers []string) {
 	for _, producer := range producers {
 		dynasty.AddProducer(producer)
 	}
 }
 
-func (dynasty *Dynasty) IsMyTurn(producer string, now int64) bool{
+func (dynasty *Dynasty) IsMyTurn(producer string, now int64) bool {
 	index := dynasty.GetProducerIndex(producer)
 	return dynasty.isMyTurnByIndex(index, now)
 }
 
-func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool{
+func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool {
 	if producerIndex < 0 {
 		return false
 	}
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
 
-	return dynastyTimeElapsed == producerIndex * dynasty.timeBetweenBlk
+	return dynastyTimeElapsed == producerIndex*dynasty.timeBetweenBlk
 }
 
-func (dynasty *Dynasty) ProducerAtATime(time int64) string{
-	if time < 0{
+func (dynasty *Dynasty) ProducerAtATime(time int64) string {
+	if time < 0 {
 		return ""
 	}
 	dynastyTimeElapsed := int(time % int64(dynasty.dynastyTime))
-	index := dynastyTimeElapsed/dynasty.timeBetweenBlk
+	index := dynastyTimeElapsed / dynasty.timeBetweenBlk
 	return dynasty.producers[index]
 }
 
 //find the index of the producer. If not found, return -1
-func (dynasty *Dynasty) GetProducerIndex(producer string) int{
-	for i,m := range dynasty.producers {
+func (dynasty *Dynasty) GetProducerIndex(producer string) int {
+	for i, m := range dynasty.producers {
 		if producer == m {
 			return i
 		}
@@ -159,7 +160,7 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int{
 	return -1
 }
 
-func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool{
+func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 
 	if block == nil {
 		return false
@@ -169,22 +170,22 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool{
 	producerHash := core.HashAddress([]byte(producer))
 
 	cbtx := block.GetCoinbaseTransaction()
-	if cbtx==nil {
+	if cbtx == nil {
 		return false
 	}
 
-	if len(cbtx.Vout) == 0{
+	if len(cbtx.Vout) == 0 {
 		return false
 	}
 
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash)==0
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
 }
 
-func IsProducerAddressValid(producer string) bool{
+func IsProducerAddressValid(producer string) bool {
 	addr := core.Address{producer}
 	return addr.ValidateAddress()
 }
 
-func (dynasty *Dynasty) GetDynastyTime() int{
+func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
 }
