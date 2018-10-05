@@ -167,7 +167,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	}
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
-	bc.GetTxPool().ConditionalAdd(tx)
+	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
 	if err != nil {
 		return err
@@ -192,7 +192,7 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 		return err
 	}
 
-	bc.GetTxPool().StructPush(tx)
+	bc.GetTxPool().Push(tx)
 
 	return err
 

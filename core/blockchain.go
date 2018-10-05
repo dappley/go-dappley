@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"github.com/jinzhu/copier"
 
 	"github.com/dappley/go-dappley/common"
@@ -65,7 +66,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 	}
 	bc.blockPool.SetBlockchain(bc)
 	err := bc.AddBlockToTail(genesis)
-	if err!=nil {
+	if err != nil {
 		logger.Panic("Blockchain: Add Genesis Block Failed During Blockchain Creation!")
 	}
 	return bc
@@ -92,7 +93,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 	if err != nil {
 		return nil, err
 	}
-	tree:=common.NewTree(tailBlock.GetHash(), tailBlock.header)
+	tree := common.NewTree(tailBlock.GetHash(), tailBlock.header)
 	bc.forkTree = tree
 	return bc, nil
 }
@@ -151,9 +152,9 @@ func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
 	bc.blockPool.SetBlockchain(bc)
 }
 
-func (bc *Blockchain) AddBlockToTail(block *Block) error{
+func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	err := bc.AddBlockToDb(block)
-	if err!= nil{
+	if err != nil {
 		logger.Warn("Blockchain: Add Block To Database Failed! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
 		return err
 	}
@@ -165,30 +166,30 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 	defer bcTemp.db.DisableBatch()
 
 	err = bcTemp.setTailBlockHash(block.GetHash())
-	if err != nil{
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
-			"hash": hex.EncodeToString(block.GetHash()),
+			"hash":   hex.EncodeToString(block.GetHash()),
 		}).Error("Blockchain: Set tail block hash failed!")
 		return err
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
 	err = utxoIndex.BuildForkUtxoIndex(block, bcTemp.db)
-	if err != nil{
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
-			"hash": hex.EncodeToString(block.GetHash()),
+			"hash":   hex.EncodeToString(block.GetHash()),
 		}).Error("Blockchain: Update UTXO index failed!")
 		return err
 	}
 
 	// Flush batch changes to storage
 	err = bcTemp.db.Flush()
-	if err != nil{
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
-			"hash": hex.EncodeToString(block.GetHash()),
+			"hash":   hex.EncodeToString(block.GetHash()),
 		}).Error("Blockchain: Cannot add block to tail - Update tail and UTXO index failed!")
 		return err
 	}
@@ -198,7 +199,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error{
 
 	logger.WithFields(logger.Fields{
 		"height": block.GetHeight(),
-		"hash": hex.EncodeToString(block.GetHash()),
+		"hash":   hex.EncodeToString(block.GetHash()),
 	}).Info("Blockchain: Added A New Block To Tail!")
 
 	return nil
@@ -376,9 +377,9 @@ func (bc *Blockchain) String() string {
 }
 
 //record the new block in the database
-func (bc *Blockchain) AddBlockToDb(block *Block) error{
+func (bc *Blockchain) AddBlockToDb(block *Block) error {
 	err := bc.db.Put(block.GetHash(), block.Serialize())
-	if err!=nil {
+	if err != nil {
 		logger.Warn("Blockchain: Add Block To Database Failed!")
 	}
 	return err
@@ -396,6 +397,9 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 func (bc *Blockchain) MergeFork(forkBlks []*Block) {
 
 	//find parent block
+	if len(forkBlks) == 0 {
+		return
+	}
 	forkHeadBlock := forkBlks[len(forkBlks)-1]
 	if forkHeadBlock == nil {
 		return
@@ -422,10 +426,9 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block) {
 	logger.Debug("Merged Fork!!")
 }
 
-
 func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
 	err := bc.AddBlockToTail(blk)
-	if err!=nil {
+	if err != nil {
 		logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
 	}
 	//Remove transactions in current transaction pool
@@ -434,9 +437,9 @@ func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
 
 func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {
 	if len(forkBlks) > 0 {
-		for i :=  len(forkBlks) - 1; i >= 0; i-- {
+		for i := len(forkBlks) - 1; i >= 0; i-- {
 			err := bc.AddBlockToTail(forkBlks[i])
-			if err!=nil {
+			if err != nil {
 				logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
 			}
 			//Remove transactions in current transaction pool
@@ -455,7 +458,7 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	parentblockHash := bc.GetTailBlockHash()
 
 	//keep rolling back blocks until the block with the input hash
-	loop:
+loop:
 	for {
 		if bytes.Compare(parentblockHash, targetHash) == 0 {
 			break loop
@@ -478,9 +481,9 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	return true
 }
 
-func (bc *Blockchain) setTailBlockHash(hash Hash) error{
+func (bc *Blockchain) setTailBlockHash(hash Hash) error {
 	err := bc.db.Put(tipKey, hash)
-	if err!= nil{
+	if err != nil {
 		logger.Error("Blockchain: Set Tail Block Hash Failed!")
 		return err
 	}

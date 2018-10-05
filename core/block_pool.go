@@ -141,17 +141,53 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 	if bcTailBlk.IsParentBlock(blk) {
 		pool.blockchain.AddBlockToBlockchainTail(blk)
+		hashs := pool.getNextBlockHeaders(blk.hashString())
+		forkBlks := pool.getBlocksByHashs(hashs)
+		pool.blockchain.MergeFork(forkBlks)
 		return
 	}
 
 	//attach above partial tree to forktree
 	if ok := pool.updateForkTree(forkParent, sender); ok == true {
-		//build forkchain based on highest leaf in tree
 		forkBlks := pool.getForkBlks()
-		//merge forkchain into blockchain
 		pool.blockchain.MergeFork(forkBlks)
 	}
 
+}
+func (pool *BlockPool) getBlocksByHashs(hashs []string) []*Block {
+	blkCache := pool.blkCache
+	var blocks []*Block
+	for i := len(hashs) - 1; i >= 0; i-- {
+		block, _ := blkCache.Get(hashs[i])
+		blocks = append(blocks, block.(*Block))
+	}
+	return blocks
+}
+
+func (pool *BlockPool) getNextBlockHeaders(blockHash string) []string {
+	var childHeaderArray []string
+	hash, ok := pool.getNextBlockHeader(blockHash)
+	for ok {
+		childHeaderArray = append(childHeaderArray, hash)
+		hash, ok = pool.getNextBlockHeader(hash)
+	}
+
+	return childHeaderArray
+}
+
+func (pool *BlockPool) getNextBlockHeader(hash string) (nextHash string, ok bool) {
+	blkCache := pool.blkCache
+	nodeCache := pool.nodeCache
+	for _, key := range nodeCache.Keys() {
+		if node, ok := nodeCache.Get(key); ok == true {
+			if block, ok := blkCache.Get(node.(*common.Node).GetKey()); ok {
+				if hex.EncodeToString(block.(*Block).GetPrevHash()) == hash {
+					return block.(*Block).hashString(), true
+				}
+			}
+		}
+	}
+	return "", false
 }
 
 func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
