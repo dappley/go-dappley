@@ -35,10 +35,15 @@ func testCmp(a interface{}, b interface{}) int {
 		return 0
 	}
 }
+func testEq(a interface{}, b interface{}) bool {
+	ai := a.(int)
+	bi := b.(int)
+	return ai == bi
+}
 
 
 func TestSlice(t *testing.T) {
-	slice := NewSlice(testCmp, func(a interface{}) {}, func(a interface{}) {})
+	slice := NewSlice(testCmp, testEq)
 	slice.Push(3)
 	slice.Push(2)
 	slice.Push(4)

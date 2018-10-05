@@ -35,6 +35,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/consensus"
 	logger "github.com/sirupsen/logrus"
+	"strings"
 )
 
 func TestServer_StartRPC(t *testing.T) {
@@ -70,14 +71,13 @@ func TestRpcSend(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	client.RemoveWalletFile()
-	client.RemoveTestWalletFile()
 
 	// Create wallets
-	senderWallet, err := logic. CreateWalletWithPathPassword(logic.GetClientTestWalletFilePath(), "test")
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	if err != nil {
 		panic(err)
 	}
-	receiverWallet, err := logic. CreateWalletWithPathPassword(logic.GetClientTestWalletFilePath(), "test")
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	if err != nil {
 		panic(err)
 	}
@@ -114,7 +114,7 @@ func TestRpcSend(t *testing.T) {
 		From: senderWallet.GetAddress().Address,
 		To: receiverWallet.GetAddress().Address,
 		Amount: common.NewAmount(7).Bytes(),
-		Walletpath: logic.GetClientTestWalletFilePath(),
+		Walletpath: strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1),
 	})
 	assert.Nil(t, err)
 
@@ -136,5 +136,4 @@ func TestRpcSend(t *testing.T) {
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
 	client.RemoveWalletFile()
-	client.RemoveTestWalletFile()
 }

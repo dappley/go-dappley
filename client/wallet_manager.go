@@ -118,15 +118,6 @@ func RemoveWalletFile(){
 	if conf == nil {
 		return
 	}
-	os.Remove(conf.GetFilePath())
-}
-
-func RemoveTestWalletFile(){
-	conf := &walletpb.WalletConfig{}
-	config.LoadConfig(walletConfigFilePath, conf)
-	if conf == nil {
-		return
-	}
 	os.Remove(strings.Replace(conf.GetFilePath(),"wallets","wallets_test",-1))
 }
 

@@ -21,13 +21,14 @@ package consensus
 import (
 	"fmt"
 
+	"strings"
+	"time"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
-	"strings"
-	"time"
 )
 
 const version = byte(0x00)
@@ -94,8 +95,7 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
-
-func (dpos *Dpos) Validate(block *core.Block) bool{
+func (dpos *Dpos) Validate(block *core.Block) bool {
 	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block) && !dpos.isDoubleMint(block)
 	if pass {
 		dpos.slot.Add(block.GetTimestamp(), block)
@@ -132,15 +132,18 @@ func (dpos *Dpos) Stop() {
 	dpos.miner.Stop()
 }
 
+func (dpos *Dpos) isForking() bool {
+	return false
+}
 
 func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
-	if _ , exist := dpos.slot.Get(block.GetTimestamp()); exist {
+	if _, exist := dpos.slot.Get(block.GetTimestamp()); exist {
 		logger.Debug("Someone is minting when they are not supposed to!")
 		return true
 	}
 	return false
 }
-func (dpos *Dpos) StartNewBlockMinting(){
+func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.miner.Stop()
 }
 func (dpos *Dpos) FullyStop() bool {
