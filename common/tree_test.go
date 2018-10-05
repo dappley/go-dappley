@@ -65,7 +65,7 @@ func Test_RecursiveFind(t *testing.T) {
 	//run find lots of times
 	for i := 5000; i < 5050; i++ {
 		tree.Get(tree.Root, i)
-		assert.Equal(t, i, tree.Found.Entries[0].value)
+		assert.Equal(t, i, tree.Found.entries[0].value)
 	}
 }
 
@@ -93,7 +93,7 @@ func Test_AddParent(t *testing.T) {
 	//check root case
 	child := tree.Root
 	child.AddParent(nodeToAdd)
-	assert.Equal(t, nodeToAdd.Entries[0].key, tree.Root.Entries[0].key)
+	assert.Equal(t, nodeToAdd.entries[0].key, tree.Root.entries[0].key)
 
 	//check invalid case
 	tree.Get(tree.Root, "u")

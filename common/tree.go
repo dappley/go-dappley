@@ -40,7 +40,7 @@ const LeafsSize = 32
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
 type Node struct {
-	Entries  []Entry
+	entries  []Entry
 	Parent   *Node
 	Children []*Node
 	Height   uint64
@@ -66,7 +66,7 @@ func (n *Node) hasChildren() bool {
 func (parent *Node) AddChild(child *Node) {
 
 	parent.Children = append(parent.Children, child)
-	parent.Entries = append(parent.Entries, child.Entries[0])
+	parent.entries = append(parent.entries, child.entries[0])
 	child.Parent = parent
 	//remove index from leafs if was leaf
 	parentKey := parent.GetKey()
@@ -84,11 +84,11 @@ func (parent *Node) AddChild(child *Node) {
 }
 
 func (n *Node) GetValue() interface{} {
-	return n.Entries[0].value
+	return n.entries[0].value
 }
 
 func (n *Node) GetKey() interface{} {
-	return n.Entries[0].key
+	return n.entries[0].key
 }
 
 func (n *Node) AddParent(parent *Node) error {
