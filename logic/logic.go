@@ -197,11 +197,3 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 	return err
 
 }
-
-func GetClientWalletFilePath() string {
-	return client.GetWalletFilePath()
-}
-
-func GetClientTestWalletFilePath() string {
-	return strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
-}

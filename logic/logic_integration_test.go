@@ -32,6 +32,8 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/client"
+	"strings"
 )
 
 const testport_msg_relay = 19999
@@ -61,7 +63,7 @@ func TestSend(t *testing.T) {
 			defer store.Close()
 
 			// Create a wallet address
-			senderWallet, err := CreateWallet(GetClientTestWalletFilePath(), "test")
+			senderWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -72,7 +74,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 			// Create a receiver wallet; Balance is 0 initially
-			receiverWallet, err := CreateWallet(GetClientTestWalletFilePath(), "test")
+			receiverWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -82,7 +84,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
-			minerWallet, err := CreateWallet(GetClientTestWalletFilePath(), "test")
+			minerWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -134,7 +136,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 	tip := uint64(5)
 	//create a wallet address
-	wallet1, err := CreateWallet(GetClientTestWalletFilePath(), "test")
+	wallet1, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
@@ -177,7 +179,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 
 	//create a wallet address
-	wallet1, err := CreateWallet(GetClientTestWalletFilePath(), "test")
+	wallet1, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
@@ -192,7 +194,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, mineReward, balance1)
 
 	//Create a second wallet
-	wallet2, err := CreateWallet(GetClientTestWalletFilePath(), "test")
+	wallet2, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	assert.NotEmpty(t, wallet2)
 	assert.Nil(t, err)
 	addr2 := wallet2.GetAddress()
