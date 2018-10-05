@@ -160,7 +160,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	//get all transactions
 	txs := miner.bc.GetTxPool().PopSortedTransactions()
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight())
+	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1)
 	txs = append(txs, &cbtx)
 	// TODO: add tips to txs
 
@@ -180,7 +180,7 @@ func (miner *Miner) mineBlock(nonce int64) bool {
 		if len(keystring) > 0 {
 			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
 			if !signed {
-				logger.Warn("Miner Key= ",miner.GetPrivKey())
+				logger.Warn("Miner Key= ", miner.GetPrivKey())
 				return false
 			}
 		}

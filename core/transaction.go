@@ -154,7 +154,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
-		if tx.Vout[0].Value != subsidy {
+		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
 			return false
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
