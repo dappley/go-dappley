@@ -38,6 +38,8 @@ var (
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
 	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct!")
+	ErrPathEmpty     = errors.New("ERROR: Path empty!")
+	ErrPasswordEmpty     = errors.New("ERROR: Password empty!")
 )
 
 //create a blockchain
@@ -51,29 +53,19 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 	return bc, nil
 }
 
-//create a wallet
-func CreateTestWallet() (*client.Wallet, error) {
-	path := strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
+//create a wallet from path
+func CreateWallet(path string, password string) (*client.Wallet, error) {
+	if len(path) == 0 {
+		return nil, ErrPathEmpty
+	}
+
+	if len(password) == 0 {
+		return nil, ErrPasswordEmpty
+	}
+
 	fl := storage.NewFileLoader(path)
 	wm := client.NewWalletManager(fl)
-	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-	wm.PassPhrase = passBytes
-	err = wm.LoadFromFile()
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-
-	return wallet, err
-}
-
-//create a wallet
-func CreateWallet() (*client.Wallet, error) {
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
+	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
