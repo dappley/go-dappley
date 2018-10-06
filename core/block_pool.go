@@ -106,7 +106,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	logger.Debug("BlockPool: Received a new block: ", hex.EncodeToString(blk.GetHash()), " From Sender: ", sender.String())
-	node, _ := pool.blockchain.forkTree.NewNode(blk.hashString(), blk.header, blk.header.height)
+	node, _ := common.NewNode(blk.hashString(), blk.header, blk.header.height)
 
 	blkCache := pool.blkCache
 	nodeCache := pool.nodeCache

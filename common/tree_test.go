@@ -19,78 +19,55 @@
 package common
 
 import (
-	"math/rand"
-	"strings"
+	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func setupIntTree() (*Tree, int) {
-	tree := NewTree(0, 0)
-	parent := tree.Root
-	len := 10000
-	//add 10000 nodes unto the tree
-	for i := 1; i < len; i++ {
-		newNode := Node{Entry{i, i}, parent, nil, parent.Height + 1, tree}
-		parent.Children = append(parent.Children, &newNode)
-		//if is true, create a new branch, else build existing branch
-		if getBool() {
-			parent = &newNode
-			tree.MaxHeight++
-		}
-	}
-	return tree, len
-}
-
-func setupAlphabetTree() (*Tree, int) {
-	alphabets := "abcdefghijklmnopqrstuvwxyz"
-	alphabetSlice := strings.Split(alphabets, "")
-	tree := NewTree("a", "a")
-	parent := tree.Root
-	//add 26 nodes unto the tree
-	for i := 1; i < len(alphabetSlice); i++ {
-		newNode, _ := tree.NewNode(alphabetSlice[i], alphabetSlice[i], parent.Height+1)
-		parent.AddChild(newNode)
-		if getBool() {
-			parent = newNode
-		}
-	}
-	return tree, len(alphabetSlice)
-}
-
-func Test_TreeLeafs(t *testing.T) {
-	//logger.SetLevel(logger.DebugLevel)
-	tree, _ := setupAlphabetTree()
-	//cached leaf nodes should not have any children
-	for _, v := range tree.leafs.Keys() {
-		val, _ := tree.leafs.Get(v)
-		assert.Equal(t, 0, len(val.(*Node).Children))
-		assert.Equal(t, true, val.(*Node).Height != 1)
-	}
-}
-
-func Test_TreeHighestLeaf(t *testing.T) {
-	//logger.SetLevel(logger.DebugLevel)
-	tree, _ := setupAlphabetTree()
-	//cached leaf nodes should not have any children
-	assert.Equal(t, tree.MaxHeight, tree.HighestLeaf.Height)
-}
-
 func Test_AddParent(t *testing.T) {
-	tree, _ := setupAlphabetTree()
-	nodeToAdd, _ := tree.NewNode("asd", "asd", 0)
-	//check root case
-	child := tree.Root
-	child.AddParent(nodeToAdd)
-	assert.Equal(t, nodeToAdd.entry.key, tree.Root.entry.key)
+	parentNode1, _ := NewNode("parent1", "parent1", 0)
+	parentNode2, _ := NewNode("parent2", "parent2", 0)
+	childNode, _ := NewNode("child2", "child2", 0)
 
-	//check invalid case
+	err1 := childNode.AddParent(parentNode1)
+	assert.Equal(t, nil, err1)
+	err2 := childNode.AddParent(parentNode2)
+	assert.Equal(t, errors.New("ERROR: Adding parent to node already with parent"), err2)
+
+	assert.Equal(t, parentNode1, childNode.Parent)
 
 }
 
-func getBool() bool {
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(10) >= 5
+func Test_AddChild(t *testing.T) {
+	parentNode, _ := NewNode("parent", "parent", 0)
+	childNode1, _ := NewNode("child1", "child1", 0)
+	childNode2, _ := NewNode("child2", "child2", 0)
+
+	parentNode.AddChild(childNode1)
+	parentNode.AddChild(childNode2)
+
+	assert.Equal(t, parentNode, childNode1.Parent)
+	assert.Equal(t, parentNode, childNode2.Parent)
+
+	assert.Equal(t, uint64(0x1), childNode2.Height)
+	assert.Equal(t, uint64(0x1), childNode2.Height)
+	assert.Equal(t, uint64(0x0), parentNode.Height)
+
+	assert.Equal(t, 2, len(parentNode.Children))
+	assert.True(t, parentNode.containChild(childNode1))
+	assert.True(t, parentNode.containChild(childNode2))
+}
+
+func Test_HasChild(t *testing.T) {
+	parentNode1, _ := NewNode("parent1", "parent1", 0)
+	parentNode2, _ := NewNode("parent2", "parent2", 0)
+	childNode1, _ := NewNode("child1", "child1", 0)
+	childNode2, _ := NewNode("child2", "child2", 0)
+	parentNode1.AddChild(childNode1)
+	childNode2.AddParent(parentNode2)
+
+	assert.True(t, parentNode1.hasChildren())
+	assert.True(t, parentNode2.hasChildren())
+
 }

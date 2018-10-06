@@ -20,8 +20,6 @@ package common
 
 import (
 	"errors"
-
-	"github.com/hashicorp/golang-lru"
 )
 
 type Entry struct {
@@ -43,16 +41,13 @@ type Node struct {
 	Parent   *Node
 	Children []*Node
 	Height   uint64
-	tree     *Tree
 }
 
-type Tree struct {
-	Root        *Node
-	MaxHeight   uint64
-	Found       *Node
-	Searching   bool
-	leafs       *lru.Cache
-	HighestLeaf *Node
+func NewNode(index interface{}, value interface{}, height uint64) (*Node, error) {
+	if index == nil || value == nil {
+		return nil, ErrCantCreateEmptyNode
+	}
+	return &Node{Entry{index, value}, nil, nil, height}, nil
 }
 
 func (n *Node) hasChildren() bool {
@@ -62,23 +57,27 @@ func (n *Node) hasChildren() bool {
 	return false
 }
 
-func (parent *Node) AddChild(child *Node) {
+func (n *Node) containChild(child *Node) bool {
+	for _, c := range n.Children {
+		if c == child {
+			return true
+		}
+	}
+	return false
+}
 
+func (parent *Node) AddChild(child *Node) {
 	parent.Children = append(parent.Children, child)
 	child.Parent = parent
-	//remove index from leafs if was leaf
-	parentKey := parent.GetKey()
 	child.Height = parent.Height + 1
-	if child.Height > child.tree.MaxHeight {
-		child.tree.MaxHeight = child.Height
-		child.tree.HighestLeaf = child
+}
+
+func (child *Node) AddParent(parent *Node) error {
+	if child.Parent != nil {
+		return ErrChildNodeAlreadyHasParent
 	}
-	leaves := parent.tree.leafs
-	///if parent was leaf, update new leaf state
-	if len(parent.Children) > 0 && leaves.Contains(parentKey) {
-		leaves.Remove(parent.GetKey())
-	}
-	leaves.Add(child.GetKey(), child)
+	parent.AddChild(child)
+	return nil
 }
 
 func (n *Node) GetValue() interface{} {
@@ -87,31 +86,4 @@ func (n *Node) GetValue() interface{} {
 
 func (n *Node) GetKey() interface{} {
 	return n.entry.key
-}
-
-func (n *Node) AddParent(parent *Node) error {
-	if n.Parent != nil {
-		return ErrChildNodeAlreadyHasParent
-
-	}
-	n.tree.Root = parent
-	parent.AddChild(n)
-	return nil
-}
-
-//tree func
-
-func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree {
-	t := &Tree{nil, 1, nil, false, nil, nil}
-	r := Node{Entry{rootNodeIndex, rootNodeValue}, nil, nil, 1, t}
-	t.Root = &r
-	t.leafs, _ = lru.New(LeafsSize)
-	return t
-}
-
-func (t *Tree) NewNode(index interface{}, value interface{}, height uint64) (*Node, error) {
-	if index == nil || value == nil {
-		return nil, ErrCantCreateEmptyNode
-	}
-	return &Node{Entry{index, value}, nil, nil, height, t}, nil
 }
