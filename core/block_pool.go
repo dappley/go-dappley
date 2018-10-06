@@ -168,7 +168,6 @@ func (pool *BlockPool) getNextBlockHeaders(blockHash string) []string {
 		childHeaderArray = append(childHeaderArray, hash)
 		hash, ok = pool.getNextBlockHeader(hash)
 	}
-
 	return childHeaderArray
 }
 
