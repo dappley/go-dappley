@@ -60,15 +60,6 @@ func setupAlphabetTree() (*Tree, int) {
 	return tree, len(alphabetSlice)
 }
 
-func Test_RecursiveFind(t *testing.T) {
-	tree, _ := setupIntTree()
-	//run find lots of times
-	for i := 5000; i < 5050; i++ {
-		tree.Get(tree.Root, i)
-		assert.Equal(t, i, tree.Found.entry.value)
-	}
-}
-
 func Test_TreeLeafs(t *testing.T) {
 	//logger.SetLevel(logger.DebugLevel)
 	tree, _ := setupAlphabetTree()
@@ -96,10 +87,6 @@ func Test_AddParent(t *testing.T) {
 	assert.Equal(t, nodeToAdd.entry.key, tree.Root.entry.key)
 
 	//check invalid case
-	tree.Get(tree.Root, "u")
-	nodeToAdd2, _ := tree.NewNode(11, 11, 0)
-	err := tree.Found.AddParent(nodeToAdd2)
-	assert.Equal(t, err, ErrChildNodeAlreadyHasParent)
 
 }
 

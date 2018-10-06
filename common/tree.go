@@ -22,7 +22,6 @@ import (
 	"errors"
 
 	"github.com/hashicorp/golang-lru"
-	logger "github.com/sirupsen/logrus"
 )
 
 type Entry struct {
@@ -115,33 +114,4 @@ func (t *Tree) NewNode(index interface{}, value interface{}, height uint64) (*No
 		return nil, ErrCantCreateEmptyNode
 	}
 	return &Node{Entry{index, value}, nil, nil, height, t}, nil
-}
-
-func (t *Tree) RecursiveFind(parent *Node, index interface{}) {
-	if !parent.hasChildren() || t.Searching == false {
-		return
-	}
-
-	for i := 0; i < len(parent.Children); i++ {
-		if parent.Children[i].GetKey() == index {
-			logger.Debug("found! ", index, " under ", parent.GetKey())
-			t.Searching = false
-			t.Found = parent.Children[i]
-		} else {
-			if t.Searching {
-				t.RecursiveFind(parent.Children[i], index)
-			}
-		}
-	}
-}
-
-//Search from root, use if you have no closer known nodes upstream
-func (t *Tree) Get(parent *Node, index interface{}) {
-	t.Searching = true
-	if t.Root.GetKey() == index {
-		logger.Debug("found! ", index, ", is root")
-		t.Found = t.Root
-		return
-	}
-	t.RecursiveFind(parent, index)
 }
