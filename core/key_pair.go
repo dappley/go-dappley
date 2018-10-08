@@ -79,22 +79,8 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	if err != nil {
 		logger.Panic(err)
 	}
-	pubKey := append(publicRawBytes(private.PublicKey.X), publicRawBytes(private.PublicKey.Y)...)
 
-	return *private, pubKey
-}
-
-func publicRawBytes(x *big.Int) []byte {
-	intBits := x.Bits()
-	s := bits.UintSize / 8
-	buf := make([]byte, len(intBits)*s)
-	i := len(buf)
-	for _, d := range intBits {
-		for j := 0; j < s; j++ {
-			i--
-			buf[i] = byte(d)
-			d >>= 8
-		}
-	}
-	return buf
+	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
+	//remove the uncompressed point at pubKey[0]
+	return *private, pubKey[1:]
 }
