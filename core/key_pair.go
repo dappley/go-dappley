@@ -28,8 +28,6 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-	"math/big"
-	"math/bits"
 )
 
 const version = byte(0x00)
