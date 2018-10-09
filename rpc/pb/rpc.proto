@@ -9,7 +9,10 @@ option objc_class_prefix = "HLW";
 service RpcService {
   rpc RpcGetVersion (GetVersionRequest) returns (GetVersionResponse) {}
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
+  rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
+  rpc RpcAddBalance (AddBalanceRequest) returns (AddBalanceResponse) {}
+  rpc RpcGetWalletAddress (GetWalletAddressRequest) returns (GetWalletAddressResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
@@ -28,15 +31,32 @@ message CreateWalletRequest {
   string passphrase = 2;
 }
 
-message GetBalanceRequest {
+message AddProducerRequest {
   string name = 1;
   string address = 2;
+}
+
+message GetBalanceRequest {
+  string name = 1;
+  string passphrase = 2;
+  string address = 3;
+}
+
+message AddBalanceRequest {
+  string address = 1;
+  bytes amount = 2;
 }
 
 message SendRequest {
   string from = 1;
   string to = 2;
   bytes amount = 3;
+  string Walletpath = 4;
+}
+
+message GetWalletAddressRequest {
+  string name = 1;
+  string passphrase = 2;
 }
 
 message GetPeerInfoRequest {}
@@ -54,9 +74,17 @@ message CreateWalletResponse {
   string address = 2;
 }
 
+message AddProducerResponse {
+  string message = 1;
+}
+
 message GetBalanceResponse {
   string message = 1;
   int64 amount = 2;
+}
+
+message AddBalanceResponse {
+  string message = 1;
 }
 
 message SendResponse {
@@ -74,6 +102,11 @@ message GetBlockchainInfoResponse {
 
 message AddPeerResponse {
   string status = 1;
+}
+
+message GetWalletAddressResponse {
+  string message = 1;
+  repeated string address = 2;
 }
 
 message GetVersionRequest {

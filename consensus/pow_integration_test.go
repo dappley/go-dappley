@@ -25,8 +25,6 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 
-	"time"
-
 	"os"
 
 	"github.com/dappley/go-dappley/client"
@@ -75,7 +73,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().StructPush(tx)
+	bc.GetTxPool().Push(tx)
 
 	//start a miner
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "test")
@@ -89,9 +87,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
-	}
+	core.WaitFullyStop(pow, 20)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -139,9 +135,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 10 {
-	}
+	core.WaitFullyStop(pow, 20)
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -178,7 +172,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().StructPush(tx)
+	bc.GetTxPool().Push(tx)
 
 	//start a producer
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
@@ -195,7 +189,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, bc, 0)
 	assert.Nil(t, err)
 
-	bc.GetTxPool().StructPush(tx2)
+	bc.GetTxPool().Push(tx2)
 
 	//Make sure there are blocks have been mined
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
@@ -206,9 +200,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//stop mining
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
-	}
+	core.WaitFullyStop(pow, 20)
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -234,7 +226,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
 	pow.Setup(n, cbAddr.Address)
-
+	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
 	blkHeight := uint64(0)
@@ -250,9 +242,7 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	currentTime := time.Now().UTC().Unix()
-	for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 2 {
-	}
+	core.WaitFullyStop(pow, 20)
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)
@@ -294,7 +284,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	pubKeyHash := util.Base58Decode([]byte(addr))
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
-	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
+	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}

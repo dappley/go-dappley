@@ -25,7 +25,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const TransactionPoolLimit = 5
+const TransactionPoolLimit = 128
 
 type TransactionPool struct {
 	messageCh    chan string
@@ -39,7 +39,7 @@ func NewTransactionPool() *TransactionPool {
 		messageCh: make(chan string, 128),
 		size:      128,
 	}
-	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, txPool.StructDelete, txPool.StructPush)
+	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, match)
 	return txPool
 }
 
@@ -55,55 +55,14 @@ func CompareTransactionTips(a interface{}, b interface{}) int {
 	}
 }
 
-func (txPool *TransactionPool) StructDelete(tx interface{}) {
-	for k, v := range txPool.Transactions.Get() {
-		if bytes.Compare(v.(Transaction).ID, tx.(Transaction).ID) == 0 {
-
-			var content []interface{}
-			content = append(content, txPool.Transactions.Get()[k+1:]...)
-			content = append(txPool.Transactions.Get()[0:k], content...)
-			txPool.Transactions.Set(content)
-			return
-		}
-	}
-}
-
-// Push a new value into slice
-func (txPool *TransactionPool) StructPush(val interface{}) {
-	if txPool.Transactions.Len() == 0 {
-		txPool.Transactions.AddSliceItem(val)
-		return
-	}
-
-	start, end := 0, txPool.Transactions.Len()-1
-	result, mid := 0, 0
-	for start <= end {
-		mid = (start + end) / 2
-		cmp := txPool.Transactions.GetSliceCmp()
-		result = cmp(txPool.Transactions.Index(mid), val)
-		if result > 0 {
-			end = mid - 1
-		} else if result < 0 {
-			start = mid + 1
-		} else {
-			break
-		}
-	}
-	content := []interface{}{val}
-	if result > 0 {
-		content = append(content, txPool.Transactions.Get()[mid:]...)
-		content = append(txPool.Transactions.Get()[0:mid], content...)
-	} else {
-		content = append(content, txPool.Transactions.Get()[mid+1:]...)
-		content = append(txPool.Transactions.Get()[0:mid+1], content...)
-
-	}
-	txPool.Transactions.Set(content)
+// match returns true if a and b are Transactions and they have the same ID, false otherwise
+func match(a interface{}, b interface{}) bool {
+	return bytes.Compare(a.(Transaction).ID, b.(Transaction).ID) == 0
 }
 
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	for _, tx := range txs {
-		txPool.StructDelete(*tx)
+		txPool.Transactions.Del(*tx)
 	}
 }
 
@@ -113,14 +72,15 @@ func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
 		if !txHandler(tx) {
-			txPool.Transactions.StructDelete(tx)
+			txPool.Transactions.Del(tx)
 		}
 	}
 }
 
 func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
 	txPool.Traverse(func(tx Transaction) bool {
-		return tx.Verify(utxoPool) // TODO: also check if amount is valid
+		return tx.Verify(utxoPool, 0) // all transactions in transaction pool have no blockHeight
+		// TODO: also check if amount is valid
 	})
 }
 
@@ -134,19 +94,19 @@ func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
 	return sortedTransactions
 }
 
-func (txPool *TransactionPool) ConditionalAdd(tx Transaction) {
+func (txPool *TransactionPool) Push(tx Transaction) {
 	//get smallest tip tx
 
 	if txPool.Transactions.Len() >= TransactionPoolLimit {
 		compareTx := txPool.Transactions.PopLeft().(Transaction)
 		greaterThanLeastTip := tx.Tip > compareTx.Tip
 		if greaterThanLeastTip {
-			txPool.Transactions.StructPush(tx)
+			txPool.Transactions.Push(tx)
 		} else { // do nothing, push back popped tx
-			txPool.Transactions.StructPush(compareTx)
+			txPool.Transactions.Push(compareTx)
 		}
 	} else {
-		txPool.Transactions.StructPush(tx)
+		txPool.Transactions.Push(tx)
 	}
 }
 

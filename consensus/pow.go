@@ -38,6 +38,7 @@ func NewProofOfWork() *ProofOfWork {
 		node:        nil,
 		exitCh:      make(chan (bool), 1),
 	}
+	p.SetKey("")
 	return p
 }
 
@@ -79,7 +80,7 @@ func (pow *ProofOfWork) Stop() {
 	pow.miner.Stop()
 }
 func (pow *ProofOfWork) FullyStop() bool {
-	v := <-pow.miner.exitCh
+	v := pow.miner.stop
 	return v
 }
 
@@ -108,4 +109,8 @@ func (pow *ProofOfWork) StartNewBlockMinting() {
 
 func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool {
 	return true
+}
+
+func (pow *ProofOfWork) AddProducer(producer string) error {
+	return nil
 }

@@ -32,6 +32,8 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/client"
+	"strings"
 )
 
 const testport_msg_relay = 19999
@@ -61,7 +63,7 @@ func TestSend(t *testing.T) {
 			defer store.Close()
 
 			// Create a wallet address
-			senderWallet, err := CreateWallet()
+			senderWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -72,7 +74,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 			// Create a receiver wallet; Balance is 0 initially
-			receiverWallet, err := CreateWallet()
+			receiverWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -82,7 +84,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
-			minerWallet, err := CreateWallet()
+			minerWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -93,10 +95,7 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			currentTime := time.Now().UTC().Unix()
-			for !pow.FullyStop() && time.Now().UTC().Unix()-currentTime < 20 {
-			}
-
+			core.WaitFullyStop(pow, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
 			if err != nil {
@@ -137,7 +136,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 	tip := uint64(5)
 	//create a wallet address
-	wallet1, err := CreateWallet()
+	wallet1, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
@@ -180,7 +179,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 
 	//create a wallet address
-	wallet1, err := CreateWallet()
+	wallet1, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
@@ -195,7 +194,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, mineReward, balance1)
 
 	//Create a second wallet
-	wallet2, err := CreateWallet()
+	wallet2, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	assert.NotEmpty(t, wallet2)
 	assert.Nil(t, err)
 	addr2 := wallet2.GetAddress()
@@ -224,27 +223,48 @@ func TestSendInsufficientBalance(t *testing.T) {
 	teardown()
 }
 
-func TestBlockMsgRelay(t *testing.T) {
+func TestBlockMsgRelaySingleMiner(t *testing.T) {
+	const (
+		timeBetweenBlock = 1
+		dposRounds       = 2
+		bufferTime       = 0
+	)
 	setup()
-	var pows []*consensus.ProofOfWork
+	var dposArray []*consensus.Dpos
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
-	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	var firstNode *network.Node
 
+	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
+
+	producerAddrs := []string{}
+	producerKey := []string{}
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++ {
+		producerAddrs = append(producerAddrs, validProducerAddr)
+		producerKey = append(producerKey, validProducerKey)
+	}
 
-		db := storage.NewRamStorage()
-		defer db.Close()
-
-		//create blockchain instance
-		bc, pow := createBlockchain(addr, db)
+	dynasty := consensus.NewDynastyWithProducers(producerAddrs)
+	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
+	dynasty.SetMaxProducers(numOfNodes)
+	for i := 0; i < numOfNodes; i++ {
+		dpos := consensus.NewDpos()
+		dpos.SetDynasty(dynasty)
+		dpos.SetTargetBit(0) //gennerate a block every round
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
 		bcs = append(bcs, bc)
-
-		node := setupNode(addr, pow, bc, testport_msg_relay+100*i)
-
-		nodes = append(nodes, node)
-		pows = append(pows, pow)
+		node := network.NewNode(bc)
+		node.Start(testport_msg_relay_port + i)
+		if i == 0 {
+			firstNode = node
+		} else {
+			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
+		}
+		dpos.Setup(node, producerAddrs[0])
+		dpos.SetKey(producerKey[0])
+		dposArray = append(dposArray, dpos)
 	}
 	//each node connects to the subsequent node only
 	for i := 0; i < len(nodes)-1; i++ {
@@ -252,10 +272,11 @@ func TestBlockMsgRelay(t *testing.T) {
 	}
 
 	//firstNode Starts Mining
+	dposArray[0].Start()
+	for bcs[0].GetMaxHeight() < 5 {
 
-	pows[0].Start()
-	for bcs[0].GetMaxHeight() < 6 {
 	}
+
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -269,26 +290,51 @@ func TestBlockMsgRelay(t *testing.T) {
 }
 
 // Test if network radiation bounces forever
-func TestBlockMsgRelayMeshNetwork(t *testing.T) {
+func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
+	const (
+		timeBetweenBlock = 1
+		dposRounds       = 2
+		bufferTime       = 0
+	)
 	setup()
-	var pows []*consensus.ProofOfWork
+	var dposArray []*consensus.Dpos
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
-	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 
+	var firstNode *network.Node
+
+	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
+
+	producerAddrs := []string{}
+	producerKey := []string{}
 	numOfNodes := 4
 	for i := 0; i < numOfNodes; i++ {
-		//init db for each node we want
-		db := storage.NewRamStorage()
-		defer db.Close()
-		bc, pow := createBlockchain(addr, db)
-		//init node based on blockchain
-		node := setupNode(addr, pow, bc, testport_msg_relay+100*i)
+		producerAddrs = append(producerAddrs, validProducerAddr)
+		producerKey = append(producerKey, validProducerKey)
+	}
 
-		//index each node and service
+	dynasty := consensus.NewDynastyWithProducers(producerAddrs)
+	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
+	dynasty.SetMaxProducers(numOfNodes)
+	for i := 0; i < numOfNodes; i++ {
+		dpos := consensus.NewDpos()
+		dpos.SetDynasty(dynasty)
+
+		dpos.SetTargetBit(0) //gennerate a block every round
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
 		bcs = append(bcs, bc)
-		nodes = append(nodes, node)
-		pows = append(pows, pow)
+
+		node := network.NewNode(bc)
+		node.Start(testport_msg_relay_port + i)
+		if i == 0 {
+			firstNode = node
+		} else {
+			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
+		}
+		dpos.Setup(node, producerAddrs[0])
+		dpos.SetKey(producerKey[0])
+		dposArray = append(dposArray, dpos)
 	}
 
 	//each node connects to every other node
@@ -301,11 +347,11 @@ func TestBlockMsgRelayMeshNetwork(t *testing.T) {
 	}
 
 	//firstNode Starts Mining
-
-	pows[0].Start()
-	for bcs[0].GetMaxHeight() < 5 {
+	for i := 0; i < len(dposArray); i++ {
+		dposArray[i].Start()
 	}
 
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -314,68 +360,6 @@ func TestBlockMsgRelayMeshNetwork(t *testing.T) {
 			return true
 		})
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
-
-	}
-}
-
-func TestBlockMsgWithDpos(t *testing.T) {
-	const (
-		timeBetweenBlock = 2
-		dposRounds       = 3
-		bufferTime       = 1
-	)
-
-	miners := []string{
-		"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
-		"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-	}
-	keystrs := []string{
-		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
-		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
-	}
-	dynasty := consensus.NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
-	dynasty.SetMaxProducers(len(miners))
-	dposArray := []*consensus.Dpos{}
-	var firstNode *network.Node
-	for i := 0; i < len(miners); i++ {
-		dpos := consensus.NewDpos()
-		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0) //gennerate a block every round
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos)
-		node := network.NewNode(bc)
-		node.Start(testport_msg_relay_port + i)
-		if i == 0 {
-			firstNode = node
-		} else {
-			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
-		}
-		dpos.Setup(node, miners[i])
-		dpos.SetKey(keystrs[i])
-		dposArray = append(dposArray, dpos)
-	}
-
-	firstNode.SyncPeersBroadcast()
-
-	for i := 0; i < len(miners); i++ {
-		dposArray[i].Start()
-	}
-
-	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
-
-	for i := 0; i < len(miners); i++ {
-		dposArray[i].Stop()
-	}
-
-	for i := 0; i < len(miners); i++ {
-		v := dposArray[i].FullyStop()
-		currentTime := time.Now().UTC().Unix()
-		for !v && time.Now().UTC().Unix()-currentTime < 20 {
-		}
-	}
-
-	for i := 0; i < len(miners); i++ {
-		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), dposArray[i].GetBlockChain().GetMaxHeight())
 	}
 }
 
@@ -423,13 +407,12 @@ func TestForkChoice(t *testing.T) {
 	}
 
 	currentTime := time.Now().UTC().Unix()
-
-	for !compareTwoBlockchains(bcs[0], bcs[numOfNodes-1]) && time.Now().UTC().Unix()-currentTime <= 5 {
+	for !core.IsTimeOut(currentTime, int64(6)) {
 	}
 
 	//Check if all nodes have the same tail block
 	for i := 0; i < numOfNodes-1; i++ {
-		assert.True(t, compareTwoBlockchains(bcs[0], bcs[i]))
+		assert.True(t, isSameBlockChain(bcs[0], bcs[i]))
 	}
 }
 
@@ -505,6 +488,72 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 	}
 }
 
+func TestDoubleMint(t *testing.T) {
+	const (
+		timeBetweenBlock = 1
+		dposRounds       = 2
+		bufferTime       = 0
+	)
+	setup()
+	var dposArray []*consensus.Dpos
+	var bcs []*core.Blockchain
+	var nodes []*network.Node
+	var receivingNode *network.Node
+
+	producerAddrs := []string{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
+	producerKey := []string{"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"}
+	numOfConcurrentDynasties := 4
+	for i := 0; i < numOfConcurrentDynasties; i++ {
+
+		dynasty := consensus.NewDynastyWithProducers(producerAddrs)
+		dynasty.SetTimeBetweenBlk(timeBetweenBlock)
+		dynasty.SetMaxProducers(1)
+
+		dpos := consensus.NewDpos()
+		dpos.SetDynasty(dynasty)
+		dpos.SetTargetBit(0)
+
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
+		bcs = append(bcs, bc)
+
+		node := network.NewNode(bc)
+		node.Start(testport_msg_relay_port + i)
+		nodes = append(nodes, node)
+
+		dpos.Setup(node, producerAddrs[0])
+		dpos.SetKey(producerKey[0])
+		dposArray = append(dposArray, dpos)
+
+		if i == numOfConcurrentDynasties-1 {
+			receivingNode = node
+		}
+	}
+
+	//each node connects to the receiving node
+	for i := 0; i < len(nodes)-1; i++ {
+		nodes[i].AddStream(receivingNode.GetPeerID(), receivingNode.GetPeerMultiaddr())
+	}
+
+	for i := 0; i < len(dposArray)-1; i++ {
+		dposArray[i].Start()
+	}
+
+	time.Sleep(time.Second * time.Duration(5))
+
+	//expect receiving node to have # of entries in dpos slot cache equal to their blockchain height
+	height := uint64(0)
+	totalSent := uint64(0)
+	for i := 0; i < len(nodes)-1; i++ {
+		totalSent += bcs[i].GetMaxHeight()
+	}
+	for _, _ = range dposArray[3].GetSlot().Keys() {
+		height++
+	}
+
+	assert.True(t, totalSent > height)
+	assert.Equal(t, height, bcs[3].GetMaxHeight())
+}
+
 func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.AddStream(
 		node2.GetPeerID(),
@@ -515,7 +564,7 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	node := network.NewNode(bc)
 	pow.Setup(node, addr.Address)
-	pow.SetTargetBit(16)
+	pow.SetTargetBit(12)
 	node.Start(port)
 	return node
 }

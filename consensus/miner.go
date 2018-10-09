@@ -42,10 +42,11 @@ type Miner struct {
 	exitCh   chan bool
 	bc       *core.Blockchain
 	cbAddr   string
-	key string
+	key      string
 	newBlock *MinedBlock
 	nonce    int64
 	retChan  chan (*MinedBlock)
+	stop     bool
 }
 
 func NewMiner() *Miner {
@@ -56,6 +57,7 @@ func NewMiner() *Miner {
 		cbAddr:   "",
 		newBlock: &MinedBlock{nil, false},
 		nonce:    0,
+		stop:     true,
 	}
 	m.SetTargetBit(defaulttargetBits)
 	return m
@@ -72,10 +74,9 @@ func (miner *Miner) SetTargetBit(bit int) {
 func (miner *Miner) SetPrivKey(key string) {
 	miner.key = key
 }
-func (miner *Miner) GetPrivKey() (string) {
+func (miner *Miner) GetPrivKey() string {
 	return miner.key
 }
-
 
 func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*MinedBlock)) {
 	miner.bc = bc
@@ -89,10 +90,12 @@ func (miner *Miner) Start() {
 		miner.resetExitCh()
 		miner.prepare()
 		nonce := int64(0)
+		miner.stop = false
 	hashLoop:
 		for {
 			select {
 			case <-miner.exitCh:
+				miner.stop = true
 				break hashLoop
 			default:
 				if nonce < maxNonce {
@@ -153,11 +156,11 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	}
 
 	//verify all transactions
-	//miner.verifyTransactions()
+	miner.verifyTransactions()
 	//get all transactions
 	txs := miner.bc.GetTxPool().PopSortedTransactions()
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight())
+	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1)
 	txs = append(txs, &cbtx)
 	// TODO: add tips to txs
 
@@ -170,18 +173,19 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 func (miner *Miner) mineBlock(nonce int64) bool {
 	hash, ok := miner.verifyNonce(nonce, miner.newBlock.block)
 	if ok {
-		hash =  miner.newBlock.block.CalculateHashWithoutNonce()
+		hash = miner.newBlock.block.CalculateHashWithoutNonce()
 		miner.newBlock.block.SetHash(hash)
 		miner.newBlock.block.SetNonce(nonce)
 		keystring := miner.GetPrivKey()
-		if len(keystring) >0 {
+		if len(keystring) > 0 {
 			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
 			if !signed {
+				logger.Warn("Miner Key= ", miner.GetPrivKey())
 				return false
 			}
 		}
 		miner.newBlock.isValid = true
-		}
+	}
 	return ok
 }
 

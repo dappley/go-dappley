@@ -17,7 +17,14 @@
 //
 package storage
 
-import "bytes"
+import (
+	"bytes"
+	"errors"
+)
+
+var (
+	ErrKeyInvalid = errors.New("Key is invalid")
+)
 
 type Storage interface {
 	Close() error
@@ -25,6 +32,15 @@ type Storage interface {
 	Get(key []byte) ([]byte, error)
 
 	Put(key []byte, val []byte) error
+
+	// EnableBatch enable batch write.
+	EnableBatch()
+
+	// DisableBatch disable batch write.
+	DisableBatch()
+
+	// Flush write and flush pending batch write.
+	Flush() error
 }
 
 type FileStorage interface {

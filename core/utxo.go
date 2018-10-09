@@ -99,14 +99,14 @@ func (index UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
 	return nil
 }
 
-// GetUTXOsByPubKey returns all current UTXOs identified by pubkey.
-func (index UTXOIndex) GetUTXOsByPubKey(pubkeyHash []byte) []*UTXO {
-	return index[string(pubkeyHash)]
+// GetUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
+func (index UTXOIndex) GetUTXOsByPubKeyHash(pubkey []byte) []*UTXO {
+	return index[string(pubkey)]
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
 func (index UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *UTXO {
-	utxos := index.GetUTXOsByPubKey(pubkeyHash)
+	utxos := index.GetUTXOsByPubKeyHash(pubkeyHash)
 
 	for _, utxo := range utxos {
 		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {

@@ -1,4 +1,4 @@
-// +build !release
+// +build release
 
 // Copyright (C) 2018 go-dappley authors
 //
@@ -24,16 +24,16 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"log"
 	"os"
-        "strings"
+	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/util"
+	"github.com/dappley/go-dappley/config/pb"
+	"strings"
 )
 
 //command names
@@ -45,8 +45,6 @@ const(
 	cliAddPeer 				= "addPeer"
 	clicreateWallet			= "createWallet"
 	cliListAddresses		= "listAddresses"
-	cliaddBalance			= "addBalance"
-	cliaddProducer			= "addProducer"
 )
 
 //flag names
@@ -58,7 +56,6 @@ const(
 	flagFromAddress		= "from"
 	flagAmount			= "amount"
 	flagPeerFullAddr    = "peerFullAddr"
-	flagProducerAddr    = "address"
 )
 
 type valueType int
@@ -83,8 +80,6 @@ var cmdList = []string{
 	cliAddPeer,
 	clicreateWallet,
 	cliListAddresses,
-	cliaddBalance,
-	cliaddProducer,
 }
 
 //configure input parameters/flags for each command
@@ -96,26 +91,6 @@ var cmdFlagsMap = map[string][]flagPars{
 		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 
 	}},
-	cliaddProducer	:{	flagPars{
-		flagProducerAddr,
-		"",
-		valueTypeString,
-		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-
-	}},
-	cliaddBalance	:{
-		flagPars{
-		flagAddressBalance,
-		"",
-		valueTypeString,
-		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",},
-		flagPars{
-			flagAmountBalance,
-			0,
-			valueTypeInt,
-			"The amount to add to the receiver.",
-		},
-	},
 	cliSend	: {
 		flagPars{
 			flagFromAddress,
@@ -153,8 +128,6 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
 	clicreateWallet			:{rpcService, createWalletCommandHandler},
 	cliListAddresses		:{rpcService, listAddressesCommandHandler},
-	cliaddBalance		:{rpcService, addBalanceCommandHandler},
-	cliaddProducer		:{rpcService, cliaddProducerCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -301,11 +274,11 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	if err!=nil {
 		if strings.Contains(err.Error(), "Password does not match!" ) {
 			fmt.Printf("ERROR: Get balance failed. Password does not match!\n")
-		 } else if strings.Contains(err.Error(), "Address not in the wallets" ) {
+		} else if strings.Contains(err.Error(), "Address not in the wallets" ) {
 			fmt.Printf("ERROR: Get balance failed. Address not found in the wallet!\n")
 		}  else {
 			fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
-			}
+		}
 		return
 	}
 	if response.Message == "Get Balance" {
@@ -361,8 +334,8 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 		return
 	}
 	if len(response.Address) > 0 {
-	fmt.Println("Create Wallet, the address is ",response.Address)
-}
+		fmt.Println("Create Wallet, the address is ",response.Address)
+	}
 	return
 
 }
@@ -422,36 +395,6 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 	}
 }
 
-func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	if len(*(flags[flagAddressBalance].(*string))) == 0 {
-		printUsage()
-		fmt.Println("\n Example: cli addBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -amount 15")
-		fmt.Println()
-		return
-	}
-		amount := int64(*(flags[flagAmountBalance].(*int)))
-		if amount <=0 {
-			fmt.Println("Add balance error! The amount must be greater than zero!")
-			return
-		}
-
-		if len(*(flags[flagAddressBalance].(*string))) != 34 {
-			fmt.Println("Add balance error!The length of address must be 34!")
-			return
-		}
-
-		addBalanceRequest := rpcpb.AddBalanceRequest{}
-		addBalanceRequest.Address = *(flags[flagAddressBalance].(*string))
-		addBalanceRequest.Amount = common.NewAmount(uint64(*(flags[flagAmountBalance].(*int)))).Bytes()
-
-	response,err  := client.(rpcpb.RpcServiceClient).RpcAddBalance(ctx,&addBalanceRequest)
-	if err!=nil {
-		fmt.Println("Add balance error!: ERR:", err)
-		return
-	}
-	fmt.Println(response.Message)
-}
-
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
 	response,err  := client.(rpcpb.RpcServiceClient).RpcGetPeerInfo(ctx,&rpcpb.GetPeerInfoRequest{})
 	if err!=nil {
@@ -459,32 +402,6 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 		return
 	}
 	fmt.Println(proto.MarshalTextString(response))
-}
-
-func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-
-	if len(*(flags[flagProducerAddr].(*string))) == 0 {
-		printUsage()
-		fmt.Println("\n Example: cli addProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
-		fmt.Println()
-		return
-	}
-
-	if len(*(flags[flagProducerAddr].(*string))) != 34 {
-		fmt.Println("The length of address must be 34!")
-		return
-	}
-
-	response,err  := client.(rpcpb.RpcServiceClient).RpcAddProducer(ctx,&rpcpb.AddProducerRequest{
-		Name: "addProducer",
-		Address: *(flags[flagProducerAddr].(*string)),
-	})
-
-	if err!=nil {
-		fmt.Println("ERROR: Add producer failed. ERR:", err)
-		return
-	}
-	fmt.Println(response.Message)
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){

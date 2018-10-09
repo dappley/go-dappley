@@ -25,8 +25,11 @@ import (
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/storage"
+	"golang.org/x/crypto/bcrypt"
+	logger "github.com/sirupsen/logrus"
+	"strings"
 )
 
 var (
@@ -34,6 +37,9 @@ var (
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
+	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct!")
+	ErrPathEmpty     = errors.New("ERROR: Path empty!")
+	ErrPasswordEmpty     = errors.New("ERROR: Password empty!")
 )
 
 //create a blockchain
@@ -47,11 +53,24 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 	return bc, nil
 }
 
-//create a wallet
-func CreateWallet() (*client.Wallet, error) {
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
+//create a wallet from path
+func CreateWallet(path string, password string) (*client.Wallet, error) {
+	if len(path) == 0 {
+		return nil, ErrPathEmpty
+	}
+
+	if len(password) == 0 {
+		return nil, ErrPasswordEmpty
+	}
+
+	fl := storage.NewFileLoader(path)
 	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	wm.PassPhrase = passBytes
+	err = wm.LoadFromFile()
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
@@ -59,17 +78,49 @@ func CreateWallet() (*client.Wallet, error) {
 	return wallet, err
 }
 
-//create a wallet with passphrase
-func CreateWalletWithpassphrase(passphrase string) (*client.Wallet, error) {
+//get wallet
+func GetWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
-	wallet := client.NewWalletWithPassphrase(passphrase)
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-	wm.LoadFromFile()
+	if len(wm.Wallets) > 0 {
+		return wm.Wallets[0], err
+	} else {
+		return nil, err
+	}
+}
 
-	return wallet, err
+//create a wallet with passphrase
+func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(wm.Wallets) > 0 && wm.PassPhrase != nil {
+		err = bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+		if err != nil {
+			return nil, ErrPasswordNotMatch
+		}
+		wallet := client.NewWallet()
+		wm.AddWallet(wallet)
+		wm.SaveWalletToFile()
+		return wallet, err
+
+	} else {
+		passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		wm.PassPhrase = passBytes
+		logger.Info("Wallet password set!")
+		wallet := client.NewWallet()
+		wm.AddWallet(wallet)
+		wm.SaveWalletToFile()
+		return wallet, err
+	}
 }
 
 //get balance
@@ -81,7 +132,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 	balance := common.NewAmount(0)
 	utxoIndex := core.LoadUTXOIndex(db)
-	utxos := utxoIndex.GetUTXOsByPubKey(pubKeyHash)
+	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}
@@ -90,8 +141,9 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 }
 
 //get all addresses
-func GetAllAddresses() ([]core.Address, error) {
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
+func GetAllAddressesFromTest() ([]core.Address, error) {
+	path := strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
+	fl := storage.NewFileLoader(path)
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 	if err != nil {
@@ -115,7 +167,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	}
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
-	bc.GetTxPool().ConditionalAdd(tx)
+	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
 	if err != nil {
 		return err
@@ -140,9 +192,8 @@ func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain
 		return err
 	}
 
-	bc.GetTxPool().StructPush(tx)
+	bc.GetTxPool().Push(tx)
 
 	return err
 
 }
-
