@@ -211,16 +211,25 @@ func TestVerify(t *testing.T) {
 
 	// test verifying coinbase transactions
 	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5)
+	bh1 := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh1, 5)
+	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
+	txout1 := NewTXOutput(common.NewAmount(10), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
+	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, 0}
+
 	// test valid coinbase transaction
 	assert.True(t, t5.Verify(UTXOIndex{}, 5))
+	assert.True(t, t6.Verify(UTXOIndex{}, 5))
+
 	// test coinbase transaction with incorrect blockHeight
 	assert.False(t, t5.Verify(UTXOIndex{}, 10))
+
 	// test coinbase transaction with incorrect subsidy
-	bh := make([]byte, 8)
-	binary.BigEndian.PutUint64(bh, 5)
-	txin := TXInput{nil, -1, bh, []byte(nil)}
-	txout := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
-	var t7 = Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
+	bh2 := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh2, 5)
+	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
+	txout2 := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
+	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, 0}
 	assert.False(t, t7.Verify(UTXOIndex{}, 5))
 
 }

@@ -148,10 +148,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	}
 
 	//attach above partial tree to forktree
-	if ok := pool.updateForkTree(forkParent, sender); ok == true {
-		forkBlks := pool.getForkBlks()
-		pool.blockchain.MergeFork(forkBlks)
-	}
+	pool.requestPrevBlock(forkParent, sender)
 
 }
 func (pool *BlockPool) getBlocksByHashs(hashs []string) []*Block {
@@ -215,44 +212,9 @@ func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
 	return node
 }
 
-func (pool *BlockPool) updateForkTree(node *common.Node, sender peer.ID) bool {
-	tree := pool.blockchain.forkTree
-	prevhash := node.GetValue().(*BlockHeader).prevHash
-
-	if tree.Get(tree.Root, string(prevhash)); tree.Found != nil { // parent exists on tree, add node to tree
-		logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " being added as child to parent ", hex.EncodeToString(node.Parent.GetValue().(*BlockHeader).hash))
-		tree.Found.AddChild(node)
-		pool.nodeCache.Remove(node)
-		return true
-	} else { // parent doesnt exist on tree, download parent from sender
-		logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " parent not found, proceeding to download parent: ", hex.EncodeToString(node.GetValue().(*BlockHeader).prevHash), " from ", sender)
-		pool.requestBlock(node.GetValue().(*BlockHeader).prevHash, sender)
-		return false
-	}
-}
-
-func (pool *BlockPool) getForkBlks() []*Block {
-	var forkblks []*Block
-	tree := pool.blockchain.forkTree
-	forkTailNode := tree.HighestLeaf
-	bc := pool.blockchain
-	tree.Get(tree.Root, string(bc.GetTailBlockHash()))
-	bcTailInTree := tree.Found
-	tree.FindCommonParent(forkTailNode, bcTailInTree)
-	forkParentHash := tree.Found.GetValue().(*BlockHeader).hash
-
-	if tree.Found != nil {
-		logger.Debug("Blockpool: no common parent found between fork tail and blockchain tail")
-		for {
-			if IsHashEqual(forkTailNode.GetValue().(*BlockHeader).hash, forkParentHash) {
-				break
-			}
-			blk := pool.getBlkFromBlkCache(string(forkTailNode.GetValue().(BlockHeader).hash))
-			forkblks = append(forkblks, blk)
-			forkTailNode = forkTailNode.Parent
-		}
-	}
-	return forkblks
+func (pool *BlockPool) requestPrevBlock(node *common.Node, sender peer.ID) {
+	logger.Debug("BlockPool: Block: ", hex.EncodeToString(node.GetValue().(*BlockHeader).hash), " parent not found, proceeding to download parent: ", hex.EncodeToString(node.GetValue().(*BlockHeader).prevHash), " from ", sender)
+	pool.blockRequestCh <- BlockRequestPars{node.GetValue().(*BlockHeader).prevHash, sender}
 }
 
 func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
@@ -261,9 +223,4 @@ func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
 	}
 	return nil
 
-}
-
-//TODO: RequestChannel should be in PoW.go
-func (pool *BlockPool) requestBlock(hash Hash, pid peer.ID) {
-	pool.blockRequestCh <- BlockRequestPars{hash, pid}
 }
