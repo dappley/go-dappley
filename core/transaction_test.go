@@ -178,14 +178,17 @@ func TestTransaction_Proto(t *testing.T) {
 
 func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	//prepare utxo pool
-	Txin := MockTxInputs()
-	Txin2 := MockTxInputs()
-	utxo1 := &UTXO{common.NewAmount(10), []byte("addr1"), Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9), []byte("addr1"), Txin[1].Txid, Txin[1].Vout}
-	utxo3 := &UTXO{common.NewAmount(9), []byte("addr1"), Txin2[0].Txid, Txin2[0].Vout}
-	utxo4 := &UTXO{common.NewAmount(9), []byte("addr1"), Txin2[1].Txid, Txin2[1].Vout}
+	pubkey := []byte("12345678901234567890123456789012")
+	pubkeyHash, _ := HashPubKey(pubkey)
+
+	Txin := MockTxInputsWithPubkey(pubkey)
+	Txin2 := MockTxInputsWithPubkey(pubkey)
+	utxo1 := &UTXO{common.NewAmount(10), pubkeyHash, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9), pubkeyHash, Txin[1].Txid, Txin[1].Vout}
+	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[0].Txid, Txin2[0].Vout}
+	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := UTXOIndex{}
-	utxoPool["addr1"] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+	utxoPool[pubkeyHash] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	txins, _ := tx.FindAllTxinsInUtxoPool(utxoPool)

@@ -63,8 +63,8 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: t,
-			sign: nil,
-			height:height,
+			sign:      nil,
+			height:    height,
 		},
 		transactions: transactions,
 	}
@@ -154,6 +154,19 @@ func MockTxInputs() []TXInput {
 	}
 }
 
+func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
+	return []TXInput{
+		{util.GenerateRandomAoB(2),
+			6,
+			util.GenerateRandomAoB(2),
+			pubkey},
+		{util.GenerateRandomAoB(2),
+			2,
+			util.GenerateRandomAoB(2),
+			pubkey},
+	}
+}
+
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
 		{common.NewAmount(5), util.GenerateRandomAoB(2)},
@@ -168,4 +181,3 @@ func GenerateMockTransactionPool(numOfTxs int) *TransactionPool {
 	}
 	return txPool
 }
-
