@@ -188,7 +188,7 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[0].Txid, Txin2[0].Vout}
 	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := UTXOIndex{}
-	utxoPool[pubkeyHash] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+	utxoPool[string(pubkeyHash)] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	txins, _ := tx.FindAllTxinsInUtxoPool(utxoPool)

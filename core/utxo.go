@@ -100,8 +100,8 @@ func (index UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
 }
 
 // GetUTXOsByPubKey returns all current UTXOs identified by pubkey.
-func (index UTXOIndex) GetUTXOsByPubKey(pubkey []byte) []*UTXO {
-	return index[string(pubkey)]
+func (index UTXOIndex) GetUTXOsByPubKey(pubkeyHash []byte) []*UTXO {
+	return index[string(pubkeyHash)]
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
