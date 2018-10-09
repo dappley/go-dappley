@@ -378,11 +378,7 @@ func (bc *Blockchain) String() string {
 
 //record the new block in the database
 func (bc *Blockchain) AddBlockToDb(block *Block) error {
-	err := bc.db.Put(block.GetHash(), block.Serialize())
-	if err != nil {
-		logger.Warn("Blockchain: Add Block To Database Failed!")
-	}
-	return err
+	return bc.db.Put(block.GetHash(), block.Serialize())
 }
 
 func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
@@ -484,7 +480,6 @@ loop:
 func (bc *Blockchain) setTailBlockHash(hash Hash) error {
 	err := bc.db.Put(tipKey, hash)
 	if err != nil {
-		logger.Error("Blockchain: Set Tail Block Hash Failed!")
 		return err
 	}
 	bc.tailBlockHash = hash
