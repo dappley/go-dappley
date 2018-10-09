@@ -77,7 +77,7 @@ func LoadUTXOIndex(db storage.Storage) UTXOIndex {
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
 		return NewUTXOIndex()
 	}
-	
+
 	return deserializeUTXOIndex(utxoBytes)
 }
 
@@ -102,6 +102,19 @@ func (index UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
 // GetUTXOsByPubKey returns all current UTXOs identified by pubkey.
 func (index UTXOIndex) GetUTXOsByPubKey(pubkey []byte) []*UTXO {
 	return index[string(pubkey)]
+}
+
+// FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
+func (index UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *UTXO {
+	utxos := index.GetUTXOsByPubKey(pubkeyHash)
+
+	for _, utxo := range utxos {
+		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
+			return utxo
+		}
+	}
+
+	return nil
 }
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
@@ -209,23 +222,22 @@ func (index UTXOIndex) removeUTXO(txid []byte, vout int) error {
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	tx, err := bc.FindTransaction(in.Txid)
 	if err != nil {
-		return  TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
+		return TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
 
-
 func (index UTXOIndex) deepCopy() UTXOIndex {
 	utxocopy := NewUTXOIndex()
 	copier.Copy(&utxocopy, &index)
-	if len(utxocopy)==0 {
+	if len(utxocopy) == 0 {
 		utxocopy = NewUTXOIndex()
 	}
 	return utxocopy
 }
 
 // GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error){
+func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error) {
 	index := LoadUTXOIndex(db)
 	deepCopy := index.deepCopy()
 	bci := bc.Iterator()

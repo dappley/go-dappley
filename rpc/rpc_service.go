@@ -156,5 +156,21 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 }
 
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
+	tx := core.Transaction{nil, nil, nil, 0}
+	tx.FromProto(in)
+
+	if tx.IsCoinbase() {
+		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
+	}
+
+	//TODO Check double spend in transaction pool
+	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	if tx.Verify(utxoIndex) == false {
+		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
+	}
+
+	rpcService.node.GetBlockchain().GetTxPool().ConditionalAdd(tx)
+	rpcService.node.TxBroadcast(&tx)
+
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }

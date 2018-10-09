@@ -113,7 +113,7 @@ message GetBlocksResponse {
 }
 
 message SendTransactionRequest {
-  corepb.Transaction transactions = 1;
+  corepb.Transaction transaction = 1;
 }
 
 message SendTransactionResponse {
