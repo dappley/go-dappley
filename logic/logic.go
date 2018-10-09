@@ -33,7 +33,7 @@ import (
 	"time"
 )
 
-const unlockduration = 60 * time.Second
+const unlockduration = 300 * time.Second
 
 var (
 	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
