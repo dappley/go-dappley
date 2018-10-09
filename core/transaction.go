@@ -211,11 +211,11 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 func (tx *Transaction) verifyAmount(prevTXs map[string]TXOutput) bool {
 	var totalVin, totalVout common.Amount
 	for _, utxo := range prevTXs {
-		totalVin.Add(utxo.Value)
+		totalVin = *totalVin.Add(utxo.Value)
 	}
 
 	for _, vout := range tx.Vout {
-		totalVout.Add(vout.Value)
+		totalVout = *totalVout.Add(vout.Value)
 	}
 
 	//TotalVin amount must equal or greater than total vout
