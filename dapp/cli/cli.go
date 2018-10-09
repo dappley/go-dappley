@@ -273,7 +273,11 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
 	if err != nil {
-		fmt.Println("ERROR: Get Balance failed. ERR:", err)
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Get Balance failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Get Balance failed. %v\n", err.Error())
+		}
 		return
 	}
 
@@ -378,7 +382,11 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 
 	response,err  := client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
 	if err != nil {
-		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Get Wallet Addresses failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Get Wallet Addresses failed. %v\n", err.Error())
+		}
 		return
 	}
 

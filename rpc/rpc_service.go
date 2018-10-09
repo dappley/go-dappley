@@ -31,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"strings"
-	"fmt"
 )
 
 type RpcService struct {
@@ -60,12 +59,18 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 			msg = "NewWallet"
 		}
 	} else if in.Name == "createWallet" {
+		empty,err := logic.IsWalletEmpty()
+		if err != nil && !empty {
+			return &rpcpb.CreateWalletResponse{
+				Message: err.Error(),
+			}, nil
+		}
 		locked, err := logic.IsWalletLocked()
 		if err != nil {
 			return &rpcpb.CreateWalletResponse{
 				Message: err.Error(),
 			}, nil
-		} else if locked {
+		} else if locked || empty {
 			passPhrase := in.Passphrase
 			if len(passPhrase) == 0 {
 				logger.Error("CreateWallet: Password is empty!")
@@ -149,7 +154,6 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 				return &rpcpb.GetBalanceResponse{Message: err.Error()}, err
 			} else {
 				wm.SetUnlockTimer(logic.GetUnlockDuration())
-				fmt.Println("Set unlock **** get balance", wm.Locked)
 			}
 		} else {
 			wallet = wm.GetWalletByAddress(core.NewAddress(address))

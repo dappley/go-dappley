@@ -28,6 +28,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"fmt"
 )
 
 func TestWalletManager_LoadFromFileExists(t *testing.T) {
@@ -157,6 +158,10 @@ func TestWalletManager_GetKeyPairByAddressNilInput(t *testing.T) {
 func TestNewWalletManager_UnlockTimer(t *testing.T) {
 	fl := storage.NewFileLoader(strings.Replace(GetWalletFilePath(), "wallets", "wallets_test", -1))
 	wm := NewWalletManager(fl)
+	err1 := wm.LoadFromFile()
+	if err1 != nil {
+		fmt.Println(err1.Error())
+	}
 	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
 	if err != nil {
 		return

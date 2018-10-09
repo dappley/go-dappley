@@ -33,7 +33,7 @@ import (
 	"time"
 )
 
-const unlockduration = 1 * time.Minute
+const unlockduration = 60 * time.Second
 
 var (
 	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
@@ -43,7 +43,7 @@ var (
 	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct!")
 	ErrPathEmpty            = errors.New("ERROR: Path empty!")
 	ErrPasswordEmpty        = errors.New("ERROR: Password empty!")
-)
+	)
 
 //create a blockchain
 func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus) (*core.Blockchain, error) {
@@ -86,7 +86,11 @@ func CreateWallet(path string, password string) (*client.Wallet, error) {
 func GetWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	empty, err:= wm.IsFileEmpty()
+	if empty {
+		return nil, nil
+	}
+	err = wm.LoadFromFile()
 	if len(wm.Wallets) > 0 {
 		return wm.Wallets[0], err
 	} else {
@@ -99,6 +103,33 @@ func IsWalletLocked() (bool, error) {
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 	return wm.Locked, err
+}
+
+func IsWalletEmpty() (bool, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	return wm.IsFileEmpty()
+}
+
+func SetLockWallet() error {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	empty, err := wm.IsFileEmpty()
+	if empty {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	err = wm.LoadFromFile()
+	if err != nil {
+		return err
+	} else {
+		wm.Locked = true
+		wm.SaveWalletToFile()
+		return nil
+	}
 }
 
 func SetUnLockWallet() error {
@@ -157,6 +188,9 @@ func AddWallet() (*client.Wallet, error) {
 	}
 
 	wallet := client.NewWallet()
+	if len(wm.Wallets) == 0 {
+		wm.Locked = true
+	}
 	wm.AddWallet(wallet)
 	wm.SaveWalletToFile()
 	return wallet, err
