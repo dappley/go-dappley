@@ -200,7 +200,7 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 		verifyResult, error1 := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if error1 != nil || verifyResult == false {
-			logger.Error(error1)
+			logger.Errorf("Error: Verify sign failed %v", error1)
 			return false
 		}
 	}

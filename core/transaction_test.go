@@ -285,7 +285,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 				txCopy := tt.tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
 				txCopy.Vin[i].PubKey = pubKeyHash
-				signature, _ := secp256k1.Sign(txCopy.Hash(), privKeyByte)
+				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
 			}
 
