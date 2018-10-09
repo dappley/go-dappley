@@ -163,10 +163,12 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(utxo)
 	if err != nil {
+		logger.Errorf("ERROR: %v", err)
 		return false
 	}
 
 	if tx.verifyAmount(prevUtxos) == false {
+		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
 

@@ -155,9 +155,9 @@ func TestSign_Invalid(t *testing.T) {
 	txout := []TXOutput{{common.NewAmount(16), pubKeyHash}}
 
 	tests := []struct {
-		name string
-		tx	Transaction
-		privKey ecdsa.PrivateKey
+		name        string
+		tx          Transaction
+		privKey     ecdsa.PrivateKey
 		expectedErr error
 	}{
 		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey, ErrTXInputNotFound},
@@ -177,7 +177,7 @@ func TestSign_Invalid(t *testing.T) {
 
 }
 
-func TestVerify(t *testing.T) {
+func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var prevTXs = map[string]Transaction{}
 
 	var t1 = Transaction{
@@ -234,7 +234,7 @@ func TestVerify(t *testing.T) {
 
 }
 
-func TestVerifySignatures(t *testing.T) {
+func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	// Fake a key pair
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
@@ -246,33 +246,37 @@ func TestVerifySignatures(t *testing.T) {
 	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))
 	wrongPrivKeyByte, _ := secp256k1.FromECDSAPrivateKey(wrongPrivKey)
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
+	wrongPubKeyHash, _ := HashPubKey(wrongPubKey)
 	wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 
-	// UTXO form previous transactions
-	prevTXOutputs := map[string]TXOutput{
-		"01": *NewTXOutput(common.NewAmount(3), address.Address),
-		"02": *NewTXOutput(common.NewAmount(4), address.Address),
-		"03": *NewTXOutput(common.NewAmount(4), wrongAddress.Address),
+	utxoIndex := map[string][]*UTXO{
+		string(pubKeyHash): []*UTXO{
+			&UTXO{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
+			&UTXO{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
+		},
 	}
 
 	// Prepare a transaction to be verified
 	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
-	txin1 := append(txin, TXInput{[]byte{2}, 1, nil, pubKey})
-	txin2 := append(txin, TXInput{[]byte{0}, 2, nil, pubKey}) // Invalid
-	txin3 := append(txin, TXInput{[]byte{3}, 2, nil, pubKey}) // Invalid
-	txin4 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // Invalid
+	txin1 := append(txin, TXInput{[]byte{2}, 1, nil, pubKey})      // Normal test
+	txin2 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
+	txin3 := append(txin, TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
+	txin4 := append(txin, TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
 	txout := []TXOutput{{common.NewAmount(7), pubKey}}
+	txout2 := []TXOutput{{common.NewAmount(8), pubKey}} //Vout amount > Vin amount
 
 	tests := []struct {
-		name string
-		tx	Transaction
+		name     string
+		tx       Transaction
 		signWith []byte
-		ok bool
+		ok       bool
 	}{
 		{"normal", Transaction{nil, txin1, txout, 0}, privKeyByte, true},
-		{"previous tx not found", Transaction{nil, txin2, txout, 0}, privKeyByte, false},
-		{"public key mismatch", Transaction{nil, txin3, txout, 0}, wrongPrivKeyByte, false},
-		{"public key mismatch2", Transaction{nil, txin4, txout, 0}, privKeyByte, false},
+		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, 0}, privKeyByte, false},
+		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, 0}, privKeyByte, false},
+		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, 0}, privKeyByte, false},
+		{"Amount invalid", Transaction{nil, txin1, txout2, 0}, privKeyByte, false},
+		{"Sign invalid", Transaction{nil, txin1, txout, 0}, wrongPrivKeyByte, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -286,7 +290,7 @@ func TestVerifySignatures(t *testing.T) {
 			}
 
 			// Verify the signatures
-			result := tt.tx.VerifySignatures(prevTXOutputs)
+			result := tt.tx.Verify(utxoIndex, 0)
 			assert.Equal(t, tt.ok, result)
 		})
 	}
