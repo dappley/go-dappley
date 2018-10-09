@@ -93,8 +93,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 	if err != nil {
 		return nil, err
 	}
-	tree := common.NewTree(tailBlock.GetHash(), tailBlock.header)
-	bc.forkTree = tree
+	bc.forkTree = common.NewTree(tailBlock.GetHash(), tailBlock.header)
 	return bc, nil
 }
 
