@@ -27,10 +27,13 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"golang.org/x/crypto/bcrypt"
 	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"strings"
+	"time"
 )
+
+const unlockduration = 1 * time.Minute
 
 var (
 	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
@@ -38,8 +41,8 @@ var (
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
 	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct!")
-	ErrPathEmpty     = errors.New("ERROR: Path empty!")
-	ErrPasswordEmpty     = errors.New("ERROR: Password empty!")
+	ErrPathEmpty            = errors.New("ERROR: Path empty!")
+	ErrPasswordEmpty        = errors.New("ERROR: Password empty!")
 )
 
 //create a blockchain
@@ -91,6 +94,25 @@ func GetWallet() (*client.Wallet, error) {
 	}
 }
 
+func IsWalletLocked() (bool, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	return wm.Locked, err
+}
+
+func SetUnLockWallet() error {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return err
+	} else {
+		wm.SetUnlockTimer(unlockduration)
+		return nil
+	}
+}
+
 //create a wallet with passphrase
 func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
@@ -125,6 +147,25 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 	}
 }
 
+//create a wallet
+func AddWallet() (*client.Wallet, error) {
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	wm := client.NewWalletManager(fl)
+	err := wm.LoadFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	wallet := client.NewWallet()
+	wm.AddWallet(wallet)
+	wm.SaveWalletToFile()
+	return wallet, err
+}
+
+func GetUnlockDuration() time.Duration {
+	return unlockduration
+}
+
 //get balance
 func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
 	pubKeyHash, valid := address.GetPubKeyHash()
@@ -144,7 +185,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 
 //get all addresses
 func GetAllAddressesFromTest() ([]core.Address, error) {
-	path := strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1)
+	path := strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1)
 	fl := storage.NewFileLoader(path)
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()

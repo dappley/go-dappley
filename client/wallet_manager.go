@@ -37,6 +37,7 @@ import (
 
 const walletConfigFilePath = "../client/wallet.conf"
 
+
 type WalletManager struct {
 	Wallets  	[]*Wallet
 	fileLoader 	storage.FileStorage
@@ -49,6 +50,7 @@ type WalletManager struct {
 type WalletData struct {
 	Wallets  	[]*Wallet
 	PassPhrase []byte
+	Locked bool
 }
 
 func GetWalletFilePath() string{
@@ -66,15 +68,20 @@ func NewWalletManager(fileLoader storage.FileStorage) *WalletManager{
 		}
 }
 
+func  (wm *WalletManager) NewTimer(timeout time.Duration) {
+	wm.timer = *time.NewTimer(timeout)
+	}
+
 func (wm *WalletManager) LoadFromFile() error{
 
 	wm.mutex.Lock()
-	defer wm.mutex.Unlock()
 	fileContent, err := wm.fileLoader.ReadFromFile()
 
 	if err != nil {
+		wm.mutex.Unlock()
 		wm.SaveWalletToFile()
 		fileContent, err = wm.fileLoader.ReadFromFile()
+		wm.mutex.Lock()
 	}
 
 	var walletdata *WalletData
@@ -82,6 +89,7 @@ func (wm *WalletManager) LoadFromFile() error{
 	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
 	err = decoder.Decode(&walletdata)
 	if err != nil {
+		wm.mutex.Unlock()
 		logger.Error("WalletManager: Load Wallets failed!")
 		logger.Error(err)
 		return err
@@ -89,7 +97,8 @@ func (wm *WalletManager) LoadFromFile() error{
 
 	wm.Wallets = walletdata.Wallets
 	wm.PassPhrase = walletdata.PassPhrase
-
+	wm.Locked = walletdata.Locked
+	wm.mutex.Unlock()
 	return nil
 }
 
@@ -103,6 +112,7 @@ func (wm *WalletManager) SaveWalletToFile() {
 	walletdata := WalletData{}
 	walletdata.Wallets = wm.Wallets
 	walletdata.PassPhrase = wm.PassPhrase
+	walletdata.Locked = wm.Locked
 	err := encoder.Encode(walletdata)
 	if err != nil {
 		logger.Error("WalletManager: save Wallets to file failed!")
@@ -131,6 +141,8 @@ func (wm *WalletManager) AddWallet(wallet *Wallet){
 func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
+	wm.mutex.Lock()
+	defer 	wm.mutex.Unlock()
 	for _, wallet := range wm.Wallets {
 		addresses = append(addresses, wallet.GetAddresses()...)
 	}
@@ -141,11 +153,13 @@ func (wm *WalletManager) GetAddresses() []core.Address {
 func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, error) {
 	var addresses []string
 
+	wm.mutex.Lock()
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err != nil {
+		wm.mutex.Unlock()
 		return nil, errors.New("Password not correct!")
 	}
-	wm.mutex.Lock()
+
 	for _, wallet := range wm.Wallets {
 		address := wallet.GetAddresses()[0].Address
 		addresses = append(addresses, address)
@@ -178,21 +192,34 @@ func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 }
 
 func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
-	wm.mutex.Lock()
-	defer 	wm.mutex.Unlock()
-
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err == nil {
 		wallet := wm.GetWalletByAddress(address)
 		if wallet == nil {
-			return nil, errors.New("Address not in the wallets!")
+			return nil, errors.New("Address not found in the wallets!")
 		} else {
 			return wallet, nil
 		}
 	} else {
 		return nil, errors.New("Password does not match!")
 	}
+	}
 
+func (wm *WalletManager) SetUnlockTimer(timeout time.Duration)  {
+	wm.Locked = false
+	wm.SaveWalletToFile()
+	wm.NewTimer(timeout)
+	wm.timer.Reset(timeout)
+	go wm.UnlockExpire()
+}
+
+func (wm *WalletManager) UnlockExpire() {
+	defer wm.timer.Stop()
+	select {
+	case <-wm.timer.C:
+		wm.Locked = true
+		wm.SaveWalletToFile()
+	}
 }
 
 
