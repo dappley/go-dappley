@@ -168,7 +168,8 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 		return false
 	}
 
-	if enableAddBalanceTest || tx.verifyAmount(prevUtxos) == false {
+	//TODO  Remove the enableAddBalanceTest flag
+	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) == false {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
