@@ -20,10 +20,8 @@ package consensus
 
 import (
 	"fmt"
-
 	"strings"
 	"time"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"

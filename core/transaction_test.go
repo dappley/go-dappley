@@ -248,8 +248,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
 	//wrongPubKeyHash, _ := HashPubKey(wrongPubKey)
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
-
-	utxoIndex := map[string][]*UTXO{
+	utxoIndex := NewUTXOIndex()
+	utxoIndex.index = map[string][]*UTXO{
 		string(pubKeyHash): []*UTXO{
 			&UTXO{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
 			&UTXO{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
@@ -371,8 +371,8 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	utxo2 := &UTXO{common.NewAmount(9), pubkeyHash, Txin[1].Txid, Txin[1].Vout}
 	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[0].Txid, Txin2[0].Vout}
 	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[1].Txid, Txin2[1].Vout}
-	utxoPool := UTXOIndex{}
-	utxoPool[string(pubkeyHash)] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+	utxoPool := NewUTXOIndex()
+	utxoPool.index[string(pubkeyHash)] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	txins, _ := tx.FindAllTxinsInUtxoPool(utxoPool)
