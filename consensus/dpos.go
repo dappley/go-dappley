@@ -20,12 +20,12 @@ package consensus
 
 import (
 	"fmt"
+	"github.com/hashicorp/golang-lru"
 
 	"github.com/dappley/go-dappley/core"
 	"time"
 	logger "github.com/sirupsen/logrus"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"fmt"
 	"github.com/dappley/go-dappley/util"
 	"strings"
 )
