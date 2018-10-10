@@ -66,6 +66,30 @@ func (n *Node) containChild(child *Node) bool {
 	return false
 }
 
+func (n *Node) GetParentNodesRange(head *Node) []*Node {
+	var parentNodes []*Node
+	parentNodes = append(parentNodes, n)
+	if n.Height > head.Height {
+		for parent := n.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
+			parentNodes = append(parentNodes, parent)
+		}
+	}
+
+	return parentNodes
+}
+
+func (n *Node) FindHeightestChild(heightest *Node) {
+	if n.hasChildren() {
+		for _, child := range n.Children {
+			child.FindHeightestChild(heightest)
+		}
+	} else {
+		if heightest == nil || n.Height > heightest.Height {
+			*heightest = *n
+		}
+	}
+}
+
 func (parent *Node) AddChild(child *Node) {
 	parent.Children = append(parent.Children, child)
 	child.Parent = parent

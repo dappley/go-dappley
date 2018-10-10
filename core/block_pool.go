@@ -141,8 +141,10 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 	if bcTailBlk.IsParentBlock(blk) {
 		pool.blockchain.AddBlockToBlockchainTail(blk)
-		hashs := pool.getNextBlockHeaders(blk.hashString())
-		forkBlks := pool.getBlocksByHashs(hashs)
+		var forkTailNode common.Node
+		node.FindHeightestChild(&forkTailNode)
+		nodes := forkTailNode.GetParentNodesRange(node)
+		forkBlks := pool.getBlocksByHashs(nodes)
 		pool.blockchain.MergeFork(forkBlks)
 		return
 	}
@@ -151,39 +153,14 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	pool.requestPrevBlock(forkParent, sender)
 
 }
-func (pool *BlockPool) getBlocksByHashs(hashs []string) []*Block {
+func (pool *BlockPool) getBlocksByHashs(nodes []*common.Node) []*Block {
 	blkCache := pool.blkCache
 	var blocks []*Block
-	for i := len(hashs) - 1; i >= 0; i-- {
-		block, _ := blkCache.Get(hashs[i])
+	for i := 0; i < len(nodes); i++ {
+		block, _ := blkCache.Get(nodes[i].GetKey())
 		blocks = append(blocks, block.(*Block))
 	}
 	return blocks
-}
-
-func (pool *BlockPool) getNextBlockHeaders(blockHash string) []string {
-	var childHeaderArray []string
-	hash, ok := pool.getNextBlockHeader(blockHash)
-	for ok {
-		childHeaderArray = append(childHeaderArray, hash)
-		hash, ok = pool.getNextBlockHeader(hash)
-	}
-	return childHeaderArray
-}
-
-func (pool *BlockPool) getNextBlockHeader(hash string) (nextHash string, ok bool) {
-	blkCache := pool.blkCache
-	nodeCache := pool.nodeCache
-	for _, key := range nodeCache.Keys() {
-		if node, ok := nodeCache.Get(key); ok == true {
-			if block, ok := blkCache.Get(node.(*common.Node).GetKey()); ok {
-				if hex.EncodeToString(block.(*Block).GetPrevHash()) == hash {
-					return block.(*Block).hashString(), true
-				}
-			}
-		}
-	}
-	return "", false
 }
 
 func (pool *BlockPool) updatePoolNodeCache(node *common.Node) *common.Node {
