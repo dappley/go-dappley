@@ -20,6 +20,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 )
 
 type Entry struct {
@@ -66,9 +67,30 @@ func (n *Tree) containChild(child *Tree) bool {
 	return false
 }
 
+func (n *Tree) Delete() {
+	if n.Parent != nil {
+		for i := 0; i < len(n.Parent.Children); i++ {
+			if n.Parent.Children[i].GetKey() == n.GetKey() {
+				n.Parent.Children = append(n.Parent.Children[:i], n.Parent.Children[i+1:]...)
+			}
+		}
+	}
+	n.deleteChild()
+}
+
+func (n *Tree) deleteChild() {
+	for _, child := range n.Children {
+		child.deleteChild()
+	}
+	*n = Tree{Entry{nil, nil}, nil, nil, 0}
+	//n = nil
+}
+
 func (n *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
 	parentTrees = append(parentTrees, n)
+	fmt.Println(head.Height)
+	fmt.Println(n.Height)
 	if n.Height > head.Height {
 		for parent := n.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
 			parentTrees = append(parentTrees, parent)
