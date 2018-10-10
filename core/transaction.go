@@ -27,19 +27,17 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
-
-	"math/big"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
+	"strings"
 )
 
 var subsidy = common.NewAmount(10)
+var enableAddBalanceTest = true
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -164,67 +162,66 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 		return true
 	}
 
-	prevUtxos := tx.FindAllTxinsInUtxoPool(utxo)
-	if prevUtxos == nil {
+	prevUtxos, err := tx.FindAllTxinsInUtxoPool(utxo)
+	if err != nil {
+		logger.Errorf("ERROR: %v", err)
 		return false
 	}
-	return tx.VerifySignatures(prevUtxos)
-}
 
-// VerifySignatures verifies signatures of Transaction inputs
-func (tx *Transaction) VerifySignatures(prevTXOutputs map[string]TXOutput) bool {
-
-	var verifyResult bool
-	var error1 error
-
-	if tx.IsCoinbase() {
-		return true
+	//TODO  Remove the enableAddBalanceTest flag
+	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) == false {
+		logger.Error("ERROR: Transaction amount is invalid")
+		return false
 	}
 
+	return tx.verifySignatures(prevUtxos)
+}
+
+func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 	for _, vin := range tx.Vin {
-		if prevTXOutputs[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
-			logger.Error("Previous transaction is invalid")
+		if prevUtxos[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
+			logger.Error("ERROR: Previous transaction is not correct")
 			return false
 		}
 	}
 
 	txCopy := tx.TrimmedCopy()
-	//	curve := elliptic.P256()
-	curve := secp256k1.S256()
 
 	for inID, vin := range tx.Vin {
-		prevTXOut := prevTXOutputs[hex.EncodeToString(vin.Txid)]
-		vinPubKeyHash, _ := HashPubKey(vin.PubKey)
-		if bytes.Compare(prevTXOut.PubKeyHash, vinPubKeyHash) != 0 {
-			logger.Error("Vout Vin public key mismatch")
-			return false
-		}
+		prevTxOut := prevUtxos[hex.EncodeToString(vin.Txid)]
+
 		txCopy.Vin[inID].Signature = nil
-		txCopy.Vin[inID].PubKey = prevTXOut.PubKeyHash
+		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
-		x := big.Int{}
-		y := big.Int{}
-		keyLen := len(vin.PubKey)
-		x.SetBytes(vin.PubKey[:(keyLen / 2)])
-		y.SetBytes(vin.PubKey[(keyLen / 2):])
 
-		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
-		originPub, err := secp256k1.FromECDSAPublicKey(&rawPubKey)
-		if err != nil {
-			logger.Error(err)
-			return false
-		}
+		originPub := make([]byte, 1+len(vin.PubKey))
+		originPub[0] = 4 // uncompressed point
+		copy(originPub[1:], vin.PubKey)
 
-		verifyResult, error1 = secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+		verifyResult, error1 := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if error1 != nil || verifyResult == false {
-			logger.Error(error1)
+			logger.Errorf("Error: Verify sign failed %v", error1)
 			return false
 		}
 	}
 
 	return true
+}
+
+func (tx *Transaction) verifyAmount(prevTXs map[string]TXOutput) bool {
+	var totalVin, totalVout common.Amount
+	for _, utxo := range prevTXs {
+		totalVin = *totalVin.Add(utxo.Value)
+	}
+
+	for _, vout := range tx.Vout {
+		totalVout = *totalVout.Add(vout.Value)
+	}
+
+	//TotalVin amount must equal or greater than total vout
+	return totalVin.Cmp(&totalVout) >= 0
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
@@ -328,18 +325,22 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transac
 	return tx, nil
 }
 
-//Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) map[string]TXOutput {
+//FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]TXOutput, error) {
 	res := make(map[string]TXOutput)
 	for _, vin := range tx.Vin {
-		utxo := utxoPool.FindUTXO(vin.Txid, vin.Vout)
+		pubKeyHash, err := HashPubKey(vin.PubKey)
+		if err != nil {
+			return nil, ErrTXInputNotFound
+		}
+		utxo := utxoPool.FindUTXOByVin(pubKeyHash, vin.Txid, vin.Vout)
 		if utxo == nil {
-			return nil
+			return nil, ErrTXInputNotFound
 		}
 		txout := TXOutput{utxo.Value, utxo.PubKeyHash}
 		res[hex.EncodeToString(vin.Txid)] = txout
 	}
-	return res
+	return res, nil
 }
 
 // String returns a human-readable representation of a transaction

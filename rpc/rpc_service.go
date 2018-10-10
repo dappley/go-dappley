@@ -20,9 +20,9 @@ package rpc
 import (
 	"context"
 	"errors"
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
@@ -33,11 +33,30 @@ import (
 	"strings"
 )
 
+const ProtoVersion = "1.0.0"
+
 type RpcService struct {
 	node *network.Node
 }
 
-// Create Wallet Response
+func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVersionRequest) (*rpcpb.GetVersionResponse, error) {
+	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
+
+	if len(clientProtoVersions) != 3 {
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
+	}
+
+	serverProtoVersions := strings.Split(ProtoVersion, ".")
+
+	// Major version must equal
+	if serverProtoVersions[0] != clientProtoVersions[0] {
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
+	}
+
+	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
+}
+
+// SayHello implements helloworld.GreeterServer
 func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
 	msg := ""
 	addr := ""
@@ -167,7 +186,7 @@ func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddP
 	if len(in.Address) == 0 {
 		return &rpcpb.AddProducerResponse{
 			Message: "Error: Address is empty!",
-			}, nil
+		}, nil
 	}
 	if in.Name == "addProducer" {
 		err := rpcSerivce.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
@@ -177,7 +196,7 @@ func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddP
 			}, nil
 		} else {
 			return &rpcpb.AddProducerResponse{
-				Message: "Error: Add producer failed! "+err.Error(),
+				Message: "Error: Add producer failed! " + err.Error(),
 			}, nil
 		}
 	} else {
@@ -266,4 +285,52 @@ func (rpcSerivce *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBa
 			return &addBalanceResponse, nil
 		}
 	}
+}
+
+func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
+	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	publicKeyHash, err := core.NewAddress(in.Address).GetPubKeyHash()
+	if err == false {
+		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
+	}
+
+	utxos := utxoIndex.GetUTXOsByPubKeyHash(publicKeyHash)
+	response := rpcpb.GetUTXOResponse{ErrorCode: OK}
+	for _, utxo := range utxos {
+		response.Utxos = append(
+			response.Utxos,
+			&rpcpb.UTXO{
+				Amount:        utxo.Value.BigInt().Int64(),
+				PublicKeyHash: utxo.PubKeyHash,
+				Txid:          utxo.Txid,
+				TxIndex:       uint32(utxo.TxIndex),
+			},
+		)
+	}
+
+	return &response, nil
+}
+
+func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
+	return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
+}
+
+func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
+	tx := core.Transaction{nil, nil, nil, 0}
+	tx.FromProto(in)
+
+	if tx.IsCoinbase() {
+		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
+	}
+
+	//TODO Check double spend in transaction pool
+	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	if tx.Verify(utxoIndex, 0) == false {
+		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
+	}
+
+	rpcService.node.GetBlockchain().GetTxPool().Push(tx)
+	rpcService.node.TxBroadcast(&tx)
+
+	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }

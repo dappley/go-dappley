@@ -155,9 +155,9 @@ func TestSign_Invalid(t *testing.T) {
 	txout := []TXOutput{{common.NewAmount(16), pubKeyHash}}
 
 	tests := []struct {
-		name string
-		tx	Transaction
-		privKey ecdsa.PrivateKey
+		name        string
+		tx          Transaction
+		privKey     ecdsa.PrivateKey
 		expectedErr error
 	}{
 		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey, ErrTXInputNotFound},
@@ -177,7 +177,7 @@ func TestSign_Invalid(t *testing.T) {
 
 }
 
-func TestVerify(t *testing.T) {
+func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var prevTXs = map[string]Transaction{}
 
 	var t1 = Transaction{
@@ -234,45 +234,50 @@ func TestVerify(t *testing.T) {
 
 }
 
-func TestVerifySignatures(t *testing.T) {
+func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	// Fake a key pair
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
 	pubKeyHash, _ := HashPubKey(pubKey)
-	address := KeyPair{*privKey, pubKey}.GenerateAddress()
+	//address := KeyPair{*privKey, pubKey}.GenerateAddress()
 
 	// Fake a wrong key pair
 	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))
 	wrongPrivKeyByte, _ := secp256k1.FromECDSAPrivateKey(wrongPrivKey)
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
-	wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
+	//wrongPubKeyHash, _ := HashPubKey(wrongPubKey)
+	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 
-	// UTXO form previous transactions
-	prevTXOutputs := map[string]TXOutput{
-		"01": *NewTXOutput(common.NewAmount(3), address.Address),
-		"02": *NewTXOutput(common.NewAmount(4), address.Address),
-		"03": *NewTXOutput(common.NewAmount(4), wrongAddress.Address),
+	utxoIndex := map[string][]*UTXO{
+		string(pubKeyHash): []*UTXO{
+			&UTXO{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
+			&UTXO{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
+		},
 	}
 
 	// Prepare a transaction to be verified
 	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
-	txin1 := append(txin, TXInput{[]byte{2}, 1, nil, pubKey})
-	txin2 := append(txin, TXInput{[]byte{0}, 2, nil, pubKey}) // Invalid
-	txin3 := append(txin, TXInput{[]byte{3}, 2, nil, pubKey}) // Invalid
-	txin4 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // Invalid
+	txin1 := append(txin, TXInput{[]byte{2}, 1, nil, pubKey})      // Normal test
+	txin2 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
+	txin3 := append(txin, TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
+	txin4 := append(txin, TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
 	txout := []TXOutput{{common.NewAmount(7), pubKey}}
+	//TODO  Reopen Invalid Amount Testcase when refactor AddBalance
+	//txout2 := []TXOutput{{common.NewAmount(8), pubKey}} //Vout amount > Vin amount
 
 	tests := []struct {
-		name string
-		tx	Transaction
+		name     string
+		tx       Transaction
 		signWith []byte
-		ok bool
+		ok       bool
 	}{
 		{"normal", Transaction{nil, txin1, txout, 0}, privKeyByte, true},
-		{"previous tx not found", Transaction{nil, txin2, txout, 0}, privKeyByte, false},
-		{"public key mismatch", Transaction{nil, txin3, txout, 0}, wrongPrivKeyByte, false},
-		{"public key mismatch2", Transaction{nil, txin4, txout, 0}, privKeyByte, false},
+		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, 0}, privKeyByte, false},
+		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, 0}, privKeyByte, false},
+		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, 0}, privKeyByte, false},
+		//{"Amount invalid", Transaction{nil, txin1, txout2, 0}, privKeyByte, false},
+		{"Sign invalid", Transaction{nil, txin1, txout, 0}, wrongPrivKeyByte, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -281,12 +286,12 @@ func TestVerifySignatures(t *testing.T) {
 				txCopy := tt.tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
 				txCopy.Vin[i].PubKey = pubKeyHash
-				signature, _ := secp256k1.Sign(txCopy.Hash(), privKeyByte)
+				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
 			}
 
 			// Verify the signatures
-			result := tt.tx.VerifySignatures(prevTXOutputs)
+			result := tt.tx.Verify(utxoIndex, 0)
 			assert.Equal(t, tt.ok, result)
 		})
 	}
@@ -294,7 +299,7 @@ func TestVerifySignatures(t *testing.T) {
 
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
-	expectVin := TXInput{nil, -1, []byte{0,0,0,0,0,0,0,0}, []byte("Reward to '13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F'")}
+	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to '13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F'")}
 	expectVout := TXOutput{common.NewAmount(10), []byte{0x1c, 0x11, 0xfe, 0x6b, 0x98, 0x1, 0x56, 0xc5, 0x83, 0xec, 0xb1, 0xfc, 0x32, 0xdb, 0x28, 0x79, 0xb, 0x52, 0xeb, 0x2d}}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
@@ -357,27 +362,32 @@ func TestTransaction_Proto(t *testing.T) {
 
 func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	//prepare utxo pool
-	Txin := MockTxInputs()
-	Txin2 := MockTxInputs()
-	utxo1 := &UTXO{common.NewAmount(10),[]byte("addr1"),Txin[0].Txid,Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin[1].Txid,Txin[1].Vout}
-	utxo3 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[0].Txid,Txin2[0].Vout}
-	utxo4 := &UTXO{common.NewAmount(9),[]byte("addr1"),Txin2[1].Txid,Txin2[1].Vout}
+	pubkey := []byte("12345678901234567890123456789012")
+	pubkeyHash, _ := HashPubKey(pubkey)
+
+	Txin := MockTxInputsWithPubkey(pubkey)
+	Txin2 := MockTxInputsWithPubkey(pubkey)
+	utxo1 := &UTXO{common.NewAmount(10), pubkeyHash, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9), pubkeyHash, Txin[1].Txid, Txin[1].Vout}
+	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[0].Txid, Txin2[0].Vout}
+	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := UTXOIndex{}
-	utxoPool["addr1"] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+	utxoPool[string(pubkeyHash)] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
-	assert.Nil(t, tx.FindAllTxinsInUtxoPool(utxoPool))
+	txins, _ := tx.FindAllTxinsInUtxoPool(utxoPool)
+	assert.Nil(t, txins)
 	tx.Vin = Txin
-	assert.NotNil(t, tx.FindAllTxinsInUtxoPool(utxoPool))
+	txins, _ = tx.FindAllTxinsInUtxoPool(utxoPool)
+	assert.NotNil(t, txins)
 }
 
 func TestNewUTXOTransactionforAddBalance(t *testing.T) {
 	receiverAddr := "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"
 	testCases := []struct {
-		name string
-		amount	*common.Amount
-		tx	Transaction
+		name        string
+		amount      *common.Amount
+		tx          Transaction
 		expectedErr error
 	}{
 		{"Add 13", common.NewAmount(13), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(13), receiverAddr)}, 0}, nil},
