@@ -19,8 +19,9 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"bytes"
+	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 type Dynasty struct{
@@ -125,6 +126,7 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int{
 func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool{
 
 	if block == nil {
+		logger.Debug("ValidateProducer: block is empty")
 		return false
 	}
 
@@ -133,10 +135,12 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool{
 
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx==nil {
+		logger.Debug("ValidateProducer: coinbase tx is empty")
 		return false
 	}
 
 	if len(cbtx.Vout) == 0{
+		logger.Debug("ValidateProducer: coinbase Vout is empty")
 		return false
 	}
 
