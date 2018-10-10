@@ -36,28 +36,28 @@ var (
 const LeafsSize = 32
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
-type Node struct {
+type Tree struct {
 	entry    Entry
-	Parent   *Node
-	Children []*Node
+	Parent   *Tree
+	Children []*Tree
 	Height   uint64
 }
 
-func NewNode(index interface{}, value interface{}, height uint64) (*Node, error) {
+func NewTree(index interface{}, value interface{}, height uint64) (*Tree, error) {
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Node{Entry{index, value}, nil, nil, height}, nil
+	return &Tree{Entry{index, value}, nil, nil, height}, nil
 }
 
-func (n *Node) hasChildren() bool {
+func (n *Tree) hasChildren() bool {
 	if len(n.Children) > 0 {
 		return true
 	}
 	return false
 }
 
-func (n *Node) containChild(child *Node) bool {
+func (n *Tree) containChild(child *Tree) bool {
 	for _, c := range n.Children {
 		if c == child {
 			return true
@@ -66,19 +66,19 @@ func (n *Node) containChild(child *Node) bool {
 	return false
 }
 
-func (n *Node) GetParentNodesRange(head *Node) []*Node {
-	var parentNodes []*Node
-	parentNodes = append(parentNodes, n)
+func (n *Tree) GetParentTreesRange(head *Tree) []*Tree {
+	var parentTrees []*Tree
+	parentTrees = append(parentTrees, n)
 	if n.Height > head.Height {
 		for parent := n.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
-			parentNodes = append(parentNodes, parent)
+			parentTrees = append(parentTrees, parent)
 		}
 	}
 
-	return parentNodes
+	return parentTrees
 }
 
-func (n *Node) FindHeightestChild(heightest *Node) {
+func (n *Tree) FindHeightestChild(heightest *Tree) {
 	if n.hasChildren() {
 		for _, child := range n.Children {
 			child.FindHeightestChild(heightest)
@@ -90,13 +90,13 @@ func (n *Node) FindHeightestChild(heightest *Node) {
 	}
 }
 
-func (parent *Node) AddChild(child *Node) {
+func (parent *Tree) AddChild(child *Tree) {
 	parent.Children = append(parent.Children, child)
 	child.Parent = parent
 	child.Height = parent.Height + 1
 }
 
-func (child *Node) AddParent(parent *Node) error {
+func (child *Tree) AddParent(parent *Tree) error {
 	if child.Parent != nil {
 		return ErrChildNodeAlreadyHasParent
 	}
@@ -104,10 +104,10 @@ func (child *Node) AddParent(parent *Node) error {
 	return nil
 }
 
-func (n *Node) GetValue() interface{} {
+func (n *Tree) GetValue() interface{} {
 	return n.entry.value
 }
 
-func (n *Node) GetKey() interface{} {
+func (n *Tree) GetKey() interface{} {
 	return n.entry.key
 }
