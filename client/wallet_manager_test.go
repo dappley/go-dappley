@@ -18,13 +18,17 @@
 package client
 
 import (
-	"testing"
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/dappley/go-dappley/storage/mock"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/storage/mock"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
+	"strings"
+	"testing"
+	"time"
+	"fmt"
 )
 
 func TestWalletManager_LoadFromFileExists(t *testing.T) {
@@ -84,19 +88,19 @@ func TestWalletManager_AddWallet(t *testing.T) {
 	wallet := NewWallet()
 	wm.AddWallet(wallet)
 
-	assert.Equal(t,wallet,wm.Wallets[0])
+	assert.Equal(t, wallet, wm.Wallets[0])
 }
 
 func TestWallet_GetAddresses(t *testing.T) {
 	wm := NewWalletManager(nil)
 	wallet := NewWallet()
 	wm.Wallets = append(wm.Wallets, wallet)
-	assert.Equal(t, wallet.GetAddresses(),wm.GetAddresses())
+	assert.Equal(t, wallet.GetAddresses(), wm.GetAddresses())
 }
 
 func TestWallet_GetAddressesNoWallet(t *testing.T) {
 	wm := NewWalletManager(nil)
-	assert.Equal(t,[]core.Address(nil),wm.GetAddresses())
+	assert.Equal(t, []core.Address(nil), wm.GetAddresses())
 }
 
 func TestWalletManager_GetWalletByAddress(t *testing.T) {
@@ -111,6 +115,7 @@ func TestWalletManager_GetWalletByAddress_withPassphrase(t *testing.T) {
 	passPhrase, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	assert.Equal(t, err, nil)
 	wm.PassPhrase = passPhrase
+	wm.Locked = true
 	wallet := NewWallet()
 	wm.Wallets = append(wm.Wallets, wallet)
 	wallet1, err := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "password")
@@ -148,4 +153,32 @@ func TestWalletManager_GetKeyPairByUnfoundAddress(t *testing.T) {
 func TestWalletManager_GetKeyPairByAddressNilInput(t *testing.T) {
 	wm := NewWalletManager(nil)
 	assert.Nil(t, wm.GetKeyPairByAddress(core.Address{}))
+}
+
+func TestNewWalletManager_UnlockTimer(t *testing.T) {
+	fl := storage.NewFileLoader(strings.Replace(GetWalletFilePath(), "wallets", "wallets_test", -1))
+	wm := NewWalletManager(fl)
+	err1 := wm.LoadFromFile()
+	if err1 != nil {
+		fmt.Println(err1.Error())
+	}
+	passBytes, err := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.DefaultCost)
+	if err != nil {
+		return
+	}
+	wallet := NewWallet()
+	wm.AddWallet(wallet)
+	wm.PassPhrase = passBytes
+	wm.Locked = true
+	wm.SaveWalletToFile()
+
+	wm.SetUnlockTimer(10 * time.Second)
+	assert.Equal(t, wm.Locked, false)
+	time.Sleep(3 *  time.Second)
+	assert.Equal(t, wm.Locked, false)
+	time.Sleep(9 * time.Second)
+	fl2 := storage.NewFileLoader(strings.Replace(GetWalletFilePath(), "wallets", "wallets_test", -1))
+	wm2 := NewWalletManager(fl2)
+	wm2.LoadFromFile()
+	assert.Equal(t, wm2.Locked, true)
 }
