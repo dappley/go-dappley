@@ -20,20 +20,27 @@ package rpc
 import (
 	"context"
 	"errors"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 
+	"strings"
+
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"strings"
 )
 
-const ProtoVersion = "1.0.0"
+const (
+	ProtoVersion                  = "1.0.0"
+	MaxGetBlocksCount       int32 = 500
+	MinUtxoBlockHeaderCount int32 = 6
+)
 
 type RpcService struct {
 	node *network.Node
@@ -212,6 +219,7 @@ func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcSerivce.node.GetBlockchain().GetMaxHeight(),
+		Producers:     rpcSerivce.node.GetBlockchain().GetConsensus().GetProducers(),
 	}, nil
 }
 
@@ -308,11 +316,88 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		)
 	}
 
+	//TODO Race condition Blockchain update after GetUTXO
+	getHeaderCount := MaxGetBlocksCount
+	if int(getHeaderCount) < len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()) {
+		getHeaderCount = int32(len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()))
+	}
+
+	tailHeight := rpcService.node.GetBlockchain().GetMaxHeight()
+	for i := int32(0); i < getHeaderCount; i++ {
+		block, err := rpcService.node.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
+		if err != nil {
+			break
+		}
+
+		response.BlockHeaders = append(response.BlockHeaders, block.GetHeader().ToProto().(*corepb.BlockHeader))
+	}
+
 	return &response, nil
 }
 
+// RpcGetBlocks Get blocks in blockchain from head to tail
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
-	return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
+	block := rpcService.findBlockInRequestHash(in.StartBlockHashs)
+
+	// Reach the blockchain's tail
+	if block.GetHeight() >= rpcService.node.GetBlockchain().GetMaxHeight() {
+		return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
+	}
+
+	var blocks []*core.Block
+	maxBlockCount := in.MaxCount
+	if maxBlockCount > MaxGetBlocksCount {
+		maxBlockCount = MaxGetBlocksCount
+	}
+
+	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
+	for i := int32(0); i < maxBlockCount && err == nil; i++ {
+		blocks = append(blocks, block)
+		block, err = rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
+	}
+
+	result := &rpcpb.GetBlocksResponse{ErrorCode: OK}
+
+	for _, block = range blocks {
+		result.Blocks = append(result.Blocks, block.ToProto().(*corepb.Block))
+	}
+
+	return result, nil
+}
+
+func (rpcService *RpcService) findBlockInRequestHash(startBlockHashs [][]byte) *core.Block {
+	for _, hash := range startBlockHashs {
+		// hash in blockchain, return
+		if block, err := rpcService.node.GetBlockchain().GetBlockByHash(hash); err == nil {
+			return block
+		}
+	}
+
+	// Return Genesis Block
+	block, _ := rpcService.node.GetBlockchain().GetBlockByHeight(0)
+	return block
+}
+
+// RpcGetBlockByHash Get single block in blockchain by hash
+func (rpcService *RpcService) RpcGetBlockByHash(ctx context.Context, in *rpcpb.GetBlockByHashRequest) (*rpcpb.GetBlockByHashResponse, error) {
+	block, err := rpcService.node.GetBlockchain().GetBlockByHash(in.Hash)
+
+	if err != nil {
+		return &rpcpb.GetBlockByHashResponse{ErrorCode: BlockNotFound}, nil
+	}
+
+	return &rpcpb.GetBlockByHashResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
+}
+
+// RpcGetBlockByHeight Get single block in blockchain by height
+func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb.GetBlockByHeightRequest) (*rpcpb.GetBlockByHeightResponse, error) {
+	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(in.Height)
+
+	if err != nil {
+		return &rpcpb.GetBlockByHeightResponse{ErrorCode: BlockNotFound}, nil
+	}
+
+	return &rpcpb.GetBlockByHeightResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
 }
 
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {

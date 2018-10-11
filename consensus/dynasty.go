@@ -121,6 +121,10 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 	}
 }
 
+func (dynasty *Dynasty) GetProducers() []string {
+	return dynasty.producers
+}
+
 func (dynasty *Dynasty) AddMultipleProducers(producers []string) {
 	for _, producer := range producers {
 		dynasty.AddProducer(producer)

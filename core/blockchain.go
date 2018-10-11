@@ -28,10 +28,11 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
 
-var tipKey = []byte("1")
+var tipKey = []byte("tailBlockHash")
 
 const BlockPoolMaxSize = 100
 const LengthForBlockToBeConsideredHistory = 100
@@ -137,6 +138,15 @@ func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
 		return nil, ErrBlockDoesNotExist
 	}
 	return Deserialize(rawBytes), nil
+}
+
+func (bc *Blockchain) GetBlockByHeight(height uint64) (*Block, error) {
+	hash, err := bc.db.Get(util.UintToHex(height))
+	if err != nil {
+		return nil, ErrBlockDoesNotExist
+	}
+
+	return bc.GetBlockByHash(hash)
 }
 
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
@@ -376,13 +386,22 @@ func (bc *Blockchain) String() string {
 	return buffer.String()
 }
 
-//record the new block in the database
+//AddBlockToDb record the new block in the database
 func (bc *Blockchain) AddBlockToDb(block *Block) error {
 	err := bc.db.Put(block.GetHash(), block.Serialize())
 	if err != nil {
 		logger.Warn("Blockchain: Add Block To Database Failed!")
+		return err
 	}
-	return err
+
+	err = bc.db.Put(util.UintToHex(block.GetHeight()), block.GetHash())
+	if err != nil {
+		// Delete block hash when save height information failed
+		bc.db.Del(block.GetHash())
+		return err
+	}
+
+	return nil
 }
 
 func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
