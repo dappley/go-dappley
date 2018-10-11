@@ -19,78 +19,138 @@
 package common
 
 import (
-	"math/rand"
-	"strings"
+	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func setupIntTree() (*Tree, int) {
-	tree := NewTree(0, 0)
-	parent := tree.Root
-	len := 10000
-	//add 10000 nodes unto the tree
-	for i := 1; i < len; i++ {
-		newNode := Node{Entry{i, i}, parent, nil, parent.Height + 1, tree}
-		parent.Children = append(parent.Children, &newNode)
-		//if is true, create a new branch, else build existing branch
-		if getBool() {
-			parent = &newNode
-			tree.MaxHeight++
-		}
-	}
-	return tree, len
-}
-
-func setupAlphabetTree() (*Tree, int) {
-	alphabets := "abcdefghijklmnopqrstuvwxyz"
-	alphabetSlice := strings.Split(alphabets, "")
-	tree := NewTree("a", "a")
-	parent := tree.Root
-	//add 26 nodes unto the tree
-	for i := 1; i < len(alphabetSlice); i++ {
-		newNode, _ := tree.NewNode(alphabetSlice[i], alphabetSlice[i], parent.Height+1)
-		parent.AddChild(newNode)
-		if getBool() {
-			parent = newNode
-		}
-	}
-	return tree, len(alphabetSlice)
-}
-
-func Test_TreeLeafs(t *testing.T) {
-	//logger.SetLevel(logger.DebugLevel)
-	tree, _ := setupAlphabetTree()
-	//cached leaf nodes should not have any children
-	for _, v := range tree.leafs.Keys() {
-		val, _ := tree.leafs.Get(v)
-		assert.Equal(t, 0, len(val.(*Node).Children))
-		assert.Equal(t, true, val.(*Node).Height != 1)
-	}
-}
-
-func Test_TreeHighestLeaf(t *testing.T) {
-	//logger.SetLevel(logger.DebugLevel)
-	tree, _ := setupAlphabetTree()
-	//cached leaf nodes should not have any children
-	assert.Equal(t, tree.MaxHeight, tree.HighestLeaf.Height)
-}
-
 func Test_AddParent(t *testing.T) {
-	tree, _ := setupAlphabetTree()
-	nodeToAdd, _ := tree.NewNode("asd", "asd", 0)
-	//check root case
-	child := tree.Root
-	child.AddParent(nodeToAdd)
-	assert.Equal(t, nodeToAdd.entry.key, tree.Root.entry.key)
+	parentNode1, _ := NewTree("parent1", "parent1", 0)
+	parentNode2, _ := NewTree("parent2", "parent2", 0)
+	childNode, _ := NewTree("child2", "child2", 0)
 
-	//check invalid case
+	err1 := childNode.AddParent(parentNode1)
+	assert.Equal(t, nil, err1)
+	err2 := childNode.AddParent(parentNode2)
+	assert.Equal(t, errors.New("ERROR: Adding parent to node already with parent"), err2)
+
+	assert.Equal(t, parentNode1, childNode.Parent)
 
 }
 
-func getBool() bool {
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(10) >= 5
+func Test_AddChild(t *testing.T) {
+	parentNode, _ := NewTree("parent", "parent", 0)
+	childNode1, _ := NewTree("child1", "child1", 0)
+	childNode2, _ := NewTree("child2", "child2", 0)
+
+	parentNode.AddChild(childNode1)
+	parentNode.AddChild(childNode2)
+
+	assert.Equal(t, parentNode, childNode1.Parent)
+	assert.Equal(t, parentNode, childNode2.Parent)
+
+	assert.Equal(t, uint64(0x1), childNode2.Height)
+	assert.Equal(t, uint64(0x1), childNode2.Height)
+	assert.Equal(t, uint64(0x0), parentNode.Height)
+
+	assert.Equal(t, 2, len(parentNode.Children))
+	assert.True(t, parentNode.containChild(childNode1))
+	assert.True(t, parentNode.containChild(childNode2))
+}
+
+func Test_HasChild(t *testing.T) {
+	parentNode1, _ := NewTree("parent1", "parent1", 0)
+	parentNode2, _ := NewTree("parent2", "parent2", 0)
+	childNode1, _ := NewTree("child1", "child1", 0)
+	childNode2, _ := NewTree("child2", "child2", 0)
+	parentNode1.AddChild(childNode1)
+	childNode2.AddParent(parentNode2)
+
+	assert.True(t, parentNode1.hasChildren())
+	assert.True(t, parentNode2.hasChildren())
+
+}
+
+func Test_FindHeightestChild(t *testing.T) {
+	node1Height0, _ := NewTree("node1Height0", "node1Height0", 0)
+	node1Height1, _ := NewTree("node1Height1", "node1Height1", 1)
+	node2Height1, _ := NewTree("node2Height1", "node2Height1", 1)
+	node1Height2, _ := NewTree("node1Height2", "node1Height2", 2)
+	node2Height2, _ := NewTree("node2Height2", "node2Height2", 2)
+	node3Height2, _ := NewTree("node3Height2", "node3Height2", 2)
+	node4Height2, _ := NewTree("node4Height2", "node4Height2", 2)
+	node1Height3, _ := NewTree("node1Height3", "node1Height3", 3)
+
+	node1Height0.AddChild(node1Height1)
+	node1Height0.AddChild(node2Height1)
+	node1Height1.AddChild(node1Height2)
+	node1Height1.AddChild(node2Height2)
+	node2Height1.AddChild(node3Height2)
+	node2Height1.AddChild(node4Height2)
+	node3Height2.AddChild(node1Height3)
+
+	var heightest1 Tree
+	var heightest2 Tree
+	var heightest3 Tree
+
+	node1Height0.FindHeightestChild(&heightest1)
+	node2Height1.FindHeightestChild(&heightest2)
+	node1Height1.FindHeightestChild(&heightest3)
+
+	assert.Equal(t, node1Height3, &heightest1)
+	assert.Equal(t, node1Height3, &heightest2)
+	assert.Equal(t, node1Height2, &heightest3)
+
+}
+
+func Test_GetParentNodesRange(t *testing.T) {
+	tree1, _ := NewTree("node1", "node1", 0)
+	tree2, _ := NewTree("node2", "node2", 1)
+	tree3, _ := NewTree("node3", "node3", 2)
+	tree4, _ := NewTree("node4", "node4", 3)
+	tree5, _ := NewTree("node5", "node5", 4)
+	tree6, _ := NewTree("node6", "node6", 5)
+	tree7, _ := NewTree("node7", "node7", 6)
+	tree8, _ := NewTree("node8", "node8", 7)
+
+	tree1.AddChild(tree2)
+	tree2.AddChild(tree3)
+	tree3.AddChild(tree4)
+	tree4.AddChild(tree5)
+	tree5.AddChild(tree6)
+	tree6.AddChild(tree7)
+	tree7.AddChild(tree8)
+
+	expect := []*Tree{tree6, tree5, tree4, tree3}
+	trees := tree6.GetParentTreesRange(tree2)
+
+	assert.Equal(t, expect, trees)
+}
+
+func Test_Delete(t *testing.T) {
+	node1Height0, _ := NewTree("node1Height0", "node1Height0", 0)
+	node1Height1, _ := NewTree("node1Height1", "node1Height1", 1)
+	node2Height1, _ := NewTree("node2Height1", "node2Height1", 1)
+	node1Height2, _ := NewTree("node1Height2", "node1Height2", 2)
+	node2Height2, _ := NewTree("node2Height2", "node2Height2", 2)
+	node3Height2, _ := NewTree("node3Height2", "node3Height2", 2)
+	node4Height2, _ := NewTree("node4Height2", "node4Height2", 2)
+	node1Height3, _ := NewTree("node1Height3", "node1Height3", 3)
+
+	node1Height0.AddChild(node1Height1)
+	node1Height0.AddChild(node2Height1)
+	node1Height1.AddChild(node1Height2)
+	node1Height1.AddChild(node2Height2)
+	node2Height1.AddChild(node3Height2)
+	node2Height1.AddChild(node4Height2)
+	node3Height2.AddChild(node1Height3)
+
+	assert.Equal(t, 2, len(node1Height1.Children))
+
+	node1Height2.Delete()
+	assert.Equal(t, 1, len(node1Height1.Children))
+	node2Height1.Delete()
+	assert.Equal(t, 0, len(node3Height2.Children))
+	assert.Equal(t, nil, node1Height2.GetKey())
 }

@@ -26,7 +26,6 @@ import (
 
 	"github.com/jinzhu/copier"
 
-	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -49,20 +48,17 @@ type Blockchain struct {
 	blockPool     BlockPoolInterface
 	consensus     Consensus
 	txPool        *TransactionPool
-	forkTree      *common.Tree
 }
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) *Blockchain {
 	genesis := NewGenesisBlock(address.Address)
-	tree := common.NewTree(genesis.GetHash(), genesis.header)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
 		NewTransactionPool(),
-		tree,
 	}
 	bc.blockPool.SetBlockchain(bc)
 	err := bc.AddBlockToTail(genesis)
@@ -85,15 +81,12 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
 		NewTransactionPool(), //TODO: Need to retrieve transaction pool from db
-		nil,
 	}
 	bc.blockPool.SetBlockchain(bc)
 
-	tailBlock, err := bc.GetTailBlock()
 	if err != nil {
 		return nil, err
 	}
-	bc.forkTree = common.NewTree(tailBlock.GetHash(), tailBlock.header)
 	return bc, nil
 }
 
@@ -317,7 +310,7 @@ func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil, bc.forkTree}
+	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

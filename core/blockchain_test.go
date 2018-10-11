@@ -21,13 +21,14 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"os"
+	"testing"
+
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"os"
-	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -40,10 +41,10 @@ func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s,nil)
+	bc := CreateBlockchain(addr, s, nil)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
-	blk,err := bc.Next()
+	blk, err := bc.Next()
 	assert.Nil(t, err)
 	assert.Empty(t, blk.GetPrevHash())
 }
@@ -52,30 +53,30 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s,nil)
+	bc := CreateBlockchain(addr, s, nil)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
-	assert.True(t,bc.IsHigherThanBlockchain(blk))
+	assert.True(t, bc.IsHigherThanBlockchain(blk))
 }
 
 func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s,nil)
+	bc := CreateBlockchain(addr, s, nil)
 
 	blk := GenerateMockBlock()
 	blk.header.height = 1
 	bc.AddBlockToTail(blk)
 
-	assert.False(t,bc.IsHigherThanBlockchain(blk))
+	assert.False(t, bc.IsHigherThanBlockchain(blk))
 }
 
 func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc:= CreateBlockchain(addr, s,nil)
+	bc := CreateBlockchain(addr, s, nil)
 
 	blk := GenerateMockBlock()
 	blk.SetHash([]byte("hash1"))
@@ -83,10 +84,10 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	bc.AddBlockToTail(blk)
 
 	isFound := bc.IsInBlockchain([]byte("hash1"))
-	assert.True(t,isFound)
+	assert.True(t, isFound)
 
 	isFound = bc.IsInBlockchain([]byte("hash2"))
-	assert.False(t,isFound)
+	assert.False(t, isFound)
 }
 
 func TestBlockchain_RollbackToABlock(t *testing.T) {
@@ -94,22 +95,22 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	bc := GenerateMockBlockchain(5)
 	defer bc.db.Close()
 
-	blk,err := bc.GetTailBlock()
-	assert.Nil(t,err)
+	blk, err := bc.GetTailBlock()
+	assert.Nil(t, err)
 
 	//find the hash at height 3 (5-2)
-	for i:=0; i<2; i++{
-		blk,err = bc.GetBlockByHash(blk.GetPrevHash())
-		assert.Nil(t,err)
+	for i := 0; i < 2; i++ {
+		blk, err = bc.GetBlockByHash(blk.GetPrevHash())
+		assert.Nil(t, err)
 	}
 
 	//rollback to height 3
 	bc.Rollback(blk.GetHash())
 
 	//the height 3 block should be the new tail block
-	newTailBlk,err := bc.GetTailBlock()
-	assert.Nil(t,err)
-	assert.Equal(t,blk.GetHash(),newTailBlk.GetHash())
+	newTailBlk, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+	assert.Equal(t, blk.GetHash(), newTailBlk.GetHash())
 
 }
 
@@ -131,7 +132,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := &Blockchain{Hash{}, db, nil, nil, nil, nil}
+	bc := &Blockchain{Hash{}, db, nil, nil, nil}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr.Address)
