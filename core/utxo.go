@@ -51,8 +51,7 @@ type UTXO struct {
 
 // NewUTXOIndex initializes an UTXOIndex instance
 func NewUTXOIndex() UTXOIndex {
-	var mutex = &sync.RWMutex{}
-	return UTXOIndex{make(map[string][]*UTXO), mutex}
+	return UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}
 }
 
 func deserializeUTXOIndex(d []byte) UTXOIndex {
@@ -97,8 +96,8 @@ func (utxos UTXOIndex) Save(mapkey string, db storage.Storage) error {
 // FindUTXO returns the UTXO instance of the corresponding TXOutput in the transaction (identified by txid and vout)
 // if the TXOutput is unspent. Otherwise, it returns nil.
 func (utxos UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
-	utxos.mutex.Lock()
-	defer utxos.mutex.Unlock()
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
 	for _, utxoArray := range utxos.index {
 		for _, u := range utxoArray {
 			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
@@ -243,9 +242,11 @@ func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	return tx.Vout[in.Vout], in.Vout, nil
 }
 
-func (index UTXOIndex) deepCopy() UTXOIndex {
+func (utxos UTXOIndex) deepCopy() UTXOIndex {
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
 	utxocopy := NewUTXOIndex()
-	copier.Copy(&utxocopy, &index)
+	copier.Copy(&utxocopy, &utxos)
 	if len(utxocopy.index)==0 {
 		utxocopy = NewUTXOIndex()
 	}
