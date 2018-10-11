@@ -90,12 +90,12 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	logger.Debug("BlockPool: Has received a new block")
 
 	if !block.VerifyHash() {
-		logger.Debug("BlockPool: Verify Hash failed!")
+		logger.Warn("BlockPool: The received block cannot pass hash verification!")
 		return
 	}
 
 	if !(pool.blockchain.GetConsensus().VerifyBlock(block)) {
-		logger.Debug("BlockPool: Verify Signature failed!")
+		logger.Warn("BlockPool: The received block cannot pass signature verification!")
 		return
 	}
 	//TODO: Verify double spending transactions in the same block
