@@ -23,7 +23,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	
+
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
@@ -77,7 +77,8 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	if err != nil {
 		logger.Panic(err)
 	}
-	pubKey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
 
-	return *private, pubKey
+	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
+	//remove the uncompressed point at pubKey[0]
+	return *private, pubKey[1:]
 }

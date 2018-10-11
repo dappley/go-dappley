@@ -1,10 +1,13 @@
 syntax = "proto3";
 package rpcpb;
 import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
+import "github.com/dappley/go-dappley/core/pb/block.proto";
+import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 
 option objc_class_prefix = "HLW";
 
 service RpcService {
+  rpc RpcGetVersion (GetVersionRequest) returns (GetVersionResponse) {}
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
@@ -13,6 +16,9 @@ service RpcService {
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
+  rpc RpcGetUTXO(GetUTXORequest) returns (GetUTXOResponse) {}
+  rpc RpcGetBlocks(GetBlocksRequest) returns (GetBlocksResponse) {}
+  rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
 }
 
 service AdminService{
@@ -103,3 +109,46 @@ message GetWalletAddressResponse {
   repeated string address = 2;
 }
 
+message GetVersionRequest {
+  string protoVersion = 1;
+}
+
+message GetVersionResponse {
+  uint32 errorCode = 1;
+  string protoVersion = 2;
+  string serverVersion = 3;
+}
+
+message GetUTXORequest {
+  string address = 1;  //wallet address
+}
+
+message GetUTXOResponse {
+  uint32 errorCode = 1;
+  repeated UTXO utxos = 2;  
+}
+
+message UTXO {
+  int64   amount = 1;   
+  bytes   publicKeyHash = 2;
+  bytes   txid = 3;     
+  uint32  txIndex = 4;
+}
+
+message GetBlocksRequest {
+  repeated bytes startBlockHashs = 1;  // Query start block hashes, sorted descending by height.
+  bytes stopBlockHash = 2;   // Query end block hash, default is empty bytes
+}
+
+message GetBlocksResponse {
+  uint32 errorCode = 1;
+  repeated corepb.Block blocks = 2;
+}
+
+message SendTransactionRequest {
+  corepb.Transaction transaction = 1;
+}
+
+message SendTransactionResponse {
+  uint32 errorCode = 1;
+}
