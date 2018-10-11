@@ -177,7 +177,7 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		} else {
 			wallet = wm.GetWalletByAddress(core.NewAddress(address))
 			if wallet == nil {
-				return &rpcpb.GetBalanceResponse{Message: errors.New("Address not found in the wallet!").Error()}, nil
+				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!",}, nil
 			}
 		}
 

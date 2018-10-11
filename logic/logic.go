@@ -29,7 +29,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"strings"
 	"time"
 )
 
@@ -40,9 +39,9 @@ var (
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
 	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
 	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
-	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct!")
-	ErrPathEmpty            = errors.New("ERROR: Path empty!")
-	ErrPasswordEmpty        = errors.New("ERROR: Password empty!")
+	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct")
+	ErrPathEmpty            = errors.New("ERROR: Path empty")
+	ErrPasswordEmpty        = errors.New("ERROR: Password empty")
 	)
 
 //create a blockchain
@@ -98,6 +97,7 @@ func GetWallet() (*client.Wallet, error) {
 	}
 }
 
+//Get lock flag
 func IsWalletLocked() (bool, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
@@ -105,12 +105,14 @@ func IsWalletLocked() (bool, error) {
 	return wm.Locked, err
 }
 
+//Tell if the file empty or not exist
 func IsWalletEmpty() (bool, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	return wm.IsFileEmpty()
 }
 
+//Set lock flag
 func SetLockWallet() error {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
@@ -132,6 +134,7 @@ func SetLockWallet() error {
 	}
 }
 
+//Set unlock and timer
 func SetUnLockWallet() error {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
@@ -196,6 +199,7 @@ func AddWallet() (*client.Wallet, error) {
 	return wallet, err
 }
 
+//Get duration
 func GetUnlockDuration() time.Duration {
 	return unlockduration
 }
@@ -215,21 +219,6 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	}
 
 	return balance, nil
-}
-
-//get all addresses
-func GetAllAddressesFromTest() ([]core.Address, error) {
-	path := strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1)
-	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
-	if err != nil {
-		return nil, err
-	}
-
-	addresses := wm.GetAddresses()
-
-	return addresses, err
 }
 
 func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) error {
