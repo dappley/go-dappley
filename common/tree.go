@@ -20,7 +20,6 @@ package common
 
 import (
 	"errors"
-	"fmt"
 )
 
 type Entry struct {
@@ -89,8 +88,6 @@ func (n *Tree) deleteChild() {
 func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
 	parentTrees = append(parentTrees, t)
-	fmt.Println(head.Height)
-	fmt.Println(t.Height)
 	if t.Height > head.Height {
 		for parent := t.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
 			parentTrees = append(parentTrees, parent)
