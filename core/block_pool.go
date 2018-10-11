@@ -169,7 +169,7 @@ func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) *common.Tree {
 	blkCache := pool.blkCache
 	forkCache := pool.forkCache
 	for _, key := range forkCache.Keys() {
-		if possibleChild, ok := forkCache.Get(key); ok == true {
+		if possibleChild, ok := forkCache.Get(key); ok {
 			if block, ok := blkCache.Get(possibleChild.(*common.Tree).GetKey()); ok {
 				if hex.EncodeToString(block.(*Block).GetPrevHash()) == hex.EncodeToString(tree.GetValue().(*BlockHeader).hash) {
 					logger.Debug("BlockPool: Block: ", hex.EncodeToString(tree.GetValue().(*BlockHeader).hash), " found child Block: ", hex.EncodeToString(possibleChild.(*common.Tree).GetValue().(*BlockHeader).hash), " in BlockPool blkCache, adding child")

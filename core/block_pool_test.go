@@ -43,15 +43,15 @@ func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
 	assert.Equal(t, 0, bp.blkCache.Len())
 	const addCount = 200
 	for i := 0; i < addCount; i++ {
-		if bp.blkCache.Len() == BlockCacheLRUCacheLimit {
+		if bp.blkCache.Len() == ForkCacheLRUCacheLimit {
 			bp.blkCache.RemoveOldest()
 		}
 		bp.blkCache.Add(i, i)
 	}
 	//test blkCache is full
-	assert.Equal(t, BlockCacheLRUCacheLimit, bp.blkCache.Len())
+	assert.Equal(t, ForkCacheLRUCacheLimit, bp.blkCache.Len())
 	//test blkCache contains last added key
 	assert.Equal(t, true, bp.blkCache.Contains(199))
 	//test blkCache oldest key = addcount - BlockPoolLRUCacheLimit
-	assert.Equal(t, addCount-BlockCacheLRUCacheLimit, bp.blkCache.Keys()[0])
+	assert.Equal(t, addCount-ForkCacheLRUCacheLimit, bp.blkCache.Keys()[0])
 }
