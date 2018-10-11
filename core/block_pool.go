@@ -27,7 +27,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const BlockCacheLRUCacheLimit = 128
+const BlockCacheLRUCacheLimit = 1024
 const ForkCacheLRUCacheLimit = 128
 
 type BlockRequestPars struct {

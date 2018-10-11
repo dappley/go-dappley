@@ -51,15 +51,15 @@ func NewTree(index interface{}, value interface{}, height uint64) (*Tree, error)
 	return &Tree{Entry{index, value}, nil, nil, height}, nil
 }
 
-func (n *Tree) hasChildren() bool {
-	if len(n.Children) > 0 {
+func (t *Tree) hasChildren() bool {
+	if len(t.Children) > 0 {
 		return true
 	}
 	return false
 }
 
-func (n *Tree) containChild(child *Tree) bool {
-	for _, c := range n.Children {
+func (t *Tree) containChild(child *Tree) bool {
+	for _, c := range t.Children {
 		if c == child {
 			return true
 		}
@@ -67,15 +67,15 @@ func (n *Tree) containChild(child *Tree) bool {
 	return false
 }
 
-func (n *Tree) Delete() {
-	if n.Parent != nil {
-		for i := 0; i < len(n.Parent.Children); i++ {
-			if n.Parent.Children[i].GetKey() == n.GetKey() {
-				n.Parent.Children = append(n.Parent.Children[:i], n.Parent.Children[i+1:]...)
+func (t *Tree) Delete() {
+	if t.Parent != nil {
+		for i := 0; i < len(t.Parent.Children); i++ {
+			if t.Parent.Children[i].GetKey() == t.GetKey() {
+				t.Parent.Children = append(t.Parent.Children[:i], t.Parent.Children[i+1:]...)
 			}
 		}
 	}
-	n.deleteChild()
+	t.deleteChild()
 }
 
 func (n *Tree) deleteChild() {
@@ -86,13 +86,13 @@ func (n *Tree) deleteChild() {
 	//n = nil
 }
 
-func (n *Tree) GetParentTreesRange(head *Tree) []*Tree {
+func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
-	parentTrees = append(parentTrees, n)
+	parentTrees = append(parentTrees, t)
 	fmt.Println(head.Height)
-	fmt.Println(n.Height)
-	if n.Height > head.Height {
-		for parent := n.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
+	fmt.Println(t.Height)
+	if t.Height > head.Height {
+		for parent := t.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
 			parentTrees = append(parentTrees, parent)
 		}
 	}
@@ -100,14 +100,14 @@ func (n *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	return parentTrees
 }
 
-func (n *Tree) FindHeightestChild(heightest *Tree) {
-	if n.hasChildren() {
-		for _, child := range n.Children {
+func (t *Tree) FindHeightestChild(heightest *Tree) {
+	if t.hasChildren() {
+		for _, child := range t.Children {
 			child.FindHeightestChild(heightest)
 		}
 	} else {
-		if heightest == nil || n.Height > heightest.Height {
-			*heightest = *n
+		if heightest == nil || t.Height > heightest.Height {
+			*heightest = *t
 		}
 	}
 }
@@ -126,10 +126,10 @@ func (child *Tree) AddParent(parent *Tree) error {
 	return nil
 }
 
-func (n *Tree) GetValue() interface{} {
-	return n.entry.value
+func (t *Tree) GetValue() interface{} {
+	return t.entry.value
 }
 
-func (n *Tree) GetKey() interface{} {
-	return n.entry.key
+func (t *Tree) GetKey() interface{} {
+	return t.entry.key
 }
