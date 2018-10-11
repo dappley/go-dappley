@@ -104,6 +104,19 @@ func (index UTXOIndex) GetUTXOsByPubKeyHash(pubkey []byte) []*UTXO {
 	return index[string(pubkey)]
 }
 
+// FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
+func (index UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *UTXO {
+	utxos := index.GetUTXOsByPubKeyHash(pubkeyHash)
+
+	for _, utxo := range utxos {
+		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
+			return utxo
+		}
+	}
+
+	return nil
+}
+
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
 func (index *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) error {
