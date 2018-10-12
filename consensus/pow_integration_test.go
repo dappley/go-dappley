@@ -27,6 +27,8 @@ import (
 
 	"os"
 
+	"time"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -34,7 +36,6 @@ import (
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"time"
 )
 
 var sendAmount = common.NewAmount(7)
@@ -90,7 +91,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
 	//Waiting the last mined block sync to blockchain
-	time.Sleep(2)
+	time.Sleep(time.Second)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -140,7 +141,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
 	//Waiting the last mined block sync to blockchain
-	time.Sleep(2)
+	time.Sleep(time.Second)
 
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
@@ -208,7 +209,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
 	//Waiting the last mined block sync to blockchain
-	time.Sleep(2)
+	time.Sleep(time.Second)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
