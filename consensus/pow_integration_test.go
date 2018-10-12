@@ -34,6 +34,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 var sendAmount = common.NewAmount(7)
@@ -88,6 +89,8 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	//Waiting the last mined block sync to blockchain
+	time.Sleep(2)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -136,6 +139,9 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	//Waiting the last mined block sync to blockchain
+	time.Sleep(2)
+
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -201,6 +207,9 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//stop mining
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	//Waiting the last mined block sync to blockchain
+	time.Sleep(2)
+
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets

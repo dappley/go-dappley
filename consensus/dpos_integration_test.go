@@ -109,6 +109,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Stop()
 	}
 	endTime := time.Now().Unix()
+	//Waiting block sync to other nodes
+	time.Sleep(2)
 
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i]
