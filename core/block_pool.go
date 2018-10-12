@@ -106,30 +106,27 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	logger.Debug("BlockPool: Received a new block: ", hex.EncodeToString(blk.GetHash()), " From Sender: ", sender.String())
-	tree, _ := common.NewTree(blk.hashString(), blk.header)
 
+	if !pool.blockchain.consensus.Validate(blk) {
+		logger.Debug("BlockPool: Block: ", hex.EncodeToString(blk.GetHash()), " did not pass consensus validation, discarding block")
+		return
+	}
+
+	tree, _ := common.NewTree(blk.hashString(), blk.header)
 	blkCache := pool.blkCache
 	forkCache := pool.forkCache
 
-	if pool.blockchain.consensus.Validate(blk) {
-		if blkCache.Contains(blk.hashString()) {
-			logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.GetHash(), " returning")
-			return
-		} else {
-			logger.Debug("BlockPool: Adding blk key to blockcache: ", hex.EncodeToString(blk.GetHash()))
-			blkCache.Add(blk.hashString(), blk)
-		}
-
-		if pool.blockchain.IsInBlockchain(blk.GetHash()) {
-			logger.Debug("BlockPool: Blockchain already contains blk: ", hex.EncodeToString(blk.GetHash()), " returning")
-			return
-		} else {
-			logger.Debug("BlockPool: Adding node key to nodecache: ", hex.EncodeToString(blk.GetHash()))
-			forkCache.Add(tree.GetKey(), tree)
-		}
-	} else {
-		logger.Debug("BlockPool: Block: ", hex.EncodeToString(blk.GetHash()), " did not pass consensus validation, discarding block")
+	if blkCache.Contains(blk.hashString()) {
+		logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.GetHash(), " returning")
 		return
+	} else if forkCache.Contains(blk.hashString()) {
+		logger.Debug("BlockPool: BlockPool forkCache already contains blk: ", blk.GetHash(), " returning")
+		return
+	} else {
+		logger.Debug("BlockPool: Adding node key to nodecache: ", hex.EncodeToString(blk.GetHash()))
+		forkCache.Add(tree.GetKey(), tree)
+		logger.Debug("BlockPool: Adding blk key to blockcache: ", hex.EncodeToString(blk.GetHash()))
+		blkCache.Add(blk.hashString(), blk)
 	}
 
 	bcTailBlk, err := pool.GetBlockchain().GetTailBlock()
