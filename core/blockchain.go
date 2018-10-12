@@ -382,7 +382,7 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	return err == nil
 }
 
-func (bc *Blockchain) MergeFork(forkBlks []*Block) {
+func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 
 	//find parent block
 	if len(forkBlks) == 0 {
@@ -392,16 +392,14 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block) {
 	if forkHeadBlock == nil {
 		return
 	}
-	forkParentHash := forkHeadBlock.GetPrevHash()
-	if !bc.IsInBlockchain(forkParentHash) {
-		return
-	}
+
 
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
 		logger.Warn(err)
 	}
+
 	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
 		return
 	}
@@ -412,6 +410,9 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block) {
 	bc.concatenateForkToBlockchain(forkBlks)
 
 	logger.Debug("Merged Fork!!")
+	bc.GetBlockPool().SetSyncState(false)
+	logger.Info("merge finished, setting syncstate to false")
+
 }
 
 func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
@@ -448,6 +449,7 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	//keep rolling back blocks until the block with the input hash
 loop:
 	for {
+		logger.Info("Blockpool: Rolling back: ", hex.EncodeToString(parentblockHash))
 		if bytes.Compare(parentblockHash, targetHash) == 0 {
 			break loop
 		}

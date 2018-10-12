@@ -42,16 +42,23 @@ type RcvedBlock struct {
 
 type BlockPool struct {
 	blockRequestCh chan BlockRequestPars
+	syncState  bool
 	size           int
 	blockchain     *Blockchain
 	blkCache       *lru.Cache //cache of full blks
 	forkCache      *lru.Cache //cache of tree nodes that contain blk header as value
 }
-
+func (pool *BlockPool) GetSyncState () bool{
+	return pool.syncState
+}
+func (pool *BlockPool) SetSyncState (sync bool){
+	pool.syncState = sync
+}
 func NewBlockPool(size int) *BlockPool {
 	pool := &BlockPool{
 		size:           size,
 		blockRequestCh: make(chan BlockRequestPars, size),
+		syncState: false,
 		blockchain:     nil,
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
@@ -88,7 +95,10 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	logger.Debug("BlockPool: Has received a new block")
-
+	if 	pool.syncState {
+		logger.Debug("BlockPool: is syncing already, tossing block ")
+		return
+	}
 	if !block.VerifyHash() {
 		logger.Warn("BlockPool: The received block cannot pass hash verification!")
 		return
@@ -112,18 +122,11 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	forkCache := pool.forkCache
 
 	if pool.blockchain.consensus.Validate(blk) {
-		if blkCache.Contains(blk.hashString()) {
-			logger.Debug("BlockPool: BlockPool blkCache already contains blk: ", blk.GetHash(), " returning")
-			return
-		} else {
+		if !blkCache.Contains(blk.hashString()) {
 			logger.Debug("BlockPool: Adding blk key to blockcache: ", hex.EncodeToString(blk.GetHash()))
 			blkCache.Add(blk.hashString(), blk)
 		}
-
-		if pool.blockchain.IsInBlockchain(blk.GetHash()) {
-			logger.Debug("BlockPool: Blockchain already contains blk: ", hex.EncodeToString(blk.GetHash()), " returning")
-			return
-		} else {
+		if !forkCache.Contains(blk.hashString()) {
 			logger.Debug("BlockPool: Adding node key to nodecache: ", hex.EncodeToString(blk.GetHash()))
 			forkCache.Add(tree.GetKey(), tree)
 		}
@@ -132,24 +135,23 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		return
 	}
 
-	bcTailBlk, err := pool.GetBlockchain().GetTailBlock()
-	if err != nil {
-		logger.Panicf("Can't find find any block %v", err)
-	}
 
 	forkParent := pool.updatePoolForkCache(tree)
+	forkParentHash := forkParent.GetValue().(*BlockHeader).prevHash
 
-	if bcTailBlk.IsParentBlock(blk) {
-		pool.blockchain.AddBlockToBlockchainTail(blk)
-		var forkTailTree *common.Tree
-		_, forkTailTree = tree.FindHeightestChild(forkTailTree, 0, 0)
+	if  parent, _ := pool.blockchain.GetBlockByHash(forkParentHash); parent !=nil {
+		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
+		if forkTailTree.GetValue().(*BlockHeader).height > pool.blockchain.GetMaxHeight(){
+			pool.syncState = true
+		}else{
+			return
+		}
 		trees := forkTailTree.GetParentTreesRange(tree)
 		forkBlks := pool.getBlocksByHashs(trees)
-		pool.blockchain.MergeFork(forkBlks)
+		pool.blockchain.MergeFork(forkBlks, forkParentHash)
 		tree.Delete()
 		return
 	}
-
 	pool.requestPrevBlock(forkParent, sender)
 }
 
