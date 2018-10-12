@@ -205,7 +205,7 @@ func (s *Stream) parseData(data []byte) {
 
 	switch dm.GetCmd() {
 	case SyncBlock:
-		logger.Debug("Stream: Received ", SyncBlock, " command from:", dm.key)
+		logger.Debug("Stream: Received ", SyncBlock, " command from:", s.remoteAddr)
 		s.node.syncBlockHandler(dm, s.peerID)
 	case SyncPeerList:
 		logger.Debug("Stream: Received ", SyncPeerList, " command from:", s.remoteAddr)
