@@ -85,7 +85,7 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 			msg = "NewWallet"
 		}
 	} else if in.Name == "createWallet" {
-		empty,err := logic.IsWalletEmpty()
+		empty, err := logic.IsWalletEmpty()
 		if err != nil && !empty {
 			return &rpcpb.CreateWalletResponse{
 				Message: err.Error(),
@@ -184,7 +184,7 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		} else {
 			wallet = wm.GetWalletByAddress(core.NewAddress(address))
 			if wallet == nil {
-				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!",}, nil
+				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!"}, nil
 			}
 		}
 
@@ -476,7 +476,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := core.Transaction{nil, nil, nil, 0}
-	tx.FromProto(in)
+	tx.FromProto(in.Transaction)
 
 	if tx.IsCoinbase() {
 		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
