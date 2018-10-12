@@ -26,9 +26,9 @@ import (
 )
 
 func Test_AddParent(t *testing.T) {
-	parentNode1, _ := NewTree("parent1", "parent1", 0)
-	parentNode2, _ := NewTree("parent2", "parent2", 0)
-	childNode, _ := NewTree("child2", "child2", 0)
+	parentNode1, _ := NewTree("parent1", "parent1")
+	parentNode2, _ := NewTree("parent2", "parent2")
+	childNode, _ := NewTree("child2", "child2")
 
 	err1 := childNode.AddParent(parentNode1)
 	assert.Equal(t, nil, err1)
@@ -40,9 +40,9 @@ func Test_AddParent(t *testing.T) {
 }
 
 func Test_AddChild(t *testing.T) {
-	parentNode, _ := NewTree("parent", "parent", 0)
-	childNode1, _ := NewTree("child1", "child1", 0)
-	childNode2, _ := NewTree("child2", "child2", 0)
+	parentNode, _ := NewTree("parent", "parent")
+	childNode1, _ := NewTree("child1", "child1")
+	childNode2, _ := NewTree("child2", "child2")
 
 	parentNode.AddChild(childNode1)
 	parentNode.AddChild(childNode2)
@@ -50,20 +50,16 @@ func Test_AddChild(t *testing.T) {
 	assert.Equal(t, parentNode, childNode1.Parent)
 	assert.Equal(t, parentNode, childNode2.Parent)
 
-	assert.Equal(t, uint64(0x1), childNode2.Height)
-	assert.Equal(t, uint64(0x1), childNode2.Height)
-	assert.Equal(t, uint64(0x0), parentNode.Height)
-
 	assert.Equal(t, 2, len(parentNode.Children))
 	assert.True(t, parentNode.containChild(childNode1))
 	assert.True(t, parentNode.containChild(childNode2))
 }
 
 func Test_HasChild(t *testing.T) {
-	parentNode1, _ := NewTree("parent1", "parent1", 0)
-	parentNode2, _ := NewTree("parent2", "parent2", 0)
-	childNode1, _ := NewTree("child1", "child1", 0)
-	childNode2, _ := NewTree("child2", "child2", 0)
+	parentNode1, _ := NewTree("parent1", "parent1")
+	parentNode2, _ := NewTree("parent2", "parent2")
+	childNode1, _ := NewTree("child1", "child1")
+	childNode2, _ := NewTree("child2", "child2")
 	parentNode1.AddChild(childNode1)
 	childNode2.AddParent(parentNode2)
 
@@ -73,14 +69,14 @@ func Test_HasChild(t *testing.T) {
 }
 
 func Test_FindHeightestChild(t *testing.T) {
-	node1Height0, _ := NewTree("node1Height0", "node1Height0", 0)
-	node1Height1, _ := NewTree("node1Height1", "node1Height1", 1)
-	node2Height1, _ := NewTree("node2Height1", "node2Height1", 1)
-	node1Height2, _ := NewTree("node1Height2", "node1Height2", 2)
-	node2Height2, _ := NewTree("node2Height2", "node2Height2", 2)
-	node3Height2, _ := NewTree("node3Height2", "node3Height2", 2)
-	node4Height2, _ := NewTree("node4Height2", "node4Height2", 2)
-	node1Height3, _ := NewTree("node1Height3", "node1Height3", 3)
+	node1Height0, _ := NewTree("node1Height0", "node1Height0")
+	node1Height1, _ := NewTree("node1Height1", "node1Height1")
+	node2Height1, _ := NewTree("node2Height1", "node2Height1")
+	node1Height2, _ := NewTree("node1Height2", "node1Height2")
+	node2Height2, _ := NewTree("node2Height2", "node2Height2")
+	node3Height2, _ := NewTree("node3Height2", "node3Height2")
+	node4Height2, _ := NewTree("node4Height2", "node4Height2")
+	node1Height3, _ := NewTree("node1Height3", "node1Height3")
 
 	node1Height0.AddChild(node1Height1)
 	node1Height0.AddChild(node2Height1)
@@ -90,29 +86,28 @@ func Test_FindHeightestChild(t *testing.T) {
 	node2Height1.AddChild(node4Height2)
 	node3Height2.AddChild(node1Height3)
 
-	var heightest1 Tree
-	var heightest2 Tree
-	var heightest3 Tree
+	var heightest1 *Tree
+	var heightest2 *Tree
+	var heightest3 *Tree
 
-	node1Height0.FindHeightestChild(&heightest1)
-	node2Height1.FindHeightestChild(&heightest2)
-	node1Height1.FindHeightestChild(&heightest3)
+	_, heightest1 = node1Height0.FindHeightestChild(heightest1, 0, 0)
+	_, heightest2 = node2Height1.FindHeightestChild(heightest2, 0, 0)
+	_, heightest3 = node1Height1.FindHeightestChild(heightest3, 0, 0)
 
-	assert.Equal(t, node1Height3, &heightest1)
-	assert.Equal(t, node1Height3, &heightest2)
-	assert.Equal(t, node1Height2, &heightest3)
-
+	assert.Equal(t, node1Height3, heightest1)
+	assert.Equal(t, node1Height3, heightest2)
+	assert.Equal(t, node1Height2, heightest3)
 }
 
 func Test_GetParentNodesRange(t *testing.T) {
-	tree1, _ := NewTree("node1", "node1", 0)
-	tree2, _ := NewTree("node2", "node2", 1)
-	tree3, _ := NewTree("node3", "node3", 2)
-	tree4, _ := NewTree("node4", "node4", 3)
-	tree5, _ := NewTree("node5", "node5", 4)
-	tree6, _ := NewTree("node6", "node6", 5)
-	tree7, _ := NewTree("node7", "node7", 6)
-	tree8, _ := NewTree("node8", "node8", 7)
+	tree1, _ := NewTree("node1", "node1")
+	tree2, _ := NewTree("node2", "node2")
+	tree3, _ := NewTree("node3", "node3")
+	tree4, _ := NewTree("node4", "node4")
+	tree5, _ := NewTree("node5", "node5")
+	tree6, _ := NewTree("node6", "node6")
+	tree7, _ := NewTree("node7", "node7")
+	tree8, _ := NewTree("node8", "node8")
 
 	tree1.AddChild(tree2)
 	tree2.AddChild(tree3)
@@ -129,14 +124,14 @@ func Test_GetParentNodesRange(t *testing.T) {
 }
 
 func Test_Delete(t *testing.T) {
-	node1Height0, _ := NewTree("node1Height0", "node1Height0", 0)
-	node1Height1, _ := NewTree("node1Height1", "node1Height1", 1)
-	node2Height1, _ := NewTree("node2Height1", "node2Height1", 1)
-	node1Height2, _ := NewTree("node1Height2", "node1Height2", 2)
-	node2Height2, _ := NewTree("node2Height2", "node2Height2", 2)
-	node3Height2, _ := NewTree("node3Height2", "node3Height2", 2)
-	node4Height2, _ := NewTree("node4Height2", "node4Height2", 2)
-	node1Height3, _ := NewTree("node1Height3", "node1Height3", 3)
+	node1Height0, _ := NewTree("node1Height0", "node1Height0")
+	node1Height1, _ := NewTree("node1Height1", "node1Height1")
+	node2Height1, _ := NewTree("node2Height1", "node2Height1")
+	node1Height2, _ := NewTree("node1Height2", "node1Height2")
+	node2Height2, _ := NewTree("node2Height2", "node2Height2")
+	node3Height2, _ := NewTree("node3Height2", "node3Height2")
+	node4Height2, _ := NewTree("node4Height2", "node4Height2")
+	node1Height3, _ := NewTree("node1Height3", "node1Height3")
 
 	node1Height0.AddChild(node1Height1)
 	node1Height0.AddChild(node2Height1)

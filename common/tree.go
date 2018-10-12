@@ -33,21 +33,18 @@ var (
 	ErrChildNodeAlreadyHasParent = errors.New("ERROR: Adding parent to node already with parent")
 )
 
-const LeafsSize = 32
-
 //entries include the node's entry itself as the first entry and its childrens' entry following
 type Tree struct {
 	entry    Entry
 	Parent   *Tree
 	Children []*Tree
-	Height   uint64
 }
 
-func NewTree(index interface{}, value interface{}, height uint64) (*Tree, error) {
+func NewTree(index interface{}, value interface{}) (*Tree, error) {
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Tree{Entry{index, value}, nil, nil, height}, nil
+	return &Tree{Entry{index, value}, nil, nil}, nil
 }
 
 func (t *Tree) hasChildren() bool {
@@ -81,14 +78,13 @@ func (n *Tree) deleteChild() {
 	for _, child := range n.Children {
 		child.deleteChild()
 	}
-	*n = Tree{Entry{nil, nil}, nil, nil, 0}
-	//n = nil
+	*n = Tree{Entry{nil, nil}, nil, nil}
 }
 
 func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
 	parentTrees = append(parentTrees, t)
-	if t.Height > head.Height {
+	if t.Parent != nil {
 		for parent := t.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
 			parentTrees = append(parentTrees, parent)
 		}
@@ -97,22 +93,25 @@ func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	return parentTrees
 }
 
-func (t *Tree) FindHeightestChild(heightest *Tree) {
+func (t *Tree) FindHeightestChild(path *Tree, prevDeep, deepest int) (deep int, deepPath *Tree) {
 	if t.hasChildren() {
 		for _, child := range t.Children {
-			child.FindHeightestChild(heightest)
+			correntDeepest, correntPath := child.FindHeightestChild(path, prevDeep+1, deepest)
+			if correntDeepest > deepest {
+				path = correntPath
+				deepest = correntDeepest
+			}
 		}
 	} else {
-		if heightest == nil || t.Height > heightest.Height {
-			*heightest = *t
-		}
+		path = t
+		deepest = prevDeep
 	}
+	return deepest, path
 }
 
 func (parent *Tree) AddChild(child *Tree) {
 	parent.Children = append(parent.Children, child)
 	child.Parent = parent
-	child.Height = parent.Height + 1
 }
 
 func (child *Tree) AddParent(parent *Tree) error {

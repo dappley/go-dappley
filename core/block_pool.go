@@ -106,7 +106,7 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 
 func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	logger.Debug("BlockPool: Received a new block: ", hex.EncodeToString(blk.GetHash()), " From Sender: ", sender.String())
-	tree, _ := common.NewTree(blk.hashString(), blk.header, blk.header.height)
+	tree, _ := common.NewTree(blk.hashString(), blk.header)
 
 	blkCache := pool.blkCache
 	forkCache := pool.forkCache
@@ -141,8 +141,8 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 	if bcTailBlk.IsParentBlock(blk) {
 		pool.blockchain.AddBlockToBlockchainTail(blk)
-		var forkTailTree common.Tree
-		tree.FindHeightestChild(&forkTailTree)
+		var forkTailTree *common.Tree
+		_, forkTailTree = tree.FindHeightestChild(forkTailTree, 0, 0)
 		trees := forkTailTree.GetParentTreesRange(tree)
 		forkBlks := pool.getBlocksByHashs(trees)
 		pool.blockchain.MergeFork(forkBlks)
@@ -150,7 +150,6 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		return
 	}
 
-	//attach above partial tree to forktree
 	pool.requestPrevBlock(forkParent, sender)
 }
 
@@ -165,9 +164,9 @@ func (pool *BlockPool) getBlocksByHashs(trees []*common.Tree) []*Block {
 }
 
 func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) *common.Tree {
-	// try to link children
 	blkCache := pool.blkCache
 	forkCache := pool.forkCache
+	// try to link children
 	for _, key := range forkCache.Keys() {
 		if possibleChild, ok := forkCache.Get(key); ok {
 			if block, ok := blkCache.Get(possibleChild.(*common.Tree).GetKey()); ok {
@@ -181,11 +180,8 @@ func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) *common.Tree {
 	//link parent
 	if parent, ok := forkCache.Get(string(tree.GetValue().(*BlockHeader).prevHash)); ok == true {
 		logger.Debug("BlockPool: Block: ", hex.EncodeToString(tree.GetValue().(*BlockHeader).hash), " found parent: ", hex.EncodeToString(tree.GetValue().(*BlockHeader).prevHash), " in BlockPool blkCache, adding parent")
-		//parent found in blkCache
 		tree.AddParent(parent.(*common.Tree))
 		tree = parent.(*common.Tree)
-	} else {
-		logger.Debug("BlockPool: Block: ", hex.EncodeToString(tree.GetValue().(*BlockHeader).hash), " no more parent found in BlockPool blkCache")
 	}
 
 	logger.Debug("BlockPool: Block: ", hex.EncodeToString(tree.GetValue().(*BlockHeader).hash), " finished updating BlockPoolCache")
