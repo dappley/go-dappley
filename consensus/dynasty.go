@@ -23,7 +23,7 @@ import (
 	"errors"
 
 	"github.com/dappley/go-dappley/core"
-	Logger "github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 )
 
 type Dynasty struct {
@@ -107,9 +107,9 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
-		Logger.Info("Current Producers:")
+		logger.Info("Current Producers:")
 		for _, producerIt := range dynasty.producers {
-			Logger.Info(producerIt)
+			logger.Info(producerIt)
 		}
 		return nil
 	} else {
@@ -167,6 +167,7 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 
 	if block == nil {
+		logger.Debug("ValidateProducer: block is empty")
 		return false
 	}
 
@@ -174,15 +175,17 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 	producerHash := core.HashAddress([]byte(producer))
 
 	cbtx := block.GetCoinbaseTransaction()
-	if cbtx == nil {
+	if cbtx==nil {
+		logger.Debug("ValidateProducer: coinbase tx is empty")
 		return false
 	}
 
-	if len(cbtx.Vout) == 0 {
+	if len(cbtx.Vout) == 0{
+		logger.Debug("ValidateProducer: coinbase Vout is empty")
 		return false
 	}
 
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash)==0
 }
 
 func IsProducerAddressValid(producer string) bool {

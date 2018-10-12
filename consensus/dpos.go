@@ -20,10 +20,8 @@ package consensus
 
 import (
 	"fmt"
-
 	"strings"
 	"time"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
@@ -100,11 +98,22 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool {
-	pass := dpos.miner.Validate(block) && dpos.dynasty.ValidateProducer(block) && !dpos.isDoubleMint(block)
-	if pass {
-		dpos.slot.Add(block.GetTimestamp(), block)
+	if !dpos.miner.Validate(block){
+		logger.Debug("Dpos: miner validate block failed")
+		return false
 	}
-	return pass
+	if !dpos.dynasty.ValidateProducer(block){
+		logger.Debug("Dpos: producer validate failed")
+		return false
+	}
+	if dpos.isDoubleMint(block){
+		logger.Debug("Dpos: doubleminting case found!")
+		return false
+	}
+
+	dpos.slot.Add(block.GetTimestamp(), block)
+
+	return true
 }
 
 func (dpos *Dpos) Start() {

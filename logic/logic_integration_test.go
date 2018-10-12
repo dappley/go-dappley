@@ -32,8 +32,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/client"
-	"strings"
 )
 
 const testport_msg_relay = 19999
@@ -63,7 +61,7 @@ func TestSend(t *testing.T) {
 			defer store.Close()
 
 			// Create a wallet address
-			senderWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+			senderWallet, err := CreateWallet(GetTestWalletPath(), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -74,7 +72,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 			// Create a receiver wallet; Balance is 0 initially
-			receiverWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+			receiverWallet, err := CreateWallet(GetTestWalletPath(), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -84,7 +82,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
-			minerWallet, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+			minerWallet, err := CreateWallet(GetTestWalletPath(), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -136,7 +134,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 	tip := uint64(5)
 	//create a wallet address
-	wallet1, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
@@ -179,7 +177,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 
 	//create a wallet address
-	wallet1, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
 	addr1 := wallet1.GetAddress()
 
@@ -194,7 +192,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, mineReward, balance1)
 
 	//Create a second wallet
-	wallet2, err := CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	wallet2, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet2)
 	assert.Nil(t, err)
 	addr2 := wallet2.GetAddress()
@@ -488,72 +486,6 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 	}
 }
 
-func TestDoubleMint(t *testing.T) {
-	const (
-		timeBetweenBlock = 1
-		dposRounds       = 2
-		bufferTime       = 0
-	)
-	setup()
-	var dposArray []*consensus.Dpos
-	var bcs []*core.Blockchain
-	var nodes []*network.Node
-	var receivingNode *network.Node
-
-	producerAddrs := []string{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
-	producerKey := []string{"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"}
-	numOfConcurrentDynasties := 4
-	for i := 0; i < numOfConcurrentDynasties; i++ {
-
-		dynasty := consensus.NewDynastyWithProducers(producerAddrs)
-		dynasty.SetTimeBetweenBlk(timeBetweenBlock)
-		dynasty.SetMaxProducers(1)
-
-		dpos := consensus.NewDpos()
-		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0)
-
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos)
-		bcs = append(bcs, bc)
-
-		node := network.NewNode(bc)
-		node.Start(testport_msg_relay_port + i)
-		nodes = append(nodes, node)
-
-		dpos.Setup(node, producerAddrs[0])
-		dpos.SetKey(producerKey[0])
-		dposArray = append(dposArray, dpos)
-
-		if i == numOfConcurrentDynasties-1 {
-			receivingNode = node
-		}
-	}
-
-	//each node connects to the receiving node
-	for i := 0; i < len(nodes)-1; i++ {
-		nodes[i].AddStream(receivingNode.GetPeerID(), receivingNode.GetPeerMultiaddr())
-	}
-
-	for i := 0; i < len(dposArray)-1; i++ {
-		dposArray[i].Start()
-	}
-
-	time.Sleep(time.Second * time.Duration(5))
-
-	//expect receiving node to have # of entries in dpos slot cache equal to their blockchain height
-	height := uint64(0)
-	totalSent := uint64(0)
-	for i := 0; i < len(nodes)-1; i++ {
-		totalSent += bcs[i].GetMaxHeight()
-	}
-	for _, _ = range dposArray[3].GetSlot().Keys() {
-		height++
-	}
-
-	assert.True(t, totalSent > height)
-	assert.Equal(t, height, bcs[3].GetMaxHeight())
-}
-
 func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.AddStream(
 		node2.GetPeerID(),
@@ -572,4 +504,55 @@ func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchai
 func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
 	pow := consensus.NewProofOfWork()
 	return core.CreateBlockchain(addr, db, pow), pow
+}
+func TestDoubleMint (t *testing.T){
+	var sendNode *network.Node
+	var recvNode *network.Node
+	var blks []*core.Block
+	var parent *core.Block
+
+	validProducerAddr:= "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
+
+	dynasty := consensus.NewDynastyWithProducers([]string{validProducerAddr})
+	producerHash := core.HashAddress([]byte(validProducerAddr))
+	tx := &core.Transaction{nil, []core.TXInput{core.TXInput{[]byte{}, -1,nil,nil}}, []core.TXOutput{core.TXOutput{common.NewAmount(0), producerHash}}, 0}
+
+	for i:=0; i< 3 ;i++  {
+		blk:=createValidBlock(producerHash, tx, validProducerKey, parent)
+		blks = append(blks, blk)
+		parent = blk
+	}
+	//check all timestamps are equal
+	for i:=0; i< len(blks)-1;i++ {
+		assert.True(t, blks[i].GetTimestamp() == blks[i+1].GetTimestamp())
+	}
+	for i := 0; i < 2; i++ {
+
+		dpos := consensus.NewDpos()
+		dpos.SetDynasty(dynasty)
+		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos)
+		node := network.NewNode(bc)
+		node.Start(testport_msg_relay_port + i)
+		if i == 0 {
+			sendNode = node
+		} else {
+			recvNode = node
+			recvNode.AddStream(sendNode.GetPeerID(), sendNode.GetPeerMultiaddr())
+		}
+	}
+
+	for i:=0; i< len(blks);i++ {
+		sendNode.BroadcastBlock(blks[i])
+	}
+
+	time.Sleep(time.Second*2)
+	assert.True(t, recvNode.GetBlockchain().GetMaxHeight()< 2)
+}
+
+func createValidBlock (hash core.Hash, tx *core.Transaction, validProducerKey string, parent *core.Block) (*core.Block) {
+	blk := core.NewBlock([]*core.Transaction{tx}, parent)
+	blk.SetHash(blk.CalculateHashWithoutNonce())
+	blk.SignBlock(validProducerKey, blk.CalculateHashWithoutNonce())
+	return blk
 }

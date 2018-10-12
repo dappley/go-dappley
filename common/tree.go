@@ -20,8 +20,6 @@ package common
 
 import (
 	"errors"
-
-	"github.com/hashicorp/golang-lru"
 )
 
 type Entry struct {
@@ -35,83 +33,99 @@ var (
 	ErrChildNodeAlreadyHasParent = errors.New("ERROR: Adding parent to node already with parent")
 )
 
-const LeafsSize = 32
-
 //entries include the node's entry itself as the first entry and its childrens' entry following
-type Node struct {
-	entry    Entry
-	Parent   *Node
-	Children []*Node
-	Height   uint64
-	tree     *Tree
-}
-
 type Tree struct {
-	Root        *Node
-	MaxHeight   uint64
-	Found       *Node
-	Searching   bool
-	leafs       *lru.Cache
-	HighestLeaf *Node
+	entry    Entry
+	Parent   *Tree
+	Children []*Tree
 }
 
-func (n *Node) hasChildren() bool {
-	if len(n.Children) > 0 {
+func NewTree(index interface{}, value interface{}) (*Tree, error) {
+	if index == nil || value == nil {
+		return nil, ErrCantCreateEmptyNode
+	}
+	return &Tree{Entry{index, value}, nil, nil}, nil
+}
+
+func (t *Tree) hasChildren() bool {
+	if len(t.Children) > 0 {
 		return true
 	}
 	return false
 }
 
-func (parent *Node) AddChild(child *Node) {
+func (t *Tree) containChild(child *Tree) bool {
+	for _, c := range t.Children {
+		if c == child {
+			return true
+		}
+	}
+	return false
+}
 
+func (t *Tree) Delete() {
+	if t.Parent != nil {
+		for i := 0; i < len(t.Parent.Children); i++ {
+			if t.Parent.Children[i].GetKey() == t.GetKey() {
+				t.Parent.Children = append(t.Parent.Children[:i], t.Parent.Children[i+1:]...)
+			}
+		}
+	}
+	t.deleteChild()
+}
+
+func (n *Tree) deleteChild() {
+	for _, child := range n.Children {
+		child.deleteChild()
+	}
+	*n = Tree{Entry{nil, nil}, nil, nil}
+}
+
+func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
+	var parentTrees []*Tree
+	parentTrees = append(parentTrees, t)
+	if t.Parent != nil {
+		for parent := t.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
+			parentTrees = append(parentTrees, parent)
+		}
+	}
+
+	return parentTrees
+}
+
+func (t *Tree) FindHeightestChild(path *Tree, prevDeep, deepest int) (deep int, deepPath *Tree) {
+	if t.hasChildren() {
+		for _, child := range t.Children {
+			correntDeepest, correntPath := child.FindHeightestChild(path, prevDeep+1, deepest)
+			if correntDeepest > deepest {
+				path = correntPath
+				deepest = correntDeepest
+			}
+		}
+	} else {
+		path = t
+		deepest = prevDeep
+	}
+	return deepest, path
+}
+
+func (parent *Tree) AddChild(child *Tree) {
 	parent.Children = append(parent.Children, child)
 	child.Parent = parent
-	//remove index from leafs if was leaf
-	parentKey := parent.GetKey()
-	child.Height = parent.Height + 1
-	if child.Height > child.tree.MaxHeight {
-		child.tree.MaxHeight = child.Height
-		child.tree.HighestLeaf = child
-	}
-	leaves := parent.tree.leafs
-	///if parent was leaf, update new leaf state
-	if len(parent.Children) > 0 && leaves.Contains(parentKey) {
-		leaves.Remove(parent.GetKey())
-	}
-	leaves.Add(child.GetKey(), child)
 }
 
-func (n *Node) GetValue() interface{} {
-	return n.entry.value
-}
-
-func (n *Node) GetKey() interface{} {
-	return n.entry.key
-}
-
-func (n *Node) AddParent(parent *Node) error {
-	if n.Parent != nil {
+func (child *Tree) AddParent(parent *Tree) error {
+	if child.Parent != nil {
 		return ErrChildNodeAlreadyHasParent
-
 	}
-	n.tree.Root = parent
-	parent.AddChild(n)
+	parent.AddChild(child)
 	return nil
 }
 
-//tree func
-
-func NewTree(rootNodeIndex interface{}, rootNodeValue interface{}) *Tree {
-	t := &Tree{nil, 1, nil, false, nil, nil}
-	r := Node{Entry{rootNodeIndex, rootNodeValue}, nil, nil, 1, t}
-	t.Root = &r
-	t.leafs, _ = lru.New(LeafsSize)
-	return t
+func (t *Tree) GetValue() interface{} {
+	return t.entry.value
 }
 
-func (t *Tree) NewNode(index interface{}, value interface{}, height uint64) (*Node, error) {
-	if index == nil || value == nil {
-		return nil, ErrCantCreateEmptyNode
-	}
-	return &Node{Entry{index, value}, nil, nil, height, t}, nil
+func (t *Tree) GetKey() interface{} {
+	return t.entry.key
 }

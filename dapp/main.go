@@ -95,6 +95,7 @@ func main() {
 	conss.Setup(node, minerAddr)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
 	logger.Info("Miner Address is ", minerAddr)
+	logic.SetLockWallet()     //lock the wallet
 
 	conss.Start()
 	defer conss.Stop()

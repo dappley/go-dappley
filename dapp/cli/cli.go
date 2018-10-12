@@ -273,18 +273,24 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
 	if err != nil {
-		fmt.Println("ERROR: Get Balance failed. ERR:", err)
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Get Balance failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Get Balance failed. %v\n", err.Error())
+		}
 		return
 	}
 
 	passphrase := ""
-	if response.Message == "WalletExists" {
+	if response.Message == "WalletExistsLocked" {
 		prompter := util.NewTerminalPrompter()
 		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
 		}
+	} else if response.Message == "WalletExistsNotLocked"{
+		passphrase = ""
 	} else if response.Message == "NoWallet" {
 		fmt.Println("Please use cli createWallet to generate a wallet first!")
 		return
@@ -332,12 +338,14 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 		}
 		return
 	}
-	if response.Message == "WalletExists" {
+	if response.Message == "WalletExistsLocked" {
 		passphrase = prompter.GetPassPhrase("Please input the password: ",false)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
 		}
+	} else if response.Message == "WalletExistsNotLocked" {
+		passphrase = ""
 	} else if response.Message == "NewWallet" {
 		passphrase = prompter.GetPassPhrase("Please input the password for generating a new wallet: ",true)
 		if passphrase == "" {
@@ -374,18 +382,24 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 
 	response,err  := client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
 	if err != nil {
-		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Get Wallet Addresses failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Get Wallet Addresses failed. %v\n", err.Error())
+		}
 		return
 	}
 
 	passphrase := ""
-	if response.Message == "WalletExists" {
+	if response.Message == "WalletExistsLocked" {
 		prompter := util.NewTerminalPrompter()
 		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
 		}
+	} else if response.Message == "WalletExistsNotLocked" {
+		passphrase = ""
 	} else if response.Message == "NoWallet" {
 		fmt.Println("Please use cli createWallet to generate a wallet first!")
 		return
