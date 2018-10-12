@@ -71,14 +71,7 @@ func (t *Tree) Delete() {
 			}
 		}
 	}
-	t.deleteChild()
-}
-
-func (n *Tree) deleteChild() {
-	for _, child := range n.Children {
-		child.deleteChild()
-	}
-	*n = Tree{Entry{nil, nil}, nil, nil}
+	t.Parent = nil
 }
 
 func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
