@@ -34,8 +34,8 @@ type Dynasty struct {
 }
 
 const (
-	defaultMaxProducers   = 5
-	defaultTimeBetweenBlk = 15
+	defaultMaxProducers   = 10
+	defaultTimeBetweenBlk = 2
 	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
 )
 
@@ -60,23 +60,6 @@ func NewDynastyWithProducers(producers []string) *Dynasty {
 		maxProducers:   len(validProducers),
 		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    len(validProducers) * defaultTimeBetweenBlk,
-	}
-
-}
-
-func NewDynastyWithConfigProducers(producers []string) *Dynasty {
-	validProducers := []string{}
-	for _, producer := range producers {
-		if IsProducerAddressValid(producer) {
-			validProducers = append(validProducers, producer)
-		}
-	}
-
-	return &Dynasty{
-		producers:      validProducers,
-		maxProducers:   defaultMaxProducers,
-		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultMaxProducers * defaultTimeBetweenBlk,
 	}
 
 }
