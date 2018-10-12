@@ -143,10 +143,9 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		forkBlks := pool.getBlocksByHashs(trees)
 		pool.blockchain.MergeFork(forkBlks)
 		tree.Delete()
-		return
+	} else {
+		pool.requestPrevBlock(forkParent, sender)
 	}
-
-	pool.requestPrevBlock(forkParent, sender)
 }
 
 func (pool *BlockPool) getBlocksByHashs(trees []*common.Tree) []*Block {
