@@ -117,7 +117,7 @@ func Test_GetParentNodesRange(t *testing.T) {
 	tree6.AddChild(tree7)
 	tree7.AddChild(tree8)
 
-	expect := []*Tree{tree6, tree5, tree4, tree3}
+	expect := []*Tree{tree6, tree5, tree4, tree3, tree2}
 	trees := tree6.GetParentTreesRange(tree2)
 
 	assert.Equal(t, expect, trees)
