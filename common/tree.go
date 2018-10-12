@@ -89,7 +89,7 @@ func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 			parentTrees = append(parentTrees, parent)
 		}
 	}
-
+	parentTrees = append(parentTrees, head)
 	return parentTrees
 }
 

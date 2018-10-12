@@ -137,7 +137,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	forkParent := pool.updatePoolForkCache(tree)
 
 	if bcTailBlk.IsParentBlock(blk) {
-		pool.blockchain.AddBlockToBlockchainTail(blk)
+		// pool.blockchain.AddBlockToBlockchainTail(blk)
 		var forkTailTree *common.Tree
 		_, forkTailTree = tree.FindHeightestChild(forkTailTree, 0, 0)
 		trees := forkTailTree.GetParentTreesRange(tree)
