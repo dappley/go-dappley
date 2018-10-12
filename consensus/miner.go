@@ -110,6 +110,8 @@ func (miner *Miner) Start() {
 			}
 		}
 		miner.returnBlk()
+		// Miner stoped
+		miner.stop = true
 		logger.Info("Miner: Mining Ends...")
 	}()
 }
