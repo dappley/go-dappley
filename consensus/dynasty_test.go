@@ -24,6 +24,12 @@ import (
 	"github.com/dappley/go-dappley/core"
 )
 
+func fakeDynasty (maxProducers, timeBetweenBlock int) *Dynasty {
+	dynasty:= NewDynasty()
+	dynasty.SetMaxProducers(maxProducers)
+	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
+	return dynasty
+}
 func TestDynasty_NewDynasty(t *testing.T) {
 	dynasty := NewDynasty()
 	assert.Empty(t,dynasty.producers)
@@ -261,7 +267,7 @@ func TestDynasty_IsMyTurnByIndex(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= NewDynasty()
+			dynasty := fakeDynasty(5, 15)
 			nextMintTime := dynasty.isMyTurnByIndex(tt.index, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
@@ -332,6 +338,7 @@ func TestDynasty_IsMyTurn(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynastyWithProducers(tt.initialProducers)
+			dynasty.SetTimeBetweenBlk(15)
 			nextMintTime := dynasty.IsMyTurn(tt.producer, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
@@ -430,6 +437,7 @@ func TestDynasty_ValidateProducer(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynastyWithProducers(producers)
+			dynasty.SetTimeBetweenBlk(15)
 			assert.Equal(t, tt.expected, dynasty.ValidateProducer(tt.block))
 		})
 	}
