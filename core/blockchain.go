@@ -380,6 +380,8 @@ func (bc *Blockchain) String() string {
 
 //AddBlockToDb record the new block in the database
 func (bc *Blockchain) AddBlockToDb(block *Block) error {
+	bc.db.EnableBatch()
+	defer bc.db.DisableBatch()
 	err := bc.db.Put(block.GetHash(), block.Serialize())
 	if err != nil {
 		logger.Warn("Blockchain: Add Block To Database Failed!")
@@ -388,8 +390,13 @@ func (bc *Blockchain) AddBlockToDb(block *Block) error {
 
 	err = bc.db.Put(util.UintToHex(block.GetHeight()), block.GetHash())
 	if err != nil {
-		// Delete block hash when save height information failed
-		bc.db.Del(block.GetHash())
+		logger.Warn("Blockchain: Add Block Height to Database Failed!")
+		return err
+	}
+
+	err = bc.db.Flush()
+	if err != nil {
+		logger.Warn("Blockchain: Flush Block to Database failed")
 		return err
 	}
 
