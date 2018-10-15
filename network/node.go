@@ -206,7 +206,10 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	// so LibP2P knows how to contact it
 	p := Peer{peerid, targetAddr}
 	if n.peerList.IsInPeerlist(&p) {
-		logger.Debug(targetAddr.String() + " is already in peerlist of " + n.GetPeerMultiaddr().String())
+		logger.WithFields(logger.Fields{
+			"host": n.GetPeerMultiaddr().String(),
+			"target": targetAddr.String(),
+		}).Debug("Node: target already added!")
 		return ErrIsInPeerlist
 	}
 
@@ -405,8 +408,11 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("Node: ", n.GetPeerID(), " Received Block: Hash:", hex.EncodeToString(blk.GetHash()), ", Height:", blk.GetHeight())
-
+	logger.WithFields(logger.Fields{
+		"hash":   hex.EncodeToString(blk.GetHash()),
+		"height": blk.GetHeight(),
+		"host": n.GetPeerID(),
+	}).Info("Node: Received block")
 	n.addBlockToPool(blk, pid)
 }
 

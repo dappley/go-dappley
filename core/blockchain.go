@@ -147,7 +147,10 @@ func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	err := bc.AddBlockToDb(block)
 	if err != nil {
-		logger.Warn("Blockchain: Add Block To Database Failed! Height:", block.GetHeight(), " Hash:", hex.EncodeToString(block.GetHash()))
+		logger.WithFields(logger.Fields{
+			"hash": hex.EncodeToString(block.GetHash()),
+			"height": block.GetHeight(),
+		}).Warn("Blockchain: Add Block To Database Failed")
 		return err
 	}
 
