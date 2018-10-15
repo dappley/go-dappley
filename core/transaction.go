@@ -27,13 +27,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
-	"strings"
 )
 
 var subsidy = common.NewAmount(10)
@@ -74,14 +76,32 @@ func (tx Transaction) Serialize() []byte {
 	return encoded.Bytes()
 }
 
+//GetToHashBytes Get bytes for hash
+func (tx *Transaction) GetToHashBytes() []byte {
+	var bytes []byte
+
+	for _, vin := range tx.Vin {
+		bytes = append(bytes, vin.Txid...)
+		// int size may differ from differnt platform
+		bytes = append(bytes, byteutils.FromInt32(int32(vin.Vout))...)
+		bytes = append(bytes, vin.PubKey...)
+		bytes = append(bytes, vin.Signature...)
+	}
+
+	for _, vout := range tx.Vout {
+		bytes = append(bytes, vout.Value.Bytes()...)
+		bytes = append(bytes, vout.PubKeyHash...)
+	}
+
+	bytes = append(bytes, byteutils.FromUint64(tx.Tip)...)
+	return bytes
+}
+
 // Hash returns the hash of the Transaction
 func (tx *Transaction) Hash() []byte {
 	var hash [32]byte
 
-	txCopy := *tx
-	txCopy.ID = []byte{}
-
-	hash = sha256.Sum256(txCopy.Serialize())
+	hash = sha256.Sum256(tx.GetToHashBytes())
 
 	return hash[:]
 }
