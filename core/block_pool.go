@@ -82,11 +82,15 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 //Verify all transactions in a fork
 func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
 	for i := len(forkBlks) - 1; i >= 0; i-- {
-		logger.Info("Start Verify")
+		logger.WithFields(logger.Fields{
+			"height": forkBlks[i].GetHeight(),
+			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
+		}).Info("Verifying block before merge")
+
 		if !forkBlks[i].VerifyTransactions(utxo) {
 			return false
 		}
-		logger.Info("Verifyed a block. Height: ", forkBlks[i].GetHeight(), "Have ", i, "block left")
+
 		utxoIndex := LoadUTXOIndex(pool.blockchain.GetDb())
 		utxoIndex.BuildForkUtxoIndex(forkBlks[i], pool.blockchain.GetDb())
 	}
@@ -123,11 +127,9 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 	if pool.blockchain.consensus.Validate(blk) {
 		if !blkCache.Contains(blk.hashString()) {
-			logger.Debug("BlockPool: Adding blk key to blockcache: ", hex.EncodeToString(blk.GetHash()))
 			blkCache.Add(blk.hashString(), blk)
 		}
 		if !forkCache.Contains(blk.hashString()) {
-			logger.Debug("BlockPool: Adding node key to nodecache: ", hex.EncodeToString(blk.GetHash()))
 			forkCache.Add(tree.GetKey(), tree)
 		}
 	} else {

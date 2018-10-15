@@ -410,7 +410,9 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain(forkBlks)
 
-	logger.Debug("Merge finished, setting syncstate to false")
+	logger.WithFields(logger.Fields{
+		"syncstate": false,
+	}).Info("Merge finished, setting syncstate to false")
 	bc.GetBlockPool().SetSyncState(false)
 
 }
@@ -456,8 +458,10 @@ loop:
 			break loop
 		}
 		block, err := bc.GetBlockByHash(parentblockHash)
-		logger.Info("Blockpool: Rolling back: ", hex.EncodeToString(parentblockHash), " height: ", block.GetHeight())
-
+		logger.WithFields(logger.Fields{
+			"height": block.GetHeight(),
+			"hash":   hex.EncodeToString(parentblockHash),
+		}).Info("Blockpool: Rolling back:")
 		if err != nil {
 			return false
 		}

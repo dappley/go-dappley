@@ -168,8 +168,10 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	// by encapsulating both addresses:
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
-	logger.Info("Full Address is ", fullAddr)
-
+	logger.Info(" ", )
+	logger.WithFields(logger.Fields{
+		"Address": fullAddr,
+	}).Info("My Address")
 	return basicHost, fullAddr, nil
 }
 
@@ -229,8 +231,10 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
-	logger.Info(n.GetPeerMultiaddr(), " Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
-
+	logger.WithFields(logger.Fields{
+		"Host": n.GetPeerID(),
+		"Target":  s.Conn().RemotePeer(),
+	}).Info("Creating stream between: ")
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
 		n.peerList.Add(peer)
@@ -279,7 +283,6 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
-		logger.Debug("Node: ", n.info.peerid, " broadcasting block with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -290,7 +293,11 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("Node: BroadcastBlock: Hash:", hex.EncodeToString(block.GetHash()), ", Height:", block.GetHeight())
+	logger.WithFields(logger.Fields{
+		"peerid": n.GetPeerID(),
+		"height": block.GetHeight(),
+		"hash":   hex.EncodeToString(block.GetHash()),
+	}).Info("Broadcasting Block: ")
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
@@ -392,7 +399,6 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 }
 func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
-		logger.Debug("Node: ", n.GetPeerID(), " Already received ", dm.GetKey(), " before")
 		return
 	}
 
