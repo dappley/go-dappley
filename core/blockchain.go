@@ -404,14 +404,14 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
+
 	bc.Rollback(forkParentHash)
 
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain(forkBlks)
 
-	logger.Debug("Merged Fork!!")
+	logger.Debug("Merge finished, setting syncstate to false")
 	bc.GetBlockPool().SetSyncState(false)
-	logger.Info("merge finished, setting syncstate to false")
 
 }
 
@@ -443,17 +443,20 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	if !bc.IsInBlockchain(targetHash) {
 		return false
 	}
-
 	parentblockHash := bc.GetTailBlockHash()
+	//if is child of tail, skip rollback
+	if IsHashEqual(parentblockHash, targetHash){
+		return true
+	}
 
 	//keep rolling back blocks until the block with the input hash
 loop:
 	for {
-		logger.Info("Blockpool: Rolling back: ", hex.EncodeToString(parentblockHash))
 		if bytes.Compare(parentblockHash, targetHash) == 0 {
 			break loop
 		}
 		block, err := bc.GetBlockByHash(parentblockHash)
+		logger.Info("Blockpool: Rolling back: ", hex.EncodeToString(parentblockHash), " height: ", block.GetHeight())
 
 		if err != nil {
 			return false
