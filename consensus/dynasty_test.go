@@ -19,9 +19,9 @@
 package consensus
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/core"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestDynasty_NewDynasty(t *testing.T) {
@@ -29,6 +29,11 @@ func TestDynasty_NewDynasty(t *testing.T) {
 	assert.Empty(t,dynasty.producers)
 }
 
+func standardizeTestDynasties(d *Dynasty, maxProducer, timeBtwBlock int) *Dynasty{
+	d.SetMaxProducers(maxProducer)
+	d.SetTimeBetweenBlk(timeBtwBlock)
+	return d
+}
 func TestDynasty_NewDynastyWithProducers(t *testing.T) {
 	tests := []struct{
 		name 		string
@@ -107,7 +112,7 @@ func TestDynasty_AddProducer(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynasty()
-			dynasty.SetMaxProducers(tt.maxPeers)
+			dynasty = standardizeTestDynasties(dynasty, tt.maxPeers, 15)
 			dynasty.AddProducer(tt.input)
 			assert.Equal(t, tt.expected, dynasty.producers)
 		})
@@ -168,7 +173,7 @@ func TestDynasty_AddMultipleProducers(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynasty()
-			dynasty.SetMaxProducers(tt.maxPeers)
+			dynasty = standardizeTestDynasties(dynasty,tt.maxPeers,15)
 			dynasty.AddMultipleProducers(tt.input)
 			assert.Equal(t, tt.expected, dynasty.producers)
 		})
@@ -262,6 +267,7 @@ func TestDynasty_IsMyTurnByIndex(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynasty()
+			dynasty = standardizeTestDynasties(dynasty,5,15)
 			nextMintTime := dynasty.isMyTurnByIndex(tt.index, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
@@ -332,6 +338,7 @@ func TestDynasty_IsMyTurn(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynastyWithProducers(tt.initialProducers)
+			dynasty = standardizeTestDynasties(dynasty,len(tt.initialProducers),15)
 			nextMintTime := dynasty.IsMyTurn(tt.producer, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
@@ -364,6 +371,7 @@ func TestDynasty_ProducerAtATime(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynastyWithProducers(producers)
+			standardizeTestDynasties(dynasty, len(producers), 15)
 			producer := dynasty.ProducerAtATime(tt.now)
 			assert.Equal(t, tt.expected, producer)
 		})
@@ -430,6 +438,7 @@ func TestDynasty_ValidateProducer(t *testing.T) {
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
 			dynasty:= NewDynastyWithProducers(producers)
+			standardizeTestDynasties(dynasty, len(producers), 15)
 			assert.Equal(t, tt.expected, dynasty.ValidateProducer(tt.block))
 		})
 	}
