@@ -90,7 +90,6 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
-	//Waiting the last mined block sync to blockchain
 	time.Sleep(time.Second)
 
 	//get the number of blocks
@@ -140,7 +139,6 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
-	//Waiting the last mined block sync to blockchain
 	time.Sleep(time.Second)
 
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -208,7 +206,6 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//stop mining
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
-	//Waiting the last mined block sync to blockchain
 	time.Sleep(time.Second)
 
 	//get the number of blocks
