@@ -38,7 +38,18 @@ const (
 	defaultTimeBetweenBlk = 15
 	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
 )
-
+func (d *Dynasty) trimProducers(){
+	//if producer conf file does not have all producers
+	if len(d.producers) < defaultMaxProducers {
+		for len(d.producers) < defaultMaxProducers {
+			d.producers = append(d.producers, "")
+		}
+	}
+	//if producer conf file has too many producers
+	if len(d.producers) > defaultMaxProducers {
+		d.producers = d.producers[:defaultMaxProducers]
+	}
+}
 func NewDynasty() *Dynasty {
 	return &Dynasty{
 		producers:      []string{},
@@ -72,13 +83,14 @@ func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 		}
 	}
 
-	return &Dynasty{
+	d := &Dynasty{
 		producers:      validProducers,
 		maxProducers:   defaultMaxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    defaultMaxProducers * defaultTimeBetweenBlk,
 	}
-
+	d.trimProducers()
+	return d
 }
 
 func (dynasty *Dynasty) SetMaxProducers(maxProducers int) {
