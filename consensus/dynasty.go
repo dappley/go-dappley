@@ -34,8 +34,8 @@ type Dynasty struct {
 }
 
 const (
-	defaultMaxProducers   = 5
-	defaultTimeBetweenBlk = 15
+	defaultMaxProducers   = 10
+	defaultTimeBetweenBlk = 1
 	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
 )
 
