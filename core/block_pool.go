@@ -126,7 +126,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		logger.Panicf("Can't find find any block %v", err)
 	}
 
-	forkParent := pool.updatePoolForkCache(tree)
+	pool.updatePoolForkCache(tree)
 
 	if bcTailBlk.IsParentBlock(blk) {
 		var forkTailTree *common.Tree
@@ -136,7 +136,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		pool.blockchain.MergeFork(forkBlks)
 		tree.Delete()
 	} else {
-		pool.requestPrevBlock(forkParent, sender)
+		pool.requestPrevBlock(tree, sender)
 	}
 }
 
@@ -148,7 +148,7 @@ func getBlocksFromTrees(trees []*common.Tree) []*Block {
 	return blocks
 }
 
-func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) *common.Tree {
+func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) {
 	blkCache := pool.blkCache
 	// try to link children
 	for _, key := range blkCache.Keys() {
@@ -164,11 +164,10 @@ func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) *common.Tree {
 	if parent, ok := blkCache.Get(string(tree.GetValue().(*Block).GetPrevHash())); ok == true {
 		logger.Debug("BlockPool: Block: ", tree.GetValue().(*Block).hashString(), " found parent: ", hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()), " in BlockPool blkCache, adding parent")
 		tree.AddParent(parent.(*common.Tree))
-		tree = parent.(*common.Tree)
+		*tree = *parent.(*common.Tree)
 	}
 
 	logger.Debug("BlockPool: Block: ", tree.GetValue().(*Block).hashString(), " finished updating BlockPoolCache")
-	return tree
 }
 
 func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
