@@ -139,11 +139,11 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	}
 
 	forkParent := pool.updatePoolBlkCache(tree)
-
 	forkParentHash := forkParent.GetValue().(*Block).GetPrevHash()
+
 	if  parent, _ := pool.blockchain.GetBlockByHash(forkParentHash); parent !=nil {
-		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
-		logger.Debug(forkTailTree.GetValue().(*Block).GetHeight())
+		_, forkTailTree := forkParent.FindHeightestChild(&common.Tree{}, 0, 0)
+
 		if forkTailTree.GetValue().(*Block).GetHeight() > pool.blockchain.GetMaxHeight(){
 			pool.syncState = true
 		}else{
@@ -151,8 +151,8 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		}
 
 		trees := forkTailTree.GetParentTreesRange(tree)
-		forkBlks := getBlocksFromTrees(trees)
 
+		forkBlks := getBlocksFromTrees(trees)
 		pool.blockchain.MergeFork(forkBlks, forkParentHash)
 		tree.Delete()
 		return
@@ -175,14 +175,12 @@ func (pool *BlockPool) updatePoolBlkCache(tree *common.Tree) *common.Tree {
 	for _, key := range blkCache.Keys() {
 		if possibleChild, ok := blkCache.Get(key); ok {
 			if hex.EncodeToString(possibleChild.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).hashString() {
-				logger.Debug("BlockPool: Block: ", tree.GetValue().(*Block).hashString(), " found child Block: ", possibleChild.(*common.Tree).GetValue().(*Block).hashString(), " in BlockPool blkCache, adding child")
 				tree.AddChild(possibleChild.(*common.Tree))
 			}
 		}
 	}
 	//link parent
 	if parent, ok := blkCache.Get(hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash())); ok == true {
-		logger.Debug("BlockPool: Block: ", tree.GetValue().(*Block).hashString(), " found parent: ", hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()), " in BlockPool blkCache, adding parent")
 		tree.AddParent(parent.(*common.Tree))
 		tree = parent.(*common.Tree)
 	}
