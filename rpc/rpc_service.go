@@ -31,6 +31,8 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"strings"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"encoding/hex"
 )
 
 const ProtoVersion = "1.0.0"
@@ -78,7 +80,7 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 			msg = "NewWallet"
 		}
 	} else if in.Name == "createWallet" {
-		empty,err := logic.IsWalletEmpty()
+		empty, err := logic.IsWalletEmpty()
 		if err != nil && !empty {
 			return &rpcpb.CreateWalletResponse{
 				Message: err.Error(),
@@ -177,7 +179,7 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		} else {
 			wallet = wm.GetWalletByAddress(core.NewAddress(address))
 			if wallet == nil {
-				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!",}, nil
+				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!"}, nil
 			}
 		}
 
@@ -324,6 +326,63 @@ func (rpcSerivce *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 		//set the timer
 		getWalletAddress := rpcpb.GetWalletAddressResponse{}
 		getWalletAddress.Address = addressList
+		return &getWalletAddress, nil
+	} else if in.Name == "listAddressesWithPrivateKey" {
+		pass := in.Passphrase
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		if err != nil {
+			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
+		}
+		addressList := []string{}
+		privateKeyList := []string{}
+		if wm.Locked {
+			addressList, err = wm.GetAddressesWithPassphrase(pass)
+			for _, addr := range addressList {
+				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
+				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
+				if err1 != nil {
+					err = err1
+					break
+				}
+				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+				err = err1
+			}
+		} else {
+			addresses := wm.GetAddresses()
+			for _, addr := range addresses {
+				addressList = append(addressList, addr.Address)
+				}
+			for _, addr := range addressList {
+				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
+				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
+				if err1 != nil {
+					err = err1
+					break
+				}
+				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+				err = err1
+			}
+			err = nil
+		}
+
+		if err != nil {
+			if strings.Contains(err.Error(), "Password not correct") {
+				return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Password not correct"}, nil
+			} else {
+				return &rpcpb.GetWalletAddressResponse{Message: err.Error()}, err
+			}
+		}
+
+		//set the timer
+		if wm.Locked {
+			wm.SetUnlockTimer(logic.GetUnlockDuration())
+		}
+
+		getWalletAddress := rpcpb.GetWalletAddressResponse{}
+		getWalletAddress.Address = addressList
+		getWalletAddress.PrivateKey = privateKeyList
 		return &getWalletAddress, nil
 	} else {
 		getWalletAddress := rpcpb.GetWalletAddressResponse{}
