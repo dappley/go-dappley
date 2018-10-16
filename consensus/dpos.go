@@ -186,7 +186,7 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 		return false
 	}
 
-	address := core.GenerateAddressByPublicKey(pubkey)
+	address := core.GenerateAddressByPublicKey(pubkey[1:])
 
 	if strings.Compare(address.Address, producer) == 0 {
 		return true
