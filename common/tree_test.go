@@ -117,35 +117,8 @@ func Test_GetParentNodesRange(t *testing.T) {
 	tree6.AddChild(tree7)
 	tree7.AddChild(tree8)
 
-	expect := []*Tree{tree6, tree5, tree4, tree3}
+	expect := []*Tree{tree6, tree5, tree4, tree3, tree2}
 	trees := tree6.GetParentTreesRange(tree2)
 
 	assert.Equal(t, expect, trees)
-}
-
-func Test_Delete(t *testing.T) {
-	node1Height0, _ := NewTree("node1Height0", "node1Height0")
-	node1Height1, _ := NewTree("node1Height1", "node1Height1")
-	node2Height1, _ := NewTree("node2Height1", "node2Height1")
-	node1Height2, _ := NewTree("node1Height2", "node1Height2")
-	node2Height2, _ := NewTree("node2Height2", "node2Height2")
-	node3Height2, _ := NewTree("node3Height2", "node3Height2")
-	node4Height2, _ := NewTree("node4Height2", "node4Height2")
-	node1Height3, _ := NewTree("node1Height3", "node1Height3")
-
-	node1Height0.AddChild(node1Height1)
-	node1Height0.AddChild(node2Height1)
-	node1Height1.AddChild(node1Height2)
-	node1Height1.AddChild(node2Height2)
-	node2Height1.AddChild(node3Height2)
-	node2Height1.AddChild(node4Height2)
-	node3Height2.AddChild(node1Height3)
-
-	assert.Equal(t, 2, len(node1Height1.Children))
-
-	node1Height2.Delete()
-	assert.Equal(t, 1, len(node1Height1.Children))
-	node2Height1.Delete()
-	assert.Equal(t, 0, len(node3Height2.Children))
-	assert.Equal(t, nil, node1Height2.GetKey())
 }

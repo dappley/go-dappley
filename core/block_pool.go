@@ -46,7 +46,6 @@ type BlockPool struct {
 	size           int
 	blockchain     *Blockchain
 	blkCache       *lru.Cache //cache of full blks
-	forkCache      *lru.Cache //cache of tree nodes that contain blk header as value
 }
 func (pool *BlockPool) GetSyncState () bool{
 	return pool.syncState
@@ -62,7 +61,6 @@ func NewBlockPool(size int) *BlockPool {
 		blockchain:     nil,
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
-	pool.forkCache, _ = lru.New(ForkCacheLRUCacheLimit)
 
 	return pool
 }
@@ -124,17 +122,13 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		"hash":   hex.EncodeToString(blk.GetHash()),
 	}).Info("BlockPool: Received a new block: ")
 
-	tree, _ := common.NewTree(blk.hashString(), blk.header)
+	tree, _ := common.NewTree(blk.hashString(), blk)
 
 	blkCache := pool.blkCache
-	forkCache := pool.forkCache
 
 	if pool.blockchain.consensus.Validate(blk) {
 		if !blkCache.Contains(blk.hashString()) {
-			blkCache.Add(blk.hashString(), blk)
-		}
-		if !forkCache.Contains(blk.hashString()) {
-			forkCache.Add(tree.GetKey(), tree)
+			blkCache.Add(blk.hashString(), tree)
 		}
 	} else {
 		logger.WithFields(logger.Fields{
@@ -144,68 +138,70 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		return
 	}
 
+	forkParent := pool.updatePoolBlkCache(tree)
 
-	forkParent := pool.updatePoolForkCache(tree)
-	forkParentHash := forkParent.GetValue().(*BlockHeader).prevHash
-
+	forkParentHash := forkParent.GetValue().(*Block).GetPrevHash()
 	if  parent, _ := pool.blockchain.GetBlockByHash(forkParentHash); parent !=nil {
 		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
-		if forkTailTree.GetValue().(*BlockHeader).height > pool.blockchain.GetMaxHeight(){
+		logger.Debug(forkTailTree.GetValue().(*Block).GetHeight())
+		if forkTailTree.GetValue().(*Block).GetHeight() > pool.blockchain.GetMaxHeight(){
 			pool.syncState = true
 		}else{
 			return
 		}
+
 		trees := forkTailTree.GetParentTreesRange(tree)
-		forkBlks := pool.getBlocksByHashs(trees)
+		forkBlks := getBlocksFromTrees(trees)
+
 		pool.blockchain.MergeFork(forkBlks, forkParentHash)
 		tree.Delete()
 		return
 	}
 	pool.requestPrevBlock(forkParent, sender)
+
 }
 
-func (pool *BlockPool) getBlocksByHashs(trees []*common.Tree) []*Block {
-	blkCache := pool.blkCache
+func getBlocksFromTrees(trees []*common.Tree) []*Block {
 	var blocks []*Block
-	for i := 0; i < len(trees); i++ {
-		block, _ := blkCache.Get(trees[i].GetKey())
-		blocks = append(blocks, block.(*Block))
+	for _, tree := range trees {
+		blocks = append(blocks, tree.GetValue().(*Block))
 	}
 	return blocks
 }
 
-func (pool *BlockPool) updatePoolForkCache(tree *common.Tree) *common.Tree {
+func (pool *BlockPool) updatePoolBlkCache(tree *common.Tree) *common.Tree {
 	blkCache := pool.blkCache
-	forkCache := pool.forkCache
 	// try to link children
-	for _, key := range forkCache.Keys() {
-		if possibleChild, ok := forkCache.Get(key); ok {
-			if block, ok := blkCache.Get(possibleChild.(*common.Tree).GetKey()); ok {
-				if hex.EncodeToString(block.(*Block).GetPrevHash()) == hex.EncodeToString(tree.GetValue().(*BlockHeader).hash) {
-					tree.AddChild(possibleChild.(*common.Tree))
-				}
+	for _, key := range blkCache.Keys() {
+		if possibleChild, ok := blkCache.Get(key); ok {
+			if hex.EncodeToString(possibleChild.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).hashString() {
+				logger.Debug("BlockPool: Block: ", tree.GetValue().(*Block).hashString(), " found child Block: ", possibleChild.(*common.Tree).GetValue().(*Block).hashString(), " in BlockPool blkCache, adding child")
+				tree.AddChild(possibleChild.(*common.Tree))
 			}
 		}
 	}
 	//link parent
-	if parent, ok := forkCache.Get(string(tree.GetValue().(*BlockHeader).prevHash)); ok == true {
+	if parent, ok := blkCache.Get(hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash())); ok == true {
+		logger.Debug("BlockPool: Block: ", tree.GetValue().(*Block).hashString(), " found parent: ", hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()), " in BlockPool blkCache, adding parent")
 		tree.AddParent(parent.(*common.Tree))
 		tree = parent.(*common.Tree)
 	}
+
 	logger.WithFields(logger.Fields{
-		"height": tree.GetValue().(*BlockHeader).height,
-		"hash":   hex.EncodeToString(tree.GetValue().(*BlockHeader).hash),
+		"height": tree.GetValue().(*Block).GetHeight(),
+		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
 	}).Info("BlockPool: Finished updating BlockPoolCache")
 	return tree
 }
 
+
 func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
 	logger.WithFields(logger.Fields{
-		"requestedHash": hex.EncodeToString(tree.GetValue().(*BlockHeader).hash),
-		"height": tree.GetValue().(*BlockHeader).height,
+		"requestedHash": hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
+		"height": tree.GetValue().(*Block).GetHeight(),
 		"from":   sender,
 	}).Info("BlockPool: Parent not found, requesting block")
-	pool.blockRequestCh <- BlockRequestPars{tree.GetValue().(*BlockHeader).prevHash, sender}
+	pool.blockRequestCh <- BlockRequestPars{tree.GetValue().(*Block).GetPrevHash(), sender}
 }
 
 func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
