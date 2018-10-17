@@ -1,4 +1,4 @@
-all: dep build run test
+all: dep build run test checkRunning
 
 testall:
 	go clean -testcache
@@ -18,13 +18,16 @@ test:
 			cd $$f; go test ./...; cd ..; \
 		fi \
 	done
-	pkill dapp || ( echo "dapp service not running"; exit 666)
 
 build:
 	cd dapp; go build;
 	cd dapp/cli; go build
 run:
 	cd dapp; ./dapp > /dev/null 2>&1 &
+
+checkRunning:
+	pkill dapp || ( echo "dapp service not running"; exit 666)
+
 
 release:
 	cd dapp; go build -tags=release
