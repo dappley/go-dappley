@@ -129,9 +129,10 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	for inID, vin := range txCopy.Vin {
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil
+		oldPubKey := txCopy.Vin[inID].PubKey
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil
+		txCopy.Vin[inID].PubKey = oldPubKey
 
 		privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 		if err != nil {
@@ -211,9 +212,10 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 		prevTxOut := prevUtxos[hex.EncodeToString(vin.Txid)]
 
 		txCopy.Vin[inID].Signature = nil
+		oldPubKey := txCopy.Vin[inID].PubKey
 		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
 		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = nil
+		txCopy.Vin[inID].PubKey = oldPubKey
 
 		originPub := make([]byte, 1+len(vin.PubKey))
 		originPub[0] = 4 // uncompressed point
