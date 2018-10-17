@@ -24,7 +24,6 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
-	"fmt"
 )
 
 type Dynasty struct {
@@ -87,8 +86,6 @@ func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynast
 	if maxProducers == 0 {
 		maxProducers = defaultMaxProducers
 	}
-
-	fmt.Println(maxProducers)
 
 	d := &Dynasty{
 		producers:      validProducers,
