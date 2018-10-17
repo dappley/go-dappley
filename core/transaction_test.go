@@ -123,7 +123,7 @@ func TestSign(t *testing.T) {
 	}
 	tx := Transaction{nil, txin, txout, 0}
 
-	fmt.Printf("Transaction to sign bytes:%v", tx.GetToHashBytes())
+	fmt.Printf("Transaction to sign bytes:%v\n", hex.EncodeToString(tx.GetToHashBytes()))
 	// Sign the transaction
 	err := tx.Sign(*privKey, prevTXs)
 
