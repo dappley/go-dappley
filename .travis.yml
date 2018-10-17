@@ -23,6 +23,7 @@ install:
 - sudo make install
 - cd -
 - dep ensure
+- make deploy-v8
 
 script:
 - make build
