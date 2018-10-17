@@ -20,20 +20,20 @@ package logic
 
 import (
 	"errors"
-
-	"github.com/dappley/go-dappley/common"
+	"time"
 
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"time"
 )
 
 const unlockduration = 300 * time.Second
 
+var minerAddress string
 var (
 	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
@@ -240,6 +240,14 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	}
 
 	return tx.ID, err
+}
+
+func SetMinerAddress(address string) {
+	minerAddress = address
+}
+
+func GetMinerAddress() string {
+	return minerAddress
 }
 
 //add balance

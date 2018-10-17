@@ -98,8 +98,9 @@ func main() {
 	logger.WithFields(logger.Fields{
 		"Miner Address": minerAddr,
 	}).Info("Consensus setup")
-	logic.SetLockWallet() //lock the wallet
 
+	logic.SetLockWallet() //lock the wallet
+	logic.SetMinerAddress(conf.GetConsensusConfig().GetMinerAddr())
 	conss.Start()
 	defer conss.Stop()
 
