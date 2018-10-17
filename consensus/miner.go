@@ -95,7 +95,6 @@ func (miner *Miner) Start() {
 		for {
 			select {
 			case <-miner.exitCh:
-				miner.stop = true
 				break hashLoop
 			default:
 				if nonce < maxNonce {
