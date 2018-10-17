@@ -123,27 +123,19 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	}).Info("BlockPool: Received a new block: ")
 
 	tree, _ := common.NewTree(blk.hashString(), blk)
-
 	blkCache := pool.blkCache
 
-	if pool.blockchain.consensus.Validate(blk) {
-		if !blkCache.Contains(blk.hashString()) {
+	if pool.blockchain.consensus.Validate(blk) && !blkCache.Contains(blk.hashString()){
 			blkCache.Add(blk.hashString(), tree)
-		}
 	} else {
-		logger.WithFields(logger.Fields{
-			"height": blk.GetHeight(),
-			"hash":   hex.EncodeToString(blk.GetHash()),
-		}).Info("Failed consensus validation, discarding block")
 		return
 	}
 
-	forkParent := pool.updatePoolBlkCache(tree)
-	forkParentHash := forkParent.GetValue().(*Block).GetPrevHash()
+	pool.updatePoolBlkCache(tree)
+	forkGrandParentHash := tree.GetValue().(*Block).GetPrevHash()
 
-	if  parent, _ := pool.blockchain.GetBlockByHash(forkParentHash); parent !=nil {
-		_, forkTailTree := forkParent.FindHeightestChild(&common.Tree{}, 0, 0)
-
+	if  parent, _ := pool.blockchain.GetBlockByHash(forkGrandParentHash); parent !=nil {
+		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
 		if forkTailTree.GetValue().(*Block).GetHeight() > pool.blockchain.GetMaxHeight(){
 			pool.syncState = true
 		}else{
@@ -151,13 +143,13 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		}
 
 		trees := forkTailTree.GetParentTreesRange(tree)
-
 		forkBlks := getBlocksFromTrees(trees)
-		pool.blockchain.MergeFork(forkBlks, forkParentHash)
+		pool.blockchain.MergeFork(forkBlks, forkGrandParentHash)
 		tree.Delete()
-		return
+
+	}else{
+		pool.requestPrevBlock(tree, sender)
 	}
-	pool.requestPrevBlock(forkParent, sender)
 
 }
 
@@ -169,7 +161,7 @@ func getBlocksFromTrees(trees []*common.Tree) []*Block {
 	return blocks
 }
 
-func (pool *BlockPool) updatePoolBlkCache(tree *common.Tree) *common.Tree {
+func (pool *BlockPool) updatePoolBlkCache(tree *common.Tree){
 	blkCache := pool.blkCache
 	// try to link children
 	for _, key := range blkCache.Keys() {
@@ -189,7 +181,6 @@ func (pool *BlockPool) updatePoolBlkCache(tree *common.Tree) *common.Tree {
 		"height": tree.GetValue().(*Block).GetHeight(),
 		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
 	}).Info("BlockPool: Finished updating BlockPoolCache")
-	return tree
 }
 
 
