@@ -19,12 +19,11 @@
 package consensus
 
 import (
-	"fmt"
 	"strings"
 	"time"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/util"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
@@ -98,15 +97,15 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool {
-	if !dpos.miner.Validate(block){
+	if !dpos.miner.Validate(block) {
 		logger.Debug("Dpos: miner validate block failed")
 		return false
 	}
-	if !dpos.dynasty.ValidateProducer(block){
+	if !dpos.dynasty.ValidateProducer(block) {
 		logger.Debug("Dpos: producer validate failed")
 		return false
 	}
-	if dpos.isDoubleMint(block){
+	if dpos.isDoubleMint(block) {
 		logger.Debug("Dpos: doubleminting case found!")
 		return false
 	}
@@ -170,20 +169,6 @@ func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
 	dpos.node.BroadcastBlock(newBlock)
 }
 
-func GenerateAddress(pubkey []byte) string {
-
-	pubKeyHash, _ := core.HashPubKey(pubkey[1:])
-
-	versionedPayload := append([]byte{version}, pubKeyHash...)
-	checksum := core.Checksum(versionedPayload)
-
-	fullPayload := append(versionedPayload, checksum...)
-	address := util.Base58Encode(fullPayload)
-	//15KciXJD9vLhhJQjqDuAgPs83r7sCi9YYK
-
-	return string(fmt.Sprintf("%s", address))
-}
-
 func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 	hash1 := block.GetHash()
 	sign := block.GetSign()
@@ -205,9 +190,9 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 		return false
 	}
 
-	address := GenerateAddress(pubkey)
+	address := core.GenerateAddressByPublicKey(pubkey[1:])
 
-	if strings.Compare(address, producer) == 0 {
+	if strings.Compare(address.Address, producer) == 0 {
 		return true
 	}
 

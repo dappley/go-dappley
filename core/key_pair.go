@@ -44,7 +44,11 @@ func NewKeyPair() *KeyPair {
 }
 
 func (w KeyPair) GenerateAddress() Address {
-	pubKeyHash, _ := HashPubKey(w.PublicKey)
+	return GenerateAddressByPublicKey(w.PublicKey)
+}
+
+func GenerateAddressByPublicKey(publicKey []byte) Address {
+	pubKeyHash, _ := HashPubKey(publicKey)
 
 	versionedPayload := append([]byte{version}, pubKeyHash...)
 	checksum := Checksum(versionedPayload)
