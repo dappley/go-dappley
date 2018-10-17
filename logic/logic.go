@@ -35,6 +35,7 @@ import (
 
 const unlockduration = 300 * time.Second
 
+var minerAddress string
 var (
 	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
 	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
@@ -241,6 +242,14 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	}
 
 	return err
+}
+
+func SetMinerAddress(address string) {
+	minerAddress = address
+}
+
+func GetMinerAddress() string {
+	return minerAddress
 }
 
 //add balance

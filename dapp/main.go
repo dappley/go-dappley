@@ -22,6 +22,7 @@ import (
 	"flag"
 
 	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
@@ -29,7 +30,6 @@ import (
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/config/pb"
 )
 
 const (
@@ -95,8 +95,8 @@ func main() {
 	conss.Setup(node, minerAddr)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
 	logger.Info("Miner Address is ", minerAddr)
-	logic.SetLockWallet()     //lock the wallet
-
+	logic.SetLockWallet() //lock the wallet
+	logic.SetMinerAddress(conf.GetConsensusConfig().GetMinerAddr())
 	conss.Start()
 	defer conss.Stop()
 
@@ -118,9 +118,9 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
-	if keyPath!="" {
+	if keyPath != "" {
 		err := node.LoadNetworkKeyFromFile(keyPath)
-		if err!= nil {
+		if err != nil {
 			logger.Error(err)
 		}
 	}
