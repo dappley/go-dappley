@@ -21,9 +21,12 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 	"testing"
 
 	"encoding/binary"
+	"encoding/hex"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 
@@ -87,6 +90,7 @@ func TestTrimmedCopy(t *testing.T) {
 func TestSign(t *testing.T) {
 	// Fake a key pair
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
+	fmt.Printf("PrivateKey:%v\n", hex.EncodeToString(privKey.D.Bytes()))
 	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
 	pubKeyHash, _ := HashPubKey(pubKey)
@@ -119,6 +123,7 @@ func TestSign(t *testing.T) {
 	}
 	tx := Transaction{nil, txin, txout, 0}
 
+	fmt.Printf("Transaction to sign bytes:%v", tx.GetToHashBytes())
 	// Sign the transaction
 	err := tx.Sign(*privKey, prevTXs)
 

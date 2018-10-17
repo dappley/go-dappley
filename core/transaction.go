@@ -132,6 +132,9 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		oldPubKey := txCopy.Vin[inID].PubKey
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 		txCopy.ID = txCopy.Hash()
+
+		fmt.Printf("Transaction vin %v to sign bytes:%v ID:%v", txCopy.GetToHashBytes(), txCopy.ID)
+
 		txCopy.Vin[inID].PubKey = oldPubKey
 
 		privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
@@ -141,6 +144,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		}
 
 		signature, err := secp256k1.Sign(txCopy.ID, privData)
+		fmt.Printf("Transaction vin %v to Signature bytes:%v", signature)
 		if err != nil {
 			logger.Error("ERROR: Sign transaction.Id failed", err)
 			return err
