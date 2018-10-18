@@ -75,6 +75,7 @@ func NewDynastyWithProducers(producers []string) *Dynasty {
 
 }
 
+//New dynasty from config file
 func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
