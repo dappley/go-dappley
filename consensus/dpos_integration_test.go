@@ -97,17 +97,15 @@ func TestDpos_MultipleMiners(t *testing.T) {
 
 	firstNode.SyncPeersBroadcast()
 
-	startTime := time.Now().Unix()
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Start()
 	}
 
-	time.Sleep(time.Second * time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
+	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
 	}
-	endTime := time.Now().Unix()
 	//Waiting block sync to other nodes
 	time.Sleep(time.Second * 2)
 	for i := 0; i < len(miners); i++ {
@@ -116,6 +114,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	}
 
 	for i := 0; i < len(miners); i++ {
-		assert.Equal(t, uint64((endTime-startTime)/timeBetweenBlock), dposArray[i].bc.GetMaxHeight())
+		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bc.GetMaxHeight())
 	}
 }
