@@ -88,6 +88,10 @@ func (dpos *Dpos) AddProducer(producer string) error {
 	return err
 }
 
+func (dpos *Dpos) GetProducers() []string {
+	return dpos.dynasty.GetProducers()
+}
+
 func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }

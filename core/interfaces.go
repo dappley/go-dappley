@@ -33,6 +33,7 @@ type Consensus interface {
 	SetKey(string)
 	FullyStop() bool
 	AddProducer(string) error
+	GetProducers() []string
 }
 
 type NetService interface {

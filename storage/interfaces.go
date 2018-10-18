@@ -33,6 +33,8 @@ type Storage interface {
 
 	Put(key []byte, val []byte) error
 
+	Del(key []byte) error
+
 	// EnableBatch enable batch write.
 	EnableBatch()
 
