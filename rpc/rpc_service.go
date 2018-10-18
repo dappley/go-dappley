@@ -23,7 +23,10 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 
+	"encoding/hex"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
@@ -31,8 +34,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"strings"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"encoding/hex"
 )
 
 const ProtoVersion = "1.0.0"
@@ -263,6 +264,34 @@ func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddP
 	return &rpcpb.AddProducerResponse{}, nil
 }
 
+func (rpcSerivce *RpcService) RpcGetMinerInfo(ctx context.Context, in *rpcpb.GetMinerInfoRequest) (*rpcpb.GetMinerInfoResponse, error) {
+	producers := []string{}
+	balances := []int64{}
+	msg := ""
+	if in.Name == "getMinerInfoWithBalance" {
+		producers = rpcSerivce.node.GetBlockchain().GetConsensus().(*consensus.Dpos).GetProducers()
+		for _, addr := range producers {
+
+			amount, err := logic.GetBalance(core.NewAddress(addr), rpcSerivce.node.GetBlockchain().GetDb())
+			if err != nil {
+				msg = err.Error()
+			} else {
+				msg = "MinerInfoWithBalance"
+				balances = append(balances, amount.Int64())
+			}
+		}
+
+	} else if in.Name == "getMinerInfo" {
+		msg = "MinerInfo"
+		producers = rpcSerivce.node.GetBlockchain().GetConsensus().(*consensus.Dpos).GetProducers()
+	}
+	return &rpcpb.GetMinerInfoResponse{
+		Message:   msg,
+		Addresses: producers,
+		Amounts:   balances,
+	}, nil
+}
+
 func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
@@ -353,7 +382,7 @@ func (rpcSerivce *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 			addresses := wm.GetAddresses()
 			for _, addr := range addresses {
 				addressList = append(addressList, addr.Address)
-				}
+			}
 			for _, addr := range addressList {
 				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
 				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)

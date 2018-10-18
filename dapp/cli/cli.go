@@ -47,6 +47,7 @@ const (
 	cliListAddresses     = "listAddresses"
 	cliaddBalance        = "addBalance"
 	cliaddProducer       = "addProducer"
+	cligetMinerInfo		 =	"getMinerInfo"
 )
 
 //flag names
@@ -60,6 +61,7 @@ const (
 	flagPeerFullAddr   = "peerFullAddr"
 	flagProducerAddr   = "address"
 	flagListPrivateKey = "privateKey"
+	flagcligetMinerBalance	= "balance"
 )
 
 type valueType int
@@ -89,6 +91,7 @@ var cmdList = []string{
 	cliListAddresses,
 	cliaddBalance,
 	cliaddProducer,
+	cligetMinerInfo,
 }
 
 //configure input parameters/flags for each command
@@ -150,6 +153,12 @@ var cmdFlagsMap = map[string][]flagPars{
 		boolType,
 		"privateKey",
 	}},
+	cligetMinerInfo: {flagPars{
+		flagcligetMinerBalance,
+		false,
+		boolType,
+		"privateKey",
+	}},
 }
 
 //map the callback function to each command
@@ -163,6 +172,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliListAddresses:     {rpcService, listAddressesCommandHandler},
 	cliaddBalance:        {rpcService, addBalanceCommandHandler},
 	cliaddProducer:       {rpcService, cliaddProducerCommandHandler},
+	cligetMinerInfo:	  {rpcService, cligetMinerInfoCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -507,6 +517,32 @@ func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
+	if err != nil {
+		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
+		return
+	}
+	fmt.Println(proto.MarshalTextString(response))
+}
+
+func cligetMinerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+
+	withBalance := false
+	if flags[flagcligetMinerBalance] == nil {
+		return
+	} else if *(flags[flagcligetMinerBalance].(*bool)) {
+		withBalance = true
+	} else {
+		withBalance = false
+	}
+	cmdName := ""
+	if withBalance {
+		cmdName = "getMinerInfoWithBalance"
+		} else {
+		cmdName = "getMinerInfo"
+	}
+		response, err:= client.(rpcpb.RpcServiceClient).RpcGetMinerInfo(ctx, &rpcpb.GetMinerInfoRequest{
+		Name: cmdName,
+	})
 	if err != nil {
 		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
 		return

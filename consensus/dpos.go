@@ -83,6 +83,10 @@ func (dpos *Dpos) GetDynasty() *Dynasty {
 	return dpos.dynasty
 }
 
+func (dpos *Dpos) GetProducers() []string {
+	return dpos.dynasty.GetProducers()
+}
+
 func (dpos *Dpos) AddProducer(producer string) error {
 	err := dpos.dynasty.AddProducer(producer)
 	return err

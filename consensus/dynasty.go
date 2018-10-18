@@ -59,6 +59,10 @@ func NewDynasty() *Dynasty {
 	}
 }
 
+func (dynasty *Dynasty) GetProducers() []string {
+	return dynasty.producers
+}
+
 func NewDynastyWithProducers(producers []string) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
