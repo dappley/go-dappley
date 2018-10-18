@@ -63,7 +63,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	const (
 		timeBetweenBlock = 2
 		dposRounds       = 3
-		bufferTime       = 1
 	)
 
 	miners := []string{
@@ -103,7 +102,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Start()
 	}
 
-	time.Sleep(time.Second * time.Duration(dynasty.dynastyTime*dposRounds+bufferTime))
+	time.Sleep(time.Second * time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
@@ -111,7 +110,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	endTime := time.Now().Unix()
 	//Waiting block sync to other nodes
 	time.Sleep(time.Second * 2)
-
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i]
 		core.WaitFullyStop(v, 20)
