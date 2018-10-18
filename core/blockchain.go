@@ -415,7 +415,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 
 	logger.WithFields(logger.Fields{
 		"syncstate": false,
-	}).Info("Merge finished, setting syncstate to false")
+	}).Debug("Merge finished, setting syncstate to false")
 	bc.GetBlockPool().SetSyncState(false)
 
 }

@@ -168,7 +168,6 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	// by encapsulating both addresses:
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
-	logger.Info(" ", )
 	logger.WithFields(logger.Fields{
 		"Address": fullAddr,
 	}).Info("My Address")
@@ -408,11 +407,6 @@ func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.WithFields(logger.Fields{
-		"hash":   hex.EncodeToString(blk.GetHash()),
-		"height": blk.GetHeight(),
-		"host": n.GetPeerID(),
-	}).Info("Node: Received block")
 	n.addBlockToPool(blk, pid)
 }
 
