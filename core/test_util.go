@@ -196,3 +196,4 @@ func WaitFullyStop(consensus Consensus, timeOut int) {
 func IsTimeOut(start, timeOut int64) bool {
 	return time.Now().UTC().Unix()-start > timeOut
 }
+

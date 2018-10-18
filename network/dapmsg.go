@@ -33,12 +33,12 @@ type DapMsg struct{
 	counter uint64
 }
 
-func NewDapmsg(cmd string, data []byte, from string, uniOrBroadcast int, counter *uint64) *DapMsg {
+func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int, counter *uint64) *DapMsg {
 	if *counter > uint64(MaxMsgCountBeforeReset){
 		*counter = 0
 	}
 	*counter++
-	return &DapMsg{cmd, data, time.Now().Unix(), from, uniOrBroadcast, *counter}
+	return &DapMsg{cmd, data, time.Now().Unix(),msgKey , uniOrBroadcast, *counter}
 }
 
 func (dm *DapMsg) GetCmd() string{

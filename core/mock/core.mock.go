@@ -34,6 +34,30 @@ func (m *MockConsensus) EXPECT() *MockConsensusMockRecorder {
 	return m.recorder
 }
 
+// AddProducer mocks base method
+func (m *MockConsensus) AddProducer(arg0 string) error {
+	ret := m.ctrl.Call(m, "AddProducer", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddProducer indicates an expected call of AddProducer
+func (mr *MockConsensusMockRecorder) AddProducer(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProducer", reflect.TypeOf((*MockConsensus)(nil).AddProducer), arg0)
+}
+
+// FullyStop mocks base method
+func (m *MockConsensus) FullyStop() bool {
+	ret := m.ctrl.Call(m, "FullyStop")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// FullyStop indicates an expected call of FullyStop
+func (mr *MockConsensusMockRecorder) FullyStop() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FullyStop", reflect.TypeOf((*MockConsensus)(nil).FullyStop))
+}
+
 // SetKey mocks base method
 func (m *MockConsensus) SetKey(arg0 string) {
 	m.ctrl.Call(m, "SetKey", arg0)
@@ -224,6 +248,18 @@ func (mr *MockBlockPoolInterfaceMockRecorder) GetBlockchain() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockchain", reflect.TypeOf((*MockBlockPoolInterface)(nil).GetBlockchain))
 }
 
+// GetSyncState mocks base method
+func (m *MockBlockPoolInterface) GetSyncState() bool {
+	ret := m.ctrl.Call(m, "GetSyncState")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GetSyncState indicates an expected call of GetSyncState
+func (mr *MockBlockPoolInterfaceMockRecorder) GetSyncState() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncState", reflect.TypeOf((*MockBlockPoolInterface)(nil).GetSyncState))
+}
+
 // Push mocks base method
 func (m *MockBlockPoolInterface) Push(arg0 *core.Block, arg1 go_libp2p_peer.ID) {
 	m.ctrl.Call(m, "Push", arg0, arg1)
@@ -242,6 +278,16 @@ func (m *MockBlockPoolInterface) SetBlockchain(arg0 *core.Blockchain) {
 // SetBlockchain indicates an expected call of SetBlockchain
 func (mr *MockBlockPoolInterfaceMockRecorder) SetBlockchain(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBlockchain", reflect.TypeOf((*MockBlockPoolInterface)(nil).SetBlockchain), arg0)
+}
+
+// SetSyncState mocks base method
+func (m *MockBlockPoolInterface) SetSyncState(arg0 bool) {
+	m.ctrl.Call(m, "SetSyncState", arg0)
+}
+
+// SetSyncState indicates an expected call of SetSyncState
+func (mr *MockBlockPoolInterfaceMockRecorder) SetSyncState(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSyncState", reflect.TypeOf((*MockBlockPoolInterface)(nil).SetSyncState), arg0)
 }
 
 // VerifyTransactions mocks base method

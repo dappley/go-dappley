@@ -86,6 +86,9 @@ func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*Min
 
 func (miner *Miner) Start() {
 	go func() {
+		if	miner.bc.GetBlockPool().GetSyncState(){
+			return
+		}
 		logger.Info("Miner: Start Mining A Block...")
 		miner.resetExitCh()
 		miner.prepare()

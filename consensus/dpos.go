@@ -19,13 +19,13 @@
 package consensus
 
 import (
-	"strings"
-	"time"
-
+	"encoding/hex"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+	"strings"
+	"time"
 )
 
 const version = byte(0x00)
@@ -123,16 +123,23 @@ func (dpos *Dpos) Start() {
 			select {
 			case now := <-ticker:
 				if dpos.dynasty.IsMyTurn(dpos.miner.cbAddr, now.Unix()) {
-					logger.Info("Dpos: My Turn to Mint! I am ", dpos.node.GetPeerID())
+					logger.WithFields(logger.Fields{
+						"peerid": dpos.node.GetPeerID(),
+					}).Info("My Turn to Mint")
 					dpos.miner.Start()
 				}
 			case minedBlk := <-dpos.mintBlkCh:
 				if minedBlk.isValid {
-					logger.Info("Dpos: A Block has been mined! ", dpos.node.GetPeerID())
+					logger.WithFields(logger.Fields{
+						"peerid": dpos.node.GetPeerID(),
+						"hash" : hex.EncodeToString(minedBlk.block.GetHash()),
+					}).Info("Dpos: A Block has been mined!")
 					dpos.updateNewBlock(minedBlk.block)
 				}
 			case <-dpos.quitCh:
-				logger.Info("Dpos: Dpos Stops! ", dpos.node.GetPeerID())
+				logger.WithFields(logger.Fields{
+					"peerid": dpos.node.GetPeerID(),
+				}).Info("Dpos: Dpos Stops!")
 				return
 			}
 		}
@@ -164,7 +171,10 @@ func (dpos *Dpos) FullyStop() bool {
 }
 
 func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
-	logger.Info("DPoS: Minted a new block. height:", newBlock.GetHeight())
+	logger.WithFields(logger.Fields{
+		"height": newBlock.GetHeight(),
+		"hash" : hex.EncodeToString(newBlock.GetHash()),
+	}).Info("DpoS: Minted a new block")
 	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.BroadcastBlock(newBlock)
 }
