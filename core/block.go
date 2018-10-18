@@ -29,7 +29,6 @@ import (
 	"reflect"
 
 	"encoding/hex"
-	"math/big"
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -253,7 +252,6 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 }
 
 func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
-	var hashInt big.Int
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -265,8 +263,7 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 		[]byte{},
 	)
 	hash := sha256.Sum256(data)
-	hashInt.SetBytes(hash[:])
-	return hashInt.Bytes()
+	return hash[:]
 }
 
 func (b *Block) SignBlock(key string, data []byte) bool {
