@@ -27,6 +27,8 @@ import (
 
 	"os"
 
+	"time"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -88,6 +90,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -136,6 +139,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -201,6 +206,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//stop mining
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets

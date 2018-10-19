@@ -128,7 +128,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Get", []byte("utxo")).Return(serializedUTXOIndex, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()
-	db.On("Flush").Return(nil).Once()
+	// Flush invoked in AddBlockToTail twice
+	db.On("Flush").Return(nil).Twice()
 
 	// Create a blockchain for testing
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")

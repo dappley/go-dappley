@@ -18,6 +18,8 @@ service RpcService {
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
   rpc RpcGetUTXO(GetUTXORequest) returns (GetUTXOResponse) {}
   rpc RpcGetBlocks(GetBlocksRequest) returns (GetBlocksResponse) {}
+  rpc RpcGetBlockByHash(GetBlockByHashRequest) returns (GetBlockByHashResponse) {}
+  rpc RpcGetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {}
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
   rpc RpcGetMinerInfo (getMinerInfoRequest) returns (GetMinerInfoResponse) {}
 
@@ -104,6 +106,7 @@ message GetPeerInfoResponse {
 message GetBlockchainInfoResponse {
   bytes   tailBlockHash = 1;
   uint64  blockHeight = 2;
+  repeated string producers = 3; // all producers' addresses
 }
 
 message AddPeerResponse {
@@ -132,7 +135,8 @@ message GetUTXORequest {
 
 message GetUTXOResponse {
   uint32 errorCode = 1;
-  repeated UTXO utxos = 2;  
+  repeated UTXO utxos = 2;
+  repeated corepb.BlockHeader blockHeaders = 3; //The latest block headers
 }
 
 message UTXO {
@@ -144,12 +148,30 @@ message UTXO {
 
 message GetBlocksRequest {
   repeated bytes startBlockHashs = 1;  // Query start block hashes, sorted descending by height.
-  bytes stopBlockHash = 2;   // Query end block hash, default is empty bytes
+  int32 maxCount = 2;   // Max query block count
 }
 
 message GetBlocksResponse {
   uint32 errorCode = 1;
   repeated corepb.Block blocks = 2;
+}
+
+message GetBlockByHashRequest {
+  bytes  hash = 1;
+}
+
+message GetBlockByHashResponse {
+  uint32 errorCode = 1;
+  corepb.Block block = 2;
+}
+
+message GetBlockByHeightRequest {
+  uint64 height = 1;
+}
+
+message GetBlockByHeightResponse {
+  uint32 errorCode = 1;
+  corepb.Block block = 2;
 }
 
 message SendTransactionRequest {

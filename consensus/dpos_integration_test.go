@@ -42,9 +42,7 @@ func TestDpos_Start(t *testing.T) {
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.Address}
-	dynasty := NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(2)
-	dynasty.SetMaxProducers(2)
+	dynasty := CreateNewDynastyForTest(miners, 2 ,2 )
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)
@@ -63,7 +61,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	const (
 		timeBetweenBlock = 2
 		dposRounds       = 3
-		bufferTime       = 1
 	)
 
 	miners := []string{
@@ -74,9 +71,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
 		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
-	dynasty := NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
-	dynasty.SetMaxProducers(len(miners))
+	dynasty := CreateNewDynastyForTest(miners, len(miners), timeBetweenBlock)
 	dposArray := []*Dpos{}
 	var firstNode *network.Node
 	for i := 0; i < len(miners); i++ {
@@ -102,12 +97,13 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Start()
 	}
 
-	time.Sleep(time.Second * time.Duration(dynasty.dynastyTime*dposRounds+bufferTime))
+	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
 	}
-
+	//Waiting block sync to other nodes
+	time.Sleep(time.Second * 2)
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i]
 		core.WaitFullyStop(v, 20)

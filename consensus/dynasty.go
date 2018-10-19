@@ -21,7 +21,6 @@ package consensus
 import (
 	"bytes"
 	"errors"
-
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -34,10 +33,10 @@ type Dynasty struct {
 }
 
 const (
-	defaultMaxProducers   = 10
-	defaultTimeBetweenBlk = 1
-	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
-)
+	defaultMaxProducers   = 5
+	defaultTimeBetweenBlk = 15
+	)
+
 func (d *Dynasty) trimProducers(){
 	//if producer conf file does not have all producers
 	if len(d.producers) < defaultMaxProducers {
@@ -123,9 +122,9 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
-		logger.Info("Current Producers:")
+		logger.Debug("Current Producers:")
 		for _, producerIt := range dynasty.producers {
-			logger.Info(producerIt)
+			logger.Debug(producerIt)
 		}
 		return nil
 	} else {
@@ -135,6 +134,10 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 			return errors.New("The number of producers reaches the maximum！")
 		}
 	}
+}
+
+func (dynasty *Dynasty) GetProducers() []string {
+	return dynasty.producers
 }
 
 func (dynasty *Dynasty) AddMultipleProducers(producers []string) {
@@ -153,7 +156,6 @@ func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool {
 		return false
 	}
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
-
 	return dynastyTimeElapsed == producerIndex*dynasty.timeBetweenBlk
 }
 
