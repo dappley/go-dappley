@@ -244,9 +244,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		producerKey = append(producerKey, validProducerKey)
 	}
 
-	dynasty := consensus.NewDynastyWithProducers(producerAddrs)
-	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
-	dynasty.SetMaxProducers(numOfNodes)
+	dynasty := consensus.CreateNewDynastyForTest(producerAddrs, numOfNodes, timeBetweenBlock )
+
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDpos()
 		dpos.SetDynasty(dynasty)
@@ -312,9 +311,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		producerKey = append(producerKey, validProducerKey)
 	}
 
-	dynasty := consensus.NewDynastyWithProducers(producerAddrs)
-	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
-	dynasty.SetMaxProducers(numOfNodes)
+	dynasty := consensus.CreateNewDynastyForTest(producerAddrs, numOfNodes, timeBetweenBlock )
+
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDpos()
 		dpos.SetDynasty(dynasty)
@@ -514,7 +512,7 @@ func TestDoubleMint (t *testing.T){
 	validProducerAddr:= "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
-	dynasty := consensus.NewDynastyWithProducers([]string{validProducerAddr})
+	dynasty := consensus.CreateNewDynastyForTest([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := core.HashAddress([]byte(validProducerAddr))
 	tx := &core.Transaction{nil, []core.TXInput{core.TXInput{[]byte{}, -1,nil,nil}}, []core.TXOutput{core.TXOutput{common.NewAmount(0), producerHash}}, 0}
 

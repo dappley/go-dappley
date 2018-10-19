@@ -21,7 +21,6 @@ package consensus
 import (
 	"bytes"
 	"errors"
-
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -36,8 +35,8 @@ type Dynasty struct {
 const (
 	defaultMaxProducers   = 10
 	defaultTimeBetweenBlk = 1
-	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
-)
+	)
+
 func (d *Dynasty) trimProducers(){
 	//if producer conf file does not have all producers
 	if len(d.producers) < defaultMaxProducers {
@@ -50,30 +49,16 @@ func (d *Dynasty) trimProducers(){
 		d.producers = d.producers[:defaultMaxProducers]
 	}
 }
-func NewDynasty() *Dynasty {
+
+func CreateNewDynastyForTest(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 	return &Dynasty{
-		producers:      []string{},
-		maxProducers:   defaultMaxProducers,
-		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultDynastyTime,
+		producers:      producers,
+		maxProducers:   maxProducers,
+		timeBetweenBlk: timeBetweenBlk,
+		dynastyTime:    timeBetweenBlk* maxProducers,
 	}
 }
 
-func NewDynastyWithProducers(producers []string) *Dynasty {
-	validProducers := []string{}
-	for _, producer := range producers {
-		if IsProducerAddressValid(producer) {
-			validProducers = append(validProducers, producer)
-		}
-	}
-	return &Dynasty{
-		producers:      validProducers,
-		maxProducers:   len(validProducers),
-		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    len(validProducers) * defaultTimeBetweenBlk,
-	}
-
-}
 
 func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 	validProducers := []string{}
@@ -119,9 +104,9 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
-		logger.Info("Current Producers:")
+		logger.Debug("Current Producers:")
 		for _, producerIt := range dynasty.producers {
-			logger.Info(producerIt)
+			logger.Debug(producerIt)
 		}
 		return nil
 	} else {
@@ -153,7 +138,6 @@ func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool {
 		return false
 	}
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
-
 	return dynastyTimeElapsed == producerIndex*dynasty.timeBetweenBlk
 }
 
