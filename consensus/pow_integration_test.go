@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/mr-tron/base58/base58"
 
 	"os"
 
@@ -288,8 +287,7 @@ func printBalances(bc *core.Blockchain, addrs []core.Address) {
 func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
-	pubKeyHash := base58.Decode(addr)
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	pubKeyHash := core.HashAddress(addr)
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
 	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {
