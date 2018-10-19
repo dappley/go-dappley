@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/mr-tron/base58/base58"
 
 	"os"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
