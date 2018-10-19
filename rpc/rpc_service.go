@@ -25,21 +25,21 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 
-	"encoding/hex"
+
 	"github.com/dappley/go-dappley/consensus"
 	"strings"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"strings"
+
 )
 
 const (
@@ -281,7 +281,10 @@ func (rpcSerivce *RpcService) RpcGetMinerInfo(ctx context.Context, in *rpcpb.Get
 	if in.Name == "getMinerInfoWithBalance" {
 		producers = rpcSerivce.node.GetBlockchain().GetConsensus().(*consensus.Dpos).GetProducers()
 		for _, addr := range producers {
-
+			if addr == "" || len(addr) != 34 {
+				balances = append(balances, -1)
+				continue
+			}
 			amount, err := logic.GetBalance(core.NewAddress(addr), rpcSerivce.node.GetBlockchain().GetDb())
 			if err != nil {
 				msg = err.Error()

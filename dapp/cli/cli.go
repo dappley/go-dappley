@@ -47,21 +47,21 @@ const (
 	cliListAddresses     = "listAddresses"
 	cliaddBalance        = "addBalance"
 	cliaddProducer       = "addProducer"
-	cligetMinerInfo		 =	"getMinerInfo"
+	cligetMinerInfo      = "getMinerInfo"
 )
 
 //flag names
 const (
-	flagAddress        = "address"
-	flagAddressBalance = "address"
-	flagAmountBalance  = "amount"
-	flagToAddress      = "to"
-	flagFromAddress    = "from"
-	flagAmount         = "amount"
-	flagPeerFullAddr   = "peerFullAddr"
-	flagProducerAddr   = "address"
-	flagListPrivateKey = "privateKey"
-	flagcligetMinerBalance	= "balance"
+	flagAddress            = "address"
+	flagAddressBalance     = "address"
+	flagAmountBalance      = "amount"
+	flagToAddress          = "to"
+	flagFromAddress        = "from"
+	flagAmount             = "amount"
+	flagPeerFullAddr       = "peerFullAddr"
+	flagProducerAddr       = "address"
+	flagListPrivateKey     = "privateKey"
+	flagcligetMinerBalance = "balance"
 )
 
 type valueType int
@@ -172,7 +172,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliListAddresses:     {rpcService, listAddressesCommandHandler},
 	cliaddBalance:        {rpcService, addBalanceCommandHandler},
 	cliaddProducer:       {rpcService, cliaddProducerCommandHandler},
-	cligetMinerInfo:	  {rpcService, cligetMinerInfoCommandHandler},
+	cligetMinerInfo:      {rpcService, cligetMinerInfoCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -537,17 +537,61 @@ func cligetMinerInfoCommandHandler(ctx context.Context, client interface{}, flag
 	cmdName := ""
 	if withBalance {
 		cmdName = "getMinerInfoWithBalance"
-		} else {
+	} else {
 		cmdName = "getMinerInfo"
 	}
-		response, err:= client.(rpcpb.RpcServiceClient).RpcGetMinerInfo(ctx, &rpcpb.GetMinerInfoRequest{
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetMinerInfo(ctx, &rpcpb.GetMinerInfoRequest{
 		Name: cmdName,
 	})
+
 	if err != nil {
-		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
+		fmt.Println("ERROR: Get Miner Info failed. ERR:", err)
 		return
+	} else if response.Message == "MinerInfo" {
+		if len(response.Addresses) == 0 {
+			fmt.Println("The miner list is empty!")
+		} else {
+			i := 1
+			fmt.Println("The max producer number is ", len(response.Addresses))
+			fmt.Println("The address list of valid miners:")
+			fmt.Printf("Miners:    Address\n")
+			fmt.Println("---------------------------------------------")
+
+			for _, addr := range response.Addresses {
+				if addr != "" && len(addr) == 34 {
+					fmt.Printf("Miner[%d]:  %s\n", i, addr)
+				}
+				i++
+			}
+		}
+	} else if response.Message == "MinerInfoWithBalance" {
+		Addresses := response.Addresses
+		Amounts := response.Amounts
+		if len(Addresses) == 0 {
+			fmt.Println("The miner list is empty!")
+		} else {
+			i := 1
+			fmt.Println("The max producer number is ", len(response.Addresses))
+			fmt.Println("The valid miner list with addresses and balances:")
+			fmt.Printf("Miners:    Address	                                Balance\n")
+			fmt.Println("-----------------------------------------------------------------")
+			for _, addr := range Addresses {
+				//fmt.Println("--------------------------------------------------------------------")
+
+				if Amounts[i-1] != -1 {
+					fmt.Printf("Miner[%d]:  %s		%d", i, addr, Amounts[i-1])
+					fmt.Println()
+					fmt.Println("-----------------------------------------------------------------")
+				}
+				i++
+			}
+
+		}
+	} else {
+		fmt.Println("ERROR: Get Miner Info failed. ERR: Response not recognized")
 	}
-	fmt.Println(proto.MarshalTextString(response))
+
+	//fmt.Println(proto.MarshalTextString(response))
 }
 
 func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
