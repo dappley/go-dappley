@@ -21,7 +21,7 @@ message NodeConfig{
 
 message DynastyConfig{
     repeated string producers = 1;
-    uint32 MaxProducers = 2;
+    uint32 maxProducers = 2;
 }
 
 message CliConfig{
