@@ -21,10 +21,10 @@ package core
 import (
 	"bytes"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/gogo/protobuf/proto"
 )
 
 type TXOutput struct {
@@ -32,12 +32,12 @@ type TXOutput struct {
 	PubKeyHash []byte
 }
 
-func (out *TXOutput) Lock(address []byte) {
+func (out *TXOutput) Lock(address string) {
 	out.PubKeyHash = HashAddress(address)
 }
 
-func HashAddress(address []byte) []byte{
-	pubKeyHash := util.Base58Decode(address)
+func HashAddress(address string) []byte {
+	pubKeyHash := base58.Decode(address)
 	return pubKeyHash[1 : len(pubKeyHash)-4]
 }
 
@@ -47,18 +47,18 @@ func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 
 func NewTXOutput(value *common.Amount, address string) *TXOutput {
 	txo := &TXOutput{value, nil}
-	txo.Lock([]byte(address))
+	txo.Lock(address)
 	return txo
 }
 
-func (out *TXOutput) ToProto() (proto.Message){
+func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
-		Value:		out.Value.Bytes(),
-		PubKeyHash:	out.PubKeyHash,
+		Value:      out.Value.Bytes(),
+		PubKeyHash: out.PubKeyHash,
 	}
 }
 
-func (out *TXOutput) FromProto(pb proto.Message){
+func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).Value)
 	out.PubKeyHash = pb.(*corepb.TXOutput).PubKeyHash
 }
