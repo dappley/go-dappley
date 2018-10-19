@@ -22,6 +22,7 @@ import (
 	"flag"
 
 	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
@@ -29,7 +30,6 @@ import (
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/config/pb"
 )
 
 const (
@@ -94,7 +94,9 @@ func main() {
 	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
 	conss.Setup(node, minerAddr)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
-	logger.Info("Miner Address is ", minerAddr)
+	logger.WithFields(logger.Fields{
+		"Miner Address": minerAddr,
+	}).Info("Consensus setup")
 	logic.SetLockWallet()     //lock the wallet
 
 	conss.Start()

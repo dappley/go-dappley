@@ -21,9 +21,9 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
+	logger "github.com/sirupsen/logrus"
 	"math/big"
 	"math/rand"
-	logger "github.com/sirupsen/logrus"
 )
 
 var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
@@ -81,6 +81,18 @@ func Base58Decode(input []byte) []byte {
 
 // IntToHex converts an int64 to a byte array
 func IntToHex(num int64) []byte {
+	buff := new(bytes.Buffer)
+	err := binary.Write(buff, binary.BigEndian, num)
+	if err != nil {
+		logger.Panic(err)
+	}
+
+	return buff.Bytes()
+}
+
+// UintToHex converts an uint64 to a byte array
+// TODO  Same as IntToHex, need refactor
+func UintToHex(num uint64) []byte {
 	buff := new(bytes.Buffer)
 	err := binary.Write(buff, binary.BigEndian, num)
 	if err != nil {
