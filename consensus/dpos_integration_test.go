@@ -42,7 +42,7 @@ func TestDpos_Start(t *testing.T) {
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.Address}
-	dynasty := CreateNewDynastyForTest(miners, 2 ,2 )
+	dynasty := NewDynasty(miners, 2 ,2 )
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)
@@ -71,7 +71,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
 		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
-	dynasty := CreateNewDynastyForTest(miners, len(miners), timeBetweenBlock)
+	dynasty := NewDynasty(miners, len(miners), timeBetweenBlock)
 	dposArray := []*Dpos{}
 	var firstNode *network.Node
 	for i := 0; i < len(miners); i++ {

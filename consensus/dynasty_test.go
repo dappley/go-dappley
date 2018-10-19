@@ -28,7 +28,7 @@ const DefaultTimeBetweenBlockIfNoneGiven = 15
 
 
 func TestDynasty_NewDynasty(t *testing.T) {
-	dynasty := CreateNewDynastyForTest([]string{}, DefaultMaxProducersIfNoProducersGiven, DefaultTimeBetweenBlockIfNoneGiven)
+	dynasty := NewDynasty([]string{}, DefaultMaxProducersIfNoProducersGiven, DefaultTimeBetweenBlockIfNoneGiven)
 	assert.Empty(t,dynasty.producers)
 }
 
@@ -67,7 +67,7 @@ func TestDynasty_AddProducer(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest([]string{}, tt.maxPeers, DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty([]string{}, tt.maxPeers, DefaultTimeBetweenBlockIfNoneGiven)
 			dynasty.AddProducer(tt.input)
 			assert.Equal(t, tt.expected, dynasty.producers)
 		})
@@ -127,7 +127,7 @@ func TestDynasty_AddMultipleProducers(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest([]string{}, tt.maxPeers, DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty([]string{}, tt.maxPeers, DefaultTimeBetweenBlockIfNoneGiven)
 			dynasty.AddMultipleProducers(tt.input)
 			assert.Equal(t, tt.expected, dynasty.producers)
 		})
@@ -172,7 +172,7 @@ func TestDynasty_GetMinerIndex(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest(tt.initialProducers, len(tt.initialProducers) , DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty(tt.initialProducers, len(tt.initialProducers) , DefaultTimeBetweenBlockIfNoneGiven)
 			index := dynasty.GetProducerIndex(tt.miner)
 			assert.Equal(t, tt.expected, index)
 		})
@@ -220,7 +220,7 @@ func TestDynasty_IsMyTurnByIndex(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest([]string{}, DefaultMaxProducersIfNoProducersGiven, DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty([]string{}, DefaultMaxProducersIfNoProducersGiven, DefaultTimeBetweenBlockIfNoneGiven)
 			nextMintTime := dynasty.isMyTurnByIndex(tt.index, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
@@ -290,7 +290,7 @@ func TestDynasty_IsMyTurn(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest(tt.initialProducers, len(tt.initialProducers), DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty(tt.initialProducers, len(tt.initialProducers), DefaultTimeBetweenBlockIfNoneGiven)
 			nextMintTime := dynasty.IsMyTurn(tt.producer, tt.now)
 			assert.Equal(t, tt.expected, nextMintTime)
 		})
@@ -322,7 +322,7 @@ func TestDynasty_ProducerAtATime(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest(producers, len(producers), DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty(producers, len(producers), DefaultTimeBetweenBlockIfNoneGiven)
 			producer := dynasty.ProducerAtATime(tt.now)
 			assert.Equal(t, tt.expected, producer)
 		})
@@ -388,7 +388,7 @@ func TestDynasty_ValidateProducer(t *testing.T) {
 
 	for _,tt := range tests {
 		t.Run(tt.name, func(t *testing.T){
-			dynasty:= CreateNewDynastyForTest(producers, len(producers), DefaultTimeBetweenBlockIfNoneGiven)
+			dynasty:= NewDynasty(producers, len(producers), DefaultTimeBetweenBlockIfNoneGiven)
 			assert.Equal(t, tt.expected, dynasty.ValidateProducer(tt.block))
 		})
 	}
