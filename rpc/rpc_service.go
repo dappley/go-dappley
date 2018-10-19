@@ -20,9 +20,10 @@ package rpc
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
@@ -30,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"strings"
 )
 
 const ProtoVersion = "1.0.0"
@@ -78,7 +78,7 @@ func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 			msg = "NewWallet"
 		}
 	} else if in.Name == "createWallet" {
-		empty,err := logic.IsWalletEmpty()
+		empty, err := logic.IsWalletEmpty()
 		if err != nil && !empty {
 			return &rpcpb.CreateWalletResponse{
 				Message: err.Error(),
@@ -177,7 +177,7 @@ func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		} else {
 			wallet = wm.GetWalletByAddress(core.NewAddress(address))
 			if wallet == nil {
-				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!",}, nil
+				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!"}, nil
 			}
 		}
 
@@ -199,16 +199,11 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 	sendFromAddress := core.NewAddress(in.From)
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
-
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
 
-	if len(in.Walletpath) == 0 {
-		return &rpcpb.SendResponse{Message: "Wallet path empty error"}, core.ErrInvalidAmount
-	}
-
-	fl := storage.NewFileLoader(in.Walletpath)
+	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 
