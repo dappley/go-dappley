@@ -33,8 +33,8 @@ type Dynasty struct {
 }
 
 const (
-	defaultMaxProducers   = 10
-	defaultTimeBetweenBlk = 1
+	defaultMaxProducers   = 5
+	defaultTimeBetweenBlk = 15
 	)
 
 func (d *Dynasty) trimProducers(){
