@@ -23,14 +23,13 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 
-	"time"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 
 const unlockduration = 300 * time.Second
@@ -43,7 +42,7 @@ var (
 	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct")
 	ErrPathEmpty            = errors.New("ERROR: Path empty")
 	ErrPasswordEmpty        = errors.New("ERROR: Password empty")
-)
+	)
 
 //create a blockchain
 func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus) (*core.Blockchain, error) {
@@ -86,7 +85,7 @@ func CreateWallet(path string, password string) (*client.Wallet, error) {
 func GetWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
-	empty, err := wm.IsFileEmpty()
+	empty, err:= wm.IsFileEmpty()
 	if empty {
 		return nil, nil
 	}

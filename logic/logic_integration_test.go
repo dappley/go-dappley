@@ -104,9 +104,7 @@ func TestSend(t *testing.T) {
 
 			// Balance of the receiver's wallet should be the amount transferred
 			receiverBalance, err := GetBalance(receiverWallet.GetAddress(), store)
-			if err != nil {
-				panic(err)
-			}
+
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 
 			// Balance of the miner's wallet should be the amount tipped + mineReward
