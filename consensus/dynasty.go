@@ -50,7 +50,7 @@ func (d *Dynasty) trimProducers(){
 	}
 }
 
-func CreateNewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
+func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 	return &Dynasty{
 		producers:      producers,
 		maxProducers:   maxProducers,
