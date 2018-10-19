@@ -24,11 +24,9 @@ import (
 	"math/rand"
 	"time"
 
-	"errors"
-	"strconv"
-
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"io/ioutil"
 	"sync"
 
@@ -170,8 +168,9 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	// by encapsulating both addresses:
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
-	logger.Info("Full Address is ", fullAddr)
-
+	logger.WithFields(logger.Fields{
+		"Address": fullAddr,
+	}).Info("My Address")
 	return basicHost, fullAddr, nil
 }
 
@@ -206,7 +205,10 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	// so LibP2P knows how to contact it
 	p := Peer{peerid, targetAddr}
 	if n.peerList.IsInPeerlist(&p) {
-		logger.Debug(targetAddr.String() + " is already in peerlist of " + n.GetPeerMultiaddr().String())
+		logger.WithFields(logger.Fields{
+			"host": n.GetPeerMultiaddr().String(),
+			"target": targetAddr.String(),
+		}).Debug("Node: target already added!")
 		return ErrIsInPeerlist
 	}
 
@@ -231,8 +233,10 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
-	logger.Info(n.GetPeerMultiaddr(), " Connected Stream to Peer Addr:", s.Conn().RemoteMultiaddr())
-
+	logger.WithFields(logger.Fields{
+		"Host": n.GetPeerID(),
+		"Target":  s.Conn().RemotePeer(),
+	}).Info("Creating stream between: ")
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
 		n.peerList.Add(peer)
@@ -262,7 +266,7 @@ func (n *Node) RelayDapMsg(dm DapMsg) {
 	n.broadcast(bytes)
 }
 
-func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int) ([]byte, error) {
+func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int, msgKey string) ([]byte, error) {
 	if cmd == "" {
 		return nil, ErrDapMsgNoCmd
 	}
@@ -279,9 +283,8 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	}
 
 	//build a dappley message
-	dm := NewDapmsg(cmd, bytes, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), uniOrBroadcast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
 	if dm.cmd == SyncBlock {
-		logger.Debug("Node: ", n.info.peerid, " broadcasting block with key ", dm.key)
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -292,8 +295,12 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.Debug("Node: BroadcastBlock: Hash:", hex.EncodeToString(block.GetHash()), ", Height:", block.GetHeight())
-	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast)
+	logger.WithFields(logger.Fields{
+		"peerid": n.GetPeerID(),
+		"height": block.GetHeight(),
+		"hash":   hex.EncodeToString(block.GetHash()),
+	}).Info("Broadcasting Block: ")
+	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
 	}
@@ -302,7 +309,7 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 }
 
 func (n *Node) SyncPeersBroadcast() error {
-	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast)
+	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Broadcast, "")
 	if err != nil {
 		return err
 	}
@@ -311,7 +318,7 @@ func (n *Node) SyncPeersBroadcast() error {
 }
 
 func (n *Node) TxBroadcast(tx *core.Transaction) error {
-	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast)
+	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, "")
 	if err != nil {
 		return err
 	}
@@ -320,7 +327,7 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 }
 
 func (n *Node) SyncPeersUnicast(pid peer.ID) error {
-	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Unicast)
+	data, err := n.prepareData(n.peerList.ToProto(), SyncPeerList, Unicast, "")
 	if err != nil {
 		return err
 	}
@@ -329,7 +336,7 @@ func (n *Node) SyncPeersUnicast(pid peer.ID) error {
 }
 
 func (n *Node) BroadcastTxCmd(txn *core.Transaction) error {
-	data, err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast)
+	data, err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast, "")
 	if err != nil {
 		return err
 	}
@@ -338,7 +345,7 @@ func (n *Node) BroadcastTxCmd(txn *core.Transaction) error {
 }
 
 func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
-	data, err := n.prepareData(block.ToProto(), SyncBlock, Unicast)
+	data, err := n.prepareData(block.ToProto(), SyncBlock, Unicast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
 	}
@@ -349,7 +356,7 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 
-	dm := NewDapmsg(RequestBlock, hash, n.info.peerid.String()+strconv.FormatUint(*n.dapMsgBroadcastCounter, 10), Unicast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(RequestBlock, hash, hex.EncodeToString(hash), Unicast, n.dapMsgBroadcastCounter)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -394,15 +401,12 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 }
 func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
-		logger.Debug("Node: ", n.GetPeerID(), " Already received ", dm.GetKey(), " before")
 		return
 	}
 
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
-	logger.Debug("Node: ", n.GetPeerID(), " Received Block: Hash:", hex.EncodeToString(blk.GetHash()), ", Height:", blk.GetHeight())
-
 	n.addBlockToPool(blk, pid)
 }
 

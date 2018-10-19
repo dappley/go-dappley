@@ -21,7 +21,6 @@ package consensus
 import (
 	"bytes"
 	"errors"
-
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -36,33 +35,30 @@ type Dynasty struct {
 const (
 	defaultMaxProducers   = 5
 	defaultTimeBetweenBlk = 15
-	defaultDynastyTime    = defaultMaxProducers * defaultTimeBetweenBlk
-)
+	)
 
-func NewDynasty() *Dynasty {
-	return &Dynasty{
-		producers:      []string{},
-		maxProducers:   defaultMaxProducers,
-		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultDynastyTime,
-	}
-}
-
-func NewDynastyWithProducers(producers []string) *Dynasty {
-	validProducers := []string{}
-	for _, producer := range producers {
-		if IsProducerAddressValid(producer) {
-			validProducers = append(validProducers, producer)
+func (d *Dynasty) trimProducers(){
+	//if producer conf file does not have all producers
+	if len(d.producers) < defaultMaxProducers {
+		for len(d.producers) < defaultMaxProducers {
+			d.producers = append(d.producers, "")
 		}
 	}
-	return &Dynasty{
-		producers:      validProducers,
-		maxProducers:   len(validProducers),
-		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    len(validProducers) * defaultTimeBetweenBlk,
+	//if producer conf file has too many producers
+	if len(d.producers) > defaultMaxProducers {
+		d.producers = d.producers[:defaultMaxProducers]
 	}
-
 }
+
+func CreateNewDynastyForTest(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
+	return &Dynasty{
+		producers:      producers,
+		maxProducers:   maxProducers,
+		timeBetweenBlk: timeBetweenBlk,
+		dynastyTime:    timeBetweenBlk* maxProducers,
+	}
+}
+
 
 func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 	validProducers := []string{}
@@ -72,13 +68,14 @@ func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 		}
 	}
 
-	return &Dynasty{
+	d := &Dynasty{
 		producers:      validProducers,
 		maxProducers:   defaultMaxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
 		dynastyTime:    defaultMaxProducers * defaultTimeBetweenBlk,
 	}
-
+	d.trimProducers()
+	return d
 }
 
 func (dynasty *Dynasty) SetMaxProducers(maxProducers int) {
@@ -107,9 +104,9 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
-		logger.Info("Current Producers:")
+		logger.Debug("Current Producers:")
 		for _, producerIt := range dynasty.producers {
-			logger.Info(producerIt)
+			logger.Debug(producerIt)
 		}
 		return nil
 	} else {
@@ -119,6 +116,10 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 			return errors.New("The number of producers reaches the maximum！")
 		}
 	}
+}
+
+func (dynasty *Dynasty) GetProducers() []string {
+	return dynasty.producers
 }
 
 func (dynasty *Dynasty) AddMultipleProducers(producers []string) {
@@ -137,7 +138,6 @@ func (dynasty *Dynasty) isMyTurnByIndex(producerIndex int, now int64) bool {
 		return false
 	}
 	dynastyTimeElapsed := int(now % int64(dynasty.dynastyTime))
-
 	return dynastyTimeElapsed == producerIndex*dynasty.timeBetweenBlk
 }
 

@@ -19,14 +19,13 @@
 package consensus
 
 import (
-	"fmt"
-	"strings"
-	"time"
+	"encoding/hex"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/util"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+	"strings"
+	"time"
 )
 
 const version = byte(0x00)
@@ -89,20 +88,24 @@ func (dpos *Dpos) AddProducer(producer string) error {
 	return err
 }
 
+func (dpos *Dpos) GetProducers() []string {
+	return dpos.dynasty.GetProducers()
+}
+
 func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool {
-	if !dpos.miner.Validate(block){
+	if !dpos.miner.Validate(block) {
 		logger.Debug("Dpos: miner validate block failed")
 		return false
 	}
-	if !dpos.dynasty.ValidateProducer(block){
+	if !dpos.dynasty.ValidateProducer(block) {
 		logger.Debug("Dpos: producer validate failed")
 		return false
 	}
-	if dpos.isDoubleMint(block){
+	if dpos.isDoubleMint(block) {
 		logger.Debug("Dpos: doubleminting case found!")
 		return false
 	}
@@ -120,16 +123,23 @@ func (dpos *Dpos) Start() {
 			select {
 			case now := <-ticker:
 				if dpos.dynasty.IsMyTurn(dpos.miner.cbAddr, now.Unix()) {
-					logger.Info("Dpos: My Turn to Mint! I am ", dpos.node.GetPeerID())
+					logger.WithFields(logger.Fields{
+						"peerid": dpos.node.GetPeerID(),
+					}).Info("My Turn to Mint")
 					dpos.miner.Start()
 				}
 			case minedBlk := <-dpos.mintBlkCh:
 				if minedBlk.isValid {
-					logger.Info("Dpos: A Block has been mined! ", dpos.node.GetPeerID())
+					logger.WithFields(logger.Fields{
+						"peerid": dpos.node.GetPeerID(),
+						"hash" : hex.EncodeToString(minedBlk.block.GetHash()),
+					}).Info("Dpos: A Block has been mined!")
 					dpos.updateNewBlock(minedBlk.block)
 				}
 			case <-dpos.quitCh:
-				logger.Info("Dpos: Dpos Stops! ", dpos.node.GetPeerID())
+				logger.WithFields(logger.Fields{
+					"peerid": dpos.node.GetPeerID(),
+				}).Info("Dpos: Dpos Stops!")
 				return
 			}
 		}
@@ -161,23 +171,12 @@ func (dpos *Dpos) FullyStop() bool {
 }
 
 func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
-	logger.Info("DPoS: Minted a new block. height:", newBlock.GetHeight())
+	logger.WithFields(logger.Fields{
+		"height": newBlock.GetHeight(),
+		"hash" : hex.EncodeToString(newBlock.GetHash()),
+	}).Info("DpoS: Minted a new block")
 	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.BroadcastBlock(newBlock)
-}
-
-func GenerateAddress(pubkey []byte) string {
-
-	pubKeyHash, _ := core.HashPubKey(pubkey[1:])
-
-	versionedPayload := append([]byte{version}, pubKeyHash...)
-	checksum := core.Checksum(versionedPayload)
-
-	fullPayload := append(versionedPayload, checksum...)
-	address := util.Base58Encode(fullPayload)
-	//15KciXJD9vLhhJQjqDuAgPs83r7sCi9YYK
-
-	return string(fmt.Sprintf("%s", address))
 }
 
 func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
@@ -201,9 +200,9 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 		return false
 	}
 
-	address := GenerateAddress(pubkey)
+	address := core.GenerateAddressByPublicKey(pubkey[1:])
 
-	if strings.Compare(address, producer) == 0 {
+	if strings.Compare(address.Address, producer) == 0 {
 		return true
 	}
 

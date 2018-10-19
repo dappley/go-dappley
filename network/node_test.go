@@ -75,7 +75,7 @@ func TestNode_prepareData(t *testing.T){
 	n:= FakeNodeWithPidAndAddr(nil,"asd", "test")
 	for _,tt := range tests{
 		t.Run(tt.name,func(t *testing.T){
-			data,err := n.prepareData(tt.msgData,tt.cmd, Unicast)
+			data,err := n.prepareData(tt.msgData,tt.cmd, Unicast,"")
 			//dapley msgs returned contains timestamp of when it was created. We only check the non-timestamp contents to make sure it is there.
 			assert.Equal(t,true, bytes.Contains(data,tt.retData))
 			assert.Equal(t,tt.retErr,err)
