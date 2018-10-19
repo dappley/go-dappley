@@ -48,6 +48,7 @@ func TestMiner_VerifyNonce(t *testing.T){
 	mineloop2:
 	for{
 		if hash, ok := miner.verifyNonce(nonce, newBlock); ok {
+			hash = newBlock.CalculateHashWithoutNonce()
 			newBlock.SetHash(hash)
 			newBlock.SetNonce(nonce)
 			newBlock.SignBlock(miner.key, hash)
@@ -131,3 +132,4 @@ func TestMiner_Start(t *testing.T) {
 	assert.True(t,blk.block.VerifyHash())
 	assert.True(t,miner.Validate(blk.block))
 }
+

@@ -60,7 +60,8 @@ func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 }
 
 
-func NewDynastyWithConfigProducers(producers []string) *Dynasty {
+//New dynasty from config file
+func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
 		if IsProducerAddressValid(producer) {
@@ -68,11 +69,15 @@ func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 		}
 	}
 
+	if maxProducers == 0 {
+		maxProducers = defaultMaxProducers
+	}
+
 	d := &Dynasty{
 		producers:      validProducers,
-		maxProducers:   defaultMaxProducers,
+		maxProducers:   maxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultMaxProducers * defaultTimeBetweenBlk,
+		dynastyTime:    maxProducers * defaultTimeBetweenBlk,
 	}
 	d.trimProducers()
 	return d
