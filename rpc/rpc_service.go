@@ -32,7 +32,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -165,9 +164,7 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		pass := in.Passphrase
 		address := in.Address
 		msg = "Get Balance"
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
-		err := wm.LoadFromFile()
+		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 		if err != nil {
 			return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
 		}
@@ -209,10 +206,7 @@ func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
 
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
-
+	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
 	}
@@ -296,9 +290,7 @@ func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 		return &getWalletAddress, nil
 	} else if in.Name == "listAddresses" {
 		pass := in.Passphrase
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
-		err := wm.LoadFromFile()
+		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 		if err != nil {
 			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
 		}
@@ -399,16 +391,14 @@ func (rpcService *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBa
 		return &rpcpb.AddBalanceResponse{Message: "Invalid send amount (must be >0)"}, nil
 	}
 
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		return &rpcpb.AddBalanceResponse{Message: "Error loading local wallets"}, err
 	}
 
 	receiverWallet := wm.GetWalletByAddress(sendToAddress)
 	if receiverWallet == nil {
-		return &rpcpb.AddBalanceResponse{Message: "Address not found in the wallet!"}, nil
+		return &rpcpb.AddBalanceResponse{Message: "Receiver Address not found in the wallet!"}, nil
 	} else {
 		err = logic.AddBalance(sendToAddress, sendAmount, rpcService.node.GetBlockchain())
 		if err != nil {

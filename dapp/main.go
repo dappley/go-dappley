@@ -100,7 +100,7 @@ func main() {
 	}).Info("Consensus setup")
 
 	logic.SetLockWallet() //lock the wallet
-	logic.SetMinerAddress(conf.GetConsensusConfig().GetMinerAddr())
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())
 	conss.Start()
 	defer conss.Stop()
 
