@@ -21,16 +21,15 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"testing"
-
 	"encoding/binary"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
+	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func getAoB(length int64) []byte {
@@ -380,33 +379,4 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	tx.Vin = Txin
 	txins, _ = tx.FindAllTxinsInUtxoPool(utxoPool)
 	assert.NotNil(t, txins)
-}
-
-func TestNewUTXOTransactionforAddBalance(t *testing.T) {
-	receiverAddr := "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"
-	testCases := []struct {
-		name        string
-		amount      *common.Amount
-		tx          Transaction
-		expectedErr error
-	}{
-		{"Add 13", common.NewAmount(13), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(13), receiverAddr)}, 0}, nil},
-		{"Add 1", common.NewAmount(1), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(1), receiverAddr)}, 0}, nil},
-		{"Add 0", common.NewAmount(0), Transaction{}, ErrInvalidAmount},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tx, err := NewUTXOTransactionforAddBalance(Address{receiverAddr}, tc.amount)
-			if tc.expectedErr == nil {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.tx.Vin, tx.Vin)
-				assert.Equal(t, tc.tx.Vout, tx.Vout)
-				assert.Equal(t, tc.tx.Tip, tx.Tip)
-			} else {
-				assert.Error(t, err)
-				assert.Equal(t, tc.expectedErr, err)
-				assert.Equal(t, tc.tx, tx)
-			}
-		})
-	}
 }

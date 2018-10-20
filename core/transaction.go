@@ -27,13 +27,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
-	"strings"
 )
 
 var subsidy = common.NewAmount(10)
@@ -304,25 +305,6 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
 	return prevTXs
-}
-
-//for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transaction, error) {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	// Validate amount
-	if amount.Validate() != nil || amount.IsZero() {
-		return Transaction{}, ErrInvalidAmount
-	}
-
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-
-	tx := Transaction{nil, inputs, outputs, 0}
-	tx.ID = tx.Hash()
-
-	return tx, nil
 }
 
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
