@@ -328,25 +328,6 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 	return prevTXs
 }
 
-//for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transaction, error) {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	// Validate amount
-	if amount.Validate() != nil || amount.IsZero() {
-		return Transaction{}, ErrInvalidAmount
-	}
-
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-
-	tx := Transaction{nil, inputs, outputs, 0}
-	tx.ID = tx.Hash()
-
-	return tx, nil
-}
-
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
 func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]TXOutput, error) {
 	res := make(map[string]TXOutput)
