@@ -78,7 +78,7 @@ func TestSend(t *testing.T) {
 			}
 
 			// Send coins from senderWallet to receiverWallet
-			err = Send(senderWallet, receiverWallet.GetAddress(), tc.transferAmount, uint64(tc.tipAmount), bc, node)
+			_, err = Send(senderWallet, receiverWallet.GetAddress(), tc.transferAmount, uint64(tc.tipAmount), bc, node)
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
@@ -148,7 +148,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
-	err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, bc, node)
+	_, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -202,7 +202,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//Send 5 coins from addr1 to addr2
-	err = Send(wallet1, addr2, transferAmount, tip, bc, node)
+	_, err = Send(wallet1, addr2, transferAmount, tip, bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10

@@ -230,12 +230,13 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	err = logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcSerivce.node.GetBlockchain(), rpcSerivce.node)
+	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcSerivce.node.GetBlockchain(), rpcSerivce.node)
+	txhashStr:= hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error sending"}, err
+		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr +"]"}, err
 	}
 
-	return &rpcpb.SendResponse{Message: "Sent"}, nil
+	return &rpcpb.SendResponse{Message: "["+ txhashStr +"] Sent"}, nil
 }
 
 func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {

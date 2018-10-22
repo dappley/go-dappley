@@ -221,25 +221,25 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) error {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) ([]byte ,error) {
 	if !senderWallet.GetAddress().ValidateAddress() {
-		return ErrInvalidSenderAddress
+		return nil, ErrInvalidSenderAddress
 	}
 	if !to.ValidateAddress() {
-		return ErrInvalidRcverAddress
+		return nil, ErrInvalidRcverAddress
 	}
 	if amount.Validate() != nil || amount.IsZero() {
-		return ErrInvalidAmount
+		return nil, ErrInvalidAmount
 	}
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return err
+	return tx.ID,err
 }
 
 //add balance
