@@ -22,24 +22,18 @@ import (
 	"bytes"
 
 	"github.com/dappley/go-dappley/common/sorted"
-	logger "github.com/sirupsen/logrus"
 )
 
 const TransactionPoolLimit = 128
 
 type TransactionPool struct {
-	messageCh    chan string
-	exitCh       chan bool
-	size         int
 	Transactions sorted.Slice
 }
 
 func NewTransactionPool() *TransactionPool {
 	txPool := &TransactionPool{
-		messageCh: make(chan string, 128),
-		size:      128,
+		Transactions:	*sorted.NewSlice(CompareTransactionTips, match),
 	}
-	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, match)
 	return txPool
 }
 
@@ -86,7 +80,7 @@ func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
 
 //need to optimize
 func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
-	sortedTransactions := []*Transaction{}
+	var sortedTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.Transactions.PopRight().(Transaction)
 		sortedTransactions = append(sortedTransactions, &tx)
@@ -107,32 +101,5 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 		}
 	} else {
 		txPool.Transactions.Push(tx)
-	}
-}
-
-func (txPool *TransactionPool) Start() {
-	go txPool.messageLoop()
-}
-
-func (txPool *TransactionPool) Stop() {
-	txPool.exitCh <- true
-}
-
-//todo: will change the input from string to transaction
-func (txPool *TransactionPool) PushTransaction(msg string) {
-	//func (txPool *TransactionPool) PushTransaction(tx *Transaction){
-	//	txPool.Push(tx)
-	logger.Info(msg)
-}
-
-func (txPool *TransactionPool) messageLoop() {
-	for {
-		select {
-		case <-txPool.exitCh:
-			logger.Info("Quit Transaction Pool")
-			return
-		case msg := <-txPool.messageCh:
-			txPool.PushTransaction(msg)
-		}
 	}
 }

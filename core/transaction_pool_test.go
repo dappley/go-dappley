@@ -90,8 +90,8 @@ func TestTranstionPoolPop(t *testing.T) {
 func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
 	txPool := NewTransactionPool()
 	totalTx:=5
-	txs := []*Transaction{}
-	for i:=0 ;i<totalTx;i++{
+	var txs []*Transaction
+	for i:=0; i < totalTx; i++ {
 		tx := MockTransaction()
 		txs = append(txs, tx)
 		txPool.Push(*tx)
