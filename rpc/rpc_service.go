@@ -322,9 +322,7 @@ func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 		return &getWalletAddress, nil
 	} else if in.Name == "listAddressesWithPrivateKey" {
 		pass := in.Passphrase
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
-		err := wm.LoadFromFile()
+		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 		if err != nil {
 			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
 		}
