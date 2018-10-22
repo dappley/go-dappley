@@ -22,11 +22,10 @@ package logic
 
 import (
 	"testing"
-
-	"github.com/dappley/go-dappley/common"
-
 	"time"
 
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -432,25 +431,35 @@ func TestAddBalance(t *testing.T) {
 			defer store.Close()
 
 			// Create a coinbase address
-			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+			minerKeyPair := core.GetKeyPairByString(key)
+			minerWallet := &client.Wallet{}
+			minerWallet.Key = minerKeyPair
+
+			addr := minerWallet.Key.GenerateAddress()
 
 			bc, pow := createBlockchain(addr, store)
 
 			// Create a new wallet address for testing
 			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
 
-			// Add `addAmount` to the balance of the new wallet
-			err := AddBalance(testAddr, tc.addAmount, bc)
-			assert.Equal(t, err, tc.expectedErr)
-
 			// Start mining to approve the transaction
 			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
+			SetMinerKeyPair(key)
 			pow.Setup(node, addr.Address)
 			pow.SetTargetBit(0)
 			pow.Start()
 
 			for bc.GetMaxHeight() <= 1 {
 			}
+
+			// Add `addAmount` to the balance of the new wallet
+			err := AddBalance(testAddr, tc.addAmount, bc)
+			height := bc.GetMaxHeight()
+			assert.Equal(t, err, tc.expectedErr)
+			for bc.GetMaxHeight()-height <= 1 {
+			}
+
 			pow.Stop()
 
 			// The wallet balance should be the expected difference
@@ -505,26 +514,26 @@ func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockcha
 	pow := consensus.NewProofOfWork()
 	return core.CreateBlockchain(addr, db, pow), pow
 }
-func TestDoubleMint (t *testing.T){
+func TestDoubleMint(t *testing.T) {
 	var sendNode *network.Node
 	var recvNode *network.Node
 	var blks []*core.Block
 	var parent *core.Block
 
-	validProducerAddr:= "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynastyWithProducers([]string{validProducerAddr})
 	producerHash := core.HashAddress([]byte(validProducerAddr))
-	tx := &core.Transaction{nil, []core.TXInput{core.TXInput{[]byte{}, -1,nil,nil}}, []core.TXOutput{core.TXOutput{common.NewAmount(0), producerHash}}, 0}
+	tx := &core.Transaction{nil, []core.TXInput{core.TXInput{[]byte{}, -1, nil, nil}}, []core.TXOutput{core.TXOutput{common.NewAmount(0), producerHash}}, 0}
 
-	for i:=0; i< 3 ;i++  {
-		blk:=createValidBlock(producerHash, tx, validProducerKey, parent)
+	for i := 0; i < 3; i++ {
+		blk := createValidBlock(producerHash, tx, validProducerKey, parent)
 		blks = append(blks, blk)
 		parent = blk
 	}
 	//check all timestamps are equal
-	for i:=0; i< len(blks)-1;i++ {
+	for i := 0; i < len(blks)-1; i++ {
 		assert.True(t, blks[i].GetTimestamp() == blks[i+1].GetTimestamp())
 	}
 	for i := 0; i < 2; i++ {
@@ -542,15 +551,15 @@ func TestDoubleMint (t *testing.T){
 		}
 	}
 
-	for i:=0; i< len(blks);i++ {
+	for i := 0; i < len(blks); i++ {
 		sendNode.BroadcastBlock(blks[i])
 	}
 
-	time.Sleep(time.Second*2)
-	assert.True(t, recvNode.GetBlockchain().GetMaxHeight()< 2)
+	time.Sleep(time.Second * 2)
+	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
 }
 
-func createValidBlock (hash core.Hash, tx *core.Transaction, validProducerKey string, parent *core.Block) (*core.Block) {
+func createValidBlock(hash core.Hash, tx *core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
 	blk := core.NewBlock([]*core.Transaction{tx}, parent)
 	blk.SetHash(blk.CalculateHashWithoutNonce())
 	blk.SignBlock(validProducerKey, blk.CalculateHashWithoutNonce())
