@@ -242,7 +242,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		producerKey = append(producerKey, validProducerKey)
 	}
 
-	dynasty := consensus.CreateNewDynastyForTest(producerAddrs, numOfNodes, timeBetweenBlock)
+	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock )
 
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDpos()
@@ -309,7 +309,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		producerKey = append(producerKey, validProducerKey)
 	}
 
-	dynasty := consensus.CreateNewDynastyForTest(producerAddrs, numOfNodes, timeBetweenBlock)
+	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock )
 
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDpos()
@@ -501,26 +501,26 @@ func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockcha
 	pow := consensus.NewProofOfWork()
 	return core.CreateBlockchain(addr, db, pow), pow
 }
-func TestDoubleMint(t *testing.T) {
+func TestDoubleMint (t *testing.T){
 	var sendNode *network.Node
 	var recvNode *network.Node
 	var blks []*core.Block
 	var parent *core.Block
 
-	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr:= "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
-	dynasty := consensus.CreateNewDynastyForTest([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
+	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := core.HashAddress(validProducerAddr)
-	tx := &core.Transaction{nil, []core.TXInput{core.TXInput{[]byte{}, -1, nil, nil}}, []core.TXOutput{core.TXOutput{common.NewAmount(0), producerHash}}, 0}
+	tx := &core.Transaction{nil, []core.TXInput{core.TXInput{[]byte{}, -1,nil,nil}}, []core.TXOutput{core.TXOutput{common.NewAmount(0), producerHash}}, 0}
 
-	for i := 0; i < 3; i++ {
-		blk := createValidBlock(producerHash, tx, validProducerKey, parent)
+	for i:=0; i< 3 ;i++  {
+		blk:=createValidBlock(producerHash, tx, validProducerKey, parent)
 		blks = append(blks, blk)
 		parent = blk
 	}
 	//check all timestamps are equal
-	for i := 0; i < len(blks)-1; i++ {
+	for i:=0; i< len(blks)-1;i++ {
 		assert.True(t, blks[i].GetTimestamp() == blks[i+1].GetTimestamp())
 	}
 	for i := 0; i < 2; i++ {
@@ -538,15 +538,15 @@ func TestDoubleMint(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < len(blks); i++ {
+	for i:=0; i< len(blks);i++ {
 		sendNode.BroadcastBlock(blks[i])
 	}
 
-	time.Sleep(time.Second * 2)
-	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
+	time.Sleep(time.Second*2)
+	assert.True(t, recvNode.GetBlockchain().GetMaxHeight()< 2)
 }
 
-func createValidBlock(hash core.Hash, tx *core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
+func createValidBlock (hash core.Hash, tx *core.Transaction, validProducerKey string, parent *core.Block) (*core.Block) {
 	blk := core.NewBlock([]*core.Transaction{tx}, parent)
 	blk.SetHash(blk.CalculateHashWithoutNonce())
 	blk.SignBlock(validProducerKey, blk.CalculateHashWithoutNonce())

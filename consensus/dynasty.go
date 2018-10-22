@@ -21,7 +21,6 @@ package consensus
 import (
 	"bytes"
 	"errors"
-
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -36,9 +35,9 @@ type Dynasty struct {
 const (
 	defaultMaxProducers   = 5
 	defaultTimeBetweenBlk = 15
-)
+	)
 
-func (d *Dynasty) trimProducers() {
+func (d *Dynasty) trimProducers(){
 	//if producer conf file does not have all producers
 	if len(d.producers) < defaultMaxProducers {
 		for len(d.producers) < defaultMaxProducers {
@@ -51,16 +50,18 @@ func (d *Dynasty) trimProducers() {
 	}
 }
 
-func CreateNewDynastyForTest(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
+func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 	return &Dynasty{
 		producers:      producers,
 		maxProducers:   maxProducers,
 		timeBetweenBlk: timeBetweenBlk,
-		dynastyTime:    timeBetweenBlk * maxProducers,
+		dynastyTime:    timeBetweenBlk* maxProducers,
 	}
 }
 
-func NewDynastyWithConfigProducers(producers []string) *Dynasty {
+
+//New dynasty from config file
+func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
 		if IsProducerAddressValid(producer) {
@@ -68,11 +69,15 @@ func NewDynastyWithConfigProducers(producers []string) *Dynasty {
 		}
 	}
 
+	if maxProducers == 0 {
+		maxProducers = defaultMaxProducers
+	}
+
 	d := &Dynasty{
 		producers:      validProducers,
-		maxProducers:   defaultMaxProducers,
+		maxProducers:   maxProducers,
 		timeBetweenBlk: defaultTimeBetweenBlk,
-		dynastyTime:    defaultMaxProducers * defaultTimeBetweenBlk,
+		dynastyTime:    maxProducers * defaultTimeBetweenBlk,
 	}
 	d.trimProducers()
 	return d
@@ -171,17 +176,17 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 	producerHash := core.HashAddress(producer)
 
 	cbtx := block.GetCoinbaseTransaction()
-	if cbtx == nil {
+	if cbtx==nil {
 		logger.Debug("ValidateProducer: coinbase tx is empty")
 		return false
 	}
 
-	if len(cbtx.Vout) == 0 {
+	if len(cbtx.Vout) == 0{
 		logger.Debug("ValidateProducer: coinbase Vout is empty")
 		return false
 	}
 
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash)==0
 }
 
 func IsProducerAddressValid(producer string) bool {
