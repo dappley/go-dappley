@@ -274,6 +274,8 @@ func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddP
 	return &rpcpb.AddProducerResponse{}, nil
 }
 
+
+// RPC response for get miner info
 func (rpcSerivce *RpcService) RpcGetMinerInfo(ctx context.Context, in *rpcpb.GetMinerInfoRequest) (*rpcpb.GetMinerInfoResponse, error) {
 	producers := []string{}
 	balances := []int64{}

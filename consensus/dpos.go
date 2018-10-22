@@ -88,6 +88,7 @@ func (dpos *Dpos) AddProducer(producer string) error {
 	return err
 }
 
+//get dynasty producer addresses
 func (dpos *Dpos) GetProducers() []string {
 	return dpos.dynasty.GetProducers()
 }
