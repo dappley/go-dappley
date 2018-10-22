@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"encoding/binary"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 
