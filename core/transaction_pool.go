@@ -22,6 +22,7 @@ import (
 	"bytes"
 
 	"github.com/dappley/go-dappley/common/sorted"
+	logger "github.com/sirupsen/logrus"
 )
 
 type TransactionPool struct {
@@ -86,8 +87,17 @@ func (txPool *TransactionPool) Pop() []*Transaction {
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
-	// Get tx with smallest tip
+	if txPool.limit == 0 {
+		logger.Warn("TransactionPool: transaction not pushed to pool because limit is set to 0")
+		return
+	}
+
 	if txPool.Transactions.Len() >= int(txPool.limit) {
+		logger.WithFields(logger.Fields{
+			"limit": txPool.limit,
+		}).Debug("TransactionPool: transaction pool limit reached")
+
+		// Get tx with least tips
 		compareTx := txPool.Transactions.PopLeft().(Transaction)
 		greaterThanLeastTip := tx.Tip > compareTx.Tip
 		if greaterThanLeastTip {

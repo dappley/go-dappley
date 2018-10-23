@@ -61,8 +61,7 @@ var popInputOrder = []struct {
 	{[]Transaction{t4, t1, t3, t2}},
 }
 
-//transaction pool push function
-func TestTxPoolPush(t *testing.T) {
+func TestTransactionPool_Push(t *testing.T) {
 	txPool := NewTransactionPool(128)
 	txPool.Push(t1)
 	assert.Equal(t, 1, txPool.Transactions.Len())
@@ -73,9 +72,29 @@ func TestTxPoolPush(t *testing.T) {
 	assert.Equal(t, 4, txPool.Transactions.Len())
 }
 
-func TestTranstionPoolPop(t *testing.T) {
+func TestTransactionPoolLimit(t *testing.T) {
+	txPool := NewTransactionPool(0)
+	txPool.Push(t1)
+	assert.Equal(t, 0, txPool.Transactions.Len())
+
+	txPool = NewTransactionPool(1)
+	txPool.Push(t1)
+	txPool.Push(t2) // Note: t2 has higher tips and should be kept in pool in place of t1
+	assert.Equal(t, 1, txPool.Transactions.Len())
+	assert.Equal(t, t2, txPool.Transactions.Get()[0].(Transaction))
+
+	txPool.Push(t4) // Note: t4 has higher tips and should be kept in pool in place of t2
+	assert.Equal(t, 1, txPool.Transactions.Len())
+	assert.Equal(t, t4, txPool.Transactions.Get()[0].(Transaction))
+
+	txPool.Push(t3) // Note: t3 has less tips and should be discarded
+	assert.Equal(t, 1, txPool.Transactions.Len())
+	assert.Equal(t, t4, txPool.Transactions.Get()[0].(Transaction))
+}
+
+func TestTransactionPool_Pop(t *testing.T) {
 	for _, tt := range popInputOrder {
-		var popOrder = []uint64{}
+		var popOrder []uint64
 		txPool := NewTransactionPool(128)
 		for _, tx := range tt.order {
 			txPool.Transactions.Push(tx)
@@ -89,15 +108,15 @@ func TestTranstionPoolPop(t *testing.T) {
 
 func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
 	txPool := NewTransactionPool(128)
-	totalTx:=5
+	totalTx := 5
 	var txs []*Transaction
-	for i:=0; i < totalTx; i++ {
+	for i := 0; i < totalTx; i++ {
 		tx := MockTransaction()
 		txs = append(txs, tx)
 		txPool.Push(*tx)
 	}
 	txPool.RemoveMultipleTransactions(txs)
 
-	assert.Equal(t,0, txPool.Transactions.Len())
+	assert.Equal(t, 0, txPool.Transactions.Len())
 
 }
