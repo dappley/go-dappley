@@ -32,17 +32,17 @@ type TransactionPool struct {
 
 func NewTransactionPool() *TransactionPool {
 	txPool := &TransactionPool{
-		Transactions:	*sorted.NewSlice(CompareTransactionTips, match),
+		Transactions:	*sorted.NewSlice(compareTxTips, match),
 	}
 	return txPool
 }
 
-func CompareTransactionTips(a interface{}, b interface{}) int {
-	ai := a.(Transaction)
-	bi := b.(Transaction)
-	if ai.Tip < bi.Tip {
+func compareTxTips(tx1 interface{}, tx2 interface{}) int {
+	t1 := tx1.(Transaction)
+	t2 := tx2.(Transaction)
+	if t1.Tip < t2.Tip {
 		return -1
-	} else if ai.Tip > bi.Tip {
+	} else if t1.Tip > t2.Tip {
 		return 1
 	} else {
 		return 0
@@ -50,8 +50,8 @@ func CompareTransactionTips(a interface{}, b interface{}) int {
 }
 
 // match returns true if a and b are Transactions and they have the same ID, false otherwise
-func match(a interface{}, b interface{}) bool {
-	return bytes.Compare(a.(Transaction).ID, b.(Transaction).ID) == 0
+func match(tx1 interface{}, tx2 interface{}) bool {
+	return bytes.Compare(tx1.(Transaction).ID, tx2.(Transaction).ID) == 0
 }
 
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
@@ -60,26 +60,24 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	}
 }
 
-//function f should return true if the transaction needs to be pushed back to the pool
-func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
-
+// traverse iterates through the transaction pool and pass the transaction to txHandler callback in each iteration
+func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
-		if !txHandler(tx) {
-			txPool.Transactions.Del(tx)
-		}
+		txHandler(tx)
 	}
 }
 
-func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
-	txPool.Traverse(func(tx Transaction) bool {
-		return tx.Verify(utxoPool, 0) // all transactions in transaction pool have no blockHeight
-		// TODO: also check if amount is valid
+// RemoveInvalidTransactions removes invalid transactions in transaction pool based on the existing UTXOs in utxoPool
+func (txPool *TransactionPool) RemoveInvalidTransactions(utxoPool UTXOIndex) {
+	txPool.traverse(func(tx Transaction) {
+		if !tx.Verify(utxoPool, 0) { // all transactions in transaction pool have no blockHeight
+			txPool.Transactions.Del(tx)
+		}
 	})
 }
 
-//need to optimize
-func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
+func (txPool *TransactionPool) Pop() []*Transaction {
 	var sortedTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.Transactions.PopRight().(Transaction)
@@ -89,8 +87,7 @@ func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
-	//get smallest tip tx
-
+	// Get tx with smallest tip
 	if txPool.Transactions.Len() >= TransactionPoolLimit {
 		compareTx := txPool.Transactions.PopLeft().(Transaction)
 		greaterThanLeastTip := tx.Tip > compareTx.Tip
