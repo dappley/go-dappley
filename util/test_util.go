@@ -16,32 +16,19 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package network
+package util
 
 import (
-	"github.com/libp2p/go-libp2p-peer"
-	"github.com/multiformats/go-multiaddr"
-	"github.com/dappley/go-dappley/core"
+	"time"
+	"math/rand"
 )
 
-func FakeNodeWithPeer(pid, addr string) *Node{
-
-	node := NewNode(nil)
-	peerid, _ := peer.IDB58Decode(pid)
-	maddr, _ := multiaddr.NewMultiaddr(addr)
-	p := &Peer{peerid,maddr}
-	node.GetPeerList().Add(p)
-
-	return node
+func GenerateRandomAoB(length int64) []byte {
+	token := make([]byte, length)
+	rand.Read(token)
+	return token
 }
 
-func FakeNodeWithPidAndAddr(bc *core.Blockchain,pid, addr string) *Node{
-
-	node := NewNode(bc)
-	peerid, _ := peer.IDB58Decode(pid)
-	maddr, _ := multiaddr.NewMultiaddr(addr)
-	p := &Peer{peerid,maddr}
-	node.info = p
-
-	return node
+func IsTimeOut(start, timeOut int64) bool {
+	return time.Now().UTC().Unix()-start > timeOut
 }

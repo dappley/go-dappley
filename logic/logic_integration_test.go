@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -401,7 +402,7 @@ func TestForkChoice(t *testing.T) {
 	}
 
 	currentTime := time.Now().UTC().Unix()
-	for !core.IsTimeOut(currentTime, int64(6)) {
+	for !util.IsTimeOut(currentTime, int64(6)) {
 	}
 
 	//Check if all nodes have the same tail block

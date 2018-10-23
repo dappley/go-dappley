@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,7 +51,7 @@ func TestDpos_Start(t *testing.T) {
 	currentTime := time.Now().UTC().Unix()
 	dpos.Start()
 	//wait for the block gets mined
-	for bc.GetMaxHeight() <= 0 && !core.IsTimeOut(currentTime, int64(50)) {
+	for bc.GetMaxHeight() <= 0 && !util.IsTimeOut(currentTime, int64(50)) {
 	}
 	dpos.Stop()
 
