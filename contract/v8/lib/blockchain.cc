@@ -28,8 +28,7 @@ void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handl
 
 // VerifyAddressCallback
 void VerifyAddressCallback(const FunctionCallbackInfo<Value> &info) {
-    printf("VerifyAddressCallback\n");
-    fflush(stdout);
+
   Isolate *isolate = info.GetIsolate();
   //Local<Object> thisArg = info.Holder();
   //Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -46,8 +45,7 @@ void VerifyAddressCallback(const FunctionCallbackInfo<Value> &info) {
         String::NewFromUtf8(isolate, "address must be string"));
     return;
   }
-
-  int ret = 3;//sVerifyAddress(*String::Utf8Value(address->ToString()));
+  int ret = sVerifyAddress(*String::Utf8Value(isolate, address));
   info.GetReturnValue().Set(ret);
 
 }

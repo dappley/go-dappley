@@ -4,7 +4,7 @@ package contract
 #cgo LDFLAGS: -L${SRCDIR}/lib -ldappleyv8
 #include <stdlib.h>
 #include "v8/engine.h"
-int VerifyAddressFunc_cgo(const char *address);
+bool VerifyAddressFunc_cgo(const char *address);
 */
 import "C"
 import (
