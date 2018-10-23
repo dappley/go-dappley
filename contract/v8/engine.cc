@@ -8,6 +8,7 @@
 #include <libplatform/libplatform.h>
 #include "engine.h"
 #include "lib/blockchain.h"
+#include "lib/exe_env.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -19,7 +20,12 @@ void Initialize(){
     V8::Initialize();
 }
 
+
+
 int executeV8Script(const char *sourceCode, uintptr_t handler) {
+
+
+
   // Create a new Isolate and make it the current one.
   Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
@@ -48,8 +54,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
               .ToLocalChecked();
 
       // Compile the source code.
-      Local<Script> script =
-          Script::Compile(context, source).ToLocalChecked();
+      Local<Script> script = Script::Compile(context, source).ToLocalChecked();
 
       // Run the script to get the result.
       Local<Value> result = script->Run(context).ToLocalChecked();

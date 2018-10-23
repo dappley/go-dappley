@@ -1,12 +1,13 @@
 package contract
 
 import "C"
-import "fmt"
+import (
+	"github.com/dappley/go-dappley/core"
+)
 
-// VerifyAddressFunc verify address is valid
+//VerifyAddressFunc verify address is valid
 //export VerifyAddressFunc
-func VerifyAddressFunc(address *C.char) int {
-	fmt.Println("Go:VerifyAddressFunc")
-	fmt.Println(C.GoString(address))
-	return 2
+func VerifyAddressFunc(address *C.char) bool {
+	addr := core.NewAddress(C.GoString(address))
+	return addr.ValidateAddress()
 }
