@@ -97,15 +97,13 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 			"limit": txPool.limit,
 		}).Debug("TransactionPool: transaction pool limit reached")
 
-		// Get tx with least tips
-		compareTx := txPool.Transactions.PopLeft().(Transaction)
-		greaterThanLeastTip := tx.Tip > compareTx.Tip
-		if greaterThanLeastTip {
-			txPool.Transactions.Push(tx)
-		} else { // do nothing, push back popped tx
-			txPool.Transactions.Push(compareTx)
+		leastTipTx := txPool.Transactions.Left().(Transaction)
+		if tx.Tip <= leastTipTx.Tip {
+			return
 		}
-	} else {
-		txPool.Transactions.Push(tx)
+
+		txPool.Transactions.PopLeft()
 	}
+
+	txPool.Transactions.Push(tx)
 }
