@@ -7,47 +7,55 @@
 #include <v8.h>
 #include <libplatform/libplatform.h>
 #include "engine.h"
+#include "lib/blockchain.h"
 
-int executeV8Script(const char *sourceCode) {
+using namespace v8;
+std::unique_ptr<Platform> platformPtr;
 
-  // Initialize V8.
-  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
-  v8::V8::InitializePlatform(platform.get());
-  v8::V8::Initialize();
+void Initialize(){
+    // Initialize V8.
+    platformPtr = platform::NewDefaultPlatform();
+    V8::InitializePlatform(platformPtr.get());
+    V8::Initialize();
+}
 
+int executeV8Script(const char *sourceCode, uintptr_t handler) {
   // Create a new Isolate and make it the current one.
-  v8::Isolate::CreateParams create_params;
-  create_params.array_buffer_allocator =
-  v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-  v8::Isolate* isolate = v8::Isolate::New(create_params);
+  Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
+  Isolate* isolate = Isolate::New(create_params);
+
+
   {
-    v8::Isolate::Scope isolate_scope(isolate);
+    Isolate::Scope isolate_scope(isolate);
 
     // Create a stack-allocated handle scope.
-    v8::HandleScope handle_scope(isolate);
+    HandleScope handle_scope(isolate);
 
     // Create a new context.
-    v8::Local<v8::Context> context = v8::Context::New(isolate);
+    Local<Context> context = v8::Context::New(isolate);
 
     // Enter the context for compiling and running the hello world script.
-    v8::Context::Scope context_scope(context);
+    Context::Scope context_scope(context);
+
+    NewBlockchainInstance(isolate, context, (void *)handler);
 
     {
       // Create a string containing the JavaScript source code.
-      v8::Local<v8::String> source =
-          v8::String::NewFromUtf8(isolate, sourceCode,
-                                  v8::NewStringType::kNormal)
+      Local<String> source =
+          String::NewFromUtf8(isolate, sourceCode,
+                                  NewStringType::kNormal)
               .ToLocalChecked();
 
       // Compile the source code.
-      v8::Local<v8::Script> script =
-          v8::Script::Compile(context, source).ToLocalChecked();
+      Local<Script> script =
+          Script::Compile(context, source).ToLocalChecked();
 
       // Run the script to get the result.
-      v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
+      Local<Value> result = script->Run(context).ToLocalChecked();
 
       // Convert the result to an UTF8 string and print it.
-      v8::String::Utf8Value utf8(isolate, result);
+      String::Utf8Value utf8(isolate, result);
       printf("%s\n", *utf8);
       fflush(stdout);
     }
@@ -55,8 +63,8 @@ int executeV8Script(const char *sourceCode) {
 
   // Dispose the isolate and tear down V8.
   isolate->Dispose();
-  v8::V8::Dispose();
-  v8::V8::ShutdownPlatform();
+  V8::Dispose();
+  V8::ShutdownPlatform();
   delete create_params.array_buffer_allocator;
   return 0;
 }
