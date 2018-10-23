@@ -112,9 +112,10 @@ func TestRpcSend(t *testing.T) {
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:   senderWallet.GetAddress().Address,
-		To:     receiverWallet.GetAddress().Address,
-		Amount: common.NewAmount(7).Bytes(),
+		From:       senderWallet.GetAddress().Address,
+		To:         receiverWallet.GetAddress().Address,
+		Amount:     common.NewAmount(7).Bytes(),
+		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 	})
 	assert.Nil(t, err)
 

@@ -199,8 +199,12 @@ func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
+	path := in.Walletpath
+	if len(in.Walletpath) == 0 {
+		path = client.GetWalletFilePath()
+	}
 
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
+	wm, err := logic.GetWalletManager(path)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
 	}
