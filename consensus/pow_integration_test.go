@@ -66,7 +66,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 
 	//create a transaction
@@ -122,7 +122,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -169,7 +169,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 	//create a transaction
 	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, bc, 0)
@@ -228,6 +228,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 		pow,
+		128,
 	)
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")

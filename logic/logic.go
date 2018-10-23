@@ -45,12 +45,12 @@ var (
 	)
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32) (*core.Blockchain, error) {
 	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus)
+	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit)
 
 	return bc, nil
 }

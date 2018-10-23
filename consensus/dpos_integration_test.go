@@ -36,7 +36,7 @@ func TestDpos_Start(t *testing.T) {
 	dpos := NewDpos()
 	cbAddr := core.Address{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128)
 	node := network.NewNode(bc)
 	node.Start(21100)
 	dpos.Setup(node, cbAddr.Address)
@@ -79,7 +79,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dpos := NewDpos()
 		dpos.SetDynasty(dynasty)
 		dpos.SetTargetBit(0)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos)
+		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128)
 		node := network.NewNode(bc)
 		node.Start(21200 + i)
 		if i == 0 {

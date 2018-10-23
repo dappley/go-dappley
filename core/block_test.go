@@ -163,7 +163,7 @@ func TestBlock_Rollback(t *testing.T) {
 	b := GenerateMockBlock()
 	tx := MockTransaction()
 	b.transactions = []*Transaction{tx}
-	txPool := NewTransactionPool()
+	txPool := NewTransactionPool(128)
 	b.Rollback(txPool)
 	assert.ElementsMatch(t, tx.ID, txPool.Transactions.Right().(Transaction).ID)
 }

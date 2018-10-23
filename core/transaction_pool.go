@@ -24,17 +24,9 @@ import (
 	"github.com/dappley/go-dappley/common/sorted"
 )
 
-const TransactionPoolLimit = 128
-
 type TransactionPool struct {
 	Transactions sorted.Slice
-}
-
-func NewTransactionPool() *TransactionPool {
-	txPool := &TransactionPool{
-		Transactions:	*sorted.NewSlice(compareTxTips, match),
-	}
-	return txPool
+	limit        uint32
 }
 
 func compareTxTips(tx1 interface{}, tx2 interface{}) int {
@@ -49,9 +41,16 @@ func compareTxTips(tx1 interface{}, tx2 interface{}) int {
 	}
 }
 
-// match returns true if a and b are Transactions and they have the same ID, false otherwise
+// match returns true if tx1 and tx2 are Transactions and they have the same ID, false otherwise
 func match(tx1 interface{}, tx2 interface{}) bool {
 	return bytes.Compare(tx1.(Transaction).ID, tx2.(Transaction).ID) == 0
+}
+
+func NewTransactionPool(limit uint32) *TransactionPool {
+	return &TransactionPool{
+		Transactions: *sorted.NewSlice(compareTxTips, match),
+		limit:        limit,
+	}
 }
 
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
@@ -88,7 +87,7 @@ func (txPool *TransactionPool) Pop() []*Transaction {
 
 func (txPool *TransactionPool) Push(tx Transaction) {
 	// Get tx with smallest tip
-	if txPool.Transactions.Len() >= TransactionPoolLimit {
+	if txPool.Transactions.Len() >= int(txPool.limit) {
 		compareTx := txPool.Transactions.PopLeft().(Transaction)
 		greaterThanLeastTip := tx.Tip > compareTx.Tip
 		if greaterThanLeastTip {
