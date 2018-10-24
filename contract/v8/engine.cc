@@ -8,7 +8,6 @@
 #include <libplatform/libplatform.h>
 #include "engine.h"
 #include "lib/blockchain.h"
-#include "lib/exe_env.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
