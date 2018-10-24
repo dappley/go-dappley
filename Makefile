@@ -1,4 +1,4 @@
-all: dep build run test checkRunning
+all: dep build run test check-running
 
 testall:
 	go clean -testcache
@@ -25,7 +25,7 @@ build:
 run:
 	cd dapp; ./dapp > /dev/null 2>&1 &
 
-checkRunning:
+check-running:
 	pkill dapp || ( echo "dapp service not running"; exit 666)
 
 
