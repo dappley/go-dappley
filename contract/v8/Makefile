@@ -9,7 +9,7 @@ CXX = g++
 build: lib/blockchain.cc.o engine.cc.o
 	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.so -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
 
-install: build
+install:
 	sudo install ../lib/*.so /usr/local/lib/
 	sudo /sbin/ldconfig
 
