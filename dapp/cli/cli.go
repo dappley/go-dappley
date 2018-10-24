@@ -328,7 +328,12 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
 		return
 	}
-	fmt.Println(proto.MarshalTextString(response))
+	encodedResponse := map[string]interface{}{
+		"TailBlockHash": hex.EncodeToString(response.TailBlockHash),
+		"BlockHeight": response.BlockHeight,
+		"Producers": response.Producers,
+	}
+	fmt.Println(encodedResponse)
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
