@@ -149,7 +149,7 @@ func (utxos UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) error {
+func (utxos *UTXOIndex) UpdateUtxoStateAndCheckForDoubleSpending(newBlk *Block, db storage.Storage) error {
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := utxos.deepCopy()
 
@@ -158,7 +158,7 @@ func (utxos *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) er
 			for _, txin := range tx.Vin {
 				err := tempIndex.removeUTXO(txin.Txid, txin.Vout)
 				if err != nil {
-					logger.Warn(err)
+					logger.Debug(err)
 				}
 			}
 		}

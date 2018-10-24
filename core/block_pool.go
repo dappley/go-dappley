@@ -92,7 +92,7 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 		}
 
 		utxoIndex := LoadUTXOIndex(pool.blockchain.GetDb())
-		utxoIndex.BuildForkUtxoIndex(forkBlks[i], pool.blockchain.GetDb())
+		utxoIndex.UpdateUtxoStateAndCheckForDoubleSpending(forkBlks[i], pool.blockchain.GetDb())
 	}
 	return true
 }
