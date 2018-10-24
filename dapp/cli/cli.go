@@ -262,7 +262,6 @@ func printUsage() {
 }
 
 func listAllBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	fmt.Println(flags)
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, &rpcpb.GetBlocksRequest{})
 	if err != nil {
 		fmt.Println("ERROR: listAllBlocks failed. ERR:", err)
