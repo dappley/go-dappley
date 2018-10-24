@@ -10,6 +10,7 @@ service RpcService {
   rpc RpcGetVersion (GetVersionRequest) returns (GetVersionResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
+  rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
   rpc RpcAddBalance (AddBalanceRequest) returns (AddBalanceResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
@@ -29,6 +30,14 @@ service AdminService{
 message CreateWalletRequest {
   string name = 1;
   string passphrase = 2;
+}
+
+message UnlockWalletRequest {
+  string name = 1;
+}
+
+message UnlockWalletResponse {
+  string message = 1;
 }
 
 message AddProducerRequest {
@@ -131,6 +140,8 @@ message GetBlocksRequest {
   repeated bytes startBlockHashs = 1;  // Query start block hashes, sorted descending by height.
   int32 maxCount = 2;   // Max query block count
 }
+
+
 
 message GetBlocksResponse {
   uint32 errorCode = 1;

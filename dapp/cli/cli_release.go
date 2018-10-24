@@ -313,11 +313,6 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 			fmt.Printf("Create Wallet, the address is %s \n", wallet.GetAddress().Address)
 			return
 		}
-		err = logic.SetUnLockWallet()
-		if err != nil {
-			fmt.Printf("Error: Unlock Wallet Failed. %v \n", err.Error())
-			return
-		}
 	}
 
 	locked, err := logic.IsWalletLocked()
@@ -340,7 +335,11 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 		if wallet != nil {
 			fmt.Printf("Create Wallet, the address is %s\n", wallet.GetAddress().Address)
 		}
-		err = logic.SetUnLockWallet()
+		//unlock the wallet
+		client.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+			Name: "unlock",
+		})
+
 		if err != nil {
 			fmt.Printf("Error: Unlock Wallet Failed. %v \n", err.Error())
 			return
@@ -392,15 +391,21 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 			fmt.Printf("Error: List addresses failed. %v \n", err.Error())
 			return
 		}
-		wm.SetUnlockTimer(logic.GetUnlockDuration())
-		if len(addressList) == 0 {
-			fmt.Println("The addresses in the wallet is empty!")
-		} else {
-			i := 1
-			fmt.Println("The address list:")
-			for _, addr := range addressList {
-				fmt.Printf("Address[%d]: %s\n", i, addr)
-				i++
+		//unlock the wallet
+		client1.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+			Name: "unlock",
+		})
+
+		if !listPriv {
+			if len(addressList) == 0 {
+				fmt.Println("The addresses in the wallet is empty!")
+			} else {
+				i := 1
+				fmt.Println("The address list:")
+				for _, addr := range addressList {
+					fmt.Printf("Address[%d]: %s\n", i, addr)
+					i++
+				}
 			}
 		}
 
