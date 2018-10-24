@@ -86,6 +86,28 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	return bc
 }
 
+func GenerateBlockWithCbtx(addr Address, lastblock *Block)*Block{
+	//create a new block chain
+	cbtx := NewCoinbaseTX(addr.Address, "", lastblock.GetHeight())
+	b := NewBlock([]*Transaction{&cbtx}, lastblock)
+	return b
+}
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, 128)
+
+	for i := 0; i < size; i++ {
+		tailBlk, _ := bc.GetTailBlock()
+		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight())
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.AddBlockToTail(b)
+	}
+	return bc
+}
+
 func MockTransaction() *Transaction {
 	return &Transaction{
 		ID:   util.GenerateRandomAoB(1),

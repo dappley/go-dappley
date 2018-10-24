@@ -64,12 +64,13 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
-
-	blk := GenerateMockBlock()
+	tailblk,_:= bc.GetTailBlock()
+	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
 	bc.AddBlockToTail(blk)
 
 	assert.False(t, bc.IsHigherThanBlockchain(blk))
+
 }
 
 func TestBlockchain_IsInBlockchain(t *testing.T) {
@@ -92,7 +93,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 
 func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//create a mock blockchain with max height of 5
-	bc := GenerateMockBlockchain(5)
+	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.db.Close()
 
 	blk, err := bc.GetTailBlock()
