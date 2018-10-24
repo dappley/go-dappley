@@ -27,13 +27,13 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
-	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/rpc/pb"
+	storage "github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	storage "github.com/dappley/go-dappley/storage"
 	"log"
 	"os"
 	"strings"
@@ -396,16 +396,14 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 			Name: "unlock",
 		})
 
-		if !listPriv {
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the wallet is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list:")
-				for _, addr := range addressList {
-					fmt.Printf("Address[%d]: %s\n", i, addr)
-					i++
-				}
+		if len(addressList) == 0 {
+			fmt.Println("The addresses in the wallet is empty!")
+		} else {
+			i := 1
+			fmt.Println("The address list:")
+			for _, addr := range addressList {
+				fmt.Printf("Address[%d]: %s\n", i, addr)
+				i++
 			}
 		}
 
