@@ -4,7 +4,7 @@ CXX = g++-4.8
 %.cc.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $<.o
 
-build: lib/blockchain.cc.o lib/exe_env.cc.o lib/file.cc.o engine.cc.o
+build: lib/blockchain.cc.o engine.cc.o
 	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.so -L../lib -lv8_monolith -lpthread
 
 install: build
