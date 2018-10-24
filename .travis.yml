@@ -23,6 +23,8 @@ install:
 - sudo make install
 - cd -
 - dep ensure
+- cd contract/v8
+- make install
 
 script:
 - make build
