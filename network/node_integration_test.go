@@ -21,13 +21,13 @@
 package network
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/core"
-	"time"
+	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/golang/mock/gomock"
-	core_mock "github.com/dappley/go-dappley/core/mock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"testing"
+	"time"
 )
 
 const(
@@ -69,33 +69,41 @@ func TestNetwork_Setup(t *testing.T) {
 }
 
 func TestNetwork_SendBlock(t *testing.T){
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	bp0 := new(mocks.BlockPoolInterface)
+	bp1 := new(mocks.BlockPoolInterface)
 
 	//setup node 0
 	db0 := storage.NewRamStorage()
 	defer db0.Close()
-	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil, 128)
-	mockBp0 := core_mock.NewMockBlockPoolInterface(mockCtrl)
-	mockBp0.EXPECT().SetBlockchain(bc0)
-	bc0.SetBlockPool(mockBp0)
 
+	bp0.On("SetBlockchain", mock.Anything).Return(nil)
+	bp0.On("BlockRequestCh").Return(make(chan core.BlockRequestPars))
+	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil)
+	bp1.On("SetBlockchain", mock.Anything)
+	bp1.On("BlockRequestCh").Return(make(chan core.BlockRequestPars))
+	bp1.On("Push", mock.Anything,mock.Anything).Return(nil)
+	bc0.SetBlockPool(bp0)
+	assert.Equal(t, bc0.GetBlockPool(),  bp0)
+	bp0.AssertCalled(t, "SetBlockchain", mock.Anything)
 	n0 := FakeNodeWithPidAndAddr(bc0,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10000")
 
 	//setup node 1
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
-	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil, 128)
-	mockBp1 := core_mock.NewMockBlockPoolInterface(mockCtrl)
-	mockBp1.EXPECT().SetBlockchain(bc1)
-	bc1.SetBlockPool(mockBp1)
+
+	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil)
+	bc1.SetBlockPool(bp1)
+
+	bp0.AssertCalled(t, "SetBlockchain", mock.Anything)
+
 	n1 := FakeNodeWithPidAndAddr(bc1,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10001")
 
 	n0.Start(test_port3)
-	mockBp0.EXPECT().BlockRequestCh()
+	time.Sleep(1*time.Second)
+	bp0.AssertCalled(t, "BlockRequestCh")
 	n1.Start(test_port4)
-	mockBp1.EXPECT().BlockRequestCh()
+	time.Sleep(1*time.Second)
+	bp1.AssertCalled(t, "BlockRequestCh")
 	//add node0 as a stream peer in node1 and node2
 	err := n1.AddStream(n0.GetPeerID(),n0.GetPeerMultiaddr())
 	assert.Nil(t, err)
@@ -103,9 +111,8 @@ func TestNetwork_SendBlock(t *testing.T){
 	//node 0 broadcast a block
 	blk := core.GenerateMockBlock()
 	n0.BroadcastBlock(blk)
-
-	mockBp1.EXPECT().Push(blk, n0.GetPeerID())
-	time.Sleep(time.Second)
+	time.Sleep(2*time.Second)
+	bp1.AssertCalled(t, "Push", mock.Anything, mock.Anything)
 }
 
 func TestNode_SyncPeers(t *testing.T){

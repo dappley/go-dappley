@@ -150,8 +150,9 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 }
 
 func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
+	blockPool.SetBlockchain(bc)
 	bc.blockPool = blockPool
-	bc.blockPool.SetBlockchain(bc)
+	//bc.blockPool.SetBlockchain(bc)
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
