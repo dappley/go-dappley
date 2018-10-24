@@ -21,7 +21,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/dappley/go-dappley/client"
@@ -40,6 +39,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"encoding/hex"
 )
 
 //command names
