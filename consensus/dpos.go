@@ -175,7 +175,11 @@ func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
 		"height": newBlock.GetHeight(),
 		"hash":   hex.EncodeToString(newBlock.GetHash()),
 	}).Info("DpoS: Minted a new block")
-	dpos.bc.AddBlockToTail(newBlock)
+	err := dpos.bc.AddBlockToTail(newBlock)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
 	dpos.node.BroadcastBlock(newBlock)
 }
 

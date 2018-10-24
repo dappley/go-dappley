@@ -364,7 +364,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
-		logger.Warn(err)
+		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
 	}
 
 	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
@@ -376,20 +376,6 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain(forkBlks)
 
-	logger.WithFields(logger.Fields{
-		"syncstate": false,
-	}).Debug("Merge finished, setting syncstate to false")
-	bc.GetBlockPool().SetSyncState(false)
-
-}
-
-func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
-	err := bc.AddBlockToTail(blk)
-	if err != nil {
-		logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
-	}
-	//Remove transactions in current transaction pool
-	bc.GetTxPool().RemoveMultipleTransactions(blk.GetTransactions())
 }
 
 func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {
