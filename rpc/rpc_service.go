@@ -306,7 +306,7 @@ func (rpcSerivce *RpcService) RpcGetMinerInfo(ctx context.Context, in *rpcpb.Get
 	}, nil
 }
 
-func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
+func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcService.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcService.node.GetBlockchain().GetMaxHeight(),
