@@ -29,7 +29,7 @@ func TestBlockPool_GetBlockchain(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := CreateBlockchain(addr, db, nil)
+	bc := CreateBlockchain(addr, db, nil, 128)
 
 	hash1 := bc.GetTailBlockHash()
 	newbc := bc.GetBlockPool().GetBlockchain()

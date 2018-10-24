@@ -21,8 +21,6 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
-	"math/rand"
-
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -47,10 +45,4 @@ func UintToHex(num uint64) []byte {
 	}
 
 	return buff.Bytes()
-}
-
-func GenerateRandomAoB(length int64) []byte {
-	token := make([]byte, length)
-	rand.Read(token)
-	return token
 }
