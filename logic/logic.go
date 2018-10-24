@@ -30,6 +30,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"time"
+	"fmt"
 )
 
 const unlockduration = 300 * time.Second
@@ -150,6 +151,7 @@ func SetUnLockWallet() error {
 //create a wallet with passphrase
 func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
+	fmt.Println("file is ", client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
 	err := wm.LoadFromFile()
 	if err != nil {

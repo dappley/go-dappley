@@ -21,12 +21,18 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
+	storage "github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
@@ -331,58 +337,74 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 }
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	walletRequest := rpcpb.CreateWalletRequest{}
-	walletRequest.Name = "getWallet"
-	response, err := client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx, &walletRequest)
+	empty, err := logic.IsWalletEmpty()
+	//if err != nil {
+	//	fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
+	//}
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
-	if err != nil {
-
-		if strings.Contains(err.Error(), "connection error") {
-			fmt.Printf("Error: Create Wallet Failed. Network Connection Error!\n")
-		} else {
-			fmt.Printf("Error: Create Wallet failed. %v\n", err.Error())
-		}
-		return
-	}
-	if response.Message == "WalletExistsLocked" {
-		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-		if passphrase == "" {
-			fmt.Println("Password Empty!")
-			return
-		}
-	} else if response.Message == "WalletExistsNotLocked" {
-		passphrase = ""
-	} else if response.Message == "NewWallet" {
+	if empty {
 		passphrase = prompter.GetPassPhrase("Please input the password for generating a new wallet: ", true)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
 		}
-	} else {
-		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
+		wallet, err := logic.CreateWalletWithpassphrase(passphrase)
+		if err != nil {
+			fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
+			return
+		}
+		if wallet != nil {
+			fmt.Printf("Create Wallet, the address is %s \n", wallet.GetAddress().Address)
+			return
+		}
+		err = logic.SetUnLockWallet()
+		if err != nil {
+			fmt.Printf("Error: Unlock Wallet Failed. %v \n", err.Error())
+			return
+		}
 	}
 
-	walletRequest = rpcpb.CreateWalletRequest{}
-	walletRequest.Passphrase = passphrase
-	walletRequest.Name = "createWallet"
-	response, err = client.(rpcpb.RpcServiceClient).RpcCreateWallet(ctx, &walletRequest)
+	locked, err := logic.IsWalletLocked()
 	if err != nil {
-		fmt.Println("ERROR: Create Wallet failed. ERR:", err)
+		fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
 		return
 	}
-	if strings.Contains(response.Message, "Error") {
-		fmt.Println(response.Message)
-		return
-	}
-	if len(response.Address) > 0 {
-		fmt.Println("Create Wallet, the address is ", response.Address)
-	}
-	return
 
+	if locked {
+		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+		if passphrase == "" {
+			fmt.Println("Password Empty!")
+			return
+		}
+		wallet, err := logic.CreateWalletWithpassphrase(passphrase)
+		if err != nil {
+			fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
+			return
+		}
+		if wallet != nil {
+			fmt.Printf("Create Wallet, the address is %s\n", wallet.GetAddress().Address)
+		}
+		err = logic.SetUnLockWallet()
+		if err != nil {
+			fmt.Printf("Error: Unlock Wallet Failed. %v \n", err.Error())
+			return
+		}
+	} else {
+		wallet, err := logic.AddWallet()
+		if err != nil {
+			fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
+			return
+		}
+		if wallet != nil {
+			fmt.Println("Create Wallet, the address is ", wallet.GetAddress().Address)
+		}
+	}
+
+	return
 }
 
-func listAddressesCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags cmdFlags) {
 
 	listPriv := false
 	if flags[flagListPrivateKey] == nil {
@@ -393,86 +415,127 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 		listPriv = false
 	}
 
-	listAddressesRequest := rpcpb.GetWalletAddressRequest{}
-	listAddressesRequest.Name = "getWallet"
+	passphrase := ""
+	prompter := util.NewTerminalPrompter()
 
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
+	empty, err := logic.IsWalletEmpty()
 	if err != nil {
-		if strings.Contains(err.Error(), "connection error") {
-			fmt.Printf("Error: Get Wallet Addresses failed. Network Connection Error!\n")
-		} else {
-			fmt.Printf("Error: Get Wallet Addresses failed. %v\n", err.Error())
-		}
+		fmt.Printf("Error: List addresses failed. %v \n", err.Error())
+		return
+	}
+	if empty {
+		fmt.Println("Please use cli createWallet to generate a wallet first!")
 		return
 	}
 
-	passphrase := ""
-	if response.Message == "WalletExistsLocked" {
-		prompter := util.NewTerminalPrompter()
-		passphrase = prompter.GetPassPhrase("Please input the wallet password: ", false)
+	locked, err := logic.IsWalletLocked()
+	if err != nil {
+		fmt.Printf("Error: List addresses failed. %v \n", err.Error())
+		return
+	}
+	if locked {
+		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
 		}
-	} else if response.Message == "WalletExistsNotLocked" {
-		passphrase = ""
-	} else if response.Message == "NoWallet" {
-		fmt.Println("Please use cli createWallet to generate a wallet first!")
-		return
-	} else {
-		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
-		return
-	}
-
-	listAddressesRequest = rpcpb.GetWalletAddressRequest{}
-	listAddressesRequest.Passphrase = passphrase
-	if listPriv {
-		listAddressesRequest.Name = "listAddressesWithPrivateKey"
-	} else {
-		listAddressesRequest.Name = "listAddresses"
-	}
-
-	response, err = client.(rpcpb.RpcServiceClient).RpcGetWalletAddress(ctx, &listAddressesRequest)
-	if err != nil {
-		fmt.Println("ERROR: Get Wallet Addresses failed. ERR:", err)
-		return
-	} else {
-		if strings.Contains(response.Message, "Password not correct") {
-			fmt.Println("ERROR: Get Wallet Addresses failed, password not correct!")
-		} else {
-			if !listPriv {
-				Addresses := response.Address
-				if len(Addresses) == 0 {
-					fmt.Println("The addresses in the wallet is empty!")
-				} else {
-					i := 1
-					fmt.Println("The address list:")
-					for _, addr := range Addresses {
-						fmt.Printf("Address[%d]: %s\n", i, addr)
-						i++
-					}
-				}
-			} else {
-				Addresses := response.Address
-				PrivateKeys := response.PrivateKey
-				if len(Addresses) == 0 {
-					fmt.Println("The addresses in the wallet is empty!")
-				} else {
-					i := 1
-					fmt.Println("The address list with private keys:")
-					for _, addr := range Addresses {
-						fmt.Println("--------------------------------------------------------------------------------")
-						fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr, i, PrivateKeys[i-1])
-						fmt.Println()
-						i++
-					}
-					fmt.Println("--------------------------------------------------------------------------------")
-				}
-
-			}
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		addressList, err := wm.GetAddressesWithPassphrase(passphrase)
+		if err != nil {
+			fmt.Printf("Error: List addresses failed. %v \n", err.Error())
+			return
 		}
-		return
+		wm.SetUnlockTimer(logic.GetUnlockDuration())
+		if !listPriv {
+			if len(addressList) == 0 {
+				fmt.Println("The addresses in the wallet is empty!")
+			} else {
+				i := 1
+				fmt.Println("The address list:")
+				for _, addr := range addressList {
+					fmt.Printf("Address[%d]: %s\n", i, addr)
+					i++
+				}
+			}
+		} else {
+			privateKeyList := []string{}
+			for _, addr := range addressList {
+				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
+				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
+				if err1 != nil {
+					err = err1
+					return
+				}
+				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+				err = err1
+			}
+			if len(addressList) == 0 {
+				fmt.Println("The addresses in the wallet is empty!")
+			} else {
+				i := 1
+				fmt.Println("The address list with private keys:")
+				for _, addr := range addressList {
+					fmt.Println("--------------------------------------------------------------------------------")
+					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr, i, privateKeyList[i-1])
+					fmt.Println()
+					i++
+				}
+				fmt.Println("--------------------------------------------------------------------------------")
+			}
+
+		}
+	} else {
+		fl := storage.NewFileLoader(client.GetWalletFilePath())
+		wm := client.NewWalletManager(fl)
+		err := wm.LoadFromFile()
+		if err != nil {
+			fmt.Printf("Error: List addresses failed. %v \n", err.Error())
+			return
+		}
+		addressList := wm.GetAddresses()
+		if !listPriv {
+			if len(addressList) == 0 {
+				fmt.Println("The addresses in the wallet is empty!")
+			} else {
+				i := 1
+				fmt.Println("The address list:")
+				for _, addr := range addressList {
+					fmt.Printf("Address[%d]: %s\n", i, addr.Address)
+					i++
+				}
+			}
+		} else {
+			privateKeyList := []string{}
+			for _, addr := range addressList {
+				keyPair := wm.GetKeyPairByAddress(addr)
+				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
+				if err1 != nil {
+					err = err1
+					return
+				}
+				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+				err = err1
+			}
+			if len(addressList) == 0 {
+				fmt.Println("The addresses in the wallet is empty!")
+			} else {
+				i := 1
+				fmt.Println("The address list with private keys:")
+				for _, addr := range addressList {
+					fmt.Println("--------------------------------------------------------------------------------")
+					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr.Address, i, privateKeyList[i-1])
+					fmt.Println()
+					i++
+				}
+				fmt.Println("--------------------------------------------------------------------------------")
+			}
+
+		}
+
 	}
+	return
 }
 
 func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
