@@ -204,7 +204,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	defer db.Close()
 
 	coinbaseAddr := Address{"testaddress"}
-	bc := CreateBlockchain(coinbaseAddr, db, nil)
+	bc := CreateBlockchain(coinbaseAddr, db, nil, 128)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
 	blk2 := GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change

@@ -52,14 +52,14 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) *Blockchain {
+func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32) *Blockchain {
 	genesis := NewGenesisBlock(address.Address)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
-		NewTransactionPool(),
+		NewTransactionPool(transactionPoolLimit),
 	}
 	bc.blockPool.SetBlockchain(bc)
 	err := bc.AddBlockToTail(genesis)
@@ -69,7 +69,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus) 
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -81,7 +81,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus) (*Blockchain, error)
 		db,
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
-		NewTransactionPool(), //TODO: Need to retrieve transaction pool from db
+		NewTransactionPool(transactionPoolLimit), //TODO: Need to retrieve transaction pool from db
 	}
 	bc.blockPool.SetBlockchain(bc)
 

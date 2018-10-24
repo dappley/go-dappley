@@ -38,6 +38,7 @@ import (
 
 //command names
 const (
+	cliListAllBlocks     = "listAllBlocks"
 	cliGetBlockchainInfo = "getBlockchainInfo"
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
@@ -82,6 +83,7 @@ const (
 
 //list of commands
 var cmdList = []string{
+	cliListAllBlocks,
 	cliGetBlockchainInfo,
 	cliGetBalance,
 	cliGetPeerInfo,
@@ -163,6 +165,7 @@ var cmdFlagsMap = map[string][]flagPars{
 
 //map the callback function to each command
 var cmdHandlers = map[string]commandHandlersWithType{
+	cliListAllBlocks:     {rpcService, listAllBlocksCommandHandler},
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {rpcService, getPeerInfoCommandHandler},
@@ -266,6 +269,17 @@ func printUsage() {
 	for _, cmd := range cmdList {
 		fmt.Println(" ", cmd)
 	}
+}
+
+func listAllBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+	fmt.Println(flags)
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, &rpcpb.GetBlocksRequest{})
+	if err != nil {
+		fmt.Println("ERROR: listAllBlocks failed. ERR:", err)
+		return
+	}
+
+	fmt.Println(proto.MarshalTextString(response))
 }
 
 func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {

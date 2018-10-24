@@ -38,7 +38,6 @@ const (
 	passwordToken  = "password"
 )
 
-// Server is used to implement helloworld.GreeterServer.
 type Server struct{
 	srv 		*grpc.Server
 	node 		*network.Node

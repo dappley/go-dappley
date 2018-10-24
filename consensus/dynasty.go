@@ -173,7 +173,7 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 	}
 
 	producer := dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash := core.HashAddress([]byte(producer))
+	producerHash := core.HashAddress(producer)
 
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx==nil {

@@ -16,42 +16,19 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package consensus
+package util
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/network"
+	"time"
+	"math/rand"
 )
 
-func TestNewDpos(t *testing.T) {
-	dpos := NewDpos()
-	assert.Equal(t,1, cap(dpos.mintBlkCh))
-	assert.Equal(t,1, cap(dpos.quitCh))
-	assert.Nil(t,dpos.node)
+func GenerateRandomAoB(length int64) []byte {
+	token := make([]byte, length)
+	rand.Read(token)
+	return token
 }
 
-func TestDpos_Setup(t *testing.T) {
-	dpos := NewDpos()
-	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.Address{cbAddr},storage.NewRamStorage(),dpos, 128)
-	node := network.NewNode(bc)
-
-	dpos.Setup(node, cbAddr)
-
-	assert.Equal(t, bc, dpos.bc)
-	assert.Equal(t, node, dpos.node)
+func IsTimeOut(start, timeOut int64) bool {
+	return time.Now().UTC().Unix()-start > timeOut
 }
-
-func TestDpos_Stop(t *testing.T) {
-	dpos := NewDpos()
-	dpos.Stop()
-	select{
-	case <-dpos.quitCh:
-	default:
-		t.Error("Failed!")
-	}
-}
-

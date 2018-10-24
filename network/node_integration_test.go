@@ -47,7 +47,7 @@ func TestNetwork_Setup(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := core.CreateBlockchain(addr,db,nil)
+	bc := core.CreateBlockchain(addr,db,nil, 128)
 
 	//create node1
 	node1 := NewNode(bc)
@@ -76,7 +76,7 @@ func TestNetwork_SendBlock(t *testing.T){
 	//setup node 0
 	db0 := storage.NewRamStorage()
 	defer db0.Close()
-	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil)
+	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil, 128)
 	mockBp0 := core_mock.NewMockBlockPoolInterface(mockCtrl)
 	mockBp0.EXPECT().SetBlockchain(bc0)
 	bc0.SetBlockPool(mockBp0)
@@ -86,7 +86,7 @@ func TestNetwork_SendBlock(t *testing.T){
 	//setup node 1
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
-	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil)
+	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil, 128)
 	mockBp1 := core_mock.NewMockBlockPoolInterface(mockCtrl)
 	mockBp1.EXPECT().SetBlockchain(bc1)
 	bc1.SetBlockPool(mockBp1)
@@ -112,7 +112,7 @@ func TestNode_SyncPeers(t *testing.T){
 	db := storage.NewRamStorage()
 	defer db.Close()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := core.CreateBlockchain(addr,db,nil)
+	bc := core.CreateBlockchain(addr,db,nil, 128)
 
 
 	//create node1
@@ -158,7 +158,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	//setup node 0
 	db0 := storage.NewRamStorage()
 	defer db0.Close()
-	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil)
+	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil, 128)
 	mockBp0 := core_mock.NewMockBlockPoolInterface(mockCtrl)
 	mockBp0.EXPECT().SetBlockchain(bc0)
 	bc0.SetBlockPool(mockBp0)
@@ -168,7 +168,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	//setup node 1
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
-	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil)
+	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil, 128)
 	mockBp1 := core_mock.NewMockBlockPoolInterface(mockCtrl)
 	mockBp1.EXPECT().SetBlockchain(bc1)
 	bc1.SetBlockPool(mockBp1)

@@ -32,6 +32,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
 const InvalidAddress = "Invalid Address"
@@ -48,9 +49,6 @@ func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
 	expectedLength := 34
-	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey); hash[0] < 10 {
-		expectedLength = 33
-	}
 	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
 }
 
@@ -58,9 +56,6 @@ func TestCreateWalletWithPassphrase(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
 	expectedLength := 34
-	if hash, _ := core.HashPubKey(wallet.GetKeyPair().PublicKey); hash[0] < 10 {
-		expectedLength = 33
-	}
 	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
 
 }
@@ -74,7 +69,31 @@ func TestCreateBlockchain(t *testing.T) {
 	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 
 	//create a blockchain
-	_, err := CreateBlockchain(addr, store, nil)
+	_, err := CreateBlockchain(addr, store, nil, 128)
+	assert.Nil(t, err)
+}
+
+
+func TestLoopCreateBlockchain(t *testing.T) {
+
+	store := storage.NewRamStorage()
+	defer store.Close()
+
+	//create a wallet address
+
+	err := ErrInvalidAddress
+	//create a blockchain loop
+	for i := 0; i < 2000; i++ {
+		err = nil
+		wallet := client.NewWallet()
+		wallet.Key = core.NewKeyPair()
+		addr := wallet.Key.GenerateAddress()
+		if !addr.ValidateAddress() {
+			fmt.Println(i, addr)
+			err = ErrInvalidAddress
+			break
+		}
+	}
 	assert.Nil(t, err)
 }
 
@@ -84,7 +103,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a blockchain with an invalid address
-	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil)
+	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil, 128)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Nil(t, bc)
 }
@@ -96,7 +115,7 @@ func TestGetBalance(t *testing.T) {
 	//create a wallet address
 	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil)
+	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -114,7 +133,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//create a wallet address
 	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil)
+	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -143,7 +162,7 @@ func TestGetAllAddresses(t *testing.T) {
 	expected_res = append(expected_res, addr)
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil)
+	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 

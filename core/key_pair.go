@@ -22,11 +22,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"errors"
-	"fmt"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -54,8 +53,7 @@ func GenerateAddressByPublicKey(publicKey []byte) Address {
 	checksum := Checksum(versionedPayload)
 
 	fullPayload := append(versionedPayload, checksum...)
-	address := util.Base58Encode(fullPayload)
-	return NewAddress(fmt.Sprintf("%s", address))
+	return NewAddress(base58.Encode(fullPayload))
 }
 
 func HashPubKey(pubKey []byte) ([]byte, error) {

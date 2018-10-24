@@ -45,15 +45,3 @@ func FakeNodeWithPidAndAddr(bc *core.Blockchain,pid, addr string) *Node{
 
 	return node
 }
-
-func FakeNodeWithPeerAndBlockchain(pid, addr string) *Node{
-
-	node := NewNode(nil)
-	peerid, _ := peer.IDB58Decode(pid)
-	maddr, _ := multiaddr.NewMultiaddr(addr)
-	p := &Peer{peerid,maddr}
-	node.GetPeerList().Add(p)
-	node.bc = core.GenerateMockBlockchain(10)
-
-	return node
-}
