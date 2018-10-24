@@ -28,4 +28,4 @@ script:
 - make build
 - make run
 - go test ./... -tags=integration
-- make checkRunning
+- make check-running

@@ -1,10 +1,10 @@
-all: dep build run test checkRunning
+all: dep build run test check-running
 
 testall:
 	go clean -testcache
 	for f in ./*/; do \
 		if [ "$$f" != "./bin/" -a  "$$f" != "./vendor/" ]; then \
-		cd $$f; go test -tags=integration ./... ; cd ..; \
+			cd $$f; go test -tags=integration ./... ; cd ..; \
 		fi \
 	done
 
@@ -20,12 +20,12 @@ test:
 	done
 
 build:
-	cd dapp; go build;
+	cd dapp; go build
 	cd dapp/cli; go build
 run:
 	cd dapp; ./dapp > /dev/null 2>&1 &
 
-checkRunning:
+check-running:
 	pkill dapp || ( echo "dapp service not running"; exit 666)
 
 
