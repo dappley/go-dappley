@@ -25,7 +25,7 @@ install:
 - dep ensure
 - cd contract/v8
 - make install
-
+- cd -
 script:
 - make build
 - make run
