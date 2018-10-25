@@ -23,8 +23,6 @@ import (
 	"testing"
 	"time"
 
-
-
 	// _ "github.com/google/trillian/crypto/keys/der/proto"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"

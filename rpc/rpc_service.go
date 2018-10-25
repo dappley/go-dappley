@@ -230,12 +230,12 @@ func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 	}
 
 	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcService.node.GetBlockchain(), rpcService.node)
-	txhashStr:= hex.EncodeToString(txhash)
+	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr +"]"}, err
+		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
 	}
 
-	return &rpcpb.SendResponse{Message: "["+ txhashStr +"] Sent"}, nil
+	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
 }
 
 func (rpcService *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {

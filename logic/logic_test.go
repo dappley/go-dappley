@@ -27,12 +27,12 @@ import (
 
 	"reflect"
 
+	"fmt"
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"fmt"
 )
 
 const InvalidAddress = "Invalid Address"
@@ -72,7 +72,6 @@ func TestCreateBlockchain(t *testing.T) {
 	_, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
 }
-
 
 func TestLoopCreateBlockchain(t *testing.T) {
 

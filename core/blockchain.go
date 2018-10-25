@@ -158,7 +158,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	err := bc.AddBlockToDb(block)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"hash": hex.EncodeToString(block.GetHash()),
+			"hash":   hex.EncodeToString(block.GetHash()),
 			"height": block.GetHeight(),
 		}).Warn("Blockchain: Add Block To Database Failed")
 		return err
@@ -426,7 +426,6 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
-
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
@@ -436,7 +435,6 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
 		return
 	}
-
 
 	bc.Rollback(forkParentHash)
 
@@ -480,7 +478,7 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	}
 	parentblockHash := bc.GetTailBlockHash()
 	//if is child of tail, skip rollback
-	if IsHashEqual(parentblockHash, targetHash){
+	if IsHashEqual(parentblockHash, targetHash) {
 		return true
 	}
 

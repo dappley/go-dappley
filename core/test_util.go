@@ -64,8 +64,8 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: t,
-			sign: nil,
-			height:height,
+			sign:      nil,
+			height:    height,
 		},
 		transactions: transactions,
 	}

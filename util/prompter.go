@@ -18,7 +18,6 @@
 
 package util
 
-
 import (
 	"fmt"
 
