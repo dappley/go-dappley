@@ -17,10 +17,12 @@ message NodeConfig{
     string dbPath = 3;
     uint32 rpcPort = 4;
     string keyPath = 5;
+    uint32 txPoolLimit = 6;
 }
 
 message DynastyConfig{
-    repeated string producers =1;
+    repeated string producers = 1;
+    uint32 maxProducers = 2;
 }
 
 message CliConfig{

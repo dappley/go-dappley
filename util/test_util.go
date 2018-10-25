@@ -16,25 +16,19 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package consensus
+package util
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"math/rand"
+	"time"
 )
 
-func TestProofOfWork_NewPoW(t *testing.T) {
-	pow := NewProofOfWork()
-	assert.Nil(t, pow.node)
-	assert.Nil(t, pow.bc)
+func GenerateRandomAoB(length int64) []byte {
+	token := make([]byte, length)
+	rand.Read(token)
+	return token
 }
 
-func TestProofOfWork_Setup(t *testing.T) {
-	pow := NewProofOfWork()
-	bc := core.GenerateMockBlockchain(5)
-	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	pow.Setup(network.NewNode(bc), cbAddr)
-	assert.Equal(t, bc, pow.bc)
+func IsTimeOut(start, timeOut int64) bool {
+	return time.Now().UTC().Unix()-start > timeOut
 }

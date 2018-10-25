@@ -19,13 +19,13 @@
 package config
 
 import (
+	"github.com/dappley/go-dappley/config/pb"
+	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
-	"github.com/gogo/protobuf/proto"
-	"github.com/dappley/go-dappley/config/pb"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -41,7 +41,7 @@ func TestLoadConfig(t *testing.T) {
 			expected: &configpb.Config{
 				ConsensusConfig: &configpb.ConsensusConfig{
 					MinerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					PrivKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+					PrivKey:   "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
 				NodeConfig: &configpb.NodeConfig{
 					Port:    5,
@@ -57,7 +57,7 @@ func TestLoadConfig(t *testing.T) {
 			expected: &configpb.Config{
 				ConsensusConfig: &configpb.ConsensusConfig{
 					MinerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					PrivKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+					PrivKey:   "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
 				NodeConfig: &configpb.NodeConfig{
 					Port: 5,
@@ -66,13 +66,13 @@ func TestLoadConfig(t *testing.T) {
 			},
 		},
 		{
-			name:    "WrongFileContent",
-			content: "WrongFileContent",
+			name:     "WrongFileContent",
+			content:  "WrongFileContent",
 			expected: &configpb.Config{},
 		},
 		{
-			name:    "EmptyFile",
-			content: "",
+			name:     "EmptyFile",
+			content:  "",
 			expected: &configpb.Config{},
 		},
 	}

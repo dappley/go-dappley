@@ -27,11 +27,12 @@ import (
 
 	"os"
 
+	"time"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -65,7 +66,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 
 	//create a transaction
@@ -88,6 +89,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -120,7 +122,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -136,6 +138,8 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	}
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
@@ -165,7 +169,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 	//create a transaction
 	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, bc, 0)
@@ -201,6 +205,8 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	//stop mining
 	pow.Stop()
 	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected wallet value for all wallets
@@ -222,6 +228,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 		pow,
+		128,
 	)
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
@@ -281,8 +288,7 @@ func printBalances(bc *core.Blockchain, addrs []core.Address) {
 func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
-	pubKeyHash := util.Base58Decode([]byte(addr))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	pubKeyHash := core.HashAddress(addr)
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
 	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {

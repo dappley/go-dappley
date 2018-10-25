@@ -22,9 +22,6 @@ package rpc
 
 import (
 	"fmt"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -37,6 +34,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
+	"strings"
+	"testing"
+	"time"
 )
 
 func TestServer_StartRPC(t *testing.T) {
@@ -85,7 +86,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow)
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128)
 	if err != nil {
 		panic(err)
 	}

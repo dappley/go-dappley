@@ -26,8 +26,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/dappley/go-dappley/crypto/utils"
 	"github.com/dappley/go-dappley/crypto/hash"
+	"github.com/dappley/go-dappley/crypto/utils"
 
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/scrypt"

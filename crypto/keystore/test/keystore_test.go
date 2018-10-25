@@ -23,10 +23,9 @@ import (
 
 	"time"
 
-
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/crypto"
 	"github.com/dappley/go-dappley/crypto/keystore"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestKeystore_SetKeyPassphrase(t *testing.T) {

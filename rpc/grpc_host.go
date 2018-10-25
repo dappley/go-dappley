@@ -19,18 +19,18 @@
 package rpc
 
 import (
-	"net"
 	"fmt"
+	"net"
 	"strings"
 
-	"golang.org/x/net/context"
-	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/rpc/pb"
+	logger "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/codes"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -38,23 +38,22 @@ const (
 	passwordToken  = "password"
 )
 
-// Server is used to implement helloworld.GreeterServer.
-type Server struct{
-	srv 		*grpc.Server
-	node 		*network.Node
-	password	string
+type Server struct {
+	srv      *grpc.Server
+	node     *network.Node
+	password string
 }
 
-func NewGrpcServer(node *network.Node, adminPassword string) *Server{
-	return &Server{grpc.NewServer(),node,adminPassword}
+func NewGrpcServer(node *network.Node, adminPassword string) *Server {
+	return &Server{grpc.NewServer(), node, adminPassword}
 }
 
 func (s *Server) Start(port uint32) {
-	go func(){
-		if port == 0{
+	go func() {
+		if port == 0 {
 			port = defaultRpcPort
 		}
-		lis, err := net.Listen("tcp", fmt.Sprint(":",port))
+		lis, err := net.Listen("tcp", fmt.Sprint(":", port))
 		if err != nil {
 			logger.Panicf("failed to listen: %v", err)
 		}
@@ -69,7 +68,7 @@ func (s *Server) Start(port uint32) {
 }
 
 func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	if strings.Contains(info.FullMethod,"rpcpb.AdminService") {
+	if strings.Contains(info.FullMethod, "rpcpb.AdminService") {
 		meta, ok := metadata.FromIncomingContext(ctx)
 		if !ok || len(meta[passwordToken]) != 1 {
 			return nil, status.Errorf(codes.Unauthenticated, "No Password")

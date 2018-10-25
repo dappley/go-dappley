@@ -33,6 +33,7 @@ type Consensus interface {
 	SetKey(string)
 	FullyStop() bool
 	AddProducer(string) error
+	GetProducers() []string
 }
 
 type NetService interface {
@@ -45,6 +46,8 @@ type BlockPoolInterface interface {
 	SetBlockchain(bc *Blockchain)
 	BlockRequestCh() chan BlockRequestPars
 	GetBlockchain() *Blockchain
+	GetSyncState() bool
+	SetSyncState(bool)
 	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
 	Push(block *Block, pid peer.ID)
 }

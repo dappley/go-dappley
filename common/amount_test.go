@@ -43,7 +43,7 @@ func TestAmount(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       *big.Int // input
-		expected    []byte // expected Big-Endian result
+		expected    []byte   // expected Big-Endian result
 		expectedErr error
 	}{
 		{"0", bigInt0, []byte{}, nil},

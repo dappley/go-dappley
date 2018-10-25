@@ -41,7 +41,7 @@ func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil)
+	bc := CreateBlockchain(addr, s, nil, 128)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -53,7 +53,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil)
+	bc := CreateBlockchain(addr, s, nil, 128)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -63,7 +63,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil)
+	bc := CreateBlockchain(addr, s, nil, 128)
 
 	blk := GenerateMockBlock()
 	blk.header.height = 1
@@ -76,7 +76,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil)
+	bc := CreateBlockchain(addr, s, nil, 128)
 
 	blk := GenerateMockBlock()
 	blk.SetHash([]byte("hash1"))
@@ -128,7 +128,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Get", []byte("utxo")).Return(serializedUTXOIndex, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()
-	db.On("Flush").Return(nil).Once()
+	// Flush invoked in AddBlockToTail twice
+	db.On("Flush").Return(nil).Twice()
 
 	// Create a blockchain for testing
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")

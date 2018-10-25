@@ -22,7 +22,12 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 	"testing"
+
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -249,9 +254,9 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
-		string(pubKeyHash): []*UTXO{
-			&UTXO{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
-			&UTXO{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
+		string(pubKeyHash): {
+			{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
+			{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
 		},
 	}
 

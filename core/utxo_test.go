@@ -204,7 +204,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	defer db.Close()
 
 	coinbaseAddr := Address{"testaddress"}
-	bc := CreateBlockchain(coinbaseAddr, db, nil)
+	bc := CreateBlockchain(coinbaseAddr, db, nil, 128)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
 	blk2 := GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change
@@ -248,8 +248,7 @@ func TestFindUTXO(t *testing.T) {
 	assert.Nil(t, utxoIndex.FindUTXO(Txin[3].Txid, Txin[3].Vout))
 }
 
-
-func TestConcurrentUTXOindexReadWrite(t *testing.T){
+func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 	index := NewUTXOIndex()
 
 	var readOps uint64
@@ -257,7 +256,6 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T){
 	var deleteOps uint64
 	const concurrentUsers = 10
 	exists := false
-
 
 	// start 10 simultaneous goroutines to execute repeated
 	// reads and writes, once per millisecond in
@@ -270,24 +268,23 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T){
 				atomic.AddUint64(&readOps, 1)
 				//perform a write
 				if !exists {
-					index.addUTXO(TXOutput{},[]byte("asd"),65)
+					index.addUTXO(TXOutput{}, []byte("asd"), 65)
 					atomic.AddUint64(&addOps, 1)
 					exists = true
 
-				}else{
+				} else {
 					index.removeUTXO([]byte("asd"), 65)
 					atomic.AddUint64(&deleteOps, 1)
 					exists = false
 				}
 
-				time.Sleep(time.Millisecond*1)
+				time.Sleep(time.Millisecond * 1)
 			}
 		}()
 	}
 
-	time.Sleep(time.Second* 1)
+	time.Sleep(time.Second * 1)
 
 	//if reports concurrent map writes, then test is broken, if passes, then test is correct
 	assert.True(t, true)
 }
-

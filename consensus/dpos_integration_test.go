@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,16 +36,14 @@ func TestDpos_Start(t *testing.T) {
 	dpos := NewDpos()
 	cbAddr := core.Address{"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128)
 	node := network.NewNode(bc)
 	node.Start(21100)
 	dpos.Setup(node, cbAddr.Address)
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.Address}
-	dynasty := NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(2)
-	dynasty.SetMaxProducers(2)
+	dynasty := NewDynasty(miners, 2, 2)
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)
@@ -52,7 +51,7 @@ func TestDpos_Start(t *testing.T) {
 	currentTime := time.Now().UTC().Unix()
 	dpos.Start()
 	//wait for the block gets mined
-	for bc.GetMaxHeight() <= 0 && !core.IsTimeOut(currentTime, int64(50)) {
+	for bc.GetMaxHeight() <= 0 && !util.IsTimeOut(currentTime, int64(50)) {
 	}
 	dpos.Stop()
 
@@ -63,7 +62,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	const (
 		timeBetweenBlock = 2
 		dposRounds       = 3
-		bufferTime       = 1
 	)
 
 	miners := []string{
@@ -74,16 +72,14 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
 		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
-	dynasty := NewDynastyWithProducers(miners)
-	dynasty.SetTimeBetweenBlk(timeBetweenBlock)
-	dynasty.SetMaxProducers(len(miners))
+	dynasty := NewDynasty(miners, len(miners), timeBetweenBlock)
 	dposArray := []*Dpos{}
 	var firstNode *network.Node
 	for i := 0; i < len(miners); i++ {
 		dpos := NewDpos()
 		dpos.SetDynasty(dynasty)
 		dpos.SetTargetBit(0)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos)
+		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128)
 		node := network.NewNode(bc)
 		node.Start(21200 + i)
 		if i == 0 {
@@ -102,12 +98,13 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Start()
 	}
 
-	time.Sleep(time.Second * time.Duration(dynasty.dynastyTime*dposRounds+bufferTime))
+	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
 	}
-
+	//Waiting block sync to other nodes
+	time.Sleep(time.Second * 2)
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i]
 		core.WaitFullyStop(v, 20)

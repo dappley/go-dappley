@@ -20,16 +20,16 @@ package storage
 
 import (
 	"bytes"
+	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
-	logger "github.com/sirupsen/logrus"
 )
 
-type FileLoader struct{
+type FileLoader struct {
 	filePath string
 }
 
-func NewFileLoader(filePath string) *FileLoader{
+func NewFileLoader(filePath string) *FileLoader {
 	return &FileLoader{
 		filePath: filePath,
 	}
