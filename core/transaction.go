@@ -39,7 +39,6 @@ import (
 )
 
 var subsidy = common.NewAmount(10)
-var enableAddBalanceTest = true
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -190,7 +189,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) == false {
+	if tx.verifyAmount(prevUtxos) == false {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
