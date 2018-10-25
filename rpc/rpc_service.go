@@ -478,7 +478,7 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 	}
 
 	var blocks []*core.Block
-	maxBlockCount := int32(rpcService.node.GetBlockchain().GetMaxHeight())
+	maxBlockCount := in.MaxCount
 	if maxBlockCount > MaxGetBlocksCount {
 		maxBlockCount = MaxGetBlocksCount
 	}

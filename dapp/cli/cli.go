@@ -39,7 +39,7 @@ import (
 
 //command names
 const (
-	cliListAllBlocks     = "listAllBlocks"
+	cliGetBlocks     = "getBlocks"
 	cliGetBlockchainInfo = "getBlockchainInfo"
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
@@ -53,6 +53,7 @@ const (
 
 //flag names
 const (
+	flagBlockMaxCount  = "maxCount"
 	flagAddress        = "address"
 	flagAddressBalance = "address"
 	flagAmountBalance  = "amount"
@@ -82,7 +83,7 @@ const (
 
 //list of commands
 var cmdList = []string{
-	cliListAllBlocks,
+	cliGetBlocks,
 	cliGetBlockchainInfo,
 	cliGetBalance,
 	cliGetPeerInfo,
@@ -96,6 +97,12 @@ var cmdList = []string{
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
+	cliGetBlocks: {flagPars{
+		flagBlockMaxCount,
+		0,
+		valueTypeInt,
+		"maxCount. Eg. 500",
+	}},
 	cliGetBalance: {flagPars{
 		flagAddress,
 		"",
@@ -157,7 +164,7 @@ var cmdFlagsMap = map[string][]flagPars{
 
 //map the callback function to each command
 var cmdHandlers = map[string]commandHandlersWithType{
-	cliListAllBlocks:     {rpcService, listAllBlocksCommandHandler},
+	cliGetBlocks:     {rpcService, getBlocksCommandHandler},
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {rpcService, getPeerInfoCommandHandler},
@@ -262,10 +269,19 @@ func printUsage() {
 	}
 }
 
-func listAllBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, &rpcpb.GetBlocksRequest{})
+func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
+	if maxCount <= 0 {
+		fmt.Println("List all blocks error! maxCount must be greater than zero!")
+		return
+	}
+
+	getBlocksRequest := &rpcpb.GetBlocksRequest{}
+	getBlocksRequest.MaxCount = maxCount
+
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
 	if err != nil {
-		fmt.Println("ERROR: listAllBlocks failed. ERR:", err)
+		fmt.Println("ERROR: getBlocks failed. ERR:", err)
 		return
 	}
 
