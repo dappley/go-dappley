@@ -19,16 +19,16 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
-	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/dappley/go-dappley/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/network"
 )
 
-func TestProofOfWork_NewPoW(t *testing.T) {
+func TestProofOfWork_NewPoW(t *testing.T){
 	pow := NewProofOfWork()
-	assert.Nil(t, pow.node)
-	assert.Nil(t, pow.bc)
+	assert.Nil(t,pow.node)
+	assert.Nil(t,pow.bc)
 }
 
 func TestProofOfWork_Setup(t *testing.T) {
@@ -36,5 +36,8 @@ func TestProofOfWork_Setup(t *testing.T) {
 	bc := core.GenerateMockBlockchain(5)
 	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	pow.Setup(network.NewNode(bc), cbAddr)
-	assert.Equal(t, bc, pow.bc)
+	assert.Equal(t,bc,pow.bc)
 }
+
+
+

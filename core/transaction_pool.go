@@ -25,33 +25,39 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+const TransactionPoolLimit = 128
+
 type TransactionPool struct {
+	messageCh    chan string
+	exitCh       chan bool
+	size         int
 	Transactions sorted.Slice
-	limit        uint32
 }
 
-func compareTxTips(tx1 interface{}, tx2 interface{}) int {
-	t1 := tx1.(Transaction)
-	t2 := tx2.(Transaction)
-	if t1.Tip < t2.Tip {
+func NewTransactionPool() *TransactionPool {
+	txPool := &TransactionPool{
+		messageCh: make(chan string, 128),
+		size:      128,
+	}
+	txPool.Transactions = *sorted.NewSlice(CompareTransactionTips, match)
+	return txPool
+}
+
+func CompareTransactionTips(a interface{}, b interface{}) int {
+	ai := a.(Transaction)
+	bi := b.(Transaction)
+	if ai.Tip < bi.Tip {
 		return -1
-	} else if t1.Tip > t2.Tip {
+	} else if ai.Tip > bi.Tip {
 		return 1
 	} else {
 		return 0
 	}
 }
 
-// match returns true if tx1 and tx2 are Transactions and they have the same ID, false otherwise
-func match(tx1 interface{}, tx2 interface{}) bool {
-	return bytes.Compare(tx1.(Transaction).ID, tx2.(Transaction).ID) == 0
-}
-
-func NewTransactionPool(limit uint32) *TransactionPool {
-	return &TransactionPool{
-		Transactions: *sorted.NewSlice(compareTxTips, match),
-		limit:        limit,
-	}
+// match returns true if a and b are Transactions and they have the same ID, false otherwise
+func match(a interface{}, b interface{}) bool {
+	return bytes.Compare(a.(Transaction).ID, b.(Transaction).ID) == 0
 }
 
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
@@ -60,25 +66,27 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	}
 }
 
-// traverse iterates through the transaction pool and pass the transaction to txHandler callback in each iteration
-func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
+//function f should return true if the transaction needs to be pushed back to the pool
+func (txPool *TransactionPool) Traverse(txHandler func(tx Transaction) bool) {
+
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
-		txHandler(tx)
+		if !txHandler(tx) {
+			txPool.Transactions.Del(tx)
+		}
 	}
 }
 
-// RemoveInvalidTransactions removes invalid transactions in transaction pool based on the existing UTXOs in utxoPool
-func (txPool *TransactionPool) RemoveInvalidTransactions(utxoPool UTXOIndex) {
-	txPool.traverse(func(tx Transaction) {
-		if !tx.Verify(utxoPool, 0) { // all transactions in transaction pool have no blockHeight
-			txPool.Transactions.Del(tx)
-		}
+func (txPool *TransactionPool) FilterAllTransactions(utxoPool UTXOIndex) {
+	txPool.Traverse(func(tx Transaction) bool {
+		return tx.Verify(utxoPool, 0) // all transactions in transaction pool have no blockHeight
+		// TODO: also check if amount is valid
 	})
 }
 
-func (txPool *TransactionPool) Pop() []*Transaction {
-	var sortedTransactions []*Transaction
+//need to optimize
+func (txPool *TransactionPool) PopSortedTransactions() []*Transaction {
+	sortedTransactions := []*Transaction{}
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.Transactions.PopRight().(Transaction)
 		sortedTransactions = append(sortedTransactions, &tx)
@@ -87,23 +95,44 @@ func (txPool *TransactionPool) Pop() []*Transaction {
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
-	if txPool.limit == 0 {
-		logger.Warn("TransactionPool: transaction not pushed to pool because limit is set to 0")
-		return
-	}
+	//get smallest tip tx
 
-	if txPool.Transactions.Len() >= int(txPool.limit) {
-		logger.WithFields(logger.Fields{
-			"limit": txPool.limit,
-		}).Debug("TransactionPool: transaction pool limit reached")
-
-		leastTipTx := txPool.Transactions.Left().(Transaction)
-		if tx.Tip <= leastTipTx.Tip {
-			return
+	if txPool.Transactions.Len() >= TransactionPoolLimit {
+		compareTx := txPool.Transactions.PopLeft().(Transaction)
+		greaterThanLeastTip := tx.Tip > compareTx.Tip
+		if greaterThanLeastTip {
+			txPool.Transactions.Push(tx)
+		} else { // do nothing, push back popped tx
+			txPool.Transactions.Push(compareTx)
 		}
-
-		txPool.Transactions.PopLeft()
+	} else {
+		txPool.Transactions.Push(tx)
 	}
+}
 
-	txPool.Transactions.Push(tx)
+func (txPool *TransactionPool) Start() {
+	go txPool.messageLoop()
+}
+
+func (txPool *TransactionPool) Stop() {
+	txPool.exitCh <- true
+}
+
+//todo: will change the input from string to transaction
+func (txPool *TransactionPool) PushTransaction(msg string) {
+	//func (txPool *TransactionPool) PushTransaction(tx *Transaction){
+	//	txPool.Push(tx)
+	logger.Info(msg)
+}
+
+func (txPool *TransactionPool) messageLoop() {
+	for {
+		select {
+		case <-txPool.exitCh:
+			logger.Info("Quit Transaction Pool")
+			return
+		case msg := <-txPool.messageCh:
+			txPool.PushTransaction(msg)
+		}
+	}
 }

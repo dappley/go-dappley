@@ -19,7 +19,6 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mock"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"fmt"
 )
 
 func TestWalletManager_LoadFromFileExists(t *testing.T) {
@@ -174,7 +174,7 @@ func TestNewWalletManager_UnlockTimer(t *testing.T) {
 
 	wm.SetUnlockTimer(10 * time.Second)
 	assert.Equal(t, wm.Locked, false)
-	time.Sleep(3 * time.Second)
+	time.Sleep(3 *  time.Second)
 	assert.Equal(t, wm.Locked, false)
 	time.Sleep(9 * time.Second)
 	fl2 := storage.NewFileLoader(strings.Replace(GetWalletFilePath(), "wallets", "wallets_test", -1))

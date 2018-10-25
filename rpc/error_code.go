@@ -12,10 +12,4 @@ const (
 
 	// InvalidTransaction transaction is invalid
 	InvalidTransaction uint32 = 3
-
-	//BlockNotFound block not found in blockchain
-	BlockNotFound uint32 = 4
-
-	// GetBlocksCountOverflow get blocks count over the max num
-	GetBlocksCountOverflow uint32 = 5
 )

@@ -21,7 +21,7 @@ package core
 import (
 	"bytes"
 
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/dappley/go-dappley/util"
 )
 
 type Address struct {
@@ -36,7 +36,7 @@ func NewAddress(addressString string) Address {
 
 func (a Address) ValidateAddress() bool {
 
-	pubKeyHash := base58.Decode(a.Address)
+	pubKeyHash := util.Base58Decode([]byte(a.Address))
 
 	if len(pubKeyHash) < addressChecksumLen {
 		return false
@@ -50,7 +50,7 @@ func (a Address) ValidateAddress() bool {
 }
 
 func (a Address) GetPubKeyHash() ([]byte, bool) {
-	pubKeyHash := base58.Decode(a.Address)
+	pubKeyHash := util.Base58Decode([]byte(a.Address))
 
 	if len(pubKeyHash) < addressChecksumLen {
 		return nil, false

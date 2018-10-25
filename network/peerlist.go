@@ -89,7 +89,7 @@ func NewPeerListStr(strs []string) *PeerList {
 
 		if err != nil {
 			logger.Warn("Address Unrecognized:", str)
-		} else {
+		}else{
 			ps = append(ps, peer)
 		}
 	}
@@ -111,10 +111,10 @@ func (pl *PeerList) RemoveOneIP(p *Peer) {
 	}
 }
 
-func (pl *PeerList) DeletePeer(p *Peer) {
-	for i, peer := range pl.GetPeerlist() {
+func (pl *PeerList) DeletePeer(p *Peer){
+	for i, peer := range pl.GetPeerlist(){
 		if peer.peerid.String() == p.peerid.String() || peer.addr.String() == p.addr.String() {
-			pl.peers = append(pl.peers[:i], pl.peers[i+1:]...)
+			pl.peers = append(pl.peers[:i],pl.peers[i+1:]...)
 			return
 		}
 	}

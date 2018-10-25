@@ -41,6 +41,7 @@ func testEq(a interface{}, b interface{}) bool {
 	return ai == bi
 }
 
+
 func TestSlice(t *testing.T) {
 	slice := NewSlice(testCmp, testEq)
 	slice.Push(3)

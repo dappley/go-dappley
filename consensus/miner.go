@@ -86,9 +86,6 @@ func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*Min
 
 func (miner *Miner) Start() {
 	go func() {
-		if miner.bc.GetBlockPool().GetSyncState() {
-			return
-		}
 		logger.Info("Miner: Start Mining A Block...")
 		miner.resetExitCh()
 		miner.prepare()
@@ -98,6 +95,7 @@ func (miner *Miner) Start() {
 		for {
 			select {
 			case <-miner.exitCh:
+				miner.stop = true
 				break hashLoop
 			default:
 				if nonce < maxNonce {
@@ -111,7 +109,6 @@ func (miner *Miner) Start() {
 				}
 			}
 		}
-		miner.stop = true
 		miner.returnBlk()
 		logger.Info("Miner: Mining Ends...")
 	}()
@@ -161,7 +158,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	//verify all transactions
 	miner.verifyTransactions()
 	//get all transactions
-	txs := miner.bc.GetTxPool().Pop()
+	txs := miner.bc.GetTxPool().PopSortedTransactions()
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1)
 	txs = append(txs, &cbtx)
@@ -206,5 +203,5 @@ func (miner *Miner) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool) 
 func (miner *Miner) verifyTransactions() {
 	utxoPool := core.LoadUTXOIndex(miner.bc.GetDb())
 	txPool := miner.bc.GetTxPool()
-	txPool.RemoveInvalidTransactions(utxoPool)
+	txPool.FilterAllTransactions(utxoPool)
 }
