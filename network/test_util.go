@@ -19,29 +19,41 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/dappley/go-dappley/core"
 )
 
-func FakeNodeWithPeer(pid, addr string) *Node {
+func FakeNodeWithPeer(pid, addr string) *Node{
 
 	node := NewNode(nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := multiaddr.NewMultiaddr(addr)
-	p := &Peer{peerid, maddr}
+	p := &Peer{peerid,maddr}
 	node.GetPeerList().Add(p)
 
 	return node
 }
 
-func FakeNodeWithPidAndAddr(bc *core.Blockchain, pid, addr string) *Node {
+func FakeNodeWithPidAndAddr(bc *core.Blockchain,pid, addr string) *Node{
 
 	node := NewNode(bc)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := multiaddr.NewMultiaddr(addr)
-	p := &Peer{peerid, maddr}
+	p := &Peer{peerid,maddr}
 	node.info = p
+
+	return node
+}
+
+func FakeNodeWithPeerAndBlockchain(pid, addr string) *Node{
+
+	node := NewNode(nil)
+	peerid, _ := peer.IDB58Decode(pid)
+	maddr, _ := multiaddr.NewMultiaddr(addr)
+	p := &Peer{peerid,maddr}
+	node.GetPeerList().Add(p)
+	node.bc = core.GenerateMockBlockchain(10)
 
 	return node
 }

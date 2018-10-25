@@ -19,62 +19,62 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
+	"github.com/dappley/go-dappley/network/pb"
 	"time"
 )
 
-type DapMsg struct {
-	cmd            string
-	data           []byte
-	unixTimeRecvd  int64
-	key            string
-	uniOrBroadcast int ``
-	counter        uint64
+type DapMsg struct{
+	cmd 	string
+	data 	[]byte
+	unixTimeRecvd int64
+	key string
+	uniOrBroadcast int``
+	counter uint64
 }
 
-func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int, counter *uint64) *DapMsg {
-	if *counter > uint64(MaxMsgCountBeforeReset) {
+func NewDapmsg(cmd string, data []byte, from string, uniOrBroadcast int, counter *uint64) *DapMsg {
+	if *counter > uint64(MaxMsgCountBeforeReset){
 		*counter = 0
 	}
 	*counter++
-	return &DapMsg{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast, *counter}
+	return &DapMsg{cmd, data, time.Now().Unix(), from, uniOrBroadcast, *counter}
 }
 
-func (dm *DapMsg) GetCmd() string {
+func (dm *DapMsg) GetCmd() string{
 	return dm.cmd
 }
 
-func (dm *DapMsg) GetData() []byte {
+func (dm *DapMsg) GetData() []byte{
 	return dm.data
 }
 
-func (dm *DapMsg) GetTimestamp() int64 {
+func (dm *DapMsg) GetTimestamp() int64{
 	return dm.unixTimeRecvd
 }
 
-func (dm *DapMsg) GetFrom() string {
+func (dm *DapMsg) GetFrom() string{
 	return dm.key
 }
-
 //used to lookup dapmsg cache (key:unix time of command + command in string, value: 1 if received recently, 0 if not).
-func (dm *DapMsg) GetKey() string {
+func (dm *DapMsg) GetKey() string{
 	return dm.key
 }
 
-func (dm *DapMsg) ToProto() proto.Message {
+
+func (dm *DapMsg) ToProto() proto.Message{
 	return &networkpb.Dapmsg{
-		Cmd:           dm.cmd,
-		Data:          dm.data,
+		Cmd: dm.cmd,
+		Data: dm.data,
 		UnixTimeRecvd: dm.unixTimeRecvd,
-		Key:           dm.key,
+		Key: dm.key,
 	}
 }
 
-func (dm *DapMsg) FromProto(pb proto.Message) {
+func (dm *DapMsg) FromProto(pb proto.Message){
 	dm.cmd = pb.(*networkpb.Dapmsg).Cmd
 	dm.data = pb.(*networkpb.Dapmsg).Data
-	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).UnixTimeRecvd
+	dm.unixTimeRecvd =pb.(*networkpb.Dapmsg).UnixTimeRecvd
 	dm.key = pb.(*networkpb.Dapmsg).Key
 
 }

@@ -64,8 +64,8 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: t,
-			sign:      nil,
-			height:    height,
+			sign: nil,
+			height:height,
 		},
 		transactions: transactions,
 	}
@@ -75,7 +75,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128)
+	bc := CreateBlockchain(addr, s, nil)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
@@ -84,6 +84,57 @@ func GenerateMockBlockchain(size int) *Blockchain {
 		bc.AddBlockToTail(b)
 	}
 	return bc
+}
+
+func GenerateMockBlockchainWithCoinbaseTxOnlyWithConsensus(size int, consensus Consensus) *Blockchain {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, consensus)
+
+	for i := 0; i < size; i++ {
+		tailBlk, _ := bc.GetTailBlock()
+		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight())
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.AddBlockToTail(b)
+	}
+	return bc
+}
+
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil)
+
+	for i := 0; i < size; i++ {
+		tailBlk, _ := bc.GetTailBlock()
+		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight())
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.AddBlockToTail(b)
+	}
+	return bc
+}
+
+//the first item is the tail of the fork
+func GenerateMockForkWithValidTx(size int, parent *Block) []*Block {
+	fork := []*Block{}
+	b := NewBlock(nil, parent)
+	b.SetHash(b.CalculateHash())
+	fork = append(fork, b)
+
+	for i := 1; i < size; i++ {
+		b = NewBlock([]*Transaction{MockTransaction()}, b)
+		b.SetHash(b.CalculateHash())
+		fork = append([]*Block{b}, fork...)
+	}
+	return fork
+}
+func GenerateMockTransactionForkWithValidSignature(db storage.Storage, address1, address2 Address, sendAmount *common.Amount, keyPair KeyPair, bc *Blockchain) Transaction {
+	tx, _ := NewUTXOTransaction(db, address1, address2, sendAmount, keyPair, bc, 0)
+	return tx
 }
 
 func MockTransaction() *Transaction {
@@ -128,8 +179,20 @@ func MockTxOutputs() []TXOutput {
 	}
 }
 
+func GenerateMockTransactionPool(numOfTxs int) *TransactionPool {
+	txPool := &TransactionPool{}
+	for i := 0; i < numOfTxs; i++ {
+		txPool.Push(*MockTransaction())
+	}
+	return txPool
+}
+
 func WaitFullyStop(consensus Consensus, timeOut int) {
 	currentTime := time.Now().UTC().Unix()
-	for !consensus.FullyStop() && !util.IsTimeOut(currentTime, int64(timeOut)) {
+	for !consensus.FullyStop() && !IsTimeOut(currentTime, int64(timeOut)) {
 	}
+}
+
+func IsTimeOut(start, timeOut int64) bool {
+	return time.Now().UTC().Unix()-start > timeOut
 }

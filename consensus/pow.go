@@ -114,7 +114,3 @@ func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool {
 func (pow *ProofOfWork) AddProducer(producer string) error {
 	return nil
 }
-
-func (pow *ProofOfWork) GetProducers() []string {
-	return nil
-}

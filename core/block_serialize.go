@@ -22,8 +22,8 @@ type BlockHeaderStream struct {
 	PrevHash  Hash
 	Nonce     int64
 	Timestamp int64
-	Sign      Hash
-	Height    uint64
+	Sign Hash
+	Height       uint64
 }
 
 type BlockStream struct {

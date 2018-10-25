@@ -20,7 +20,6 @@ package common
 
 import (
 	"errors"
-	logger "github.com/sirupsen/logrus"
 )
 
 type Entry struct {
@@ -78,16 +77,10 @@ func (t *Tree) Delete() {
 func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
 	parentTrees = append(parentTrees, t)
-	if t.GetKey() == head.GetKey() { //fork of length 1
-		return parentTrees
-	}
-	if t.Parent != nil && head != nil {
+	if t.Parent != nil {
 		for parent := t.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
 			parentTrees = append(parentTrees, parent)
 		}
-	} else {
-		logger.Error("Fork tail or head is empty!")
-		return nil
 	}
 	parentTrees = append(parentTrees, head)
 	return parentTrees

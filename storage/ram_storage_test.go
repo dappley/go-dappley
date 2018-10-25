@@ -126,5 +126,6 @@ func TestRamStorage_BatchWrite(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("1234"), v2)
 
+
 	rs.DisableBatch()
 }
