@@ -159,32 +159,41 @@ func TestNode_SyncPeers(t *testing.T){
 }
 
 func TestNode_RequestBlockUnicast(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+
+	bp0 := new(mocks.BlockPoolInterface)
+	bp1 := new(mocks.BlockPoolInterface)
+
+	bp0.On("SetBlockchain", mock.Anything).Return(nil)
+	bp0.On("BlockRequestCh").Return(make(chan core.BlockRequestPars))
+	bp1.On("SetBlockchain", mock.Anything).Return(nil)
+	bp1.On("BlockRequestCh").Return(make(chan core.BlockRequestPars))
+	bp1.On("Push", mock.Anything,mock.Anything).Return(nil)
 
 	//setup node 0
 	db0 := storage.NewRamStorage()
 	defer db0.Close()
-	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil, 128)
-	mockBp0 := core_mock.NewMockBlockPoolInterface(mockCtrl)
-	mockBp0.EXPECT().SetBlockchain(bc0)
-	bc0.SetBlockPool(mockBp0)
+
+	bc0 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db0, nil)
+	bc0.SetBlockPool(bp0)
 
 	n0 := FakeNodeWithPidAndAddr(bc0,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10000")
 
 	//setup node 1
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
-	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil, 128)
-	mockBp1 := core_mock.NewMockBlockPoolInterface(mockCtrl)
-	mockBp1.EXPECT().SetBlockchain(bc1)
-	bc1.SetBlockPool(mockBp1)
+
+	bc1 := core.CreateBlockchain(core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}, db1, nil)
+
+	bc1.SetBlockPool(bp1)
 	n1 := FakeNodeWithPidAndAddr(bc1,"QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ","/ip4/192.168.10.110/tcp/10000")
 
 	n0.Start(test_port9)
-	mockBp0.EXPECT().BlockRequestCh()
+	time.Sleep(1*time.Second)
+	bp0.AssertCalled(t, "BlockRequestCh")
+
 	n1.Start(test_port5)
-	mockBp1.EXPECT().BlockRequestCh()
+	time.Sleep(1*time.Second)
+	bp1.AssertCalled(t, "BlockRequestCh")
 
 	//add node0 as a stream peer in node1 and node2
 	err := n1.AddStream(n0.GetPeerID(),n0.GetPeerMultiaddr())
@@ -197,7 +206,9 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 
 	//node1 request the block
 	n1.RequestBlockUnicast(blk.GetHash(),n0.GetPeerID())
-	mockBp1.EXPECT().Push(blk, n0.GetPeerID())
 
-	time.Sleep(time.Second)
+	//wait for node 1 to receive response
+	time.Sleep(2*time.Second)
+	bp1.AssertCalled(t, "Push", mock.Anything, mock.Anything)
+
 }
