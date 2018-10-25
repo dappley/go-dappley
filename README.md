@@ -2,8 +2,7 @@
 
 Official Go implementation of the dappley protocol.
 
-[![Build Status](https://travis-ci.com/dappley/go-dappley.svg?branch=master)](https://travis-ci.com/dappley/go-dappley)
-
+[![Build Status](https://travis-ci.com/dappley/go-dappley.svg?branch=master)](https://travis-ci.com/dappley/go-dappley) [![Go Report Card](https://goreportcard.com/badge/github.com/dappley/go-dappley)](https://goreportcard.com/report/github.com/dappley/go-dappley)
 
 ## Building from source
 
