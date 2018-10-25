@@ -20,8 +20,7 @@ package logic
 
 import (
 	"errors"
-
-	"github.com/dappley/go-dappley/common"
+	"time"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -30,7 +29,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"time"
 )
 
 const unlockduration = 300 * time.Second
@@ -47,12 +45,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus) (*core.Blockchain, error) {
 	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit)
+	bc := core.CreateBlockchain(address, db, consensus)
 
 	return bc, nil
 }
@@ -210,25 +208,25 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) ([]byte, error) {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) error {
 	if !senderWallet.GetAddress().ValidateAddress() {
-		return nil, ErrInvalidSenderAddress
+		return ErrInvalidSenderAddress
 	}
 	if !to.ValidateAddress() {
-		return nil, ErrInvalidRcverAddress
+		return ErrInvalidRcverAddress
 	}
 	if amount.Validate() != nil || amount.IsZero() {
-		return nil, ErrInvalidAmount
+		return ErrInvalidAmount
 	}
 
 	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), bc, tip)
 	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return tx.ID, err
+	return err
 }
 
 func SetMinerKeyPair(key string) {

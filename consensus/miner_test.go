@@ -19,14 +19,14 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
+	"testing"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/core"
 	"math/big"
-	"testing"
 )
 
-func TestMiner_VerifyNonce(t *testing.T) {
+func TestMiner_VerifyNonce(t *testing.T){
 
 	miner := NewMiner()
 	miner.SetTargetBit(14)
@@ -36,25 +36,23 @@ func TestMiner_VerifyNonce(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 		nil,
-		128,
 	)
 	defer bc.GetDb().Close()
 
-	miner.Setup(bc, cbAddr.Address, nil)
+	miner.Setup(bc,cbAddr.Address, nil)
 	miner.SetPrivKey(keystr)
 
 	//prepare a block with correct nonce value
-	newBlock := core.NewBlock(nil, nil)
+	newBlock := core.NewBlock(nil,nil)
 	nonce := int64(0)
-mineloop2:
-	for {
+	mineloop2:
+	for{
 		if hash, ok := miner.verifyNonce(nonce, newBlock); ok {
-			hash = newBlock.CalculateHashWithoutNonce()
 			newBlock.SetHash(hash)
 			newBlock.SetNonce(nonce)
 			newBlock.SignBlock(miner.key, hash)
 			break mineloop2
-		} else {
+		}else{
 			nonce++
 		}
 
@@ -70,28 +68,29 @@ mineloop2:
 }
 
 func TestMiner_SetTargetBit(t *testing.T) {
-	tests := []struct {
-		name     string
-		bit      int
+	tests := []struct{
+		name 	 string
+		bit 	 int
 		expected int
-	}{{"regular", 16, 16},
-		{"zero", 0, 0},
-		{"negative", -5, 0},
-		{"above256", 257, 0},
-		{"regular2", 18, 18},
-		{"equalTo256", 256, 256},
+	}{{"regular",16,16},
+		{"zero",0,0},
+		{"negative",-5,0},
+		{"above256",257,0},
+		{"regular2",18,18},
+		{"equalTo256",256,256},
 	}
 
 	miner := NewMiner()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _,tt := range tests{
+		t.Run(tt.name,func(t *testing.T){
 			miner.SetTargetBit(tt.bit)
 			target := big.NewInt(1)
-			target.Lsh(target, uint(256-tt.expected))
-			assert.Equal(t, target, miner.target)
+			target.Lsh(target,uint(256-tt.expected))
+			assert.Equal(t,target,miner.target)
 		})
 	}
 }
+
 
 func TestMiner_ValidateDifficulty(t *testing.T) {
 
@@ -104,32 +103,31 @@ func TestMiner_ValidateDifficulty(t *testing.T) {
 
 	blk.SetHash(target.Bytes())
 
-	assert.False(t, miner.Validate(blk))
+	assert.False(t,miner.Validate(blk))
 
 	//create a block that has a hash value smaller than the target
 	target = big.NewInt(1)
 	target.Lsh(target, uint(256-defaulttargetBits-1))
 	blk.SetHash(target.Bytes())
 
-	assert.True(t, miner.Validate(blk))
+	assert.True(t,miner.Validate(blk))
 }
 
 func TestMiner_Start(t *testing.T) {
 	miner := NewMiner()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
-	bc := core.CreateBlockchain(
+	bc:=core.CreateBlockchain(
 		core.Address{cbAddr},
 		storage.NewRamStorage(),
 		nil,
-		128,
 	)
-	retCh := make(chan (*MinedBlock), 0)
-	miner.Setup(bc, cbAddr, retCh)
+	retCh := make(chan(*MinedBlock),0)
+	miner.Setup(bc,cbAddr,retCh)
 	miner.SetPrivKey(keystr)
 	miner.Start()
-	blk := <-retCh
-	assert.True(t, blk.isValid)
-	assert.True(t, blk.block.VerifyHash())
-	assert.True(t, miner.Validate(blk.block))
+	blk := <- retCh
+	assert.True(t,blk.isValid)
+	assert.True(t,blk.block.VerifyHash())
+	assert.True(t,miner.Validate(blk.block))
 }
