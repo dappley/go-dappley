@@ -40,7 +40,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"encoding/hex"
 )
 
 //command names

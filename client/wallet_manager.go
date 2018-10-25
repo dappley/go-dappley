@@ -36,7 +36,6 @@ import (
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
-const clientFilePath = "../client"
 
 type WalletManager struct {
 	Wallets    []*Wallet
