@@ -34,9 +34,9 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/vrf"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 var (

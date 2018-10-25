@@ -19,14 +19,14 @@
 package rpc
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/network"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewGrpcServer(t *testing.T) {
 	node := network.NewNode(nil)
 	grpcServer := NewGrpcServer(node, "password")
-	assert.Equal(t,node,grpcServer.node)
-	assert.Equal(t,"password",grpcServer.password)
+	assert.Equal(t, node, grpcServer.node)
+	assert.Equal(t, "password", grpcServer.password)
 }

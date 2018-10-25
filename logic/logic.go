@@ -42,7 +42,7 @@ var (
 	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct")
 	ErrPathEmpty            = errors.New("ERROR: Path empty")
 	ErrPasswordEmpty        = errors.New("ERROR: Password empty")
-	)
+)
 
 //create a blockchain
 func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32) (*core.Blockchain, error) {
@@ -85,7 +85,7 @@ func CreateWallet(path string, password string) (*client.Wallet, error) {
 func GetWallet() (*client.Wallet, error) {
 	fl := storage.NewFileLoader(client.GetWalletFilePath())
 	wm := client.NewWalletManager(fl)
-	empty, err:= wm.IsFileEmpty()
+	empty, err := wm.IsFileEmpty()
 	if empty {
 		return nil, nil
 	}
@@ -221,7 +221,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) ([]byte ,error) {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) ([]byte, error) {
 	if !senderWallet.GetAddress().ValidateAddress() {
 		return nil, ErrInvalidSenderAddress
 	}
@@ -239,7 +239,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 		return nil, err
 	}
 
-	return tx.ID,err
+	return tx.ID, err
 }
 
 //add balance

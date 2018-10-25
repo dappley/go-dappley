@@ -60,7 +60,7 @@ var blk3 = &Block{
 }
 
 func TestHashTransactions(t *testing.T) {
-	block := NewBlock([]*Transaction{&Transaction{}}, blk2)
+	block := NewBlock([]*Transaction{{}}, blk2)
 	hash := block.HashTransactions()
 	assert.Equal(t, expectHash, hash)
 }
@@ -90,9 +90,9 @@ func TestNewBlock(t *testing.T) {
 	assert.Equal(t, emptyTransaction, block4.transactions)
 	assert.Equal(t, Hash(nil), block4.header.prevHash)
 
-	block5 := NewBlock([]*Transaction{&Transaction{}}, nil)
+	block5 := NewBlock([]*Transaction{{}}, nil)
 	assert.Nil(t, block5.header.prevHash)
-	assert.Equal(t, []*Transaction{&Transaction{}}, block5.transactions)
+	assert.Equal(t, []*Transaction{{}}, block5.transactions)
 	assert.Equal(t, &Transaction{}, block5.transactions[0])
 	assert.NotNil(t, block5.transactions)
 }
@@ -188,8 +188,8 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 }
 
 func TestIsParentBlockHash(t *testing.T) {
-	parentBlock := NewBlock([]*Transaction{&Transaction{}}, blk2)
-	childBlock := NewBlock([]*Transaction{&Transaction{}}, parentBlock)
+	parentBlock := NewBlock([]*Transaction{{}}, blk2)
+	childBlock := NewBlock([]*Transaction{{}}, parentBlock)
 
 	assert.True(t, IsParentBlockHash(parentBlock, childBlock))
 	assert.False(t, IsParentBlockHash(parentBlock, nil))
@@ -198,8 +198,8 @@ func TestIsParentBlockHash(t *testing.T) {
 }
 
 func TestIsParentBlockHeight(t *testing.T) {
-	parentBlock := NewBlock([]*Transaction{&Transaction{}}, blk2)
-	childBlock := NewBlock([]*Transaction{&Transaction{}}, parentBlock)
+	parentBlock := NewBlock([]*Transaction{{}}, blk2)
+	childBlock := NewBlock([]*Transaction{{}}, parentBlock)
 
 	assert.True(t, IsParentBlockHeight(parentBlock, childBlock))
 	assert.False(t, IsParentBlockHeight(parentBlock, nil))
@@ -207,7 +207,7 @@ func TestIsParentBlockHeight(t *testing.T) {
 	assert.False(t, IsParentBlockHeight(childBlock, parentBlock))
 }
 func TestCalculateHashWithNonce(t *testing.T) {
-	block := NewBlock([]*Transaction{&Transaction{}}, blk3)
+	block := NewBlock([]*Transaction{{}}, blk3)
 	block.header.timestamp = 0
 	expectHash1 := Hash{0x9e, 0x7e, 0x58, 0x1d, 0x8c, 0x9, 0x5c, 0xb4, 0xb, 0x6c, 0xae, 0xbd, 0x9e, 0xa3, 0x4a, 0x2, 0x80, 0xf, 0xf2, 0xce, 0xce, 0x6, 0xe6, 0xbd, 0x7c, 0xe1, 0xa4, 0x5a, 0x4f, 0x2e, 0xc8, 0xe6}
 	assert.Equal(t, Hash(expectHash1), block.CalculateHashWithNonce(1))

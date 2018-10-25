@@ -22,20 +22,20 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-	"testing"
-	"time"
-	"google.golang.org/grpc"
-	"golang.org/x/net/context"
-	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/consensus"
 	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"strings"
+	"testing"
+	"time"
 )
 
 func TestServer_StartRPC(t *testing.T) {
@@ -44,14 +44,14 @@ func TestServer_StartRPC(t *testing.T) {
 	addr := "/ip4/127.0.0.1/tcp/10000"
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
-	server := NewGrpcServer(node,"temp")
+	server := NewGrpcServer(node, "temp")
 	server.Start(defaultRpcPort)
 	defer server.Stop()
 
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 	//prepare grpc client
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprint(":",defaultRpcPort), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort), grpc.WithInsecure())
 	assert.Nil(t, err)
 	defer conn.Close()
 
@@ -61,7 +61,7 @@ func TestServer_StartRPC(t *testing.T) {
 
 	ret := &network.PeerList{}
 	ret.FromProto(response.PeerList)
-	assert.Equal(t,node.GetPeerList(),ret)
+	assert.Equal(t, node.GetPeerList(), ret)
 
 }
 
@@ -73,11 +73,11 @@ func TestRpcSend(t *testing.T) {
 	client.RemoveWalletFile()
 
 	// Create wallets
-	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
 	if err != nil {
 		panic(err)
 	}
-	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +102,7 @@ func TestRpcSend(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a grpc connection and a client
-	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort + 1), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+1), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -111,16 +111,17 @@ func TestRpcSend(t *testing.T) {
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From: senderWallet.GetAddress().Address,
-		To: receiverWallet.GetAddress().Address,
-		Amount: common.NewAmount(7).Bytes(),
-		Walletpath: strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1),
+		From:       senderWallet.GetAddress().Address,
+		To:         receiverWallet.GetAddress().Address,
+		Amount:     common.NewAmount(7).Bytes(),
+		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 	})
 	assert.Nil(t, err)
 
 	// Start mining to approve the transaction
 	pow.Start()
-	for bc.GetMaxHeight() < 1 {}
+	for bc.GetMaxHeight() < 1 {
+	}
 	pow.Stop()
 
 	time.Sleep(100 * time.Millisecond)
@@ -131,7 +132,7 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	leftBalance,_ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
+	leftBalance, _ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
 	assert.Equal(t, leftBalance, senderBalance) // minedReward * (blockHeight + 1) - (Send Balance)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 

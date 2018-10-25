@@ -43,7 +43,7 @@ func TestDpos_Start(t *testing.T) {
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.Address}
-	dynasty := NewDynasty(miners, 2 ,2 )
+	dynasty := NewDynasty(miners, 2, 2)
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)

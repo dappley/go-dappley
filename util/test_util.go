@@ -19,8 +19,8 @@
 package util
 
 import (
-	"time"
 	"math/rand"
+	"time"
 )
 
 func GenerateRandomAoB(length int64) []byte {

@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/dappley/go-dappley/client"
@@ -267,14 +268,64 @@ func printUsage() {
 	}
 }
 
-func listAllBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+func listAllBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, &rpcpb.GetBlocksRequest{})
 	if err != nil {
 		fmt.Println("ERROR: listAllBlocks failed. ERR:", err)
 		return
 	}
 
-	fmt.Println(proto.MarshalTextString(response))
+	var encodedBlocks []map[string]interface{}
+	for i := 0; i < len(response.Blocks); i++ {
+		block := response.Blocks[i]
+
+		var encodedTransactions []map[string]interface{}
+
+		for j := 0; j < len(block.Transactions); j++ {
+			transaction := block.Transactions[j]
+
+			var encodedVin []map[string]interface{}
+			for k := 0; k < len(transaction.Vin); k++ {
+				vin := transaction.Vin[k]
+				encodedVin = append(encodedVin, map[string]interface{}{
+					"Vout":      vin.Vout,
+					"Signature": hex.EncodeToString(vin.Signature),
+					"PubKey":    string(vin.PubKey),
+				})
+			}
+
+			var encodedVout []map[string]interface{}
+			for l := 0; l < len(transaction.Vout); l++ {
+				vout := transaction.Vout[l]
+				encodedVout = append(encodedVout, map[string]interface{}{
+					"Value":      vout.Value,
+					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
+				})
+			}
+
+			encodedTransaction := map[string]interface{}{
+				"ID":   hex.EncodeToString(transaction.ID),
+				"Vin":  encodedVin,
+				"Vout": encodedVout,
+			}
+			encodedTransactions = append(encodedTransactions, encodedTransaction)
+		}
+
+		encodedBlock := map[string]interface{}{
+			"Header": map[string]interface{}{
+				"Hash":      hex.EncodeToString(block.Header.Hash),
+				"Prevhash":  hex.EncodeToString(block.Header.Prevhash),
+				"Timestamp": block.Header.Timestamp,
+				"Sign":      hex.EncodeToString(block.Header.Sign),
+				"height":    block.Header.Height,
+			},
+			"Transactions": encodedTransactions,
+		}
+
+		encodedBlocks = append(encodedBlocks, encodedBlock)
+	}
+
+	fmt.Println(encodedBlocks)
 }
 
 func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -283,7 +334,12 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
 		return
 	}
-	fmt.Println(proto.MarshalTextString(response))
+	encodedResponse := map[string]interface{}{
+		"TailBlockHash": hex.EncodeToString(response.TailBlockHash),
+		"BlockHeight":   response.BlockHeight,
+		"Producers":     response.Producers,
+	}
+	fmt.Println(encodedResponse)
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
