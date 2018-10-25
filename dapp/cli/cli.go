@@ -406,9 +406,6 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	empty, err := logic.IsWalletEmpty()
-	//if err != nil {
-	//	fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
-	//}
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
 	if empty {
