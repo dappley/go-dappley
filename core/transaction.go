@@ -39,7 +39,6 @@ import (
 )
 
 var subsidy = common.NewAmount(10)
-var enableAddBalanceTest = true
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -190,7 +189,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) == false {
+	if tx.verifyAmount(prevUtxos) == false {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
@@ -326,25 +325,6 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
 	return prevTXs
-}
-
-//for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transaction, error) {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	// Validate amount
-	if amount.Validate() != nil || amount.IsZero() {
-		return Transaction{}, ErrInvalidAmount
-	}
-
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-
-	tx := Transaction{nil, inputs, outputs, 0}
-	tx.ID = tx.Hash()
-
-	return tx, nil
 }
 
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool

@@ -21,17 +21,20 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"testing"
-
 	"encoding/binary"
+
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"testing"
+
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func getAoB(length int64) []byte {
@@ -264,8 +267,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	txin3 := append(txin, TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
 	txin4 := append(txin, TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
 	txout := []TXOutput{{common.NewAmount(7), pubKey}}
-	//TODO  Reopen Invalid Amount Testcase when refactor AddBalance
-	//txout2 := []TXOutput{{common.NewAmount(8), pubKey}} //Vout amount > Vin amount
+	txout2 := []TXOutput{{common.NewAmount(8), pubKey}} //Vout amount > Vin amount
 
 	tests := []struct {
 		name     string
@@ -277,7 +279,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, 0}, privKeyByte, false},
 		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, 0}, privKeyByte, false},
 		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, 0}, privKeyByte, false},
-		//{"Amount invalid", Transaction{nil, txin1, txout2, 0}, privKeyByte, false},
+		{"Amount invalid", Transaction{nil, txin1, txout2, 0}, privKeyByte, false},
 		{"Sign invalid", Transaction{nil, txin1, txout, 0}, wrongPrivKeyByte, false},
 	}
 	for _, tt := range tests {
@@ -381,33 +383,4 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	tx.Vin = Txin
 	txins, _ = tx.FindAllTxinsInUtxoPool(utxoPool)
 	assert.NotNil(t, txins)
-}
-
-func TestNewUTXOTransactionforAddBalance(t *testing.T) {
-	receiverAddr := "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"
-	testCases := []struct {
-		name        string
-		amount      *common.Amount
-		tx          Transaction
-		expectedErr error
-	}{
-		{"Add 13", common.NewAmount(13), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(13), receiverAddr)}, 0}, nil},
-		{"Add 1", common.NewAmount(1), Transaction{nil, []TXInput(nil), []TXOutput{*NewTXOutput(common.NewAmount(1), receiverAddr)}, 0}, nil},
-		{"Add 0", common.NewAmount(0), Transaction{}, ErrInvalidAmount},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tx, err := NewUTXOTransactionforAddBalance(Address{receiverAddr}, tc.amount)
-			if tc.expectedErr == nil {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.tx.Vin, tx.Vin)
-				assert.Equal(t, tc.tx.Vout, tx.Vout)
-				assert.Equal(t, tc.tx.Tip, tx.Tip)
-			} else {
-				assert.Error(t, err)
-				assert.Equal(t, tc.expectedErr, err)
-				assert.Equal(t, tc.tx, tx)
-			}
-		})
-	}
 }

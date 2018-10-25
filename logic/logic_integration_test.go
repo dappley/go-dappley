@@ -22,11 +22,10 @@ package logic
 
 import (
 	"testing"
-
-	"github.com/dappley/go-dappley/common"
-
 	"time"
 
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -429,25 +428,35 @@ func TestAddBalance(t *testing.T) {
 			defer store.Close()
 
 			// Create a coinbase address
-			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+			minerKeyPair := core.GetKeyPairByString(key)
+			minerWallet := &client.Wallet{}
+			minerWallet.Key = minerKeyPair
+
+			addr := minerWallet.Key.GenerateAddress()
 
 			bc, pow := createBlockchain(addr, store)
 
 			// Create a new wallet address for testing
 			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
 
-			// Add `addAmount` to the balance of the new wallet
-			err := AddBalance(testAddr, tc.addAmount, bc)
-			assert.Equal(t, err, tc.expectedErr)
-
 			// Start mining to approve the transaction
 			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
+			SetMinerKeyPair(key)
 			pow.Setup(node, addr.Address)
 			pow.SetTargetBit(0)
 			pow.Start()
 
 			for bc.GetMaxHeight() <= 1 {
 			}
+
+			// Add `addAmount` to the balance of the new wallet
+			err := AddBalance(testAddr, tc.addAmount, bc)
+			height := bc.GetMaxHeight()
+			assert.Equal(t, err, tc.expectedErr)
+			for bc.GetMaxHeight()-height <= 1 {
+			}
+
 			pow.Stop()
 
 			// The wallet balance should be the expected difference
@@ -514,6 +523,7 @@ func TestDoubleMint(t *testing.T) {
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := core.HashAddress(validProducerAddr)
 	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), producerHash}}, 0}
+
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock(producerHash, tx, validProducerKey, parent)

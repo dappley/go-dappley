@@ -84,3 +84,12 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	//remove the uncompressed point at pubKey[0]
 	return *private, pubKey[1:]
 }
+func GetKeyPairByString(privateKey string) *KeyPair {
+	private, err := secp256k1.HexToECDSAPrivateKey(privateKey)
+	if err != nil {
+		logger.Panic(err)
+	}
+
+	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
+	return &KeyPair{*private, pubKey[1:]}
+}

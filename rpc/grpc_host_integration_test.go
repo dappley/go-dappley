@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"fmt"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -33,6 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
 	"strings"
 	"testing"
 	"time"
