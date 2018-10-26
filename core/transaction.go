@@ -198,7 +198,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	return tx.verifySignatures(prevUtxos)
 }
 
-func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
+func (tx *Transaction) verifySignatures(prevUtxos map[string]*UTXO) bool {
 	for _, vin := range tx.Vin {
 		if prevUtxos[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
 			logger.Error("ERROR: Previous transaction is not correct")
@@ -232,7 +232,7 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 	return true
 }
 
-func (tx *Transaction) verifyAmount(prevTXs map[string]TXOutput) bool {
+func (tx *Transaction) verifyAmount(prevTXs map[string]*UTXO) bool {
 	var totalVin, totalVout common.Amount
 	for _, utxo := range prevTXs {
 		totalVin = *totalVin.Add(utxo.Value)
@@ -348,8 +348,8 @@ func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transac
 }
 
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]TXOutput, error) {
-	res := make(map[string]TXOutput)
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]*UTXO, error) {
+	res := make(map[string]*UTXO)
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := HashPubKey(vin.PubKey)
 		if err != nil {
@@ -359,8 +359,7 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]TX
 		if utxo == nil {
 			return nil, ErrTXInputNotFound
 		}
-		txout := TXOutput{utxo.Value, utxo.PubKeyHash}
-		res[hex.EncodeToString(vin.Txid)] = txout
+		res[hex.EncodeToString(vin.Txid)] = utxo
 	}
 	return res, nil
 }
