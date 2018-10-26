@@ -163,14 +163,14 @@ func (rpcService *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetP
 	}, nil
 }
 
-func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
+func (rpcService *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
 	if len(in.Address) == 0 {
 		return &rpcpb.AddProducerResponse{
 			Message: "Error: Address is empty!",
 		}, nil
 	}
 	if in.Name == "addProducer" {
-		err := rpcSerivce.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+		err := rpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
 		if err == nil {
 			return &rpcpb.AddProducerResponse{
 				Message: "Add producer sucessfully!",
@@ -351,6 +351,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
 
+//unlock the wallet through rpc service
 func (rpcService *RpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
 	msg := "failed"
 	if in.Name == "unlock" {
