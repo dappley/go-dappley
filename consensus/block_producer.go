@@ -32,7 +32,6 @@ type BlockProducer struct {
 	cbAddr   string
 	key      string
 	newBlock *MinedBlock
-	nonce    int64
 	retChan  chan *MinedBlock
 	stop     bool
 }
@@ -43,7 +42,6 @@ func NewBlockProducer() *BlockProducer {
 		bc:       nil,
 		cbAddr:   "",
 		newBlock: &MinedBlock{nil, false},
-		nonce:    0,
 		stop:     true,
 	}
 }
@@ -64,30 +62,18 @@ func (bp *BlockProducer) Setup(bc *core.Blockchain, cbAddr string, retChan chan 
 
 func (bp *BlockProducer) Start() {
 	go func() {
-		if bp.bc.GetBlockPool().GetSyncState(){
+		if bp.bc.GetBlockPool().GetSyncState() {
 			return
 		}
 		logger.Info("BlockProducer: Producing a block...")
 		bp.resetExitCh()
 		bp.prepare()
-		nonce := int64(0)
 		bp.stop = false
-	hashLoop:
-		for {
-			select {
-			case <-bp.exitCh:
-				break hashLoop
-			default:
-				if nonce < maxNonce {
-					if ok := bp.produceBlock(nonce); ok {
-						break hashLoop
-					} else {
-						nonce++
-					}
-				} else {
-					break hashLoop
-				}
-			}
+		select {
+		case <-bp.exitCh:
+			logger.Warn("BlockProducer: Block production is interrupted")
+		default:
+			bp.produceBlock()
 		}
 		bp.stop = true
 		bp.returnBlk()
@@ -145,36 +131,25 @@ func (bp *BlockProducer) prepareBlock() *MinedBlock {
 	txs = append(txs, &cbtx)
 	// TODO: add tips to txs
 
-	bp.nonce = 0
-	//prepare the new block (without the correct nonce value)
+	//prepare the new block
 	return &MinedBlock{core.NewBlock(txs, parentBlock), false}
 }
 
-// produceBlock returns true if a block is produced ans signed successfully; returns false otherwise
-func (bp *BlockProducer) produceBlock(nonce int64) bool {
+// produceBlock hashes and signs the new block; returns true if it was successful
+func (bp *BlockProducer) produceBlock() bool {
 	hash := bp.newBlock.block.CalculateHashWithoutNonce()
 	bp.newBlock.block.SetHash(hash)
-	bp.newBlock.block.SetNonce(nonce)
-	keystring := bp.GetPrivKey()
-	if len(keystring) > 0 {
-		signed := bp.newBlock.block.SignBlock(bp.GetPrivKey(), hash)
+	bp.newBlock.block.SetNonce(0)
+	keyString := bp.GetPrivKey()
+	if len(keyString) > 0 {
+		signed := bp.newBlock.block.SignBlock(keyString, hash)
 		if !signed {
-			logger.Warn("Miner Key= ", bp.GetPrivKey())
+			logger.Warn("Miner Key= ", keyString)
 			return false
 		}
 	}
 	bp.newBlock.isValid = true
 	return true
-}
-
-func (bp *BlockProducer) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool) {
-	//var hashInt big.Int
-	var hash core.Hash
-
-	hash = blk.CalculateHashWithNonce(nonce)
-	//hashInt.SetBytes(hash[:])
-
-	return hash, true/*hashInt.Cmp(bp.target) == -1*/
 }
 
 // verifyTransactions removes invalid transactions from transaction pool

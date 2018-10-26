@@ -32,16 +32,7 @@ func TestBlockProducer_Validate(t *testing.T) {
 
 	bp := NewBlockProducer()
 
-	//create a block that has a hash value larger than the target
 	blk := core.GenerateMockBlock()
-	//target := big.NewInt(1)
-	//target.Lsh(target, uint(256-defaulttargetBits+1))
-	//
-	//blk.SetHash(target.Bytes())
-	//
-	//assert.False(t, bp.Validate(blk))
-
-	//create a block that has a hash value smaller than the target
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-defaulttargetBits-1))
 	blk.SetHash(target.Bytes())
