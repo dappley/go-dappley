@@ -70,7 +70,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, 0)
+	tx, err := core.NewUTXOTransaction(core.LoadUTXOIndex(bc.GetDb()), wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, 0)
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -172,7 +172,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, 0)
+	tx, err := core.NewUTXOTransaction(core.LoadUTXOIndex(bc.GetDb()), wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, 0)
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -190,7 +190,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	}
 
 	//add second transaction
-	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, 0)
+	tx2, err := core.NewUTXOTransaction(core.LoadUTXOIndex(bc.GetDb()), wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, 0)
 	assert.Nil(t, err)
 
 	bc.GetTxPool().Push(tx2)

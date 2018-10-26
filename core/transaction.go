@@ -33,7 +33,6 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -248,19 +247,60 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	return tx
 }
 
-// NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip uint64) (Transaction, error) {
+func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (*Transaction, error){
+
 	var inputs []TXInput
 	var outputs []TXOutput
+
+	sum := common.NewAmount(0)
+	// Build a list of inputs
+	for _, utxo := range utxos {
+		input := TXInput{utxo.Txid, utxo.TxIndex, nil, senderKeyPair.PublicKey}
+		inputs = append(inputs, input)
+		sum = sum.Add(utxo.Value)
+	}
+	// Build a list of outputs
+	outputs = append(outputs, *NewTXOutput(amount, to.Address))
+
+	if sum.Cmp(amount.Add(tip)) < 0 {
+		return nil, ErrInsufficientFund
+	}
+
+	change, err := sum.Sub(amount)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+
+	change, err = change.Sub(tip)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+
+	outputs = append(outputs, *NewTXOutput(change, from.Address))
+
+	tx := &Transaction{nil, inputs, outputs, tip.Uint64()}
+	tx.ID = tx.Hash()
+	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
+	if err != nil {
+		return nil, err
+	}
+	return tx,nil
+}
+
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(utxoIndex UTXOIndex, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip uint64) (Transaction, error) {
+
 	var utxos []*UTXO
 
+	tipAmount := common.NewAmount(tip)
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
-	sum := common.NewAmount(0)
-	allUtxos := LoadUTXOIndex(db).GetUTXOsByPubKeyHash(pubKeyHash)
+	allUtxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
 
 	if len(allUtxos) < 1 {
 		return Transaction{}, ErrInsufficientFund
 	}
+
+	sum := common.NewAmount(0)
 	for _, v := range allUtxos {
 		sum = sum.Add(v.Value)
 		utxos = append(utxos, v)
@@ -269,34 +309,13 @@ func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amo
 		}
 	}
 
-	if sum.Cmp(amount) < 0 { // TODO: add tips
+	if sum.Cmp(amount.Add(tipAmount)) < 0 {
 		return Transaction{}, ErrInsufficientFund
 	}
 
-	// Build a list of inputs
-	for _, utxo := range utxos {
-		input := TXInput{utxo.Txid, utxo.TxIndex, nil, senderKeyPair.PublicKey}
-		inputs = append(inputs, input)
-	}
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-	if sum.Cmp(amount) > 0 {
-		change, err := sum.Sub(amount)
-		if err != nil {
-			logger.Panic(err)
-		}
-		outputs = append(outputs, *NewTXOutput(change, from.Address))
-	}
+	tx ,err:= NewTransaction(utxos,from, to, amount, senderKeyPair, tipAmount)
 
-	tx := Transaction{nil, inputs, outputs, tip}
-	tx.ID = tx.Hash()
-	err := tx.Sign(senderKeyPair.PrivateKey, utxos)
-	if err != nil {
-		logger.Error(err)
-		return Transaction{}, err
-	}
-
-	return tx, nil
+	return *tx,err
 }
 
 func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transaction {

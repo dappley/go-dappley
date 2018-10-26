@@ -232,7 +232,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 		return nil, ErrInvalidAmount
 	}
 
-	tx, err := core.NewUTXOTransaction(bc.GetDb(), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), tip)
+	tx, err := core.NewUTXOTransaction(core.LoadUTXOIndex(bc.GetDb()), senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), tip)
 	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
 	if err != nil {

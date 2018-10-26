@@ -101,6 +101,7 @@ func TestSend(t *testing.T) {
 				panic(err)
 			}
 			expectedBalance, _ := mineReward.Sub(tc.expectedTransfer)
+			expectedBalance, _ = expectedBalance.Sub(common.NewAmount(tc.expectedTip))
 			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the receiver's wallet should be the amount transferred
