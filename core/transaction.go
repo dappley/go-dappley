@@ -249,41 +249,24 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error) {
 
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	sum := common.NewAmount(0)
-	// Build a list of inputs
-	for _, utxo := range utxos {
-		input := TXInput{utxo.Txid, utxo.TxIndex, nil, senderKeyPair.PublicKey}
-		inputs = append(inputs, input)
-		sum = sum.Add(utxo.Value)
-	}
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-
-	if sum.Cmp(amount.Add(tip)) < 0 {
-		return Transaction{}, ErrInsufficientFund
+	sum := calculateUtxoSum(utxos)
+	change,err := calculateChange(sum, amount, tip)
+	if err!= nil {
+		return Transaction{}, err
 	}
 
-	change, err := sum.Sub(amount)
-	if err != nil {
-		return Transaction{}, ErrInsufficientFund
-	}
-
-	change, err = change.Sub(tip)
-	if err != nil {
-		return Transaction{}, ErrInsufficientFund
-	}
-
-	outputs = append(outputs, *NewTXOutput(change, from.Address))
-
-	tx := Transaction{nil, inputs, outputs, tip.Uint64()}
+	tx := Transaction{
+		nil,
+		prepareInputLists(utxos, senderKeyPair.PublicKey),
+		prepareOutputLists(from, to, amount, change),
+		tip.Uint64()}
 	tx.ID = tx.Hash()
+
 	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
 	if err != nil {
 		return Transaction{}, err
 	}
+
 	return tx,nil
 }
 
@@ -387,4 +370,51 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 		voutArray = append(voutArray, txout)
 	}
 	tx.Vout = voutArray
+}
+
+
+//calculateChange calculates the change
+func calculateChange(input, amount, tip *common.Amount) (*common.Amount, error){
+	change, err := input.Sub(amount)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+
+	change, err = change.Sub(tip)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+	return change, nil
+}
+
+//prepareInputLists prepares a list of txinputs for a new transaction
+func prepareInputLists(utxos []*UTXO, publicKey []byte) []TXInput{
+	var inputs []TXInput
+
+	// Build a list of inputs
+	for _, utxo := range utxos {
+		input := TXInput{utxo.Txid, utxo.TxIndex, nil, publicKey}
+		inputs = append(inputs, input)
+	}
+
+	return inputs
+}
+
+//calculateUtxoSum calculates the total amount of all input utxos
+func calculateUtxoSum(utxos []*UTXO) *common.Amount{
+	sum := common.NewAmount(0)
+	for _, utxo := range utxos {
+		sum = sum.Add(utxo.Value)
+	}
+	return sum
+}
+
+//preapreOutPutLists prepares a list of txoutputs for a new transaction
+func prepareOutputLists(from,to Address, amount *common.Amount, change *common.Amount) []TXOutput{
+
+	var outputs []TXOutput
+	// Build a list of outputs
+	outputs = append(outputs, *NewTXOutput(amount, to.Address))
+	outputs = append(outputs, *NewTXOutput(change, from.Address))
+	return outputs
 }
