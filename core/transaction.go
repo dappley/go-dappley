@@ -184,6 +184,19 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	return tx.verifySignatures(prevUtxos)
 }
 
+//verifyTip verifies if the transaction has the correct tip
+func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool{
+	sum := calculateUtxoSum(prevUtxos)
+	var err error
+	for _,vout := range tx.Vout{
+		sum, err = sum.Sub(vout.Value)
+		if err!=nil {
+			return false
+		}
+	}
+	return tx.Tip == sum.Uint64()
+}
+
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for _, utxo := range prevUtxos {
 		if utxo.PubKeyHash == nil {

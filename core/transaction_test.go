@@ -364,3 +364,65 @@ func TestNewUTXOTransactionforAddBalance(t *testing.T) {
 		})
 	}
 }
+
+func TestTransaction_VerifyTip(t *testing.T) {
+
+	tests := []struct{
+		name 	string
+		tx 		*Transaction
+		utxos	[]*UTXO
+		res 	bool
+	}{
+		{"correctTip",
+		 &Transaction{nil,nil,[]TXOutput{
+		 	{common.NewAmount(3),nil},
+		 	{common.NewAmount(8),nil}}, 5,
+			},
+
+		 []*UTXO{
+			{common.NewAmount(7),nil,nil,0},
+			{common.NewAmount(9),nil,nil,0}},
+			true,
+		},
+		{"notEnoughTip",
+			&Transaction{nil,nil,[]TXOutput{
+				{common.NewAmount(3),nil},
+				{common.NewAmount(8),nil}}, 5,
+			},
+
+			[]*UTXO{
+				{common.NewAmount(6),nil,nil,0},
+				{common.NewAmount(9),nil,nil,0}},
+			false,
+		},
+		{"TooMuchTip",
+			&Transaction{nil,nil,[]TXOutput{
+				{common.NewAmount(3),nil},
+				{common.NewAmount(8),nil}}, 5,
+			},
+
+			[]*UTXO{
+				{common.NewAmount(7),nil,nil,0},
+				{common.NewAmount(29),nil,nil,0}},
+			false,
+		},
+		{"Input<Output",
+			&Transaction{nil,nil,[]TXOutput{
+				{common.NewAmount(3),nil},
+				{common.NewAmount(8),nil}}, 5,
+			},
+
+			[]*UTXO{
+				{common.NewAmount(1),nil,nil,0},
+				{common.NewAmount(9),nil,nil,0}},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.res, tt.tx.verifyTip(tt.utxos))
+		})
+	}
+
+}
