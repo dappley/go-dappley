@@ -31,7 +31,6 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
@@ -39,7 +38,6 @@ import (
 )
 
 var subsidy = common.NewAmount(10)
-var enableAddBalanceTest = true
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -76,32 +74,14 @@ func (tx Transaction) Serialize() []byte {
 	return encoded.Bytes()
 }
 
-//GetToHashBytes Get bytes for hash
-func (tx *Transaction) GetToHashBytes() []byte {
-	var bytes []byte
-
-	for _, vin := range tx.Vin {
-		bytes = append(bytes, vin.Txid...)
-		// int size may differ from differnt platform
-		bytes = append(bytes, byteutils.FromInt32(int32(vin.Vout))...)
-		bytes = append(bytes, vin.PubKey...)
-		bytes = append(bytes, vin.Signature...)
-	}
-
-	for _, vout := range tx.Vout {
-		bytes = append(bytes, vout.Value.Bytes()...)
-		bytes = append(bytes, vout.PubKeyHash...)
-	}
-
-	bytes = append(bytes, byteutils.FromUint64(tx.Tip)...)
-	return bytes
-}
-
 // Hash returns the hash of the Transaction
 func (tx *Transaction) Hash() []byte {
 	var hash [32]byte
 
-	hash = sha256.Sum256(tx.GetToHashBytes())
+	txCopy := *tx
+	txCopy.ID = []byte{}
+
+	hash = sha256.Sum256(txCopy.Serialize())
 
 	return hash[:]
 }
@@ -125,20 +105,19 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	}
 
 	txCopy := tx.TrimmedCopy()
-	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
-	if err != nil {
-		logger.Error("ERROR: Get private key failed", err)
-		return err
-	}
 
 	for inID, vin := range txCopy.Vin {
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil
-		oldPubKey := txCopy.Vin[inID].PubKey
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[inID].PubKey = nil
 
-		txCopy.Vin[inID].PubKey = oldPubKey
+		privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
+		if err != nil {
+			logger.Error("ERROR: Get private key failed", err)
+			return err
+		}
 
 		signature, err := secp256k1.Sign(txCopy.ID, privData)
 		if err != nil {
@@ -190,7 +169,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) == false {
+	if tx.verifyAmount(prevUtxos) == false {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
@@ -212,10 +191,9 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 		prevTxOut := prevUtxos[hex.EncodeToString(vin.Txid)]
 
 		txCopy.Vin[inID].Signature = nil
-		oldPubKey := txCopy.Vin[inID].PubKey
 		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
 		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = oldPubKey
+		txCopy.Vin[inID].PubKey = nil
 
 		originPub := make([]byte, 1+len(vin.PubKey))
 		originPub[0] = 4 // uncompressed point
@@ -326,25 +304,6 @@ func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transactio
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
 	return prevTXs
-}
-
-//for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transaction, error) {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	// Validate amount
-	if amount.Validate() != nil || amount.IsZero() {
-		return Transaction{}, ErrInvalidAmount
-	}
-
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-
-	tx := Transaction{nil, inputs, outputs, 0}
-	tx.ID = tx.Hash()
-
-	return tx, nil
 }
 
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool

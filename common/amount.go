@@ -44,6 +44,7 @@ func (a *Amount) Validate() error {
 	return nil
 }
 
+
 // NewAmount returns a new Amount struct with given an unsigned integer.
 func NewAmount(i uint64) *Amount {
 	return &Amount{*new(big.Int).SetUint64(i)}

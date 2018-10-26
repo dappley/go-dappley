@@ -19,30 +19,20 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
+	"strings"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-
-	"strings"
-
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
 
-const (
-	ProtoVersion                  = "1.0.0"
-	MaxGetBlocksCount       int32 = 500
-	MinUtxoBlockHeaderCount int32 = 6
-)
+const ProtoVersion = "1.0.0"
 
 type RpcService struct {
 	node *network.Node
@@ -65,7 +55,8 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
 }
 
-func (rpcService *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
+// SayHello implements helloworld.GreeterServer
+func (rpcSerivce *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
 	msg := ""
 	addr := ""
 	if in.Name == "getWallet" {
@@ -144,7 +135,7 @@ func (rpcService *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.Cre
 		Address: addr}, nil
 }
 
-func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
+func (rpcSerivce *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	msg := ""
 	if in.Name == "getWallet" {
 		wallet, err := logic.GetWallet()
@@ -167,9 +158,7 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		pass := in.Passphrase
 		address := in.Address
 		msg = "Get Balance"
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
-		err := wm.LoadFromFile()
+		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 		if err != nil {
 			return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
 		}
@@ -190,7 +179,7 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		}
 
 		getbalanceResp := rpcpb.GetBalanceResponse{}
-		amount, err := logic.GetBalance(wallet.GetAddress(), rpcService.node.GetBlockchain().GetDb())
+		amount, err := logic.GetBalance(wallet.GetAddress(), rpcSerivce.node.GetBlockchain().GetDb())
 		if err != nil {
 			getbalanceResp.Message = "Failed to get balance from blockchain"
 			return &getbalanceResp, nil
@@ -203,23 +192,19 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	}
 }
 
-func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
+func (rpcSerivce *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
 	sendFromAddress := core.NewAddress(in.From)
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
-
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
-
+	path := in.Walletpath
 	if len(in.Walletpath) == 0 {
-		return &rpcpb.SendResponse{Message: "Wallet path empty error"}, core.ErrInvalidAmount
+		path = client.GetWalletFilePath()
 	}
 
-	fl := storage.NewFileLoader(in.Walletpath)
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
-
+	wm, err := logic.GetWalletManager(path)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
 	}
@@ -229,29 +214,28 @@ func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcService.node.GetBlockchain(), rpcService.node)
-	txhashStr := hex.EncodeToString(txhash)
+	err = logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcSerivce.node.GetBlockchain(), rpcSerivce.node)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
+		return &rpcpb.SendResponse{Message: "Error sending"}, err
 	}
 
-	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
+	return &rpcpb.SendResponse{Message: "Sent"}, nil
 }
 
-func (rpcService *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
+func (rpcSerivce *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
 	return &rpcpb.GetPeerInfoResponse{
-		PeerList: rpcService.node.GetPeerList().ToProto().(*networkpb.Peerlist),
+		PeerList: rpcSerivce.node.GetPeerList().ToProto().(*networkpb.Peerlist),
 	}, nil
 }
 
-func (rpcService *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
+func (rpcSerivce *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
 	if len(in.Address) == 0 {
 		return &rpcpb.AddProducerResponse{
 			Message: "Error: Address is empty!",
 		}, nil
 	}
 	if in.Name == "addProducer" {
-		err := rpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+		err := rpcSerivce.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
 		if err == nil {
 			return &rpcpb.AddProducerResponse{
 				Message: "Add producer sucessfully!",
@@ -270,15 +254,14 @@ func (rpcService *RpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddP
 	return &rpcpb.AddProducerResponse{}, nil
 }
 
-func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
+func (rpcSerivce *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	return &rpcpb.GetBlockchainInfoResponse{
-		TailBlockHash: rpcService.node.GetBlockchain().GetTailBlockHash(),
-		BlockHeight:   rpcService.node.GetBlockchain().GetMaxHeight(),
-		Producers:     rpcService.node.GetBlockchain().GetConsensus().GetProducers(),
+		TailBlockHash: rpcSerivce.node.GetBlockchain().GetTailBlockHash(),
+		BlockHeight:   rpcSerivce.node.GetBlockchain().GetMaxHeight(),
 	}, nil
 }
 
-func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb.GetWalletAddressRequest) (*rpcpb.GetWalletAddressResponse, error) {
+func (rpcSerivce *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb.GetWalletAddressRequest) (*rpcpb.GetWalletAddressResponse, error) {
 
 	if in.Name == "getWallet" {
 		msg := ""
@@ -303,9 +286,7 @@ func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 		return &getWalletAddress, nil
 	} else if in.Name == "listAddresses" {
 		pass := in.Passphrase
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
-		err := wm.LoadFromFile()
+		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 		if err != nil {
 			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
 		}
@@ -334,63 +315,6 @@ func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 		//set the timer
 		getWalletAddress := rpcpb.GetWalletAddressResponse{}
 		getWalletAddress.Address = addressList
-		return &getWalletAddress, nil
-	} else if in.Name == "listAddressesWithPrivateKey" {
-		pass := in.Passphrase
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
-		err := wm.LoadFromFile()
-		if err != nil {
-			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
-		}
-		addressList := []string{}
-		privateKeyList := []string{}
-		if wm.Locked {
-			addressList, err = wm.GetAddressesWithPassphrase(pass)
-			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
-				if err1 != nil {
-					err = err1
-					break
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
-				err = err1
-			}
-		} else {
-			addresses := wm.GetAddresses()
-			for _, addr := range addresses {
-				addressList = append(addressList, addr.Address)
-			}
-			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
-				if err1 != nil {
-					err = err1
-					break
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
-				err = err1
-			}
-			err = nil
-		}
-
-		if err != nil {
-			if strings.Contains(err.Error(), "Password not correct") {
-				return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Password not correct"}, nil
-			} else {
-				return &rpcpb.GetWalletAddressResponse{Message: err.Error()}, err
-			}
-		}
-
-		//set the timer
-		if wm.Locked {
-			wm.SetUnlockTimer(logic.GetUnlockDuration())
-		}
-
-		getWalletAddress := rpcpb.GetWalletAddressResponse{}
-		getWalletAddress.Address = addressList
-		getWalletAddress.PrivateKey = privateKeyList
 		return &getWalletAddress, nil
 	} else {
 		getWalletAddress := rpcpb.GetWalletAddressResponse{}
@@ -399,25 +323,23 @@ func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 	}
 }
 
-func (rpcService *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBalanceRequest) (*rpcpb.AddBalanceResponse, error) {
+func (rpcSerivce *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBalanceRequest) (*rpcpb.AddBalanceResponse, error) {
 	sendToAddress := core.NewAddress(in.Address)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return &rpcpb.AddBalanceResponse{Message: "Invalid send amount (must be >0)"}, nil
 	}
 
-	fl := storage.NewFileLoader(client.GetWalletFilePath())
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		return &rpcpb.AddBalanceResponse{Message: "Error loading local wallets"}, err
 	}
 
 	receiverWallet := wm.GetWalletByAddress(sendToAddress)
 	if receiverWallet == nil {
-		return &rpcpb.AddBalanceResponse{Message: "Address not found in the wallet!"}, nil
+		return &rpcpb.AddBalanceResponse{Message: "Receiver Address not found in the wallet!"}, nil
 	} else {
-		err = logic.AddBalance(sendToAddress, sendAmount, rpcService.node.GetBlockchain())
+		err = logic.AddBalance(sendToAddress, sendAmount, rpcSerivce.node.GetBlockchain())
 		if err != nil {
 			return &rpcpb.AddBalanceResponse{Message: "Add balance failed, " + err.Error()}, nil
 		} else {
@@ -449,93 +371,16 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		)
 	}
 
-	//TODO Race condition Blockchain update after GetUTXO
-	getHeaderCount := MaxGetBlocksCount
-	if int(getHeaderCount) < len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()) {
-		getHeaderCount = int32(len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()))
-	}
-
-	tailHeight := rpcService.node.GetBlockchain().GetMaxHeight()
-	for i := int32(0); i < getHeaderCount; i++ {
-		block, err := rpcService.node.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
-		if err != nil {
-			break
-		}
-
-		response.BlockHeaders = append(response.BlockHeaders, block.GetHeader().ToProto().(*corepb.BlockHeader))
-	}
-
 	return &response, nil
 }
 
-// RpcGetBlocks Get blocks in blockchain from head to tail
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
-	block := rpcService.findBlockInRequestHash(in.StartBlockHashs)
-
-	// Reach the blockchain's tail
-	if block.GetHeight() >= rpcService.node.GetBlockchain().GetMaxHeight() {
-		return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
-	}
-
-	var blocks []*core.Block
-	maxBlockCount := in.MaxCount
-	if maxBlockCount > MaxGetBlocksCount {
-		maxBlockCount = MaxGetBlocksCount
-	}
-
-	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
-	for i := int32(0); i < maxBlockCount && err == nil; i++ {
-		blocks = append(blocks, block)
-		block, err = rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
-	}
-
-	result := &rpcpb.GetBlocksResponse{ErrorCode: OK}
-
-	for _, block = range blocks {
-		result.Blocks = append(result.Blocks, block.ToProto().(*corepb.Block))
-	}
-
-	return result, nil
-}
-
-func (rpcService *RpcService) findBlockInRequestHash(startBlockHashs [][]byte) *core.Block {
-	for _, hash := range startBlockHashs {
-		// hash in blockchain, return
-		if block, err := rpcService.node.GetBlockchain().GetBlockByHash(hash); err == nil {
-			return block
-		}
-	}
-
-	// Return Genesis Block
-	block, _ := rpcService.node.GetBlockchain().GetBlockByHeight(0)
-	return block
-}
-
-// RpcGetBlockByHash Get single block in blockchain by hash
-func (rpcService *RpcService) RpcGetBlockByHash(ctx context.Context, in *rpcpb.GetBlockByHashRequest) (*rpcpb.GetBlockByHashResponse, error) {
-	block, err := rpcService.node.GetBlockchain().GetBlockByHash(in.Hash)
-
-	if err != nil {
-		return &rpcpb.GetBlockByHashResponse{ErrorCode: BlockNotFound}, nil
-	}
-
-	return &rpcpb.GetBlockByHashResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
-}
-
-// RpcGetBlockByHeight Get single block in blockchain by height
-func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb.GetBlockByHeightRequest) (*rpcpb.GetBlockByHeightResponse, error) {
-	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(in.Height)
-
-	if err != nil {
-		return &rpcpb.GetBlockByHeightResponse{ErrorCode: BlockNotFound}, nil
-	}
-
-	return &rpcpb.GetBlockByHeightResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
 }
 
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := core.Transaction{nil, nil, nil, 0}
-	tx.FromProto(in.Transaction)
+	tx.FromProto(in)
 
 	if tx.IsCoinbase() {
 		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil

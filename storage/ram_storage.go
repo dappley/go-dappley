@@ -22,22 +22,23 @@ import (
 	"sync"
 )
 
-type RamStorage struct {
-	data           *sync.Map
+
+type RamStorage struct{
+	data *sync.Map
 	isBatchEnabled bool
-	batchLock      sync.Mutex
-	batchData      map[string][]byte
+	batchLock	sync.Mutex
+	batchData   map[string][]byte
 }
 
-func NewRamStorage() *RamStorage {
+func NewRamStorage() *RamStorage{
 	return &RamStorage{
-		data:           new(sync.Map),
+		data: new(sync.Map),
 		isBatchEnabled: false,
-		batchData:      make(map[string][]byte),
+		batchData: make(map[string][]byte),
 	}
 }
 
-func (rs *RamStorage) Get(key []byte) ([]byte, error) {
+func (rs *RamStorage) Get(key []byte) ([]byte, error){
 	value, ok := rs.data.Load(string(key))
 	if ok {
 		return value.([]byte), nil
@@ -45,24 +46,19 @@ func (rs *RamStorage) Get(key []byte) ([]byte, error) {
 	return nil, ErrKeyInvalid
 }
 
-func (rs *RamStorage) Put(key []byte, val []byte) error {
+func (rs *RamStorage) Put(key []byte, val []byte) error{
 	if rs.isBatchEnabled {
 		rs.batchLock.Lock()
 		defer rs.batchLock.Unlock()
 		rs.batchData[string(key)] = val
 		return nil
 	}
-	rs.data.Store(string(key), val)
+	rs.data.Store(string(key),val)
 	return nil
 }
 
-func (rs *RamStorage) Del(key []byte) error {
-	rs.data.Delete(key)
-	return nil
-}
-
-func (rs *RamStorage) Close() error {
-	rs.data.Range(func(key, value interface{}) bool {
+func (rs *RamStorage) Close() error{
+	rs.data.Range(func(key,value interface{}) bool{
 		rs.data.Delete(key)
 		return true
 	})
@@ -99,3 +95,5 @@ func (rs *RamStorage) DisableBatch() {
 	rs.batchData = make(map[string][]byte)
 	rs.isBatchEnabled = false
 }
+
+

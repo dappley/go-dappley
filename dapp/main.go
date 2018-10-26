@@ -71,10 +71,9 @@ func main() {
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
 	conss.StartNewBlockMinting()
-	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit)
+	bc, err := core.GetBlockchain(db, conss)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss, txPoolLimit)
+		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss)
 		if err != nil {
 			logger.Panic(err)
 		}
@@ -95,11 +94,9 @@ func main() {
 	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
 	conss.Setup(node, minerAddr)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
-	logger.WithFields(logger.Fields{
-		"Miner Address": minerAddr,
-	}).Info("Consensus setup")
+	logger.Info("Miner Address is ", minerAddr)
 	logic.SetLockWallet() //lock the wallet
-
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())
 	conss.Start()
 	defer conss.Stop()
 
@@ -109,7 +106,7 @@ func main() {
 func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dynasty) {
 	//set up consensus
 	conss := consensus.NewDpos()
-	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
+	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers())
 	conss.SetDynasty(dynasty)
 	conss.SetTargetBit(0)
 	return conss, dynasty

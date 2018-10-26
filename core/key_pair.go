@@ -22,10 +22,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -53,7 +54,8 @@ func GenerateAddressByPublicKey(publicKey []byte) Address {
 	checksum := Checksum(versionedPayload)
 
 	fullPayload := append(versionedPayload, checksum...)
-	return NewAddress(base58.Encode(fullPayload))
+	address := util.Base58Encode(fullPayload)
+	return NewAddress(fmt.Sprintf("%s", address))
 }
 
 func HashPubKey(pubKey []byte) ([]byte, error) {
@@ -83,4 +85,13 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
 	//remove the uncompressed point at pubKey[0]
 	return *private, pubKey[1:]
+}
+func GetKeyPairByString(privateKey string) *KeyPair {
+	private, err := secp256k1.HexToECDSAPrivateKey(privateKey)
+	if err != nil {
+		logger.Panic(err)
+	}
+
+	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
+	return &KeyPair{*private, pubKey[1:]}
 }

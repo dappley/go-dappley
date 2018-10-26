@@ -31,7 +31,7 @@ var (
 )
 
 type LevelDB struct {
-	db    *leveldb.DB
+	db *leveldb.DB
 	batch *leveldb.Batch
 }
 
@@ -46,7 +46,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 	}
 
 	return &LevelDB{
-		db:    db1,
+		db: db1,
 		batch: nil,
 	}
 }
@@ -74,10 +74,6 @@ func (ldb *LevelDB) Put(key []byte, val []byte) error {
 		logger.Error(err)
 	}
 	return err
-}
-
-func (ldb *LevelDB) Del(key []byte) error {
-	return ldb.db.Delete(key, nil)
 }
 
 func (ldb *LevelDB) EnableBatch() {
