@@ -94,7 +94,7 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			core.WaitDoneOrTimeout(pow.FullyStop, 20)
+			core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
 			if err != nil {

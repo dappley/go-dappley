@@ -31,7 +31,7 @@ type Consensus interface {
 	Setup(NetService, string)
 	SetTargetBit(int)
 	SetKey(string)
-	FullyStop() bool
+	FinishedMining() bool
 	AddProducer(string) error
 	GetProducers() []string
 }

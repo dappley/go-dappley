@@ -24,8 +24,8 @@ func (_m *Consensus) AddProducer(_a0 string) error {
 	return r0
 }
 
-// FullyStop provides a mock function with given fields:
-func (_m *Consensus) FullyStop() bool {
+// FinishedMining provides a mock function with given fields:
+func (_m *Consensus) FinishedMining() bool {
 	ret := _m.Called()
 
 	var r0 bool
@@ -33,6 +33,22 @@ func (_m *Consensus) FullyStop() bool {
 		r0 = rf()
 	} else {
 		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// GetProducers provides a mock function with given fields:
+func (_m *Consensus) GetProducers() []string {
+	ret := _m.Called()
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
 	}
 
 	return r0

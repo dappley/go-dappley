@@ -107,7 +107,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i]
-		core.WaitDoneOrTimeout(v.FullyStop, 20)
+		core.WaitDoneOrTimeout(v.FinishedMining, 20)
 	}
 
 	for i := 0; i < len(miners); i++ {

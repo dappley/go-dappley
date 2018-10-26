@@ -165,7 +165,7 @@ func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
 func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.miner.Stop()
 }
-func (dpos *Dpos) FullyStop() bool {
+func (dpos *Dpos) FinishedMining() bool {
 	v := dpos.miner.stop
 	return v
 }
