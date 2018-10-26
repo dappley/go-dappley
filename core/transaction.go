@@ -181,7 +181,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 		return false
 	}
 
-	return tx.verifySignatures(prevUtxos)
+	return tx.verifySignatures(prevUtxos) && tx.verifyTip(prevUtxos)
 }
 
 //verifyTip verifies if the transaction has the correct tip
