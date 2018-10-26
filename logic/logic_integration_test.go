@@ -114,7 +114,7 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()), minerBalance)
+			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(tc.expectedTip)), minerBalance)
 
 		})
 	}

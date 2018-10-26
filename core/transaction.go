@@ -176,12 +176,12 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) == false {
+	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) == false {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
 
-	return tx.verifySignatures(prevUtxos) && tx.verifyTip(prevUtxos)
+	return tx.verifySignatures(prevUtxos)
 }
 
 //verifyTip verifies if the transaction has the correct tip
@@ -244,7 +244,7 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
+func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -252,7 +252,7 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
 	txin := TXInput{nil, -1, bh, []byte(data)}
-	txout := NewTXOutput(subsidy, to)
+	txout := NewTXOutput(subsidy.Add(tip), to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()
 

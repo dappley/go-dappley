@@ -62,7 +62,7 @@ func TestTrimmedCopy(t *testing.T) {
 
 	t2 := t1.TrimmedCopy()
 
-	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 	t4 := t3.TrimmedCopy()
 	assert.Equal(t, t1.ID, t2.ID)
 	assert.Equal(t, t1.Tip, t2.Tip)
@@ -164,7 +164,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	prevTXs[string(t3.ID)] = t4
 
 	// test verifying coinbase transactions
-	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5)
+	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
@@ -252,7 +252,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 }
 
 func TestNewCoinbaseTX(t *testing.T) {
-	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to '13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F'")}
 	expectVout := TXOutput{common.NewAmount(10), []byte{0x1c, 0x11, 0xfe, 0x6b, 0x98, 0x1, 0x56, 0xc5, 0x83, 0xec, 0xb1, 0xfc, 0x32, 0xdb, 0x28, 0x79, 0xb, 0x52, 0xeb, 0x2d}}
 	assert.Equal(t, 1, len(t1.Vin))
@@ -261,12 +261,12 @@ func TestNewCoinbaseTX(t *testing.T) {
 	assert.Equal(t, expectVout, t1.Vout[0])
 	assert.Equal(t, uint64(0), t1.Tip)
 
-	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 
 	// Assert that NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
 	assert.Equal(t, t1, t2)
 
-	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 1)
+	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 1, common.NewAmount(0))
 
 	assert.NotEqual(t, t1, t3)
 	assert.NotEqual(t, t1.ID, t3.ID)
@@ -283,7 +283,7 @@ func TestIsCoinBase(t *testing.T) {
 
 	assert.False(t, t1.IsCoinbase())
 
-	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 
 	assert.True(t, t2.IsCoinbase())
 
