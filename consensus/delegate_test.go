@@ -28,20 +28,20 @@ import (
 	"github.com/dappley/go-dappley/storage"
 )
 
-func TestBlockProducer_Validate(t *testing.T) {
+func TestDelegate_Validate(t *testing.T) {
 
-	bp := NewBlockProducer()
+	d := NewDelegate()
 
 	blk := core.GenerateMockBlock()
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-defaulttargetBits-1))
 	blk.SetHash(target.Bytes())
 
-	assert.True(t, bp.Validate(blk))
+	assert.True(t, d.Validate(blk))
 }
 
-func TestBlockProducer_Start(t *testing.T) {
-	bp := NewBlockProducer()
+func TestDelegate_Start(t *testing.T) {
+	d := NewDelegate()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
@@ -51,11 +51,11 @@ func TestBlockProducer_Start(t *testing.T) {
 		128,
 	)
 	retCh := make(chan *MinedBlock, 0)
-	bp.Setup(bc, cbAddr, retCh)
-	bp.SetPrivKey(keystr)
-	bp.Start()
+	d.Setup(bc, cbAddr, retCh)
+	d.SetPrivKey(keystr)
+	d.Start()
 	blk := <-retCh
 	assert.True(t, blk.isValid)
 	assert.True(t, blk.block.VerifyHash())
-	assert.True(t, bp.Validate(blk.block))
+	assert.True(t, d.Validate(blk.block))
 }

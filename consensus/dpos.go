@@ -34,21 +34,21 @@ const version = byte(0x00)
 const addressChecksumLen = 4
 
 type Dpos struct {
-	bc            *core.Blockchain
-	blockProducer *BlockProducer
-	mintBlkCh     chan *MinedBlock
-	node          core.NetService
-	quitCh        chan bool
-	dynasty       *Dynasty
-	slot          *lru.Cache
+	bc        *core.Blockchain
+	delegate  *Delegate
+	mintBlkCh chan *MinedBlock
+	node      core.NetService
+	quitCh    chan bool
+	dynasty   *Dynasty
+	slot      *lru.Cache
 }
 
 func NewDpos() *Dpos {
 	dpos := &Dpos{
-		blockProducer: NewBlockProducer(),
-		mintBlkCh:     make(chan *MinedBlock, 1),
-		node:          nil,
-		quitCh:        make(chan bool, 1),
+		delegate:  NewDelegate(),
+		mintBlkCh: make(chan *MinedBlock, 1),
+		node:      nil,
+		quitCh:    make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -66,15 +66,15 @@ func (dpos *Dpos) GetSlot() *lru.Cache {
 func (dpos *Dpos) Setup(node core.NetService, cbAddr string) {
 	dpos.bc = node.GetBlockchain()
 	dpos.node = node
-	dpos.blockProducer.Setup(dpos.bc, cbAddr, dpos.mintBlkCh)
+	dpos.delegate.Setup(dpos.bc, cbAddr, dpos.mintBlkCh)
 }
 
 func (dpos *Dpos) SetTargetBit(bit int) {
-	//dpos.blockProducer.SetTargetBit(bit)
+	//dpos.delegate.SetTargetBit(bit)
 }
 
 func (dpos *Dpos) SetKey(key string) {
-	dpos.blockProducer.SetPrivKey(key)
+	dpos.delegate.SetPrivKey(key)
 }
 
 func (dpos *Dpos) SetDynasty(dynasty *Dynasty) {
@@ -99,7 +99,7 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 }
 
 func (dpos *Dpos) Validate(block *core.Block) bool {
-	if !dpos.blockProducer.Validate(block) {
+	if !dpos.delegate.Validate(block) {
 		logger.Debug("Dpos: blockProducer validate block failed")
 		return false
 	}
@@ -124,11 +124,11 @@ func (dpos *Dpos) Start() {
 		for {
 			select {
 			case now := <-ticker:
-				if dpos.dynasty.IsMyTurn(dpos.blockProducer.cbAddr, now.Unix()) {
+				if dpos.dynasty.IsMyTurn(dpos.delegate.cbAddr, now.Unix()) {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
 					}).Info("My Turn to Mint")
-					dpos.blockProducer.Start()
+					dpos.delegate.Start()
 				}
 			case minedBlk := <-dpos.mintBlkCh:
 				if minedBlk.isValid {
@@ -150,7 +150,7 @@ func (dpos *Dpos) Start() {
 
 func (dpos *Dpos) Stop() {
 	dpos.quitCh <- true
-	dpos.blockProducer.Stop()
+	dpos.delegate.Stop()
 }
 
 func (dpos *Dpos) isForking() bool {
@@ -165,11 +165,10 @@ func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
 	return false
 }
 func (dpos *Dpos) StartNewBlockMinting() {
-	dpos.blockProducer.Stop()
+	dpos.delegate.Stop()
 }
-
 func (dpos *Dpos) FinishedMining() bool {
-	v := dpos.blockProducer.stop
+	v := dpos.delegate.stop
 	return v
 }
 

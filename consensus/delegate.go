@@ -26,7 +26,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 )
 
-type BlockProducer struct {
+type Delegate struct {
 	exitCh   chan bool
 	bc       *core.Blockchain
 	cbAddr   string
@@ -36,8 +36,8 @@ type BlockProducer struct {
 	stop     bool
 }
 
-func NewBlockProducer() *BlockProducer {
-	return &BlockProducer{
+func NewDelegate() *Delegate {
+	return &Delegate{
 		exitCh:   make(chan bool, 1),
 		bc:       nil,
 		cbAddr:   "",
@@ -46,88 +46,88 @@ func NewBlockProducer() *BlockProducer {
 	}
 }
 
-func (bp *BlockProducer) SetPrivKey(key string) {
-	bp.key = key
+func (d *Delegate) SetPrivKey(key string) {
+	d.key = key
 }
 
-func (bp *BlockProducer) GetPrivKey() string {
-	return bp.key
+func (d *Delegate) GetPrivKey() string {
+	return d.key
 }
 
-func (bp *BlockProducer) Setup(bc *core.Blockchain, cbAddr string, retChan chan *MinedBlock) {
-	bp.bc = bc
-	bp.cbAddr = cbAddr
-	bp.retChan = retChan
+func (d *Delegate) Setup(bc *core.Blockchain, cbAddr string, retChan chan *MinedBlock) {
+	d.bc = bc
+	d.cbAddr = cbAddr
+	d.retChan = retChan
 }
 
-func (bp *BlockProducer) Start() {
+func (d *Delegate) Start() {
 	go func() {
-		if bp.bc.GetBlockPool().GetSyncState() {
+		if d.bc.GetBlockPool().GetSyncState() {
 			return
 		}
-		logger.Info("BlockProducer: Producing a block...")
-		bp.resetExitCh()
-		bp.prepare()
-		bp.stop = false
+		logger.Info("Delegate: Producing a block...")
+		d.resetExitCh()
+		d.prepare()
+		d.stop = false
 		select {
-		case <-bp.exitCh:
-			logger.Warn("BlockProducer: Block production is interrupted")
+		case <-d.exitCh:
+			logger.Warn("Delegate: Block production is interrupted")
 		default:
-			bp.produceBlock()
+			d.produceBlock()
 		}
-		bp.stop = true
-		bp.returnBlk()
-		logger.Info("BlockProducer: Produced a block")
+		d.stop = true
+		d.returnBlk()
+		logger.Info("Delegate: Produced a block")
 	}()
 }
 
-func (bp *BlockProducer) Stop() {
-	if len(bp.exitCh) == 0 {
-		bp.exitCh <- true
+func (d *Delegate) Stop() {
+	if len(d.exitCh) == 0 {
+		d.exitCh <- true
 	}
 }
 
-func (bp *BlockProducer) Validate(blk *core.Block) bool {
+func (d *Delegate) Validate(blk *core.Block) bool {
 	var hashInt big.Int
 
 	hash := blk.GetHash()
 	hashInt.SetBytes(hash)
 
-	//isValid := hashInt.Cmp(bp.target) == -1
+	//isValid := hashInt.Cmp(d.target) == -1
 
 	return true
 }
 
-func (bp *BlockProducer) prepare() {
-	bp.newBlock = bp.prepareBlock()
+func (d *Delegate) prepare() {
+	d.newBlock = d.prepareBlock()
 }
 
-func (bp *BlockProducer) returnBlk() {
-	if !bp.newBlock.isValid {
-		bp.newBlock.block.Rollback(bp.bc.GetTxPool())
+func (d *Delegate) returnBlk() {
+	if !d.newBlock.isValid {
+		d.newBlock.block.Rollback(d.bc.GetTxPool())
 	}
-	bp.retChan <- bp.newBlock
+	d.retChan <- d.newBlock
 }
 
-func (bp *BlockProducer) resetExitCh() {
-	if len(bp.exitCh) > 0 {
-		<-bp.exitCh
+func (d *Delegate) resetExitCh() {
+	if len(d.exitCh) > 0 {
+		<-d.exitCh
 	}
 }
 
-func (bp *BlockProducer) prepareBlock() *MinedBlock {
+func (d *Delegate) prepareBlock() *MinedBlock {
 
-	parentBlock, err := bp.bc.GetTailBlock()
+	parentBlock, err := d.bc.GetTailBlock()
 	if err != nil {
 		logger.Error(err)
 	}
 
 	//verify all transactions
-	bp.verifyTransactions()
+	d.verifyTransactions()
 	//get all transactions
-	txs := bp.bc.GetTxPool().Pop()
+	txs := d.bc.GetTxPool().Pop()
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(bp.cbAddr, "", bp.bc.GetMaxHeight()+1)
+	cbtx := core.NewCoinbaseTX(d.cbAddr, "", d.bc.GetMaxHeight()+1)
 	txs = append(txs, &cbtx)
 	// TODO: add tips to txs
 
@@ -136,25 +136,25 @@ func (bp *BlockProducer) prepareBlock() *MinedBlock {
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful
-func (bp *BlockProducer) produceBlock() bool {
-	hash := bp.newBlock.block.CalculateHashWithoutNonce()
-	bp.newBlock.block.SetHash(hash)
-	bp.newBlock.block.SetNonce(0)
-	keyString := bp.GetPrivKey()
+func (d *Delegate) produceBlock() bool {
+	hash := d.newBlock.block.CalculateHashWithoutNonce()
+	d.newBlock.block.SetHash(hash)
+	d.newBlock.block.SetNonce(0)
+	keyString := d.GetPrivKey()
 	if len(keyString) > 0 {
-		signed := bp.newBlock.block.SignBlock(keyString, hash)
+		signed := d.newBlock.block.SignBlock(keyString, hash)
 		if !signed {
 			logger.Warn("Miner Key= ", keyString)
 			return false
 		}
 	}
-	bp.newBlock.isValid = true
+	d.newBlock.isValid = true
 	return true
 }
 
 // verifyTransactions removes invalid transactions from transaction pool
-func (bp *BlockProducer) verifyTransactions() {
-	utxoPool := core.LoadUTXOIndex(bp.bc.GetDb())
-	txPool := bp.bc.GetTxPool()
+func (d *Delegate) verifyTransactions() {
+	utxoPool := core.LoadUTXOIndex(d.bc.GetDb())
+	txPool := d.bc.GetTxPool()
 	txPool.RemoveInvalidTransactions(utxoPool)
 }
