@@ -24,7 +24,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/gob"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -300,19 +299,6 @@ func NewUTXOTransaction(utxoIndex UTXOIndex, from, to Address, amount *common.Am
 	}
 
 	return NewTransaction(utxos,from, to, amount, senderKeyPair, tipAmount)
-}
-
-func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transaction {
-	prevTXs := make(map[string]Transaction)
-
-	for _, vin := range tx.Vin {
-		prevTX, err := bc.FindTransaction(vin.Txid)
-		if err != nil {
-			logger.Panic(err)
-		}
-		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
-	}
-	return prevTXs
 }
 
 //for add balance
