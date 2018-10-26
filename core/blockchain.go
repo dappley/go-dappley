@@ -180,7 +180,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
-	err = utxoIndex.TryUpdateUtxoState(block, bcTemp.db)
+	err = utxoIndex.UpdateUtxoState(block, bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
