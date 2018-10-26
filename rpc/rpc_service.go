@@ -435,7 +435,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
 	}
 
-	utxos := utxoIndex.GetUTXOsByPubKeyHash(publicKeyHash)
+	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
 	response := rpcpb.GetUTXOResponse{ErrorCode: OK}
 	for _, utxo := range utxos {
 		response.Utxos = append(

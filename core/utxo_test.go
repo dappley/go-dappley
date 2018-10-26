@@ -213,8 +213,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	bc.AddBlockToTail(blk2)
 
 	utxoIndex := LoadUTXOIndex(db)
-	addr1UTXOs := utxoIndex.GetUTXOsByPubKeyHash(address1Hash)
-	addr2UTXOs := utxoIndex.GetUTXOsByPubKeyHash(address2Hash)
+	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address1Hash)
+	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address2Hash)
 	// Expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len(addr1UTXOs))
 	assert.Equal(t, common.NewAmount(4), addr1UTXOs[0].Value)
@@ -264,7 +264,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 		go func() {
 			for {
 				//perform a read
-				index.GetUTXOsByPubKeyHash([]byte("asd"))
+				index.GetAllUTXOsByPubKeyHash([]byte("asd"))
 				atomic.AddUint64(&readOps, 1)
 				//perform a write
 				if !exists {
@@ -287,4 +287,61 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 
 	//if reports concurrent map writes, then test is broken, if passes, then test is correct
 	assert.True(t, true)
+}
+
+func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
+
+	//preapre 3 utxos in the utxo index
+	txoutputs := []TXOutput{
+		{common.NewAmount(3), address1Hash},
+		{common.NewAmount(4), address2Hash},
+		{common.NewAmount(5), address2Hash},
+	}
+
+	index := NewUTXOIndex()
+	for _, txoutput := range txoutputs{
+		index.addUTXO(txoutput,[]byte("01"),0)
+	}
+
+	//start the test
+	tests := []struct {
+		name     string
+		amount   *common.Amount
+		pubKey 	 []byte
+		err      error
+	}{
+		{"enoughUtxo",
+		common.NewAmount(3),
+		address2Hash,
+		nil,},
+
+		{"notEnoughUtxo",
+		common.NewAmount(4),
+		address1Hash,
+			ErrInsufficientFund,},
+
+		{"justEnoughUtxo",
+			common.NewAmount(9),
+			address2Hash,
+			nil,},
+		{"notEnoughUtxo2",
+			common.NewAmount(10),
+			address2Hash,
+			ErrInsufficientFund,},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			utxos, err := index.GetUTXOsByAmount(tt.pubKey, tt.amount)
+			assert.Equal(t, tt.err, err)
+			if err!=nil {
+				return
+			}
+			sum := common.NewAmount(0)
+			for _,utxo := range utxos{
+				sum = sum.Add(utxo.Value)
+			}
+			assert.True(t, sum.Cmp(tt.amount)>=0)
+		})
+	}
+
 }

@@ -247,7 +247,7 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	return tx
 }
 
-func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (*Transaction, error){
+func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error){
 
 	var inputs []TXInput
 	var outputs []TXOutput
@@ -263,26 +263,26 @@ func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, send
 	outputs = append(outputs, *NewTXOutput(amount, to.Address))
 
 	if sum.Cmp(amount.Add(tip)) < 0 {
-		return nil, ErrInsufficientFund
+		return Transaction{}, ErrInsufficientFund
 	}
 
 	change, err := sum.Sub(amount)
 	if err != nil {
-		return nil, ErrInsufficientFund
+		return Transaction{}, ErrInsufficientFund
 	}
 
 	change, err = change.Sub(tip)
 	if err != nil {
-		return nil, ErrInsufficientFund
+		return Transaction{}, ErrInsufficientFund
 	}
 
 	outputs = append(outputs, *NewTXOutput(change, from.Address))
 
-	tx := &Transaction{nil, inputs, outputs, tip.Uint64()}
+	tx := Transaction{nil, inputs, outputs, tip.Uint64()}
 	tx.ID = tx.Hash()
 	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
 	if err != nil {
-		return nil, err
+		return Transaction{}, err
 	}
 	return tx,nil
 }
@@ -290,32 +290,16 @@ func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, send
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxoIndex UTXOIndex, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip uint64) (Transaction, error) {
 
-	var utxos []*UTXO
-
 	tipAmount := common.NewAmount(tip)
+	totalAmount := amount.Add(tipAmount)
 	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
-	allUtxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
+	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash,totalAmount)
 
-	if len(allUtxos) < 1 {
-		return Transaction{}, ErrInsufficientFund
+	if err!=nil {
+		return Transaction{}, err
 	}
 
-	sum := common.NewAmount(0)
-	for _, v := range allUtxos {
-		sum = sum.Add(v.Value)
-		utxos = append(utxos, v)
-		if sum.Cmp(amount) >= 0 {
-			break
-		}
-	}
-
-	if sum.Cmp(amount.Add(tipAmount)) < 0 {
-		return Transaction{}, ErrInsufficientFund
-	}
-
-	tx ,err:= NewTransaction(utxos,from, to, amount, senderKeyPair, tipAmount)
-
-	return *tx,err
+	return NewTransaction(utxos,from, to, amount, senderKeyPair, tipAmount)
 }
 
 func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transaction {
