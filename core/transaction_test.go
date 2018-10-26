@@ -91,22 +91,12 @@ func TestSign(t *testing.T) {
 	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
 	pubKeyHash, _ := HashPubKey(pubKey)
-	address := KeyPair{*privKey, pubKey}.GenerateAddress()
 
 	// Previous transactions containing UTXO of the address
-	prevTXs := map[string]Transaction{
-		"01": NewCoinbaseTX(address.Address, "", 1),
-		"02": NewCoinbaseTX(address.Address, "", 2),
-		"03": {
-			[]byte{3},
-			[]TXInput{},
-			[]TXOutput{
-				*NewTXOutput(common.NewAmount(3), address.Address),
-				*NewTXOutput(common.NewAmount(4), address.Address),
-				*NewTXOutput(common.NewAmount(6), address.Address),
-			},
-			0,
-		},
+	prevTXs := []*UTXO{
+		{common.NewAmount(13), pubKeyHash,[]byte("01"),0},
+		{common.NewAmount(13), pubKeyHash,[]byte("02"),0},
+		{common.NewAmount(13), pubKeyHash,[]byte("03"),0},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -122,10 +112,11 @@ func TestSign(t *testing.T) {
 
 	// Sign the transaction
 	err := tx.Sign(*privKey, prevTXs)
-
 	if assert.Nil(t, err) {
 		// Assert that the signatures were created by the fake key pair
 		for i, vin := range tx.Vin {
+
+
 			if assert.NotNil(t, vin.Signature) {
 				txCopy := tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
@@ -139,44 +130,6 @@ func TestSign(t *testing.T) {
 	}
 }
 
-func TestSign_Invalid(t *testing.T) {
-	// Fake a key pair
-	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
-	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash, _ := HashPubKey(pubKey)
-	address := KeyPair{*privKey, pubKey}.GenerateAddress()
-
-	// Previous transactions containing UTXO of the address
-	prevTXs := map[string]Transaction{"01": NewCoinbaseTX(address.Address, "", 1)}
-
-	// New transaction to be signed (paid from the fake account)
-	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
-	txin1 := append(txin, TXInput{[]byte{1}, 1, nil, pubKey}) // Invalid
-	txin2 := append(txin, TXInput{[]byte{3}, 2, nil, pubKey}) // Invalid
-	txout := []TXOutput{{common.NewAmount(16), pubKeyHash}}
-
-	tests := []struct {
-		name        string
-		tx          Transaction
-		privKey     ecdsa.PrivateKey
-		expectedErr error
-	}{
-		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey, ErrTXInputNotFound},
-		{"Previous tx not found", Transaction{nil, txin2, txout, 0}, *privKey, ErrTXInputNotFound},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.tx.Sign(tt.privKey, prevTXs)
-			assert.Equal(t, tt.expectedErr, err)
-
-			// Assert that the signatures are still nil
-			for _, vin := range tt.tx.Vin {
-				assert.Nil(t, vin.Signature)
-			}
-		})
-	}
-
-}
 
 func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var prevTXs = map[string]Transaction{}
