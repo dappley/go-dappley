@@ -54,6 +54,7 @@ message SendRequest {
   string to = 2;
   bytes amount = 3;
   string Walletpath = 4;
+  uint64 tip = 5;
 }
 
 message GetWalletAddressRequest {

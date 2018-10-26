@@ -229,7 +229,7 @@ func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcService.node.GetBlockchain(), rpcService.node)
+	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip, rpcService.node.GetBlockchain(), rpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
