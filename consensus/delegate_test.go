@@ -34,7 +34,7 @@ func TestDelegate_Validate(t *testing.T) {
 
 	blk := core.GenerateMockBlock()
 	target := big.NewInt(1)
-	target.Lsh(target, uint(256-defaulttargetBits-1))
+	target.Lsh(target, uint(256-defaultTargetBits-1))
 	blk.SetHash(target.Bytes())
 
 	assert.True(t, d.Validate(blk))

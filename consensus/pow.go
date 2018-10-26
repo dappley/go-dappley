@@ -25,18 +25,18 @@ import (
 
 type ProofOfWork struct {
 	bc          *core.Blockchain
-	miner       *Miner
-	mintBlkChan chan (*MinedBlock)
+	miner       BlockProducer
+	mintBlkChan chan *MinedBlock
 	node        core.NetService
-	exitCh      chan (bool)
+	exitCh      chan bool
 }
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
 		miner:       NewMiner(),
-		mintBlkChan: make(chan (*MinedBlock), 1),
+		mintBlkChan: make(chan *MinedBlock, 1),
 		node:        nil,
-		exitCh:      make(chan (bool), 1),
+		exitCh:      make(chan bool, 1),
 	}
 	p.SetKey("")
 	return p

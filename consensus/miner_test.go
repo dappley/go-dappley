@@ -100,7 +100,7 @@ func TestMiner_ValidateDifficulty(t *testing.T) {
 	//create a block that has a hash value larger than the target
 	blk := core.GenerateMockBlock()
 	target := big.NewInt(1)
-	target.Lsh(target, uint(256-defaulttargetBits+1))
+	target.Lsh(target, uint(256-defaultTargetBits+1))
 
 	blk.SetHash(target.Bytes())
 
@@ -108,7 +108,7 @@ func TestMiner_ValidateDifficulty(t *testing.T) {
 
 	//create a block that has a hash value smaller than the target
 	target = big.NewInt(1)
-	target.Lsh(target, uint(256-defaulttargetBits-1))
+	target.Lsh(target, uint(256-defaultTargetBits-1))
 	blk.SetHash(target.Bytes())
 
 	assert.True(t, miner.Validate(blk))

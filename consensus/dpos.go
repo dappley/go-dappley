@@ -35,7 +35,7 @@ const addressChecksumLen = 4
 
 type Dpos struct {
 	bc        *core.Blockchain
-	delegate  *Delegate
+	delegate  BlockProducer
 	mintBlkCh chan *MinedBlock
 	node      core.NetService
 	quitCh    chan bool

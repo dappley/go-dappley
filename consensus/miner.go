@@ -27,16 +27,11 @@ import (
 	"github.com/dappley/go-dappley/common"
 )
 
-const defaulttargetBits = 0
+const defaultTargetBits = 0
 
 type State int
 
 var maxNonce int64 = math.MaxInt64
-
-type MinedBlock struct {
-	block   *core.Block
-	isValid bool
-}
 
 type Miner struct {
 	target   *big.Int
@@ -46,7 +41,7 @@ type Miner struct {
 	key      string
 	newBlock *MinedBlock
 	nonce    int64
-	retChan  chan (*MinedBlock)
+	retChan  chan *MinedBlock
 	stop     bool
 }
 
@@ -60,7 +55,7 @@ func NewMiner() *Miner {
 		nonce:    0,
 		stop:     true,
 	}
-	m.SetTargetBit(defaulttargetBits)
+	m.SetTargetBit(defaultTargetBits)
 	return m
 }
 
@@ -79,7 +74,7 @@ func (miner *Miner) GetPrivKey() string {
 	return miner.key
 }
 
-func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*MinedBlock)) {
+func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan *MinedBlock) {
 	miner.bc = bc
 	miner.cbAddr = cbAddr
 	miner.retChan = retChan
