@@ -19,14 +19,16 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 type ProofOfWork struct {
 	bc          *core.Blockchain
 	miner       BlockProducer
 	mintBlkChan chan *MinedBlock
+	blkProduced bool
 	node        core.NetService
 	exitCh      chan bool
 }
@@ -35,6 +37,7 @@ func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
 		miner:       NewMiner(),
 		mintBlkChan: make(chan *MinedBlock, 1),
+		blkProduced: false,
 		node:        nil,
 		exitCh:      make(chan bool, 1),
 	}
@@ -66,6 +69,7 @@ func (pow *ProofOfWork) Start() {
 				logger.Info("PoW stopped...")
 				return
 			case minedBlk := <-pow.mintBlkChan:
+				pow.blkProduced = true
 				if minedBlk.isValid {
 					pow.updateNewBlock(minedBlk.block)
 				}
@@ -80,8 +84,7 @@ func (pow *ProofOfWork) Stop() {
 	pow.miner.Stop()
 }
 func (pow *ProofOfWork) FinishedMining() bool {
-	v := pow.miner.stop
-	return v
+	return pow.blkProduced
 }
 
 func (pow *ProofOfWork) Validate(blk *core.Block) bool {

@@ -27,22 +27,20 @@ import (
 )
 
 type Delegate struct {
-	exitCh   chan bool
-	bc       *core.Blockchain
-	cbAddr   string
-	key      string
-	newBlock *MinedBlock
-	retChan  chan *MinedBlock
-	stop     bool
+	exitCh      chan bool
+	bc          *core.Blockchain
+	beneficiary string
+	key         string
+	newBlock    *MinedBlock
+	retChan     chan *MinedBlock
 }
 
 func NewDelegate() *Delegate {
 	return &Delegate{
-		exitCh:   make(chan bool, 1),
-		bc:       nil,
-		cbAddr:   "",
-		newBlock: &MinedBlock{nil, false},
-		stop:     true,
+		exitCh:      make(chan bool, 1),
+		bc:          nil,
+		beneficiary: "",
+		newBlock:    &MinedBlock{nil, false},
 	}
 }
 
@@ -54,9 +52,13 @@ func (d *Delegate) GetPrivKey() string {
 	return d.key
 }
 
-func (d *Delegate) Setup(bc *core.Blockchain, cbAddr string, retChan chan *MinedBlock) {
+func (d *Delegate) Beneficiary() string {
+	return d.beneficiary
+}
+
+func (d *Delegate) Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock) {
 	d.bc = bc
-	d.cbAddr = cbAddr
+	d.beneficiary = beneficiaryAddr
 	d.retChan = retChan
 }
 
@@ -68,14 +70,12 @@ func (d *Delegate) Start() {
 		logger.Info("Delegate: Producing a block...")
 		d.resetExitCh()
 		d.prepare()
-		d.stop = false
 		select {
 		case <-d.exitCh:
 			logger.Warn("Delegate: Block production is interrupted")
 		default:
 			d.produceBlock()
 		}
-		d.stop = true
 		d.returnBlk()
 		logger.Info("Delegate: Produced a block")
 	}()
@@ -127,7 +127,7 @@ func (d *Delegate) prepareBlock() *MinedBlock {
 	//get all transactions
 	txs := d.bc.GetTxPool().Pop()
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(d.cbAddr, "", d.bc.GetMaxHeight()+1)
+	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1)
 	txs = append(txs, &cbtx)
 	// TODO: add tips to txs
 

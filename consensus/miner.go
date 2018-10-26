@@ -34,26 +34,24 @@ type State int
 var maxNonce int64 = math.MaxInt64
 
 type Miner struct {
-	target   *big.Int
-	exitCh   chan bool
-	bc       *core.Blockchain
-	cbAddr   string
-	key      string
-	newBlock *MinedBlock
-	nonce    int64
-	retChan  chan *MinedBlock
-	stop     bool
+	target      *big.Int
+	exitCh      chan bool
+	bc          *core.Blockchain
+	beneficiary string
+	key         string
+	newBlock    *MinedBlock
+	nonce       int64
+	retChan     chan *MinedBlock
 }
 
 func NewMiner() *Miner {
 	m := &Miner{
-		target:   nil,
-		exitCh:   make(chan bool, 1),
-		bc:       nil,
-		cbAddr:   "",
-		newBlock: &MinedBlock{nil, false},
-		nonce:    0,
-		stop:     true,
+		target:      nil,
+		exitCh:      make(chan bool, 1),
+		bc:          nil,
+		beneficiary: "",
+		newBlock:    &MinedBlock{nil, false},
+		nonce:       0,
 	}
 	m.SetTargetBit(defaultTargetBits)
 	return m
@@ -74,9 +72,13 @@ func (miner *Miner) GetPrivKey() string {
 	return miner.key
 }
 
-func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan *MinedBlock) {
+func (miner *Miner) Beneficiary() string {
+	return miner.beneficiary
+}
+
+func (miner *Miner) Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock) {
 	miner.bc = bc
-	miner.cbAddr = cbAddr
+	miner.beneficiary = beneficiaryAddr
 	miner.retChan = retChan
 }
 
@@ -89,7 +91,6 @@ func (miner *Miner) Start() {
 		miner.resetExitCh()
 		miner.prepare()
 		nonce := int64(0)
-		miner.stop = false
 	hashLoop:
 		for {
 			select {
@@ -107,7 +108,6 @@ func (miner *Miner) Start() {
 				}
 			}
 		}
-		miner.stop = true
 		miner.returnBlk()
 		logger.Info("Miner: Mining Ends...")
 	}()
@@ -164,7 +164,7 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
 	}
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1, totalTips)
+	cbtx := core.NewCoinbaseTX(miner.beneficiary, "", miner.bc.GetMaxHeight()+1, totalTips)
 	txs = append(txs, &cbtx)
 
 	miner.nonce = 0

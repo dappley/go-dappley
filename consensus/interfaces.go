@@ -26,10 +26,20 @@ type MinedBlock struct {
 }
 
 type BlockProducer interface {
-	Setup(bc *core.Blockchain, cbAddr string, retChan chan *MinedBlock)
+	// Setup tells the producer to give rewards to beneficiaryAddr and return the new block through retChan
+	Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock)
+
 	SetPrivKey(key string)
+
 	GetPrivKey() string
+
+	// Beneficiary returns the address to receive rewards
+	Beneficiary() string
+
 	Start()
+
 	Stop()
+
+	// Validate returns true if blk is valid according to consensus
 	Validate(blk *core.Block) bool
 }

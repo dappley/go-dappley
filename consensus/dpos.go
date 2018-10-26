@@ -34,21 +34,23 @@ const version = byte(0x00)
 const addressChecksumLen = 4
 
 type Dpos struct {
-	bc        *core.Blockchain
-	delegate  BlockProducer
-	mintBlkCh chan *MinedBlock
-	node      core.NetService
-	quitCh    chan bool
-	dynasty   *Dynasty
-	slot      *lru.Cache
+	bc          *core.Blockchain
+	delegate    BlockProducer
+	mintBlkCh   chan *MinedBlock
+	blkProduced bool
+	node        core.NetService
+	quitCh      chan bool
+	dynasty     *Dynasty
+	slot        *lru.Cache
 }
 
 func NewDpos() *Dpos {
 	dpos := &Dpos{
-		delegate:  NewDelegate(),
-		mintBlkCh: make(chan *MinedBlock, 1),
-		node:      nil,
-		quitCh:    make(chan bool, 1),
+		delegate:    NewDelegate(),
+		mintBlkCh:   make(chan *MinedBlock, 1),
+		blkProduced: false,
+		node:        nil,
+		quitCh:      make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -124,13 +126,15 @@ func (dpos *Dpos) Start() {
 		for {
 			select {
 			case now := <-ticker:
-				if dpos.dynasty.IsMyTurn(dpos.delegate.cbAddr, now.Unix()) {
+				if dpos.dynasty.IsMyTurn(dpos.delegate.Beneficiary(), now.Unix()) {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
 					}).Info("My Turn to Mint")
+					dpos.blkProduced = false
 					dpos.delegate.Start()
 				}
 			case minedBlk := <-dpos.mintBlkCh:
+				dpos.blkProduced = true
 				if minedBlk.isValid {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
@@ -168,8 +172,7 @@ func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.delegate.Stop()
 }
 func (dpos *Dpos) FinishedMining() bool {
-	v := dpos.delegate.stop
-	return v
+	return dpos.blkProduced
 }
 
 func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
