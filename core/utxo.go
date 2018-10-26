@@ -108,17 +108,17 @@ func (utxos UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
 }
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
-func (utxos UTXOIndex) GetAllUTXOsByPubKeyHash(pubkey []byte) []*UTXO {
+func (utxos UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) []*UTXO {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
-	return utxos.index[string(pubkey)]
+	return utxos.index[string(pubkeyHash)]
 
 }
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
-func (utxos UTXOIndex) GetUTXOsByAmount(pubkey []byte, amount *common.Amount) ([]*UTXO, error) {
+func (utxos UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amount) ([]*UTXO, error) {
 
-	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkey)
+	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 
 	var retUtxos []*UTXO
 	sum := common.NewAmount(0)

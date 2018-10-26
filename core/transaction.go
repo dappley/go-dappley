@@ -246,7 +246,8 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	return tx
 }
 
-func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error){
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error) {
 
 	var inputs []TXInput
 	var outputs []TXOutput
@@ -284,21 +285,6 @@ func NewTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, send
 		return Transaction{}, err
 	}
 	return tx,nil
-}
-
-// NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxoIndex UTXOIndex, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip uint64) (Transaction, error) {
-
-	tipAmount := common.NewAmount(tip)
-	totalAmount := amount.Add(tipAmount)
-	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
-	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash,totalAmount)
-
-	if err!=nil {
-		return Transaction{}, err
-	}
-
-	return NewTransaction(utxos,from, to, amount, senderKeyPair, tipAmount)
 }
 
 //for add balance
