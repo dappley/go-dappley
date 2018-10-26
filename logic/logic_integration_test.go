@@ -22,11 +22,9 @@ package logic
 
 import (
 	"testing"
-
-	"github.com/dappley/go-dappley/common"
-
 	"time"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -449,7 +447,6 @@ func TestAddBalance(t *testing.T) {
 			for bc.GetMaxHeight() <= 1 {
 			}
 			pow.Stop()
-
 			// The wallet balance should be the expected difference
 			balance, err := GetBalance(testAddr, store)
 			assert.Nil(t, err)
