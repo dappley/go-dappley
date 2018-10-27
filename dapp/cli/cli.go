@@ -35,6 +35,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"encoding/json"
 )
 
 //command names
@@ -370,7 +371,12 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		encodedBlocks = append(encodedBlocks, encodedBlock)
 	}
 
-	fmt.Println(encodedBlocks)
+	blocks, err := json.MarshalIndent(encodedBlocks, "", "  ")
+	if err != nil {
+		fmt.Println("Print blocks failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blocks))
 }
 
 func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -384,7 +390,13 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 		"BlockHeight":   response.BlockHeight,
 		"Producers":     response.Producers,
 	}
-	fmt.Println(encodedResponse)
+
+	blockchainInfo, err := json.MarshalIndent(encodedResponse, "", "  ")
+	if err != nil {
+		fmt.Println("Print blockchain info failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blockchainInfo))
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
