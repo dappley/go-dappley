@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/dappley/go-dappley/common"
@@ -34,13 +35,13 @@ import (
 	"log"
 	"os"
 	"strings"
-	"encoding/hex"
 	clientpkg "github.com/dappley/go-dappley/client"
+	"encoding/json"
 )
 
 //command names
 const (
-	cliGetBlocks     = "getBlocks"
+	cliGetBlocks         = "getBlocks"
 	cliGetBlockchainInfo = "getBlockchainInfo"
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
@@ -54,17 +55,18 @@ const (
 
 //flag names
 const (
-	flagBlockMaxCount  = "maxCount"
-	flagAddress        = "address"
-	flagAddressBalance = "address"
-	flagAmountBalance  = "amount"
-	flagToAddress      = "to"
-	flagFromAddress    = "from"
-	flagAmount         = "amount"
+	flagStartBlockHashes = "startBlockHashes"
+	flagBlockMaxCount    = "maxCount"
+	flagAddress          = "address"
+	flagAddressBalance   = "address"
+	flagAmountBalance    = "amount"
 	flagTip			   = "tip"
-	flagPeerFullAddr   = "peerFullAddr"
-	flagProducerAddr   = "address"
-	flagListPrivateKey = "privateKey"
+	flagToAddress        = "to"
+	flagFromAddress      = "from"
+	flagAmount           = "amount"
+	flagPeerFullAddr     = "peerFullAddr"
+	flagProducerAddr     = "address"
+	flagListPrivateKey   = "privateKey"
 )
 
 type valueType int
@@ -100,12 +102,21 @@ var cmdList = []string{
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
-	cliGetBlocks: {flagPars{
-		flagBlockMaxCount,
-		0,
-		valueTypeInt,
-		"maxCount. Eg. 500",
-	}},
+	cliGetBlocks: {
+		flagPars{
+			flagBlockMaxCount,
+			0,
+			valueTypeInt,
+			"maxCount. Eg. 500",
+		},
+		flagPars{
+			flagStartBlockHashes,
+			"",
+			valueTypeString,
+			"startBlockHashes. Eg. \"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897ba, " +
+				"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897bb\"(no space)",
+		},
+	},
 	cliGetBalance: {flagPars{
 		flagAddress,
 		"",
@@ -283,50 +294,65 @@ func printUsage() {
 func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
-		fmt.Println("List all blocks error! maxCount must be greater than zero!")
+		fmt.Println("Get blocks error! maxCount must be greater than zero!")
 		return
 	}
 
 	getBlocksRequest := &rpcpb.GetBlocksRequest{}
 	getBlocksRequest.MaxCount = maxCount
 
+	// set startBlockHashes of getBlocksRequest if specified in flag
+	startBlockHashesString := string(*(flags[flagStartBlockHashes].(*string)))
+	if len(startBlockHashesString) > 0 {
+		var startBlockHashes [][]byte
+		for _, startBlockHash := range strings.Split(startBlockHashesString, ",") {
+			startBlockHashInByte, err := hex.DecodeString(startBlockHash)
+			if err != nil{
+				fmt.Println("ERROR: get blocks failed. ERR:", err)
+				return
+			}
+			startBlockHashes = append(startBlockHashes, startBlockHashInByte)
+		}
+		getBlocksRequest.StartBlockHashes = startBlockHashes
+	}
+
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
 	if err != nil {
-		fmt.Println("ERROR: listAllBlocks failed. ERR:", err)
+		fmt.Println("ERROR: get blocks failed. ERR:", err)
 		return
 	}
 
 	var encodedBlocks []map[string]interface{}
-	for i := 0; i < len(response.Blocks); i ++ {
+	for i := 0; i < len(response.Blocks); i++ {
 		block := response.Blocks[i]
 
 		var encodedTransactions []map[string]interface{}
 
-		for j := 0; j < len(block.Transactions); j ++ {
+		for j := 0; j < len(block.Transactions); j++ {
 			transaction := block.Transactions[j]
 
 			var encodedVin []map[string]interface{}
-			for k := 0; k < len(transaction.Vin); k ++ {
+			for k := 0; k < len(transaction.Vin); k++ {
 				vin := transaction.Vin[k]
 				encodedVin = append(encodedVin, map[string]interface{}{
-					"Vout": vin.Vout,
+					"Vout":      vin.Vout,
 					"Signature": hex.EncodeToString(vin.Signature),
-					"PubKey": string(vin.PubKey),
+					"PubKey":    string(vin.PubKey),
 				})
 			}
 
 			var encodedVout []map[string]interface{}
-			for l := 0; l < len(transaction.Vout); l ++ {
+			for l := 0; l < len(transaction.Vout); l++ {
 				vout := transaction.Vout[l]
 				encodedVout = append(encodedVout, map[string]interface{}{
-					"Value": vout.Value,
+					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
 				})
 			}
 
 			encodedTransaction := map[string]interface{}{
-				"ID": hex.EncodeToString(transaction.ID),
-				"Vin": encodedVin,
+				"ID":   hex.EncodeToString(transaction.ID),
+				"Vin":  encodedVin,
 				"Vout": encodedVout,
 			}
 			encodedTransactions = append(encodedTransactions, encodedTransaction)
@@ -346,7 +372,12 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		encodedBlocks = append(encodedBlocks, encodedBlock)
 	}
 
-	fmt.Println(encodedBlocks)
+	blocks, err := json.MarshalIndent(encodedBlocks, "", "  ")
+	if err != nil {
+		fmt.Println("Print blocks failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blocks))
 }
 
 func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -360,7 +391,13 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 		"BlockHeight":   response.BlockHeight,
 		"Producers":     response.Producers,
 	}
-	fmt.Println(encodedResponse)
+
+	blockchainInfo, err := json.MarshalIndent(encodedResponse, "", "  ")
+	if err != nil {
+		fmt.Println("Print blockchain info failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blockchainInfo))
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
