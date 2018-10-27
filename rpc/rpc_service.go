@@ -386,29 +386,29 @@ func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb
 	}
 }
 
-func (rpcService *RpcService) RpcAddBalance(ctx context.Context, in *rpcpb.AddBalanceRequest) (*rpcpb.AddBalanceResponse, error) {
-	sendToAddress := core.NewAddress(in.Address)
+func (rpcService *RpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
+	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.AddBalanceResponse{Message: "Invalid send amount (must be >0)"}, nil
+		return &rpcpb.SendFromMinerResponse{Message: "Invalid send amount (must be >0)"}, nil
 	}
 
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
-		return &rpcpb.AddBalanceResponse{Message: "Error loading local wallets"}, err
+		return &rpcpb.SendFromMinerResponse{Message: "Error loading local wallets"}, err
 	}
 
 	receiverWallet := wm.GetWalletByAddress(sendToAddress)
 	if receiverWallet == nil {
-		return &rpcpb.AddBalanceResponse{Message: "Receiver Address not found in the wallet!"}, nil
+		return &rpcpb.SendFromMinerResponse{Message: "Receiver Address not found in the wallet!"}, nil
 	} else {
-		err = logic.AddBalance(sendToAddress, sendAmount, rpcService.node.GetBlockchain())
+		err = logic.SendFromMiner(sendToAddress, sendAmount, rpcService.node.GetBlockchain())
 		if err != nil {
-			return &rpcpb.AddBalanceResponse{Message: "Add balance failed, " + err.Error()}, nil
+			return &rpcpb.SendFromMinerResponse{Message: "Add balance failed, " + err.Error()}, nil
 		} else {
-			addBalanceResponse := rpcpb.AddBalanceResponse{}
-			addBalanceResponse.Message = "Add balance succeed!"
-			return &addBalanceResponse, nil
+			sendFromMinerResponse := rpcpb.SendFromMinerResponse{}
+			sendFromMinerResponse.Message = "Add balance succeed!"
+			return &sendFromMinerResponse, nil
 		}
 	}
 }

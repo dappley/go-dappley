@@ -11,7 +11,7 @@ service RpcService {
   rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
-  rpc RpcAddBalance (AddBalanceRequest) returns (AddBalanceResponse) {}
+  rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
   rpc RpcGetWalletAddress (GetWalletAddressRequest) returns (GetWalletAddressResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
@@ -44,8 +44,8 @@ message GetBalanceRequest {
   string address = 3;
 }
 
-message AddBalanceRequest {
-  string address = 1;
+message SendFromMinerRequest {
+  string to = 1;
   bytes amount = 2;
 }
 
@@ -85,7 +85,7 @@ message GetBalanceResponse {
   int64 amount = 2;
 }
 
-message AddBalanceResponse {
+message SendFromMinerResponse {
   string message = 1;
 }
 

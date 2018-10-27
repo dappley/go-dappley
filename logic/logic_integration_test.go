@@ -451,7 +451,7 @@ func TestAddBalance(t *testing.T) {
 			}
 
 			// Add `addAmount` to the balance of the new wallet
-			err := AddBalance(testAddr, tc.addAmount, bc)
+			err := SendFromMiner(testAddr, tc.addAmount, bc)
 			height := bc.GetMaxHeight()
 			assert.Equal(t, err, tc.expectedErr)
 			for bc.GetMaxHeight()-height <= 1 {
@@ -486,7 +486,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			// Create a blockchain
 			bc, err := CreateBlockchain(addr, store, nil, 128)
 			assert.Nil(t, err)
-			err = AddBalance(core.Address{tc.address}, common.NewAmount(8), bc)
+			err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc)
 			assert.Equal(t, ErrInvalidAddress, err)
 		})
 	}

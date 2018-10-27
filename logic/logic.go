@@ -238,7 +238,7 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func AddBalance(address core.Address, amount *common.Amount, bc *core.Blockchain) error {
+func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain) error {
 	if !address.ValidateAddress() {
 		return ErrInvalidAddress
 	}
