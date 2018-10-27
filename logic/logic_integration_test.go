@@ -526,7 +526,7 @@ func TestDoubleMint(t *testing.T) {
 	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}}}, 0}
 
 	for i := 0; i < 3; i++ {
-		blk := createValidBlock(producerHash, tx, validProducerKey, parent)
+		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, parent)
 		blks = append(blks, blk)
 		parent = blk
 	}
@@ -557,8 +557,8 @@ func TestDoubleMint(t *testing.T) {
 	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
 }
 
-func createValidBlock(hash core.Hash, tx *core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
-	blk := core.NewBlock([]*core.Transaction{tx}, parent)
+func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
+	blk := core.NewBlock(tx, parent)
 	blk.SetHash(blk.CalculateHashWithoutNonce())
 	blk.SignBlock(validProducerKey, blk.CalculateHashWithoutNonce())
 	return blk
