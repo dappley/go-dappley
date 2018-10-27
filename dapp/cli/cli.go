@@ -344,7 +344,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 			for l := 0; l < len(transaction.Vout); l++ {
 				vout := transaction.Vout[l]
 				encodedVout = append(encodedVout, map[string]interface{}{
-					"Value":      vout.Value,
+					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
 				})
 			}
