@@ -60,6 +60,7 @@ const (
 	flagToAddress      = "to"
 	flagFromAddress    = "from"
 	flagAmount         = "amount"
+	flagTip			   = "tip"
 	flagPeerFullAddr   = "peerFullAddr"
 	flagProducerAddr   = "address"
 	flagListPrivateKey = "privateKey"
@@ -72,6 +73,7 @@ const (
 	valueTypeInt = iota
 	valueTypeString
 	boolType
+	valueTypeUint64
 )
 
 type serviceType int
@@ -146,6 +148,12 @@ var cmdFlagsMap = map[string][]flagPars{
 			0,
 			valueTypeInt,
 			"The amount to send from the sender to the receiver.",
+		},
+		flagPars{
+			flagTip,
+			uint64(0),
+			valueTypeUint64,
+			"Tip to miner.",
 		},
 	},
 	cliAddPeer: {flagPars{
@@ -238,6 +246,8 @@ func main() {
 				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].String(par.name, par.defaultValue.(string), par.usage)
 			case boolType:
 				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Bool(par.name, par.defaultValue.(bool), par.usage)
+			case valueTypeUint64:
+				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Uint64(par.name, par.defaultValue.(uint64), par.usage)
 			}
 		}
 	}
@@ -627,9 +637,10 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	response, err := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
-		From:   *(flags[flagFromAddress].(*string)),
-		To:     *(flags[flagToAddress].(*string)),
-		Amount: common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+		From:       *(flags[flagFromAddress].(*string)),
+		To:         *(flags[flagToAddress].(*string)),
+		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+		Tip:        *(flags[flagTip].(*uint64)),
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
