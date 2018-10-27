@@ -39,7 +39,7 @@ import (
 
 //command names
 const (
-	cliGetBlocks     = "getBlocks"
+	cliGetBlocks         = "getBlocks"
 	cliGetBlockchainInfo = "getBlockchainInfo"
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
@@ -53,17 +53,18 @@ const (
 
 //flag names
 const (
-	flagBlockMaxCount  = "maxCount"
-	flagAddress        = "address"
-	flagAddressBalance = "address"
-	flagAmountBalance  = "amount"
-	flagToAddress      = "to"
-	flagFromAddress    = "from"
-	flagAmount         = "amount"
+	flagStartBlockHashes = "startBlockHashes"
+	flagBlockMaxCount    = "maxCount"
+	flagAddress          = "address"
+	flagAddressBalance   = "address"
+	flagAmountBalance    = "amount"
 	flagTip			   = "tip"
-	flagPeerFullAddr   = "peerFullAddr"
-	flagProducerAddr   = "address"
-	flagListPrivateKey = "privateKey"
+	flagToAddress        = "to"
+	flagFromAddress      = "from"
+	flagAmount           = "amount"
+	flagPeerFullAddr     = "peerFullAddr"
+	flagProducerAddr     = "address"
+	flagListPrivateKey   = "privateKey"
 )
 
 type valueType int
@@ -99,12 +100,21 @@ var cmdList = []string{
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
-	cliGetBlocks: {flagPars{
-		flagBlockMaxCount,
-		0,
-		valueTypeInt,
-		"maxCount. Eg. 500",
-	}},
+	cliGetBlocks: {
+		flagPars{
+			flagBlockMaxCount,
+			0,
+			valueTypeInt,
+			"maxCount. Eg. 500",
+		},
+		flagPars{
+			flagStartBlockHashes,
+			"",
+			valueTypeString,
+			"startBlockHashes. Eg. \"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897ba, " +
+				"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897bb\"(no space)",
+		},
+	},
 	cliGetBalance: {flagPars{
 		flagAddress,
 		"",
@@ -282,16 +292,31 @@ func printUsage() {
 func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
-		fmt.Println("List all blocks error! maxCount must be greater than zero!")
+		fmt.Println("Get blocks error! maxCount must be greater than zero!")
 		return
 	}
 
 	getBlocksRequest := &rpcpb.GetBlocksRequest{}
 	getBlocksRequest.MaxCount = maxCount
 
+	// set startBlockHashes of getBlocksRequest if specified in flag
+	startBlockHashesString := string(*(flags[flagStartBlockHashes].(*string)))
+	if len(startBlockHashesString) > 0 {
+		var startBlockHashes [][]byte
+		for _, startBlockHash := range strings.Split(startBlockHashesString, ",") {
+			startBlockHashInByte, err := hex.DecodeString(startBlockHash)
+			if err != nil{
+				fmt.Println("ERROR: get blocks failed. ERR:", err)
+				return
+			}
+			startBlockHashes = append(startBlockHashes, startBlockHashInByte)
+		}
+		getBlocksRequest.StartBlockHashes = startBlockHashes
+	}
+
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
 	if err != nil {
-		fmt.Println("ERROR: getBlocks failed. ERR:", err)
+		fmt.Println("ERROR: get blocks failed. ERR:", err)
 		return
 	}
 

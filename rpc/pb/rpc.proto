@@ -142,7 +142,7 @@ message UTXO {
 }
 
 message GetBlocksRequest {
-  repeated bytes startBlockHashs = 1;  // Query start block hashes, sorted descending by height.
+  repeated bytes startBlockHashes = 1;  // Query start block hashes, sorted descending by height.
   int32 maxCount = 2;   // Max query block count
 }
 

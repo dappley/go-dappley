@@ -1069,7 +1069,7 @@ func (m *UTXO) GetTxIndex() uint32 {
 }
 
 type GetBlocksRequest struct {
-	StartBlockHashs      [][]byte `protobuf:"bytes,1,rep,name=startBlockHashs,proto3" json:"startBlockHashs,omitempty"`
+	StartBlockHashes      [][]byte `protobuf:"bytes,1,rep,name=startBlockHashes,proto3" json:"startBlockHashes,omitempty"`
 	MaxCount             int32    `protobuf:"varint,2,opt,name=maxCount,proto3" json:"maxCount,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1100,9 +1100,9 @@ func (m *GetBlocksRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlocksRequest proto.InternalMessageInfo
 
-func (m *GetBlocksRequest) GetStartBlockHashs() [][]byte {
+func (m *GetBlocksRequest) GetStartBlockHashes() [][]byte {
 	if m != nil {
-		return m.StartBlockHashs
+		return m.StartBlockHashes
 	}
 	return nil
 }
