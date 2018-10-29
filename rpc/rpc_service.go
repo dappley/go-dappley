@@ -27,12 +27,10 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -60,85 +58,6 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	}
 
 	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
-}
-
-func (rpcService *RpcService) RpcCreateWallet(ctx context.Context, in *rpcpb.CreateWalletRequest) (*rpcpb.CreateWalletResponse, error) {
-	msg := ""
-	addr := ""
-	if in.Name == "getWallet" {
-		wallet, err := logic.GetWallet()
-		if err != nil {
-			msg = err.Error()
-		}
-		if wallet != nil {
-			locked, err := logic.IsWalletLocked()
-			if err != nil {
-				msg = err.Error()
-			} else if locked {
-				msg = "WalletExistsLocked"
-			} else {
-				msg = "WalletExistsNotLocked"
-			}
-		} else {
-			msg = "NewWallet"
-		}
-	} else if in.Name == "createWallet" {
-		empty, err := logic.IsWalletEmpty()
-		if err != nil && !empty {
-			return &rpcpb.CreateWalletResponse{
-				Message: err.Error(),
-			}, nil
-		}
-		locked, err := logic.IsWalletLocked()
-		if err != nil {
-			return &rpcpb.CreateWalletResponse{
-				Message: err.Error(),
-			}, nil
-		} else if locked || empty {
-			passPhrase := in.Passphrase
-			if len(passPhrase) == 0 {
-				logger.Error("CreateWallet: Password is empty!")
-				msg = "Create Wallet Error: Password Empty!"
-				return &rpcpb.CreateWalletResponse{
-					Message: msg,
-					Address: ""}, nil
-			}
-			wallet, err := logic.CreateWalletWithpassphrase(passPhrase)
-			if err != nil {
-				msg = "Create Wallet Error: Password not correct!"
-				addr = ""
-			} else if wallet != nil {
-				err = logic.SetUnLockWallet()
-				if err != nil {
-					msg = err.Error()
-				}
-				addr = wallet.GetAddress().Address
-				msg = "Create Wallet: "
-
-			} else {
-				msg = "Create Wallet Error: Wallet Empty!"
-				addr = ""
-			}
-		} else { //unlock
-			wallet, err := logic.AddWallet()
-			if err != nil {
-				msg = err.Error()
-			} else if wallet != nil {
-				addr = wallet.GetAddress().Address
-				msg = "Create Wallet: "
-
-			} else {
-				msg = "Create Wallet Error: Wallet Empty!"
-				addr = ""
-			}
-		}
-
-	} else {
-		msg = "Error: not recognize the command!"
-	}
-	return &rpcpb.CreateWalletResponse{
-		Message: msg,
-		Address: addr}, nil
 }
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
@@ -267,123 +186,6 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 		BlockHeight:   rpcService.node.GetBlockchain().GetMaxHeight(),
 		Producers:     rpcService.node.GetBlockchain().GetConsensus().GetProducers(),
 	}, nil
-}
-
-func (rpcService *RpcService) RpcGetWalletAddress(ctx context.Context, in *rpcpb.GetWalletAddressRequest) (*rpcpb.GetWalletAddressResponse, error) {
-
-	if in.Name == "getWallet" {
-		msg := ""
-		wallet, err := logic.GetWallet()
-		if err != nil {
-			msg = err.Error()
-		}
-		if wallet != nil {
-			locked, err := logic.IsWalletLocked()
-			if err != nil {
-				msg = err.Error()
-			} else if locked {
-				msg = "WalletExistsLocked"
-			} else {
-				msg = "WalletExistsNotLocked"
-			}
-		} else {
-			msg = "NoWallet"
-		}
-		getWalletAddress := rpcpb.GetWalletAddressResponse{}
-		getWalletAddress.Message = msg
-		return &getWalletAddress, nil
-	} else if in.Name == "listAddresses" {
-		pass := in.Passphrase
-		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-		if err != nil {
-			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
-		}
-		addressList := []string{}
-		if wm.Locked {
-			addressList, err = wm.GetAddressesWithPassphrase(pass)
-		} else {
-			addresses := wm.GetAddresses()
-			for _, addr := range addresses {
-				addressList = append(addressList, addr.Address)
-			}
-			err = nil
-		}
-
-		if err != nil {
-			if strings.Contains(err.Error(), "Password not correct") {
-				return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Password not correct"}, nil
-			} else {
-				return &rpcpb.GetWalletAddressResponse{Message: err.Error()}, err
-			}
-		}
-		if wm.Locked {
-			wm.SetUnlockTimer(logic.GetUnlockDuration())
-		}
-
-		//set the timer
-		getWalletAddress := rpcpb.GetWalletAddressResponse{}
-		getWalletAddress.Address = addressList
-		return &getWalletAddress, nil
-	} else if in.Name == "listAddressesWithPrivateKey" {
-		pass := in.Passphrase
-		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-		if err != nil {
-			return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Error loading local wallet"}, err
-		}
-		addressList := []string{}
-		privateKeyList := []string{}
-		if wm.Locked {
-			addressList, err = wm.GetAddressesWithPassphrase(pass)
-			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
-				if err1 != nil {
-					err = err1
-					break
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
-				err = err1
-			}
-		} else {
-			addresses := wm.GetAddresses()
-			for _, addr := range addresses {
-				addressList = append(addressList, addr.Address)
-			}
-			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
-				if err1 != nil {
-					err = err1
-					break
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
-				err = err1
-			}
-			err = nil
-		}
-
-		if err != nil {
-			if strings.Contains(err.Error(), "Password not correct") {
-				return &rpcpb.GetWalletAddressResponse{Message: "ListWalletAddresses: Password not correct"}, nil
-			} else {
-				return &rpcpb.GetWalletAddressResponse{Message: err.Error()}, err
-			}
-		}
-
-		//set the timer
-		if wm.Locked {
-			wm.SetUnlockTimer(logic.GetUnlockDuration())
-		}
-
-		getWalletAddress := rpcpb.GetWalletAddressResponse{}
-		getWalletAddress.Address = addressList
-		getWalletAddress.PrivateKey = privateKeyList
-		return &getWalletAddress, nil
-	} else {
-		getWalletAddress := rpcpb.GetWalletAddressResponse{}
-		getWalletAddress.Message = "Error: not recognize the command!"
-		return &getWalletAddress, nil
-	}
 }
 
 func (rpcService *RpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
@@ -536,4 +338,20 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.TxBroadcast(&tx)
 
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
+}
+
+//unlock the wallet through rpc service
+func (rpcService *RpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
+	msg := "failed"
+	if in.Name == "unlock" {
+		err := logic.SetUnLockWallet()
+		if err != nil {
+			msg = err.Error()
+		} else {
+			msg = "succeed"
+		}
+	}
+	return &rpcpb.UnlockWalletResponse{
+		Message: msg,
+	}, nil
 }
