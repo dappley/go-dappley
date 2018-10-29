@@ -128,8 +128,11 @@ func MockTxOutputs() []TXOutput {
 	}
 }
 
-func WaitFullyStop(consensus Consensus, timeOut int) {
+type Done func() bool
+
+func WaitDoneOrTimeout(done Done, timeOut int) {
 	currentTime := time.Now().UTC().Unix()
-	for !consensus.FullyStop() && !util.IsTimeOut(currentTime, int64(timeOut)) {
+	for !done() && !util.IsTimeOut(currentTime, int64(timeOut)) {
+		time.Sleep(time.Second/5)
 	}
 }

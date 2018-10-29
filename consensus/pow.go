@@ -79,7 +79,7 @@ func (pow *ProofOfWork) Stop() {
 	pow.exitCh <- true
 	pow.miner.Stop()
 }
-func (pow *ProofOfWork) FullyStop() bool {
+func (pow *ProofOfWork) FinishedMining() bool {
 	v := pow.miner.stop
 	return v
 }
