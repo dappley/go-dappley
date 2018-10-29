@@ -175,7 +175,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) == false {
+	if !tx.verifyAmount(prevUtxos) || !tx.verifyTip(prevUtxos) {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
@@ -237,7 +237,8 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 	for _, vout := range tx.Vout {
 		totalVout = *totalVout.Add(vout.Value)
 	}
-
+	fmt.Println(totalVin.String())
+	fmt.Println(totalVout.String())
 	//TotalVin amount must equal or greater than total vout
 	return totalVin.Cmp(&totalVout) >= 0
 }
