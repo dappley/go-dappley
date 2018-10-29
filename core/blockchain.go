@@ -150,8 +150,8 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 }
 
 func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
+	blockPool.SetBlockchain(bc)
 	bc.blockPool = blockPool
-	bc.blockPool.SetBlockchain(bc)
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
@@ -255,71 +255,6 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 	}
 
 	return Transaction{}, ErrTransactionNotFound
-}
-
-//TODO: optimize performance
-func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) ([]Transaction, error) {
-	var unspentTXs []Transaction
-	spentTXOs := make(map[string][]int)
-	bci := bc.Iterator()
-
-	for {
-		block, err := bci.Next()
-		if err != nil {
-		}
-
-		for _, tx := range block.GetTransactions() {
-			txID := hex.EncodeToString(tx.ID)
-
-		Outputs: //TODO
-			for outIdx, out := range tx.Vout {
-				if spentTXOs[txID] != nil {
-					for _, spentOut := range spentTXOs[txID] {
-						if spentOut == outIdx {
-							continue Outputs
-						}
-					}
-				}
-
-				if out.IsLockedWithKey(pubKeyHash) {
-					unspentTXs = append(unspentTXs, *tx)
-				}
-			}
-
-			if tx.IsCoinbase() == false {
-				for _, in := range tx.Vin {
-					if in.UsesKey(pubKeyHash) {
-						inTxID := hex.EncodeToString(in.Txid)
-						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
-					}
-				}
-			}
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			break
-		}
-	}
-
-	return unspentTXs, nil
-}
-
-func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
-	var UTXOs []TXOutput
-	unspentTransactions, err := bc.FindUnspentTransactions(pubKeyHash)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, tx := range unspentTransactions {
-		for _, out := range tx.Vout {
-			if out.IsLockedWithKey(pubKeyHash) {
-				UTXOs = append(UTXOs, out)
-			}
-		}
-	}
-
-	return UTXOs, nil
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {

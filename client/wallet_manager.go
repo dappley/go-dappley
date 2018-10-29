@@ -33,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path/filepath"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -64,12 +65,17 @@ func GetWalletFilePath() string {
 		return ""
 	}
 	walletPath := strings.Replace(conf.GetFilePath(), "/wallets.dat", "", 1)
+	walletfile := ""
+	err := errors.New("")
 	if Exists(walletPath) {
-		return conf.GetFilePath()
+		walletfile, err = filepath.Abs(conf.GetFilePath())
 	} else if Exists(strings.Replace(walletPath, "..", "../..", 1)) {
-		return strings.Replace(conf.GetFilePath(),"..", "../..", 1)
+		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(),"..", "../..", 1))
 	}
-	return ""
+	if err != nil && err.Error() == ""{
+		return walletfile
+	}
+	return walletfile
 }
 
 func NewWalletManager(fileLoader storage.FileStorage) *WalletManager {

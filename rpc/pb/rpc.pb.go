@@ -365,6 +365,13 @@ func (m *SendRequest) GetWalletpath() string {
 	return ""
 }
 
+func (m *SendRequest) GetTip() uint64 {
+	if m != nil {
+		return m.Tip
+	}
+	return 0
+}
+
 type GetWalletAddressRequest struct {
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Passphrase           string   `protobuf:"bytes,2,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
@@ -1697,7 +1704,7 @@ func _RpcService_RpcAddBalance_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/rpcpb.RpcService/RpcAddBalance",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RpcServiceServer).RpcAddBalance(ctx, req.(*AddBalanceRequest))
+		return srv.(RpcServiceServer).RpcGetWalletAddress(ctx, req.(*GetWalletAddressRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

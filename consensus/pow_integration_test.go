@@ -24,9 +24,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
-
 	"os"
-
 	"time"
 
 	"github.com/dappley/go-dappley/client"
@@ -69,8 +67,12 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
 
+	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
+	utxos,err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	assert.Nil(t,err)
+
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, bc, 0)
+	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0))
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -88,8 +90,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitFullyStop(pow, 20)
-	time.Sleep(time.Second)
+	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -137,7 +138,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitFullyStop(pow, 20)
+	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -171,8 +172,13 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	pow := NewProofOfWork()
 	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
 	assert.NotNil(t, bc)
+
+	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
+	utxos,err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	assert.Nil(t,err)
+
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, bc, 0)
+	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0))
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -189,8 +195,11 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
+	utxos2,err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	assert.Nil(t,err)
+
 	//add second transaction
-	tx2, err := core.NewUTXOTransaction(db, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, bc, 0)
+	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, common.NewAmount(0))
 	assert.Nil(t, err)
 
 	bc.GetTxPool().Push(tx2)
@@ -204,7 +213,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//stop mining
 	pow.Stop()
-	core.WaitFullyStop(pow, 20)
+	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	//get the number of blocks
@@ -249,7 +258,7 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	core.WaitFullyStop(pow, 20)
+	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)
@@ -290,7 +299,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	balance := common.NewAmount(0)
 	pubKeyHash := core.HashAddress(addr)
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
-	utxos := utxoIndex.GetUTXOsByPubKeyHash(pubKeyHash)
+	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {
 		balance = balance.Add(out.Value)
 	}

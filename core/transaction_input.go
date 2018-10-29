@@ -19,8 +19,6 @@
 package core
 
 import (
-	"bytes"
-
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 )
@@ -30,13 +28,6 @@ type TXInput struct {
 	Vout      int
 	Signature []byte
 	PubKey    []byte
-}
-
-// UsesKey checks whether the address initiated the transaction
-func (in *TXInput) UsesKey(pubKeyHash []byte) bool {
-	lockingHash, _ := HashPubKey(in.PubKey)
-
-	return bytes.Compare(lockingHash, pubKeyHash) == 0
 }
 
 func (in *TXInput) ToProto() proto.Message {

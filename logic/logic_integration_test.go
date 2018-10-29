@@ -94,13 +94,14 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			core.WaitFullyStop(pow, 20)
+			core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
 			if err != nil {
 				panic(err)
 			}
 			expectedBalance, _ := mineReward.Sub(tc.expectedTransfer)
+			expectedBalance, _ = expectedBalance.Sub(common.NewAmount(tc.expectedTip))
 			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the receiver's wallet should be the amount transferred
@@ -113,7 +114,7 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()), minerBalance)
+			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(tc.expectedTip)), minerBalance)
 
 		})
 	}
