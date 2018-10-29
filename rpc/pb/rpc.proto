@@ -142,8 +142,6 @@ message GetBlocksRequest {
   int32 maxCount = 2;   // Max query block count
 }
 
-
-
 message GetBlocksResponse {
   uint32 errorCode = 1;
   repeated corepb.Block blocks = 2;
