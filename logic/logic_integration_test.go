@@ -88,7 +88,7 @@ func TestSend(t *testing.T) {
 			}
 
 			// Make sender the miner and mine for 1 block (which should include the transaction)
-			pow.Setup(node, minerWallet.GetAddress().Address)
+			pow.Setup(node, minerWallet.GetAddress().String())
 			pow.Start()
 			for bc.GetMaxHeight() < 1 {
 			}
@@ -376,7 +376,7 @@ func TestForkChoice(t *testing.T) {
 		bcs = append(bcs, bc)
 
 		node := network.NewNode(bcs[i])
-		pow.Setup(node, addr.Address)
+		pow.Setup(node, addr.String())
 		pow.SetTargetBit(16)
 		node.Start(testport_fork + i)
 		pows = append(pows, pow)
@@ -444,7 +444,7 @@ func TestAddBalance(t *testing.T) {
 			// Start mining to approve the transaction
 			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
 			SetMinerKeyPair(key)
-			pow.Setup(node, addr.Address)
+			pow.Setup(node, addr.String())
 			pow.SetTargetBit(0)
 			pow.Start()
 
@@ -502,7 +502,7 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	node := network.NewNode(bc)
-	pow.Setup(node, addr.Address)
+	pow.Setup(node, addr.String())
 	pow.SetTargetBit(12)
 	node.Start(port)
 	return node

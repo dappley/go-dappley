@@ -74,7 +74,7 @@ func main() {
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
 	bc, err := core.GetBlockchain(db, conss, txPoolLimit)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss, txPoolLimit)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit)
 		if err != nil {
 			logger.Panic(err)
 		}

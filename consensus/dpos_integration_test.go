@@ -39,10 +39,10 @@ func TestDpos_Start(t *testing.T) {
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128)
 	node := network.NewNode(bc)
 	node.Start(21100)
-	dpos.Setup(node, cbAddr.Address)
+	dpos.Setup(node, cbAddr.String())
 	dpos.SetKey(keystr)
 
-	miners := []string{cbAddr.Address}
+	miners := []string{cbAddr.String()}
 	dynasty := NewDynasty(miners, 2, 2)
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14

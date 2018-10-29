@@ -34,9 +34,13 @@ func NewAddress(addressString string) Address {
 	return address
 }
 
+func (a Address) String() string{
+	return a.Address
+}
+
 func (a Address) ValidateAddress() bool {
 
-	pubKeyHash := base58.Decode(a.Address)
+	pubKeyHash := base58.Decode(a.String())
 
 	if len(pubKeyHash) < addressChecksumLen {
 		return false
@@ -50,7 +54,7 @@ func (a Address) ValidateAddress() bool {
 }
 
 func (a Address) GetPubKeyHash() ([]byte, bool) {
-	pubKeyHash := base58.Decode(a.Address)
+	pubKeyHash := base58.Decode(a.String())
 
 	if len(pubKeyHash) < addressChecksumLen {
 		return nil, false

@@ -30,7 +30,7 @@ func TestMiner_VerifyNonce(t *testing.T) {
 
 	miner := NewMiner()
 	miner.SetTargetBit(14)
-	cbAddr := core.Address{"1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"}
+	cbAddr := core.NewAddress("1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg")
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
 		cbAddr,
@@ -40,7 +40,7 @@ func TestMiner_VerifyNonce(t *testing.T) {
 	)
 	defer bc.GetDb().Close()
 
-	miner.Setup(bc, cbAddr.Address, nil)
+	miner.Setup(bc, cbAddr.String(), nil)
 	miner.SetPrivKey(keystr)
 
 	//prepare a block with correct nonce value
@@ -119,7 +119,7 @@ func TestMiner_Start(t *testing.T) {
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
-		core.Address{cbAddr},
+		core.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,
 		128,

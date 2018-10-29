@@ -80,7 +80,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "test")
-	pow.Setup(n, wallet1.GetAddress().Address)
+	pow.Setup(n, wallet1.GetAddress().String())
 
 	pow.Start()
 
@@ -129,7 +129,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	//start a miner
 
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
-	pow.Setup(n, wallet.GetAddress().Address)
+	pow.Setup(n, wallet.GetAddress().String())
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -186,7 +186,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//start a producer
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
-	pow.Setup(n, wallet1.GetAddress().Address)
+	pow.Setup(n, wallet1.GetAddress().String())
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -241,7 +241,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	)
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
-	pow.Setup(n, cbAddr.Address)
+	pow.Setup(n, cbAddr.String())
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -288,7 +288,7 @@ func TestMiner_InvalidTransactions(t *testing.T) {
 
 func printBalances(bc *core.Blockchain, addrs []core.Address) {
 	for _, addr := range addrs {
-		b, _ := getBalance(bc, addr.Address)
+		b, _ := getBalance(bc, addr.String())
 		logger.Debug("addr", addr, ":", b)
 	}
 }
@@ -308,7 +308,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[core.Address]*common.Amount) {
 	for addr, bal := range addrBals {
-		bc, err := getBalance(bc, addr.Address)
+		bc, err := getBalance(bc, addr.String())
 		assert.Nil(t, err)
 		assert.Equal(t, bal, bc)
 	}

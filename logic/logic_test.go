@@ -49,14 +49,14 @@ func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
 	expectedLength := 34
-	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
+	assert.Equal(t, expectedLength, len(wallet.Addresses[0].String()))
 }
 
 func TestCreateWalletWithPassphrase(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
 	expectedLength := 34
-	assert.Equal(t, expectedLength, len(wallet.Addresses[0].Address))
+	assert.Equal(t, expectedLength, len(wallet.Addresses[0].String()))
 
 }
 
@@ -66,7 +66,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer store.Close()
 
 	//create a wallet address
-	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+	addr := core.NewAddress("1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV")
 
 	//create a blockchain
 	_, err := CreateBlockchain(addr, store, nil, 128)
@@ -112,7 +112,7 @@ func TestGetBalance(t *testing.T) {
 	defer store.Close()
 
 	//create a wallet address
-	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+	addr := core.NewAddress("1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV")
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
@@ -130,7 +130,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a wallet address
-	addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+	addr := core.NewAddress("1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV")
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)

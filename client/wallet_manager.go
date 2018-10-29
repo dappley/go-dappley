@@ -195,7 +195,7 @@ func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, 
 		return nil, errors.New("Password not correct!")
 	}
 	for _, wallet := range wm.Wallets {
-		address := wallet.GetAddresses()[0].Address
+		address := wallet.GetAddresses()[0].String()
 		addresses = append(addresses, address)
 	}
 	wm.mutex.Unlock()

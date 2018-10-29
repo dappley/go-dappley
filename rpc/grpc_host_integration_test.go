@@ -98,7 +98,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
-	pow.Setup(node, minerWallet.GetAddress().Address)
+	pow.Setup(node, minerWallet.GetAddress().String())
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -118,8 +118,8 @@ func TestRpcSend(t *testing.T) {
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:       senderWallet.GetAddress().Address,
-		To:         receiverWallet.GetAddress().Address,
+		From:       senderWallet.GetAddress().String(),
+		To:         receiverWallet.GetAddress().String(),
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip: 		2,

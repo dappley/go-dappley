@@ -422,7 +422,7 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 
 	var outputs []TXOutput
 	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-	outputs = append(outputs, *NewTXOutput(change, from.Address))
+	outputs = append(outputs, *NewTXOutput(amount, to.String()))
+	outputs = append(outputs, *NewTXOutput(change, from.String()))
 	return outputs
 }

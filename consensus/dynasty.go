@@ -189,7 +189,7 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 }
 
 func IsProducerAddressValid(producer string) bool {
-	addr := core.Address{producer}
+	addr := core.NewAddress(producer)
 	return addr.ValidateAddress()
 }
 

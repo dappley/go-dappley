@@ -90,7 +90,7 @@ func TestSign(t *testing.T) {
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
 	pubKeyHash, _ := HashPubKey(pubKey)
 
-	// Previous transactions containing UTXO of the address
+	// Previous transactions containing UTXO of the Address
 	prevTXs := []*UTXO{
 		{common.NewAmount(13), pubKeyHash, []byte("01"), 0},
 		{common.NewAmount(13), pubKeyHash, []byte("02"), 0},
@@ -190,7 +190,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
 	pubKeyHash, _ := HashPubKey(pubKey)
-	//address := KeyPair{*privKey, pubKey}.GenerateAddress()
+	//Address := KeyPair{*privKey, pubKey}.GenerateAddress()
 
 	// Fake a wrong key pair
 	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))

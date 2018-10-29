@@ -50,7 +50,7 @@ var bh2 = &BlockHeader{
 	1,
 }
 
-// Padding address to 32 Byte
+// Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
 var address1Hash, _ = HashPubKey(address1Bytes)
