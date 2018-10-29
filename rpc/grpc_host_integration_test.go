@@ -302,27 +302,27 @@ func TestRpcGetBlocks(t *testing.T) {
 
 	//Check first query
 	maxGetBlocksCount := 20
-	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxGetBlocksCount: maxGetBlocksCount})
+	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxCount: maxGetBlocksCount})
 	assert.Nil(t, err)
 	assert.Equal(t, response.ErrorCode, OK)
 	assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
 	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
-	block20, err := rpcContext.bc.GetBlockByHeight(maxGetBlocksCount)
+	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
 	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
 
 	// Check query loop
 	var startBlockHashs [][]byte
-	queryCount := (rpcContext.bc.GetMaxHeight()+maxGetBlocksCount-1)/maxGetBlocksCount - 1
+	queryCount := (int(rpcContext.bc.GetMaxHeight())+maxGetBlocksCount-1)/maxGetBlocksCount - 1
 	startHashCount := 3 // suggest value is 2/3 * producersnum +1
 
 	for i := 0; i < queryCount; i++ {
 		startBlockHashs = nil
 		lastBlocksCount := len(response.Blocks)
-		for j := 0; j < start; j++ {
+		for j := 0; j < startHashCount; j++ {
 			startBlockHashs = append(startBlockHashs, response.Blocks[lastBlocksCount-1-j])
 		}
-		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: startBlockHashs, MaxGetBlocksCount: maxGetBlocksCount})
+		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: startBlockHashs, MaxCount: maxGetBlocksCount})
 		assert.Nil(t, err)
 		assert.Equal(t, response.ErrorCode, OK)
 		if i == (queryCount - 1) {
@@ -338,14 +338,14 @@ func TestRpcGetBlocks(t *testing.T) {
 	assert.Equal(t, tailBlock.GetHash(), response.Blocks[len(response.Blocks)-1].Header.GetHash())
 
 	// Check query reach tailblock
-	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{tailBlock.GetHash()}, MaxGetBlocksCount: maxGetBlocksCount})
+	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{tailBlock.GetHash()}, MaxCount: maxGetBlocksCount})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, response.ErrorCode)
 	assert.Equal(t, 0, len(response.Blocks))
 
 	// Check maxGetBlocksCount overflow
-	maxGetBlocksCount = MaxGetBlocksCount + 1
-	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxGetBlocksCount: maxGetBlocksCount})
+	maxGetBlocksCount = int(MaxGetBlocksCount) + 1
+	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxCount: maxGetBlocksCount})
 	assert.Nil(t, err)
 	assert.Equal(t, GetBlocksCountOverflow, response.ErrorCode)
 }
@@ -378,13 +378,13 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	block20, err := rpcContext.bc.GetBlockByHeight(20)
-	response, err := c.RpcGetBlockByHash(block20.GetHash())
+	response, err := c.RpcGetBlockByHash(context.Background, &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
 	assert.Nil(t, err)
 	assert.Euqal(t, OK, response.ErrorCode)
 	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
-	response, err = c.RpcGetBlockByHash(tailBlock.GetHash())
+	response, err = c.RpcGetBlockByHash(context.Background, &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
 	assert.Nil(t, err)
 	assert.Euqal(t, OK, response.ErrorCode)
 	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
@@ -422,18 +422,18 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	block20, err := rpcContext.bc.GetBlockByHeight(20)
-	response, err := c.RpcGetBlockByHeight(20)
+	response, err := c.RpcGetBlockByHeight(context.Background, &rpcpb.GetBlockByHeightRequest{Height: 20})
 	assert.Nil(t, err)
 	assert.Euqal(t, OK, response.ErrorCode)
 	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
-	response, err = c.RpcGetBlockByHeight(tailBlock.GetHeight())
+	response, err = c.RpcGetBlockByHeight(context.Background, &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
 	assert.Nil(t, err)
 	assert.Euqal(t, OK, response.ErrorCode)
 	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
 
-	response, err = c.RpcGetBlockByHeight(tailBlock.GetHeight() + 1)
+	response, err = c.RpcGetBlockByHeight(context.Background, &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
 	assert.Nil(t, err)
 	assert.Euqal(t, BlockNotFound, response.ErrorCode)
 }
