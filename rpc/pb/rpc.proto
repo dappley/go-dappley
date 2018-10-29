@@ -8,11 +8,10 @@ option objc_class_prefix = "HLW";
 
 service RpcService {
   rpc RpcGetVersion (GetVersionRequest) returns (GetVersionResponse) {}
-  rpc RpcCreateWallet (CreateWalletRequest) returns (CreateWalletResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
+  rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
   rpc RpcAddBalance (AddBalanceRequest) returns (AddBalanceResponse) {}
-  rpc RpcGetWalletAddress (GetWalletAddressRequest) returns (GetWalletAddressResponse) {}
   rpc RpcSend (SendRequest) returns (SendResponse) {}
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
@@ -31,6 +30,14 @@ service AdminService{
 message CreateWalletRequest {
   string name = 1;
   string passphrase = 2;
+}
+
+message UnlockWalletRequest {
+  string name = 1;
+}
+
+message UnlockWalletResponse {
+  string message = 1;
 }
 
 message AddProducerRequest {
@@ -70,12 +77,7 @@ message AddPeerRequest {
   string fullAddress = 1;
 }
 
-// The response message 
-
-message CreateWalletResponse {
-  string message = 1;
-  string address = 2;
-}
+// The response message
 
 message AddProducerResponse {
   string message = 1;
@@ -106,12 +108,6 @@ message GetBlockchainInfoResponse {
 
 message AddPeerResponse {
   string status = 1;
-}
-
-message GetWalletAddressResponse {
-  string message = 1;
-  repeated string address = 2;
-  repeated string privateKey = 3;
 }
 
 message GetVersionRequest {
