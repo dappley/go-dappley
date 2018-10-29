@@ -181,7 +181,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 		return false
 	}
 
-	return tx.verifySignatures(prevUtxos)
+	return tx.verifySignatures(prevUtxos) && tx.verifyPublicKeyHash(prevUtxos)
 }
 
 //verifyTip verifies if the transaction has the correct tip
@@ -195,6 +195,21 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool{
 		}
 	}
 	return tx.Tip == sum.Uint64()
+}
+
+//verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
+//key hash in utxo
+func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool{
+	for i,vin := range tx.Vin{
+		pubKeyHash, err:= HashPubKey(vin.PubKey)
+		if err!=nil {
+			return false
+		}
+		if !bytes.Equal(pubKeyHash,prevUtxos[i].PubKeyHash) {
+			return false
+		}
+	}
+	return true
 }
 
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {

@@ -426,3 +426,45 @@ func TestTransaction_VerifyTip(t *testing.T) {
 	}
 
 }
+
+func TestTransaction_verifyPublicKeyHash(t *testing.T) {
+
+	tests := []struct{
+		name 	string
+		tx 		*Transaction
+		utxos	[]*UTXO
+		res 	bool
+	}{
+		{"correctPubKeyHash",
+			&Transaction{nil,[]TXInput{{nil,0,nil, []byte("12345678901234567890123456789012")}},nil, 0},
+
+			[]*UTXO{{common.NewAmount(7), []byte{203,126,204,19,229,226,190,111,137,59,99,222,87,104,48,146,135,200,98,230}, nil, 0}},
+			true,
+		},
+		{"incorrectPubKeyHash",
+			&Transaction{nil,[]TXInput{{nil,0,nil, []byte("2345678901234567890123456789012")}},nil, 0},
+
+			[]*UTXO{{common.NewAmount(7), []byte{203,126,204,19,229,226,190,111,137,59,99,222,87,104,48,146,135,200,98,230}, nil, 0}},
+			false,
+		},
+		{"noPubKey",
+			&Transaction{nil,[]TXInput{{nil,0,nil, nil}},nil, 0},
+
+			[]*UTXO{{common.NewAmount(7), []byte{203,126,204,19,229,226,190,111,137,59,99,222,87,104,48,146,135,200,98,230}, nil, 0}},
+			false,
+		},
+		{"noPubKeyHash",
+			&Transaction{nil,[]TXInput{{nil,0,nil, []byte("2345678901234567890123456789012")}},nil, 0},
+
+			[]*UTXO{{common.NewAmount(7), nil, nil, 0}},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.res, tt.tx.verifyPublicKeyHash(tt.utxos))
+		})
+	}
+
+}
