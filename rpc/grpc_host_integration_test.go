@@ -218,7 +218,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	assert.Nil(t, err)
 
-	assert.Equal(t, tailBlock.GetHash(), response.TailBlockHash)
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.TailBlockHash)
 	assert.Equal(t, tailBlock.GetHeight(), response.BlockHeight)
 	assert.Equal(t, 0, len(response.Producers))
 }
@@ -266,7 +266,7 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	assert.Equal(t, len(senderResponse.BlockHeaders), MinUtxoBlockHeaderCount)
-	assert.Equal(t, senderResponse.BlockHeaders[0].Hash, tailBlock.GetHash)
+	assert.Equal(t, senderResponse.BlockHeaders[0].Hash, []byte(tailBlock.GetHash()))
 
 	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverWallet.GetAddress().Address})
 	assert.Nil(t, err)
@@ -308,9 +308,9 @@ func TestRpcGetBlocks(t *testing.T) {
 	assert.Equal(t, response.ErrorCode, OK)
 	assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
-	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
+	assert.Equal(t, response.Blocks[0].GetHeader().Hash, []byte(block1.GetHash()))
 	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
-	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block20.GetHash())
+	assert.Equal(t, response.Blocks[0].GetHeader().Hash, []byte(block20.GetHash()))
 
 	// Check query loop
 	var startBlockHashs [][]byte
@@ -336,7 +336,7 @@ func TestRpcGetBlocks(t *testing.T) {
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	assert.Nil(t, err)
-	assert.Equal(t, tailBlock.GetHash(), response.Blocks[len(response.Blocks)-1].Header.GetHash())
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.Blocks[len(response.Blocks)-1].Header.GetHash())
 
 	// Check query reach tailblock
 	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{tailBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
@@ -381,13 +381,13 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	response, err := c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, response.ErrorCode)
-	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(block20.GetHash()), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, response.ErrorCode)
-	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
 
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: []byte("noexists")})
 	assert.Nil(t, err)
@@ -424,13 +424,13 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	response, err := c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: 20})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, response.ErrorCode)
-	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(block20.GetHash()), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, response.ErrorCode)
-	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
 
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
 	assert.Nil(t, err)
