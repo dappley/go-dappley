@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
@@ -32,7 +31,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
-	storage "github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
@@ -532,7 +531,7 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 	return
 }
 
-func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags cmdFlags) {
+func listAddressesCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 
 	listPriv := false
 	if flags[flagListPrivateKey] == nil {
@@ -567,8 +566,8 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 			fmt.Println("Password Empty!")
 			return
 		}
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
+		fl := storage.NewFileLoader(clientpkg.GetWalletFilePath())
+		wm := clientpkg.NewWalletManager(fl)
 		err := wm.LoadFromFile()
 		addressList, err := wm.GetAddressesWithPassphrase(passphrase)
 		if err != nil {
@@ -576,7 +575,7 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 			return
 		}
 		//unlock the wallet
-		client1.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+		client.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
 			Name: "unlock",
 		})
 
@@ -619,8 +618,8 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 
 		}
 	} else {
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
+		fl := storage.NewFileLoader(clientpkg.GetWalletFilePath())
+		wm := clientpkg.NewWalletManager(fl)
 		err := wm.LoadFromFile()
 		if err != nil {
 			fmt.Printf("Error: List addresses failed. %v \n", err.Error())
