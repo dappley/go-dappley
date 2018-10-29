@@ -53,7 +53,7 @@ func (s *Server) Start(port uint32) {
 		if port == 0 {
 			port = defaultRpcPort
 		}
-		lis, err := reuse.Listen("tcp", fmt.Sprint(":", port))
+		lis, err := reuse.Listen("tcp", fmt.Sprint("0.0.0.0:", port))
 		if err != nil {
 			logger.Panicf("failed to listen: %v", err)
 		}
