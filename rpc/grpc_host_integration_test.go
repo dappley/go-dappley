@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
@@ -302,14 +303,14 @@ func TestRpcGetBlocks(t *testing.T) {
 
 	//Check first query
 	maxGetBlocksCount := 20
-	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxCount: maxGetBlocksCount})
+	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, err)
 	assert.Equal(t, response.ErrorCode, OK)
 	assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
 	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
 	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
-	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
+	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block20.GetHash())
 
 	// Check query loop
 	var startBlockHashs [][]byte
@@ -320,13 +321,13 @@ func TestRpcGetBlocks(t *testing.T) {
 		startBlockHashs = nil
 		lastBlocksCount := len(response.Blocks)
 		for j := 0; j < startHashCount; j++ {
-			startBlockHashs = append(startBlockHashs, response.Blocks[lastBlocksCount-1-j])
+			startBlockHashs = append(startBlockHashs, response.Blocks[lastBlocksCount-1-j].Header.Hash)
 		}
-		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: startBlockHashs, MaxCount: maxGetBlocksCount})
+		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: startBlockHashs, MaxCount: int32(maxGetBlocksCount)})
 		assert.Nil(t, err)
 		assert.Equal(t, response.ErrorCode, OK)
 		if i == (queryCount - 1) {
-			leftCount := rpcContext.bc.GetMaxHeight() - queryCount*maxGetBlocksCount
+			leftCount := int(rpcContext.bc.GetMaxHeight()) - queryCount*maxGetBlocksCount
 			assert.Equal(t, len(response.Blocks), leftCount)
 		} else {
 			assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
@@ -338,14 +339,14 @@ func TestRpcGetBlocks(t *testing.T) {
 	assert.Equal(t, tailBlock.GetHash(), response.Blocks[len(response.Blocks)-1].Header.GetHash())
 
 	// Check query reach tailblock
-	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{tailBlock.GetHash()}, MaxCount: maxGetBlocksCount})
+	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{tailBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, response.ErrorCode)
 	assert.Equal(t, 0, len(response.Blocks))
 
 	// Check maxGetBlocksCount overflow
 	maxGetBlocksCount = int(MaxGetBlocksCount) + 1
-	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxCount: maxGetBlocksCount})
+	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, err)
 	assert.Equal(t, GetBlocksCountOverflow, response.ErrorCode)
 }
@@ -368,7 +369,6 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	core.WaitFullyStop(rpcContext.consensus, 20)
 	time.Sleep(time.Second)
 
-	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
 	// Create a grpc connection and a client
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -378,20 +378,20 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	block20, err := rpcContext.bc.GetBlockByHeight(20)
-	response, err := c.RpcGetBlockByHash(context.Background, &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
+	response, err := c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
 	assert.Nil(t, err)
-	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, OK, response.ErrorCode)
 	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
-	response, err = c.RpcGetBlockByHash(context.Background, &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
+	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
 	assert.Nil(t, err)
-	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, OK, response.ErrorCode)
 	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
 
-	response, err = c.RpcGetBlockByHash([]byte("noexists"))
+	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: []byte("noexists")})
 	assert.Nil(t, err)
-	assert.Euqal(t, BlockNotFound, response.ErrorCode)
+	assert.Equal(t, BlockNotFound, response.ErrorCode)
 }
 
 func TestRpcGetBlockByHeight(t *testing.T) {
@@ -412,7 +412,6 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	core.WaitFullyStop(rpcContext.consensus, 20)
 	time.Sleep(time.Second)
 
-	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
 	// Create a grpc connection and a client
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -422,20 +421,20 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	block20, err := rpcContext.bc.GetBlockByHeight(20)
-	response, err := c.RpcGetBlockByHeight(context.Background, &rpcpb.GetBlockByHeightRequest{Height: 20})
+	response, err := c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: 20})
 	assert.Nil(t, err)
-	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, OK, response.ErrorCode)
 	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
-	response, err = c.RpcGetBlockByHeight(context.Background, &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
+	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
 	assert.Nil(t, err)
-	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, OK, response.ErrorCode)
 	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
 
-	response, err = c.RpcGetBlockByHeight(context.Background, &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
+	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
 	assert.Nil(t, err)
-	assert.Euqal(t, BlockNotFound, response.ErrorCode)
+	assert.Equal(t, BlockNotFound, response.ErrorCode)
 }
 
 func TestRpcSendTransaction(t *testing.T) {
@@ -470,11 +469,11 @@ func TestRpcSendTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		rpcContext.wallet.GetKeyPair(),
+		*rpcContext.wallet.GetKeyPair(),
 		rpcContext.bc,
 		0,
 	)
-	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto()})
+	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
 	assert.Equal(t, OK, successResponse.ErrorCode)
 
@@ -482,12 +481,12 @@ func TestRpcSendTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		rpcContext.wallet.GetKeyPair(),
+		*rpcContext.wallet.GetKeyPair(),
 		rpcContext.bc,
 		0,
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
-	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto()})
+	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
 	assert.Equal(t, InvalidTransaction, failedResponse.ErrorCode)
 
@@ -500,9 +499,11 @@ func TestRpcSendTransaction(t *testing.T) {
 	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10)
-	leftAmount := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
-	assert.Equal(t, leftAmount, logic.GetBalance(rpcContext.wallet.GetAddress()))
-	assert.Equal(t, common.NewAmount(6), logic.GetBalance(receiverWallet.GetAddress()))
+	leftAmount,err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
+	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
+	assert.Equal(t, leftAmount, realAmount)
+	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.store)
+	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
 func createRpcTestContext() (*RpcTestContext, error) {
@@ -551,7 +552,7 @@ func (context *RpcTestContext) destroyContext() {
 func getBalance(utxos []*rpcpb.UTXO) *common.Amount {
 	amount := common.NewAmount(0)
 	for _, utxo := range utxos {
-		amount = amount.Add(utxo.Value)
+		amount = amount.Add(common.NewAmount(uint64(utxo.Amount)))
 	}
 	return amount
 }
