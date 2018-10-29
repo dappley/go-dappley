@@ -22,8 +22,14 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
@@ -36,11 +42,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"log"
-	"os"
-	"strings"
-	clientpkg "github.com/dappley/go-dappley/client"
-	"encoding/json"
 )
 
 //command names
@@ -53,7 +54,7 @@ const (
 	cliAddPeer           = "addPeer"
 	clicreateWallet      = "createWallet"
 	cliListAddresses     = "listAddresses"
-	cliaddBalance        = "addBalance"
+	clisendFromMiner     = "sendFromMiner"
 	cliaddProducer       = "addProducer"
 )
 
@@ -62,9 +63,9 @@ const (
 	flagStartBlockHashes = "startBlockHashes"
 	flagBlockMaxCount    = "maxCount"
 	flagAddress          = "address"
-	flagAddressBalance   = "address"
+	flagAddressBalance   = "to"
 	flagAmountBalance    = "amount"
-	flagTip			   = "tip"
+	flagTip              = "tip"
 	flagToAddress        = "to"
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
@@ -100,7 +101,7 @@ var cmdList = []string{
 	cliAddPeer,
 	clicreateWallet,
 	cliListAddresses,
-	cliaddBalance,
+	clisendFromMiner,
 	cliaddProducer,
 }
 
@@ -133,7 +134,7 @@ var cmdFlagsMap = map[string][]flagPars{
 		valueTypeString,
 		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 	}},
-	cliaddBalance: {
+	clisendFromMiner: {
 		flagPars{
 			flagAddressBalance,
 			"",
@@ -188,7 +189,7 @@ var cmdFlagsMap = map[string][]flagPars{
 
 //map the callback function to each command
 var cmdHandlers = map[string]commandHandlersWithType{
-	cliGetBlocks:     {rpcService, getBlocksCommandHandler},
+	cliGetBlocks:         {rpcService, getBlocksCommandHandler},
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {rpcService, getPeerInfoCommandHandler},
@@ -196,7 +197,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateWallet:      {rpcService, createWalletCommandHandler},
 	cliListAddresses:     {rpcService, listAddressesCommandHandler},
-	cliaddBalance:        {rpcService, addBalanceCommandHandler},
+	clisendFromMiner:     {rpcService, sendFromMinerCommandHandler},
 	cliaddProducer:       {rpcService, cliaddProducerCommandHandler},
 }
 
@@ -311,7 +312,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		var startBlockHashes [][]byte
 		for _, startBlockHash := range strings.Split(startBlockHashesString, ",") {
 			startBlockHashInByte, err := hex.DecodeString(startBlockHash)
-			if err != nil{
+			if err != nil {
 				fmt.Println("ERROR: get blocks failed. ERR:", err)
 				return
 			}
@@ -669,10 +670,10 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 	return
 }
 
-func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func sendFromMinerCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	if len(*(flags[flagAddressBalance].(*string))) == 0 {
 		printUsage()
-		fmt.Println("\n Example: cli addBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -amount 15")
+		fmt.Println("\n Example: cli sendFromMiner -to 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -amount 15")
 		fmt.Println()
 		return
 	}
@@ -687,11 +688,11 @@ func addBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		return
 	}
 
-	addBalanceRequest := rpcpb.AddBalanceRequest{}
-	addBalanceRequest.Address = *(flags[flagAddressBalance].(*string))
-	addBalanceRequest.Amount = common.NewAmount(uint64(*(flags[flagAmountBalance].(*int)))).Bytes()
+	sendFromMinerRequest := rpcpb.SendFromMinerRequest{}
+	sendFromMinerRequest.To = *(flags[flagAddressBalance].(*string))
+	sendFromMinerRequest.Amount = common.NewAmount(uint64(*(flags[flagAmountBalance].(*int)))).Bytes()
 
-	response, err := client.(rpcpb.RpcServiceClient).RpcAddBalance(ctx, &addBalanceRequest)
+	response, err := client.(rpcpb.RpcServiceClient).RpcSendFromMiner(ctx, &sendFromMinerRequest)
 	if err != nil {
 		fmt.Println("Add balance error!: ERR:", err)
 		return

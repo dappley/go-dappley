@@ -22,11 +22,10 @@ package logic
 
 import (
 	"testing"
-
-	"github.com/dappley/go-dappley/common"
-
 	"time"
 
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -430,25 +429,35 @@ func TestAddBalance(t *testing.T) {
 			defer store.Close()
 
 			// Create a coinbase address
-			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+			minerKeyPair := core.GetKeyPairByString(key)
+			minerWallet := &client.Wallet{}
+			minerWallet.Key = minerKeyPair
+
+			addr := minerWallet.Key.GenerateAddress()
 
 			bc, pow := createBlockchain(addr, store)
 
 			// Create a new wallet address for testing
 			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
 
-			// Add `addAmount` to the balance of the new wallet
-			err := AddBalance(testAddr, tc.addAmount, bc)
-			assert.Equal(t, err, tc.expectedErr)
-
 			// Start mining to approve the transaction
 			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
+			SetMinerKeyPair(key)
 			pow.Setup(node, addr.Address)
 			pow.SetTargetBit(0)
 			pow.Start()
 
 			for bc.GetMaxHeight() <= 1 {
 			}
+
+			// Add `addAmount` to the balance of the new wallet
+			err := SendFromMiner(testAddr, tc.addAmount, bc)
+			height := bc.GetMaxHeight()
+			assert.Equal(t, err, tc.expectedErr)
+			for bc.GetMaxHeight()-height <= 1 {
+			}
+
 			pow.Stop()
 
 			// The wallet balance should be the expected difference
@@ -478,7 +487,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			// Create a blockchain
 			bc, err := CreateBlockchain(addr, store, nil, 128)
 			assert.Nil(t, err)
-			err = AddBalance(core.Address{tc.address}, common.NewAmount(8), bc)
+			err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc)
 			assert.Equal(t, ErrInvalidAddress, err)
 		})
 	}

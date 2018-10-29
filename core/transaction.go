@@ -37,7 +37,6 @@ import (
 )
 
 var subsidy = common.NewAmount(10)
-var enableAddBalanceTest = true
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -176,7 +175,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if !enableAddBalanceTest && tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) == false {
+	if !tx.verifyAmount(prevUtxos) || !tx.verifyTip(prevUtxos) {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
@@ -185,12 +184,12 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 }
 
 //verifyTip verifies if the transaction has the correct tip
-func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool{
+func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 	sum := calculateUtxoSum(prevUtxos)
 	var err error
-	for _,vout := range tx.Vout{
+	for _, vout := range tx.Vout {
 		sum, err = sum.Sub(vout.Value)
-		if err!=nil {
+		if err != nil {
 			return false
 		}
 	}
@@ -253,7 +252,8 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 	for _, vout := range tx.Vout {
 		totalVout = *totalVout.Add(vout.Value)
 	}
-
+	fmt.Println(totalVin.String())
+	fmt.Println(totalVout.String())
 	//TotalVin amount must equal or greater than total vout
 	return totalVin.Cmp(&totalVout) >= 0
 }
@@ -278,8 +278,8 @@ func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Tran
 func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
-	change,err := calculateChange(sum, amount, tip)
-	if err!= nil {
+	change, err := calculateChange(sum, amount, tip)
+	if err != nil {
 		return Transaction{}, err
 	}
 
@@ -294,25 +294,6 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 	if err != nil {
 		return Transaction{}, err
 	}
-
-	return tx,nil
-}
-
-//for add balance
-func NewUTXOTransactionforAddBalance(to Address, amount *common.Amount) (Transaction, error) {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	// Validate amount
-	if amount.Validate() != nil || amount.IsZero() {
-		return Transaction{}, ErrInvalidAmount
-	}
-
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-
-	tx := Transaction{nil, inputs, outputs, 0}
-	tx.ID = tx.Hash()
 
 	return tx, nil
 }
@@ -400,9 +381,8 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.Vout = voutArray
 }
 
-
 //calculateChange calculates the change
-func calculateChange(input, amount, tip *common.Amount) (*common.Amount, error){
+func calculateChange(input, amount, tip *common.Amount) (*common.Amount, error) {
 	change, err := input.Sub(amount)
 	if err != nil {
 		return nil, ErrInsufficientFund
@@ -416,7 +396,7 @@ func calculateChange(input, amount, tip *common.Amount) (*common.Amount, error){
 }
 
 //prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*UTXO, publicKey []byte) []TXInput{
+func prepareInputLists(utxos []*UTXO, publicKey []byte) []TXInput {
 	var inputs []TXInput
 
 	// Build a list of inputs
@@ -429,7 +409,7 @@ func prepareInputLists(utxos []*UTXO, publicKey []byte) []TXInput{
 }
 
 //calculateUtxoSum calculates the total amount of all input utxos
-func calculateUtxoSum(utxos []*UTXO) *common.Amount{
+func calculateUtxoSum(utxos []*UTXO) *common.Amount {
 	sum := common.NewAmount(0)
 	for _, utxo := range utxos {
 		sum = sum.Add(utxo.Value)
@@ -438,7 +418,7 @@ func calculateUtxoSum(utxos []*UTXO) *common.Amount{
 }
 
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from,to Address, amount *common.Amount, change *common.Amount) []TXOutput{
+func prepareOutputLists(from, to Address, amount *common.Amount, change *common.Amount) []TXOutput {
 
 	var outputs []TXOutput
 	// Build a list of outputs
