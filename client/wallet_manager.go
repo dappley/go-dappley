@@ -33,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path/filepath"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -54,11 +55,27 @@ type WalletData struct {
 
 func GetWalletFilePath() string {
 	conf := &walletpb.WalletConfig{}
-	config.LoadConfig(walletConfigFilePath, conf)
+	if Exists(walletConfigFilePath) {
+		config.LoadConfig(walletConfigFilePath, conf)
+	} else if Exists(strings.Replace(walletConfigFilePath, "..", "../..", 1)) {
+		config.LoadConfig(strings.Replace(walletConfigFilePath, "..", "../..", 1), conf)
+	}
+
 	if conf == nil {
 		return ""
 	}
-	return conf.GetFilePath()
+	walletPath := strings.Replace(conf.GetFilePath(), "/wallets.dat", "", 1)
+	walletfile := ""
+	err := errors.New("")
+	if Exists(walletPath) {
+		walletfile, err = filepath.Abs(conf.GetFilePath())
+	} else if Exists(strings.Replace(walletPath, "..", "../..", 1)) {
+		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(),"..", "../..", 1))
+	}
+	if err != nil && err.Error() == ""{
+		return walletfile
+	}
+	return walletfile
 }
 
 func NewWalletManager(fileLoader storage.FileStorage) *WalletManager {
@@ -66,6 +83,18 @@ func NewWalletManager(fileLoader storage.FileStorage) *WalletManager {
 		fileLoader: fileLoader,
 	}
 }
+
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
 
 func (wm *WalletManager) NewTimer(timeout time.Duration) {
 	wm.timer = *time.NewTimer(timeout)

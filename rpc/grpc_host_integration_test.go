@@ -83,6 +83,12 @@ func TestRpcSend(t *testing.T) {
 		panic(err)
 	}
 
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128)
@@ -92,7 +98,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
-	pow.Setup(node, senderWallet.GetAddress().Address)
+	pow.Setup(node, minerWallet.GetAddress().Address)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -116,6 +122,7 @@ func TestRpcSend(t *testing.T) {
 		To:         receiverWallet.GetAddress().Address,
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		Tip: 		2,
 	})
 	assert.Nil(t, err)
 
@@ -133,9 +140,14 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	leftBalance, _ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
-	assert.Equal(t, leftBalance, senderBalance) // minedReward * (blockHeight + 1) - (Send Balance)
-	assert.Equal(t, common.NewAmount(7), receiverBalance)
+	minerBalance, err := logic.GetBalance(minerWallet.GetAddress(), store)
+	assert.Nil(t, err)
 
+	leftBalance, _ := minedReward.Sub(common.NewAmount(7))
+	leftBalance, _ = leftBalance.Sub(common.NewAmount(2))
+	minerRewardBalance := minedReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(2))
+	assert.Equal(t, leftBalance, senderBalance)
+	assert.Equal(t, common.NewAmount(7), receiverBalance)
+	assert.Equal(t, minerRewardBalance, minerBalance)
 	client.RemoveWalletFile()
 }

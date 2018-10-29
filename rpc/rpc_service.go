@@ -220,7 +220,7 @@ func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcService.node.GetBlockchain(), rpcService.node)
+	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip, rpcService.node.GetBlockchain(), rpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
@@ -420,7 +420,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
 	}
 
-	utxos := utxoIndex.GetUTXOsByPubKeyHash(publicKeyHash)
+	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
 	response := rpcpb.GetUTXOResponse{ErrorCode: OK}
 	for _, utxo := range utxos {
 		response.Utxos = append(
@@ -455,7 +455,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 
 // RpcGetBlocks Get blocks in blockchain from head to tail
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
-	block := rpcService.findBlockInRequestHash(in.StartBlockHashs)
+	block := rpcService.findBlockInRequestHash(in.StartBlockHashes)
 
 	// Reach the blockchain's tail
 	if block.GetHeight() >= rpcService.node.GetBlockchain().GetMaxHeight() {
@@ -483,8 +483,8 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 	return result, nil
 }
 
-func (rpcService *RpcService) findBlockInRequestHash(startBlockHashs [][]byte) *core.Block {
-	for _, hash := range startBlockHashs {
+func (rpcService *RpcService) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
+	for _, hash := range startBlockHashes {
 		// hash in blockchain, return
 		if block, err := rpcService.node.GetBlockchain().GetBlockByHash(hash); err == nil {
 			return block

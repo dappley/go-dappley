@@ -24,7 +24,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/gob"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -33,7 +32,6 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -106,21 +104,10 @@ func (tx *Transaction) Hash() []byte {
 }
 
 // Sign signs each input of a Transaction
-func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) error {
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	if tx.IsCoinbase() {
 		logger.Warning("Coinbase transaction could not be signed")
 		return nil
-	}
-
-	for _, vin := range tx.Vin {
-		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
-			logger.Error("Previous transaction is invalid")
-			return ErrTXInputNotFound
-		}
-		if vin.Vout >= len(prevTXs[hex.EncodeToString(vin.Txid)].Vout) {
-			logger.Error("Input of the transaction not found in previous transactions")
-			return ErrTXInputNotFound
-		}
 	}
 
 	txCopy := tx.TrimmedCopy()
@@ -130,14 +117,13 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		return err
 	}
 
-	for inID, vin := range txCopy.Vin {
-		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
-		txCopy.Vin[inID].Signature = nil
-		oldPubKey := txCopy.Vin[inID].PubKey
-		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
+	for i, vin := range txCopy.Vin {
+		txCopy.Vin[i].Signature = nil
+		oldPubKey := vin.PubKey
+		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash
 		txCopy.ID = txCopy.Hash()
 
-		txCopy.Vin[inID].PubKey = oldPubKey
+		txCopy.Vin[i].PubKey = oldPubKey
 
 		signature, err := secp256k1.Sign(txCopy.ID, privData)
 		if err != nil {
@@ -145,7 +131,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 			return err
 		}
 
-		tx.Vin[inID].Signature = signature
+		tx.Vin[i].Signature = signature
 	}
 	return nil
 }
@@ -189,7 +175,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	}
 
 	//TODO  Remove the enableAddBalanceTest flag
-	if tx.verifyAmount(prevUtxos) == false {
+	if tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) == false {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
 	}
@@ -197,9 +183,22 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 	return tx.verifySignatures(prevUtxos)
 }
 
-func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
-	for _, vin := range tx.Vin {
-		if prevUtxos[hex.EncodeToString(vin.Txid)].PubKeyHash == nil {
+//verifyTip verifies if the transaction has the correct tip
+func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
+	sum := calculateUtxoSum(prevUtxos)
+	var err error
+	for _, vout := range tx.Vout {
+		sum, err = sum.Sub(vout.Value)
+		if err != nil {
+			return false
+		}
+	}
+	return tx.Tip == sum.Uint64()
+}
+
+func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
+	for _, utxo := range prevUtxos {
+		if utxo.PubKeyHash == nil {
 			logger.Error("ERROR: Previous transaction is not correct")
 			return false
 		}
@@ -207,14 +206,12 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 
 	txCopy := tx.TrimmedCopy()
 
-	for inID, vin := range tx.Vin {
-		prevTxOut := prevUtxos[hex.EncodeToString(vin.Txid)]
-
-		txCopy.Vin[inID].Signature = nil
-		oldPubKey := txCopy.Vin[inID].PubKey
-		txCopy.Vin[inID].PubKey = prevTxOut.PubKeyHash
+	for i, vin := range tx.Vin {
+		txCopy.Vin[i].Signature = nil
+		oldPubKey := txCopy.Vin[i].PubKey
+		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash
 		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[inID].PubKey = oldPubKey
+		txCopy.Vin[i].PubKey = oldPubKey
 
 		originPub := make([]byte, 1+len(vin.PubKey))
 		originPub[0] = 4 // uncompressed point
@@ -231,7 +228,7 @@ func (tx *Transaction) verifySignatures(prevUtxos map[string]TXOutput) bool {
 	return true
 }
 
-func (tx *Transaction) verifyAmount(prevTXs map[string]TXOutput) bool {
+func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 	var totalVin, totalVout common.Amount
 	for _, utxo := range prevTXs {
 		totalVin = *totalVin.Add(utxo.Value)
@@ -246,7 +243,7 @@ func (tx *Transaction) verifyAmount(prevTXs map[string]TXOutput) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
+func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -254,7 +251,7 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
 	txin := TXInput{nil, -1, bh, []byte(data)}
-	txout := NewTXOutput(subsidy, to)
+	txout := NewTXOutput(subsidy.Add(tip), to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
 	tx.ID = tx.Hash()
 
@@ -262,74 +259,32 @@ func NewCoinbaseTX(to, data string, blockHeight uint64) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(db storage.Storage, from, to Address, amount *common.Amount, senderKeyPair KeyPair, bc *Blockchain, tip uint64) (Transaction, error) {
-	var inputs []TXInput
-	var outputs []TXOutput
-	var validOutputs []*UTXO
+func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error) {
 
-	pubKeyHash, _ := HashPubKey(senderKeyPair.PublicKey)
-	sum := common.NewAmount(0)
-	senderUTXOs := LoadUTXOIndex(db).GetUTXOsByPubKeyHash(pubKeyHash)
-
-	if len(senderUTXOs) < 1 {
-		return Transaction{}, ErrInsufficientFund
-	}
-	for _, v := range senderUTXOs {
-		sum = sum.Add(v.Value)
-		validOutputs = append(validOutputs, v)
-		if sum.Cmp(amount) >= 0 {
-			break
-		}
-	}
-
-	if sum.Cmp(amount) < 0 { // TODO: add tips
-		return Transaction{}, ErrInsufficientFund
-	}
-
-	// Build a list of inputs
-	for _, out := range validOutputs {
-		input := TXInput{out.Txid, out.TxIndex, nil, senderKeyPair.PublicKey}
-		inputs = append(inputs, input)
-
-	}
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.Address))
-	if sum.Cmp(amount) > 0 {
-		change, err := sum.Sub(amount)
-		if err != nil {
-			logger.Panic(err)
-		}
-		outputs = append(outputs, *NewTXOutput(change, from.Address))
-	}
-
-	tx := Transaction{nil, inputs, outputs, tip}
-	tx.ID = tx.Hash()
-	prevTXs := tx.GetPrevTransactions(bc)
-	err := tx.Sign(senderKeyPair.PrivateKey, prevTXs)
+	sum := calculateUtxoSum(utxos)
+	change, err := calculateChange(sum, amount, tip)
 	if err != nil {
-		logger.Error(err)
+		return Transaction{}, err
+	}
+
+	tx := Transaction{
+		nil,
+		prepareInputLists(utxos, senderKeyPair.PublicKey),
+		prepareOutputLists(from, to, amount, change),
+		tip.Uint64()}
+	tx.ID = tx.Hash()
+
+	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
+	if err != nil {
 		return Transaction{}, err
 	}
 
 	return tx, nil
 }
 
-func (tx *Transaction) GetPrevTransactions(bc *Blockchain) map[string]Transaction {
-	prevTXs := make(map[string]Transaction)
-
-	for _, vin := range tx.Vin {
-		prevTX, err := bc.FindTransaction(vin.Txid)
-		if err != nil {
-			logger.Panic(err)
-		}
-		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
-	}
-	return prevTXs
-}
-
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]TXOutput, error) {
-	res := make(map[string]TXOutput)
+func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, error) {
+	var res []*UTXO
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := HashPubKey(vin.PubKey)
 		if err != nil {
@@ -339,8 +294,7 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) (map[string]TX
 		if utxo == nil {
 			return nil, ErrTXInputNotFound
 		}
-		txout := TXOutput{utxo.Value, utxo.PubKeyHash}
-		res[hex.EncodeToString(vin.Txid)] = txout
+		res = append(res, utxo)
 	}
 	return res, nil
 }
@@ -409,4 +363,50 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 		voutArray = append(voutArray, txout)
 	}
 	tx.Vout = voutArray
+}
+
+//calculateChange calculates the change
+func calculateChange(input, amount, tip *common.Amount) (*common.Amount, error) {
+	change, err := input.Sub(amount)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+
+	change, err = change.Sub(tip)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+	return change, nil
+}
+
+//prepareInputLists prepares a list of txinputs for a new transaction
+func prepareInputLists(utxos []*UTXO, publicKey []byte) []TXInput {
+	var inputs []TXInput
+
+	// Build a list of inputs
+	for _, utxo := range utxos {
+		input := TXInput{utxo.Txid, utxo.TxIndex, nil, publicKey}
+		inputs = append(inputs, input)
+	}
+
+	return inputs
+}
+
+//calculateUtxoSum calculates the total amount of all input utxos
+func calculateUtxoSum(utxos []*UTXO) *common.Amount {
+	sum := common.NewAmount(0)
+	for _, utxo := range utxos {
+		sum = sum.Add(utxo.Value)
+	}
+	return sum
+}
+
+//preapreOutPutLists prepares a list of txoutputs for a new transaction
+func prepareOutputLists(from, to Address, amount *common.Amount, change *common.Amount) []TXOutput {
+
+	var outputs []TXOutput
+	// Build a list of outputs
+	outputs = append(outputs, *NewTXOutput(amount, to.Address))
+	outputs = append(outputs, *NewTXOutput(change, from.Address))
+	return outputs
 }

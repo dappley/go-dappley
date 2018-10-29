@@ -60,7 +60,7 @@ func TestTrimmedCopy(t *testing.T) {
 
 	t2 := t1.TrimmedCopy()
 
-	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 	t4 := t3.TrimmedCopy()
 	assert.Equal(t, t1.ID, t2.ID)
 	assert.Equal(t, t1.Tip, t2.Tip)
@@ -89,22 +89,12 @@ func TestSign(t *testing.T) {
 	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
 	pubKeyHash, _ := HashPubKey(pubKey)
-	address := KeyPair{*privKey, pubKey}.GenerateAddress()
 
 	// Previous transactions containing UTXO of the address
-	prevTXs := map[string]Transaction{
-		"01": NewCoinbaseTX(address.Address, "", 1),
-		"02": NewCoinbaseTX(address.Address, "", 2),
-		"03": {
-			[]byte{3},
-			[]TXInput{},
-			[]TXOutput{
-				*NewTXOutput(common.NewAmount(3), address.Address),
-				*NewTXOutput(common.NewAmount(4), address.Address),
-				*NewTXOutput(common.NewAmount(6), address.Address),
-			},
-			0,
-		},
+	prevTXs := []*UTXO{
+		{common.NewAmount(13), pubKeyHash, []byte("01"), 0},
+		{common.NewAmount(13), pubKeyHash, []byte("02"), 0},
+		{common.NewAmount(13), pubKeyHash, []byte("03"), 0},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -120,10 +110,10 @@ func TestSign(t *testing.T) {
 
 	// Sign the transaction
 	err := tx.Sign(*privKey, prevTXs)
-
 	if assert.Nil(t, err) {
 		// Assert that the signatures were created by the fake key pair
 		for i, vin := range tx.Vin {
+
 			if assert.NotNil(t, vin.Signature) {
 				txCopy := tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
@@ -135,45 +125,6 @@ func TestSign(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestSign_Invalid(t *testing.T) {
-	// Fake a key pair
-	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
-	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash, _ := HashPubKey(pubKey)
-	address := KeyPair{*privKey, pubKey}.GenerateAddress()
-
-	// Previous transactions containing UTXO of the address
-	prevTXs := map[string]Transaction{"01": NewCoinbaseTX(address.Address, "", 1)}
-
-	// New transaction to be signed (paid from the fake account)
-	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
-	txin1 := append(txin, TXInput{[]byte{1}, 1, nil, pubKey}) // Invalid
-	txin2 := append(txin, TXInput{[]byte{3}, 2, nil, pubKey}) // Invalid
-	txout := []TXOutput{{common.NewAmount(16), pubKeyHash}}
-
-	tests := []struct {
-		name        string
-		tx          Transaction
-		privKey     ecdsa.PrivateKey
-		expectedErr error
-	}{
-		{"Input not found in previous tx", Transaction{nil, txin1, txout, 0}, *privKey, ErrTXInputNotFound},
-		{"Previous tx not found", Transaction{nil, txin2, txout, 0}, *privKey, ErrTXInputNotFound},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.tx.Sign(tt.privKey, prevTXs)
-			assert.Equal(t, tt.expectedErr, err)
-
-			// Assert that the signatures are still nil
-			for _, vin := range tt.tx.Vin {
-				assert.Nil(t, vin.Signature)
-			}
-		})
-	}
-
 }
 
 func TestVerifyCoinbaseTransaction(t *testing.T) {
@@ -209,7 +160,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	prevTXs[string(t3.ID)] = t4
 
 	// test verifying coinbase transactions
-	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5)
+	var t5 = NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
@@ -296,7 +247,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 }
 
 func TestNewCoinbaseTX(t *testing.T) {
-	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t1 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to '13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F'")}
 	expectVout := TXOutput{common.NewAmount(10), []byte{0x1c, 0x11, 0xfe, 0x6b, 0x98, 0x1, 0x56, 0xc5, 0x83, 0xec, 0xb1, 0xfc, 0x32, 0xdb, 0x28, 0x79, 0xb, 0x52, 0xeb, 0x2d}}
 	assert.Equal(t, 1, len(t1.Vin))
@@ -305,12 +256,12 @@ func TestNewCoinbaseTX(t *testing.T) {
 	assert.Equal(t, expectVout, t1.Vout[0])
 	assert.Equal(t, uint64(0), t1.Tip)
 
-	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 
 	// Assert that NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
 	assert.Equal(t, t1, t2)
 
-	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 1)
+	t3 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 1, common.NewAmount(0))
 
 	assert.NotEqual(t, t1, t3)
 	assert.NotEqual(t, t1.ID, t3.ID)
@@ -327,7 +278,7 @@ func TestIsCoinBase(t *testing.T) {
 
 	assert.False(t, t1.IsCoinbase())
 
-	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0)
+	t2 := NewCoinbaseTX("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F", "", 0, common.NewAmount(0))
 
 	assert.True(t, t2.IsCoinbase())
 

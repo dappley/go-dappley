@@ -22,12 +22,14 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
+	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
@@ -54,16 +56,18 @@ const (
 
 //flag names
 const (
-	flagBlockMaxCount  = "maxCount"
-	flagAddress        = "address"
-	flagAddressBalance = "to"
-	flagAmountBalance  = "amount"
-	flagToAddress      = "to"
-	flagFromAddress    = "from"
-	flagAmount         = "amount"
-	flagPeerFullAddr   = "peerFullAddr"
-	flagProducerAddr   = "address"
-	flagListPrivateKey = "privateKey"
+	flagStartBlockHashes = "startBlockHashes"
+	flagBlockMaxCount    = "maxCount"
+	flagAddress          = "address"
+	flagAddressBalance   = "to"
+	flagAmountBalance    = "amount"
+	flagTip              = "tip"
+	flagToAddress        = "to"
+	flagFromAddress      = "from"
+	flagAmount           = "amount"
+	flagPeerFullAddr     = "peerFullAddr"
+	flagProducerAddr     = "address"
+	flagListPrivateKey   = "privateKey"
 )
 
 type valueType int
@@ -73,6 +77,7 @@ const (
 	valueTypeInt = iota
 	valueTypeString
 	boolType
+	valueTypeUint64
 )
 
 type serviceType int
@@ -98,12 +103,21 @@ var cmdList = []string{
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
-	cliGetBlocks: {flagPars{
-		flagBlockMaxCount,
-		0,
-		valueTypeInt,
-		"maxCount. Eg. 500",
-	}},
+	cliGetBlocks: {
+		flagPars{
+			flagBlockMaxCount,
+			0,
+			valueTypeInt,
+			"maxCount. Eg. 500",
+		},
+		flagPars{
+			flagStartBlockHashes,
+			"",
+			valueTypeString,
+			"startBlockHashes. Eg. \"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897ba, " +
+				"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897bb\"(no space)",
+		},
+	},
 	cliGetBalance: {flagPars{
 		flagAddress,
 		"",
@@ -147,6 +161,12 @@ var cmdFlagsMap = map[string][]flagPars{
 			0,
 			valueTypeInt,
 			"The amount to send from the sender to the receiver.",
+		},
+		flagPars{
+			flagTip,
+			uint64(0),
+			valueTypeUint64,
+			"Tip to miner.",
 		},
 	},
 	cliAddPeer: {flagPars{
@@ -239,6 +259,8 @@ func main() {
 				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].String(par.name, par.defaultValue.(string), par.usage)
 			case boolType:
 				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Bool(par.name, par.defaultValue.(bool), par.usage)
+			case valueTypeUint64:
+				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Uint64(par.name, par.defaultValue.(uint64), par.usage)
 			}
 		}
 	}
@@ -273,16 +295,31 @@ func printUsage() {
 func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
-		fmt.Println("List all blocks error! maxCount must be greater than zero!")
+		fmt.Println("Get blocks error! maxCount must be greater than zero!")
 		return
 	}
 
 	getBlocksRequest := &rpcpb.GetBlocksRequest{}
 	getBlocksRequest.MaxCount = maxCount
 
+	// set startBlockHashes of getBlocksRequest if specified in flag
+	startBlockHashesString := string(*(flags[flagStartBlockHashes].(*string)))
+	if len(startBlockHashesString) > 0 {
+		var startBlockHashes [][]byte
+		for _, startBlockHash := range strings.Split(startBlockHashesString, ",") {
+			startBlockHashInByte, err := hex.DecodeString(startBlockHash)
+			if err != nil {
+				fmt.Println("ERROR: get blocks failed. ERR:", err)
+				return
+			}
+			startBlockHashes = append(startBlockHashes, startBlockHashInByte)
+		}
+		getBlocksRequest.StartBlockHashes = startBlockHashes
+	}
+
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
 	if err != nil {
-		fmt.Println("ERROR: getBlocks failed. ERR:", err)
+		fmt.Println("ERROR: get blocks failed. ERR:", err)
 		return
 	}
 
@@ -309,7 +346,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 			for l := 0; l < len(transaction.Vout); l++ {
 				vout := transaction.Vout[l]
 				encodedVout = append(encodedVout, map[string]interface{}{
-					"Value":      vout.Value,
+					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
 				})
 			}
@@ -336,7 +373,12 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		encodedBlocks = append(encodedBlocks, encodedBlock)
 	}
 
-	fmt.Println(encodedBlocks)
+	blocks, err := json.MarshalIndent(encodedBlocks, "", "  ")
+	if err != nil {
+		fmt.Println("Print blocks failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blocks))
 }
 
 func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -350,7 +392,13 @@ func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, fl
 		"BlockHeight":   response.BlockHeight,
 		"Producers":     response.Producers,
 	}
-	fmt.Println(encodedResponse)
+
+	blockchainInfo, err := json.MarshalIndent(encodedResponse, "", "  ")
+	if err != nil {
+		fmt.Println("Print blockchain info failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blockchainInfo))
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -628,9 +676,11 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	response, err := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
-		From:   *(flags[flagFromAddress].(*string)),
-		To:     *(flags[flagToAddress].(*string)),
-		Amount: common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+		From:       *(flags[flagFromAddress].(*string)),
+		To:         *(flags[flagToAddress].(*string)),
+		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+		Tip:        *(flags[flagTip].(*uint64)),
+		Walletpath: clientpkg.GetWalletFilePath(),
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)

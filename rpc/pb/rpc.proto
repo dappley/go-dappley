@@ -54,6 +54,7 @@ message SendRequest {
   string to = 2;
   bytes amount = 3;
   string Walletpath = 4;
+  uint64 tip = 5;
 }
 
 message GetWalletAddressRequest {
@@ -141,7 +142,7 @@ message UTXO {
 }
 
 message GetBlocksRequest {
-  repeated bytes startBlockHashs = 1;  // Query start block hashes, sorted descending by height.
+  repeated bytes startBlockHashes = 1;  // Query start block hashes, sorted descending by height.
   int32 maxCount = 2;   // Max query block count
 }
 
