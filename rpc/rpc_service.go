@@ -21,12 +21,10 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"strings"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-
-	"strings"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -39,9 +37,9 @@ import (
 )
 
 const (
-	ProtoVersion                  = "1.0.0"
-	MaxGetBlocksCount       int32 = 500
-	MinUtxoBlockHeaderCount int32 = 6
+	ProtoVersion                   = "1.0.0"
+	MaxGetBlocksCount       int32  = 500
+	MinUtxoBlockHeaderCount uint64 = 6
 )
 
 type RpcService struct {
@@ -230,12 +228,12 @@ func (rpcService *RpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest
 	}
 
 	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, 0, rpcService.node.GetBlockchain(), rpcService.node)
-	txhashStr:= hex.EncodeToString(txhash)
+	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr +"]"}, err
+		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
 	}
 
-	return &rpcpb.SendResponse{Message: "["+ txhashStr +"] Sent"}, nil
+	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
 }
 
 func (rpcService *RpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -450,13 +448,17 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	}
 
 	//TODO Race condition Blockchain update after GetUTXO
-	getHeaderCount := MaxGetBlocksCount
+	getHeaderCount := MinUtxoBlockHeaderCount
 	if int(getHeaderCount) < len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()) {
-		getHeaderCount = int32(len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()))
+		getHeaderCount = uint64(len(rpcService.node.GetBlockchain().GetConsensus().GetProducers()))
 	}
 
 	tailHeight := rpcService.node.GetBlockchain().GetMaxHeight()
-	for i := int32(0); i < getHeaderCount; i++ {
+	if getHeaderCount > tailHeight {
+		getHeaderCount = tailHeight
+	}
+
+	for i := uint64(0); i < getHeaderCount; i++ {
 		block, err := rpcService.node.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
 		if err != nil {
 			break
@@ -480,7 +482,7 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 	var blocks []*core.Block
 	maxBlockCount := int32(rpcService.node.GetBlockchain().GetMaxHeight())
 	if maxBlockCount > MaxGetBlocksCount {
-		maxBlockCount = MaxGetBlocksCount
+		return &rpcpb.GetBlocksResponse{ErrorCode: GetBlocksCountOverflow}, nil
 	}
 
 	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)

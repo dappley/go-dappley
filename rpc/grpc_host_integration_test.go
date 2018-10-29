@@ -22,21 +22,33 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/common"
+	"strings"
 	"testing"
 	"time"
-	"google.golang.org/grpc"
-	"golang.org/x/net/context"
-	"github.com/stretchr/testify/assert"
+
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/consensus"
 	logger "github.com/sirupsen/logrus"
-	"strings"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
+
+type RpcTestContext struct {
+	store      storage.Storage
+	wallet     *client.Wallet
+	consensus  core.Consensus
+	bc         *core.Blockchain
+	node       *network.Node
+	rpcServer  *Server
+	serverPort uint32
+}
 
 func TestServer_StartRPC(t *testing.T) {
 
@@ -44,14 +56,14 @@ func TestServer_StartRPC(t *testing.T) {
 	addr := "/ip4/127.0.0.1/tcp/10000"
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
-	server := NewGrpcServer(node,"temp")
+	server := NewGrpcServer(node, "temp")
 	server.Start(defaultRpcPort)
 	defer server.Stop()
 
-	time.Sleep(time.Millisecond*100)
+	time.Sleep(time.Millisecond * 100)
 	//prepare grpc client
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprint(":",defaultRpcPort), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort), grpc.WithInsecure())
 	assert.Nil(t, err)
 	defer conn.Close()
 
@@ -61,7 +73,7 @@ func TestServer_StartRPC(t *testing.T) {
 
 	ret := &network.PeerList{}
 	ret.FromProto(response.PeerList)
-	assert.Equal(t,node.GetPeerList(),ret)
+	assert.Equal(t, node.GetPeerList(), ret)
 
 }
 
@@ -73,11 +85,11 @@ func TestRpcSend(t *testing.T) {
 	client.RemoveWalletFile()
 
 	// Create wallets
-	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
 	if err != nil {
 		panic(err)
 	}
-	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +114,7 @@ func TestRpcSend(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a grpc connection and a client
-	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort + 1), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+1), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -111,16 +123,17 @@ func TestRpcSend(t *testing.T) {
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From: senderWallet.GetAddress().Address,
-		To: receiverWallet.GetAddress().Address,
-		Amount: common.NewAmount(7).Bytes(),
-		Walletpath: strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1),
+		From:       senderWallet.GetAddress().Address,
+		To:         receiverWallet.GetAddress().Address,
+		Amount:     common.NewAmount(7).Bytes(),
+		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 	})
 	assert.Nil(t, err)
 
 	// Start mining to approve the transaction
 	pow.Start()
-	for bc.GetMaxHeight() < 1 {}
+	for bc.GetMaxHeight() < 1 {
+	}
 	pow.Stop()
 
 	time.Sleep(100 * time.Millisecond)
@@ -131,9 +144,414 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	leftBalance,_ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
+	leftBalance, _ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
 	assert.Equal(t, leftBalance, senderBalance) // minedReward * (blockHeight + 1) - (Send Balance)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 
 	client.RemoveWalletFile()
+}
+
+func TestRpcGetVersion(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	// Test GetVersion with support client version
+	response, err := c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0"})
+	assert.Nil(t, err)
+	assert.Equal(t, response.ErrorCode, OK)
+	assert.Equal(t, response.ProtoVersion, "1.0.0")
+
+	// Test GetVersion with unsupport client version -- invalid version length
+	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
+	assert.Nil(t, err)
+	assert.Equal(t, response.ErrorCode, ProtoVersionNotSupport)
+
+	// Test GetVersion with unsupport client version
+	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "2.0.0"})
+	assert.Nil(t, err)
+	assert.Equal(t, response.ErrorCode, ProtoVersionNotSupport)
+}
+
+func TestRpcGetBlockchainInfo(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	rpcContext.consensus.SetTargetBit(3)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	for rpcContext.bc.GetMaxHeight() < 5 {
+
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+	response, err := c.RpcGetBlockchainInfo(context.Background(), &rpcpb.GetBlockchainInfoRequest{})
+	assert.Nil(t, err)
+
+	tailBlock, err := rpcContext.bc.GetTailBlock()
+	assert.Nil(t, err)
+
+	assert.Equal(t, tailBlock.GetHash(), response.TailBlockHash)
+	assert.Equal(t, tailBlock.GetHeight(), response.BlockHeight)
+	assert.Equal(t, 0, len(response.Producers))
+}
+
+func TestRpcGetUTXO(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), rpcContext.bc, rpcContext.node)
+
+	rpcContext.consensus.SetTargetBit(3)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	for rpcContext.bc.GetMaxHeight() < MinUtxoBlockHeaderCount {
+
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.wallet.GetAddress()})
+	assert.Nil(t, err)
+	assert.Equal(t, senderResponse.ErrorCode, OK)
+	minedReward := common.NewAmount(10)
+	leftAmount := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
+	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
+
+	tailBlock, err := rpcContext.bc.GetTailBlock()
+	assert.Equal(t, len(senderResponse.BlockHeaders), MinUtxoBlockHeaderCount)
+	assert.Equal(t, senderResponse.BlockHeaders[0].Hash, tailBlock.GetHash)
+
+	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverWallet.GetAddress()})
+	assert.Nil(t, err)
+	assert.Equal(t, receiverResponse.ErrorCode, OK)
+	assert.Equal(t, common.NewAmount(6), getBalance(senderResponse.Utxos))
+}
+
+func TestRpcGetBlocks(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	rpcContext.consensus.SetTargetBit(0)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	for rpcContext.bc.GetMaxHeight() < 500 {
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
+	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	//Check first query
+	maxGetBlocksCount := 20
+	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxGetBlocksCount: maxGetBlocksCount})
+	assert.Nil(t, err)
+	assert.Equal(t, response.ErrorCode, OK)
+	assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
+	block1, err := rpcContext.bc.GetBlockByHeight(1)
+	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
+	block20, err := rpcContext.bc.GetBlockByHeight(maxGetBlocksCount)
+	assert.Equal(t, response.Blocks[0].GetHeader().Hash, block1.GetHash())
+
+	// Check query loop
+	var startBlockHashs [][]byte
+	queryCount := (rpcContext.bc.GetMaxHeight()+maxGetBlocksCount-1)/maxGetBlocksCount - 1
+	startHashCount := 3 // suggest value is 2/3 * producersnum +1
+
+	for i := 0; i < queryCount; i++ {
+		startBlockHashs = nil
+		lastBlocksCount := len(response.Blocks)
+		for j := 0; j < start; j++ {
+			startBlockHashs = append(startBlockHashs, response.Blocks[lastBlocksCount-1-j])
+		}
+		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: startBlockHashs, MaxGetBlocksCount: maxGetBlocksCount})
+		assert.Nil(t, err)
+		assert.Equal(t, response.ErrorCode, OK)
+		if i == (queryCount - 1) {
+			leftCount := rpcContext.bc.GetMaxHeight() - queryCount*maxGetBlocksCount
+			assert.Equal(t, len(response.Blocks), leftCount)
+		} else {
+			assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
+		}
+	}
+
+	tailBlock, err := rpcContext.bc.GetTailBlock()
+	assert.Nil(t, err)
+	assert.Equal(t, tailBlock.GetHash(), response.Blocks[len(response.Blocks)-1].Header.GetHash())
+
+	// Check query reach tailblock
+	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{tailBlock.GetHash()}, MaxGetBlocksCount: maxGetBlocksCount})
+	assert.Nil(t, err)
+	assert.Equal(t, OK, response.ErrorCode)
+	assert.Equal(t, 0, len(response.Blocks))
+
+	// Check maxGetBlocksCount overflow
+	maxGetBlocksCount := MaxGetBlocksCount + 1
+	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashs: [][]byte{genesisBlock.GetHash()}, MaxGetBlocksCount: maxGetBlocksCount})
+	assert.Nil(t, err)
+	assert.Equal(t, GetBlocksCountOverflow, response.ErrorCode)
+}
+
+func TestRpcGetBlockByHash(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	rpcContext.consensus.SetTargetBit(0)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	for rpcContext.bc.GetMaxHeight() < 50 {
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
+	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	block20, err := rpcContext.bc.GetBlockByHeight(20)
+	response, err := c.RpcGetBlockByHash(block20.GetHash())
+	assert.Nil(t, err)
+	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
+
+	tailBlock, err := rpcContext.bc.GetTailBlock()
+	response, err = c.RpcGetBlockByHash(tailBlock.GetHash())
+	assert.Nil(t, err)
+	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
+
+	response, err = c.RpcGetBlockByHash([]byte("noexists"))
+	assert.Nil(t, err)
+	assert.Euqal(t, BlockNotFound, response.ErrorCode)
+}
+
+func TestRpcGetBlockByHeight(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	rpcContext.consensus.SetTargetBit(0)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	for rpcContext.bc.GetMaxHeight() < 50 {
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
+	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	block20, err := rpcContext.bc.GetBlockByHeight(20)
+	response, err := c.RpcGetBlockByHeight(20)
+	assert.Nil(t, err)
+	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, block20.GetHash(), response.Block.Header.GetHash())
+
+	tailBlock, err := rpcContext.bc.GetTailBlock()
+	response, err = c.RpcGetBlockByHeight(tailBlock.GetHeight())
+	assert.Nil(t, err)
+	assert.Euqal(t, OK, response.ErrorCode)
+	assert.Equal(t, tailBlock.GetHash(), response.Block.Header.GetHash())
+
+	response, err = c.RpcGetBlockByHeight(tailBlock.GetHeight() + 1)
+	assert.Nil(t, err)
+	assert.Euqal(t, BlockNotFound, response.ErrorCode)
+}
+
+func TestRpcSendTransaction(t *testing.T) {
+	rpcContext, err := createRpcTestContext()
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	rpcContext.consensus.SetTargetBit(3)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	maxHeight := rpcContext.bc.GetMaxHeight()
+	for maxHeight < 2 {
+		maxHeight = rpcContext.bc.GetMaxHeight()
+	}
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	transaction, err := core.NewUTXOTransaction(rpcContext.store,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet.GetAddress(),
+		common.NewAmount(6),
+		rpcContext.wallet.GetKeyPair(),
+		rpcContext.bc,
+		0,
+	)
+	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto()})
+	assert.Nil(t, err)
+	assert.Equal(t, OK, successResponse.ErrorCode)
+
+	errTransaction, err := core.NewUTXOTransaction(rpcContext.store,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet.GetAddress(),
+		common.NewAmount(6),
+		rpcContext.wallet.GetKeyPair(),
+		rpcContext.bc,
+		0,
+	)
+	errTransaction.Vin[0].Signature = []byte("invalid")
+	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto()})
+	assert.Nil(t, err)
+	assert.Equal(t, InvalidTransaction, failedResponse.ErrorCode)
+
+	maxHeight = rpcContext.bc.GetMaxHeight()
+	for (rpcContext.bc.GetMaxHeight() - maxHeight) >= 1 {
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitFullyStop(pow, 20)
+	time.Sleep(time.Second)
+
+	minedReward := common.NewAmount(10)
+	leftAmount := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
+	assert.Equal(t, leftAmount, logic.GetBalance(rpcContext.wallet.GetAddress()))
+	assert.Equal(t, common.NewAmount(6), logic.GetBalance(receiverWallet.GetAddress()))
+}
+
+func createRpcTestContext() (*RpcTestContext, error) {
+	context := RpcTestContext{}
+	context.store = storage.NewRamStorage()
+
+	client.RemoveWalletFile()
+
+	// Create wallets
+	wallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		context.destroyContext()
+		panic(err)
+	}
+	context.wallet = wallet
+
+	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
+	context.consensus = consensus.NewProofOfWork()
+	bc, err := logic.CreateBlockchain(wallet.GetAddress(), context.store, context.consensus, 128)
+	if err != nil {
+		context.destroyContext()
+		panic(err)
+	}
+	context.bc = bc
+
+	// Prepare a PoW node that put mining reward to the sender's address
+	context.node = network.FakeNodeWithPidAndAddr(bc, "a", "b")
+
+	// Start a grpc server
+	context.rpcServer = NewGrpcServer(context.node, "temp")
+	context.serverPort = defaultRpcPort + 1 // use a different port as other integration tests
+	context.rpcServer.Start(context.serverPort)
+	return &context, nil
+}
+
+func (context *RpcTestContext) destroyContext() {
+	if context.rpcServer != nil {
+		context.rpcServer.Stop()
+	}
+
+	if context.store != nil {
+		context.store.Close()
+	}
+}
+
+func getBalance(utxos []*rpcpb.UTXO) *common.Amount {
+	amount := common.NewAmount(0)
+	for _, utxo := range utxos {
+		amount = amount.Add(utxo.Value)
+	}
+	return amount
 }

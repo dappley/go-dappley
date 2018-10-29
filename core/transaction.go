@@ -239,6 +239,9 @@ func (tx *Transaction) verifyAmount(prevTXs map[string]TXOutput) bool {
 	}
 
 	for _, vout := range tx.Vout {
+		if vout.Value.Validate() != nil {
+			return false
+		}
 		totalVout = *totalVout.Add(vout.Value)
 	}
 
