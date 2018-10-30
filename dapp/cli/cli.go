@@ -192,13 +192,13 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBlocks:         {rpcService, getBlocksCommandHandler},
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
-	cliGetPeerInfo:       {rpcService, getPeerInfoCommandHandler},
-	cliSend:              {rpcService, sendCommandHandler},
+	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
+	cliSend:              {adminRpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateWallet:      {rpcService, createWalletCommandHandler},
-	cliListAddresses:     {rpcService, listAddressesCommandHandler},
-	clisendFromMiner:     {rpcService, sendFromMinerCommandHandler},
-	cliaddProducer:       {rpcService, cliaddProducerCommandHandler},
+	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
+	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
+	cliaddProducer:       {adminRpcService, cliaddProducerCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -283,6 +283,7 @@ func main() {
 		if cmd.Parsed() {
 			md := metadata.Pairs("password", cliConfig.GetPassword())
 			ctx := metadata.NewOutgoingContext(context.Background(), md)
+			fmt.Println(cmdName)
 			cmdHandlers[cmdName].cmdHandler(ctx, clients[cmdHandlers[cmdName].serviceType], cmdFlagValues[cmdName])
 		}
 	}
@@ -579,7 +580,6 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
 			Name: "unlock",
 		})
-
 		if !listPriv {
 			if len(addressList) == 0 {
 				fmt.Println("The addresses in the wallet is empty!")

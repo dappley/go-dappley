@@ -23,23 +23,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"strings"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
 	storage "github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"log"
-	"os"
-	"strings"
 )
 
 //command names
@@ -67,13 +65,14 @@ const (
 type valueType int
 
 //type enum
-const(
+const (
 	valueTypeInt = iota
 	valueTypeString
 )
 
 type serviceType int
-const(
+
+const (
 	rpcService = iota
 	adminRpcService
 )
@@ -127,23 +126,23 @@ var cmdFlagsMap = map[string][]flagPars{
 
 //map the callback function to each command
 var cmdHandlers = map[string]commandHandlersWithType{
-	cliGetBlockchainInfo	: {rpcService, getBlockchainInfoCommandHandler},
-	cliGetBalance			: {rpcService, getBalanceCommandHandler},
-	cliGetPeerInfo			: {rpcService, getPeerInfoCommandHandler},
-	cliSend					: {rpcService, sendCommandHandler},
-	cliAddPeer				: {adminRpcService, addPeerCommandHandler},
-	clicreateWallet			:{rpcService, createWalletCommandHandler},
-	cliListAddresses		:{rpcService, listAddressesCommandHandler},
+	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
+	cliGetBalance:        {rpcService, getBalanceCommandHandler},
+	cliGetPeerInfo:       {rpcService, getPeerInfoCommandHandler},
+	cliSend:              {rpcService, sendCommandHandler},
+	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
+	clicreateWallet:      {rpcService, createWalletCommandHandler},
+	cliListAddresses:     {rpcService, listAddressesCommandHandler},
 }
 
 type commandHandlersWithType struct {
-	serviceType		serviceType
-	cmdHandler 		commandHandler
+	serviceType serviceType
+	cmdHandler  commandHandler
 }
 
-type commandHandler func(ctx context.Context, client interface{},flags cmdFlags)
+type commandHandler func(ctx context.Context, client interface{}, flags cmdFlags)
 
-type flagPars struct{
+type flagPars struct {
 	name         string
 	defaultValue interface{}
 	valueType    valueType
@@ -181,8 +180,8 @@ func main() {
 
 	cmdFlagSetList := map[string]*flag.FlagSet{}
 	//set up flagset for each command
-	for _, cmd := range cmdList{
-		fs := flag.NewFlagSet(cmd,flag.ContinueOnError)
+	for _, cmd := range cmdList {
+		fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 		cmdFlagSetList[cmd] = fs
 	}
 
@@ -190,12 +189,12 @@ func main() {
 	//set up flags for each command
 	for cmd, pars := range cmdFlagsMap {
 		cmdFlagValues[cmd] = cmdFlags{}
-		for _,par := range pars{
-			switch par.valueType{
+		for _, par := range pars {
+			switch par.valueType {
 			case valueTypeInt:
-				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Int(par.name,par.defaultValue.(int),par.usage)
+				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].Int(par.name, par.defaultValue.(int), par.usage)
 			case valueTypeString:
-				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].String(par.name,par.defaultValue.(string),par.usage)
+				cmdFlagValues[cmd][par.name] = cmdFlagSetList[cmd].String(par.name, par.defaultValue.(string), par.usage)
 			}
 		}
 	}
@@ -206,9 +205,9 @@ func main() {
 	if cmd == nil {
 		fmt.Println("\nERROR:", cmdName, "is an invalid command")
 		printUsage()
-	}else{
+	} else {
 		err := cmd.Parse(args[1:])
-		if err!= nil{
+		if err != nil {
 			return
 		}
 		if cmd.Parsed() {
@@ -222,21 +221,21 @@ func main() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	for _,cmd := range cmdList{
+	for _, cmd := range cmdList {
 		fmt.Println(" ", cmd)
 	}
 }
 
-func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
-	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBlockchainInfo(ctx,&rpcpb.GetBlockchainInfoRequest{})
-	if err!=nil {
+func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlockchainInfo(ctx, &rpcpb.GetBlockchainInfoRequest{})
+	if err != nil {
 		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
 		return
 	}
 	fmt.Println(proto.MarshalTextString(response))
 }
 
-func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags){
+func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	if len(*(flags[flagAddress].(*string))) == 0 {
 		printUsage()
 		fmt.Println("\n Example: cli getBalance -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
@@ -247,7 +246,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	getBalanceRequest := rpcpb.GetBalanceRequest{}
 	getBalanceRequest.Name = "getWallet"
 
-	response,err  := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
 	if err != nil {
 		fmt.Println("ERROR: Get Balance failed. ERR:", err)
 		return
@@ -256,7 +255,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	passphrase := ""
 	if response.Message == "WalletExists" {
 		prompter := util.NewTerminalPrompter()
-		passphrase = prompter.GetPassPhrase("Please input the wallet password: ",false)
+		passphrase = prompter.GetPassPhrase("Please input the wallet password: ", false)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
@@ -264,7 +263,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	} else if response.Message == "NoWallet" {
 		fmt.Println("Please use cli createWallet to generate a wallet first!")
 		return
-	}  else {
+	} else {
 		fmt.Printf("Error: Create Wallet Failed! %v\n", response.Message)
 		return
 	}
@@ -273,13 +272,13 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	getBalanceRequest.Name = "getBalance"
 	getBalanceRequest.Address = *(flags[flagAddress].(*string))
 	getBalanceRequest.Passphrase = passphrase
-	response, err  = client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
-	if err!=nil {
-		if strings.Contains(err.Error(), "Password does not match!" ) {
+	response, err = client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err != nil {
+		if strings.Contains(err.Error(), "Password does not match!") {
 			fmt.Printf("ERROR: Get balance failed. Password does not match!\n")
-		} else if strings.Contains(err.Error(), "Address not in the wallets" ) {
+		} else if strings.Contains(err.Error(), "Address not in the wallets") {
 			fmt.Printf("ERROR: Get balance failed. Address not found in the wallet!\n")
-		}  else {
+		} else {
 			fmt.Printf("ERROR: Get balance failed. ERR: %v\n", err)
 		}
 		return
