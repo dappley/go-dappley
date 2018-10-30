@@ -65,8 +65,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	)
 
 	miners := []string{
-		"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
-		"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+		"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8",
+		"dQEooMsqp23RkPsvZXj3XbsRh9BUyGz2S9",
 	}
 	keystrs := []string{
 		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",

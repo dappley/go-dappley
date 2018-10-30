@@ -29,7 +29,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const version = byte(0x00)
+const version = byte(0x5A)
 const addressChecksumLen = 4
 
 type KeyPair struct {
