@@ -27,6 +27,8 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -114,10 +116,16 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 }
 
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
+	tailBlock, err := rpcService.node.GetBlockchain().GetTailBlock()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcService.node.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcService.node.GetBlockchain().GetMaxHeight(),
 		Producers:     rpcService.node.GetBlockchain().GetConsensus().GetProducers(),
+		Timestamp:     tailBlock.GetTimestamp(),
 	}, nil
 }
 

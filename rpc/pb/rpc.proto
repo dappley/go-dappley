@@ -104,6 +104,7 @@ message GetBlockchainInfoResponse {
   bytes   tailBlockHash = 1;
   uint64  blockHeight = 2;
   repeated string producers = 3; // all producers' addresses
+  int64   timestamp = 4;
 }
 
 message AddPeerResponse {
