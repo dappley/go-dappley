@@ -26,10 +26,26 @@ import (
 	"testing"
 )
 
+func newTargetRequirement(bit int) Requirement {
+	target := big.NewInt(1)
+	target = target.Lsh(target, uint(256-bit))
+	return func(block *core.Block) bool {
+		var hashInt big.Int
+		var hashInt2 big.Int
+
+		hash := block.GetHash()
+		hashInt.SetBytes(hash)
+
+		hashFromNonce := block.CalculateHashWithNonce(block.GetNonce())
+		hashInt2.SetBytes(hashFromNonce)
+		return hashInt.Cmp(target) == -1 && hashInt2.Cmp(target) == -1
+	}
+}
+
 func TestMiner_VerifyNonce(t *testing.T) {
 
 	miner := NewMiner()
-	miner.SetTargetBit(14)
+	miner.SetRequirement(newTargetRequirement(14))
 	cbAddr := core.NewAddress("1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg")
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
@@ -48,54 +64,30 @@ func TestMiner_VerifyNonce(t *testing.T) {
 	nonce := int64(0)
 mineloop2:
 	for {
-		if hash, ok := miner.verifyNonce(nonce, newBlock); ok {
-			hash = newBlock.CalculateHashWithoutNonce()
-			newBlock.SetHash(hash)
-			newBlock.SetNonce(nonce)
+		hash := newBlock.CalculateHashWithNonce(nonce)
+		newBlock.SetNonce(nonce)
+		newBlock.SetHash(newBlock.CalculateHashWithNonce(nonce))
+		fulfilled := miner.requirement(newBlock)
+		if fulfilled {
 			newBlock.SignBlock(miner.key, hash)
 			break mineloop2
 		} else {
 			nonce++
 		}
-
 	}
 
 	//check if the verifyNonce function returns true
-	_, ok := miner.verifyNonce(nonce, newBlock)
-	assert.True(t, ok)
+	assert.True(t, miner.requirement(newBlock))
 
 	//input a wrong nonce value, check if it returns false
-	_, ok = miner.verifyNonce(nonce-1, newBlock)
-	assert.False(t, ok)
-}
-
-func TestMiner_SetTargetBit(t *testing.T) {
-	tests := []struct {
-		name     string
-		bit      int
-		expected int
-	}{{"regular", 16, 16},
-		{"zero", 0, 0},
-		{"negative", -5, 0},
-		{"above256", 257, 0},
-		{"regular2", 18, 18},
-		{"equalTo256", 256, 256},
-	}
-
-	miner := NewMiner()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			miner.SetTargetBit(tt.bit)
-			target := big.NewInt(1)
-			target.Lsh(target, uint(256-tt.expected))
-			assert.Equal(t, target, miner.target)
-		})
-	}
+	newBlock.SetNonce(nonce-1)
+	assert.False(t, miner.requirement(newBlock))
 }
 
 func TestMiner_ValidateDifficulty(t *testing.T) {
 
 	miner := NewMiner()
+	miner.SetRequirement(newTargetRequirement(defaultTargetBits))
 
 	//create a block that has a hash value larger than the target
 	blk := core.GenerateMockBlock()
@@ -104,18 +96,19 @@ func TestMiner_ValidateDifficulty(t *testing.T) {
 
 	blk.SetHash(target.Bytes())
 
-	assert.False(t, miner.Validate(blk))
+	assert.False(t, miner.requirement(blk))
 
 	//create a block that has a hash value smaller than the target
 	target = big.NewInt(1)
 	target.Lsh(target, uint(256-defaultTargetBits-1))
 	blk.SetHash(target.Bytes())
 
-	assert.True(t, miner.Validate(blk))
+	assert.True(t, miner.requirement(blk))
 }
 
 func TestMiner_Start(t *testing.T) {
 	miner := NewMiner()
+	miner.SetRequirement(newTargetRequirement(defaultTargetBits))
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
@@ -124,12 +117,12 @@ func TestMiner_Start(t *testing.T) {
 		nil,
 		128,
 	)
-	retCh := make(chan (*MinedBlock), 0)
+	retCh := make(chan *MinedBlock, 0)
 	miner.Setup(bc, cbAddr, retCh)
 	miner.SetPrivKey(keystr)
 	miner.Start()
 	blk := <-retCh
 	assert.True(t, blk.isValid)
 	assert.True(t, blk.block.VerifyHash())
-	assert.True(t, miner.Validate(blk.block))
+	assert.True(t, miner.requirement(blk.block))
 }

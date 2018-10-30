@@ -19,7 +19,6 @@
 package consensus
 
 import (
-	"bytes"
 	"errors"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
@@ -162,30 +161,6 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 		}
 	}
 	return -1
-}
-
-func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
-
-	if block == nil {
-		logger.Debug("ValidateProducer: block is empty")
-		return false
-	}
-
-	producer := dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash := core.HashAddress(producer)
-
-	cbtx := block.GetCoinbaseTransaction()
-	if cbtx == nil {
-		logger.Debug("ValidateProducer: coinbase tx is empty")
-		return false
-	}
-
-	if len(cbtx.Vout) == 0 {
-		logger.Debug("ValidateProducer: coinbase Vout is empty")
-		return false
-	}
-
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash.GetPubKeyHash()) == 0
 }
 
 func IsProducerAddressValid(producer string) bool {

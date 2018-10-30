@@ -20,60 +20,54 @@ package consensus
 
 import (
 	"math"
-	"math/big"
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 )
-
-const defaultTargetBits = 0
 
 type State int
 
 var maxNonce int64 = math.MaxInt64
 
 type Miner struct {
-	target      *big.Int
 	exitCh      chan bool
 	bc          *core.Blockchain
 	beneficiary string
 	key         string
 	newBlock    *MinedBlock
 	nonce       int64
+	requirement Requirement
 	retChan     chan *MinedBlock
 }
 
 func NewMiner() *Miner {
 	m := &Miner{
-		target:      nil,
 		exitCh:      make(chan bool, 1),
 		bc:          nil,
 		beneficiary: "",
 		newBlock:    &MinedBlock{nil, false},
 		nonce:       0,
+		requirement: noRequirement,
 	}
-	m.SetTargetBit(defaultTargetBits)
 	return m
-}
-
-func (miner *Miner) SetTargetBit(bit int) {
-	if bit < 0 || bit > 256 {
-		return
-	}
-	target := big.NewInt(1)
-	miner.target = target.Lsh(target, uint(256-bit))
 }
 
 func (miner *Miner) SetPrivKey(key string) {
 	miner.key = key
 }
+
 func (miner *Miner) GetPrivKey() string {
 	return miner.key
 }
 
 func (miner *Miner) Beneficiary() string {
 	return miner.beneficiary
+}
+
+func (miner *Miner) SetRequirement(requirement Requirement) {
+	miner.requirement = requirement
 }
 
 func (miner *Miner) Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock) {
@@ -117,17 +111,6 @@ func (miner *Miner) Stop() {
 	if len(miner.exitCh) == 0 {
 		miner.exitCh <- true
 	}
-}
-
-func (miner *Miner) Validate(blk *core.Block) bool {
-	var hashInt big.Int
-
-	hash := blk.GetHash()
-	hashInt.SetBytes(hash)
-
-	isValid := hashInt.Cmp(miner.target) == -1
-
-	return isValid
 }
 
 func (miner *Miner) prepare() {
@@ -174,11 +157,13 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
 func (miner *Miner) mineBlock(nonce int64) bool {
-	hash, ok := miner.verifyNonce(nonce, miner.newBlock.block)
-	if ok {
+	hash := miner.newBlock.block.CalculateHashWithNonce(nonce)
+	miner.newBlock.block.SetHash(hash)
+	miner.newBlock.block.SetNonce(nonce)
+	fulfilled := miner.requirement(miner.newBlock.block)
+	if fulfilled {
 		hash = miner.newBlock.block.CalculateHashWithoutNonce()
 		miner.newBlock.block.SetHash(hash)
-		miner.newBlock.block.SetNonce(nonce)
 		keystring := miner.GetPrivKey()
 		if len(keystring) > 0 {
 			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
@@ -189,17 +174,7 @@ func (miner *Miner) mineBlock(nonce int64) bool {
 		}
 		miner.newBlock.isValid = true
 	}
-	return ok
-}
-
-func (miner *Miner) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool) {
-	var hashInt big.Int
-	var hash core.Hash
-
-	hash = blk.CalculateHashWithNonce(nonce)
-	hashInt.SetBytes(hash[:])
-
-	return hash, hashInt.Cmp(miner.target) == -1
+	return fulfilled
 }
 
 //verify transactions and remove invalid transactions

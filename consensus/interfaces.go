@@ -25,6 +25,11 @@ type MinedBlock struct {
 	isValid bool
 }
 
+// Requirement inspects the given block and returns true if it fulfills the requirement
+type Requirement func(block *core.Block) bool
+
+var noRequirement = func(block *core.Block) bool { return true }
+
 type BlockProducer interface {
 	// Setup tells the producer to give rewards to beneficiaryAddr and return the new block through retChan
 	Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock)
@@ -33,13 +38,13 @@ type BlockProducer interface {
 
 	GetPrivKey() string
 
-	// Beneficiary returns the address to receive rewards
+	// Beneficiary returns the address which receives rewards
 	Beneficiary() string
+
+	// SetRequirement defines the requirement that a new block must fulfill
+	SetRequirement(requirement Requirement)
 
 	Start()
 
 	Stop()
-
-	// Validate returns true if blk is valid according to consensus
-	Validate(blk *core.Block) bool
 }

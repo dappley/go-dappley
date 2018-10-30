@@ -19,10 +19,8 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/dappley/go-dappley/common"
 )
 
 const DefaultMaxProducersIfNoProducersGiven = 5
@@ -326,71 +324,6 @@ func TestDynasty_ProducerAtATime(t *testing.T) {
 			dynasty := NewDynasty(producers, len(producers), DefaultTimeBetweenBlockIfNoneGiven)
 			producer := dynasty.ProducerAtATime(tt.now)
 			assert.Equal(t, tt.expected, producer)
-		})
-	}
-}
-
-func TestDynasty_ValidateProducer(t *testing.T) {
-	producers := []string{
-		"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
-
-	cbtx := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD", "", 0, common.NewAmount(0))
-	cbtxInvalidProducer := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBGjWk9yTWmMkhcoDD", "", 0, common.NewAmount(0))
-
-	tests := []struct {
-		name     string
-		block    *core.Block
-		expected bool
-	}{
-		{
-			name: "ValidProducer",
-			block: core.FakeNewBlockWithTimestamp(
-				46,
-				[]*core.Transaction{
-					core.MockTransaction(),
-					&cbtx,
-				},
-				nil,
-			),
-			expected: true,
-		},
-		{
-			name: "ProducerNotAtItsTurn",
-			block: core.FakeNewBlockWithTimestamp(
-				44,
-				[]*core.Transaction{
-					core.MockTransaction(),
-					&cbtx,
-				},
-				nil,
-			),
-			expected: false,
-		},
-		{
-			name: "NotAProducer",
-			block: core.FakeNewBlockWithTimestamp(
-				44,
-				[]*core.Transaction{
-					core.MockTransaction(),
-					&cbtxInvalidProducer,
-				},
-				nil,
-			),
-			expected: false,
-		},
-		{
-			name:     "EmptyBlock",
-			block:    nil,
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dynasty := NewDynasty(producers, len(producers), DefaultTimeBetweenBlockIfNoneGiven)
-			assert.Equal(t, tt.expected, dynasty.ValidateProducer(tt.block))
 		})
 	}
 }

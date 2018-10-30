@@ -19,7 +19,6 @@
 package consensus
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,18 +26,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 )
-
-func TestDelegate_Validate(t *testing.T) {
-
-	d := NewDelegate()
-
-	blk := core.GenerateMockBlock()
-	target := big.NewInt(1)
-	target.Lsh(target, uint(256-defaultTargetBits-1))
-	blk.SetHash(target.Bytes())
-
-	assert.True(t, d.Validate(blk))
-}
 
 func TestDelegate_Start(t *testing.T) {
 	d := NewDelegate()
@@ -57,5 +44,4 @@ func TestDelegate_Start(t *testing.T) {
 	blk := <-retCh
 	assert.True(t, blk.isValid)
 	assert.True(t, blk.block.VerifyHash())
-	assert.True(t, d.Validate(blk.block))
 }

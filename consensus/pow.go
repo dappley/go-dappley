@@ -20,14 +20,18 @@ package consensus
 
 import (
 	logger "github.com/sirupsen/logrus"
+	"math/big"
 
 	"github.com/dappley/go-dappley/core"
 )
+
+const defaultTargetBits = 0
 
 type ProofOfWork struct {
 	bc          *core.Blockchain
 	miner       BlockProducer
 	mintBlkChan chan *MinedBlock
+	target      *big.Int
 	blkProduced bool
 	node        core.NetService
 	exitCh      chan bool
@@ -52,7 +56,13 @@ func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int) {
-	pow.miner.SetTargetBit(bit)
+	if bit < 0 || bit > 256 {
+		return
+	}
+	target := big.NewInt(1)
+	pow.target = target.Lsh(target, uint(256-bit))
+
+	pow.miner.SetRequirement(pow.isHashBelowTarget)
 }
 
 func (pow *ProofOfWork) SetKey(key string) {
@@ -87,8 +97,17 @@ func (pow *ProofOfWork) FinishedMining() bool {
 	return pow.blkProduced
 }
 
-func (pow *ProofOfWork) Validate(blk *core.Block) bool {
-	return pow.miner.Validate(blk)
+func (pow *ProofOfWork) isHashBelowTarget(block *core.Block) bool {
+	var hashInt big.Int
+
+	hash := block.GetHash()
+	hashInt.SetBytes(hash)
+
+	return hashInt.Cmp(pow.target) == -1
+}
+
+func (pow *ProofOfWork) Validate(block *core.Block) bool {
+	return pow.isHashBelowTarget(block)
 }
 
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {

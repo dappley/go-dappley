@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"bytes"
 	"encoding/hex"
 	"strings"
 	"time"
@@ -69,6 +70,7 @@ func (dpos *Dpos) Setup(node core.NetService, cbAddr string) {
 	dpos.bc = node.GetBlockchain()
 	dpos.node = node
 	dpos.delegate.Setup(dpos.bc, cbAddr, dpos.mintBlkCh)
+	dpos.delegate.SetRequirement(dpos.requirementForNewBlock)
 }
 
 func (dpos *Dpos) SetTargetBit(bit int) {
@@ -100,12 +102,8 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
-func (dpos *Dpos) Validate(block *core.Block) bool {
-	if !dpos.delegate.Validate(block) {
-		logger.Debug("Dpos: blockProducer validate block failed")
-		return false
-	}
-	if !dpos.dynasty.ValidateProducer(block) {
+func (dpos *Dpos) requirementForNewBlock(block *core.Block) bool{
+	if !dpos.beneficiaryIsProducer(block) {
 		logger.Debug("Dpos: producer validate failed")
 		return false
 	}
@@ -114,8 +112,17 @@ func (dpos *Dpos) Validate(block *core.Block) bool {
 		return false
 	}
 
-	dpos.slot.Add(block.GetTimestamp(), block)
+	return true
+}
 
+// Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
+func (dpos *Dpos) Validate(block *core.Block) bool {
+	fulfilled := dpos.requirementForNewBlock(block)
+	if !fulfilled {
+		return false
+	}
+
+	dpos.slot.Add(block.GetTimestamp(), block)
 	return true
 }
 
@@ -168,9 +175,78 @@ func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
 	}
 	return false
 }
+
+// verifyProducer verifies a given block is produced by the valid producer by verifying the signature of the block
+func (dpos *Dpos) verifyProducer(block *core.Block) bool {
+	if block == nil {
+		logger.Warn("DPoS: block is empty!")
+		return false
+	}
+
+	hash := block.GetHash()
+	sign := block.GetSign()
+
+	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
+
+	if hash == nil {
+		logger.Warn("DPoS: block hash empty!")
+		return false
+	}
+	if sign == nil {
+		logger.Warn("DPoS: block signature empty!")
+		return false
+	}
+
+	pubkey, err := secp256k1.RecoverECDSAPublicKey(hash, sign)
+	if err != nil {
+		logger.Warn("DPoS: Get pub key from block signature error!")
+		return false
+	}
+
+	pubKeyHash,err := core.NewUserPubKeyHash(pubkey[1:])
+	if err != nil {
+		logger.Warn("DPoS: Invalid Public Key!")
+		return false
+	}
+
+	address := pubKeyHash.GenerateAddress()
+
+	if strings.Compare(address.String(), producer) != 0 {
+		logger.Warn("DPoS: Address is not current producer's")
+		return false
+	}
+
+	return true
+}
+
+// beneficiaryIsProducer is a Requirement that ensure the reward is paid to the producer at the time slot
+func (dpos *Dpos) beneficiaryIsProducer(block *core.Block) bool {
+	if block == nil {
+		logger.Debug("beneficiaryIsProducer requirement failed: block is empty")
+		return false
+	}
+
+	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
+	producerHash := core.HashAddress(producer)
+
+	cbtx := block.GetCoinbaseTransaction()
+	if cbtx == nil {
+		logger.Debug("beneficiaryIsProducer requirement failed: coinbase tx is empty")
+		return false
+	}
+
+	if len(cbtx.Vout) == 0 {
+		logger.Debug("beneficiaryIsProducer requirement failed: coinbase Vout is empty")
+		return false
+	}
+
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash.GetPubKeyHash()) == 0
+}
+
 func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.delegate.Stop()
 }
+
 func (dpos *Dpos) FinishedMining() bool {
 	return dpos.blkProduced
 }
@@ -185,39 +261,5 @@ func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
 }
 
 func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
-	hash1 := block.GetHash()
-	sign := block.GetSign()
-
-	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
-
-	if hash1 == nil {
-		logger.Warn("DPoS: block hash empty!")
-		return false
-	}
-	if sign == nil {
-		logger.Warn("DPoS: block signature empty!")
-		return false
-	}
-
-	pubkey, err := secp256k1.RecoverECDSAPublicKey(hash1, sign)
-	if err != nil {
-		logger.Warn("DPoS: Get pub key from block signature error!")
-		return false
-	}
-
-	pubKeyHash,err := core.NewUserPubKeyHash(pubkey[1:])
-	if err != nil {
-		logger.Warn("DPoS: Invalid Public Key!")
-		return false
-	}
-
-	address := pubKeyHash.GenerateAddress()
-
-	if strings.Compare(address.String(), producer) == 0 {
-		return true
-	}
-
-	logger.Warn("DPoS: Address is not current producer's")
-	return false
-
+	return dpos.verifyProducer(block)
 }

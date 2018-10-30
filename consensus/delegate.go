@@ -19,8 +19,6 @@
 package consensus
 
 import (
-	"math/big"
-
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core"
@@ -32,6 +30,7 @@ type Delegate struct {
 	beneficiary string
 	key         string
 	newBlock    *MinedBlock
+	requirement Requirement
 	retChan     chan *MinedBlock
 }
 
@@ -41,6 +40,7 @@ func NewDelegate() *Delegate {
 		bc:          nil,
 		beneficiary: "",
 		newBlock:    &MinedBlock{nil, false},
+		requirement: noRequirement,
 	}
 }
 
@@ -54,6 +54,10 @@ func (d *Delegate) GetPrivKey() string {
 
 func (d *Delegate) Beneficiary() string {
 	return d.beneficiary
+}
+
+func (d *Delegate) SetRequirement(requirement Requirement) {
+	d.requirement = requirement
 }
 
 func (d *Delegate) Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock) {
@@ -85,17 +89,6 @@ func (d *Delegate) Stop() {
 	if len(d.exitCh) == 0 {
 		d.exitCh <- true
 	}
-}
-
-func (d *Delegate) Validate(blk *core.Block) bool {
-	var hashInt big.Int
-
-	hash := blk.GetHash()
-	hashInt.SetBytes(hash)
-
-	//isValid := hashInt.Cmp(d.target) == -1
-
-	return true
 }
 
 func (d *Delegate) prepare() {
@@ -135,21 +128,24 @@ func (d *Delegate) prepareBlock() *MinedBlock {
 	return &MinedBlock{core.NewBlock(txs, parentBlock), false}
 }
 
-// produceBlock hashes and signs the new block; returns true if it was successful
+// produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement
 func (d *Delegate) produceBlock() bool {
 	hash := d.newBlock.block.CalculateHashWithoutNonce()
 	d.newBlock.block.SetHash(hash)
 	d.newBlock.block.SetNonce(0)
-	keyString := d.GetPrivKey()
-	if len(keyString) > 0 {
-		signed := d.newBlock.block.SignBlock(keyString, hash)
-		if !signed {
-			logger.Warn("Miner Key= ", keyString)
-			return false
+	fulfilled := d.requirement(d.newBlock.block)
+	if fulfilled {
+		keyString := d.GetPrivKey()
+		if len(keyString) > 0 {
+			signed := d.newBlock.block.SignBlock(keyString, hash)
+			if !signed {
+				logger.Warn("Delegate Key= ", keyString)
+				return false
+			}
 		}
+		d.newBlock.isValid = true
 	}
-	d.newBlock.isValid = true
-	return true
+	return fulfilled
 }
 
 // verifyTransactions removes invalid transactions from transaction pool
