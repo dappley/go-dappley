@@ -88,7 +88,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 
 func GenerateBlockWithCbtx(addr Address, lastblock *Block)*Block{
 	//create a new block chain
-	cbtx := NewCoinbaseTX(addr.Address, "", lastblock.GetHeight())
+	cbtx := NewCoinbaseTX(addr.Address, "", lastblock.GetHeight(), common.NewAmount(0))
 	b := NewBlock([]*Transaction{&cbtx}, lastblock)
 	return b
 }
@@ -100,7 +100,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight())
+		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockToTail(b)
