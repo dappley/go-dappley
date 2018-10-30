@@ -475,7 +475,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := rpcContext.wallet.Key.GetPubKeyHash()
+	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
 	utxos, err := core.LoadUTXOIndex(rpcContext.store).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
