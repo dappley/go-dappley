@@ -269,6 +269,60 @@ loop:
 	pow.Stop()
 }
 
+func TestPreventDoubleSpend(t *testing.T) {
+	//create new wallet
+	wallets := &client.WalletManager{}
+
+	wallet1 := client.NewWallet()
+	wallet2 := client.NewWallet()
+	wallet3 := client.NewWallet()
+
+	wallets.AddWallet(wallet1)
+	wallets.AddWallet(wallet2)
+	wallets.AddWallet(wallet3)
+
+	sendAmount:=common.NewAmount(10)
+	keyPair := wallets.GetKeyPairByAddress(wallet1.GetAddress())
+
+	//create a blockchain
+	db := storage.NewRamStorage()
+	defer db.Close()
+
+	pow := NewProofOfWork()
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
+	assert.NotNil(t, bc)
+
+	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
+	utxos,err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	assert.Nil(t,err)
+
+	//create a transaction
+	tx1, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0))
+	tx2, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0))
+
+	assert.Nil(t, err)
+
+	//push the transaction to transaction pool
+	bc.GetTxPool().Push(tx1)
+	bc.GetTxPool().Push(tx2)
+
+	//start a miner
+	n := network.FakeNodeWithPidAndAddr(bc, "asd", "test")
+	pow.Setup(n, wallet1.GetAddress().Address)
+
+	pow.Start()
+
+	//Make sure there are blocks have been mined
+	count := GetNumberOfBlocks(t, bc.Iterator())
+	for count < 2 {
+		count = GetNumberOfBlocks(t, bc.Iterator())
+	}
+	pow.Stop()
+
+	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+	assert.True(t, core.MetricsTxDoubleSpend.Count()>0)
+}
+
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
 	//find how many blocks have been mined
 	numOfBlocksMined := 0
