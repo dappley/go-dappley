@@ -131,7 +131,7 @@ message GetUTXOResponse {
 }
 
 message UTXO {
-  int64   amount = 1;   
+  bytes   amount = 1;   
   bytes   publicKeyHash = 2;
   bytes   txid = 3;     
   uint32  txIndex = 4;

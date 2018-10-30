@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	ProtoVersion                  = "1.0.0"
-	MaxGetBlocksCount       int32 = 500
+	ProtoVersion                   = "1.0.0"
+	MaxGetBlocksCount       int32  = 500
 	MinUtxoBlockHeaderCount uint64 = 6
 )
 
@@ -134,7 +134,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		response.Utxos = append(
 			response.Utxos,
 			&rpcpb.UTXO{
-				Amount:        utxo.Value.BigInt().Int64(),
+				Amount:        utxo.Value.Bytes(),
 				PublicKeyHash: utxo.PubKeyHash,
 				Txid:          utxo.Txid,
 				TxIndex:       uint32(utxo.TxIndex),

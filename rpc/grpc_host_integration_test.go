@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
@@ -211,7 +212,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus, 20)
+	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -255,7 +256,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus, 20)
+	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -298,7 +299,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus, 20)
+	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
@@ -375,7 +376,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus, 20)
+	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -418,7 +419,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus, 20)
+	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -474,7 +475,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := rpcContext.wallet.GetPubKeyHash()
+	pubKeyHash, _ := rpcContext.wallet.Key.GetPubKeyHash()
 	utxos, err := core.LoadUTXOIndex(rpcContext.store).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -483,7 +484,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
-		0,
+		common.NewAmount(0),
 	)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
@@ -499,7 +500,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
-		0,
+		common.NewAmount(0),
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
@@ -511,7 +512,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus, 20)
+	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
 	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10)
@@ -568,7 +569,7 @@ func (context *RpcTestContext) destroyContext() {
 func getBalance(utxos []*rpcpb.UTXO) *common.Amount {
 	amount := common.NewAmount(0)
 	for _, utxo := range utxos {
-		amount = amount.Add(common.NewAmount(uint64(utxo.Amount)))
+		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))
 	}
 	return amount
 }
