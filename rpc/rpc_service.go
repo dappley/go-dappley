@@ -143,7 +143,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 			response.Utxos,
 			&rpcpb.UTXO{
 				Amount:        utxo.Value.Bytes(),
-				PublicKeyHash: utxo.PubKeyHash,
+				PublicKeyHash: utxo.PubKeyHash.GetPubKeyHash(),
 				Txid:          utxo.Txid,
 				TxIndex:       uint32(utxo.TxIndex),
 			},

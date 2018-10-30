@@ -185,7 +185,7 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 		return false
 	}
 
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash.GetPubKeyHash()) == 0
 }
 
 func IsProducerAddressValid(producer string) bool {

@@ -109,16 +109,16 @@ func MockUtxoInputs() []TXInput {
 
 func MockUtxoOutputsWithoutInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), address1Hash.GetPubKeyHash()},
-		{common.NewAmount(7), address1Hash.GetPubKeyHash()},
+		{common.NewAmount(5), address1Hash},
+		{common.NewAmount(7), address1Hash},
 	}
 }
 
 func MockUtxoOutputsWithInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(4), address1Hash.GetPubKeyHash()},
-		{common.NewAmount(5), address2Hash.GetPubKeyHash()},
-		{common.NewAmount(3), address2Hash.GetPubKeyHash()},
+		{common.NewAmount(4), address1Hash},
+		{common.NewAmount(5), address2Hash},
+		{common.NewAmount(3), address2Hash},
 	}
 }
 
@@ -126,7 +126,7 @@ func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	txout := TXOutput{common.NewAmount(5), address1Hash.GetPubKeyHash()}
+	txout := TXOutput{common.NewAmount(5), address1Hash}
 	utxoIndex := NewUTXOIndex()
 
 	utxoIndex.addUTXO(txout, []byte{1}, 0)
@@ -147,10 +147,10 @@ func TestRemoveUTXO(t *testing.T) {
 
 	utxoIndex := NewUTXOIndex()
 
-	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(5), address1Hash.GetPubKeyHash(), []byte{1}, 0})
-	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash.GetPubKeyHash(), []byte{1}, 1})
-	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash.GetPubKeyHash(), []byte{2}, 0})
-	utxoIndex.index[string(address2Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address2Hash.GetPubKeyHash())], &UTXO{common.NewAmount(4), address2Hash.GetPubKeyHash(), []byte{1}, 2})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(5), address1Hash, []byte{1}, 0})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash, []byte{1}, 1})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash, []byte{2}, 0})
+	utxoIndex.index[string(address2Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address2Hash.GetPubKeyHash())], &UTXO{common.NewAmount(4), address2Hash, []byte{1}, 2})
 
 	err := utxoIndex.removeUTXO([]byte{1}, 0)
 
@@ -237,8 +237,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 func TestFindUTXO(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := &UTXO{common.NewAmount(10), []byte("addr1"), Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9), []byte("addr1"), Txin[1].Txid, Txin[1].Vout}
+	utxo1 := &UTXO{common.NewAmount(10), PubKeyHash{[]byte("addr1")}, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9), PubKeyHash{[]byte("addr1")}, Txin[1].Txid, Txin[1].Vout}
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index["addr1"] = []*UTXO{utxo1, utxo2}
 
@@ -293,9 +293,9 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 
 	//preapre 3 utxos in the utxo index
 	txoutputs := []TXOutput{
-		{common.NewAmount(3), address1Hash.GetPubKeyHash()},
-		{common.NewAmount(4), address2Hash.GetPubKeyHash()},
-		{common.NewAmount(5), address2Hash.GetPubKeyHash()},
+		{common.NewAmount(3), address1Hash},
+		{common.NewAmount(4), address2Hash},
+		{common.NewAmount(5), address2Hash},
 	}
 
 	index := NewUTXOIndex()

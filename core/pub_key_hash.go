@@ -12,7 +12,7 @@ const versionContract = byte(0x58)
 const addressChecksumLen = 4
 
 type PubKeyHash struct {
-	pubKeyHash []byte
+	PubKeyHash []byte
 }
 
 var (
@@ -41,7 +41,7 @@ func NewContractPubKeyHash() (PubKeyHash, error) {
 
 //GetPubKeyHash gets the public key hash
 func (pkh PubKeyHash) GetPubKeyHash() []byte {
-	return pkh.pubKeyHash
+	return pkh.PubKeyHash
 }
 
 //GenerateAddress generates an address  from a public key hash
@@ -53,11 +53,11 @@ func (pkh PubKeyHash) GenerateAddress() Address {
 
 //GenerateAddress generates an address  from a public key hash
 func (pkh PubKeyHash) IsContract() (bool, error){
-	if pkh.pubKeyHash[0] == versionUser {
+	if pkh.PubKeyHash[0] == versionUser {
 		return false, nil
 	}
 
-	if pkh.pubKeyHash[0] == versionContract {
+	if pkh.PubKeyHash[0] == versionContract {
 		return true, nil
 	}
 

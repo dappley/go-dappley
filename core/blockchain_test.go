@@ -21,14 +21,14 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/storage/mocks"
+	"github.com/stretchr/testify/mock"
 	"os"
 	"testing"
 
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestMain(m *testing.M) {
@@ -117,9 +117,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Serialized data of an empty UTXOIndex (generated using `hex.EncodeToString(UTXOIndex{}.serialize())`)
-	serializedUTXOIndex, _ := hex.DecodeString("1aff87040101095554584f496e64657801ff8800010c01ff8600000dff8502010" +
-		"2ff860001ff8200003bff81030102ff82000104010556616c756501ff8400010a5075624b657948617368010a00010454786964010a" +
-		"0001075478496e64657801040000000aff83050102ff8a0000000fff8b05010103496e7401ff8c00000004ff880000")
+	serializedUTXOIndex, _ := hex.DecodeString(`0fff89040102ff8a00010c01ff8800000dff87020102ff880001ff8200003cff81030102ff82000104010556616c756501ff8400010a5075624b65794861736801ff8600010454786964010a0001075478496e64657801040000000aff83050102ff8c0000000fff8d05010103496e7401ff8e00000027ff850301010a5075624b65794861736801ff86000101010a5075624b657948617368010a00000004ff8a0000`)
 
 	db := new(mocks.Storage)
 
@@ -132,7 +130,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(nil).Twice()
 
 	// Create a blockchain for testing
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	bc := &Blockchain{Hash{}, db, nil, nil, nil}
 
 	// Add genesis block

@@ -87,7 +87,7 @@ func (tx *Transaction) GetToHashBytes() []byte {
 
 	for _, vout := range tx.Vout {
 		bytes = append(bytes, vout.Value.Bytes()...)
-		bytes = append(bytes, vout.PubKeyHash...)
+		bytes = append(bytes, vout.PubKeyHash.GetPubKeyHash()...)
 	}
 
 	bytes = append(bytes, byteutils.FromUint64(tx.Tip)...)
@@ -120,7 +120,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	for i, vin := range txCopy.Vin {
 		txCopy.Vin[i].Signature = nil
 		oldPubKey := vin.PubKey
-		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash
+		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash.GetPubKeyHash()
 		txCopy.ID = txCopy.Hash()
 
 		txCopy.Vin[i].PubKey = oldPubKey
@@ -203,8 +203,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
 	for i, vin := range tx.Vin {
 
-		pkh := PubKeyHash{prevUtxos[i].PubKeyHash}
-		isContract, err:= pkh.IsContract()
+		isContract, err:= prevUtxos[i].PubKeyHash.IsContract()
 		if err != nil {
 			return false
 		}
@@ -218,7 +217,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 		if err != nil {
 			return false
 		}
-		if !bytes.Equal(pubKeyHash.GetPubKeyHash(), prevUtxos[i].PubKeyHash) {
+		if !bytes.Equal(pubKeyHash.GetPubKeyHash(), prevUtxos[i].PubKeyHash.GetPubKeyHash()) {
 			return false
 		}
 	}
@@ -227,7 +226,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for _, utxo := range prevUtxos {
-		if utxo.PubKeyHash == nil {
+		if utxo.PubKeyHash.GetPubKeyHash() == nil {
 			logger.Error("ERROR: Previous transaction is not correct")
 			return false
 		}
@@ -238,7 +237,7 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for i, vin := range tx.Vin {
 		txCopy.Vin[i].Signature = nil
 		oldPubKey := txCopy.Vin[i].PubKey
-		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash
+		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash.GetPubKeyHash()
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[i].PubKey = oldPubKey
 
@@ -348,7 +347,7 @@ func (tx Transaction) String() string {
 	for i, output := range tx.Vout {
 		lines = append(lines, fmt.Sprintf("     Output %d:", i))
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
-		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash.GetPubKeyHash()))
 	}
 	lines = append(lines, "\n")
 

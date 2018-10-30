@@ -43,7 +43,7 @@ type UTXOIndex struct {
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
 	Value      *common.Amount
-	PubKeyHash []byte
+	PubKeyHash PubKeyHash
 	Txid       []byte
 	TxIndex    int
 }
@@ -233,7 +233,7 @@ func (utxos UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	u := newUTXO(txout, txid, vout)
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
-	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
+	utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(utxos.index[string(u.PubKeyHash.GetPubKeyHash())], u)
 
 }
 
@@ -245,8 +245,8 @@ func (utxos UTXOIndex) removeUTXO(txid []byte, vout int) error {
 	for _, utxoArray := range utxos.index {
 		for i, u := range utxoArray {
 			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
-				userUTXOs := utxos.index[string(u.PubKeyHash)]
-				utxos.index[string(u.PubKeyHash)] = append(userUTXOs[:i], userUTXOs[i+1:]...)
+				userUTXOs := utxos.index[string(u.PubKeyHash.GetPubKeyHash())]
+				utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(userUTXOs[:i], userUTXOs[i+1:]...)
 				return nil
 			}
 		}

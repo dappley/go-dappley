@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-
-
 func TestNewUserPubKeyHash(t *testing.T) {
 	expect := []uint8([]byte{versionUser,0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
 
@@ -24,7 +22,7 @@ func TestNewUserPubKeyHash_Fail(t *testing.T) {
 func TestNewContractPubKeyHash(t *testing.T) {
 	pkh, err := NewContractPubKeyHash()
 	assert.Nil(t, err)
-	assert.Equal(t, versionContract, pkh.pubKeyHash[0])
+	assert.Equal(t, versionContract, pkh.PubKeyHash[0])
 }
 
 func TestPubKeyHash_IsContract(t *testing.T) {

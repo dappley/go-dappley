@@ -29,11 +29,11 @@ import (
 
 type TXOutput struct {
 	Value      *common.Amount
-	PubKeyHash []byte
+	PubKeyHash PubKeyHash
 }
 
 func (out *TXOutput) Lock(address string) {
-	out.PubKeyHash = HashAddress(address)
+	out.PubKeyHash = PubKeyHash{HashAddress(address)}
 }
 
 func HashAddress(address string) []byte {
@@ -42,11 +42,11 @@ func HashAddress(address string) []byte {
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
-	return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
+	return bytes.Compare(out.PubKeyHash.GetPubKeyHash(), pubKeyHash) == 0
 }
 
 func NewTXOutput(value *common.Amount, address string) *TXOutput {
-	txo := &TXOutput{value, nil}
+	txo := &TXOutput{value, PubKeyHash{}}
 	txo.Lock(address)
 	return txo
 }
@@ -54,11 +54,11 @@ func NewTXOutput(value *common.Amount, address string) *TXOutput {
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),
-		PubKeyHash: out.PubKeyHash,
+		PubKeyHash: out.PubKeyHash.GetPubKeyHash(),
 	}
 }
 
 func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).Value)
-	out.PubKeyHash = pb.(*corepb.TXOutput).PubKeyHash
+	out.PubKeyHash = PubKeyHash{pb.(*corepb.TXOutput).PubKeyHash}
 }
