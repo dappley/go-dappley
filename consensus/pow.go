@@ -33,7 +33,6 @@ type ProofOfWork struct {
 	miner       BlockProducer
 	mintBlkChan chan *NewBlock
 	target      *big.Int
-	blkProduced bool
 	node        core.NetService
 	exitCh      chan bool
 }
@@ -42,7 +41,6 @@ func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
 		miner:       NewMiner(),
 		mintBlkChan: make(chan *NewBlock, 1),
-		blkProduced: false,
 		node:        nil,
 		exitCh:      make(chan bool, 1),
 	}
@@ -80,7 +78,6 @@ func (pow *ProofOfWork) Start() {
 				logger.Info("PoW stopped...")
 				return
 			case minedBlk := <-pow.mintBlkChan:
-				pow.blkProduced = true
 				if minedBlk.IsValid {
 					pow.updateNewBlock(minedBlk.Block)
 				}
@@ -94,8 +91,9 @@ func (pow *ProofOfWork) Stop() {
 	pow.exitCh <- true
 	pow.miner.Stop()
 }
-func (pow *ProofOfWork) FinishedMining() bool {
-	return pow.blkProduced
+
+func (pow *ProofOfWork) IsProducingBlock() bool {
+	return !pow.miner.IsIdle()
 }
 
 func (pow *ProofOfWork) isHashBelowTarget(block *core.Block) bool {

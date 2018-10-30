@@ -29,14 +29,14 @@ import (
 )
 
 func TestNewDpos(t *testing.T) {
-	dpos := NewDpos()
+	dpos := NewDPOS()
 	assert.Equal(t, 1, cap(dpos.newBlockCh))
 	assert.Equal(t, 1, cap(dpos.quitCh))
 	assert.Nil(t, dpos.node)
 }
 
 func TestDpos_Setup(t *testing.T) {
-	dpos := NewDpos()
+	dpos := NewDPOS()
 	cbAddr := "abcdefg"
 	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128)
 	node := network.NewNode(bc)
@@ -48,7 +48,7 @@ func TestDpos_Setup(t *testing.T) {
 }
 
 func TestDpos_Stop(t *testing.T) {
-	dpos := NewDpos()
+	dpos := NewDPOS()
 	dpos.Stop()
 	select {
 	case <-dpos.quitCh:
@@ -116,7 +116,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dpos := NewDpos()
+			dpos := NewDPOS()
 			dpos.SetDynasty(NewDynasty(producers, len(producers), defaultTimeBetweenBlk))
 			assert.Equal(t, tt.expected, dpos.beneficiaryIsProducer(tt.block))
 		})

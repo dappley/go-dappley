@@ -40,6 +40,7 @@ type Miner struct {
 	nonce       int64
 	requirement Requirement
 	newBlockCh  chan *NewBlock
+	idle bool
 }
 
 func NewMiner() *Miner {
@@ -50,6 +51,7 @@ func NewMiner() *Miner {
 		newBlock:    &NewBlock{nil, false},
 		nonce:       0,
 		requirement: noRequirement,
+		idle: true,
 	}
 	return m
 }
@@ -79,6 +81,7 @@ func (miner *Miner) Start() {
 		}
 		logger.Info("Miner: Start Mining A Block...")
 		miner.resetExitCh()
+		miner.idle = false
 		miner.prepare()
 		nonce := int64(0)
 	hashLoop:
@@ -99,6 +102,7 @@ func (miner *Miner) Start() {
 			}
 		}
 		miner.returnBlk()
+		miner.idle = true
 		logger.Info("Miner: Mining Ends...")
 	}()
 }
@@ -107,6 +111,10 @@ func (miner *Miner) Stop() {
 	if len(miner.exitCh) == 0 {
 		miner.exitCh <- true
 	}
+}
+
+func (miner *Miner) IsIdle() bool {
+	return miner.idle
 }
 
 func (miner *Miner) prepare() {

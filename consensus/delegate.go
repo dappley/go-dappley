@@ -32,6 +32,7 @@ type Delegate struct {
 	newBlock    *NewBlock
 	requirement Requirement
 	newBlockCh  chan *NewBlock
+	idle        bool
 }
 
 func NewDelegate() *Delegate {
@@ -41,6 +42,7 @@ func NewDelegate() *Delegate {
 		beneficiary: "",
 		newBlock:    &NewBlock{nil, false},
 		requirement: noRequirement,
+		idle:        true,
 	}
 }
 
@@ -69,6 +71,7 @@ func (d *Delegate) Start() {
 		}
 		logger.Info("Delegate: Producing a block...")
 		d.resetExitCh()
+		d.idle = false
 		d.prepare()
 		select {
 		case <-d.exitCh:
@@ -77,6 +80,7 @@ func (d *Delegate) Start() {
 			d.produceBlock()
 		}
 		d.returnBlk()
+		d.idle = true
 		logger.Info("Delegate: Produced a block")
 	}()
 }
@@ -85,6 +89,10 @@ func (d *Delegate) Stop() {
 	if len(d.exitCh) == 0 {
 		d.exitCh <- true
 	}
+}
+
+func (d *Delegate) IsIdle() bool {
+	return d.idle
 }
 
 func (d *Delegate) prepare() {

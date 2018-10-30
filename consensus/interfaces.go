@@ -45,4 +45,6 @@ type BlockProducer interface {
 	Start()
 
 	Stop()
+
+	IsIdle() bool
 }

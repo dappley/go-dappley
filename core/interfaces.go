@@ -27,11 +27,12 @@ type Consensus interface {
 	VerifyBlock(block *Block) bool
 	Start()
 	Stop()
-	StartNewBlockMinting()
 	Setup(NetService, string)
-	SetTargetBit(int)
 	SetKey(string)
-	FinishedMining() bool
+
+	// IsProducingBlock returns true if this node itself is producing a block
+	IsProducingBlock() bool
+
 	AddProducer(string) error
 	GetProducers() []string
 }

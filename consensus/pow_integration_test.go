@@ -90,7 +90,9 @@ func TestMiner_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !pow.IsProducingBlock()
+	}, 20)
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -138,7 +140,9 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !pow.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	count = GetNumberOfBlocks(t, bc.Iterator())
@@ -213,7 +217,9 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 
 	//stop mining
 	pow.Stop()
-	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !pow.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	//get the number of blocks
@@ -258,7 +264,9 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !pow.IsProducingBlock()
+	}, 20)
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)
