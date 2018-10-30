@@ -477,6 +477,10 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, OK, successResponse.ErrorCode)
 
+	maxHeight = rpcContext.bc.GetMaxHeight()
+	for (rpcContext.bc.GetMaxHeight() - maxHeight) >= 1 {
+	}
+
 	errTransaction, err := core.NewUTXOTransaction(rpcContext.store,
 		rpcContext.wallet.GetAddress(),
 		receiverWallet.GetAddress(),
