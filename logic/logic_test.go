@@ -66,7 +66,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer store.Close()
 
 	//create a wallet address
-	addr := core.NewAddress("1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV")
+	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 
 	//create a blockchain
 	_, err := CreateBlockchain(addr, store, nil, 128)
@@ -112,7 +112,7 @@ func TestGetBalance(t *testing.T) {
 	defer store.Close()
 
 	//create a wallet address
-	addr := core.NewAddress("1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV")
+	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
@@ -130,18 +130,18 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a wallet address
-	addr := core.NewAddress("1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV")
+	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
-	balance1, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"), store)
+	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), store)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance1)
 
-	balance2, err := GetBalance(core.NewAddress("1AUrNJCRM5X5fDdmm3E3yjCrXQMLwfwfww"), store)
+	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), store)
 	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }

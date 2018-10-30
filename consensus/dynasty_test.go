@@ -43,13 +43,13 @@ func TestDynasty_AddProducer(t *testing.T) {
 		{
 			name:     "ValidInput",
 			maxPeers: 3,
-			input:    "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-			expected: []string{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"},
+			input:    "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expected: []string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"},
 		},
 		{
 			name:     "MinerExceedsLimit",
 			maxPeers: 0,
-			input:    "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
+			input:    "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
 			expected: []string{},
 		},
 		{
@@ -86,24 +86,24 @@ func TestDynasty_AddMultipleProducers(t *testing.T) {
 			name:     "ValidInput",
 			maxPeers: 3,
 			input: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
+				"dZ8GsrkSAiARL7ZnJLZSADzVXH4ea9EzhL"},
 			expected: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
+				"dZ8GsrkSAiARL7ZnJLZSADzVXH4ea9EzhL"},
 		},
 		{
 			name:     "ExceedsLimit",
 			maxPeers: 2,
 			input: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
+				"dZ8GsrkSAiARL7ZnJLZSADzVXH4ea9EzhL"},
 			expected: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
 			},
 		},
 		{
@@ -115,8 +115,8 @@ func TestDynasty_AddMultipleProducers(t *testing.T) {
 		{
 			name:     "mixedInput",
 			maxPeers: 3,
-			input:    []string{"m1", "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD", "m3"},
-			expected: []string{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"},
+			input:    []string{"m1", "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "m3"},
+			expected: []string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"},
 		},
 		{
 			name:     "EmptyInput",
@@ -145,27 +145,27 @@ func TestDynasty_GetMinerIndex(t *testing.T) {
 		{
 			name: "minerCouldBeFound",
 			initialProducers: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner:    "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
+				"dZ8GsrkSAiARL7ZnJLZSADzVXH4ea9EzhL"},
+			miner:    "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
 			expected: 0,
 		},
 		{
 			name: "minerCouldNotBeFound",
 			initialProducers: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
-			miner:    "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDF",
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
+				"dZ8GsrkSAiARL7ZnJLZSADzVXH4ea9EzhL"},
+			miner:    "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivg",
 			expected: -1,
 		},
 		{
 			name: "EmptyInput",
 			initialProducers: []string{
-				"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
-				"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-				"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"},
+				"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+				"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs",
+				"dZ8GsrkSAiARL7ZnJLZSADzVXH4ea9EzhL"},
 			miner:    "",
 			expected: -1,
 		},

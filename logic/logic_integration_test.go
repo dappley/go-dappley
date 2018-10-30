@@ -439,7 +439,7 @@ func TestAddBalance(t *testing.T) {
 			bc, pow := createBlockchain(addr, store)
 
 			// Create a new wallet address for testing
-			testAddr := core.Address{"1AUrNJCRM5X5fDdmm3E3yjCrXQMLvDj9tb"}
+			testAddr := core.Address{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"}
 
 			// Start mining to approve the transaction
 			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
@@ -483,7 +483,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			defer store.Close()
 
 			// Create a coinbase wallet address
-			addr := core.Address{"1G4r54VdJsotfCukXUWmg1ZRnhjUs6TvbV"}
+			addr := core.Address{"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
 			// Create a blockchain
 			bc, err := CreateBlockchain(addr, store, nil, 128)
 			assert.Nil(t, err)

@@ -29,6 +29,10 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var (
+	ErrInvalidPubKeyHashVersion = errors.New("Invalid Public Key Hash Version ")
+)
+
 const versionUser = byte(0x5A)
 const versionContract = byte(0x58)
 const addressChecksumLen = 4
@@ -67,6 +71,19 @@ func GenerateAddressByPublicKey(publicKey []byte, isContract bool) Address {
 
 	fullPayload := append(versionedPayload, checksum...)
 	return NewAddress(base58.Encode(fullPayload))
+}
+
+//IsVersionContract
+func IsVersionContract(version byte) (bool, error){
+	if version == versionUser {
+		return false, nil
+	}
+
+	if version == versionContract {
+		return true, nil
+	}
+
+	return false, ErrInvalidPubKeyHashVersion
 }
 
 func HashPubKey(pubKey []byte) ([]byte, error) {

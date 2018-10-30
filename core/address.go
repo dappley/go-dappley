@@ -20,8 +20,13 @@ package core
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
+)
+
+var (
+	ErrInvalidPubKeyHashLength = errors.New("Invalid Public Key Hash Length ")
 )
 
 type Address struct {
@@ -34,10 +39,24 @@ func NewAddress(addressString string) Address {
 	return address
 }
 
-func (a Address) String() string{
+//String returns the address in string type
+func (a Address) String() string {
 	return a.Address
 }
 
+//isContract checks if an address is a contract address
+func (a Address) IsContract() (bool, error) {
+	pubKeyHash := base58.Decode(a.String())
+
+	if len(pubKeyHash) < addressChecksumLen {
+		return false, ErrInvalidPubKeyHashLength
+	}
+
+	version := pubKeyHash[0]
+	return IsVersionContract(version)
+}
+
+//ValidateAddress checks if an address is valid
 func (a Address) ValidateAddress() bool {
 
 	pubKeyHash := base58.Decode(a.String())
@@ -45,8 +64,14 @@ func (a Address) ValidateAddress() bool {
 	if len(pubKeyHash) < addressChecksumLen {
 		return false
 	}
+
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
 	version := pubKeyHash[0]
+
+	if _, err := IsVersionContract(version); err != nil {
+		return false
+	}
+
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
 	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
 

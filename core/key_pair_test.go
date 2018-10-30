@@ -52,6 +52,42 @@ func TestGenerateContractAddress(t *testing.T) {
 	assert.Equal(t, uint8('c'), address.String()[0])
 }
 
+func TestIsVersionContract(t *testing.T) {
+	tests := []struct {
+		name     	string
+		version 	byte
+		expectedRes bool
+		expectedErr error
+	}{
+		{
+			name:     		"ContractAddress",
+			version: 		versionContract,
+			expectedRes:    true,
+			expectedErr: 	nil,
+		},
+		{
+			name:     		"UserAddress",
+			version: 		versionUser,
+			expectedRes:    false,
+			expectedErr: 	nil,
+		},
+		{
+			name:     		"InvalidAddress",
+			version: 		0x00,
+			expectedRes:    false,
+			expectedErr: 	ErrInvalidPubKeyHashVersion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res,err := IsVersionContract(tt.version)
+			assert.Equal(t, res, tt.expectedRes)
+			assert.Equal(t, err, tt.expectedErr)
+		})
+	}
+}
+
 func TestNewKeyPair(t *testing.T) {
 	key1 := NewKeyPair()
 
