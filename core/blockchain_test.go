@@ -79,7 +79,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 
-	blk := GenerateMockBlock()
+	blk := GenerateUtxoMockBlockWithoutInputs()
 	blk.SetHash([]byte("hash1"))
 	blk.header.height = 1
 	bc.AddBlockToTail(blk)
@@ -149,8 +149,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
 
 	// Simulate a failure when flushing new block to storage
-	simulatedFailure := errors.New("simulated storage failure")
-	db.On("Flush").Return(simulatedFailure)
+	simulatedFailure1 := errors.New("simulated storage failure")
+	db.On("Flush").Return(simulatedFailure1)
 
 	// Add new block
 	blk := GenerateMockBlock()
@@ -158,8 +158,9 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	blk.header.height = 1
 	err = bc.AddBlockToTail(blk)
 
+	simulatedFailure2 := errors.New("UTXO: utxo not found when trying to remove from cache")
 	// Expect the simulated error when adding new block
-	assert.Equal(t, simulatedFailure, err)
+	assert.Equal(t, simulatedFailure2, err)
 	// Expect that genesis block is still the blockchain tail
 	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
 
