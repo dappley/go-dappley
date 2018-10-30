@@ -310,7 +310,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
 	assert.Equal(t, response.Blocks[0].GetHeader().Hash, []byte(block1.GetHash()))
 	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
-	assert.Equal(t, response.Blocks[0].GetHeader().Hash, []byte(block20.GetHash()))
+	assert.Equal(t, response.Blocks[19].GetHeader().Hash, []byte(block20.GetHash()))
 
 	// Check query loop
 	var startBlockHashs [][]byte
