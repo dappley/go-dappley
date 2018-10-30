@@ -42,8 +42,7 @@ type UTXOIndex struct {
 
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
-	Value      *common.Amount
-	PubKeyHash PubKeyHash
+	TXOutput
 	Txid       []byte
 	TxIndex    int
 }
@@ -183,7 +182,7 @@ func (utxos *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) er
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
 func newUTXO(txout TXOutput, txid []byte, vout int) *UTXO {
-	return &UTXO{txout.Value, txout.PubKeyHash, txid, vout}
+	return &UTXO{txout, txid, vout}
 }
 
 // undoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.

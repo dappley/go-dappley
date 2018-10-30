@@ -92,9 +92,9 @@ func TestSign(t *testing.T) {
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*UTXO{
-		{common.NewAmount(13), pubKeyHash, []byte("01"), 0},
-		{common.NewAmount(13), pubKeyHash, []byte("02"), 0},
-		{common.NewAmount(13), pubKeyHash, []byte("03"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash}, []byte("01"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash}, []byte("02"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash}, []byte("03"), 0},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -201,8 +201,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
 		string(pubKeyHash.GetPubKeyHash()): {
-			{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
-			{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
+			{TXOutput{common.NewAmount(4), pubKeyHash}, []byte{1}, 0},
+			{TXOutput{common.NewAmount(3), pubKeyHash}, []byte{2}, 1},
 		},
 	}
 
@@ -317,10 +317,10 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 
 	Txin := MockTxInputsWithPubkey(pubkey)
 	Txin2 := MockTxInputsWithPubkey(pubkey)
-	utxo1 := &UTXO{common.NewAmount(10), pubkeyHash, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9), pubkeyHash, Txin[1].Txid, Txin[1].Vout}
-	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[0].Txid, Txin2[0].Vout}
-	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[1].Txid, Txin2[1].Vout}
+	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash}, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash}, Txin[1].Txid, Txin[1].Vout}
+	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash}, Txin2[0].Txid, Txin2[0].Vout}
+	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash}, Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := NewUTXOIndex()
 	utxoPool.index[string(pubkeyHash.GetPubKeyHash())] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 

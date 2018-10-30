@@ -147,10 +147,14 @@ func TestRemoveUTXO(t *testing.T) {
 
 	utxoIndex := NewUTXOIndex()
 
-	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(5), address1Hash, []byte{1}, 0})
-	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash, []byte{1}, 1})
-	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash, []byte{2}, 0})
-	utxoIndex.index[string(address2Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address2Hash.GetPubKeyHash())], &UTXO{common.NewAmount(4), address2Hash, []byte{1}, 2})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())],
+		&UTXO{TXOutput{common.NewAmount(5), address1Hash}, []byte{1}, 0})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())],
+		&UTXO{TXOutput{common.NewAmount(2), address1Hash}, []byte{1}, 1})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())],
+		&UTXO{TXOutput{common.NewAmount(2), address1Hash}, []byte{2}, 0})
+	utxoIndex.index[string(address2Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address2Hash.GetPubKeyHash())],
+		&UTXO{TXOutput{common.NewAmount(4), address2Hash}, []byte{1}, 2})
 
 	err := utxoIndex.removeUTXO([]byte{1}, 0)
 
@@ -237,8 +241,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 func TestFindUTXO(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := &UTXO{common.NewAmount(10), PubKeyHash{[]byte("addr1")}, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9), PubKeyHash{[]byte("addr1")}, Txin[1].Txid, Txin[1].Vout}
+	utxo1 := &UTXO{TXOutput{common.NewAmount(10), PubKeyHash{[]byte("addr1")}}, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{TXOutput{common.NewAmount(9), PubKeyHash{[]byte("addr1")}}, Txin[1].Txid, Txin[1].Vout}
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index["addr1"] = []*UTXO{utxo1, utxo2}
 
