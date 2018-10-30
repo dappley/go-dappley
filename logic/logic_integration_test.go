@@ -434,7 +434,7 @@ func TestAddBalance(t *testing.T) {
 			minerWallet := &client.Wallet{}
 			minerWallet.Key = minerKeyPair
 
-			addr := minerWallet.Key.GenerateAddress()
+			addr := minerWallet.Key.GenerateAddress(false)
 
 			bc, pow := createBlockchain(addr, store)
 

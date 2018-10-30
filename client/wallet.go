@@ -29,7 +29,7 @@ type Wallet struct {
 func NewWallet() *Wallet {
 	wallet := &Wallet{}
 	wallet.Key = core.NewKeyPair()
-	wallet.Addresses = append(wallet.Addresses, wallet.Key.GenerateAddress())
+	wallet.Addresses = append(wallet.Addresses, wallet.Key.GenerateAddress(false))
 	return wallet
 }
 

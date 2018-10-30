@@ -255,7 +255,7 @@ func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockch
 	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
 	minerWallet := &client.Wallet{}
 	minerWallet.Key = minerKeyPair
-	minerWallet.Addresses = append(minerWallet.Addresses, minerWallet.Key.GenerateAddress())
+	minerWallet.Addresses = append(minerWallet.Addresses, minerWallet.Key.GenerateAddress(false))
 
 	pubKeyHash, _ := core.HashPubKey(minerWallet.Key.PublicKey)
 	utxos, err := core.LoadUTXOIndex(bc.GetDb()).GetUTXOsByAmount(pubKeyHash, amount)

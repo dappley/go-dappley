@@ -29,7 +29,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const version = byte(0x5A)
+const versionUser = byte(0x5A)
+const versionContract = byte(0x58)
 const addressChecksumLen = 4
 
 type KeyPair struct {
@@ -42,12 +43,24 @@ func NewKeyPair() *KeyPair {
 	return &KeyPair{private, public}
 }
 
-func (w KeyPair) GenerateAddress() Address {
-	return GenerateAddressByPublicKey(w.PublicKey)
+func (w KeyPair) GenerateAddress(isContract bool) Address {
+	return GenerateAddressByPublicKey(w.PublicKey, isContract)
 }
 
-func GenerateAddressByPublicKey(publicKey []byte) Address {
+func GenerateContractAddress() Address{
+	keyPair := NewKeyPair()
+	return keyPair.GenerateAddress(true)
+}
+
+func GenerateAddressByPublicKey(publicKey []byte, isContract bool) Address {
 	pubKeyHash, _ := HashPubKey(publicKey)
+
+	var version byte
+	if isContract{
+		version = versionContract
+	}else{
+		version = versionUser
+	}
 
 	versionedPayload := append([]byte{version}, pubKeyHash...)
 	checksum := Checksum(versionedPayload)
