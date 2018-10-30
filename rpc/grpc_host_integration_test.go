@@ -449,7 +449,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.SetTargetBit(3)
+	rpcContext.consensus.SetTargetBit(1)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -478,7 +478,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, OK, successResponse.ErrorCode)
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
-	for (rpcContext.bc.GetMaxHeight() - maxHeight) >= 1 {
+	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
 
 	errTransaction, err := core.NewUTXOTransaction(rpcContext.store,
@@ -495,7 +495,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, InvalidTransaction, failedResponse.ErrorCode)
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
-	for (rpcContext.bc.GetMaxHeight() - maxHeight) >= 1 {
+	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
 
 	rpcContext.consensus.Stop()
