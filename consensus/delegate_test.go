@@ -37,11 +37,11 @@ func TestDelegate_Start(t *testing.T) {
 		nil,
 		128,
 	)
-	retCh := make(chan *MinedBlock, 0)
+	retCh := make(chan *NewBlock, 0)
 	d.Setup(bc, cbAddr, retCh)
-	d.SetPrivKey(keystr)
+	d.SetPrivateKey(keystr)
 	d.Start()
 	blk := <-retCh
-	assert.True(t, blk.isValid)
-	assert.True(t, blk.block.VerifyHash())
+	assert.True(t, blk.IsValid)
+	assert.True(t, blk.VerifyHash())
 }

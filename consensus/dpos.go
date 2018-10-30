@@ -32,12 +32,11 @@ import (
 )
 
 const version = byte(0x00)
-const addressChecksumLen = 4
 
 type Dpos struct {
 	bc          *core.Blockchain
 	delegate    BlockProducer
-	mintBlkCh   chan *MinedBlock
+	newBlockCh  chan *NewBlock
 	blkProduced bool
 	node        core.NetService
 	quitCh      chan bool
@@ -48,7 +47,7 @@ type Dpos struct {
 func NewDpos() *Dpos {
 	dpos := &Dpos{
 		delegate:    NewDelegate(),
-		mintBlkCh:   make(chan *MinedBlock, 1),
+		newBlockCh:  make(chan *NewBlock, 1),
 		blkProduced: false,
 		node:        nil,
 		quitCh:      make(chan bool, 1),
@@ -69,7 +68,7 @@ func (dpos *Dpos) GetSlot() *lru.Cache {
 func (dpos *Dpos) Setup(node core.NetService, cbAddr string) {
 	dpos.bc = node.GetBlockchain()
 	dpos.node = node
-	dpos.delegate.Setup(dpos.bc, cbAddr, dpos.mintBlkCh)
+	dpos.delegate.Setup(dpos.bc, cbAddr, dpos.newBlockCh)
 	dpos.delegate.SetRequirement(dpos.requirementForNewBlock)
 }
 
@@ -78,7 +77,7 @@ func (dpos *Dpos) SetTargetBit(bit int) {
 }
 
 func (dpos *Dpos) SetKey(key string) {
-	dpos.delegate.SetPrivKey(key)
+	dpos.delegate.SetPrivateKey(key)
 }
 
 func (dpos *Dpos) SetDynasty(dynasty *Dynasty) {
@@ -102,13 +101,13 @@ func (dpos *Dpos) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
-func (dpos *Dpos) requirementForNewBlock(block *core.Block) bool{
+func (dpos *Dpos) requirementForNewBlock(block *core.Block) bool {
 	if !dpos.beneficiaryIsProducer(block) {
-		logger.Debug("Dpos: producer validate failed")
+		logger.Debug("DPoS: producer validate failed")
 		return false
 	}
 	if dpos.isDoubleMint(block) {
-		logger.Debug("Dpos: doubleminting case found!")
+		logger.Debug("DPoS: doubleminting case found!")
 		return false
 	}
 
@@ -128,7 +127,7 @@ func (dpos *Dpos) Validate(block *core.Block) bool {
 
 func (dpos *Dpos) Start() {
 	go func() {
-		logger.Info("Dpos Starts...", dpos.node.GetPeerID())
+		logger.Info("DPoS Starts...", dpos.node.GetPeerID())
 		ticker := time.NewTicker(time.Second).C
 		for {
 			select {
@@ -140,19 +139,19 @@ func (dpos *Dpos) Start() {
 					dpos.blkProduced = false
 					dpos.delegate.Start()
 				}
-			case minedBlk := <-dpos.mintBlkCh:
+			case newBlk := <-dpos.newBlockCh:
 				dpos.blkProduced = true
-				if minedBlk.isValid {
+				if newBlk.IsValid {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
-						"hash":   hex.EncodeToString(minedBlk.block.GetHash()),
-					}).Info("Dpos: A Block has been mined!")
-					dpos.updateNewBlock(minedBlk.block)
+						"hash":   hex.EncodeToString(newBlk.GetHash()),
+					}).Info("DPoS: A Block is produced!")
+					dpos.updateNewBlock(newBlk.Block)
 				}
 			case <-dpos.quitCh:
 				logger.WithFields(logger.Fields{
 					"peerid": dpos.node.GetPeerID(),
-				}).Info("Dpos: Dpos Stops!")
+				}).Info("DPoS: DPoS Stops!")
 				return
 			}
 		}
@@ -219,7 +218,7 @@ func (dpos *Dpos) verifyProducer(block *core.Block) bool {
 	return true
 }
 
-// beneficiaryIsProducer is a Requirement that ensure the reward is paid to the producer at the time slot
+// beneficiaryIsProducer is a Requirement that ensures the reward is paid to the producer at the time slot
 func (dpos *Dpos) beneficiaryIsProducer(block *core.Block) bool {
 	if block == nil {
 		logger.Debug("beneficiaryIsProducer requirement failed: block is empty")
@@ -255,7 +254,7 @@ func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
 	logger.WithFields(logger.Fields{
 		"height": newBlock.GetHeight(),
 		"hash":   hex.EncodeToString(newBlock.GetHash()),
-	}).Info("DpoS: Minted a new block")
+	}).Info("DPoS: Minted a new block")
 	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.BroadcastBlock(newBlock)
 }

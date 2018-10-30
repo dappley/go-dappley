@@ -19,11 +19,13 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/storage"
 )
 
 func newTargetRequirement(bit int) Requirement {
@@ -57,7 +59,7 @@ func TestMiner_VerifyNonce(t *testing.T) {
 	defer bc.GetDb().Close()
 
 	miner.Setup(bc, cbAddr.String(), nil)
-	miner.SetPrivKey(keystr)
+	miner.SetPrivateKey(keystr)
 
 	//prepare a block with correct nonce value
 	newBlock := core.NewBlock(nil, nil)
@@ -80,7 +82,7 @@ mineloop2:
 	assert.True(t, miner.requirement(newBlock))
 
 	//input a wrong nonce value, check if it returns false
-	newBlock.SetNonce(nonce-1)
+	newBlock.SetNonce(nonce - 1)
 	assert.False(t, miner.requirement(newBlock))
 }
 
@@ -117,12 +119,12 @@ func TestMiner_Start(t *testing.T) {
 		nil,
 		128,
 	)
-	retCh := make(chan *MinedBlock, 0)
+	retCh := make(chan *NewBlock, 0)
 	miner.Setup(bc, cbAddr, retCh)
-	miner.SetPrivKey(keystr)
+	miner.SetPrivateKey(keystr)
 	miner.Start()
 	blk := <-retCh
-	assert.True(t, blk.isValid)
-	assert.True(t, blk.block.VerifyHash())
-	assert.True(t, miner.requirement(blk.block))
+	assert.True(t, blk.IsValid)
+	assert.True(t, blk.VerifyHash())
+	assert.True(t, miner.requirement(blk.Block))
 }

@@ -19,17 +19,18 @@
 package consensus
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewDpos(t *testing.T) {
 	dpos := NewDpos()
-	assert.Equal(t, 1, cap(dpos.mintBlkCh))
+	assert.Equal(t, 1, cap(dpos.newBlockCh))
 	assert.Equal(t, 1, cap(dpos.quitCh))
 	assert.Nil(t, dpos.node)
 }

@@ -29,9 +29,9 @@ type Delegate struct {
 	bc          *core.Blockchain
 	beneficiary string
 	key         string
-	newBlock    *MinedBlock
+	newBlock    *NewBlock
 	requirement Requirement
-	retChan     chan *MinedBlock
+	newBlockCh  chan *NewBlock
 }
 
 func NewDelegate() *Delegate {
@@ -39,17 +39,13 @@ func NewDelegate() *Delegate {
 		exitCh:      make(chan bool, 1),
 		bc:          nil,
 		beneficiary: "",
-		newBlock:    &MinedBlock{nil, false},
+		newBlock:    &NewBlock{nil, false},
 		requirement: noRequirement,
 	}
 }
 
-func (d *Delegate) SetPrivKey(key string) {
+func (d *Delegate) SetPrivateKey(key string) {
 	d.key = key
-}
-
-func (d *Delegate) GetPrivKey() string {
-	return d.key
 }
 
 func (d *Delegate) Beneficiary() string {
@@ -60,10 +56,10 @@ func (d *Delegate) SetRequirement(requirement Requirement) {
 	d.requirement = requirement
 }
 
-func (d *Delegate) Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock) {
+func (d *Delegate) Setup(bc *core.Blockchain, beneficiaryAddr string, newBlockCh chan *NewBlock) {
 	d.bc = bc
 	d.beneficiary = beneficiaryAddr
-	d.retChan = retChan
+	d.newBlockCh = newBlockCh
 }
 
 func (d *Delegate) Start() {
@@ -96,10 +92,10 @@ func (d *Delegate) prepare() {
 }
 
 func (d *Delegate) returnBlk() {
-	if !d.newBlock.isValid {
-		d.newBlock.block.Rollback(d.bc.GetTxPool())
+	if !d.newBlock.IsValid {
+		d.newBlock.Rollback(d.bc.GetTxPool())
 	}
-	d.retChan <- d.newBlock
+	d.newBlockCh <- d.newBlock
 }
 
 func (d *Delegate) resetExitCh() {
@@ -108,7 +104,7 @@ func (d *Delegate) resetExitCh() {
 	}
 }
 
-func (d *Delegate) prepareBlock() *MinedBlock {
+func (d *Delegate) prepareBlock() *NewBlock {
 
 	parentBlock, err := d.bc.GetTailBlock()
 	if err != nil {
@@ -125,25 +121,24 @@ func (d *Delegate) prepareBlock() *MinedBlock {
 	// TODO: add tips to txs
 
 	//prepare the new block
-	return &MinedBlock{core.NewBlock(txs, parentBlock), false}
+	return &NewBlock{core.NewBlock(txs, parentBlock), false}
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement
 func (d *Delegate) produceBlock() bool {
-	hash := d.newBlock.block.CalculateHashWithoutNonce()
-	d.newBlock.block.SetHash(hash)
-	d.newBlock.block.SetNonce(0)
-	fulfilled := d.requirement(d.newBlock.block)
+	hash := d.newBlock.CalculateHashWithoutNonce()
+	d.newBlock.SetHash(hash)
+	d.newBlock.SetNonce(0)
+	fulfilled := d.requirement(d.newBlock.Block)
 	if fulfilled {
-		keyString := d.GetPrivKey()
-		if len(keyString) > 0 {
-			signed := d.newBlock.block.SignBlock(keyString, hash)
+		if len(d.key) > 0 {
+			signed := d.newBlock.SignBlock(d.key, hash)
 			if !signed {
-				logger.Warn("Delegate Key= ", keyString)
+				logger.Warn("Delegate Key= ", d.key)
 				return false
 			}
 		}
-		d.newBlock.isValid = true
+		d.newBlock.IsValid = true
 	}
 	return fulfilled
 }

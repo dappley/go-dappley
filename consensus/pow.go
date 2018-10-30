@@ -19,8 +19,9 @@
 package consensus
 
 import (
-	logger "github.com/sirupsen/logrus"
 	"math/big"
+
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core"
 )
@@ -30,7 +31,7 @@ const defaultTargetBits = 0
 type ProofOfWork struct {
 	bc          *core.Blockchain
 	miner       BlockProducer
-	mintBlkChan chan *MinedBlock
+	mintBlkChan chan *NewBlock
 	target      *big.Int
 	blkProduced bool
 	node        core.NetService
@@ -40,7 +41,7 @@ type ProofOfWork struct {
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
 		miner:       NewMiner(),
-		mintBlkChan: make(chan *MinedBlock, 1),
+		mintBlkChan: make(chan *NewBlock, 1),
 		blkProduced: false,
 		node:        nil,
 		exitCh:      make(chan bool, 1),
@@ -66,7 +67,7 @@ func (pow *ProofOfWork) SetTargetBit(bit int) {
 }
 
 func (pow *ProofOfWork) SetKey(key string) {
-	pow.miner.SetPrivKey(key)
+	pow.miner.SetPrivateKey(key)
 }
 
 func (pow *ProofOfWork) Start() {
@@ -80,8 +81,8 @@ func (pow *ProofOfWork) Start() {
 				return
 			case minedBlk := <-pow.mintBlkChan:
 				pow.blkProduced = true
-				if minedBlk.isValid {
-					pow.updateNewBlock(minedBlk.block)
+				if minedBlk.IsValid {
+					pow.updateNewBlock(minedBlk.Block)
 				}
 				pow.miner.Start()
 			}

@@ -36,10 +36,10 @@ type Miner struct {
 	bc          *core.Blockchain
 	beneficiary string
 	key         string
-	newBlock    *MinedBlock
+	newBlock    *NewBlock
 	nonce       int64
 	requirement Requirement
-	retChan     chan *MinedBlock
+	newBlockCh  chan *NewBlock
 }
 
 func NewMiner() *Miner {
@@ -47,19 +47,15 @@ func NewMiner() *Miner {
 		exitCh:      make(chan bool, 1),
 		bc:          nil,
 		beneficiary: "",
-		newBlock:    &MinedBlock{nil, false},
+		newBlock:    &NewBlock{nil, false},
 		nonce:       0,
 		requirement: noRequirement,
 	}
 	return m
 }
 
-func (miner *Miner) SetPrivKey(key string) {
+func (miner *Miner) SetPrivateKey(key string) {
 	miner.key = key
-}
-
-func (miner *Miner) GetPrivKey() string {
-	return miner.key
 }
 
 func (miner *Miner) Beneficiary() string {
@@ -70,10 +66,10 @@ func (miner *Miner) SetRequirement(requirement Requirement) {
 	miner.requirement = requirement
 }
 
-func (miner *Miner) Setup(bc *core.Blockchain, beneficiaryAddr string, retChan chan *MinedBlock) {
+func (miner *Miner) Setup(bc *core.Blockchain, beneficiaryAddr string, newBlockCh chan *NewBlock) {
 	miner.bc = bc
 	miner.beneficiary = beneficiaryAddr
-	miner.retChan = retChan
+	miner.newBlockCh = newBlockCh
 }
 
 func (miner *Miner) Start() {
@@ -118,10 +114,10 @@ func (miner *Miner) prepare() {
 }
 
 func (miner *Miner) returnBlk() {
-	if !miner.newBlock.isValid {
-		miner.newBlock.block.Rollback(miner.bc.GetTxPool())
+	if !miner.newBlock.IsValid {
+		miner.newBlock.Rollback(miner.bc.GetTxPool())
 	}
-	miner.retChan <- miner.newBlock
+	miner.newBlockCh <- miner.newBlock
 }
 
 func (miner *Miner) resetExitCh() {
@@ -130,7 +126,7 @@ func (miner *Miner) resetExitCh() {
 	}
 }
 
-func (miner *Miner) prepareBlock() *MinedBlock {
+func (miner *Miner) prepareBlock() *NewBlock {
 
 	parentBlock, err := miner.bc.GetTailBlock()
 	if err != nil {
@@ -152,27 +148,26 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)
-	return &MinedBlock{core.NewBlock(txs, parentBlock), false}
+	return &NewBlock{core.NewBlock(txs, parentBlock), false}
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
 func (miner *Miner) mineBlock(nonce int64) bool {
-	hash := miner.newBlock.block.CalculateHashWithNonce(nonce)
-	miner.newBlock.block.SetHash(hash)
-	miner.newBlock.block.SetNonce(nonce)
-	fulfilled := miner.requirement(miner.newBlock.block)
+	hash := miner.newBlock.CalculateHashWithNonce(nonce)
+	miner.newBlock.SetHash(hash)
+	miner.newBlock.SetNonce(nonce)
+	fulfilled := miner.requirement(miner.newBlock.Block)
 	if fulfilled {
-		hash = miner.newBlock.block.CalculateHashWithoutNonce()
-		miner.newBlock.block.SetHash(hash)
-		keystring := miner.GetPrivKey()
-		if len(keystring) > 0 {
-			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
+		hash = miner.newBlock.CalculateHashWithoutNonce()
+		miner.newBlock.SetHash(hash)
+		if len(miner.key) > 0 {
+			signed := miner.newBlock.SignBlock(miner.key, hash)
 			if !signed {
-				logger.Warn("Miner Key= ", miner.GetPrivKey())
+				logger.Warn("Miner Key= ", miner.key)
 				return false
 			}
 		}
-		miner.newBlock.isValid = true
+		miner.newBlock.IsValid = true
 	}
 	return fulfilled
 }
