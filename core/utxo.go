@@ -40,7 +40,6 @@ type UTXOIndex struct {
 	mutex *sync.RWMutex
 }
 
-
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
 	Value      *common.Amount
@@ -82,7 +81,7 @@ func (utxos UTXOIndex) serialize() []byte {
 func LoadUTXOIndex(db storage.Storage) UTXOIndex {
 	utxoBytes, err := db.Get([]byte(utxoMapKey))
 
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0{
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
 		return NewUTXOIndex()
 	}
 	return deserializeUTXOIndex(utxoBytes)
@@ -108,18 +107,39 @@ func (utxos UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
 	return nil
 }
 
-// GetUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
-func (utxos UTXOIndex) GetUTXOsByPubKeyHash(pubkey []byte) []*UTXO {
+// GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
+func (utxos UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) []*UTXO {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
-	return utxos.index[string(pubkey)]
+	return utxos.index[string(pubkeyHash)]
 
+}
 
+// GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
+func (utxos UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amount) ([]*UTXO, error) {
+
+	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
+
+	var retUtxos []*UTXO
+	sum := common.NewAmount(0)
+	for _, u := range allUtxos {
+		sum = sum.Add(u.Value)
+		retUtxos = append(retUtxos, u)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+	}
+
+	if sum.Cmp(amount) < 0 {
+		return nil, ErrInsufficientFund
+	}
+
+	return retUtxos, nil
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
 func (utxos UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *UTXO {
-	utxosOfKey := utxos.GetUTXOsByPubKeyHash(pubkeyHash)
+	utxosOfKey := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	for _, utxo := range utxosOfKey {
 		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
 			return utxo
@@ -237,7 +257,7 @@ func (utxos UTXOIndex) removeUTXO(txid []byte, vout int) error {
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	tx, err := bc.FindTransaction(in.Txid)
 	if err != nil {
-		return  TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
+		return TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
@@ -247,14 +267,14 @@ func (utxos UTXOIndex) deepCopy() UTXOIndex {
 	defer utxos.mutex.RUnlock()
 	utxocopy := NewUTXOIndex()
 	copier.Copy(&utxocopy, &utxos)
-	if len(utxocopy.index)==0 {
+	if len(utxocopy.index) == 0 {
 		utxocopy = NewUTXOIndex()
 	}
 	return utxocopy
 }
 
 // GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error){
+func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error) {
 	index := LoadUTXOIndex(db)
 	deepCopy := index.deepCopy()
 	bci := bc.Iterator()

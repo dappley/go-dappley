@@ -19,24 +19,24 @@
 package consensus
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/storage"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewDpos(t *testing.T) {
 	dpos := NewDpos()
-	assert.Equal(t,1, cap(dpos.mintBlkCh))
-	assert.Equal(t,1, cap(dpos.quitCh))
-	assert.Nil(t,dpos.node)
+	assert.Equal(t, 1, cap(dpos.mintBlkCh))
+	assert.Equal(t, 1, cap(dpos.quitCh))
+	assert.Nil(t, dpos.node)
 }
 
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDpos()
 	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.Address{cbAddr},storage.NewRamStorage(),dpos, 128)
+	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128)
 	node := network.NewNode(bc)
 
 	dpos.Setup(node, cbAddr)
@@ -48,10 +48,9 @@ func TestDpos_Setup(t *testing.T) {
 func TestDpos_Stop(t *testing.T) {
 	dpos := NewDpos()
 	dpos.Stop()
-	select{
+	select {
 	case <-dpos.quitCh:
 	default:
 		t.Error("Failed!")
 	}
 }
-

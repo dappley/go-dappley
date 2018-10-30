@@ -29,7 +29,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const version = byte(0x00)
+const version = byte(0x5A)
 const addressChecksumLen = 4
 
 type KeyPair struct {
@@ -83,4 +83,13 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
 	//remove the uncompressed point at pubKey[0]
 	return *private, pubKey[1:]
+}
+func GetKeyPairByString(privateKey string) *KeyPair {
+	private, err := secp256k1.HexToECDSAPrivateKey(privateKey)
+	if err != nil {
+		logger.Panic(err)
+	}
+
+	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
+	return &KeyPair{*private, pubKey[1:]}
 }

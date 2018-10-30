@@ -78,7 +78,7 @@ while [ $counter -le $2 ]; do
 		# miner gives some money
 	        address=${accList[$RANDOM % ${#accList[@]} ]}	
 		echo "adding $addBalanceAmount to $address"
-		./cli addBalance -address $address -amount $addBalanceAmount
+		./cli sendFromMiner -to $address -amount $addBalanceAmount
 		#if [[ $addBalanceRes == *"Add balance error!"* ]]; then
 		#	echo $addBalanceRes; exit 1
    		#fi

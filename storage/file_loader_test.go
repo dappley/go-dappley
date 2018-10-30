@@ -37,4 +37,3 @@ func TestFileLoader_SaveToFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, expected.Bytes(), ret)
 }
-

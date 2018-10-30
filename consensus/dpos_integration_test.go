@@ -39,11 +39,11 @@ func TestDpos_Start(t *testing.T) {
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128)
 	node := network.NewNode(bc)
 	node.Start(21100)
-	dpos.Setup(node, cbAddr.Address)
+	dpos.Setup(node, cbAddr.String())
 	dpos.SetKey(keystr)
 
-	miners := []string{cbAddr.Address}
-	dynasty := NewDynasty(miners, 2 ,2 )
+	miners := []string{cbAddr.String()}
+	dynasty := NewDynasty(miners, 2, 2)
 	dpos.SetDynasty(dynasty)
 	//3 seconds should be enough to mine a block with difficulty 14
 	dpos.SetTargetBit(14)
@@ -65,8 +65,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	)
 
 	miners := []string{
-		"1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR",
-		"1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+		"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8",
+		"dQEooMsqp23RkPsvZXj3XbsRh9BUyGz2S9",
 	}
 	keystrs := []string{
 		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
@@ -107,7 +107,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	for i := 0; i < len(miners); i++ {
 		v := dposArray[i]
-		core.WaitFullyStop(v, 20)
+		core.WaitDoneOrTimeout(v.FinishedMining, 20)
 	}
 
 	for i := 0; i < len(miners); i++ {

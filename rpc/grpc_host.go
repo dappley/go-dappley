@@ -20,16 +20,16 @@ package rpc
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
-	reuse "github.com/libp2p/go-reuseport"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -53,7 +53,7 @@ func (s *Server) Start(port uint32) {
 		if port == 0 {
 			port = defaultRpcPort
 		}
-		lis, err := reuse.Listen("tcp", fmt.Sprint("0.0.0.0:", port))
+		lis, err := net.Listen("tcp", fmt.Sprint(":", port))
 		if err != nil {
 			logger.Panicf("failed to listen: %v", err)
 		}
@@ -69,13 +69,15 @@ func (s *Server) Start(port uint32) {
 
 func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	if strings.Contains(info.FullMethod, "rpcpb.AdminService") {
-		meta, ok := metadata.FromIncomingContext(ctx)
-		if !ok || len(meta[passwordToken]) != 1 {
-			return nil, status.Errorf(codes.Unauthenticated, "No Password")
+		peer, ok := peer.FromContext(ctx)
+		if !ok || len(peer.Addr.String()) == 0 {
+			return nil, status.Errorf(codes.Unauthenticated, "Unknow ip")
 		}
-		if meta[passwordToken][0] != s.password {
-			return nil, status.Errorf(codes.Unauthenticated, "Invalid Password")
+		ip := strings.Split(peer.Addr.String(), ":")
+		if ip[0] != "127.0.0.1" {
+			return nil, status.Errorf(codes.Unauthenticated, "Unauthorized access")
 		}
+
 	}
 	return handler(ctx, req)
 }

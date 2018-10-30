@@ -136,7 +136,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	bc := &Blockchain{Hash{}, db, nil, nil, nil}
 
 	// Add genesis block
-	genesis := NewGenesisBlock(addr.Address)
+	genesis := NewGenesisBlock(addr.String())
 	err := bc.AddBlockToTail(genesis)
 
 	// Expect batch write was used

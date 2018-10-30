@@ -24,6 +24,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/common"
 )
 
 const defaulttargetBits = 0
@@ -86,7 +87,7 @@ func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*Min
 
 func (miner *Miner) Start() {
 	go func() {
-		if	miner.bc.GetBlockPool().GetSyncState(){
+		if miner.bc.GetBlockPool().GetSyncState() {
 			return
 		}
 		logger.Info("Miner: Start Mining A Block...")
@@ -162,10 +163,14 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 	miner.verifyTransactions()
 	//get all transactions
 	txs := miner.bc.GetTxPool().Pop()
+	//calculate tips
+	totalTips := common.NewAmount(0)
+	for _, tx := range txs {
+		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+	}
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1)
+	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1, totalTips)
 	txs = append(txs, &cbtx)
-	// TODO: add tips to txs
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)

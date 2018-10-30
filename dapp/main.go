@@ -74,7 +74,7 @@ func main() {
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
 	bc, err := core.GetBlockchain(db, conss, txPoolLimit)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.Address{genesisAddr}, db, conss, txPoolLimit)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit)
 		if err != nil {
 			logger.Panic(err)
 		}
@@ -98,8 +98,9 @@ func main() {
 	logger.WithFields(logger.Fields{
 		"Miner Address": minerAddr,
 	}).Info("Consensus setup")
-	logic.SetLockWallet()     //lock the wallet
 
+	logic.SetLockWallet() //lock the wallet
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())
 	conss.Start()
 	defer conss.Stop()
 
@@ -121,9 +122,9 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
-	if keyPath!="" {
+	if keyPath != "" {
 		err := node.LoadNetworkKeyFromFile(keyPath)
-		if err!= nil {
+		if err != nil {
 			logger.Error(err)
 		}
 	}

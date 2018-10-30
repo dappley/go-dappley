@@ -35,9 +35,9 @@ type Dynasty struct {
 const (
 	defaultMaxProducers   = 5
 	defaultTimeBetweenBlk = 15
-	)
+)
 
-func (d *Dynasty) trimProducers(){
+func (d *Dynasty) trimProducers() {
 	//if producer conf file does not have all producers
 	if len(d.producers) < defaultMaxProducers {
 		for len(d.producers) < defaultMaxProducers {
@@ -55,10 +55,9 @@ func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 		producers:      producers,
 		maxProducers:   maxProducers,
 		timeBetweenBlk: timeBetweenBlk,
-		dynastyTime:    timeBetweenBlk* maxProducers,
+		dynastyTime:    timeBetweenBlk * maxProducers,
 	}
 }
-
 
 //New dynasty from config file
 func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
@@ -176,21 +175,21 @@ func (dynasty *Dynasty) ValidateProducer(block *core.Block) bool {
 	producerHash := core.HashAddress(producer)
 
 	cbtx := block.GetCoinbaseTransaction()
-	if cbtx==nil {
+	if cbtx == nil {
 		logger.Debug("ValidateProducer: coinbase tx is empty")
 		return false
 	}
 
-	if len(cbtx.Vout) == 0{
+	if len(cbtx.Vout) == 0 {
 		logger.Debug("ValidateProducer: coinbase Vout is empty")
 		return false
 	}
 
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash)==0
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
 }
 
 func IsProducerAddressValid(producer string) bool {
-	addr := core.Address{producer}
+	addr := core.NewAddress(producer)
 	return addr.ValidateAddress()
 }
 

@@ -28,14 +28,14 @@ type Equal func(a interface{}, b interface{}) bool
 type Slice struct {
 	content []interface{}
 	cmp     Cmp
-	eq		Equal
+	eq      Equal
 }
 
 // NewSlice return a new slice
 func NewSlice(cmp Cmp, eq Equal) *Slice {
 	return &Slice{
 		cmp: cmp,
-		eq: eq,
+		eq:  eq,
 	}
 }
 
@@ -91,18 +91,17 @@ func (s *Slice) Set(slice []interface{}) {
 	s.content = slice
 }
 
-func(s *Slice) AddSliceItem(item interface{}) []interface{}{
+func (s *Slice) AddSliceItem(item interface{}) []interface{} {
 	s.content = append(s.content, item)
 	return s.content
 }
-func(s *Slice) AddSliceSlice(slice []interface{}) []interface{}{
+func (s *Slice) AddSliceSlice(slice []interface{}) []interface{} {
 	s.content = append(s.content, slice...)
 	return s.content
 }
 func (s *Slice) GetSliceCmp() Cmp {
 	return s.cmp
 }
-
 
 // PopLeft pop out the min value
 func (s *Slice) PopLeft() interface{} {
@@ -125,7 +124,6 @@ func (s *Slice) PopRight() interface{} {
 }
 
 // Del the given value
-
 
 // Index return the value at the given value
 func (s *Slice) Index(index int) interface{} {

@@ -132,7 +132,7 @@ func (dpos *Dpos) Start() {
 				if minedBlk.isValid {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
-						"hash" : hex.EncodeToString(minedBlk.block.GetHash()),
+						"hash":   hex.EncodeToString(minedBlk.block.GetHash()),
 					}).Info("Dpos: A Block has been mined!")
 					dpos.updateNewBlock(minedBlk.block)
 				}
@@ -165,7 +165,7 @@ func (dpos *Dpos) isDoubleMint(block *core.Block) bool {
 func (dpos *Dpos) StartNewBlockMinting() {
 	dpos.miner.Stop()
 }
-func (dpos *Dpos) FullyStop() bool {
+func (dpos *Dpos) FinishedMining() bool {
 	v := dpos.miner.stop
 	return v
 }
@@ -173,7 +173,7 @@ func (dpos *Dpos) FullyStop() bool {
 func (dpos *Dpos) updateNewBlock(newBlock *core.Block) {
 	logger.WithFields(logger.Fields{
 		"height": newBlock.GetHeight(),
-		"hash" : hex.EncodeToString(newBlock.GetHash()),
+		"hash":   hex.EncodeToString(newBlock.GetHash()),
 	}).Info("DpoS: Minted a new block")
 	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.BroadcastBlock(newBlock)
@@ -202,7 +202,7 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 
 	address := core.GenerateAddressByPublicKey(pubkey[1:])
 
-	if strings.Compare(address.Address, producer) == 0 {
+	if strings.Compare(address.String(), producer) == 0 {
 		return true
 	}
 

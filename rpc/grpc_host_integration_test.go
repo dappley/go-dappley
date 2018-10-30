@@ -25,13 +25,9 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/logic"
+	"google.golang.org/grpc"
+	"golang.org/x/net/context"
+	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
@@ -57,24 +53,24 @@ func TestServer_StartRPC(t *testing.T) {
 	addr := "/ip4/127.0.0.1/tcp/10000"
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
-	server := NewGrpcServer(node, "temp")
+	server := NewGrpcServer(node,"temp")
 	server.Start(defaultRpcPort)
 	defer server.Stop()
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond*100)
 	//prepare grpc client
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":",defaultRpcPort), grpc.WithInsecure())
 	assert.Nil(t, err)
 	defer conn.Close()
 
-	c := rpcpb.NewRpcServiceClient(conn)
+	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
 
 	ret := &network.PeerList{}
 	ret.FromProto(response.PeerList)
-	assert.Equal(t, node.GetPeerList(), ret)
+	assert.Equal(t,node.GetPeerList(),ret)
 
 }
 
@@ -86,11 +82,16 @@ func TestRpcSend(t *testing.T) {
 	client.RemoveWalletFile()
 
 	// Create wallets
-	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
 	if err != nil {
 		panic(err)
 	}
-	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +105,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
-	pow.Setup(node, senderWallet.GetAddress().Address)
+	pow.Setup(node, minerWallet.GetAddress().String())
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -115,19 +116,20 @@ func TestRpcSend(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a grpc connection and a client
-	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+1), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort + 1), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
-	c := rpcpb.NewRpcServiceClient(conn)
+	c := rpcpb.NewAdminServiceClient(conn)
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:       senderWallet.GetAddress().Address,
-		To:         receiverWallet.GetAddress().Address,
-		Amount:     common.NewAmount(7).Bytes(),
-		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		From:       senderWallet.GetAddress().String(),
+		To:         receiverWallet.GetAddress().String(),
+		Amount: common.NewAmount(7).Bytes(),
+		Walletpath: strings.Replace(client.GetWalletFilePath(),"wallets","wallets_test",-1),
+		Tip:        2,
 	})
 	assert.Nil(t, err)
 
@@ -145,13 +147,17 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
 	assert.Nil(t, err)
-	leftBalance, _ := minedReward.Times(bc.GetMaxHeight() + 1).Sub(common.NewAmount(7))
-	assert.Equal(t, leftBalance, senderBalance) // minedReward * (blockHeight + 1) - (Send Balance)
-	assert.Equal(t, common.NewAmount(7), receiverBalance)
+	minerBalance, err := logic.GetBalance(minerWallet.GetAddress(), store)
+	assert.Nil(t, err)
 
+	leftBalance, _ := minedReward.Sub(common.NewAmount(7))
+	leftBalance, _ = leftBalance.Sub(common.NewAmount(2))
+	minerRewardBalance := minedReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(2))
+	assert.Equal(t, leftBalance, senderBalance)
+	assert.Equal(t, common.NewAmount(7), receiverBalance)
+	assert.Equal(t, minerRewardBalance, minerBalance)
 	client.RemoveWalletFile()
 }
-
 func TestRpcGetVersion(t *testing.T) {
 	rpcContext, err := createRpcTestContext(2)
 	if err != nil {

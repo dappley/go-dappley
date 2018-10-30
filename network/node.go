@@ -206,7 +206,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	p := Peer{peerid, targetAddr}
 	if n.peerList.IsInPeerlist(&p) {
 		logger.WithFields(logger.Fields{
-			"host": n.GetPeerMultiaddr().String(),
+			"host":   n.GetPeerMultiaddr().String(),
 			"target": targetAddr.String(),
 		}).Debug("Node: target already added!")
 		return ErrIsInPeerlist
@@ -234,8 +234,8 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.WithFields(logger.Fields{
-		"Host": n.GetPeerID(),
-		"Target":  s.Conn().RemotePeer(),
+		"Host":   n.GetPeerID(),
+		"Target": s.Conn().RemotePeer(),
 	}).Info("Creating stream between: ")
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {

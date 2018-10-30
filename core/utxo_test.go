@@ -50,7 +50,7 @@ var bh2 = &BlockHeader{
 	1,
 }
 
-// Padding address to 32 Byte
+// Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
 var address1Hash, _ = HashPubKey(address1Bytes)
@@ -213,8 +213,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	bc.AddBlockToTail(blk2)
 
 	utxoIndex := LoadUTXOIndex(db)
-	addr1UTXOs := utxoIndex.GetUTXOsByPubKeyHash(address1Hash)
-	addr2UTXOs := utxoIndex.GetUTXOsByPubKeyHash(address2Hash)
+	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address1Hash)
+	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address2Hash)
 	// Expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len(addr1UTXOs))
 	assert.Equal(t, common.NewAmount(4), addr1UTXOs[0].Value)
@@ -248,8 +248,7 @@ func TestFindUTXO(t *testing.T) {
 	assert.Nil(t, utxoIndex.FindUTXO(Txin[3].Txid, Txin[3].Vout))
 }
 
-
-func TestConcurrentUTXOindexReadWrite(t *testing.T){
+func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 	index := NewUTXOIndex()
 
 	var readOps uint64
@@ -258,7 +257,6 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T){
 	const concurrentUsers = 10
 	exists := false
 
-
 	// start 10 simultaneous goroutines to execute repeated
 	// reads and writes, once per millisecond in
 	// each goroutine.
@@ -266,28 +264,84 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T){
 		go func() {
 			for {
 				//perform a read
-				index.GetUTXOsByPubKeyHash([]byte("asd"))
+				index.GetAllUTXOsByPubKeyHash([]byte("asd"))
 				atomic.AddUint64(&readOps, 1)
 				//perform a write
 				if !exists {
-					index.addUTXO(TXOutput{},[]byte("asd"),65)
+					index.addUTXO(TXOutput{}, []byte("asd"), 65)
 					atomic.AddUint64(&addOps, 1)
 					exists = true
 
-				}else{
+				} else {
 					index.removeUTXO([]byte("asd"), 65)
 					atomic.AddUint64(&deleteOps, 1)
 					exists = false
 				}
 
-				time.Sleep(time.Millisecond*1)
+				time.Sleep(time.Millisecond * 1)
 			}
 		}()
 	}
 
-	time.Sleep(time.Second* 1)
+	time.Sleep(time.Second * 1)
 
 	//if reports concurrent map writes, then test is broken, if passes, then test is correct
 	assert.True(t, true)
 }
 
+func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
+
+	//preapre 3 utxos in the utxo index
+	txoutputs := []TXOutput{
+		{common.NewAmount(3), address1Hash},
+		{common.NewAmount(4), address2Hash},
+		{common.NewAmount(5), address2Hash},
+	}
+
+	index := NewUTXOIndex()
+	for _, txoutput := range txoutputs{
+		index.addUTXO(txoutput,[]byte("01"),0)
+	}
+
+	//start the test
+	tests := []struct {
+		name     string
+		amount   *common.Amount
+		pubKey 	 []byte
+		err      error
+	}{
+		{"enoughUtxo",
+		common.NewAmount(3),
+		address2Hash,
+		nil,},
+
+		{"notEnoughUtxo",
+		common.NewAmount(4),
+		address1Hash,
+			ErrInsufficientFund,},
+
+		{"justEnoughUtxo",
+			common.NewAmount(9),
+			address2Hash,
+			nil,},
+		{"notEnoughUtxo2",
+			common.NewAmount(10),
+			address2Hash,
+			ErrInsufficientFund,},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			utxos, err := index.GetUTXOsByAmount(tt.pubKey, tt.amount)
+			assert.Equal(t, tt.err, err)
+			if err!=nil {
+				return
+			}
+			sum := common.NewAmount(0)
+			for _,utxo := range utxos{
+				sum = sum.Add(utxo.Value)
+			}
+			assert.True(t, sum.Cmp(tt.amount)>=0)
+		})
+	}
+
+}

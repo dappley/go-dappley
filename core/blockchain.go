@@ -53,7 +53,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32) *Blockchain {
-	genesis := NewGenesisBlock(address.Address)
+	genesis := NewGenesisBlock(address.String())
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
@@ -150,15 +150,15 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 }
 
 func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
+	blockPool.SetBlockchain(bc)
 	bc.blockPool = blockPool
-	bc.blockPool.SetBlockchain(bc)
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	err := bc.AddBlockToDb(block)
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"hash": hex.EncodeToString(block.GetHash()),
+			"hash":   hex.EncodeToString(block.GetHash()),
 			"height": block.GetHeight(),
 		}).Warn("Blockchain: Add Block To Database Failed")
 		return err
@@ -255,71 +255,6 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 	}
 
 	return Transaction{}, ErrTransactionNotFound
-}
-
-//TODO: optimize performance
-func (bc *Blockchain) FindUnspentTransactions(pubKeyHash []byte) ([]Transaction, error) {
-	var unspentTXs []Transaction
-	spentTXOs := make(map[string][]int)
-	bci := bc.Iterator()
-
-	for {
-		block, err := bci.Next()
-		if err != nil {
-		}
-
-		for _, tx := range block.GetTransactions() {
-			txID := hex.EncodeToString(tx.ID)
-
-		Outputs: //TODO
-			for outIdx, out := range tx.Vout {
-				if spentTXOs[txID] != nil {
-					for _, spentOut := range spentTXOs[txID] {
-						if spentOut == outIdx {
-							continue Outputs
-						}
-					}
-				}
-
-				if out.IsLockedWithKey(pubKeyHash) {
-					unspentTXs = append(unspentTXs, *tx)
-				}
-			}
-
-			if tx.IsCoinbase() == false {
-				for _, in := range tx.Vin {
-					if in.UsesKey(pubKeyHash) {
-						inTxID := hex.EncodeToString(in.Txid)
-						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
-					}
-				}
-			}
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			break
-		}
-	}
-
-	return unspentTXs, nil
-}
-
-func (bc *Blockchain) FindUTXO(pubKeyHash []byte) ([]TXOutput, error) {
-	var UTXOs []TXOutput
-	unspentTransactions, err := bc.FindUnspentTransactions(pubKeyHash)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, tx := range unspentTransactions {
-		for _, out := range tx.Vout {
-			if out.IsLockedWithKey(pubKeyHash) {
-				UTXOs = append(UTXOs, out)
-			}
-		}
-	}
-
-	return UTXOs, nil
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
@@ -426,7 +361,6 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
-
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
@@ -436,7 +370,6 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
 		return
 	}
-
 
 	bc.Rollback(forkParentHash)
 
@@ -480,7 +413,7 @@ func (bc *Blockchain) Rollback(targetHash Hash) bool {
 	}
 	parentblockHash := bc.GetTailBlockHash()
 	//if is child of tail, skip rollback
-	if IsHashEqual(parentblockHash, targetHash){
+	if IsHashEqual(parentblockHash, targetHash) {
 		return true
 	}
 

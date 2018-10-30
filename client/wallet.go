@@ -17,8 +17,6 @@
 //
 package client
 
-
-
 import (
 	"github.com/dappley/go-dappley/core"
 )
