@@ -153,7 +153,7 @@ func TestRpcSend(t *testing.T) {
 }
 
 func TestRpcGetVersion(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(2)
 	if err != nil {
 		panic(err)
 	}
@@ -187,7 +187,7 @@ func TestRpcGetVersion(t *testing.T) {
 }
 
 func TestRpcGetBlockchainInfo(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(3)
 	if err != nil {
 		panic(err)
 	}
@@ -224,7 +224,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 }
 
 func TestRpcGetUTXO(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(4)
 	if err != nil {
 		panic(err)
 	}
@@ -265,17 +265,17 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
-	assert.Equal(t, len(senderResponse.BlockHeaders), MinUtxoBlockHeaderCount)
+	assert.Equal(t, len(senderResponse.BlockHeaders), int(MinUtxoBlockHeaderCount))
 	assert.Equal(t, senderResponse.BlockHeaders[0].Hash, []byte(tailBlock.GetHash()))
 
 	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverWallet.GetAddress().Address})
 	assert.Nil(t, err)
 	assert.Equal(t, receiverResponse.ErrorCode, OK)
-	assert.Equal(t, common.NewAmount(6), getBalance(senderResponse.Utxos))
+	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
 }
 
 func TestRpcGetBlocks(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(5)
 	if err != nil {
 		panic(err)
 	}
@@ -352,7 +352,7 @@ func TestRpcGetBlocks(t *testing.T) {
 }
 
 func TestRpcGetBlockByHash(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(6)
 	if err != nil {
 		panic(err)
 	}
@@ -395,7 +395,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 }
 
 func TestRpcGetBlockByHeight(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(7)
 	if err != nil {
 		panic(err)
 	}
@@ -438,7 +438,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 }
 
 func TestRpcSendTransaction(t *testing.T) {
-	rpcContext, err := createRpcTestContext()
+	rpcContext, err := createRpcTestContext(8)
 	if err != nil {
 		panic(err)
 	}
@@ -499,14 +499,14 @@ func TestRpcSendTransaction(t *testing.T) {
 	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10)
-	leftAmount,err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
+	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, leftAmount, realAmount)
 	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
-func createRpcTestContext() (*RpcTestContext, error) {
+func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()
 
@@ -534,7 +534,7 @@ func createRpcTestContext() (*RpcTestContext, error) {
 
 	// Start a grpc server
 	context.rpcServer = NewGrpcServer(context.node, "temp")
-	context.serverPort = defaultRpcPort + 1 // use a different port as other integration tests
+	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 	return &context, nil
 }
