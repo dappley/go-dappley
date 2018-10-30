@@ -28,13 +28,13 @@ func TestAddress_IsContract(t *testing.T) {
 			name:     		"InvalidAddress",
 			address: 		Address{"1Xnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"},
 			expectedRes:    false,
-			expectedErr: 	ErrInvalidPubKeyHashVersion,
+			expectedErr: 	ErrInvalidAddress,
 		},
 		{
-			name:     		"EmptyAddress",
-			address: 		Address{""},
-			expectedRes:    false,
-			expectedErr: 	ErrInvalidPubKeyHashLength,
+			name:        	"EmptyAddress",
+			address:     	Address{""},
+			expectedRes:	false,
+			expectedErr: 	ErrInvalidAddress,
 		},
 	}
 

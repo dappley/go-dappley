@@ -199,7 +199,20 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
 //key hash in utxo
 func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
+
+
 	for i, vin := range tx.Vin {
+
+		isContract, err:=IsHashPubKeyContract(prevUtxos[i].PubKeyHash)
+		if err != nil {
+			return false
+		}
+		//if the utxo belongs to a contract, the utxo is not verified through
+		//public key hash. It will be verified through consensus
+		if isContract {
+			continue
+		}
+
 		pubKeyHash, err := HashPubKey(vin.PubKey)
 		if err != nil {
 			return false

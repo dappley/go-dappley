@@ -38,7 +38,7 @@ func (out *TXOutput) Lock(address string) {
 
 func HashAddress(address string) []byte {
 	pubKeyHash := base58.Decode(address)
-	return pubKeyHash[1 : len(pubKeyHash)-4]
+	return pubKeyHash[: len(pubKeyHash)-4]
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {

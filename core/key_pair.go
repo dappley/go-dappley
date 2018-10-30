@@ -57,29 +57,26 @@ func GenerateContractAddress() Address{
 }
 
 func GenerateAddressByPublicKey(publicKey []byte, isContract bool) Address {
-	pubKeyHash, _ := HashPubKey(publicKey)
 
-	var version byte
-	if isContract{
-		version = versionContract
+	var pubKeyHash []byte
+	if isContract {
+		pubKeyHash, _ = GenerateContractPubKeyHash(publicKey)
 	}else{
-		version = versionUser
+		pubKeyHash, _ = HashPubKey(publicKey)
 	}
 
-	versionedPayload := append([]byte{version}, pubKeyHash...)
-	checksum := Checksum(versionedPayload)
-
-	fullPayload := append(versionedPayload, checksum...)
+	checksum := Checksum(pubKeyHash)
+	fullPayload := append(pubKeyHash, checksum...)
 	return NewAddress(base58.Encode(fullPayload))
 }
 
-//IsVersionContract
-func IsVersionContract(version byte) (bool, error){
-	if version == versionUser {
+//IsHashPubKeyContract
+func IsHashPubKeyContract(pubKeyHash []byte) (bool, error){
+	if pubKeyHash[0] == versionUser {
 		return false, nil
 	}
 
-	if version == versionContract {
+	if pubKeyHash[0] == versionContract {
 		return true, nil
 	}
 
@@ -87,6 +84,24 @@ func IsVersionContract(version byte) (bool, error){
 }
 
 func HashPubKey(pubKey []byte) ([]byte, error) {
+	pubKeyHash, err := GeneratePublicKeyHash(pubKey)
+	if err!=nil {
+		return pubKeyHash, err
+	}
+	pubKeyHash = append([]byte{versionUser}, pubKeyHash...)
+	return pubKeyHash,nil
+}
+
+func GenerateContractPubKeyHash(pubKey []byte) ([]byte, error) {
+	pubKeyHash, err := GeneratePublicKeyHash(pubKey)
+	if err != nil {
+		return pubKeyHash, err
+	}
+	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
+	return pubKeyHash,nil
+}
+
+func GeneratePublicKeyHash(pubKey []byte) ([]byte, error){
 	if pubKey == nil || len(pubKey) < 32 {
 		err := errors.New("pubkey not correct")
 		return nil, err
@@ -94,7 +109,6 @@ func HashPubKey(pubKey []byte) ([]byte, error) {
 	sha := hash.Sha3256(pubKey)
 	content := hash.Ripemd160(sha)
 	return content, nil
-
 }
 
 func Checksum(payload []byte) []byte {

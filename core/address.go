@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	ErrInvalidPubKeyHashLength = errors.New("Invalid Public Key Hash Length ")
+	ErrInvalidAddress = errors.New("Invalid Address")
 )
 
 type Address struct {
@@ -46,38 +46,21 @@ func (a Address) String() string {
 
 //isContract checks if an address is a contract address
 func (a Address) IsContract() (bool, error) {
-	pubKeyHash := base58.Decode(a.String())
-
-	if len(pubKeyHash) < addressChecksumLen {
-		return false, ErrInvalidPubKeyHashLength
+	pubKeyHash, ok := a.GetPubKeyHash()
+	if !ok {
+		return false, ErrInvalidAddress
 	}
 
-	version := pubKeyHash[0]
-	return IsVersionContract(version)
+	return IsHashPubKeyContract(pubKeyHash)
 }
 
 //ValidateAddress checks if an address is valid
 func (a Address) ValidateAddress() bool {
-
-	pubKeyHash := base58.Decode(a.String())
-
-	if len(pubKeyHash) < addressChecksumLen {
-		return false
-	}
-
-	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
-	version := pubKeyHash[0]
-
-	if _, err := IsVersionContract(version); err != nil {
-		return false
-	}
-
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
-	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
-
-	return bytes.Compare(actualChecksum, targetChecksum) == 0
+	_, ok := a.GetPubKeyHash()
+	return ok
 }
 
+//GetPubKeyHash decodes the address to the original public key hash. If unsuccessful, return false
 func (a Address) GetPubKeyHash() ([]byte, bool) {
 	pubKeyHash := base58.Decode(a.String())
 
@@ -85,9 +68,8 @@ func (a Address) GetPubKeyHash() ([]byte, bool) {
 		return nil, false
 	}
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
-	version := pubKeyHash[0]
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
-	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
+	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
+	targetChecksum := Checksum(pubKeyHash)
 
 	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
 		return pubKeyHash, true
