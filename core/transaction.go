@@ -198,13 +198,13 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
 //key hash in utxo
-func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool{
-	for i,vin := range tx.Vin{
-		pubKeyHash, err:= HashPubKey(vin.PubKey)
-		if err!=nil {
+func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
+	for i, vin := range tx.Vin {
+		pubKeyHash, err := HashPubKey(vin.PubKey)
+		if err != nil {
 			return false
 		}
-		if !bytes.Equal(pubKeyHash,prevUtxos[i].PubKeyHash) {
+		if !bytes.Equal(pubKeyHash, prevUtxos[i].PubKeyHash) {
 			return false
 		}
 	}
@@ -252,8 +252,6 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 	for _, vout := range tx.Vout {
 		totalVout = *totalVout.Add(vout.Value)
 	}
-	fmt.Println(totalVin.String())
-	fmt.Println(totalVout.String())
 	//TotalVin amount must equal or greater than total vout
 	return totalVin.Cmp(&totalVout) >= 0
 }
