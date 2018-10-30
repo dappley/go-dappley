@@ -45,8 +45,6 @@ func TestDpos_Start(t *testing.T) {
 	miners := []string{cbAddr.String()}
 	dynasty := NewDynasty(miners, 2, 2)
 	dpos.SetDynasty(dynasty)
-	//3 seconds should be enough to mine a block with difficulty 14
-	dpos.SetTargetBit(14)
 	//wait for the block gets mined
 	currentTime := time.Now().UTC().Unix()
 	dpos.Start()
@@ -78,7 +76,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i := 0; i < len(miners); i++ {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128)
 		node := network.NewNode(bc)
 		node.Start(21200 + i)

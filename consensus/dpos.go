@@ -234,10 +234,6 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash.GetPubKeyHash()) == 0
 }
 
-func (dpos *DPOS) StartNewBlockMinting() {
-	dpos.delegate.Stop()
-}
-
 func (dpos *DPOS) IsProducingBlock() bool {
 	return !dpos.delegate.IsIdle()
 }
