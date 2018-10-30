@@ -28,6 +28,8 @@ import (
 	"google.golang.org/grpc"
 	"golang.org/x/net/context"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
