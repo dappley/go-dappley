@@ -4,8 +4,8 @@
 //
 // the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// the Free Software Foundation, either pubKeyHash 3 of the License, or
+// (at your option) any later pubKeyHash.
 //
 // the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,11 +20,8 @@ package core
 
 import (
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"errors"
 
-	"github.com/btcsuite/btcutil/base58"
-	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	logger "github.com/sirupsen/logrus"
 )
@@ -32,10 +29,6 @@ import (
 var (
 	ErrInvalidPubKeyHashVersion = errors.New("Invalid Public Key Hash Version ")
 )
-
-const versionUser = byte(0x5A)
-const versionContract = byte(0x58)
-const addressChecksumLen = 4
 
 type KeyPair struct {
 	PrivateKey ecdsa.PrivateKey
@@ -48,74 +41,8 @@ func NewKeyPair() *KeyPair {
 }
 
 func (w KeyPair) GenerateAddress(isContract bool) Address {
-	return GenerateAddressByPublicKey(w.PublicKey, isContract)
-}
-
-func GenerateContractAddress() Address{
-	keyPair := NewKeyPair()
-	return keyPair.GenerateAddress(true)
-}
-
-func GenerateAddressByPublicKey(publicKey []byte, isContract bool) Address {
-
-	var pubKeyHash []byte
-	if isContract {
-		pubKeyHash, _ = GenerateContractPubKeyHash(publicKey)
-	}else{
-		pubKeyHash, _ = HashPubKey(publicKey)
-	}
-
-	checksum := Checksum(pubKeyHash)
-	fullPayload := append(pubKeyHash, checksum...)
-	return NewAddress(base58.Encode(fullPayload))
-}
-
-//IsHashPubKeyContract
-func IsHashPubKeyContract(pubKeyHash []byte) (bool, error){
-	if pubKeyHash[0] == versionUser {
-		return false, nil
-	}
-
-	if pubKeyHash[0] == versionContract {
-		return true, nil
-	}
-
-	return false, ErrInvalidPubKeyHashVersion
-}
-
-func HashPubKey(pubKey []byte) ([]byte, error) {
-	pubKeyHash, err := GeneratePublicKeyHash(pubKey)
-	if err!=nil {
-		return pubKeyHash, err
-	}
-	pubKeyHash = append([]byte{versionUser}, pubKeyHash...)
-	return pubKeyHash,nil
-}
-
-func GenerateContractPubKeyHash(pubKey []byte) ([]byte, error) {
-	pubKeyHash, err := GeneratePublicKeyHash(pubKey)
-	if err != nil {
-		return pubKeyHash, err
-	}
-	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
-	return pubKeyHash,nil
-}
-
-func GeneratePublicKeyHash(pubKey []byte) ([]byte, error){
-	if pubKey == nil || len(pubKey) < 32 {
-		err := errors.New("pubkey not correct")
-		return nil, err
-	}
-	sha := hash.Sha3256(pubKey)
-	content := hash.Ripemd160(sha)
-	return content, nil
-}
-
-func Checksum(payload []byte) []byte {
-	firstSHA := sha256.Sum256(payload)
-	secondSHA := sha256.Sum256(firstSHA[:])
-
-	return secondSHA[:addressChecksumLen]
+	pubKeyHash, _ := NewUserPubKeyHash(w.PublicKey)
+	return pubKeyHash.GenerateAddress()
 }
 
 func newKeyPair() (ecdsa.PrivateKey, []byte) {

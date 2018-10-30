@@ -200,7 +200,13 @@ func (dpos *Dpos) VerifyBlock(block *core.Block) bool {
 		return false
 	}
 
-	address := core.GenerateAddressByPublicKey(pubkey[1:],false)
+	pubKeyHash,err := core.NewUserPubKeyHash(pubkey[1:])
+	if err != nil {
+		logger.Warn("DPoS: Invalid Public Key!")
+		return false
+	}
+
+	address := pubKeyHash.GenerateAddress()
 
 	if strings.Compare(address.String(), producer) == 0 {
 		return true

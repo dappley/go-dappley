@@ -4,8 +4,8 @@
 //
 // the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// the Free Software Foundation, either pubKeyHash 3 of the License, or
+// (at your option) any later pubKeyHash.
 //
 // the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -47,47 +47,6 @@ func TestGenerateAddress(t *testing.T) {
 	assert.Equal(t, address1, address3)
 }
 
-func TestGenerateContractAddress(t *testing.T) {
-	address := GenerateContractAddress()
-	assert.Equal(t, uint8('c'), address.String()[0])
-}
-
-func TestIsHashPubKeyContract(t *testing.T) {
-	tests := []struct {
-		name     	string
-		version 	[]byte
-		expectedRes bool
-		expectedErr error
-	}{
-		{
-			name:     		"ContractAddress",
-			version: 		[]byte{versionContract},
-			expectedRes:    true,
-			expectedErr: 	nil,
-		},
-		{
-			name:     		"UserAddress",
-			version: 		[]byte{versionUser},
-			expectedRes:    false,
-			expectedErr: 	nil,
-		},
-		{
-			name:     		"InvalidAddress",
-			version: 		[]byte{0x00},
-			expectedRes:    false,
-			expectedErr: 	ErrInvalidPubKeyHashVersion,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			res,err := IsHashPubKeyContract(tt.version)
-			assert.Equal(t, res, tt.expectedRes)
-			assert.Equal(t, err, tt.expectedErr)
-		})
-	}
-}
-
 func TestNewKeyPair(t *testing.T) {
 	key1 := NewKeyPair()
 
@@ -98,18 +57,4 @@ func TestNewKeyPair(t *testing.T) {
 	assert.Equal(t, 64, len(key1.PublicKey))
 	assert.Equal(t, 32, len(key1.PrivateKey.D.Bytes()))
 
-}
-
-func TestHashPubKey_fail(t *testing.T) {
-	content, err := HashPubKey(nil)
-	assert.Nil(t, content)
-	assert.NotNil(t, err)
-}
-
-func TestHashPubKey(t *testing.T) {
-	expect := []uint8([]byte{versionUser,0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
-
-	publicKey := []uint8([]byte{0xd7, 0x23, 0x82, 0x25, 0xaa, 0x81, 0x1f, 0x4d, 0xf6, 0xae, 0x31, 0x35, 0x60, 0xfc, 0x81, 0x7, 0x8, 0x8b, 0x3b, 0x87, 0x25, 0xae, 0xf3, 0xec, 0x62, 0xde, 0xa8, 0x88, 0xbc, 0x1e, 0x93, 0xa4, 0xc9, 0xac, 0xfa, 0x27, 0x83, 0xf4, 0x69, 0x61, 0x57, 0xb5, 0x82, 0xe6, 0x62, 0xd0, 0x18, 0x5c, 0xdd, 0x28, 0xbf, 0xe4, 0x5c, 0xb5, 0xd7, 0xe3, 0xb5, 0x43, 0xd, 0x20, 0xac, 0x73, 0x58, 0x15})
-	content, _ := HashPubKey(publicKey)
-	assert.Equal(t, expect, content)
 }

@@ -4,8 +4,8 @@
 //
 // the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// the Free Software Foundation, either pubKeyHash 3 of the License, or
+// (at your option) any later pubKeyHash.
 //
 // the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -88,13 +88,13 @@ func TestSign(t *testing.T) {
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash, _ := HashPubKey(pubKey)
+	pubKeyHash, _ := NewUserPubKeyHash(pubKey)
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*UTXO{
-		{common.NewAmount(13), pubKeyHash, []byte("01"), 0},
-		{common.NewAmount(13), pubKeyHash, []byte("02"), 0},
-		{common.NewAmount(13), pubKeyHash, []byte("03"), 0},
+		{common.NewAmount(13), pubKeyHash.GetPubKeyHash(), []byte("01"), 0},
+		{common.NewAmount(13), pubKeyHash.GetPubKeyHash(), []byte("02"), 0},
+		{common.NewAmount(13), pubKeyHash.GetPubKeyHash(), []byte("03"), 0},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -104,7 +104,7 @@ func TestSign(t *testing.T) {
 		{[]byte{3}, 2, nil, pubKey},
 	}
 	txout := []TXOutput{
-		{common.NewAmount(19), pubKeyHash},
+		{common.NewAmount(19), pubKeyHash.GetPubKeyHash()},
 	}
 	tx := Transaction{nil, txin, txout, 0}
 
@@ -117,7 +117,7 @@ func TestSign(t *testing.T) {
 			if assert.NotNil(t, vin.Signature) {
 				txCopy := tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
-				txCopy.Vin[i].PubKey = pubKeyHash
+				txCopy.Vin[i].PubKey = pubKeyHash.GetPubKeyHash()
 
 				verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
 				assert.Nil(t, err)
@@ -189,20 +189,20 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash, _ := HashPubKey(pubKey)
+	pubKeyHash, _ := NewUserPubKeyHash(pubKey)
 	//Address := KeyPair{*privKey, pubKey}.GenerateAddress()
 
 	// Fake a wrong key pair
 	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))
 	wrongPrivKeyByte, _ := secp256k1.FromECDSAPrivateKey(wrongPrivKey)
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
-	//wrongPubKeyHash, _ := HashPubKey(wrongPubKey)
+	//wrongPubKeyHash, _ := NewUserPubKeyHash(wrongPubKey)
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
-		string(pubKeyHash): {
-			{common.NewAmount(4), pubKeyHash, []byte{1}, 0},
-			{common.NewAmount(3), pubKeyHash, []byte{2}, 1},
+		string(pubKeyHash.GetPubKeyHash()): {
+			{common.NewAmount(4), pubKeyHash.GetPubKeyHash(), []byte{1}, 0},
+			{common.NewAmount(3), pubKeyHash.GetPubKeyHash(), []byte{2}, 1},
 		},
 	}
 
@@ -234,7 +234,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			for i := range tt.tx.Vin {
 				txCopy := tt.tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
-				txCopy.Vin[i].PubKey = pubKeyHash
+				txCopy.Vin[i].PubKey = pubKeyHash.GetPubKeyHash()
 				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
 			}
@@ -312,16 +312,16 @@ func TestTransaction_Proto(t *testing.T) {
 func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	//prepare utxo pool
 	pubkey := []byte("12345678901234567890123456789012")
-	pubkeyHash, _ := HashPubKey(pubkey)
+	pubkeyHash, _ := NewUserPubKeyHash(pubkey)
 
 	Txin := MockTxInputsWithPubkey(pubkey)
 	Txin2 := MockTxInputsWithPubkey(pubkey)
-	utxo1 := &UTXO{common.NewAmount(10), pubkeyHash, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{common.NewAmount(9), pubkeyHash, Txin[1].Txid, Txin[1].Vout}
-	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[0].Txid, Txin2[0].Vout}
-	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash, Txin2[1].Txid, Txin2[1].Vout}
+	utxo1 := &UTXO{common.NewAmount(10), pubkeyHash.GetPubKeyHash(), Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{common.NewAmount(9), pubkeyHash.GetPubKeyHash(), Txin[1].Txid, Txin[1].Vout}
+	utxo3 := &UTXO{common.NewAmount(9), pubkeyHash.GetPubKeyHash(), Txin2[0].Txid, Txin2[0].Vout}
+	utxo4 := &UTXO{common.NewAmount(9), pubkeyHash.GetPubKeyHash(), Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := NewUTXOIndex()
-	utxoPool.index[string(pubkeyHash)] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+	utxoPool.index[string(pubkeyHash.GetPubKeyHash())] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
 	tx := MockTransaction()
 	txins, _ := tx.FindAllTxinsInUtxoPool(utxoPool)

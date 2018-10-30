@@ -4,8 +4,8 @@
 //
 // the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// the Free Software Foundation, either pubKeyHash 3 of the License, or
+// (at your option) any later pubKeyHash.
 //
 // the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -53,8 +53,8 @@ var bh2 = &BlockHeader{
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash, _ = HashPubKey(address1Bytes)
-var address2Hash, _ = HashPubKey(address2Bytes)
+var address1Hash, _ = NewUserPubKeyHash(address1Bytes)
+var address2Hash, _ = NewUserPubKeyHash(address2Bytes)
 
 func GenerateUtxoMockBlockWithoutInputs() *Block {
 
@@ -109,16 +109,16 @@ func MockUtxoInputs() []TXInput {
 
 func MockUtxoOutputsWithoutInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), address1Hash},
-		{common.NewAmount(7), address1Hash},
+		{common.NewAmount(5), address1Hash.GetPubKeyHash()},
+		{common.NewAmount(7), address1Hash.GetPubKeyHash()},
 	}
 }
 
 func MockUtxoOutputsWithInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(4), address1Hash},
-		{common.NewAmount(5), address2Hash},
-		{common.NewAmount(3), address2Hash},
+		{common.NewAmount(4), address1Hash.GetPubKeyHash()},
+		{common.NewAmount(5), address2Hash.GetPubKeyHash()},
+		{common.NewAmount(3), address2Hash.GetPubKeyHash()},
 	}
 }
 
@@ -126,12 +126,12 @@ func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	txout := TXOutput{common.NewAmount(5), address1Hash}
+	txout := TXOutput{common.NewAmount(5), address1Hash.GetPubKeyHash()}
 	utxoIndex := NewUTXOIndex()
 
 	utxoIndex.addUTXO(txout, []byte{1}, 0)
 
-	addr1UTXOs := utxoIndex.index[string(address1Hash)]
+	addr1UTXOs := utxoIndex.index[string(address1Hash.GetPubKeyHash())]
 	assert.Equal(t, 1, len(addr1UTXOs))
 	assert.Equal(t, txout.Value, addr1UTXOs[0].Value)
 	assert.Equal(t, []byte{1}, addr1UTXOs[0].Txid)
@@ -147,22 +147,22 @@ func TestRemoveUTXO(t *testing.T) {
 
 	utxoIndex := NewUTXOIndex()
 
-	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)], &UTXO{common.NewAmount(5), address1Hash, []byte{1}, 0})
-	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)], &UTXO{common.NewAmount(2), address1Hash, []byte{1}, 1})
-	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)], &UTXO{common.NewAmount(2), address1Hash, []byte{2}, 0})
-	utxoIndex.index[string(address2Hash)] = append(utxoIndex.index[string(address2Hash)], &UTXO{common.NewAmount(4), address2Hash, []byte{1}, 2})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(5), address1Hash.GetPubKeyHash(), []byte{1}, 0})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash.GetPubKeyHash(), []byte{1}, 1})
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())], &UTXO{common.NewAmount(2), address1Hash.GetPubKeyHash(), []byte{2}, 0})
+	utxoIndex.index[string(address2Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address2Hash.GetPubKeyHash())], &UTXO{common.NewAmount(4), address2Hash.GetPubKeyHash(), []byte{1}, 2})
 
 	err := utxoIndex.removeUTXO([]byte{1}, 0)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
+	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash.GetPubKeyHash())]))
 
 	err = utxoIndex.removeUTXO([]byte{2}, 1) // Does not exists
 
 	assert.NotNil(t, err)
-	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
+	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash.GetPubKeyHash())]))
 }
 
 func TestUpdate(t *testing.T) {
@@ -176,13 +176,13 @@ func TestUpdate(t *testing.T) {
 
 	// Assert that both the original instance and the database copy are updated correctly
 	for _, index := range []UTXOIndex{utxoIndex, utxoIndexInDB} {
-		assert.Equal(t, 2, len(index.index[string(address1Hash)]))
-		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash)][0].Txid)
-		assert.Equal(t, 0, index.index[string(address1Hash)][0].TxIndex)
-		assert.Equal(t, blk.transactions[0].Vout[0].Value, index.index[string(address1Hash)][0].Value)
-		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash)][1].Txid)
-		assert.Equal(t, 1, index.index[string(address1Hash)][1].TxIndex)
-		assert.Equal(t, blk.transactions[0].Vout[1].Value, index.index[string(address1Hash)][1].Value)
+		assert.Equal(t, 2, len(index.index[string(address1Hash.GetPubKeyHash())]))
+		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash.GetPubKeyHash())][0].Txid)
+		assert.Equal(t, 0, index.index[string(address1Hash.GetPubKeyHash())][0].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[0].Value, index.index[string(address1Hash.GetPubKeyHash())][0].Value)
+		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash.GetPubKeyHash())][1].Txid)
+		assert.Equal(t, 1, index.index[string(address1Hash.GetPubKeyHash())][1].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[1].Value, index.index[string(address1Hash.GetPubKeyHash())][1].Value)
 	}
 }
 
@@ -196,7 +196,7 @@ func TestUpdate_Failed(t *testing.T) {
 	utxoIndex := NewUTXOIndex()
 	err := utxoIndex.BuildForkUtxoIndex(blk, db)
 	assert.Equal(t, simulatedFailure, err)
-	assert.Equal(t, 0, len(utxoIndex.index[string(address1Hash)]))
+	assert.Equal(t, 0, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {
@@ -213,8 +213,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	bc.AddBlockToTail(blk2)
 
 	utxoIndex := LoadUTXOIndex(db)
-	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address1Hash)
-	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address2Hash)
+	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address1Hash.GetPubKeyHash())
+	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash(address2Hash.GetPubKeyHash())
 	// Expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, len(addr1UTXOs))
 	assert.Equal(t, common.NewAmount(4), addr1UTXOs[0].Value)
@@ -228,10 +228,10 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 		panic(err)
 	}
 
-	assert.Equal(t, 2, len(indexSnapshot.index[string(address1Hash)]))
-	assert.Equal(t, common.NewAmount(5), indexSnapshot.index[string(address1Hash)][0].Value)
-	assert.Equal(t, common.NewAmount(7), indexSnapshot.index[string(address1Hash)][1].Value)
-	assert.Equal(t, 0, len(indexSnapshot.index[string(address2Hash)]))
+	assert.Equal(t, 2, len(indexSnapshot.index[string(address1Hash.GetPubKeyHash())]))
+	assert.Equal(t, common.NewAmount(5), indexSnapshot.index[string(address1Hash.GetPubKeyHash())][0].Value)
+	assert.Equal(t, common.NewAmount(7), indexSnapshot.index[string(address1Hash.GetPubKeyHash())][1].Value)
+	assert.Equal(t, 0, len(indexSnapshot.index[string(address2Hash.GetPubKeyHash())]))
 }
 
 func TestFindUTXO(t *testing.T) {
@@ -293,9 +293,9 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 
 	//preapre 3 utxos in the utxo index
 	txoutputs := []TXOutput{
-		{common.NewAmount(3), address1Hash},
-		{common.NewAmount(4), address2Hash},
-		{common.NewAmount(5), address2Hash},
+		{common.NewAmount(3), address1Hash.GetPubKeyHash()},
+		{common.NewAmount(4), address2Hash.GetPubKeyHash()},
+		{common.NewAmount(5), address2Hash.GetPubKeyHash()},
 	}
 
 	index := NewUTXOIndex()
@@ -312,21 +312,21 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	}{
 		{"enoughUtxo",
 		common.NewAmount(3),
-		address2Hash,
+		address2Hash.GetPubKeyHash(),
 		nil,},
 
 		{"notEnoughUtxo",
 		common.NewAmount(4),
-		address1Hash,
+		address1Hash.GetPubKeyHash(),
 			ErrInsufficientFund,},
 
 		{"justEnoughUtxo",
 			common.NewAmount(9),
-			address2Hash,
+			address2Hash.GetPubKeyHash(),
 			nil,},
 		{"notEnoughUtxo2",
 			common.NewAmount(10),
-			address2Hash,
+			address2Hash.GetPubKeyHash(),
 			ErrInsufficientFund,},
 	}
 	for _, tt := range tests {

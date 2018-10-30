@@ -4,8 +4,8 @@
 //
 // the go-dappley library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// the Free Software Foundation, either pubKeyHash 3 of the License, or
+// (at your option) any later pubKeyHash.
 //
 // the go-dappley library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -203,7 +203,8 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
 	for i, vin := range tx.Vin {
 
-		isContract, err:=IsHashPubKeyContract(prevUtxos[i].PubKeyHash)
+		pkh := PubKeyHash{prevUtxos[i].PubKeyHash}
+		isContract, err:= pkh.IsContract()
 		if err != nil {
 			return false
 		}
@@ -213,11 +214,11 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 			continue
 		}
 
-		pubKeyHash, err := HashPubKey(vin.PubKey)
+		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
 			return false
 		}
-		if !bytes.Equal(pubKeyHash, prevUtxos[i].PubKeyHash) {
+		if !bytes.Equal(pubKeyHash.GetPubKeyHash(), prevUtxos[i].PubKeyHash) {
 			return false
 		}
 	}
@@ -316,11 +317,11 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, error) {
 	var res []*UTXO
 	for _, vin := range tx.Vin {
-		pubKeyHash, err := HashPubKey(vin.PubKey)
+		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
 			return nil, ErrTXInputNotFound
 		}
-		utxo := utxoPool.FindUTXOByVin(pubKeyHash, vin.Txid, vin.Vout)
+		utxo := utxoPool.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
 			return nil, ErrTXInputNotFound
 		}
