@@ -8,12 +8,7 @@ option objc_class_prefix = "HLW";
 
 service RpcService {
   rpc RpcGetVersion (GetVersionRequest) returns (GetVersionResponse) {}
-  rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcGetBalance (GetBalanceRequest) returns (GetBalanceResponse) {}
-  rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
-  rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
-  rpc RpcSend (SendRequest) returns (SendResponse) {}
-  rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcGetBlockchainInfo (GetBlockchainInfoRequest) returns (GetBlockchainInfoResponse) {}
   rpc RpcGetUTXO(GetUTXORequest) returns (GetUTXOResponse) {}
   rpc RpcGetBlocks(GetBlocksRequest) returns (GetBlocksResponse) {}
@@ -24,6 +19,11 @@ service RpcService {
 
 service AdminService{
   rpc RpcAddPeer(AddPeerRequest) returns (AddPeerResponse) {}
+  rpc RpcSend (SendRequest) returns (SendResponse) {}
+  rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
+  rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
+  rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
+  rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
 }
 
 // The request message 

@@ -56,7 +56,7 @@ func TestServer_StartRPC(t *testing.T) {
 	assert.Nil(t, err)
 	defer conn.Close()
 
-	c := rpcpb.NewRpcServiceClient(conn)
+	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
 
@@ -88,7 +88,6 @@ func TestRpcSend(t *testing.T) {
 		panic(err)
 	}
 
-
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128)
@@ -114,7 +113,7 @@ func TestRpcSend(t *testing.T) {
 		panic(err)
 	}
 	defer conn.Close()
-	c := rpcpb.NewRpcServiceClient(conn)
+	c := rpcpb.NewAdminServiceClient(conn)
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
@@ -122,7 +121,7 @@ func TestRpcSend(t *testing.T) {
 		To:         receiverWallet.GetAddress().String(),
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
-		Tip: 		2,
+		Tip:        2,
 	})
 	assert.Nil(t, err)
 

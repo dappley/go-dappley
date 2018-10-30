@@ -510,7 +510,7 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 			fmt.Printf("Create Wallet, the address is %s\n", wallet.GetAddress().Address)
 		}
 		//unlock the wallet
-		client.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
 			Name: "unlock",
 		})
 
@@ -576,7 +576,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 			return
 		}
 		//unlock the wallet
-		client.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
 			Name: "unlock",
 		})
 
@@ -692,7 +692,7 @@ func sendFromMinerCommandHandler(ctx context.Context, client interface{}, flags 
 	sendFromMinerRequest.To = *(flags[flagAddressBalance].(*string))
 	sendFromMinerRequest.Amount = common.NewAmount(uint64(*(flags[flagAmountBalance].(*int)))).Bytes()
 
-	response, err := client.(rpcpb.RpcServiceClient).RpcSendFromMiner(ctx, &sendFromMinerRequest)
+	response, err := client.(rpcpb.AdminServiceClient).RpcSendFromMiner(ctx, &sendFromMinerRequest)
 	if err != nil {
 		fmt.Println("Add balance error!: ERR:", err)
 		return
@@ -701,7 +701,7 @@ func sendFromMinerCommandHandler(ctx context.Context, client interface{}, flags 
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
+	response, err := client.(rpcpb.AdminServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
 	if err != nil {
 		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
 		return
@@ -723,7 +723,7 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 		return
 	}
 
-	response, err := client.(rpcpb.RpcServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
+	response, err := client.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
 		Name:    "addProducer",
 		Address: *(flags[flagProducerAddr].(*string)),
 	})
@@ -736,7 +736,7 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
+	response, err := client.(rpcpb.AdminServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
 		From:       *(flags[flagFromAddress].(*string)),
 		To:         *(flags[flagToAddress].(*string)),
 		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
