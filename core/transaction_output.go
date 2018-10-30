@@ -30,6 +30,7 @@ import (
 type TXOutput struct {
 	Value      *common.Amount
 	PubKeyHash PubKeyHash
+	Contract   string
 }
 
 func (out *TXOutput) Lock(address string) {
@@ -46,11 +47,15 @@ func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 }
 
 func NewTXOutput(value *common.Amount, address string) *TXOutput {
-	txo := &TXOutput{value, PubKeyHash{}}
+	txo := &TXOutput{value, PubKeyHash{},""}
 	txo.Lock(address)
 	return txo
 }
 
+func NewContractTXOutput(value *common.Amount, contract string) *TXOutput {
+	txo := &TXOutput{value, NewContractPubKeyHash(),contract}
+	return txo
+}
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),

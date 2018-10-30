@@ -123,8 +123,8 @@ func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), PubKeyHash{util.GenerateRandomAoB(2)}},
-		{common.NewAmount(7), PubKeyHash{util.GenerateRandomAoB(2)}},
+		{common.NewAmount(5), PubKeyHash{util.GenerateRandomAoB(2)},""},
+		{common.NewAmount(7), PubKeyHash{util.GenerateRandomAoB(2)},""},
 	}
 }
 

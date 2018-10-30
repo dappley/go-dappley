@@ -146,7 +146,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -207,7 +207,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 		if err != nil {
 			return false
 		}
-		//if the utxo belongs to a contract, the utxo is not verified through
+		//if the utxo belongs to a Contract, the utxo is not verified through
 		//public key hash. It will be verified through consensus
 		if isContract {
 			continue
