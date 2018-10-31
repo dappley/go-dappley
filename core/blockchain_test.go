@@ -156,8 +156,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
 
 	// Simulate a failure when flushing new block to storage
-	simulatedFailure1 := errors.New("simulated storage failure")
-	db.On("Flush").Return(simulatedFailure1)
+	simulatedFailure := errors.New("simulated storage failure")
+	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
 	blk := GenerateMockBlock()
@@ -165,10 +165,11 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	blk.header.height = 1
 	err = bc.AddBlockToTail(blk)
 
-	simulatedFailure2 := errors.New("UTXO: utxo not found when trying to remove from cache")
-	// Expect the simulated error when adding new block
-	assert.Equal(t, simulatedFailure2, err)
-	// Expect that genesis block is still the blockchain tail
-	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
+	//Expect 2 mock txns to be rejected when minting
+	assert.Equal(t, MetricsTxDoubleSpend.Count() , int64(2))
+	// Expect the coinbase txn to go through
+	assert.Equal(t, nil , err)
+	// Expect that the block added is the blockchain tail
+	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
 
 }
