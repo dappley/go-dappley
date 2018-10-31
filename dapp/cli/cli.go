@@ -360,6 +360,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 				encodedVout = append(encodedVout, map[string]interface{}{
 					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
+					"Contract":   vout.Contract,
 				})
 			}
 
