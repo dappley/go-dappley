@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/common"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core"
@@ -123,10 +124,14 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	d.verifyTransactions()
 	//get all transactions
 	txs := d.bc.GetTxPool().Pop()
+	//calculate tips
+	totalTips := common.NewAmount(0)
+	for _, tx := range txs {
+		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+	}
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1)
+	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1, totalTips)
 	txs = append(txs, &cbtx)
-	// TODO: add tips to txs
 
 	//prepare the new block
 	return &NewBlock{core.NewBlock(txs, parentBlock), false}
