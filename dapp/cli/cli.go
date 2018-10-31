@@ -290,7 +290,6 @@ func main() {
 		if cmd.Parsed() {
 			md := metadata.Pairs("password", cliConfig.GetPassword())
 			ctx := metadata.NewOutgoingContext(context.Background(), md)
-			fmt.Println(cmdName)
 			cmdHandlers[cmdName].cmdHandler(ctx, clients[cmdHandlers[cmdName].serviceType], cmdFlagValues[cmdName])
 		}
 	}
