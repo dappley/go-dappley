@@ -141,7 +141,7 @@ func (miner *Miner) prepareBlock() *NewBlock {
 		logger.Error(err)
 	}
 
-	//verify all transactions
+	//return valid transactions
 	utxoPool := core.LoadUTXOIndex(miner.bc.GetDb())
 	utxoTemp := utxoPool.DeepCopy()
 	validTxs := miner.bc.GetTxPool().ValidTxns(func(tx core.Transaction) bool {
