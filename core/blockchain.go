@@ -173,13 +173,12 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
-	err = utxoIndex.UpdateUtxoState(block, bcTemp.db)
+	_, err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   hex.EncodeToString(block.GetHash()),
 		}).Error("Blockchain: Update UTXO index failed!")
-		MetricsTxDoubleSpend.Inc(1)
 		return err
 	}
 
