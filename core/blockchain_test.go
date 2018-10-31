@@ -40,6 +40,8 @@ func TestMain(m *testing.M) {
 func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 
@@ -52,6 +54,8 @@ func TestCreateBlockchain(t *testing.T) {
 func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 	blk := GenerateMockBlock()
@@ -62,28 +66,32 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
-
-	blk := GenerateMockBlock()
+	tailblk,_:= bc.GetTailBlock()
+	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
 	bc.AddBlockToTail(blk)
 
 	assert.False(t, bc.IsHigherThanBlockchain(blk))
+
 }
 
 func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 
-	blk := GenerateMockBlock()
-	blk.SetHash([]byte("hash1"))
-	blk.header.height = 1
+	blk := GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockToTail(blk)
 
-	isFound := bc.IsInBlockchain([]byte("hash1"))
+	isFound := bc.IsInBlockchain([]byte("hash"))
 	assert.True(t, isFound)
 
 	isFound = bc.IsInBlockchain([]byte("hash2"))
@@ -92,7 +100,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 
 func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//create a mock blockchain with max height of 5
-	bc := GenerateMockBlockchain(5)
+	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.db.Close()
 
 	blk, err := bc.GetTailBlock()
@@ -157,9 +165,11 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	blk.header.height = 1
 	err = bc.AddBlockToTail(blk)
 
-	// Expect the simulated error when adding new block
-	assert.Equal(t, simulatedFailure, err)
-	// Expect that genesis block is still the blockchain tail
-	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
+	//Expect 2 mock txns to be rejected when minting
+	assert.Equal(t, MetricsTxDoubleSpend.Count() , int64(2))
+	// Expect the coinbase txn to go through
+	assert.Equal(t, nil , err)
+	// Expect that the block added is the blockchain tail
+	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
 
 }

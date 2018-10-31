@@ -113,9 +113,13 @@ func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
 	logger.Info("PoW: Minted a new block. height:", newBlock.GetHeight())
 	if !newBlock.VerifyHash() {
 		logger.Warn("hash verification is wrong")
-
+		return
 	}
-	pow.bc.AddBlockToTail(newBlock)
+	err:= pow.bc.AddBlockToTail(newBlock)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
 	pow.broadcastNewBlock(newBlock)
 }
 

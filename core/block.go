@@ -293,7 +293,7 @@ func (b *Block) VerifyHash() bool {
 
 func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 	for _, tx := range b.GetTransactions() {
-		if !tx.Verify(utxo, b.GetHeight()) {
+		if !tx.Verify(&utxo, b.GetHeight()) {
 			return false
 		}
 	}

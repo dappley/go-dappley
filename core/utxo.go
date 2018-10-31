@@ -21,6 +21,7 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -147,28 +148,42 @@ func (utxos UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *
 	return nil
 }
 
-// Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
-// transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) error {
-	// Create a copy of the index so operations below are only temporal
-	tempIndex := utxos.deepCopy()
-
-	for _, tx := range newBlk.GetTransactions() {
-		if !tx.IsCoinbase() {
-			for _, txin := range tx.Vin {
-				err := tempIndex.removeUTXO(txin.Txid, txin.Vout)
-				if err != nil {
-					logger.Warn(err)
-				}
+func (utxos *UTXOIndex) ApplyTransaction(tx *Transaction) error {
+	if !tx.IsCoinbase() {
+		for _, txin := range tx.Vin {
+			err := utxos.removeUTXO(txin.Txid, txin.Vout)
+			if err != nil {
+				MetricsTxDoubleSpend.Inc(1)
+				logger.WithFields(logger.Fields{
+					"txhash": hex.EncodeToString(tx.ID),
+				}).Warn("Bad transaction found when minting, throwing")
+				return err
 			}
 		}
-		for i, txout := range tx.Vout {
-			tempIndex.addUTXO(txout, tx.ID, i)
+	}
+	for i, txout := range tx.Vout {
+		utxos.addUTXO(txout, tx.ID, i)
+	}
+	return nil
+}
+
+// Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
+// transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
+func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) ([]*Transaction, error ){
+	err:=errors.New("")
+	// Create a copy of the index so operations below are only temporal
+	tempIndex := utxos.DeepCopy()
+	goodTxs := []*Transaction{}
+	for _, tx := range txs {
+		err = tempIndex.ApplyTransaction(tx)
+		if err!=nil{
+			continue
 		}
+		goodTxs = append(goodTxs, tx)
 	}
 
 	// Save to database
-	err := tempIndex.Save(utxoMapKey, db)
+	err = tempIndex.Save(utxoMapKey, db)
 
 	// Assign the temporal copy to the original receiver index ONLY after it is successfully saved to db
 	if err == nil {
@@ -177,7 +192,7 @@ func (utxos *UTXOIndex) BuildForkUtxoIndex(newBlk *Block, db storage.Storage) er
 		logger.Error(fmt.Errorf("failed to update utxo index: %v", err))
 	}
 
-	return err
+	return goodTxs, err
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
@@ -260,8 +275,8 @@ func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
-
-func (utxos UTXOIndex) deepCopy() UTXOIndex {
+//creates a deepcopy of the receiver object
+func (utxos UTXOIndex) DeepCopy() UTXOIndex {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
 	utxocopy := NewUTXOIndex()
@@ -275,7 +290,7 @@ func (utxos UTXOIndex) deepCopy() UTXOIndex {
 // GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
 func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error) {
 	index := LoadUTXOIndex(db)
-	deepCopy := index.deepCopy()
+	deepCopy := index.DeepCopy()
 	bci := bc.Iterator()
 
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions

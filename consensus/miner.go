@@ -141,22 +141,25 @@ func (miner *Miner) prepareBlock() *NewBlock {
 		logger.Error(err)
 	}
 
-	//verify all transactions
-	miner.verifyTransactions()
-	//get all transactions
-	txs := miner.bc.GetTxPool().Pop()
+	//return valid transactions
+	utxoPool := core.LoadUTXOIndex(miner.bc.GetDb())
+	utxoTemp := utxoPool.DeepCopy()
+	validTxs := miner.bc.GetTxPool().ValidTxns(func(tx core.Transaction) bool {
+		return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
+	})
+
 	//calculate tips
 	totalTips := common.NewAmount(0)
-	for _, tx := range txs {
+	for _, tx := range validTxs {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
 	}
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(miner.beneficiary, "", miner.bc.GetMaxHeight()+1, totalTips)
-	txs = append(txs, &cbtx)
+	validTxs = append(validTxs, &cbtx)
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)
-	return &NewBlock{core.NewBlock(txs, parentBlock), false}
+	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
@@ -181,8 +184,4 @@ func (miner *Miner) mineBlock(nonce int64) bool {
 }
 
 //verify transactions and remove invalid transactions
-func (miner *Miner) verifyTransactions() {
-	utxoPool := core.LoadUTXOIndex(miner.bc.GetDb())
-	txPool := miner.bc.GetTxPool()
-	txPool.RemoveInvalidTransactions(utxoPool)
-}
+

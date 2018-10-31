@@ -168,11 +168,11 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, 0}
 
 	// test valid coinbase transaction
-	assert.True(t, t5.Verify(UTXOIndex{}, 5))
-	assert.True(t, t6.Verify(UTXOIndex{}, 5))
+	assert.True(t, t5.Verify(&UTXOIndex{}, 5))
+	assert.True(t, t6.Verify(&UTXOIndex{}, 5))
 
 	// test coinbase transaction with incorrect blockHeight
-	assert.False(t, t5.Verify(UTXOIndex{}, 10))
+	assert.False(t, t5.Verify(&UTXOIndex{}, 10))
 
 	// test coinbase transaction with incorrect subsidy
 	bh2 := make([]byte, 8)
@@ -180,7 +180,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
 	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, 0}
-	assert.False(t, t7.Verify(UTXOIndex{}, 5))
+	assert.False(t, t7.Verify(&UTXOIndex{}, 5))
 
 }
 
@@ -241,7 +241,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			}
 
 			// Verify the signatures
-			result := tt.tx.Verify(utxoIndex, 0)
+			result := tt.tx.Verify(&utxoIndex, 0)
 			assert.Equal(t, tt.ok, result)
 		})
 	}

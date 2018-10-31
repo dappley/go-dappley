@@ -120,21 +120,23 @@ func (d *Delegate) prepareBlock() *NewBlock {
 		logger.Error(err)
 	}
 
-	//verify all transactions
-	d.verifyTransactions()
-	//get all transactions
-	txs := d.bc.GetTxPool().Pop()
+	//return valid transactions
+	utxoPool := core.LoadUTXOIndex(d.bc.GetDb())
+	utxoTemp := utxoPool.DeepCopy()
+	validTxs := d.bc.GetTxPool().ValidTxns(func(tx core.Transaction) bool {
+		return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
+	})
 	//calculate tips
 	totalTips := common.NewAmount(0)
-	for _, tx := range txs {
+	for _, tx := range validTxs {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
 	}
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1, totalTips)
-	txs = append(txs, &cbtx)
+	validTxs = append(validTxs, &cbtx)
 
 	//prepare the new block
-	return &NewBlock{core.NewBlock(txs, parentBlock), false}
+	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement
@@ -154,11 +156,4 @@ func (d *Delegate) produceBlock() bool {
 		d.newBlock.IsValid = true
 	}
 	return fulfilled
-}
-
-// verifyTransactions removes invalid transactions from transaction pool
-func (d *Delegate) verifyTransactions() {
-	utxoPool := core.LoadUTXOIndex(d.bc.GetDb())
-	txPool := d.bc.GetTxPool()
-	txPool.RemoveInvalidTransactions(utxoPool)
 }

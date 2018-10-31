@@ -155,14 +155,7 @@ func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
-	err := bc.AddBlockToDb(block)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"hash":   hex.EncodeToString(block.GetHash()),
-			"height": block.GetHeight(),
-		}).Warn("Blockchain: Add Block To Database Failed")
-		return err
-	}
+
 
 	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()
@@ -170,7 +163,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
-	err = bcTemp.setTailBlockHash(block.GetHash())
+	err := bcTemp.setTailBlockHash(block.GetHash())
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -180,12 +173,21 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
-	err = utxoIndex.BuildForkUtxoIndex(block, bcTemp.db)
+	_, err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   hex.EncodeToString(block.GetHash()),
 		}).Error("Blockchain: Update UTXO index failed!")
+		return err
+	}
+
+	err = bcTemp.AddBlockToDb(block)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"hash":   hex.EncodeToString(block.GetHash()),
+			"height": block.GetHeight(),
+		}).Warn("Blockchain: Add Block To Database Failed")
 		return err
 	}
 
@@ -318,8 +320,7 @@ func (bc *Blockchain) String() string {
 
 //AddBlockToDb record the new block in the database
 func (bc *Blockchain) AddBlockToDb(block *Block) error {
-	bc.db.EnableBatch()
-	defer bc.db.DisableBatch()
+
 	err := bc.db.Put(block.GetHash(), block.Serialize())
 	if err != nil {
 		logger.Warn("Blockchain: Add Block To Database Failed!")
@@ -329,12 +330,6 @@ func (bc *Blockchain) AddBlockToDb(block *Block) error {
 	err = bc.db.Put(util.UintToHex(block.GetHeight()), block.GetHash())
 	if err != nil {
 		logger.Warn("Blockchain: Add Block Height to Database Failed!")
-		return err
-	}
-
-	err = bc.db.Flush()
-	if err != nil {
-		logger.Warn("Blockchain: Flush Block to Database failed")
 		return err
 	}
 
@@ -364,7 +359,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
-		logger.Warn(err)
+		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
 	}
 
 	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
@@ -376,20 +371,6 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain(forkBlks)
 
-	logger.WithFields(logger.Fields{
-		"syncstate": false,
-	}).Debug("Merge finished, setting syncstate to false")
-	bc.GetBlockPool().SetSyncState(false)
-
-}
-
-func (bc *Blockchain) AddBlockToBlockchainTail(blk *Block) {
-	err := bc.AddBlockToTail(blk)
-	if err != nil {
-		logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
-	}
-	//Remove transactions in current transaction pool
-	bc.GetTxPool().RemoveMultipleTransactions(blk.GetTransactions())
 }
 
 func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {

@@ -44,6 +44,7 @@ var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
 	ErrInvalidAmount    = errors.New("transaction: amount is invalid (must be > 0)")
 	ErrTXInputNotFound  = errors.New("transaction: transaction input not found")
+	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
 )
 
 type Transaction struct {
@@ -157,7 +158,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxo *UTXOIndex, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
 		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
@@ -169,8 +170,7 @@ func (tx *Transaction) Verify(utxo UTXOIndex, blockHeight uint64) bool {
 		}
 		return true
 	}
-
-	prevUtxos, err := tx.FindAllTxinsInUtxoPool(utxo)
+	prevUtxos, err := tx.FindAllTxinsInUtxoPool(*utxo)
 	if err != nil {
 		logger.Errorf("ERROR: %v", err)
 		return false
@@ -321,10 +321,11 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
-			return nil, ErrTXInputNotFound
+			return nil, ErrNewUserPubKeyHash
 		}
 		utxo := utxoPool.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
+			MetricsTxDoubleSpend.Inc(1)
 			return nil, ErrTXInputNotFound
 		}
 		res = append(res, utxo)

@@ -92,7 +92,11 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 		}
 
 		utxoIndex := LoadUTXOIndex(pool.blockchain.GetDb())
-		utxoIndex.BuildForkUtxoIndex(forkBlks[i], pool.blockchain.GetDb())
+
+		_, err := utxoIndex.UpdateUtxoState(forkBlks[i].GetTransactions(), pool.blockchain.GetDb())
+		if err != nil {
+			return false
+		}
 	}
 	return true
 }
@@ -149,7 +153,12 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		pool.blockchain.MergeFork(forkBlks, forkheadParentHash)
 		tree.Delete()
 
-	} else {
+		logger.WithFields(logger.Fields{
+			"syncstate": false,
+		}).Debug("Merge finished or exited, setting syncstate to false")
+		pool.SetSyncState(false)
+
+	}else{
 		pool.requestPrevBlock(tree, sender)
 	}
 

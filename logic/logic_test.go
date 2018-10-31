@@ -218,14 +218,6 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	teardown()
 }
 
-func TestCompare(t *testing.T) {
-	bc1 := core.GenerateMockBlockchain(5)
-	bc2 := bc1
-	assert.True(t, isSameBlockChain(bc1, bc2))
-	bc3 := core.GenerateMockBlockchain(5)
-	assert.False(t, isSameBlockChain(bc1, bc3))
-}
-
 func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
 	if bc1 == nil || bc2 == nil {
 		return false
