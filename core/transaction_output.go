@@ -20,6 +20,7 @@ package core
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/contract"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/common"
@@ -55,6 +56,14 @@ func NewTXOutput(value *common.Amount, address string) *TXOutput {
 func NewContractTXOutput(contract string) *TXOutput {
 	txo := &TXOutput{common.NewAmount(0), NewContractPubKeyHash(),contract}
 	return txo
+}
+
+//Execute runs the smart contract in the txoutput
+func (out *TXOutput) RunSmartContract() {
+	if out.Contract != "" {
+		engine := sc.NewScEngine(out.Contract)
+		engine.Execute()
+	}
 }
 
 func (out *TXOutput) ToProto() proto.Message {

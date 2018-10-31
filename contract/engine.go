@@ -1,4 +1,4 @@
-package contract
+package sc
 
 /*
 #cgo LDFLAGS: -L${SRCDIR}/lib -ldappleyv8
