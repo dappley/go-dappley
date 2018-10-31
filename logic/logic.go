@@ -103,8 +103,16 @@ func IsWalletLocked() (bool, error) {
 
 //Tell if the file empty or not exist
 func IsWalletEmpty() (bool, error) {
-	wm, _ := GetWalletManager(client.GetWalletFilePath())
-	return wm.IsFileEmpty()
+	if client.Exists(client.GetWalletFilePath()) {
+		wm, _ := GetWalletManager(client.GetWalletFilePath())
+		if len(wm.Wallets) == 0 {
+			return true, nil
+		} else {
+			return wm.IsFileEmpty()
+		}
+	} else {
+		return true, nil
+	}
 }
 
 //Set lock flag
@@ -233,9 +241,10 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
-		logger.Info()
+		logger.WithFields(logger.Fields{
+			"contractAddr": contractAddr.String(),
+		}).Info("Smart Contract Deployed Successful!")
 	}
-
 
 	if err != nil {
 		return nil, err

@@ -20,69 +20,58 @@ package consensus
 
 import (
 	"math"
-	"math/big"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/common"
-)
 
-const defaulttargetBits = 0
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
+)
 
 type State int
 
 var maxNonce int64 = math.MaxInt64
 
-type MinedBlock struct {
-	block   *core.Block
-	isValid bool
-}
-
 type Miner struct {
-	target   *big.Int
-	exitCh   chan bool
-	bc       *core.Blockchain
-	cbAddr   string
-	key      string
-	newBlock *MinedBlock
-	nonce    int64
-	retChan  chan (*MinedBlock)
-	stop     bool
+	exitCh      chan bool
+	bc          *core.Blockchain
+	beneficiary string
+	key         string
+	newBlock    *NewBlock
+	nonce       int64
+	requirement Requirement
+	newBlockCh  chan *NewBlock
+	idle        bool
 }
 
 func NewMiner() *Miner {
 	m := &Miner{
-		target:   nil,
-		exitCh:   make(chan bool, 1),
-		bc:       nil,
-		cbAddr:   "",
-		newBlock: &MinedBlock{nil, false},
-		nonce:    0,
-		stop:     true,
+		exitCh:      make(chan bool, 1),
+		bc:          nil,
+		beneficiary: "",
+		newBlock:    &NewBlock{nil, false},
+		nonce:       0,
+		requirement: noRequirement,
+		idle:        true,
 	}
-	m.SetTargetBit(defaulttargetBits)
 	return m
 }
 
-func (miner *Miner) SetTargetBit(bit int) {
-	if bit < 0 || bit > 256 {
-		return
-	}
-	target := big.NewInt(1)
-	miner.target = target.Lsh(target, uint(256-bit))
-}
-
-func (miner *Miner) SetPrivKey(key string) {
+func (miner *Miner) SetPrivateKey(key string) {
 	miner.key = key
 }
-func (miner *Miner) GetPrivKey() string {
-	return miner.key
+
+func (miner *Miner) Beneficiary() string {
+	return miner.beneficiary
 }
 
-func (miner *Miner) Setup(bc *core.Blockchain, cbAddr string, retChan chan (*MinedBlock)) {
+func (miner *Miner) SetRequirement(requirement Requirement) {
+	miner.requirement = requirement
+}
+
+func (miner *Miner) Setup(bc *core.Blockchain, beneficiaryAddr string, newBlockCh chan *NewBlock) {
 	miner.bc = bc
-	miner.cbAddr = cbAddr
-	miner.retChan = retChan
+	miner.beneficiary = beneficiaryAddr
+	miner.newBlockCh = newBlockCh
 }
 
 func (miner *Miner) Start() {
@@ -92,9 +81,9 @@ func (miner *Miner) Start() {
 		}
 		logger.Info("Miner: Start Mining A Block...")
 		miner.resetExitCh()
+		miner.idle = false
 		miner.prepare()
 		nonce := int64(0)
-		miner.stop = false
 	hashLoop:
 		for {
 			select {
@@ -112,8 +101,8 @@ func (miner *Miner) Start() {
 				}
 			}
 		}
-		miner.stop = true
 		miner.returnBlk()
+		miner.idle = true
 		logger.Info("Miner: Mining Ends...")
 	}()
 }
@@ -124,15 +113,8 @@ func (miner *Miner) Stop() {
 	}
 }
 
-func (miner *Miner) Validate(blk *core.Block) bool {
-	var hashInt big.Int
-
-	hash := blk.GetHash()
-	hashInt.SetBytes(hash)
-
-	isValid := hashInt.Cmp(miner.target) == -1
-
-	return isValid
+func (miner *Miner) IsIdle() bool {
+	return miner.idle
 }
 
 func (miner *Miner) prepare() {
@@ -140,10 +122,10 @@ func (miner *Miner) prepare() {
 }
 
 func (miner *Miner) returnBlk() {
-	if !miner.newBlock.isValid {
-		miner.newBlock.block.Rollback(miner.bc.GetTxPool())
+	if !miner.newBlock.IsValid {
+		miner.newBlock.Rollback(miner.bc.GetTxPool())
 	}
-	miner.retChan <- miner.newBlock
+	miner.newBlockCh <- miner.newBlock
 }
 
 func (miner *Miner) resetExitCh() {
@@ -152,7 +134,7 @@ func (miner *Miner) resetExitCh() {
 	}
 }
 
-func (miner *Miner) prepareBlock() *MinedBlock {
+func (miner *Miner) prepareBlock() *NewBlock {
 
 	parentBlock, err := miner.bc.GetTailBlock()
 	if err != nil {
@@ -172,42 +154,33 @@ func (miner *Miner) prepareBlock() *MinedBlock {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
 	}
 	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.cbAddr, "", miner.bc.GetMaxHeight()+1, totalTips)
+	cbtx := core.NewCoinbaseTX(miner.beneficiary, "", miner.bc.GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)
-	return &MinedBlock{core.NewBlock(validTxs, parentBlock), false}
+	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
 func (miner *Miner) mineBlock(nonce int64) bool {
-	hash, ok := miner.verifyNonce(nonce, miner.newBlock.block)
-	if ok {
-		hash = miner.newBlock.block.CalculateHashWithoutNonce()
-		miner.newBlock.block.SetHash(hash)
-		miner.newBlock.block.SetNonce(nonce)
-		keystring := miner.GetPrivKey()
-		if len(keystring) > 0 {
-			signed := miner.newBlock.block.SignBlock(miner.GetPrivKey(), hash)
+	hash := miner.newBlock.CalculateHashWithNonce(nonce)
+	miner.newBlock.SetHash(hash)
+	miner.newBlock.SetNonce(nonce)
+	fulfilled := miner.requirement(miner.newBlock.Block)
+	if fulfilled {
+		hash = miner.newBlock.CalculateHashWithoutNonce()
+		miner.newBlock.SetHash(hash)
+		if len(miner.key) > 0 {
+			signed := miner.newBlock.SignBlock(miner.key, hash)
 			if !signed {
-				logger.Warn("Miner Key= ", miner.GetPrivKey())
+				logger.Warn("Miner Key= ", miner.key)
 				return false
 			}
 		}
-		miner.newBlock.isValid = true
+		miner.newBlock.IsValid = true
 	}
-	return ok
-}
-
-func (miner *Miner) verifyNonce(nonce int64, blk *core.Block) (core.Hash, bool) {
-	var hashInt big.Int
-	var hash core.Hash
-
-	hash = blk.CalculateHashWithNonce(nonce)
-	hashInt.SetBytes(hash[:])
-
-	return hash, hashInt.Cmp(miner.target) == -1
+	return fulfilled
 }
 
 //verify transactions and remove invalid transactions

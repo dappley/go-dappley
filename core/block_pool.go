@@ -112,8 +112,8 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 		return
 	}
 
-	if !(pool.blockchain.GetConsensus().VerifyBlock(block)) {
-		logger.Warn("BlockPool: The received block cannot pass signature verification!")
+	if !(pool.blockchain.GetConsensus().Validate(block)) {
+		logger.Warn("BlockPool: The received block is invalid according to consensus!")
 		return
 	}
 	//TODO: Verify double spending transactions in the same block
@@ -131,7 +131,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	tree, _ := common.NewTree(blk.hashString(), blk)
 	blkCache := pool.blkCache
 
-	if !pool.blockchain.consensus.Validate(blk) || blkCache.Contains(blk.hashString()) {
+	if blkCache.Contains(blk.hashString()) {
 		return
 	}
 

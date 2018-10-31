@@ -49,7 +49,7 @@ func TestSend(t *testing.T) {
 		expectedTip      uint64
 		expectedErr      error
 	}{
-		//{"Deploy contract", common.NewAmount(7), 0, "helloworld!", common.NewAmount(7), 0, nil},
+		{"Deploy contract", common.NewAmount(7), 0, "helloworld!", common.NewAmount(7), 0, nil},
 		{"Send with no tip", common.NewAmount(7), 0, "", common.NewAmount(7), 0, nil},
 		{"Send with tips", common.NewAmount(6), 2, "", common.NewAmount(6), 2, nil},
 		{"Send zero with no tip", common.NewAmount(0), 0, "", common.NewAmount(0), 0, ErrInvalidAmount},
@@ -96,13 +96,18 @@ func TestSend(t *testing.T) {
 				panic(err)
 			}
 
+			//a short delay before mining starts
+			time.Sleep(time.Millisecond*500)
+
 			// Make sender the miner and mine for 1 block (which should include the transaction)
 			pow.Setup(node, minerWallet.GetAddress().String())
 			pow.Start()
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+			core.WaitDoneOrTimeout(func() bool {
+				return !pow.IsProducingBlock()
+			}, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
 			if err != nil {
@@ -120,13 +125,12 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(tc.expectedTip)), minerBalance)
 
 			//check smart contract deployment
-			blk, err := bc.GetTailBlock()
-			assert.Nil(t, err)
-			maxHeight := blk.GetHeight()
 			res := string("")
 			contractAddr := core.NewAddress("")
 			loop:
-			for i:= maxHeight; i>0; i-- {
+			for i:= bc.GetMaxHeight(); i>0; i-- {
+				blk, err := bc.GetBlockByHeight(i)
+				assert.Nil(t, err)
 				for _,tx := range blk.GetTransactions(){
 					contractAddr = tx.GetContractAddress()
 					if contractAddr.String() != ""{
@@ -257,7 +261,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		bufferTime       = 0
 	)
 	setup()
-	var dposArray []*consensus.Dpos
+	var dposArray []*consensus.DPOS
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
 	var firstNode *network.Node
@@ -276,9 +280,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock)
 
 	for i := 0; i < numOfNodes; i++ {
-		dpos := consensus.NewDpos()
+		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
 		bcs = append(bcs, bc)
 		node := network.NewNode(bc)
@@ -323,7 +326,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		bufferTime       = 0
 	)
 	setup()
-	var dposArray []*consensus.Dpos
+	var dposArray []*consensus.DPOS
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
 
@@ -343,10 +346,9 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock)
 
 	for i := 0; i < numOfNodes; i++ {
-		dpos := consensus.NewDpos()
+		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 
-		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
 		bcs = append(bcs, bc)
 
@@ -566,7 +568,7 @@ func TestDoubleMint(t *testing.T) {
 	}
 	for i := 0; i < 2; i++ {
 
-		dpos := consensus.NewDpos()
+		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128)
 		node := network.NewNode(bc)

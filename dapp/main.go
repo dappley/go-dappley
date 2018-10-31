@@ -70,7 +70,6 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
-	conss.StartNewBlockMinting()
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
 	bc, err := core.GetBlockchain(db, conss, txPoolLimit)
 	if err != nil {
@@ -109,10 +108,12 @@ func main() {
 
 func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewDpos()
+	conss := consensus.NewDPOS()
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
 	conss.SetDynasty(dynasty)
-	conss.SetTargetBit(0)
+
+	// Make sure the producer is not producing block yet
+	conss.Stop()
 	return conss, dynasty
 }
 
