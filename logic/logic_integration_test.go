@@ -49,7 +49,7 @@ func TestSend(t *testing.T) {
 		expectedTip      uint64
 		expectedErr      error
 	}{
-		//{"Deploy contract", common.NewAmount(7), 0, "helloworld!", common.NewAmount(7), 0, nil},
+		{"Deploy contract", common.NewAmount(7), 0, "helloworld!", common.NewAmount(7), 0, nil},
 		{"Send with no tip", common.NewAmount(7), 0, "", common.NewAmount(7), 0, nil},
 		{"Send with tips", common.NewAmount(6), 2, "", common.NewAmount(6), 2, nil},
 		{"Send zero with no tip", common.NewAmount(0), 0, "", common.NewAmount(0), 0, ErrInvalidAmount},
@@ -95,6 +95,9 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
+
+			//a short delay before mining starts
+			time.Sleep(time.Millisecond*500)
 
 			// Make sender the miner and mine for 1 block (which should include the transaction)
 			pow.Setup(node, minerWallet.GetAddress().String())
