@@ -310,7 +310,8 @@ func printUsage() {
 func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
-		fmt.Println("Get blocks error! maxCount must be greater than zero!")
+		fmt.Println("\n Example: cli getBlocks -startBlockHashes 10 -maxCount 5")
+		fmt.Println()
 		return
 	}
 
@@ -363,6 +364,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 				encodedVout = append(encodedVout, map[string]interface{}{
 					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
+					"Contract":   vout.Contract,
 				})
 			}
 
