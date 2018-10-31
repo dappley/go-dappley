@@ -20,8 +20,6 @@ package core
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/contract"
-
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
