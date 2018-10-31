@@ -21,7 +21,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
@@ -59,59 +58,25 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 }
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
-	msg := ""
-	if in.Name == "getWallet" {
-		wallet, err := logic.GetWallet()
-		if err != nil {
-			msg = err.Error()
-		} else if wallet != nil {
-			locked, err := logic.IsWalletLocked()
-			if err != nil {
-				msg = err.Error()
-			} else if locked {
-				msg = "WalletExistsLocked"
-			} else {
-				msg = "WalletExistsNotLocked"
-			}
-		} else {
-			msg = "NoWallet"
-		}
-		return &rpcpb.GetBalanceResponse{Message: msg}, nil
-	} else if in.Name == "getBalance" {
-		pass := in.Passphrase
-		address := in.Address
-		msg = "Get Balance"
-		wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-		if err != nil {
-			return &rpcpb.GetBalanceResponse{Message: "GetBalance : Error loading local wallets"}, err
-		}
 
-		wallet := client.NewWallet()
-		if wm.Locked {
-			wallet, err = wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), pass)
-			if err != nil {
-				return &rpcpb.GetBalanceResponse{Message: err.Error()}, err
-			} else {
-				wm.SetUnlockTimer(logic.GetUnlockDuration())
-			}
-		} else {
-			wallet = wm.GetWalletByAddress(core.NewAddress(address))
-			if wallet == nil {
-				return &rpcpb.GetBalanceResponse{Message: "Address not found in the wallet!"}, nil
-			}
-		}
-
+	if in.Name == "getBalance" {
 		getbalanceResp := rpcpb.GetBalanceResponse{}
-		amount, err := logic.GetBalance(wallet.GetAddress(), rpcService.node.GetBlockchain().GetDb())
+		address := in.Address
+		if len(address) != 34 {
+			getbalanceResp.Message = "The address is not valid"
+			return &getbalanceResp, nil
+		}
+
+		amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain().GetDb())
 		if err != nil {
 			getbalanceResp.Message = "Failed to get balance from blockchain"
 			return &getbalanceResp, nil
 		}
 		getbalanceResp.Amount = amount.Int64()
-		getbalanceResp.Message = msg
+		getbalanceResp.Message = "Succeed"
 		return &getbalanceResp, nil
 	} else {
-		return &rpcpb.GetBalanceResponse{Message: "GetBalance Error: not recognize the command!"}, nil
+		return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
 	}
 }
 

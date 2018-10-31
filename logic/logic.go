@@ -103,8 +103,16 @@ func IsWalletLocked() (bool, error) {
 
 //Tell if the file empty or not exist
 func IsWalletEmpty() (bool, error) {
-	wm, _ := GetWalletManager(client.GetWalletFilePath())
-	return wm.IsFileEmpty()
+	if client.Exists(client.GetWalletFilePath()) {
+		wm, _ := GetWalletManager(client.GetWalletFilePath())
+		if len(wm.Wallets) == 0 {
+			return true, nil
+		} else {
+			return wm.IsFileEmpty()
+		}
+	} else {
+		return true, nil
+	}
 }
 
 //Set lock flag

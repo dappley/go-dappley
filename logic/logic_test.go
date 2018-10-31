@@ -185,6 +185,21 @@ func TestGetAllAddresses(t *testing.T) {
 	teardown()
 }
 
+func TestIsWalletEmptyWallet(t *testing.T) {
+	setup()
+	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
+	assert.NotEmpty(t, wallet1)
+	assert.Nil(t, err)
+	empty, err := IsTestWalletEmpty()
+	assert.Nil(t, err)
+	assert.Equal(t,false, empty)
+	setup()
+	empty, err = IsTestWalletEmpty()
+	assert.Nil(t, err)
+	assert.Equal(t,true, empty)
+
+}
+
 func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
 	setup()

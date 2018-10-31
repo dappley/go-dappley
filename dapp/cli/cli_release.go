@@ -21,19 +21,21 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/dappley/go-dappley/client"
+	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
-	storage "github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
@@ -42,6 +44,7 @@ import (
 
 //command names
 const (
+	cliGetBlocks         = "getBlocks"
 	cliGetBlockchainInfo = "getBlockchainInfo"
 	cliGetBalance        = "getBalance"
 	cliGetPeerInfo       = "getPeerInfo"
@@ -49,18 +52,23 @@ const (
 	cliAddPeer           = "addPeer"
 	clicreateWallet      = "createWallet"
 	cliListAddresses     = "listAddresses"
+	cliaddProducer       = "addProducer"
 )
 
 //flag names
 const (
-	flagAddress        = "address"
-	flagAddressBalance = "address"
-	flagAmountBalance  = "amount"
-	flagToAddress      = "to"
-	flagFromAddress    = "from"
-	flagAmount         = "amount"
-	flagPeerFullAddr   = "peerFullAddr"
-)
+	flagStartBlockHashes = "startBlockHashes"
+	flagBlockMaxCount    = "maxCount"
+	flagAddress          = "address"
+	flagAddressBalance   = "to"
+	flagAmountBalance    = "amount"
+	flagTip              = "tip"
+	flagToAddress        = "to"
+	flagFromAddress      = "from"
+	flagAmount           = "amount"
+	flagContract		 = "contract"
+	flagPeerFullAddr     = "peerFullAddr"
+	)
 
 type valueType int
 
@@ -79,6 +87,7 @@ const (
 
 //list of commands
 var cmdList = []string{
+	cliGetBlocks,
 	cliGetBlockchainInfo,
 	cliGetBalance,
 	cliGetPeerInfo,
@@ -90,6 +99,21 @@ var cmdList = []string{
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
+	cliGetBlocks: {
+		flagPars{
+			flagBlockMaxCount,
+			0,
+			valueTypeInt,
+			"maxCount. Eg. 500",
+		},
+		flagPars{
+			flagStartBlockHashes,
+			"",
+			valueTypeString,
+			"startBlockHashes. Eg. \"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897ba, " +
+				"8334b4c19091ae7582506eec5b84bfeb4a5e101042e40b403490c4ceb33897bb\"(no space)",
+		},
+	},
 	cliGetBalance: {flagPars{
 		flagAddress,
 		"",
@@ -115,6 +139,18 @@ var cmdFlagsMap = map[string][]flagPars{
 			valueTypeInt,
 			"The amount to send from the sender to the receiver.",
 		},
+		flagPars{
+			flagTip,
+			uint64(0),
+			valueTypeUint64,
+			"Tip to miner.",
+		},
+		flagPars{
+			flagContract,
+			"",
+			valueTypeString,
+			"Smart contract in JavaScript. Eg. helloworld!",
+		},
 	},
 	cliAddPeer: {flagPars{
 		flagPeerFullAddr,
@@ -126,13 +162,14 @@ var cmdFlagsMap = map[string][]flagPars{
 
 //map the callback function to each command
 var cmdHandlers = map[string]commandHandlersWithType{
+	cliGetBlocks:         {rpcService, getBlocksCommandHandler},
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
-	cliGetPeerInfo:       {rpcService, getPeerInfoCommandHandler},
-	cliSend:              {rpcService, sendCommandHandler},
+	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
+	cliSend:              {adminRpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
-	clicreateWallet:      {rpcService, createWalletCommandHandler},
-	cliListAddresses:     {rpcService, listAddressesCommandHandler},
+	clicreateWallet:      {adminRpcService, createWalletCommandHandler},
+	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -226,13 +263,113 @@ func printUsage() {
 	}
 }
 
+func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
+	if maxCount <= 0 {
+		fmt.Println("Get blocks error! maxCount must be greater than zero!")
+		return
+	}
+
+	getBlocksRequest := &rpcpb.GetBlocksRequest{}
+	getBlocksRequest.MaxCount = maxCount
+
+	// set startBlockHashes of getBlocksRequest if specified in flag
+	startBlockHashesString := string(*(flags[flagStartBlockHashes].(*string)))
+	if len(startBlockHashesString) > 0 {
+		var startBlockHashes [][]byte
+		for _, startBlockHash := range strings.Split(startBlockHashesString, ",") {
+			startBlockHashInByte, err := hex.DecodeString(startBlockHash)
+			if err != nil {
+				fmt.Println("ERROR: get blocks failed. ERR:", err)
+				return
+			}
+			startBlockHashes = append(startBlockHashes, startBlockHashInByte)
+		}
+		getBlocksRequest.StartBlockHashes = startBlockHashes
+	}
+
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
+	if err != nil {
+		fmt.Println("ERROR: get blocks failed. ERR:", err)
+		return
+	}
+
+	var encodedBlocks []map[string]interface{}
+	for i := 0; i < len(response.Blocks); i++ {
+		block := response.Blocks[i]
+
+		var encodedTransactions []map[string]interface{}
+
+		for j := 0; j < len(block.Transactions); j++ {
+			transaction := block.Transactions[j]
+
+			var encodedVin []map[string]interface{}
+			for k := 0; k < len(transaction.Vin); k++ {
+				vin := transaction.Vin[k]
+				encodedVin = append(encodedVin, map[string]interface{}{
+					"Vout":      vin.Vout,
+					"Signature": hex.EncodeToString(vin.Signature),
+					"PubKey":    string(vin.PubKey),
+				})
+			}
+
+			var encodedVout []map[string]interface{}
+			for l := 0; l < len(transaction.Vout); l++ {
+				vout := transaction.Vout[l]
+				encodedVout = append(encodedVout, map[string]interface{}{
+					"Value":      string(vout.Value),
+					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
+				})
+			}
+
+			encodedTransaction := map[string]interface{}{
+				"ID":   hex.EncodeToString(transaction.ID),
+				"Vin":  encodedVin,
+				"Vout": encodedVout,
+			}
+			encodedTransactions = append(encodedTransactions, encodedTransaction)
+		}
+
+		encodedBlock := map[string]interface{}{
+			"Header": map[string]interface{}{
+				"Hash":      hex.EncodeToString(block.Header.Hash),
+				"Prevhash":  hex.EncodeToString(block.Header.Prevhash),
+				"Timestamp": block.Header.Timestamp,
+				"Sign":      hex.EncodeToString(block.Header.Sign),
+				"height":    block.Header.Height,
+			},
+			"Transactions": encodedTransactions,
+		}
+
+		encodedBlocks = append(encodedBlocks, encodedBlock)
+	}
+
+	blocks, err := json.MarshalIndent(encodedBlocks, "", "  ")
+	if err != nil {
+		fmt.Println("Print blocks failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blocks))
+}
+
 func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlockchainInfo(ctx, &rpcpb.GetBlockchainInfoRequest{})
 	if err != nil {
 		fmt.Println("ERROR: GetBlockchainInfo failed. ERR:", err)
 		return
 	}
-	fmt.Println(proto.MarshalTextString(response))
+	encodedResponse := map[string]interface{}{
+		"TailBlockHash": hex.EncodeToString(response.TailBlockHash),
+		"BlockHeight":   response.BlockHeight,
+		"Producers":     response.Producers,
+	}
+
+	blockchainInfo, err := json.MarshalIndent(encodedResponse, "", "  ")
+	if err != nil {
+		fmt.Println("Print blockchain info failed. ERR: ", err)
+	}
+
+	fmt.Println(string(blockchainInfo))
 }
 
 func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -248,18 +385,24 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
 	if err != nil {
-		fmt.Println("ERROR: Get Balance failed. ERR:", err)
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Printf("Error: Get Balance failed. Network Connection Error!\n")
+		} else {
+			fmt.Printf("Error: Get Balance failed. %v\n", err.Error())
+		}
 		return
 	}
 
 	passphrase := ""
-	if response.Message == "WalletExists" {
+	if response.Message == "WalletExistsLocked" {
 		prompter := util.NewTerminalPrompter()
 		passphrase = prompter.GetPassPhrase("Please input the wallet password: ", false)
 		if passphrase == "" {
 			fmt.Println("Password Empty!")
 			return
 		}
+	} else if response.Message == "WalletExistsNotLocked" {
+		passphrase = ""
 	} else if response.Message == "NoWallet" {
 		fmt.Println("Please use cli createWallet to generate a wallet first!")
 		return
@@ -294,9 +437,6 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	empty, err := logic.IsWalletEmpty()
-	//if err != nil {
-	//	fmt.Printf("Error: Create Wallet Failed. %v \n", err.Error())
-	//}
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
 	if empty {
@@ -337,7 +477,7 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 			fmt.Printf("Create Wallet, the address is %s\n", wallet.GetAddress().Address)
 		}
 		//unlock the wallet
-		client.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
 			Name: "unlock",
 		})
 
@@ -384,8 +524,8 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 			fmt.Println("Password Empty!")
 			return
 		}
-		fl := storage.NewFileLoader(client.GetWalletFilePath())
-		wm := client.NewWalletManager(fl)
+		fl := storage.NewFileLoader(clientpkg.GetWalletFilePath())
+		wm := clientpkg.NewWalletManager(fl)
 		err := wm.LoadFromFile()
 		addressList, err := wm.GetAddressesWithPassphrase(passphrase)
 		if err != nil {
@@ -393,7 +533,7 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 			return
 		}
 		//unlock the wallet
-		client1.(rpcpb.RpcServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
+		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
 			Name: "unlock",
 		})
 
@@ -433,7 +573,7 @@ func listAddressesCommandHandler(ctx context.Context, client1 interface{}, flags
 }
 
 func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
+	response, err := client.(rpcpb.AdminServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
 	if err != nil {
 		fmt.Println("ERROR: GetPeerInfo failed. ERR:", err)
 		return
@@ -442,10 +582,13 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.RpcServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
-		From:   *(flags[flagFromAddress].(*string)),
-		To:     *(flags[flagToAddress].(*string)),
-		Amount: common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+	response, err := client.(rpcpb.AdminServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
+		From:       *(flags[flagFromAddress].(*string)),
+		To:         *(flags[flagToAddress].(*string)),
+		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
+		Tip:        *(flags[flagTip].(*uint64)),
+		Walletpath: clientpkg.GetWalletFilePath(),
+		Contract:  	*(flags[flagContract].(*string)),
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
