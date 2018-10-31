@@ -71,7 +71,7 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 // RemoveInvalidTransactions removes invalid transactions in transaction pool based on the existing UTXOs in utxoPool
 func (txPool *TransactionPool) RemoveInvalidTransactions(utxoPool UTXOIndex) {
 	txPool.traverse(func(tx Transaction) {
-		if !tx.Verify(utxoPool, 0) { // all transactions in transaction pool have no blockHeight
+		if !tx.Verify(&utxoPool, 0) { // all transactions in transaction pool have no blockHeight
 			txPool.Transactions.Del(tx)
 		}
 	})
