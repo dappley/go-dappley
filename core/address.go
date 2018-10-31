@@ -44,7 +44,7 @@ func (a Address) String() string {
 	return a.Address
 }
 
-//isContract checks if an address is a contract address
+//isContract checks if an address is a Contract address
 func (a Address) IsContract() (bool, error) {
 	pubKeyHash, ok := a.GetPubKeyHash()
 	if !ok {

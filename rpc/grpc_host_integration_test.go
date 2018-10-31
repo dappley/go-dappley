@@ -134,6 +134,7 @@ func TestRpcSend(t *testing.T) {
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        2,
+		Contract: 	"",
 	})
 	assert.Nil(t, err)
 
@@ -162,6 +163,79 @@ func TestRpcSend(t *testing.T) {
 	assert.Equal(t, minerRewardBalance, minerBalance)
 	client.RemoveWalletFile()
 }
+
+func TestRpcSendContract(t *testing.T) {
+
+	logger.SetLevel(logger.WarnLevel)
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+	client.RemoveWalletFile()
+
+	// Create wallets
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
+	pow := consensus.NewProofOfWork()
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare a PoW node that put mining reward to the sender's address
+	node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.SetTargetBit(0)
+
+	// Start a grpc server
+	server := NewGrpcServer(node, "temp")
+	server.Start(defaultRpcPort+10) // use a different port as other integration tests
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":",defaultRpcPort+10), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewAdminServiceClient(conn)
+
+	contract := "helloworld!"
+	// Initiate a RPC send request
+	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
+		From:       senderWallet.GetAddress().String(),
+		To:         "",
+		Amount:     common.NewAmount(7).Bytes(),
+		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		Tip:        2,
+		Contract: 	contract,
+	})
+	assert.Nil(t, err)
+
+	// Start mining to approve the transaction
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	blk,_ := bc.GetTailBlock()
+	assert.Equal(t, contract, blk.GetTransactions()[0].Vout[0].Contract)
+
+	client.RemoveWalletFile()
+}
+
 func TestRpcGetVersion(t *testing.T) {
 	rpcContext, err := createRpcTestContext(2)
 	if err != nil {
@@ -245,7 +319,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, rpcContext.bc, rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
 
 	rpcContext.consensus.SetTargetBit(3)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
@@ -485,6 +559,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
+			"",
 	)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
@@ -501,6 +576,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
+			"",
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})

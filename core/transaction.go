@@ -38,6 +38,8 @@ import (
 
 var subsidy = common.NewAmount(10)
 
+const ContractTxouputIndex = 0
+
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
 	ErrInvalidAmount    = errors.New("transaction: amount is invalid (must be > 0)")
@@ -146,7 +148,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -207,7 +209,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 		if err != nil {
 			return false
 		}
-		//if the utxo belongs to a contract, the utxo is not verified through
+		//if the utxo belongs to a Contract, the utxo is not verified through
 		//public key hash. It will be verified through consensus
 		if isContract {
 			continue
@@ -289,7 +291,8 @@ func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Tran
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair, tip *common.Amount) (Transaction, error) {
+func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair,
+						tip *common.Amount, contract string) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, amount, tip)
@@ -300,7 +303,7 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 	tx := Transaction{
 		nil,
 		prepareInputLists(utxos, senderKeyPair.PublicKey),
-		prepareOutputLists(from, to, amount, change),
+		prepareOutputLists(from, to, amount, change, contract),
 		tip.Uint64()}
 	tx.ID = tx.Hash()
 
@@ -327,6 +330,24 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		res = append(res, utxo)
 	}
 	return res, nil
+}
+
+//GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
+func (tx *Transaction) GetContractAddress() Address{
+	if len(tx.Vout) == 0 {
+		return NewAddress("")
+	}
+
+	isContract, err := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
+	if err!= nil {
+		return NewAddress("")
+	}
+
+	if !isContract {
+		return NewAddress("")
+	}
+
+	return tx.Vout[ContractTxouputIndex].PubKeyHash.GenerateAddress()
 }
 
 // String returns a human-readable representation of a transaction
@@ -432,11 +453,17 @@ func calculateUtxoSum(utxos []*UTXO) *common.Amount {
 }
 
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to Address, amount *common.Amount, change *common.Amount) []TXOutput {
+func prepareOutputLists(from, to Address, amount *common.Amount, change *common.Amount, contract string) []TXOutput {
 
 	var outputs []TXOutput
-	// Build a list of outputs
-	outputs = append(outputs, *NewTXOutput(amount, to.String()))
+	toAddr := to
+
+	if contract != "" {
+		outputs = append(outputs, *NewContractTXOutput(contract))
+		toAddr = outputs[0].PubKeyHash.GenerateAddress()
+	}
+
+	outputs = append(outputs, *NewTXOutput(amount, toAddr.String()))
 	outputs = append(outputs, *NewTXOutput(change, from.String()))
 	return outputs
 }

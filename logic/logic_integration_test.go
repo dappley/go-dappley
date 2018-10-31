@@ -21,9 +21,6 @@
 package logic
 
 import (
-	"testing"
-	"time"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -32,6 +29,8 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
 
 const testport_msg_relay = 19999
@@ -45,14 +44,16 @@ func TestSend(t *testing.T) {
 		name             string
 		transferAmount   *common.Amount
 		tipAmount        uint64
+		contract 		 string
 		expectedTransfer *common.Amount
 		expectedTip      uint64
 		expectedErr      error
 	}{
-		{"Send with no tip", common.NewAmount(7), 0, common.NewAmount(7), 0, nil},
-		{"Send with tips", common.NewAmount(6), 2, common.NewAmount(6), 2, nil},
-		{"Send zero with no tip", common.NewAmount(0), 0, common.NewAmount(0), 0, ErrInvalidAmount},
-		{"Send zero with tips", common.NewAmount(0), 2, common.NewAmount(0), 0, ErrInvalidAmount},
+		{"Deploy contract", common.NewAmount(7), 0, "helloworld!", common.NewAmount(7), 0, nil},
+		{"Send with no tip", common.NewAmount(7), 0, "", common.NewAmount(7), 0, nil},
+		{"Send with tips", common.NewAmount(6), 2, "", common.NewAmount(6), 2, nil},
+		{"Send zero with no tip", common.NewAmount(0), 0, "", common.NewAmount(0), 0, ErrInvalidAmount},
+		{"Send zero with tips", common.NewAmount(0), 2, "", common.NewAmount(0), 0, ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -78,7 +79,15 @@ func TestSend(t *testing.T) {
 			}
 
 			// Send coins from senderWallet to receiverWallet
-			_, err = Send(senderWallet, receiverWallet.GetAddress(), tc.transferAmount, uint64(tc.tipAmount), bc, node)
+			var rcvAddr core.Address
+			isContract := (tc.contract!="")
+			if isContract {
+				rcvAddr = core.NewAddress("")
+			}else{
+				rcvAddr = receiverWallet.GetAddress()
+			}
+
+			_, err = Send(senderWallet, rcvAddr, tc.transferAmount, uint64(tc.tipAmount), tc.contract, bc, node)
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
@@ -103,11 +112,6 @@ func TestSend(t *testing.T) {
 			expectedBalance, _ = expectedBalance.Sub(common.NewAmount(tc.expectedTip))
 			assert.Equal(t, expectedBalance, senderBalance)
 
-			// Balance of the receiver's wallet should be the amount transferred
-			receiverBalance, err := GetBalance(receiverWallet.GetAddress(), store)
-
-			assert.Equal(t, tc.expectedTransfer, receiverBalance)
-
 			// Balance of the miner's wallet should be the amount tipped + mineReward
 			minerBalance, err := GetBalance(minerWallet.GetAddress(), store)
 			if err != nil {
@@ -115,6 +119,32 @@ func TestSend(t *testing.T) {
 			}
 			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(tc.expectedTip)), minerBalance)
 
+			//check smart contract deployment
+			blk, err := bc.GetTailBlock()
+			assert.Nil(t, err)
+			maxHeight := blk.GetHeight()
+			res := string("")
+			contractAddr := core.NewAddress("")
+			loop:
+			for i:= maxHeight; i>0; i-- {
+				for _,tx := range blk.GetTransactions(){
+					contractAddr = tx.GetContractAddress()
+					if contractAddr.String() != ""{
+						res = tx.Vout[core.ContractTxouputIndex].Contract
+						break loop;
+					}
+				}
+			}
+			assert.Equal(t, tc.contract, res)
+
+			// Balance of the receiver's wallet should be the amount transferred
+			var receiverBalance *common.Amount
+			if isContract{
+				receiverBalance, err = GetBalance(contractAddr, store)
+			}else{
+				receiverBalance, err = GetBalance(receiverWallet.GetAddress(), store)
+			}
+			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
 	}
 }
@@ -149,7 +179,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
-	_, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, bc, node)
+	_, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, "", bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -203,7 +233,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
 
 	//Send 5 coins from addr1 to addr2
-	_, err = Send(wallet1, addr2, transferAmount, tip, bc, node)
+	_, err = Send(wallet1, addr2, transferAmount, tip, "", bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -523,7 +553,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := core.HashAddress(validProducerAddr)
-	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}}}, 0}
+	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash},""}}, 0}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, parent)

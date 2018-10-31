@@ -20,8 +20,7 @@ func TestNewUserPubKeyHash_Fail(t *testing.T) {
 }
 
 func TestNewContractPubKeyHash(t *testing.T) {
-	pkh, err := NewContractPubKeyHash()
-	assert.Nil(t, err)
+	pkh := NewContractPubKeyHash()
 	assert.Equal(t, versionContract, pkh.PubKeyHash[0])
 }
 
@@ -49,6 +48,12 @@ func TestPubKeyHash_IsContract(t *testing.T) {
 			pubKeyHash:  []byte{0x00},
 			expectedRes: false,
 			expectedErr: ErrInvalidPubKeyHashVersion,
+		},
+		{
+			name:        "EmptyAddress",
+			pubKeyHash:  []byte{},
+			expectedRes: false,
+			expectedErr: ErrEmptyPublicKeyHash,
 		},
 	}
 

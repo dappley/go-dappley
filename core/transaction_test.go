@@ -45,8 +45,8 @@ func GenerateFakeTxInputs() []TXInput {
 
 func GenerateFakeTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(1), PubKeyHash{getAoB(2)}},
-		{common.NewAmount(2), PubKeyHash{getAoB(2)}},
+		{common.NewAmount(1), PubKeyHash{getAoB(2)},""},
+		{common.NewAmount(2), PubKeyHash{getAoB(2)},""},
 	}
 }
 
@@ -92,9 +92,9 @@ func TestSign(t *testing.T) {
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*UTXO{
-		{TXOutput{common.NewAmount(13), pubKeyHash}, []byte("01"), 0},
-		{TXOutput{common.NewAmount(13), pubKeyHash}, []byte("02"), 0},
-		{TXOutput{common.NewAmount(13), pubKeyHash}, []byte("03"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash,""}, []byte("01"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash,""}, []byte("02"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash,""}, []byte("03"), 0},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -104,7 +104,7 @@ func TestSign(t *testing.T) {
 		{[]byte{3}, 2, nil, pubKey},
 	}
 	txout := []TXOutput{
-		{common.NewAmount(19), pubKeyHash},
+		{common.NewAmount(19), pubKeyHash,""},
 	}
 	tx := Transaction{nil, txin, txout, 0}
 
@@ -201,8 +201,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
 		string(pubKeyHash.GetPubKeyHash()): {
-			{TXOutput{common.NewAmount(4), pubKeyHash}, []byte{1}, 0},
-			{TXOutput{common.NewAmount(3), pubKeyHash}, []byte{2}, 1},
+			{TXOutput{common.NewAmount(4), pubKeyHash,""}, []byte{1}, 0},
+			{TXOutput{common.NewAmount(3), pubKeyHash,""}, []byte{2}, 1},
 		},
 	}
 
@@ -213,8 +213,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	txin3 := append(txin, TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
 	txin4 := append(txin, TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
 	pbh, _  := NewUserPubKeyHash(pubKey)
-	txout := []TXOutput{{common.NewAmount(7), pbh}}
-	txout2 := []TXOutput{{common.NewAmount(8), pbh}} //Vout amount > Vin amount
+	txout := []TXOutput{{common.NewAmount(7), pbh,""}}
+	txout2 := []TXOutput{{common.NewAmount(8), pbh,""}} //Vout amount > Vin amount
 
 	tests := []struct {
 		name     string
@@ -250,7 +250,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB", "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := TXOutput{common.NewAmount(10), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}}
+	expectVout := TXOutput{common.NewAmount(10), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}},""}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
 	assert.Equal(t, 1, len(t1.Vout))
@@ -317,10 +317,10 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 
 	Txin := MockTxInputsWithPubkey(pubkey)
 	Txin2 := MockTxInputsWithPubkey(pubkey)
-	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash}, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash}, Txin[1].Txid, Txin[1].Vout}
-	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash}, Txin2[0].Txid, Txin2[0].Vout}
-	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash}, Txin2[1].Txid, Txin2[1].Vout}
+	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash,""}, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin[1].Txid, Txin[1].Vout}
+	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[0].Txid, Txin2[0].Vout}
+	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := NewUTXOIndex()
 	utxoPool.index[string(pubkeyHash.GetPubKeyHash())] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
@@ -330,4 +330,63 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	tx.Vin = Txin
 	txins, _ = tx.FindAllTxinsInUtxoPool(utxoPool)
 	assert.NotNil(t, txins)
+}
+
+func TestTransaction_GetContractAddress(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		addr 		string
+		expectedRes string
+	}{
+		{
+			name:        "ContainsContractAddress",
+			addr:  		 "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectedRes: "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+		},
+		{
+			name:        "ContainsUserAddress",
+			addr:  		 "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expectedRes: "",
+		},
+		{
+			name:        "EmptyInput",
+			addr:  		 "",
+			expectedRes: "",
+		},
+		{
+			name:        "InvalidAddress",
+			addr:  		 "dsdGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expectedRes: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr := NewAddress(tt.addr)
+			pkh, _ := addr.GetPubKeyHash()
+			tx := Transaction{
+				nil,
+				nil,
+				[]TXOutput{
+					{nil,
+						PubKeyHash{pkh},
+						"",
+					},
+				},
+				0,
+			}
+
+			assert.Equal(t,NewAddress(tt.expectedRes),tx.GetContractAddress())
+		})
+	}
+
+
+
+
+
+
+
+
+
 }

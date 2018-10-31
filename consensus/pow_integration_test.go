@@ -72,7 +72,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.Nil(t,err)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0))
+	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0),"")
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -178,7 +178,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.Nil(t,err)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0))
+	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0),"")
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -199,7 +199,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.Nil(t,err)
 
 	//add second transaction
-	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, common.NewAmount(0))
+	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, common.NewAmount(0),"")
 	assert.Nil(t, err)
 
 	bc.GetTxPool().Push(tx2)

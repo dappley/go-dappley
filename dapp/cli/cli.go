@@ -69,6 +69,7 @@ const (
 	flagToAddress        = "to"
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
+	flagContract		 = "contract"
 	flagPeerFullAddr     = "peerFullAddr"
 	flagProducerAddr     = "address"
 	flagListPrivateKey   = "privateKey"
@@ -172,6 +173,12 @@ var cmdFlagsMap = map[string][]flagPars{
 			valueTypeUint64,
 			"Tip to miner.",
 		},
+		flagPars{
+			flagContract,
+			"",
+			valueTypeString,
+			"Smart contract in JavaScript. Eg. helloworld!",
+		},
 	},
 	cliAddPeer: {flagPars{
 		flagPeerFullAddr,
@@ -195,7 +202,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {adminRpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
-	clicreateWallet:      {rpcService, createWalletCommandHandler},
+	clicreateWallet:      {adminRpcService, createWalletCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	cliaddProducer:       {adminRpcService, cliaddProducerCommandHandler},
@@ -742,6 +749,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
 		Tip:        *(flags[flagTip].(*uint64)),
 		Walletpath: clientpkg.GetWalletFilePath(),
+		Contract:  	*(flags[flagContract].(*string)),
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)

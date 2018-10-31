@@ -208,11 +208,13 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, bc *core.Blockchain, node *network.Node) ([]byte, error) {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, error) {
 	if !senderWallet.GetAddress().ValidateAddress() {
 		return nil, ErrInvalidSenderAddress
 	}
-	if !to.ValidateAddress() {
+
+	//Contract deployment transaction does not need to validate to address
+	if !to.ValidateAddress() && contract == "" {
 		return nil, ErrInvalidRcverAddress
 	}
 	if amount.Validate() != nil || amount.IsZero() {
@@ -225,9 +227,16 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 		return nil, err
 	}
 
-	tx, err := core.NewUTXOTransaction(utxos, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), common.NewAmount(tip))
+	tx, err := core.NewUTXOTransaction(utxos, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), common.NewAmount(tip), contract)
 	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
+
+	contractAddr := tx.GetContractAddress()
+	if contractAddr.String() != "" {
+		logger.Info()
+	}
+
+
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +272,7 @@ func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockch
 		return err
 	}
 
-	tx, err := core.NewUTXOTransaction(utxos, minerWallet.GetAddress(), address, amount, *minerWallet.GetKeyPair(), common.NewAmount(0))
+	tx, err := core.NewUTXOTransaction(utxos, minerWallet.GetAddress(), address, amount, *minerWallet.GetKeyPair(), common.NewAmount(0),"")
 
 	if err != nil {
 		return err
