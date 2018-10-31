@@ -19,11 +19,13 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/network"
 )
 
 func TestProofOfWork_NewPoW(t *testing.T) {

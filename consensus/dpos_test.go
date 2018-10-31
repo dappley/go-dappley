@@ -21,11 +21,12 @@ package consensus
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDpos(t *testing.T) {

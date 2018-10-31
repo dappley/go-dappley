@@ -24,11 +24,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDpos_Start(t *testing.T) {

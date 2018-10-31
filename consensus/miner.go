@@ -21,10 +21,10 @@ package consensus
 import (
 	"math"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
 )
 
 type State int
@@ -40,7 +40,7 @@ type Miner struct {
 	nonce       int64
 	requirement Requirement
 	newBlockCh  chan *NewBlock
-	idle bool
+	idle        bool
 }
 
 func NewMiner() *Miner {
@@ -51,7 +51,7 @@ func NewMiner() *Miner {
 		newBlock:    &NewBlock{nil, false},
 		nonce:       0,
 		requirement: noRequirement,
-		idle: true,
+		idle:        true,
 	}
 	return m
 }

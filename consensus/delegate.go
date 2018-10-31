@@ -19,9 +19,9 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/common"
 	logger "github.com/sirupsen/logrus"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 )
 

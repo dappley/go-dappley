@@ -199,7 +199,7 @@ func (dpos *DPOS) verifyProducer(block *core.Block) bool {
 		return false
 	}
 
-	pubKeyHash,err := core.NewUserPubKeyHash(pubkey[1:])
+	pubKeyHash, err := core.NewUserPubKeyHash(pubkey[1:])
 	if err != nil {
 		logger.Warn("DPoS: Invalid Public Key!")
 		return false
