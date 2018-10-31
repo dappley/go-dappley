@@ -70,7 +70,7 @@ func generateNewBlockChain(files []fileInfo) {
 	bcs := make([]*core.Blockchain, len(files))
 	addr := core.NewAddress(genesisAddr)
 	for i := 0; i < len(files); i++ {
-		bc := core.CreateBlockchain(addr, files[i].db, nil)
+		bc := core.CreateBlockchain(addr, files[i].db, nil, 20)
 		bcs[i] = bc
 	}
 	max, index := getMaxHeightOfDifferentStart(files)
