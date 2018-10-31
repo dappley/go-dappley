@@ -49,6 +49,12 @@ func TestPubKeyHash_IsContract(t *testing.T) {
 			expectedRes: false,
 			expectedErr: ErrInvalidPubKeyHashVersion,
 		},
+		{
+			name:        "EmptyAddress",
+			pubKeyHash:  []byte{},
+			expectedRes: false,
+			expectedErr: ErrEmptyPublicKeyHash,
+		},
 	}
 
 	for _, tt := range tests {

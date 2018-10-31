@@ -331,3 +331,62 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 	txins, _ = tx.FindAllTxinsInUtxoPool(utxoPool)
 	assert.NotNil(t, txins)
 }
+
+func TestTransaction_GetContractAddress(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		addr 		string
+		expectedRes string
+	}{
+		{
+			name:        "ContainsContractAddress",
+			addr:  		 "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectedRes: "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+		},
+		{
+			name:        "ContainsUserAddress",
+			addr:  		 "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expectedRes: "",
+		},
+		{
+			name:        "EmptyInput",
+			addr:  		 "",
+			expectedRes: "",
+		},
+		{
+			name:        "InvalidAddress",
+			addr:  		 "dsdGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expectedRes: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr := NewAddress(tt.addr)
+			pkh, _ := addr.GetPubKeyHash()
+			tx := Transaction{
+				nil,
+				nil,
+				[]TXOutput{
+					{nil,
+						PubKeyHash{pkh},
+						"",
+					},
+				},
+				0,
+			}
+
+			assert.Equal(t,NewAddress(tt.expectedRes),tx.GetContractAddress())
+		})
+	}
+
+
+
+
+
+
+
+
+
+}

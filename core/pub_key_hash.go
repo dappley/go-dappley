@@ -17,6 +17,7 @@ type PubKeyHash struct {
 
 var (
 	ErrIncorrectPublicKey = errors.New("Public key is not correct")
+	ErrEmptyPublicKeyHash = errors.New("Empty public key hash")
 )
 
 //NewUserPubKeyHash hashes a public key and returns a user type public key hash
@@ -50,6 +51,11 @@ func (pkh PubKeyHash) GenerateAddress() Address {
 
 //GenerateAddress generates an address  from a public key hash
 func (pkh PubKeyHash) IsContract() (bool, error){
+
+	if len(pkh.PubKeyHash) == 0 {
+		return false, ErrEmptyPublicKeyHash
+	}
+
 	if pkh.PubKeyHash[0] == versionUser {
 		return false, nil
 	}

@@ -52,10 +52,11 @@ func NewTXOutput(value *common.Amount, address string) *TXOutput {
 	return txo
 }
 
-func NewContractTXOutput(value *common.Amount, contract string) *TXOutput {
-	txo := &TXOutput{value, NewContractPubKeyHash(),contract}
+func NewContractTXOutput(contract string) *TXOutput {
+	txo := &TXOutput{common.NewAmount(0), NewContractPubKeyHash(),contract}
 	return txo
 }
+
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),

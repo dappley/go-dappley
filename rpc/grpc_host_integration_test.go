@@ -245,7 +245,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, rpcContext.bc, rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
 
 	rpcContext.consensus.SetTargetBit(3)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
@@ -485,6 +485,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
+			"",
 	)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
@@ -501,6 +502,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
+			"",
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})

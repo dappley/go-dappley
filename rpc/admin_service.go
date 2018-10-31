@@ -133,7 +133,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip,"", adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
