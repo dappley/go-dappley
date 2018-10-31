@@ -24,7 +24,6 @@ import (
 
 type Consensus interface {
 	Validate(block *Block) bool
-	VerifyBlock(block *Block) bool
 	Start()
 	Stop()
 	Setup(NetService, string)

@@ -110,6 +110,11 @@ func (dpos *DPOS) requirementForNewBlock(block *core.Block) bool {
 
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
 func (dpos *DPOS) Validate(block *core.Block) bool {
+	producerIsValid := dpos.verifyProducer(block)
+	if !producerIsValid {
+		return false
+	}
+
 	fulfilled := dpos.requirementForNewBlock(block)
 	if !fulfilled {
 		return false
@@ -245,8 +250,4 @@ func (dpos *DPOS) updateNewBlock(newBlock *core.Block) {
 	}).Info("DPoS: Minted a new block")
 	dpos.bc.AddBlockToTail(newBlock)
 	dpos.node.BroadcastBlock(newBlock)
-}
-
-func (dpos *DPOS) VerifyBlock(block *core.Block) bool {
-	return dpos.verifyProducer(block)
 }

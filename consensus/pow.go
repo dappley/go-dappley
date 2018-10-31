@@ -124,10 +124,6 @@ func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block) {
 	pow.node.BroadcastBlock(blk)
 }
 
-func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool {
-	return true
-}
-
 func (pow *ProofOfWork) AddProducer(producer string) error {
 	return nil
 }
