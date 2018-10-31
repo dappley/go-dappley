@@ -123,13 +123,12 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(tc.expectedTip)), minerBalance)
 
 			//check smart contract deployment
-			blk, err := bc.GetTailBlock()
-			assert.Nil(t, err)
-			maxHeight := blk.GetHeight()
 			res := string("")
 			contractAddr := core.NewAddress("")
 			loop:
-			for i:= maxHeight; i>0; i-- {
+			for i:= bc.GetMaxHeight(); i>0; i-- {
+				blk, err := bc.GetBlockByHeight(i)
+				assert.Nil(t, err)
 				for _,tx := range blk.GetTransactions(){
 					contractAddr = tx.GetContractAddress()
 					if contractAddr.String() != ""{
