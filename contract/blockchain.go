@@ -1,4 +1,4 @@
-package contract
+package sc
 
 import "C"
 import (

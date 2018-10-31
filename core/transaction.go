@@ -351,6 +351,15 @@ func (tx *Transaction) GetContractAddress() Address{
 	return tx.Vout[ContractTxouputIndex].PubKeyHash.GenerateAddress()
 }
 
+//GetContract returns the smart contract code in a transaction
+func (tx *Transaction) GetContract() string{
+	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
+	if !isContract {
+		return ""
+	}
+	return tx.Vout[ContractTxouputIndex].Contract
+}
+
 // String returns a human-readable representation of a transaction
 func (tx Transaction) String() string {
 	var lines []string
