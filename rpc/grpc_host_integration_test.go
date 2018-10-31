@@ -291,7 +291,6 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.SetTargetBit(3)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -300,7 +299,9 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -335,7 +336,6 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
 
-	rpcContext.consensus.SetTargetBit(3)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -344,7 +344,9 @@ func TestRpcGetUTXO(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -379,7 +381,6 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.SetTargetBit(0)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -387,7 +388,9 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
@@ -456,7 +459,6 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.SetTargetBit(0)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -464,7 +466,9 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -499,7 +503,6 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.SetTargetBit(0)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -507,7 +510,9 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	// Create a grpc connection and a client
@@ -547,7 +552,6 @@ func TestRpcSendTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.SetTargetBit(1)
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
 
@@ -602,7 +606,9 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(rpcContext.consensus.FinishedMining, 20)
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
 	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10)

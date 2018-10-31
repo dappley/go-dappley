@@ -105,7 +105,9 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			core.WaitDoneOrTimeout(pow.FinishedMining, 20)
+			core.WaitDoneOrTimeout(func() bool {
+				return !pow.IsProducingBlock()
+			}, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
 			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
 			if err != nil {
@@ -259,7 +261,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		bufferTime       = 0
 	)
 	setup()
-	var dposArray []*consensus.Dpos
+	var dposArray []*consensus.DPOS
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
 	var firstNode *network.Node
@@ -278,9 +280,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock)
 
 	for i := 0; i < numOfNodes; i++ {
-		dpos := consensus.NewDpos()
+		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
 		bcs = append(bcs, bc)
 		node := network.NewNode(bc)
@@ -325,7 +326,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		bufferTime       = 0
 	)
 	setup()
-	var dposArray []*consensus.Dpos
+	var dposArray []*consensus.DPOS
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
 
@@ -345,10 +346,9 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock)
 
 	for i := 0; i < numOfNodes; i++ {
-		dpos := consensus.NewDpos()
+		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 
-		dpos.SetTargetBit(0) //gennerate a block every round
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
 		bcs = append(bcs, bc)
 
@@ -568,7 +568,7 @@ func TestDoubleMint(t *testing.T) {
 	}
 	for i := 0; i < 2; i++ {
 
-		dpos := consensus.NewDpos()
+		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128)
 		node := network.NewNode(bc)

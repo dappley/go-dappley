@@ -24,14 +24,20 @@ import (
 
 type Consensus interface {
 	Validate(block *Block) bool
-	VerifyBlock(block *Block) bool
-	Start()
-	Stop()
-	StartNewBlockMinting()
+
 	Setup(NetService, string)
-	SetTargetBit(int)
 	SetKey(string)
-	FinishedMining() bool
+
+	// Start runs the consensus algorithm and begins to produce blocks
+	Start()
+
+	// Stop ceases the consensus algorithm and block production
+	Stop()
+
+	// IsProducingBlock returns true if this node itself is currently producing a block
+	IsProducingBlock() bool
+
+	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
 	GetProducers() []string
 }

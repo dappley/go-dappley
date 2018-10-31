@@ -19,24 +19,30 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core"
+	"math/big"
+
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
+
+const defaultTargetBits = 0
 
 type ProofOfWork struct {
 	bc          *core.Blockchain
-	miner       *Miner
-	mintBlkChan chan (*MinedBlock)
+	miner       BlockProducer
+	mintBlkChan chan *NewBlock
+	target      *big.Int
 	node        core.NetService
-	exitCh      chan (bool)
+	exitCh      chan bool
 }
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
 		miner:       NewMiner(),
-		mintBlkChan: make(chan (*MinedBlock), 1),
+		mintBlkChan: make(chan *NewBlock, 1),
 		node:        nil,
-		exitCh:      make(chan (bool), 1),
+		exitCh:      make(chan bool, 1),
 	}
 	p.SetKey("")
 	return p
@@ -49,11 +55,17 @@ func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int) {
-	pow.miner.SetTargetBit(bit)
+	if bit < 0 || bit > 256 {
+		return
+	}
+	target := big.NewInt(1)
+	pow.target = target.Lsh(target, uint(256-bit))
+
+	pow.miner.SetRequirement(pow.isHashBelowTarget)
 }
 
 func (pow *ProofOfWork) SetKey(key string) {
-	pow.miner.SetPrivKey(key)
+	pow.miner.SetPrivateKey(key)
 }
 
 func (pow *ProofOfWork) Start() {
@@ -66,8 +78,8 @@ func (pow *ProofOfWork) Start() {
 				logger.Info("PoW stopped...")
 				return
 			case minedBlk := <-pow.mintBlkChan:
-				if minedBlk.isValid {
-					pow.updateNewBlock(minedBlk.block)
+				if minedBlk.IsValid {
+					pow.updateNewBlock(minedBlk.Block)
 				}
 				pow.miner.Start()
 			}
@@ -79,13 +91,22 @@ func (pow *ProofOfWork) Stop() {
 	pow.exitCh <- true
 	pow.miner.Stop()
 }
-func (pow *ProofOfWork) FinishedMining() bool {
-	v := pow.miner.stop
-	return v
+
+func (pow *ProofOfWork) IsProducingBlock() bool {
+	return !pow.miner.IsIdle()
 }
 
-func (pow *ProofOfWork) Validate(blk *core.Block) bool {
-	return pow.miner.Validate(blk)
+func (pow *ProofOfWork) isHashBelowTarget(block *core.Block) bool {
+	var hashInt big.Int
+
+	hash := block.GetHash()
+	hashInt.SetBytes(hash)
+
+	return hashInt.Cmp(pow.target) == -1
+}
+
+func (pow *ProofOfWork) Validate(block *core.Block) bool {
+	return pow.isHashBelowTarget(block)
 }
 
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
@@ -101,14 +122,6 @@ func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
 func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block) {
 	//broadcast the block to other nodes
 	pow.node.BroadcastBlock(blk)
-}
-
-func (pow *ProofOfWork) StartNewBlockMinting() {
-	pow.miner.Stop()
-}
-
-func (pow *ProofOfWork) VerifyBlock(block *core.Block) bool {
-	return true
 }
 
 func (pow *ProofOfWork) AddProducer(producer string) error {
