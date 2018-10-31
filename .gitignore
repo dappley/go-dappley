@@ -1,3 +1,5 @@
 .idea/
 vendor/
 tool/*.db
+.vscode/
+.vendor-new/
