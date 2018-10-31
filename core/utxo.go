@@ -172,7 +172,7 @@ func (utxos *UTXOIndex) ApplyTransaction(tx *Transaction) error {
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) ([]*Transaction, error ){
 	err:=errors.New("")
 	// Create a copy of the index so operations below are only temporal
-	tempIndex := utxos.deepCopy()
+	tempIndex := utxos.DeepCopy()
 	goodTxs := []*Transaction{}
 	for _, tx := range txs {
 		err = tempIndex.ApplyTransaction(tx)
@@ -275,8 +275,8 @@ func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
-
-func (utxos UTXOIndex) deepCopy() UTXOIndex {
+//creates a deepcopy of the receiver object
+func (utxos UTXOIndex) DeepCopy() UTXOIndex {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
 	utxocopy := NewUTXOIndex()
@@ -290,7 +290,7 @@ func (utxos UTXOIndex) deepCopy() UTXOIndex {
 // GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
 func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (UTXOIndex, error) {
 	index := LoadUTXOIndex(db)
-	deepCopy := index.deepCopy()
+	deepCopy := index.DeepCopy()
 	bci := bc.Iterator()
 
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
