@@ -56,13 +56,6 @@ func NewContractTXOutput(contract string) *TXOutput {
 	return txo
 }
 
-//Execute runs the smart contract in the txoutput
-func (out *TXOutput) RunSmartContract() {
-	if out.Contract != "" {
-		engine := sc.NewScEngine(out.Contract)
-		engine.Execute()
-	}
-}
 
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
