@@ -230,8 +230,23 @@ func TestRpcSendContract(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	blk,_ := bc.GetTailBlock()
-	assert.Equal(t, contract, blk.GetTransactions()[0].Vout[0].Contract)
+	//check smart contract deployment
+	blk, err := bc.GetTailBlock()
+	assert.Nil(t, err)
+	maxHeight := blk.GetHeight()
+	res := string("")
+	contractAddr := core.NewAddress("")
+	loop:
+	for i:= maxHeight; i>0; i-- {
+		for _,tx := range blk.GetTransactions(){
+			contractAddr = tx.GetContractAddress()
+			if contractAddr.String() != ""{
+				res = tx.Vout[core.ContractTxouputIndex].Contract
+				break loop;
+			}
+		}
+	}
+	assert.Equal(t, contract, res)
 
 	client.RemoveWalletFile()
 }
