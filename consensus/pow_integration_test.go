@@ -327,7 +327,6 @@ func TestPreventDoubleSpend(t *testing.T) {
 	}
 	pow.Stop()
 
-	core.WaitDoneOrTimeout(pow.FinishedMining, 20)
 	assert.True(t, core.MetricsTxDoubleSpend.Count()>0)
 }
 
