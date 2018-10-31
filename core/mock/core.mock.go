@@ -122,18 +122,6 @@ func (mr *MockConsensusMockRecorder) Validate(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockConsensus)(nil).Validate), arg0)
 }
 
-// VerifyBlock mocks base method
-func (m *MockConsensus) VerifyBlock(arg0 *core.Block) bool {
-	ret := m.ctrl.Call(m, "VerifyBlock", arg0)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// VerifyBlock indicates an expected call of VerifyBlock
-func (mr *MockConsensusMockRecorder) VerifyBlock(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyBlock", reflect.TypeOf((*MockConsensus)(nil).VerifyBlock), arg0)
-}
-
 // MockNetService is a mock of NetService interface
 type MockNetService struct {
 	ctrl     *gomock.Controller
