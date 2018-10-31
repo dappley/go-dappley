@@ -307,7 +307,8 @@ func printUsage() {
 func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
-		fmt.Println("Get blocks error! maxCount must be greater than zero!")
+		fmt.Println("\n Example: cli getBlocks -startBlockHashes 10 -maxCount 5")
+		fmt.Println()
 		return
 	}
 
