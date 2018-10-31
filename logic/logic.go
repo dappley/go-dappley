@@ -230,6 +230,13 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	tx, err := core.NewUTXOTransaction(utxos, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), common.NewAmount(tip), contract)
 	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
+
+	contractAddr := tx.GetContractAddress()
+	if contractAddr.String() != "" {
+		logger.Info()
+	}
+
+
 	if err != nil {
 		return nil, err
 	}
