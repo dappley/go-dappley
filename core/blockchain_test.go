@@ -40,6 +40,8 @@ func TestMain(m *testing.M) {
 func TestCreateBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 
@@ -52,6 +54,8 @@ func TestCreateBlockchain(t *testing.T) {
 func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 	blk := GenerateMockBlock()
@@ -62,6 +66,9 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 	tailblk,_:= bc.GetTailBlock()
@@ -76,15 +83,15 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 func TestBlockchain_IsInBlockchain(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
+	defer s.Close()
+
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
-	blk.SetHash([]byte("hash1"))
-	blk.header.height = 1
 	bc.AddBlockToTail(blk)
 
-	isFound := bc.IsInBlockchain([]byte("hash1"))
+	isFound := bc.IsInBlockchain([]byte("hash"))
 	assert.True(t, isFound)
 
 	isFound = bc.IsInBlockchain([]byte("hash2"))
