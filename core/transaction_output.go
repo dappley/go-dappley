@@ -61,10 +61,12 @@ func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),
 		PubKeyHash: out.PubKeyHash.GetPubKeyHash(),
+		Contract: 	out.Contract,
 	}
 }
 
 func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).Value)
 	out.PubKeyHash = PubKeyHash{pb.(*corepb.TXOutput).PubKeyHash}
+	out.Contract = pb.(*corepb.TXOutput).Contract
 }

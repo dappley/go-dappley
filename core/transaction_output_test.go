@@ -31,7 +31,7 @@ func TestTXOutput_Proto(t *testing.T) {
 	vout := TXOutput{
 		common.NewAmount(1),
 		PubKeyHash{[]byte("PubKeyHash")},
-		"",
+		"contract",
 	}
 
 	pb := vout.ToProto()
