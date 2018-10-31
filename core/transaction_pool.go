@@ -68,20 +68,15 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	}
 }
 
-// RemoveInvalidTransactions removes invalid transactions in transaction pool based on the existing UTXOs in utxoPool
-func (txPool *TransactionPool) RemoveInvalidTransactions(utxoPool UTXOIndex) {
-	txPool.traverse(func(tx Transaction) {
-		if !tx.Verify(&utxoPool, 0) { // all transactions in transaction pool have no blockHeight
-			txPool.Transactions.Del(tx)
-		}
-	})
-}
+type filterTx func(Transaction) bool
 
-func (txPool *TransactionPool) Pop() []*Transaction {
+func (txPool *TransactionPool) ValidTxns(filter filterTx) []*Transaction {
 	var sortedTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.Transactions.PopRight().(Transaction)
-		sortedTransactions = append(sortedTransactions, &tx)
+		if(filter(tx)){
+			sortedTransactions = append(sortedTransactions, &tx)
+		}
 	}
 	return sortedTransactions
 }
