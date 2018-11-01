@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/contract"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
@@ -128,8 +129,11 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	})
 	//calculate tips
 	totalTips := common.NewAmount(0)
+	utxoIndex := core.LoadUTXOIndex(d.bc.GetDb())
+	engine := sc.NewV8Engine()
 	for _, tx := range validTxs {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+		tx.Execute(utxoIndex, engine)
 	}
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1, totalTips)

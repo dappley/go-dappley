@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/contract"
 	"math"
 
 	logger "github.com/sirupsen/logrus"
@@ -150,9 +151,13 @@ func (miner *Miner) prepareBlock() *NewBlock {
 
 	//calculate tips
 	totalTips := common.NewAmount(0)
+	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
+	engine := sc.NewV8Engine()
 	for _, tx := range validTxs {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+		tx.Execute(utxoIndex, engine)
 	}
+
 	//add coinbase transaction to transaction pool
 	cbtx := core.NewCoinbaseTX(miner.beneficiary, "", miner.bc.GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
