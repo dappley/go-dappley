@@ -368,6 +368,9 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 		//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 		//is a smart contract deployment transaction, not a smart contract call transaction.
 		if len(utxos) != 0{
+			logger.WithFields(logger.Fields{
+				"contractAddr": utxos[0].PubKeyHash.GenerateAddress().String(),
+			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
 			sc.Execute()
 		}
