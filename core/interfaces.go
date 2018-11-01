@@ -57,3 +57,8 @@ type BlockPoolInterface interface {
 	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
 	Push(block *Block, pid peer.ID)
 }
+
+type ScEngine interface{
+	ImportSourceCode(source string)
+	Execute()
+}

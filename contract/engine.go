@@ -14,7 +14,7 @@ import (
 
 var v8once = sync.Once{}
 
-type ScEngine struct{
+type V8Engine struct{
 	source string
 }
 
@@ -23,15 +23,19 @@ func InitializeV8Engine(){
 	C.InitializeBlockchain((C.VerifyAddressFunc)(unsafe.Pointer(C.VerifyAddressFunc_cgo)))
 }
 
-//NewScEngine generates a new ScEngine instance
-func NewScEngine(source string) *ScEngine{
+//NewV8Engine generates a new V8Engine instance
+func NewV8Engine() *V8Engine {
 	v8once.Do(func(){InitializeV8Engine()})
-	return &ScEngine{
-		source: source,
+	return &V8Engine{
+		source: "",
 	}
 }
 
-func (sc *ScEngine) Execute(){
+func (sc *V8Engine) ImportSourceCode(source string){
+	sc.source = source
+}
+
+func (sc *V8Engine) Execute(){
 	cSource := C.CString(sc.source)
 	defer C.free(unsafe.Pointer(cSource))
 	var handler uint64

@@ -56,7 +56,6 @@ func NewContractTXOutput(contract string) *TXOutput {
 	return txo
 }
 
-
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),

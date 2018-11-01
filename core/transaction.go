@@ -360,6 +360,20 @@ func (tx *Transaction) GetContract() string{
 	return tx.Vout[ContractTxouputIndex].Contract
 }
 
+//Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
+func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
+	vout := tx.Vout[ContractTxouputIndex]
+	if isContract,_:=vout.PubKeyHash.IsContract(); isContract {
+		utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
+		//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
+		//is a smart contract deployment transaction, not a smart contract call transaction.
+		if len(utxos) != 0{
+			sc.ImportSourceCode(utxos[0].Contract)
+			sc.Execute()
+		}
+	}
+}
+
 // String returns a human-readable representation of a transaction
 func (tx Transaction) String() string {
 	var lines []string
