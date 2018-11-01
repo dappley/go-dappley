@@ -88,6 +88,6 @@ func generatePubKeyHash(pubKey []byte) ([]byte, error) {
 
 // GetAddressPayloadLength get the payload length
 func GetAddressPayloadLength() int {
-	// 1byte(version byte) + 32byte(public key baytes) + addressChecksumLen
-	return 33 + addressChecksumLen
+	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
+	return 20 + addressChecksumLen
 }
