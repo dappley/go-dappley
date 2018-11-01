@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"github.com/dappley/go-dappley/core/mocks"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -380,12 +381,67 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 			assert.Equal(t,NewAddress(tt.expectedRes),tx.GetContractAddress())
 		})
 	}
+}
 
+func TestTransaction_Execute(t *testing.T) {
 
+	tests := []struct {
+		name        		string
+		scAddr 				string
+		toAddr 				string
+		expectContractRun 	bool
+	}{
+		{
+			name:        		"CallAContract",
+			scAddr:   	 		"cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
+			toAddr: 			"cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
+			expectContractRun: 	true,
+		},
+		{
+			name:        		"CallAWrongContractAddr",
+			scAddr:   	 		"cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
+			toAddr: 			"cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectContractRun: 	false,
+		},
+		{
+			name:        		"NoPreviousContract",
+			scAddr:   	 		"",
+			toAddr: 			"cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectContractRun: 	false,
+		},
 
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := mocks.ScEngine{}
+			contract := "helloworld!"
+			if tt.expectContractRun{
+				sc.On("ImportSourceCode",contract)
+				sc.On("Execute")
+			}
 
+			scUtxo := UTXO{
+				TxIndex: 0,
+				Txid: nil,
+				TXOutput: TXOutput{
+					PubKeyHash: PubKeyHash{[]byte(tt.scAddr)},
+					Contract: contract,
+				},
+			}
 
+			tx := Transaction{
+				Vout: []TXOutput{{nil,PubKeyHash{[]byte(tt.toAddr)},""}},
+			}
+
+			index := NewUTXOIndex()
+			if tt.scAddr != ""{
+				index.addUTXO(scUtxo.TXOutput,nil,0)
+			}
+
+			tx.Execute(index,&sc)
+		})
+	}
 
 
 
