@@ -111,9 +111,6 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 	conss := consensus.NewDPOS()
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
 	conss.SetDynasty(dynasty)
-
-	// Make sure the producer is not producing block yet
-	conss.Stop()
 	return conss, dynasty
 }
 
