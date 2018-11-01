@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/crypto/hash"
 )
@@ -50,7 +51,7 @@ func (pkh PubKeyHash) GenerateAddress() Address {
 }
 
 //GenerateAddress generates an address  from a public key hash
-func (pkh PubKeyHash) IsContract() (bool, error){
+func (pkh PubKeyHash) IsContract() (bool, error) {
 
 	if len(pkh.PubKeyHash) == 0 {
 		return false, ErrEmptyPublicKeyHash
@@ -85,4 +86,8 @@ func generatePubKeyHash(pubKey []byte) ([]byte, error) {
 	return content, nil
 }
 
-
+// GetAddressPayloadLength get the payload length
+func GetAddressPayloadLength() int {
+	// 1byte(version byte) + 32byte(public key baytes) + addressChecksumLen
+	return 33 + addressChecksumLen
+}

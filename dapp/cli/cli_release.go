@@ -68,9 +68,9 @@ const (
 	flagToAddress        = "to"
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
-	flagContract		 = "contract"
+	flagContract         = "contract"
 	flagPeerFullAddr     = "peerFullAddr"
-	)
+)
 
 type valueType int
 
@@ -420,7 +420,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	}
 
 	address := *(flags[flagAddress].(*string))
-	if len(address) != 34 {
+	if core.NewAddress(address).ValidateAddress() == false {
 		fmt.Println("Error: Get balance failed: the address is not valid")
 		return
 	}
@@ -643,7 +643,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
 		Tip:        *(flags[flagTip].(*uint64)),
 		Walletpath: clientpkg.GetWalletFilePath(),
-		Contract:  	*(flags[flagContract].(*string)),
+		Contract:   *(flags[flagContract].(*string)),
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)

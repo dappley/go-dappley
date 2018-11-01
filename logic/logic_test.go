@@ -20,15 +20,13 @@ package logic
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
-	"github.com/dappley/go-dappley/common"
-
-	"reflect"
-
-	"fmt"
 	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
@@ -48,16 +46,21 @@ func TestMain(m *testing.M) {
 func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
-	expectedLength := 34
-	assert.Equal(t, expectedLength, len(wallet.Addresses[0].String()))
+	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
+	assert.Equal(t, ok, true)
+	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
+	assert.Nil(t, err)
+	assert.Equal(t, pubKeyHash, walletPubKeyHash.PubKeyHash)
 }
 
 func TestCreateWalletWithPassphrase(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
-	expectedLength := 34
-	assert.Equal(t, expectedLength, len(wallet.Addresses[0].String()))
-
+	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
+	assert.Equal(t, ok, true)
+	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
+	assert.Nil(t, err)
+	assert.Equal(t, pubKeyHash, walletPubKeyHash.PubKeyHash)
 }
 
 func TestCreateBlockchain(t *testing.T) {
@@ -192,11 +195,11 @@ func TestIsWalletEmptyWallet(t *testing.T) {
 	assert.Nil(t, err)
 	empty, err := IsTestWalletEmpty()
 	assert.Nil(t, err)
-	assert.Equal(t,false, empty)
+	assert.Equal(t, false, empty)
 	setup()
 	empty, err = IsTestWalletEmpty()
 	assert.Nil(t, err)
-	assert.Equal(t,true, empty)
+	assert.Equal(t, true, empty)
 
 }
 

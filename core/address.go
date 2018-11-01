@@ -64,7 +64,7 @@ func (a Address) ValidateAddress() bool {
 func (a Address) GetPubKeyHash() ([]byte, bool) {
 	pubKeyHash := base58.Decode(a.String())
 
-	if len(pubKeyHash) < addressChecksumLen {
+	if len(pubKeyHash) != GetAddressPayloadLength() {
 		return nil, false
 	}
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]

@@ -49,11 +49,6 @@ for (( c=0; c<=$1; c++ )); do
 		# get address in output
 		address=${arr[-1]}
 		echo $address
-		# if is not address (operation failed) then create wallet again
-		if [ ${#address} -ne "34" ]; then
-			./fakeTxns $1 $2
-			exit 1
-		fi
 		# create list of addresses
 		accList[$c]=$address	
 	done <<< "$output"

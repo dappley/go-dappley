@@ -62,7 +62,7 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 	if in.Name == "getBalance" {
 		getbalanceResp := rpcpb.GetBalanceResponse{}
 		address := in.Address
-		if len(address) != 34 {
+		if core.NewAddress(address).ValidateAddress() == false {
 			getbalanceResp.Message = "The address is not valid"
 			return &getbalanceResp, nil
 		}

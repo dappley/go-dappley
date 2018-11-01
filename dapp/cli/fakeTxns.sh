@@ -41,12 +41,7 @@ for (( c=0; c<=$1; c++ )); do
 	while read -r line; do	
 		arr=(${line// / })	
 		# get address in output	
-		address=${arr[-1]}	
-		# if is not address (operation failed) then create wallet again	
-		if [ ${#address} -ne "34" ]; then	
-			./createWallets $1 $2	
-			exit 1	
-		fi	
+		address=${arr[-1]}		
 		# create list of addresses	
 		accList[$c]=$address		
 	done <<< "$output"	

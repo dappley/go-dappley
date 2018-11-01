@@ -460,7 +460,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	}
 
 	address := *(flags[flagAddress].(*string))
-	if len(address) != 34 {
+	if core.NewAddress(address).ValidateAddress() == false {
 		fmt.Println("Error: Get balance failed: the address is not valid")
 		return
 	}
@@ -743,8 +743,8 @@ func sendFromMinerCommandHandler(ctx context.Context, client interface{}, flags 
 		return
 	}
 
-	if len(*(flags[flagAddressBalance].(*string))) != 34 {
-		fmt.Println("Add balance error!The length of address must be 34!")
+	if core.NewAddress(*(flags[flagAddressBalance].(*string))).ValidateAddress() == false {
+		fmt.Println("Add balance error! The address is invalid!")
 		return
 	}
 
@@ -786,8 +786,8 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 		return
 	}
 
-	if len(*(flags[flagProducerAddr].(*string))) != 34 {
-		fmt.Println("The length of address must be 34!")
+	if core.NewAddress(*(flags[flagProducerAddr].(*string))).ValidateAddress() == false {
+		fmt.Println("")
 		return
 	}
 
