@@ -370,6 +370,7 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 		if len(utxos) != 0{
 			logger.WithFields(logger.Fields{
 				"contractAddr": utxos[0].PubKeyHash.GenerateAddress().String(),
+				"contract"	  :	utxos[0].Contract,
 			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
 			sc.Execute()

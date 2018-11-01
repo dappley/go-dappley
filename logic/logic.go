@@ -243,6 +243,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	if contractAddr.String() != "" {
 		logger.WithFields(logger.Fields{
 			"contractAddr": contractAddr.String(),
+			"contract"	  : contract,
 		}).Info("Smart Contract Deployed Successful!")
 	}
 
