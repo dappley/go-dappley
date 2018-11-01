@@ -44,9 +44,9 @@ func newTargetRequirement(bit int) Requirement {
 	}
 }
 
-func TestMiner_VerifyNonce(t *testing.T) {
+func TestBlockProducer_VerifyNonce(t *testing.T) {
 
-	miner := NewMiner()
+	miner := NewBlockProducer()
 	miner.SetRequirement(newTargetRequirement(14))
 	cbAddr := core.NewAddress("1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg")
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
@@ -86,9 +86,9 @@ mineloop2:
 	assert.False(t, miner.requirement(newBlock))
 }
 
-func TestMiner_ValidateDifficulty(t *testing.T) {
+func TestBlockProducer_ValidateDifficulty(t *testing.T) {
 
-	miner := NewMiner()
+	miner := NewBlockProducer()
 	miner.SetRequirement(newTargetRequirement(defaultTargetBits))
 
 	//create a block that has a hash value larger than the target
@@ -108,8 +108,8 @@ func TestMiner_ValidateDifficulty(t *testing.T) {
 	assert.True(t, miner.requirement(blk))
 }
 
-func TestMiner_Start(t *testing.T) {
-	miner := NewMiner()
+func TestBlockProducer_Start(t *testing.T) {
+	miner := NewBlockProducer()
 	miner.SetRequirement(newTargetRequirement(defaultTargetBits))
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"

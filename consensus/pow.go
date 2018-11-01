@@ -30,7 +30,7 @@ const defaultTargetBits = 0
 
 type ProofOfWork struct {
 	bc          *core.Blockchain
-	miner       BlockProducer
+	miner       *BlockProducer
 	mintBlkChan chan *NewBlock
 	target      *big.Int
 	node        core.NetService
@@ -39,7 +39,7 @@ type ProofOfWork struct {
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:       NewMiner(),
+		miner:       NewBlockProducer(),
 		mintBlkChan: make(chan *NewBlock, 1),
 		node:        nil,
 		exitCh:      make(chan bool, 1),

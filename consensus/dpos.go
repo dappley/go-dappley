@@ -35,7 +35,7 @@ const version = byte(0x00)
 
 type DPOS struct {
 	bc         *core.Blockchain
-	delegate   BlockProducer
+	delegate   *BlockProducer
 	newBlockCh chan *NewBlock
 	node       core.NetService
 	quitCh     chan bool
@@ -45,7 +45,7 @@ type DPOS struct {
 
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
-		delegate:   NewDelegate(),
+		delegate:   NewBlockProducer(),
 		newBlockCh: make(chan *NewBlock, 1),
 		node:       nil,
 		quitCh:     make(chan bool, 1),
