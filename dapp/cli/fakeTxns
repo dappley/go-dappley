@@ -66,28 +66,35 @@ function reviewBalancesAndQuit()
 	echo "Job done."
 	exit 1
 }
+function sendFromMiner(){
+
+	rand=${accList[$RANDOM % ${#accList[@]} ]}	
+	# miner gives some money
+	accRich[$counter]=$rand
+	echo "adding $addBalanceAmount to ${accRich[$counter]}"
+	./cli sendFromMiner -to ${accRich[$counter]} -amount $addBalanceAmount	
+}
+function transaction(){
+	# create random amount (0-20)
+	amount=$((RANDOM%(addBalanceAmount+10)))
+	# from = last sendFromMiner address, to = random index in accList
+	from=${accRich[$counter-1]}
+	to=${accList[$RANDOM % ${#accList[@]} ]} 
+	echo "sending $amount from $from to $to"
+	./cli send -from $from -to $to -amount $amount # &>> log
+}
 counter=0
-while [ $counter -le $2 ]; do
+# block must be mined before sendFromMiner takes effect
+sendFromMiner
+while [ $counter -le $(($2+1)) ]; do
 	if [ $bcHeight -lt $newBcHeight ]; then
-		if [ $counter -eq $2 ]; then
+       		((counter++))	
+		if [ $counter -eq $(($2+1)) ]; then
 			reviewBalancesAndQuit
 		fi
-		echo "block mined...height $newBcHeight"
-		# miner gives some money
-	        address=${accList[$RANDOM % ${#accList[@]} ]}	
-		echo "adding $addBalanceAmount to $address"
-		./cli sendFromMiner -to $address -amount $addBalanceAmount
-		#if [[ $addBalanceRes == *"Add balance error!"* ]]; then
-		#	echo $addBalanceRes; exit 1
-   		#fi
-		# emulate a random transaction
-		amount=$((RANDOM%(addBalanceAmount+10)))
-		from=$address
-		to=${accList[$RANDOM % ${#accList[@]} ]} 
-		echo "sending $amount from $from to $to"
-		./cli send -from $from -to $to -amount $amount # &>> log
+		sendFromMiner
+		transaction
 		bcHeight=$newBcHeight
-       		((counter++))	
 	       echo "waiting for miner to mint next block..."
 	       echo "---------------------------"
 	else
