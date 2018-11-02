@@ -15,4 +15,4 @@ Blockchain.prototype = {
         return this.nativeBlockchain.verifyAddress(address);
     }
 };
-module.exports = new Blockchain();
+var Blockchain = new Blockchain();

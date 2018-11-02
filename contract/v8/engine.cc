@@ -8,6 +8,7 @@
 #include <libplatform/libplatform.h>
 #include "engine.h"
 #include "lib/blockchain.h"
+#include "lib/lib_load.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -44,6 +45,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
     Context::Scope context_scope(context);
 
     NewBlockchainInstance(isolate, context, (void *)handler);
+    LoadLibraries(isolate, context);
 
     {
       // Create a string containing the JavaScript source code.

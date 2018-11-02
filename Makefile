@@ -34,5 +34,5 @@ release:
 	cd dapp/cli; go build -tags=release
 
 deploy-v8:
-	sudo install scEngine/lib/libdappleyv8.so /usr/local/lib/
+	sudo install contract/lib/libdappleyv8.so /usr/local/lib/
 	sudo /sbin/ldconfig

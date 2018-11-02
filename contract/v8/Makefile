@@ -6,7 +6,7 @@ CXX = g++
 %.cc.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $<.o
 
-build: lib/blockchain.cc.o engine.cc.o
+build: lib/blockchain.cc.o engine.cc.o lib/file.cc.o lib/lib_load.cc.o
 	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.so -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
 
 install:
