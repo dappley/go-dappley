@@ -22,19 +22,16 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"time"
-
-	logger "github.com/sirupsen/logrus"
-
-	"reflect"
-
 	"encoding/hex"
+	"reflect"
+	"time"
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -72,6 +69,32 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 			prevHash:  prevHash,
 			nonce:     0,
 			timestamp: time.Now().Unix(),
+			sign:      nil,
+			height:    height,
+		},
+		transactions: transactions,
+	}
+}
+
+func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp int64) *Block {
+
+	var prevHash []byte
+	var height uint64
+	height = 1
+	if parent != nil {
+		prevHash = parent.GetHash()
+		height = parent.GetHeight() + 1
+	}
+
+	if transactions == nil {
+		transactions = []*Transaction{}
+	}
+	return &Block{
+		header: &BlockHeader{
+			hash:      []byte{},
+			prevHash:  prevHash,
+			nonce:     0,
+			timestamp: timeStamp,
 			sign:      nil,
 			height:    height,
 		},

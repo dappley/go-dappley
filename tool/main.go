@@ -8,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/config/pb"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 )
@@ -31,9 +34,14 @@ func main() {
 	numberBuffer := flag.Int("number", 1, "an int")
 
 	flag.Parse()
-
+	genesisConf := &configpb.DynastyConfig{}
+	config.LoadConfig(genesisFilePath, genesisConf)
 	number := *numberBuffer
 	files := make([]fileInfo, number)
+	conf := &configpb.Config{}
+	config.LoadConfig(configFilePath, conf)
+	maxProducers := (int)(genesisConf.GetMaxProducers())
+	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 
 	for i := 0; i < number; i++ {
 		reader := bufio.NewReader(os.Stdin)
@@ -63,21 +71,23 @@ func main() {
 
 	}
 
-	generateNewBlockChain(files)
+	generateNewBlockChain(files, dynasty)
 }
 
-func generateNewBlockChain(files []fileInfo) {
+func generateNewBlockChain(files []fileInfo, d *consensus.Dynasty) {
 	bcs := make([]*core.Blockchain, len(files))
 	addr := core.NewAddress(genesisAddr)
 	for i := 0; i < len(files); i++ {
 		bc := core.CreateBlockchain(addr, files[i].db, nil, 20)
 		bcs[i] = bc
 	}
+	var time int64
+	time = 1532392928
 	max, index := getMaxHeightOfDifferentStart(files)
 	for i := 0; i < max; i++ {
-		tailBlk, _ := bcs[index].GetTailBlock()
-		b := core.NewBlock([]*core.Transaction{core.MockTransaction()}, tailBlk)
-		b.SetHash(b.CalculateHash())
+		time = time + 15
+		b := generateBlock(bcs[index], time, d)
+
 		for idx := 0; idx < len(files); idx++ {
 			if files[idx].differentFrom >= i {
 				bcs[idx].AddBlockToTail(b)
@@ -86,7 +96,7 @@ func generateNewBlockChain(files []fileInfo) {
 	}
 
 	for i := 0; i < len(files); i++ {
-		makeBlockChainToSize(bcs[i], files[i].height)
+		makeBlockChainToSize(bcs[i], files[i].height, time, d)
 		fmt.Println(bcs[i].GetMaxHeight())
 	}
 
@@ -104,11 +114,23 @@ func getMaxHeightOfDifferentStart(files []fileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(bc *core.Blockchain, size int) {
+func makeBlockChainToSize(bc *core.Blockchain, size int, time int64, d *consensus.Dynasty) {
+
 	for bc.GetMaxHeight() < uint64(size) {
-		tailBlk, _ := bc.GetTailBlock()
-		b := core.NewBlock([]*core.Transaction{core.MockTransaction()}, tailBlk)
-		b.SetHash(b.CalculateHash())
+		time = time + 15
+		b := generateBlock(bc, time, d)
 		bc.AddBlockToTail(b)
 	}
+}
+
+func generateBlock(bc *core.Blockchain, time int64, d *consensus.Dynasty) *core.Block {
+	key := ""
+	// producer := d.ProducerAtATime(time)
+	tailBlk, _ := bc.GetTailBlock()
+	b := core.NewBlockWithTimestamp([]*core.Transaction{core.MockTransaction()}, tailBlk, time)
+	hash := b.CalculateHashWithoutNonce()
+	b.SetHash(hash)
+	b.SetNonce(0)
+	b.SignBlock(key, hash)
+	return b
 }
