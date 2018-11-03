@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -17,7 +20,6 @@ import (
 
 const (
 	genesisAddr     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	configFilePath  = "conf/default.conf"
 	genesisFilePath = "conf/genesis.conf"
 	defaultPassword = "password"
 )
@@ -28,6 +30,15 @@ type fileInfo struct {
 	db            *storage.LevelDB
 }
 
+type Key struct {
+	Key     string `json:"key"`
+	Address string `json:"address"`
+}
+
+type Keys struct {
+	Keys []Key `json:"keys"`
+}
+
 func main() {
 	// var filePath string
 
@@ -36,13 +47,12 @@ func main() {
 	flag.Parse()
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePath, genesisConf)
+	fmt.Println("load genesis file")
 	number := *numberBuffer
 	files := make([]fileInfo, number)
-	conf := &configpb.Config{}
-	config.LoadConfig(configFilePath, conf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
-
+	keys := loadPrivateKey()
 	for i := 0; i < number; i++ {
 		reader := bufio.NewReader(os.Stdin)
 		//enter filename
@@ -71,10 +81,10 @@ func main() {
 
 	}
 
-	generateNewBlockChain(files, dynasty)
+	generateNewBlockChain(files, dynasty, keys)
 }
 
-func generateNewBlockChain(files []fileInfo, d *consensus.Dynasty) {
+func generateNewBlockChain(files []fileInfo, d *consensus.Dynasty, keys Keys) {
 	bcs := make([]*core.Blockchain, len(files))
 	addr := core.NewAddress(genesisAddr)
 	for i := 0; i < len(files); i++ {
@@ -86,7 +96,7 @@ func generateNewBlockChain(files []fileInfo, d *consensus.Dynasty) {
 	max, index := getMaxHeightOfDifferentStart(files)
 	for i := 0; i < max; i++ {
 		time = time + 15
-		b := generateBlock(bcs[index], time, d)
+		b := generateBlock(bcs[index], time, d, keys)
 
 		for idx := 0; idx < len(files); idx++ {
 			if files[idx].differentFrom >= i {
@@ -96,7 +106,7 @@ func generateNewBlockChain(files []fileInfo, d *consensus.Dynasty) {
 	}
 
 	for i := 0; i < len(files); i++ {
-		makeBlockChainToSize(bcs[i], files[i].height, time, d)
+		makeBlockChainToSize(bcs[i], files[i].height, time, d, keys)
 		fmt.Println(bcs[i].GetMaxHeight())
 	}
 
@@ -114,23 +124,47 @@ func getMaxHeightOfDifferentStart(files []fileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(bc *core.Blockchain, size int, time int64, d *consensus.Dynasty) {
+func makeBlockChainToSize(bc *core.Blockchain, size int, time int64, d *consensus.Dynasty, keys Keys) {
 
 	for bc.GetMaxHeight() < uint64(size) {
 		time = time + 15
-		b := generateBlock(bc, time, d)
+		b := generateBlock(bc, time, d, keys)
 		bc.AddBlockToTail(b)
 	}
 }
 
-func generateBlock(bc *core.Blockchain, time int64, d *consensus.Dynasty) *core.Block {
-	key := ""
-	// producer := d.ProducerAtATime(time)
+func generateBlock(bc *core.Blockchain, time int64, d *consensus.Dynasty, keys Keys) *core.Block {
+	producer := d.ProducerAtATime(time)
+	key := keys.getPrivateKeyByAddress(producer)
 	tailBlk, _ := bc.GetTailBlock()
-	b := core.NewBlockWithTimestamp([]*core.Transaction{core.MockTransaction()}, tailBlk, time)
+	cbtx := core.NewCoinbaseTX(producer, "", bc.GetMaxHeight()+1, common.NewAmount(0))
+	b := core.NewBlockWithTimestamp([]*core.Transaction{&cbtx}, tailBlk, time)
 	hash := b.CalculateHashWithoutNonce()
 	b.SetHash(hash)
 	b.SetNonce(0)
 	b.SignBlock(key, hash)
 	return b
+}
+
+func loadPrivateKey() Keys {
+	jsonFile, err := os.Open("conf/key.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var keys Keys
+
+	json.Unmarshal(byteValue, &keys)
+
+	return keys
+}
+
+func (k Keys) getPrivateKeyByAddress(address string) string {
+	for _, key := range k.Keys {
+		if key.Address == address {
+			return key.Key
+		}
+	}
+	return ""
 }

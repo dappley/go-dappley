@@ -158,7 +158,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		}).Debug("Merge finished or exited, setting syncstate to false")
 		pool.SetSyncState(false)
 
-	}else{
+	} else {
 		pool.requestPrevBlock(tree, sender)
 	}
 
