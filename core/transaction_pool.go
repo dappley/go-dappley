@@ -80,7 +80,7 @@ func (txPool *TransactionPool) ValidTxs(utxoTemp UTXOIndex) []*Transaction {
 }
 
 func verifyAndUpdateUtxo(utxoTemp UTXOIndex, tx Transaction) bool {
-	return tx.Verify(&utxoTemp, 0) && utxoTemp.UpdateUtxo(&tx) == nil
+	return tx.Verify(&utxoTemp, 0) && utxoTemp.UpdateUtxo(&tx)
 }
 
 func (txPool *TransactionPool) PopRight() Transaction {

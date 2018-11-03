@@ -148,7 +148,7 @@ func (utxos UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *
 	return nil
 }
 
-func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) error {
+func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	if !tx.IsCoinbase() {
 		for _, txin := range tx.Vin {
 			err := utxos.removeUTXO(txin.Txid, txin.Vout)
@@ -157,29 +157,24 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) error {
 				logger.WithFields(logger.Fields{
 					"txhash": hex.EncodeToString(tx.ID),
 				}).Warn("Bad transaction found when minting, throwing")
-				return err
+				return false
 			}
 		}
 	}
 	for i, txout := range tx.Vout {
 		utxos.addUTXO(txout, tx.ID, i)
 	}
-	return nil
+	return true
 }
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) ([]*Transaction, error ){
+func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) error{
 	err:=errors.New("")
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := utxos.DeepCopy()
-	goodTxs := []*Transaction{}
 	for _, tx := range txs {
-		err = tempIndex.UpdateUtxo(tx)
-		if err!=nil{
-			continue
-		}
-		goodTxs = append(goodTxs, tx)
+		tempIndex.UpdateUtxo(tx)
 	}
 
 	// Save to database
@@ -192,7 +187,7 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) 
 		logger.Error(fmt.Errorf("failed to update utxo index: %v", err))
 	}
 
-	return goodTxs, err
+	return err
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
