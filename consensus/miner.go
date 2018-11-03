@@ -141,12 +141,9 @@ func (miner *Miner) prepareBlock() *NewBlock {
 		logger.Error(err)
 	}
 
-	//return valid transactions
-	utxoPool := core.LoadUTXOIndex(miner.bc.GetDb())
-	utxoTemp := utxoPool.DeepCopy()
-	validTxs := miner.bc.GetTxPool().ValidTxns(func(tx core.Transaction) bool {
-		return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
-	})
+	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
+	utxoTemp := utxoIndex.DeepCopy()
+	validTxs := miner.bc.GetTxPool().ValidTxns(utxoTemp)
 
 	//calculate tips
 	totalTips := common.NewAmount(0)

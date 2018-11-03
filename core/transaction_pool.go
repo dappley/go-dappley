@@ -68,17 +68,23 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	}
 }
 
-type filterTx func(Transaction) bool
-
-func (txPool *TransactionPool) ValidTxns(filter filterTx) []*Transaction {
+func (txPool *TransactionPool) ValidTxns(utxoTemp UTXOIndex) []*Transaction {
 	var sortedTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
-		tx := txPool.Transactions.PopRight().(Transaction)
-		if(filter(tx)){
+		tx := txPool.PopRight()
+		if verifyAndUpdateUtxo(utxoTemp, tx) {
 			sortedTransactions = append(sortedTransactions, &tx)
 		}
 	}
 	return sortedTransactions
+}
+
+func verifyAndUpdateUtxo(utxoTemp UTXOIndex, tx Transaction) bool {
+	return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
+}
+
+func (txPool *TransactionPool) PopRight() Transaction {
+	return txPool.Transactions.PopRight().(Transaction)
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {

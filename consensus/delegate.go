@@ -123,9 +123,7 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	//return valid transactions
 	utxoPool := core.LoadUTXOIndex(d.bc.GetDb())
 	utxoTemp := utxoPool.DeepCopy()
-	validTxs := d.bc.GetTxPool().ValidTxns(func(tx core.Transaction) bool {
-		return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
-	})
+	validTxs := d.bc.GetTxPool().ValidTxns(utxoTemp)
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range validTxs {
