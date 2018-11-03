@@ -16,3 +16,4 @@ Blockchain.prototype = {
     }
 };
 var Blockchain = new Blockchain();
+//module.exports = new Blockchain();

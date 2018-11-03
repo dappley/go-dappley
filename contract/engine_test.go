@@ -7,16 +7,42 @@ import (
 
 
 func TestScEngine_Execute(t *testing.T) {
-	script:= `'use strict';
+	script:=
+`'use strict';
 
-if (typeof Blockchain === "undefined") {
-throw new Error("_native_blockchain is undefined.");
-}
+var AddrChecker = function(){
+	
+};
 
-var result = Blockchain.verifyAddress("1G4r54VdJsotfCukXUWmg1ZRnhj2s6TvbV");
-"verifyAddress:" + result`
+AddrChecker.prototype = {
+		check:function(addr){
+    	return Blockchain.verifyAddress(addr);
+    }
+};
+var addrChecker = new AddrChecker;
+`
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.Execute()
+	sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\"")
 }
+
+func TestScEngine_Execute_FunctionCall(t *testing.T) {
+	script:= `'use strict';
+var Foo = function(){
+	
+};
+
+Foo.prototype = {
+		test:function(i,j){
+    	return i-j;
+    }
+};
+
+var f = new Foo();`
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	sc.Execute("test","1,9")
+}
+

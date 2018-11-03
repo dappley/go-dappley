@@ -8,7 +8,8 @@
 #include <libplatform/libplatform.h>
 #include "engine.h"
 #include "lib/blockchain.h"
-#include "lib/lib_load.h"
+#include "lib/load_lib.h"
+#include "lib/load_sc.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -37,16 +38,17 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
 
     // Create a stack-allocated handle scope.
     HandleScope handle_scope(isolate);
-
+    //
+    Local<ObjectTemplate> globalTpl = NewNativeRequireFunction(isolate);
     // Create a new context.
-    Local<Context> context = v8::Context::New(isolate);
+    Local<Context> context = v8::Context::New(isolate, NULL, globalTpl);
 
     // Enter the context for compiling and running the hello world script.
     Context::Scope context_scope(context);
 
     NewBlockchainInstance(isolate, context, (void *)handler);
-    LoadLibraries(isolate, context);
 
+    LoadLibraries(isolate, context);
     {
       // Create a string containing the JavaScript source code.
       Local<String> source =

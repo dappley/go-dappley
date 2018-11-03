@@ -10,6 +10,7 @@ extern "C" {
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler) ;
     EXPORT void InitializeBlockchain(VerifyAddressFunc verifyAddress);
+    EXPORT void InitializeSmartContract(char* source);
 #ifdef __cplusplus
 }
 #endif

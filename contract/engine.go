@@ -8,6 +8,7 @@ bool VerifyAddressFunc_cgo(const char *address);
 */
 import "C"
 import (
+	"fmt"
 	"unsafe"
 	"sync"
 )
@@ -35,10 +36,15 @@ func (sc *V8Engine) ImportSourceCode(source string){
 	sc.source = source
 }
 
-func (sc *V8Engine) Execute(){
+func (sc *V8Engine) Execute(function string, arg string){
 	cSource := C.CString(sc.source)
 	defer C.free(unsafe.Pointer(cSource))
+	functionCallStr := fmt.Sprintf(`var instance = new _native_require();
+									instance["%s"].apply(instance, [%s]);`,function,arg)
+	cFunction := C.CString(functionCallStr)
+	defer C.free(unsafe.Pointer(cFunction))
 	var handler uint64
 	handler=0
-	C.executeV8Script(cSource, C.uintptr_t(handler))
+	C.InitializeSmartContract(cSource)
+	C.executeV8Script(cFunction, C.uintptr_t(handler))
 }
