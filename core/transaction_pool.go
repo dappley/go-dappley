@@ -68,7 +68,7 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	}
 }
 
-func (txPool *TransactionPool) ValidTxns(utxoTemp UTXOIndex) []*Transaction {
+func (txPool *TransactionPool) ValidTxs(utxoTemp UTXOIndex) []*Transaction {
 	var sortedTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.PopRight()

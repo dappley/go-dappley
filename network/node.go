@@ -335,8 +335,8 @@ func (n *Node) SyncPeersUnicast(pid peer.ID) error {
 	return nil
 }
 
-func (n *Node) BroadcastTxCmd(txn *core.Transaction) error {
-	data, err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast, "")
+func (n *Node) BroadcastTxCmd(tx *core.Transaction) error {
+	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, "")
 	if err != nil {
 		return err
 	}
