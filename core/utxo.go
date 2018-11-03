@@ -148,7 +148,7 @@ func (utxos UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *
 	return nil
 }
 
-func (utxos *UTXOIndex) ApplyTransaction(tx *Transaction) error {
+func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) error {
 	if !tx.IsCoinbase() {
 		for _, txin := range tx.Vin {
 			err := utxos.removeUTXO(txin.Txid, txin.Vout)
@@ -175,7 +175,7 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) 
 	tempIndex := utxos.DeepCopy()
 	goodTxs := []*Transaction{}
 	for _, tx := range txs {
-		err = tempIndex.ApplyTransaction(tx)
+		err = tempIndex.UpdateUtxo(tx)
 		if err!=nil{
 			continue
 		}
