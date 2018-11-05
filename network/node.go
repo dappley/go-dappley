@@ -20,15 +20,14 @@ package network
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
-	"time"
-
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
@@ -284,7 +283,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
-	if dm.cmd == SyncBlock {
+	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx {
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -318,7 +317,7 @@ func (n *Node) SyncPeersBroadcast() error {
 }
 
 func (n *Node) TxBroadcast(tx *core.Transaction) error {
-	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, "")
+	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, hex.EncodeToString(tx.ID))
 	if err != nil {
 		return err
 	}
@@ -332,15 +331,6 @@ func (n *Node) SyncPeersUnicast(pid peer.ID) error {
 		return err
 	}
 	n.unicast(data, pid)
-	return nil
-}
-
-func (n *Node) BroadcastTxCmd(tx *core.Transaction) error {
-	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, "")
-	if err != nil {
-		return err
-	}
-	n.broadcast(data)
 	return nil
 }
 
@@ -414,13 +404,19 @@ func (n *Node) cacheDapMsg(dm DapMsg) {
 	n.recentlyRcvedDapMsgs.Store(dm.GetKey(), true)
 }
 
-func (n *Node) addTxToPool(data []byte) {
+func (n *Node) addTxToPool(dm *DapMsg) {
+	if n.isNetworkRadiation(*dm) {
+		return
+	}
+
+	n.RelayDapMsg(*dm)
+	n.cacheDapMsg(*dm)
 
 	//create a block proto
 	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, txpb); err != nil {
+	if err := proto.Unmarshal(dm.GetData(), txpb); err != nil {
 		logger.Warn(err)
 	}
 

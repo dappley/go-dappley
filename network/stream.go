@@ -211,7 +211,7 @@ func (s *Stream) parseData(data []byte) {
 	case RequestBlock:
 		s.node.sendRequestedBlock(dm.GetData(), s.peerID)
 	case BroadcastTx:
-		s.node.addTxToPool(dm.GetData())
+		s.node.addTxToPool(dm)
 	default:
 		logger.Debug("Received invalid command from:", s.peerID)
 	}
