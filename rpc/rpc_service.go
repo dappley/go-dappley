@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
+	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -203,6 +204,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	return &rpcpb.GetBlockByHeightResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
 }
 
+// RpcSendTransaction Send transaction to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := core.Transaction{nil, nil, nil, 0}
 	tx.FromProto(in.Transaction)
@@ -220,4 +222,19 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.TxBroadcast(&tx)
 
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
+}
+
+func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
+	var txHandler interface{} = nil
+	txHandler = func(tx *core.Transaction) {
+		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
+		err := stream.Send(response)
+		if err != nil {
+			logger.Infof("Send transaction to client failed %v\n", err)
+			rpcService.node.GetBlockchain().GetTxPool().EventBus.Unsubscribe(core.NewTransactionTopic, txHandler)
+		}
+	}
+
+	rpcService.node.GetBlockchain().GetTxPool().EventBus.SubscribeAsync(core.NewTransactionTopic, txHandler, false)
+	return nil
 }

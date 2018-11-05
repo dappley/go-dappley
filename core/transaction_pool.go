@@ -21,13 +21,20 @@ package core
 import (
 	"bytes"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/sorted"
 	logger "github.com/sirupsen/logrus"
+)
+
+const (
+	NewTransactionTopic   = "NewTransaction"
+	EvictTransactionTopic = "EvictTransaction"
 )
 
 type TransactionPool struct {
 	Transactions sorted.Slice
 	limit        uint32
+	EventBus     EventBus.Bus
 }
 
 func compareTxTips(tx1 interface{}, tx2 interface{}) int {
@@ -51,6 +58,7 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		Transactions: *sorted.NewSlice(compareTxTips, match),
 		limit:        limit,
+		EventBus:     EventBus.New(),
 	}
 }
 
@@ -104,7 +112,9 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 		}
 
 		txPool.Transactions.PopLeft()
+		txPool.EventBus.Publish(EvictTransactionTopic, &leastTipTx)
 	}
 
 	txPool.Transactions.Push(tx)
+	txPool.EventBus.Publish(NewTransactionTopic, &tx)
 }

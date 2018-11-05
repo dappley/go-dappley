@@ -24,10 +24,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jinzhu/copier"
-
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/jinzhu/copier"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -155,7 +154,6 @@ func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
-
 
 	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()

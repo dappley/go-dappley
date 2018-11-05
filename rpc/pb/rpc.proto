@@ -15,6 +15,7 @@ service RpcService {
   rpc RpcGetBlockByHash(GetBlockByHashRequest) returns (GetBlockByHashResponse) {}
   rpc RpcGetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {}
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
+  rpc RpcGetNewTransactions(GetNewTransactionsRequest) returns (stream GetNewTransactionsResponse) {}
 }
 
 service AdminService{
@@ -174,4 +175,12 @@ message SendTransactionRequest {
 message SendTransactionResponse {
   uint32 errorCode = 1;
 }
+
+message GetNewTransactionsRequest {
+}
+
+message GetNewTransactionsResponse {
+  corepb.Transaction transaction = 1;
+}
+
 
