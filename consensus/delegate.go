@@ -121,9 +121,16 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	}
 
 	//return valid transactions
-	utxoPool := core.LoadUTXOIndex(d.bc.GetDb())
-	utxoTemp := utxoPool.DeepCopy()
-	validTxs := d.bc.GetTxPool().ValidTxs(utxoTemp)
+	utxoIndex := core.LoadUTXOIndex(d.bc.GetDb())
+	validTxs := d.bc.GetTxPool().GetValidTxs(utxoIndex)
+
+	// update UTXO set
+	for i, tx := range validTxs {
+		// remove transaction if utxo set cannot be updated
+		if !utxoIndex.UpdateUtxo(tx) {
+			validTxs = append(validTxs[:i], validTxs[i + 1:]...)
+		}
+	}
 
 	//calculate tips
 	totalTips := common.NewAmount(0)

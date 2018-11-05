@@ -141,8 +141,15 @@ func (miner *Miner) prepareBlock() *NewBlock {
 		logger.Error(err)
 	}
 	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
-	utxoTemp := utxoIndex.DeepCopy()
-	validTxs := miner.bc.GetTxPool().ValidTxs(utxoTemp)
+	validTxs := miner.bc.GetTxPool().GetValidTxs(utxoIndex)
+
+	// update UTXO set
+	for i, tx := range validTxs {
+		// remove transaction if utxo set cannot be updated
+		if !utxoIndex.UpdateUtxo(tx) {
+			validTxs = append(validTxs[:i], validTxs[i + 1:]...)
+		}
+	}
 
 	//calculate tips
 	totalTips := common.NewAmount(0)
