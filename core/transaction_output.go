@@ -46,13 +46,17 @@ func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 }
 
 func NewTXOutput(value *common.Amount, address string) *TXOutput {
-	txo := &TXOutput{value, PubKeyHash{},""}
-	txo.Lock(address)
-	return txo
+	return NewTxOut(value, address,"")
 }
 
-func NewContractTXOutput(contract string) *TXOutput {
-	txo := &TXOutput{common.NewAmount(0), NewContractPubKeyHash(),contract}
+func NewContractTXOutput(address string, contract string) *TXOutput {
+	return NewTxOut(common.NewAmount(0), address, contract)
+}
+
+
+func NewTxOut(value *common.Amount, address string, contract string) *TXOutput{
+	txo := &TXOutput{value, PubKeyHash{},contract}
+	txo.Lock(address)
 	return txo
 }
 

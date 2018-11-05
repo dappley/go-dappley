@@ -488,9 +488,12 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	var outputs []TXOutput
 	toAddr := to
 
+	if toAddr.String() == "" {
+		toAddr = NewContractPubKeyHash().GenerateAddress()
+	}
+
 	if contract != "" {
-		outputs = append(outputs, *NewContractTXOutput(contract))
-		toAddr = outputs[0].PubKeyHash.GenerateAddress()
+		outputs = append(outputs, *NewContractTXOutput(toAddr.String(), contract))
 	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr.String()))
