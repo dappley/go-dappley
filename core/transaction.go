@@ -40,6 +40,7 @@ import (
 var subsidy = common.NewAmount(10)
 
 const ContractTxouputIndex = 0
+const quotationMark = "\""
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -369,13 +370,15 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 		//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 		//is a smart contract deployment transaction, not a smart contract call transaction.
 		if len(utxos) != 0{
+			function, args := util.DecodeScInput(vout.Contract)
 			logger.WithFields(logger.Fields{
-				"contractAddr": utxos[0].PubKeyHash.GenerateAddress().String(),
-				"contract"	  :	utxos[0].Contract,
+				"contractAddr"		: utxos[0].PubKeyHash.GenerateAddress().String(),
+				"contract"	  		: utxos[0].Contract,
+				"invokedFunction" 	: function,
+				"arguments"			: args,
 			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
-			function, args := util.DecodeScInput(vout.Contract)
-			sc.Execute(function, args)
+			sc.Execute(function, quotationMark+args+quotationMark)
 		}
 	}
 }

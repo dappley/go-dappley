@@ -71,6 +71,8 @@ const (
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
 	flagContract         = "contract"
+	flagFunction		 = "function"
+	flagArgs			 = "args"
 	flagPeerFullAddr     = "peerFullAddr"
 	flagProducerAddr     = "address"
 	flagListPrivateKey   = "privateKey"
@@ -180,6 +182,18 @@ var cmdFlagsMap = map[string][]flagPars{
 			"",
 			valueTypeString,
 			"Smart contract in JavaScript. Eg. helloworld!",
+		},
+		flagPars{
+			flagFunction,
+			"",
+			valueTypeString,
+			"function call to deployed smart contract. Eg. callSmartContractFunction",
+		},
+		flagPars{
+			flagArgs,
+			"",
+			valueTypeString,
+			"Arguments to pass into the function call to smart contract.",
 		},
 	},
 	cliAddPeer: {flagPars{
@@ -811,6 +825,8 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		Tip:        *(flags[flagTip].(*uint64)),
 		Walletpath: clientpkg.GetWalletFilePath(),
 		Contract:   *(flags[flagContract].(*string)),
+		Function: 	*(flags[flagFunction].(*string)),
+		Args:		*(flags[flagArgs].(*string)),
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
