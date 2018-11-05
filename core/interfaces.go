@@ -60,5 +60,5 @@ type BlockPoolInterface interface {
 
 type ScEngine interface{
 	ImportSourceCode(source string)
-	Execute()
+	Execute(function,args string)
 }

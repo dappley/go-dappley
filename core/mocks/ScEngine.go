@@ -9,9 +9,9 @@ type ScEngine struct {
 	mock.Mock
 }
 
-// Execute provides a mock function with given fields:
-func (_m *ScEngine) Execute() {
-	_m.Called()
+// Execute provides a mock function with given fields: function, args
+func (_m *ScEngine) Execute(function string, args string) {
+	_m.Called(function, args)
 }
 
 // ImportSourceCode provides a mock function with given fields: source

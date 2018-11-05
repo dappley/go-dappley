@@ -373,7 +373,7 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 				"contract"	  :	utxos[0].Contract,
 			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
-			sc.Execute()
+			sc.Execute(vout.Contract, "")//TODO: pass in arguments
 		}
 	}
 }

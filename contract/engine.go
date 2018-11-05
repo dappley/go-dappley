@@ -36,15 +36,21 @@ func (sc *V8Engine) ImportSourceCode(source string){
 	sc.source = source
 }
 
-func (sc *V8Engine) Execute(function string, arg string){
+func (sc *V8Engine) Execute(function, args string){
+
 	cSource := C.CString(sc.source)
 	defer C.free(unsafe.Pointer(cSource))
-	functionCallStr := fmt.Sprintf(`var instance = new _native_require();
-									instance["%s"].apply(instance, [%s]);`,function,arg)
-	cFunction := C.CString(functionCallStr)
-	defer C.free(unsafe.Pointer(cFunction))
-	var handler uint64
-	handler=0
 	C.InitializeSmartContract(cSource)
+
+	functionCallScript := prepareFuncCallScript(function,args)
+	cFunction := C.CString(functionCallScript)
+	defer C.free(unsafe.Pointer(cFunction))
+
+	handler := uint64(0)
 	C.executeV8Script(cFunction, C.uintptr_t(handler))
+}
+
+func prepareFuncCallScript(function, args string) string{
+	return fmt.Sprintf(`var instance = new _native_require();
+						instance["%s"].apply(instance, [%s]);`,function, args)
 }
