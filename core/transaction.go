@@ -26,6 +26,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/util"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
@@ -373,7 +374,8 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 				"contract"	  :	utxos[0].Contract,
 			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
-			sc.Execute(vout.Contract, "")//TODO: pass in arguments
+			function, args := util.DecodeScInput(vout.Contract)
+			sc.Execute(function, args)
 		}
 	}
 }

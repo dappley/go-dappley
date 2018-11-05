@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -133,7 +134,12 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
-	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip, in.Contract, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	contract := in.Contract
+	if contract == "" && in.Function != ""{
+		contract = util.EncodeScInput(in.Function, in.Args)
+	}
+
+	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip, contract, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
 		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err

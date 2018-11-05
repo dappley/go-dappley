@@ -442,7 +442,4 @@ func TestTransaction_Execute(t *testing.T) {
 			tx.Execute(index,&sc)
 		})
 	}
-
-
-
 }
