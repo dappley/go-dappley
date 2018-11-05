@@ -21,8 +21,11 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	logger "github.com/sirupsen/logrus"
 )
+const keyFunction = "scFunction"
+const keyArs = "scArgs"
 
 // IntToHex converts an int64 to a byte array
 func IntToHex(num int64) []byte {
@@ -45,4 +48,16 @@ func UintToHex(num uint64) []byte {
 	}
 
 	return buff.Bytes()
+}
+
+func EncodeScInput(function, args string) string{
+	input := map[string]string{keyFunction:function, keyArs:args}
+	encodedStr, _ := json.Marshal(input)
+	return string(encodedStr)
+}
+
+func DecodeScInput(s string) (function, args string){
+	var input map[string]string
+	json.Unmarshal([]byte(s),&input)
+	return input[keyFunction],input[keyArs]
 }
