@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"math"
 	"math/big"
 
 	logger "github.com/sirupsen/logrus"
@@ -27,6 +28,7 @@ import (
 )
 
 const defaultTargetBits = 0
+var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
 	bc     *core.Blockchain

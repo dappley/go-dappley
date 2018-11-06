@@ -1,15 +1,11 @@
 package consensus
 
 import (
-	"math"
-
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 )
-
-var maxNonce int64 = math.MaxInt64
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
 type process func(block *core.Block)
