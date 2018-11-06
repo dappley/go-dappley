@@ -5,16 +5,17 @@ import (
 	"testing"
 )
 
-func TestEncodeScInput(t *testing.T) {
-	expectedStr := `{"scArgs":"01","scFunction":"getBalance"}`
-	assert.Equal(t, expectedStr, EncodeScInput("getBalance","01"))
-}
-
 func TestDecodeScInput(t *testing.T) {
 	expectedFunction := "getBalance"
-	expectedArgs := "01"
-	input := `{"scArgs":"01","scFunction":"getBalance"}`
+	expectedArgs := []string{"01","02"}
+	input := `{"args":["01","02"],"function":"getBalance"}`
 	function,args := DecodeScInput(input)
 	assert.Equal(t, expectedFunction, function)
 	assert.Equal(t, expectedArgs, args)
+}
+
+func TestPrepareArgs(t *testing.T) {
+	args := []string{"01","02"}
+	expectedRes := "\"01\",\"02\""
+	assert.Equal(t, expectedRes, PrepareArgs(args))
 }

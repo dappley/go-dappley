@@ -22,10 +22,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	logger "github.com/sirupsen/logrus"
 )
-const keyFunction = "scFunction"
-const keyArs = "scArgs"
+const quotationMark = "\""
 
 // IntToHex converts an int64 to a byte array
 func IntToHex(num int64) []byte {
@@ -50,14 +50,32 @@ func UintToHex(num uint64) []byte {
 	return buff.Bytes()
 }
 
-func EncodeScInput(function, args string) string{
-	input := map[string]string{keyFunction:function, keyArs:args}
-	encodedStr, _ := json.Marshal(input)
-	return string(encodedStr)
+type argStruct struct{
+	Function string `json:"function"`
+	Args 	 []string `json:"args"`
 }
 
-func DecodeScInput(s string) (function, args string){
-	var input map[string]string
-	json.Unmarshal([]byte(s),&input)
-	return input[keyFunction],input[keyArs]
+func DecodeScInput(s string) (function string, args []string){
+	var input argStruct
+	err := json.Unmarshal([]byte(s),&input)
+	if err!= nil{
+		fmt.Println(err)
+	}
+	return input.Function, input.Args
+}
+
+func PrepareArgs(args []string) string{
+	totalArgs := ""
+	for i,arg := range args{
+		if i==0{
+			totalArgs += quoteArg(arg)
+		}else{
+			totalArgs += "," + quoteArg(arg)
+		}
+	}
+	return totalArgs
+}
+
+func quoteArg(arg string) string{
+	return quotationMark + arg + quotationMark
 }

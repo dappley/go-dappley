@@ -40,7 +40,6 @@ import (
 var subsidy = common.NewAmount(10)
 
 const ContractTxouputIndex = 0
-const quotationMark = "\""
 
 var (
 	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
@@ -378,7 +377,7 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 				"arguments"			: args,
 			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
-			sc.Execute(function, quotationMark+args+quotationMark)
+			sc.Execute(function, util.PrepareArgs(args))
 		}
 	}
 }
