@@ -641,7 +641,7 @@ func TestGetNewTransactions(t *testing.T) {
 		panic(err)
 	}
 	c1 := rpcpb.NewRpcServiceClient(conn1)
-	
+
 	var tx1ID []byte
 	var tx2ID []byte
 	var conn1Step1 = false
@@ -668,7 +668,6 @@ func TestGetNewTransactions(t *testing.T) {
 		assert.NotEqual(t, len(tx2ID), 0)
 		assert.Equal(t, response2.Transaction.ID, tx2ID)
 	}()
-
 
 	// Create a grpc connection and a client
 	conn2, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
@@ -702,7 +701,7 @@ func TestGetNewTransactions(t *testing.T) {
 	tx2ID, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, conn1Step2, true)
-    conn1.Close()
+	conn1.Close()
 
 	_, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), 0, "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
