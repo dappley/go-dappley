@@ -134,7 +134,7 @@ func TestRpcSend(t *testing.T) {
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        2,
-		Contract: 	"",
+		Data: 	"",
 	})
 	assert.Nil(t, err)
 
@@ -218,7 +218,7 @@ func TestRpcSendContract(t *testing.T) {
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        2,
-		Contract: 	contract,
+		Data: 	contract,
 	})
 	assert.Nil(t, err)
 
