@@ -3,3 +3,4 @@ vendor/
 tool/*.db
 .vscode/
 .vendor-new/
+tool/tool
