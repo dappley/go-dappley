@@ -22,9 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dappley/go-dappley/core/pb"
 )
 
 var header = &BlockHeader{
@@ -157,7 +158,7 @@ func TestBlock_VerifyHash(t *testing.T) {
 	assert.True(t, b1.VerifyHash())
 
 	//calculate a hash value with a different nonce
-	hash = b1.CalculateHashWithNonce(b1.GetNonce()+1)
+	hash = b1.CalculateHashWithNonce(b1.GetNonce() + 1)
 	b1.SetHash(hash)
 	assert.False(t, b1.VerifyHash())
 

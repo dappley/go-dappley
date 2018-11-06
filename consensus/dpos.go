@@ -31,17 +31,15 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
-const version = byte(0x00)
-
 type DPOS struct {
-	bc         *core.Blockchain
-	bp         *BlockProducer
+	bc          *core.Blockchain
+	bp          *BlockProducer
 	producerKey string
-	newBlockCh chan *core.Block
-	node       core.NetService
-	stopCh     chan bool
-	dynasty    *Dynasty
-	slot       *lru.Cache
+	newBlockCh  chan *core.Block
+	node        core.NetService
+	stopCh      chan bool
+	dynasty     *Dynasty
+	slot        *lru.Cache
 }
 
 func NewDPOS() *DPOS {

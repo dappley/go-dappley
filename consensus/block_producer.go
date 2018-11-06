@@ -82,7 +82,7 @@ func (bp *BlockProducer) prepareBlock() {
 	for i, tx := range validTxs {
 		// remove transaction if utxo set cannot be updated
 		if !utxoIndex.UpdateUtxo(tx) {
-			validTxs = append(validTxs[:i], validTxs[i + 1:]...)
+			validTxs = append(validTxs[:i], validTxs[i+1:]...)
 		}
 	}
 
