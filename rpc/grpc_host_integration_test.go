@@ -21,6 +21,7 @@
 package rpc
 
 import (
+	"github.com/ethereum/go-ethereum/swarm/network/stream"
 	"fmt"
 	"strings"
 	"testing"
@@ -134,7 +135,7 @@ func TestRpcSend(t *testing.T) {
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        2,
-		Contract: 	"",
+		Contract:   "",
 	})
 	assert.Nil(t, err)
 
@@ -197,13 +198,13 @@ func TestRpcSendContract(t *testing.T) {
 
 	// Start a grpc server
 	server := NewGrpcServer(node, "temp")
-	server.Start(defaultRpcPort+10) // use a different port as other integration tests
+	server.Start(defaultRpcPort + 10) // use a different port as other integration tests
 	defer server.Stop()
 
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a grpc connection and a client
-	conn, err := grpc.Dial(fmt.Sprint(":",defaultRpcPort+10), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+10), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -218,7 +219,7 @@ func TestRpcSendContract(t *testing.T) {
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        2,
-		Contract: 	contract,
+		Contract:   contract,
 	})
 	assert.Nil(t, err)
 
@@ -233,15 +234,15 @@ func TestRpcSendContract(t *testing.T) {
 	//check smart contract deployment
 	res := string("")
 	contractAddr := core.NewAddress("")
-	loop:
-	for i:= bc.GetMaxHeight(); i>0; i-- {
+loop:
+	for i := bc.GetMaxHeight(); i > 0; i-- {
 		blk, err := bc.GetBlockByHeight(i)
 		assert.Nil(t, err)
-		for _,tx := range blk.GetTransactions(){
+		for _, tx := range blk.GetTransactions() {
 			contractAddr = tx.GetContractAddress()
-			if contractAddr.String() != ""{
+			if contractAddr.String() != "" {
 				res = tx.Vout[core.ContractTxouputIndex].Contract
-				break loop;
+				break loop
 			}
 		}
 	}
@@ -577,7 +578,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-			"",
+		"",
 	)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
@@ -594,7 +595,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(6),
 		*rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-			"",
+		"",
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
@@ -617,6 +618,96 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, leftAmount, realAmount)
 	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, common.NewAmount(6), recvAmount)
+}
+
+func GetNewTransactions(t *testing.T) {
+	rpcContext, err := createRpcTestContext(11)
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	// Create a grpc connection and a client
+	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	c1 := rpcpb.NewRpcServiceClient(conn1)
+	
+	var tx1ID byte[]
+	var tx2ID byte[]
+	var conn1Step1 = false
+	var conn1Step2 = false
+	var conn2Step1 = false
+
+	go func() {
+		stream, err := c1.RpcGetNewTransactions(context.Background(), &rpcpb.GetNewTransactionsRequest{})
+		if err != nil {
+			return
+		}
+
+		response1, err := stream.Recv()
+		conn1Step1 = true
+		assert.Nil(t, err)
+		assert.NotEqual(t, len(tx1ID)， 0)
+		assert.Equal(t, response1.Transaction.ID, tx1ID)
+
+		response2, err := stream.Recv()
+		conn1Step2 = true
+		assert.Nil(t, err)
+		assert.NotEqual(t, len(tx2ID)， 0)
+		assert.Equal(t, response2.Transaction.ID, tx2ID)
+	}
+
+
+	// Create a grpc connection and a client
+	conn2, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	c2 := rpcpb.NewRpcServiceClient(conn2)
+	go func() {
+		stream, err := c2.RpcGetNewTransactions(context.Background(), &rpcpb.GetNewTransactionsRequest{})
+		if err != nil {
+			return
+		}
+
+		response1, err := stream.Recv()
+		conn2Step1 = true
+		assert.Nil(t, err)
+		assert.NotEqual(t, len(tx1ID)， 0)
+		assert.Equal(t, response1.Transaction.ID, tx1ID)
+	}
+
+	tx1ID, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
+	time.Sleep(time.Second)
+	assert.Equal(t, conn1Step1, true)
+	assert.Equal(t, conn1Step2, false)
+	assert.Equal(t, conn2Step1, true)
+	conn2.Close()
+
+	tx2ID, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
+	time.Sleep(time.Second)
+	assert.Equal(t, conn1Step2, true)
+    conn1.Close()
+
+	_, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), 0, "", rpcContext.bc, rpcContext.node)
+	time.Sleep(time.Second)
+	assert.Equal(t, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic), false)
+
+	rpcContext.consensus.Stop()
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
+	time.Sleep(time.Second)
 }
 
 func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
