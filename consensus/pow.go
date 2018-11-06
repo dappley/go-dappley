@@ -79,9 +79,7 @@ func (pow *ProofOfWork) Stop() {
 
 func (pow *ProofOfWork) mineBlocks() {
 	logger.Info("Mining starts")
-	if len(pow.stopCh) > 0 {
-		<-pow.stopCh
-	}
+	pow.resetStopCh()
 	for {
 		select {
 		case <-pow.stopCh:
@@ -98,10 +96,22 @@ func (pow *ProofOfWork) mineBlocks() {
 	}
 }
 
+func (pow *ProofOfWork) resetStopCh() {
+L:
+	for {
+		select {
+		case <-pow.stopCh:
+		default:
+			break L
+		}
+	}
+}
+
 func (pow *ProofOfWork) calculateValidHash(block *core.Block) {
 	for {
 		select {
 		case <-pow.stopCh:
+			pow.stopCh <- true
 			return
 		default:
 			hash := block.CalculateHashWithNonce(block.GetNonce())
@@ -144,7 +154,7 @@ func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
 	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: Minted a new block")
 	if !newBlock.VerifyHash() {
-		logger.Warn("hash verification is wrong")
+		logger.Warn("PoW: Invalid hash in new block (mining might have been interrupted)")
 		return
 	}
 	err := pow.bc.AddBlockToTail(newBlock)

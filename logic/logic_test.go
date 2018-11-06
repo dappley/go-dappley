@@ -255,6 +255,5 @@ func teardown() {
 }
 
 func cleanUpDatabase() {
-	logger.Debug("REMOVE WALLLLLLLLLET")
 	client.RemoveWalletFile()
 }

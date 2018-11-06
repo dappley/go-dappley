@@ -248,6 +248,10 @@ func (dpos *DPOS) updateNewBlock(newBlock *core.Block) {
 		"height": newBlock.GetHeight(),
 		"hash":   hex.EncodeToString(newBlock.GetHash()),
 	}).Info("DPoS: Produced a new block")
+	if !newBlock.VerifyHash() {
+		logger.Warn("DPoS: Invalid hash in new block")
+		return
+	}
 	err := dpos.bc.AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)
