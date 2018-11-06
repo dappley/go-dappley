@@ -44,6 +44,7 @@ func NewProofOfWork() *ProofOfWork {
 		node:   nil,
 		stopCh: make(chan bool, 1),
 	}
+	p.SetTargetBit(defaultTargetBits)
 	return p
 }
 

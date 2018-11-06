@@ -21,6 +21,11 @@
 package logic
 
 import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -28,9 +33,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 const testport_msg_relay = 19999
@@ -266,7 +268,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	var nodes []*network.Node
 	var firstNode *network.Node
 
-	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	producerAddrs := []string{}
@@ -332,7 +334,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 
 	var firstNode *network.Node
 
-	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	producerAddrs := []string{}
@@ -550,7 +552,7 @@ func TestDoubleMint(t *testing.T) {
 	var blks []*core.Block
 	var parent *core.Block
 
-	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
+	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
