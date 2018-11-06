@@ -19,8 +19,8 @@ package rpc
 
 import (
 	"context"
-	"strings"
 	"encoding/hex"
+	"strings"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
@@ -226,7 +226,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 }
 
 func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
-	var txHandler interface{} = nil
+	var txHandler interface{}
+
+	quitCh := make(chan bool, 1)
+
 	logger.Errorf("GetNewTransaction")
 	txHandler = func(tx *core.Transaction) {
 		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
@@ -235,9 +238,11 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 		if err != nil {
 			logger.Errorf("Send transaction to client failed %v\n", err)
 			rpcService.node.GetBlockchain().GetTxPool().EventBus.Unsubscribe(core.NewTransactionTopic, txHandler)
+			quitCh <- true
 		}
 	}
 
 	rpcService.node.GetBlockchain().GetTxPool().EventBus.SubscribeAsync(core.NewTransactionTopic, txHandler, false)
+	<-quitCh
 	return nil
 }
