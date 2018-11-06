@@ -32,7 +32,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/util"
 )
 
 const testport_msg_relay = 19999
@@ -411,38 +410,103 @@ func TestForkChoice(t *testing.T) {
 
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
+		pow.SetTargetBit(18)
+		node.Start(testport_fork + i)
+		pows = append(pows, pow)
+		nodes = append(nodes, node)
+	}
+
+	//start node0 first
+	pows[0].Start()
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() > 5
+	}, 5)
+	//start node1
+	pows[1].Start()
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() > 8
+	}, 5)
+	blk1,_ := bcs[0].GetTailBlock()
+
+	pows[0].Stop()
+	pows[1].Stop()
+
+	connectNodes(nodes[0], nodes[1])
+	nodes[0].BroadcastBlock(blk1)
+	//make sure syncing starts
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[1].GetBlockPool().GetSyncState()
+	}, 2)
+	//make sure syncing ends
+	core.WaitDoneOrTimeout(func() bool {
+		return !bcs[1].GetBlockPool().GetSyncState()
+	}, 2)
+	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
+}
+
+
+func TestForkSegmentHandling(t *testing.T) {
+	var pows []*consensus.ProofOfWork
+	var bcs []*core.Blockchain
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+
+	numOfNodes := 2
+	nodes := []*network.Node{}
+	for i := 0; i < numOfNodes; i++ {
+		db := storage.NewRamStorage()
+		defer db.Close()
+
+		bc, pow := createBlockchain(addr, db)
+		bcs = append(bcs, bc)
+
+		node := network.NewNode(bcs[i])
+		pow.Setup(node, addr.String())
 		pow.SetTargetBit(16)
 		node.Start(testport_fork + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 	}
 
-	//start node0 first. the next node starts mining after the previous node is at least at height 5
-	for i := 0; i < numOfNodes; i++ {
-		pows[i].Start()
-		//seed node broadcasts syncpeers
-		for bcs[i].GetMaxHeight() < 5 {
-		}
-	}
+	blk1 := &core.Block{}
+	blk2 := &core.Block{}
 
-	for i := 0; i < numOfNodes; i++ {
-		if i != 0 {
-			nodes[i].AddStream(
-				nodes[0].GetPeerID(),
-				nodes[0].GetPeerMultiaddr(),
-			)
-		}
-		nodes[0].SyncPeersBroadcast()
-	}
+	//start node0 first
+	pows[0].Start()
+	//get node0's 10th blk
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() > 10
+	}, 5)
+	blk1,_ = bcs[0].GetTailBlock()
+	//start node1
+	pows[1].Start()
+	//get node0's 13th blk
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() > 13
+	}, 5)
+	blk2,_ = bcs[0].GetTailBlock()
 
-	currentTime := time.Now().UTC().Unix()
-	for !util.IsTimeOut(currentTime, int64(6)) {
-	}
+	pows[0].Stop()
+	pows[1].Stop()
 
-	//Check if all nodes have the same tail block
-	for i := 0; i < numOfNodes-1; i++ {
-		assert.True(t, isSameBlockChain(bcs[0], bcs[i]))
-	}
+	connectNodes(nodes[0], nodes[1])
+	nodes[0].BroadcastBlock(blk1)
+	//wait for node1 to start syncing
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[1].GetBlockPool().GetSyncState()
+	}, 2)
+
+	//while node1 is syncing, node0 broadcast higher block on the same fork
+	nodes[0].BroadcastBlock(blk2)
+	//make sure syncing begins
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[1].GetBlockPool().GetSyncState()
+	}, 2)
+	//make sure syncing ends
+	core.WaitDoneOrTimeout(func() bool {
+		return !bcs[1].GetBlockPool().GetSyncState()
+	}, 2)
+	//merge should be successful and both nodes should have the same blockchain
+	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 
 // Integration test for adding balance

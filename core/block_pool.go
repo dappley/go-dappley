@@ -158,7 +158,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		logger.WithFields(logger.Fields{
 			"syncstate": false,
 		}).Debug("Merge finished or exited, setting syncstate to false")
-		pool.SetSyncState(false)
+		pool.syncState = false
 
 	} else {
 		pool.requestPrevBlock(tree, sender)
@@ -187,6 +187,11 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 				tree.AddChild(cachedBlk.(*common.Tree))
 			}
 		}
+	}
+
+	//try to link parent
+	if parent, ok := blkCache.Get(string(tree.GetValue().(*Block).GetPrevHash())); ok == true {
+		tree.AddParent(parent.(*common.Tree))
 	}
 	logger.WithFields(logger.Fields{
 		"height": tree.GetValue().(*Block).GetHeight(),
