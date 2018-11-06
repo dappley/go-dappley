@@ -21,8 +21,6 @@ void Initialize(){
     V8::Initialize();
 }
 
-
-
 int executeV8Script(const char *sourceCode, uintptr_t handler) {
 
 
@@ -71,8 +69,12 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
 
   // Dispose the isolate and tear down V8.
   isolate->Dispose();
-  V8::Dispose();
-  V8::ShutdownPlatform();
+
   delete create_params.array_buffer_allocator;
   return 0;
+}
+
+void DisposeV8(){
+  V8::Dispose();
+  V8::ShutdownPlatform();
 }
