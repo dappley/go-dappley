@@ -15,8 +15,8 @@ var AddrChecker = function(){
 };
 
 AddrChecker.prototype = {
-		check:function(addr){
-    	return Blockchain.verifyAddress(addr);
+		check:function(addr,dummy){
+    	return Blockchain.verifyAddress(addr)+dummy;
     }
 };
 var addrChecker = new AddrChecker;
@@ -24,6 +24,6 @@ var addrChecker = new AddrChecker;
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\"")
+	sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
 }
 

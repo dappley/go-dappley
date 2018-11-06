@@ -370,14 +370,15 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 		//is a smart contract deployment transaction, not a smart contract call transaction.
 		if len(utxos) != 0{
 			function, args := util.DecodeScInput(vout.Contract)
+			totalArgs := util.PrepareArgs(args)
 			logger.WithFields(logger.Fields{
 				"contractAddr"		: utxos[0].PubKeyHash.GenerateAddress().String(),
 				"contract"	  		: utxos[0].Contract,
 				"invokedFunction" 	: function,
-				"arguments"			: args,
+				"arguments"			: totalArgs,
 			}).Info("Executing smart contract...")
 			sc.ImportSourceCode(utxos[0].Contract)
-			sc.Execute(function, util.PrepareArgs(args))
+			sc.Execute(function, totalArgs)
 		}
 	}
 }
