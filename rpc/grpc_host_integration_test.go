@@ -620,6 +620,7 @@ func TestRpcSendTransaction(t *testing.T) {
 }
 
 func TestGetNewTransactions(t *testing.T) {
+	logger.SetLevel(logger.WarnLevel)
 	rpcContext, err := createRpcTestContext(11)
 	if err != nil {
 		panic(err)
@@ -648,7 +649,9 @@ func TestGetNewTransactions(t *testing.T) {
 	var conn2Step1 = false
 
 	go func() {
-		stream, err := c1.RpcGetNewTransactions(context.Background(), &rpcpb.GetNewTransactionsRequest{})
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		stream, err := c1.RpcGetNewTransactions(ctx, &rpcpb.GetNewTransactionsRequest{})
 		if err != nil {
 			return
 		}
@@ -674,19 +677,22 @@ func TestGetNewTransactions(t *testing.T) {
 	}
 	c2 := rpcpb.NewRpcServiceClient(conn2)
 	go func() {
-		stream, err := c2.RpcGetNewTransactions(context.Background(), &rpcpb.GetNewTransactionsRequest{})
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		stream, err := c2.RpcGetNewTransactions(ctx, &rpcpb.GetNewTransactionsRequest{})
 		if err != nil {
 			return
 		}
-
 		response1, err := stream.Recv()
 		conn2Step1 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, len(tx1ID), 0)
 		assert.Equal(t, response1.Transaction.ID, tx1ID)
 	}()
+	time.Sleep(time.Second)
 
 	tx1ID, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
+	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, conn1Step1, true)
 	assert.Equal(t, conn1Step2, false)

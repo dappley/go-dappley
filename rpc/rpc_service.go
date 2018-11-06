@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"strings"
+	"encoding/hex"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
@@ -226,8 +227,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
 	var txHandler interface{} = nil
+	logger.Errorf("GetNewTransaction")
 	txHandler = func(tx *core.Transaction) {
 		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
+		logger.Errorf("Send transaction to client %v\n", hex.EncodeToString(response.Transaction.ID))
 		err := stream.Send(response)
 		if err != nil {
 			logger.Errorf("Send transaction to client failed %v\n", err)
