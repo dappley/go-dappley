@@ -134,7 +134,9 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	if blkCache.Contains(blk.hashString()) {
 		return
 	}
-
+	if !pool.isChildBlockInCache(blk.hashString()) && blk.GetHeight() <= pool.blockchain.GetMaxHeight() {
+		return
+	}
 	blkCache.Add(blk.hashString(), tree)
 	pool.updateBlkCache(tree)
 
@@ -207,4 +209,16 @@ func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
 	}
 	return nil
 
+}
+
+func (pool BlockPool) isChildBlockInCache(hashString string) bool {
+	blkCache := pool.blkCache
+	for _, key := range blkCache.Keys() {
+		if cachedBlk, ok := blkCache.Get(key); ok {
+			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == hashString {
+				return true
+			}
+		}
+	}
+	return false
 }
