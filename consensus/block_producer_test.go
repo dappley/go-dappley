@@ -19,7 +19,6 @@
 package consensus
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,103 +27,27 @@ import (
 	"github.com/dappley/go-dappley/storage"
 )
 
-func newTargetRequirement(bit int) Requirement {
-	target := big.NewInt(1)
-	target = target.Lsh(target, uint(256-bit))
-	return func(block *core.Block) bool {
-		var hashInt big.Int
-		var hashInt2 big.Int
-
-		hash := block.GetHash()
-		hashInt.SetBytes(hash)
-
-		hashFromNonce := block.CalculateHashWithNonce(block.GetNonce())
-		hashInt2.SetBytes(hashFromNonce)
-		return hashInt.Cmp(target) == -1 && hashInt2.Cmp(target) == -1
-	}
-}
-
-func TestBlockProducer_VerifyNonce(t *testing.T) {
-
-	miner := NewBlockProducer()
-	miner.SetRequirement(newTargetRequirement(14))
-	cbAddr := core.NewAddress("1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg")
-	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
-	bc := core.CreateBlockchain(
-		cbAddr,
-		storage.NewRamStorage(),
-		nil,
-		128,
-	)
-	defer bc.GetDb().Close()
-
-	miner.Setup(bc, cbAddr.String(), nil)
-	miner.SetPrivateKey(keystr)
-
-	//prepare a block with correct nonce value
-	newBlock := core.NewBlock(nil, nil)
-	nonce := int64(0)
-mineloop2:
-	for {
-		hash := newBlock.CalculateHashWithNonce(nonce)
-		newBlock.SetNonce(nonce)
-		newBlock.SetHash(newBlock.CalculateHashWithNonce(nonce))
-		fulfilled := miner.requirement(newBlock)
-		if fulfilled {
-			newBlock.SignBlock(miner.key, hash)
-			break mineloop2
-		} else {
-			nonce++
-		}
-	}
-
-	//check if the verifyNonce function returns true
-	assert.True(t, miner.requirement(newBlock))
-
-	//input a wrong nonce value, check if it returns false
-	newBlock.SetNonce(nonce - 1)
-	assert.False(t, miner.requirement(newBlock))
-}
-
-func TestBlockProducer_ValidateDifficulty(t *testing.T) {
-
-	miner := NewBlockProducer()
-	miner.SetRequirement(newTargetRequirement(defaultTargetBits))
-
-	//create a block that has a hash value larger than the target
-	blk := core.GenerateMockBlock()
-	target := big.NewInt(1)
-	target.Lsh(target, uint(256-defaultTargetBits+1))
-
-	blk.SetHash(target.Bytes())
-
-	assert.False(t, miner.requirement(blk))
-
-	//create a block that has a hash value smaller than the target
-	target = big.NewInt(1)
-	target.Lsh(target, uint(256-defaultTargetBits-1))
-	blk.SetHash(target.Bytes())
-
-	assert.True(t, miner.requirement(blk))
-}
-
-func TestBlockProducer_Start(t *testing.T) {
-	miner := NewBlockProducer()
-	miner.SetRequirement(newTargetRequirement(defaultTargetBits))
+func TestBlockProducer_ProduceBlock(t *testing.T) {
+	bp := NewBlockProducer()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
-	keystr := "ac0a17dd3025b433ca0307d227241430ff4dda4be5e01a6c6cc6d2ccfaec895b"
 	bc := core.CreateBlockchain(
 		core.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,
 		128,
 	)
-	retCh := make(chan *NewBlock, 0)
-	miner.Setup(bc, cbAddr, retCh)
-	miner.SetPrivateKey(keystr)
-	miner.Start()
-	blk := <-retCh
-	assert.True(t, blk.IsValid)
-	assert.True(t, blk.VerifyHash())
-	assert.True(t, miner.requirement(blk.Block))
+	bp.Setup(bc, cbAddr)
+	processRuns := false
+	bp.SetProcess(func(block *core.Block) {
+		processRuns = true
+	})
+	block := bp.ProduceBlock()
+	assert.True(t, processRuns)
+	assert.NotNil(t, block)
+
+	bc.GetBlockPool().SetSyncState(true)
+	processRuns = false
+	block = bp.ProduceBlock()
+	assert.False(t, processRuns)
+	assert.Nil(t, block)
 }

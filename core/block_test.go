@@ -154,9 +154,16 @@ func TestBlock_VerifyHash(t *testing.T) {
 	//calculate correct hash value
 	hash := b1.CalculateHash()
 	b1.SetHash(hash)
-
-	//then this should be correct
 	assert.True(t, b1.VerifyHash())
+
+	//calculate a hash value with a different nonce
+	hash = b1.CalculateHashWithNonce(b1.GetNonce()+1)
+	b1.SetHash(hash)
+	assert.False(t, b1.VerifyHash())
+
+	hash = b1.CalculateHashWithoutNonce()
+	b1.SetHash(hash)
+	assert.False(t, b1.VerifyHash())
 }
 
 func TestBlock_Rollback(t *testing.T) {

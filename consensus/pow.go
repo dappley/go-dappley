@@ -29,29 +29,27 @@ import (
 const defaultTargetBits = 0
 
 type ProofOfWork struct {
-	bc          *core.Blockchain
-	miner       *BlockProducer
-	mintBlkChan chan *NewBlock
-	target      *big.Int
-	node        core.NetService
-	exitCh      chan bool
+	bc     *core.Blockchain
+	miner  *BlockProducer
+	target *big.Int
+	node   core.NetService
+	stopCh chan bool
 }
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:       NewBlockProducer(),
-		mintBlkChan: make(chan *NewBlock, 1),
-		node:        nil,
-		exitCh:      make(chan bool, 1),
+		miner:  NewBlockProducer(),
+		node:   nil,
+		stopCh: make(chan bool, 1),
 	}
-	p.SetKey("")
 	return p
 }
 
 func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
 	pow.bc = node.GetBlockchain()
 	pow.node = node
-	pow.miner.Setup(pow.bc, cbAddr, pow.mintBlkChan)
+	pow.miner.Setup(pow.bc, cbAddr)
+	pow.miner.SetProcess(pow.calculateValidHash)
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int) {
@@ -60,36 +58,59 @@ func (pow *ProofOfWork) SetTargetBit(bit int) {
 	}
 	target := big.NewInt(1)
 	pow.target = target.Lsh(target, uint(256-bit))
-
-	pow.miner.SetRequirement(pow.isHashBelowTarget)
 }
 
 func (pow *ProofOfWork) SetKey(key string) {
-	pow.miner.SetPrivateKey(key)
+	// pow does not require block signing
 }
 
 func (pow *ProofOfWork) Start() {
-	go func() {
-		logger.Info("PoW started...")
-		pow.miner.Start()
-		for {
-			select {
-			case <-pow.exitCh:
-				logger.Info("PoW stopped...")
-				return
-			case minedBlk := <-pow.mintBlkChan:
-				if minedBlk.IsValid {
-					pow.updateNewBlock(minedBlk.Block)
-				}
-				pow.miner.Start()
-			}
-		}
-	}()
+	logger.Info("PoW starts...")
+	go pow.mineBlocks()
 }
 
 func (pow *ProofOfWork) Stop() {
-	pow.exitCh <- true
-	pow.miner.Stop()
+	logger.Info("PoW stops...")
+	pow.stopCh <- true
+}
+
+func (pow *ProofOfWork) mineBlocks() {
+	logger.Info("Mining starts")
+	if len(pow.stopCh) > 0 {
+		<-pow.stopCh
+	}
+	for {
+		select {
+		case <-pow.stopCh:
+			logger.Info("Mining stopped")
+			return
+		default:
+			newBlock := pow.miner.ProduceBlock()
+			if !pow.Validate(newBlock) {
+				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: No valid block is mined")
+				return
+			}
+			pow.updateNewBlock(newBlock)
+		}
+	}
+}
+
+func (pow *ProofOfWork) calculateValidHash(block *core.Block) {
+	for {
+		select {
+		case <-pow.stopCh:
+			return
+		default:
+			hash := block.CalculateHashWithNonce(block.GetNonce())
+			block.SetHash(hash)
+			if !pow.isHashBelowTarget(block) {
+				pow.tryDifferentNonce(block)
+				continue
+			}
+			return
+		}
+	}
+
 }
 
 func (pow *ProofOfWork) IsProducingBlock() bool {
@@ -109,23 +130,26 @@ func (pow *ProofOfWork) Validate(block *core.Block) bool {
 	return pow.isHashBelowTarget(block)
 }
 
+func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
+	nonce := block.GetNonce()
+	if nonce >= maxNonce {
+		logger.Warn("PoW: Tried all possible nonce")
+	}
+	block.SetNonce(nonce + 1)
+}
+
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
-	logger.Info("PoW: Minted a new block. height:", newBlock.GetHeight())
+	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: Minted a new block")
 	if !newBlock.VerifyHash() {
 		logger.Warn("hash verification is wrong")
 		return
 	}
-	err:= pow.bc.AddBlockToTail(newBlock)
+	err := pow.bc.AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	pow.broadcastNewBlock(newBlock)
-}
-
-func (pow *ProofOfWork) broadcastNewBlock(blk *core.Block) {
-	//broadcast the block to other nodes
-	pow.node.BroadcastBlock(blk)
+	pow.node.BroadcastBlock(newBlock)
 }
 
 func (pow *ProofOfWork) AddProducer(producer string) error {

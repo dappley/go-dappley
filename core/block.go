@@ -256,7 +256,7 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 }
 
 func (b *Block) CalculateHash() Hash {
-	return b.CalculateHashWithoutNonce()
+	return b.CalculateHashWithNonce(b.GetNonce())
 }
 
 func (b *Block) CalculateHashWithoutNonce() Hash {

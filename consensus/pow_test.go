@@ -65,3 +65,25 @@ func TestProofOfWork_SetTargetBit(t *testing.T) {
 		})
 	}
 }
+
+func TestProofOfWork_isHashBelowTarget(t *testing.T) {
+
+	pow := NewProofOfWork()
+	pow.SetTargetBit(defaultTargetBits)
+
+	//create a block that has a hash value larger than the target
+	blk := core.GenerateMockBlock()
+	hash := big.NewInt(1)
+	hash.Lsh(hash, uint(256-defaultTargetBits+1))
+
+	blk.SetHash(hash.Bytes())
+
+	assert.False(t, pow.isHashBelowTarget(blk))
+
+	//create a block that has a hash value smaller than the target
+	hash = big.NewInt(1)
+	hash.Lsh(hash, uint(256-defaultTargetBits-1))
+	blk.SetHash(hash.Bytes())
+
+	assert.True(t, pow.isHashBelowTarget(blk))
+}
