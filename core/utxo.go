@@ -122,11 +122,13 @@ func (utxos UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amount
 
 	var retUtxos []*UTXO
 	sum := common.NewAmount(0)
-	for _, u := range allUtxos {
-		sum = sum.Add(u.Value)
-		retUtxos = append(retUtxos, u)
-		if sum.Cmp(amount) >= 0 {
-			break
+	for i, u := range allUtxos {
+		if !isContractUtxo(i,u.PubKeyHash){
+			sum = sum.Add(u.Value)
+			retUtxos = append(retUtxos, u)
+			if sum.Cmp(amount) >= 0 {
+				break
+			}
 		}
 	}
 
@@ -135,6 +137,11 @@ func (utxos UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amount
 	}
 
 	return retUtxos, nil
+}
+
+func isContractUtxo(index int, pubKeyHash PubKeyHash) bool{
+	isContract, _ := pubKeyHash.IsContract()
+	return isContract && index==0
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout

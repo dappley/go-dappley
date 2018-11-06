@@ -295,11 +295,14 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 
 func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 
+	contractPkh := NewContractPubKeyHash()
 	//preapre 3 utxos in the utxo index
 	txoutputs := []TXOutput{
 		{common.NewAmount(3), address1Hash,""},
 		{common.NewAmount(4), address2Hash,""},
 		{common.NewAmount(5), address2Hash,""},
+		{common.NewAmount(2), contractPkh, "helloworld!"},
+		{common.NewAmount(4), contractPkh, ""},
 	}
 
 	index := NewUTXOIndex()
@@ -331,6 +334,14 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 		{"notEnoughUtxo2",
 			common.NewAmount(10),
 			address2Hash.GetPubKeyHash(),
+			ErrInsufficientFund,},
+		{"smartContractUtxo",
+			common.NewAmount(3),
+			contractPkh.PubKeyHash,
+			nil,},
+		{"smartContractUtxoInsufficient",
+			common.NewAmount(5),
+			contractPkh.PubKeyHash,
 			ErrInsufficientFund,},
 	}
 	for _, tt := range tests {
