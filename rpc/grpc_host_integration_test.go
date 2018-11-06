@@ -21,7 +21,6 @@
 package rpc
 
 import (
-	"github.com/ethereum/go-ethereum/swarm/network/stream"
 	"fmt"
 	"strings"
 	"testing"
@@ -620,7 +619,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
-func GetNewTransactions(t *testing.T) {
+func TestGetNewTransactions(t *testing.T) {
 	rpcContext, err := createRpcTestContext(11)
 	if err != nil {
 		panic(err)
@@ -642,8 +641,8 @@ func GetNewTransactions(t *testing.T) {
 	}
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 	
-	var tx1ID byte[]
-	var tx2ID byte[]
+	var tx1ID []byte
+	var tx2ID []byte
 	var conn1Step1 = false
 	var conn1Step2 = false
 	var conn2Step1 = false
@@ -657,15 +656,15 @@ func GetNewTransactions(t *testing.T) {
 		response1, err := stream.Recv()
 		conn1Step1 = true
 		assert.Nil(t, err)
-		assert.NotEqual(t, len(tx1ID)， 0)
+		assert.NotEqual(t, len(tx1ID), 0)
 		assert.Equal(t, response1.Transaction.ID, tx1ID)
 
 		response2, err := stream.Recv()
 		conn1Step2 = true
 		assert.Nil(t, err)
-		assert.NotEqual(t, len(tx2ID)， 0)
+		assert.NotEqual(t, len(tx2ID), 0)
 		assert.Equal(t, response2.Transaction.ID, tx2ID)
-	}
+	}()
 
 
 	// Create a grpc connection and a client
@@ -683,9 +682,9 @@ func GetNewTransactions(t *testing.T) {
 		response1, err := stream.Recv()
 		conn2Step1 = true
 		assert.Nil(t, err)
-		assert.NotEqual(t, len(tx1ID)， 0)
+		assert.NotEqual(t, len(tx1ID), 0)
 		assert.Equal(t, response1.Transaction.ID, tx1ID)
-	}
+	}()
 
 	tx1ID, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
