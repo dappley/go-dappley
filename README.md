@@ -30,6 +30,7 @@ go get -u -v github.com/dappley/go-dappley
 ```bash
 cd github.com/dappley/go-dappley
 make
+# note: you may be asked to grant super user permission
 ```
 
 ## Running Dapp
