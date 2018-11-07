@@ -1,10 +1,10 @@
 #include "blockchain.h"
 #include "../engine.h"
 
-static VerifyAddressFunc sVerifyAddress = NULL;
+static FuncVerifyAddress sVerifyAddress = NULL;
 
 
-void InitializeBlockchain(VerifyAddressFunc verifyAddress) {
+void InitializeBlockchain(FuncVerifyAddress verifyAddress) {
   sVerifyAddress = verifyAddress;
 }
 

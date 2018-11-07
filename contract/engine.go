@@ -4,7 +4,12 @@ package sc
 #cgo LDFLAGS: -L${SRCDIR}/lib -ldappleyv8
 #include <stdlib.h>
 #include "v8/engine.h"
-bool VerifyAddressFunc_cgo(const char *address);
+//blockchain
+bool  Cgo_VerifyAddressFunc(const char *address);
+//storage
+char* Cgo_StorageGetFunc(const char *key);
+int   Cgo_StorageSetFunc(const char *key, const char *value);
+int   Cgo_StorageDelFunc(const char *key);
 */
 import "C"
 import (
@@ -21,7 +26,10 @@ type V8Engine struct{
 
 func InitializeV8Engine(){
 	C.Initialize()
-	C.InitializeBlockchain((C.VerifyAddressFunc)(unsafe.Pointer(C.VerifyAddressFunc_cgo)))
+	C.InitializeBlockchain((C.FuncVerifyAddress)(unsafe.Pointer(C.Cgo_VerifyAddressFunc)))
+	C.InitializeStorage((C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
+						(C.FuncStorageSet)(unsafe.Pointer(C.Cgo_StorageSetFunc)),
+						(C.FuncStorageDel)(unsafe.Pointer(C.Cgo_StorageDelFunc)))
 }
 
 //NewV8Engine generates a new V8Engine instance

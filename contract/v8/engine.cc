@@ -10,6 +10,7 @@
 #include "lib/blockchain.h"
 #include "lib/load_lib.h"
 #include "lib/load_sc.h"
+#include "lib/storage.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -45,6 +46,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
     Context::Scope context_scope(context);
 
     NewBlockchainInstance(isolate, context, (void *)handler);
+    NewStorageInstance(isolate, context);
 
     LoadLibraries(isolate, context);
     {
