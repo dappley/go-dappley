@@ -7,13 +7,19 @@ import (
 	"sync"
 )
 
+type ScLocalStorage map[string]string
+
 type ScState struct{
-	states map[string]string
+	states map[string]ScLocalStorage
 	mutex *sync.RWMutex
 }
 
+func NewScLocalStorage() ScLocalStorage{
+	return make(map[string]string)
+}
+
 func NewScState() *ScState{
-	return &ScState{make(map[string]string), &sync.RWMutex{}}
+	return &ScState{make(map[string]ScLocalStorage), &sync.RWMutex{}}
 }
 
 func deserializeScState(d []byte) *ScState {
