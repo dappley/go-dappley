@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"sync"
 )
@@ -13,6 +14,8 @@ type ScState struct{
 	states map[string]ScLocalStorage
 	mutex *sync.RWMutex
 }
+
+const scStateMapKey = "scState"
 
 func NewScLocalStorage() ScLocalStorage{
 	return make(map[string]string)
@@ -43,6 +46,7 @@ func (ss *ScState) serialize() []byte {
 	return encoded.Bytes()
 }
 
+//Get deletes an item in scStorage
 func (ss *ScState) Get(pubKeyHash, key string) string{
 	if len(ss.states[pubKeyHash]) == 0 {
 		return ""
@@ -50,6 +54,7 @@ func (ss *ScState) Get(pubKeyHash, key string) string{
 	return ss.states[pubKeyHash][key]
 }
 
+//Set deletes an item in scStorage
 func (ss *ScState) Set(pubKeyHash, key, value string) int{
 	if len(ss.states[pubKeyHash]) == 0 {
 		ls := NewScLocalStorage()
@@ -59,6 +64,7 @@ func (ss *ScState) Set(pubKeyHash, key, value string) int{
 	return 0
 }
 
+//Del deletes an item in scStorage
 func (ss *ScState) Del(pubKeyHash, key string) int{
 	if len(ss.states[pubKeyHash]) == 0 {
 		return 1;
@@ -69,4 +75,19 @@ func (ss *ScState) Del(pubKeyHash, key string) int{
 
 	delete(ss.states[pubKeyHash],key)
 	return 0
+}
+
+//LoadFromDatabase loads states from database
+func (ss *ScState) LoadFromDatabase(db storage.Storage){
+	rawBytes, err := db.Get([]byte(scStateMapKey))
+
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
+		return
+	}
+	ss = deserializeScState(rawBytes)
+}
+
+//SaveToDatabase saves states to database
+func (ss *ScState) SaveToDatabase(db storage.Storage) error{
+	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
