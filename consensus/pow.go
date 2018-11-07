@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 
@@ -88,6 +89,7 @@ func (pow *ProofOfWork) mineBlocks() {
 		default:
 			if pow.miner.bc.GetBlockPool().GetSyncState() > 1 {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
+				fmt.Println(pow.miner.bc.GetBlockPool().GetSyncState())
 				continue
 			}
 			newBlock := pow.miner.ProduceBlock()

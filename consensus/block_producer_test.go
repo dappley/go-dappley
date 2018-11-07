@@ -21,10 +21,9 @@ package consensus
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBlockProducer_ProduceBlock(t *testing.T) {
@@ -45,9 +44,4 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	assert.True(t, processRuns)
 	assert.NotNil(t, block)
 
-	bc.GetBlockPool().SetSyncState(true)
-	processRuns = false
-	block = bp.ProduceBlock()
-	assert.False(t, processRuns)
-	assert.Nil(t, block)
 }
