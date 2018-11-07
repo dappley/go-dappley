@@ -22,12 +22,12 @@ import (
 	"math"
 	"math/big"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 const defaultTargetBits = 0
+
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
@@ -86,6 +86,10 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("Mining stopped")
 			return
 		default:
+			if pow.miner.bc.GetBlockPool().GetSyncState() > 1 {
+				logger.Debug("BlockProducer: Paused while block pool is syncing")
+				continue
+			}
 			newBlock := pow.miner.ProduceBlock()
 			if !pow.Validate(newBlock) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: No valid block is mined")

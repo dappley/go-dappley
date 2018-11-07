@@ -42,23 +42,23 @@ type RcvedBlock struct {
 
 type BlockPool struct {
 	blockRequestCh chan BlockRequestPars
-	syncState      bool
+	syncState      int
 	size           int
 	blockchain     *Blockchain
 	blkCache       *lru.Cache //cache of full blks
 }
 
-func (pool *BlockPool) GetSyncState() bool {
+func (pool *BlockPool) GetSyncState() int {
 	return pool.syncState
 }
-func (pool *BlockPool) SetSyncState(sync bool) {
+func (pool *BlockPool) SetSyncState(sync int) {
 	pool.syncState = sync
 }
 func NewBlockPool(size int) *BlockPool {
 	pool := &BlockPool{
 		size:           size,
 		blockRequestCh: make(chan BlockRequestPars, size),
-		syncState:      false,
+		syncState:      0,
 		blockchain:     nil,
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
@@ -103,7 +103,7 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 
 func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 	logger.Info("BlockPool: Has received a new block")
-	if pool.syncState {
+	if pool.syncState != 0 {
 		logger.Debug("BlockPool: is syncing already, tossing block ")
 		return
 	}
@@ -145,7 +145,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	if parent, _ := pool.blockchain.GetBlockByHash(forkheadParentHash); parent != nil {
 		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
 		if forkTailTree.GetValue().(*Block).GetHeight() > pool.blockchain.GetMaxHeight() {
-			pool.syncState = true
+			pool.SetSyncState(int(forkTailTree.GetValue().(*Block).GetHeight() - pool.blockchain.GetMaxHeight()))
 		} else {
 			return
 		}
@@ -156,9 +156,9 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		tree.Delete()
 
 		logger.WithFields(logger.Fields{
-			"syncstate": false,
+			"syncstate": 0,
 		}).Debug("Merge finished or exited, setting syncstate to false")
-		pool.syncState = false
+		pool.SetSyncState(0)
 
 	} else {
 		pool.requestPrevBlock(tree, sender)

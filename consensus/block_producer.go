@@ -1,10 +1,9 @@
 package consensus
 
 import (
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
@@ -46,11 +45,7 @@ func (bp *BlockProducer) SetProcess(process process) {
 
 // ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it
 func (bp *BlockProducer) ProduceBlock() *core.Block {
-	// Do not produce block if block pool is syncing
-	if bp.bc.GetBlockPool().GetSyncState() {
-		logger.Debug("BlockProducer: Paused while block pool is syncing")
-		return nil
-	}
+
 	bp.idle = false
 	bp.prepareBlock()
 	if bp.process != nil {

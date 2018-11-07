@@ -24,11 +24,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/hashicorp/golang-lru"
+	logger "github.com/sirupsen/logrus"
 )
 
 type DPOS struct {
@@ -128,6 +127,11 @@ func (dpos *DPOS) Start() {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
 					}).Info("DPoS: My Turn to produce block...")
+					// Do not produce block if block pool is syncing
+					if dpos.bp.bc.GetBlockPool().GetSyncState() != 0 {
+						logger.Debug("BlockProducer: Paused while block pool is syncing")
+						continue
+					}
 					newBlk := dpos.bp.ProduceBlock()
 					if !dpos.Validate(newBlk) {
 						logger.Error("DPoS: invalid block produced!")

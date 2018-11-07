@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	genesisAddr     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	genesisFilePath = "conf/genesis.conf"
-	defaultPassword = "password"
+	genesisAddr           = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+	genesisFilePath       = "conf/genesis.conf"
+	defaultPassword       = "password"
+	defaultTimeBetweenBlk = 3
 )
 
 type fileInfo struct {
@@ -95,7 +96,7 @@ func generateNewBlockChain(files []fileInfo, d *consensus.Dynasty, keys Keys) {
 	time = 1532392928
 	max, index := getMaxHeightOfDifferentStart(files)
 	for i := 0; i < max; i++ {
-		time = time + 15
+		time = time + defaultTimeBetweenBlk
 		b := generateBlock(bcs[index], time, d, keys)
 
 		for idx := 0; idx < len(files); idx++ {
@@ -127,7 +128,7 @@ func getMaxHeightOfDifferentStart(files []fileInfo) (int, int) {
 func makeBlockChainToSize(bc *core.Blockchain, size int, time int64, d *consensus.Dynasty, keys Keys) {
 
 	for bc.GetMaxHeight() < uint64(size) {
-		time = time + 15
+		time = time + defaultTimeBetweenBlk
 		b := generateBlock(bc, time, d, keys)
 		bc.AddBlockToTail(b)
 	}
@@ -139,7 +140,7 @@ func generateBlock(bc *core.Blockchain, time int64, d *consensus.Dynasty, keys K
 	tailBlk, _ := bc.GetTailBlock()
 	cbtx := core.NewCoinbaseTX(producer, "", bc.GetMaxHeight()+1, common.NewAmount(0))
 	b := core.NewBlockWithTimestamp([]*core.Transaction{&cbtx}, tailBlk, time)
-	hash := b.CalculateHashWithoutNonce()
+	hash := b.CalculateHashWithNonce(0)
 	b.SetHash(hash)
 	b.SetNonce(0)
 	b.SignBlock(key, hash)
