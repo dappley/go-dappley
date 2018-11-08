@@ -32,7 +32,6 @@ void NewStorageInstance(Isolate *isolate, Local<Context> context, void *address)
 
   Local<Object> instance = storageTpl->NewInstance(context).ToLocalChecked();
   instance->SetInternalField(0, External::New(isolate, address));
-
   context->Global()->DefineOwnProperty(
       context, String::NewFromUtf8(isolate, "_native_storage"),
       instance,
@@ -44,9 +43,7 @@ void NewStorageInstance(Isolate *isolate, Local<Context> context, void *address)
 void storageGetCallback(const FunctionCallbackInfo<Value> &info){
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
-    //thisArg->GetInternalField(0);
-    //HandleScope::CreateHandle(NULL,NULL);
-    //Local<External> handler = NULL;// Local<External>::Cast(thisArg->GetInternalField(0));
+    Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
 
     if (info.Length() != 1) {
         isolate->ThrowException(String::NewFromUtf8(isolate, "Storage.Get requires 1 arguments"));
@@ -59,7 +56,7 @@ void storageGetCallback(const FunctionCallbackInfo<Value> &info){
             String::NewFromUtf8(isolate, "key must be string"));
         return;
     }
-    char *res = sGet(NULL, *String::Utf8Value(isolate, key));
+    char *res = sGet(handler->Value(), *String::Utf8Value(isolate, key));
 
     if (res == NULL) {
         info.GetReturnValue().SetNull();
@@ -73,7 +70,7 @@ void storageGetCallback(const FunctionCallbackInfo<Value> &info){
 void storageSetCallback(const FunctionCallbackInfo<Value> &info){
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
-    //Local<External> handler = External::New(isolate, address);//Local<External>::Cast(thisArg->GetInternalField(0));
+    Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
 
     if (info.Length() != 2) {
         isolate->ThrowException(String::NewFromUtf8(isolate, "Storage.Set requires 2 arguments"));
@@ -92,7 +89,7 @@ void storageSetCallback(const FunctionCallbackInfo<Value> &info){
         return;
     }
 
-    int ret = sSet(NULL, *String::Utf8Value(isolate, key),*String::Utf8Value(isolate, value));
+    int ret = sSet(handler->Value(), *String::Utf8Value(isolate, key),*String::Utf8Value(isolate, value));
 
     info.GetReturnValue().Set(ret);
 }
@@ -101,7 +98,7 @@ void storageSetCallback(const FunctionCallbackInfo<Value> &info){
 void storageDelCallback(const FunctionCallbackInfo<Value> &info){
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
-    //Local<External> handler = NULL;//Local<External>::Cast(thisArg->GetInternalField(0));
+    Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
 
     if (info.Length() != 1) {
         isolate->ThrowException(String::NewFromUtf8(isolate, "Storage.Del requires 1 arguments"));
@@ -114,7 +111,7 @@ void storageDelCallback(const FunctionCallbackInfo<Value> &info){
             String::NewFromUtf8(isolate, "key must be string"));
         return;
     }
-    int ret = sDel(NULL, *String::Utf8Value(isolate, key));
+    int ret = sDel(handler->Value(), *String::Utf8Value(isolate, key));
 
     info.GetReturnValue().Set(ret);
 }

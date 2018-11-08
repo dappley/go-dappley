@@ -26,12 +26,13 @@ var (
 
 //export StorageGetFunc
 func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char{
-	engine := getV8EngineByAddress(uint64(uintptr(address)))
+	addr := uint64(uintptr(address))
+	engine := getV8EngineByAddress(addr)
 	goKey := C.GoString(key)
 
 	if engine == nil{
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: address,
+			"contractAddr"		: addr,
 			"key"	  			: goKey,
 		}).Debug("Smart Contract: Failed to get storage handler!")
 		return nil
@@ -40,7 +41,7 @@ func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char{
 	val := engine.storage[goKey]
 	if val == "" {
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: address,
+			"contractAddr"		: addr,
 			"key"	  			: goKey,
 		}).Debug("Smart Contract: Failed to get value from storage")
 		return nil
@@ -51,13 +52,14 @@ func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char{
 
 //export StorageSetFunc
 func StorageSetFunc(address unsafe.Pointer, key,value *C.char) int{
-	engine := getV8EngineByAddress(uint64(uintptr(address)))
+	addr := uint64(uintptr(address))
+	engine := getV8EngineByAddress(addr)
 	goKey := C.GoString(key)
 	goVal := C.GoString(value)
 
 	if engine == nil{
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: address,
+			"contractAddr"		: addr,
 			"key"	  			: goKey,
 		}).Debug("Smart Contract: Failed to get storage handler!")
 		return 1
@@ -69,17 +71,17 @@ func StorageSetFunc(address unsafe.Pointer, key,value *C.char) int{
 
 //export StorageDelFunc
 func StorageDelFunc(address unsafe.Pointer, key *C.char) int{
-	engine := getV8EngineByAddress(uint64(uintptr(address)))
+	addr := uint64(uintptr(address))
+	engine := getV8EngineByAddress(addr)
 	goKey := C.GoString(key)
 
 	if engine == nil{
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: address,
+			"contractAddr"		: addr,
 			"key"	  			: goKey,
 		}).Debug("Smart Contract: Failed to get storage handler!")
 		return 1
 	}
-
 	delete(engine.storage, goKey)
 	return 0
 }
