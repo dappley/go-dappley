@@ -26,11 +26,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jinzhu/copier"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/jinzhu/copier"
+	logger "github.com/sirupsen/logrus"
 )
 
 const utxoMapKey = "utxo"
@@ -44,8 +43,8 @@ type UTXOIndex struct {
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
 	TXOutput
-	Txid       []byte
-	TxIndex    int
+	Txid    []byte
+	TxIndex int
 }
 
 // NewUTXOIndex initializes an UTXOIndex instance
@@ -169,8 +168,8 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) error{
-	err:=errors.New("")
+func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) error {
+	err := errors.New("")
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := utxos.DeepCopy()
 	for _, tx := range txs {
@@ -270,6 +269,7 @@ func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
+
 //creates a deepcopy of the receiver object
 func (utxos UTXOIndex) DeepCopy() UTXOIndex {
 	utxos.mutex.RLock()
