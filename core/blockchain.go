@@ -358,6 +358,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
 		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
+		return
 	}
 
 	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {

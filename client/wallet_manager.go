@@ -22,6 +22,12 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
@@ -29,11 +35,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-	"path/filepath"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -70,9 +71,9 @@ func GetWalletFilePath() string {
 	if Exists(walletPath) {
 		walletfile, err = filepath.Abs(conf.GetFilePath())
 	} else if Exists(strings.Replace(walletPath, "..", "../..", 1)) {
-		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(),"..", "../..", 1))
+		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
 	}
-	if err != nil && err.Error() == ""{
+	if err != nil && err.Error() == "" {
 		return walletfile
 	}
 	return walletfile
@@ -94,7 +95,6 @@ func Exists(path string) bool {
 	}
 	return true
 }
-
 
 func (wm *WalletManager) NewTimer(timeout time.Duration) {
 	wm.timer = *time.NewTimer(timeout)
@@ -130,7 +130,7 @@ func (wm *WalletManager) LoadFromFile() error {
 	return nil
 }
 
-func (wm *WalletManager) IsFileEmpty() (bool, error) {
+func (wm WalletManager) IsFileEmpty() (bool, error) {
 	fileContent, err := wm.fileLoader.ReadFromFile()
 	if err != nil {
 		return true, err
@@ -140,7 +140,7 @@ func (wm *WalletManager) IsFileEmpty() (bool, error) {
 }
 
 // SaveToFile saves Wallets to a file
-func (wm *WalletManager) SaveWalletToFile() {
+func (wm WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
 	wm.mutex.Lock()
 	defer wm.mutex.Unlock()
@@ -173,7 +173,7 @@ func (wm *WalletManager) AddWallet(wallet *Wallet) {
 	wm.mutex.Unlock()
 }
 
-func (wm *WalletManager) GetAddresses() []core.Address {
+func (wm WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
 	wm.mutex.Lock()
@@ -202,7 +202,7 @@ func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, 
 	return addresses, nil
 }
 
-func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {
+func (wm WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {
 
 	wallet := wm.GetWalletByAddress(address)
 	if wallet == nil {
@@ -212,7 +212,7 @@ func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair
 
 }
 
-func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
+func (wm WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 	wm.mutex.Lock()
 	defer wm.mutex.Unlock()
 
@@ -224,7 +224,7 @@ func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 	return nil
 }
 
-func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
+func (wm WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err == nil {
 		wallet := wm.GetWalletByAddress(address)

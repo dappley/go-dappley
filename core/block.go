@@ -51,29 +51,7 @@ type Block struct {
 type Hash []byte
 
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
-
-	var prevHash []byte
-	var height uint64
-	height = 1
-	if parent != nil {
-		prevHash = parent.GetHash()
-		height = parent.GetHeight() + 1
-	}
-
-	if transactions == nil {
-		transactions = []*Transaction{}
-	}
-	return &Block{
-		header: &BlockHeader{
-			hash:      []byte{},
-			prevHash:  prevHash,
-			nonce:     0,
-			timestamp: time.Now().Unix(),
-			sign:      nil,
-			height:    height,
-		},
-		transactions: transactions,
-	}
+	return NewBlockWithTimestamp(transactions, parent, time.Now().Unix())
 }
 
 func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp int64) *Block {
@@ -256,7 +234,7 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 }
 
 func (b *Block) CalculateHash() Hash {
-	return b.CalculateHashWithoutNonce()
+	return b.CalculateHashWithNonce(b.GetNonce())
 }
 
 func (b *Block) CalculateHashWithoutNonce() Hash {

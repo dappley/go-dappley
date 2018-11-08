@@ -21,9 +21,8 @@ package consensus
 import (
 	"errors"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 type Dynasty struct {

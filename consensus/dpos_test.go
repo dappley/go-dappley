@@ -32,7 +32,7 @@ import (
 func TestNewDpos(t *testing.T) {
 	dpos := NewDPOS()
 	assert.Equal(t, 1, cap(dpos.newBlockCh))
-	assert.Equal(t, 1, cap(dpos.quitCh))
+	assert.Equal(t, 1, cap(dpos.stopCh))
 	assert.Nil(t, dpos.node)
 }
 
@@ -46,16 +46,6 @@ func TestDpos_Setup(t *testing.T) {
 
 	assert.Equal(t, bc, dpos.bc)
 	assert.Equal(t, node, dpos.node)
-}
-
-func TestDpos_Stop(t *testing.T) {
-	dpos := NewDPOS()
-	dpos.Stop()
-	select {
-	case <-dpos.quitCh:
-	default:
-		t.Error("Failed!")
-	}
 }
 
 func TestDpos_beneficiaryIsProducer(t *testing.T) {

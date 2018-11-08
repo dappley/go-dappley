@@ -76,19 +76,15 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	}
 }
 
-func (txPool *TransactionPool) ValidTxs(utxoTemp UTXOIndex) []*Transaction {
-	var sortedTransactions []*Transaction
+func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
+	var validTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
 		tx := txPool.PopRight()
-		if verifyAndUpdateUtxo(utxoTemp, tx) {
-			sortedTransactions = append(sortedTransactions, &tx)
+		if tx.Verify(&utxoIndex, 0) {
+			validTransactions = append(validTransactions, &tx)
 		}
 	}
-	return sortedTransactions
-}
-
-func verifyAndUpdateUtxo(utxoTemp UTXOIndex, tx Transaction) bool {
-	return tx.Verify(&utxoTemp, 0) && utxoTemp.UpdateUtxo(&tx)
+	return validTransactions
 }
 
 func (txPool *TransactionPool) PopRight() Transaction {

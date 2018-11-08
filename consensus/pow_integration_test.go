@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 }
 
 //mine multiple transactions
-func TestMiner_SingleValidTx(t *testing.T) {
+func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//create new wallet
 	wallets := &client.WalletManager{}
@@ -111,7 +111,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 }
 
 //mine empty blocks
-func TestMiner_MineEmptyBlock(t *testing.T) {
+func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//create new wallet
 	walletManager := &client.WalletManager{}
@@ -157,7 +157,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 }
 
 //mine multiple transactions
-func TestMiner_MultipleValidTx(t *testing.T) {
+func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//create new wallet
 	wallets := &client.WalletManager{}
@@ -343,7 +343,7 @@ func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
 }
 
 //TODO: test mining with invalid transactions
-func TestMiner_InvalidTransactions(t *testing.T) {
+func TestBlockProducer_InvalidTransactions(t *testing.T) {
 
 }
 
