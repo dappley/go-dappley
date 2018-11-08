@@ -1,6 +1,7 @@
 package sc
 
 import (
+	"github.com/sirupsen/logrus"
 	"testing"
 )
 
@@ -27,7 +28,8 @@ var addrChecker = new AddrChecker;
 	sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
 }
 
-func TestScEngine_Storage(t *testing.T) {
+func TestScEngine_StorageGet(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
 	script:=
 		`'use strict';
 
@@ -50,5 +52,63 @@ var storageTest = new StorageTest;
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
+	sc.Execute("get","\"key\"")
+}
+
+func TestScEngine_StorageSet(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script:=
+		`'use strict';
+
+var StorageTest = function(){
+	
+};
+
+StorageTest.prototype = {
+	set:function(key,value){
+    	return LocalStorage.set(key,value);
+    },
+	get:function(key){
+    	return LocalStorage.get(key);
+    }
+};
+var storageTest = new StorageTest;
+`
+	ss := make(map[string]string)
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	sc.ImportLocalStorage(ss)
+	sc.Execute("set","\"key\",6")
+	sc.Execute("get","\"key\"")
+}
+
+func TestScEngine_StorageDel(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script:=
+		`'use strict';
+
+var StorageTest = function(){
+	
+};
+
+StorageTest.prototype = {
+	set:function(key,value){
+    	return LocalStorage.set(key,value);
+    },
+	get:function(key){
+    	return LocalStorage.get(key);
+    },
+	del:function(key){
+    	return LocalStorage.del(key);
+    }
+};
+var storageTest = new StorageTest;
+`
+	ss := make(map[string]string)
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	sc.ImportLocalStorage(ss)
+	sc.Execute("set","\"key\",6")
+	sc.Execute("del","\"key\"")
 	sc.Execute("get","\"key\"")
 }
