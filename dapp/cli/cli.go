@@ -431,14 +431,13 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		return
 	}
 
-	getBalanceRequest := rpcpb.GetBalanceRequest{}
 	address := *(flags[flagAddress].(*string))
 	if core.NewAddress(address).ValidateAddress() == false {
 		fmt.Println("Error: Get balance failed: the address is not valid")
 		return
 	}
 
-	getBalanceRequest = rpcpb.GetBalanceRequest{}
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
 	getBalanceRequest.Name = "getBalance"
 	getBalanceRequest.Address = address
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)

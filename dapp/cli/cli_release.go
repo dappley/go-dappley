@@ -391,98 +391,28 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		return
 	}
 
-	passphrase := ""
-	prompter := util.NewTerminalPrompter()
-	getBalanceRequest := rpcpb.GetBalanceRequest{}
-
-	empty, err := logic.IsWalletEmpty()
-	if err != nil {
-		fmt.Printf("Error: Get balance failed. %v \n", err.Error())
-		return
-	}
-	if empty {
-		fmt.Println("Please use cli createWallet to generate a wallet first!")
-		return
-	}
-
-	locked, err := logic.IsWalletLocked()
-	if err != nil {
-		fmt.Printf("Error: Get balance failed. %v \n", err.Error())
-		return
-	}
-
-	fl := storage.NewFileLoader(clientpkg.GetWalletFilePath())
-	wm := clientpkg.NewWalletManager(fl)
-	err = wm.LoadFromFile()
-	if err != nil {
-		fmt.Printf("Error: Get balance failed. %v \n", err.Error())
-		return
-	}
-
 	address := *(flags[flagAddress].(*string))
 	if core.NewAddress(address).ValidateAddress() == false {
 		fmt.Println("Error: Get balance failed: the address is not valid")
 		return
 	}
 
-	if locked {
-		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-		if passphrase == "" {
-			fmt.Println("Password Empty!")
-			return
-		}
-		wallet, err := wm.GetWalletByAddressWithPassphrase(core.NewAddress(address), passphrase)
-		if err != nil {
+	getBalanceRequest := rpcpb.GetBalanceRequest{}
+	getBalanceRequest.Name = "getBalance"
+	getBalanceRequest.Address = address
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	if err != nil {
+		if strings.Contains(err.Error(), "connection error") {
+			fmt.Println("Error: Get balance failed. The server is not reachable!")
+		} else {
 			fmt.Printf("Error: Get balance failed. %v \n", err.Error())
-			return
 		}
-
-		getBalanceRequest = rpcpb.GetBalanceRequest{}
-		getBalanceRequest.Name = "getBalance"
-		getBalanceRequest.Address = wallet.GetAddress().Address
-		response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
-		if err != nil {
-			if strings.Contains(err.Error(), "connection error") {
-				fmt.Println("Error: Get balance failed. The server is not reachable!")
-			} else {
-				fmt.Printf("Error: Get balance failed. %v \n", err.Error())
-			}
-			return
-		}
-		if response.Message == "Succeed" {
-			fmt.Printf("The balance is: %d\n", response.Amount)
-		} else {
-			fmt.Println(response.Message)
-		}
-		//unlock the wallet
-		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
-			Name: "unlock",
-		})
 		return
+	}
+	if response.Message == "Succeed" {
+		fmt.Printf("The balance is: %d\n", response.Amount)
 	} else {
-		wallet := wm.GetWalletByAddress(core.NewAddress(address))
-		if wallet == nil {
-			fmt.Println("Error: Get balance failed. Address not found in the wallets!")
-			return
-		}
-		getBalanceRequest = rpcpb.GetBalanceRequest{}
-		getBalanceRequest.Name = "getBalance"
-		getBalanceRequest.Address = wallet.GetAddress().Address
-		response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
-		if err != nil {
-			if strings.Contains(err.Error(), "connection error") {
-				fmt.Println("Error: Get balance failed. The server is not reachable!")
-			} else {
-				fmt.Printf("Error: Get balance failed. %v \n", err.Error())
-			}
-			return
-		}
-		if response.Message == "Succeed" {
-			fmt.Printf("The balance is: %d\n", response.Amount)
-		} else {
-			fmt.Println(response.Message)
-		}
-		return
+		fmt.Println(response.Message)
 	}
 }
 
