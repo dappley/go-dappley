@@ -367,7 +367,7 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEng
 	if isContract,_:=vout.PubKeyHash.IsContract(); isContract {
 		utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
 		//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
-		//is a smart contract deployment transaction, not a smart contract call transaction.
+		//is a smart contract deployment transaction, not a smart contract execution transaction.
 		if len(utxos) != 0{
 			function, args := util.DecodeScInput(vout.Contract)
 			totalArgs := util.PrepareArgs(args)

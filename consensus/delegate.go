@@ -127,22 +127,36 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	validTxs := d.bc.GetTxPool().ValidTxns(func(tx core.Transaction) bool {
 		return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
 	})
+
+	cbtx := d.calculateTips(validTxs)
+	d.executeSmartContract(validTxs)
+	validTxs = append(validTxs, cbtx)
+
+	//prepare the new block
+	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
+}
+
+func (d *Delegate) calculateTips(txs []*core.Transaction) *core.Transaction{
 	//calculate tips
 	totalTips := common.NewAmount(0)
+	for _, tx := range txs {
+		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+	}
+	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1, totalTips)
+	return &cbtx
+}
+
+//executeSmartContract executes all smart contracts
+func (d *Delegate) executeSmartContract(txs []*core.Transaction){
+	//start a new smart contract engine
 	utxoIndex := core.LoadUTXOIndex(d.bc.GetDb())
 	scStorage := core.NewScState()
 	scStorage.LoadFromDatabase(d.bc.GetDb())
 	engine := sc.NewV8Engine()
-	for _, tx := range validTxs {
-		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+	for _, tx := range txs {
 		tx.Execute(utxoIndex, scStorage, engine)
 	}
-	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(d.beneficiary, "", d.bc.GetMaxHeight()+1, totalTips)
-	validTxs = append(validTxs, &cbtx)
-
-	//prepare the new block
-	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
+	scStorage.SaveToDatabase(d.bc.GetDb())
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement

@@ -149,24 +149,36 @@ func (miner *Miner) prepareBlock() *NewBlock {
 		return tx.Verify(&utxoTemp, 0) && utxoTemp.ApplyTransaction(&tx) == nil
 	})
 
-	//calculate tips
-	totalTips := common.NewAmount(0)
-	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
-	scStorage := core.NewScState()
-	scStorage.LoadFromDatabase(miner.bc.GetDb())
-	engine := sc.NewV8Engine()
-	for _, tx := range validTxs {
-		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
-		tx.Execute(utxoIndex, scStorage, engine)
-	}
-
-	//add coinbase transaction to transaction pool
-	cbtx := core.NewCoinbaseTX(miner.beneficiary, "", miner.bc.GetMaxHeight()+1, totalTips)
-	validTxs = append(validTxs, &cbtx)
+	cbtx := miner.calculateTips(validTxs)
+	miner.executeSmartContract(validTxs)
+	validTxs = append(validTxs, cbtx)
 
 	miner.nonce = 0
 	//prepare the new block (without the correct nonce value)
 	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
+}
+
+func (miner *Miner) calculateTips(txs []*core.Transaction) *core.Transaction{
+	//calculate tips
+	totalTips := common.NewAmount(0)
+	for _, tx := range txs {
+		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+	}
+	cbtx := core.NewCoinbaseTX(miner.beneficiary, "", miner.bc.GetMaxHeight()+1, totalTips)
+	return &cbtx
+}
+
+//executeSmartContract executes all smart contracts
+func (miner *Miner) executeSmartContract(txs []*core.Transaction){
+	//start a new smart contract engine
+	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
+	scStorage := core.NewScState()
+	scStorage.LoadFromDatabase(miner.bc.GetDb())
+	engine := sc.NewV8Engine()
+	for _, tx := range txs {
+		tx.Execute(utxoIndex, scStorage, engine)
+	}
+	scStorage.SaveToDatabase(miner.bc.GetDb())
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
