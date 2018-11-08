@@ -84,7 +84,7 @@ func (s *Slice) Del(val interface{}) {
 	}
 }
 
-func (s *Slice) Get() []interface{} {
+func (s Slice) Get() []interface{} {
 	return s.content
 }
 func (s *Slice) Set(slice []interface{}) {
@@ -99,7 +99,7 @@ func (s *Slice) AddSliceSlice(slice []interface{}) []interface{} {
 	s.content = append(s.content, slice...)
 	return s.content
 }
-func (s *Slice) GetSliceCmp() Cmp {
+func (s Slice) GetSliceCmp() Cmp {
 	return s.cmp
 }
 
@@ -126,7 +126,7 @@ func (s *Slice) PopRight() interface{} {
 // Del the given value
 
 // Index return the value at the given value
-func (s *Slice) Index(index int) interface{} {
+func (s Slice) Index(index int) interface{} {
 	if s.Len() > index {
 		return s.content[index]
 	}
@@ -134,12 +134,12 @@ func (s *Slice) Index(index int) interface{} {
 }
 
 // Len return the length of slice
-func (s *Slice) Len() int {
+func (s Slice) Len() int {
 	return len(s.content)
 }
 
 // Left return the min value, not pop out
-func (s *Slice) Left() interface{} {
+func (s Slice) Left() interface{} {
 	if s.Len() > 0 {
 		return s.content[0]
 	}
@@ -147,7 +147,7 @@ func (s *Slice) Left() interface{} {
 }
 
 // Right return the max value, not pop out
-func (s *Slice) Right() interface{} {
+func (s Slice) Right() interface{} {
 	if s.Len() > 0 {
 		return s.content[len(s.content)-1]
 	}
