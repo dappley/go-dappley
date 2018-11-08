@@ -19,10 +19,10 @@ func NewScState() *ScState{
 	return &ScState{make(map[string]map[string]string), &sync.RWMutex{}}
 }
 
-func deserializeScState(d []byte) *ScState {
-	scState := NewScState()
+func deserializeScState(d []byte) map[string]map[string]string {
+	scState := make(map[string]map[string]string)
 	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&scState.states)
+	err := decoder.Decode(&scState)
 	if err != nil {
 		logger.Panic("Failed to deserialize utxo states:", err)
 	}
@@ -74,7 +74,8 @@ func (ss *ScState) Del(pubKeyHash, key string) int{
 //Get deletes an item in scStorage
 func (ss *ScState) GetStorageByAddress(address string) map[string]string{
 	if len(ss.states[address]) == 0 {
-		return nil
+		//initializes the map with dummy data
+		ss.states[address] = map[string]string{"init":"i"}
 	}
 	return ss.states[address]
 }
@@ -86,7 +87,7 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage){
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
 		return
 	}
-	ss = deserializeScState(rawBytes)
+	ss.states = deserializeScState(rawBytes)
 }
 
 //SaveToDatabase saves states to database

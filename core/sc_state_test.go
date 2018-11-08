@@ -12,7 +12,8 @@ func TestScState_Serialize(t *testing.T) {
 	ls["key1"] = "value1"
 	ss.states["addr1"] = ls
 	rawBytes := ss.serialize()
-	ssRet := deserializeScState(rawBytes)
+	ssRet := NewScState()
+	ssRet.states = deserializeScState(rawBytes)
 	assert.Equal(t,ss.states,ssRet.states)
 }
 
