@@ -434,11 +434,11 @@ func TestForkChoice(t *testing.T) {
 	nodes[0].BroadcastBlock(blk1)
 	//make sure syncing starts
 	core.WaitDoneOrTimeout(func() bool {
-		return (bcs[1].GetBlockPool().GetSyncState() != 0)
+		return bcs[1].GetBlockPool().GetSyncState()
 	}, 2)
 	//make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState() == 0
+		return !bcs[1].GetBlockPool().GetSyncState()
 	}, 2)
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
@@ -490,18 +490,18 @@ func TestForkSegmentHandling(t *testing.T) {
 	nodes[0].BroadcastBlock(blk1)
 	//wait for node1 to start syncing
 	core.WaitDoneOrTimeout(func() bool {
-		return (bcs[1].GetBlockPool().GetSyncState() != 0)
+		return bcs[1].GetBlockPool().GetSyncState()
 	}, 2)
 
 	//while node1 is syncing, node0 broadcast higher block on the same fork
 	nodes[0].BroadcastBlock(blk2)
 	//make sure syncing begins
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState() != 0
+		return bcs[1].GetBlockPool().GetSyncState()
 	}, 2)
 	//make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState() == 0
+		return !bcs[1].GetBlockPool().GetSyncState()
 	}, 2)
 	//merge should be successful and both nodes should have the same blockchain
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))

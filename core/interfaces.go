@@ -52,8 +52,8 @@ type BlockPoolInterface interface {
 	SetBlockchain(bc *Blockchain)
 	BlockRequestCh() chan BlockRequestPars
 	GetBlockchain() *Blockchain
-	GetSyncState() int
-	SetSyncState(int)
+	GetSyncState() bool
+	SetSyncState(bool)
 	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
 	Push(block *Block, pid peer.ID)
 }
