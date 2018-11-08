@@ -504,7 +504,7 @@ func TestForkSegmentHandling(t *testing.T) {
 		return bcs[1].GetBlockPool().GetSyncState() == 0
 	}, 2)
 	//merge should be successful and both nodes should have the same blockchain
-	assert.False(t, isSameBlockChain(bcs[0], bcs[1]))
+	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 
 // Integration test for adding balance
