@@ -439,7 +439,7 @@ func TestTransaction_Execute(t *testing.T) {
 				index.addUTXO(scUtxo.TXOutput,nil,0)
 			}
 
-			tx.Execute(index,&sc)
+			tx.Execute(index, nil, &sc)
 		})
 	}
 }

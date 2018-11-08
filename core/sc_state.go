@@ -8,21 +8,15 @@ import (
 	"sync"
 )
 
-type ScLocalStorage map[string]string
-
 type ScState struct{
-	states map[string]ScLocalStorage
+	states map[string]map[string]string
 	mutex *sync.RWMutex
 }
 
 const scStateMapKey = "scState"
 
-func NewScLocalStorage() ScLocalStorage{
-	return make(map[string]string)
-}
-
 func NewScState() *ScState{
-	return &ScState{make(map[string]ScLocalStorage), &sync.RWMutex{}}
+	return &ScState{make(map[string]map[string]string), &sync.RWMutex{}}
 }
 
 func deserializeScState(d []byte) *ScState {
@@ -57,7 +51,7 @@ func (ss *ScState) Get(pubKeyHash, key string) string{
 //Set deletes an item in scStorage
 func (ss *ScState) Set(pubKeyHash, key, value string) int{
 	if len(ss.states[pubKeyHash]) == 0 {
-		ls := NewScLocalStorage()
+		ls := make(map[string]string)
 		ss.states[pubKeyHash] = ls
 	}
 	ss.states[pubKeyHash][key] = value
@@ -75,6 +69,14 @@ func (ss *ScState) Del(pubKeyHash, key string) int{
 
 	delete(ss.states[pubKeyHash],key)
 	return 0
+}
+
+//Get deletes an item in scStorage
+func (ss *ScState) GetStorageByAddress(address string) map[string]string{
+	if len(ss.states[address]) == 0 {
+		return nil
+	}
+	return ss.states[address]
 }
 
 //LoadFromDatabase loads states from database

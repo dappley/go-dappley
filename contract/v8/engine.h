@@ -6,9 +6,9 @@
 extern "C" {
 #endif
     typedef bool (*FuncVerifyAddress)(const char *address);
-    typedef char* (*FuncStorageGet)(const char *key);
-    typedef int (*FuncStorageSet)(const char *key, const char *value);
-    typedef int (*FuncStorageDel)(const char *key);
+    typedef char* (*FuncStorageGet)(void *address, const char *key);
+    typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
+    typedef int (*FuncStorageDel)(void *address, const char *key);
 
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler) ;

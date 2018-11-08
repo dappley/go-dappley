@@ -152,10 +152,12 @@ func (miner *Miner) prepareBlock() *NewBlock {
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
+	scStorage := core.NewScState()
+	scStorage.LoadFromDatabase(miner.bc.GetDb())
 	engine := sc.NewV8Engine()
 	for _, tx := range validTxs {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
-		tx.Execute(utxoIndex, engine)
+		tx.Execute(utxoIndex, scStorage, engine)
 	}
 
 	//add coinbase transaction to transaction pool

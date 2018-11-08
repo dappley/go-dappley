@@ -362,7 +362,7 @@ func (tx *Transaction) GetContract() string{
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
+func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) {
 	vout := tx.Vout[ContractTxouputIndex]
 	if isContract,_:=vout.PubKeyHash.IsContract(); isContract {
 		utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
@@ -371,14 +371,16 @@ func (tx *Transaction) Execute(index UTXOIndex, sc ScEngine) {
 		if len(utxos) != 0{
 			function, args := util.DecodeScInput(vout.Contract)
 			totalArgs := util.PrepareArgs(args)
+			address := utxos[0].PubKeyHash.GenerateAddress().String()
 			logger.WithFields(logger.Fields{
-				"contractAddr"		: utxos[0].PubKeyHash.GenerateAddress().String(),
+				"contractAddr"		: address,
 				"contract"	  		: utxos[0].Contract,
 				"invokedFunction" 	: function,
 				"arguments"			: totalArgs,
 			}).Info("Executing smart contract...")
-			sc.ImportSourceCode(utxos[0].Contract)
-			sc.Execute(function, totalArgs)
+			engine.ImportSourceCode(utxos[0].Contract)
+			engine.ImportLocalStorage(scStorage.GetStorageByAddress(address))
+			engine.Execute(function, totalArgs)
 		}
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 func TestScState_Serialize(t *testing.T) {
 	ss := NewScState()
-	ls := NewScLocalStorage()
+	ls := make(map[string]string)
 	ls["key1"] = "value1"
 	ss.states["addr1"] = ls
 	rawBytes := ss.serialize()
@@ -18,7 +18,7 @@ func TestScState_Serialize(t *testing.T) {
 
 func TestScState_Get(t *testing.T) {
 	ss := NewScState()
-	ls := NewScLocalStorage()
+	ls := make(map[string]string)
 	ls["key1"] = "value1"
 	ss.states["addr1"] = ls
 	assert.Equal(t, "value1", ss.Get("addr1","key1"))
@@ -32,7 +32,7 @@ func TestScState_Set(t *testing.T) {
 
 func TestScState_Del(t *testing.T) {
 	ss := NewScState()
-	ls := NewScLocalStorage()
+	ls := make(map[string]string)
 	ls["key1"] = "value1"
 	ss.states["addr1"] = ls
 	ss.Del("addr1","key1")

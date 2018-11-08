@@ -24,13 +24,10 @@ void Initialize(){
 
 int executeV8Script(const char *sourceCode, uintptr_t handler) {
 
-
-
   // Create a new Isolate and make it the current one.
   Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(create_params);
-
 
   {
     Isolate::Scope isolate_scope(isolate);
@@ -46,7 +43,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
     Context::Scope context_scope(context);
 
     NewBlockchainInstance(isolate, context, (void *)handler);
-    NewStorageInstance(isolate, context);
+    NewStorageInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {

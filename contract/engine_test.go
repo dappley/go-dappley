@@ -45,8 +45,10 @@ StorageTest.prototype = {
 };
 var storageTest = new StorageTest;
 `
+	ss := make(map[string]string)
+	ss["key"]= "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.Execute("set","\"key\",5")
+	sc.ImportLocalStorage(ss)
 	sc.Execute("get","\"key\"")
 }

@@ -7,21 +7,30 @@ package sc
 //blockchain
 bool  Cgo_VerifyAddressFunc(const char *address);
 //storage
-char* Cgo_StorageGetFunc(const char *key);
-int   Cgo_StorageSetFunc(const char *key, const char *value);
-int   Cgo_StorageDelFunc(const char *key);
+char* Cgo_StorageGetFunc(void *address, const char *key);
+int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
+int   Cgo_StorageDelFunc(void *address, const char *key);
 */
 import "C"
 import (
+
 	"fmt"
-	"unsafe"
 	"sync"
+	"unsafe"
+
 )
 
-var v8once = sync.Once{}
+var (
+	v8once 			= sync.Once{}
+	v8EngineList 	= make(map[uint64]*V8Engine)
+	storagesMutex 	= sync.RWMutex{}
+	currHandler			= uint64(100)
+)
 
 type V8Engine struct{
-	source string
+	source  string
+	storage map[string]string
+	handler uint64
 }
 
 func InitializeV8Engine(){
@@ -35,13 +44,22 @@ func InitializeV8Engine(){
 //NewV8Engine generates a new V8Engine instance
 func NewV8Engine() *V8Engine {
 	v8once.Do(func(){InitializeV8Engine()})
-	return &V8Engine{
-		source: "",
+	engine := &V8Engine{
+		source:  "",
+		storage: make(map[string]string),
+		handler: currHandler,
 	}
+	currHandler++;
+	v8EngineList[engine.handler] = engine
+	return engine
 }
 
 func (sc *V8Engine) ImportSourceCode(source string){
 	sc.source = source
+}
+
+func (sc *V8Engine) ImportLocalStorage(storage map[string]string){
+	sc.storage = storage
 }
 
 func (sc *V8Engine) Execute(function, args string){
@@ -54,11 +72,16 @@ func (sc *V8Engine) Execute(function, args string){
 	cFunction := C.CString(functionCallScript)
 	defer C.free(unsafe.Pointer(cFunction))
 
-	handler := uint64(0)
-	C.executeV8Script(cFunction, C.uintptr_t(handler))
+	C.executeV8Script(cFunction, C.uintptr_t(sc.handler))
 }
 
 func prepareFuncCallScript(function, args string) string{
 	return fmt.Sprintf(`var instance = new _native_require();
 						instance["%s"].apply(instance, [%s]);`,function, args)
+}
+
+func getV8EngineByAddress(handler uint64) *V8Engine{
+	storagesMutex.Lock()
+	defer storagesMutex.Unlock()
+	return v8EngineList[handler]
 }

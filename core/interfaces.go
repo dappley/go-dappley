@@ -60,5 +60,6 @@ type BlockPoolInterface interface {
 
 type ScEngine interface{
 	ImportSourceCode(source string)
+	ImportLocalStorage(storage map[string]string)
 	Execute(function,args string)
 }

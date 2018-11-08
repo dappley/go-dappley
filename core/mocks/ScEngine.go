@@ -14,6 +14,11 @@ func (_m *ScEngine) Execute(function string, args string) {
 	_m.Called(function, args)
 }
 
+// ImportLocalStorage provides a mock function with given fields: storage
+func (_m *ScEngine) ImportLocalStorage(storage map[string]string) {
+	_m.Called(storage)
+}
+
 // ImportSourceCode provides a mock function with given fields: source
 func (_m *ScEngine) ImportSourceCode(source string) {
 	_m.Called(source)
