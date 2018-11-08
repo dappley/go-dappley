@@ -69,6 +69,7 @@ func (pow *ProofOfWork) SetKey(key string) {
 
 func (pow *ProofOfWork) Start() {
 	logger.Info("PoW starts...")
+	pow.resetStopCh()
 	go pow.mineBlocks()
 }
 
@@ -79,7 +80,6 @@ func (pow *ProofOfWork) Stop() {
 
 func (pow *ProofOfWork) mineBlocks() {
 	logger.Info("Mining starts")
-	pow.resetStopCh()
 	for {
 		select {
 		case <-pow.stopCh:
