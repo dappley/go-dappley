@@ -34,6 +34,4 @@ release:
 	cd dapp/cli; go build -tags=release
 
 deploy-v8:
-	sudo install contract/lib/libdappleyv8.so /usr/local/lib/
-	sudo /sbin/ldconfig
-	cd contract/v8; make build; make install
+	cd contract/v8; make install
