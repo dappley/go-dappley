@@ -67,7 +67,7 @@ func (bp *BlockProducer) prepareBlock() {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
-	validTxs := bp.bc.GetTxPool().GetValidTxs(utxoIndex)
+	validTxs := bp.bc.GetTxPool().GetValidTxs(*utxoIndex)
 
 	// update UTXO set
 	for i, tx := range validTxs {

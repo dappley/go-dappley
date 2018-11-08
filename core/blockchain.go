@@ -361,7 +361,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
-	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
+	if !bc.GetBlockPool().VerifyTransactions(*utxo, forkBlks) {
 		return
 	}
 
