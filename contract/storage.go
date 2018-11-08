@@ -3,6 +3,24 @@ import "C"
 import (
 	logger "github.com/sirupsen/logrus"
 	"unsafe"
+	"regexp"
+	"errors"
+)
+
+
+var (
+	// StorageKeyPattern the pattern of varible key stored in stateDB
+	/*
+		const fieldNameRe = /^[a-zA-Z_$][a-zA-Z0-9_]+$/;
+		var combineStorageMapKey = function (fieldName, key) {
+			return "@" + fieldName + "[" + key + "]";
+		};
+	*/
+	StorageKeyPattern = regexp.MustCompile("^@([a-zA-Z_$][a-zA-Z0-9_]+?)\\[(.*?)\\]$")
+	// DefaultDomainKey the default domain key
+	DefaultDomainKey = "_"
+	// ErrInvalidStorageKey invalid storage key error
+	ErrInvalidStorageKey = errors.New("invalid storage key")
 )
 
 
