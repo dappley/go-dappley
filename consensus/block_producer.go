@@ -70,9 +70,8 @@ func (bp *BlockProducer) prepareBlock() {
 	validTxs := bp.bc.GetTxPool().GetValidTxs(*utxoIndex)
 
 	// update UTXO set
-	for i, tx := range validTxs {
-		// remove transaction if utxo set cannot be updated
-		if !utxoIndex.UpdateUtxo(tx) {
+	for i:=0; i< len(validTxs); i++ {
+		if !utxoIndex.UpdateUtxo(validTxs[i]) {
 			validTxs = append(validTxs[:i], validTxs[i+1:]...)
 		}
 	}
