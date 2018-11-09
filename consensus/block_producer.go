@@ -51,8 +51,11 @@ func (bp *BlockProducer) ProduceBlock() *core.Block {
 	if bp.process != nil {
 		bp.process(bp.newBlock)
 	}
-	bp.idle = true
 	return bp.newBlock
+}
+
+func (bp *BlockProducer) BlockProduceFinish() {
+	bp.idle = true
 }
 
 func (bp *BlockProducer) IsIdle() bool {
