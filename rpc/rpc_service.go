@@ -243,3 +243,5 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 	<-quitCh
 	return nil
 }
+
+func (rpcService *RpcService) IsPrivate() bool {return false}

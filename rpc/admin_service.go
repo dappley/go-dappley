@@ -141,3 +141,5 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
 }
+
+func (adminRpcService *AdminRpcService) IsPrivate() bool {return true}
