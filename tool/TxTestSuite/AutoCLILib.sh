@@ -40,7 +40,6 @@ function reviewBalancesAndQuit()
 }
 
 function sendFromMiner(){
-
 	rand=${accList[$RANDOM % ${#accList[@]} ]}	
 	# miner gives some money
 	accRich[$counter]=$rand
@@ -61,6 +60,9 @@ function newTxBetweenLocalWallets(){
 function newTxToAnotherNode(){
 	from=$me
 	to=${accList[$RANDOM % ${#accList[@]} ]} 
+	while ["$from" == "$to"]:; do
+		to=${accList[$RANDOM % ${#accList[@]} ]}
+	done
 	amount=$((RANDOM%(addBalanceAmount+10)))
 	echo "sending $amount from $from to $to"
 	eval $cliPath  send -from $from -to $to -amount $amount
