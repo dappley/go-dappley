@@ -58,6 +58,10 @@ type BlockPoolInterface interface {
 	Push(block *Block, pid peer.ID)
 }
 
+type ScEngineManager interface{
+	CreateEngine() ScEngine
+}
+
 type ScEngine interface{
 	ImportSourceCode(source string)
 	ImportLocalStorage(storage map[string]string)
