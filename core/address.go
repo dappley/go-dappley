@@ -73,7 +73,7 @@ func (a Address) GetPubKeyHash() ([]byte, bool) {
 
 	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
 		return pubKeyHash, true
-	} else {
-		return nil, false
 	}
+	return nil, false
+
 }
