@@ -320,8 +320,8 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool {
 	return parentBlk.GetHeight() == childBlk.GetHeight()-1
 }
 
-func (parent *Block) IsParentBlock(child *Block) bool {
-	return IsParentBlockHash(parent, child) && IsParentBlockHeight(parent, child)
+func (b *Block) IsParentBlock(child *Block) bool {
+	return IsParentBlockHash(b, child) && IsParentBlockHeight(b, child)
 }
 
 func (b *Block) Rollback(txPool *TransactionPool) {

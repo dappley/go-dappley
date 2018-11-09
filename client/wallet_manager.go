@@ -54,6 +54,7 @@ type WalletData struct {
 	Locked     bool
 }
 
+//GetWalletFilePath return wallet file Path
 func GetWalletFilePath() string {
 	conf := &walletpb.WalletConfig{}
 	if Exists(walletConfigFilePath) {
@@ -139,7 +140,7 @@ func (wm *WalletManager) IsFileEmpty() (bool, error) {
 	}
 }
 
-// SaveToFile saves Wallets to a file
+// SaveWalletToFile saves Wallets to a file
 func (wm *WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
 	wm.mutex.Lock()

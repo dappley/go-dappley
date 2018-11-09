@@ -84,7 +84,7 @@ func makeBlockChainToSize(bc *core.Blockchain, size int, time int64, d *consensu
 }
 
 func generateBlock(bc *core.Blockchain, time int64, d *consensus.Dynasty, keys Keys) *core.Block {
-	producer := d.ProducerAtATime(time)
+	producer := core.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
 	tailBlk, _ := bc.GetTailBlock()
 	cbtx := core.NewCoinbaseTX(producer, "", bc.GetMaxHeight()+1, common.NewAmount(0))
@@ -110,9 +110,9 @@ func LoadPrivateKey() Keys {
 	return keys
 }
 
-func (k Keys) getPrivateKeyByAddress(address string) string {
+func (k Keys) getPrivateKeyByAddress(address core.Address) string {
 	for _, key := range k.Keys {
-		if key.Address == address {
+		if key.Address == address.Address {
 			return key.Key
 		}
 	}

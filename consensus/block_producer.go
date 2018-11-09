@@ -82,7 +82,7 @@ func (bp *BlockProducer) prepareBlock() {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
 	}
 
-	cbtx := core.NewCoinbaseTX(bp.beneficiary, "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := core.NewCoinbaseTX(core.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
 
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)
