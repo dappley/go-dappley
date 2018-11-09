@@ -42,6 +42,8 @@ func (ss *ScState) serialize() []byte {
 
 //Get deletes an item in scStorage
 func (ss *ScState) Get(pubKeyHash, key string) string{
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
 	if len(ss.states[pubKeyHash]) == 0 {
 		return ""
 	}
@@ -50,6 +52,9 @@ func (ss *ScState) Get(pubKeyHash, key string) string{
 
 //Set deletes an item in scStorage
 func (ss *ScState) Set(pubKeyHash, key, value string) int{
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
+
 	if len(ss.states[pubKeyHash]) == 0 {
 		ls := make(map[string]string)
 		ss.states[pubKeyHash] = ls
@@ -60,6 +65,8 @@ func (ss *ScState) Set(pubKeyHash, key, value string) int{
 
 //Del deletes an item in scStorage
 func (ss *ScState) Del(pubKeyHash, key string) int{
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
 	if len(ss.states[pubKeyHash]) == 0 {
 		return 1;
 	}
@@ -73,6 +80,8 @@ func (ss *ScState) Del(pubKeyHash, key string) int{
 
 //Get deletes an item in scStorage
 func (ss *ScState) GetStorageByAddress(address string) map[string]string{
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
 	if len(ss.states[address]) == 0 {
 		//initializes the map with dummy data
 		ss.states[address] = map[string]string{"init":"i"}
@@ -82,6 +91,8 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string{
 
 //LoadFromDatabase loads states from database
 func (ss *ScState) LoadFromDatabase(db storage.Storage){
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
 	rawBytes, err := db.Get([]byte(scStateMapKey))
 
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
@@ -93,4 +104,10 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage){
 //SaveToDatabase saves states to database
 func (ss *ScState) SaveToDatabase(db storage.Storage) error{
 	return db.Put([]byte(scStateMapKey), ss.serialize())
+}
+
+func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager){
+	for _,tx := range txs{
+		tx.Execute(index,ss,manager.CreateEngine())
+	}
 }

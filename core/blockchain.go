@@ -185,6 +185,13 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 		return err
 	}
 
+	if bc.scManager!= nil {
+		scState := NewScState()
+		scState.LoadFromDatabase(bcTemp.db)
+		scState.Update(block.GetTransactions(),utxoIndex,bc.scManager)
+		scState.SaveToDatabase(bcTemp.db)
+	}
+
 	err = bcTemp.AddBlockToDb(block)
 	if err != nil {
 		logger.WithFields(logger.Fields{
