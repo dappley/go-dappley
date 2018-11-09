@@ -12,17 +12,11 @@ accList[0]=$me
 accList[1]="dThUP369noDhMw5yUwDYTx29awu4SUSM4R"
 accList[2]="dJEuZE3T97MQA9ThK5PfHTwFUPS5HcejgS"
 
-counter=0
-#before next block is mined, send some money to addr from miner
-sendFromMiner
-while [ $counter -le $2 ]; do
+while :; do
+	# if block is mined, then miner has some money to send 
         if [ $bcHeight -lt $newBcHeight ]; then
 		date +"%m-%d-%Y %T"
-                if [ $counter -eq $2 ]; then
-                        reviewBalancesAndQuit
-                fi
-                ((counter++))
-                sendFromMiner
+		#send amount is random[0,20) for testing purposes
                 newTxToAnotherNode
                 bcHeight=$newBcHeight
         else
