@@ -43,7 +43,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128)
+	bc := CreateBlockchain(addr, s, nil, 128, nil)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -57,7 +57,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128)
+	bc := CreateBlockchain(addr, s, nil, 128, nil)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -70,7 +70,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128)
+	bc := CreateBlockchain(addr, s, nil, 128, nil)
 	tailblk,_:= bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
@@ -86,7 +86,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128)
+	bc := CreateBlockchain(addr, s, nil, 128, nil)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockToTail(blk)
@@ -139,7 +139,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, nil, nil}
+	bc := &Blockchain{Hash{}, db, nil, nil, nil, nil}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr.String())

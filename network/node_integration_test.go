@@ -42,7 +42,7 @@ const (
 
 func initNode(address string, port int, db storage.Storage) (*Node, error){
 	addr := core.Address{address}
-	bc := core.CreateBlockchain(addr ,db,nil, 128)
+	bc := core.CreateBlockchain(addr ,db,nil, 128, nil)
 	n := NewNode(bc)
 	err := n.Start(port)
 	return n, err

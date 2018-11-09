@@ -282,7 +282,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil)
 		bcs = append(bcs, bc)
 		node := network.NewNode(bc)
 		node.Start(testport_msg_relay_port + i)
@@ -349,7 +349,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil)
 		bcs = append(bcs, bc)
 
 		node := network.NewNode(bc)
@@ -542,7 +542,7 @@ func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchai
 
 func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
 	pow := consensus.NewProofOfWork()
-	return core.CreateBlockchain(addr, db, pow, 128), pow
+	return core.CreateBlockchain(addr, db, pow, 128, nil), pow
 }
 func TestDoubleMint(t *testing.T) {
 	var sendNode *network.Node
@@ -570,7 +570,7 @@ func TestDoubleMint(t *testing.T) {
 
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128)
+		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128, nil)
 		node := network.NewNode(bc)
 		node.Start(testport_msg_relay_port + i)
 		if i == 0 {

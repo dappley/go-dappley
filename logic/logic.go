@@ -50,7 +50,7 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit)
+	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, nil)
 
 	return bc, nil
 }

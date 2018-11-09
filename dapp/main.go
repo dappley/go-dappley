@@ -71,7 +71,7 @@ func main() {
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit)
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, nil)
 	if err != nil {
 		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit)
 		if err != nil {

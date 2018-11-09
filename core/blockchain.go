@@ -49,10 +49,11 @@ type Blockchain struct {
 	blockPool     BlockPoolInterface
 	consensus     Consensus
 	txPool        *TransactionPool
+	scManager 	  ScEngineManager
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32) *Blockchain {
+func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager) *Blockchain {
 	genesis := NewGenesisBlock(address.String())
 	bc := &Blockchain{
 		genesis.GetHash(),
@@ -60,6 +61,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
 		NewTransactionPool(transactionPoolLimit),
+		scManager,
 	}
 	bc.blockPool.SetBlockchain(bc)
 	err := bc.AddBlockToTail(genesis)
@@ -69,7 +71,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -82,6 +84,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		NewBlockPool(BlockPoolMaxSize),
 		consensus,
 		NewTransactionPool(transactionPoolLimit), //TODO: Need to retrieve transaction pool from db
+		scManager,
 	}
 	bc.blockPool.SetBlockchain(bc)
 
@@ -260,7 +263,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil,nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

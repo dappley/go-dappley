@@ -36,6 +36,7 @@ func TestDelegate_Start(t *testing.T) {
 		storage.NewRamStorage(),
 		nil,
 		128,
+		nil,
 	)
 	retCh := make(chan *NewBlock, 0)
 	d.Setup(bc, cbAddr, retCh)

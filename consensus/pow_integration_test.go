@@ -64,7 +64,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
@@ -125,7 +125,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128)
+	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128, nil)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -174,7 +174,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
@@ -244,6 +244,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		storage.NewRamStorage(),
 		pow,
 		128,
+		nil,
 	)
 	defer bc.GetDb().Close()
 	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
@@ -297,7 +298,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()

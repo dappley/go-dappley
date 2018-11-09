@@ -55,6 +55,7 @@ func TestMiner_VerifyNonce(t *testing.T) {
 		storage.NewRamStorage(),
 		nil,
 		128,
+		nil,
 	)
 	defer bc.GetDb().Close()
 
@@ -118,6 +119,7 @@ func TestMiner_Start(t *testing.T) {
 		storage.NewRamStorage(),
 		nil,
 		128,
+		nil,
 	)
 	retCh := make(chan *NewBlock, 0)
 	miner.Setup(bc, cbAddr, retCh)
