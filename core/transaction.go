@@ -274,7 +274,7 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Transaction {
+func NewCoinbaseTX(to Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -463,7 +463,7 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 		toAddr = outputs[0].PubKeyHash.GenerateAddress()
 	}
 
-	outputs = append(outputs, *NewTXOutput(amount, toAddr.String()))
-	outputs = append(outputs, *NewTXOutput(change, from.String()))
+	outputs = append(outputs, *NewTXOutput(amount, toAddr))
+	outputs = append(outputs, *NewTXOutput(change, from))
 	return outputs
 }

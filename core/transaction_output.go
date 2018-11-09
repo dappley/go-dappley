@@ -33,27 +33,27 @@ type TXOutput struct {
 	Contract   string
 }
 
-func (out *TXOutput) Lock(address string) {
+func (out *TXOutput) Lock(address Address) {
 	out.PubKeyHash = PubKeyHash{HashAddress(address)}
 }
 
-func HashAddress(address string) []byte {
-	pubKeyHash := base58.Decode(address)
-	return pubKeyHash[: len(pubKeyHash)-4]
+func HashAddress(address Address) []byte {
+	pubKeyHash := base58.Decode(address.String())
+	return pubKeyHash[:len(pubKeyHash)-4]
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare(out.PubKeyHash.GetPubKeyHash(), pubKeyHash) == 0
 }
 
-func NewTXOutput(value *common.Amount, address string) *TXOutput {
-	txo := &TXOutput{value, PubKeyHash{},""}
+func NewTXOutput(value *common.Amount, address Address) *TXOutput {
+	txo := &TXOutput{value, PubKeyHash{}, ""}
 	txo.Lock(address)
 	return txo
 }
 
 func NewContractTXOutput(contract string) *TXOutput {
-	txo := &TXOutput{common.NewAmount(0), NewContractPubKeyHash(),contract}
+	txo := &TXOutput{common.NewAmount(0), NewContractPubKeyHash(), contract}
 	return txo
 }
 
@@ -61,7 +61,7 @@ func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),
 		PubKeyHash: out.PubKeyHash.GetPubKeyHash(),
-		Contract: 	out.Contract,
+		Contract:   out.Contract,
 	}
 }
 

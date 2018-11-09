@@ -52,7 +52,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32) *Blockchain {
-	genesis := NewGenesisBlock(address.String())
+	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
