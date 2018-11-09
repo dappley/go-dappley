@@ -102,7 +102,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128)
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -185,7 +185,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128)
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 128, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -635,7 +635,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	context.consensus = consensus.NewProofOfWork()
-	bc, err := logic.CreateBlockchain(wallet.GetAddress(), context.store, context.consensus, 128)
+	bc, err := logic.CreateBlockchain(wallet.GetAddress(), context.store, context.consensus, 128, nil)
 	if err != nil {
 		context.destroyContext()
 		panic(err)

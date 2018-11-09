@@ -172,7 +172,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr1, store, nil, 128)
+	bc, err := CreateBlockchain(addr1, store, nil, 128, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -215,7 +215,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr1, store, nil, 128)
+	bc, err := CreateBlockchain(addr1, store, nil, 128, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -266,8 +266,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	var nodes []*network.Node
 	var firstNode *network.Node
 
-	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
-	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
+	validProducerAddr := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
+	validProducerKey := "300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a"
 
 	producerAddrs := []string{}
 	producerKey := []string{}
@@ -332,8 +332,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 
 	var firstNode *network.Node
 
-	validProducerAddr := "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
-	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
+	validProducerAddr := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
+	validProducerKey := "300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a"
 
 	producerAddrs := []string{}
 	producerKey := []string{}
@@ -517,7 +517,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			// Create a coinbase wallet address
 			addr := core.Address{"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
 			// Create a blockchain
-			bc, err := CreateBlockchain(addr, store, nil, 128)
+			bc, err := CreateBlockchain(addr, store, nil, 128, nil)
 			assert.Nil(t, err)
 			err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc)
 			assert.Equal(t, ErrInvalidAddress, err)

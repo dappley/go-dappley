@@ -20,6 +20,7 @@ package logic
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/contract"
 	"time"
 
 	"github.com/dappley/go-dappley/client"
@@ -45,12 +46,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *sc.V8EngineManager) (*core.Blockchain, error) {
 	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, nil)
+	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, scManager)
 
 	return bc, nil
 }

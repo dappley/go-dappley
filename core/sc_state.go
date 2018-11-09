@@ -103,10 +103,14 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage){
 
 //SaveToDatabase saves states to database
 func (ss *ScState) SaveToDatabase(db storage.Storage) error{
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
 	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
 
 func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager){
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
 	for _,tx := range txs{
 		tx.Execute(index,ss,manager.CreateEngine())
 	}

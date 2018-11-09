@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/contract"
 
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
@@ -71,9 +72,10 @@ func main() {
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, nil)
+	scManager := sc.NewV8EngineManager()
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager)
 		if err != nil {
 			logger.Panic(err)
 		}

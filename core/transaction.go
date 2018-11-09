@@ -404,6 +404,7 @@ func (tx Transaction) String() string {
 		lines = append(lines, fmt.Sprintf("     Output %d:", i))
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
 		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash.GetPubKeyHash()))
+		lines = append(lines, fmt.Sprintf("       Contract: %s", output.Contract))
 	}
 	lines = append(lines, "\n")
 

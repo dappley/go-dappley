@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-
 	"github.com/jinzhu/copier"
 
 	"github.com/dappley/go-dappley/storage"
@@ -176,6 +175,14 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
+
+	if bc.scManager!= nil {
+		scState := NewScState()
+		scState.LoadFromDatabase(bcTemp.db)
+		scState.Update(block.GetTransactions(),utxoIndex,bc.scManager)
+		scState.SaveToDatabase(bcTemp.db)
+	}
+
 	_, err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -183,13 +190,6 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 			"hash":   hex.EncodeToString(block.GetHash()),
 		}).Error("Blockchain: Update UTXO index failed!")
 		return err
-	}
-
-	if bc.scManager!= nil {
-		scState := NewScState()
-		scState.LoadFromDatabase(bcTemp.db)
-		scState.Update(block.GetTransactions(),utxoIndex,bc.scManager)
-		scState.SaveToDatabase(bcTemp.db)
 	}
 
 	err = bcTemp.AddBlockToDb(block)
