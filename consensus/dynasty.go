@@ -113,13 +113,12 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 			logger.Debug(producerIt)
 		}
 		return nil
-	} else {
-		if !IsProducerAddressValid(producer) {
-			return errors.New("The address of producers not valid！")
-		} else {
-			return errors.New("The number of producers reaches the maximum！")
-		}
 	}
+	if !IsProducerAddressValid(producer) {
+		return errors.New("The address of producers not valid！")
+	}
+	return errors.New("The number of producers reaches the maximum！")
+
 }
 
 func (dynasty *Dynasty) GetProducers() []string {
