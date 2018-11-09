@@ -178,7 +178,6 @@ func (miner *Miner) executeSmartContract(txs []*core.Transaction){
 	for _, tx := range txs {
 		tx.Execute(utxoIndex, scStorage, engine)
 	}
-	scStorage.SaveToDatabase(miner.bc.GetDb())
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement

@@ -156,7 +156,6 @@ func (d *Delegate) executeSmartContract(txs []*core.Transaction){
 	for _, tx := range txs {
 		tx.Execute(utxoIndex, scStorage, engine)
 	}
-	scStorage.SaveToDatabase(d.bc.GetDb())
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement
