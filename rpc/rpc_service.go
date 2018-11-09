@@ -76,9 +76,9 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		getbalanceResp.Amount = amount.Int64()
 		getbalanceResp.Message = "Succeed"
 		return &getbalanceResp, nil
-	} else {
-		return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
 	}
+	return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
+
 }
 
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
@@ -244,4 +244,4 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 	return nil
 }
 
-func (rpcService *RpcService) IsPrivate() bool {return false}
+func (rpcService *RpcService) IsPrivate() bool { return false }
