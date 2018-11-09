@@ -302,10 +302,10 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 
 	//firstNode Starts Mining
 	dposArray[0].Start()
-	for bcs[0].GetMaxHeight() < 5 {
-
-	}
-
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() >= 5
+	}, 8)
+	dposArray[0].Stop()
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -379,6 +379,10 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	}
 
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
+
+	for i := 0; i < len(dposArray); i++ {
+		dposArray[i].Stop()
+	}
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -391,7 +395,6 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 }
 
 func TestForkChoice(t *testing.T) {
-
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -420,7 +423,7 @@ func TestForkChoice(t *testing.T) {
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 5
 	}, 5)
-	//start node1
+	//start node1 with delay
 	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 8
@@ -459,7 +462,7 @@ func TestForkSegmentHandling(t *testing.T) {
 
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
-		pow.SetTargetBit(16)
+		pow.SetTargetBit(18)
 		node.Start(testport_fork + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
