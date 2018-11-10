@@ -58,18 +58,16 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 			return &rpcpb.AddProducerResponse{
 				Message: "Add producer sucessfully!",
 			}, nil
-		} else {
-			return &rpcpb.AddProducerResponse{
-				Message: "Error: Add producer failed! " + err.Error(),
-			}, nil
 		}
-	} else {
 		return &rpcpb.AddProducerResponse{
-			Message: "Error: Command not recognized!",
+			Message: "Error: Add producer failed! " + err.Error(),
 		}, nil
-	}
 
-	return &rpcpb.AddProducerResponse{}, nil
+	}
+	return &rpcpb.AddProducerResponse{
+		Message: "Error: Command not recognized!",
+	}, nil
+
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -104,11 +102,10 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain())
 	if err != nil {
 		return &rpcpb.SendFromMinerResponse{Message: "Add balance failed, " + err.Error()}, nil
-	} else {
-		sendFromMinerResponse := rpcpb.SendFromMinerResponse{}
-		sendFromMinerResponse.Message = "Add balance succeed!"
-		return &sendFromMinerResponse, nil
 	}
+	sendFromMinerResponse := rpcpb.SendFromMinerResponse{}
+	sendFromMinerResponse.Message = "Add balance succeed!"
+	return &sendFromMinerResponse, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -142,4 +139,4 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
 }
 
-func (adminRpcService *AdminRpcService) IsPrivate() bool {return true}
+func (adminRpcService *AdminRpcService) IsPrivate() bool { return true }
