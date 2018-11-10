@@ -1,10 +1,11 @@
 package logic
 
 import (
+	"strings"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
-	"strings"
 )
 
 //get all addresses
@@ -30,10 +31,10 @@ func IsTestWalletEmpty() (bool, error) {
 		wm, _ := GetWalletManager(GetTestWalletPath())
 		if len(wm.Wallets) == 0 {
 			return true, nil
-		} else {
-			return wm.IsFileEmpty()
 		}
-	} else {
-		return true, nil
+		return wm.IsFileEmpty()
+
 	}
+	return true, nil
+
 }
