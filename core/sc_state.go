@@ -80,8 +80,6 @@ func (ss *ScState) Del(pubKeyHash, key string) int{
 
 //Get deletes an item in scStorage
 func (ss *ScState) GetStorageByAddress(address string) map[string]string{
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
 	if len(ss.states[address]) == 0 {
 		//initializes the map with dummy data
 		ss.states[address] = map[string]string{"init":"i"}
@@ -103,8 +101,6 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage){
 
 //SaveToDatabase saves states to database
 func (ss *ScState) SaveToDatabase(db storage.Storage) error{
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
 	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
 

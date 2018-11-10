@@ -370,17 +370,19 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEng
 		//is a smart contract deployment transaction, not a smart contract execution transaction.
 		if len(utxos) != 0{
 			function, args := util.DecodeScInput(vout.Contract)
-			totalArgs := util.PrepareArgs(args)
-			address := utxos[0].PubKeyHash.GenerateAddress().String()
-			logger.WithFields(logger.Fields{
-				"contractAddr"		: address,
-				"contract"	  		: utxos[0].Contract,
-				"invokedFunction" 	: function,
-				"arguments"			: totalArgs,
-			}).Info("Executing smart contract...")
-			engine.ImportSourceCode(utxos[0].Contract)
-			engine.ImportLocalStorage(scStorage.GetStorageByAddress(address))
-			engine.Execute(function, totalArgs)
+			if function != "" {
+				totalArgs := util.PrepareArgs(args)
+				address := utxos[0].PubKeyHash.GenerateAddress().String()
+				logger.WithFields(logger.Fields{
+					"contractAddr"		: address,
+					"contract"	  		: utxos[0].Contract,
+					"invokedFunction" 	: function,
+					"arguments"			: totalArgs,
+				}).Info("Executing smart contract...")
+				engine.ImportSourceCode(utxos[0].Contract)
+				engine.ImportLocalStorage(scStorage.GetStorageByAddress(address))
+				engine.Execute(function, totalArgs)
+			}
 		}
 	}
 }
