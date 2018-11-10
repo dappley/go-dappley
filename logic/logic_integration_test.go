@@ -36,6 +36,8 @@ import (
 const testport_msg_relay = 19999
 const testport_msg_relay_port = 21202
 const testport_fork = 10200
+const testport_fork_segment = 10201
+
 
 //test send
 func TestSend(t *testing.T) {
@@ -463,7 +465,7 @@ func TestForkSegmentHandling(t *testing.T) {
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
 		pow.SetTargetBit(18)
-		node.Start(testport_fork + i)
+		node.Start(testport_fork_segment + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 	}
@@ -473,35 +475,33 @@ func TestForkSegmentHandling(t *testing.T) {
 
 	//start node0 first
 	pows[0].Start()
-	//get node0's 10th blk
+	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 10
+		return bcs[0].GetMaxHeight() > 2
 	}, 5)
 	blk1, _ = bcs[0].GetTailBlock()
 	//start node1
-	pows[1].Start()
-	//get node0's 13th blk
+	pows[1].Stop()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 13
-	}, 5)
+		return bcs[0].GetMaxHeight() > 7
+	}, 2)
 	blk2, _ = bcs[0].GetTailBlock()
 
 	pows[0].Stop()
-	pows[1].Stop()
 
 	connectNodes(nodes[0], nodes[1])
 	nodes[0].BroadcastBlock(blk1)
-	//wait for node1 to start syncing
+	//wait for node1 to sync
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 4)
 
-	//while node1 is syncing, node0 broadcast higher block on the same fork
+	//node0 broadcast higher block on the same fork
 	nodes[0].BroadcastBlock(blk2)
 	//make sure syncing begins
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 5)
 	//make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
 		return !bcs[1].GetBlockPool().GetSyncState()
