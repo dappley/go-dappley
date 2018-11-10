@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	logger "github.com/sirupsen/logrus"
 )
 const quotationMark = "\""
@@ -59,7 +58,11 @@ func DecodeScInput(s string) (function string, args []string){
 	var input argStruct
 	err := json.Unmarshal([]byte(s),&input)
 	if err!= nil{
-		fmt.Println(err)
+		logger.WithFields(logger.Fields{
+			"input"				: s,
+			"decoded function"	: input.Function,
+			"decoded args" 		: input.Args,
+		}).Warn("Unable to decode smart contract input!")
 	}
 	return input.Function, input.Args
 }
