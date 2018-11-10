@@ -50,6 +50,8 @@ func NewV8Engine() *V8Engine {
 		handler: currHandler,
 	}
 	currHandler++;
+	storagesMutex.Lock()
+	defer storagesMutex.Unlock()
 	v8EngineList[engine.handler] = engine
 	return engine
 }
