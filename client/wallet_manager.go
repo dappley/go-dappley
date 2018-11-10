@@ -135,9 +135,9 @@ func (wm *WalletManager) IsFileEmpty() (bool, error) {
 	fileContent, err := wm.fileLoader.ReadFromFile()
 	if err != nil {
 		return true, err
-	} else {
-		return len(fileContent) == 0, nil
 	}
+	return len(fileContent) == 0, nil
+
 }
 
 // SaveWalletToFile saves Wallets to a file
@@ -231,12 +231,12 @@ func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, 
 		wallet := wm.GetWalletByAddress(address)
 		if wallet == nil {
 			return nil, errors.New("Address not found in the wallets!")
-		} else {
-			return wallet, nil
 		}
-	} else {
-		return nil, errors.New("Password does not match!")
+		return wallet, nil
+
 	}
+	return nil, errors.New("Password does not match!")
+
 }
 
 func (wm *WalletManager) SetUnlockTimer(timeout time.Duration) {
