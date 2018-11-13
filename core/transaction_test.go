@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"sync"
 )
 
 func getAoB(length int64) []byte {
@@ -168,11 +169,11 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, 0}
 
 	// test valid coinbase transaction
-	assert.True(t, t5.Verify(&UTXOIndex{}, 5))
-	assert.True(t, t6.Verify(&UTXOIndex{}, 5))
+	assert.True(t, t5.Verify(&UTXOIndex{}, NewTransactionPool(128), 5))
+	assert.True(t, t6.Verify(&UTXOIndex{}, NewTransactionPool(128), 5))
 
 	// test coinbase transaction with incorrect blockHeight
-	assert.False(t, t5.Verify(&UTXOIndex{}, 10))
+	assert.False(t, t5.Verify(&UTXOIndex{}, NewTransactionPool(128), 10))
 
 	// test coinbase transaction with incorrect subsidy
 	bh2 := make([]byte, 8)
@@ -180,7 +181,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
 	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, 0}
-	assert.False(t, t7.Verify(&UTXOIndex{}, 5))
+	assert.False(t, t7.Verify(&UTXOIndex{}, NewTransactionPool(128), 5))
 
 }
 
@@ -241,7 +242,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			}
 
 			// Verify the signatures
-			result := tt.tx.Verify(&utxoIndex, 0)
+			result := tt.tx.Verify(&utxoIndex, NewTransactionPool(128), 0)
 			assert.Equal(t, tt.ok, result)
 		})
 	}
@@ -380,13 +381,95 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 			assert.Equal(t,NewAddress(tt.expectedRes),tx.GetContractAddress())
 		})
 	}
+}
 
+func TestTransaction_VerifyDependentTransactions(t *testing.T) {
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
+	var pkHash1, _ = NewUserPubKeyHash(pubkey1)
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
+	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
+	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
+	var pubkey3 = GetKeyPairByString(prikey3).PublicKey
+	var pkHash3, _ = NewUserPubKeyHash(pubkey3)
+	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
+	var pubkey4 = GetKeyPairByString(prikey4).PublicKey
+	var pkHash4, _ = NewUserPubKeyHash(pubkey4)
 
+	var dependentTx1 = Transaction{
+		ID: []byte("dtx1"),
+		Vin: []TXInput{
+			{t1.ID, 10, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash1,""},
+			{common.NewAmount(10), pkHash2,""},
+		},
+		Tip: 3,
+	}
 
+	var dependentTx2 = Transaction{
+		ID: []byte("dtx2"),
+		Vin: []TXInput{
+			{dependentTx1.ID, 1, nil, pubkey2},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash3,""},
+			{common.NewAmount(2), pkHash4,""},
+		},
+		Tip: 3,
+	}
 
+	var dependentTx3 = Transaction{
+		ID: []byte("dtx3"),
+		Vin: []TXInput{
+			{dependentTx2.ID, 0, nil, pubkey3},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(1), pkHash3,""},
+		},
+		Tip: 4,
+	}
 
+	var dependentTx4 = Transaction{
+		ID: []byte("dtx4"),
+		Vin: []TXInput{
+			{dependentTx2.ID, 1, nil, pubkey4},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(1), pkHash4,""},
+		},
+		Tip: 1,
+	}
 
+	var UtxoIndex = UTXOIndex{
+		map[string][]*UTXO{
+			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
+		},
+		&sync.RWMutex{},
+	}
 
+	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
+	tx2Utxo2 := UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1}
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, UtxoIndex.index[string(pkHash2.GetPubKeyHash())])
+	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2})
 
+	txPool := NewTransactionPool(3)
+	txPool.Push(dependentTx2)
+	txPool.Push(dependentTx3)
 
+	assert.Equal(t, true, dependentTx2.Verify(&UtxoIndex, txPool, 0))
+
+	assert.Equal(t, true, dependentTx3.Verify(&UtxoIndex, txPool, 0))
+
+	txPool.Push(t1)
+	assert.Equal(t, false, t1.Verify(&UtxoIndex, txPool, 0))
+
+	txPool.Push(dependentTx4)
+	assert.Equal(t, true, dependentTx4.Verify(&UtxoIndex, txPool, 0))
+
+	// test UTXOs not found for parent transactions
+	assert.Equal(t, false, dependentTx3.Verify(&UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, txPool, 0))
 }

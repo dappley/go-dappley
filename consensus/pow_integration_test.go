@@ -33,6 +33,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	"fmt"
 )
 
 var sendAmount = common.NewAmount(7)
@@ -96,8 +97,13 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
+	fmt.Println("************")
+	fmt.Println(count)
+	fmt.Println("++++++++++++")
 	//set the expected wallet value for all wallets
 	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount)
+	fmt.Println(remaining)
+	fmt.Println("************")
 	if err != nil {
 		panic(err)
 	}

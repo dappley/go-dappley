@@ -158,7 +158,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxo *UTXOIndex, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxo *UTXOIndex, txPool *TransactionPool, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
 		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
@@ -170,19 +170,38 @@ func (tx *Transaction) Verify(utxo *UTXOIndex, blockHeight uint64) bool {
 		}
 		return true
 	}
+
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(*utxo)
 	if err != nil {
-		logger.Errorf("ERROR: %v", err)
-		return false
+		for _, vin := range tx.Vin {
+			parentTx, exists := txPool.index[string(vin.Txid)]
+			if !exists {
+				return false
+			}
+			pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
+			if err != nil {
+				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
+				return false
+			}
+			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.Verify(utxo, txPool, 0) {
+				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
+				return false
+			}
+			prevUtxos = append(prevUtxos, newUTXO(parentTx.Vout[vin.Vout], vin.Txid, vin.Vout))
+		}
 	}
 
-	//TODO  Remove the enableAddBalanceTest flag
-	if !tx.verifyAmount(prevUtxos) || !tx.verifyTip(prevUtxos) {
-		logger.Error("ERROR: Transaction amount is invalid")
+	if tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) && tx.verifySignatures(prevUtxos) && tx.verifyPublicKeyHash(prevUtxos) {
+		// update utxoIndex
+		for index, vout := range tx.Vout {
+			utxoIndexKey := string(vout.PubKeyHash.GetPubKeyHash())
+			utxo.index[utxoIndexKey] = append(utxo.index[utxoIndexKey], newUTXO(vout, tx.ID, index))
+		}
+		return true
+	} else {
+		txPool.RemoveMultipleTransactions([]*Transaction{tx})
 		return false
 	}
-
-	return tx.verifySignatures(prevUtxos) && tx.verifyPublicKeyHash(prevUtxos)
 }
 
 //verifyTip verifies if the transaction has the correct tip

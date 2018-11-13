@@ -27,6 +27,7 @@ import (
 
 type TransactionPool struct {
 	Transactions sorted.Slice
+	index 		 map[string]*Transaction
 	limit        uint32
 }
 
@@ -50,6 +51,7 @@ func match(tx1 interface{}, tx2 interface{}) bool {
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		Transactions: *sorted.NewSlice(compareTxTips, match),
+		index: 		  make(map[string]*Transaction),
 		limit:        limit,
 	}
 }
@@ -57,6 +59,7 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	for _, tx := range txs {
 		txPool.Transactions.Del(*tx)
+		delete(txPool.index, string(tx.ID))
 	}
 }
 
@@ -69,18 +72,43 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 }
 
 func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
-	var validTransactions []*Transaction
-	for txPool.Transactions.Len() > 0 {
-		tx := txPool.PopRight()
-		if tx.Verify(&utxoIndex, 0) {
-			validTransactions = append(validTransactions, &tx)
+	var validTxs []*Transaction
+	for i := 0; i < txPool.Transactions.Len(); i ++ {
+		tx := txPool.Transactions.Index(i).(Transaction)
+		isValid := false
+		for _, validTx := range validTxs {
+			if bytes.Equal(validTx.ID, tx.ID) {
+				isValid = true
+				break
+			}
+		}
+		if isValid {
+			continue
+		}
+		if tx.Verify(&utxoIndex, txPool, 0) {
+			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
+			validTxs = append(validTxs, dependentTxs...)
 		}
 	}
-	return validTransactions
+	return validTxs
+}
+
+func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Transaction) []*Transaction {
+	if _, exists := txPool.index[string(txID)]; !exists {
+		return dependentTxs
+	}
+	tx := txPool.index[string(txID)]
+	dependentTxs = append(dependentTxs, tx)
+	for _, vin := range tx.Vin {
+		dependentTxs = txPool.getDependentTxs(vin.Txid, dependentTxs)
+	}
+	return dependentTxs
 }
 
 func (txPool *TransactionPool) PopRight() Transaction {
-	return txPool.Transactions.PopRight().(Transaction)
+	tx := txPool.Transactions.PopRight().(Transaction)
+	delete(txPool.index, string(tx.ID))
+	return tx
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
@@ -103,4 +131,5 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 	}
 
 	txPool.Transactions.Push(tx)
+	txPool.index[string(tx.ID)] = &tx
 }
