@@ -2,6 +2,7 @@ package sc
 
 import (
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -25,7 +26,7 @@ var addrChecker = new AddrChecker;
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	assert.Equal(t,"35",sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
 }
 
 func TestScEngine_StorageGet(t *testing.T) {
@@ -52,7 +53,7 @@ var storageTest = new StorageTest;
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.Execute("get","\"key\"")
+	assert.Equal(t,"7", sc.Execute("get","\"key\""))
 }
 
 func TestScEngine_StorageSet(t *testing.T) {
@@ -78,8 +79,9 @@ var storageTest = new StorageTest;
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.Execute("set","\"key\",6")
-	sc.Execute("get","\"key\"")
+
+	assert.Equal(t,"0", sc.Execute("set","\"key\",6"))
+	assert.Equal(t,"6", sc.Execute("get","\"key\""))
 }
 
 func TestScEngine_StorageDel(t *testing.T) {
@@ -108,7 +110,7 @@ var storageTest = new StorageTest;
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.Execute("set","\"key\",6")
-	sc.Execute("del","\"key\"")
-	sc.Execute("get","\"key\"")
+	assert.Equal(t,"0", sc.Execute("set","\"key\",6"))
+	assert.Equal(t,"0", sc.Execute("del","\"key\""))
+	assert.Equal(t,"null", sc.Execute("get","\"key\""))
 }

@@ -57,12 +57,17 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
       Local<Script> script = Script::Compile(context, source).ToLocalChecked();
 
       // Run the script to get the result.
-      Local<Value> result = script->Run(context).ToLocalChecked();
+      Local<Value> scriptRes = script->Run(context).ToLocalChecked();
 
-      // Convert the result to an UTF8 string and print it.
-      String::Utf8Value utf8(isolate, result);
-      printf("%s\n", *utf8);
-      fflush(stdout);
+      // set result.
+      if (result != NULL && !scriptRes.IsEmpty())  {
+        Local<Object> obj = scriptRes.As<Object>();
+        if (!obj->IsUndefined()) {
+            String::Utf8Value str(isolate, obj);
+            *result = (char *)malloc(str.length() + 1);
+            strcpy(*result, *str);
+        }
+      }
     }
   }
 

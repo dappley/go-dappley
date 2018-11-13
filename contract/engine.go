@@ -15,6 +15,7 @@ import "C"
 import (
 
 	"fmt"
+	logger "github.com/sirupsen/logrus"
 	"sync"
 	"unsafe"
 
@@ -64,9 +65,10 @@ func (sc *V8Engine) ImportLocalStorage(storage map[string]string){
 	sc.storage = storage
 }
 
-func (sc *V8Engine) Execute(function, args string) {
+func (sc *V8Engine) Execute(function, args string) string{
 	res := "\"\""
-	var result *C.Char
+	status := "success"
+	var result *C.char
 
 	cSource := C.CString(sc.source)
 	defer C.free(unsafe.Pointer(cSource))
@@ -76,14 +78,20 @@ func (sc *V8Engine) Execute(function, args string) {
 	cFunction := C.CString(functionCallScript)
 	defer C.free(unsafe.Pointer(cFunction))
 
-	C.executeV8Script(cFunction, C.uintptr_t(sc.handler), &result)
+	if C.executeV8Script(cFunction, C.uintptr_t(sc.handler), &result) > 0 {
+		status = "failed"
+	}
 
 	if result!=nil{
 		res = C.GoString(result)
 		C.free(unsafe.Pointer(result))
 	}
 
-	fmt.Println(res)
+	logger.WithFields(logger.Fields{
+		"result"	: res,
+		"status"	: status,
+	}).Info("Smart Contract Execution Ends.")
+	return res
 }
 
 func prepareFuncCallScript(function, args string) string{

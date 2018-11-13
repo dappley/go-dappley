@@ -10,8 +10,17 @@ type ScEngine struct {
 }
 
 // Execute provides a mock function with given fields: function, args
-func (_m *ScEngine) Execute(function string, args string) {
-	_m.Called(function, args)
+func (_m *ScEngine) Execute(function string, args string) string {
+	ret := _m.Called(function, args)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string) string); ok {
+		r0 = rf(function, args)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
 }
 
 // ImportLocalStorage provides a mock function with given fields: storage
