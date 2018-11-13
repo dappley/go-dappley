@@ -439,11 +439,11 @@ func TestForkChoice(t *testing.T) {
 	//make sure syncing starts
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 10)
 	//make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
 		return !bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 10)
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 
