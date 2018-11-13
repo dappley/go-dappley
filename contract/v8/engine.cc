@@ -22,7 +22,7 @@ void Initialize(){
     V8::Initialize();
 }
 
-int executeV8Script(const char *sourceCode, uintptr_t handler) {
+int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
 
   // Create a new Isolate and make it the current one.
   Isolate::CreateParams create_params;

@@ -64,7 +64,9 @@ func (sc *V8Engine) ImportLocalStorage(storage map[string]string){
 	sc.storage = storage
 }
 
-func (sc *V8Engine) Execute(function, args string){
+func (sc *V8Engine) Execute(function, args string) {
+	res := "\"\""
+	var result *C.Char
 
 	cSource := C.CString(sc.source)
 	defer C.free(unsafe.Pointer(cSource))
@@ -74,7 +76,14 @@ func (sc *V8Engine) Execute(function, args string){
 	cFunction := C.CString(functionCallScript)
 	defer C.free(unsafe.Pointer(cFunction))
 
-	C.executeV8Script(cFunction, C.uintptr_t(sc.handler))
+	C.executeV8Script(cFunction, C.uintptr_t(sc.handler), &result)
+
+	if result!=nil{
+		res = C.GoString(result)
+		C.free(unsafe.Pointer(result))
+	}
+
+	fmt.Println(res)
 }
 
 func prepareFuncCallScript(function, args string) string{

@@ -11,7 +11,7 @@ extern "C" {
     typedef int (*FuncStorageDel)(void *address, const char *key);
 
     EXPORT void Initialize();
-    EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler) ;
+    EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) ;
     EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeSmartContract(char* source);

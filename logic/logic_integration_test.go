@@ -1,4 +1,3 @@
-// +build integration
 
 // Copyright (C) 2018 go-dappley authors
 //
@@ -523,6 +522,80 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			assert.Equal(t, ErrInvalidAddress, err)
 		})
 	}
+}
+
+func TestSmartContractLocalStorage(t *testing.T){
+	store := storage.NewRamStorage()
+	defer store.Close()
+
+	contract := `'use strict';
+
+	var StorageTest = function(){
+
+	};
+
+	StorageTest.prototype = {
+	set:function(key,value){
+			return LocalStorage.set(key,value);
+		},
+	get:function(key){
+			return LocalStorage.get(key);
+		}
+	};
+	var storageTest = new StorageTest;
+	`
+
+	// Create a wallet address
+	senderWallet, err := CreateWallet(GetTestWalletPath(), "test")
+	assert.Nil(t, err)
+
+	bc, pow := createBlockchain(senderWallet.GetAddress(), store)
+	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
+
+	//deploy smart contract
+	_, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), uint64(0), contract, bc, node)
+	assert.Nil(t, err)
+
+	tx := bc.GetTxPool().Transactions.Get()[0].(core.Transaction)
+	txp := &tx
+	contractAddr := txp.GetContractAddress()
+
+	// Create a miner wallet; Balance is 0 initially
+	minerWallet, err := CreateWallet(GetTestWalletPath(), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	//a short delay before mining starts
+	time.Sleep(time.Millisecond*500)
+
+	// Make sender the miner and mine for 1 block (which should include the transaction)
+	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	//a short delay before mining starts
+	time.Sleep(time.Millisecond*500)
+
+	//store data
+	functionCall:=`{"function":"set","args":["testKey","222"]}`
+	_, err = Send(senderWallet, contractAddr, common.NewAmount(1), uint64(0), functionCall, bc, node)
+	assert.Nil(t, err)
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	//get data
+	functionCall=`{"function":"get","args":["testKey"]}`
+	_, err = Send(senderWallet, contractAddr, common.NewAmount(1), uint64(0), functionCall, bc, node)
+	assert.Nil(t, err)
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
 }
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
