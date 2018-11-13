@@ -38,7 +38,6 @@ const testport_msg_relay_port = 21202
 const testport_fork = 10200
 const testport_fork_segment = 10201
 
-
 //test send
 func TestSend(t *testing.T) {
 	var mineReward = common.NewAmount(10)
@@ -621,7 +620,7 @@ func TestDoubleMint(t *testing.T) {
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
-	producerHash := core.HashAddress(core.NewAddress(validProducerAddr))
+	producerHash, _ := core.NewAddress(validProducerAddr).GetPubKeyHash()
 	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}, ""}}, 0}
 
 	for i := 0; i < 3; i++ {

@@ -21,7 +21,6 @@ package core
 import (
 	"bytes"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
@@ -34,12 +33,8 @@ type TXOutput struct {
 }
 
 func (out *TXOutput) Lock(address Address) {
-	out.PubKeyHash = PubKeyHash{HashAddress(address)}
-}
-
-func HashAddress(address Address) []byte {
-	pubKeyHash := base58.Decode(address.String())
-	return pubKeyHash[:len(pubKeyHash)-4]
+	hash, _ := address.GetPubKeyHash()
+	out.PubKeyHash = PubKeyHash{hash}
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
