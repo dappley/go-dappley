@@ -63,14 +63,6 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	}
 }
 
-// traverse iterates through the transaction pool and pass the transaction to txHandler callback in each iteration
-func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
-	for _, v := range txPool.Transactions.Get() {
-		tx := v.(Transaction)
-		txHandler(tx)
-	}
-}
-
 func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	for i := 0; i < txPool.Transactions.Len(); i ++ {
@@ -103,12 +95,6 @@ func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Tran
 		dependentTxs = txPool.getDependentTxs(vin.Txid, dependentTxs)
 	}
 	return dependentTxs
-}
-
-func (txPool *TransactionPool) PopRight() Transaction {
-	tx := txPool.Transactions.PopRight().(Transaction)
-	delete(txPool.index, string(tx.ID))
-	return tx
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
