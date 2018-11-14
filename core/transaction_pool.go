@@ -67,22 +67,26 @@ func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	for i := 0; i < txPool.Transactions.Len(); i ++ {
 		tx := txPool.Transactions.Index(i).(Transaction)
-		isValid := false
-		for _, validTx := range validTxs {
-			if bytes.Equal(validTx.ID, tx.ID) {
-				isValid = true
-				break
-			}
-		}
-		if isValid {
+
+		if contains(tx, validTxs) {
 			continue
 		}
+
 		if tx.Verify(&utxoIndex, txPool, 0) {
 			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
 			validTxs = append(validTxs, dependentTxs...)
 		}
 	}
 	return validTxs
+}
+
+func contains(targetTx Transaction, txs []*Transaction) bool {
+	for _, tx := range txs {
+		if bytes.Equal(targetTx.ID, tx.ID) {
+			return true
+		}
+	}
+	return false
 }
 
 func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Transaction) []*Transaction {
