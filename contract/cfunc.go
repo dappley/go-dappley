@@ -10,6 +10,7 @@ int  TransferFunc(void *handler, const char *to, const char *amount, const char 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
 int   StorageDelFunc(void *address,const char *key);
+int	  RecordRewardFunc(void *handler, const char *address, const char *amount);
 
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
@@ -30,5 +31,10 @@ int Cgo_StorageSetFunc(void *address, const char *key, const char *value){
 int Cgo_StorageDelFunc(void *address, const char *key){
 	return StorageDelFunc(address,key);
 };
+
+int	Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount){
+	return RecordRewardFunc(handler, address,amount);
+}
+
 */
 import "C"

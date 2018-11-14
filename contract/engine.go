@@ -11,6 +11,7 @@ int  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const c
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
 int   Cgo_StorageDelFunc(void *address, const char *key);
+int	  Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount);
 */
 import "C"
 import (
@@ -51,6 +52,7 @@ func InitializeV8Engine() {
 		(C.FuncStorageSet)(unsafe.Pointer(C.Cgo_StorageSetFunc)),
 		(C.FuncStorageDel)(unsafe.Pointer(C.Cgo_StorageDelFunc)),
 	)
+	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
 }
 
 //NewV8Engine generates a new V8Engine instance

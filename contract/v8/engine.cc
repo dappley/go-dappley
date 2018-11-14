@@ -11,6 +11,7 @@
 #include "lib/load_lib.h"
 #include "lib/load_sc.h"
 #include "lib/storage.h"
+#include "lib/reward_distributor.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -44,9 +45,11 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
 
     NewBlockchainInstance(isolate, context, (void *)handler);
     NewStorageInstance(isolate, context, (void *)handler);
+    NewRewardDistributorInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {
+
       // Create a string containing the JavaScript source code.
       Local<String> source =
           String::NewFromUtf8(isolate, sourceCode,

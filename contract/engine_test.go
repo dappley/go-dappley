@@ -164,3 +164,29 @@ var storageTest = new StorageTest;
 	assert.Equal(t, "0", sc.Execute("del", "\"key\""))
 	assert.Equal(t, "null", sc.Execute("get", "\"key\""))
 }
+
+func TestScEngine_Reward(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script :=
+		`'use strict';
+
+var RewardTest = function(){
+	
+};
+
+RewardTest.prototype = {
+	reward:function(addr,amount){
+    	return _native_reward.record(addr,amount);
+    }
+};
+var rewardTest = new RewardTest;
+`
+	ss := make(map[string]string)
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	sc.ImportLocalStorage(ss)
+
+	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"8\""))
+	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"9\""))
+	assert.Equal(t, "17", ss["myAddr"])
+}
