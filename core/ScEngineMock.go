@@ -49,6 +49,11 @@ func (_m *ScEngineMock) ImportLocalStorage(storage map[string]string) {
 	_m.Called(storage)
 }
 
+// ImportRewardStorage provides a mock function with given fields: rewards
+func (_m *ScEngineMock) ImportRewardStorage(rewards map[string]string) {
+	_m.Called(rewards)
+}
+
 // ImportSourceCode provides a mock function with given fields: source
 func (_m *ScEngineMock) ImportSourceCode(source string) {
 	_m.Called(source)

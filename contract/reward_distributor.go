@@ -17,19 +17,19 @@ func RecordRewardFunc(handler unsafe.Pointer, address *C.char, amount *C.char) i
 		logger.WithFields(logger.Fields{
 			"reward address"		: addr,
 			"amount"	  			: amt,
-		}).Debug("Smart Contract: Failed to get storage handler!")
+		}).Debug("Smart Contract: Failed to get smart engine handler!")
 		return 1
 	}
 
-	if engine.storage[addr] == "" {
-		engine.storage[addr] = "0"
+	if engine.rewards[addr] == "" {
+		engine.rewards[addr] = "0"
 	}
 
-	originalAmt, err := strconv.Atoi(engine.storage[addr])
+	originalAmt, err := strconv.Atoi(engine.rewards[addr])
 	if err != nil{
 		logger.WithFields(logger.Fields{
 			"reward address"		: addr,
-			"original amount"	  	: engine.storage[addr],
+			"original amount"	  	: engine.rewards[addr],
 			"error"					: err,
 		}).Warn("Smart Contract: Current reward list access failed!")
 		return 1
@@ -64,7 +64,7 @@ func RecordRewardFunc(handler unsafe.Pointer, address *C.char, amount *C.char) i
 	}
 
 
-	engine.storage[addr] = strconv.Itoa(originalAmt+rewardAmt)
+	engine.rewards[addr] = strconv.Itoa(originalAmt+rewardAmt)
 
 	return 0
 }

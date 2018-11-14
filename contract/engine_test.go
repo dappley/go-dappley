@@ -184,7 +184,7 @@ var rewardTest = new RewardTest;
 	ss := make(map[string]string)
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.ImportLocalStorage(ss)
+	sc.ImportRewardStorage(ss)
 
 	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"8\""))
 	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"9\""))

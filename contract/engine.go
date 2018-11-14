@@ -34,6 +34,7 @@ var (
 type V8Engine struct {
 	source        string
 	storage       map[string]string
+	rewards       map[string]string
 	contractAddr  core.Address
 	contractUTXOs []*core.UTXO
 	sourceTXID    []byte
@@ -97,6 +98,10 @@ func (sc *V8Engine) ImportSourceTXID(txid []byte) {
 // GetGeneratedTXs returns the transactions generated as a result of executing the contract
 func (sc *V8Engine) GetGeneratedTXs() []*core.Transaction {
 	return sc.generatedTXs
+}
+
+func (sc *V8Engine) ImportRewardStorage(rewards map[string]string) {
+	sc.rewards = rewards
 }
 
 func (sc *V8Engine) Execute(function, args string) string {

@@ -68,6 +68,7 @@ type ScEngine interface {
 	ImportContractAddr(contractAddr Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*UTXO)
+	ImportRewardStorage(rewards map[string]string)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }

@@ -384,6 +384,7 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEng
 				engine.ImportContractAddr(address)
 				engine.ImportUTXOs(utxos[1:])
 				engine.ImportSourceTXID(tx.ID)
+				engine.ImportRewardStorage(scStorage.GetRewardStorage())
 				engine.Execute(function, totalArgs)
 				return engine.GetGeneratedTXs()
 			}
