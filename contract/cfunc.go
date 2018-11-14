@@ -5,6 +5,7 @@ package sc
 #include <stdbool.h>
 
 bool  VerifyAddressFunc(const char* address);
+int  TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
@@ -13,6 +14,11 @@ int   StorageDelFunc(void *address,const char *key);
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
 };
+
+int Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip) {
+	return TransferFunc(handler, to, amount, tip);
+};
+
 char* Cgo_StorageGetFunc(void *address, const char *key){
 	return StorageGetFunc(address,key);
 };
