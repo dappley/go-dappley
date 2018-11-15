@@ -158,7 +158,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxo *UTXOIndex, txPool *TransactionPool, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxoIndex *UTXOIndex, txPool *TransactionPool, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
 		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
@@ -171,9 +171,24 @@ func (tx *Transaction) Verify(utxo *UTXOIndex, txPool *TransactionPool, blockHei
 		return true
 	}
 
-	prevUtxos, err := tx.FindAllTxinsInUtxoPool(*utxo)
-	if err != nil {
-		for _, vin := range tx.Vin {
+	var prevUtxos []*UTXO
+	var notFoundVin []TXInput
+	for _, vin := range tx.Vin {
+		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
+		if err != nil {
+			txPool.RemoveMultipleTransactions([]*Transaction{tx})
+			return false
+		}
+		utxo := utxoIndex.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
+		if utxo == nil {
+			notFoundVin = append(notFoundVin, vin)
+			continue
+		}
+		prevUtxos = append(prevUtxos, utxo)
+	}
+
+	if notFoundVin != nil {
+		for _, vin := range notFoundVin {
 			parentTx, exists := txPool.index[string(vin.Txid)]
 			if !exists {
 				return false
@@ -183,8 +198,9 @@ func (tx *Transaction) Verify(utxo *UTXOIndex, txPool *TransactionPool, blockHei
 				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
 				return false
 			}
-			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.Verify(utxo, txPool, 0) {
+			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.Verify(utxoIndex, txPool, 0) {
 				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
+				MetricsTxDoubleSpend.Inc(1)
 				return false
 			}
 			prevUtxos = append(prevUtxos, newUTXO(parentTx.Vout[vin.Vout], vin.Txid, vin.Vout))
@@ -195,7 +211,7 @@ func (tx *Transaction) Verify(utxo *UTXOIndex, txPool *TransactionPool, blockHei
 		// update utxoIndex
 		for index, vout := range tx.Vout {
 			utxoIndexKey := string(vout.PubKeyHash.GetPubKeyHash())
-			utxo.index[utxoIndexKey] = append(utxo.index[utxoIndexKey], newUTXO(vout, tx.ID, index))
+			utxoIndex.index[utxoIndexKey] = append(utxoIndex.index[utxoIndexKey], newUTXO(vout, tx.ID, index))
 		}
 		return true
 	} else {
@@ -334,24 +350,6 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 	return tx, nil
 }
 
-//FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, error) {
-	var res []*UTXO
-	for _, vin := range tx.Vin {
-		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
-			return nil, ErrNewUserPubKeyHash
-		}
-		utxo := utxoPool.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
-		if utxo == nil {
-			MetricsTxDoubleSpend.Inc(1)
-			return nil, ErrTXInputNotFound
-		}
-		res = append(res, utxo)
-	}
-	return res, nil
-}
-
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
 func (tx *Transaction) GetContractAddress() Address{
 	if len(tx.Vout) == 0 {
@@ -393,47 +391,6 @@ func (tx Transaction) String() string {
 	lines = append(lines, "\n")
 
 	return strings.Join(lines, "\n")
-}
-
-func (tx *Transaction) ToProto() proto.Message {
-
-	var vinArray []*corepb.TXInput
-	for _, txin := range tx.Vin {
-		vinArray = append(vinArray, txin.ToProto().(*corepb.TXInput))
-	}
-
-	var voutArray []*corepb.TXOutput
-	for _, txout := range tx.Vout {
-		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
-	}
-
-	return &corepb.Transaction{
-		ID:   tx.ID,
-		Vin:  vinArray,
-		Vout: voutArray,
-		Tip:  tx.Tip,
-	}
-}
-
-func (tx *Transaction) FromProto(pb proto.Message) {
-	tx.ID = pb.(*corepb.Transaction).ID
-	tx.Tip = pb.(*corepb.Transaction).Tip
-
-	var vinArray []TXInput
-	txin := TXInput{}
-	for _, txinpb := range pb.(*corepb.Transaction).Vin {
-		txin.FromProto(txinpb)
-		vinArray = append(vinArray, txin)
-	}
-	tx.Vin = vinArray
-
-	var voutArray []TXOutput
-	txout := TXOutput{}
-	for _, txoutpb := range pb.(*corepb.Transaction).Vout {
-		txout.FromProto(txoutpb)
-		voutArray = append(voutArray, txout)
-	}
-	tx.Vout = voutArray
 }
 
 //calculateChange calculates the change
@@ -486,4 +443,45 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	outputs = append(outputs, *NewTXOutput(amount, toAddr.String()))
 	outputs = append(outputs, *NewTXOutput(change, from.String()))
 	return outputs
+}
+
+func (tx *Transaction) ToProto() proto.Message {
+
+	var vinArray []*corepb.TXInput
+	for _, txin := range tx.Vin {
+		vinArray = append(vinArray, txin.ToProto().(*corepb.TXInput))
+	}
+
+	var voutArray []*corepb.TXOutput
+	for _, txout := range tx.Vout {
+		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
+	}
+
+	return &corepb.Transaction{
+		ID:   tx.ID,
+		Vin:  vinArray,
+		Vout: voutArray,
+		Tip:  tx.Tip,
+	}
+}
+
+func (tx *Transaction) FromProto(pb proto.Message) {
+	tx.ID = pb.(*corepb.Transaction).ID
+	tx.Tip = pb.(*corepb.Transaction).Tip
+
+	var vinArray []TXInput
+	txin := TXInput{}
+	for _, txinpb := range pb.(*corepb.Transaction).Vin {
+		txin.FromProto(txinpb)
+		vinArray = append(vinArray, txin)
+	}
+	tx.Vin = vinArray
+
+	var voutArray []TXOutput
+	txout := TXOutput{}
+	for _, txoutpb := range pb.(*corepb.Transaction).Vout {
+		txout.FromProto(txoutpb)
+		voutArray = append(voutArray, txout)
+	}
+	tx.Vout = voutArray
 }

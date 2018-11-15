@@ -311,27 +311,37 @@ func TestTransaction_Proto(t *testing.T) {
 	assert.Equal(t, t1, t2)
 }
 
-func TestTransaction_FindTxInUtxoPool(t *testing.T) {
-	//prepare utxo pool
-	pubkey := []byte("12345678901234567890123456789012")
-	pubkeyHash, _ := NewUserPubKeyHash(pubkey)
-
-	Txin := MockTxInputsWithPubkey(pubkey)
-	Txin2 := MockTxInputsWithPubkey(pubkey)
-	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash,""}, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin[1].Txid, Txin[1].Vout}
-	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[0].Txid, Txin2[0].Vout}
-	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[1].Txid, Txin2[1].Vout}
-	utxoPool := NewUTXOIndex()
-	utxoPool.index[string(pubkeyHash.GetPubKeyHash())] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
-
-	tx := MockTransaction()
-	txins, _ := tx.FindAllTxinsInUtxoPool(utxoPool)
-	assert.Nil(t, txins)
-	tx.Vin = Txin
-	txins, _ = tx.FindAllTxinsInUtxoPool(utxoPool)
-	assert.NotNil(t, txins)
-}
+//func TestTransaction_FindTxInUtxoPool(t *testing.T) {
+//	//prepare utxo pool
+//	pubkey := []byte("12345678901234567890123456789012")
+//	pubkeyHash, _ := NewUserPubKeyHash(pubkey)
+//
+//	Txin := MockTxInputsWithPubkey(pubkey)
+//	Txin2 := MockTxInputsWithPubkey(pubkey)
+//	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash,""}, Txin[0].Txid, Txin[0].Vout}
+//	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin[1].Txid, Txin[1].Vout}
+//	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[0].Txid, Txin2[0].Vout}
+//	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[1].Txid, Txin2[1].Vout}
+//	utxoPool := NewUTXOIndex()
+//	utxoPool.index[string(pubkeyHash.GetPubKeyHash())] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
+//
+//	tx := MockTransaction()
+//	txins, notFoundUtxo, err := tx.findAllTxinsInUtxoPool(utxoPool)
+//	assert.Nil(t, txins)
+//	assert.Nil(t, notFoundUtxo)
+//	assert.Equal(t, ErrNewUserPubKeyHash, err)
+//
+//	tx.Vin = Txin
+//	txins, notFoundUtxo, err = tx.findAllTxinsInUtxoPool(utxoPool)
+//	assert.NotNil(t, txins)
+//	assert.Nil(t, notFoundUtxo)
+//	assert.Equal(t, nil, err)
+//
+//	txins, notFoundUtxo, err = tx.findAllTxinsInUtxoPool(NewUTXOIndex())
+//	assert.Nil(t, txins)
+//	assert.NotNil(t, notFoundUtxo)
+//	assert.Equal(t, nil, err)
+//}
 
 func TestTransaction_GetContractAddress(t *testing.T) {
 
@@ -396,11 +406,14 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
 	var pubkey4 = GetKeyPairByString(prikey4).PublicKey
 	var pkHash4, _ = NewUserPubKeyHash(pubkey4)
+	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
+	var pubkey5 = GetKeyPairByString(prikey5).PublicKey
+	var pkHash5, _ = NewUserPubKeyHash(pubkey5)
 
 	var dependentTx1 = Transaction{
 		ID: []byte("dtx1"),
 		Vin: []TXInput{
-			{t1.ID, 10, nil, pubkey1},
+			{t1.ID, 1, nil, pubkey1},
 		},
 		Vout: []TXOutput{
 			{common.NewAmount(5), pkHash1,""},
@@ -416,9 +429,9 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		},
 		Vout: []TXOutput{
 			{common.NewAmount(5), pkHash3,""},
-			{common.NewAmount(2), pkHash4,""},
+			{common.NewAmount(3), pkHash4,""},
 		},
-		Tip: 3,
+		Tip: 2,
 	}
 
 	var dependentTx3 = Transaction{
@@ -427,7 +440,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 			{dependentTx2.ID, 0, nil, pubkey3},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(1), pkHash3,""},
+			{common.NewAmount(1), pkHash4,""},
 		},
 		Tip: 4,
 	}
@@ -436,29 +449,49 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		ID: []byte("dtx4"),
 		Vin: []TXInput{
 			{dependentTx2.ID, 1, nil, pubkey4},
+			{dependentTx3.ID, 0, nil, pubkey4},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(1), pkHash4,""},
+			{common.NewAmount(3), pkHash1,""},
 		},
 		Tip: 1,
+	}
+
+	var dependentTx5 = Transaction{
+		ID: []byte("dtx5"),
+		Vin: []TXInput{
+			{dependentTx1.ID, 0, nil, pubkey1},
+			{dependentTx4.ID, 0, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(4), pkHash5,""},
+		},
+		Tip: 4,
 	}
 
 	var UtxoIndex = UTXOIndex{
 		map[string][]*UTXO{
 			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
+			string(pkHash1.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
 
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
 	tx2Utxo2 := UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1}
+	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0}
+	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}
+	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0}
 	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, UtxoIndex.index[string(pkHash2.GetPubKeyHash())])
 	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
-	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2})
+	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
+	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
 
-	txPool := NewTransactionPool(3)
+	txPool := NewTransactionPool(6)
 	txPool.Push(dependentTx2)
 	txPool.Push(dependentTx3)
+	txPool.Push(dependentTx4)
+	txPool.Push(dependentTx5)
 
 	assert.Equal(t, true, dependentTx2.Verify(&UtxoIndex, txPool, 0))
 
@@ -467,8 +500,11 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	txPool.Push(t1)
 	assert.Equal(t, false, t1.Verify(&UtxoIndex, txPool, 0))
 
-	txPool.Push(dependentTx4)
+	//txPool.Push(dependentTx4)
 	assert.Equal(t, true, dependentTx4.Verify(&UtxoIndex, txPool, 0))
+
+	//txPool.Push(dependentTx5)
+	assert.Equal(t, true, dependentTx5.Verify(&UtxoIndex, txPool, 0))
 
 	// test UTXOs not found for parent transactions
 	assert.Equal(t, false, dependentTx3.Verify(&UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, txPool, 0))
