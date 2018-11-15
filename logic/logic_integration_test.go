@@ -36,6 +36,7 @@ import (
 const testport_msg_relay = 19999
 const testport_msg_relay_port = 21202
 const testport_fork = 10200
+const testport_fork_segment = 10201
 
 //test send
 func TestSend(t *testing.T) {
@@ -302,10 +303,10 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 
 	//firstNode Starts Mining
 	dposArray[0].Start()
-	for bcs[0].GetMaxHeight() < 5 {
-
-	}
-
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() >= 5
+	}, 8)
+	dposArray[0].Stop()
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -379,6 +380,10 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	}
 
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
+
+	for i := 0; i < len(dposArray); i++ {
+		dposArray[i].Stop()
+	}
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i := 0; i < len(nodes); i++ {
@@ -391,7 +396,6 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 }
 
 func TestForkChoice(t *testing.T) {
-
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
@@ -420,7 +424,7 @@ func TestForkChoice(t *testing.T) {
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 5
 	}, 5)
-	//start node1
+	//start node1 with delay
 	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 8
@@ -435,11 +439,11 @@ func TestForkChoice(t *testing.T) {
 	//make sure syncing starts
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 10)
 	//make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
 		return !bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 10)
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 
@@ -459,8 +463,8 @@ func TestForkSegmentHandling(t *testing.T) {
 
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
-		pow.SetTargetBit(16)
-		node.Start(testport_fork + i)
+		pow.SetTargetBit(18)
+		node.Start(testport_fork_segment + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 	}
@@ -470,35 +474,33 @@ func TestForkSegmentHandling(t *testing.T) {
 
 	//start node0 first
 	pows[0].Start()
-	//get node0's 10th blk
+	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 10
+		return bcs[0].GetMaxHeight() > 2
 	}, 5)
 	blk1, _ = bcs[0].GetTailBlock()
 	//start node1
-	pows[1].Start()
-	//get node0's 13th blk
+	pows[1].Stop()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 13
-	}, 5)
+		return bcs[0].GetMaxHeight() > 7
+	}, 2)
 	blk2, _ = bcs[0].GetTailBlock()
 
 	pows[0].Stop()
-	pows[1].Stop()
 
 	connectNodes(nodes[0], nodes[1])
 	nodes[0].BroadcastBlock(blk1)
-	//wait for node1 to start syncing
+	//wait for node1 to sync
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 4)
 
-	//while node1 is syncing, node0 broadcast higher block on the same fork
+	//node0 broadcast higher block on the same fork
 	nodes[0].BroadcastBlock(blk2)
 	//make sure syncing begins
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
+	}, 5)
 	//make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
 		return !bcs[1].GetBlockPool().GetSyncState()
@@ -618,7 +620,7 @@ func TestDoubleMint(t *testing.T) {
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
-	producerHash := core.HashAddress(validProducerAddr)
+	producerHash, _ := core.NewAddress(validProducerAddr).GetPubKeyHash()
 	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}, ""}}, 0}
 
 	for i := 0; i < 3; i++ {

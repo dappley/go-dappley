@@ -76,9 +76,9 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		getbalanceResp.Amount = amount.Int64()
 		getbalanceResp.Message = "Succeed"
 		return &getbalanceResp, nil
-	} else {
-		return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
 	}
+	return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
+
 }
 
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
@@ -214,7 +214,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
-	if tx.Verify(&utxoIndex, 0) == false {
+	if tx.Verify(utxoIndex, 0) == false {
 		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
 	}
 
@@ -243,3 +243,5 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 	<-quitCh
 	return nil
 }
+
+func (rpcService *RpcService) IsPrivate() bool { return false }

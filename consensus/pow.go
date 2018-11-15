@@ -96,6 +96,7 @@ func (pow *ProofOfWork) mineBlocks() {
 				return
 			}
 			pow.updateNewBlock(newBlock)
+			pow.miner.BlockProduceFinish()
 		}
 	}
 }

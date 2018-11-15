@@ -226,7 +226,7 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 	}
 
 	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash := core.HashAddress(producer)
+	producerHash, _ := core.NewAddress(producer).GetPubKeyHash()
 
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {

@@ -21,14 +21,14 @@ package core
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/dappley/go-dappley/storage/mocks"
-	"github.com/stretchr/testify/mock"
 	"os"
 	"testing"
 
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestMain(m *testing.M) {
@@ -68,10 +68,9 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128)
-	tailblk,_:= bc.GetTailBlock()
+	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
 	bc.AddBlockToTail(blk)
@@ -142,7 +141,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	bc := &Blockchain{Hash{}, db, nil, nil, nil}
 
 	// Add genesis block
-	genesis := NewGenesisBlock(addr.String())
+	genesis := NewGenesisBlock(addr)
 	err := bc.AddBlockToTail(genesis)
 
 	// Expect batch write was used
@@ -166,9 +165,9 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	err = bc.AddBlockToTail(blk)
 
 	//Expect 2 mock txs to be rejected when minting
-	assert.Equal(t, MetricsTxDoubleSpend.Count() , int64(2))
+	assert.Equal(t, MetricsTxDoubleSpend.Count(), int64(2))
 	// Expect the coinbase tx to go through
-	assert.Equal(t, nil , err)
+	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
 	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
 

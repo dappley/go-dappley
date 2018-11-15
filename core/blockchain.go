@@ -52,7 +52,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32) *Blockchain {
-	genesis := NewGenesisBlock(address.String())
+	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
@@ -361,7 +361,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
-	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
+	if !bc.GetBlockPool().VerifyTransactions(*utxo, forkBlks) {
 		return
 	}
 

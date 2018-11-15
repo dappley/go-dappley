@@ -68,7 +68,7 @@ func (s *Server) Start(port uint32) {
 }
 
 func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	if strings.Contains(info.FullMethod, "rpcpb.AdminService") {
+	if info.Server.(Service).IsPrivate() {
 		peer, ok := peer.FromContext(ctx)
 		if !ok || len(peer.Addr.String()) == 0 {
 			return nil, status.Errorf(codes.Unauthenticated, "Unknow ip")
