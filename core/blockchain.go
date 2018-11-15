@@ -45,7 +45,7 @@ var (
 type Blockchain struct {
 	tailBlockHash []byte
 	db            storage.Storage
-	blockPool     BlockPoolInterface
+	blockPool     *BlockPool
 	consensus     Consensus
 	txPool        *TransactionPool
 	scManager 	  ScEngineManager
@@ -101,7 +101,7 @@ func (bc *Blockchain) GetTailBlockHash() Hash {
 	return bc.tailBlockHash
 }
 
-func (bc *Blockchain) GetBlockPool() BlockPoolInterface {
+func (bc *Blockchain) GetBlockPool() *BlockPool {
 	return bc.blockPool
 }
 
@@ -151,7 +151,7 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
 }
 
-func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
+func (bc *Blockchain) SetBlockPool(blockPool *BlockPool) {
 	blockPool.SetBlockchain(bc)
 	bc.blockPool = blockPool
 }

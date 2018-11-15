@@ -296,7 +296,6 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 		if !tx.Verify(&utxo, b.GetHeight()) {
 			return false
 		}
-		tx.Execute()
 	}
 	return true
 }
