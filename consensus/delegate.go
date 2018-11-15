@@ -129,9 +129,10 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	})
 
 	cbtx := d.calculateTips(validTxs)
-	scGeneratedTXs := d.executeSmartContract(validTxs)
+	scGeneratedTXs, scState:= d.executeSmartContract(validTxs)
+	rtx := core.NewRewardTx(d.bc.GetMaxHeight()+1, scState.GetRewardStorage())
 	validTxs = append(validTxs, scGeneratedTXs...)
-	validTxs = append(validTxs, cbtx)
+	validTxs = append(validTxs, cbtx, &rtx)
 
 	//prepare the new block
 	return &NewBlock{core.NewBlock(validTxs, parentBlock), false}
@@ -147,8 +148,10 @@ func (d *Delegate) calculateTips(txs []*core.Transaction) *core.Transaction {
 	return &cbtx
 }
 
+
 //executeSmartContract executes all smart contracts
-func (d *Delegate) executeSmartContract(txs []*core.Transaction) []*core.Transaction {
+func (d *Delegate) executeSmartContract(txs []*core.Transaction) ([]*core.Transaction,*core.ScState) {
+
 	//start a new smart contract engine
 	utxoIndex := core.LoadUTXOIndex(d.bc.GetDb())
 	scStorage := core.NewScState()
@@ -158,7 +161,8 @@ func (d *Delegate) executeSmartContract(txs []*core.Transaction) []*core.Transac
 	for _, tx := range txs {
 		generatedTXs = append(generatedTXs, tx.Execute(utxoIndex, scStorage, engine)...)
 	}
-	return generatedTXs
+
+	return generatedTXs,scStorage
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement

@@ -296,6 +296,7 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 		if !tx.Verify(&utxo, b.GetHeight()) {
 			return false
 		}
+		tx.Execute()
 	}
 	return true
 }
@@ -326,7 +327,7 @@ func (parent *Block) IsParentBlock(child *Block) bool {
 func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
-			if !tx.IsCoinbase() {
+			if !tx.IsCoinbase() && !tx.IsRewardTx() {
 				txPool.Push(*tx)
 			}
 		}

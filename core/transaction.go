@@ -146,6 +146,11 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 		return nil
 	}
 
+	if tx.IsRewardTx() {
+		logger.Warning("Reward transaction could not be signed")
+		return nil
+	}
+
 	txCopy := tx.TrimmedCopy()
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
@@ -203,13 +208,18 @@ func (tx *Transaction) Verify(utxo *UTXOIndex, blockHeight uint64) bool {
 		}
 		return true
 	}
+
+	if tx.IsRewardTx(){
+		//TODO: verify reward tx here
+		return true
+	}
+
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(*utxo)
 	if err != nil {
 		logger.Errorf("ERROR: %v", err)
 		return false
 	}
 
-	//TODO  Remove the enableAddBalanceTest flag
 	if !tx.verifyAmount(prevUtxos) || !tx.verifyTip(prevUtxos) {
 		logger.Error("ERROR: Transaction amount is invalid")
 		return false
@@ -418,35 +428,44 @@ func (tx *Transaction) GetContract() string {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) []*Transaction {
-	vout := tx.Vout[ContractTxouputIndex]
-	if isContract, _ := vout.PubKeyHash.IsContract(); isContract {
-		utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
-		//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
-		//is a smart contract deployment transaction, not a smart contract execution transaction.
-		if len(utxos) != 0 {
-			function, args := util.DecodeScInput(vout.Contract)
-			if function != "" {
-				totalArgs := util.PrepareArgs(args)
-				address := utxos[0].PubKeyHash.GenerateAddress()
-				logger.WithFields(logger.Fields{
-					"contractAddr":    address.String(),
-					"contract":        utxos[0].Contract,
-					"invokedFunction": function,
-					"arguments":       totalArgs,
-				}).Info("Executing smart contract...")
-				engine.ImportSourceCode(utxos[0].Contract)
-				engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
-				engine.ImportContractAddr(address)
-				engine.ImportUTXOs(utxos[1:])
-				engine.ImportSourceTXID(tx.ID)
-				engine.ImportRewardStorage(scStorage.GetRewardStorage())
-				engine.Execute(function, totalArgs)
-				return engine.GetGeneratedTXs()
-			}
-		}
+func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) {
+
+	if tx.IsRewardTx(){
+		return
 	}
-	return []*Transaction{}
+
+	vout := tx.Vout[ContractTxouputIndex]
+
+	if isContract,_:=vout.PubKeyHash.IsContract(); !isContract{
+		return
+	}
+	utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
+	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
+	//is a smart contract deployment transaction, not a smart contract execution transaction.
+	if len(utxos) == 0 {
+		return
+	}
+
+	function, args := util.DecodeScInput(vout.Contract)
+	if function == "" {
+		return
+	}
+
+	totalArgs := util.PrepareArgs(args)
+	address := utxos[0].PubKeyHash.GenerateAddress()
+	logger.WithFields(logger.Fields{
+		"contractAddr":    address.String(),
+		"contract":        utxos[0].Contract,
+		"invokedFunction": function,
+		"arguments":       totalArgs,
+	}).Info("Executing smart contract...")
+	engine.ImportSourceCode(utxos[0].Contract)
+	engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
+	engine.ImportContractAddr(address)
+	engine.ImportUTXOs(utxos[1:])
+	engine.ImportSourceTXID(tx.ID)
+	engine.ImportRewardStorage(scStorage.GetRewardStorage())
+	engine.Execute(function, totalArgs)
 }
 
 // String returns a human-readable representation of a transaction

@@ -156,7 +156,7 @@ func (utxos UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *
 }
 
 func (utxos *UTXOIndex) ApplyTransaction(tx *Transaction) error {
-	if !tx.IsCoinbase() {
+	if !tx.IsCoinbase() && !tx.IsRewardTx() {
 		for _, txin := range tx.Vin {
 			err := utxos.removeUTXO(txin.Txid, txin.Vout)
 			if err != nil {
@@ -216,7 +216,7 @@ func (utxos UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.Sto
 		if err != nil {
 			logger.Panic(err)
 		}
-		if tx.IsCoinbase() {
+		if tx.IsCoinbase() || tx.IsRewardTx() {
 			continue
 		}
 		err = utxos.unspendVinsInTx(tx, bc)
