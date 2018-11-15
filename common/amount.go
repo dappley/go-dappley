@@ -37,7 +37,7 @@ type Amount struct {
 }
 
 // Validate returns error if a is not a valid amount, otherwise returns nil.
-func (a *Amount) Validate() error {
+func (a Amount) Validate() error {
 	if a.Sign() < 0 {
 		return ErrAmountUnderflow
 	}
@@ -81,17 +81,17 @@ func NewAmountFromBytes(b []byte) *Amount {
 }
 
 // Uint64 returns the big.Int representation of the amount.
-func (a *Amount) BigInt() *big.Int {
+func (a Amount) BigInt() *big.Int {
 	return &a.Int
 }
 
 // Add returns sum of a + b
-func (a *Amount) Add(b *Amount) *Amount {
+func (a Amount) Add(b *Amount) *Amount {
 	return &Amount{*new(big.Int).Add(a.BigInt(), b.BigInt())}
 }
 
 // Sub returns difference of a - b. Returns nil with ErrAmountUnderflow if the result is negative (a < b)
-func (a *Amount) Sub(b *Amount) (*Amount, error) {
+func (a Amount) Sub(b *Amount) (*Amount, error) {
 	diff := &Amount{*new(big.Int).Sub(a.BigInt(), b.BigInt())}
 	if err := diff.Validate(); nil != err {
 		return nil, err
@@ -100,12 +100,12 @@ func (a *Amount) Sub(b *Amount) (*Amount, error) {
 }
 
 // mul returns product of a * b
-func (a *Amount) mul(b *Amount) *Amount {
+func (a Amount) mul(b *Amount) *Amount {
 	return &Amount{*new(big.Int).Mul(a.BigInt(), b.BigInt())}
 }
 
 // Times returns product of a * b where b is uint64
-func (a *Amount) Times(b uint64) *Amount {
+func (a Amount) Times(b uint64) *Amount {
 	return a.mul(NewAmount(b))
 }
 
@@ -113,10 +113,10 @@ func (a *Amount) Times(b uint64) *Amount {
 //   -1 if a <  b
 //    0 if a == b
 //   +1 if a >  b
-func (a *Amount) Cmp(b *Amount) int {
+func (a Amount) Cmp(b *Amount) int {
 	return a.BigInt().Cmp(b.BigInt())
 }
 
-func (a *Amount) IsZero() bool {
+func (a Amount) IsZero() bool {
 	return a.Cmp(NewAmount(0)) == 0
 }

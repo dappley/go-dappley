@@ -51,8 +51,11 @@ func (bp *BlockProducer) ProduceBlock() *core.Block {
 	if bp.process != nil {
 		bp.process(bp.newBlock)
 	}
-	bp.idle = true
 	return bp.newBlock
+}
+
+func (bp *BlockProducer) BlockProduceFinish() {
+	bp.idle = true
 }
 
 func (bp *BlockProducer) IsIdle() bool {
@@ -67,12 +70,11 @@ func (bp *BlockProducer) prepareBlock() {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
-	validTxs := bp.bc.GetTxPool().GetValidTxs(utxoIndex)
+	validTxs := bp.bc.GetTxPool().GetValidTxs(*utxoIndex)
 
 	// update UTXO set
-	for i, tx := range validTxs {
-		// remove transaction if utxo set cannot be updated
-		if !utxoIndex.UpdateUtxo(tx) {
+	for i:=0; i< len(validTxs); i++ {
+		if !utxoIndex.UpdateUtxo(validTxs[i]) {
 			validTxs = append(validTxs[:i], validTxs[i+1:]...)
 		}
 	}
@@ -82,7 +84,7 @@ func (bp *BlockProducer) prepareBlock() {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
 	}
 
-	cbtx := core.NewCoinbaseTX(bp.beneficiary, "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := core.NewCoinbaseTX(core.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
 
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)

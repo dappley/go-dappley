@@ -393,7 +393,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress().Address)
+	genesisBlock := core.NewGenesisBlock(rpcContext.wallet.GetAddress())
 	// Create a grpc connection and a client
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {

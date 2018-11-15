@@ -41,9 +41,9 @@ var subsidy = common.NewAmount(10)
 const ContractTxouputIndex = 0
 
 var (
-	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
-	ErrInvalidAmount    = errors.New("transaction: amount is invalid (must be > 0)")
-	ErrTXInputNotFound  = errors.New("transaction: transaction input not found")
+	ErrInsufficientFund  = errors.New("transaction: the balance is insufficient")
+	ErrInvalidAmount     = errors.New("transaction: amount is invalid (must be > 0)")
+	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
 	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
 )
 
@@ -59,12 +59,12 @@ type TxIndex struct {
 	BlockIndex int
 }
 
-func (tx Transaction) IsCoinbase() bool {
+func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1 && len(tx.Vout) == 1
 }
 
 // Serialize returns a serialized Transaction
-func (tx Transaction) Serialize() []byte {
+func (tx *Transaction) Serialize() []byte {
 	var encoded bytes.Buffer
 
 	enc := gob.NewEncoder(&encoded)
@@ -149,7 +149,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -202,10 +202,9 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 //key hash in utxo
 func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
-
 	for i, vin := range tx.Vin {
 
-		isContract, err:= prevUtxos[i].PubKeyHash.IsContract()
+		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
 		if err != nil {
 			return false
 		}
@@ -275,7 +274,7 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Transaction {
+func NewCoinbaseTX(to Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -292,7 +291,7 @@ func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Tran
 
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair,
-						tip *common.Amount, contract string) (Transaction, error) {
+	tip *common.Amount, contract string) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, amount, tip)
@@ -334,13 +333,13 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 }
 
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
-func (tx *Transaction) GetContractAddress() Address{
+func (tx *Transaction) GetContractAddress() Address {
 	if len(tx.Vout) == 0 {
 		return NewAddress("")
 	}
 
 	isContract, err := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
-	if err!= nil {
+	if err != nil {
 		return NewAddress("")
 	}
 
@@ -352,7 +351,7 @@ func (tx *Transaction) GetContractAddress() Address{
 }
 
 // String returns a human-readable representation of a transaction
-func (tx Transaction) String() string {
+func (tx *Transaction) String() string {
 	var lines []string
 
 	lines = append(lines, fmt.Sprintf("\n--- Transaction %x:", tx.ID))
@@ -464,7 +463,7 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 		toAddr = outputs[0].PubKeyHash.GenerateAddress()
 	}
 
-	outputs = append(outputs, *NewTXOutput(amount, toAddr.String()))
-	outputs = append(outputs, *NewTXOutput(change, from.String()))
+	outputs = append(outputs, *NewTXOutput(amount, toAddr))
+	outputs = append(outputs, *NewTXOutput(change, from))
 	return outputs
 }

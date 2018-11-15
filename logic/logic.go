@@ -90,9 +90,8 @@ func GetWallet() (*client.Wallet, error) {
 	}
 	if len(wm.Wallets) > 0 {
 		return wm.Wallets[0], err
-	} else {
-		return nil, err
 	}
+	return nil, err
 }
 
 //Get lock flag
@@ -107,12 +106,11 @@ func IsWalletEmpty() (bool, error) {
 		wm, _ := GetWalletManager(client.GetWalletFilePath())
 		if len(wm.Wallets) == 0 {
 			return true, nil
-		} else {
-			return wm.IsFileEmpty()
 		}
-	} else {
-		return true, nil
+		return wm.IsFileEmpty()
 	}
+	return true, nil
+
 }
 
 //Set lock flag
@@ -128,11 +126,11 @@ func SetLockWallet() error {
 
 	if err2 != nil {
 		return err2
-	} else {
-		wm.Locked = true
-		wm.SaveWalletToFile()
-		return nil
 	}
+	wm.Locked = true
+	wm.SaveWalletToFile()
+	return nil
+
 }
 
 //Set unlock and timer
@@ -140,10 +138,10 @@ func SetUnLockWallet() error {
 	wm, err := GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		return err
-	} else {
-		wm.SetUnlockTimer(unlockduration)
-		return nil
 	}
+	wm.SetUnlockTimer(unlockduration)
+	return nil
+
 }
 
 //create a wallet with passphrase
@@ -163,19 +161,19 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 		wm.SaveWalletToFile()
 		return wallet, err
 
-	} else {
-		passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			return nil, err
-		}
-		wm.PassPhrase = passBytes
-		logger.Info("Wallet password set!")
-		wallet := client.NewWallet()
-		wm.AddWallet(wallet)
-		wm.Locked = true
-		wm.SaveWalletToFile()
-		return wallet, err
 	}
+	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	wm.PassPhrase = passBytes
+	logger.Info("Wallet password set!")
+	wallet := client.NewWallet()
+	wm.AddWallet(wallet)
+	wm.Locked = true
+	wm.SaveWalletToFile()
+	return wallet, err
+
 }
 
 //create a wallet
@@ -281,7 +279,7 @@ func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockch
 		return err
 	}
 
-	tx, err := core.NewUTXOTransaction(utxos, minerWallet.GetAddress(), address, amount, *minerWallet.GetKeyPair(), common.NewAmount(0),"")
+	tx, err := core.NewUTXOTransaction(utxos, minerWallet.GetAddress(), address, amount, *minerWallet.GetKeyPair(), common.NewAmount(0), "")
 
 	if err != nil {
 		return err

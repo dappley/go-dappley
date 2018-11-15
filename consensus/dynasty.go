@@ -37,16 +37,16 @@ const (
 	defaultTimeBetweenBlk = 15
 )
 
-func (d *Dynasty) trimProducers() {
+func (dynasty *Dynasty) trimProducers() {
 	//if producer conf file does not have all producers
-	if len(d.producers) < defaultMaxProducers {
-		for len(d.producers) < defaultMaxProducers {
-			d.producers = append(d.producers, "")
+	if len(dynasty.producers) < defaultMaxProducers {
+		for len(dynasty.producers) < defaultMaxProducers {
+			dynasty.producers = append(dynasty.producers, "")
 		}
 	}
 	//if producer conf file has too many producers
-	if len(d.producers) > defaultMaxProducers {
-		d.producers = d.producers[:defaultMaxProducers]
+	if len(dynasty.producers) > defaultMaxProducers {
+		dynasty.producers = dynasty.producers[:defaultMaxProducers]
 	}
 }
 
@@ -113,13 +113,12 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 			logger.Debug(producerIt)
 		}
 		return nil
-	} else {
-		if !IsProducerAddressValid(producer) {
-			return errors.New("The address of producers not valid！")
-		} else {
-			return errors.New("The number of producers reaches the maximum！")
-		}
 	}
+	if !IsProducerAddressValid(producer) {
+		return errors.New("The address of producers not valid！")
+	}
+	return errors.New("The number of producers reaches the maximum！")
+
 }
 
 func (dynasty *Dynasty) GetProducers() []string {

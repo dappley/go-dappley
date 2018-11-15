@@ -54,6 +54,7 @@ type WalletData struct {
 	Locked     bool
 }
 
+//GetWalletFilePath return wallet file Path
 func GetWalletFilePath() string {
 	conf := &walletpb.WalletConfig{}
 	if Exists(walletConfigFilePath) {
@@ -130,17 +131,17 @@ func (wm *WalletManager) LoadFromFile() error {
 	return nil
 }
 
-func (wm WalletManager) IsFileEmpty() (bool, error) {
+func (wm *WalletManager) IsFileEmpty() (bool, error) {
 	fileContent, err := wm.fileLoader.ReadFromFile()
 	if err != nil {
 		return true, err
-	} else {
-		return len(fileContent) == 0, nil
 	}
+	return len(fileContent) == 0, nil
+
 }
 
-// SaveToFile saves Wallets to a file
-func (wm WalletManager) SaveWalletToFile() {
+// SaveWalletToFile saves Wallets to a file
+func (wm *WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
 	wm.mutex.Lock()
 	defer wm.mutex.Unlock()
@@ -173,7 +174,7 @@ func (wm *WalletManager) AddWallet(wallet *Wallet) {
 	wm.mutex.Unlock()
 }
 
-func (wm WalletManager) GetAddresses() []core.Address {
+func (wm *WalletManager) GetAddresses() []core.Address {
 	var addresses []core.Address
 
 	wm.mutex.Lock()
@@ -202,7 +203,7 @@ func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, 
 	return addresses, nil
 }
 
-func (wm WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {
+func (wm *WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair {
 
 	wallet := wm.GetWalletByAddress(address)
 	if wallet == nil {
@@ -212,7 +213,7 @@ func (wm WalletManager) GetKeyPairByAddress(address core.Address) *core.KeyPair 
 
 }
 
-func (wm WalletManager) GetWalletByAddress(address core.Address) *Wallet {
+func (wm *WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 	wm.mutex.Lock()
 	defer wm.mutex.Unlock()
 
@@ -224,18 +225,18 @@ func (wm WalletManager) GetWalletByAddress(address core.Address) *Wallet {
 	return nil
 }
 
-func (wm WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
+func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, password string) (*Wallet, error) {
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err == nil {
 		wallet := wm.GetWalletByAddress(address)
 		if wallet == nil {
 			return nil, errors.New("Address not found in the wallets!")
-		} else {
-			return wallet, nil
 		}
-	} else {
-		return nil, errors.New("Password does not match!")
+		return wallet, nil
+
 	}
+	return nil, errors.New("Password does not match!")
+
 }
 
 func (wm *WalletManager) SetUnlockTimer(timeout time.Duration) {
