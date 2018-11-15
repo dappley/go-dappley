@@ -296,6 +296,24 @@ func TestNewRewardTx(t *testing.T) {
 	assert.Equal(t, common.NewAmount(9), tx.Vout[1].Value)
 }
 
+func TestTransaction_IsRewardTx(t *testing.T) {
+	tests := []struct {
+		name     	string
+		tx       	Transaction
+		expectedRes bool
+	}{
+		{"normal", NewRewardTx(1, map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB":"9"}), true},
+		{"no rewards", NewRewardTx(1,nil), true},
+		{"coinbase", NewCoinbaseTX("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB","",5, common.NewAmount(0)), false},
+		{"normal tx",  *MockTransaction(),false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t,tt.expectedRes,tt.tx.IsRewardTx())
+		})
+	}
+}
+
 func TestTransaction_Proto(t *testing.T) {
 	t1 := Transaction{
 		ID:   util.GenerateRandomAoB(1),

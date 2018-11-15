@@ -41,6 +41,7 @@ import (
 var subsidy = common.NewAmount(10)
 
 const ContractTxouputIndex = 0
+var rewardTxData = []byte("Distribute X Rewards")
 
 var (
 	ErrInsufficientFund  = errors.New("transaction: the balance is insufficient")
@@ -62,7 +63,37 @@ type TxIndex struct {
 }
 
 func (tx Transaction) IsCoinbase() bool {
-	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1 && len(tx.Vout) == 1
+
+	if !tx.isVinCoinbase(){
+		return false
+	}
+
+	if len(tx.Vout) != 1 {
+		return false
+	}
+
+	if bytes.Equal(tx.Vin[0].PubKey,rewardTxData){
+		return false
+	}
+
+	return true
+}
+
+func (tx Transaction) IsRewardTx() bool{
+
+	if !tx.isVinCoinbase(){
+		return false
+	}
+
+	if !bytes.Equal(tx.Vin[0].PubKey,rewardTxData){
+		return false
+	}
+
+	return true
+}
+
+func (tx Transaction) isVinCoinbase() bool{
+	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
 // Serialize returns a serialized Transaction
@@ -297,7 +328,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction{
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, []byte("Distribute X Rewards")}
+	txin := TXInput{nil, -1, bh, rewardTxData}
 	txOutputs := []TXOutput{}
 	for address, amount := range rewards{
 		amt,err := common.NewAmountFromString(amount)
