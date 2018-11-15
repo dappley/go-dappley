@@ -22,15 +22,15 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"github.com/dappley/go-dappley/core/mocks"
 	"testing"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 )
 
 func getAoB(length int64) []byte {
@@ -46,8 +46,8 @@ func GenerateFakeTxInputs() []TXInput {
 
 func GenerateFakeTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(1), PubKeyHash{getAoB(2)},""},
-		{common.NewAmount(2), PubKeyHash{getAoB(2)},""},
+		{common.NewAmount(1), PubKeyHash{getAoB(2)}, ""},
+		{common.NewAmount(2), PubKeyHash{getAoB(2)}, ""},
 	}
 }
 
@@ -93,9 +93,9 @@ func TestSign(t *testing.T) {
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*UTXO{
-		{TXOutput{common.NewAmount(13), pubKeyHash,""}, []byte("01"), 0},
-		{TXOutput{common.NewAmount(13), pubKeyHash,""}, []byte("02"), 0},
-		{TXOutput{common.NewAmount(13), pubKeyHash,""}, []byte("03"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("01"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("02"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("03"), 0},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -105,7 +105,7 @@ func TestSign(t *testing.T) {
 		{[]byte{3}, 2, nil, pubKey},
 	}
 	txout := []TXOutput{
-		{common.NewAmount(19), pubKeyHash,""},
+		{common.NewAmount(19), pubKeyHash, ""},
 	}
 	tx := Transaction{nil, txin, txout, 0}
 
@@ -202,8 +202,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
 		string(pubKeyHash.GetPubKeyHash()): {
-			{TXOutput{common.NewAmount(4), pubKeyHash,""}, []byte{1}, 0},
-			{TXOutput{common.NewAmount(3), pubKeyHash,""}, []byte{2}, 1},
+			{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0},
+			{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1},
 		},
 	}
 
@@ -213,9 +213,9 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	txin2 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
 	txin3 := append(txin, TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
 	txin4 := append(txin, TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
-	pbh, _  := NewUserPubKeyHash(pubKey)
-	txout := []TXOutput{{common.NewAmount(7), pbh,""}}
-	txout2 := []TXOutput{{common.NewAmount(8), pbh,""}} //Vout amount > Vin amount
+	pbh, _ := NewUserPubKeyHash(pubKey)
+	txout := []TXOutput{{common.NewAmount(7), pbh, ""}}
+	txout2 := []TXOutput{{common.NewAmount(8), pbh, ""}} //Vout amount > Vin amount
 
 	tests := []struct {
 		name     string
@@ -251,7 +251,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB", "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := TXOutput{common.NewAmount(10), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}},""}
+	expectVout := TXOutput{common.NewAmount(10), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}, ""}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
 	assert.Equal(t, 1, len(t1.Vout))
@@ -318,10 +318,10 @@ func TestTransaction_FindTxInUtxoPool(t *testing.T) {
 
 	Txin := MockTxInputsWithPubkey(pubkey)
 	Txin2 := MockTxInputsWithPubkey(pubkey)
-	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash,""}, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin[1].Txid, Txin[1].Vout}
-	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[0].Txid, Txin2[0].Vout}
-	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash,""}, Txin2[1].Txid, Txin2[1].Vout}
+	utxo1 := &UTXO{TXOutput{common.NewAmount(10), pubkeyHash, ""}, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash, ""}, Txin[1].Txid, Txin[1].Vout}
+	utxo3 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash, ""}, Txin2[0].Txid, Txin2[0].Vout}
+	utxo4 := &UTXO{TXOutput{common.NewAmount(9), pubkeyHash, ""}, Txin2[1].Txid, Txin2[1].Vout}
 	utxoPool := NewUTXOIndex()
 	utxoPool.index[string(pubkeyHash.GetPubKeyHash())] = []*UTXO{utxo1, utxo2, utxo3, utxo4}
 
@@ -337,27 +337,27 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		addr 		string
+		addr        string
 		expectedRes string
 	}{
 		{
 			name:        "ContainsContractAddress",
-			addr:  		 "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			addr:        "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
 			expectedRes: "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
 		},
 		{
 			name:        "ContainsUserAddress",
-			addr:  		 "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			addr:        "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
 			expectedRes: "",
 		},
 		{
 			name:        "EmptyInput",
-			addr:  		 "",
+			addr:        "",
 			expectedRes: "",
 		},
 		{
 			name:        "InvalidAddress",
-			addr:  		 "dsdGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			addr:        "dsdGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
 			expectedRes: "",
 		},
 	}
@@ -378,7 +378,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 				0,
 			}
 
-			assert.Equal(t,NewAddress(tt.expectedRes),tx.GetContractAddress())
+			assert.Equal(t, NewAddress(tt.expectedRes), tx.GetContractAddress())
 		})
 	}
 }
@@ -386,60 +386,59 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 func TestTransaction_Execute(t *testing.T) {
 
 	tests := []struct {
-		name        		string
-		scAddr 				string
-		toAddr 				string
-		expectContractRun 	bool
+		name              string
+		scAddr            string
+		toAddr            string
+		expectContractRun bool
 	}{
 		{
-			name:        		"CallAContract",
-			scAddr:   	 		"cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
-			toAddr: 			"cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
-			expectContractRun: 	true,
+			name:              "CallAContract",
+			scAddr:            "cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
+			toAddr:            "cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
+			expectContractRun: true,
 		},
 		{
-			name:        		"CallAWrongContractAddr",
-			scAddr:   	 		"cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
-			toAddr: 			"cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
-			expectContractRun: 	false,
+			name:              "CallAWrongContractAddr",
+			scAddr:            "cWDSCWqwYRM6jNiN83PuRGvtcDuPpzBcfb",
+			toAddr:            "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectContractRun: false,
 		},
 		{
-			name:        		"NoPreviousContract",
-			scAddr:   	 		"",
-			toAddr: 			"cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
-			expectContractRun: 	false,
+			name:              "NoPreviousContract",
+			scAddr:            "",
+			toAddr:            "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectContractRun: false,
 		},
-
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := mocks.ScEngine{}
+			sc := new(ScEngineMock)
 			contract := "helloworld!"
-			if tt.expectContractRun{
-				sc.On("ImportSourceCode",contract)
+			if tt.expectContractRun {
+				sc.On("ImportSourceCode", contract)
 				sc.On("Execute")
 			}
 
 			scUtxo := UTXO{
 				TxIndex: 0,
-				Txid: nil,
+				Txid:    nil,
 				TXOutput: TXOutput{
 					PubKeyHash: PubKeyHash{[]byte(tt.scAddr)},
-					Contract: contract,
+					Contract:   contract,
 				},
 			}
 
 			tx := Transaction{
-				Vout: []TXOutput{{nil,PubKeyHash{[]byte(tt.toAddr)},""}},
+				Vout: []TXOutput{{nil, PubKeyHash{[]byte(tt.toAddr)}, ""}},
 			}
 
 			index := NewUTXOIndex()
-			if tt.scAddr != ""{
-				index.addUTXO(scUtxo.TXOutput,nil,0)
+			if tt.scAddr != "" {
+				index.addUTXO(scUtxo.TXOutput, nil, 0)
 			}
 
-			tx.Execute(index, nil, &sc)
+			tx.Execute(index, nil, sc)
 		})
 	}
 }

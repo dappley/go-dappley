@@ -58,12 +58,16 @@ type BlockPoolInterface interface {
 	Push(block *Block, pid peer.ID)
 }
 
-type ScEngineManager interface{
+type ScEngineManager interface {
 	CreateEngine() ScEngine
 }
 
-type ScEngine interface{
+type ScEngine interface {
 	ImportSourceCode(source string)
 	ImportLocalStorage(storage map[string]string)
-	Execute(function,args string) string
+	ImportContractAddr(contractAddr Address)
+	ImportSourceTXID(txid []byte)
+	ImportUTXOs(utxos []*UTXO)
+	GetGeneratedTXs() []*Transaction
+	Execute(function, args string) string
 }

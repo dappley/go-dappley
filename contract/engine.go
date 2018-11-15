@@ -19,6 +19,8 @@ import (
 	"unsafe"
 
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 var (
@@ -29,9 +31,13 @@ var (
 )
 
 type V8Engine struct {
-	source       string
-	storage      map[string]string
-	handler      uint64
+	source        string
+	storage       map[string]string
+	contractAddr  core.Address
+	contractUTXOs []*core.UTXO
+	sourceTXID    []byte
+	generatedTXs  []*core.Transaction
+	handler       uint64
 }
 
 func InitializeV8Engine() {
@@ -53,6 +59,7 @@ func NewV8Engine() *V8Engine {
 	engine := &V8Engine{
 		source:       "",
 		storage:      make(map[string]string),
+		contractAddr: core.NewAddress(""),
 		handler:      currHandler,
 	}
 	currHandler++
@@ -70,7 +77,26 @@ func (sc *V8Engine) ImportLocalStorage(storage map[string]string) {
 	sc.storage = storage
 }
 
-func (sc *V8Engine) Execute(function, args string) string{
+// ImportContractAddr supplies the wallet address of the contract to the engine
+func (sc *V8Engine) ImportContractAddr(contractAddr core.Address) {
+	sc.contractAddr = contractAddr
+}
+
+// ImportUTXOs supplies the list of contract's UTXOs to the engine
+func (sc *V8Engine) ImportUTXOs(utxos []*core.UTXO) {
+	sc.contractUTXOs = utxos
+}
+
+// ImportSourceTXID supplies the  to the engine
+func (sc *V8Engine) ImportSourceTXID(txid []byte) {
+	sc.sourceTXID = txid
+}
+
+func (sc *V8Engine) GetGeneratedTXs() []*core.Transaction {
+	return sc.generatedTXs
+}
+
+func (sc *V8Engine) Execute(function, args string) string {
 	res := "\"\""
 	status := "success"
 	var result *C.char
@@ -87,14 +113,14 @@ func (sc *V8Engine) Execute(function, args string) string{
 		status = "failed"
 	}
 
-	if result!=nil{
+	if result != nil {
 		res = C.GoString(result)
 		C.free(unsafe.Pointer(result))
 	}
 
 	logger.WithFields(logger.Fields{
-		"result"	: res,
-		"status"	: status,
+		"result": res,
+		"status": status,
 	}).Info("Smart Contract Execution Ends.")
 	return res
 }

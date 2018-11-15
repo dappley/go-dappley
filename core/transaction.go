@@ -26,15 +26,16 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/util"
 	"strings"
+
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/util"
 )
 
 var subsidy = common.NewAmount(10)
@@ -42,9 +43,9 @@ var subsidy = common.NewAmount(10)
 const ContractTxouputIndex = 0
 
 var (
-	ErrInsufficientFund = errors.New("transaction: the balance is insufficient")
-	ErrInvalidAmount    = errors.New("transaction: amount is invalid (must be > 0)")
-	ErrTXInputNotFound  = errors.New("transaction: transaction input not found")
+	ErrInsufficientFund  = errors.New("transaction: the balance is insufficient")
+	ErrInvalidAmount     = errors.New("transaction: amount is invalid (must be > 0)")
+	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
 	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
 )
 
@@ -150,7 +151,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -203,10 +204,9 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 //key hash in utxo
 func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
-
 	for i, vin := range tx.Vin {
 
-		isContract, err:= prevUtxos[i].PubKeyHash.IsContract()
+		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
 		if err != nil {
 			return false
 		}
@@ -293,7 +293,7 @@ func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Tran
 
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair,
-						tip *common.Amount, contract string) (Transaction, error) {
+	tip *common.Amount, contract string) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, amount, tip)
@@ -335,13 +335,13 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 }
 
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
-func (tx *Transaction) GetContractAddress() Address{
+func (tx *Transaction) GetContractAddress() Address {
 	if len(tx.Vout) == 0 {
 		return NewAddress("")
 	}
 
 	isContract, err := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
-	if err!= nil {
+	if err != nil {
 		return NewAddress("")
 	}
 
@@ -353,7 +353,7 @@ func (tx *Transaction) GetContractAddress() Address{
 }
 
 //GetContract returns the smart contract code in a transaction
-func (tx *Transaction) GetContract() string{
+func (tx *Transaction) GetContract() string {
 	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
 	if !isContract {
 		return ""
@@ -364,24 +364,29 @@ func (tx *Transaction) GetContract() string{
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
 func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) {
 	vout := tx.Vout[ContractTxouputIndex]
-	if isContract,_:=vout.PubKeyHash.IsContract(); isContract {
+	if isContract, _ := vout.PubKeyHash.IsContract(); isContract {
 		utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
 		//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 		//is a smart contract deployment transaction, not a smart contract execution transaction.
-		if len(utxos) != 0{
+		if len(utxos) != 0 {
 			function, args := util.DecodeScInput(vout.Contract)
 			if function != "" {
 				totalArgs := util.PrepareArgs(args)
-				address := utxos[0].PubKeyHash.GenerateAddress().String()
+				address := utxos[0].PubKeyHash.GenerateAddress()
 				logger.WithFields(logger.Fields{
-					"contractAddr"		: address,
-					"contract"	  		: utxos[0].Contract,
-					"invokedFunction" 	: function,
-					"arguments"			: totalArgs,
+					"contractAddr":    address.String(),
+					"contract":        utxos[0].Contract,
+					"invokedFunction": function,
+					"arguments":       totalArgs,
 				}).Info("Executing smart contract...")
 				engine.ImportSourceCode(utxos[0].Contract)
-				engine.ImportLocalStorage(scStorage.GetStorageByAddress(address))
+				engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
+				engine.ImportContractAddr(address)
+				engine.ImportUTXOs(utxos[1:])
+				engine.ImportSourceTXID(tx.ID)
 				engine.Execute(function, totalArgs)
+				// TODO: Handle the generated transactions, if any
+				//engine.GetGeneratedTXs()
 			}
 		}
 	}
