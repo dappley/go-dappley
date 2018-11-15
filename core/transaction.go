@@ -362,7 +362,7 @@ func (tx *Transaction) GetContract() string {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) {
+func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) []*Transaction {
 	vout := tx.Vout[ContractTxouputIndex]
 	if isContract, _ := vout.PubKeyHash.IsContract(); isContract {
 		utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
@@ -385,11 +385,11 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEng
 				engine.ImportUTXOs(utxos[1:])
 				engine.ImportSourceTXID(tx.ID)
 				engine.Execute(function, totalArgs)
-				// TODO: Handle the generated transactions, if any
-				//engine.GetGeneratedTXs()
+				return engine.GetGeneratedTXs()
 			}
 		}
 	}
+	return []*Transaction{}
 }
 
 // String returns a human-readable representation of a transaction

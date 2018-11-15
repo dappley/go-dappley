@@ -87,11 +87,12 @@ func (sc *V8Engine) ImportUTXOs(utxos []*core.UTXO) {
 	sc.contractUTXOs = utxos
 }
 
-// ImportSourceTXID supplies the  to the engine
+// ImportSourceTXID supplies the id of the transaction which executes the contract
 func (sc *V8Engine) ImportSourceTXID(txid []byte) {
 	sc.sourceTXID = txid
 }
 
+// GetGeneratedTXs returns the transactions generated as a result of executing the contract
 func (sc *V8Engine) GetGeneratedTXs() []*core.Transaction {
 	return sc.generatedTXs
 }
