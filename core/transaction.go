@@ -291,6 +291,31 @@ func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Tran
 	return tx
 }
 
+//NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
+func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction{
+
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
+
+	txin := TXInput{nil, -1, bh, []byte("Distribute X Rewards")}
+	txOutputs := []TXOutput{}
+	for address, amount := range rewards{
+		amt,err := common.NewAmountFromString(amount)
+		if err!= nil {
+			logger.WithFields(logger.Fields{
+				"address"	:address,
+				"amount"	:amount,
+				"error"		:err,
+			}).Warn("Transaction: Not able to parse reward amount")
+		}
+		txOutputs = append(txOutputs,*NewTXOutput(amt, address))
+	}
+	tx := Transaction{nil, []TXInput{txin}, txOutputs, 0}
+	tx.ID = tx.Hash()
+
+	return tx
+}
+
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair,
 	tip *common.Amount, contract string) (Transaction, error) {

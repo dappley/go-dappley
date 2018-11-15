@@ -286,6 +286,16 @@ func TestIsCoinBase(t *testing.T) {
 
 }
 
+func TestNewRewardTx(t *testing.T) {
+	rewards := map[string]string{
+		"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "8",
+		"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa": "9",
+	}
+	tx := NewRewardTx(5,rewards)
+	assert.Equal(t, common.NewAmount(8), tx.Vout[0].Value)
+	assert.Equal(t, common.NewAmount(9), tx.Vout[1].Value)
+}
+
 func TestTransaction_Proto(t *testing.T) {
 	t1 := Transaction{
 		ID:   util.GenerateRandomAoB(1),
