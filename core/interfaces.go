@@ -48,16 +48,6 @@ type NetService interface {
 	GetBlockchain() *Blockchain
 }
 
-type BlockPoolInterface interface {
-	SetBlockchain(bc *Blockchain)
-	BlockRequestCh() chan BlockRequestPars
-	GetBlockchain() *Blockchain
-	GetSyncState() bool
-	SetSyncState(bool)
-	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
-	Push(block *Block, pid peer.ID)
-}
-
 type ScEngineManager interface {
 	CreateEngine() ScEngine
 }
