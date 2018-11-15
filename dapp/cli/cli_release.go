@@ -583,6 +583,12 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 }
 
 func helpCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	fmt.Println("-----------------------------------------------------------------")
+	fmt.Println("Command: cli ", "createWallet")
+	fmt.Printf("Usage Example: cli createWallet\n")
+	fmt.Println("-----------------------------------------------------------------")
+	fmt.Println("Command: cli ", "listAddresses")
+	fmt.Printf("Usage Example: cli listAddresses\n")
 	for cmd, pars := range cmdFlagsMap {
 		fmt.Println("-----------------------------------------------------------------")
 		fmt.Println("Command: cli ", cmd)
