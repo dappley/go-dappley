@@ -20,7 +20,6 @@ package core
 
 import (
 	"encoding/hex"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
@@ -79,7 +78,7 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 }
 
 //Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
+func (pool *BlockPool) VerifyTransactions(bc *Blockchain, utxoSnapshot UTXOIndex, forkBlks []*Block) bool {
 	logger.Info("Verifying transactions")
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
@@ -87,7 +86,8 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
 		}).Debug("Verifying block before merge")
 
-		if !forkBlks[i].VerifyTransactions(utxo) {
+		if !forkBlks[i].VerifyTransactions(utxoSnapshot) ||
+		   !forkBlks[i].VerifySmartContractTransactions(bc.db, bc.scManager){
 			return false
 		}
 	}

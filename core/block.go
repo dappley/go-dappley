@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"github.com/dappley/go-dappley/storage"
 	"time"
 
 	logger "github.com/sirupsen/logrus"
@@ -296,8 +297,38 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 		if !tx.Verify(&utxo, b.GetHeight()) {
 			return false
 		}
+		err := utxo.ApplyTransaction(tx)
+		if err!=nil{
+			return false
+		}
 	}
 	return true
+}
+
+func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEngineManager) bool{
+
+	if manager==nil{
+		return true
+	}
+
+	utxo := LoadUTXOIndex(db)
+	scState := NewScState()
+	scState.LoadFromDatabase(db)
+	var rewardTx *Transaction
+	for _, tx := range b.GetTransactions() {
+		if tx.IsRewardTx(){
+			rewardTx = tx
+			continue
+		}
+		tx.Execute(utxo, scState, manager.CreateEngine())
+	}
+
+	if rewardTx == nil {
+		return true
+	}
+
+	rewardStorage := scState.GetRewardStorage()
+	return rewardTx.MatchRewards(rewardStorage)
 }
 
 func IsParentBlockHash(parentBlk, childBlk *Block) bool {

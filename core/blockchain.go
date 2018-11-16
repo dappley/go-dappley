@@ -372,7 +372,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
 	}
 
-	if !bc.GetBlockPool().VerifyTransactions(utxo, forkBlks) {
+	if !bc.GetBlockPool().VerifyTransactions(bc, utxo, forkBlks) {
 		return
 	}
 
