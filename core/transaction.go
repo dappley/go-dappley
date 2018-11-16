@@ -158,6 +158,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
+// Verify function will change utxoIndex and txPool
 func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, blockHeight uint64) bool {
 
 	if tx.IsCoinbase() {
