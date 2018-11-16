@@ -191,6 +191,9 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, block
 		for _, vin := range notFoundVin {
 			parentTx, exists := txPool.index[string(vin.Txid)]
 			if !exists {
+				// todo: change doublespend condition
+				// vin of tx not found in utxoIndex or txPool
+				MetricsTxDoubleSpend.Inc(1)
 				return false
 			}
 			pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
@@ -200,7 +203,6 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, block
 			}
 			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.Verify(utxoIndex, txPool, 0) {
 				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
-				MetricsTxDoubleSpend.Inc(1)
 				return false
 			}
 			prevUtxos = append(prevUtxos, newUTXO(parentTx.Vout[vin.Vout], vin.Txid, vin.Vout))
