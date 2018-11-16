@@ -315,20 +315,20 @@ func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEn
 	scState := NewScState()
 	scState.LoadFromDatabase(db)
 	var rewardTx *Transaction
+	rewards := make(map[string]string)
 	for _, tx := range b.GetTransactions() {
 		if tx.IsRewardTx(){
 			rewardTx = tx
 			continue
 		}
-		tx.Execute(utxo, scState, manager.CreateEngine())
+		tx.Execute(utxo, scState, rewards, manager.CreateEngine())
 	}
 
 	if rewardTx == nil {
 		return true
 	}
 
-	rewardStorage := scState.GetRewardStorage()
-	return rewardTx.MatchRewards(rewardStorage)
+	return rewardTx.MatchRewards(rewards)
 }
 
 func IsParentBlockHash(parentBlk, childBlk *Block) bool {

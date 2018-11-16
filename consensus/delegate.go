@@ -129,8 +129,9 @@ func (d *Delegate) prepareBlock() *NewBlock {
 	})
 
 	cbtx := d.calculateTips(validTxs)
-	scGeneratedTXs, scState:= d.executeSmartContract(validTxs)
-	rtx := core.NewRewardTx(d.bc.GetMaxHeight()+1, scState.GetRewardStorage())
+	rewards := make(map[string]string)
+	scGeneratedTXs := d.executeSmartContract(validTxs, rewards)
+	rtx := core.NewRewardTx(d.bc.GetMaxHeight()+1, rewards)
 	validTxs = append(validTxs, scGeneratedTXs...)
 	validTxs = append(validTxs, cbtx, &rtx)
 
@@ -149,9 +150,8 @@ func (d *Delegate) calculateTips(txs []*core.Transaction) *core.Transaction {
 }
 
 
-//executeSmartContract executes all smart contracts
-func (d *Delegate) executeSmartContract(txs []*core.Transaction) ([]*core.Transaction,*core.ScState) {
-
+//executeSmartContract executes all smart contracts. returns the updated state
+func (d *Delegate) executeSmartContract(txs []*core.Transaction, rewards map[string]string) []*core.Transaction{
 	//start a new smart contract engine
 	utxoIndex := core.LoadUTXOIndex(d.bc.GetDb())
 	scStorage := core.NewScState()
@@ -159,10 +159,10 @@ func (d *Delegate) executeSmartContract(txs []*core.Transaction) ([]*core.Transa
 	engine := sc.NewV8Engine()
 	var generatedTXs []*core.Transaction
 	for _, tx := range txs {
-		generatedTXs = append(generatedTXs, tx.Execute(utxoIndex, scStorage, engine)...)
+		generatedTXs = append(generatedTXs, tx.Execute(utxoIndex, scStorage, rewards, engine)...)
 	}
 
-	return generatedTXs,scStorage
+	return generatedTXs
 }
 
 // produceBlock hashes and signs the new block; returns true if it was successful and the block fulfills the requirement

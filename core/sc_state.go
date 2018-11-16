@@ -90,11 +90,6 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string{
 	return ss.states[address]
 }
 
-//GetRewardStorage gets the storage that stores the reward distribution
-func (ss *ScState) GetRewardStorage() map[string]string{
-	return ss.states[scRewardKey]
-}
-
 //LoadFromDatabase loads states from database
 func (ss *ScState) LoadFromDatabase(db storage.Storage){
 	ss.mutex.Lock()
@@ -112,10 +107,11 @@ func (ss *ScState) SaveToDatabase(db storage.Storage) error{
 	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
 
+//Update updates smart contract states by executing all input transactions
 func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager){
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
 	for _,tx := range txs{
-		tx.Execute(index,ss,manager.CreateEngine())
+		tx.Execute(index,ss,nil,manager.CreateEngine())
 	}
 }

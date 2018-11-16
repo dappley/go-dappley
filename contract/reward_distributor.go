@@ -21,6 +21,14 @@ func RecordRewardFunc(handler unsafe.Pointer, address *C.char, amount *C.char) i
 		return 1
 	}
 
+	if engine.rewards == nil {
+		logger.WithFields(logger.Fields{
+			"reward address"		: addr,
+			"amount"	  			: amt,
+		}).Debug("Smart Contract: Reward list has nil pointer!")
+		return 1
+	}
+
 	if engine.rewards[addr] == "" {
 		engine.rewards[addr] = "0"
 	}

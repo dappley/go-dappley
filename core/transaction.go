@@ -428,27 +428,27 @@ func (tx *Transaction) GetContract() string {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEngine) {
+func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[string]string, engine ScEngine) []*Transaction{
 
 	if tx.IsRewardTx(){
-		return
+		return nil
 	}
 
 	vout := tx.Vout[ContractTxouputIndex]
 
 	if isContract,_:=vout.PubKeyHash.IsContract(); !isContract{
-		return
+		return nil
 	}
 	utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
 	if len(utxos) == 0 {
-		return
+		return nil
 	}
 
 	function, args := util.DecodeScInput(vout.Contract)
 	if function == "" {
-		return
+		return nil
 	}
 
 	totalArgs := util.PrepareArgs(args)
@@ -464,8 +464,9 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEng
 	engine.ImportContractAddr(address)
 	engine.ImportUTXOs(utxos[1:])
 	engine.ImportSourceTXID(tx.ID)
-	engine.ImportRewardStorage(scStorage.GetRewardStorage())
+	engine.ImportRewardStorage(rewards)
 	engine.Execute(function, totalArgs)
+	return engine.GetGeneratedTXs()
 }
 
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool{

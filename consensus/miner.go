@@ -150,8 +150,9 @@ func (miner *Miner) prepareBlock() *NewBlock {
 	})
 
 	cbtx := miner.calculateTips(validTxs)
-	scGeneratedTXs, scState := miner.executeSmartContract(validTxs)
-	rtx := core.NewRewardTx(miner.bc.GetMaxHeight()+1, scState.GetRewardStorage())
+	rewards := make(map[string]string)
+	scGeneratedTXs := miner.executeSmartContract(validTxs)
+	rtx := core.NewRewardTx(miner.bc.GetMaxHeight()+1, rewards)
 	validTxs = append(validTxs, scGeneratedTXs...)
 	validTxs = append(validTxs, cbtx, &rtx)
 
@@ -171,7 +172,7 @@ func (miner *Miner) calculateTips(txs []*core.Transaction) *core.Transaction {
 }
 
 //executeSmartContract executes all smart contracts
-func (miner *Miner) executeSmartContract(txs []*core.Transaction) ([]*core.Transaction, *core.ScState) {
+func (miner *Miner) executeSmartContract(txs []*core.Transaction, rewards map[string]string) []*core.Transaction{
 	//start a new smart contract engine
 	utxoIndex := core.LoadUTXOIndex(miner.bc.GetDb())
 	scStorage := core.NewScState()
@@ -179,9 +180,9 @@ func (miner *Miner) executeSmartContract(txs []*core.Transaction) ([]*core.Trans
 	engine := sc.NewV8Engine()
 	var generatedTXs []*core.Transaction
 	for _, tx := range txs {
-		generatedTXs = append(generatedTXs, tx.Execute(utxoIndex, scStorage, engine)...)
+		generatedTXs = append(generatedTXs, tx.Execute(utxoIndex, scStorage, rewards, engine)...)
 	}
-	return generatedTXs, scStorage
+	return generatedTXs
 }
 
 //returns true if a block is mined; returns false if the nonce value does not satisfy the difficulty requirement
