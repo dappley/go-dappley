@@ -65,22 +65,43 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 
 func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
-	for i := 0; i < txPool.Transactions.Len(); i ++ {
-		tx := txPool.Transactions.Index(i).(Transaction)
+	var invalidTxs []*Transaction
 
-		if contains(tx, validTxs) {
+	tempTxPool := txPool.deepCopy()
+	tempUtxoIndex := utxoIndex.DeepCopy()
+	for txId := range txPool.index {
+		tx := txPool.index[txId]
+
+		if contains(tx, validTxs) || contains(tx, invalidTxs) {
 			continue
 		}
 
-		if tx.Verify(&utxoIndex, txPool, 0) {
+		if tx.Verify(tempUtxoIndex, tempTxPool, 0) {
 			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
 			validTxs = append(validTxs, dependentTxs...)
+		} else {
+			invalidTxs = append(invalidTxs, tx)
 		}
 	}
+
 	return validTxs
 }
 
-func contains(targetTx Transaction, txs []*Transaction) bool {
+func (txPool *TransactionPool) deepCopy() TransactionPool {
+	txPoolCopy := TransactionPool{
+		Transactions: *sorted.NewSlice(compareTxTips, match),
+		index:        make(map[string]*Transaction),
+		limit:        txPool.limit,
+	}
+
+	for index := range txPool.index {
+		txPoolCopy.Push(txPool.index[index].TrimmedCopy())
+	}
+
+	return txPoolCopy
+}
+
+func contains(targetTx *Transaction, txs []*Transaction) bool {
 	for _, tx := range txs {
 		if bytes.Equal(targetTx.ID, tx.ID) {
 			return true
