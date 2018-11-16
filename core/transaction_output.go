@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type TXOutput struct {
@@ -58,6 +59,25 @@ func NewTxOut(value *common.Amount, address string, contract string) *TXOutput{
 	txo := &TXOutput{value, PubKeyHash{},contract}
 	txo.Lock(address)
 	return txo
+}
+
+func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) bool{
+
+	val, isFound := rewardStorage[out.PubKeyHash.GenerateAddress().String()]
+	if !isFound {
+		return false
+	}
+
+	amount, err := common.NewAmountFromString(val)
+	if err!=nil{
+		logger.WithFields(logger.Fields{
+			"reward":val,
+			"error" :err,
+		}).Warn("TXOutput: Reward amount is in invalid format.")
+		return false
+	}
+
+	return out.Value.Cmp(amount)==0
 }
 
 func (out *TXOutput) ToProto() proto.Message {
