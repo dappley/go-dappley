@@ -63,7 +63,7 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	}
 }
 
-func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
+func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	var invalidTxs []*Transaction
 
@@ -83,6 +83,9 @@ func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
 			invalidTxs = append(invalidTxs, tx)
 		}
 	}
+
+	txPool.RemoveMultipleTransactions(validTxs)
+	txPool.RemoveMultipleTransactions(invalidTxs)
 
 	return validTxs
 }
