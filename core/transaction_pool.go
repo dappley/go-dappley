@@ -120,6 +120,10 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 		txPool.Transactions.PopLeft()
 	}
 
+	if _, exists := txPool.index[string(tx.ID)]; exists {
+		logger.Warn("TransactionPool: transaction not pushed to pool because transaction ID already exists")
+	}
+
 	txPool.Transactions.Push(tx)
 	txPool.index[string(tx.ID)] = &tx
 }
