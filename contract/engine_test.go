@@ -29,6 +29,27 @@ var addrChecker = new AddrChecker;
 	assert.Equal(t, "35", sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
 }
 
+func TestScEngine_Execute_SyntaxError(t *testing.T) {
+	// Missing quotes around 'use strict'
+	script := `use strict;
+
+var AddrChecker = function(){
+	
+};
+
+AddrChecker.prototype = {
+		check:function(addr,dummy){
+    	return Blockchain.verifyAddress(addr)+dummy;
+    }
+};
+var addrChecker = new AddrChecker;
+`
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	assert.Equal(t, "1", sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
+}
+
 func TestScEngine_BlockchainTransfer(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
