@@ -97,8 +97,8 @@ func (txPool *TransactionPool) deepCopy() TransactionPool {
 		limit:        txPool.limit,
 	}
 
-	for index := range txPool.index {
-		txPoolCopy.Push(txPool.index[index].TrimmedCopy())
+	for _, tx := range txPool.index {
+		txPoolCopy.Push(tx.TrimmedCopy())
 	}
 
 	return txPoolCopy
