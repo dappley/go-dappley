@@ -151,3 +151,12 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 	txPool.Transactions.Push(tx)
 	txPool.index[string(tx.ID)] = &tx
 }
+
+func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
+	if _, exists := txPool.index[string(txId)]; !exists {
+		logger.Warn("TransactionPool: transaction does not exists")
+		return nil
+	}
+
+	return txPool.index[string(txId)]
+}

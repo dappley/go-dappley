@@ -190,8 +190,8 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, block
 
 	if notFoundVin != nil {
 		for _, vin := range notFoundVin {
-			parentTx, exists := txPool.index[string(vin.Txid)]
-			if !exists {
+			parentTx := txPool.GetTxByID(vin.Txid)
+			if parentTx == nil {
 				// todo: change doublespend condition
 				// vin of tx not found in utxoIndex or txPool
 				MetricsTxDoubleSpend.Inc(1)
