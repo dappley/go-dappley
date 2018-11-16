@@ -291,25 +291,25 @@ func TestNewRewardTx(t *testing.T) {
 		"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "8",
 		"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa": "9",
 	}
-	tx := NewRewardTx(5,rewards)
+	tx := NewRewardTx(5, rewards)
 	assert.Equal(t, common.NewAmount(8), tx.Vout[0].Value)
 	assert.Equal(t, common.NewAmount(9), tx.Vout[1].Value)
 }
 
 func TestTransaction_IsRewardTx(t *testing.T) {
 	tests := []struct {
-		name     	string
-		tx       	Transaction
+		name        string
+		tx          Transaction
 		expectedRes bool
 	}{
-		{"normal", NewRewardTx(1, map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB":"9"}), true},
-		{"no rewards", NewRewardTx(1,nil), true},
-		{"coinbase", NewCoinbaseTX("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB","",5, common.NewAmount(0)), false},
-		{"normal tx",  *MockTransaction(),false},
+		{"normal", NewRewardTx(1, map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "9"}), true},
+		{"no rewards", NewRewardTx(1, nil), true},
+		{"coinbase", NewCoinbaseTX("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB", "", 5, common.NewAmount(0)), false},
+		{"normal tx", *MockTransaction(), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t,tt.expectedRes,tt.tx.IsRewardTx())
+			assert.Equal(t, tt.expectedRes, tt.tx.IsRewardTx())
 		})
 	}
 }
@@ -469,4 +469,180 @@ func TestTransaction_Execute(t *testing.T) {
 			tx.Execute(index, nil, sc)
 		})
 	}
+}
+
+func TestTransaction_MatchRewards(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		tx            *Transaction
+		rewardStorage map[string]string
+		expectedRes   bool
+	}{
+		{"normal",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(1),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				}},
+				0,
+			},
+			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
+			true,
+		},
+		{"emptyVout",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{},
+				0,
+			},
+			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
+			false,
+		},
+		{"emptyRewardMap",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(1),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				}},
+				0,
+			},
+			nil,
+			false,
+		},
+		{"Wrong address",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(1),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				}},
+				0,
+			},
+			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
+			false,
+		},
+		{"Wrong amount",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(3),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				}},
+				0,
+			},
+			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
+			false,
+		},
+		{"twoAddresses",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(1),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				},
+					{
+						common.NewAmount(4),
+						PubKeyHash{[]byte{
+							90, 13, 39, 130, 118, 11, 160, 130, 83, 126, 86, 102, 252, 178, 87,
+							218, 57, 174, 123, 244, 229}},
+						"",
+					}},
+				0,
+			},
+			map[string]string{
+				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
+				"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1",
+			},
+			true,
+		},
+		{"MoreRewards",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(1),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				},
+					{
+						common.NewAmount(4),
+						PubKeyHash{[]byte{
+							90, 13, 39, 130, 118, 11, 160, 130, 83, 126, 86, 102, 252, 178, 87,
+							218, 57, 174, 123, 244, 229}},
+						"",
+					}},
+				0,
+			},
+			map[string]string{
+				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
+				"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1",
+				"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6fYekB": "3",
+			},
+			false,
+		},
+		{"MoreVout",
+			&Transaction{
+				nil,
+				[]TXInput{{nil, -1, nil, rewardTxData}},
+				[]TXOutput{{
+					common.NewAmount(1),
+					PubKeyHash{[]byte{
+						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
+						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+					"",
+				},
+					{
+						common.NewAmount(4),
+						PubKeyHash{[]byte{
+							90, 13, 39, 130, 118, 11, 160, 130, 83, 126, 86, 102, 252, 178, 87,
+							218, 57, 174, 123, 244, 229}},
+						"",
+					}},
+				0,
+			},
+			map[string]string{
+				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedRes, tt.tx.MatchRewards(tt.rewardStorage))
+		})
+	}
+
 }

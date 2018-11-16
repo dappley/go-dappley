@@ -468,6 +468,26 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, engine ScEng
 	engine.Execute(function, totalArgs)
 }
 
+func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool{
+
+	if tx==nil {
+		logger.Debug("Transaction: Transaction does not exist")
+		return false
+	}
+
+	if !tx.IsRewardTx(){
+		logger.Debug("Transaction: Transaction is not a reward transaction")
+		return false
+	}
+
+	for _,vout := range tx.Vout{
+		if !vout.IsFoundInRewardStorage(rewardStorage){
+			return false
+		}
+	}
+	return len(rewardStorage) == len(tx.Vout)
+}
+
 // String returns a human-readable representation of a transaction
 func (tx Transaction) String() string {
 	var lines []string
@@ -589,3 +609,4 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	outputs = append(outputs, *NewTXOutput(change, from.String()))
 	return outputs
 }
+
