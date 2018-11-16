@@ -69,14 +69,6 @@ func (bp *BlockProducer) prepareBlock() {
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
 	validTxs := bp.bc.GetTxPool().GetValidTxs(utxoIndex)
 
-	// update UTXO set
-	for i, tx := range validTxs {
-		// remove transaction if utxo set cannot be updated
-		if !utxoIndex.UpdateUtxo(tx) {
-			validTxs = append(validTxs[:i], validTxs[i+1:]...)
-		}
-	}
-
 	totalTips := common.NewAmount(0)
 	for _, tx := range validTxs {
 		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
