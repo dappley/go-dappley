@@ -349,3 +349,10 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	}
 
 }
+
+func TestUTXOIndex_DeepCopy(t *testing.T) {
+	utxoIndex := NewUTXOIndex()
+	utxoCopy := utxoIndex.DeepCopy()
+	utxoCopy.index[string(address1Hash.GetPubKeyHash())] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}}
+	assert.NotEqual(t, utxoIndex, utxoCopy)
+}
