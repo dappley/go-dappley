@@ -208,11 +208,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, txPool *TransactionPool, blo
 	}
 
 	if tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) && tx.verifySignatures(prevUtxos) && tx.verifyPublicKeyHash(prevUtxos) {
-		// update utxoIndex
-		for index, vout := range tx.Vout {
-			utxoIndexKey := string(vout.PubKeyHash.GetPubKeyHash())
-			utxoIndex.index[utxoIndexKey] = append(utxoIndex.index[utxoIndexKey], newUTXO(vout, tx.ID, index))
-		}
+		utxoIndex.UpdateUtxo(tx)
 		return true
 	} else {
 		txPool.RemoveMultipleTransactions([]*Transaction{tx})
