@@ -151,7 +151,7 @@ func (miner *Miner) prepareBlock() *NewBlock {
 
 	cbtx := miner.calculateTips(validTxs)
 	rewards := make(map[string]string)
-	scGeneratedTXs := miner.executeSmartContract(validTxs)
+	scGeneratedTXs := miner.executeSmartContract(validTxs, rewards)
 	rtx := core.NewRewardTx(miner.bc.GetMaxHeight()+1, rewards)
 	validTxs = append(validTxs, scGeneratedTXs...)
 	validTxs = append(validTxs, cbtx, &rtx)

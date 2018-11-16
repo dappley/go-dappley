@@ -466,11 +466,7 @@ func TestTransaction_Execute(t *testing.T) {
 				index.addUTXO(scUtxo.TXOutput, nil, 0)
 			}
 
-<<<<<<< dc3846709775fd8f1037ae922aa85318e2146d21
-			tx.Execute(index, nil, sc)
-=======
-			tx.Execute(index, nil, nil,&sc)
->>>>>>> Decouple reward storage from smart contract states
+			tx.Execute(index, nil, nil, sc)
 		})
 	}
 }
