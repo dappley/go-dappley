@@ -157,10 +157,25 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
-// Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-// Verify function will change utxoIndex and txPool
-func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, blockHeight uint64) bool {
+func (tx *Transaction) DeepCopy() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
 
+	for _, vin := range tx.Vin {
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
+	}
+
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
+	}
+
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
+
+	return txCopy
+}
+
+// Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
+func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
 		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
 			return false
@@ -172,6 +187,13 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, block
 		return true
 	}
 
+	tempTxPool := txPool.deepCopy()
+	tempUtxoIndex := utxoIndex.DeepCopy()
+	return tx.VerifyTxInTempPool(tempUtxoIndex, tempTxPool, blockHeight)
+}
+
+// VerifyTxInPool function will change utxoIndex and txPool
+func (tx *Transaction) VerifyTxInTempPool(utxoIndex UTXOIndex, txPool TransactionPool, blockHeight uint64) bool {
 	var prevUtxos []*UTXO
 	var notFoundVin []TXInput
 	for _, vin := range tx.Vin {
@@ -202,7 +224,8 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool TransactionPool, block
 				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
 				return false
 			}
-			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.Verify(utxoIndex, txPool, 0) {
+
+			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.VerifyTxInTempPool(utxoIndex, txPool, 0) {
 				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
 				return false
 			}

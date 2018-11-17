@@ -67,14 +67,12 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	var invalidTxs []*Transaction
 
-	tempTxPool := txPool.deepCopy()
-	tempUtxoIndex := utxoIndex.DeepCopy()
 	for _, tx := range txPool.index {
 		if contains(tx, validTxs) || contains(tx, invalidTxs) {
 			continue
 		}
 
-		if tx.Verify(tempUtxoIndex, tempTxPool, 0) {
+		if tx.Verify(utxoIndex, txPool, 0) {
 			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
 			validTxs = append(validTxs, dependentTxs...)
 		} else {
@@ -96,7 +94,7 @@ func (txPool *TransactionPool) deepCopy() TransactionPool {
 	}
 
 	for _, tx := range txPool.index {
-		txPoolCopy.Push(tx.TrimmedCopy())
+		txPoolCopy.Push(tx.DeepCopy())
 	}
 
 	return txPoolCopy

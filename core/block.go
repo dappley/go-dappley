@@ -298,9 +298,8 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 		txPool.Transactions.Push(tx)
 	}
 
-	tempUtxoIndex := utxo.DeepCopy()
 	for _, tx := range b.GetTransactions() {
-		if !tx.Verify(tempUtxoIndex, *txPool, b.GetHeight()) {
+		if !tx.Verify(utxo, txPool, b.GetHeight()) {
 			return false
 		}
 	}

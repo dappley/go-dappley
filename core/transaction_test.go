@@ -169,11 +169,11 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, 0}
 
 	// test valid coinbase transaction
-	assert.True(t, t5.Verify(UTXOIndex{}, *NewTransactionPool(128), 5))
-	assert.True(t, t6.Verify(UTXOIndex{}, *NewTransactionPool(128), 5))
+	assert.True(t, t5.Verify(UTXOIndex{}, NewTransactionPool(128), 5))
+	assert.True(t, t6.Verify(UTXOIndex{}, NewTransactionPool(128), 5))
 
 	// test coinbase transaction with incorrect blockHeight
-	assert.False(t, t5.Verify(UTXOIndex{}, *NewTransactionPool(128), 10))
+	assert.False(t, t5.Verify(UTXOIndex{}, NewTransactionPool(128), 10))
 
 	// test coinbase transaction with incorrect subsidy
 	bh2 := make([]byte, 8)
@@ -181,7 +181,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := NewTXOutput(common.NewAmount(20), "13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")
 	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, 0}
-	assert.False(t, t7.Verify(UTXOIndex{}, *NewTransactionPool(128), 5))
+	assert.False(t, t7.Verify(UTXOIndex{}, NewTransactionPool(128), 5))
 
 }
 
@@ -242,7 +242,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			}
 
 			// Verify the signatures
-			result := tt.tx.Verify(utxoIndex, *NewTransactionPool(128), 0)
+			result := tt.tx.Verify(utxoIndex, NewTransactionPool(128), 0)
 			assert.Equal(t, tt.ok, result)
 		})
 	}
@@ -493,19 +493,19 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	txPool.Push(dependentTx4)
 	txPool.Push(dependentTx5)
 
-	assert.Equal(t, true, dependentTx2.Verify(UtxoIndex, *txPool, 0))
+	assert.Equal(t, true, dependentTx2.Verify(UtxoIndex, txPool, 0))
 
-	assert.Equal(t, true, dependentTx3.Verify(UtxoIndex, *txPool, 0))
+	assert.Equal(t, true, dependentTx3.Verify(UtxoIndex, txPool, 0))
 
 	txPool.Push(t1)
-	assert.Equal(t, false, t1.Verify(UtxoIndex, *txPool, 0))
+	assert.Equal(t, false, t1.Verify(UtxoIndex, txPool, 0))
 
 	//txPool.Push(dependentTx4)
-	assert.Equal(t, true, dependentTx4.Verify(UtxoIndex, *txPool, 0))
+	assert.Equal(t, true, dependentTx4.Verify(UtxoIndex, txPool, 0))
 
 	//txPool.Push(dependentTx5)
-	assert.Equal(t, true, dependentTx5.Verify(UtxoIndex, *txPool, 0))
+	assert.Equal(t, true, dependentTx5.Verify(UtxoIndex, txPool, 0))
 
 	// test UTXOs not found for parent transactions
-	assert.Equal(t, false, dependentTx3.Verify(UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, *txPool, 0))
+	assert.Equal(t, false, dependentTx3.Verify(UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, txPool, 0))
 }

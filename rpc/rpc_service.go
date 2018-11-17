@@ -212,7 +212,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
-	if tx.Verify(utxoIndex, *core.NewTransactionPool(128),0) == false {
+	if tx.Verify(utxoIndex, core.NewTransactionPool(128),0) == false {
 		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
 	}
 
