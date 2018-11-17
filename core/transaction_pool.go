@@ -69,9 +69,7 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 
 	tempTxPool := txPool.deepCopy()
 	tempUtxoIndex := utxoIndex.DeepCopy()
-	for txId := range txPool.index {
-		tx := txPool.index[txId]
-
+	for _, tx := range txPool.index {
 		if contains(tx, validTxs) || contains(tx, invalidTxs) {
 			continue
 		}
