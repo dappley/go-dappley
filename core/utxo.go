@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jinzhu/copier"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
@@ -274,10 +273,13 @@ func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 func (utxos UTXOIndex) DeepCopy() UTXOIndex {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
+
 	utxocopy := NewUTXOIndex()
-	copier.Copy(&utxocopy, &utxos)
-	if len(utxocopy.index) == 0 {
-		utxocopy = NewUTXOIndex()
+	for pkh := range utxos.index {
+		utxocopy.index[pkh] = make([]*UTXO, 0)
+		for _, utxo := range utxos.index[pkh] {
+			utxocopy.index[pkh] = append(utxocopy.index[pkh], utxo)
+		}
 	}
 	return utxocopy
 }

@@ -353,6 +353,27 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 func TestUTXOIndex_DeepCopy(t *testing.T) {
 	utxoIndex := NewUTXOIndex()
 	utxoCopy := utxoIndex.DeepCopy()
-	utxoCopy.index[string(address1Hash.GetPubKeyHash())] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}}
-	assert.NotEqual(t, utxoIndex, utxoCopy)
+	assert.Equal(t, 0, len(utxoIndex.index))
+	assert.Equal(t, 0, len(utxoCopy.index))
+
+	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = []*UTXO{}
+	assert.Equal(t, 1, len(utxoIndex.index))
+	assert.Equal(t, 0, len(utxoCopy.index))
+
+	utxoCopy.index[string(address1Hash.GetPubKeyHash())] = append(utxoCopy.index[string(address1Hash.GetPubKeyHash())], &UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0})
+	assert.Equal(t, 1, len(utxoIndex.index))
+	assert.Equal(t, 1, len(utxoCopy.index))
+	assert.Equal(t, 0, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
+	assert.Equal(t, 1, len(utxoCopy.index[string(address1Hash.GetPubKeyHash())]))
+
+	utxoCopy.index["1"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}, {MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}}
+	utxoCopy2 := utxoCopy.DeepCopy()
+	utxoCopy2.index["1"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}}
+	assert.Equal(t, 2, len(utxoCopy.index))
+	assert.Equal(t, 2, len(utxoCopy2.index))
+	assert.Equal(t, 2, len(utxoCopy.index["1"]))
+	assert.Equal(t, 1, len(utxoCopy2.index["1"]))
+	assert.Equal(t, 1, len(utxoIndex.index))
+
+	assert.EqualValues(t, utxoCopy.index[string(address1Hash.GetPubKeyHash())], utxoCopy2.index[string(address1Hash.GetPubKeyHash())])
 }
