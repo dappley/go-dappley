@@ -398,72 +398,91 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 func TestForkChoice(t *testing.T) {
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
+	var dbs []storage.Storage
+	// Remember to close all opened databases after test
+	defer func() {
+		for _, db := range dbs {
+			db.Close()
+		}
+	}()
+
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 	//wait for mining for at least "targetHeight" blocks
 	//targetHeight := uint64(4)
 	//num of nodes to be created in the test
 	numOfNodes := 2
-	nodes := []*network.Node{}
+	var nodes []*network.Node
 	for i := 0; i < numOfNodes; i++ {
 		db := storage.NewRamStorage()
-		defer db.Close()
+		dbs = append(dbs, db)
 
 		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
-		pow.SetTargetBit(18)
+		pow.SetTargetBit(10)
 		node.Start(testport_fork + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 	}
 
-	//start node0 first
-	pows[0].Start()
-	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 5
-	}, 5)
-	//start node1 with delay
+	// Mine more blocks on node[0] than on node[1]
 	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 8
-	}, 5)
-	blk1, _ := bcs[0].GetTailBlock()
-
-	pows[0].Stop()
+		return bcs[1].GetMaxHeight() > 4
+	}, 10)
 	pows[1].Stop()
+	desiredHeight := uint64(10)
+	if bcs[1].GetMaxHeight() > 10 {
+		desiredHeight = bcs[1].GetMaxHeight()
+	}
+	pows[0].Start()
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() > desiredHeight
+	}, 10)
+	pows[0].Stop()
 
+	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
+	tailBlk, _ := bcs[0].GetTailBlock()
 	connectNodes(nodes[0], nodes[1])
-	nodes[0].BroadcastBlock(blk1)
-	//make sure syncing starts
+	nodes[0].BroadcastBlock(tailBlk)
+	// Make sure syncing starts on node[1]
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
 	}, 10)
-	//make sure syncing ends
+	// Make sure syncing ends on node[1]
 	core.WaitDoneOrTimeout(func() bool {
 		return !bcs[1].GetBlockPool().GetSyncState()
-	}, 10)
+	}, 20)
+
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 
 func TestForkSegmentHandling(t *testing.T) {
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
+	var dbs []storage.Storage
+	// Remember to close all opened databases after test
+	defer func() {
+		for _, db := range dbs {
+			db.Close()
+		}
+	}()
 	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 
 	numOfNodes := 2
-	nodes := []*network.Node{}
+	var nodes []*network.Node
 	for i := 0; i < numOfNodes; i++ {
 		db := storage.NewRamStorage()
-		defer db.Close()
+		dbs = append(dbs, db)
 
 		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
 
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
-		pow.SetTargetBit(18)
+		pow.SetTargetBit(16)
 		node.Start(testport_fork_segment + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
@@ -472,40 +491,47 @@ func TestForkSegmentHandling(t *testing.T) {
 	blk1 := &core.Block{}
 	blk2 := &core.Block{}
 
-	//start node0 first
-	pows[0].Start()
+	// Ensure node[1] mined some blocks
 	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 2
+		return bcs[1].GetMaxHeight() > 3
 	}, 5)
-	blk1, _ = bcs[0].GetTailBlock()
-	//start node1
 	pows[1].Stop()
+
+	pows[0].Start()
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 7
-	}, 2)
-	blk2, _ = bcs[0].GetTailBlock()
-
+	}, 5)
+	blk1, _ = bcs[0].GetBlockByHeight(7)
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[0].GetMaxHeight() > 12
+	}, 5)
 	pows[0].Stop()
+	blk2, _ = bcs[0].GetTailBlock()
 
 	connectNodes(nodes[0], nodes[1])
 	nodes[0].BroadcastBlock(blk1)
-	//wait for node1 to sync
+	// Wait for node[1] to start syncing
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetBlockPool().GetSyncState()
-	}, 4)
+	}, 10)
 
-	//node0 broadcast higher block on the same fork
+	// node[0] broadcast higher block on the same fork and should trigger another sync on node[1]
 	nodes[0].BroadcastBlock(blk2)
-	//make sure syncing begins
-	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState()
-	}, 5)
-	//make sure syncing ends
+
+	// Make sure previous syncing ends
 	core.WaitDoneOrTimeout(func() bool {
 		return !bcs[1].GetBlockPool().GetSyncState()
-	}, 2)
-	//merge should be successful and both nodes should have the same blockchain
+	}, 10)
+	// Make sure node[1] is syncing again
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[1].GetBlockPool().GetSyncState()
+	}, 10)
+	// Make sure syncing ends
+	core.WaitDoneOrTimeout(func() bool {
+		return !bcs[1].GetBlockPool().GetSyncState()
+	}, 10)
+
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 

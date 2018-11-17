@@ -154,6 +154,5 @@ type Done func() bool
 func WaitDoneOrTimeout(done Done, timeOut int) {
 	currentTime := time.Now().UTC().Unix()
 	for !done() && !util.IsTimeOut(currentTime, int64(timeOut)) {
-		time.Sleep(time.Second / 5)
 	}
 }
