@@ -493,19 +493,29 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	txPool.Push(dependentTx4)
 	txPool.Push(dependentTx5)
 
+	// verify dependent txs 2,3,4,5 with relation:
+	//tx1 (UtxoIndex)
+	//|     \
+	//tx2    \
+	//|  \    \
+	//tx3-tx4-tx5
+
+	// test a transaction whose Vin is from UtxoIndex
 	assert.Equal(t, true, dependentTx2.Verify(UtxoIndex, txPool, 0))
 
+	// test a transaction whose Vin is from another transaction in transaction pool
 	assert.Equal(t, true, dependentTx3.Verify(UtxoIndex, txPool, 0))
 
-	txPool.Push(t1)
-	assert.Equal(t, false, t1.Verify(UtxoIndex, txPool, 0))
-
-	//txPool.Push(dependentTx4)
+	// test a transaction whose Vin is from another two transactions in transaction pool
 	assert.Equal(t, true, dependentTx4.Verify(UtxoIndex, txPool, 0))
 
-	//txPool.Push(dependentTx5)
+	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	assert.Equal(t, true, dependentTx5.Verify(UtxoIndex, txPool, 0))
 
 	// test UTXOs not found for parent transactions
 	assert.Equal(t, false, dependentTx3.Verify(UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, txPool, 0))
+
+	// test a standalone transaction
+	txPool.Push(t1)
+	assert.Equal(t, false, t1.Verify(UtxoIndex, txPool, 0))
 }
