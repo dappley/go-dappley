@@ -20,7 +20,7 @@ import (
 var(
 	password			= "testpassword"
 	maxWallet 			= 10
-	initialAmount 		= uint64(10)
+	initialAmount 		= uint64(100)
 	maxSendAmount 		= uint64(3)
 	sendInternalInMs 	= time.Duration(1000)
 )
@@ -84,7 +84,9 @@ func createWallet() []core.Address{
 			}
 		}
 	}
-	for _, addr:=range wm.GetAddresses(){
+	wm, err = logic.GetWalletManager(client.GetWalletFilePath())
+	addresses = wm.GetAddresses()
+	for _, addr:=range addresses{
 		logger.WithFields(logger.Fields{
 			"address"	: addr.String(),
 		}).Info("Current Wallet Addresses")
