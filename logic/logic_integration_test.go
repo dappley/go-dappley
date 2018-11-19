@@ -435,12 +435,12 @@ func TestForkChoice(t *testing.T) {
 	pows[1].Stop()
 	desiredHeight := uint64(10)
 	if bcs[1].GetMaxHeight() > 10 {
-		desiredHeight = bcs[1].GetMaxHeight()
+		desiredHeight = bcs[1].GetMaxHeight() + 1
 	}
 	pows[0].Start()
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > desiredHeight
-	}, 10)
+	}, 20)
 	pows[0].Stop()
 
 	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
@@ -482,7 +482,7 @@ func TestForkSegmentHandling(t *testing.T) {
 
 		node := network.NewNode(bcs[i])
 		pow.Setup(node, addr.String())
-		pow.SetTargetBit(16)
+		pow.SetTargetBit(10)
 		node.Start(testport_fork_segment + i)
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
@@ -495,18 +495,22 @@ func TestForkSegmentHandling(t *testing.T) {
 	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetMaxHeight() > 3
-	}, 5)
+	}, 10)
 	pows[1].Stop()
 
+	// Ensure node[0] mines more blocks than node[1]
 	pows[0].Start()
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 7
-	}, 5)
-	blk1, _ = bcs[0].GetBlockByHeight(7)
-	core.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 12
-	}, 5)
+	}, 30)
 	pows[0].Stop()
+
+	// Pick 2 blocks from blockchain[0] which can trigger syncing on node[1]
+	mid := uint64(7)
+	if bcs[0].GetMaxHeight() < 7 {
+		mid = bcs[0].GetMaxHeight() - 1
+	}
+	blk1, _ = bcs[0].GetBlockByHeight(mid)
 	blk2, _ = bcs[0].GetTailBlock()
 
 	connectNodes(nodes[0], nodes[1])
