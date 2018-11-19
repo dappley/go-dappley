@@ -239,6 +239,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 				txCopy.Vin[i].PubKey = pubKeyHash.GetPubKeyHash()
 				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
+				tt.tx.ID = tt.tx.Hash()
 			}
 
 			// Verify the signatures
@@ -411,7 +412,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	var pkHash5, _ = NewUserPubKeyHash(pubkey5)
 
 	var dependentTx1 = Transaction{
-		ID: []byte("dtx1"),
+		ID: nil,
 		Vin: []TXInput{
 			{t1.ID, 1, nil, pubkey1},
 		},
@@ -421,9 +422,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		},
 		Tip: 3,
 	}
+	dependentTx1.ID = dependentTx1.Hash()
 
 	var dependentTx2 = Transaction{
-		ID: []byte("dtx2"),
+		ID: nil,
 		Vin: []TXInput{
 			{dependentTx1.ID, 1, nil, pubkey2},
 		},
@@ -433,9 +435,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		},
 		Tip: 2,
 	}
+	dependentTx2.ID = dependentTx2.Hash()
 
 	var dependentTx3 = Transaction{
-		ID: []byte("dtx3"),
+		ID: nil,
 		Vin: []TXInput{
 			{dependentTx2.ID, 0, nil, pubkey3},
 		},
@@ -444,9 +447,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		},
 		Tip: 4,
 	}
+	dependentTx3.ID = dependentTx3.Hash()
 
 	var dependentTx4 = Transaction{
-		ID: []byte("dtx4"),
+		ID: nil,
 		Vin: []TXInput{
 			{dependentTx2.ID, 1, nil, pubkey4},
 			{dependentTx3.ID, 0, nil, pubkey4},
@@ -456,9 +460,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		},
 		Tip: 1,
 	}
+	dependentTx4.ID = dependentTx4.Hash()
 
 	var dependentTx5 = Transaction{
-		ID: []byte("dtx5"),
+		ID: nil,
 		Vin: []TXInput{
 			{dependentTx1.ID, 0, nil, pubkey1},
 			{dependentTx4.ID, 0, nil, pubkey1},
@@ -468,6 +473,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 		},
 		Tip: 4,
 	}
+	dependentTx5.ID = dependentTx5.Hash()
 
 	var UtxoIndex = UTXOIndex{
 		map[string][]*UTXO{

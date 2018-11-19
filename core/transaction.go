@@ -242,6 +242,15 @@ func (tx *Transaction) VerifyTxInTempPool(utxoIndex UTXOIndex, txPool Transactio
 	}
 }
 
+// verifyID verifies if the transaction ID is the hash of the transaction
+func (tx *Transaction) verifyID() bool {
+	if bytes.Equal(tx.ID, tx.Hash()) {
+		return true
+	} else {
+		return false
+	}
+}
+
 //verifyTip verifies if the transaction has the correct tip
 func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 	sum := calculateUtxoSum(prevUtxos)
