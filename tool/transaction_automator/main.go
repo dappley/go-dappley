@@ -18,11 +18,13 @@ import (
 )
 
 var(
-	password			= "testpassword"
-	maxWallet 			= 10
-	initialAmount 		= uint64(100)
-	maxSendAmount 		= uint64(3)
-	sendInternalInMs 	= time.Duration(1000)
+	password             = "testpassword"
+	maxWallet            = 10
+	initialAmount        = uint64(100)
+	blockReward 		 = uint64(10)
+	maxDefaultSendAmount = uint64(5)
+	sendInterval         = time.Duration(1000)
+	fundTimeout          = time.Duration(time.Minute * 5)
 )
 
 func main() {
@@ -31,7 +33,7 @@ func main() {
 	})
 
 	var filePath string
-	flag.StringVar(&filePath, "f", "default.conf", "CLI config file path")
+	flag.StringVar(&filePath, "f", "conf/default_cli.conf", "CLI config file path")
 	flag.Parse()
 
 	cliConfig := &configpb.CliConfig{}
@@ -43,10 +45,14 @@ func main() {
 
 	addresses := createWallet()
 
-	fundAllFromMiner(adminClient, addresses)
+	fundFromMiner(adminClient, rpcClient, addresses)
+	logger.WithFields(logger.Fields{
+		"initial total amount"	:initialAmount,
+		"send interval(ms)"		:sendInterval,
+	}).Info("Funding completed. Script Starts.")
 	displayBalances(rpcClient, addresses)
 
-	ticker := time.NewTicker(time.Millisecond*sendInternalInMs).C
+	ticker := time.NewTicker(time.Millisecond* sendInterval).C
 	getBalanceTicker := time.NewTicker(time.Minute).C
 	for{
 		select{
@@ -94,13 +100,64 @@ func createWallet() []core.Address{
 	return addresses
 }
 
-func fundAllFromMiner(adminClient rpcpb.AdminServiceClient, addresses []core.Address){
-	for _, addr := range addresses{
-		fundFromMiner(adminClient, addr.String())
+func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, addresses []core.Address){
+	logger.Info("Requesting fund from miner...")
+
+	fundAddr := addresses[0].String()
+	if len(addresses) == 0{
+		logger.Panic("Wallet is not created! Can not get fund from miner!")
+	}
+
+	requestFundFromMiner(adminClient, fundAddr)
+	bal, isSufficient := checkSufficientInitialAmount(rpcClient, fundAddr)
+	if isSufficient{
+		//continue if the initial amount is sufficient
+		return
+	}
+	logger.WithFields(logger.Fields{
+		"address"	: fundAddr,
+		"balance"	: bal,
+		"targetFund": initialAmount,
+	}).Info("Current wallet balance is insufficient. Waiting for more funds...")
+	waitTilInitialAmountIsSufficient(adminClient, rpcClient, fundAddr)
+}
+
+func checkSufficientInitialAmount(rpcClient rpcpb.RpcServiceClient, addr string) (uint64, bool){
+	balance,err := getBalance(rpcClient, addr)
+	if err!=nil {
+		logger.WithFields(logger.Fields{
+			"err"	: err,
+		}).Panic("Not able to get balance")
+	}
+	return uint64(balance),uint64(balance) >= initialAmount
+}
+
+func waitTilInitialAmountIsSufficient(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, addr string){
+	checkBalanceTicker := time.NewTicker(time.Second * 5).C
+	timeout := time.NewTicker(fundTimeout).C
+	for{
+		select{
+		case <- checkBalanceTicker:
+			bal, isSufficient := checkSufficientInitialAmount(rpcClient, addr)
+			if isSufficient{
+				//continue if the initial amount is sufficient
+				return
+			}
+			logger.WithFields(logger.Fields{
+				"address"	: addr,
+				"balance"	: bal,
+				"targetFund": initialAmount,
+			}).Info("Current wallet balance is insufficient. Waiting for more funds...")
+			requestFundFromMiner(adminClient, addr)
+		case <- timeout:
+			logger.WithFields(logger.Fields{
+				"targetFund"	: initialAmount,
+			}).Panic("Time out. Not able to get sufficient fund from miner!")
+		}
 	}
 }
 
-func fundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string) {
+func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string) {
 
 	sendFromMinerRequest := rpcpb.SendFromMinerRequest{}
 	sendFromMinerRequest.To = fundAddr
@@ -110,7 +167,7 @@ func fundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string) {
 	if err!= nil {
 		logger.WithFields(logger.Fields{
 			"error": err,
-		}).Panic("Insufficient test fund from miner")
+		}).Panic("Unable to get test fund from miner")
 	}
 }
 
@@ -154,7 +211,7 @@ func calcSendAmount(rpcClient rpcpb.RpcServiceClient, from, to string) uint64{
 	}
 
 	if amount == 0 {
-		amount = rand.Uint64()%maxSendAmount + 1
+		amount = rand.Uint64()%maxDefaultSendAmount + 1
 	}
 	return amount
 }
@@ -163,7 +220,7 @@ func getAddrWithBalance(rpcClient rpcpb.RpcServiceClient, addresses []core.Addre
 	fromIndex := rand.Intn(maxWallet)
 	amount, err := getBalance(rpcClient, addresses[fromIndex].String())
 	//TODO: add time out to this loop
-	for  err!=nil || amount <= int64(maxSendAmount+1) {
+	for  err!=nil || amount <= int64(maxDefaultSendAmount+1) {
 		fromIndex = rand.Intn(maxWallet)
 		amount, err = getBalance(rpcClient, addresses[fromIndex].String())
 	}

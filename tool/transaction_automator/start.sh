@@ -1,3 +1,13 @@
 #!/bin/bash
-nohup ./transaction_automator > tx.log &
-echo $! > script.pid
+#start up dapp
+nohup ../../dapp/dapp  > dapp.log &
+echo $! > pid/dapp.pid
+#wait 5 seconds
+echo "Dapp starting... 5 Seconds until test script starts..."
+sleep 5
+#start up test script
+nohup ./transaction_automator > script.log &
+echo $! > pid/script.pid
+
+echo "use command 'tail -f dapp.log' to monitor dappley blockchain status"
+echo "use command 'tail -f script.log' to monitor test script status"
