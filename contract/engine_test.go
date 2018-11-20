@@ -1,15 +1,15 @@
 package sc
 
 import (
-	"github.com/sirupsen/logrus"
 	"testing"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/sirupsen/logrus"
 )
 
-
-
 func TestScEngine_Execute(t *testing.T) {
-	script:=
-`'use strict';
+	script :=
+		`'use strict';
 
 var AddrChecker = function(){
 	
@@ -25,12 +25,12 @@ var addrChecker = new AddrChecker;
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.Execute("check","\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
 }
 
 func TestScEngine_StorageGet(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
-	script:=
+	script :=
 		`'use strict';
 
 var StorageTest = function(){
@@ -48,16 +48,16 @@ StorageTest.prototype = {
 var storageTest = new StorageTest;
 `
 	ss := make(map[string]string)
-	ss["key"]= "7"
+	ss["key"] = "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.Execute("get","\"key\"")
+	sc.Execute("get", "\"key\"")
 }
 
 func TestScEngine_StorageSet(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
-	script:=
+	script :=
 		`'use strict';
 
 var StorageTest = function(){
@@ -78,13 +78,13 @@ var storageTest = new StorageTest;
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.Execute("set","\"key\",6")
-	sc.Execute("get","\"key\"")
+	sc.Execute("set", "\"key\",6")
+	sc.Execute("get", "\"key\"")
 }
 
 func TestScEngine_StorageDel(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
-	script:=
+	script :=
 		`'use strict';
 
 var StorageTest = function(){
@@ -109,7 +109,32 @@ var storageTest = new StorageTest;
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.Execute("set","\"key\",6")
-	sc.Execute("del","\"key\"")
-	sc.Execute("get","\"key\"")
+	sc.Execute("set", "\"key\",6")
+	sc.Execute("del", "\"key\"")
+	sc.Execute("get", "\"key\"")
+}
+
+func TestScEngine_TransactionTest(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script :=
+		`'use strict';
+
+var TransactionTest = function(){
+};
+
+TransactionTest.prototype = {
+	dump: function(dummy) {
+		_log.error("tx id:", _tx.id)
+		_log.error("tx vin length:" _tx.vin.length)
+		_log.error("tx vout length:" _tx.vin.length)
+	}
+};
+var transactionTest = new TransactionTest;
+`
+	ss := make(map[string]string)
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	sc.ImportLocalStorage(ss)
+	sc.ImportTransaction(core.MockTransaction())
+	sc.Execute("dump", "dummy")
 }
