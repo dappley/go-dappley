@@ -65,6 +65,12 @@ void NewTransactionInstance(Isolate *isolate, Local<Context> context, void* addr
         vins->Set(context, i, vinInstance);
         free(tx->vin[i].pubkey);
     }
+    txInstance->DefineOwnProperty(
+        context,
+        String::NewFromUtf8(isolate, "vin"),
+        vins,
+        DEFAULT_PROPERTY
+    );
 
     Local<Array> vouts = Array::New(isolate, tx->vout_length);
     for (int i = 0; i < tx->vout_length; i++) {
@@ -85,6 +91,12 @@ void NewTransactionInstance(Isolate *isolate, Local<Context> context, void* addr
         free(tx->vout[i].pubkeyhash);
         vouts->Set(context, i, voutInstance);
     }
+    txInstance->DefineOwnProperty(
+        context,
+        String::NewFromUtf8(isolate, "vout"),
+        vouts,
+        DEFAULT_PROPERTY
+    );
 
     txInstance->DefineOwnProperty(
         context,
