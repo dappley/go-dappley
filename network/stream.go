@@ -81,8 +81,7 @@ func (s *Stream) StopStream() {
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
-	delete(s.node.streams, s.peerID)
-	s.node.peerList.DeletePeer(&Peer{s.peerID, s.remoteAddr})
+	s.node.DisconnectPeer(s.peerID, s.remoteAddr)
 }
 
 func (s *Stream) Send(data []byte) {
@@ -205,13 +204,13 @@ func (s *Stream) parseData(data []byte) {
 
 	switch dm.GetCmd() {
 	case SyncBlock:
-		s.node.syncBlockHandler(dm, s.peerID)
+		s.node.SyncBlockHandler(dm, s.peerID)
 	case SyncPeerList:
-		s.node.addMultiPeers(dm.GetData())
+		s.node.AddMultiPeers(dm.GetData())
 	case RequestBlock:
-		s.node.sendRequestedBlock(dm.GetData(), s.peerID)
+		s.node.SendRequestedBlock(dm.GetData(), s.peerID)
 	case BroadcastTx:
-		s.node.addTxToPool(dm)
+		s.node.AddTxToPool(dm)
 	default:
 		logger.Debug("Received invalid command from:", s.peerID)
 	}

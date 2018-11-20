@@ -230,6 +230,11 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	return nil
 }
 
+func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
+	delete(n.streams, peerid)
+	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
+}
+
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.WithFields(logger.Fields{
@@ -389,7 +394,7 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 
 	return block
 }
-func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
+func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
 		return
 	}
@@ -404,7 +409,7 @@ func (n *Node) cacheDapMsg(dm DapMsg) {
 	n.recentlyRcvedDapMsgs.Store(dm.GetKey(), true)
 }
 
-func (n *Node) addTxToPool(dm *DapMsg) {
+func (n *Node) AddTxToPool(dm *DapMsg) {
 	if n.isNetworkRadiation(*dm) {
 		return
 	}
@@ -429,7 +434,7 @@ func (n *Node) addTxToPool(dm *DapMsg) {
 	n.bc.GetTxPool().Push(*tx)
 }
 
-func (n *Node) addMultiPeers(data []byte) {
+func (n *Node) AddMultiPeers(data []byte) {
 
 	go func() {
 		//create a peerList proto
@@ -467,7 +472,7 @@ func (n *Node) addMultiPeers(data []byte) {
 	}()
 }
 
-func (n *Node) sendRequestedBlock(hash []byte, pid peer.ID) {
+func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	blockBytes, err := n.bc.GetDb().Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
