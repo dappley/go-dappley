@@ -50,6 +50,11 @@ type Block struct {
 
 type Hash []byte
 
+func (h Hash) String() string {
+	return hex.EncodeToString(h)
+}
+
+
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
 	return NewBlockWithTimestamp(transactions, parent, time.Now().Unix())
 }
@@ -353,8 +358,4 @@ func (b *Block) GetCoinbaseTransaction() *Transaction {
 		}
 	}
 	return nil
-}
-
-func (b *Block) hashString() string {
-	return hex.EncodeToString(b.GetHash())
 }

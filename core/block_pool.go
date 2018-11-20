@@ -128,16 +128,16 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		"hash": hex.EncodeToString(blk.GetHash()),
 	}).Info("BlockPool: Received a new block: ")
 
-	tree, _ := common.NewTree(blk.hashString(), blk)
+	tree, _ := common.NewTree(blk.GetHash().String(), blk)
 	blkCache := pool.blkCache
 
-	if blkCache.Contains(blk.hashString()) {
+	if blkCache.Contains(blk.GetHash().String()) {
 		return
 	}
-	if !pool.isChildBlockInCache(blk.hashString()) && blk.GetHeight() <= pool.blockchain.GetMaxHeight() {
+	if !pool.isChildBlockInCache(blk.GetHash().String()) && blk.GetHeight() <= pool.blockchain.GetMaxHeight() {
 		return
 	}
-	blkCache.Add(blk.hashString(), tree)
+	blkCache.Add(blk.GetHash().String(), tree)
 	pool.updateBlkCache(tree)
 
 	forkheadParentHash := tree.GetValue().(*Block).GetPrevHash()
@@ -179,7 +179,7 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	// try to link child
 	for _, key := range blkCache.Keys() {
 		if cachedBlk, ok := blkCache.Get(key); ok {
-			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).hashString() {
+			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).GetHash().String() {
 				logger.WithFields(logger.Fields{
 					"treeheight":     tree.GetValue().(*Block).GetHeight(),
 					"cacheblkHeight": cachedBlk.(*common.Tree).GetValue().(*Block).GetHeight(),
