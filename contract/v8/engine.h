@@ -11,7 +11,7 @@ extern "C" {
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
     typedef transaction_t* (*FuncTransactionGet)(void* address);
-    typedef void (*FuncLogger)(unsigned int level, const char** args, int length);
+    typedef void (*FuncLogger)(unsigned int level, char** args, int length);
 
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler) ;

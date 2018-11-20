@@ -34,7 +34,7 @@ func LoggerFunc(level C.uint, args **C.char, length C.int) {
 	}
 
 	argSlice := (**[1 << 30]C.char)(unsafe.Pointer(args))[:length:length]
-	goArgs := make(string, length + 1)
+	goArgs := make(string, length+1)
 	append(goArgs, "[Contract]")
 	for index, arg := range argSlice {
 		append(goArgs, C.GoString(argSlice[index]))
