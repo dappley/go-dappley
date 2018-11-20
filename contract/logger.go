@@ -16,7 +16,7 @@ const (
 	ERROR uint32 = 3
 )
 
-const logFuncEntries = map[uint32]LogFunc{
+var logFuncEntries = map[uint32]LogFunc{
 	DEBUG: logger.Debug,
 	INFO:  logger.Info,
 	WARN:  logger.Warn,
@@ -33,11 +33,11 @@ func LoggerFunc(level C.uint, args **C.char, length C.int) {
 		return
 	}
 
-	argSlice := (**[1 << 30]C.char)(unsafe.Pointer(args))[:length:length]
-	goArgs := make(string, length+1)
-	append(goArgs, "[Contract]")
-	for index, arg := range argSlice {
-		append(goArgs, C.GoString(argSlice[index]))
+	argSlice := (*[1 << 30]*C.char)(unsafe.Pointer(args))[:length:length]
+	goArgs := make([]string, length+1)
+	goArgs = append(goArgs, "[Contract]")
+	for _, arg := range argSlice {
+		goArgs = append(goArgs, C.GoString(arg))
 	}
 
 	logFunc(goArgs)

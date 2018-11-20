@@ -1,6 +1,8 @@
 package sc
 
-//#include "v8/lib/transaction_struct.h"
+/*
+#include "v8/lib/transaction_struct.h"
+*/
 import "C"
 import (
 	"encoding/hex"
@@ -8,6 +10,8 @@ import (
 
 	logger "github.com/sirupsen/logrus"
 )
+
+type CTransaction C.struct_transaction_t
 
 //export TransactionGetFunc
 func TransactionGetFunc(address unsafe.Pointer) *C.struct_transaction_t {
@@ -29,32 +33,32 @@ func TransactionGetFunc(address unsafe.Pointer) *C.struct_transaction_t {
 	}
 
 	tx := C.struct_transaction_t{}
-	tx._id = C.CString(hex.EncodeToString(engine.tx.ID))
-	tx._tip = C.longlong(engine.tx.Tip)
+	tx.id = C.CString(hex.EncodeToString(engine.tx.ID))
+	tx.tip = C.ulonglong(engine.tx.Tip)
 
-	tx._vin_length = C.int(len(engine.tx.Vin))
+	tx.vin_length = C.int(len(engine.tx.Vin))
 	vins := make([]C.struct_transaction_vin_t, len(engine.tx.Vin))
-	for i, txVin := range engine.tx.Vin {
+	for _, txVin := range engine.tx.Vin {
 		vin := C.struct_transaction_vin_t{}
-		vin._txid = C.CString(hex.EncodeToString(txVin.Txid))
-		vin._vout = C.int(txVin.Vout)
-		vin._signature = C.CString(hex.EncodeToString(txVin.Signature))
-		vin._pubkey = C.CString(hex.EncodeToString(txVin.PubKey))
-		append(vins, vin)
+		vin.txid = C.CString(hex.EncodeToString(txVin.Txid))
+		vin.vout = C.int(txVin.Vout)
+		vin.signature = C.CString(hex.EncodeToString(txVin.Signature))
+		vin.pubkey = C.CString(hex.EncodeToString(txVin.PubKey))
+		vins = append(vins, vin)
 	}
-	tx._vin = unsafe.Pointer(&vins[0])
+	tx.vin = (*C.struct_transaction_vin_t)(unsafe.Pointer(&vins[0]))
 
-	tx._vout_length = C.int(len(engine.tx.Vout))
+	tx.vout_length = C.int(len(engine.tx.Vout))
 	vouts := make([]C.struct_transaction_vout_t, len(engine.tx.Vout))
-	for i, txVout := range engine.tx.Vout {
+	for _, txVout := range engine.tx.Vout {
 		vout := C.struct_transaction_vout_t{}
-		vout._amount = C.longlong(txVout.Value.Int64())
-		vout._pubkeyhash = C.CString(hex.EncodeToString(txVout.PubKeyHash))
-		append(vouts, vout)
+		vout.amount = C.longlong(txVout.Value.Int64())
+		vout.pubkeyhash = C.CString(hex.EncodeToString(txVout.PubKeyHash.PubKeyHash))
+		vouts = append(vouts, vout)
 	}
-	tx._vout = unsafe.Pointer(&vouts[0])
+	tx.vout = (*C.struct_transaction_vout_t)(unsafe.Pointer(&vouts[0]))
 
-	return unsafe.Pointer(&tx)
+	return (*C.struct_transaction_t)(unsafe.Pointer(&tx))
 }
 
 //export TransactionGetIdFunc
@@ -88,14 +92,14 @@ func TransactionGetVinLength(address unsafe.Pointer) C.int {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return nil
+		return 0 
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return nil
+		return 0 
 	}
 	return C.int(len(engine.tx.Vin))
 }
@@ -119,7 +123,7 @@ func TransactionGetVinTxidFunc(address unsafe.Pointer, index C.int) *C.char {
 		return nil
 	}
 
-	if index >= len(engine.tx.Vin) {
+	if int(index) >= len(engine.tx.Vin) {
 		logger.WithFields(logger.Fields{
 			"contractTransactionId": hex.EncodeToString(engine.tx.ID),
 		}).Debug("Smart contract: vin index overflow")
@@ -137,17 +141,17 @@ func TransactionGetVinVoutFunc(address unsafe.Pointer, index C.int) C.int {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return nil
+		return 0 
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return nil
+		return 0 
 	}
 
-	if index >= len(engine.tx.Vin) {
+	if int(index) >= len(engine.tx.Vin) {
 		logger.WithFields(logger.Fields{
 			"contractTransactionId": hex.EncodeToString(engine.tx.ID),
 		}).Debug("Smart contract: vin index overflow")
@@ -175,7 +179,7 @@ func TransactionGetVinSignatureFunc(address unsafe.Pointer, index C.int) *C.char
 		return nil
 	}
 
-	if index >= len(engine.tx.Vin) {
+	if int(index) >= len(engine.tx.Vin) {
 		logger.WithFields(logger.Fields{
 			"contractTransactionId": hex.EncodeToString(engine.tx.ID),
 		}).Debug("Smart contract: vin index overflow")
@@ -203,7 +207,7 @@ func TransactionGetVinPubkeyFunc(address unsafe.Pointer, index C.int) *C.char {
 		return nil
 	}
 
-	if index >= len(engine.tx.Vin) {
+	if int(index) >= len(engine.tx.Vin) {
 		logger.WithFields(logger.Fields{
 			"contractTransactionId": hex.EncodeToString(engine.tx.ID),
 		}).Debug("Smart contract: vin index overflow")
@@ -221,14 +225,14 @@ func TransactionGetVoutLength(address unsafe.Pointer) C.int {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return nil
+		return 0
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return nil
+		return 0
 	}
 	return C.int(len(engine.tx.Vout))
 }
@@ -242,17 +246,17 @@ func TransactionGetVoutAmount(address unsafe.Pointer, index C.int) C.longlong {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return nil
+		return 0 
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return nil
+		return 0 
 	}
 
-	if index >= len(engine.tx.Vout) {
+	if int(index) >= len(engine.tx.Vout) {
 		logger.WithFields(logger.Fields{
 			"contractTransactionId": hex.EncodeToString(engine.tx.ID),
 		}).Debug("Smart contract: vout index overflow")
@@ -279,7 +283,7 @@ func TransactionGetVountPubkeyHash(address unsafe.Pointer, index C.int) *C.char 
 		return nil
 	}
 
-	if index >= len(engine.tx.Vout) {
+	if int(index) >= len(engine.tx.Vout) {
 		logger.WithFields(logger.Fields{
 			"contractTransactionId": hex.EncodeToString(engine.tx.ID),
 		}).Debug("Smart contract: vout index overflow")

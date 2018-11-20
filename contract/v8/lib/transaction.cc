@@ -78,11 +78,11 @@ void NewTransactionInstance(Isolate *isolate, Local<Context> context, void* addr
 
         voutInstance->DefineOwnProperty(
             context,
-            String::NewFromUtf8(isolate, "pukeyhash"),
-            String::NewFromUtf8(isolate, tx->vout[i].pukeyhash),
+            String::NewFromUtf8(isolate, "pubkeyhash"),
+            String::NewFromUtf8(isolate, tx->vout[i].pubkeyhash),
             DEFAULT_PROPERTY
         );
-        free(tx->vout[i].pukeyhash);
+        free(tx->vout[i].pubkeyhash);
         vouts->Set(context, i, voutInstance);
     }
 

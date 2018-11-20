@@ -3,25 +3,25 @@
 
 #include <stdlib.h>
 
-typedef struct {
+struct transaction_vin_t {
     char* txid;
     int   vout;
     char* signature;
     char* pubkey;
-} transaction_vin_t;
+} ;
 
-typedef struct {
+struct transaction_vout_t {
     long long amount;
-    char* pukeyhash; 
-} transaction_vout_t;
+    char* pubkeyhash; 
+} ;
 
-typedef struct {
+struct transaction_t {
     char*  id;
     int    vin_length;
-    transaction_vin_t* vin;
+    struct transaction_vin_t* vin;
     int    vout_length;
-    transaction_vout_t* vout;
+    struct transaction_vout_t* vout;
     unsigned long long tip; 
-} transaction_t;
+} ;
 
 #endif /* __TRANSACTION_STRUCT_H__ */
