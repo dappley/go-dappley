@@ -222,7 +222,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	n.streamHandler(stream)
 
 	// Add the peer list
-	if len(n.peerList.peers) >= PEERLISTMAXSIZE {
+	if n.peerList.ListIsFull() {
 		n.peerList.RemoveOneIP(&Peer{peerid, targetAddr})
 	}
 	n.peerList.Add(&Peer{peerid, targetAddr})
