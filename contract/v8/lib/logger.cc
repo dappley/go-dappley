@@ -45,12 +45,19 @@ void LogCallback(unsigned int level, const FunctionCallbackInfo<Value> &info) {
     Local<Object> thisArg = info.Holder();
 
     char** args = (char **)malloc(sizeof(char *) * info.Length());
-
+    String::Utf8Value** utf8Values = new String::Utf8Value*[info.Length()]; 
     for (int i = 0; i < info.Length(); i++) {
-        args[i] = *String::Utf8Value(isolate, info[i]);
+        String::Utf8Value* str = new String::Utf8Value(isolate, info[i]);
+        args[i] = **str; 
+        utf8Values[i] = str;
     }
 
     sLogger(level, args, info.Length());
+    for (int i = 0; i< info.Length(); i++) {
+        delete utf8Values[i];
+    }
+    delete[] utf8Values; 
+    free(args);
 }
 
 void LogDebugCallback(const FunctionCallbackInfo<Value> &info){

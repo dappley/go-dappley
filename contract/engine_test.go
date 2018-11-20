@@ -93,6 +93,7 @@ var StorageTest = function(){
 
 StorageTest.prototype = {
 	set:function(key,value){
+		_log.error("Test case in Storage del ", "set")
     	return LocalStorage.set(key,value);
     },
 	get:function(key){
