@@ -443,6 +443,10 @@ func TestForkChoice(t *testing.T) {
 	}, 20)
 	pows[0].Stop()
 
+	core.WaitDoneOrTimeout(func() bool {
+		return !pows[0].IsProducingBlock()
+	}, 5)
+
 	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
 	tailBlk, _ := bcs[0].GetTailBlock()
 	connectNodes(nodes[0], nodes[1])
@@ -504,6 +508,10 @@ func TestForkSegmentHandling(t *testing.T) {
 		return bcs[0].GetMaxHeight() > 12
 	}, 30)
 	pows[0].Stop()
+
+	core.WaitDoneOrTimeout(func() bool {
+		return !pows[0].IsProducingBlock()
+	}, 5)
 
 	// Pick 2 blocks from blockchain[0] which can trigger syncing on node[1]
 	mid := uint64(7)
