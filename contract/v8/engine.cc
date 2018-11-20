@@ -11,6 +11,8 @@
 #include "lib/load_lib.h"
 #include "lib/load_sc.h"
 #include "lib/storage.h"
+#include "lib/logger.h"
+#include "lib/transaction.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -44,6 +46,8 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
 
     NewBlockchainInstance(isolate, context, (void *)handler);
     NewStorageInstance(isolate, context, (void *)handler);
+    NewLoggerInstance(isolate, context, (void *)handler);
+    NewTransactionInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {
