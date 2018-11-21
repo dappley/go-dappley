@@ -27,7 +27,6 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -443,7 +442,7 @@ func TestTransaction_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := new(mocks.ScEngine)
+			sc := new(ScEngineMock)
 			contract := "helloworld!"
 			if tt.expectContractRun {
 				sc.On("ImportSourceCode", contract)
