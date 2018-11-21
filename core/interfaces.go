@@ -19,7 +19,6 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/libp2p/go-libp2p-peer"
 )
 
@@ -60,7 +59,7 @@ type ScEngine interface {
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*UTXO)
 	ImportRewardStorage(rewards map[string]string)
-	ImportTransaction(tx *core.Transaction)
+	ImportTransaction(tx *Transaction)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }
