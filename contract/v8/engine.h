@@ -10,7 +10,7 @@ extern "C" {
     typedef char* (*FuncStorageGet)(void *address, const char *key);
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
-    typedef void (*FuncTransactionGet)(void* address, SetTransactionCb cb, void* context);
+    typedef void (*FuncTransactionGet)(void* address, void* context);
     typedef void (*FuncLogger)(unsigned int level, char** args, int length);
 
     EXPORT void Initialize();
@@ -18,6 +18,7 @@ extern "C" {
     EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
+    EXPORT void SetTransactionData(struct transaction_t* tx, void* context);
     EXPORT void InitializeLogger(FuncLogger logger);
     EXPORT void InitializeSmartContract(char* source);
     EXPORT void DisposeV8();

@@ -1,7 +1,7 @@
 package sc
 
 /*
-#include "v8/lib/transaction_struct.h"
+#include "v8/engine.h"
 */
 import "C"
 import (
@@ -12,7 +12,7 @@ import (
 )
 
 //export TransactionGetFunc
-func TransactionGetFunc(address unsafe.Pointer, cb C.SetTransactionCb, context unsafe.Pointer) {
+func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	addr := uint64(uintptr(address))
 	engine := getV8EngineByAddress(addr)
 
@@ -63,7 +63,7 @@ func TransactionGetFunc(address unsafe.Pointer, cb C.SetTransactionCb, context u
 	}
 	tx.vout = (*C.struct_transaction_vout_t)(unsafe.Pointer(&vouts[0]))
 
-	cb((*C.struct_transaction_t)(unsafe.Pointer(&tx)), context)
+	C.SetTransactionData((*C.struct_transaction_t)(unsafe.Pointer(&tx)), context)
 }
 
 //export TransactionGetIdFunc

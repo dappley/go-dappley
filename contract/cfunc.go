@@ -9,7 +9,7 @@ bool  VerifyAddressFunc(const char* address);
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
 int   StorageDelFunc(void *address,const char *key);
-void TransactionGetFunc(void *address, SetTransactionCb cb, void *context);
+void TransactionGetFunc(void *address, void *context);
 void LoggerFunc(unsigned int level, char ** args, int length);
 
 bool Cgo_VerifyAddressFunc(const char *address) {
@@ -27,8 +27,8 @@ int Cgo_StorageDelFunc(void *address, const char *key){
 	return StorageDelFunc(address,key);
 };
 
-void Cgo_TransactionGetFunc(void *address, SetTransactionCb cb, void *context) {
-	TransactionGetFunc(address, cb, context);
+void Cgo_TransactionGetFunc(void *address, void *context) {
+	TransactionGetFunc(address, context);
 }
 
 void Cgo_LoggerFunc(unsigned int level, char ** args, int length) {

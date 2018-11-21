@@ -24,5 +24,4 @@ struct transaction_t {
     unsigned long long tip; 
 } ;
 
-typedef void (*SetTransactionCb)(struct transaction_t* tx, void* context);
 #endif /* __TRANSACTION_STRUCT_H__ */

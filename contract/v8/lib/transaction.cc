@@ -5,7 +5,6 @@ const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(
     PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
 static FuncTransactionGet txGet = NULL;
-static void ReceiveTransactionData(struct transaction_t* tx, void* context);
 typedef struct {
     Isolate *isolate;
     Local<Context> *context;
@@ -15,7 +14,7 @@ void InitializeTransaction(FuncTransactionGet get) {
     txGet = get;
 }
 
-void ReceiveTransactionData(struct transaction_t* tx, void* context) {
+void SetTransactionData(struct transaction_t* tx, void* context) {
     if (tx == NULL || context == NULL) {
         return;
     }
@@ -117,5 +116,5 @@ void NewTransactionInstance(Isolate *isolate, Local<Context> context, void* addr
     TransactionContext txContext;
     txContext.isolate = isolate;
     txContext.context = &context;
-    txGet(address, ReceiveTransactionData, &txContext);
+    txGet(address, &txContext);
 }
