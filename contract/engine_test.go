@@ -122,7 +122,7 @@ StorageTest.prototype = {
 var storageTest = new StorageTest;
 `
 	ss := make(map[string]string)
-	ss["key"]= "7"
+	ss["key"] = "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)

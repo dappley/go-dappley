@@ -24,13 +24,13 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/mocks"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func getAoB(length int64) []byte {
@@ -443,7 +443,7 @@ func TestTransaction_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := new(ScEngineMock)
+			sc := new(mocks.ScEngine)
 			contract := "helloworld!"
 			if tt.expectContractRun {
 				sc.On("ImportSourceCode", contract)
