@@ -23,28 +23,29 @@ import (
 	"unsafe"
 
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 var (
-	v8once 			= sync.Once{}
-	v8EngineList 	= make(map[uint64]*V8Engine)
-	storagesMutex 	= sync.RWMutex{}
-	currHandler			= uint64(100)
+	v8once        = sync.Once{}
+	v8EngineList  = make(map[uint64]*V8Engine)
+	storagesMutex = sync.RWMutex{}
+	currHandler   = uint64(100)
 )
 
-type V8Engine struct{
-	source  string
-	storage map[string]string
-	tx      *core.Transaction
-        rewards       map[string]string
+type V8Engine struct {
+	source        string
+	storage       map[string]string
+	tx            *core.Transaction
+	rewards       map[string]string
 	contractAddr  core.Address
 	contractUTXOs []*core.UTXO
 	sourceTXID    []byte
 	generatedTXs  []*core.Transaction
-	handler uint64
+	handler       uint64
 }
 
-func InitializeV8Engine(){
+func InitializeV8Engine() {
 	C.Initialize()
 	C.InitializeBlockchain(
 		(C.FuncVerifyAddress)(unsafe.Pointer(C.Cgo_VerifyAddressFunc)),
@@ -52,22 +53,22 @@ func InitializeV8Engine(){
 	)
 	C.InitializeStorage(
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
-						(C.FuncStorageSet)(unsafe.Pointer(C.Cgo_StorageSetFunc)),
-						(C.FuncStorageDel)(unsafe.Pointer(C.Cgo_StorageDelFunc)))
-        C.InitializeTransaction((C.FuncTransactionGet)(unsafe.Pointer(C.Cgo_TransactionGetFunc)))
+		(C.FuncStorageSet)(unsafe.Pointer(C.Cgo_StorageSetFunc)),
+		(C.FuncStorageDel)(unsafe.Pointer(C.Cgo_StorageDelFunc)))
+	C.InitializeTransaction((C.FuncTransactionGet)(unsafe.Pointer(C.Cgo_TransactionGetFunc)))
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
-        C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
+	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
 }
 
 //NewV8Engine generates a new V8Engine instance
 func NewV8Engine() *V8Engine {
-	v8once.Do(func(){InitializeV8Engine()})
+	v8once.Do(func() { InitializeV8Engine() })
 	engine := &V8Engine{
-		source:  "",
-		storage: make(map[string]string),
-		tx:      nil,
-                contractAddr: core.NewAddress(""),
-		handler: currHandler,
+		source:       "",
+		storage:      make(map[string]string),
+		tx:           nil,
+		contractAddr: core.NewAddress(""),
+		handler:      currHandler,
 	}
 	currHandler++
 	storagesMutex.Lock()
@@ -76,11 +77,11 @@ func NewV8Engine() *V8Engine {
 	return engine
 }
 
-func (sc *V8Engine) ImportSourceCode(source string){
+func (sc *V8Engine) ImportSourceCode(source string) {
 	sc.source = source
 }
 
-func (sc *V8Engine) ImportLocalStorage(storage map[string]string){
+func (sc *V8Engine) ImportLocalStorage(storage map[string]string) {
 	sc.storage = storage
 }
 
@@ -121,7 +122,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 	defer C.free(unsafe.Pointer(cSource))
 	C.InitializeSmartContract(cSource)
 
-	functionCallScript := prepareFuncCallScript(function,args)
+	functionCallScript := prepareFuncCallScript(function, args)
 	cFunction := C.CString(functionCallScript)
 	defer C.free(unsafe.Pointer(cFunction))
 
@@ -141,7 +142,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 	return res
 }
 
-func prepareFuncCallScript(function, args string) string{
+func prepareFuncCallScript(function, args string) string {
 	return fmt.Sprintf(
 		`var instance = new _native_require();instance["%s"].apply(instance, [%s]);`,
 		function,
@@ -149,7 +150,7 @@ func prepareFuncCallScript(function, args string) string{
 	)
 }
 
-func getV8EngineByAddress(handler uint64) *V8Engine{
+func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	return v8EngineList[handler]
