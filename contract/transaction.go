@@ -23,7 +23,7 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 		return
 	}
 
-	if cb == nil || context == nil {
+	if context == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Invalid get transaction params!")
@@ -42,26 +42,24 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx.tip = C.ulonglong(engine.tx.Tip)
 
 	tx.vin_length = C.int(len(engine.tx.Vin))
-	vins := make([]C.struct_transaction_vin_t, len(engine.tx.Vin))
-	for _, txVin := range engine.tx.Vin {
-		vin := C.struct_transaction_vin_t{}
-		vin.txid = C.CString(hex.EncodeToString(txVin.Txid))
-		vin.vout = C.int(txVin.Vout)
-		vin.signature = C.CString(hex.EncodeToString(txVin.Signature))
-		vin.pubkey = C.CString(hex.EncodeToString(txVin.PubKey))
-		vins = append(vins, vin)
+	vinAddr = (*C.struct_transaction_vin_t)(C.malloc(C.sizeof_struct_transaction_vin_t * tx.vin_length))
+	vins := (*[1 << 30]C.struct_transaction_vin_t)(unsafe.Pointer(vinAddr))[:tx.vin_length:tx.vin_length]
+	for index, txVin := range engine.tx.Vin {
+		vins[index].txid = C.CString(hex.EncodeToString(txVin.Txid))
+		vins[index].vout = C.int(txVin.Vout)
+		vins[index].signature = C.CString(hex.EncodeToString(txVin.Signature))
+		vins[index].pubkey = C.CString(hex.EncodeToString(txVin.PubKey))
 	}
-	tx.vin = (*C.struct_transaction_vin_t)(unsafe.Pointer(&vins[0]))
+	tx.vin = vinAddr
 
 	tx.vout_length = C.int(len(engine.tx.Vout))
-	vouts := make([]C.struct_transaction_vout_t, len(engine.tx.Vout))
-	for _, txVout := range engine.tx.Vout {
-		vout := C.struct_transaction_vout_t{}
-		vout.amount = C.longlong(txVout.Value.Int64())
-		vout.pubkeyhash = C.CString(hex.EncodeToString(txVout.PubKeyHash.PubKeyHash))
-		vouts = append(vouts, vout)
+	voutAddr = (*C.struct_transaction_vout_t)(C.malloc(C.struct_transaction_vout_t * tx.vout_length))
+	vouts := (*[1 << 30]C.struct_transaction_vout_t)(unsafe.Pointer(voutAddr))[:tx.vout_length:tx.vout_length]
+	for index, txVout := range engine.tx.Vout {
+		vouts[index].amount = C.longlong(txVout.Value.Int64())
+		vouts[index].pubkeyhash = C.CString(hex.EncodeToString(txVout.PubKeyHash.PubKeyHash))
 	}
-	tx.vout = (*C.struct_transaction_vout_t)(unsafe.Pointer(&vouts[0]))
+	tx.vout = voutAddr
 
 	C.SetTransactionData((*C.struct_transaction_t)(unsafe.Pointer(&tx)), context)
 }
