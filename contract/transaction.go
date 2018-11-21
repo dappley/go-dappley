@@ -42,7 +42,7 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx.tip = C.ulonglong(engine.tx.Tip)
 
 	tx.vin_length = C.int(len(engine.tx.Vin))
-	vinAddr = (*C.struct_transaction_vin_t)(C.malloc(C.sizeof_struct_transaction_vin_t * tx.vin_length))
+	vinAddr := (*C.struct_transaction_vin_t)(C.malloc(C.ulong(C.sizeof_struct_transaction_vin_t * tx.vin_length)))
 	vins := (*[1 << 30]C.struct_transaction_vin_t)(unsafe.Pointer(vinAddr))[:tx.vin_length:tx.vin_length]
 	for index, txVin := range engine.tx.Vin {
 		vins[index].txid = C.CString(hex.EncodeToString(txVin.Txid))
@@ -53,7 +53,7 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx.vin = vinAddr
 
 	tx.vout_length = C.int(len(engine.tx.Vout))
-	voutAddr = (*C.struct_transaction_vout_t)(C.malloc(C.struct_transaction_vout_t * tx.vout_length))
+	voutAddr := (*C.struct_transaction_vout_t)(C.malloc(C.ulong(C.sizeof_struct_transaction_vout_t * tx.vout_length)))
 	vouts := (*[1 << 30]C.struct_transaction_vout_t)(unsafe.Pointer(voutAddr))[:tx.vout_length:tx.vout_length]
 	for index, txVout := range engine.tx.Vout {
 		vouts[index].amount = C.longlong(txVout.Value.Int64())

@@ -123,10 +123,19 @@ var TransactionTest = function(){
 };
 
 TransactionTest.prototype = {
-	dump: function(dummy) {
+	dump:function(dummy) {
+		_log.error("dump")
 		_log.error("tx id:", _tx.id)
-		_log.error("tx vin length:" _tx.vin.length)
-		_log.error("tx vout length:" _tx.vin.length)
+		_log.error("tx vin length:", _tx.vin.length)
+		let index = 0
+		for (let vin of _tx.vin) {
+			_log.error("index:", index, " id: ", vin.txid, " vout: ", vin.vout, " signature: ", vin.signature, " pubkey: ", vin.pubkey)
+		}
+		_log.error("tx vout length:", _tx.vin.length)
+		index = 0
+		for (let vout of _tx.vout) {
+			_log.error("index:", index, " amount: ", vout.amount, " pubkeyhash: ", vout.pubkeyhash)
+		}
 	}
 };
 var transactionTest = new TransactionTest;
@@ -136,5 +145,5 @@ var transactionTest = new TransactionTest;
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	sc.ImportTransaction(core.MockTransaction())
-	sc.Execute("dump", "dummy")
+	sc.Execute("dump", "\"dummy\"")
 }
