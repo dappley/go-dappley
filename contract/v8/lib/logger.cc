@@ -42,7 +42,6 @@ void NewLoggerInstance(Isolate *isolate, Local<Context> context, void* address) 
 
 void LogCallback(unsigned int level, const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
-    Local<Object> thisArg = info.Holder();
 
     char** args = (char **)malloc(sizeof(char *) * info.Length());
     String::Utf8Value** utf8Values = new String::Utf8Value*[info.Length()]; 
