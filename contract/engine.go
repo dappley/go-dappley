@@ -11,6 +11,7 @@ int  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const c
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
 int   Cgo_StorageDelFunc(void *address, const char *key);
+int	  Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount);
 //transaction
 struct transaction_t* Cgo_TransactionGetFunc(void *address);
 //log
