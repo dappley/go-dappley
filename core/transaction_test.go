@@ -25,9 +25,9 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/mocks"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
