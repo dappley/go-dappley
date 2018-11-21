@@ -10,7 +10,7 @@ extern "C" {
     typedef char* (*FuncStorageGet)(void *address, const char *key);
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
-    typedef struct transaction_t* (*FuncTransactionGet)(void* address);
+    typedef void (*FuncTransactionGet)(void* address, SetTransactionCb cb, void* context);
     typedef void (*FuncLogger)(unsigned int level, char** args, int length);
 
     EXPORT void Initialize();

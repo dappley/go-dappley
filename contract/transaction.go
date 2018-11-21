@@ -11,10 +11,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-type CTransaction C.struct_transaction_t
-
 //export TransactionGetFunc
-func TransactionGetFunc(address unsafe.Pointer) *C.struct_transaction_t {
+func TransactionGetFunc(address unsafe.Pointer, cb C.SetTransactionCb, context unsafe.Pointer) {
 	addr := uint64(uintptr(address))
 	engine := getV8EngineByAddress(addr)
 
@@ -22,6 +20,13 @@ func TransactionGetFunc(address unsafe.Pointer) *C.struct_transaction_t {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
+		return nil
+	}
+
+	if cb == nil || context == nil {
+		logger.WithFields(logger.Fields{
+			"contractAddr": addr,
+		}).Debug("Smart Contract: Invalid get transaction params!")
 		return nil
 	}
 
@@ -58,7 +63,7 @@ func TransactionGetFunc(address unsafe.Pointer) *C.struct_transaction_t {
 	}
 	tx.vout = (*C.struct_transaction_vout_t)(unsafe.Pointer(&vouts[0]))
 
-	return (*C.struct_transaction_t)(unsafe.Pointer(&tx))
+	cb((*C.struct_transaction_t)(unsafe.Pointer(&tx)), context)
 }
 
 //export TransactionGetIdFunc
@@ -92,14 +97,14 @@ func TransactionGetVinLength(address unsafe.Pointer) C.int {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return 0 
+		return 0
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return 0 
+		return 0
 	}
 	return C.int(len(engine.tx.Vin))
 }
@@ -141,14 +146,14 @@ func TransactionGetVinVoutFunc(address unsafe.Pointer, index C.int) C.int {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return 0 
+		return 0
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return 0 
+		return 0
 	}
 
 	if int(index) >= len(engine.tx.Vin) {
@@ -246,14 +251,14 @@ func TransactionGetVoutAmount(address unsafe.Pointer, index C.int) C.longlong {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return 0 
+		return 0
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return 0 
+		return 0
 	}
 
 	if int(index) >= len(engine.tx.Vout) {
