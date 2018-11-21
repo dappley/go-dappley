@@ -20,21 +20,21 @@ func TransactionGetFunc(address unsafe.Pointer, cb C.SetTransactionCb, context u
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Failed to get V8 engine!")
-		return nil
+		return
 	}
 
 	if cb == nil || context == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart Contract: Invalid get transaction params!")
-		return nil
+		return
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
 			"contractAddr": addr,
 		}).Debug("Smart contract: Failed to get transaction in v8 engine")
-		return nil
+		return
 	}
 
 	tx := C.struct_transaction_t{}

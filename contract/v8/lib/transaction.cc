@@ -5,7 +5,7 @@ const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(
     PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
 static FuncTransactionGet txGet = NULL;
-static void ReceiveTransactionData(struct transaction_t* tx);
+static void ReceiveTransactionData(struct transaction_t* tx, void* context);
 typedef struct {
     Isolate *isolate;
     Local<Context> *context;
@@ -61,7 +61,7 @@ void ReceiveTransactionData(struct transaction_t* tx, void* context) {
             String::NewFromUtf8(txContext->isolate, tx->vin[i].pubkey),
             DEFAULT_PROPERTY
         );
-        vins->Set(context, i, vinInstance);
+        vins->Set(*(txContext->context), i, vinInstance);
     }
     txInstance->DefineOwnProperty(
         *(txContext->context),
@@ -86,7 +86,7 @@ void ReceiveTransactionData(struct transaction_t* tx, void* context) {
             String::NewFromUtf8(txContext->isolate, tx->vout[i].pubkeyhash),
             DEFAULT_PROPERTY
         );
-        vouts->Set(context, i, voutInstance);
+        vouts->Set(*(txContext->context), i, voutInstance);
     }
     txInstance->DefineOwnProperty(
         *(txContext->context),
