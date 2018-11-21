@@ -23,10 +23,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/copier"
 
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/jinzhu/copier"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -48,12 +48,12 @@ type Blockchain struct {
 	blockPool     *BlockPool
 	consensus     Consensus
 	txPool        *TransactionPool
-	scManager 	  ScEngineManager
+	scManager     ScEngineManager
 }
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager) *Blockchain {
-	genesis := NewGenesisBlock(address.String())
+	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
@@ -158,7 +158,6 @@ func (bc *Blockchain) SetBlockPool(blockPool *BlockPool) {
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
-
 	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()
 
@@ -176,14 +175,14 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
 
-	if bc.scManager!= nil {
+	if bc.scManager != nil {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db)
-		scState.Update(block.GetTransactions(),utxoIndex,bc.scManager)
+		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager)
 		scState.SaveToDatabase(bcTemp.db)
 	}
 
-	_, err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
+	err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -270,7 +269,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil,nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil, nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -370,9 +369,10 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
 	if err != nil {
 		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
+		return
 	}
 
-	if !bc.GetBlockPool().VerifyTransactions(bc, utxo, forkBlks) {
+	if !bc.GetBlockPool().VerifyTransactions(bc, *utxo, forkBlks) {
 		return
 	}
 

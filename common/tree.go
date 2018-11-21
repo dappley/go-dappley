@@ -20,6 +20,7 @@ package common
 
 import (
 	"errors"
+
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -109,16 +110,16 @@ func (t *Tree) FindHeightestChild(path *Tree, prevDeep, deepest int) (deep int, 
 	return deepest, path
 }
 
-func (parent *Tree) AddChild(child *Tree) {
-	parent.Children = append(parent.Children, child)
-	child.Parent = parent
+func (t *Tree) AddChild(child *Tree) {
+	t.Children = append(t.Children, child)
+	child.Parent = t
 }
 
-func (child *Tree) AddParent(parent *Tree) error {
-	if child.Parent != nil {
+func (t *Tree) AddParent(parent *Tree) error {
+	if t.Parent != nil {
 		return ErrChildNodeAlreadyHasParent
 	}
-	parent.AddChild(child)
+	parent.AddChild(t)
 	return nil
 }
 

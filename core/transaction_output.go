@@ -20,7 +20,7 @@ package core
 
 import (
 	"bytes"
-	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
@@ -33,35 +33,30 @@ type TXOutput struct {
 	Contract   string
 }
 
-func (out *TXOutput) Lock(address string) {
-	out.PubKeyHash = PubKeyHash{HashAddress(address)}
-}
-
-func HashAddress(address string) []byte {
-	pubKeyHash := base58.Decode(address)
-	return pubKeyHash[: len(pubKeyHash)-4]
+func (out *TXOutput) Lock(address Address) {
+	hash, _ := address.GetPubKeyHash()
+	out.PubKeyHash = PubKeyHash{hash}
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare(out.PubKeyHash.GetPubKeyHash(), pubKeyHash) == 0
 }
 
-func NewTXOutput(value *common.Amount, address string) *TXOutput {
-	return NewTxOut(value, address,"")
+func NewTXOutput(value *common.Amount, address Address) *TXOutput {
+	return NewTxOut(value, address, "")
 }
 
-func NewContractTXOutput(address string, contract string) *TXOutput {
+func NewContractTXOutput(address Address, contract string) *TXOutput {
 	return NewTxOut(common.NewAmount(0), address, contract)
 }
 
-
-func NewTxOut(value *common.Amount, address string, contract string) *TXOutput{
-	txo := &TXOutput{value, PubKeyHash{},contract}
+func NewTxOut(value *common.Amount, address Address, contract string) *TXOutput {
+	txo := &TXOutput{value, PubKeyHash{}, contract}
 	txo.Lock(address)
 	return txo
 }
 
-func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) bool{
+func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) bool {
 
 	val, isFound := rewardStorage[out.PubKeyHash.GenerateAddress().String()]
 	if !isFound {
@@ -69,22 +64,22 @@ func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) boo
 	}
 
 	amount, err := common.NewAmountFromString(val)
-	if err!=nil{
+	if err != nil {
 		logger.WithFields(logger.Fields{
-			"reward":val,
-			"error" :err,
+			"reward": val,
+			"error":  err,
 		}).Warn("TXOutput: Reward amount is in invalid format.")
 		return false
 	}
 
-	return out.Value.Cmp(amount)==0
+	return out.Value.Cmp(amount) == 0
 }
 
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),
 		PubKeyHash: out.PubKeyHash.GetPubKeyHash(),
-		Contract: 	out.Contract,
+		Contract:   out.Contract,
 	}
 }
 

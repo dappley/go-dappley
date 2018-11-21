@@ -41,6 +41,7 @@ import (
 var subsidy = common.NewAmount(10)
 
 const ContractTxouputIndex = 0
+
 var rewardTxData = []byte("Distribute X Rewards")
 
 var (
@@ -62,9 +63,9 @@ type TxIndex struct {
 	BlockIndex int
 }
 
-func (tx Transaction) IsCoinbase() bool {
+func (tx *Transaction) IsCoinbase() bool {
 
-	if !tx.isVinCoinbase(){
+	if !tx.isVinCoinbase() {
 		return false
 	}
 
@@ -72,32 +73,32 @@ func (tx Transaction) IsCoinbase() bool {
 		return false
 	}
 
-	if bytes.Equal(tx.Vin[0].PubKey,rewardTxData){
+	if bytes.Equal(tx.Vin[0].PubKey, rewardTxData) {
 		return false
 	}
 
 	return true
 }
 
-func (tx Transaction) IsRewardTx() bool{
+func (tx *Transaction) IsRewardTx() bool {
 
-	if !tx.isVinCoinbase(){
+	if !tx.isVinCoinbase() {
 		return false
 	}
 
-	if !bytes.Equal(tx.Vin[0].PubKey,rewardTxData){
+	if !bytes.Equal(tx.Vin[0].PubKey, rewardTxData) {
 		return false
 	}
 
 	return true
 }
 
-func (tx Transaction) isVinCoinbase() bool{
+func (tx *Transaction) isVinCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
 // Serialize returns a serialized Transaction
-func (tx Transaction) Serialize() []byte {
+func (tx *Transaction) Serialize() []byte {
 	var encoded bytes.Buffer
 
 	enc := gob.NewEncoder(&encoded)
@@ -209,7 +210,7 @@ func (tx *Transaction) Verify(utxo *UTXOIndex, blockHeight uint64) bool {
 		return true
 	}
 
-	if tx.IsRewardTx(){
+	if tx.IsRewardTx() {
 		//TODO: verify reward tx here
 		return true
 	}
@@ -317,7 +318,7 @@ func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Transaction {
+func NewCoinbaseTX(to Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -333,23 +334,23 @@ func NewCoinbaseTX(to, data string, blockHeight uint64, tip *common.Amount) Tran
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
-func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction{
+func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
 	txin := TXInput{nil, -1, bh, rewardTxData}
 	txOutputs := []TXOutput{}
-	for address, amount := range rewards{
-		amt,err := common.NewAmountFromString(amount)
-		if err!= nil {
+	for address, amount := range rewards {
+		amt, err := common.NewAmountFromString(amount)
+		if err != nil {
 			logger.WithFields(logger.Fields{
-				"address"	:address,
-				"amount"	:amount,
-				"error"		:err,
+				"address": address,
+				"amount":  amount,
+				"error":   err,
 			}).Warn("Transaction: Not able to parse reward amount")
 		}
-		txOutputs = append(txOutputs,*NewTXOutput(amt, address))
+		txOutputs = append(txOutputs, *NewTXOutput(amt, NewAddress(address)))
 	}
 	tx := Transaction{nil, []TXInput{txin}, txOutputs, 0}
 	tx.ID = tx.Hash()
@@ -428,15 +429,15 @@ func (tx *Transaction) GetContract() string {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[string]string, engine ScEngine) []*Transaction{
+func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[string]string, engine ScEngine) []*Transaction {
 
-	if tx.IsRewardTx(){
+	if tx.IsRewardTx() {
 		return nil
 	}
 
 	vout := tx.Vout[ContractTxouputIndex]
 
-	if isContract,_:=vout.PubKeyHash.IsContract(); !isContract{
+	if isContract, _ := vout.PubKeyHash.IsContract(); !isContract {
 		return nil
 	}
 	utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
@@ -469,20 +470,20 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[
 	return engine.GetGeneratedTXs()
 }
 
-func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool{
+func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 
-	if tx==nil {
+	if tx == nil {
 		logger.Debug("Transaction: Transaction does not exist")
 		return false
 	}
 
-	if !tx.IsRewardTx(){
+	if !tx.IsRewardTx() {
 		logger.Debug("Transaction: Transaction is not a reward transaction")
 		return false
 	}
 
-	for _,vout := range tx.Vout{
-		if !vout.IsFoundInRewardStorage(rewardStorage){
+	for _, vout := range tx.Vout {
+		if !vout.IsFoundInRewardStorage(rewardStorage) {
 			return false
 		}
 	}
@@ -490,7 +491,7 @@ func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool{
 }
 
 // String returns a human-readable representation of a transaction
-func (tx Transaction) String() string {
+func (tx *Transaction) String() string {
 	var lines []string
 
 	lines = append(lines, fmt.Sprintf("\n--- Transaction %x:", tx.ID))
@@ -603,11 +604,10 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	}
 
 	if contract != "" {
-		outputs = append(outputs, *NewContractTXOutput(toAddr.String(), contract))
+		outputs = append(outputs, *NewContractTXOutput(toAddr, contract))
 	}
 
-	outputs = append(outputs, *NewTXOutput(amount, toAddr.String()))
-	outputs = append(outputs, *NewTXOutput(change, from.String()))
+	outputs = append(outputs, *NewTXOutput(amount, toAddr))
+	outputs = append(outputs, *NewTXOutput(change, from))
 	return outputs
 }
-

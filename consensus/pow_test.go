@@ -32,6 +32,7 @@ func TestProofOfWork_NewPoW(t *testing.T) {
 	pow := NewProofOfWork()
 	assert.Nil(t, pow.node)
 	assert.Nil(t, pow.bc)
+	assert.Equal(t, big.NewInt(1).Lsh(big.NewInt(1), uint(256)), pow.target)
 }
 
 func TestProofOfWork_Setup(t *testing.T) {
@@ -64,4 +65,26 @@ func TestProofOfWork_SetTargetBit(t *testing.T) {
 			assert.Equal(t, target, pow.target)
 		})
 	}
+}
+
+func TestProofOfWork_isHashBelowTarget(t *testing.T) {
+
+	pow := NewProofOfWork()
+	pow.SetTargetBit(defaultTargetBits)
+
+	//create a block that has a hash value larger than the target
+	blk := core.GenerateMockBlock()
+	hash := big.NewInt(1)
+	hash.Lsh(hash, uint(256-defaultTargetBits+1))
+
+	blk.SetHash(hash.Bytes())
+
+	assert.False(t, pow.isHashBelowTarget(blk))
+
+	//create a block that has a hash value smaller than the target
+	hash = big.NewInt(1)
+	hash.Lsh(hash, uint(256-defaultTargetBits-1))
+	blk.SetHash(hash.Bytes())
+
+	assert.True(t, pow.isHashBelowTarget(blk))
 }

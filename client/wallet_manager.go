@@ -22,6 +22,12 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
@@ -29,11 +35,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-	"path/filepath"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
@@ -53,6 +54,7 @@ type WalletData struct {
 	Locked     bool
 }
 
+//GetWalletFilePath return wallet file Path
 func GetWalletFilePath() string {
 	conf := &walletpb.WalletConfig{}
 	if Exists(walletConfigFilePath) {
@@ -70,9 +72,9 @@ func GetWalletFilePath() string {
 	if Exists(walletPath) {
 		walletfile, err = filepath.Abs(conf.GetFilePath())
 	} else if Exists(strings.Replace(walletPath, "..", "../..", 1)) {
-		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(),"..", "../..", 1))
+		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
 	}
-	if err != nil && err.Error() == ""{
+	if err != nil && err.Error() == "" {
 		return walletfile
 	}
 	return walletfile
@@ -94,7 +96,6 @@ func Exists(path string) bool {
 	}
 	return true
 }
-
 
 func (wm *WalletManager) NewTimer(timeout time.Duration) {
 	wm.timer = *time.NewTimer(timeout)
@@ -134,12 +135,12 @@ func (wm *WalletManager) IsFileEmpty() (bool, error) {
 	fileContent, err := wm.fileLoader.ReadFromFile()
 	if err != nil {
 		return true, err
-	} else {
-		return len(fileContent) == 0, nil
 	}
+	return len(fileContent) == 0, nil
+
 }
 
-// SaveToFile saves Wallets to a file
+// SaveWalletToFile saves Wallets to a file
 func (wm *WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
 	wm.mutex.Lock()
@@ -230,12 +231,12 @@ func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, 
 		wallet := wm.GetWalletByAddress(address)
 		if wallet == nil {
 			return nil, errors.New("Address not found in the wallets!")
-		} else {
-			return wallet, nil
 		}
-	} else {
-		return nil, errors.New("Password does not match!")
+		return wallet, nil
+
 	}
+	return nil, errors.New("Password does not match!")
+
 }
 
 func (wm *WalletManager) SetUnlockTimer(timeout time.Duration) {

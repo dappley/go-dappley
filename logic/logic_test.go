@@ -155,13 +155,13 @@ func TestGetAllAddresses(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	expected_res := []core.Address{}
+	expectedRes := []core.Address{}
 	//create a wallet address
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet)
 	addr := wallet.GetAddress()
 
-	expected_res = append(expected_res, addr)
+	expectedRes = append(expectedRes, addr)
 
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128, nil)
@@ -175,7 +175,7 @@ func TestGetAllAddresses(t *testing.T) {
 		addr = wallet.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
-		expected_res = append(expected_res, addr)
+		expectedRes = append(expectedRes, addr)
 	}
 
 	//get all addresses
@@ -183,8 +183,8 @@ func TestGetAllAddresses(t *testing.T) {
 	assert.Nil(t, err)
 
 	//the length should be equal
-	assert.Equal(t, len(expected_res), len(addrs))
-	assert.ElementsMatch(t, expected_res, addrs)
+	assert.Equal(t, len(expectedRes), len(addrs))
+	assert.ElementsMatch(t, expectedRes, addrs)
 	teardown()
 }
 

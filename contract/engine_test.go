@@ -67,12 +67,12 @@ var transferTest = new TransferTest;`
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
-			TXOutput: *core.NewTxOut(common.NewAmount(15), contractAddr.String(), ""),
+			TXOutput: *core.NewTxOut(common.NewAmount(15), contractAddr, ""),
 		},
 		{
 			Txid:     []byte("2"),
 			TxIndex:  0,
-			TXOutput: *core.NewTxOut(common.NewAmount(3), contractAddr.String(), ""),
+			TXOutput: *core.NewTxOut(common.NewAmount(3), contractAddr, ""),
 		},
 	}
 
@@ -97,7 +97,7 @@ var transferTest = new TransferTest;`
 			// change
 			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
 
-			assert.Equal(t, core.HashAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GetPubKeyHash())
+			assert.Equal(t, core.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
 			assert.Equal(t, contractPubKeyHash.GetPubKeyHash(), sc.generatedTXs[0].Vout[1].PubKeyHash.GetPubKeyHash())
 		}
 	}

@@ -22,20 +22,17 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
-	"github.com/dappley/go-dappley/storage"
-	"time"
-
-	logger "github.com/sirupsen/logrus"
-
-	"reflect"
-
 	"encoding/hex"
+	"reflect"
+	"time"
 
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -54,7 +51,15 @@ type Block struct {
 
 type Hash []byte
 
+func (h Hash) String() string {
+	return hex.EncodeToString(h)
+}
+
 func NewBlock(transactions []*Transaction, parent *Block) *Block {
+	return NewBlockWithTimestamp(transactions, parent, time.Now().Unix())
+}
+
+func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp int64) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -72,7 +77,7 @@ func NewBlock(transactions []*Transaction, parent *Block) *Block {
 			hash:      []byte{},
 			prevHash:  prevHash,
 			nonce:     0,
-			timestamp: time.Now().Unix(),
+			timestamp: timeStamp,
 			sign:      nil,
 			height:    height,
 		},
@@ -234,7 +239,7 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 }
 
 func (b *Block) CalculateHash() Hash {
-	return b.CalculateHashWithoutNonce()
+	return b.CalculateHashWithNonce(b.GetNonce())
 }
 
 func (b *Block) CalculateHashWithoutNonce() Hash {
@@ -297,17 +302,16 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 		if !tx.Verify(&utxo, b.GetHeight()) {
 			return false
 		}
-		err := utxo.ApplyTransaction(tx)
-		if err!=nil{
+		if !utxo.UpdateUtxo(tx) {
 			return false
 		}
 	}
 	return true
 }
 
-func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEngineManager) bool{
+func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEngineManager) bool {
 
-	if manager==nil{
+	if manager == nil {
 		return true
 	}
 
@@ -317,11 +321,11 @@ func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEn
 	var rewardTx *Transaction
 	rewards := make(map[string]string)
 	for _, tx := range b.GetTransactions() {
-		if tx.IsRewardTx(){
+		if tx.IsRewardTx() {
 			rewardTx = tx
 			continue
 		}
-		tx.Execute(utxo, scState, rewards, manager.CreateEngine())
+		tx.Execute(*utxo, scState, rewards, manager.CreateEngine())
 	}
 
 	if rewardTx == nil {
@@ -350,8 +354,8 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool {
 	return parentBlk.GetHeight() == childBlk.GetHeight()-1
 }
 
-func (parent *Block) IsParentBlock(child *Block) bool {
-	return IsParentBlockHash(parent, child) && IsParentBlockHeight(parent, child)
+func (b *Block) IsParentBlock(child *Block) bool {
+	return IsParentBlockHash(b, child) && IsParentBlockHeight(b, child)
 }
 
 func (b *Block) Rollback(txPool *TransactionPool) {
@@ -383,8 +387,4 @@ func (b *Block) GetCoinbaseTransaction() *Transaction {
 		}
 	}
 	return nil
-}
-
-func (b *Block) hashString() string {
-	return hex.EncodeToString(b.GetHash())
 }

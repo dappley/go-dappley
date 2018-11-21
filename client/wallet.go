@@ -33,19 +33,19 @@ func NewWallet() *Wallet {
 	return wallet
 }
 
-func (w *Wallet) GetAddress() core.Address {
+func (w Wallet) GetAddress() core.Address {
 	return w.Addresses[0]
 }
 
-func (w *Wallet) GetKeyPair() *core.KeyPair {
+func (w Wallet) GetKeyPair() *core.KeyPair {
 	return w.Key
 }
 
-func (w *Wallet) GetAddresses() []core.Address {
+func (w Wallet) GetAddresses() []core.Address {
 	return w.Addresses
 }
 
-func (w *Wallet) ContainAddress(address core.Address) bool {
+func (w Wallet) ContainAddress(address core.Address) bool {
 	for _, value := range w.Addresses {
 		if value == address {
 			return true

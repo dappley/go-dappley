@@ -87,8 +87,8 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 			[]byte("contractGenerated"),
 			txins,
 			[]core.TXOutput{
-				*core.NewTxOut(amountValue, toAddr.String(), ""),
-				*core.NewTxOut(change, contractAddr.String(), ""),
+				*core.NewTxOut(amountValue, toAddr, ""),
+				*core.NewTxOut(change, contractAddr, ""),
 			},
 			tipValue.Uint64(),
 		},

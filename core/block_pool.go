@@ -87,7 +87,14 @@ func (pool *BlockPool) VerifyTransactions(bc *Blockchain, utxoSnapshot UTXOIndex
 		}).Debug("Verifying block before merge")
 
 		if !forkBlks[i].VerifyTransactions(utxoSnapshot) ||
-		   !forkBlks[i].VerifySmartContractTransactions(bc.db, bc.scManager){
+			!forkBlks[i].VerifySmartContractTransactions(bc.db, bc.scManager) {
+			return false
+		}
+
+		utxoIndex := LoadUTXOIndex(pool.blockchain.GetDb())
+
+		err := utxoIndex.UpdateUtxoState(forkBlks[i].GetTransactions(), pool.blockchain.GetDb())
+		if err != nil {
 			return false
 		}
 	}
@@ -121,14 +128,16 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		"hash": hex.EncodeToString(blk.GetHash()),
 	}).Info("BlockPool: Received a new block: ")
 
-	tree, _ := common.NewTree(blk.hashString(), blk)
+	tree, _ := common.NewTree(blk.GetHash().String(), blk)
 	blkCache := pool.blkCache
 
-	if blkCache.Contains(blk.hashString()) {
+	if blkCache.Contains(blk.GetHash().String()) {
 		return
 	}
-
-	blkCache.Add(blk.hashString(), tree)
+	if !pool.isChildBlockInCache(blk.GetHash().String()) && blk.GetHeight() <= pool.blockchain.GetMaxHeight() {
+		return
+	}
+	blkCache.Add(blk.GetHash().String(), tree)
 	pool.updateBlkCache(tree)
 
 	forkheadParentHash := tree.GetValue().(*Block).GetPrevHash()
@@ -136,7 +145,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	if parent, _ := pool.blockchain.GetBlockByHash(forkheadParentHash); parent != nil {
 		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
 		if forkTailTree.GetValue().(*Block).GetHeight() > pool.blockchain.GetMaxHeight() {
-			pool.syncState = true
+			pool.SetSyncState(true)
 		} else {
 			return
 		}
@@ -147,11 +156,11 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 		tree.Delete()
 
 		logger.WithFields(logger.Fields{
-			"syncstate": false,
+			"syncstate": 0,
 		}).Debug("Merge finished or exited, setting syncstate to false")
 		pool.SetSyncState(false)
 
-	}else{
+	} else {
 		pool.requestPrevBlock(tree, sender)
 	}
 
@@ -170,7 +179,7 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	// try to link child
 	for _, key := range blkCache.Keys() {
 		if cachedBlk, ok := blkCache.Get(key); ok {
-			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).hashString() {
+			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).GetHash().String() {
 				logger.WithFields(logger.Fields{
 					"treeheight":     tree.GetValue().(*Block).GetHeight(),
 					"cacheblkHeight": cachedBlk.(*common.Tree).GetValue().(*Block).GetHeight(),
@@ -178,6 +187,11 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 				tree.AddChild(cachedBlk.(*common.Tree))
 			}
 		}
+	}
+
+	//try to link parent
+	if parent, ok := blkCache.Get(string(tree.GetValue().(*Block).GetPrevHash())); ok == true {
+		tree.AddParent(parent.(*common.Tree))
 	}
 	logger.WithFields(logger.Fields{
 		"height": tree.GetValue().(*Block).GetHeight(),
@@ -200,4 +214,16 @@ func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
 	}
 	return nil
 
+}
+
+func (pool BlockPool) isChildBlockInCache(hashString string) bool {
+	blkCache := pool.blkCache
+	for _, key := range blkCache.Keys() {
+		if cachedBlk, ok := blkCache.Get(key); ok {
+			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == hashString {
+				return true
+			}
+		}
+	}
+	return false
 }

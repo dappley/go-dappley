@@ -25,14 +25,13 @@ import (
 	"testing"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 var sendAmount = common.NewAmount(7)
@@ -47,7 +46,7 @@ func TestMain(m *testing.M) {
 }
 
 //mine multiple transactions
-func TestMiner_SingleValidTx(t *testing.T) {
+func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//create new wallet
 	wallets := &client.WalletManager{}
@@ -72,7 +71,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0),"")
+	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0), "")
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -111,7 +110,7 @@ func TestMiner_SingleValidTx(t *testing.T) {
 }
 
 //mine empty blocks
-func TestMiner_MineEmptyBlock(t *testing.T) {
+func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//create new wallet
 	walletManager := &client.WalletManager{}
@@ -157,7 +156,7 @@ func TestMiner_MineEmptyBlock(t *testing.T) {
 }
 
 //mine multiple transactions
-func TestMiner_MultipleValidTx(t *testing.T) {
+func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//create new wallet
 	wallets := &client.WalletManager{}
@@ -182,7 +181,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//create a transaction
-	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0),"")
+	tx, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0), "")
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -203,7 +202,7 @@ func TestMiner_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//add second transaction
-	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, common.NewAmount(0),"")
+	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, *keyPair, common.NewAmount(0), "")
 	assert.Nil(t, err)
 
 	bc.GetTxPool().Push(tx2)
@@ -290,7 +289,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	wallets.AddWallet(wallet2)
 	wallets.AddWallet(wallet3)
 
-	sendAmount:=common.NewAmount(10)
+	sendAmount := common.NewAmount(10)
 	keyPair := wallets.GetKeyPairByAddress(wallet1.GetAddress())
 
 	//create a blockchain
@@ -302,8 +301,8 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos,err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
-	assert.Nil(t,err)
+	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	assert.Nil(t, err)
 
 	//create a transaction
 	tx1, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0), "")
@@ -328,7 +327,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	}
 	pow.Stop()
 
-	assert.True(t, core.MetricsTxDoubleSpend.Count()>0)
+	assert.True(t, core.MetricsTxDoubleSpend.Count() > 0)
 }
 
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
@@ -344,7 +343,7 @@ func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
 }
 
 //TODO: test mining with invalid transactions
-func TestMiner_InvalidTransactions(t *testing.T) {
+func TestBlockProducer_InvalidTransactions(t *testing.T) {
 
 }
 
@@ -359,7 +358,7 @@ func printBalances(bc *core.Blockchain, addrs []core.Address) {
 func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
-	pubKeyHash := core.HashAddress(addr)
+	pubKeyHash, _ := core.NewAddress(addr).GetPubKeyHash()
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	for _, out := range utxos {

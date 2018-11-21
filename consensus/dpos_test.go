@@ -21,18 +21,17 @@ package consensus
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDpos(t *testing.T) {
 	dpos := NewDPOS()
 	assert.Equal(t, 1, cap(dpos.newBlockCh))
-	assert.Equal(t, 1, cap(dpos.quitCh))
+	assert.Equal(t, 1, cap(dpos.stopCh))
 	assert.Nil(t, dpos.node)
 }
 
@@ -48,24 +47,14 @@ func TestDpos_Setup(t *testing.T) {
 	assert.Equal(t, node, dpos.node)
 }
 
-func TestDpos_Stop(t *testing.T) {
-	dpos := NewDPOS()
-	dpos.Stop()
-	select {
-	case <-dpos.quitCh:
-	default:
-		t.Error("Failed!")
-	}
-}
-
 func TestDpos_beneficiaryIsProducer(t *testing.T) {
 	producers := []string{
 		"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD",
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
 
-	cbtx := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD", "", 0, common.NewAmount(0))
-	cbtxInvalidProducer := core.NewCoinbaseTX("121yKAXeG4cw6uaGCBGjWk9yTWmMkhcoDD", "", 0, common.NewAmount(0))
+	cbtx := core.NewCoinbaseTX(core.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtxInvalidProducer := core.NewCoinbaseTX(core.NewAddress(producers[0]), "", 0, common.NewAmount(0))
 
 	tests := []struct {
 		name     string
