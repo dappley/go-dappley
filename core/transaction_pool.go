@@ -21,13 +21,20 @@ package core
 import (
 	"bytes"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/sorted"
 	logger "github.com/sirupsen/logrus"
+)
+
+const (
+	NewTransactionTopic   = "NewTransaction"
+	EvictTransactionTopic = "EvictTransaction"
 )
 
 type TransactionPool struct {
 	Transactions sorted.Slice
 	limit        uint32
+	EventBus     EventBus.Bus
 }
 
 func compareTxTips(tx1 interface{}, tx2 interface{}) int {
@@ -51,6 +58,7 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		Transactions: *sorted.NewSlice(compareTxTips, match),
 		limit:        limit,
+		EventBus:     EventBus.New(),
 	}
 }
 
@@ -68,17 +76,19 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	}
 }
 
-type filterTx func(Transaction) bool
-
-func (txPool *TransactionPool) ValidTxns(filter filterTx) []*Transaction {
-	var sortedTransactions []*Transaction
+func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
+	var validTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
-		tx := txPool.Transactions.PopRight().(Transaction)
-		if(filter(tx)){
-			sortedTransactions = append(sortedTransactions, &tx)
+		tx := txPool.PopRight()
+		if tx.Verify(&utxoIndex, 0) {
+			validTransactions = append(validTransactions, &tx)
 		}
 	}
-	return sortedTransactions
+	return validTransactions
+}
+
+func (txPool *TransactionPool) PopRight() Transaction {
+	return txPool.Transactions.PopRight().(Transaction)
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
@@ -98,7 +108,9 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 		}
 
 		txPool.Transactions.PopLeft()
+		txPool.EventBus.Publish(EvictTransactionTopic, &leastTipTx)
 	}
 
 	txPool.Transactions.Push(tx)
+	txPool.EventBus.Publish(NewTransactionTopic, &tx)
 }

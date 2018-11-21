@@ -19,7 +19,7 @@ package core
 
 const genesisCoinbaseData = "Hello world"
 
-func NewGenesisBlock(address string) *Block {
+func NewGenesisBlock(address Address) *Block {
 	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
 
 	txin := TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}

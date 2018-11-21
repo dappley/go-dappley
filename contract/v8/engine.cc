@@ -13,6 +13,7 @@
 #include "lib/storage.h"
 #include "lib/logger.h"
 #include "lib/transaction.h"
+#include "lib/reward_distributor.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -24,7 +25,54 @@ void Initialize(){
     V8::Initialize();
 }
 
-int executeV8Script(const char *sourceCode, uintptr_t handler) {
+const char* toCString(const v8::String::Utf8Value& value) {
+  return *value ? *value : "<string conversion failed>";
+}
+
+void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
+  v8::HandleScope handle_scope(isolate);
+  v8::String::Utf8Value exception(isolate, try_catch->Exception());
+  const char* exception_string = toCString(exception);
+  v8::Local<v8::Message> message = try_catch->Message();
+  if (message.IsEmpty()) {
+    // V8 didn't provide any extra information about this error; just
+    // print the exception.
+    fprintf(stderr, "%s\n", exception_string);
+  } else {
+    // Print (filename):(line number): (message).
+    v8::String::Utf8Value filename(isolate,
+      message->GetScriptOrigin().ResourceName());
+    v8::Local<v8::Context> context(isolate->GetCurrentContext());
+    const char* filename_string = toCString(filename);
+    int linenum = message->GetLineNumber(context).FromJust();
+    fprintf(stderr, "%s:%i: %s\n", filename_string, linenum, exception_string);
+    // Print line of source code.
+    v8::String::Utf8Value sourceline(
+      isolate, message->GetSourceLine(context).ToLocalChecked());
+    const char* sourceline_string = toCString(sourceline);
+    fprintf(stderr, "%s\n", sourceline_string);
+    // Print wavy underline (GetUnderline is deprecated).
+    int start = message->GetStartColumn(context).FromJust();
+    for (int i = 0; i < start; i++) {
+      fprintf(stderr, " ");
+    }
+    int end = message->GetEndColumn(context).FromJust();
+    for (int i = start; i < end; i++) {
+      fprintf(stderr, "^");
+    }
+    fprintf(stderr, "\n");
+    v8::Local<v8::Value> stack_trace_string;
+    if (try_catch->StackTrace(context).ToLocal(&stack_trace_string) &&
+    stack_trace_string->IsString() &&
+    v8::Local<v8::String>::Cast(stack_trace_string)->Length() > 0) {
+      v8::String::Utf8Value stack_trace(isolate, stack_trace_string);
+      const char* stack_trace_string = toCString(stack_trace);
+      fprintf(stderr, "%s\n", stack_trace_string);
+    }
+  }
+}
+
+int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
 
   // Create a new Isolate and make it the current one.
   Isolate::CreateParams create_params;
@@ -38,6 +86,10 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
     HandleScope handle_scope(isolate);
     //
     Local<ObjectTemplate> globalTpl = NewNativeRequireFunction(isolate);
+
+    // Set up an exception handler
+    TryCatch try_catch(isolate);
+
     // Create a new context.
     Local<Context> context = v8::Context::New(isolate, NULL, globalTpl);
 
@@ -48,25 +100,44 @@ int executeV8Script(const char *sourceCode, uintptr_t handler) {
     NewStorageInstance(isolate, context, (void *)handler);
     NewLoggerInstance(isolate, context, (void *)handler);
     NewTransactionInstance(isolate, context, (void *)handler);
+    NewRewardDistributorInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {
+
       // Create a string containing the JavaScript source code.
-      Local<String> source =
-          String::NewFromUtf8(isolate, sourceCode,
-                                  NewStringType::kNormal)
-              .ToLocalChecked();
+      Local<String> source = String::NewFromUtf8(
+        isolate,
+        sourceCode,
+        NewStringType::kNormal
+      ).ToLocalChecked();
 
       // Compile the source code.
-      Local<Script> script = Script::Compile(context, source).ToLocalChecked();
+      Local<Script> script;
+      if (!Script::Compile(context, source).ToLocal(&script)) {
+        reportException(isolate, &try_catch);
+        *result = strdup("1");
+        return 1;
+      }
 
       // Run the script to get the result.
-      Local<Value> result = script->Run(context).ToLocalChecked();
+      Local<Value> scriptRes;
+      if (!script->Run(context).ToLocal(&scriptRes)) {
+        assert(try_catch.HasCaught());
+        reportException(isolate, &try_catch);
+        *result = strdup("1");
+        return 1;
+      }
 
-      // Convert the result to an UTF8 string and print it.
-      String::Utf8Value utf8(isolate, result);
-      printf("%s\n", *utf8);
-      fflush(stdout);
+      // set result.
+      if (result != NULL)  {
+        Local<Object> obj = scriptRes.As<Object>();
+        if (!obj->IsUndefined()) {
+          String::Utf8Value str(isolate, obj);
+          *result = (char *)malloc(str.length() + 1);
+          strcpy(*result, *str);
+        }
+      }
     }
   }
 

@@ -20,15 +20,14 @@ package network
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
-	"time"
-
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
@@ -223,12 +222,17 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 	n.streamHandler(stream)
 
 	// Add the peer list
-	if len(n.peerList.peers) >= PEERLISTMAXSIZE {
+	if n.peerList.ListIsFull() {
 		n.peerList.RemoveOneIP(&Peer{peerid, targetAddr})
 	}
 	n.peerList.Add(&Peer{peerid, targetAddr})
 
 	return nil
+}
+
+func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
+	delete(n.streams, peerid)
+	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
 func (n *Node) streamHandler(s net.Stream) {
@@ -284,7 +288,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
-	if dm.cmd == SyncBlock {
+	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx {
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -318,7 +322,7 @@ func (n *Node) SyncPeersBroadcast() error {
 }
 
 func (n *Node) TxBroadcast(tx *core.Transaction) error {
-	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, "")
+	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, hex.EncodeToString(tx.ID))
 	if err != nil {
 		return err
 	}
@@ -332,15 +336,6 @@ func (n *Node) SyncPeersUnicast(pid peer.ID) error {
 		return err
 	}
 	n.unicast(data, pid)
-	return nil
-}
-
-func (n *Node) BroadcastTxCmd(txn *core.Transaction) error {
-	data, err := n.prepareData(txn.ToProto(), BroadcastTx, Broadcast, "")
-	if err != nil {
-		return err
-	}
-	n.broadcast(data)
 	return nil
 }
 
@@ -399,7 +394,7 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 
 	return block
 }
-func (n *Node) syncBlockHandler(dm *DapMsg, pid peer.ID) {
+func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
 		return
 	}
@@ -414,13 +409,19 @@ func (n *Node) cacheDapMsg(dm DapMsg) {
 	n.recentlyRcvedDapMsgs.Store(dm.GetKey(), true)
 }
 
-func (n *Node) addTxToPool(data []byte) {
+func (n *Node) AddTxToPool(dm *DapMsg) {
+	if n.isNetworkRadiation(*dm) {
+		return
+	}
+
+	n.RelayDapMsg(*dm)
+	n.cacheDapMsg(*dm)
 
 	//create a block proto
 	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, txpb); err != nil {
+	if err := proto.Unmarshal(dm.GetData(), txpb); err != nil {
 		logger.Warn(err)
 	}
 
@@ -433,7 +434,7 @@ func (n *Node) addTxToPool(data []byte) {
 	n.bc.GetTxPool().Push(*tx)
 }
 
-func (n *Node) addMultiPeers(data []byte) {
+func (n *Node) AddMultiPeers(data []byte) {
 
 	go func() {
 		//create a peerList proto
@@ -471,7 +472,7 @@ func (n *Node) addMultiPeers(data []byte) {
 	}()
 }
 
-func (n *Node) sendRequestedBlock(hash []byte, pid peer.ID) {
+func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	blockBytes, err := n.bc.GetDb().Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")

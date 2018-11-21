@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
+	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -75,9 +76,9 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		getbalanceResp.Amount = amount.Int64()
 		getbalanceResp.Message = "Succeed"
 		return &getbalanceResp, nil
-	} else {
-		return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
 	}
+	return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
+
 }
 
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
@@ -203,6 +204,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	return &rpcpb.GetBlockByHeightResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
 }
 
+// RpcSendTransaction Send transaction to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := core.Transaction{nil, nil, nil, 0}
 	tx.FromProto(in.Transaction)
@@ -212,7 +214,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
-	if tx.Verify(&utxoIndex, 0) == false {
+	if tx.Verify(utxoIndex, 0) == false {
 		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
 	}
 
@@ -221,3 +223,25 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
+
+func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
+	var txHandler interface{}
+
+	quitCh := make(chan bool, 1)
+
+	txHandler = func(tx *core.Transaction) {
+		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
+		err := stream.Send(response)
+		if err != nil {
+			logger.Infof("Send transaction to client failed %v\n", err)
+			rpcService.node.GetBlockchain().GetTxPool().EventBus.Unsubscribe(core.NewTransactionTopic, txHandler)
+			quitCh <- true
+		}
+	}
+
+	rpcService.node.GetBlockchain().GetTxPool().EventBus.SubscribeAsync(core.NewTransactionTopic, txHandler, false)
+	<-quitCh
+	return nil
+}
+
+func (rpcService *RpcService) IsPrivate() bool { return false }

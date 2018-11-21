@@ -1,0 +1,6 @@
+script.pid
+tx.log
+transaction_automator
+bin
+pid/*.pid
+*.log

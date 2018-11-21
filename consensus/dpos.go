@@ -24,31 +24,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/hashicorp/golang-lru"
+	logger "github.com/sirupsen/logrus"
 )
 
-const version = byte(0x00)
-
 type DPOS struct {
-	bc         *core.Blockchain
-	delegate   BlockProducer
-	newBlockCh chan *NewBlock
-	node       core.NetService
-	quitCh     chan bool
-	dynasty    *Dynasty
-	slot       *lru.Cache
+	bc          *core.Blockchain
+	bp          *BlockProducer
+	producerKey string
+	newBlockCh  chan *core.Block
+	node        core.NetService
+	stopCh      chan bool
+	dynasty     *Dynasty
+	slot        *lru.Cache
 }
 
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
-		delegate:   NewDelegate(),
-		newBlockCh: make(chan *NewBlock, 1),
+		bp:         NewBlockProducer(),
+		newBlockCh: make(chan *core.Block, 1),
 		node:       nil,
-		quitCh:     make(chan bool, 1),
+		stopCh:     make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -66,12 +64,12 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
 	dpos.bc = node.GetBlockchain()
 	dpos.node = node
-	dpos.delegate.Setup(dpos.bc, cbAddr, dpos.newBlockCh)
-	dpos.delegate.SetRequirement(dpos.requirementForNewBlock)
+	dpos.bp.Setup(dpos.bc, cbAddr)
+	dpos.bp.SetProcess(dpos.hashAndSign)
 }
 
 func (dpos *DPOS) SetKey(key string) {
-	dpos.delegate.SetPrivateKey(key)
+	dpos.producerKey = key
 }
 
 func (dpos *DPOS) SetDynasty(dynasty *Dynasty) {
@@ -95,19 +93,6 @@ func (dpos *DPOS) GetBlockChain() *core.Blockchain {
 	return dpos.bc
 }
 
-func (dpos *DPOS) requirementForNewBlock(block *core.Block) bool {
-	if !dpos.beneficiaryIsProducer(block) {
-		logger.Debug("DPoS: producer validate failed")
-		return false
-	}
-	if dpos.isDoubleMint(block) {
-		logger.Debug("DPoS: doubleminting case found!")
-		return false
-	}
-
-	return true
-}
-
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
 func (dpos *DPOS) Validate(block *core.Block) bool {
 	producerIsValid := dpos.verifyProducer(block)
@@ -115,8 +100,12 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 		return false
 	}
 
-	fulfilled := dpos.requirementForNewBlock(block)
-	if !fulfilled {
+	if !dpos.beneficiaryIsProducer(block) {
+		logger.Debug("DPoS: Producer validation failed")
+		return false
+	}
+	if dpos.isDoubleMint(block) {
+		logger.Debug("DPoS: Double-minting case found!")
 		return false
 	}
 
@@ -126,29 +115,31 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 
 func (dpos *DPOS) Start() {
 	go func() {
-		logger.Info("DPoS Starts...", dpos.node.GetPeerID())
+		logger.Info("DPoS starts...", dpos.node.GetPeerID())
+		if len(dpos.stopCh) > 0 {
+			<-dpos.stopCh
+		}
 		ticker := time.NewTicker(time.Second).C
 		for {
 			select {
 			case now := <-ticker:
-				if dpos.dynasty.IsMyTurn(dpos.delegate.Beneficiary(), now.Unix()) {
+				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
 					logger.WithFields(logger.Fields{
 						"peerid": dpos.node.GetPeerID(),
-					}).Info("My Turn to Mint")
-					dpos.delegate.Start()
+					}).Info("DPoS: My Turn to produce block...")
+					// Do not produce block if block pool is syncing
+					if dpos.bp.bc.GetBlockPool().GetSyncState() {
+						logger.Debug("BlockProducer: Paused while block pool is syncing")
+						continue
+					}
+					newBlk := dpos.bp.ProduceBlock()
+					if !dpos.Validate(newBlk) {
+						logger.Error("DPoS: invalid block produced!")
+						continue
+					}
+					dpos.updateNewBlock(newBlk)
 				}
-			case newBlk := <-dpos.newBlockCh:
-				if newBlk.IsValid {
-					logger.WithFields(logger.Fields{
-						"peerid": dpos.node.GetPeerID(),
-						"hash":   hex.EncodeToString(newBlk.GetHash()),
-					}).Info("DPoS: A Block is produced!")
-					dpos.updateNewBlock(newBlk.Block)
-				}
-			case <-dpos.quitCh:
-				logger.WithFields(logger.Fields{
-					"peerid": dpos.node.GetPeerID(),
-				}).Info("DPoS: DPoS Stops!")
+			case <-dpos.stopCh:
 				return
 			}
 		}
@@ -156,8 +147,20 @@ func (dpos *DPOS) Start() {
 }
 
 func (dpos *DPOS) Stop() {
-	dpos.quitCh <- true
-	dpos.delegate.Stop()
+	logger.WithFields(logger.Fields{
+		"peerid": dpos.node.GetPeerID(),
+	}).Info("DPoS stops...")
+	dpos.stopCh <- true
+}
+
+func (dpos *DPOS) hashAndSign(block *core.Block) {
+	//block.SetNonce(0)
+	hash := block.CalculateHash()
+	block.SetHash(hash)
+	ok := block.SignBlock(dpos.producerKey, hash)
+	if !ok {
+		logger.Warn("DPoS: Failed to sign the new block")
+	}
 }
 
 func (dpos *DPOS) isForking() bool {
@@ -215,7 +218,7 @@ func (dpos *DPOS) verifyProducer(block *core.Block) bool {
 	return true
 }
 
-// beneficiaryIsProducer is a Requirement that ensures the reward is paid to the producer at the time slot
+// beneficiaryIsProducer is a requirement that ensures the reward is paid to the producer at the time slot
 func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 	if block == nil {
 		logger.Debug("beneficiaryIsProducer requirement failed: block is empty")
@@ -223,7 +226,7 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 	}
 
 	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash := core.HashAddress(producer)
+	producerHash, _ := core.NewAddress(producer).GetPubKeyHash()
 
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {
@@ -240,14 +243,19 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 }
 
 func (dpos *DPOS) IsProducingBlock() bool {
-	return !dpos.delegate.IsIdle()
+	return !dpos.bp.IsIdle()
 }
 
 func (dpos *DPOS) updateNewBlock(newBlock *core.Block) {
 	logger.WithFields(logger.Fields{
+		"peerid": dpos.node.GetPeerID(),
 		"height": newBlock.GetHeight(),
 		"hash":   hex.EncodeToString(newBlock.GetHash()),
-	}).Info("DpoS: Minted a new block")
+	}).Info("DPoS: Produced a new block")
+	if !newBlock.VerifyHash() {
+		logger.Warn("DPoS: Invalid hash in new block")
+		return
+	}
 	err := dpos.bc.AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)

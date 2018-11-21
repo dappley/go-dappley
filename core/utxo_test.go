@@ -20,16 +20,16 @@ package core
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/storage/mocks"
-	"github.com/stretchr/testify/mock"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/storage/mocks"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 var bh1 = &BlockHeader{
@@ -109,16 +109,16 @@ func MockUtxoInputs() []TXInput {
 
 func MockUtxoOutputsWithoutInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), address1Hash,""},
-		{common.NewAmount(7), address1Hash,""},
+		{common.NewAmount(5), address1Hash, ""},
+		{common.NewAmount(7), address1Hash, ""},
 	}
 }
 
 func MockUtxoOutputsWithInputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(4), address1Hash,""},
-		{common.NewAmount(5), address2Hash,""},
-		{common.NewAmount(3), address2Hash,""},
+		{common.NewAmount(4), address1Hash, ""},
+		{common.NewAmount(5), address2Hash, ""},
+		{common.NewAmount(3), address2Hash, ""},
 	}
 }
 
@@ -126,7 +126,7 @@ func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	txout := TXOutput{common.NewAmount(5), address1Hash,""}
+	txout := TXOutput{common.NewAmount(5), address1Hash, ""}
 	utxoIndex := NewUTXOIndex()
 
 	utxoIndex.addUTXO(txout, []byte{1}, 0)
@@ -148,13 +148,13 @@ func TestRemoveUTXO(t *testing.T) {
 	utxoIndex := NewUTXOIndex()
 
 	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())],
-		&UTXO{TXOutput{common.NewAmount(5), address1Hash,""}, []byte{1}, 0})
+		&UTXO{TXOutput{common.NewAmount(5), address1Hash, ""}, []byte{1}, 0})
 	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())],
-		&UTXO{TXOutput{common.NewAmount(2), address1Hash,""}, []byte{1}, 1})
+		&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{1}, 1})
 	utxoIndex.index[string(address1Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address1Hash.GetPubKeyHash())],
-		&UTXO{TXOutput{common.NewAmount(2), address1Hash,""}, []byte{2}, 0})
+		&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{2}, 0})
 	utxoIndex.index[string(address2Hash.GetPubKeyHash())] = append(utxoIndex.index[string(address2Hash.GetPubKeyHash())],
-		&UTXO{TXOutput{common.NewAmount(4), address2Hash,""}, []byte{1}, 2})
+		&UTXO{TXOutput{common.NewAmount(4), address2Hash, ""}, []byte{1}, 2})
 
 	err := utxoIndex.removeUTXO([]byte{1}, 0)
 
@@ -179,7 +179,7 @@ func TestUpdate(t *testing.T) {
 	utxoIndexInDB := LoadUTXOIndex(db)
 
 	// Assert that both the original instance and the database copy are updated correctly
-	for _, index := range []UTXOIndex{utxoIndex, utxoIndexInDB} {
+	for _, index := range []UTXOIndex{*utxoIndex, *utxoIndexInDB} {
 		assert.Equal(t, 2, len(index.index[string(address1Hash.GetPubKeyHash())]))
 		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash.GetPubKeyHash())][0].Txid)
 		assert.Equal(t, 0, index.index[string(address1Hash.GetPubKeyHash())][0].TxIndex)
@@ -198,7 +198,7 @@ func TestUpdate_Failed(t *testing.T) {
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex()
-	_,err := utxoIndex.UpdateUtxoState(blk.GetTransactions(), db)
+	err := utxoIndex.UpdateUtxoState(blk.GetTransactions(), db)
 	assert.Equal(t, simulatedFailure, err)
 	assert.Equal(t, 0, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
 }
@@ -241,8 +241,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 func TestFindUTXO(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := &UTXO{TXOutput{common.NewAmount(10), PubKeyHash{[]byte("addr1")},""}, Txin[0].Txid, Txin[0].Vout}
-	utxo2 := &UTXO{TXOutput{common.NewAmount(9), PubKeyHash{[]byte("addr1")},""}, Txin[1].Txid, Txin[1].Vout}
+	utxo1 := &UTXO{TXOutput{common.NewAmount(10), PubKeyHash{[]byte("addr1")}, ""}, Txin[0].Txid, Txin[0].Vout}
+	utxo2 := &UTXO{TXOutput{common.NewAmount(9), PubKeyHash{[]byte("addr1")}, ""}, Txin[1].Txid, Txin[1].Vout}
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index["addr1"] = []*UTXO{utxo1, utxo2}
 
@@ -298,64 +298,64 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	contractPkh := NewContractPubKeyHash()
 	//preapre 3 utxos in the utxo index
 	txoutputs := []TXOutput{
-		{common.NewAmount(3), address1Hash,""},
-		{common.NewAmount(4), address2Hash,""},
-		{common.NewAmount(5), address2Hash,""},
+		{common.NewAmount(3), address1Hash, ""},
+		{common.NewAmount(4), address2Hash, ""},
+		{common.NewAmount(5), address2Hash, ""},
 		{common.NewAmount(2), contractPkh, "helloworld!"},
 		{common.NewAmount(4), contractPkh, ""},
 	}
 
 	index := NewUTXOIndex()
-	for _, txoutput := range txoutputs{
-		index.addUTXO(txoutput,[]byte("01"),0)
+	for _, txoutput := range txoutputs {
+		index.addUTXO(txoutput, []byte("01"), 0)
 	}
 
 	//start the test
 	tests := []struct {
-		name     string
-		amount   *common.Amount
-		pubKey 	 []byte
-		err      error
+		name   string
+		amount *common.Amount
+		pubKey []byte
+		err    error
 	}{
 		{"enoughUtxo",
-		common.NewAmount(3),
-		address2Hash.GetPubKeyHash(),
-		nil,},
+			common.NewAmount(3),
+			address2Hash.GetPubKeyHash(),
+			nil},
 
 		{"notEnoughUtxo",
-		common.NewAmount(4),
-		address1Hash.GetPubKeyHash(),
-			ErrInsufficientFund,},
+			common.NewAmount(4),
+			address1Hash.GetPubKeyHash(),
+			ErrInsufficientFund},
 
 		{"justEnoughUtxo",
 			common.NewAmount(9),
 			address2Hash.GetPubKeyHash(),
-			nil,},
+			nil},
 		{"notEnoughUtxo2",
 			common.NewAmount(10),
 			address2Hash.GetPubKeyHash(),
-			ErrInsufficientFund,},
+			ErrInsufficientFund},
 		{"smartContractUtxo",
 			common.NewAmount(3),
 			contractPkh.PubKeyHash,
-			nil,},
+			nil},
 		{"smartContractUtxoInsufficient",
 			common.NewAmount(5),
 			contractPkh.PubKeyHash,
-			ErrInsufficientFund,},
+			ErrInsufficientFund},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			utxos, err := index.GetUTXOsByAmount(tt.pubKey, tt.amount)
 			assert.Equal(t, tt.err, err)
-			if err!=nil {
+			if err != nil {
 				return
 			}
 			sum := common.NewAmount(0)
-			for _,utxo := range utxos{
+			for _, utxo := range utxos {
 				sum = sum.Add(utxo.Value)
 			}
-			assert.True(t, sum.Cmp(tt.amount)>=0)
+			assert.True(t, sum.Cmp(tt.amount) >= 0)
 		})
 	}
 

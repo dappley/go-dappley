@@ -2,10 +2,12 @@
 #include "../engine.h"
 
 static FuncVerifyAddress sVerifyAddress = NULL;
+static FuncTransfer sTransfer = NULL;
 
 
-void InitializeBlockchain(FuncVerifyAddress verifyAddress) {
+void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer) {
   sVerifyAddress = verifyAddress;
+  sTransfer = transfer;
 }
 
 void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handler) {
@@ -14,6 +16,11 @@ void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handl
 
   blockTpl->Set(String::NewFromUtf8(isolate, "verifyAddress"),
                 FunctionTemplate::New(isolate, VerifyAddressCallback),
+                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
+                                               PropertyAttribute::ReadOnly));
+
+  blockTpl->Set(String::NewFromUtf8(isolate, "transfer"),
+                FunctionTemplate::New(isolate, TransferCallback),
                 static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
                                                PropertyAttribute::ReadOnly));
 
@@ -46,6 +53,48 @@ void VerifyAddressCallback(const FunctionCallbackInfo<Value> &info) {
     return;
   }
   int ret = sVerifyAddress(*String::Utf8Value(isolate, address));
+  info.GetReturnValue().Set(ret);
+
+}
+
+void TransferCallback(const FunctionCallbackInfo<Value> &info) {
+  Isolate *isolate = info.GetIsolate();
+  Local<Object> thisArg = info.Holder();
+  Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
+
+  if (info.Length() != 3) {
+    isolate->ThrowException(String::NewFromUtf8(
+        isolate, "Blockchain.transfer() requires 3 arguments"));
+    return;
+  }
+
+  Local<Value> to = info[0];
+  if (!to->IsString()) {
+    isolate->ThrowException(
+        String::NewFromUtf8(isolate, "to must be string"));
+    return;
+  }
+
+  Local<Value> amount = info[1];
+  if (!amount->IsString()) {
+    isolate->ThrowException(
+        String::NewFromUtf8(isolate, "amount must be string"));
+    return;
+  }
+
+  Local<Value> tip = info[2];
+  if (!tip->IsString()) {
+    isolate->ThrowException(
+        String::NewFromUtf8(isolate, "tip must be string"));
+    return;
+  }
+
+  int ret = sTransfer(
+    handler->Value(),
+    *String::Utf8Value(isolate, to),
+    *String::Utf8Value(isolate, amount),
+    *String::Utf8Value(isolate, tip)
+  );
   info.GetReturnValue().Set(ret);
 
 }

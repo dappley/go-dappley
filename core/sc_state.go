@@ -13,7 +13,10 @@ type ScState struct{
 	mutex *sync.RWMutex
 }
 
-const scStateMapKey = "scState"
+const (
+	scStateMapKey = "scState"
+	scRewardKey = "scStateRewardKey"
+)
 
 func NewScState() *ScState{
 	return &ScState{make(map[string]map[string]string), &sync.RWMutex{}}
@@ -40,7 +43,7 @@ func (ss *ScState) serialize() []byte {
 	return encoded.Bytes()
 }
 
-//Get deletes an item in scStorage
+//Get gets an item in scStorage
 func (ss *ScState) Get(pubKeyHash, key string) string{
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
@@ -50,7 +53,7 @@ func (ss *ScState) Get(pubKeyHash, key string) string{
 	return ss.states[pubKeyHash][key]
 }
 
-//Set deletes an item in scStorage
+//Set sets an item in scStorage
 func (ss *ScState) Set(pubKeyHash, key, value string) int{
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
@@ -78,7 +81,7 @@ func (ss *ScState) Del(pubKeyHash, key string) int{
 	return 0
 }
 
-//Get deletes an item in scStorage
+//GetStorageByAddress gets a storage map by address
 func (ss *ScState) GetStorageByAddress(address string) map[string]string{
 	if len(ss.states[address]) == 0 {
 		//initializes the map with dummy data
@@ -104,10 +107,11 @@ func (ss *ScState) SaveToDatabase(db storage.Storage) error{
 	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
 
+//Update updates smart contract states by executing all input transactions
 func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager){
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
 	for _,tx := range txs{
-		tx.Execute(index,ss,manager.CreateEngine())
+		tx.Execute(index,ss,nil,manager.CreateEngine())
 	}
 }

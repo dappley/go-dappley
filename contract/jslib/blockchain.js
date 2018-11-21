@@ -13,6 +13,10 @@ var Blockchain = function () {
 Blockchain.prototype = {
     verifyAddress: function (address) {
         return this.nativeBlockchain.verifyAddress(address);
+    },
+    transfer: function (to, amount, tip) {
+        return this.nativeBlockchain.transfer(to, amount, tip);
     }
 };
+
 var Blockchain = new Blockchain();

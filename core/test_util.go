@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 )
@@ -86,9 +85,9 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	return bc
 }
 
-func GenerateBlockWithCbtx(addr Address, lastblock *Block)*Block{
+func GenerateBlockWithCbtx(addr Address, lastblock *Block) *Block {
 	//create a new block chain
-	cbtx := NewCoinbaseTX(addr.Address, "", lastblock.GetHeight(), common.NewAmount(0))
+	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
 	b := NewBlock([]*Transaction{&cbtx}, lastblock)
 	return b
 }
@@ -100,7 +99,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr.Address, "", bc.GetMaxHeight(), common.NewAmount(0))
+		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockToTail(b)
@@ -145,8 +144,8 @@ func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), PubKeyHash{util.GenerateRandomAoB(2)},""},
-		{common.NewAmount(7), PubKeyHash{util.GenerateRandomAoB(2)},""},
+		{common.NewAmount(5), PubKeyHash{util.GenerateRandomAoB(2)}, ""},
+		{common.NewAmount(7), PubKeyHash{util.GenerateRandomAoB(2)}, ""},
 	}
 }
 
@@ -155,6 +154,5 @@ type Done func() bool
 func WaitDoneOrTimeout(done Done, timeOut int) {
 	currentTime := time.Now().UTC().Unix()
 	for !done() && !util.IsTimeOut(currentTime, int64(timeOut)) {
-		time.Sleep(time.Second/5)
 	}
 }

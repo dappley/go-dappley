@@ -48,22 +48,17 @@ type NetService interface {
 	GetBlockchain() *Blockchain
 }
 
-type BlockPoolInterface interface {
-	SetBlockchain(bc *Blockchain)
-	BlockRequestCh() chan BlockRequestPars
-	GetBlockchain() *Blockchain
-	GetSyncState() bool
-	SetSyncState(bool)
-	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
-	Push(block *Block, pid peer.ID)
-}
-
-type ScEngineManager interface{
+type ScEngineManager interface {
 	CreateEngine() ScEngine
 }
 
-type ScEngine interface{
+type ScEngine interface {
 	ImportSourceCode(source string)
 	ImportLocalStorage(storage map[string]string)
-	Execute(function,args string)
+	ImportContractAddr(contractAddr Address)
+	ImportSourceTXID(txid []byte)
+	ImportUTXOs(utxos []*UTXO)
+	ImportRewardStorage(rewards map[string]string)
+	GetGeneratedTXs() []*Transaction
+	Execute(function, args string) string
 }
