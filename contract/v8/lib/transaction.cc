@@ -52,7 +52,6 @@ void SetTransactionData(struct transaction_t* tx, void* context) {
             String::NewFromUtf8(txContext->isolate, tx->vin[i].signature),
             DEFAULT_PROPERTY
         );
-        free(tx->vin[i].signature);
 
         vinInstance->DefineOwnProperty(
             *(txContext->context), 

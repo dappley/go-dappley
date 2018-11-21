@@ -129,8 +129,8 @@ TransactionTest.prototype = {
 		_log.error("tx vin length:", _tx.vin.length)
 		let index = 0
 		for (let vin of _tx.vin) {
-			_log.error("index:", index, " id: ", vin.txid, " vout: ", vin.vout, " signature: ", vin.signature, " pubkey: ", vin.pubkey)
-		}
+	    		_log.error("index:", index, " id: ", vin.txid, " vout: ", vin.vout, " signature: ", vin.signature, " pubkey: ", vin.pubkey)
+	    	}
 		_log.error("tx vout length:", _tx.vin.length)
 		index = 0
 		for (let vout of _tx.vout) {
