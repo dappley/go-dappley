@@ -189,11 +189,11 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, bloc
 
 	tempTxPool := txPool.deepCopy()
 	tempUtxoIndex := utxoIndex.DeepCopy()
-	return tx.VerifyTxInTempPool(tempUtxoIndex, tempTxPool, blockHeight)
+	return tx.verifyTxInTempPool(tempUtxoIndex, tempTxPool)
 }
 
 // VerifyTxInPool function will change utxoIndex and txPool
-func (tx *Transaction) VerifyTxInTempPool(utxoIndex UTXOIndex, txPool TransactionPool, blockHeight uint64) bool {
+func (tx *Transaction) verifyTxInTempPool(utxoIndex UTXOIndex, txPool TransactionPool) bool {
 	var prevUtxos []*UTXO
 	var notFoundVin []TXInput
 	for _, vin := range tx.Vin {
@@ -205,9 +205,9 @@ func (tx *Transaction) VerifyTxInTempPool(utxoIndex UTXOIndex, txPool Transactio
 		utxo := utxoIndex.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
 			notFoundVin = append(notFoundVin, vin)
-			continue
+		} else {
+			prevUtxos = append(prevUtxos, utxo)
 		}
-		prevUtxos = append(prevUtxos, utxo)
 	}
 
 	if notFoundVin != nil {
@@ -225,7 +225,8 @@ func (tx *Transaction) VerifyTxInTempPool(utxoIndex UTXOIndex, txPool Transactio
 				return false
 			}
 
-			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) || !parentTx.VerifyTxInTempPool(utxoIndex, txPool, 0) {
+			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) ||
+				!parentTx.verifyTxInTempPool(utxoIndex, txPool) {
 				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
 				return false
 			}
