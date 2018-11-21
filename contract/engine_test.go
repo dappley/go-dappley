@@ -212,6 +212,8 @@ var rewardTest = new RewardTest;
 	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"9\""))
 	assert.Equal(t, "17", ss["myAddr"])
 }
+
+
 func TestScEngine_TransactionTest(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	script :=
