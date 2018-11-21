@@ -46,7 +46,7 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *sc.V8EngineManager) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager) (*core.Blockchain, error) {
 	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}

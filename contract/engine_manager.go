@@ -1,4 +1,4 @@
-package sc
+package vm
 
 import "github.com/dappley/go-dappley/core"
 

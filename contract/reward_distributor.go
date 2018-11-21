@@ -1,4 +1,4 @@
-package sc
+package vm
 import "C"
 import (
 	logger "github.com/sirupsen/logrus"

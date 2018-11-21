@@ -1,4 +1,4 @@
-package sc
+package vm
 
 /*
 #cgo LDFLAGS: -L${SRCDIR}/lib -ldappleyv8
