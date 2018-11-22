@@ -1,4 +1,4 @@
-package sc
+package v8
 
 import "C"
 import (
@@ -37,7 +37,7 @@ func LoggerFunc(level C.uint, args **C.char, length C.int) {
 	goArgs := make([]interface{}, length+1)
 	goArgs[0] = "[Contract] "
 	for index, arg := range argSlice {
-	    goArgs[index + 1] = C.GoString(arg)	
+		goArgs[index+1] = C.GoString(arg)
 	}
 
 	logFunc(goArgs...)
