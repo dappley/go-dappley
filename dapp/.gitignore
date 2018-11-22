@@ -2,3 +2,4 @@ dapp.exe
 dapp
 *.db
 cli/cli
+*.pid
