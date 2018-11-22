@@ -171,7 +171,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
-	err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
+	err = utxoIndex.UpdateUtxoStateToDb(block.GetTransactions(), bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),

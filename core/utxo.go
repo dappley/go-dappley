@@ -168,13 +168,11 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) error {
+func (utxos *UTXOIndex) UpdateUtxoStateToDb(txs []*Transaction, db storage.Storage) error {
 	err := errors.New("")
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := utxos.DeepCopy()
-	for _, tx := range txs {
-		tempIndex.UpdateUtxo(tx)
-	}
+	tempIndex.UpdateUtxoState(txs)
 
 	// Save to database
 	err = tempIndex.Save(utxoMapKey, db)
@@ -187,6 +185,15 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) 
 	}
 
 	return err
+}
+
+func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) bool {
+	for _, tx := range txs {
+		if !utxos.UpdateUtxo(tx){
+			return false
+		}
+	}
+	return true
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
