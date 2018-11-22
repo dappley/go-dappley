@@ -188,12 +188,13 @@ func (utxos *UTXOIndex) UpdateUtxoStateToDb(txs []*Transaction, db storage.Stora
 }
 
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) bool {
+	ok := true
 	for _, tx := range txs {
 		if !utxos.UpdateUtxo(tx){
-			return false
+			ok = false
 		}
 	}
-	return true
+	return ok
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
