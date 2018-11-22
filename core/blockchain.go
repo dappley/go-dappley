@@ -105,6 +105,10 @@ func (bc *Blockchain) GetBlockPool() *BlockPool {
 	return bc.blockPool
 }
 
+func (bc *Blockchain) GetSCManager() ScEngineManager {
+	return bc.scManager
+}
+
 func (bc *Blockchain) GetConsensus() Consensus {
 	return bc.consensus
 }
@@ -372,7 +376,11 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
-	if !bc.GetBlockPool().VerifyTransactions(bc, *utxo, forkBlks) {
+	scState := NewScState()
+	// TODO: Should get ScState at block hash instead of fetching from DB
+	scState.LoadFromDatabase(bc.db)
+
+	if !bc.GetBlockPool().VerifyTransactions(*utxo, scState, forkBlks) {
 		return
 	}
 

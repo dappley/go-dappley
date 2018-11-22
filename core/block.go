@@ -29,7 +29,6 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -309,15 +308,12 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
 	return true
 }
 
-func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEngineManager) bool {
+func (b *Block) VerifySmartContractTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager) bool {
 
 	if manager == nil {
 		return true
 	}
 
-	utxo := LoadUTXOIndex(db)
-	scState := NewScState()
-	scState.LoadFromDatabase(db)
 	var rewardTx *Transaction
 	rewards := make(map[string]string)
 	for _, tx := range b.GetTransactions() {
@@ -325,7 +321,7 @@ func (b *Block) VerifySmartContractTransactions(db storage.Storage, manager ScEn
 			rewardTx = tx
 			continue
 		}
-		tx.Execute(*utxo, scState, rewards, manager.CreateEngine())
+		tx.Execute(utxo, scState, rewards, manager.CreateEngine())
 	}
 
 	if rewardTx == nil {
