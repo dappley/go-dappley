@@ -139,11 +139,19 @@ var StorageTest = function(){
 
 StorageTest.prototype = {
 	set:function(key,value){
-    	return LocalStorage.set(key,value);
+    	return LocalStorage.set(key, value);
     },
 	get:function(key){
     	return LocalStorage.get(key);
-    }
+    },
+	setColor: function(key, color){
+		var car = {type:"Fiat", model:"500", color:"white"};
+		car.color = color;
+		return LocalStorage.set(key, car);
+	},
+	getColor: function(key){
+		return LocalStorage.get(key).color;
+	}
 };
 var storageTest = new StorageTest;
 `
@@ -154,6 +162,10 @@ var storageTest = new StorageTest;
 
 	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
 	assert.Equal(t, "6", sc.Execute("get", "\"key\""))
+	assert.Equal(t, "0", sc.Execute("set", "\"key\",\"abcd\""))
+	assert.Equal(t, "abcd", sc.Execute("get", "\"key\""))
+	assert.Equal(t, "0", sc.Execute("setColor", "\"key\",\"BLACK\""))
+	assert.Equal(t, "BLACK", sc.Execute("getColor", "\"key\""))
 }
 
 func TestScEngine_StorageDel(t *testing.T) {
