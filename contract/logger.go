@@ -1,4 +1,4 @@
-package v8
+package vm
 
 import "C"
 import (
