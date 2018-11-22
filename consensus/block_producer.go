@@ -123,7 +123,7 @@ func (bp *BlockProducer) executeSmartContract(txs []*core.Transaction, rewards m
 	//start a new smart contract engine
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
 	scStorage := core.NewScState()
-	scStorage.LoadFromDatabase(bp.bc.GetDb())
+	scStorage.LoadFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
 	engine := vm.NewV8Engine()
 	var generatedTXs []*core.Transaction
 	for _, tx := range txs {

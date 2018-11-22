@@ -91,10 +91,10 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string{
 }
 
 //LoadFromDatabase loads states from database
-func (ss *ScState) LoadFromDatabase(db storage.Storage){
+func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash){
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
-	rawBytes, err := db.Get([]byte(scStateMapKey))
+	rawBytes, err := db.Get([]byte(scStateMapKey + blkHash.String()))
 
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
 		return
@@ -103,8 +103,8 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage){
 }
 
 //SaveToDatabase saves states to database
-func (ss *ScState) SaveToDatabase(db storage.Storage) error{
-	return db.Put([]byte(scStateMapKey), ss.serialize())
+func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error{
+	return db.Put([]byte(scStateMapKey + blkHash.String()), ss.serialize())
 }
 
 //Update updates smart contract states by executing all input transactions

@@ -181,9 +181,9 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	if bc.scManager != nil {
 		scState := NewScState()
-		scState.LoadFromDatabase(bcTemp.db)
+		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
 		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager)
-		scState.SaveToDatabase(bcTemp.db)
+		scState.SaveToDatabase(bcTemp.db, block.GetHash())
 	}
 
 	err = utxoIndex.UpdateUtxoState(block.GetTransactions(), bcTemp.db)
@@ -377,8 +377,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	}
 
 	scState := NewScState()
-	// TODO: Should get ScState at block hash instead of fetching from DB
-	scState.LoadFromDatabase(bc.db)
+	scState.LoadFromDatabase(bc.db, forkParentHash)
 
 	if !bc.GetBlockPool().VerifyTransactions(*utxo, scState, forkBlks) {
 		return
