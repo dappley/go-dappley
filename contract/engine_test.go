@@ -259,3 +259,42 @@ var transactionTest = new TransactionTest;
 	sc.ImportTransaction(core.MockTransaction())
 	sc.Execute("dump", "\"dummy\"")
 }
+
+func TestStepRecord(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script :=
+		`'use strict';
+
+var StepRecorder = function(){
+
+};
+
+StepRecorder.prototype = {
+    record: function(addr, steps){
+        var originalSteps = LocalStorage.get(addr);
+		LocalStorage.set(addr, originalSteps + steps)
+        _native_reward.record(addr, steps);
+    }
+};
+
+var stepRecorder = new StepRecorder;
+`
+	ss := make(map[string]string)
+	reward := make(map[string]string)
+	sc := NewV8Engine()
+	sc.ImportSourceCode(script)
+	sc.ImportLocalStorage(ss)
+	sc.ImportRewardStorage(reward)
+
+	assert.Equal(t, "\"\"", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20"))
+	assert.Equal(t, "20", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "\"\"", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15"))
+	assert.Equal(t, "35", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "\"\"", sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10"))
+	assert.Equal(t, "10", ss["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+}
