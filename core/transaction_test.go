@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"github.com/stretchr/testify/mock"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -444,22 +445,19 @@ func TestTransaction_Execute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sc := new(ScEngineMock)
 			contract := "helloworld!"
-			if tt.expectContractRun {
-				sc.On("ImportSourceCode", contract)
-				sc.On("Execute")
-			}
+			toPKH, _ := NewAddress(tt.toAddr).GetPubKeyHash()
+			scPKH, _ := NewAddress(tt.scAddr).GetPubKeyHash()
 
 			scUtxo := UTXO{
 				TxIndex: 0,
 				Txid:    nil,
 				TXOutput: TXOutput{
-					PubKeyHash: PubKeyHash{[]byte(tt.scAddr)},
+					PubKeyHash: PubKeyHash{scPKH},
 					Contract:   contract,
 				},
 			}
-
 			tx := Transaction{
-				Vout: []TXOutput{{nil, PubKeyHash{[]byte(tt.toAddr)}, ""}},
+				Vout: []TXOutput{{nil, PubKeyHash{toPKH}, "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
 			}
 
 			index := NewUTXOIndex()
@@ -467,7 +465,20 @@ func TestTransaction_Execute(t *testing.T) {
 				index.addUTXO(scUtxo.TXOutput, nil, 0)
 			}
 
-			tx.Execute(*index, nil, nil, sc)
+			if tt.expectContractRun {
+				sc.On("ImportSourceCode", contract)
+				sc.On("ImportLocalStorage", mock.Anything)
+				sc.On("ImportContractAddr", mock.Anything)
+				sc.On("ImportUTXOs", mock.Anything)
+				sc.On("ImportSourceTXID", mock.Anything)
+				sc.On("ImportRewardStorage", mock.Anything)
+				sc.On("ImportTransaction", mock.Anything)
+				sc.On("GetGeneratedTXs").Return([]*Transaction{})
+				sc.On("Execute", mock.Anything, mock.Anything).Return("")
+			}
+
+			tx.Execute(*index, NewScState(), nil, sc)
+			sc.AssertExpectations(t)
 		})
 	}
 }
