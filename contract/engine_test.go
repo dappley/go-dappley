@@ -261,8 +261,8 @@ var transactionTest = new TransactionTest;
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	tx := core.MockTransaction()
-	sc.ImportTransaction(tx.Vin)
-	sc.ImportPrevUtxos(core.MockUtxos())
+	sc.ImportTransaction(tx)
+	sc.ImportPrevUtxos(core.MockUtxos(tx.Vin))
 	sc.Execute("dump", "\"dummy\"")
 }
 
