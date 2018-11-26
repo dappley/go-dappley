@@ -4,8 +4,9 @@ CXX = g++
 .PHONY: clean install
 
 LIB_SRC_DIR := lib
-LIB_SRC_FILES := $(wildcard $(LIB_SRC_FILES)/*.cc)
-LIB_OBJ_FILES := $(patsubst $(SRC_DIR)/%.cc,$(OBJ_DIR)/%.cc.o,$(LIB_SRC_FILES))
+LIB_SRC_FILES := $(wildcard $(LIB_SRC_DIR)/*.cc)
+LIB_OBJ_FILES := $(patsubst $(LIB_SRC_DIR)/%.cc,$(LIB_SRC_DIR)/%.cc.o,$(LIB_SRC_FILES))
+
 
 %.cc.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $<.o

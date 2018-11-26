@@ -37,7 +37,7 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 		return
 	}
 
-	utxoLength = C.int(len(engine.prevUtxos))
+	utxoLength := C.int(len(engine.prevUtxos))
 	utxosAddr := (*C.struct_utxo_t)(C.malloc(C.ulong(C.sizeof_struct_utxo_t * utxoLength)))
 	defer C.free(unsafe.Pointer(utxosAddr))
 	utxos := (*[1 << 30]C.struct_utxo_t)(unsafe.Pointer(utxosAddr))[:utxoLength:utxoLength]
@@ -48,7 +48,7 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 
 		utxo.tx_index = C.int(prevUtxo.TxIndex)
 
-		utxo.value = C.ulonglong(prevUtxo.Value)
+		utxo.value = C.longlong(prevUtxo.Value.Int64())
 		utxo.pubkeyhash = C.CString(hex.EncodeToString(prevUtxo.PubKeyHash.PubKeyHash))
 		defer C.free(unsafe.Pointer(utxo.pubkeyhash))
 

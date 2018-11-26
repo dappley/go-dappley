@@ -1,4 +1,4 @@
-#include "utxo.h"
+#include "prev_utxo.h"
 #include "../engine.h"
 
 const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(
