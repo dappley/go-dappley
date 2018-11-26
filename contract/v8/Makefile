@@ -3,10 +3,14 @@ CXX = g++
 
 .PHONY: clean install
 
+LIB_SRC_DIR := lib
+LIB_SRC_FILES := $(wildcard $(LIB_SRC_FILES)/*.cc)
+LIB_OBJ_FILES := $(patsubst $(SRC_DIR)/%.cc,$(OBJ_DIR)/%.cc.o,$(LIB_SRC_FILES))
+
 %.cc.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $<.o
 
-build: lib/blockchain.cc.o engine.cc.o lib/file.cc.o lib/load_lib.cc.o lib/load_sc.cc.o lib/storage.cc.o lib/transaction.cc.o lib/logger.cc.o lib/reward_distributor.cc.o
+build: engine.cc.o $(LIB_OBJ_FILES)
 	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.so -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
 
 install:

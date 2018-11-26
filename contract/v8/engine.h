@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "lib/transaction_struct.h"
+#include "lib/utxo_struct.h"
+
 #define EXPORT __attribute__((__visibility__("default")))
 
 #ifdef __cplusplus
@@ -12,6 +14,7 @@ extern "C" {
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
     typedef void (*FuncTransactionGet)(void* address, void* context);
+    typedef void (*FuncPrevUtxoGet)(void* address, void* context);
     typedef void (*FuncLogger)(unsigned int level, char** args, int length);
     typedef int (*FuncRecordReward)(void *handler, const char *address, const char *amount);
 
@@ -22,6 +25,8 @@ extern "C" {
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
     EXPORT void SetTransactionData(struct transaction_t* tx, void* context);
+    EXPORT void InitializePrevUtxo(FuncPrevUtxoGet get);
+    EXPORT void SetPrevUtxoData(struct utxo_t* utxos, int length, void* context);
     EXPORT void InitializeLogger(FuncLogger logger);
     EXPORT void InitializeSmartContract(char* source);
     EXPORT void DisposeV8();

@@ -14,6 +14,7 @@
 #include "lib/logger.h"
 #include "lib/transaction.h"
 #include "lib/reward_distributor.h"
+#include "lib/prev_utxo.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -101,6 +102,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     NewLoggerInstance(isolate, context, (void *)handler);
     NewTransactionInstance(isolate, context, (void *)handler);
     NewRewardDistributorInstance(isolate, context, (void *)handler);
+    NewPrevUtxoInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {

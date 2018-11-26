@@ -124,6 +124,7 @@ func (tx *Transaction) GetToHashBytes() []byte {
 	for _, vout := range tx.Vout {
 		bytes = append(bytes, vout.Value.Bytes()...)
 		bytes = append(bytes, vout.PubKeyHash.GetPubKeyHash()...)
+		bytes = append(bytes, []byte(vout.Contract)...)
 	}
 
 	bytes = append(bytes, byteutils.FromUint64(tx.Tip)...)
@@ -446,6 +447,12 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[
 		return nil
 	}
 
+	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
+	if err != nil {
+		logger.Errorf("ERROR: %v", err)
+		return nil
+	}
+
 	function, args := util.DecodeScInput(vout.Contract)
 	if function == "" {
 		return nil
@@ -466,6 +473,7 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[
 	engine.ImportSourceTXID(tx.ID)
 	engine.ImportRewardStorage(rewards)
 	engine.ImportTransaction(tx)
+	engine.ImportPrevUtxos(prevUtxos)
 	engine.Execute(function, totalArgs)
 	return engine.GetGeneratedTXs()
 }

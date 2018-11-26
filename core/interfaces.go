@@ -60,6 +60,7 @@ type ScEngine interface {
 	ImportUTXOs(utxos []*UTXO)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *Transaction)
+	ImportPrevUtxos(utxos []*core.UTXO)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }

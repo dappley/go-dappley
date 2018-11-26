@@ -10,9 +10,10 @@ int  TransferFunc(void *handler, const char *to, const char *amount, const char 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
 int   StorageDelFunc(void *address,const char *key);
-void TransactionGetFunc(void *address, void *context);
-void LoggerFunc(unsigned int level, char ** args, int length);
+void  TransactionGetFunc(void *address, void *context);
+void  LoggerFunc(unsigned int level, char ** args, int length);
 int	  RecordRewardFunc(void *handler, const char *address, const char *amount);
+void  PrevUtxoGetFunc(void *address, void* context);
 
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
@@ -46,6 +47,9 @@ int	Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount)
 	return RecordRewardFunc(handler, address,amount);
 }
 
+void  Cgo_PrevUtxoGetFunc(void *address, void* context) {
+	return PrevUtxoGetFunc(address, context);
+}
 
 */
 import "C"

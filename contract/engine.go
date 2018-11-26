@@ -16,6 +16,8 @@ int	  Cgo_RecordRewardFunc(void *handler, const char *address, const char *amoun
 struct transaction_t* Cgo_TransactionGetFunc(void *address);
 //log
 void Cgo_LoggerFunc(unsigned int level, const char ** args, int length);
+//prev utxo
+void Cgo_PrevUtxoGetFunc(void *address, void* context);
 */
 import "C"
 import (
@@ -41,6 +43,7 @@ type V8Engine struct {
 	rewards       map[string]string
 	contractAddr  core.Address
 	contractUTXOs []*core.UTXO
+	prevUtxos     []*core.UTXO
 	sourceTXID    []byte
 	generatedTXs  []*core.Transaction
 	handler       uint64
@@ -59,6 +62,7 @@ func InitializeV8Engine() {
 	C.InitializeTransaction((C.FuncTransactionGet)(unsafe.Pointer(C.Cgo_TransactionGetFunc)))
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
+	C.InitializePrevUtxo((C.FuncPrevUtxoGet)(unsafe.Pointer(C.Cgo_PrevUtxoGetFunc)))
 }
 
 //NewV8Engine generates a new V8Engine instance
@@ -112,6 +116,11 @@ func (sc *V8Engine) GetGeneratedTXs() []*core.Transaction {
 
 func (sc *V8Engine) ImportRewardStorage(rewards map[string]string) {
 	sc.rewards = rewards
+}
+
+// ImportPrevUtxos supplies the utxos of vin in current transaction
+func (sc *V8Engine) ImportPrevUtxos(utxos []*core.UTXO) {
+	sc.prevUtxos = utxos
 }
 
 func (sc *V8Engine) Execute(function, args string) string {
