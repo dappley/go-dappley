@@ -21,7 +21,6 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -152,10 +151,6 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 		for _, txin := range tx.Vin {
 			err := utxos.removeUTXO(txin.Txid, txin.Vout)
 			if err != nil {
-				MetricsTxDoubleSpend.Inc(1)
-				logger.WithFields(logger.Fields{
-					"txhash": hex.EncodeToString(tx.ID),
-				}).Warn("Bad transaction found when minting, throwing")
 				return false
 			}
 		}
@@ -172,8 +167,23 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction, db storage.Storage) 
 	err:=errors.New("")
 	// Create a copy of the index so operations below are only temporal
 	tempIndex := utxos.DeepCopy()
-	for _, tx := range txs {
-		tempIndex.UpdateUtxo(tx)
+
+	txLenBeforeUpdate := len(txs)
+	firstUpdate := true
+	for firstUpdate || txLenBeforeUpdate != len(txs) {
+		firstUpdate = false
+		txLenBeforeUpdate = len(txs)
+		nextTxs := make([]*Transaction, 0, len(txs))
+		for _, tx := range txs {
+			if !tempIndex.UpdateUtxo(tx) {
+				nextTxs = append(nextTxs, tx)
+			}
+		}
+		txs = nextTxs
+	}
+	if len(txs) != 0 {
+		// vin of tx not found in utxoIndex or txPool
+		MetricsTxDoubleSpend.Inc(1)
 	}
 
 	// Save to database

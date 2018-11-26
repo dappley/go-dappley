@@ -115,8 +115,16 @@ func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Tran
 	}
 	tx := txPool.index[string(txID)]
 	dependentTxs = append(dependentTxs, tx)
+
+	hashTxs := map[*Transaction]bool{tx: true}
 	for _, vin := range tx.Vin {
-		dependentTxs = txPool.getDependentTxs(vin.Txid, dependentTxs)
+		parentTxs := txPool.getDependentTxs(vin.Txid, dependentTxs)
+		for _, parentTx := range parentTxs {
+			if _, exists := hashTxs[parentTx]; !exists {
+				hashTxs[parentTx] = true
+				dependentTxs = append(dependentTxs, parentTx)
+			}
+		}
 	}
 	return dependentTxs
 }

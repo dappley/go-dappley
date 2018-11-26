@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"sync"
 )
 
 var bh1 = &BlockHeader{
@@ -173,11 +174,13 @@ func TestUpdate(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
+
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.UpdateUtxoState(blk.GetTransactions(), db)
 	utxoIndexInDB := LoadUTXOIndex(db)
 
+	// test updating UTXO index with non-dependent transactions
 	// Assert that both the original instance and the database copy are updated correctly
 	for _, index := range []UTXOIndex{utxoIndex, utxoIndexInDB} {
 		assert.Equal(t, 2, len(index.index[string(address1Hash.GetPubKeyHash())]))
@@ -188,6 +191,124 @@ func TestUpdate(t *testing.T) {
 		assert.Equal(t, 1, index.index[string(address1Hash.GetPubKeyHash())][1].TxIndex)
 		assert.Equal(t, blk.transactions[0].Vout[1].Value, index.index[string(address1Hash.GetPubKeyHash())][1].Value)
 	}
+
+	// test updating UTXO index with dependent transactions
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
+	var pkHash1, _ = NewUserPubKeyHash(pubkey1)
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
+	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
+	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
+	var pubkey3 = GetKeyPairByString(prikey3).PublicKey
+	var pkHash3, _ = NewUserPubKeyHash(pubkey3)
+	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
+	var pubkey4 = GetKeyPairByString(prikey4).PublicKey
+	var pkHash4, _ = NewUserPubKeyHash(pubkey4)
+	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
+	var pubkey5 = GetKeyPairByString(prikey5).PublicKey
+	var pkHash5, _ = NewUserPubKeyHash(pubkey5)
+
+	var dependentTx1 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{t1.ID, 1, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash1,""},
+			{common.NewAmount(10), pkHash2,""},
+		},
+		Tip: 3,
+	}
+	dependentTx1.ID = dependentTx1.Hash()
+
+	var dependentTx2 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx1.ID, 1, nil, pubkey2},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash3,""},
+			{common.NewAmount(3), pkHash4,""},
+		},
+		Tip: 2,
+	}
+	dependentTx2.ID = dependentTx2.Hash()
+
+	var dependentTx3 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx2.ID, 0, nil, pubkey3},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(1), pkHash4,""},
+		},
+		Tip: 4,
+	}
+	dependentTx3.ID = dependentTx3.Hash()
+
+	var dependentTx4 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx2.ID, 1, nil, pubkey4},
+			{dependentTx3.ID, 0, nil, pubkey4},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(3), pkHash1,""},
+		},
+		Tip: 1,
+	}
+	dependentTx4.ID = dependentTx4.Hash()
+
+	var dependentTx5 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx1.ID, 0, nil, pubkey1},
+			{dependentTx4.ID, 0, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(4), pkHash5,""},
+		},
+		Tip: 4,
+	}
+	dependentTx5.ID = dependentTx5.Hash()
+
+	var UtxoIndex = UTXOIndex{
+		map[string][]*UTXO{
+			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
+			string(pkHash1.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+		},
+		&sync.RWMutex{},
+	}
+
+	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
+	tx2Utxo2 := UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1}
+	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0}
+	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}
+	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0}
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, UtxoIndex.index[string(pkHash2.GetPubKeyHash())])
+	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
+	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
+
+	txsForUpdate := []*Transaction{&dependentTx2, &dependentTx3}
+	UtxoIndex.UpdateUtxoState(txsForUpdate, db)
+	assert.Equal(t, 1, len(LoadUTXOIndex(db).index[string(pkHash1.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash2.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash3.GetPubKeyHash())]))
+	assert.Equal(t, 2, len(LoadUTXOIndex(db).index[string(pkHash4.GetPubKeyHash())]))
+	txsForUpdate = []*Transaction{&dependentTx2, &dependentTx3, &dependentTx4}
+	UtxoIndex.UpdateUtxoState(txsForUpdate, db)
+	assert.Equal(t, 2, len(LoadUTXOIndex(db).index[string(pkHash1.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash2.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash3.GetPubKeyHash())]))
+	txsForUpdate = []*Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5}
+	UtxoIndex.UpdateUtxoState(txsForUpdate, db)
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash1.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash2.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash3.GetPubKeyHash())]))
+	assert.Equal(t, 0, len(LoadUTXOIndex(db).index[string(pkHash4.GetPubKeyHash())]))
+	assert.Equal(t, 1, len(LoadUTXOIndex(db).index[string(pkHash5.GetPubKeyHash())]))
 }
 
 func TestUpdate_Failed(t *testing.T) {
