@@ -175,7 +175,8 @@ func TestUpdate(t *testing.T) {
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex()
-	utxoIndex.UpdateUtxoStateToDb(blk.GetTransactions(), db)
+	utxoIndex.UpdateUtxoState(blk.GetTransactions())
+	utxoIndex.Save(db)
 	utxoIndexInDB := LoadUTXOIndex(db)
 
 	// Assert that both the original instance and the database copy are updated correctly
@@ -198,9 +199,11 @@ func TestUpdate_Failed(t *testing.T) {
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex()
-	err := utxoIndex.UpdateUtxoStateToDb(blk.GetTransactions(), db)
+	isSuccessful := utxoIndex.UpdateUtxoState(blk.GetTransactions())
+	err := utxoIndex.Save(db)
 	assert.Equal(t, simulatedFailure, err)
-	assert.Equal(t, 0, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
+	assert.Equal(t, true, isSuccessful)
+	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {

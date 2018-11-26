@@ -40,6 +40,7 @@ var (
 	ErrNotAbleToGetLastBlockHash = errors.New("ERROR: Not able to get last block hash in blockchain")
 	ErrTransactionNotFound       = errors.New("ERROR: Transaction not found")
 	ErrDuplicatedBlock           = errors.New("ERROR: Block already exists in blockchain")
+	ErrUpdateUtxoState			 = errors.New("Blockchain: Update UTXO index failed")
 )
 
 type Blockchain struct {
@@ -171,11 +172,20 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
-	err = utxoIndex.UpdateUtxoStateToDb(block.GetTransactions(), bcTemp.db)
+	isSuccessful := utxoIndex.UpdateUtxoState(block.GetTransactions())
+	if !isSuccessful {
+		logger.WithFields(logger.Fields{
+			"height": block.GetHeight(),
+			"hash":   hex.EncodeToString(block.GetHash()),
+		}).Error("Blockchain: Update UTXO index failed!")
+		return ErrUpdateUtxoState
+	}
+	err = utxoIndex.Save(bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   hex.EncodeToString(block.GetHash()),
+			"error":  err,
 		}).Error("Blockchain: Update UTXO index failed!")
 		return err
 	}

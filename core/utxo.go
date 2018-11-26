@@ -23,7 +23,6 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
@@ -87,8 +86,8 @@ func LoadUTXOIndex(db storage.Storage) *UTXOIndex {
 }
 
 // Save stores the index to db
-func (utxos *UTXOIndex) Save(mapkey string, db storage.Storage) error {
-	return db.Put([]byte(mapkey), utxos.serialize())
+func (utxos *UTXOIndex) Save(db storage.Storage) error {
+	return db.Put([]byte(utxoMapKey), utxos.serialize())
 }
 
 // FindUTXO returns the UTXO instance of the corresponding TXOutput in the transaction (identified by txid and vout)
@@ -155,7 +154,8 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 				MetricsTxDoubleSpend.Inc(1)
 				logger.WithFields(logger.Fields{
 					"txhash": hex.EncodeToString(tx.ID),
-				}).Warn("Bad transaction found when minting, throwing")
+					"error" : err,
+				}).Warn("UTXO: update utxo from transaction failed")
 				return false
 			}
 		}
@@ -164,27 +164,6 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 		utxos.addUTXO(txout, tx.ID, i)
 	}
 	return true
-}
-
-// Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
-// transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) UpdateUtxoStateToDb(txs []*Transaction, db storage.Storage) error {
-	err := errors.New("")
-	// Create a copy of the index so operations below are only temporal
-	tempIndex := utxos.DeepCopy()
-	tempIndex.UpdateUtxoState(txs)
-
-	// Save to database
-	err = tempIndex.Save(utxoMapKey, db)
-
-	// Assign the temporal copy to the original receiver index ONLY after it is successfully saved to db
-	if err == nil {
-		*utxos = *tempIndex
-	} else {
-		logger.Error(fmt.Errorf("failed to update utxo index: %v", err))
-	}
-
-	return err
 }
 
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) bool {

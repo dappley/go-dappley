@@ -76,6 +76,15 @@ func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
 	}
 }
 
+func (txPool *TransactionPool) GetAllTransactions() []*Transaction{
+	txs := []*Transaction{}
+	for _, v := range txPool.Transactions.Get() {
+		tx := v.(Transaction)
+		txs = append(txs, &tx)
+	}
+	return txs
+}
+
 func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTransactions []*Transaction
 	for txPool.Transactions.Len() > 0 {
