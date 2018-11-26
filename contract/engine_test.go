@@ -238,12 +238,13 @@ TransactionTest.prototype = {
 	dump:function(dummy) {
 		_log.error("dump")
 		_log.error("tx id:", _tx.id)
+		_log.error("prevUtxo length:", _prevUtxos.length)
 		_log.error("tx vin length:", _tx.vin.length)
 		let index = 0
 		for (let vin of _tx.vin) {
 				_log.error("Vin index:", index, " id:", vin.txid, " vout:", vin.vout, 
 				    " signature:", vin.signature, " pubkey:", vin.pubkey)
-				prevUtxo = _prevUtxos[index]
+				let prevUtxo = _prevUtxos[index]
 				_log.error("PrevUtxo id:", prevUtxo.txid, " txIndex:", prevUtxo.txIndex, 
 				    " value:", prevUtxo.value, " pubkeyhash:", prevUtxo.pubkeyhash, " address:", prevUtxo.address)
 	    	}

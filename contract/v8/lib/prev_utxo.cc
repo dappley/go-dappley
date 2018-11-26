@@ -57,7 +57,7 @@ void SetPrevUtxoData(struct utxo_t* utxos, int length,  void* context) {
             String::NewFromUtf8(utxoContext->isolate, utxos[i].address),
             DEFAULT_PROPERTY
         );
-        utxosInstance->Set(*(utxoContext->context), i, utxosInstance);
+        utxosInstance->Set(*(utxoContext->context), i, utxoInstance);
     } 
 
     (*(utxoContext->context))->Global()->DefineOwnProperty(

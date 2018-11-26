@@ -142,12 +142,12 @@ func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
 	}
 }
 
-func MockUtxos(inputs []TXInput) []UTXO {
-	utxos := make([]UTXO, len(inputs))
+func MockUtxos(inputs []TXInput) []*UTXO {
+	utxos := make([]*UTXO, len(inputs))
 
 	for index, input := range inputs {
 		pubKeyHash, _ := NewUserPubKeyHash(input.PubKey)
-		utxos[index] = UTXO{
+		utxos[index] = &UTXO{
 			TXOutput: TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
 			Txid:     input.Txid,
 			TxIndex:  0,
