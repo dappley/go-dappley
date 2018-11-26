@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"github.com/stretchr/testify/mock"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -31,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func getAoB(length int64) []byte {
@@ -443,7 +443,7 @@ func TestTransaction_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := new(ScEngineMock)
+			sc := new(MockScEngine)
 			contract := "helloworld!"
 			toPKH, _ := NewAddress(tt.toAddr).GetPubKeyHash()
 			scPKH, _ := NewAddress(tt.scAddr).GetPubKeyHash()
