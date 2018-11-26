@@ -226,7 +226,6 @@ var rewardTest = new RewardTest;
 	assert.Equal(t, "17", ss["myAddr"])
 }
 
-
 func TestScEngine_TransactionTest(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	script :=
@@ -242,12 +241,16 @@ TransactionTest.prototype = {
 		_log.error("tx vin length:", _tx.vin.length)
 		let index = 0
 		for (let vin of _tx.vin) {
-	    		_log.error("index:", index, " id: ", vin.txid, " vout: ", vin.vout, " signature: ", vin.signature, " pubkey: ", vin.pubkey)
+				_log.error("Vin index:", index, " id:", vin.txid, " vout:", vin.vout, 
+				    " signature:", vin.signature, " pubkey:", vin.pubkey)
+				prevUtxo = _prevUtxos[index]
+				_log.error("PrevUtxo id:", prevUtxo.txid, " txIndex:", prevUtxo.txIndex, 
+				    " value:", prevUtxo.value, " pubkeyhash:", prevUtxo.pubkeyhash, " address:", prevUtxo.address)
 	    	}
 		_log.error("tx vout length:", _tx.vin.length)
 		index = 0
 		for (let vout of _tx.vout) {
-			_log.error("index:", index, " amount: ", vout.amount, " pubkeyhash: ", vout.pubkeyhash)
+			_log.error("index:", index, " amount:", vout.amount, " pubkeyhash:", vout.pubkeyhash)
 		}
 	}
 };
@@ -258,6 +261,7 @@ var transactionTest = new TransactionTest;
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	sc.ImportTransaction(core.MockTransaction())
+	sc.ImportPrevUtxos(core.MockUtxos())
 	sc.Execute("dump", "\"dummy\"")
 }
 

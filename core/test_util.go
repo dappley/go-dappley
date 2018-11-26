@@ -121,11 +121,11 @@ func MockTxInputs() []TXInput {
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
-			util.GenerateRandomAoB(2)},
+			[]byte("12345678901234567890123456789013")},
 		{util.GenerateRandomAoB(2),
 			2,
 			util.GenerateRandomAoB(2),
-			util.GenerateRandomAoB(2)},
+			[]byte("12345678901234567890123456789014")},
 	}
 }
 
@@ -140,6 +140,21 @@ func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
 			util.GenerateRandomAoB(2),
 			pubkey},
 	}
+}
+
+func MockUtxos(inputs []TXInput) []UTXO {
+	utxos := make([]UTXO, len(inputs))
+
+	for index, input := range inputs {
+		pubKeyHash, _ := NewUserPubKeyHash(input.PubKey)
+		utxos[index] = UTXO{
+			TXOutput: TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
+			Txid:     input.Txid,
+			TxIndex:  0,
+		}
+	}
+
+	return utxos
 }
 
 func MockTxOutputs() []TXOutput {
