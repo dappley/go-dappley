@@ -473,6 +473,7 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("ImportSourceTXID", mock.Anything)
 				sc.On("ImportRewardStorage", mock.Anything)
 				sc.On("ImportTransaction", mock.Anything)
+				sc.On("ImportPrevUtxos", mock.Anything)
 				sc.On("GetGeneratedTXs").Return([]*Transaction{})
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
