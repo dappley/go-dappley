@@ -95,8 +95,10 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
+
 	//set the expected wallet value for all wallets
 	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount)
+
 	if err != nil {
 		panic(err)
 	}
@@ -306,7 +308,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 
 	//create a transaction
 	tx1, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0), "")
-	tx2, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount, *keyPair, common.NewAmount(0), "")
+	tx2, err := core.NewUTXOTransaction(utxos, wallet1.GetAddress(), wallet3.GetAddress(), sendAmount, *keyPair, common.NewAmount(0), "")
 
 	assert.Nil(t, err)
 

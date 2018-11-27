@@ -91,12 +91,7 @@ func (pool *BlockPool) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScSta
 			return false
 		}
 
-		utxoIndex := LoadUTXOIndex(pool.blockchain.GetDb())
-
-		err := utxoIndex.UpdateUtxoState(forkBlks[i].GetTransactions(), pool.blockchain.GetDb())
-		if err != nil {
-			return false
-		}
+		utxoSnapshot.UpdateUtxoState(forkBlks[i].GetTransactions())
 	}
 	return true
 }

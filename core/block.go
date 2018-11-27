@@ -297,8 +297,13 @@ func (b *Block) VerifyHash() bool {
 }
 
 func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
+	txPool := NewTransactionPool(uint32(len(b.transactions)))
 	for _, tx := range b.GetTransactions() {
-		if !tx.Verify(&utxo, b.GetHeight()) {
+		txPool.Transactions.Push(*tx)
+	}
+
+	for _, tx := range b.GetTransactions() {
+		if !tx.Verify(utxo, txPool, b.GetHeight()) {
 			return false
 		}
 		if !utxo.UpdateUtxo(tx) {

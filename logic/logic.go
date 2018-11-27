@@ -229,15 +229,19 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	}
 
 	pubKeyHash, _ := core.NewUserPubKeyHash(senderWallet.Key.PublicKey)
-	utxos, err := core.LoadUTXOIndex(bc.GetDb()).GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
+	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
+
+	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
 	if err != nil {
 		return nil, err
 	}
 
 	tx, err := core.NewUTXOTransaction(utxos, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), common.NewAmount(tip), contract)
+
 	bc.GetTxPool().Push(tx)
 	node.TxBroadcast(&tx)
-
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
 		if to.String() == contractAddr.String(){

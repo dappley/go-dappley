@@ -33,6 +33,7 @@ const (
 
 type TransactionPool struct {
 	Transactions sorted.Slice
+	index 		 map[string]*Transaction
 	limit        uint32
 	EventBus     EventBus.Bus
 }
@@ -57,6 +58,7 @@ func match(tx1 interface{}, tx2 interface{}) bool {
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		Transactions: *sorted.NewSlice(compareTxTips, match),
+		index: 		  make(map[string]*Transaction),
 		limit:        limit,
 		EventBus:     EventBus.New(),
 	}
@@ -65,30 +67,84 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 	for _, tx := range txs {
 		txPool.Transactions.Del(*tx)
+		delete(txPool.index, string(tx.ID))
 	}
 }
 
-// traverse iterates through the transaction pool and pass the transaction to txHandler callback in each iteration
-func (txPool *TransactionPool) traverse(txHandler func(tx Transaction)) {
-	for _, v := range txPool.Transactions.Get() {
-		tx := v.(Transaction)
-		txHandler(tx)
-	}
-}
+func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
+	var validTxs []*Transaction
+	var invalidTxs []*Transaction
 
-func (txPool *TransactionPool) GetValidTxs(utxoIndex UTXOIndex) []*Transaction {
-	var validTransactions []*Transaction
-	for txPool.Transactions.Len() > 0 {
-		tx := txPool.PopRight()
-		if tx.Verify(&utxoIndex, 0) {
-			validTransactions = append(validTransactions, &tx)
+	for _, tx := range txPool.index {
+		if contains(tx, validTxs) || contains(tx, invalidTxs) {
+			continue
+		}
+
+		if tx.Verify(utxoIndex, txPool, 0) {
+			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
+			validTxs = append(validTxs, dependentTxs...)
+		} else {
+			invalidTxs = append(invalidTxs, tx)
 		}
 	}
-	return validTransactions
+
+	txPool.RemoveMultipleTransactions(validTxs)
+	txPool.RemoveMultipleTransactions(invalidTxs)
+
+	return validTxs
 }
 
-func (txPool *TransactionPool) PopRight() Transaction {
-	return txPool.Transactions.PopRight().(Transaction)
+func (txPool *TransactionPool) GetAllTransactions() []*Transaction{
+	txs := []*Transaction{}
+	for _, v := range txPool.Transactions.Get() {
+		tx := v.(Transaction)
+		txs = append(txs, &tx)
+	}
+	return txs
+}
+
+func (txPool *TransactionPool) deepCopy() TransactionPool {
+	txPoolCopy := TransactionPool{
+		Transactions: *sorted.NewSlice(compareTxTips, match),
+		index:        make(map[string]*Transaction),
+		limit:        txPool.limit,
+		EventBus:     EventBus.New(),
+	}
+
+	for _, tx := range txPool.index {
+		txPoolCopy.Push(tx.DeepCopy())
+	}
+
+	return txPoolCopy
+}
+
+func contains(targetTx *Transaction, txs []*Transaction) bool {
+	for _, tx := range txs {
+		if bytes.Equal(targetTx.ID, tx.ID) {
+			return true
+		}
+	}
+	return false
+}
+
+func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Transaction) []*Transaction {
+	if _, exists := txPool.index[string(txID)]; !exists {
+		return dependentTxs
+	}
+	tx := txPool.index[string(txID)]
+	dependentTxs = append(dependentTxs, tx)
+
+	hashTxs := map[*Transaction]bool{tx: true}
+	for _, vin := range tx.Vin {
+		parentTxs := txPool.getDependentTxs(vin.Txid, dependentTxs)
+		for _, parentTx := range parentTxs {
+			if _, exists := hashTxs[parentTx]; !exists {
+				hashTxs[parentTx] = true
+				dependentTxs = append(dependentTxs, parentTx)
+			}
+		}
+	}
+	return dependentTxs
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
@@ -111,6 +167,20 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 		txPool.EventBus.Publish(EvictTransactionTopic, &leastTipTx)
 	}
 
+	if _, exists := txPool.index[string(tx.ID)]; exists {
+		logger.Warn("TransactionPool: transaction not pushed to pool because transaction ID already exists")
+	}
+
 	txPool.Transactions.Push(tx)
+	txPool.index[string(tx.ID)] = &tx
 	txPool.EventBus.Publish(NewTransactionTopic, &tx)
+}
+
+func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
+	if _, exists := txPool.index[string(txId)]; !exists {
+		logger.Warn("TransactionPool: transaction does not exists")
+		return nil
+	}
+
+	return txPool.index[string(txId)]
 }
