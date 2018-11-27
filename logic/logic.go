@@ -230,9 +230,7 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	pubKeyHash, _ := core.NewUserPubKeyHash(senderWallet.Key.PublicKey)
 	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
 
-	if !utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions()) {
-		return nil, errors.New("Send: update to latest utxo failed")
-	}
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
 	if err != nil {

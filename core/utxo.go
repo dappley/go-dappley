@@ -21,13 +21,11 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
-	"encoding/hex"
 	"errors"
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/jinzhu/copier"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -151,11 +149,6 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 		for _, txin := range tx.Vin {
 			err := utxos.removeUTXO(txin.Txid, txin.Vout)
 			if err != nil {
-				MetricsTxDoubleSpend.Inc(1)
-				logger.WithFields(logger.Fields{
-					"txhash": hex.EncodeToString(tx.ID),
-					"error" : err,
-				}).Warn("UTXO: update utxo from transaction failed")
 				return false
 			}
 		}
@@ -166,14 +159,27 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	return true
 }
 
-func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) bool {
-	ok := true
-	for _, tx := range txs {
-		if !utxos.UpdateUtxo(tx){
-			ok = false
+// Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
+// transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
+func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
+	// Create a copy of the index so operations below are only temporal
+	txLenBeforeUpdate := len(txs)
+	firstUpdate := true
+	for firstUpdate || txLenBeforeUpdate != len(txs) {
+		firstUpdate = false
+		txLenBeforeUpdate = len(txs)
+		nextTxs := make([]*Transaction, 0, len(txs))
+		for _, tx := range txs {
+			if !utxos.UpdateUtxo(tx) {
+				nextTxs = append(nextTxs, tx)
+			}
 		}
+		txs = nextTxs
 	}
-	return ok
+	if len(txs) != 0 {
+		// vin of tx not found in utxoIndex or txPool
+		MetricsTxDoubleSpend.Inc(1)
+	}
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
@@ -261,10 +267,13 @@ func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
+
 	utxocopy := NewUTXOIndex()
-	copier.Copy(&utxocopy, &utxos)
-	if len(utxocopy.index) == 0 {
-		utxocopy = NewUTXOIndex()
+	for pkh := range utxos.index {
+		utxocopy.index[pkh] = make([]*UTXO, 0)
+		for _, utxo := range utxos.index[pkh] {
+			utxocopy.index[pkh] = append(utxocopy.index[pkh], utxo)
+		}
 	}
 	return utxocopy
 }

@@ -70,14 +70,8 @@ func (bp *BlockProducer) prepareBlock() {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
-	validTxs := bp.bc.GetTxPool().GetValidTxs(*utxoIndex)
 
-	// update UTXO set
-	for i:=0; i< len(validTxs); i++ {
-		if !utxoIndex.UpdateUtxo(validTxs[i]) {
-			validTxs = append(validTxs[:i], validTxs[i+1:]...)
-		}
-	}
+	validTxs := bp.bc.GetTxPool().PopValidTxs(*utxoIndex)
 
 	totalTips := common.NewAmount(0)
 	for _, tx := range validTxs {

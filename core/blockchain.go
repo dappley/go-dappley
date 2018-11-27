@@ -172,14 +172,8 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
-	isSuccessful := utxoIndex.UpdateUtxoState(block.GetTransactions())
-	if !isSuccessful {
-		logger.WithFields(logger.Fields{
-			"height": block.GetHeight(),
-			"hash":   hex.EncodeToString(block.GetHash()),
-		}).Error("Blockchain: Update UTXO index failed!")
-		return ErrUpdateUtxoState
-	}
+	utxoIndex.UpdateUtxoState(block.GetTransactions())
+
 	err = utxoIndex.Save(bcTemp.db)
 	if err != nil {
 		logger.WithFields(logger.Fields{
