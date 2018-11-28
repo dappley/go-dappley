@@ -15,6 +15,7 @@
 #include "lib/transaction.h"
 #include "lib/reward_distributor.h"
 #include "lib/prev_utxo.h"
+#include "lib/crypto.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -98,6 +99,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     Context::Scope context_scope(context);
 
     NewBlockchainInstance(isolate, context, (void *)handler);
+    NewCryptoInstance(isolate, context, (void *)handler);
     NewStorageInstance(isolate, context, (void *)handler);
     NewLoggerInstance(isolate, context, (void *)handler);
     NewTransactionInstance(isolate, context, (void *)handler);

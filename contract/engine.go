@@ -18,6 +18,8 @@ struct transaction_t* Cgo_TransactionGetFunc(void *address);
 void Cgo_LoggerFunc(unsigned int level, const char ** args, int length);
 //prev utxo
 void Cgo_PrevUtxoGetFunc(void *address, void* context);
+
+bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
 */
 import "C"
 import (
@@ -63,6 +65,7 @@ func InitializeV8Engine() {
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
 	C.InitializePrevUtxo((C.FuncPrevUtxoGet)(unsafe.Pointer(C.Cgo_PrevUtxoGetFunc)))
+	C.InitializeCrypto((C.FuncVerifySignature)(unsafe.Pointer(C.Cgo_VerifySignatureFunc)))
 }
 
 //NewV8Engine generates a new V8Engine instance

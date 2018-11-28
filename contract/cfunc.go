@@ -14,6 +14,7 @@ void  TransactionGetFunc(void *address, void *context);
 void  LoggerFunc(unsigned int level, char ** args, int length);
 int	  RecordRewardFunc(void *handler, const char *address, const char *amount);
 void  PrevUtxoGetFunc(void *address, void* context);
+bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
 
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
@@ -49,6 +50,10 @@ int	Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount)
 
 void  Cgo_PrevUtxoGetFunc(void *address, void* context) {
 	return PrevUtxoGetFunc(address, context);
+}
+
+bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig){
+	return VerifySignatureFunc(msg, pubkey, sig);
 }
 
 */

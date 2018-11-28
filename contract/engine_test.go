@@ -1,6 +1,10 @@
 package vm
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"io/ioutil"
 	"testing"
 
@@ -54,13 +58,13 @@ var addrChecker = new AddrChecker;
 func TestScEngine_BlockchainTransfer(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
-var TransferTest = function(){};
-TransferTest.prototype = {
+var CryptoTest = function(){};
+CryptoTest.prototype = {
     transfer: function(to, amount, tip){
         return Blockchain.transfer(to, amount, tip);
     }
 };
-var transferTest = new TransferTest;`
+var transferTest = new CryptoTest;`
 
 	contractPubKeyHash := core.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
@@ -289,4 +293,31 @@ func TestStepRecord(t *testing.T) {
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+}
+
+func TestCrypto(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script, _ := ioutil.ReadFile("test/test_crypto.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+
+	kp := core.NewKeyPair()
+	msg := "hello world dappley"
+	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	data := sha256.Sum256([]byte(msg))
+	signature, _ := secp256k1.Sign(data[:], privData)
+
+	assert.Equal(
+		t,
+		"true",
+		sc.Execute("verifySig",
+			fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
+				hex.EncodeToString(data[:]),
+				hex.EncodeToString(kp.PublicKey),
+				hex.EncodeToString(signature),
+			),
+		),
+	)
+
 }
