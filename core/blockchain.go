@@ -184,6 +184,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
 		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager)
+		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState)
 		scState.SaveToDatabase(bcTemp.db, block.GetHash())
 	}
 

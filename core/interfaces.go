@@ -50,6 +50,7 @@ type NetService interface {
 
 type ScEngineManager interface {
 	CreateEngine() ScEngine
+	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState)
 }
 
 type ScEngine interface {

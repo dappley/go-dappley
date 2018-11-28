@@ -30,6 +30,7 @@ import (
 )
 
 const utxoMapKey = "utxo"
+const contractUtxoKey = "ContractUtxos"
 
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndex struct {
@@ -241,8 +242,17 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	u := newUTXO(txout, txid, vout)
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
+	//if it is a smart contract deployment utxo add it to contract utxos
+	if isContract, _ := txout.PubKeyHash.IsContract();isContract &&
+	 	len(utxos.index[string(u.PubKeyHash.GetPubKeyHash())]) == 0 {
+		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
+	}
 	utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(utxos.index[string(u.PubKeyHash.GetPubKeyHash())], u)
 
+}
+
+func (utxos *UTXOIndex) GetContractUtxos() []*UTXO{
+	return utxos.index[contractUtxoKey]
 }
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
