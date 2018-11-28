@@ -86,8 +86,7 @@ func (pool *BlockPool) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScSta
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
 		}).Debug("Verifying block before merge")
 
-		if !forkBlks[i].VerifyTransactions(utxoSnapshot) ||
-			!forkBlks[i].VerifySmartContractTransactions(utxoSnapshot, scState, pool.blockchain.GetSCManager()) {
+		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, pool.blockchain.GetSCManager()) {
 			return false
 		}
 

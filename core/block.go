@@ -296,27 +296,16 @@ func (b *Block) VerifyHash() bool {
 	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
 
-func (b *Block) VerifyTransactions(utxo UTXOIndex) bool {
+func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager) bool {
+	if len(b.GetTransactions()) == 0 {
+		logger.WithFields(logger.Fields{"blkHash": b.GetHash()}).
+			Debug("No transactions to verify in this block")
+		return true
+	}
+
 	txPool := NewTransactionPool(uint32(len(b.transactions)))
 	for _, tx := range b.GetTransactions() {
 		txPool.Transactions.Push(*tx)
-	}
-
-	for _, tx := range b.GetTransactions() {
-		if !tx.Verify(utxo, txPool, b.GetHeight()) {
-			return false
-		}
-		if !utxo.UpdateUtxo(tx) {
-			return false
-		}
-	}
-	return true
-}
-
-func (b *Block) VerifySmartContractTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager) bool {
-
-	if manager == nil {
-		return true
 	}
 
 	var rewardTx *Transaction
@@ -326,13 +315,22 @@ func (b *Block) VerifySmartContractTransactions(utxo UTXOIndex, scState *ScState
 			rewardTx = tx
 			continue
 		}
-		tx.Execute(utxo, scState, rewards, manager.CreateEngine())
+		if isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract(); isContract {
+			if manager == nil {
+				logger.Warn("Smart contract execution transaction cannot be verified")
+				logger.Debug("missing SCEngineManager")
+				return false
+			}
+			tx.Execute(utxo, scState, rewards, manager.CreateEngine())
+		} else {
+			if !tx.Verify(utxo, txPool, b.GetHeight()) {
+				return false
+			}
+		}
 	}
-
 	if rewardTx == nil {
 		return true
 	}
-
 	return rewardTx.MatchRewards(rewards)
 }
 
