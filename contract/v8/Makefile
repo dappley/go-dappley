@@ -24,7 +24,7 @@ build: engine.cc.o $(LIB_OBJ_FILES)
 
 install:
 	sudo install ../lib/*.$(FILESUFFIX) /usr/local/lib/
-    $(LDCONFIG)
+	$(LDCONFIG)
 
 clean:
 	rm **/*.o
