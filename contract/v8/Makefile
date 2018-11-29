@@ -1,5 +1,14 @@
 CXXFLAGS = -g -std=gnu++14 -fno-exceptions -nostdinc++ -isystem../include/third_party/libc++/include -isystem../include/third_party/libc++abi/include  -I../include -fno-rtti -fPIC -m64 -Wall -Wextra -Wno-unused-parameter -Wno-unused-result -O2 
 CXX = g++
+UNAME = $(shell uname)
+ifeq ($(UNAME), Linux)
+    FILESUFFIX = so
+    LDCONFIG = sudo /sbin/ldconfig
+endif
+ifeq ($(UNAME), Darwin)
+    FILESUFFIX = dylib
+    LDCONFIG =
+endif
 
 .PHONY: clean install
 
@@ -7,18 +16,17 @@ LIB_SRC_DIR := lib
 LIB_SRC_FILES := $(wildcard $(LIB_SRC_DIR)/*.cc)
 LIB_OBJ_FILES := $(patsubst $(LIB_SRC_DIR)/%.cc,$(LIB_SRC_DIR)/%.cc.o,$(LIB_SRC_FILES))
 
-
 %.cc.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $<.o
 
 build: engine.cc.o $(LIB_OBJ_FILES)
-	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.so -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
+	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.$(FILESUFFIX) -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
 
 install:
-	sudo install ../lib/*.so /usr/local/lib/
-	sudo /sbin/ldconfig
+	sudo install ../lib/*.$(FILESUFFIX) /usr/local/lib/
+    $(LDCONFIG)
 
 clean:
 	rm **/*.o
 	rm *.o
-	rm ../lib/libdappleyv8.so
+	rm ../lib/libdappleyv8.$(FILESUFFIX)
