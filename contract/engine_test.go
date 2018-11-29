@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -58,13 +59,13 @@ var addrChecker = new AddrChecker;
 func TestScEngine_BlockchainTransfer(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
-var CryptoTest = function(){};
-CryptoTest.prototype = {
+var MathTest = function(){};
+MathTest.prototype = {
     transfer: function(to, amount, tip){
         return Blockchain.transfer(to, amount, tip);
     }
 };
-var transferTest = new CryptoTest;`
+var transferTest = new MathTest;`
 
 	contractPubKeyHash := core.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
@@ -320,4 +321,19 @@ func TestCrypto(t *testing.T) {
 		),
 	)
 
+}
+
+func TestMath(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script, _ := ioutil.ReadFile("test/test_math.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+	sc.ImportSourceTXID([]byte("testmath"))
+
+	res := sc.Execute("random", "20")
+	i, err := strconv.Atoi(res)
+	assert.Nil(t, err)
+	assert.True(t, i < 20)
+	assert.True(t, i >= 0)
 }

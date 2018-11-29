@@ -5,7 +5,7 @@ package vm
 #include "v8/lib/transaction_struct.h"
 
 bool  VerifyAddressFunc(const char* address);
-int  TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
+int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
@@ -15,6 +15,7 @@ void  LoggerFunc(unsigned int level, char ** args, int length);
 int	  RecordRewardFunc(void *handler, const char *address, const char *amount);
 void  PrevUtxoGetFunc(void *address, void* context);
 bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
+int RandomFunc(void *handler, int max);
 
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
@@ -50,6 +51,10 @@ int	Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount)
 
 void  Cgo_PrevUtxoGetFunc(void *address, void* context) {
 	return PrevUtxoGetFunc(address, context);
+}
+
+int Cgo_RandomFunc(void *handler, int max){
+	return RandomFunc(handler, max);
 }
 
 bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig){

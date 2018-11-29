@@ -16,6 +16,7 @@
 #include "lib/reward_distributor.h"
 #include "lib/prev_utxo.h"
 #include "lib/crypto.h"
+#include "lib/math.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
@@ -105,6 +106,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     NewTransactionInstance(isolate, context, (void *)handler);
     NewRewardDistributorInstance(isolate, context, (void *)handler);
     NewPrevUtxoInstance(isolate, context, (void *)handler);
+    NewMathInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {

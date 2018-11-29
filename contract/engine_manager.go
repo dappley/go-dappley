@@ -17,7 +17,7 @@ func (em *V8EngineManager) CreateEngine() core.ScEngine{
 	return NewV8Engine()
 }
 
-func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO, scStorage *core.ScState){
+func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO, scStorage *core.ScState, ){
 	logger.WithFields(logger.Fields{
 		"numOfSmartContract" : len(contractUtxos),
 	}).Info("Running Scheduled Events...")
@@ -28,6 +28,7 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO, scStor
 		engine.ImportSourceCode(utxo.Contract)
 		engine.ImportLocalStorage(scStorage.GetStorageByAddress(addr.String()))
 		engine.ImportContractAddr(addr)
+		engine.ImportSourceTXID(utxo.Txid)
 		engine.Execute(scheduleFuncName,"")
 	}
 }

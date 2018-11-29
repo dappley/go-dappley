@@ -20,6 +20,7 @@ void Cgo_LoggerFunc(unsigned int level, const char ** args, int length);
 void Cgo_PrevUtxoGetFunc(void *address, void* context);
 
 bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
+int Cgo_RandomFunc(void *handler, int max);
 */
 import "C"
 import (
@@ -49,6 +50,7 @@ type V8Engine struct {
 	sourceTXID    []byte
 	generatedTXs  []*core.Transaction
 	handler       uint64
+	seed 		  int64
 }
 
 func InitializeV8Engine() {
@@ -66,6 +68,7 @@ func InitializeV8Engine() {
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
 	C.InitializePrevUtxo((C.FuncPrevUtxoGet)(unsafe.Pointer(C.Cgo_PrevUtxoGetFunc)))
 	C.InitializeCrypto((C.FuncVerifySignature)(unsafe.Pointer(C.Cgo_VerifySignatureFunc)))
+	C.InitializeMath((C.FuncRandom)(unsafe.Pointer(C.Cgo_RandomFunc)))
 }
 
 //NewV8Engine generates a new V8Engine instance

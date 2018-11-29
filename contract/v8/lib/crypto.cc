@@ -8,15 +8,15 @@ void InitializeCrypto(FuncVerifySignature verifySignature) {
 }
 
 void NewCryptoInstance(Isolate *isolate, Local<Context> context, void *handler) {
-  Local<ObjectTemplate> cytproTpl = ObjectTemplate::New(isolate);
-  cytproTpl->SetInternalFieldCount(1);
+  Local<ObjectTemplate> crytpoTpl = ObjectTemplate::New(isolate);
+  crytpoTpl->SetInternalFieldCount(1);
 
-  cytproTpl->Set(String::NewFromUtf8(isolate, "verifySignature"),
+  crytpoTpl->Set(String::NewFromUtf8(isolate, "verifySignature"),
                 FunctionTemplate::New(isolate, VerifySignatureCallback),
                 static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
                                                PropertyAttribute::ReadOnly));
 
-  Local<Object> instance = cytproTpl->NewInstance(context).ToLocalChecked();
+  Local<Object> instance = crytpoTpl->NewInstance(context).ToLocalChecked();
   instance->SetInternalField(0, External::New(isolate, handler));
 
   context->Global()->DefineOwnProperty(
@@ -31,7 +31,7 @@ void VerifySignatureCallback(const FunctionCallbackInfo<Value> &info) {
 
   if (info.Length() != 3) {
     isolate->ThrowException(String::NewFromUtf8(
-        isolate, "Blockchain.hash() requires 3 arguments"));
+        isolate, "crypto.verifySignature() requires 3 arguments"));
     return;
   }
 
