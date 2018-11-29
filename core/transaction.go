@@ -92,6 +92,29 @@ func (tx *Transaction) IsRewardTx() bool {
 	return true
 }
 
+// IsContract returns true if tx deploys/executes a smart contract; false otherwise
+func (tx *Transaction) IsContract() bool {
+	if len(tx.Vout) == 0 {
+		return false
+	}
+	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
+	return isContract
+}
+
+// IsFromContract returns true if tx is generated from a contract execution; false otherwise
+func (tx *Transaction) IsFromContract() bool {
+	if len(tx.Vin) == 0 {
+		return false
+	}
+	for _, vin := range tx.Vin {
+		pubKey, _ := NewUserPubKeyHash(vin.PubKey)
+		if IsContract, _ := pubKey.IsContract(); !IsContract {
+			return false
+		}
+	}
+	return true
+}
+
 func (tx *Transaction) isVinCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
@@ -205,7 +228,7 @@ func (tx *Transaction) DeepCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
