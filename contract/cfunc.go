@@ -15,6 +15,7 @@ void  LoggerFunc(unsigned int level, char ** args, int length);
 int	  RecordRewardFunc(void *handler, const char *address, const char *amount);
 void  PrevUtxoGetFunc(void *address, void* context);
 bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
+bool  VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 int RandomFunc(void *handler, int max);
 
 bool Cgo_VerifyAddressFunc(const char *address) {
@@ -59,6 +60,10 @@ int Cgo_RandomFunc(void *handler, int max){
 
 bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig){
 	return VerifySignatureFunc(msg, pubkey, sig);
+}
+
+bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey){
+	return VerifyPublicKeyFunc(addr, pubkey);
 }
 
 */

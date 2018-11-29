@@ -296,7 +296,7 @@ func TestStepRecord(t *testing.T) {
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 }
 
-func TestCrypto(t *testing.T) {
+func TestCrypto_VerifySignature(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	script, _ := ioutil.ReadFile("test/test_crypto.js")
 
@@ -320,7 +320,42 @@ func TestCrypto(t *testing.T) {
 			),
 		),
 	)
+}
 
+func TestCrypto_VerifyPublicKey(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+	script, _ := ioutil.ReadFile("test/test_crypto.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+
+	kp := core.NewKeyPair()
+	fmt.Println(kp.PublicKey)
+	pkh, err := core.NewUserPubKeyHash(kp.PublicKey)
+	assert.Nil(t, err)
+	addr := pkh.GenerateAddress()
+	fmt.Println(addr)
+
+	assert.Equal(
+		t,
+		"true",
+		sc.Execute("verifyPk",
+			fmt.Sprintf("\"%s\", \"%s\"",
+				addr,
+				hex.EncodeToString(kp.PublicKey),
+			),
+		),
+	)
+	assert.Equal(
+		t,
+		"false",
+		sc.Execute("verifyPk",
+			fmt.Sprintf("\"%s\", \"%s\"",
+				"IncorrectAddress",
+				hex.EncodeToString(kp.PublicKey),
+			),
+		),
+	)
 }
 
 func TestMath(t *testing.T) {

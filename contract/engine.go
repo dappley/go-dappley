@@ -18,8 +18,10 @@ struct transaction_t* Cgo_TransactionGetFunc(void *address);
 void Cgo_LoggerFunc(unsigned int level, const char ** args, int length);
 //prev utxo
 void Cgo_PrevUtxoGetFunc(void *address, void* context);
-
+//crypto
 bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
+bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey);
+//math
 int Cgo_RandomFunc(void *handler, int max);
 */
 import "C"
@@ -67,7 +69,10 @@ func InitializeV8Engine() {
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
 	C.InitializePrevUtxo((C.FuncPrevUtxoGet)(unsafe.Pointer(C.Cgo_PrevUtxoGetFunc)))
-	C.InitializeCrypto((C.FuncVerifySignature)(unsafe.Pointer(C.Cgo_VerifySignatureFunc)))
+	C.InitializeCrypto(
+		(C.FuncVerifySignature)(unsafe.Pointer(C.Cgo_VerifySignatureFunc)),
+		(C.FuncVerifyPublicKey)(unsafe.Pointer(C.Cgo_VerifyPublicKeyFunc)),
+	)
 	C.InitializeMath((C.FuncRandom)(unsafe.Pointer(C.Cgo_RandomFunc)))
 }
 

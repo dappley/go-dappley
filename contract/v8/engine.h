@@ -18,6 +18,7 @@ extern "C" {
     typedef void (*FuncLogger)(unsigned int level, char** args, int length);
     typedef int (*FuncRecordReward)(void *handler, const char *address, const char *amount);
     typedef bool (*FuncVerifySignature)(const char *msg, const char *pubKey, const char *sig);
+    typedef bool (*FuncVerifyPublicKey)(const char *addr, const char *pubKey);
     typedef int (*FuncRandom)(void *handler, int max);
 
     EXPORT void Initialize();
@@ -26,7 +27,7 @@ extern "C" {
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
-    EXPORT void InitializeCrypto(FuncVerifySignature verifySignature);
+    EXPORT void InitializeCrypto(FuncVerifySignature verifySignature, FuncVerifyPublicKey verifyPublicKey);
     EXPORT void InitializeMath(FuncRandom random);
     EXPORT void SetTransactionData(struct transaction_t* tx, void* context);
     EXPORT void InitializePrevUtxo(FuncPrevUtxoGet get);

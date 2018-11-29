@@ -2,6 +2,7 @@ package vm
 import "C"
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	logger "github.com/sirupsen/logrus"
 )
@@ -57,4 +58,32 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
 	}
 
 	return res
+}
+
+//export VerifyPublicKeyFunc
+func VerifyPublicKeyFunc(addr, pubkey *C.char) bool{
+	goAddr := C.GoString(addr)
+	goPubkey := C.GoString(pubkey)
+
+	pubKeyBytes, err :=	hex.DecodeString(goPubkey)
+	if err!= nil{
+		logger.WithFields(logger.Fields{
+			"address"	: goAddr,
+			"pubKey" 	: pubKeyBytes,
+			"error" 	: err,
+		}).Debug("Smart Contract: VerifyPublicKey failed. Unable to decode public key")
+		return false
+	}
+
+	pubKeyHash, err := core.NewUserPubKeyHash(pubKeyBytes)
+	if err!= nil{
+		logger.WithFields(logger.Fields{
+			"content"	: goAddr,
+			"pubKey" 	: pubKeyBytes,
+			"error" 	: err,
+		}).Debug("Smart Contract: VerifyPublicKey failed. Unable to hash public key")
+		return false
+	}
+
+	return pubKeyHash.GenerateAddress().String() == goAddr
 }

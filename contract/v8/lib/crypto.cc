@@ -2,21 +2,28 @@
 #include "../engine.h"
 
 static FuncVerifySignature sVerifySignature = NULL;
+static FuncVerifyPublicKey sVerifyPublicKey = NULL;
 
-void InitializeCrypto(FuncVerifySignature verifySignature) {
+void InitializeCrypto(FuncVerifySignature verifySignature, FuncVerifyPublicKey verifyPublicKey) {
   sVerifySignature = verifySignature;
+  sVerifyPublicKey = verifyPublicKey;
 }
 
 void NewCryptoInstance(Isolate *isolate, Local<Context> context, void *handler) {
-  Local<ObjectTemplate> crytpoTpl = ObjectTemplate::New(isolate);
-  crytpoTpl->SetInternalFieldCount(1);
+  Local<ObjectTemplate> cryptoTpl = ObjectTemplate::New(isolate);
+  cryptoTpl->SetInternalFieldCount(1);
 
-  crytpoTpl->Set(String::NewFromUtf8(isolate, "verifySignature"),
+  cryptoTpl->Set(String::NewFromUtf8(isolate, "verifySignature"),
                 FunctionTemplate::New(isolate, VerifySignatureCallback),
                 static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
                                                PropertyAttribute::ReadOnly));
 
-  Local<Object> instance = crytpoTpl->NewInstance(context).ToLocalChecked();
+  cryptoTpl->Set(String::NewFromUtf8(isolate, "verifyPublicKey"),
+                FunctionTemplate::New(isolate, VerifyPublicKeyCallback),
+                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
+                                               PropertyAttribute::ReadOnly));
+
+  Local<Object> instance = cryptoTpl->NewInstance(context).ToLocalChecked();
   instance->SetInternalField(0, External::New(isolate, handler));
 
   context->Global()->DefineOwnProperty(
@@ -60,6 +67,36 @@ void VerifySignatureCallback(const FunctionCallbackInfo<Value> &info) {
   bool ret = sVerifySignature(*String::Utf8Value(isolate, msg),
                                 *String::Utf8Value(isolate, pubKey),
                                 *String::Utf8Value(isolate, sig));
+
+  info.GetReturnValue().Set(ret);
+}
+
+void VerifyPublicKeyCallback(const FunctionCallbackInfo<Value> &info) {
+
+  Isolate *isolate = info.GetIsolate();
+
+  if (info.Length() != 2) {
+    isolate->ThrowException(String::NewFromUtf8(
+        isolate, "crypto.verifyPublicKey() requires 2 arguments"));
+    return;
+  }
+
+  Local<Value> addr = info[0];
+  if (!addr->IsString()) {
+    isolate->ThrowException(
+    String::NewFromUtf8(isolate, "address must be string"));
+    return;
+  }
+
+  Local<Value> pubKey = info[1];
+  if (!pubKey->IsString()) {
+    isolate->ThrowException(
+    String::NewFromUtf8(isolate, "public key must be string"));
+    return;
+  }
+
+  bool ret = sVerifyPublicKey(*String::Utf8Value(isolate, addr),
+                                *String::Utf8Value(isolate, pubKey));
 
   info.GetReturnValue().Set(ret);
 }
