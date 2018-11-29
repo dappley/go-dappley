@@ -228,7 +228,7 @@ func TestRpcSendContract(t *testing.T) {
 	}
 	pow.Stop()
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(time.Second)
 
 	//check smart contract deployment
 	res := string("")
