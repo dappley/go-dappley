@@ -315,7 +315,7 @@ func TestCrypto_VerifySignature(t *testing.T) {
 		"true",
 		sc.Execute("verifySig",
 			fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
-				hex.EncodeToString(data[:]),
+				msg,
 				hex.EncodeToString(kp.PublicKey),
 				hex.EncodeToString(signature),
 			),

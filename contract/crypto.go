@@ -1,6 +1,7 @@
 package vm
 import "C"
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -13,14 +14,7 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
 	goPubkey := C.GoString(pubkey)
 	goSig := C.GoString(sig)
 
-	msgBytes, err := hex.DecodeString(goMsg)
-	if err!= nil{
-		logger.WithFields(logger.Fields{
-			"content"	: goMsg,
-			"error"		: err,
-		}).Debug("Smart Contract: VerifySignature failed. Unable to decode message")
-		return false
-	}
+	data := sha256.Sum256([]byte(goMsg))
 
 	sigBytes, err := hex.DecodeString(goSig)
 	if err!= nil{
@@ -46,7 +40,7 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
 	originPub[0] = 4 // uncompressed point
 	copy(originPub[1:], pubKeyBytes)
 
-	res, err := secp256k1.Verify(msgBytes, sigBytes, originPub)
+	res, err := secp256k1.Verify(data[:], sigBytes, originPub)
 	if err!= nil{
 		logger.WithFields(logger.Fields{
 			"content"	: goMsg,

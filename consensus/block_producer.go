@@ -85,6 +85,7 @@ func (bp *BlockProducer) prepareBlock() {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
 		logger.Error(err)
+		return
 	}
 
 	// Retrieve all valid transactions from tx pool
