@@ -278,6 +278,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	rewardEngine.On("ImportTransaction", mock.Anything)
 	rewardEngine.On("ImportPrevUtxos", mock.Anything)
 	rewardEngine.On("GetGeneratedTXs").Return([]*Transaction{})
+	rewardEngine.On("ImportCurrBlockHeight", mock.Anything)
 	rewardEngine.On("Execute", mock.Anything, mock.Anything).Run(mockRewardExecute).Return("0")
 	rewardEngineManager := new(MockScEngineManager)
 	rewardEngineManager.On("CreateEngine").Return(rewardEngine)

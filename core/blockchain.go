@@ -183,7 +183,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	if bc.scManager != nil {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
-		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager)
+		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight())
 		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState)
 		scState.SaveToDatabase(bcTemp.db, block.GetHash())
 	}

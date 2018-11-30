@@ -101,3 +101,17 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 
 	return 0
 }
+
+//export GetCurrBlockHeightFunc
+func GetCurrBlockHeightFunc(handler unsafe.Pointer) uint64{
+	engine := getV8EngineByAddress(uint64(uintptr(handler)))
+	if engine == nil {
+		logger.WithFields(logger.Fields{
+			"handler" : uint64(uintptr(handler)),
+			"function": "Math.GetCurrBlockHeightFunc",
+		}).Debug("Smart Contract: Failed to get the engine instance while executing getCurrBlockHeightFunc!")
+		return 0
+	}
+	
+	return engine.blkHeight;
+}

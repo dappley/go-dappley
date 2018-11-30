@@ -108,10 +108,10 @@ func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error{
 }
 
 //Update updates smart contract states by executing all input transactions
-func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager){
+func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager, currBlkHeight uint64){
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
 	for _,tx := range txs{
-		tx.Execute(index,ss,nil,manager.CreateEngine())
+		tx.Execute(index,ss,nil,manager.CreateEngine(), currBlkHeight)
 	}
 }

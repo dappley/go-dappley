@@ -7,6 +7,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"io/ioutil"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -371,4 +372,25 @@ func TestMath(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, i < 20)
 	assert.True(t, i >= 0)
+}
+
+func TestBlkHeight(t *testing.T){
+	logrus.SetLevel(logrus.DebugLevel)
+	script, _ := ioutil.ReadFile("test/test_blockheight.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+	sc.ImportCurrBlockHeight(22334)
+
+	assert.Equal(t, "22334", sc.Execute("getBlkHeight", ""))
+
+}
+
+func TestTrimWhiteSpaces(t *testing.T){
+	logrus.SetLevel(logrus.DebugLevel)
+	script, _ := ioutil.ReadFile("test/test_blockheight.js")
+	scriptStr := string(script)
+	str := strings.Replace(scriptStr, " ", "", -1)
+	str = strings.Replace(str, "\\n", "", -1)
+	fmt.Println(str)
 }

@@ -78,3 +78,8 @@ func (_m *MockScEngine) ImportTransaction(tx *Transaction) {
 func (_m *MockScEngine) ImportUTXOs(utxos []*UTXO) {
 	_m.Called(utxos)
 }
+
+// ImportCurrBlockHeight provides a mock function with given fields: currBlkHeight
+func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
+	_m.Called(currBlkHeight)
+}

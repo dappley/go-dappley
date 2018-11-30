@@ -16,6 +16,9 @@ Blockchain.prototype = {
     },
     transfer: function (to, amount, tip) {
         return this.nativeBlockchain.transfer(to, amount, tip);
+    },
+    getCurrBlockHeight: function(){
+        return this.nativeBlockchain.getCurrBlockHeight();
     }
 };
 

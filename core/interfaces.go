@@ -62,6 +62,7 @@ type ScEngine interface {
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *Transaction)
 	ImportPrevUtxos(utxos []*UTXO)
+	ImportCurrBlockHeight(currBlkHeight uint64)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }

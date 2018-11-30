@@ -550,7 +550,11 @@ func (tx *Transaction) GetContract() string {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[string]string, engine ScEngine) []*Transaction {
+func (tx *Transaction) Execute( index UTXOIndex,
+							   	scStorage *ScState,
+								rewards map[string]string,
+								engine ScEngine,
+								currblkHeight uint64) []*Transaction {
 
 	if tx.IsRewardTx() {
 		return nil
@@ -595,6 +599,7 @@ func (tx *Transaction) Execute(index UTXOIndex, scStorage *ScState, rewards map[
 	engine.ImportRewardStorage(rewards)
 	engine.ImportTransaction(tx)
 	engine.ImportPrevUtxos(prevUtxos)
+	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.Execute(function, totalArgs)
 	return engine.GetGeneratedTXs()
 }

@@ -7,6 +7,7 @@ package vm
 //blockchain
 bool  Cgo_VerifyAddressFunc(const char *address);
 int  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
+int Cgo_GetCurrBlockHeightFunc(void *handler);
 //storage
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
@@ -52,7 +53,7 @@ type V8Engine struct {
 	sourceTXID    []byte
 	generatedTXs  []*core.Transaction
 	handler       uint64
-	seed 		  int64
+	blkHeight	  uint64
 }
 
 func InitializeV8Engine() {
@@ -60,6 +61,7 @@ func InitializeV8Engine() {
 	C.InitializeBlockchain(
 		(C.FuncVerifyAddress)(unsafe.Pointer(C.Cgo_VerifyAddressFunc)),
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
+		(C.FuncGetCurrBlockHeight)(unsafe.Pointer(C.Cgo_GetCurrBlockHeightFunc)),
 	)
 	C.InitializeStorage(
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
@@ -132,6 +134,11 @@ func (sc *V8Engine) ImportRewardStorage(rewards map[string]string) {
 // ImportPrevUtxos supplies the utxos of vin in current transaction
 func (sc *V8Engine) ImportPrevUtxos(utxos []*core.UTXO) {
 	sc.prevUtxos = utxos
+}
+
+// ImportCurrBlockHeight imports the current block height
+func (sc *V8Engine) ImportCurrBlockHeight(blkHeight uint64) {
+	sc.blkHeight = blkHeight
 }
 
 func (sc *V8Engine) Execute(function, args string) string {

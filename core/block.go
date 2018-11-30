@@ -356,7 +356,7 @@ L:
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine)
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight())
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions

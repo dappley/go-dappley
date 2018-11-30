@@ -3,11 +3,13 @@
 
 static FuncVerifyAddress sVerifyAddress = NULL;
 static FuncTransfer sTransfer = NULL;
+static FuncGetCurrBlockHeight sGetCurrBlockHeight = NULL;
 
 
-void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer) {
+void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight){
   sVerifyAddress = verifyAddress;
   sTransfer = transfer;
+  sGetCurrBlockHeight = getCurrBlockHeight;
 }
 
 void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handler) {
@@ -21,6 +23,11 @@ void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handl
 
   blockTpl->Set(String::NewFromUtf8(isolate, "transfer"),
                 FunctionTemplate::New(isolate, TransferCallback),
+                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
+                                               PropertyAttribute::ReadOnly));
+
+  blockTpl->Set(String::NewFromUtf8(isolate, "getCurrBlockHeight"),
+                FunctionTemplate::New(isolate, GetCurrBlockHeightCallback),
                 static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
                                                PropertyAttribute::ReadOnly));
 
@@ -95,6 +102,22 @@ void TransferCallback(const FunctionCallbackInfo<Value> &info) {
     *String::Utf8Value(isolate, amount),
     *String::Utf8Value(isolate, tip)
   );
+  info.GetReturnValue().Set(ret);
+
+}
+
+void GetCurrBlockHeightCallback(const FunctionCallbackInfo<Value> &info) {
+  Isolate *isolate = info.GetIsolate();
+  Local<Object> thisArg = info.Holder();
+  Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
+
+  if (info.Length() != 0) {
+    isolate->ThrowException(String::NewFromUtf8(
+        isolate, "Blockchain.getCurrBlockHeight() does not require any argument"));
+    return;
+  }
+
+  int ret = sGetCurrBlockHeight(handler->Value());
   info.GetReturnValue().Set(ret);
 
 }

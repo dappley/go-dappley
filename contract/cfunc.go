@@ -6,6 +6,7 @@ package vm
 
 bool  VerifyAddressFunc(const char* address);
 int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
+int   GetCurrBlockHeightFunc(void *handler);
 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
@@ -24,6 +25,10 @@ bool Cgo_VerifyAddressFunc(const char *address) {
 
 int Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip) {
 	return TransferFunc(handler, to, amount, tip);
+};
+
+int Cgo_GetCurrBlockHeightFunc(void *handler){
+	return GetCurrBlockHeightFunc(handler);
 };
 
 char* Cgo_StorageGetFunc(void *address, const char *key){

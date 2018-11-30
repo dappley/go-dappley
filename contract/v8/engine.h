@@ -20,10 +20,11 @@ extern "C" {
     typedef bool (*FuncVerifySignature)(const char *msg, const char *pubKey, const char *sig);
     typedef bool (*FuncVerifyPublicKey)(const char *addr, const char *pubKey);
     typedef int (*FuncRandom)(void *handler, int max);
+    typedef int (*FuncGetCurrBlockHeight)(void *handler);
 
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler, char **result);
-    EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer);
+    EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight);
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
