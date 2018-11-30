@@ -234,15 +234,25 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	userPubKey := NewKeyPair().PublicKey
 	userPubKeyHash, _ := NewUserPubKeyHash(userPubKey)
 	userAddr := userPubKeyHash.GenerateAddress()
-	contractPubKey := NewKeyPair().PublicKey
-	contractPubKeyHashByte, _ := generatePubKeyHash(contractPubKey)
-	contractPubKeyHash := PubKeyHash{append([]byte{versionContract}, contractPubKeyHashByte...)}
+	contractPubKeyHash := NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
 	contractTX := &Transaction{
 		[]byte("txid"),
 		[]TXInput{{[]byte("txinid"), 0, nil, userPubKey}},
 		[]TXOutput{*NewContractTXOutput(contractAddr, "{\"function\": \"foo\"}")},
 		0,
+	}
+	generatedTX := &Transaction{
+		[]byte("contractGenerated"),
+		[]TXInput{
+			{[]byte("prevtxid"), 0, []byte("txid"), contractPubKeyHash.GetPubKeyHash()},
+			{[]byte("prevtxid"), 1, []byte("txid"), contractPubKeyHash.GetPubKeyHash()},
+		},
+		[]TXOutput{
+			*NewTxOut(common.NewAmount(23), userAddr, ""),
+			*NewTxOut(common.NewAmount(10), contractAddr, ""),
+		},
+		uint64(7),
 	}
 
 	var generatedRewards map[string]string
@@ -271,6 +281,21 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	rewardEngine.On("Execute", mock.Anything, mock.Anything).Run(mockRewardExecute).Return("0")
 	rewardEngineManager := new(MockScEngineManager)
 	rewardEngineManager.On("CreateEngine").Return(rewardEngine)
+
+	// Mock smart contract engine that generate contract-incurred transactions
+	genTXEngine := new(MockScEngine)
+	genTXEngine.On("ImportSourceCode", mock.Anything)
+	genTXEngine.On("ImportLocalStorage", mock.Anything)
+	genTXEngine.On("ImportContractAddr", mock.Anything)
+	genTXEngine.On("ImportUTXOs", mock.Anything)
+	genTXEngine.On("ImportSourceTXID", mock.Anything)
+	genTXEngine.On("ImportRewardStorage", mock.Anything)
+	genTXEngine.On("ImportTransaction", mock.Anything)
+	genTXEngine.On("ImportPrevUtxos", mock.Anything)
+	genTXEngine.On("GetGeneratedTXs").Return([]*Transaction{generatedTX})
+	genTXEngine.On("Execute", mock.Anything, mock.Anything).Return("0")
+	genTXEngineManager := new(MockScEngineManager)
+	genTXEngineManager.On("CreateEngine").Return(genTXEngine)
 
 	tests := []struct {
 		name          string
@@ -323,6 +348,21 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				},
 			},
 			rewardEngineManager,
+			true,
+		},
+		{
+			"generated tx",
+			[]*Transaction{contractTX, generatedTX},
+			map[string][]*UTXO{
+				string(contractPubKeyHash.GetPubKeyHash()): {
+					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0},
+					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1},
+				},
+				string(userPubKeyHash.GetPubKeyHash()): {
+					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
+				},
+			},
+			genTXEngineManager,
 			true,
 		},
 		{

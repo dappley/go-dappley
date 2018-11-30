@@ -28,13 +28,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10)
@@ -107,7 +108,7 @@ func (tx *Transaction) IsFromContract() bool {
 		return false
 	}
 	for _, vin := range tx.Vin {
-		pubKey, _ := NewUserPubKeyHash(vin.PubKey)
+		pubKey := PubKeyHash{vin.PubKey}
 		if IsContract, _ := pubKey.IsContract(); !IsContract {
 			return false
 		}
@@ -130,6 +131,54 @@ func (tx *Transaction) Serialize() []byte {
 	}
 
 	return encoded.Bytes()
+}
+
+// Describe reverse-engineers the high-level description of a transaction
+func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, amount, tip *common.Amount, error error) {
+	var receiverAddress Address
+	vinPubKey := tx.Vin[0].PubKey
+	pubKeyHash := PubKeyHash{[]byte("")}
+	inputAmount := common.NewAmount(0)
+	outputAmount := common.NewAmount(0)
+	payoutAmount := common.NewAmount(0)
+	for _, vin := range tx.Vin {
+		if bytes.Compare(vin.PubKey, vinPubKey) == 0 {
+			switch {
+			case tx.IsRewardTx():
+				pubKeyHash = PubKeyHash{rewardTxData}
+				continue
+			case tx.IsFromContract():
+				// vinPubKey is the pubKeyHash if it is a sc generated tx
+				pubKeyHash = PubKeyHash{vinPubKey}
+			default:
+				pkh, err := NewUserPubKeyHash(vin.PubKey)
+				if err != nil {
+					return nil, nil, nil, nil, err
+				}
+				pubKeyHash = pkh
+			}
+			usedUTXO := index.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
+			inputAmount = inputAmount.Add(usedUTXO.Value)
+		} else {
+			logger.Debug("Transaction: using utxo from multiple wallets")
+		}
+	}
+	for _, vout := range tx.Vout {
+		if bytes.Compare(vout.PubKeyHash.GetPubKeyHash(), vinPubKey) == 0 {
+			outputAmount = outputAmount.Add(vout.Value)
+		} else {
+			receiverAddress = vout.PubKeyHash.GenerateAddress()
+			payoutAmount = payoutAmount.Add(vout.Value)
+		}
+	}
+	tip, err := inputAmount.Sub(outputAmount)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	senderAddress := pubKeyHash.GenerateAddress()
+
+	return &senderAddress, &receiverAddress, payoutAmount, tip, nil
 }
 
 //GetToHashBytes Get bytes for hash

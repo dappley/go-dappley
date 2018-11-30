@@ -26,12 +26,14 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -308,30 +310,103 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScE
 		txPool.Transactions.Push(*tx)
 	}
 
-	var rewardTx *Transaction
+	var rewardTX *Transaction
+	var contractGeneratedTXs []*Transaction
 	rewards := make(map[string]string)
+	var allContractGeneratedTXs []*Transaction
+L:
 	for _, tx := range b.GetTransactions() {
+		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
-			rewardTx = tx
-			continue
+			if rewardTX != nil {
+				logger.Warn("Block contains more than 1 reward transaction")
+				return false
+			}
+			rewardTX = tx
+			continue L
 		}
-		if isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract(); isContract {
+		if tx.IsFromContract() {
+			contractGeneratedTXs = append(contractGeneratedTXs, tx)
+
+			contractSource := tx.Vin[0].Signature
+			for _, t := range b.GetTransactions() {
+				if bytes.Compare(contractSource, t.ID) == 0 {
+					// source tx is found in this block
+					continue L
+				}
+			}
+			logger.WithFields(logger.Fields{"tx": tx}).
+				Debug("The contract source of this generated tx is not in the same block")
+			// TODO: Execute the contract in source tx
+			//sourceTX, err := Blockchain{}.FindTransaction(contractSource)
+			//if err != nil || !sourceTX.IsContract() {
+			//	return false
+			//}
+			//scEngine := manager.CreateEngine()
+			//sourceTX.Execute(utxo, scState, rewards, scEngine)
+			//allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
+			continue L
+		}
+
+		if tx.IsContract() {
+			// Run the contract and collect generated transactions
 			if manager == nil {
-				logger.Warn("Smart contract execution transaction cannot be verified")
+				logger.Warn("Smart contract cannot be verified")
 				logger.Debug("missing SCEngineManager")
 				return false
 			}
-			tx.Execute(utxo, scState, rewards, manager.CreateEngine())
+			scEngine := manager.CreateEngine()
+			tx.Execute(utxo, scState, rewards, scEngine)
+			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
+			// tx is a normal transactions
 			if !tx.Verify(utxo, txPool, b.GetHeight()) {
 				return false
 			}
 		}
 	}
-	if rewardTx == nil {
-		return true
+	// Assert that any contract-incurred transactions matches the ones generated from contract execution
+	if rewardTX != nil && !rewardTX.MatchRewards(rewards) {
+		return false
 	}
-	return rewardTx.MatchRewards(rewards)
+	if len(contractGeneratedTXs) > 0 && !verifyGeneratedTXs(utxo, contractGeneratedTXs, allContractGeneratedTXs) {
+		return false
+	}
+	return true
+}
+
+// verifyGeneratedTXs verify that all transactions in candidates can be found in generatedTXs
+func verifyGeneratedTXs(utxo UTXOIndex, candidates []*Transaction, generatedTXs []*Transaction) bool {
+	// genTXBuckets stores description of txs grouped by concatenation of sender's and recipient's public key hashes
+	genTXBuckets := make(map[string][][]*common.Amount)
+	for _, genTX := range generatedTXs {
+		sender, recipient, amount, tip, err := genTX.Describe(utxo)
+		if err != nil {
+			continue
+		}
+		hashKey := sender.String() + recipient.String()
+		genTXBuckets[hashKey] = append(genTXBuckets[hashKey], []*common.Amount{amount, tip})
+	}
+L:
+	for _, tx := range candidates {
+		sender, recipient, amount, tip, err := tx.Describe(utxo)
+		if err != nil {
+			return false
+		}
+		hashKey := sender.String() + recipient.String()
+		if genTXBuckets[hashKey] == nil {
+			return false
+		}
+		for i, t := range genTXBuckets[hashKey] {
+			// tx is verified if amount and tip matches
+			if amount.Cmp(t[0]) == 0 && tip.Cmp(t[1]) == 0 {
+				genTXBuckets[hashKey] = append(genTXBuckets[hashKey][:i], genTXBuckets[hashKey][i+1:]...)
+				continue L
+			}
+		}
+		return false
+	}
+	return true
 }
 
 func IsParentBlockHash(parentBlk, childBlk *Block) bool {
