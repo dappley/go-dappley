@@ -294,6 +294,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	genTXEngine.On("ImportTransaction", mock.Anything)
 	genTXEngine.On("ImportPrevUtxos", mock.Anything)
 	genTXEngine.On("GetGeneratedTXs").Return([]*Transaction{generatedTX})
+	genTXEngine.On("ImportCurrBlockHeight", mock.Anything)
 	genTXEngine.On("Execute", mock.Anything, mock.Anything).Return("0")
 	genTXEngineManager := new(MockScEngineManager)
 	genTXEngineManager.On("CreateEngine").Return(genTXEngine)
