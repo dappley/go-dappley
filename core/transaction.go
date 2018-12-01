@@ -509,7 +509,7 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 
 	tx := Transaction{
 		nil,
-		prepareInputLists(utxos, senderKeyPair.PublicKey),
+		prepareInputLists(utxos, senderKeyPair.PublicKey, nil),
 		prepareOutputLists(from, to, amount, change, contract),
 		tip.Uint64()}
 	tx.ID = tx.Hash()
@@ -518,6 +518,33 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 	if err != nil {
 		return Transaction{}, err
 	}
+
+	return tx, nil
+}
+
+func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, tip *common.Amount, sourceTXID []byte) (Transaction, error) {
+	contractPubKeyHash, ok := contractAddr.GetPubKeyHash()
+	if !ok {
+		return Transaction{}, ErrInvalidAddress
+	}
+	if isContract, err := (PubKeyHash{contractPubKeyHash}).IsContract(); !isContract {
+		return Transaction{}, err
+	}
+
+	sum := calculateUtxoSum(utxos)
+	change, err := calculateChange(sum, amount, tip)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	// Intentionally set PubKeyHash as PubKey (to recognize it is from contract) and sourceTXID as signature in Vin
+	tx := Transaction{
+		nil,
+		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
+		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
+		tip.Uint64(),
+	}
+	tx.ID = tx.Hash()
 
 	return tx, nil
 }
@@ -550,12 +577,12 @@ func (tx *Transaction) GetContract() string {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute( index UTXOIndex,
-							   	scStorage *ScState,
-								rewards map[string]string,
-								engine ScEngine,
-								currblkHeight uint64,
-								parentBlk *Block) []*Transaction {
+func (tx *Transaction) Execute(index UTXOIndex,
+	scStorage *ScState,
+	rewards map[string]string,
+	engine ScEngine,
+	currblkHeight uint64,
+	parentBlk *Block) []*Transaction {
 
 	if tx.IsRewardTx() {
 		return nil
@@ -685,12 +712,12 @@ func calculateChange(input, amount, tip *common.Amount) (*common.Amount, error) 
 }
 
 //prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*UTXO, publicKey []byte) []TXInput {
+func prepareInputLists(utxos []*UTXO, publicKey []byte, signature []byte) []TXInput {
 	var inputs []TXInput
 
 	// Build a list of inputs
 	for _, utxo := range utxos {
-		input := TXInput{utxo.Txid, utxo.TxIndex, nil, publicKey}
+		input := TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
 		inputs = append(inputs, input)
 	}
 

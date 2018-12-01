@@ -50,68 +50,40 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	contractAddr := engine.contractAddr
 	utxos := engine.contractUTXOs
 	sourceTXID := engine.sourceTXID
-	contractPubKey, ok := contractAddr.GetPubKeyHash()
-	if !ok {
+	if !contractAddr.ValidateAddress() {
 		return 1
 	}
 
-	// TODO: to be removed after implementing NewContractTransferTX
-	var txins []core.TXInput
-
-	// TODO: need to refactor and expose "get utxos by amount" from UTXOIndex, given a []*UTXO
+	// TODO: need to refactor and implement "get utxos by amount" method from []*UTXO
 	total := common.NewAmount(0)
-	for _, utxo := range utxos {
+	for i, utxo := range utxos {
 		total = total.Add(utxo.Value)
-		txins = append(txins, core.TXInput{
-			Txid:      utxo.Txid,
-			Vout:      utxo.TxIndex,
-			Signature: sourceTXID,
-			PubKey:    contractPubKey,
-		})
 		if total.Cmp(amountValue.Add(tipValue)) >= 0 {
+			utxos = utxos[:i+1]
 			break
 		}
 	}
 
-	change, err := total.Sub(amountValue.Add(tipValue))
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"balance": total,
-			"amount":  amountValue,
-			"tip":     tipValue,
-		}).Debug("Smart Contract: Insufficient balance!")
-		return 1
-	}
-	engine.generatedTXs = []*core.Transaction{
-		{
-			[]byte("contractGenerated"),
-			txins,
-			[]core.TXOutput{
-				*core.NewTxOut(amountValue, toAddr, ""),
-				*core.NewTxOut(change, contractAddr, ""),
-			},
-			tipValue.Uint64(),
-		},
-	}
+	transferTX, err := core.NewContractTransferTX(utxos, contractAddr, toAddr, amountValue, tipValue, sourceTXID)
 
-	//engine.generatedTXs = append(
-	//	engine.generatedTXs,
-	//	core.NewContractTransferTX(contractAddr, toAddr, amountValue, tipValue),
-	//)
+	engine.generatedTXs = append(
+		engine.generatedTXs,
+		&transferTX,
+	)
 
 	return 0
 }
 
 //export GetCurrBlockHeightFunc
-func GetCurrBlockHeightFunc(handler unsafe.Pointer) uint64{
+func GetCurrBlockHeightFunc(handler unsafe.Pointer) uint64 {
 	engine := getV8EngineByAddress(uint64(uintptr(handler)))
 	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"handler" : uint64(uintptr(handler)),
+			"handler":  uint64(uintptr(handler)),
 			"function": "Math.GetCurrBlockHeightFunc",
 		}).Debug("Smart Contract: Failed to get the engine instance while executing getCurrBlockHeightFunc!")
 		return 0
 	}
-	
-	return engine.blkHeight;
+
+	return engine.blkHeight
 }
