@@ -117,28 +117,30 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 
 	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 
-	var retUtxos []*UTXO
-	sum := common.NewAmount(0)
-	for i, u := range allUtxos {
-		if !isContractUtxo(i, u.PubKeyHash) {
-			sum = sum.Add(u.Value)
-			retUtxos = append(retUtxos, u)
-			if sum.Cmp(amount) >= 0 {
-				break
-			}
-		}
-	}
-
-	if sum.Cmp(amount) < 0 {
+	retUtxos, ok := PrepareUTXOs(allUtxos, amount)
+	if !ok {
 		return nil, ErrInsufficientFund
 	}
 
 	return retUtxos, nil
 }
 
-func isContractUtxo(index int, pubKeyHash PubKeyHash) bool {
-	isContract, _ := pubKeyHash.IsContract()
-	return isContract && index == 0
+// PrepareUTXOs returns a minimum subset of utxos valued at amount or more
+// for smart contract, utxos[0] is expected to be the contract
+func PrepareUTXOs(utxos []*UTXO, amount *common.Amount) ([]*UTXO, bool) {
+	sum := common.NewAmount(0)
+	if isContract, _ := utxos[0].PubKeyHash.IsContract(); isContract {
+		utxos = utxos[1:]
+	}
+
+	for i, u := range utxos {
+		sum = sum.Add(u.Value)
+		if sum.Cmp(amount) >= 0 {
+			return utxos[:i+1], true
+		}
+	}
+	return utxos, false
+
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout

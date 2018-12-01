@@ -54,17 +54,19 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 		return 1
 	}
 
-	// TODO: need to refactor and implement "get utxos by amount" method from []*UTXO
-	total := common.NewAmount(0)
-	for i, utxo := range utxos {
-		total = total.Add(utxo.Value)
-		if total.Cmp(amountValue.Add(tipValue)) >= 0 {
-			utxos = utxos[:i+1]
-			break
-		}
+	utxosToSpend, ok := core.PrepareUTXOs(utxos, amountValue.Add(tipValue))
+	if !ok {
+		logger.WithFields(logger.Fields{
+			"all utxos":      utxos,
+			"spending utxos": utxosToSpend,
+			"to":             toAddr,
+			"amount":         amountValue,
+			"tip":            tipValue,
+		}).Warn("Smart Contract: Insufficient fund for the transfer!")
+		return 1
 	}
 
-	transferTX, err := core.NewContractTransferTX(utxos, contractAddr, toAddr, amountValue, tipValue, sourceTXID)
+	transferTX, err := core.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

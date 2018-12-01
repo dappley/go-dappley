@@ -4,16 +4,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"io/ioutil"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 func TestScEngine_Execute(t *testing.T) {
@@ -58,7 +58,6 @@ var addrChecker = new AddrChecker;
 }
 
 func TestScEngine_BlockchainTransfer(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
 var MathTest = function(){};
 MathTest.prototype = {
@@ -71,6 +70,11 @@ var transferTest = new MathTest;`
 	contractPubKeyHash := core.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
 	contractUTXOs := []*core.UTXO{
+		{
+			Txid:     []byte("1"),
+			TxIndex:  0,
+			TXOutput: *core.NewTxOut(common.NewAmount(0), contractAddr, "somecontract"),
+		},
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
@@ -111,7 +115,6 @@ var transferTest = new MathTest;`
 }
 
 func TestScEngine_StorageGet(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
 
 var StorageTest = function(){
@@ -137,7 +140,6 @@ var storageTest = new StorageTest;
 }
 
 func TestScEngine_StorageSet(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
 
 var StorageTest = function(){
@@ -176,7 +178,6 @@ var storageTest = new StorageTest;
 }
 
 func TestScEngine_StorageDel(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script := `'use strict';
 
 var StorageTest = function(){
@@ -207,7 +208,6 @@ var storageTest = new StorageTest;
 }
 
 func TestScEngine_Reward(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script :=
 		`'use strict';
 
@@ -233,7 +233,6 @@ var rewardTest = new RewardTest;
 }
 
 func TestScEngine_TransactionTest(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script :=
 		`'use strict';
 
@@ -274,7 +273,6 @@ var transactionTest = new TransactionTest;
 }
 
 func TestStepRecord(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script, _ := ioutil.ReadFile("jslib/step_recorder.js")
 
 	ss := make(map[string]string)
@@ -298,7 +296,6 @@ func TestStepRecord(t *testing.T) {
 }
 
 func TestCrypto_VerifySignature(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script, _ := ioutil.ReadFile("test/test_crypto.js")
 
 	sc := NewV8Engine()
@@ -324,7 +321,6 @@ func TestCrypto_VerifySignature(t *testing.T) {
 }
 
 func TestCrypto_VerifyPublicKey(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script, _ := ioutil.ReadFile("test/test_crypto.js")
 
 	sc := NewV8Engine()
@@ -360,7 +356,6 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 }
 
 func TestMath(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	script, _ := ioutil.ReadFile("test/test_math.js")
 
 	sc := NewV8Engine()
@@ -374,8 +369,7 @@ func TestMath(t *testing.T) {
 	assert.True(t, i >= 0)
 }
 
-func TestBlkHeight(t *testing.T){
-	logrus.SetLevel(logrus.DebugLevel)
+func TestBlkHeight(t *testing.T) {
 	script, _ := ioutil.ReadFile("test/test_blockheight.js")
 
 	sc := NewV8Engine()
@@ -386,8 +380,7 @@ func TestBlkHeight(t *testing.T){
 
 }
 
-func TestTrimWhiteSpaces(t *testing.T){
-	logrus.SetLevel(logrus.DebugLevel)
+func TestTrimWhiteSpaces(t *testing.T) {
 	script, _ := ioutil.ReadFile("test/test_blockheight.js")
 	scriptStr := string(script)
 	str := strings.Replace(scriptStr, " ", "", -1)
