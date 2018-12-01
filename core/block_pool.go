@@ -78,7 +78,7 @@ func (pool *BlockPool) GetBlockchain() *Blockchain {
 }
 
 //Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScState, forkBlks []*Block) bool {
+func (pool *BlockPool) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScState, forkBlks []*Block, parentBlk *Block) bool {
 	logger.Info("Verifying transactions")
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
@@ -86,10 +86,10 @@ func (pool *BlockPool) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScSta
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
 		}).Debug("Verifying block before merge")
 
-		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, pool.blockchain.GetSCManager()) {
+		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, pool.blockchain.GetSCManager(), parentBlk) {
 			return false
 		}
-
+		parentBlk = forkBlks[i]
 		utxoSnapshot.UpdateUtxoState(forkBlks[i].GetTransactions())
 	}
 	return true

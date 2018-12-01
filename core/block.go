@@ -298,7 +298,7 @@ func (b *Block) VerifyHash() bool {
 	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
 
-func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager) bool {
+func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager, parentBlk *Block) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{"blkHash": b.GetHash()}).
 			Debug("No transactions to verify in this block")
@@ -356,7 +356,7 @@ L:
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight())
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(),parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions

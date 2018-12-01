@@ -54,6 +54,7 @@ type V8Engine struct {
 	generatedTXs  []*core.Transaction
 	handler       uint64
 	blkHeight	  uint64
+	seed 		  int64
 }
 
 func InitializeV8Engine() {
@@ -139,6 +140,11 @@ func (sc *V8Engine) ImportPrevUtxos(utxos []*core.UTXO) {
 // ImportCurrBlockHeight imports the current block height
 func (sc *V8Engine) ImportCurrBlockHeight(blkHeight uint64) {
 	sc.blkHeight = blkHeight
+}
+
+// ImportCurrBlockHeight imports the current block height
+func (sc *V8Engine) ImportSeed(seed int64) {
+	sc.seed = seed
 }
 
 func (sc *V8Engine) Execute(function, args string) string {

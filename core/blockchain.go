@@ -166,10 +166,18 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()
 
+	parentBlk, err := bc.GetTailBlock()
+	if err!=nil{
+		logger.WithFields(logger.Fields{
+			"height": block.GetHeight(),
+			"hash":   hex.EncodeToString(block.GetHash()),
+		}).Debug("Blockchain: Not able to get tail block")
+	}
+
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
-	err := bcTemp.setTailBlockHash(block.GetHash())
+	err = bcTemp.setTailBlockHash(block.GetHash())
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -180,11 +188,19 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
 
-	if bc.scManager != nil {
+	if bc.scManager != nil && parentBlk !=nil {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
-		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight())
-		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState)
+		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight(), parentBlk)
+		parentBlk,err := bc.GetTailBlock()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"height": block.GetHeight(),
+				"hash":   hex.EncodeToString(block.GetHash()),
+			}).Error("Blockchain: Can not get parent block!")
+			return err
+		}
+		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, block.GetHeight(), parentBlk.GetTimestamp())
 		scState.SaveToDatabase(bcTemp.db, block.GetHash())
 	}
 
@@ -384,7 +400,13 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	scState := NewScState()
 	scState.LoadFromDatabase(bc.db, forkParentHash)
 
-	if !bc.GetBlockPool().VerifyTransactions(*utxo, scState, forkBlks) {
+	parentBlk, err := bc.GetBlockByHash(forkParentHash)
+	if err != nil {
+		logger.Error("Blockchain: Not able to get parent block during merging")
+		return
+	}
+
+	if !bc.GetBlockPool().VerifyTransactions(*utxo, scState, forkBlks, parentBlk) {
 		return
 	}
 

@@ -554,7 +554,8 @@ func (tx *Transaction) Execute( index UTXOIndex,
 							   	scStorage *ScState,
 								rewards map[string]string,
 								engine ScEngine,
-								currblkHeight uint64) []*Transaction {
+								currblkHeight uint64,
+								parentBlk *Block) []*Transaction {
 
 	if tx.IsRewardTx() {
 		return nil
@@ -600,6 +601,7 @@ func (tx *Transaction) Execute( index UTXOIndex,
 	engine.ImportTransaction(tx)
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)
+	engine.ImportSeed(parentBlk.GetTimestamp())
 	engine.Execute(function, totalArgs)
 	return engine.GetGeneratedTXs()
 }

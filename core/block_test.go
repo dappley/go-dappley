@@ -279,6 +279,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	rewardEngine.On("ImportPrevUtxos", mock.Anything)
 	rewardEngine.On("GetGeneratedTXs").Return([]*Transaction{})
 	rewardEngine.On("ImportCurrBlockHeight", mock.Anything)
+	rewardEngine.On("ImportSeed", mock.Anything)
 	rewardEngine.On("Execute", mock.Anything, mock.Anything).Run(mockRewardExecute).Return("0")
 	rewardEngineManager := new(MockScEngineManager)
 	rewardEngineManager.On("CreateEngine").Return(rewardEngine)
@@ -295,6 +296,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	genTXEngine.On("ImportPrevUtxos", mock.Anything)
 	genTXEngine.On("GetGeneratedTXs").Return([]*Transaction{generatedTX})
 	genTXEngine.On("ImportCurrBlockHeight", mock.Anything)
+	genTXEngine.On("ImportSeed", mock.Anything)
 	genTXEngine.On("Execute", mock.Anything, mock.Anything).Return("0")
 	genTXEngineManager := new(MockScEngineManager)
 	genTXEngineManager.On("CreateEngine").Return(genTXEngine)
@@ -391,7 +393,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			utxoIndex := UTXOIndex{tt.utxos, &sync.RWMutex{}}
 			scState := NewScState()
 			block := NewBlock(tt.txs, blk)
-			assert.Equal(t, tt.ok, block.VerifyTransactions(utxoIndex, scState, tt.engineManager))
+			assert.Equal(t, tt.ok, block.VerifyTransactions(utxoIndex, scState, tt.engineManager, block))
 		})
 	}
 }

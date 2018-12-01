@@ -50,7 +50,7 @@ type NetService interface {
 
 type ScEngineManager interface {
 	CreateEngine() ScEngine
-	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState)
+	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState,blkHeight uint64,seed int64)
 }
 
 type ScEngine interface {
@@ -63,6 +63,7 @@ type ScEngine interface {
 	ImportTransaction(tx *Transaction)
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
+    ImportSeed(seed int64)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }

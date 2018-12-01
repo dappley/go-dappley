@@ -458,10 +458,11 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("ImportPrevUtxos", mock.Anything)
 				sc.On("GetGeneratedTXs").Return([]*Transaction{})
 				sc.On("ImportCurrBlockHeight", mock.Anything)
+				sc.On("ImportSeed", mock.Anything)
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
-
-			tx.Execute(*index, NewScState(), nil, sc, 0)
+			parentBlk := GenerateMockBlock()
+			tx.Execute(*index, NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}
