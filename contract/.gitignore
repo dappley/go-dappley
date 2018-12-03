@@ -1,2 +1,4 @@
 v8/*.o
 v8/lib/*.o
+v8/libdappleyv8.dylib
+v8/libdappleyv8.so

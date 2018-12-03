@@ -22,7 +22,7 @@ LIB_OBJ_FILES := $(patsubst $(LIB_SRC_DIR)/%.cc,$(LIB_SRC_DIR)/%.cc.o,$(LIB_SRC_
 build: engine.cc.o $(LIB_OBJ_FILES)
 	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.$(FILESUFFIX) -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
 
-install:
+install: build
 	sudo install ../lib/*.$(FILESUFFIX) /usr/local/lib/
 	$(LDCONFIG)
 
