@@ -1,4 +1,4 @@
-CXXFLAGS = -g -std=gnu++14 -fno-exceptions -nostdinc++ -isystem../include/third_party/libc++/include -isystem../include/third_party/libc++abi/include  -I../include -fno-rtti -fPIC -m64 -Wall -Wextra -Wno-unused-parameter -Wno-unused-result -O2 
+CXXFLAGS = -g -std=c++11 -fno-exceptions -nostdinc++ -isystem../include/third_party/libc++/include -isystem../include/third_party/libc++abi/include  -I../include -fno-rtti -fPIC -m64 -Wall -Wextra -Wno-unused-parameter -Wno-unused-result -O2 
 CXX = g++
 UNAME = $(shell uname)
 ifeq ($(UNAME), Linux)
