@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
@@ -98,7 +99,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 		return &rpcpb.SendFromMinerResponse{Message: "Invalid send amount (must be >0)"}, nil
 	}
 
-	err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain())
+	_, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	if err != nil {
 		return &rpcpb.SendFromMinerResponse{Message: "Add balance failed, " + err.Error()}, nil
 	}

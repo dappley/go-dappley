@@ -20,11 +20,11 @@ package logic
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/contract"
 	"time"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
@@ -216,52 +216,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 }
 
 func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, error) {
-	if !senderWallet.GetAddress().ValidateAddress() {
-		return nil, ErrInvalidSenderAddress
-	}
-
-	//Contract deployment transaction does not need to validate to address
-	if !to.ValidateAddress() && contract == "" {
-		return nil, ErrInvalidRcverAddress
-	}
-	if amount.Validate() != nil || amount.IsZero() {
-		return nil, ErrInvalidAmount
-	}
-
-	pubKeyHash, _ := core.NewUserPubKeyHash(senderWallet.Key.PublicKey)
-	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
-
-	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
-
-	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
-	if err != nil {
-		return nil, err
-	}
-
-	tx, err := core.NewUTXOTransaction(utxos, senderWallet.GetAddress(), to, amount, *senderWallet.GetKeyPair(), common.NewAmount(tip), contract)
-
-	bc.GetTxPool().Push(tx)
-	node.TxBroadcast(&tx)
-	contractAddr := tx.GetContractAddress()
-	if contractAddr.String() != "" {
-		if to.String() == contractAddr.String(){
-			logger.WithFields(logger.Fields{
-				"contractAddr": contractAddr.String(),
-				"data"	  	  : contract,
-			}).Info("Smart Contract Invoke Transaction Sent Successful!")
-		}else{
-			logger.WithFields(logger.Fields{
-				"contractAddr": contractAddr.String(),
-				"contract"	  : contract,
-			}).Info("Smart Contract Deployement Transaction Sent Successful!")
-		}
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return tx.ID, err
+	return sendTo(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, contract, bc, node)
 }
 
 func SetMinerKeyPair(key string) {
@@ -273,39 +228,9 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain) error {
-	if !address.ValidateAddress() {
-		return ErrInvalidAddress
-	}
-
-	if amount.Validate() != nil || amount.IsZero() {
-		return ErrInvalidAmount
-	}
+func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, error) {
 	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
-	minerWallet := &client.Wallet{}
-	minerWallet.Key = minerKeyPair
-	minerWallet.Addresses = append(minerWallet.Addresses, minerWallet.Key.GenerateAddress(false))
-
-	pubKeyHash, _ := core.NewUserPubKeyHash(minerWallet.Key.PublicKey)
-	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
-
-	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
-
-	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
-	if err != nil {
-		return err
-	}
-
-	tx, err := core.NewUTXOTransaction(utxos, minerWallet.GetAddress(), address, amount, *minerWallet.GetKeyPair(), common.NewAmount(0), "")
-
-	if err != nil {
-		return err
-	}
-
-	bc.GetTxPool().Push(tx)
-
-	return err
-
+	return sendTo(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, 0, "", bc, node)
 }
 
 func GetWalletManager(path string) (*client.WalletManager, error) {
@@ -316,4 +241,54 @@ func GetWalletManager(path string) (*client.WalletManager, error) {
 		return nil, err
 	}
 	return wm, nil
+}
+
+func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, error) {
+	if !from.ValidateAddress() {
+		return nil, ErrInvalidSenderAddress
+	}
+
+	//Contract deployment transaction does not need to validate to address
+	if !to.ValidateAddress() && contract == "" {
+		return nil, ErrInvalidRcverAddress
+	}
+
+	if amount.Validate() != nil || amount.IsZero() {
+		return nil, ErrInvalidAmount
+	}
+
+	pubKeyHash, _ := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
+
+	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, common.NewAmount(tip), contract)
+
+	bc.GetTxPool().Push(tx)
+	node.TxBroadcast(&tx)
+	contractAddr := tx.GetContractAddress()
+	if contractAddr.String() != "" {
+		if to.String() == contractAddr.String() {
+			logger.WithFields(logger.Fields{
+				"contractAddr": contractAddr.String(),
+				"data":         contract,
+			}).Info("Smart Contract Invoke Transaction Sent Successful!")
+		} else {
+			logger.WithFields(logger.Fields{
+				"contractAddr": contractAddr.String(),
+				"contract":     contract,
+			}).Info("Smart Contract Deployement Transaction Sent Successful!")
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tx.ID, err
 }

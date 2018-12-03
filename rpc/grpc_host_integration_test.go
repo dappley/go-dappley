@@ -575,7 +575,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -592,7 +592,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)

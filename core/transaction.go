@@ -498,7 +498,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair KeyPair,
+func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair *KeyPair,
 	tip *common.Amount, contract string) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
