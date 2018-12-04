@@ -619,6 +619,135 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
+func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
+	rpcContext, err := createRpcTestContext(9)
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	receiverWallet1, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test1")
+	if err != nil {
+		panic(err)
+	}
+	receiverWallet2, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test2")
+	if err != nil {
+		panic(err)
+	}
+	receiverWallet3, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test3")
+	if err != nil {
+		panic(err)
+	}
+	receiverWallet4, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test4")
+	if err != nil {
+		panic(err)
+	}
+
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	maxHeight := rpcContext.bc.GetMaxHeight()
+	for maxHeight < 2 {
+		maxHeight = rpcContext.bc.GetMaxHeight()
+	}
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
+	utxoIndex := core.LoadUTXOIndex(rpcContext.store)
+	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
+	assert.Nil(t, err)
+
+	transaction1, err := core.NewUTXOTransaction(utxos,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet1.GetAddress(),
+		common.NewAmount(3),
+		*rpcContext.wallet.GetKeyPair(),
+		common.NewAmount(0),
+		"",
+	)
+	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction1})
+	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
+	transaction2, err := core.NewUTXOTransaction(utxos,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet2.GetAddress(),
+		common.NewAmount(2),
+		*rpcContext.wallet.GetKeyPair(),
+		common.NewAmount(0),
+		"",
+	)
+	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction2})
+	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	transaction3, err := core.NewUTXOTransaction(utxos,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet3.GetAddress(),
+		common.NewAmount(1),
+		*rpcContext.wallet.GetKeyPair(),
+		common.NewAmount(0),
+		"",
+	)
+	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
+
+	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
+	assert.Nil(t, err)
+	assert.Equal(t, []uint32{OK, OK, OK}, successResponse.ErrorCode)
+
+	maxHeight = rpcContext.bc.GetMaxHeight()
+	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
+	}
+
+	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
+	errTransaction, err := core.NewUTXOTransaction(utxos2,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet4.GetAddress(),
+		common.NewAmount(3),
+		*rpcContext.wallet.GetKeyPair(),
+		common.NewAmount(0),
+		"",
+	)
+
+	transaction4, err := core.NewUTXOTransaction(utxos2,
+		rpcContext.wallet.GetAddress(),
+		receiverWallet4.GetAddress(),
+		common.NewAmount(3),
+		*rpcContext.wallet.GetKeyPair(),
+		common.NewAmount(0),
+		"",
+	)
+	errTransaction.Vin[0].Signature = []byte("invalid")
+	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
+	assert.Nil(t, err)
+	assert.Equal(t, []uint32{InvalidTransaction, OK}, failedResponse.ErrorCode)
+
+	maxHeight = rpcContext.bc.GetMaxHeight()
+	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
+	}
+
+	rpcContext.consensus.Stop()
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
+	time.Sleep(time.Second)
+
+	minedReward := common.NewAmount(10)
+	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(9))
+	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
+	assert.Equal(t, leftAmount, realAmount)
+	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.store)
+	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.store)
+	recvAmount3, err := logic.GetBalance(receiverWallet3.GetAddress(), rpcContext.store)
+	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.store)
+	assert.Equal(t, common.NewAmount(3), recvAmount1)
+	assert.Equal(t, common.NewAmount(2), recvAmount2)
+	assert.Equal(t, common.NewAmount(1), recvAmount3)
+	assert.Equal(t, common.NewAmount(3), recvAmount4)
+}
+
 func TestGetNewTransactions(t *testing.T) {
 	logger.SetLevel(logger.WarnLevel)
 	rpcContext, err := createRpcTestContext(11)
