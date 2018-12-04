@@ -615,10 +615,9 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	address := utxos[0].PubKeyHash.GenerateAddress()
 	logger.WithFields(logger.Fields{
 		"contractAddr":    address.String(),
-		"contract":        utxos[0].Contract,
 		"invokedFunction": function,
 		"arguments":       totalArgs,
-	}).Info("Executing smart contract...")
+	}).Debug("Executing smart contract...")
 	engine.ImportSourceCode(utxos[0].Contract)
 	engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
 	engine.ImportContractAddr(address)
