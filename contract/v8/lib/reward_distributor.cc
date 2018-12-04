@@ -29,9 +29,6 @@ void NewRewardDistributorInstance(Isolate *isolate, Local<Context> context, void
 // VerifyAddressCallback
 void RecordRewardCallback(const FunctionCallbackInfo<Value> &info) {
 
-    printf("RecordRewardCallbaack!");
-    fflush(stdout);
-
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));

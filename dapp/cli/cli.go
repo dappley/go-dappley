@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -71,6 +72,7 @@ const (
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
 	flagData             = "data"
+	flagFilePath		 = "file"
 	flagPeerFullAddr     = "peerFullAddr"
 	flagProducerAddr     = "address"
 	flagListPrivateKey   = "privateKey"
@@ -180,6 +182,12 @@ var cmdFlagsMap = map[string][]flagPars{
 			"",
 			valueTypeString,
 			"Smart contract in JavaScript. Eg. helloworld!",
+		},
+		flagPars{
+			flagFilePath,
+			"",
+			valueTypeString,
+			"Smart contract file path. Eg. contract/smart_contract.js",
 		},
 	},
 	cliAddPeer: {flagPars{
@@ -734,13 +742,25 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	var data string
+	path := *(flags[flagFilePath].(*string))
+	if path == "" {
+		data = *(flags[flagData].(*string))
+	}else{
+		script,err := ioutil.ReadFile(path)
+		if err!=nil{
+			fmt.Println("Smart contract path is invalid. Path:", path)
+			return
+		}
+		data = string(script)
+	}
 	response, err := client.(rpcpb.AdminServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
 		From:       *(flags[flagFromAddress].(*string)),
 		To:         *(flags[flagToAddress].(*string)),
 		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
 		Tip:        *(flags[flagTip].(*uint64)),
 		Walletpath: clientpkg.GetWalletFilePath(),
-		Data:   *(flags[flagData].(*string)),
+		Data:   	data,
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)

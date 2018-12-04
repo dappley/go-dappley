@@ -49,13 +49,13 @@ func UintToHex(num uint64) []byte {
 	return buff.Bytes()
 }
 
-type argStruct struct{
+type ArgStruct struct{
 	Function string `json:"function"`
 	Args 	 []string `json:"args"`
 }
 
 func DecodeScInput(s string) (function string, args []string){
-	var input argStruct
+	var input ArgStruct
 	err := json.Unmarshal([]byte(s),&input)
 	if err!= nil{
 		logger.WithFields(logger.Fields{
@@ -80,5 +80,8 @@ func PrepareArgs(args []string) string{
 }
 
 func quoteArg(arg string) string{
-	return quotationMark + arg + quotationMark
+	if arg[0] != '['{
+		return quotationMark + arg + quotationMark
+	}
+	return arg
 }
