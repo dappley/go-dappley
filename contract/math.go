@@ -18,9 +18,6 @@ func RandomFunc(handler unsafe.Pointer, max C.int) int{
 		}).Debug("Smart Contract: Failed to get the engine instance while executing transfer!")
 		return -1
 	}
-	logger.WithFields(logger.Fields{
-		"max": max,
-	}).Info("Smart Contract: random function has been called")
 
 	if engine.seed == 0{
 		logger.WithFields(logger.Fields{
