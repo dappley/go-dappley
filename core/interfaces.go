@@ -64,6 +64,7 @@ type ScEngine interface {
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
     ImportSeed(seed int64)
+	ImportNodeAddress(addr Address)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }

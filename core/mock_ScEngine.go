@@ -84,7 +84,12 @@ func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
 	_m.Called(currBlkHeight)
 }
 
-// ImportCurrBlockHeight provides a mock function with given fields: currBlkHeight
+// ImportSeed provides a mock function with given fields: seed
 func (_m *MockScEngine) ImportSeed(seed int64) {
 	_m.Called(seed)
+}
+
+// ImportNodeAddress provides a mock function with given fields: addr
+func (_m *MockScEngine) ImportNodeAddress(addr Address) {
+	_m.Called(addr)
 }

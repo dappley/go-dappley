@@ -55,6 +55,7 @@ type V8Engine struct {
 	handler       uint64
 	blkHeight	  uint64
 	seed 		  int64
+	nodeAddr 	  core.Address
 }
 
 func InitializeV8Engine() {
@@ -145,6 +146,11 @@ func (sc *V8Engine) ImportCurrBlockHeight(blkHeight uint64) {
 // ImportCurrBlockHeight imports the current block height
 func (sc *V8Engine) ImportSeed(seed int64) {
 	sc.seed = seed
+}
+
+// ImportCurrBlockHeight imports the current block height
+func (sc *V8Engine) ImportNodeAddress(addr core.Address) {
+	sc.nodeAddr = addr
 }
 
 func (sc *V8Engine) Execute(function, args string) string {

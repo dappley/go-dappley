@@ -7,13 +7,17 @@ import (
 
 const scheduleFuncName = "dapp_schedule"
 
-type V8EngineManager struct{}
+type V8EngineManager struct{
+	address core.Address
+}
 
-func NewV8EngineManager() *V8EngineManager{
-	return &V8EngineManager{}
+func NewV8EngineManager(address core.Address) *V8EngineManager{
+	return &V8EngineManager{address}
 }
 
 func (em *V8EngineManager) CreateEngine() core.ScEngine{
+	engine := NewV8Engine()
+	engine.ImportNodeAddress(em.address)
 	return NewV8Engine()
 }
 
@@ -27,7 +31,7 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
 
 	for _, utxo := range contractUtxos{
 		addr := utxo.PubKeyHash.GenerateAddress()
-		engine := NewV8Engine()
+		engine := em.CreateEngine()
 		engine.ImportSourceCode(utxo.Contract)
 		engine.ImportLocalStorage(scStorage.GetStorageByAddress(addr.String()))
 		engine.ImportContractAddr(addr)
