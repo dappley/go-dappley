@@ -4,7 +4,6 @@ import "C"
 import (
 	logger "github.com/sirupsen/logrus"
 	"math/rand"
-	"time"
 	"unsafe"
 )
 
@@ -23,15 +22,15 @@ func RandomFunc(handler unsafe.Pointer, max C.int) int{
 		"max": max,
 	}).Info("Smart Contract: random function has been called")
 
-	if engine.sourceTXID == nil{
+	if engine.seed == 0{
 		logger.WithFields(logger.Fields{
 			"handler" : uint64(uintptr(handler)),
 			"function": "Math.random",
 			"max":  max,
-		}).Debug("Smart Contract: Failed to get source txid!")
+		}).Debug("Smart Contract: Failed to get random seed!")
 		return -1
 	}
 
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(engine.seed)
 	return rand.Intn(int(max))
 }

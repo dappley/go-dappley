@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -360,13 +359,10 @@ func TestMath(t *testing.T) {
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
-	sc.ImportSourceTXID([]byte("testmath"))
+	sc.ImportSeed(10)
 
 	res := sc.Execute("random", "20")
-	i, err := strconv.Atoi(res)
-	assert.Nil(t, err)
-	assert.True(t, i < 20)
-	assert.True(t, i >= 0)
+	assert.Equal(t, "14", res)
 }
 
 func TestBlkHeight(t *testing.T) {

@@ -80,7 +80,8 @@ func PrepareArgs(args []string) string{
 }
 
 func quoteArg(arg string) string{
-	if arg[0] != '['{
+	//if the input is an array or a json object, do not quote them.
+	if arg[0] != '[' && arg[0] != '{'{
 		return quotationMark + arg + quotationMark
 	}
 	return arg
