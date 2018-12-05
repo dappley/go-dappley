@@ -366,7 +366,7 @@ func TestMath(t *testing.T) {
 }
 
 func TestBlkHeight(t *testing.T) {
-	script, _ := ioutil.ReadFile("test/test_blockheight.js")
+	script, _ := ioutil.ReadFile("test/test_blockchain.js")
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))

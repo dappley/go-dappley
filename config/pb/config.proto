@@ -18,6 +18,7 @@ message NodeConfig{
     uint32 rpcPort = 4;
     string keyPath = 5;
     uint32 txPoolLimit = 6;
+    string nodeAddr = 7;
 }
 
 message DynastyConfig{
