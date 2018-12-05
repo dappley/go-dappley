@@ -19,6 +19,9 @@ Blockchain.prototype = {
     },
     getCurrBlockHeight: function(){
         return this.nativeBlockchain.getCurrBlockHeight();
+    },
+    getNodeAddress : function(){
+        return this.nativeBlockchain.getNodeAddress();
     }
 };
 
