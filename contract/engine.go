@@ -101,6 +101,8 @@ func NewV8Engine() *V8Engine {
 
 //DestroyEngine destroy V8Engine instance
 func (sc *V8Engine) DestroyEngine() {
+	storagesMutex.Lock()
+	defer storagesMutex.Unlock()
 	delete(v8EngineList, sc.handler)
 }
 
