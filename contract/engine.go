@@ -54,9 +54,9 @@ type V8Engine struct {
 	sourceTXID    []byte
 	generatedTXs  []*core.Transaction
 	handler       uint64
-	blkHeight	  uint64
-	seed 		  int64
-	nodeAddr 	  core.Address
+	blkHeight     uint64
+	seed          int64
+	nodeAddr      core.Address
 }
 
 func InitializeV8Engine() {
@@ -97,6 +97,11 @@ func NewV8Engine() *V8Engine {
 	defer storagesMutex.Unlock()
 	v8EngineList[engine.handler] = engine
 	return engine
+}
+
+//DestroyEngine destroy V8Engine instance
+func (sc *V8Engine) DestroyEngine() {
+	delete(v8EngineList, sc.handler)
 }
 
 func (sc *V8Engine) ImportSourceCode(source string) {

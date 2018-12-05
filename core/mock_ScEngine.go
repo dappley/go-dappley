@@ -9,6 +9,11 @@ type MockScEngine struct {
 	mock.Mock
 }
 
+// DestroyEngine provides a mock function with given fields:
+func (_m *MockScEngine) DestroyEngine() {
+	_m.Called()
+}
+
 // Execute provides a mock function with given fields: function, args
 func (_m *MockScEngine) Execute(function string, args string) string {
 	ret := _m.Called(function, args)
@@ -44,9 +49,19 @@ func (_m *MockScEngine) ImportContractAddr(contractAddr Address) {
 	_m.Called(contractAddr)
 }
 
+// ImportCurrBlockHeight provides a mock function with given fields: currBlkHeight
+func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
+	_m.Called(currBlkHeight)
+}
+
 // ImportLocalStorage provides a mock function with given fields: storage
 func (_m *MockScEngine) ImportLocalStorage(storage map[string]string) {
 	_m.Called(storage)
+}
+
+// ImportNodeAddress provides a mock function with given fields: addr
+func (_m *MockScEngine) ImportNodeAddress(addr Address) {
+	_m.Called(addr)
 }
 
 // ImportPrevUtxos provides a mock function with given fields: utxos
@@ -57,6 +72,11 @@ func (_m *MockScEngine) ImportPrevUtxos(utxos []*UTXO) {
 // ImportRewardStorage provides a mock function with given fields: rewards
 func (_m *MockScEngine) ImportRewardStorage(rewards map[string]string) {
 	_m.Called(rewards)
+}
+
+// ImportSeed provides a mock function with given fields: seed
+func (_m *MockScEngine) ImportSeed(seed int64) {
+	_m.Called(seed)
 }
 
 // ImportSourceCode provides a mock function with given fields: source
@@ -77,19 +97,4 @@ func (_m *MockScEngine) ImportTransaction(tx *Transaction) {
 // ImportUTXOs provides a mock function with given fields: utxos
 func (_m *MockScEngine) ImportUTXOs(utxos []*UTXO) {
 	_m.Called(utxos)
-}
-
-// ImportCurrBlockHeight provides a mock function with given fields: currBlkHeight
-func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
-	_m.Called(currBlkHeight)
-}
-
-// ImportSeed provides a mock function with given fields: seed
-func (_m *MockScEngine) ImportSeed(seed int64) {
-	_m.Called(seed)
-}
-
-// ImportNodeAddress provides a mock function with given fields: addr
-func (_m *MockScEngine) ImportNodeAddress(addr Address) {
-	_m.Called(addr)
 }

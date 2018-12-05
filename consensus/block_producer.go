@@ -120,6 +120,7 @@ func (bp *BlockProducer) executeSmartContract(txs []*core.Transaction, rewards m
 	scStorage := core.NewScState()
 	scStorage.LoadFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
 	engine := vm.NewV8Engine()
+	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction
 	for _, tx := range txs {
 		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
