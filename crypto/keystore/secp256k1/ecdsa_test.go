@@ -93,7 +93,7 @@ func TestSign(t *testing.T) {
 				assert.Nil(t, err)
 				originPub, err := FromECDSAPublicKey(&tt.priv.PublicKey)
 				assert.Nil(t, err)
-				if hex.EncodeToString(originPub) != hex.EncodeToString(originPubgpub) {
+				if hex.EncodeToString(originPub) != hex.EncodeToString(gpub) {
 					t.Errorf("recover failed: pub not equal")
 					seckey, _ := FromECDSAPrivateKey(tt.priv)
 					t.Log("private:", hex.EncodeToString(seckey))
