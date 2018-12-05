@@ -19,14 +19,13 @@
 package secp256k1
 
 import (
-	"testing"
-
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
 	"io"
+	"testing"
 
 	"github.com/dappley/go-dappley/crypto/hash"
-	"github.com/nebulasio/go-nebulas/util/byteutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,11 +93,11 @@ func TestSign(t *testing.T) {
 				assert.Nil(t, err)
 				originPub, err := FromECDSAPublicKey(&tt.priv.PublicKey)
 				assert.Nil(t, err)
-				if !byteutils.Equal(originPub, gpub) {
+				if hex.EncodeToString(originPub) != hex.EncodeToString(originPubgpub) {
 					t.Errorf("recover failed: pub not equal")
 					seckey, _ := FromECDSAPrivateKey(tt.priv)
-					t.Log("private:", byteutils.Hex(seckey))
-					t.Log("public:", byteutils.Hex(originPub))
+					t.Log("private:", hex.EncodeToString(seckey))
+					t.Log("public:", hex.EncodeToString(originPub))
 					return
 				}
 			})
