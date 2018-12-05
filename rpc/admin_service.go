@@ -126,7 +126,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 
 	senderWallet := wm.GetWalletByAddress(sendFromAddress)
-	if len(senderWallet.Addresses) == 0 {
+	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
 		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
 	}
 
