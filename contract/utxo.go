@@ -6,6 +6,7 @@ package vm
 import "C"
 import (
 	"encoding/hex"
+	"math"
 	"unsafe"
 
 	logger "github.com/sirupsen/logrus"
@@ -40,7 +41,8 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	utxoLength := C.int(len(engine.prevUtxos))
 	utxosAddr := (*C.struct_utxo_t)(C.malloc(C.size_t(C.sizeof_struct_utxo_t * utxoLength)))
 	defer C.free(unsafe.Pointer(utxosAddr))
-	utxos := (*[1 << 30]C.struct_utxo_t)(unsafe.Pointer(utxosAddr))[:utxoLength:utxoLength]
+	var temp C.struct_utxo_t
+	utxos := (*[(math.MaxInt32 - 1)/unsafe.Sizeof(temp)]C.struct_utxo_t)(unsafe.Pointer(utxosAddr))[:utxoLength:utxoLength]
 	for index, prevUtxo := range engine.prevUtxos {
 		utxo := &utxos[index]
 		utxo.txid = C.CString(hex.EncodeToString(prevUtxo.Txid))

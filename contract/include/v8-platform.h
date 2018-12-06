@@ -250,6 +250,13 @@ class PageAllocator {
    */
   virtual bool SetPermissions(void* address, size_t length,
                               Permission permissions) = 0;
+
+  /**
+   * Frees memory in the given [address, address + size) range. address and size
+   * should be operating system page-aligned. The next write to this
+   * memory area brings the memory transparently back.
+   */
+  virtual bool DiscardSystemPages(void* address, size_t size) { return true; }
 };
 
 /**
@@ -401,6 +408,12 @@ class Platform {
    * Returns an instance of a v8::TracingController. This must be non-nullptr.
    */
   virtual TracingController* GetTracingController() = 0;
+
+  /**
+   * Tells the embedder to generate and upload a crashdump during an unexpected
+   * but non-critical scenario.
+   */
+  virtual void DumpWithoutCrashing() {}
 
  protected:
   /**
