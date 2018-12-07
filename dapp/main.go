@@ -42,11 +42,15 @@ const (
 
 func main() {
 
+	logger.SetFormatter(&logger.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	logger.SetLevel(logger.InfoLevel)
+
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 	flag.Parse()
-
-	logger.SetLevel(logger.DebugLevel)
 
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}

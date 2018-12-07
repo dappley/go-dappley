@@ -393,3 +393,15 @@ func TestGetNodeAddress(t *testing.T) {
 
 	assert.Equal(t, "testAddr", sc.Execute("getNodeAddress", ""))
 }
+
+func TestNewAddress(t *testing.T){
+	kp := core.NewKeyPair()
+	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	pk := hex.EncodeToString(privData)
+	publicKey := hex.EncodeToString(kp.PublicKey)
+	pkh, _ := core.NewUserPubKeyHash(kp.PublicKey)
+	addr := pkh.GenerateAddress()
+	fmt.Println("privatekey:", pk)
+	fmt.Println("publickey:", publicKey)
+	fmt.Println("addr:", addr)
+}
