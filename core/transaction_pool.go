@@ -82,7 +82,11 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 
 		if tx.Verify(utxoIndex, txPool, 0) {
 			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
-			validTxs = append(validTxs, dependentTxs...)
+			for _, dependentTx := range dependentTxs {
+				if !contains(dependentTx, validTxs) {
+					validTxs = append(validTxs, dependentTx)
+				}
+			}
 		} else {
 			invalidTxs = append(invalidTxs, tx)
 		}
