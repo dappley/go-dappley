@@ -50,10 +50,11 @@ type NetService interface {
 
 type ScEngineManager interface {
 	CreateEngine() ScEngine
-	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState,blkHeight uint64,seed int64)
+	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState, blkHeight uint64, seed int64)
 }
 
 type ScEngine interface {
+	DestroyEngine()
 	ImportSourceCode(source string)
 	ImportLocalStorage(storage map[string]string)
 	ImportContractAddr(contractAddr Address)
@@ -63,7 +64,8 @@ type ScEngine interface {
 	ImportTransaction(tx *Transaction)
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
-    ImportSeed(seed int64)
+	ImportSeed(seed int64)
+	ImportNodeAddress(addr Address)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
 }

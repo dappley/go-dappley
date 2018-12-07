@@ -277,12 +277,12 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 			logger.WithFields(logger.Fields{
 				"contractAddr": contractAddr.String(),
 				"data":         contract,
-			}).Info("Smart Contract Invoke Transaction Sent Successful!")
+			}).Debug("Smart Contract Invoke Transaction Sent Successful!")
 		} else {
 			logger.WithFields(logger.Fields{
 				"contractAddr": contractAddr.String(),
 				"contract":     contract,
-			}).Info("Smart Contract Deployement Transaction Sent Successful!")
+			}).Debug("Smart Contract Deployement Transaction Sent Successful!")
 		}
 	}
 

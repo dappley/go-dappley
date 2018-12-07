@@ -568,14 +568,6 @@
   version = "v0.3.7"
 
 [[projects]]
-  digest = "1:7141fb68f409e92a18ffcd2ac731de9bb65f672f2ad5269a80c3a3f84c178324"
-  name = "github.com/nebulasio/go-nebulas"
-  packages = ["util/byteutils"]
-  pruneopts = "UT"
-  revision = "7f78adb93fa34d2c4cc4b206d11b03ee84c8bd1c"
-  version = "v1.0.7"
-
-[[projects]]
   digest = "1:450b7623b185031f3a456801155c8320209f75d0d4c4e633c6b1e59d44d6e392"
   name = "github.com/opentracing/opentracing-go"
   packages = [
@@ -890,7 +882,6 @@
     "github.com/libp2p/go-libp2p-peer",
     "github.com/libp2p/go-libp2p-peerstore",
     "github.com/multiformats/go-multiaddr",
-    "github.com/nebulasio/go-nebulas/util/byteutils",
     "github.com/peterh/liner",
     "github.com/rcrowley/go-metrics",
     "github.com/satori/go.uuid",

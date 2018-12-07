@@ -82,6 +82,8 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
   create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(create_params);
 
+  int errorCode = 0;
+
   {
     Isolate::Scope isolate_scope(isolate);
 
@@ -123,7 +125,8 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
       if (!Script::Compile(context, source).ToLocal(&script)) {
         reportException(isolate, &try_catch);
         *result = strdup("1");
-        return 1;
+        errorCode = 1;
+        goto RET;
       }
 
       // Run the script to get the result.
@@ -132,7 +135,8 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
         assert(try_catch.HasCaught());
         reportException(isolate, &try_catch);
         *result = strdup("1");
-        return 1;
+        errorCode = 1;
+        goto RET;
       }
 
       // set result.
@@ -147,11 +151,12 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     }
   }
 
+RET:
   // Dispose the isolate and tear down V8.
   isolate->Dispose();
 
   delete create_params.array_buffer_allocator;
-  return 0;
+  return errorCode;
 }
 
 void DisposeV8(){

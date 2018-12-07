@@ -20,6 +20,7 @@ package core
 
 import (
 	"bytes"
+	"sync"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/sorted"
@@ -36,6 +37,7 @@ type TransactionPool struct {
 	index 		 map[string]*Transaction
 	limit        uint32
 	EventBus     EventBus.Bus
+	mutex        sync.RWMutex
 }
 
 func compareTxTips(tx1 interface{}, tx2 interface{}) int {
@@ -61,10 +63,13 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 		index: 		  make(map[string]*Transaction),
 		limit:        limit,
 		EventBus:     EventBus.New(),
+		mutex:        sync.RWMutex{},
 	}
 }
 
 func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
 	for _, tx := range txs {
 		txPool.Transactions.Del(*tx)
 		delete(txPool.index, string(tx.ID))
@@ -74,7 +79,7 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	var invalidTxs []*Transaction
-
+	
 	for _, tx := range txPool.index {
 		if contains(tx, validTxs) || contains(tx, invalidTxs) {
 			continue
@@ -95,6 +100,8 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 }
 
 func (txPool *TransactionPool) GetAllTransactions() []*Transaction{
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
 	txs := []*Transaction{}
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
@@ -148,6 +155,8 @@ func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Tran
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
 	if txPool.limit == 0 {
 		logger.Warn("TransactionPool: transaction not pushed to pool because limit is set to 0")
 		return
@@ -177,6 +186,8 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 }
 
 func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
 	if _, exists := txPool.index[string(txId)]; !exists {
 		logger.Warn("TransactionPool: transaction does not exists")
 		return nil
