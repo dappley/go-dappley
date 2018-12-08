@@ -307,7 +307,7 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScE
 
 	txPool := NewTransactionPool(uint32(len(b.transactions)))
 	for _, tx := range b.GetTransactions() {
-		txPool.Transactions.Push(*tx)
+		txPool.Push(*tx)
 	}
 
 	var rewardTX *Transaction

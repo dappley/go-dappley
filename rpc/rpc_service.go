@@ -225,6 +225,33 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
 
+// RpcSendBatchTransaction sends a batch of transactions to blockchain created by wallet client
+func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
+	respErrorCode := []uint32{}
+	for _, txInReq := range in.Transaction {
+		tx := core.Transaction{nil, nil, nil, 0}
+		tx.FromProto(txInReq)
+
+		if tx.IsCoinbase() {
+			respErrorCode = append(respErrorCode, InvalidTransaction)
+			continue
+		}
+
+		utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+
+		if tx.Verify(*utxoIndex, core.NewTransactionPool(128), 0) == false {
+			respErrorCode = append(respErrorCode, InvalidTransaction)
+			continue
+		}
+
+		rpcService.node.GetBlockchain().GetTxPool().Push(tx)
+		rpcService.node.TxBroadcast(&tx)
+
+		respErrorCode = append(respErrorCode, OK)
+	}
+	return &rpcpb.SendBatchTransactionResponse{ErrorCode: respErrorCode}, nil
+}
+
 func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
 	var txHandler interface{}
 
