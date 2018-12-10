@@ -15,6 +15,7 @@ service RpcService {
   rpc RpcGetBlockByHash(GetBlockByHashRequest) returns (GetBlockByHashResponse) {}
   rpc RpcGetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {}
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
+  rpc RpcSendBatchTransaction(SendBatchTransactionRequest) returns (SendBatchTransactionResponse) {}
   rpc RpcGetNewTransactions(GetNewTransactionsRequest) returns (stream GetNewTransactionsResponse) {}
 }
 
@@ -176,11 +177,17 @@ message SendTransactionResponse {
   uint32 errorCode = 1;
 }
 
+message SendBatchTransactionRequest {
+  repeated corepb.Transaction transaction = 1;
+}
+
+message SendBatchTransactionResponse {
+  repeated uint32 errorCode = 1;
+}
+
 message GetNewTransactionsRequest {
 }
 
 message GetNewTransactionsResponse {
   corepb.Transaction transaction = 1;
 }
-
-
