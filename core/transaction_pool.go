@@ -182,7 +182,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 
 func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
 	if _, exists := txPool.index[string(txId)]; !exists {
-		logger.Warn("TransactionPool: transaction does not exists")
+		logger.Warn("TransactionPool: transaction does not exist")
 		return nil
 	}
 
