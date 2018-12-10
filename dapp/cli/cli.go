@@ -72,7 +72,7 @@ const (
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
 	flagData             = "data"
-	flagFilePath		 = "file"
+	flagFilePath         = "file"
 	flagPeerFullAddr     = "peerFullAddr"
 	flagProducerAddr     = "address"
 	flagListPrivateKey   = "privateKey"
@@ -746,9 +746,9 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	path := *(flags[flagFilePath].(*string))
 	if path == "" {
 		data = *(flags[flagData].(*string))
-	}else{
-		script,err := ioutil.ReadFile(path)
-		if err!=nil{
+	} else {
+		script, err := ioutil.ReadFile(path)
+		if err != nil {
 			fmt.Println("Smart contract path is invalid. Path:", path)
 			return
 		}
@@ -760,8 +760,9 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
 		Tip:        *(flags[flagTip].(*uint64)),
 		Walletpath: clientpkg.GetWalletFilePath(),
-		Data:   	data,
+		Data:       data,
 	})
+	fmt.Printf("Data %v\n", data)
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
 		return

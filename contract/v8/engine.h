@@ -3,7 +3,15 @@
 #include "lib/transaction_struct.h"
 #include "lib/utxo_struct.h"
 
+#ifdef WIN32 
+#ifdef V8DLL
+#define EXPORT __declspec(dllexport)
+#else 
+#define EXPORT __declspec(dllimport)
+#endif
+#else
 #define EXPORT __attribute__((__visibility__("default")))
+#endif 
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +45,7 @@ extern "C" {
     EXPORT void InitializeLogger(FuncLogger logger);
     EXPORT void InitializeSmartContract(char* source);
     EXPORT void DisposeV8();
+    EXPORT void V8Free(void *data);
 #ifdef __cplusplus
 }
 #endif

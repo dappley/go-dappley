@@ -181,7 +181,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 
 	if result != nil {
 		res = C.GoString(result)
-		C.free(unsafe.Pointer(result))
+		C.V8Free(unsafe.Pointer(result))
 	}
 
 	logger.WithFields(logger.Fields{

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <v8.h>
 #include <libplatform/libplatform.h>
 #include "engine.h"
@@ -81,7 +82,6 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
   Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(create_params);
-
   int errorCode = 0;
 
   {
@@ -162,4 +162,8 @@ RET:
 void DisposeV8(){
   V8::Dispose();
   V8::ShutdownPlatform();
+}
+
+void V8Free(void *data) {
+  free(data);
 }
