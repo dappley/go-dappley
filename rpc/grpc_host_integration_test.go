@@ -22,7 +22,6 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/contract"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
@@ -670,7 +670,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet1.GetAddress(),
 		common.NewAmount(3),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -680,7 +680,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(2),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -690,7 +690,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet3.GetAddress(),
 		common.NewAmount(1),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -709,7 +709,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -718,7 +718,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
