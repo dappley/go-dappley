@@ -215,7 +215,7 @@ func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, error) {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	return sendTo(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, contract, bc, node)
 }
 
@@ -228,7 +228,7 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, error) {
+func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
 	return sendTo(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, 0, "", bc, node)
 }
@@ -243,18 +243,18 @@ func GetWalletManager(path string) (*client.WalletManager, error) {
 	return wm, nil
 }
 
-func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, error) {
+func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amount *common.Amount, tip uint64, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	if !from.ValidateAddress() {
-		return nil, ErrInvalidSenderAddress
+		return nil, "", ErrInvalidSenderAddress
 	}
 
 	//Contract deployment transaction does not need to validate to address
 	if !to.ValidateAddress() && contract == "" {
-		return nil, ErrInvalidRcverAddress
+		return nil, "", ErrInvalidRcverAddress
 	}
 
 	if amount.Validate() != nil || amount.IsZero() {
-		return nil, ErrInvalidAmount
+		return nil, "", ErrInvalidAmount
 	}
 
 	pubKeyHash, _ := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
@@ -264,7 +264,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, common.NewAmount(tip), contract)
@@ -287,8 +287,8 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return tx.ID, err
+	return tx.ID, contractAddr.String(), err
 }
