@@ -670,7 +670,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet1.GetAddress(),
 		common.NewAmount(3),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -680,7 +680,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(2),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -690,7 +690,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet3.GetAddress(),
 		common.NewAmount(1),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -709,7 +709,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
@@ -718,7 +718,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetAddress(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
-		*rpcContext.wallet.GetKeyPair(),
+		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
