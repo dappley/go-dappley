@@ -178,7 +178,7 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 	}
 	if len(txs) != 0 {
 		// vin of tx not found in utxoIndex or txPool
-		MetricsTxDoubleSpend.Inc(1)
+		MetricsInvalidTx.Inc(1)
 	}
 }
 
