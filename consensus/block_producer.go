@@ -98,10 +98,10 @@ func (bp *BlockProducer) prepareBlock() {
 	rewards := make(map[string]string)
 	scGeneratedTXs := bp.executeSmartContract(validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
 	validTxs = append(validTxs, scGeneratedTXs...)
-
+	validTxs = append(validTxs, cbtx)
 	if len(rewards) > 0 {
 		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
-		validTxs = append(validTxs, cbtx, &rtx)
+		validTxs = append(validTxs, &rtx)
 	}
 
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)

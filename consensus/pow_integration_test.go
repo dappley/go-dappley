@@ -329,7 +329,11 @@ func TestPreventDoubleSpend(t *testing.T) {
 	}
 	pow.Stop()
 
-	assert.True(t, core.MetricsTxDoubleSpend.Count() > 0)
+	block, _ := bc.GetBlockByHeight(1)
+	// Only one transaction packaged(1 coinbase + 1 transaction)
+	assert.Equal(t, 2, len(block.GetTransactions()))
+
+	assert.False(t, core.MetricsTxDoubleSpend.Count() > 0)
 }
 
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {

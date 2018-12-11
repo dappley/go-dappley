@@ -38,7 +38,7 @@ func TestDpos_Start(t *testing.T) {
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil)
 	node := network.NewNode(bc)
-	node.Start(21100)
+	node.Start(22100)
 	dpos.Setup(node, cbAddr.String())
 	dpos.SetKey(keystr)
 
