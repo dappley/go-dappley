@@ -71,9 +71,9 @@ func NewStream(s net.Stream, node *Node) *Stream {
 	}
 }
 
-func (s *Stream) Start() {
+func (s *Stream) Start(quitCh chan <- *Stream) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw)
+	s.startLoop(rw,quitCh)
 }
 
 func (s *Stream) StopStream() {
@@ -81,15 +81,14 @@ func (s *Stream) StopStream() {
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
-	s.node.DisconnectPeer(s.peerID, s.remoteAddr)
 }
 
 func (s *Stream) Send(data []byte) {
 	s.dataCh <- data
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter) {
-	go s.readLoop(rw)
+func (s *Stream) startLoop(rw *bufio.ReadWriter,quitCh chan <- *Stream) {
+	go s.readLoop(rw, quitCh)
 	go s.writeLoop(rw)
 }
 
@@ -127,10 +126,11 @@ func (s *Stream) read(rw *bufio.ReadWriter) {
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan <- *Stream) {
 	for {
 		select {
 		case <-s.quitRdCh:
+			quitCh <- s
 			logger.Debug("Stream ReadLoop Terminated!")
 			return
 		default:

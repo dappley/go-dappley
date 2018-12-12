@@ -59,11 +59,13 @@ type Node struct {
 	info                   *Peer
 	bc                     *core.Blockchain
 	streams                map[peer.ID]*Stream
+	streamExitCh		   chan *Stream
 	peerList               *PeerList
 	exitCh                 chan bool
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
+
 }
 
 //create new Node instance
@@ -73,6 +75,7 @@ func NewNode(bc *core.Blockchain) *Node {
 		nil,
 		bc,
 		make(map[peer.ID]*Stream, 10),
+		make(chan *Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
 		&sync.Map{},
@@ -105,8 +108,21 @@ func (n *Node) Start(listenPort int) error {
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
+	n.StartExitListener()
 	return err
 }
+
+func (n *Node) StartExitListener() {
+	go func() {
+		for {
+			select {
+			case s:=<-n.streamExitCh:
+				n.DisconnectPeer(s.peerID, s.remoteAddr)
+			}
+		}
+	}()
+}
+
 
 func (n *Node) StartRequestLoop() {
 
@@ -246,8 +262,9 @@ func (n *Node) streamHandler(s net.Stream) {
 		n.peerList.Add(peer)
 		//start stream
 		ns := NewStream(s, n)
+		//add stream to this.streams
 		n.streams[s.Conn().RemotePeer()] = ns
-		ns.Start()
+		ns.Start(n.streamExitCh)
 
 		n.SyncPeersUnicast(peer.peerid)
 	}
