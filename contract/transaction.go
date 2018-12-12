@@ -6,6 +6,7 @@ package vm
 import "C"
 import (
 	"encoding/hex"
+	"math"
 	"unsafe"
 
 	logger "github.com/sirupsen/logrus"
@@ -45,7 +46,8 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx.vin_length = C.int(len(engine.tx.Vin))
 	vinAddr := (*C.struct_transaction_vin_t)(C.malloc(C.size_t(C.sizeof_struct_transaction_vin_t * tx.vin_length)))
 	defer C.free(unsafe.Pointer(vinAddr))
-	vins := (*[1 << 30]C.struct_transaction_vin_t)(unsafe.Pointer(vinAddr))[:tx.vin_length:tx.vin_length]
+	var tempVin C.struct_transaction_vin_t
+	vins := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(tempVin)]C.struct_transaction_vin_t)(unsafe.Pointer(vinAddr))[:tx.vin_length:tx.vin_length]
 	for index, txVin := range engine.tx.Vin {
 		vin := &vins[index]
 		vin.txid = C.CString(hex.EncodeToString(txVin.Txid))
@@ -61,7 +63,8 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx.vout_length = C.int(len(engine.tx.Vout))
 	voutAddr := (*C.struct_transaction_vout_t)(C.malloc(C.size_t(C.sizeof_struct_transaction_vout_t * tx.vout_length)))
 	defer C.free(unsafe.Pointer(voutAddr))
-	vouts := (*[1 << 30]C.struct_transaction_vout_t)(unsafe.Pointer(voutAddr))[:tx.vout_length:tx.vout_length]
+	var tempVout C.struct_transaction_vout_t
+	vouts := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(tempVout)]C.struct_transaction_vout_t)(unsafe.Pointer(voutAddr))[:tx.vout_length:tx.vout_length]
 	for index, txVout := range engine.tx.Vout {
 		vout := &vouts[index]
 		vout.amount = C.longlong(txVout.Value.Int64())
