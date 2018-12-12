@@ -55,11 +55,11 @@ func (h Hash) String() string {
 }
 
 
-func NewBlock(transactions []*Transaction, parent *Block) *Block {
-	return NewBlockWithTimestamp(transactions, parent, time.Now().Unix())
+func NewBlock(txs []*Transaction, parent *Block) *Block {
+	return NewBlockWithTimestamp(txs, parent, time.Now().Unix())
 }
 
-func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp int64) *Block {
+func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -69,8 +69,8 @@ func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp
 		height = parent.GetHeight() + 1
 	}
 
-	if transactions == nil {
-		transactions = []*Transaction{}
+	if txs == nil {
+		txs = []*Transaction{}
 	}
 	return &Block{
 		header: &BlockHeader{
@@ -81,7 +81,7 @@ func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp
 			sign:      nil,
 			height:    height,
 		},
-		transactions: transactions,
+		transactions: txs,
 	}
 }
 

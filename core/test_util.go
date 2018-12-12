@@ -45,7 +45,7 @@ func GenerateMockBlock() *Block {
 	}
 }
 
-func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Block) *Block {
+func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Block {
 	var prevHash []byte
 	var height uint64
 	height = 0
@@ -54,8 +54,8 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 		height = parent.GetHeight() + 1
 	}
 
-	if transactions == nil {
-		transactions = []*Transaction{}
+	if txs == nil {
+		txs = []*Transaction{}
 	}
 	return &Block{
 		header: &BlockHeader{
@@ -66,7 +66,7 @@ func FakeNewBlockWithTimestamp(t int64, transactions []*Transaction, parent *Blo
 			sign:      nil,
 			height:    height,
 		},
-		transactions: transactions,
+		transactions: txs,
 	}
 }
 

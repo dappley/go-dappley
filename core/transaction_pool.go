@@ -38,12 +38,12 @@ type TransactionPool struct {
 	EventBus     EventBus.Bus
 }
 
-func compareTxTips(tx1 interface{}, tx2 interface{}) int {
-	t1 := tx1.(Transaction)
-	t2 := tx2.(Transaction)
-	if t1.Tip < t2.Tip {
+func compareTxTips(t1 interface{}, t2 interface{}) int {
+	tx1 := t1.(Transaction)
+	tx2 := t2.(Transaction)
+	if tx1.Tip < tx2.Tip {
 		return -1
-	} else if t1.Tip > t2.Tip {
+	} else if tx1.Tip > tx2.Tip {
 		return 1
 	} else {
 		return 0
@@ -51,8 +51,8 @@ func compareTxTips(tx1 interface{}, tx2 interface{}) int {
 }
 
 // match returns true if tx1 and tx2 are Transactions and they have the same ID, false otherwise
-func match(tx1 interface{}, tx2 interface{}) bool {
-	return bytes.Compare(tx1.(Transaction).ID, tx2.(Transaction).ID) == 0
+func match(t1 interface{}, t2 interface{}) bool {
+	return bytes.Compare(t1.(Transaction).ID, t2.(Transaction).ID) == 0
 }
 
 func NewTransactionPool(limit uint32) *TransactionPool {

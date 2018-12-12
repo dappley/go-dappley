@@ -25,25 +25,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var t1 = Transaction{
+var tx1 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
 	Tip:  2,
 }
-var t2 = Transaction{
+var tx2 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
 	Tip:  5,
 }
-var t3 = Transaction{
+var tx3 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
 	Tip:  10,
 }
-var t4 = Transaction{
+var tx4 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
@@ -55,41 +55,41 @@ var expectPopOrder = []uint64{20, 10, 5, 2}
 var popInputOrder = []struct {
 	order []Transaction
 }{
-	{[]Transaction{t4, t3, t2, t1}},
-	{[]Transaction{t1, t2, t3, t4}},
-	{[]Transaction{t2, t1, t4, t3}},
-	{[]Transaction{t4, t1, t3, t2}},
+	{[]Transaction{tx4, tx3, tx2, tx1}},
+	{[]Transaction{tx1, tx2, tx3, tx4}},
+	{[]Transaction{tx2, tx1, tx4, tx3}},
+	{[]Transaction{tx4, tx1, tx3, tx2}},
 }
 
 func TestTransactionPool_Push(t *testing.T) {
 	txPool := NewTransactionPool(128)
-	txPool.Push(t1)
+	txPool.Push(tx1)
 	assert.Equal(t, 1, txPool.Transactions.Len())
-	txPool.Push(t2)
+	txPool.Push(tx2)
 	assert.Equal(t, 2, txPool.Transactions.Len())
-	txPool.Push(t3)
-	txPool.Push(t4)
+	txPool.Push(tx3)
+	txPool.Push(tx4)
 	assert.Equal(t, 4, txPool.Transactions.Len())
 }
 
 func TestTransactionPoolLimit(t *testing.T) {
 	txPool := NewTransactionPool(0)
-	txPool.Push(t1)
+	txPool.Push(tx1)
 	assert.Equal(t, 0, txPool.Transactions.Len())
 
 	txPool = NewTransactionPool(1)
-	txPool.Push(t1)
-	txPool.Push(t2) // Note: t2 has higher tips and should be kept in pool in place of t1
+	txPool.Push(tx1)
+	txPool.Push(tx2) // Note: t2 has higher tips and should be kept in pool in place of t1
 	assert.Equal(t, 1, txPool.Transactions.Len())
-	assert.Equal(t, t2, txPool.Transactions.Get()[0].(Transaction))
+	assert.Equal(t, tx2, txPool.Transactions.Get()[0].(Transaction))
 
-	txPool.Push(t4) // Note: t4 has higher tips and should be kept in pool in place of t2
+	txPool.Push(tx4) // Note: t4 has higher tips and should be kept in pool in place of t2
 	assert.Equal(t, 1, txPool.Transactions.Len())
-	assert.Equal(t, t4, txPool.Transactions.Get()[0].(Transaction))
+	assert.Equal(t, tx4, txPool.Transactions.Get()[0].(Transaction))
 
-	txPool.Push(t3) // Note: t3 has less tips and should be discarded
+	txPool.Push(tx3) // Note: t3 has less tips and should be discarded
 	assert.Equal(t, 1, txPool.Transactions.Len())
-	assert.Equal(t, t4, txPool.Transactions.Get()[0].(Transaction))
+	assert.Equal(t, tx4, txPool.Transactions.Get()[0].(Transaction))
 }
 
 func TestTransactionPool_Pop(t *testing.T) {
