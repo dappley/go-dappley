@@ -17,7 +17,29 @@
 //
 package core
 
+import peer "github.com/libp2p/go-libp2p-peer"
+
 type BlockManager struct {
-	bc *Blockchain
-	bp *BlockPool
+	blockchain *Blockchain
+	blockPool  *BlockPool
+}
+
+func (bm *BlockManager) SetblockPool(blockPool *BlockPool) {
+	bm.blockPool = blockPool
+}
+
+func (bm *BlockManager) Setblockchain(blockchain *Blockchain) {
+	bm.blockchain = blockchain
+}
+
+func (bm *BlockManager) Getblockchain() *Blockchain {
+	return bm.blockchain
+}
+
+func (bm *BlockManager) GetblockPool() *BlockPool {
+	return bm.blockPool
+}
+
+func (bm *BlockManager) Push(block *Block, pid peer.ID) {
+
 }
