@@ -471,6 +471,8 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 		toAddr = outputs[0].PubKeyHash.GenerateAddress()
 	}
 
+	toAddr = to //to be modified if smart contract is merged
+
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
 	outputs = append(outputs, *NewTXOutput(change, from))
 	return outputs
