@@ -208,7 +208,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
-	cliSend:              {adminRpcService, sendCommandHandler},
+	cliSend:              {rpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateWallet:      {adminRpcService, createWalletCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
@@ -764,7 +764,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		uu := core.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
-		uu.PubKeyHash, err = core.NewUserPubKeyHash(u.PublicKeyHash)
+		uu.PubKeyHash = core.PubKeyHash{u.PublicKeyHash}
 		if err != nil {
 			fmt.Println("ERROR: Send failed. ERR:", err)
 			return
@@ -798,6 +798,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		fmt.Println("ERROR: Send failed. ERR:", err)
 		return
 	}
+	fmt.Println(response1)
 	fmt.Println(proto.MarshalTextString(response1))
 }
 
