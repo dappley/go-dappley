@@ -46,14 +46,13 @@ type NetService interface {
 	BroadcastBlock(block *Block) error
 	GetPeerID() peer.ID
 	GetBlockchain() *Blockchain
+	GetBlockPool() *BlockPool
 }
 
 type BlockPoolInterface interface {
-	SetBlockchain(bc *Blockchain)
 	BlockRequestCh() chan BlockRequestPars
-	GetBlockchain() *Blockchain
 	GetSyncState() bool
 	SetSyncState(bool)
 	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
-	Push(block *Block, pid peer.ID)
+	Push(block *Block, pid peer.ID, blockchain *Blockchain)
 }

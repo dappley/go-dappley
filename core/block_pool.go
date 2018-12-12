@@ -27,6 +27,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+const BlockPoolMaxSize = 100
 const BlockCacheLRUCacheLimit = 1024
 const ForkCacheLRUCacheLimit = 128
 
@@ -44,7 +45,6 @@ type BlockPool struct {
 	blockRequestCh chan BlockRequestPars
 	syncState      bool
 	size           int
-	blockchain     *Blockchain
 	blkCache       *lru.Cache //cache of full blks
 }
 
@@ -55,27 +55,21 @@ func (pool *BlockPool) SetSyncState(sync bool) {
 	pool.syncState = sync
 }
 func NewBlockPool(size int) *BlockPool {
+	if size <= 0 {
+		size = BlockPoolMaxSize
+	}
 	pool := &BlockPool{
 		size:           size,
 		blockRequestCh: make(chan BlockRequestPars, size),
 		syncState:      false,
-		blockchain:     nil,
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
 
 	return pool
 }
 
-func (pool *BlockPool) SetBlockchain(bc *Blockchain) {
-	pool.blockchain = bc
-}
-
 func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
-}
-
-func (pool *BlockPool) GetBlockchain() *Blockchain {
-	return pool.blockchain
 }
 
 //Verify all transactions in a fork
@@ -96,7 +90,7 @@ func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) boo
 	return true
 }
 
-func (pool *BlockPool) Push(block *Block, pid peer.ID) {
+func (pool *BlockPool) Push(block *Block, pid peer.ID, blockchain *Blockchain) {
 	logger.Info("BlockPool: Has received a new block")
 	if pool.syncState {
 		logger.Debug("BlockPool: is syncing already, tossing block ")
@@ -107,17 +101,17 @@ func (pool *BlockPool) Push(block *Block, pid peer.ID) {
 		return
 	}
 
-	if !(pool.blockchain.GetConsensus().Validate(block)) {
+	if !(blockchain.GetConsensus().Validate(block)) {
 		logger.Warn("BlockPool: The received block is invalid according to consensus!")
 		return
 	}
 	//TODO: Verify double spending transactions in the same block
 
 	logger.Debug("BlockPool: Block has been verified")
-	pool.handleRecvdBlock(block, pid)
+	pool.handleRecvdBlock(block, pid, blockchain)
 }
 
-func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
+func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID, blockchain *Blockchain) {
 	logger.WithFields(logger.Fields{
 		"From": sender.String(),
 		"hash": hex.EncodeToString(blk.GetHash()),
@@ -129,7 +123,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 	if blkCache.Contains(blk.GetHash().String()) {
 		return
 	}
-	if !pool.isChildBlockInCache(blk.GetHash().String()) && blk.GetHeight() <= pool.blockchain.GetMaxHeight() {
+	if !pool.isChildBlockInCache(blk.GetHash().String()) && blk.GetHeight() <= blockchain.GetMaxHeight() {
 		return
 	}
 	blkCache.Add(blk.GetHash().String(), tree)
@@ -137,9 +131,9 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 	forkheadParentHash := tree.GetValue().(*Block).GetPrevHash()
 
-	if parent, _ := pool.blockchain.GetBlockByHash(forkheadParentHash); parent != nil {
+	if parent, _ := blockchain.GetBlockByHash(forkheadParentHash); parent != nil {
 		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
-		if forkTailTree.GetValue().(*Block).GetHeight() > pool.blockchain.GetMaxHeight() {
+		if forkTailTree.GetValue().(*Block).GetHeight() > blockchain.GetMaxHeight() {
 			pool.SetSyncState(true)
 		} else {
 			return
@@ -147,7 +141,7 @@ func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID) {
 
 		trees := forkTailTree.GetParentTreesRange(tree)
 		forkBlks := getBlocksFromTrees(trees)
-		pool.blockchain.MergeFork(forkBlks, forkheadParentHash)
+		blockchain.MergeFork(forkBlks, forkheadParentHash, pool)
 		tree.Delete()
 
 		logger.WithFields(logger.Fields{

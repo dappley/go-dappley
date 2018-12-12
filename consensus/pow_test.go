@@ -22,16 +22,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestProofOfWork_NewPoW(t *testing.T) {
 	pow := NewProofOfWork()
 	assert.Nil(t, pow.node)
-	assert.Nil(t, pow.bc)
 	assert.Equal(t, big.NewInt(1).Lsh(big.NewInt(1), uint(256)), pow.target)
 }
 
@@ -39,8 +37,9 @@ func TestProofOfWork_Setup(t *testing.T) {
 	pow := NewProofOfWork()
 	bc := core.GenerateMockBlockchain(5)
 	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	pow.Setup(network.NewNode(bc), cbAddr)
-	assert.Equal(t, bc, pow.bc)
+	pool := core.NewBlockPool(0)
+	pow.Setup(network.NewNode(bc, pool), cbAddr)
+	assert.Equal(t, bc, pow.node.GetBlockchain())
 }
 
 func TestProofOfWork_SetTargetBit(t *testing.T) {

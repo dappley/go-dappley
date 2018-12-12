@@ -32,7 +32,6 @@ import (
 
 var tipKey = []byte("tailBlockHash")
 
-const BlockPoolMaxSize = 100
 const LengthForBlockToBeConsideredHistory = 100
 
 var (
@@ -40,13 +39,12 @@ var (
 	ErrNotAbleToGetLastBlockHash = errors.New("ERROR: Not able to get last block hash in blockchain")
 	ErrTransactionNotFound       = errors.New("ERROR: Transaction not found")
 	ErrDuplicatedBlock           = errors.New("ERROR: Block already exists in blockchain")
-	ErrUpdateUtxoState			 = errors.New("Blockchain: Update UTXO index failed")
+	ErrUpdateUtxoState           = errors.New("Blockchain: Update UTXO index failed")
 )
 
 type Blockchain struct {
 	tailBlockHash []byte
 	db            storage.Storage
-	blockPool     BlockPoolInterface
 	consensus     Consensus
 	txPool        *TransactionPool
 }
@@ -57,11 +55,9 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
-		NewBlockPool(BlockPoolMaxSize),
 		consensus,
 		NewTransactionPool(transactionPoolLimit),
 	}
-	bc.blockPool.SetBlockchain(bc)
 	err := bc.AddBlockToTail(genesis)
 	if err != nil {
 		logger.Panic("Blockchain: Add Genesis Block Failed During Blockchain Creation!")
@@ -79,12 +75,9 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 	bc := &Blockchain{
 		tip,
 		db,
-		NewBlockPool(BlockPoolMaxSize),
 		consensus,
 		NewTransactionPool(transactionPoolLimit), //TODO: Need to retrieve transaction pool from db
 	}
-	bc.blockPool.SetBlockchain(bc)
-
 	if err != nil {
 		return nil, err
 	}
@@ -97,10 +90,6 @@ func (bc *Blockchain) GetDb() storage.Storage {
 
 func (bc *Blockchain) GetTailBlockHash() Hash {
 	return bc.tailBlockHash
-}
-
-func (bc *Blockchain) GetBlockPool() BlockPoolInterface {
-	return bc.blockPool
 }
 
 func (bc *Blockchain) GetConsensus() Consensus {
@@ -147,11 +136,6 @@ func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
 
 func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
-}
-
-func (bc *Blockchain) SetBlockPool(blockPool BlockPoolInterface) {
-	blockPool.SetBlockchain(bc)
-	bc.blockPool = blockPool
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
@@ -262,7 +246,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, nil, bc.consensus, nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -347,7 +331,7 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	return err == nil
 }
 
-func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
+func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash, bp *BlockPool) {
 
 	//find parent block
 	if len(forkBlks) == 0 {
@@ -365,7 +349,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 		return
 	}
 
-	if !bc.GetBlockPool().VerifyTransactions(*utxo, forkBlks) {
+	if !bp.VerifyTransactions(*utxo, forkBlks) {
 		return
 	}
 

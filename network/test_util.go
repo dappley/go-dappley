@@ -26,7 +26,7 @@ import (
 
 func FakeNodeWithPeer(pid, addr string) *Node {
 
-	node := NewNode(nil)
+	node := NewNode(nil, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := multiaddr.NewMultiaddr(addr)
 	p := &Peer{peerid, maddr}
@@ -35,9 +35,9 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 	return node
 }
 
-func FakeNodeWithPidAndAddr(bc *core.Blockchain, pid, addr string) *Node {
+func FakeNodeWithPidAndAddr(pool *core.BlockPool, bc *core.Blockchain, pid, addr string) *Node {
 
-	node := NewNode(bc)
+	node := NewNode(bc, pool)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := multiaddr.NewMultiaddr(addr)
 	p := &Peer{peerid, maddr}

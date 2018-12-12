@@ -31,7 +31,6 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	bc     *core.Blockchain
 	miner  *BlockProducer
 	target *big.Int
 	node   core.NetService
@@ -49,9 +48,8 @@ func NewProofOfWork() *ProofOfWork {
 }
 
 func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
-	pow.bc = node.GetBlockchain()
 	pow.node = node
-	pow.miner.Setup(pow.bc, cbAddr)
+	pow.miner.Setup(node.GetBlockchain(), cbAddr)
 	pow.miner.SetProcess(pow.calculateValidHash)
 }
 
@@ -86,7 +84,7 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("Mining stopped")
 			return
 		default:
-			if pow.miner.bc.GetBlockPool().GetSyncState() {
+			if pow.node.GetBlockPool().GetSyncState() {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
@@ -162,7 +160,7 @@ func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
 		logger.Warn("PoW: Invalid hash in new block (mining might have been interrupted)")
 		return
 	}
-	err := pow.bc.AddBlockToTail(newBlock)
+	err := pow.node.GetBlockchain().AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)
 		return

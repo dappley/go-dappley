@@ -21,22 +21,8 @@ package core
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestBlockPool_GetBlockchain(t *testing.T) {
-	db := storage.NewRamStorage()
-	defer db.Close()
-	addr := Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
-	bc := CreateBlockchain(addr, db, nil, 128)
-
-	hash1 := bc.GetTailBlockHash()
-	newbc := bc.GetBlockPool().GetBlockchain()
-
-	hash2 := newbc.GetTailBlockHash()
-	assert.ElementsMatch(t, hash1, hash2)
-}
 
 func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
 	bp := NewBlockPool(5)

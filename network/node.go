@@ -58,6 +58,7 @@ type Node struct {
 	host                   host.Host
 	info                   *Peer
 	bc                     *core.Blockchain
+	pool                   *core.BlockPool
 	streams                map[peer.ID]*Stream
 	peerList               *PeerList
 	exitCh                 chan bool
@@ -67,11 +68,12 @@ type Node struct {
 }
 
 //create new Node instance
-func NewNode(bc *core.Blockchain) *Node {
+func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	placeholder := uint64(0)
 	return &Node{nil,
 		nil,
 		bc,
+		pool,
 		make(map[peer.ID]*Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
@@ -89,6 +91,7 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 }
 
 func (n *Node) GetBlockchain() *core.Blockchain    { return n.bc }
+func (n *Node) GetBlockPool() *core.BlockPool      { return n.pool }
 func (n *Node) GetPeerList() *PeerList             { return n.peerList }
 func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
 
@@ -115,7 +118,7 @@ func (n *Node) StartRequestLoop() {
 			select {
 			case <-n.exitCh:
 				return
-			case brPars := <-n.bc.GetBlockPool().BlockRequestCh():
+			case brPars := <-n.pool.BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
 			}
 		}
@@ -374,7 +377,7 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
-	n.bc.GetBlockPool().Push(block, pid)
+	n.pool.Push(block, pid, n.bc)
 }
 
 func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
