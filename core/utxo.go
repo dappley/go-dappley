@@ -173,22 +173,8 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 	// Create a copy of the index so operations below are only temporal
-	txLenBeforeUpdate := len(txs)
-	firstUpdate := true
-	for firstUpdate || txLenBeforeUpdate != len(txs) {
-		firstUpdate = false
-		txLenBeforeUpdate = len(txs)
-		nextTxs := make([]*Transaction, 0, len(txs))
-		for _, tx := range txs {
-			if !utxos.UpdateUtxo(tx) {
-				nextTxs = append(nextTxs, tx)
-			}
-		}
-		txs = nextTxs
-	}
-	if len(txs) != 0 {
-		// vin of tx not found in utxoIndex or txPool
-		MetricsTxDoubleSpend.Inc(1)
+	for _, tx := range txs {
+		utxos.UpdateUtxo(tx)
 	}
 }
 
@@ -201,7 +187,8 @@ func newUTXO(txout TXOutput, txid []byte, vout int) *UTXO {
 // Note that the operation does not save the index to db.
 func (utxos *UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.Storage) {
 
-	for _, tx := range blk.GetTransactions() {
+	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
+		tx := blk.GetTransactions()[i]
 		err := utxos.excludeVoutsInTx(tx, db)
 		if err != nil {
 			logger.Panic(err)
@@ -245,15 +232,15 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
 	//if it is a smart contract deployment utxo add it to contract utxos
-	if isContract, _ := txout.PubKeyHash.IsContract();isContract &&
-	 	len(utxos.index[string(u.PubKeyHash.GetPubKeyHash())]) == 0 {
+	if isContract, _ := txout.PubKeyHash.IsContract(); isContract &&
+		len(utxos.index[string(u.PubKeyHash.GetPubKeyHash())]) == 0 {
 		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
 	}
 	utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(utxos.index[string(u.PubKeyHash.GetPubKeyHash())], u)
 
 }
 
-func (utxos *UTXOIndex) GetContractUtxos() []*UTXO{
+func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
 	return utxos.index[contractUtxoKey]
 }
 

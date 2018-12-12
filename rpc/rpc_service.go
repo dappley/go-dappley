@@ -214,12 +214,13 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
-	if tx.Verify(*utxoIndex, core.NewTransactionPool(128),0) == false {
+	if tx.Verify(utxoIndex, 0) == false {
 		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, nil
 	}
 
-	rpcService.node.GetBlockchain().GetTxPool().Push(tx)
+	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 	rpcService.node.TxBroadcast(&tx)
 
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
@@ -228,6 +229,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 // RpcSendBatchTransaction sends a batch of transactions to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	respErrorCode := []uint32{}
+	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 	for _, txInReq := range in.Transaction {
 		tx := core.Transaction{nil, nil, nil, 0}
 		tx.FromProto(txInReq)
@@ -237,14 +240,13 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			continue
 		}
 
-		utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
-
-		if tx.Verify(*utxoIndex, core.NewTransactionPool(128), 0) == false {
+		if tx.Verify(utxoIndex, 0) == false {
 			respErrorCode = append(respErrorCode, InvalidTransaction)
 			continue
 		}
 
-		rpcService.node.GetBlockchain().GetTxPool().Push(tx)
+		utxoIndex.UpdateUtxo(&tx)
+		rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 		rpcService.node.TxBroadcast(&tx)
 
 		respErrorCode = append(respErrorCode, OK)

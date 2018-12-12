@@ -660,8 +660,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), uint64(0), contract, bc, node)
 	assert.Nil(t, err)
 
-	tx := bc.GetTxPool().Transactions.Get()[0].(core.Transaction)
-	txp := &tx
+	txp := bc.GetTxPool().GetTransactions()[0]
 	contractAddr := txp.GetContractAddress()
 
 	// Create a miner wallet; Balance is 0 initially

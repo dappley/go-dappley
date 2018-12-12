@@ -20,6 +20,7 @@ package core
 
 import (
 	"encoding/hex"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
@@ -90,7 +91,6 @@ func (pool *BlockPool) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScSta
 			return false
 		}
 		parentBlk = forkBlks[i]
-		utxoSnapshot.UpdateUtxoState(forkBlks[i].GetTransactions())
 	}
 	return true
 }

@@ -91,16 +91,34 @@ func (bp *BlockProducer) prepareBlock() {
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
 
-	validTxs := bp.bc.GetTxPool().PopValidTxs(*utxoIndex)
+	txs := bp.bc.GetTxPool().GetAndResetTransactions()
+	validTxs := filterValidTxs(txs, utxoIndex, parentBlock.GetHeight()+1)
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
 	scGeneratedTXs := bp.executeSmartContract(validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
-	rtx := core.NewRewardTx(bp.bc.GetMaxHeight()+1, rewards)
 	validTxs = append(validTxs, scGeneratedTXs...)
-	validTxs = append(validTxs, cbtx, &rtx)
+
+	if len(rewards) > 0 {
+		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
+		validTxs = append(validTxs, cbtx, &rtx)
+	}
 
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)
+}
+
+func filterValidTxs(txs []*core.Transaction, utxoIndex *core.UTXOIndex, blockHeight uint64) []*core.Transaction {
+	tempUtxoIndex := utxoIndex.DeepCopy()
+	var validTxs []*core.Transaction
+
+	for _, tx := range txs {
+		if tx.Verify(tempUtxoIndex, blockHeight) {
+			validTxs = append(validTxs, tx)
+		}
+		tempUtxoIndex.UpdateUtxo(tx)
+	}
+
+	return validTxs
 }
 
 func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {

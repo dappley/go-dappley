@@ -24,18 +24,18 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10)
@@ -277,7 +277,7 @@ func (tx *Transaction) DeepCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -286,9 +286,10 @@ func (tx *Transaction) DeepCopy() Transaction {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
-		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
+		//TODO coinbase vout check need add tip
+		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
 			return false
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
@@ -303,60 +304,58 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, bloc
 		return true
 	}
 
-	tempTxPool := txPool.deepCopy()
-	tempUtxoIndex := utxoIndex.DeepCopy()
-	return tx.verifyTxInTempPool(*tempUtxoIndex, tempTxPool)
-}
-
-// VerifyTxInPool function will change utxoIndex and txPool
-func (tx *Transaction) verifyTxInTempPool(utxoIndex UTXOIndex, txPool TransactionPool) bool {
 	var prevUtxos []*UTXO
-	var notFoundVin []TXInput
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
-			txPool.RemoveMultipleTransactions([]*Transaction{tx})
+			logger.WithFields(logger.Fields{
+				"txId":       hex.EncodeToString(tx.ID),
+				"vin TxId":   hex.EncodeToString(vin.Txid),
+				"vin Pubkey": hex.EncodeToString(vin.PubKey),
+			}).Warn("Transaction: Get vin PubKeyHash Failed")
 			return false
 		}
 		utxo := utxoIndex.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
-			notFoundVin = append(notFoundVin, vin)
-		} else {
-			prevUtxos = append(prevUtxos, utxo)
+			logger.WithFields(logger.Fields{
+				"txId":     hex.EncodeToString(tx.ID),
+				"vinTxId":  hex.EncodeToString(vin.Txid),
+				"vinIndex": vin.Vout,
+			}).Warn("Transaction: Vin not found")
+			return false
 		}
+		prevUtxos = append(prevUtxos, utxo)
 	}
 
-	if notFoundVin != nil {
-		for _, vin := range notFoundVin {
-			parentTx := txPool.GetTxByID(vin.Txid)
-			if parentTx == nil {
-				// todo: change doublespend condition
-				// vin of tx not found in utxoIndex or txPool
-				MetricsTxDoubleSpend.Inc(1)
-				return false
-			}
-			pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
-			if err != nil {
-				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
-				return false
-			}
-
-			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) ||
-				!parentTx.verifyTxInTempPool(utxoIndex, txPool) {
-				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
-				return false
-			}
-			prevUtxos = append(prevUtxos, newUTXO(parentTx.Vout[vin.Vout], vin.Txid, vin.Vout))
-		}
-	}
-
-	if tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) && tx.verifySignatures(prevUtxos) && tx.verifyPublicKeyHash(prevUtxos) {
-		utxoIndex.UpdateUtxo(tx)
-		return true
-	} else {
-		txPool.RemoveMultipleTransactions([]*Transaction{tx})
+	if !tx.verifyPublicKeyHash(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"txId": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: Pubkey is invalid")
 		return false
 	}
+
+	if !tx.verifyAmount(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"txId": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: Amount is invalid")
+		return false
+	}
+
+	if !tx.verifyTip(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"txId": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: Tip is invalid")
+		return false
+	}
+
+	if !tx.verifySignatures(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"txId": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: Signature is invalid")
+		return false
+	}
+
+	return true
 }
 
 // verifyID verifies if the transaction ID is the hash of the transaction

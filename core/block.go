@@ -26,14 +26,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -305,11 +304,6 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScE
 		return true
 	}
 
-	txPool := NewTransactionPool(uint32(len(b.transactions)))
-	for _, tx := range b.GetTransactions() {
-		txPool.Push(*tx)
-	}
-
 	var rewardTX *Transaction
 	var contractGeneratedTXs []*Transaction
 	rewards := make(map[string]string)
@@ -323,6 +317,7 @@ L:
 				return false
 			}
 			rewardTX = tx
+			utxo.UpdateUtxo(tx)
 			continue L
 		}
 		if tx.IsFromContract() {
@@ -356,13 +351,15 @@ L:
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(),parentBlk)
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			utxo.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if !tx.Verify(utxo, txPool, b.GetHeight()) {
+			if !tx.Verify(&utxo, b.GetHeight()) {
 				return false
 			}
+			utxo.UpdateUtxo(tx)
 		}
 	}
 	// Assert that any contract-incurred transactions matches the ones generated from contract execution
@@ -372,6 +369,7 @@ L:
 	if len(contractGeneratedTXs) > 0 && !verifyGeneratedTXs(utxo, contractGeneratedTXs, allContractGeneratedTXs) {
 		return false
 	}
+	utxo.UpdateUtxoState(allContractGeneratedTXs)
 	return true
 }
 
@@ -436,7 +434,7 @@ func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
 			if !tx.IsCoinbase() && !tx.IsRewardTx() {
-				txPool.Push(*tx)
+				txPool.Push(tx)
 			}
 		}
 	}

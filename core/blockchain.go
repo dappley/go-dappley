@@ -167,7 +167,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	bcTemp := bc.deepCopy()
 
 	parentBlk, err := bc.GetTailBlock()
-	if err!=nil{
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   hex.EncodeToString(block.GetHash()),
@@ -188,11 +188,11 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
 
-	if bc.scManager != nil && parentBlk !=nil {
+	if bc.scManager != nil && parentBlk != nil {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
 		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight(), parentBlk)
-		parentBlk,err := bc.GetTailBlock()
+		parentBlk, err := bc.GetTailBlock()
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"height": block.GetHeight(),
@@ -425,7 +425,7 @@ func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {
 				logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
 			}
 			//Remove transactions in current transaction pool
-			bc.GetTxPool().RemoveMultipleTransactions(forkBlks[i].GetTransactions())
+			bc.GetTxPool().CheckAndRemoveTransactions(forkBlks[i].GetTransactions())
 		}
 	}
 }

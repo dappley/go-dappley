@@ -23,13 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 var header = &BlockHeader{
@@ -177,7 +176,7 @@ func TestBlock_Rollback(t *testing.T) {
 	b.transactions = []*Transaction{tx}
 	txPool := NewTransactionPool(128)
 	b.Rollback(txPool)
-	assert.ElementsMatch(t, tx.ID, txPool.Transactions.Right().(Transaction).ID)
+	assert.ElementsMatch(t, tx.ID, txPool.GetTransactions()[0].ID)
 }
 
 func TestBlock_FindTransaction(t *testing.T) {

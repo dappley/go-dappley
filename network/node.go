@@ -431,7 +431,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	//load the tx with proto
 	tx.FromProto(txpb)
 	//add tx to txpool
-	n.bc.GetTxPool().Push(*tx)
+	n.bc.GetTxPool().Push(tx)
 }
 
 func (n *Node) AddMultiPeers(data []byte) {
