@@ -382,6 +382,7 @@ func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {
 			err := bc.AddBlockToTail(forkBlks[i])
 			if err != nil {
 				logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
+				return
 			}
 			//Remove transactions in current transaction pool
 			bc.GetTxPool().RemoveMultipleTransactions(forkBlks[i].GetTransactions())

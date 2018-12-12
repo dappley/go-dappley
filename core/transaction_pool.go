@@ -93,7 +93,6 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	}
 
 	txPool.RemoveMultipleTransactions(validTxs)
-	txPool.RemoveMultipleTransactions(invalidTxs)
 
 	return validTxs
 }

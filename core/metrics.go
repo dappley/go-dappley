@@ -6,5 +6,6 @@ import "github.com/dappley/go-dappley/metrics"
 var (
 	// tx metrics
 	MetricsTxDoubleSpend             = dapmetrics.NewCounter("dap.txpool.doublespend")
+	MetricsInvalidTx				 = dapmetrics.NewCounter("dap.txPool.invalidtx")
 
 )

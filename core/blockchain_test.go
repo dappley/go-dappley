@@ -165,7 +165,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	err = bc.AddBlockToTail(blk)
 
 	//Expect 2 mock txs to be rejected when minting
-	assert.Equal(t, int64(1), MetricsTxDoubleSpend.Count())
+	assert.Equal(t, int64(1), MetricsInvalidTx.Count())
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil , err)
 	// Expect that the block added is the blockchain tail
