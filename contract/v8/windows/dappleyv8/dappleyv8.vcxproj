@@ -27,7 +27,7 @@
     <ClCompile Include="..\..\lib\load_sc.cc" />
     <ClCompile Include="..\..\lib\logger.cc" />
     <ClCompile Include="..\..\lib\math.cc" />
-    <ClCompile Include="..\..\lib\memory.cpp" />
+    <ClCompile Include="..\..\lib\memory.cc" />
     <ClCompile Include="..\..\lib\prev_utxo.cc" />
     <ClCompile Include="..\..\lib\reward_distributor.cc" />
     <ClCompile Include="..\..\lib\storage.cc" />
