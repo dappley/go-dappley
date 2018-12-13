@@ -1,4 +1,5 @@
 #include "blockchain.h"
+#include "memory.h"
 #include "../engine.h"
 
 static FuncVerifyAddress sVerifyAddress = NULL;
@@ -145,7 +146,7 @@ void GetNodeAddressCallback(const FunctionCallbackInfo<Value> &info) {
       info.GetReturnValue().SetNull();
   } else {
       info.GetReturnValue().Set(String::NewFromUtf8(isolate, ret));
-      free(ret);
+      MyFree(ret);
   }
 
 }

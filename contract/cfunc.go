@@ -20,6 +20,9 @@ bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
 bool  VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 int RandomFunc(void *handler, int max);
 
+void* Malloc(size_t size);
+void  Free(void* address);
+
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
 };
@@ -75,6 +78,15 @@ bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *si
 bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey){
 	return VerifyPublicKeyFunc(addr, pubkey);
 }
+
+void* Cgo_Malloc(size_t size) {
+    return Malloc(size);
+}
+
+void  Cgo_Free(void* address) {
+	Free(address);
+}
+
 
 */
 import "C"

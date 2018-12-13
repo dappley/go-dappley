@@ -1,5 +1,6 @@
 #include "storage.h"
 #include "../engine.h"
+#include "memory.h"
 
 static FuncStorageGet sGet = NULL;
 static FuncStorageSet sSet = NULL;
@@ -62,7 +63,7 @@ void storageGetCallback(const FunctionCallbackInfo<Value> &info){
         info.GetReturnValue().SetNull();
     } else {
         info.GetReturnValue().Set(String::NewFromUtf8(isolate, res));
-        free(res);
+        MyFree(res);
     }
 }
 

@@ -1,5 +1,6 @@
 #include "logger.h"
 #include "../engine.h"
+#include "memory.h"
 
 static FuncLogger sLogger = NULL;
 
@@ -43,7 +44,7 @@ void NewLoggerInstance(Isolate *isolate, Local<Context> context, void* address) 
 void LogCallback(unsigned int level, const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
 
-    char** args = (char **)malloc(sizeof(char *) * info.Length());
+    char** args = (char **)MyMalloc(sizeof(char *) * info.Length());
     String::Utf8Value** utf8Values = new String::Utf8Value*[info.Length()]; 
     for (int i = 0; i < info.Length(); i++) {
         String::Utf8Value* str = new String::Utf8Value(isolate, info[i]);
@@ -56,7 +57,7 @@ void LogCallback(unsigned int level, const FunctionCallbackInfo<Value> &info) {
         delete utf8Values[i];
     }
     delete[] utf8Values; 
-    free(args);
+    MyFree(args);
 }
 
 void LogDebugCallback(const FunctionCallbackInfo<Value> &info){

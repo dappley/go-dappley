@@ -8,11 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestScEngine_Execute(t *testing.T) {
@@ -394,7 +393,7 @@ func TestGetNodeAddress(t *testing.T) {
 	assert.Equal(t, "testAddr", sc.Execute("getNodeAddress", ""))
 }
 
-func TestNewAddress(t *testing.T){
+func TestNewAddress(t *testing.T) {
 	kp := core.NewKeyPair()
 	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
 	pk := hex.EncodeToString(privData)

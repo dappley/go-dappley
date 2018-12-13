@@ -27,6 +27,7 @@
     <ClCompile Include="..\..\lib\load_sc.cc" />
     <ClCompile Include="..\..\lib\logger.cc" />
     <ClCompile Include="..\..\lib\math.cc" />
+    <ClCompile Include="..\..\lib\memory.cpp" />
     <ClCompile Include="..\..\lib\prev_utxo.cc" />
     <ClCompile Include="..\..\lib\reward_distributor.cc" />
     <ClCompile Include="..\..\lib\storage.cc" />
@@ -41,6 +42,7 @@
     <ClInclude Include="..\..\lib\load_sc.h" />
     <ClInclude Include="..\..\lib\logger.h" />
     <ClInclude Include="..\..\lib\math.h" />
+    <ClInclude Include="..\..\lib\memory.h" />
     <ClInclude Include="..\..\lib\prev_utxo.h" />
     <ClInclude Include="..\..\lib\reward_distributor.h" />
     <ClInclude Include="..\..\lib\storage.h" />
@@ -167,6 +169,7 @@ copy /Y ..\..\lib\*.dll  ..\..\..\..\..\dapp</Command>
       <Command>cd $(OutDir) 
 gendef $(TargetName)$(TargetExt)
 dlltool -d $(TargetName).def -D $(TargetName)$(TargetExt) -l ..\..\..\..\lib\lib$(TargetName)$(TargetExt).a
+copy /Y $(TargetName)$(TargetExt) ..\..\lib
 copy /Y $(TargetName)$(TargetExt) ..\..\..\..\
 copy /Y $(TargetName)$(TargetExt) ..\..\..\..\..\dapp
 copy /Y ..\..\lib\*.dll  ..\..\..\..\

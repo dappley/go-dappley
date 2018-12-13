@@ -18,9 +18,12 @@
 #include "lib/prev_utxo.h"
 #include "lib/crypto.h"
 #include "lib/math.h"
+#include "lib/memory.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
+static char* wrapReturnResult(const char* src);
+
 
 void Initialize(){
     // Initialize V8.
@@ -100,7 +103,6 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
 
     // Enter the context for compiling and running the hello world script.
     Context::Scope context_scope(context);
-
     NewBlockchainInstance(isolate, context, (void *)handler);
     NewCryptoInstance(isolate, context, (void *)handler);
     NewStorageInstance(isolate, context, (void *)handler);
@@ -124,7 +126,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
       Local<Script> script;
       if (!Script::Compile(context, source).ToLocal(&script)) {
         reportException(isolate, &try_catch);
-        *result = strdup("1");
+        *result = wrapReturnResult("1");
         errorCode = 1;
         goto RET;
       }
@@ -132,9 +134,10 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
       // Run the script to get the result.
       Local<Value> scriptRes;
       if (!script->Run(context).ToLocal(&scriptRes)) {
+		printf("run failed\n");
         assert(try_catch.HasCaught());
         reportException(isolate, &try_catch);
-        *result = strdup("1");
+        *result = wrapReturnResult("1");
         errorCode = 1;
         goto RET;
       }
@@ -144,8 +147,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
         Local<Object> obj = scriptRes.As<Object>();
         if (!obj->IsUndefined()) {
           String::Utf8Value str(isolate, obj);
-          *result = (char *)malloc(str.length() + 1);
-          strcpy(*result, *str);
+          *result = wrapReturnResult(*str);
         }
       }
     }
@@ -159,11 +161,13 @@ RET:
   return errorCode;
 }
 
+char* wrapReturnResult(const char* src) {
+	char* result = (char *)MyMalloc(strlen(src) + 1);
+	strcpy(result, src);
+	return result;
+}
+
 void DisposeV8(){
   V8::Dispose();
   V8::ShutdownPlatform();
-}
-
-void V8Free(void *data) {
-  free(data);
 }

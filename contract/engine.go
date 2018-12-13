@@ -25,6 +25,9 @@ bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *si
 bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 //math
 int Cgo_RandomFunc(void *handler, int max);
+
+void* Cgo_Malloc(size_t size);
+void  Cgo_Free(void* address);
 */
 import "C"
 import (
@@ -80,6 +83,7 @@ func InitializeV8Engine() {
 		(C.FuncVerifyPublicKey)(unsafe.Pointer(C.Cgo_VerifyPublicKeyFunc)),
 	)
 	C.InitializeMath((C.FuncRandom)(unsafe.Pointer(C.Cgo_RandomFunc)))
+	C.InitializeMemoryFunc((C.FuncMalloc)(unsafe.Pointer(C.Cgo_Malloc)), (C.FuncFree)(unsafe.Pointer(C.Cgo_Free)))
 }
 
 //NewV8Engine generates a new V8Engine instance
@@ -181,7 +185,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 
 	if result != nil {
 		res = C.GoString(result)
-		C.V8Free(unsafe.Pointer(result))
+		C.free(unsafe.Pointer(result))
 	}
 
 	logger.WithFields(logger.Fields{

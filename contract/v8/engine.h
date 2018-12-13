@@ -30,6 +30,8 @@ extern "C" {
     typedef int (*FuncRandom)(void *handler, int max);
     typedef int (*FuncGetCurrBlockHeight)(void *handler);
     typedef char* (*FuncGetNodeAddress)(void *handler);
+	typedef void* (*FuncMalloc)(size_t size);
+	typedef void  (*FuncFree)(void* data);
 
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler, char **result);
@@ -45,7 +47,7 @@ extern "C" {
     EXPORT void InitializeLogger(FuncLogger logger);
     EXPORT void InitializeSmartContract(char* source);
     EXPORT void DisposeV8();
-    EXPORT void V8Free(void *data);
+	EXPORT void InitializeMemoryFunc(FuncMalloc mallocFunc, FuncFree freeFunc);
 #ifdef __cplusplus
 }
 #endif
