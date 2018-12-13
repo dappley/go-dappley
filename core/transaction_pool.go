@@ -74,13 +74,14 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	var invalidTxs []*Transaction
+	tempUtxoIndex := utxoIndex.DeepCopy()
 
 	for _, tx := range txPool.index {
 		if contains(tx, validTxs) || contains(tx, invalidTxs) {
 			continue
 		}
 
-		if tx.Verify(utxoIndex, txPool, 0) {
+		if tx.Verify(*tempUtxoIndex, txPool, 0) {
 			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
 			for _, dependentTx := range dependentTxs {
 				if !contains(dependentTx, validTxs) {

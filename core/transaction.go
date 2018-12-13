@@ -188,8 +188,7 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, bloc
 	}
 
 	tempTxPool := txPool.deepCopy()
-	tempUtxoIndex := utxoIndex.DeepCopy()
-	return tx.verifyTxInTempPool(*tempUtxoIndex, tempTxPool)
+	return tx.verifyTxInTempPool(utxoIndex, tempTxPool)
 }
 
 // VerifyTxInPool function will change utxoIndex and txPool
