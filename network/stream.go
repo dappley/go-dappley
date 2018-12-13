@@ -49,9 +49,9 @@ var (
 	startBytes = []byte{0x7E, 0x7E}
 	endBytes   = []byte{0x7F, 0x7F, 0}
 )
+type dapHandler func(*DapMsg, *Stream)
 
 type Stream struct {
-	node       *Node
 	peerID     peer.ID
 	remoteAddr multiaddr.Multiaddr
 	stream     net.Stream
@@ -60,8 +60,8 @@ type Stream struct {
 	quitWrCh   chan bool
 }
 
-func NewStream(s net.Stream, node *Node) *Stream {
-	return &Stream{node,
+func NewStream(s net.Stream) *Stream {
+	return &Stream{
 		s.Conn().RemotePeer(),
 		s.Conn().RemoteMultiaddr(),
 		s,
@@ -71,9 +71,9 @@ func NewStream(s net.Stream, node *Node) *Stream {
 	}
 }
 
-func (s *Stream) Start(quitCh chan <- *Stream) {
+func (s *Stream) Start(quitCh chan <- *Stream, dh dapHandler) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw,quitCh)
+	s.startLoop(rw,quitCh, dh)
 }
 
 func (s *Stream) StopStream() {
@@ -87,8 +87,8 @@ func (s *Stream) Send(data []byte) {
 	s.dataCh <- data
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter,quitCh chan <- *Stream) {
-	go s.readLoop(rw, quitCh)
+func (s *Stream) startLoop(rw *bufio.ReadWriter,quitCh chan <- *Stream, dh dapHandler) {
+	go s.readLoop(rw, quitCh, dh)
 	go s.writeLoop(rw)
 }
 
@@ -107,7 +107,7 @@ func readMsg(rw *bufio.ReadWriter) ([]byte, error) {
 	}
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter) {
+func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
 	//read stream with delimiter
 	bytes, err := readMsg(rw)
 
@@ -117,7 +117,8 @@ func (s *Stream) read(rw *bufio.ReadWriter) {
 
 	//TODO: How to verify the integrity of the received message
 	if len(bytes) > 1 {
-		s.parseData(bytes)
+		dm := s.parseData(bytes)
+		dh(dm, s)
 	} else {
 		logger.Debug("Read less than 1 byte. Stop Reading...")
 		//stop the stream
@@ -126,7 +127,7 @@ func (s *Stream) read(rw *bufio.ReadWriter) {
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan <- *Stream) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan <- *Stream, dh dapHandler) {
 	for {
 		select {
 		case <-s.quitRdCh:
@@ -134,7 +135,7 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan <- *Stream) {
 			logger.Debug("Stream ReadLoop Terminated!")
 			return
 		default:
-			s.read(rw)
+			s.read(rw, dh)
 		}
 	}
 }
@@ -185,12 +186,12 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 }
 
 //should parse and relay
-func (s *Stream) parseData(data []byte) {
+func (s *Stream) parseData(data []byte) *DapMsg {
 
 	dataDecoded, err := decodeMessage(data)
 	if err != nil {
 		logger.Warn(err)
-		return
+		return nil
 	}
 
 	dmpb := &networkpb.Dapmsg{}
@@ -201,18 +202,6 @@ func (s *Stream) parseData(data []byte) {
 
 	dm := &DapMsg{}
 	dm.FromProto(dmpb)
-
-	switch dm.GetCmd() {
-	case SyncBlock:
-		s.node.SyncBlockHandler(dm, s.peerID)
-	case SyncPeerList:
-		s.node.AddMultiPeers(dm.GetData())
-	case RequestBlock:
-		s.node.SendRequestedBlock(dm.GetData(), s.peerID)
-	case BroadcastTx:
-		s.node.AddTxToPool(dm)
-	default:
-		logger.Debug("Received invalid command from:", s.peerID)
-	}
+	return dm
 
 }

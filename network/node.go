@@ -251,6 +251,22 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
+func  (n *Node) dispatch (msg *DapMsg, s *Stream) {
+	switch msg.GetCmd() {
+	case SyncBlock:
+		n.SyncBlockHandler(msg, s.peerID)
+	case SyncPeerList:
+		n.AddMultiPeers(msg.GetData())
+	case RequestBlock:
+		n.SendRequestedBlock(msg.GetData(), s.peerID)
+	case BroadcastTx:
+		n.AddTxToPool(msg)
+	default:
+		logger.Debug("Received invalid command from:", s.peerID)
+
+	}
+}
+
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.WithFields(logger.Fields{
@@ -261,10 +277,10 @@ func (n *Node) streamHandler(s net.Stream) {
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
 		n.peerList.Add(peer)
 		//start stream
-		ns := NewStream(s, n)
+		ns := NewStream(s)
 		//add stream to this.streams
 		n.streams[s.Conn().RemotePeer()] = ns
-		ns.Start(n.streamExitCh)
+		ns.Start(n.streamExitCh, n.dispatch)
 
 		n.SyncPeersUnicast(peer.peerid)
 	}
