@@ -464,12 +464,16 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	var outputs []TXOutput
 	toAddr := to
 
-	if contract != "" {
-		outputs = append(outputs, *NewContractTXOutput(contract))
-		toAddr = outputs[0].PubKeyHash.GenerateAddress()
+	if toAddr.String() == "" {
+		toAddr = NewContractPubKeyHash().GenerateAddress()
 	}
 
-	toAddr = to //to be modified if smart contract is merged
+	if contract != "" {
+		txOut := *NewContractTXOutput(contract)
+		pkh, _ := toAddr.GetPubKeyHash()
+		txOut.PubKeyHash.PubKeyHash = pkh
+		outputs = append(outputs, txOut)
+	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
 	outputs = append(outputs, *NewTXOutput(change, from))
