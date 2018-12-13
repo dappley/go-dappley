@@ -36,11 +36,11 @@ const BlockPoolMaxSize = 100
 const LengthForBlockToBeConsideredHistory = 100
 
 var (
-	ErrBlockDoesNotExist         = errors.New("ERROR: Block does not exist in blockchain")
-	ErrNotAbleToGetLastBlockHash = errors.New("ERROR: Not able to get last block hash in blockchain")
-	ErrTransactionNotFound       = errors.New("ERROR: Transaction not found")
-	ErrDuplicatedBlock           = errors.New("ERROR: Block already exists in blockchain")
-	ErrUpdateUtxoState			 = errors.New("Blockchain: Update UTXO index failed")
+	ErrBlockDoesNotExist         = errors.New("block does not exist")
+	ErrNotAbleToGetLastBlockHash = errors.New("unable to get last block hash")
+	ErrTransactionNotFound       = errors.New("transaction not found")
+	ErrDuplicatedBlock           = errors.New("block already exists")
+	ErrUpdateUtxoState			 = errors.New("update UTXO index failed")
 )
 
 type Blockchain struct {

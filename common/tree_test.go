@@ -19,7 +19,6 @@
 package common
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +32,7 @@ func Test_AddParent(t *testing.T) {
 	err1 := childNode.AddParent(parentNode1)
 	assert.Equal(t, nil, err1)
 	err2 := childNode.AddParent(parentNode2)
-	assert.Equal(t, errors.New("ERROR: Adding parent to node already with parent"), err2)
+	assert.Equal(t, ErrNodeAlreadyHasParent, err2)
 
 	assert.Equal(t, parentNode1, childNode.Parent)
 

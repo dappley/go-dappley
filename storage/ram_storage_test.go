@@ -19,7 +19,6 @@
 package storage
 
 import (
-	"errors"
 	"sync"
 	"testing"
 
@@ -60,7 +59,7 @@ func TestRamStorage_GetandPut(t *testing.T) {
 	_, err := r.Get([]byte("d"))
 
 	//there should be an error returned
-	assert.Equal(t, err, errors.New("Key is invalid"))
+	assert.Equal(t, err, ErrKeyInvalid)
 }
 
 //test close method
@@ -77,7 +76,7 @@ func TestRamStorage_Close(t *testing.T) {
 	v, err := r.Get([]byte("1"))
 
 	//there should be an error returned
-	assert.Equal(t, err, errors.New("Key is invalid"))
+	assert.Equal(t, err, ErrKeyInvalid)
 	//there should be not value returned
 	assert.Nil(t, v)
 }

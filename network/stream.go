@@ -42,7 +42,7 @@ const (
 )
 
 var (
-	ErrInvalidMessageFormat = errors.New("Message format is invalid")
+	ErrInvalidMessageFormat = errors.New("invalid message format")
 )
 
 var (

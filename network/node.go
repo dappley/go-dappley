@@ -50,8 +50,8 @@ const (
 )
 
 var (
-	ErrDapMsgNoCmd  = errors.New("ERROR: Dappley message has no command input")
-	ErrIsInPeerlist = errors.New("ERROR: Peer already exists in peerlist")
+	ErrDapMsgNoCmd  = errors.New("command not specified")
+	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
 
 type Node struct {

@@ -39,6 +39,11 @@ import (
 
 const walletConfigFilePath = "../client/wallet.conf"
 
+var (
+	ErrPasswordIncorrect = errors.New("password is incorrect")
+	ErrAddressNotFound = errors.New("address not found in local wallets")
+)
+
 type WalletManager struct {
 	Wallets    []*Wallet
 	fileLoader storage.FileStorage
@@ -67,15 +72,11 @@ func GetWalletFilePath() string {
 		return ""
 	}
 	walletPath := strings.Replace(conf.GetFilePath(), "/wallets.dat", "", 1)
-	walletfile := ""
-	err := errors.New("")
+	var walletfile string
 	if Exists(walletPath) {
-		walletfile, err = filepath.Abs(conf.GetFilePath())
+		walletfile, _ = filepath.Abs(conf.GetFilePath())
 	} else if Exists(strings.Replace(walletPath, "..", "../..", 1)) {
-		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
-	}
-	if err != nil && err.Error() == "" {
-		return walletfile
+		walletfile, _ = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
 	}
 	return walletfile
 }
@@ -193,7 +194,7 @@ func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, 
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err != nil {
 		wm.mutex.Unlock()
-		return nil, errors.New("Password not correct!")
+		return nil, ErrPasswordIncorrect
 	}
 	for _, wallet := range wm.Wallets {
 		address := wallet.GetAddresses()[0].String()
@@ -230,12 +231,12 @@ func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, 
 	if err == nil {
 		wallet := wm.GetWalletByAddress(address)
 		if wallet == nil {
-			return nil, errors.New("Address not found in the wallets!")
+			return nil, ErrAddressNotFound
 		}
 		return wallet, nil
 
 	}
-	return nil, errors.New("Password does not match!")
+	return nil, ErrPasswordIncorrect
 
 }
 

@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	ErrInvalidAddress = errors.New("Invalid Address")
+	ErrInvalidAddress = errors.New("invalid address")
 )
 
 type Address struct {
