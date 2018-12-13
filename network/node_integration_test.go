@@ -152,7 +152,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 
 	blk := core.GenerateMockBlock()
 
-	err = n1.bc.GetDb().Put(blk.GetHash(), blk.Serialize())
+	err = n1.GetBlockchain().GetDb().Put(blk.GetHash(), blk.Serialize())
 	assert.Nil(t, err)
 
 	n2.RequestBlockUnicast(blk.GetHash(), n1.GetPeerID())

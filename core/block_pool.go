@@ -72,87 +72,56 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
 }
 
-//Verify all transactions in a fork
-func (pool *BlockPool) VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
-	logger.Info("Verifying transactions")
-	for i := len(forkBlks) - 1; i >= 0; i-- {
-		logger.WithFields(logger.Fields{
-			"height": forkBlks[i].GetHeight(),
-			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
-		}).Debug("Verifying block before merge")
-
-		if !forkBlks[i].VerifyTransactions(utxo) {
-			return false
-		}
-
-		utxo.UpdateUtxoState(forkBlks[i].GetTransactions())
-	}
-	return true
-}
-
-func (pool *BlockPool) Push(block *Block, pid peer.ID, blockchain *Blockchain) {
+func (pool *BlockPool) Verify(block *Block) bool {
 	logger.Info("BlockPool: Has received a new block")
 	if pool.syncState {
 		logger.Debug("BlockPool: is syncing already, tossing block ")
-		return
+		return false
 	}
 	if !block.VerifyHash() {
 		logger.Warn("BlockPool: The received block cannot pass hash verification!")
-		return
-	}
-
-	if !(blockchain.GetConsensus().Validate(block)) {
-		logger.Warn("BlockPool: The received block is invalid according to consensus!")
-		return
+		return false
 	}
 	//TODO: Verify double spending transactions in the same block
 
-	logger.Debug("BlockPool: Block has been verified")
-	pool.handleRecvdBlock(block, pid, blockchain)
+	return true
 }
 
-func (pool *BlockPool) handleRecvdBlock(blk *Block, sender peer.ID, blockchain *Blockchain) {
-	logger.WithFields(logger.Fields{
-		"From": sender.String(),
-		"hash": hex.EncodeToString(blk.GetHash()),
-	}).Info("BlockPool: Received a new block: ")
-
-	tree, _ := common.NewTree(blk.GetHash().String(), blk)
+func (pool *BlockPool) HandleRecvdBlock(tree *common.Tree, maxHeight uint64) Hash {
 	blkCache := pool.blkCache
 
-	if blkCache.Contains(blk.GetHash().String()) {
-		return
+	if blkCache.Contains(tree.GetValue().(*Block).GetHash().String()) {
+		return nil
 	}
-	if !pool.isChildBlockInCache(blk.GetHash().String()) && blk.GetHeight() <= blockchain.GetMaxHeight() {
-		return
+	if !pool.isChildBlockInCache(tree.GetValue().(*Block).GetHash().String()) && tree.GetValue().(*Block).GetHeight() <= maxHeight {
+		return nil
 	}
-	blkCache.Add(blk.GetHash().String(), tree)
+	blkCache.Add(tree.GetValue().(*Block).GetHash().String(), tree)
 	pool.updateBlkCache(tree)
 
 	forkheadParentHash := tree.GetValue().(*Block).GetPrevHash()
+	return forkheadParentHash
 
-	if parent, _ := blockchain.GetBlockByHash(forkheadParentHash); parent != nil {
-		_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
-		if forkTailTree.GetValue().(*Block).GetHeight() > blockchain.GetMaxHeight() {
-			pool.SetSyncState(true)
-		} else {
-			return
-		}
-
-		trees := forkTailTree.GetParentTreesRange(tree)
-		forkBlks := getBlocksFromTrees(trees)
-		blockchain.MergeFork(forkBlks, forkheadParentHash, pool)
-		tree.Delete()
-
-		logger.WithFields(logger.Fields{
-			"syncstate": 0,
-		}).Debug("Merge finished or exited, setting syncstate to false")
-		pool.SetSyncState(false)
-
+}
+func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) []*Block {
+	_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
+	if forkTailTree.GetValue().(*Block).GetHeight() > maxHeight {
+		pool.SetSyncState(true)
 	} else {
-		pool.requestPrevBlock(tree, sender)
+		return nil
 	}
 
+	trees := forkTailTree.GetParentTreesRange(tree)
+	forkBlks := getBlocksFromTrees(trees)
+	return forkBlks
+}
+
+func (pool *BlockPool) CleanCacheAfterMerge(tree *common.Tree) {
+	tree.Delete()
+	logger.WithFields(logger.Fields{
+		"syncstate": 0,
+	}).Debug("Merge finished or exited, setting syncstate to false")
+	pool.SetSyncState(false)
 }
 
 func getBlocksFromTrees(trees []*common.Tree) []*Block {

@@ -57,8 +57,7 @@ var (
 type Node struct {
 	host                   host.Host
 	info                   *Peer
-	bc                     *core.Blockchain
-	pool                   *core.BlockPool
+	bm                     *core.BlockManager
 	streams                map[peer.ID]*Stream
 	peerList               *PeerList
 	exitCh                 chan bool
@@ -70,10 +69,12 @@ type Node struct {
 //create new Node instance
 func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	placeholder := uint64(0)
+	bm := core.NewBlockManager()
+	bm.SetblockPool(pool)
+	bm.Setblockchain(bc)
 	return &Node{nil,
 		nil,
-		bc,
-		pool,
+		bm,
 		make(map[peer.ID]*Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
@@ -90,8 +91,8 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain    { return n.bc }
-func (n *Node) GetBlockPool() *core.BlockPool      { return n.pool }
+func (n *Node) GetBlockchain() *core.Blockchain    { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool      { return n.bm.GetblockPool() }
 func (n *Node) GetPeerList() *PeerList             { return n.peerList }
 func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
 
@@ -118,7 +119,7 @@ func (n *Node) StartRequestLoop() {
 			select {
 			case <-n.exitCh:
 				return
-			case brPars := <-n.pool.BlockRequestCh():
+			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
 			}
 		}
@@ -377,7 +378,7 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
-	n.pool.Push(block, pid, n.bc)
+	n.bm.Push(block, pid)
 }
 
 func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
@@ -434,7 +435,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	//load the tx with proto
 	tx.FromProto(txpb)
 	//add tx to txpool
-	n.bc.GetTxPool().Push(*tx)
+	n.bm.Getblockchain().GetTxPool().Push(*tx)
 }
 
 func (n *Node) AddMultiPeers(data []byte) {
@@ -476,7 +477,7 @@ func (n *Node) AddMultiPeers(data []byte) {
 }
 
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
-	blockBytes, err := n.bc.GetDb().Get(hash)
+	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
 		return

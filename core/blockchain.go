@@ -331,7 +331,7 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	return err == nil
 }
 
-func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash, bp *BlockPool) {
+func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 
 	//find parent block
 	if len(forkBlks) == 0 {
@@ -349,7 +349,7 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash, bp *Bloc
 		return
 	}
 
-	if !bp.VerifyTransactions(*utxo, forkBlks) {
+	if !VerifyTransactions(*utxo, forkBlks) {
 		return
 	}
 
@@ -358,6 +358,24 @@ func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash, bp *Bloc
 	//add all blocks in fork from head to tail
 	bc.concatenateForkToBlockchain(forkBlks)
 
+}
+
+//Verify all transactions in a fork
+func VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
+	logger.Info("Verifying transactions")
+	for i := len(forkBlks) - 1; i >= 0; i-- {
+		logger.WithFields(logger.Fields{
+			"height": forkBlks[i].GetHeight(),
+			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
+		}).Debug("Verifying block before merge")
+
+		if !forkBlks[i].VerifyTransactions(utxo) {
+			return false
+		}
+
+		utxo.UpdateUtxoState(forkBlks[i].GetTransactions())
+	}
+	return true
 }
 
 func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {

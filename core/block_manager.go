@@ -17,11 +17,21 @@
 //
 package core
 
-import peer "github.com/libp2p/go-libp2p-peer"
+import (
+	"encoding/hex"
+
+	"github.com/dappley/go-dappley/common"
+	peer "github.com/libp2p/go-libp2p-peer"
+	logger "github.com/sirupsen/logrus"
+)
 
 type BlockManager struct {
 	blockchain *Blockchain
 	blockPool  *BlockPool
+}
+
+func NewBlockManager() *BlockManager {
+	return &BlockManager{}
 }
 
 func (bm *BlockManager) SetblockPool(blockPool *BlockPool) {
@@ -41,5 +51,28 @@ func (bm *BlockManager) GetblockPool() *BlockPool {
 }
 
 func (bm *BlockManager) Push(block *Block, pid peer.ID) {
-
+	if !bm.blockPool.Verify(block) {
+		return
+	}
+	if !(bm.blockchain.GetConsensus().Validate(block)) {
+		logger.Warn("BlockPool: The received block is invalid according to consensus!")
+		return
+	}
+	logger.Debug("BlockPool: Block has been verified")
+	tree, _ := common.NewTree(block.GetHash().String(), block)
+	logger.WithFields(logger.Fields{
+		"From": pid.String(),
+		"hash": hex.EncodeToString(block.GetHash()),
+	}).Info("BlockPool: Received a new block: ")
+	forkheadParentHash := bm.blockPool.HandleRecvdBlock(tree, bm.blockchain.GetMaxHeight())
+	if forkheadParentHash == nil {
+		return
+	}
+	if parent, _ := bm.blockchain.GetBlockByHash(forkheadParentHash); parent == nil {
+		bm.blockPool.requestPrevBlock(tree, pid)
+		return
+	}
+	forkBlks := bm.blockPool.GenerateForkBlocks(tree, bm.blockchain.GetMaxHeight())
+	bm.blockchain.MergeFork(forkBlks, forkheadParentHash)
+	bm.blockPool.CleanCacheAfterMerge(tree)
 }
