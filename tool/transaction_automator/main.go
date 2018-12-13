@@ -20,11 +20,12 @@ import (
 var(
 	password             = "testpassword"
 	maxWallet            = 10
-	initialAmount        = uint64(100)
-	blockReward 		 = uint64(10)
+	initialAmount        = uint64(10)
 	maxDefaultSendAmount = uint64(5)
-	sendInterval         = time.Duration(1000)
+	sendInterval         = time.Duration(1000) //ms
+	checkBalanceInterval = time.Duration(10) //s
 	fundTimeout          = time.Duration(time.Minute * 5)
+	currBalance 		 = make(map[string]uint64)
 )
 
 func main() {
@@ -53,13 +54,17 @@ func main() {
 	displayBalances(rpcClient, addresses)
 
 	ticker := time.NewTicker(time.Millisecond* sendInterval).C
-	getBalanceTicker := time.NewTicker(time.Minute).C
+	currHeight := getBlockHeight(rpcClient)
 	for{
-		select{
-		case <- ticker:
-			sendRandomTransactions(adminClient, rpcClient, addresses)
-		case <- getBalanceTicker:
-			displayBalances(rpcClient, addresses)
+		select {
+		case <-ticker:
+			height := getBlockHeight(rpcClient)
+			if height > currHeight {
+				displayBalances(rpcClient, addresses)
+				currHeight = height
+			}else{
+				sendRandomTransactions(adminClient, addresses)
+			}
 		}
 	}
 }
@@ -171,14 +176,14 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string)
 	}
 }
 
-func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, addresses []core.Address){
+func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []core.Address){
 
-	fromIndex := getAddrWithBalance(rpcClient, addresses)
+	fromIndex := getAddrWithBalance(addresses)
 	toIndex := rand.Intn(maxWallet)
 	for toIndex == fromIndex{
 		toIndex = rand.Intn(maxWallet)
 	}
-	sendAmount := calcSendAmount(rpcClient, addresses[fromIndex].String(), addresses[toIndex].String())
+	sendAmount := calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
 	err :=  sendTransaction(adminClient, addresses[fromIndex].String(), addresses[toIndex].String(), sendAmount)
 	if err!=nil {
 		logger.WithFields(logger.Fields{
@@ -186,7 +191,9 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, rpcClient rpcp
 			"to"	: addresses[toIndex].String(),
 			"amount": sendAmount,
 			"error" : err,
-		}).Warn("send transaction failed!")
+			"fromBal" : currBalance[addresses[fromIndex].String()],
+			"toBal" : currBalance[addresses[toIndex].String()],
+		}).Panic("send transaction failed!")
 		return
 	}
 	logger.WithFields(logger.Fields{
@@ -194,35 +201,36 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, rpcClient rpcp
 		"to"	: addresses[toIndex].String(),
 		"amount": sendAmount,
 		"error" : err,
+		"fromBal" : currBalance[addresses[fromIndex].String()],
+		"toBal" : currBalance[addresses[toIndex].String()],
 	}).Info("Transaction Sent!")
 }
 
-func calcSendAmount(rpcClient rpcpb.RpcServiceClient, from, to string) uint64{
-	fromBalance, _  := getBalance(rpcClient, from)
-	toBalance, _  := getBalance(rpcClient, to)
-	difference := fromBalance-toBalance
+func calcSendAmount(from, to string) uint64{
+	fromBalance, _  := currBalance[from]
+	toBalance, _  := currBalance[to]
 	amount := uint64(0)
-	if difference < 0 {
+	if fromBalance < toBalance {
 		amount = 1
-	}else if difference==0 {
-		amount = uint64(fromBalance - 1)
+	}else if fromBalance==toBalance {
+		amount = fromBalance - 1
 	}else{
-		amount = uint64(difference/3)
+		amount = (fromBalance-toBalance)/3
 	}
 
 	if amount == 0 {
-		amount = rand.Uint64()%maxDefaultSendAmount + 1
+		amount = 1
 	}
 	return amount
 }
 
-func getAddrWithBalance(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) int{
+func getAddrWithBalance(addresses []core.Address) int{
 	fromIndex := rand.Intn(maxWallet)
-	amount, err := getBalance(rpcClient, addresses[fromIndex].String())
+	amount := currBalance[addresses[fromIndex].String()]
 	//TODO: add time out to this loop
-	for  err!=nil || amount <= int64(maxDefaultSendAmount+1) {
+	for amount <= maxDefaultSendAmount+1 {
 		fromIndex = rand.Intn(maxWallet)
-		amount, err = getBalance(rpcClient, addresses[fromIndex].String())
+		amount = currBalance[addresses[fromIndex].String()]
 	}
 	return fromIndex
 }
@@ -236,7 +244,12 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		Walletpath: client.GetWalletFilePath(),
 		Contract:   "",
 	})
-	return err
+	if err!=nil{
+		return err
+	}
+	currBalance[from] -= amount
+	currBalance[to] += amount
+	return nil
 }
 
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
@@ -252,7 +265,9 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address)
 		logger.WithFields(logger.Fields{
 			"address" 	: addr.String(),
 			"amount"	: amount,
+			"record"	: currBalance[addr.String()],
 		}).Info("wallet balance")
+		currBalance[addr.String()] = uint64(amount)
 	}
 }
 
@@ -262,4 +277,18 @@ func getBalance(rpcClient rpcpb.RpcServiceClient, address string) (int64, error)
 	getBalanceRequest.Address = address
 	response, err := rpcClient.RpcGetBalance(context.Background(), &getBalanceRequest)
 	return response.Amount, err
+}
+
+func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64{
+	resp, err := rpcClient.RpcGetBlockchainInfo(
+		context.Background(),
+		&rpcpb.GetBlockchainInfoRequest{})
+	if err!=nil{
+		logger.Panic("Can not get block height. err:", err)
+	}
+	return resp.BlockHeight
+}
+
+func isBalanceSufficient(addr string, amount uint64) bool{
+	return currBalance[addr] >= amount
 }
