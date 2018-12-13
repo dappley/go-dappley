@@ -43,8 +43,6 @@ const ContractTxouputIndex = 0
 var (
 	ErrInsufficientFund  = errors.New("transaction: insufficient balance")
 	ErrInvalidAmount     = errors.New("transaction: invalid amount (must be > 0)")
-	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
-	ErrNewUserPubKeyHash = errors.New("transaction: cannot create pubkeyhash")
 )
 
 type Transaction struct {

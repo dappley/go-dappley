@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	ErrNodeNotFound         = errors.New("tree: node not found")
 	ErrCantCreateEmptyNode  = errors.New("tree: node index and value must not be empty")
 	ErrNodeAlreadyHasParent = errors.New("tree: node already has a parent")
 )

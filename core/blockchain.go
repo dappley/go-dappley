@@ -37,10 +37,7 @@ const LengthForBlockToBeConsideredHistory = 100
 
 var (
 	ErrBlockDoesNotExist         = errors.New("block does not exist")
-	ErrNotAbleToGetLastBlockHash = errors.New("unable to get last block hash")
 	ErrTransactionNotFound       = errors.New("transaction not found")
-	ErrDuplicatedBlock           = errors.New("block already exists")
-	ErrUpdateUtxoState			 = errors.New("update UTXO index failed")
 )
 
 type Blockchain struct {
