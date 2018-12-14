@@ -329,7 +329,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	}
 	pow.Stop()
 
-	assert.True(t, core.MetricsTxDoubleSpend.Count() > 0)
+	assert.True(t, core.MetricsInvalidTx.Count() > 0)
 }
 
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {

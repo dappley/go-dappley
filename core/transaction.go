@@ -329,9 +329,8 @@ func (tx *Transaction) verifyTxInTempPool(utxoIndex UTXOIndex, txPool Transactio
 		for _, vin := range notFoundVin {
 			parentTx := txPool.GetTxByID(vin.Txid)
 			if parentTx == nil {
-				// todo: change doublespend condition
 				// vin of tx not found in utxoIndex or txPool
-				MetricsTxDoubleSpend.Inc(1)
+				MetricsInvalidTx.Inc(1)
 				return false
 			}
 			pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)

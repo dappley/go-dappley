@@ -98,7 +98,6 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	}
 
 	txPool.RemoveMultipleTransactions(validTxs)
-	txPool.RemoveMultipleTransactions(invalidTxs)
 
 	return validTxs
 }
@@ -193,7 +192,7 @@ func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 	if _, exists := txPool.index[string(txId)]; !exists {
-		logger.Warn("TransactionPool: transaction does not exists")
+		logger.Warn("TransactionPool: transaction does not exist")
 		return nil
 	}
 

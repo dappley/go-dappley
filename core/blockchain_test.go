@@ -166,7 +166,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	err = bc.AddBlockToTail(blk)
 
 	// Expect the coinbase tx to go through
-	assert.Equal(t, nil , err)
+	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
 	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
 }
