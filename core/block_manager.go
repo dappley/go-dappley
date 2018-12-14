@@ -74,5 +74,5 @@ func (bm *BlockManager) Push(block *Block, pid peer.ID) {
 	}
 	forkBlks := bm.blockPool.GenerateForkBlocks(tree, bm.blockchain.GetMaxHeight())
 	bm.blockchain.MergeFork(forkBlks, forkheadParentHash)
-	bm.blockPool.CleanCacheAfterMerge(tree)
+	bm.blockPool.CleanCache(tree)
 }

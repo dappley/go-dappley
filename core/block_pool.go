@@ -116,7 +116,7 @@ func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) [
 	return forkBlks
 }
 
-func (pool *BlockPool) CleanCacheAfterMerge(tree *common.Tree) {
+func (pool *BlockPool) CleanCache(tree *common.Tree) {
 	tree.Delete()
 	logger.WithFields(logger.Fields{
 		"syncstate": 0,
