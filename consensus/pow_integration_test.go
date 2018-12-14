@@ -36,7 +36,7 @@ import (
 
 var sendAmount = common.NewAmount(7)
 var sendAmount2 = common.NewAmount(6)
-var mineReward = common.NewAmount(10)
+var mineReward = common.NewAmount(10000000)
 
 func TestMain(m *testing.M) {
 

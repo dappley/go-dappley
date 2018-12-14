@@ -38,7 +38,7 @@ const testport_fork_segment = 10201
 
 //test send
 func TestSend(t *testing.T) {
-	var mineReward = common.NewAmount(10)
+	var mineReward = common.NewAmount(10000000)
 	testCases := []struct {
 		name             string
 		transferAmount   *common.Amount
@@ -161,7 +161,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//this is internally set. Dont modify
-	mineReward := common.NewAmount(10)
+	mineReward := common.NewAmount(10000000)
 	//Transfer ammount
 	transferAmount := common.NewAmount(25)
 	tip := uint64(5)
@@ -204,9 +204,9 @@ func TestSendInsufficientBalance(t *testing.T) {
 	tip := uint64(5)
 
 	//this is internally set. Dont modify
-	mineReward := common.NewAmount(10)
+	mineReward := common.NewAmount(10000000)
 	//Transfer ammount is larger than the balance
-	transferAmount := common.NewAmount(25)
+	transferAmount := common.NewAmount(250000000)
 
 	//create a wallet address
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")

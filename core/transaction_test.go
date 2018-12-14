@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"sync"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -31,9 +32,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
-	"sync"
-
 )
 
 func getAoB(length int64) []byte {
@@ -168,7 +166,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
-	txout1 := NewTXOutput(common.NewAmount(10), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
+	txout1 := NewTXOutput(common.NewAmount(10000000), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, 0}
 
 	// test valid coinbase transaction
@@ -255,7 +253,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX(NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := TXOutput{common.NewAmount(10), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}, ""}
+	expectVout := TXOutput{common.NewAmount(10000000), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}, ""}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
 	assert.Equal(t, 1, len(t1.Vout))
@@ -666,8 +664,8 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 			{t1.ID, 1, nil, pubkey1},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(5), pkHash1,""},
-			{common.NewAmount(10), pkHash2,""},
+			{common.NewAmount(5), pkHash1, ""},
+			{common.NewAmount(10), pkHash2, ""},
 		},
 		Tip: 3,
 	}
@@ -679,8 +677,8 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 			{dependentTx1.ID, 1, nil, pubkey2},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(5), pkHash3,""},
-			{common.NewAmount(3), pkHash4,""},
+			{common.NewAmount(5), pkHash3, ""},
+			{common.NewAmount(3), pkHash4, ""},
 		},
 		Tip: 2,
 	}
@@ -692,7 +690,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 			{dependentTx2.ID, 0, nil, pubkey3},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(1), pkHash4,""},
+			{common.NewAmount(1), pkHash4, ""},
 		},
 		Tip: 4,
 	}
@@ -705,7 +703,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 			{dependentTx3.ID, 0, nil, pubkey4},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(3), pkHash1,""},
+			{common.NewAmount(3), pkHash1, ""},
 		},
 		Tip: 1,
 	}
@@ -718,7 +716,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 			{dependentTx4.ID, 0, nil, pubkey1},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(4), pkHash5,""},
+			{common.NewAmount(4), pkHash5, ""},
 		},
 		Tip: 4,
 	}

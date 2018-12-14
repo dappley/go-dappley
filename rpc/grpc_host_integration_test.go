@@ -149,7 +149,7 @@ func TestRpcSend(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Check balance
-	minedReward := common.NewAmount(10)
+	minedReward := common.NewAmount(10000000)
 	senderBalance, err := logic.GetBalance(senderWallet.GetAddress(), store)
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
@@ -363,7 +363,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.wallet.GetAddress().Address})
 	assert.Nil(t, err)
 	assert.Equal(t, senderResponse.ErrorCode, OK)
-	minedReward := common.NewAmount(10)
+	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
 
@@ -614,7 +614,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	minedReward := common.NewAmount(10)
+	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, leftAmount, realAmount)
@@ -737,7 +737,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	minedReward := common.NewAmount(10)
+	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(9))
 	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, leftAmount, realAmount)
