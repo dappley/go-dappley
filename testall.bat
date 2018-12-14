@@ -1,16 +1,27 @@
 @echo off
-set back=%cd%
+setlocal EnableDelayedExpansion
+SET back=%cd%
 for /d %%i in (*) do (
-set test=true
+
+set notest="true"
 echo %%i
-if %%i == "bin" set test=
-if %%i == "vendor" set test=
+if "%%i" == "bin" set notest="false"
+if "%%i" == "vendor" set notest="false"
 
-if defined test (
-    cd %%i 
-    go test --tags="integration"
-    cd ../
-) 
+if !notest! == "true" (
+    copy contract\v8\windows\lib\*.dll %%i
+    
+    cd %%i
+    go test -tags=integration -c 
 
+    set "testfile=%%i.test.exe"
+    echo "!testfile!"
+
+    !testfile!
+
+    if not "%%i" == "dapp" DEL *.dll
+
+    cd ..
+)
 )
 cd %back%

@@ -1425,10 +1425,6 @@ class V8_EXPORT ScriptCompiler {
 
   enum CompileOptions {
     kNoCompileOptions = 0,
-    kProduceParserCache,
-    kConsumeParserCache,
-    kProduceCodeCache,
-    kProduceFullCodeCache,
     kConsumeCodeCache,
     kEagerCompile
   };
@@ -1826,8 +1822,18 @@ struct SampleInfo {
 };
 
 struct MemoryRange {
-  const void* start;
-  size_t length_in_bytes;
+  const void* start = nullptr;
+  size_t length_in_bytes = 0;
+};
+
+struct JSEntryStub {
+  MemoryRange code;
+};
+
+struct UnwindState {
+  MemoryRange code_range;
+  MemoryRange embedded_code_range;
+  JSEntryStub js_entry_stub;
 };
 
 /**
@@ -2530,7 +2536,7 @@ enum class NewStringType {
  */
 class V8_EXPORT String : public Name {
  public:
-  static constexpr int kMaxLength = internal::kApiPointerSize == 4
+  static constexpr int kMaxLength = internal::kApiTaggedSize == 4
                                         ? (1 << 28) - 16
                                         : internal::kSmiMaxValue / 2 - 24;
 
@@ -2630,8 +2636,7 @@ class V8_EXPORT String : public Name {
    public:
     virtual ~ExternalStringResourceBase() = default;
 
-    V8_DEPRECATE_SOON("Use IsCacheable().",
-                      virtual bool IsCompressible() const) {
+    V8_DEPRECATED("Use IsCacheable().", virtual bool IsCompressible() const) {
       return false;
     }
 
@@ -2640,16 +2645,7 @@ class V8_EXPORT String : public Name {
      * ExternalStringResource::data() may be cached, otherwise it is not
      * expected to be stable beyond the current top-level task.
      */
-    virtual bool IsCacheable() const {
-#if __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-      return !IsCompressible();
-#if __clang__
-#pragma clang diagnostic pop
-#endif
-    }
+    virtual bool IsCacheable() const { return true; }
 
    protected:
     ExternalStringResourceBase() = default;
@@ -3654,6 +3650,18 @@ class V8_EXPORT Object : public Value {
 
   static Local<Object> New(Isolate* isolate);
 
+  /**
+   * Creates a JavaScript object with the given properties, and
+   * a the given prototype_or_null (which can be any JavaScript
+   * value, and if it's null, the newly created object won't have
+   * a prototype at all). This is similar to Object.create().
+   * All properties will be created as enumerable, configurable
+   * and writable properties.
+   */
+  static Local<Object> New(Isolate* isolate, Local<Value> prototype_or_null,
+                           Local<Name>* names, Local<Value>* values,
+                           size_t length);
+
   V8_INLINE static Object* Cast(Value* obj);
 
  private:
@@ -3677,6 +3685,12 @@ class V8_EXPORT Array : public Object {
    */
   static Local<Array> New(Isolate* isolate, int length = 0);
 
+  /**
+   * Creates a JavaScript array out of a Local<Value> array in C++
+   * with a known length.
+   */
+  static Local<Array> New(Isolate* isolate, Local<Value>* elements,
+                          size_t length);
   V8_INLINE static Array* Cast(Value* obj);
  private:
   Array();
@@ -3761,8 +3775,8 @@ class ReturnValue {
   }
   // Local setters
   template <typename S>
-  V8_INLINE V8_DEPRECATE_SOON("Use Global<> instead",
-                              void Set(const Persistent<S>& handle));
+  V8_INLINE V8_DEPRECATED("Use Global<> instead",
+                          void Set(const Persistent<S>& handle));
   template <typename S>
   V8_INLINE void Set(const Global<S>& handle);
   template <typename S>
@@ -3989,10 +4003,11 @@ class V8_EXPORT Function : public Object {
       Local<Value> data = Local<Value>(), int length = 0,
       ConstructorBehavior behavior = ConstructorBehavior::kAllow,
       SideEffectType side_effect_type = SideEffectType::kHasSideEffect);
-  static V8_DEPRECATE_SOON(
-      "Use maybe version",
-      Local<Function> New(Isolate* isolate, FunctionCallback callback,
-                          Local<Value> data = Local<Value>(), int length = 0));
+  static V8_DEPRECATED("Use maybe version",
+                       Local<Function> New(Isolate* isolate,
+                                           FunctionCallback callback,
+                                           Local<Value> data = Local<Value>(),
+                                           int length = 0));
 
   V8_WARN_UNUSED_RESULT MaybeLocal<Object> NewInstance(
       Local<Context> context, int argc, Local<Value> argv[]) const;
@@ -4011,9 +4026,9 @@ class V8_EXPORT Function : public Object {
       Local<Context> context, int argc, Local<Value> argv[],
       SideEffectType side_effect_type = SideEffectType::kHasSideEffect) const;
 
-  V8_DEPRECATE_SOON("Use maybe version",
-                    Local<Value> Call(Local<Value> recv, int argc,
-                                      Local<Value> argv[]));
+  V8_DEPRECATED("Use maybe version",
+                Local<Value> Call(Local<Value> recv, int argc,
+                                  Local<Value> argv[]));
   V8_WARN_UNUSED_RESULT MaybeLocal<Value> Call(Local<Context> context,
                                                Local<Value> recv, int argc,
                                                Local<Value> argv[]);
@@ -4146,6 +4161,11 @@ class V8_EXPORT Promise : public Object {
    * Returns the value of the [[PromiseState]] field.
    */
   PromiseState State();
+
+  /**
+   * Marks this promise as handled to avoid reporting unhandled rejections.
+   */
+  void MarkAsHandled();
 
   V8_INLINE static Promise* Cast(Value* obj);
 
@@ -4349,7 +4369,7 @@ class V8_EXPORT WasmCompiledModule : public Object {
 /**
  * The V8 interface for WebAssembly streaming compilation. When streaming
  * compilation is initiated, V8 passes a {WasmStreaming} object to the embedder
- * such that the embedder can pass the input butes for streaming compilation to
+ * such that the embedder can pass the input bytes for streaming compilation to
  * V8.
  */
 class V8_EXPORT WasmStreaming final {
@@ -5719,7 +5739,7 @@ class V8_EXPORT FunctionTemplate : public Template {
       SideEffectType side_effect_type = SideEffectType::kHasSideEffect);
 
   /** Returns the unique function instance in the current execution context.*/
-  V8_DEPRECATE_SOON("Use maybe version", Local<Function> GetFunction());
+  V8_DEPRECATED("Use maybe version", Local<Function> GetFunction());
   V8_WARN_UNUSED_RESULT MaybeLocal<Function> GetFunction(
       Local<Context> context);
 
@@ -6016,7 +6036,7 @@ class V8_EXPORT ObjectTemplate : public Template {
                                                  size_t index);
 
   /** Creates a new instance of this template.*/
-  V8_DEPRECATE_SOON("Use maybe version", Local<Object> NewInstance());
+  V8_DEPRECATED("Use maybe version", Local<Object> NewInstance());
   V8_WARN_UNUSED_RESULT MaybeLocal<Object> NewInstance(Local<Context> context);
 
   /**
@@ -6236,7 +6256,7 @@ class V8_EXPORT AccessorSignature : public Data {
 
 
 // --- Extensions ---
-V8_DEPRECATE_SOON("Implementation detail", class)
+V8_DEPRECATED("Implementation detail", class)
 V8_EXPORT ExternalOneByteStringResourceImpl
     : public String::ExternalOneByteStringResource {
  public:
@@ -6487,10 +6507,12 @@ typedef void (*HostInitializeImportMetaObjectCallback)(Local<Context> context,
  * PrepareStackTraceCallback is called when the stack property of an error is
  * first accessed. The return value will be used as the stack value. If this
  * callback is registed, the |Error.prepareStackTrace| API will be disabled.
+ * |sites| is an array of call sites, specified in
+ * https://github.com/v8/v8/wiki/Stack-Trace-API
  */
 typedef MaybeLocal<Value> (*PrepareStackTraceCallback)(Local<Context> context,
                                                        Local<Value> error,
-                                                       Local<StackTrace> trace);
+                                                       Local<Array> sites);
 
 /**
  * PromiseHook with type kInit is called when a new promise is
@@ -7050,6 +7072,10 @@ class V8_EXPORT EmbedderHeapTracer {
 /**
  * Callback and supporting data used in SnapshotCreator to implement embedder
  * logic to serialize internal fields.
+ * Internal fields that directly reference V8 objects are serialized without
+ * calling this callback. Internal fields that contain aligned pointers are
+ * serialized by this callback if it returns non-zero result. Otherwise it is
+ * serialized verbatim.
  */
 struct SerializeInternalFieldsCallback {
   typedef StartupData (*CallbackFunction)(Local<Object> holder, int index,
@@ -7113,6 +7139,7 @@ class V8_EXPORT Isolate {
      * generated function.
      * An entry_hook can only be provided in no-snapshot builds; in snapshot
      * builds it must be nullptr.
+     * TODO(v8:8503): Remove entry_hook.
      */
     FunctionEntryHook entry_hook;
 
@@ -7361,6 +7388,7 @@ class V8_EXPORT Isolate {
     kDateToLocaleTimeString = 68,
     kAttemptOverrideReadOnlyOnPrototypeSloppy = 69,
     kAttemptOverrideReadOnlyOnPrototypeStrict = 70,
+    kOptimizedFunctionWithOneShotBytecode = 71,
 
     // If you add new values here, you'll also need to update Chromium's:
     // web_feature.mojom, UseCounterCallback.cpp, and enums.xml. V8 changes to
@@ -8111,13 +8139,9 @@ class V8_EXPORT Isolate {
   void GetCodeRange(void** start, size_t* length_in_bytes);
 
   /**
-   * Returns a memory range containing the code for V8's embedded functions
-   * (e.g. builtins) which are shared across isolates.
-   *
-   * If embedded builtins are disabled, then the memory range will be a null
-   * pointer with 0 length.
+   * Returns the UnwindState necessary for use with the Unwinder API.
    */
-  MemoryRange GetEmbeddedCodeRange();
+  UnwindState GetUnwindState();
 
   /** Set the callback to invoke in case of fatal errors. */
   void SetFatalErrorHandler(FatalErrorCallback that);
@@ -8163,7 +8187,9 @@ class V8_EXPORT Isolate {
   void SetWasmModuleCallback(ExtensionCallback callback);
   void SetWasmInstanceCallback(ExtensionCallback callback);
 
-  void SetWasmCompileStreamingCallback(ApiImplementationCallback callback);
+  V8_DEPRECATE_SOON(
+      "The callback set in SetWasmStreamingCallback is used now",
+      void SetWasmCompileStreamingCallback(ApiImplementationCallback callback));
 
   void SetWasmStreamingCallback(WasmStreamingCallback callback);
 
@@ -8457,15 +8483,17 @@ class V8_EXPORT V8 {
    * \param context The third argument passed to the Linux signal handler, which
    * points to a ucontext_t structure.
    */
-  static bool TryHandleSignal(int signal_number, void* info, void* context);
+  V8_DEPRECATE_SOON("Use TryHandleWebAssemblyTrapPosix",
+                    static bool TryHandleSignal(int signal_number, void* info,
+                                                void* context));
 #endif  // V8_OS_POSIX
 
   /**
    * Enable the default signal handler rather than using one provided by the
    * embedder.
    */
-  V8_DEPRECATE_SOON("Use EnableWebAssemblyTrapHandler",
-                    static bool RegisterDefaultSignalHandler());
+  V8_DEPRECATED("Use EnableWebAssemblyTrapHandler",
+                static bool RegisterDefaultSignalHandler());
 
   /**
    * Activate trap-based bounds checking for WebAssembly.
@@ -9285,6 +9313,51 @@ class V8_EXPORT Locker {
   internal::Isolate* isolate_;
 };
 
+/**
+ * Various helpers for skipping over V8 frames in a given stack.
+ *
+ * The unwinder API is only supported on the x64 architecture.
+ */
+class V8_EXPORT Unwinder {
+ public:
+  /**
+   * Attempt to unwind the stack to the most recent C++ frame. This function is
+   * signal-safe and does not access any V8 state and thus doesn't require an
+   * Isolate.
+   *
+   * The unwinder needs to know the location of the JS Entry Stub (a piece of
+   * code that is run when C++ code calls into generated JS code). This is used
+   * for edge cases where the current frame is being constructed or torn down
+   * when the stack sample occurs.
+   *
+   * The unwinder also needs the virtual memory range of all possible V8 code
+   * objects. There are two ranges required - the heap code range and the range
+   * for code embedded in the binary. The V8 API provides all required inputs
+   * via an UnwindState object through the Isolate::GetUnwindState() API. These
+   * values will not change after Isolate initialization, so the same
+   * |unwind_state| can be used for multiple calls.
+   *
+   * \param unwind_state Input state for the Isolate that the stack comes from.
+   * \param register_state The current registers. This is an in-out param that
+   * will be overwritten with the register values after unwinding, on success.
+   * \param stack_base Currently unused.
+   *
+   * \return True on success.
+   */
+  static bool TryUnwindV8Frames(const UnwindState& unwind_state,
+                                RegisterState* register_state,
+                                const void* stack_base);
+
+  /**
+   * Whether the PC is within the V8 code range represented by code_range or
+   * embedded_code_range in |unwind_state|.
+   *
+   * If this returns false, then calling UnwindV8Frames() with the same PC
+   * and unwind_state will always fail. If it returns true, then unwinding may
+   * (but not necessarily) be successful.
+   */
+  static bool PCIsInV8(const UnwindState& unwind_state, void* pc);
+};
 
 // --- Implementation ---
 
@@ -9790,7 +9863,7 @@ AccessorSignature* AccessorSignature::Cast(Data* data) {
 }
 
 Local<Value> Object::GetInternalField(int index) {
-#ifndef V8_ENABLE_CHECKS
+#if !defined(V8_ENABLE_CHECKS) && !defined(V8_COMPRESS_POINTERS)
   typedef internal::Address A;
   typedef internal::Internals I;
   A obj = *reinterpret_cast<A*>(this);
@@ -9800,7 +9873,7 @@ Local<Value> Object::GetInternalField(int index) {
   if (instance_type == I::kJSObjectType ||
       instance_type == I::kJSApiObjectType ||
       instance_type == I::kJSSpecialApiObjectType) {
-    int offset = I::kJSObjectHeaderSize + (internal::kApiPointerSize * index);
+    int offset = I::kJSObjectHeaderSize + (I::kEmbedderDataSlotSize * index);
     A value = I::ReadField<A>(obj, offset);
     A* result = HandleScope::CreateHandle(
         reinterpret_cast<internal::NeverReadOnlySpaceObject*>(obj), value);
@@ -9812,7 +9885,7 @@ Local<Value> Object::GetInternalField(int index) {
 
 
 void* Object::GetAlignedPointerFromInternalField(int index) {
-#ifndef V8_ENABLE_CHECKS
+#if !defined(V8_ENABLE_CHECKS) && !defined(V8_COMPRESS_POINTERS)
   typedef internal::Address A;
   typedef internal::Internals I;
   A obj = *reinterpret_cast<A*>(this);
@@ -9822,7 +9895,7 @@ void* Object::GetAlignedPointerFromInternalField(int index) {
   if (V8_LIKELY(instance_type == I::kJSObjectType ||
                 instance_type == I::kJSApiObjectType ||
                 instance_type == I::kJSSpecialApiObjectType)) {
-    int offset = I::kJSObjectHeaderSize + (internal::kApiPointerSize * index);
+    int offset = I::kJSObjectHeaderSize + (I::kEmbedderDataSlotSize * index);
     return I::ReadField<void*>(obj, offset);
   }
 #endif
@@ -10388,7 +10461,7 @@ MaybeLocal<T> Isolate::GetDataFromSnapshotOnce(size_t index) {
 int64_t Isolate::AdjustAmountOfExternalAllocatedMemory(
     int64_t change_in_bytes) {
   typedef internal::Internals I;
-  const int64_t kMemoryReducerActivationLimit = 32 * 1024 * 1024;
+  constexpr int64_t kMemoryReducerActivationLimit = 32 * 1024 * 1024;
   int64_t* external_memory = reinterpret_cast<int64_t*>(
       reinterpret_cast<uint8_t*>(this) + I::kExternalMemoryOffset);
   int64_t* external_memory_limit = reinterpret_cast<int64_t*>(
@@ -10396,15 +10469,14 @@ int64_t Isolate::AdjustAmountOfExternalAllocatedMemory(
   int64_t* external_memory_at_last_mc =
       reinterpret_cast<int64_t*>(reinterpret_cast<uint8_t*>(this) +
                                  I::kExternalMemoryAtLastMarkCompactOffset);
-  const int64_t amount = *external_memory + change_in_bytes;
 
+  const int64_t amount = *external_memory + change_in_bytes;
   *external_memory = amount;
 
   int64_t allocation_diff_since_last_mc =
-      *external_memory_at_last_mc - *external_memory;
-  allocation_diff_since_last_mc = allocation_diff_since_last_mc < 0
-                                      ? -allocation_diff_since_last_mc
-                                      : allocation_diff_since_last_mc;
+      *external_memory - *external_memory_at_last_mc;
+  // Only check memory pressure and potentially trigger GC if the amount of
+  // external memory increased.
   if (allocation_diff_since_last_mc > kMemoryReducerActivationLimit) {
     CheckMemoryPressure();
   }
@@ -10420,7 +10492,7 @@ int64_t Isolate::AdjustAmountOfExternalAllocatedMemory(
 }
 
 Local<Value> Context::GetEmbedderData(int index) {
-#ifndef V8_ENABLE_CHECKS
+#if !defined(V8_ENABLE_CHECKS) && !defined(V8_COMPRESS_POINTERS)
   typedef internal::Address A;
   typedef internal::Internals I;
   auto* context = *reinterpret_cast<internal::NeverReadOnlySpaceObject**>(this);
@@ -10434,7 +10506,7 @@ Local<Value> Context::GetEmbedderData(int index) {
 
 
 void* Context::GetAlignedPointerFromEmbedderData(int index) {
-#ifndef V8_ENABLE_CHECKS
+#if !defined(V8_ENABLE_CHECKS) && !defined(V8_COMPRESS_POINTERS)
   typedef internal::Internals I;
   return I::ReadEmbedderData<void*>(this, index);
 #else
