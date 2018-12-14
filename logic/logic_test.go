@@ -19,7 +19,6 @@
 package logic
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -145,7 +144,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance1)
 
 	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), store)
-	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
+	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
 

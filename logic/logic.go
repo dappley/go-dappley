@@ -36,13 +36,13 @@ const unlockduration = 300 * time.Second
 
 var minerPrivateKey string
 var (
-	ErrInvalidAmount        = errors.New("ERROR: Amount is invalid (must be > 0)")
-	ErrInvalidAddress       = errors.New("ERROR: Address is invalid")
-	ErrInvalidSenderAddress = errors.New("ERROR: Sender address is invalid")
-	ErrInvalidRcverAddress  = errors.New("ERROR: Receiver address is invalid")
-	ErrPasswordNotMatch     = errors.New("ERROR: Password not correct")
-	ErrPathEmpty            = errors.New("ERROR: Path empty")
-	ErrPasswordEmpty        = errors.New("ERROR: Password empty")
+	ErrInvalidAmount        = errors.New("invalid amount (must be > 0)")
+	ErrInvalidAddress       = errors.New("invalid address")
+	ErrInvalidSenderAddress = errors.New("invalid sender address")
+	ErrInvalidRcverAddress  = errors.New("invalid receiver address")
+	ErrPasswordNotMatch     = errors.New("password is incorrect")
+	ErrPathEmpty            = errors.New("empty path")
+	ErrPasswordEmpty        = errors.New("empty password")
 )
 
 //create a blockchain

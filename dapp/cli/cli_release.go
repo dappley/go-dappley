@@ -29,6 +29,7 @@ import (
 	"os"
 	"strings"
 
+	"errors"
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -41,6 +42,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"github.com/dappley/go-dappley/core/pb"
 )
 
 //command names
@@ -100,6 +102,10 @@ var cmdList = []string{
 	cliListAddresses,
 	cliHelp,
 }
+
+var (
+	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
+)
 
 //configure input parameters/flags for each command
 var cmdFlagsMap = map[string][]flagPars{
@@ -170,7 +176,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetBlockchainInfo: {rpcService, getBlockchainInfoCommandHandler},
 	cliGetBalance:        {rpcService, getBalanceCommandHandler},
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
-	cliSend:              {adminRpcService, sendCommandHandler},
+	cliSend:              {rpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
 	clicreateWallet:      {adminRpcService, createWalletCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
@@ -272,7 +278,8 @@ func printUsage() {
 func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
-		fmt.Println("Get blocks error! maxCount must be greater than zero!")
+		fmt.Println("\n Example: cli getBlocks -startBlockHashes 10 -maxCount 5")
+		fmt.Println()
 		return
 	}
 
@@ -325,6 +332,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 				encodedVout = append(encodedVout, map[string]interface{}{
 					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
+					"Contract":   vout.Contract,
 				})
 			}
 
@@ -567,19 +575,84 @@ func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cm
 }
 
 func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.AdminServiceClient).RpcSend(ctx, &rpcpb.SendRequest{
-		From:       *(flags[flagFromAddress].(*string)),
-		To:         *(flags[flagToAddress].(*string)),
-		Amount:     common.NewAmount(uint64(*(flags[flagAmount].(*int)))).Bytes(),
-		Tip:        *(flags[flagTip].(*uint64)),
-		Walletpath: clientpkg.GetWalletFilePath(),
-		Contract:   *(flags[flagContract].(*string)),
+
+	if core.NewAddress(*(flags[flagFromAddress].(*string))).ValidateAddress() == false {
+		fmt.Println("the 'from' address is not valid!")
+		return
+	}
+
+	if core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
+		fmt.Println("the 'to' address is not valid!")
+		return
+	}
+
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+		Address: core.NewAddress(*(flags[flagFromAddress].(*string))).Address,
 	})
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
 		return
 	}
-	fmt.Println(proto.MarshalTextString(response))
+	utxos := response.GetUtxos()
+	var InputUtxos []*core.UTXO
+	for _, u := range utxos {
+		uu := core.UTXO{}
+		uu.Value = common.NewAmountFromBytes(u.Amount)
+		uu.Txid = u.Txid
+		uu.PubKeyHash = core.PubKeyHash{u.PublicKeyHash}
+		if err != nil {
+			fmt.Println("ERROR: Send failed. ERR:", err)
+			return
+		}
+		uu.TxIndex = int(u.TxIndex)
+		InputUtxos = append(InputUtxos, &uu)
+	}
+
+	tx_utxos, err := GetUTXOsfromAmount(InputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))))
+	if err != nil {
+		fmt.Println("ERROR: Send failed. ERR:", err)
+		return
+	}
+
+	wm, err := logic.GetWalletManager(clientpkg.GetWalletFilePath())
+	if err != nil {
+		fmt.Println("ERROR: Send failed. ERR:", err)
+		return
+	}
+	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
+
+
+	tx, err := core.NewUTXOTransaction(tx_utxos, core.NewAddress(*(flags[flagFromAddress].(*string))), core.NewAddress(*(flags[flagToAddress].(*string))),
+		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), *senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), *(flags[flagContract].(*string)))
+
+	sendTransactionRequest := rpcpb.SendTransactionRequest{}
+	sendTransactionRequest.Transaction = tx.ToProto().(*corepb.Transaction)
+	response1, err := client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, &sendTransactionRequest)
+
+	if err != nil {
+		fmt.Println("ERROR: Send failed. ERR:", err)
+		return
+	}
+	fmt.Println(response1)
+	fmt.Println(proto.MarshalTextString(response1))
+}
+
+func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount) ([]*core.UTXO, error) {
+	var retUtxos []*core.UTXO
+	sum := common.NewAmount(0)
+	for _, u := range inputUTXOs {
+		sum = sum.Add(u.Value)
+		retUtxos = append(retUtxos, u)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+	}
+
+	if sum.Cmp(amount) < 0 {
+		return nil, ErrInsufficientFund
+	}
+
+	return retUtxos, nil
 }
 
 func helpCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {

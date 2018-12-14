@@ -34,18 +34,18 @@ const (
 
 type TransactionPool struct {
 	Transactions sorted.Slice
-	index 		 map[string]*Transaction
+	index        map[string]*Transaction
 	limit        uint32
 	EventBus     EventBus.Bus
 	mutex        sync.RWMutex
 }
 
-func compareTxTips(tx1 interface{}, tx2 interface{}) int {
-	t1 := tx1.(Transaction)
-	t2 := tx2.(Transaction)
-	if t1.Tip < t2.Tip {
+func compareTxTips(t1 interface{}, t2 interface{}) int {
+	tx1 := t1.(Transaction)
+	tx2 := t2.(Transaction)
+	if tx1.Tip < tx2.Tip {
 		return -1
-	} else if t1.Tip > t2.Tip {
+	} else if tx1.Tip > tx2.Tip {
 		return 1
 	} else {
 		return 0
@@ -53,14 +53,14 @@ func compareTxTips(tx1 interface{}, tx2 interface{}) int {
 }
 
 // match returns true if tx1 and tx2 are Transactions and they have the same ID, false otherwise
-func match(tx1 interface{}, tx2 interface{}) bool {
-	return bytes.Compare(tx1.(Transaction).ID, tx2.(Transaction).ID) == 0
+func match(t1 interface{}, t2 interface{}) bool {
+	return bytes.Compare(t1.(Transaction).ID, t2.(Transaction).ID) == 0
 }
 
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		Transactions: *sorted.NewSlice(compareTxTips, match),
-		index: 		  make(map[string]*Transaction),
+		index:        make(map[string]*Transaction),
 		limit:        limit,
 		EventBus:     EventBus.New(),
 		mutex:        sync.RWMutex{},
@@ -79,13 +79,14 @@ func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
 func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	var validTxs []*Transaction
 	var invalidTxs []*Transaction
-	
+	tempUtxoIndex := utxoIndex.DeepCopy()
+
 	for _, tx := range txPool.index {
 		if contains(tx, validTxs) || contains(tx, invalidTxs) {
 			continue
 		}
 
-		if tx.Verify(utxoIndex, txPool, 0) {
+		if tx.Verify(*tempUtxoIndex, txPool, 0) {
 			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
 			for _, dependentTx := range dependentTxs {
 				if !contains(dependentTx, validTxs) {
@@ -102,7 +103,7 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	return validTxs
 }
 
-func (txPool *TransactionPool) GetAllTransactions() []*Transaction{
+func (txPool *TransactionPool) GetAllTransactions() []*Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 	txs := []*Transaction{}

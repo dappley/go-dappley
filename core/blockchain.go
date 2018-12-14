@@ -36,11 +36,8 @@ const BlockPoolMaxSize = 100
 const LengthForBlockToBeConsideredHistory = 100
 
 var (
-	ErrBlockDoesNotExist         = errors.New("ERROR: Block does not exist in blockchain")
-	ErrNotAbleToGetLastBlockHash = errors.New("ERROR: Not able to get last block hash in blockchain")
-	ErrTransactionNotFound       = errors.New("ERROR: Transaction not found")
-	ErrDuplicatedBlock           = errors.New("ERROR: Block already exists in blockchain")
-	ErrUpdateUtxoState           = errors.New("Blockchain: Update UTXO index failed")
+	ErrBlockDoesNotExist   = errors.New("block does not exist")
+	ErrTransactionNotFound = errors.New("transaction not found")
 )
 
 type Blockchain struct {
@@ -167,7 +164,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	bcTemp := bc.deepCopy()
 
 	parentBlk, err := bc.GetTailBlock()
-	if err!=nil{
+	if err != nil {
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   hex.EncodeToString(block.GetHash()),
@@ -188,11 +185,11 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	utxoIndex := LoadUTXOIndex(bcTemp.db)
 
-	if bc.scManager != nil && parentBlk !=nil {
+	if bc.scManager != nil && parentBlk != nil {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
 		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight(), parentBlk)
-		parentBlk,err := bc.GetTailBlock()
+		parentBlk, err := bc.GetTailBlock()
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"height": block.GetHeight(),

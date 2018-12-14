@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	ErrKeyInvalid = errors.New("Key is invalid")
+	ErrKeyInvalid = errors.New("key is invalid")
 )
 
 type Storage interface {

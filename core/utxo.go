@@ -271,7 +271,7 @@ func (utxos *UTXOIndex) removeUTXO(txid []byte, vout int) error {
 			}
 		}
 	}
-	return errors.New("UTXO: utxo not found when trying to remove from cache")
+	return errors.New("utxo not found when trying to remove from cache")
 }
 
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {

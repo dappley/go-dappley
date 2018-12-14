@@ -44,8 +44,8 @@ const ContractTxouputIndex = 0
 var rewardTxData = []byte("Distribute X Rewards")
 
 var (
-	ErrInsufficientFund  = errors.New("transaction: the balance is insufficient")
-	ErrInvalidAmount     = errors.New("transaction: amount is invalid (must be > 0)")
+	ErrInsufficientFund  = errors.New("transaction: insufficient balance")
+	ErrInvalidAmount     = errors.New("transaction: invalid amount (must be > 0)")
 	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
 	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
 )
@@ -303,8 +303,7 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, bloc
 	}
 
 	tempTxPool := txPool.deepCopy()
-	tempUtxoIndex := utxoIndex.DeepCopy()
-	return tx.verifyTxInTempPool(*tempUtxoIndex, tempTxPool)
+	return tx.verifyTxInTempPool(utxoIndex, tempTxPool)
 }
 
 // VerifyTxInPool function will change utxoIndex and txPool

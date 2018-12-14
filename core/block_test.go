@@ -71,28 +71,28 @@ func TestHashTransactions(t *testing.T) {
 }
 
 func TestNewBlock(t *testing.T) {
-	var emptyTransaction = []*Transaction([]*Transaction{})
+	var emptyTx = []*Transaction([]*Transaction{})
 	var emptyHash = Hash(Hash{})
 	var expectBlock3Hash = Hash{0x61}
 	block1 := NewBlock(nil, nil)
 	assert.Nil(t, block1.header.prevHash)
-	assert.Equal(t, emptyTransaction, block1.transactions)
+	assert.Equal(t, emptyTx, block1.transactions)
 
 	block2 := NewBlock(nil, blk)
 	assert.Equal(t, emptyHash, block2.header.prevHash)
 	assert.Equal(t, Hash(Hash{}), block2.header.prevHash)
-	assert.Equal(t, emptyTransaction, block2.transactions)
+	assert.Equal(t, emptyTx, block2.transactions)
 
 	block3 := NewBlock(nil, blk2)
 	assert.Equal(t, expectBlock3Hash, block3.header.prevHash)
 	assert.Equal(t, Hash(Hash{'a'}), block3.header.prevHash)
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
 	assert.Equal(t, uint64(1), block3.header.height)
-	assert.Equal(t, emptyTransaction, block3.transactions)
+	assert.Equal(t, emptyTx, block3.transactions)
 
 	block4 := NewBlock([]*Transaction{}, nil)
 	assert.Nil(t, block4.header.prevHash)
-	assert.Equal(t, emptyTransaction, block4.transactions)
+	assert.Equal(t, emptyTx, block4.transactions)
 	assert.Equal(t, Hash(nil), block4.header.prevHash)
 
 	block5 := NewBlock([]*Transaction{{}}, nil)

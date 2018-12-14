@@ -50,8 +50,8 @@ const (
 )
 
 var (
-	ErrDapMsgNoCmd  = errors.New("ERROR: Dappley message has no command input")
-	ErrIsInPeerlist = errors.New("ERROR: Peer already exists in peerlist")
+	ErrDapMsgNoCmd  = errors.New("command not specified")
+	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
 
 type Node struct {
@@ -59,11 +59,13 @@ type Node struct {
 	info                   *Peer
 	bc                     *core.Blockchain
 	streams                map[peer.ID]*Stream
+	streamExitCh		   chan *Stream
 	peerList               *PeerList
 	exitCh                 chan bool
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
+
 }
 
 //create new Node instance
@@ -73,6 +75,7 @@ func NewNode(bc *core.Blockchain) *Node {
 		nil,
 		bc,
 		make(map[peer.ID]*Stream, 10),
+		make(chan *Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
 		&sync.Map{},
@@ -105,8 +108,21 @@ func (n *Node) Start(listenPort int) error {
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
+	n.StartExitListener()
 	return err
 }
+
+func (n *Node) StartExitListener() {
+	go func() {
+		for {
+			select {
+			case s:=<-n.streamExitCh:
+				n.DisconnectPeer(s.peerID, s.remoteAddr)
+			}
+		}
+	}()
+}
+
 
 func (n *Node) StartRequestLoop() {
 
@@ -235,6 +251,22 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
+func  (n *Node) dispatch (msg *DapMsg, s *Stream) {
+	switch msg.GetCmd() {
+	case SyncBlock:
+		n.SyncBlockHandler(msg, s.peerID)
+	case SyncPeerList:
+		n.AddMultiPeers(msg.GetData())
+	case RequestBlock:
+		n.SendRequestedBlock(msg.GetData(), s.peerID)
+	case BroadcastTx:
+		n.AddTxToPool(msg)
+	default:
+		logger.Debug("Received invalid command from:", s.peerID)
+
+	}
+}
+
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.WithFields(logger.Fields{
@@ -245,9 +277,10 @@ func (n *Node) streamHandler(s net.Stream) {
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
 		n.peerList.Add(peer)
 		//start stream
-		ns := NewStream(s, n)
+		ns := NewStream(s)
+		//add stream to this.streams
 		n.streams[s.Conn().RemotePeer()] = ns
-		ns.Start()
+		ns.Start(n.streamExitCh, n.dispatch)
 
 		n.SyncPeersUnicast(peer.peerid)
 	}

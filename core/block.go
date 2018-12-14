@@ -26,14 +26,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -56,11 +55,11 @@ func (h Hash) String() string {
 	return hex.EncodeToString(h)
 }
 
-func NewBlock(transactions []*Transaction, parent *Block) *Block {
-	return NewBlockWithTimestamp(transactions, parent, time.Now().Unix())
+func NewBlock(txs []*Transaction, parent *Block) *Block {
+	return NewBlockWithTimestamp(txs, parent, time.Now().Unix())
 }
 
-func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp int64) *Block {
+func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -70,8 +69,8 @@ func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp
 		height = parent.GetHeight() + 1
 	}
 
-	if transactions == nil {
-		transactions = []*Transaction{}
+	if txs == nil {
+		txs = []*Transaction{}
 	}
 	return &Block{
 		header: &BlockHeader{
@@ -82,7 +81,7 @@ func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp
 			sign:      nil,
 			height:    height,
 		},
-		transactions: transactions,
+		transactions: txs,
 	}
 }
 
@@ -356,7 +355,7 @@ L:
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(),parentBlk)
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
