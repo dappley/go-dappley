@@ -25,32 +25,32 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-type BlockManager struct {
+type BlockChainManager struct {
 	blockchain *Blockchain
 	blockPool  *BlockPool
 }
 
-func NewBlockManager() *BlockManager {
-	return &BlockManager{}
+func NewBlockChainManager() *BlockChainManager {
+	return &BlockChainManager{}
 }
 
-func (bm *BlockManager) SetblockPool(blockPool *BlockPool) {
+func (bm *BlockChainManager) SetblockPool(blockPool *BlockPool) {
 	bm.blockPool = blockPool
 }
 
-func (bm *BlockManager) Setblockchain(blockchain *Blockchain) {
+func (bm *BlockChainManager) Setblockchain(blockchain *Blockchain) {
 	bm.blockchain = blockchain
 }
 
-func (bm *BlockManager) Getblockchain() *Blockchain {
+func (bm *BlockChainManager) Getblockchain() *Blockchain {
 	return bm.blockchain
 }
 
-func (bm *BlockManager) GetblockPool() *BlockPool {
+func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockManager) Push(block *Block, pid peer.ID) {
+func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	if !bm.blockPool.Verify(block) {
 		return
 	}
@@ -77,7 +77,7 @@ func (bm *BlockManager) Push(block *Block, pid peer.ID) {
 	bm.blockPool.CleanCache(tree)
 }
 
-func (bm *BlockManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
+func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 
 	//find parent block
 	if len(forkBlks) == 0 {

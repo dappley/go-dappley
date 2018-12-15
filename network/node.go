@@ -57,7 +57,7 @@ var (
 type Node struct {
 	host                   host.Host
 	info                   *Peer
-	bm                     *core.BlockManager
+	bm                     *core.BlockChainManager
 	streams                map[peer.ID]*Stream
 	peerList               *PeerList
 	exitCh                 chan bool
@@ -69,7 +69,7 @@ type Node struct {
 //create new Node instance
 func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	placeholder := uint64(0)
-	bm := core.NewBlockManager()
+	bm := core.NewBlockChainManager()
 	bm.SetblockPool(pool)
 	bm.Setblockchain(bc)
 	return &Node{nil,
