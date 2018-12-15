@@ -129,6 +129,11 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 // for smart contract, utxos[0] is expected to be the contract
 func PrepareUTXOs(utxos []*UTXO, amount *common.Amount) ([]*UTXO, bool) {
 	sum := common.NewAmount(0)
+
+	if len(utxos) < 1{
+		return utxos, false
+	}
+
 	if isContract, _ := utxos[0].PubKeyHash.IsContract(); isContract {
 		utxos = utxos[1:]
 	}
