@@ -331,35 +331,6 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	return err == nil
 }
 
-func (bc *Blockchain) MergeFork(forkBlks []*Block, forkParentHash Hash) {
-
-	//find parent block
-	if len(forkBlks) == 0 {
-		return
-	}
-	forkHeadBlock := forkBlks[len(forkBlks)-1]
-	if forkHeadBlock == nil {
-		return
-	}
-
-	//verify transactions in the fork
-	utxo, err := GetUTXOIndexAtBlockHash(bc.db, bc, forkParentHash)
-	if err != nil {
-		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
-		return
-	}
-
-	if !VerifyTransactions(*utxo, forkBlks) {
-		return
-	}
-
-	bc.Rollback(forkParentHash)
-
-	//add all blocks in fork from head to tail
-	bc.concatenateForkToBlockchain(forkBlks)
-
-}
-
 //Verify all transactions in a fork
 func VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
 	logger.Info("Verifying transactions")

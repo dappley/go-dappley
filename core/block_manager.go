@@ -73,6 +73,35 @@ func (bm *BlockManager) Push(block *Block, pid peer.ID) {
 		return
 	}
 	forkBlks := bm.blockPool.GenerateForkBlocks(tree, bm.blockchain.GetMaxHeight())
-	bm.blockchain.MergeFork(forkBlks, forkheadParentHash)
+	bm.MergeFork(forkBlks, forkheadParentHash)
 	bm.blockPool.CleanCache(tree)
+}
+
+func (bm *BlockManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
+
+	//find parent block
+	if len(forkBlks) == 0 {
+		return
+	}
+	forkHeadBlock := forkBlks[len(forkBlks)-1]
+	if forkHeadBlock == nil {
+		return
+	}
+
+	//verify transactions in the fork
+	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
+	if err != nil {
+		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
+		return
+	}
+
+	if !VerifyTransactions(*utxo, forkBlks) {
+		return
+	}
+
+	bm.blockchain.Rollback(forkParentHash)
+
+	//add all blocks in fork from head to tail
+	bm.blockchain.concatenateForkToBlockchain(forkBlks)
+
 }
