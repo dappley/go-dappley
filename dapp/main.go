@@ -116,7 +116,7 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 
 func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
-	node := network.NewNode(bc)
+	node := network.NewNode(bc, core.NewBlockPool(0))
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()

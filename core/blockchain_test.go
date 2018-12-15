@@ -138,7 +138,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, nil, nil}
+	bc := &Blockchain{Hash{}, db, nil, nil}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -167,7 +167,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	//Expect 2 mock txs to be rejected when minting
 	assert.Equal(t, int64(1), MetricsInvalidTx.Count())
 	// Expect the coinbase tx to go through
-	assert.Equal(t, nil , err)
+	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
 	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
 }

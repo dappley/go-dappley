@@ -71,7 +71,8 @@ func TestSend(t *testing.T) {
 			// Create a PoW blockchain with the sender wallet's address as the coinbase address
 			// i.e. sender's wallet would have mineReward amount after blockchain created
 			bc, pow := createBlockchain(senderWallet.GetAddress(), store)
-			node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
+			pool := core.NewBlockPool(0)
+			node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 			// Create a receiver wallet; Balance is 0 initially
 			receiverWallet, err := CreateWallet(GetTestWalletPath(), "test")
@@ -181,7 +182,8 @@ func TestSendToInvalidAddress(t *testing.T) {
 	balance1, err := GetBalance(addr1, store)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
-	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
+	pool := core.NewBlockPool(0)
+	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
 	_, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, "", bc, node)
@@ -235,7 +237,8 @@ func TestSendInsufficientBalance(t *testing.T) {
 	balance2, err := GetBalance(addr2, store)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
-	node := network.FakeNodeWithPidAndAddr(bc, "test", "test")
+	pool := core.NewBlockPool(0)
+	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to addr2
 	_, err = Send(wallet1, addr2, transferAmount, tip, "", bc, node)
@@ -285,7 +288,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
 		bcs = append(bcs, bc)
-		node := network.NewNode(bc)
+		pool := core.NewBlockPool(0)
+		node := network.NewNode(bc, pool)
 		node.Start(testport_msg_relay_port + i)
 		if i == 0 {
 			firstNode = node
@@ -352,8 +356,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128)
 		bcs = append(bcs, bc)
-
-		node := network.NewNode(bc)
+		pool := core.NewBlockPool(0)
+		node := network.NewNode(bc, pool)
 		node.Start(testport_msg_relay_port + i)
 		if i == 0 {
 			firstNode = node
@@ -399,6 +403,7 @@ func TestForkChoice(t *testing.T) {
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	var dbs []storage.Storage
+	var pools []*core.BlockPool
 	// Remember to close all opened databases after test
 	defer func() {
 		for _, db := range dbs {
@@ -418,8 +423,9 @@ func TestForkChoice(t *testing.T) {
 
 		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
-
-		node := network.NewNode(bcs[i])
+		pool := core.NewBlockPool(0)
+		pools = append(pools, pool)
+		node := network.NewNode(bcs[i], pool)
 		pow.Setup(node, addr.String())
 		pow.SetTargetBit(10)
 		node.Start(testport_fork + i)
@@ -453,11 +459,11 @@ func TestForkChoice(t *testing.T) {
 	nodes[0].BroadcastBlock(tailBlk)
 	// Make sure syncing starts on node[1]
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState()
+		return pools[1].GetSyncState()
 	}, 10)
 	// Make sure syncing ends on node[1]
 	core.WaitDoneOrTimeout(func() bool {
-		return !bcs[1].GetBlockPool().GetSyncState()
+		return !pools[1].GetSyncState()
 	}, 20)
 
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
@@ -467,6 +473,7 @@ func TestForkSegmentHandling(t *testing.T) {
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	var dbs []storage.Storage
+	var pools []*core.BlockPool
 	// Remember to close all opened databases after test
 	defer func() {
 		for _, db := range dbs {
@@ -483,8 +490,9 @@ func TestForkSegmentHandling(t *testing.T) {
 
 		bc, pow := createBlockchain(addr, db)
 		bcs = append(bcs, bc)
-
-		node := network.NewNode(bcs[i])
+		pool := core.NewBlockPool(0)
+		pools = append(pools, pool)
+		node := network.NewNode(bcs[i], pool)
 		pow.Setup(node, addr.String())
 		pow.SetTargetBit(10)
 		node.Start(testport_fork_segment + i)
@@ -525,7 +533,7 @@ func TestForkSegmentHandling(t *testing.T) {
 	nodes[0].BroadcastBlock(blk1)
 	// Wait for node[1] to start syncing
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState()
+		return pools[1].GetSyncState()
 	}, 10)
 
 	// node[0] broadcast higher block on the same fork and should trigger another sync on node[1]
@@ -533,15 +541,15 @@ func TestForkSegmentHandling(t *testing.T) {
 
 	// Make sure previous syncing ends
 	core.WaitDoneOrTimeout(func() bool {
-		return !bcs[1].GetBlockPool().GetSyncState()
+		return !pools[1].GetSyncState()
 	}, 10)
 	// Make sure node[1] is syncing again
 	core.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetBlockPool().GetSyncState()
+		return pools[1].GetSyncState()
 	}, 10)
 	// Make sure syncing ends
 	core.WaitDoneOrTimeout(func() bool {
-		return !bcs[1].GetBlockPool().GetSyncState()
+		return !pools[1].GetSyncState()
 	}, 10)
 
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
@@ -578,7 +586,8 @@ func TestAddBalance(t *testing.T) {
 			testAddr := core.Address{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"}
 
 			// Start mining to approve the transaction
-			node := network.FakeNodeWithPidAndAddr(bc, "a", "b")
+			pool := core.NewBlockPool(0)
+			node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
 			SetMinerKeyPair(key)
 			pow.Setup(node, addr.String())
 			pow.SetTargetBit(0)
@@ -637,7 +646,8 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 }
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
-	node := network.NewNode(bc)
+	pool := core.NewBlockPool(0)
+	node := network.NewNode(bc, pool)
 	pow.Setup(node, addr.String())
 	pow.SetTargetBit(12)
 	node.Start(port)
@@ -675,7 +685,8 @@ func TestDoubleMint(t *testing.T) {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128)
-		node := network.NewNode(bc)
+		pool := core.NewBlockPool(0)
+		node := network.NewNode(bc, pool)
 		node.Start(testport_msg_relay_port + i)
 		if i == 0 {
 			sendNode = node
