@@ -349,16 +349,16 @@ func VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
 	return true
 }
 
-func (bc *Blockchain) concatenateForkToBlockchain(forkBlks []*Block) {
-	if len(forkBlks) > 0 {
-		for i := len(forkBlks) - 1; i >= 0; i-- {
-			err := bc.AddBlockToTail(forkBlks[i])
+func (bc *Blockchain) addBlocksToTail(blocks []*Block) {
+	if len(blocks) > 0 {
+		for i := len(blocks) - 1; i >= 0; i-- {
+			err := bc.AddBlockToTail(blocks[i])
 			if err != nil {
 				logger.Error("Blockchain: Not Able To Add Block To Tail While Concatenating Fork To Blockchain!")
 				return
 			}
 			//Remove transactions in current transaction pool
-			bc.GetTxPool().RemoveMultipleTransactions(forkBlks[i].GetTransactions())
+			bc.GetTxPool().RemoveMultipleTransactions(blocks[i].GetTransactions())
 		}
 	}
 }

@@ -102,6 +102,6 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	bm.blockchain.Rollback(forkParentHash)
 
 	//add all blocks in fork from head to tail
-	bm.blockchain.concatenateForkToBlockchain(forkBlks)
+	bm.blockchain.addBlocksToTail(forkBlks)
 
 }
