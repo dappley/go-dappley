@@ -129,6 +129,11 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 // for smart contract, utxos[0] is expected to be the contract
 func PrepareUTXOs(utxos []*UTXO, amount *common.Amount) ([]*UTXO, bool) {
 	sum := common.NewAmount(0)
+
+	if len(utxos) < 1{
+		return utxos, false
+	}
+
 	if isContract, _ := utxos[0].PubKeyHash.IsContract(); isContract {
 		utxos = utxos[1:]
 	}
@@ -173,7 +178,7 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 	// Create a copy of the index so operations below are only temporal
-	for _, tx := range txs {
+		for _, tx := range txs {
 		utxos.UpdateUtxo(tx)
 	}
 }
@@ -232,15 +237,15 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
 	//if it is a smart contract deployment utxo add it to contract utxos
-	if isContract, _ := txout.PubKeyHash.IsContract(); isContract &&
-		len(utxos.index[string(u.PubKeyHash.GetPubKeyHash())]) == 0 {
+	if isContract, _ := txout.PubKeyHash.IsContract();isContract &&
+	 	len(utxos.index[string(u.PubKeyHash.GetPubKeyHash())]) == 0 {
 		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
 	}
 	utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(utxos.index[string(u.PubKeyHash.GetPubKeyHash())], u)
 
 }
 
-func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
+func (utxos *UTXOIndex) GetContractUtxos() []*UTXO{
 	return utxos.index[contractUtxoKey]
 }
 
@@ -258,7 +263,7 @@ func (utxos *UTXOIndex) removeUTXO(txid []byte, vout int) error {
 			}
 		}
 	}
-	return errors.New("UTXO: utxo not found when trying to remove from cache")
+	return errors.New("utxo not found when trying to remove from cache")
 }
 
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {

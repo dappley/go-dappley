@@ -20,6 +20,7 @@ test:
 	done
 
 build:
+	make deploy-v8
 	cd dapp; go build
 	cd dapp/cli; go build
 run:
@@ -34,4 +35,4 @@ release:
 	cd dapp/cli; go build -tags=release
 
 deploy-v8:
-	cd contract/v8; make install
+	cd contract/v8; make build; make install

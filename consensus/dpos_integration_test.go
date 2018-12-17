@@ -24,12 +24,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDpos_Start(t *testing.T) {
@@ -37,7 +36,8 @@ func TestDpos_Start(t *testing.T) {
 	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil)
-	node := network.NewNode(bc)
+	pool := core.NewBlockPool(0)
+	node := network.NewNode(bc, pool)
 	node.Start(22100)
 	dpos.Setup(node, cbAddr.String())
 	dpos.SetKey(keystr)
@@ -77,7 +77,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128,nil)
-		node := network.NewNode(bc)
+		pool := core.NewBlockPool(0)
+		node := network.NewNode(bc, pool)
 		node.Start(21200 + i)
 		if i == 0 {
 			firstNode = node
@@ -110,6 +111,6 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	}
 
 	for i := 0; i < len(miners); i++ {
-		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bc.GetMaxHeight())
+		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].node.GetBlockchain().GetMaxHeight())
 	}
 }

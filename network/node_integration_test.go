@@ -22,10 +22,11 @@ package network
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
@@ -40,10 +41,11 @@ const (
 	test_port9
 )
 
-func initNode(address string, port int, db storage.Storage) (*Node, error){
+func initNode(address string, port int, db storage.Storage) (*Node, error) {
 	addr := core.Address{address}
-	bc := core.CreateBlockchain(addr ,db,nil, 128, nil)
-	n := NewNode(bc)
+	bc := core.CreateBlockchain(addr, db, nil, 128, nil)
+	pool := core.NewBlockPool(0)
+	n := NewNode(bc, pool)
 	err := n.Start(port)
 	return n, err
 }
@@ -54,36 +56,35 @@ func TestNetwork_AddStream(t *testing.T) {
 	defer db.Close()
 
 	//create node1
-	n1,err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port1, db)
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port1, db)
 	assert.Nil(t, err)
 
 	//currently it should only have itself as its node
 	assert.Len(t, n1.host.Network().Peerstore().Peers(), 1)
 
 	//create node2
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port2,db)
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port2, db)
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
-	err = n1.AddStream(n2.GetPeerID(),n2.GetPeerMultiaddr())
+	err = n1.AddStream(n2.GetPeerID(), n2.GetPeerMultiaddr())
 	assert.Nil(t, err)
 	assert.Len(t, n1.host.Network().Peerstore().Peers(), 2)
 }
 
-
-func TestNetwork_BroadcastBlock(t *testing.T){
+func TestNetwork_BroadcastBlock(t *testing.T) {
 	//setup node 0
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	n1, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",test_port3, db)
+	n1, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port3, db)
 	assert.Nil(t, err)
 
 	//setup node 1
-	n2 , err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",test_port4, db)
+	n2, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port4, db)
 	assert.Nil(t, err)
 
-	err = n2.AddStream(n1.GetPeerID(),n1.GetPeerMultiaddr())
+	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
 	assert.Nil(t, err)
 
 	blk := core.GenerateMockBlock()
@@ -102,21 +103,21 @@ func TestNode_SyncPeers(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port7, db)
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port7, db)
 	assert.Nil(t, err)
 
 	//create node 2 and add node1 as a peer
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port8, db)
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port8, db)
 	assert.Nil(t, err)
 
-	err = n2.AddStream(n1.GetPeerID(),n1.GetPeerMultiaddr())
+	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
 	assert.Nil(t, err)
 
 	//create node 3 and add node1 as a peer
-	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port9, db)
+	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port9, db)
 	assert.Nil(t, err)
 
-	err = n3.AddStream(n1.GetPeerID(),n1.GetPeerMultiaddr())
+	err = n3.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
 	assert.Nil(t, err)
 
 	//node 1 broadcast syncpeers
@@ -128,10 +129,10 @@ func TestNode_SyncPeers(t *testing.T) {
 	}, 5)
 
 	//node2 should have node 3 as its peer
-	assert.True(t,n2.peerList.IsInPeerlist(n3.GetInfo()))
+	assert.True(t, n2.peerList.IsInPeerlist(n3.GetInfo()))
 
 	//node3 should have node 2 as its peer
-	assert.True(t,n3.peerList.IsInPeerlist(n2.GetInfo()))
+	assert.True(t, n3.peerList.IsInPeerlist(n2.GetInfo()))
 
 }
 
@@ -140,21 +141,21 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	//setup node 1
 	db := storage.NewRamStorage()
 	defer db.Close()
-	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port5, db)
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port5, db)
 	assert.Nil(t, err)
 	//setup node 2
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz",test_port6, db)
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port6, db)
 	assert.Nil(t, err)
 
-	err = n2.AddStream(n1.GetPeerID(),n1.GetPeerMultiaddr())
+	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
 	assert.Nil(t, err)
 
 	blk := core.GenerateMockBlock()
 
-	err = n1.bc.GetDb().Put(blk.GetHash(),blk.Serialize())
+	err = n1.GetBlockchain().GetDb().Put(blk.GetHash(), blk.Serialize())
 	assert.Nil(t, err)
 
-	n2.RequestBlockUnicast(blk.GetHash(),n1.GetPeerID())
+	n2.RequestBlockUnicast(blk.GetHash(), n1.GetPeerID())
 	//wait for node 1 to receive response
 	core.WaitDoneOrTimeout(func() bool {
 		blk, _ := n2.recentlyRcvedDapMsgs.Load(hex.EncodeToString(blk.GetHash()))

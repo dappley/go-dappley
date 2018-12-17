@@ -50,15 +50,16 @@ const (
 )
 
 var (
-	ErrDapMsgNoCmd  = errors.New("ERROR: Dappley message has no command input")
-	ErrIsInPeerlist = errors.New("ERROR: Peer already exists in peerlist")
+	ErrDapMsgNoCmd  = errors.New("command not specified")
+	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
 
 type Node struct {
 	host                   host.Host
 	info                   *Peer
-	bc                     *core.Blockchain
+	bm                     *core.BlockChainManager
 	streams                map[peer.ID]*Stream
+	streamExitCh           chan *Stream
 	peerList               *PeerList
 	exitCh                 chan bool
 	recentlyRcvedDapMsgs   *sync.Map
@@ -67,12 +68,16 @@ type Node struct {
 }
 
 //create new Node instance
-func NewNode(bc *core.Blockchain) *Node {
+func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	placeholder := uint64(0)
+	bm := core.NewBlockChainManager()
+	bm.SetblockPool(pool)
+	bm.Setblockchain(bc)
 	return &Node{nil,
 		nil,
-		bc,
+		bm,
 		make(map[peer.ID]*Stream, 10),
+		make(chan *Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
 		&sync.Map{},
@@ -88,7 +93,8 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain    { return n.bc }
+func (n *Node) GetBlockchain() *core.Blockchain    { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool      { return n.bm.GetblockPool() }
 func (n *Node) GetPeerList() *PeerList             { return n.peerList }
 func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
 
@@ -96,6 +102,7 @@ func (n *Node) Start(listenPort int) error {
 
 	h, addr, err := createBasicHost(listenPort, n.privKey)
 	if err != nil {
+		logger.Error("Create basic host failed", err)
 		return err
 	}
 
@@ -105,7 +112,19 @@ func (n *Node) Start(listenPort int) error {
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
+	n.StartExitListener()
 	return err
+}
+
+func (n *Node) StartExitListener() {
+	go func() {
+		for {
+			select {
+			case s := <-n.streamExitCh:
+				n.DisconnectPeer(s.peerID, s.remoteAddr)
+			}
+		}
+	}()
 }
 
 func (n *Node) StartRequestLoop() {
@@ -115,7 +134,7 @@ func (n *Node) StartRequestLoop() {
 			select {
 			case <-n.exitCh:
 				return
-			case brPars := <-n.bc.GetBlockPool().BlockRequestCh():
+			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
 			}
 		}
@@ -157,6 +176,7 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	basicHost, err := libp2p.New(context.Background(), opts...)
 
 	if err != nil {
+		logger.Error("New p2p failed", err)
 		return nil, nil, err
 	}
 
@@ -235,6 +255,22 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
+func (n *Node) dispatch(msg *DapMsg, s *Stream) {
+	switch msg.GetCmd() {
+	case SyncBlock:
+		n.SyncBlockHandler(msg, s.peerID)
+	case SyncPeerList:
+		n.AddMultiPeers(msg.GetData())
+	case RequestBlock:
+		n.SendRequestedBlock(msg.GetData(), s.peerID)
+	case BroadcastTx:
+		n.AddTxToPool(msg)
+	default:
+		logger.Debug("Received invalid command from:", s.peerID)
+
+	}
+}
+
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	logger.WithFields(logger.Fields{
@@ -245,9 +281,10 @@ func (n *Node) streamHandler(s net.Stream) {
 	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
 		n.peerList.Add(peer)
 		//start stream
-		ns := NewStream(s, n)
+		ns := NewStream(s)
+		//add stream to this.streams
 		n.streams[s.Conn().RemotePeer()] = ns
-		ns.Start()
+		ns.Start(n.streamExitCh, n.dispatch)
 
 		n.SyncPeersUnicast(peer.peerid)
 	}
@@ -374,7 +411,7 @@ func (n *Node) unicast(data []byte, pid peer.ID) {
 
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
-	n.bc.GetBlockPool().Push(block, pid)
+	n.bm.Push(block, pid)
 }
 
 func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
@@ -431,7 +468,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	//load the tx with proto
 	tx.FromProto(txpb)
 	//add tx to txpool
-	n.bc.GetTxPool().Push(tx)
+	n.bm.Getblockchain().GetTxPool().Push(tx)
 }
 
 func (n *Node) AddMultiPeers(data []byte) {
@@ -473,7 +510,7 @@ func (n *Node) AddMultiPeers(data []byte) {
 }
 
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
-	blockBytes, err := n.bc.GetDb().Get(hash)
+	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
 	if err != nil {
 		logger.Warn("Unable to get block data. Block request failed")
 		return

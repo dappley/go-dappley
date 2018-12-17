@@ -20,12 +20,13 @@ package network
 
 import (
 	"bytes"
+	"os"
+	"testing"
+
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -72,7 +73,7 @@ func TestNode_prepareData(t *testing.T) {
 			retErr:  ErrDapMsgNoCmd,
 		},
 	}
-	n := FakeNodeWithPidAndAddr(nil, "asd", "test")
+	n := FakeNodeWithPidAndAddr(nil, nil, "asd", "test")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := n.prepareData(tt.msgData, tt.cmd, Unicast, "")

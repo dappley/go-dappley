@@ -53,25 +53,25 @@ func GenerateFakeTxOutputs() []TXOutput {
 }
 
 func TestTrimmedCopy(t *testing.T) {
-	var t1 = Transaction{
+	var tx1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  2,
 	}
 
-	t2 := t1.TrimmedCopy()
+	t2 := tx1.TrimmedCopy()
 
 	t3 := NewCoinbaseTX(NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
 	t4 := t3.TrimmedCopy()
-	assert.Equal(t, t1.ID, t2.ID)
-	assert.Equal(t, t1.Tip, t2.Tip)
-	assert.Equal(t, t1.Vout, t2.Vout)
+	assert.Equal(t, tx1.ID, t2.ID)
+	assert.Equal(t, tx1.Tip, t2.Tip)
+	assert.Equal(t, tx1.Vout, t2.Vout)
 	for index, vin := range t2.Vin {
 		assert.Nil(t, vin.Signature)
 		assert.Nil(t, vin.PubKey)
-		assert.Equal(t, t1.Vin[index].Txid, vin.Txid)
-		assert.Equal(t, t1.Vin[index].Vout, vin.Vout)
+		assert.Equal(t, tx1.Vin[index].Txid, vin.Txid)
+		assert.Equal(t, tx1.Vin[index].Vout, vin.Vout)
 	}
 
 	assert.Equal(t, t3.ID, t4.ID)
@@ -132,41 +132,41 @@ func TestSign(t *testing.T) {
 func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var prevTXs = map[string]Transaction{}
 
-	var t1 = Transaction{
+	var tx1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  2,
 	}
 
-	var t2 = Transaction{
+	var tx2 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  5,
 	}
-	var t3 = Transaction{
+	var tx3 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  10,
 	}
-	var t4 = Transaction{
+	var tx4 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  20,
 	}
-	prevTXs[string(t1.ID)] = t2
-	prevTXs[string(t2.ID)] = t3
-	prevTXs[string(t3.ID)] = t4
+	prevTXs[string(tx1.ID)] = tx2
+	prevTXs[string(tx2.ID)] = tx3
+	prevTXs[string(tx3.ID)] = tx4
 
 	// test verifying coinbase transactions
 	var t5 = NewCoinbaseTX(NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
-	txout1 := NewTXOutput(common.NewAmount(10), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
+	txout1 := NewTXOutput(common.NewAmount(10000000), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, 0}
 
 	// test valid coinbase transaction
@@ -253,7 +253,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX(NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := TXOutput{common.NewAmount(10), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}, ""}
+	expectVout := TXOutput{common.NewAmount(10000000), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}, ""}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
 	assert.Equal(t, 1, len(t1.Vout))
@@ -273,14 +273,14 @@ func TestNewCoinbaseTX(t *testing.T) {
 
 //test IsCoinBase function
 func TestIsCoinBase(t *testing.T) {
-	var t1 = Transaction{
+	var tx1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  2,
 	}
 
-	assert.False(t, t1.IsCoinbase())
+	assert.False(t, tx1.IsCoinbase())
 
 	t2 := NewCoinbaseTX(NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
 
@@ -319,14 +319,14 @@ func TestTransaction_IsRewardTx(t *testing.T) {
 }
 
 func TestTransaction_Proto(t *testing.T) {
-	t1 := Transaction{
+	tx1 := Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  5,
 	}
 
-	pb := t1.ToProto()
+	pb := tx1.ToProto()
 	var i interface{} = pb
 	_, correct := i.(proto.Message)
 	assert.Equal(t, true, correct)
@@ -337,10 +337,10 @@ func TestTransaction_Proto(t *testing.T) {
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 
-	t2 := Transaction{}
-	t2.FromProto(newpb)
+	tx2 := Transaction{}
+	tx2.FromProto(newpb)
 
-	assert.Equal(t, t1, t2)
+	assert.Equal(t, tx1, tx2)
 }
 
 func TestTransaction_GetContractAddress(t *testing.T) {
@@ -774,6 +774,6 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	assert.Equal(t, false, dependentTx3.Verify(&UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, 0))
 
 	// test a standalone transaction
-	txPool.Push(&t1)
+	txPool.Push(&tx1)
 	assert.Equal(t, false, t1.Verify(&utxoIndex, 0))
 }

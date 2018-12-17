@@ -24,16 +24,15 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var (
+	ErrCantCreateEmptyNode  = errors.New("tree: node index and value must not be empty")
+	ErrNodeAlreadyHasParent = errors.New("tree: node already has a parent")
+)
+
 type Entry struct {
 	key   interface{}
 	value interface{}
 }
-
-var (
-	ErrNodeNotFound              = errors.New("ERROR: Node not found in tree")
-	ErrCantCreateEmptyNode       = errors.New("ERROR: Node index and value must not be empty")
-	ErrChildNodeAlreadyHasParent = errors.New("ERROR: Adding parent to node already with parent")
-)
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
 type Tree struct {
@@ -117,7 +116,7 @@ func (t *Tree) AddChild(child *Tree) {
 
 func (t *Tree) AddParent(parent *Tree) error {
 	if t.Parent != nil {
-		return ErrChildNodeAlreadyHasParent
+		return ErrNodeAlreadyHasParent
 	}
 	parent.AddChild(t)
 	return nil

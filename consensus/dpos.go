@@ -31,7 +31,6 @@ import (
 )
 
 type DPOS struct {
-	bc          *core.Blockchain
 	bp          *BlockProducer
 	producerKey string
 	newBlockCh  chan *core.Block
@@ -62,9 +61,8 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 }
 
 func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
-	dpos.bc = node.GetBlockchain()
 	dpos.node = node
-	dpos.bp.Setup(dpos.bc, cbAddr)
+	dpos.bp.Setup(node.GetBlockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
 }
 
@@ -87,10 +85,6 @@ func (dpos *DPOS) AddProducer(producer string) error {
 
 func (dpos *DPOS) GetProducers() []string {
 	return dpos.dynasty.GetProducers()
-}
-
-func (dpos *DPOS) GetBlockChain() *core.Blockchain {
-	return dpos.bc
 }
 
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
@@ -128,7 +122,7 @@ func (dpos *DPOS) Start() {
 						"peerid": dpos.node.GetPeerID(),
 					}).Info("DPoS: My Turn to produce block...")
 					// Do not produce block if block pool is syncing
-					if dpos.bp.bc.GetBlockPool().GetSyncState() {
+					if dpos.node.GetBlockPool().GetSyncState() {
 						logger.Debug("BlockProducer: Paused while block pool is syncing")
 						continue
 					}
@@ -256,7 +250,7 @@ func (dpos *DPOS) updateNewBlock(newBlock *core.Block) {
 		logger.Warn("DPoS: Invalid hash in new block")
 		return
 	}
-	err := dpos.bc.AddBlockToTail(newBlock)
+	err := dpos.node.GetBlockchain().AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)
 		return

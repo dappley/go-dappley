@@ -102,7 +102,7 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 func (dynasty *Dynasty) AddProducer(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
-			return errors.New("Producer already in the producer list！")
+			return errors.New("already a producer")
 		}
 	}
 
@@ -115,10 +115,9 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 		return nil
 	}
 	if !IsProducerAddressValid(producer) {
-		return errors.New("The address of producers not valid！")
+		return errors.New("invalid producer address")
 	}
-	return errors.New("The number of producers reaches the maximum！")
-
+	return errors.New("maximum number of producers reached")
 }
 
 func (dynasty *Dynasty) GetProducers() []string {

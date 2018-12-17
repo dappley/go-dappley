@@ -17,8 +17,9 @@ type PubKeyHash struct {
 }
 
 var (
-	ErrIncorrectPublicKey = errors.New("Public key is not correct")
-	ErrEmptyPublicKeyHash = errors.New("Empty public key hash")
+	ErrIncorrectPublicKey = errors.New("public key not correct")
+	ErrEmptyPublicKeyHash = errors.New("empty public key hash")
+	ErrInvalidPubKeyHashVersion = errors.New("invalid public key hash version")
 )
 
 //NewUserPubKeyHash hashes a public key and returns a user type public key hash

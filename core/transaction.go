@@ -38,15 +38,15 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var subsidy = common.NewAmount(10)
+var subsidy = common.NewAmount(10000000)
 
 const ContractTxouputIndex = 0
 
 var rewardTxData = []byte("Distribute X Rewards")
 
 var (
-	ErrInsufficientFund  = errors.New("transaction: the balance is insufficient")
-	ErrInvalidAmount     = errors.New("transaction: amount is invalid (must be > 0)")
+	ErrInsufficientFund  = errors.New("transaction: insufficient balance")
+	ErrInvalidAmount     = errors.New("transaction: invalid amount (must be > 0)")
 	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
 	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
 )
@@ -304,7 +304,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		return true
 	}
 
-	var prevUtxos []*UTXO
+var prevUtxos []*UTXO
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {

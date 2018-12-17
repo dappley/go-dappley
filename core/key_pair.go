@@ -20,14 +20,8 @@ package core
 
 import (
 	"crypto/ecdsa"
-	"errors"
-
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	logger "github.com/sirupsen/logrus"
-)
-
-var (
-	ErrInvalidPubKeyHashVersion = errors.New("Invalid Public Key Hash Version ")
 )
 
 type KeyPair struct {
