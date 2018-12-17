@@ -50,21 +50,27 @@ func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
+func (bm *BlockChainManager) verifyBlock(block *Block) bool{
 	if !bm.blockPool.Verify(block) {
-		return
+		return false
 	}
 	if !(bm.blockchain.GetConsensus().Validate(block)) {
 		logger.Warn("BlockPool: The received block is invalid according to consensus!")
-		return
+		return false
 	}
 	logger.Debug("BlockPool: Block has been verified")
+	return true
+}
+func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
+	if !bm.verifyBlock(block){
+		return
+	}
 	tree, _ := common.NewTree(block.GetHash().String(), block)
 	logger.WithFields(logger.Fields{
 		"From": pid.String(),
 		"hash": hex.EncodeToString(block.GetHash()),
 	}).Info("BlockPool: Received a new block: ")
-	forkheadParentHash := bm.blockPool.HandleRecvdBlock(tree, bm.blockchain.GetMaxHeight())
+	forkheadParentHash := bm.blockPool.CacheRecvdBlock(tree, bm.blockchain.GetMaxHeight())
 	if forkheadParentHash == nil {
 		return
 	}
