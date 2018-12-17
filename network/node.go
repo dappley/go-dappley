@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"math/rand"
 	"sync"
@@ -422,6 +423,10 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
+	if blockpb.Header == nil{
+		spew.Dump(blockpb)
+		spew.Dump(data)
+	}
 
 	//create an empty block
 	block := &core.Block{}
@@ -436,6 +441,12 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
+	if len(dm.data)==0{
+		logger.WithFields(logger.Fields{
+			"cmd"	: "sync block",
+		}).Warn("No block information is found")
+		return
+	}
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())

@@ -230,6 +230,9 @@ func (bh *BlockHeader) ToProto() proto.Message {
 }
 
 func (bh *BlockHeader) FromProto(pb proto.Message) {
+	if pb==nil{
+		return
+	}
 	bh.hash = pb.(*corepb.BlockHeader).Hash
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
