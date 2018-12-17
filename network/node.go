@@ -447,8 +447,6 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		}).Warn("No block information is found")
 		return
 	}
-	n.RelayDapMsg(*dm)
-
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
 	n.addBlockToPool(blk, pid)
