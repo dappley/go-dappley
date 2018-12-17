@@ -21,10 +21,9 @@ import (
 var (
 	password             = "testpassword"
 	maxWallet            = 10
-	initialAmount        = uint64(10)
+	initialAmount        = uint64(1000)
 	maxDefaultSendAmount = uint64(5)
 	sendInterval         = time.Duration(1000) //ms
-	checkBalanceInterval = time.Duration(10)   //s
 	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
 )
