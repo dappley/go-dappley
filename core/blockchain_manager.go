@@ -70,7 +70,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		"From": pid.String(),
 		"hash": hex.EncodeToString(block.GetHash()),
 	}).Info("BlockPool: Received a new block: ")
-	forkheadParentHash := bm.blockPool.CacheRecvdBlock(tree, bm.blockchain.GetMaxHeight())
+	forkheadParentHash := bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
 	if forkheadParentHash == nil {
 		return
 	}

@@ -87,7 +87,7 @@ func (pool *BlockPool) Verify(block *Block) bool {
 	return true
 }
 
-func (pool *BlockPool) CacheRecvdBlock(tree *common.Tree, maxHeight uint64) Hash {
+func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) Hash {
 	blkCache := pool.blkCache
 
 	if blkCache.Contains(tree.GetValue().(*Block).GetHash().String()) {
