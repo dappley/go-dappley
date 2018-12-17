@@ -448,9 +448,13 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 	n.RelayDapMsg(*dm)
+
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
 	n.addBlockToPool(blk, pid)
+	if(dm.uniOrBroadcast == Broadcast){
+		n.RelayDapMsg(*dm)
+	}
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {
