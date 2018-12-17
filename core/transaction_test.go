@@ -661,7 +661,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	var dependentTx1 = Transaction{
 		ID: nil,
 		Vin: []TXInput{
-			{t1.ID, 1, nil, pubkey1},
+			{tx1.ID, 1, nil, pubkey1},
 		},
 		Vout: []TXOutput{
 			{common.NewAmount(5), pkHash1, ""},
@@ -775,5 +775,5 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	// test a standalone transaction
 	txPool.Push(&tx1)
-	assert.Equal(t, false, t1.Verify(&utxoIndex, 0))
+	assert.Equal(t, false, tx1.Verify(&utxoIndex, 0))
 }
