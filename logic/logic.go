@@ -22,13 +22,14 @@ import (
 	"errors"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const unlockduration = 300 * time.Second
@@ -167,7 +168,7 @@ func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
 		return nil, err
 	}
 	wm.PassPhrase = passBytes
-	logger.Info("Wallet password set!")
+	logger.Info("Wallet password is set!")
 	wallet := client.NewWallet()
 	wm.AddWallet(wallet)
 	wm.Locked = true
@@ -244,8 +245,8 @@ func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, t
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
 		logger.WithFields(logger.Fields{
-			"contractAddr": contractAddr.String(),
-		}).Info("Smart Contract Deployed Successful!")
+			"contract_address": contractAddr.String(),
+		}).Info("Smart contract is deployed!")
 	}
 
 	if err != nil {

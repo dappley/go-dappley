@@ -23,14 +23,15 @@ import (
 	"net"
 	"strings"
 
-	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/rpc/pb"
 )
 
 const (
@@ -55,14 +56,15 @@ func (s *Server) Start(port uint32) {
 		}
 		lis, err := net.Listen("tcp", fmt.Sprint(":", port))
 		if err != nil {
-			logger.Panicf("failed to listen: %v", err)
+			logger.WithError(err).WithFields(logger.Fields{"port": port}).
+				Panic("Server: failed to listen to TCP port")
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
 		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
 		if err := srv.Serve(lis); err != nil {
-			logger.Fatalf("failed to serve: %s", err)
+			logger.WithError(err).Fatal("Server: encounters an error while serving")
 		}
 	}()
 }
@@ -71,11 +73,11 @@ func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grp
 	if info.Server.(Service).IsPrivate() {
 		peer, ok := peer.FromContext(ctx)
 		if !ok || len(peer.Addr.String()) == 0 {
-			return nil, status.Errorf(codes.Unauthenticated, "Unknow ip")
+			return nil, status.Errorf(codes.Unauthenticated, "unknown ip")
 		}
 		ip := strings.Split(peer.Addr.String(), ":")
 		if ip[0] != "127.0.0.1" {
-			return nil, status.Errorf(codes.Unauthenticated, "Unauthorized access")
+			return nil, status.Errorf(codes.Unauthenticated, "unauthorized access")
 		}
 
 	}

@@ -24,9 +24,10 @@ import (
 	"errors"
 	"sync"
 
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 const utxoMapKey = "utxo"
@@ -56,7 +57,7 @@ func deserializeUTXOIndex(d []byte) *UTXOIndex {
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&utxos.index)
 	if err != nil {
-		logger.Panicf("failed to deserialize UTXOs: %v", err)
+		logger.WithError(err).Panic("UTXOIndex: failed to deserialize UTXOs")
 	}
 	return utxos
 }

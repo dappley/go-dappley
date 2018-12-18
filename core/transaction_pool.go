@@ -22,8 +22,9 @@ import (
 	"bytes"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/dappley/go-dappley/common/sorted"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common/sorted"
 )
 
 const (
@@ -33,7 +34,7 @@ const (
 
 type TransactionPool struct {
 	Transactions sorted.Slice
-	index 		 map[string]*Transaction
+	index        map[string]*Transaction
 	limit        uint32
 	EventBus     EventBus.Bus
 }
@@ -58,7 +59,7 @@ func match(t1 interface{}, t2 interface{}) bool {
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		Transactions: *sorted.NewSlice(compareTxTips, match),
-		index: 		  make(map[string]*Transaction),
+		index:        make(map[string]*Transaction),
 		limit:        limit,
 		EventBus:     EventBus.New(),
 	}
@@ -98,7 +99,7 @@ func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
 	return validTxs
 }
 
-func (txPool *TransactionPool) GetAllTransactions() []*Transaction{
+func (txPool *TransactionPool) GetAllTransactions() []*Transaction {
 	txs := []*Transaction{}
 	for _, v := range txPool.Transactions.Get() {
 		tx := v.(Transaction)
@@ -153,14 +154,14 @@ func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Tran
 
 func (txPool *TransactionPool) Push(tx Transaction) {
 	if txPool.limit == 0 {
-		logger.Warn("TransactionPool: transaction not pushed to pool because limit is set to 0")
+		logger.Warn("TransactionPool: transaction is not pushed to pool because limit is set to 0")
 		return
 	}
 
 	if txPool.Transactions.Len() >= int(txPool.limit) {
 		logger.WithFields(logger.Fields{
 			"limit": txPool.limit,
-		}).Debug("TransactionPool: transaction pool limit reached")
+		}).Warn("TransactionPool: is full")
 
 		leastTipTx := txPool.Transactions.Left().(Transaction)
 		if tx.Tip <= leastTipTx.Tip {
@@ -172,7 +173,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 	}
 
 	if _, exists := txPool.index[string(tx.ID)]; exists {
-		logger.Warn("TransactionPool: transaction not pushed to pool because transaction ID already exists")
+		logger.Warn("TransactionPool: transaction is not pushed to pool because transaction ID already exists")
 	}
 
 	txPool.Transactions.Push(tx)

@@ -28,12 +28,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10)
@@ -41,8 +42,8 @@ var subsidy = common.NewAmount(10)
 const ContractTxouputIndex = 0
 
 var (
-	ErrInsufficientFund  = errors.New("transaction: insufficient balance")
-	ErrInvalidAmount     = errors.New("transaction: invalid amount (must be > 0)")
+	ErrInsufficientFund = errors.New("transaction: insufficient balance")
+	ErrInvalidAmount    = errors.New("transaction: invalid amount (must be > 0)")
 )
 
 type Transaction struct {
@@ -107,14 +108,14 @@ func (tx *Transaction) Hash() []byte {
 // Sign signs each input of a Transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	if tx.IsCoinbase() {
-		logger.Warning("Coinbase transaction could not be signed")
+		logger.Warning("Transaction: will not sign a coinbase transaction")
 		return nil
 	}
 
 	txCopy := tx.TrimmedCopy()
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
-		logger.Error("ERROR: Get private key failed", err)
+		logger.WithError(err).Error("Transaction: failed to get private key")
 		return err
 	}
 
@@ -128,7 +129,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 
 		signature, err := secp256k1.Sign(txCopy.ID, privData)
 		if err != nil {
-			logger.Error("ERROR: Sign transaction.Id failed", err)
+			logger.WithError(err).Error("Transaction: failed to create a signature")
 			return err
 		}
 
@@ -164,7 +165,7 @@ func (tx *Transaction) DeepCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash,""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -291,7 +292,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for _, utxo := range prevUtxos {
 		if utxo.PubKeyHash.GetPubKeyHash() == nil {
-			logger.Error("ERROR: Previous transaction is not correct")
+			logger.Error("Transaction: previous transaction is not correct")
 			return false
 		}
 	}
@@ -309,10 +310,10 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 		originPub[0] = 4 // uncompressed point
 		copy(originPub[1:], vin.PubKey)
 
-		verifyResult, error1 := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
-		if error1 != nil || verifyResult == false {
-			logger.Errorf("Error: Verify sign failed %v", error1)
+		if err != nil || verifyResult == false {
+			logger.WithError(err).Error("Transaction: signature cannot be verified")
 			return false
 		}
 	}

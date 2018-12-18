@@ -29,9 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -41,6 +38,10 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -59,13 +60,12 @@ type Node struct {
 	info                   *Peer
 	bm                     *core.BlockChainManager
 	streams                map[peer.ID]*Stream
-	streamExitCh		   chan *Stream
+	streamExitCh           chan *Stream
 	peerList               *PeerList
 	exitCh                 chan bool
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
-
 }
 
 //create new Node instance
@@ -120,13 +120,12 @@ func (n *Node) StartExitListener() {
 	go func() {
 		for {
 			select {
-			case s:=<-n.streamExitCh:
+			case s := <-n.streamExitCh:
 				n.DisconnectPeer(s.peerID, s.remoteAddr)
 			}
 		}
 	}()
 }
-
 
 func (n *Node) StartRequestLoop() {
 
@@ -188,8 +187,8 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
 	logger.WithFields(logger.Fields{
-		"Address": fullAddr,
-	}).Info("My Address")
+		"address": fullAddr,
+	}).Info("Host is up")
 	return basicHost, fullAddr, nil
 }
 
@@ -227,7 +226,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 		logger.WithFields(logger.Fields{
 			"host":   n.GetPeerMultiaddr().String(),
 			"target": targetAddr.String(),
-		}).Debug("Node: target already added!")
+		}).Debug("Node: target has already been added before!")
 		return ErrIsInPeerlist
 	}
 
@@ -255,7 +254,7 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
-func  (n *Node) dispatch (msg *DapMsg, s *Stream) {
+func (n *Node) dispatch(msg *DapMsg, s *Stream) {
 	switch msg.GetCmd() {
 	case SyncBlock:
 		n.SyncBlockHandler(msg, s.peerID)
@@ -266,28 +265,38 @@ func  (n *Node) dispatch (msg *DapMsg, s *Stream) {
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 	default:
-		logger.Debug("Received invalid command from:", s.peerID)
+		logger.WithFields(logger.Fields{"from": s.peerID}).
+			Debug("Node: received an invalid command")
 
 	}
 }
 
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
-	logger.WithFields(logger.Fields{
-		"Host":   n.GetPeerID(),
-		"Target": s.Conn().RemotePeer(),
-	}).Info("Creating stream between: ")
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
-	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
-		n.peerList.Add(peer)
-		//start stream
-		ns := NewStream(s)
-		//add stream to this.streams
-		n.streams[s.Conn().RemotePeer()] = ns
-		ns.Start(n.streamExitCh, n.dispatch)
-
-		n.SyncPeersUnicast(peer.peerid)
+	if n.peerList.ListIsFull() {
+		logger.WithFields(logger.Fields{
+			"peers": len(n.peerList.GetPeerlist()),
+		}).Warn("Node: peer list is full")
 	}
+	if n.peerList.IsInPeerlist(peer) {
+		logger.WithFields(logger.Fields{
+			"peer": s.Conn().RemotePeer(),
+		}).Warn("Node: peer is already in the peer list")
+	}
+	logger.WithFields(logger.Fields{
+		"host":   n.GetPeerID(),
+		"target": s.Conn().RemotePeer(),
+	}).Info("Node: is creating a new stream")
+
+	n.peerList.Add(peer)
+	//start stream
+	ns := NewStream(s)
+	//add stream to this.streams
+	n.streams[s.Conn().RemotePeer()] = ns
+	ns.Start(n.streamExitCh, n.dispatch)
+
+	n.SyncPeersUnicast(peer.peerid)
 }
 
 func (n *Node) GetInfo() *Peer { return n.info }
@@ -337,10 +346,10 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
 	logger.WithFields(logger.Fields{
-		"peerid": n.GetPeerID(),
-		"height": block.GetHeight(),
-		"hash":   hex.EncodeToString(block.GetHash()),
-	}).Info("Broadcasting Block: ")
+		"peer_id": n.GetPeerID(),
+		"height":  block.GetHeight(),
+		"hash":    hex.EncodeToString(block.GetHash()),
+	}).Info("Node: is broadcasting a block")
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
@@ -512,7 +521,7 @@ func (n *Node) AddMultiPeers(data []byte) {
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
 	if err != nil {
-		logger.Warn("Unable to get block data. Block request failed")
+		logger.Warn("Node: failed to get the requested block from database")
 		return
 	}
 	block := core.Deserialize(blockBytes)

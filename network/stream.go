@@ -24,12 +24,13 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -49,6 +50,7 @@ var (
 	startBytes = []byte{0x7E, 0x7E}
 	endBytes   = []byte{0x7F, 0x7F, 0}
 )
+
 type dapHandler func(*DapMsg, *Stream)
 
 type Stream struct {
@@ -71,13 +73,14 @@ func NewStream(s net.Stream) *Stream {
 	}
 }
 
-func (s *Stream) Start(quitCh chan <- *Stream, dh dapHandler) {
+func (s *Stream) Start(quitCh chan<- *Stream, dh dapHandler) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw,quitCh, dh)
+	s.startLoop(rw, quitCh, dh)
 }
 
 func (s *Stream) StopStream() {
-	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
+	logger.WithFields(logger.Fields{"peer_address": s.remoteAddr}).
+		Debug("Stream: is terminated!")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
@@ -87,7 +90,7 @@ func (s *Stream) Send(data []byte) {
 	s.dataCh <- data
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter,quitCh chan <- *Stream, dh dapHandler) {
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
 	go s.readLoop(rw, quitCh, dh)
 	go s.writeLoop(rw)
 }
@@ -120,19 +123,19 @@ func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
 		dm := s.parseData(bytes)
 		dh(dm, s)
 	} else {
-		logger.Debug("Read less than 1 byte. Stop Reading...")
+		logger.Debug("Stream: reads less than 1 byte. Stop Reading...")
 		//stop the stream
 		s.StopStream()
 	}
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan <- *Stream, dh dapHandler) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
 	for {
 		select {
 		case <-s.quitRdCh:
 			quitCh <- s
-			logger.Debug("Stream ReadLoop Terminated!")
+			logger.Debug("Stream: read loop is terminated!")
 			return
 		default:
 			s.read(rw, dh)
@@ -178,7 +181,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			rw.Flush()
 			mutex.Unlock()
 		case <-s.quitWrCh:
-			logger.Debug("Stream Write Terminated!")
+			logger.Debug("Stream: write loop is terminated!")
 			return nil
 		}
 	}

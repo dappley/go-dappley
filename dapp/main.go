@@ -21,6 +21,8 @@ package main
 import (
 	"flag"
 
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -29,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -52,7 +53,7 @@ func main() {
 	config.LoadConfig(genesisFilePath, genesisConf)
 
 	if genesisConf == nil {
-		logger.Error("ERROR: Cannot load genesis configurations from file!Exiting...")
+		logger.Error("Cannot load genesis configurations from file! Exiting...")
 		return
 	}
 
@@ -60,7 +61,7 @@ func main() {
 	conf := &configpb.Config{}
 	config.LoadConfig(filePath, conf)
 	if conf == nil {
-		logger.Error("ERROR: Cannot load configurations from file!Exiting...")
+		logger.Error("Cannot load configurations from file! Exiting...")
 		return
 	}
 
@@ -81,7 +82,7 @@ func main() {
 
 	node, err := initNode(conf, bc)
 	if err != nil {
-		logger.Error("ERROR: initNode failed! Exiting...")
+		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
 
@@ -95,8 +96,8 @@ func main() {
 	conss.Setup(node, minerAddr)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
 	logger.WithFields(logger.Fields{
-		"Miner Address": minerAddr,
-	}).Info("Consensus setup")
+		"miner_address": minerAddr,
+	}).Info("Consensus is set")
 
 	logic.SetLockWallet() //lock the wallet
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())

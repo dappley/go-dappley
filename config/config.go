@@ -19,20 +19,21 @@
 package config
 
 import (
+	"io/ioutil"
+
 	"github.com/gogo/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
-	"io/ioutil"
 )
 
 func LoadConfig(filename string, pb proto.Message) {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logger.Warn("Cannot read config file", err)
+		logger.WithError(err).Warn("LoadConfig: cannot read the config file")
 		return
 	}
 
 	err = proto.UnmarshalText(string(bytes), pb)
 	if err != nil {
-		logger.Warn("Cannot parse config file", err)
+		logger.WithError(err).Warn("LoadConfig: cannot parse content of the config file")
 	}
 }

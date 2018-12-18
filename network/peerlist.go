@@ -21,11 +21,12 @@ package network
 import (
 	"fmt"
 
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 var PEERLISTMAXSIZE = 20
@@ -88,7 +89,8 @@ func NewPeerListStr(strs []string) *PeerList {
 		peer, err := CreatePeerFromString(str)
 
 		if err != nil {
-			logger.Warn("Address Unrecognized:", str)
+			logger.WithFields(logger.Fields{"address": str}).
+				Warn("PeerList: cannot recognize address")
 		} else {
 			ps = append(ps, peer)
 		}

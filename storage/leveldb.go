@@ -19,7 +19,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	logger "github.com/sirupsen/logrus"
@@ -27,7 +26,7 @@ import (
 )
 
 var (
-	ErrLevelDbNotAbleToOpenFile = errors.New("leveldb fails to open file")
+	ErrLevelDbNotAbleToOpenFile = errors.New("leveldb failed to open file")
 )
 
 type LevelDB struct {
@@ -52,7 +51,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 }
 
 func (ldb *LevelDB) Close() error {
-	logger.Info("closing database")
+	logger.Info("LevelDB: is closing the database connection")
 	return ldb.db.Close()
 }
 
@@ -86,7 +85,7 @@ func (ldb *LevelDB) EnableBatch() {
 
 func (ldb *LevelDB) Flush() error {
 	if ldb.batch != nil {
-		logger.Debug(fmt.Sprintf("leveldb: flushing %d operations to storage", ldb.batch.Len()))
+		logger.Debugf("LevelDB: is flushing %d operations to storage", ldb.batch.Len())
 		return ldb.db.Write(ldb.batch, nil)
 	}
 	return nil
