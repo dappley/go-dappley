@@ -89,8 +89,9 @@ func NewPeerListStr(strs []string) *PeerList {
 		peer, err := CreatePeerFromString(str)
 
 		if err != nil {
-			logger.WithFields(logger.Fields{"address": str}).
-				Warn("PeerList: cannot recognize address")
+			logger.WithFields(logger.Fields{
+				"address": str,
+			}).Warn("PeerList: cannot recognize address.")
 		} else {
 			ps = append(ps, peer)
 		}

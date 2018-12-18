@@ -84,14 +84,14 @@ func initRpcClient(port int) *grpc.ClientConn {
 func createWallet() []core.Address {
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
-		logger.Panic("Cannot get wallet manager")
+		logger.Panic("Cannot get wallet manager.")
 	}
 	addresses := wm.GetAddresses()
 	numOfWallets := len(addresses)
 	for i := numOfWallets; i < maxWallet; i++ {
 		_, err := logic.CreateWalletWithpassphrase(password)
 		if err != nil {
-			logger.WithError(err).Panic("Cannot create new wallet")
+			logger.WithError(err).Panic("Cannot create new wallet.")
 		}
 	}
 	wm, err = logic.GetWalletManager(client.GetWalletFilePath())
@@ -106,7 +106,7 @@ func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServ
 	logger.Info("Requesting fund from miner...")
 
 	if len(addresses) == 0 {
-		logger.Panic("There is no wallet to receive fund")
+		logger.Panic("There is no wallet to receive fund.")
 	}
 
 	fundAddr := addresses[0].String()
@@ -120,7 +120,7 @@ func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServ
 	logger.WithFields(logger.Fields{
 		"address":    fundAddr,
 		"balance":    bal,
-		"targetFund": initialAmount,
+		"target_fund": initialAmount,
 	}).Info("Current wallet balance is insufficient. Waiting for more funds...")
 	waitTilInitialAmountIsSufficient(adminClient, rpcClient, fundAddr)
 }
@@ -130,7 +130,7 @@ func checkSufficientInitialAmount(rpcClient rpcpb.RpcServiceClient, addr string)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"address": addr,
-		}).Panic("Failed to get balance")
+		}).Panic("Failed to get balance.")
 	}
 	return uint64(balance), uint64(balance) >= initialAmount
 }
@@ -170,7 +170,7 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"fund_address": fundAddr,
-		}).Panic("Failed to get test fund from miner")
+		}).Panic("Failed to get test fund from miner.")
 	}
 }
 
@@ -252,7 +252,7 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address)
 			"record":  currBalance[addr.String()],
 		})
 		if err != nil {
-			balanceLogger.WithError(err).Warn("Failed to get wallet balance")
+			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
 		}
 		balanceLogger.Info("Displaying wallet balance...")
 		currBalance[addr.String()] = uint64(amount)
@@ -272,7 +272,7 @@ func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64 {
 		context.Background(),
 		&rpcpb.GetBlockchainInfoRequest{})
 	if err != nil {
-		logger.WithError(err).Panic("Cannot get block height")
+		logger.WithError(err).Panic("Cannot get block height.")
 	}
 	return resp.BlockHeight
 }

@@ -112,7 +112,7 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 		logger.WithFields(logger.Fields{
 			"producer": producer,
 			"list":     dynasty.producers,
-		}).Debug("Dynasty: added a producer to list")
+		}).Debug("Dynasty: added a producer to list.")
 		return nil
 	}
 	if !IsProducerAddressValid(producer) {

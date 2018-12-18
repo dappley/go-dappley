@@ -188,7 +188,7 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	fullAddr := addr.Encapsulate(hostAddr)
 	logger.WithFields(logger.Fields{
 		"address": fullAddr,
-	}).Info("Host is up")
+	}).Info("Host is up.")
 	return basicHost, fullAddr, nil
 }
 
@@ -265,9 +265,9 @@ func (n *Node) dispatch(msg *DapMsg, s *Stream) {
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 	default:
-		logger.WithFields(logger.Fields{"from": s.peerID}).
-			Debug("Node: received an invalid command")
-
+		logger.WithFields(logger.Fields{
+			"from": s.peerID,
+		}).Debug("Node: received an invalid command.")
 	}
 }
 
@@ -277,17 +277,17 @@ func (n *Node) streamHandler(s net.Stream) {
 	if n.peerList.ListIsFull() {
 		logger.WithFields(logger.Fields{
 			"peers": len(n.peerList.GetPeerlist()),
-		}).Warn("Node: peer list is full")
+		}).Warn("Node: peer list is full.")
 	}
 	if n.peerList.IsInPeerlist(peer) {
 		logger.WithFields(logger.Fields{
 			"peer": s.Conn().RemotePeer(),
-		}).Warn("Node: peer is already in the peer list")
+		}).Warn("Node: peer is already in the peer list.")
 	}
 	logger.WithFields(logger.Fields{
 		"host":   n.GetPeerID(),
 		"target": s.Conn().RemotePeer(),
-	}).Info("Node: is creating a new stream")
+	}).Info("Node: is creating a new stream.")
 
 	n.peerList.Add(peer)
 	//start stream
@@ -349,7 +349,7 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 		"peer_id": n.GetPeerID(),
 		"height":  block.GetHeight(),
 		"hash":    hex.EncodeToString(block.GetHash()),
-	}).Info("Node: is broadcasting a block")
+	}).Info("Node: is broadcasting a block.")
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
@@ -521,7 +521,7 @@ func (n *Node) AddMultiPeers(data []byte) {
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
 	if err != nil {
-		logger.Warn("Node: failed to get the requested block from database")
+		logger.Warn("Node: failed to get the requested block from database.")
 		return
 	}
 	block := core.Deserialize(blockBytes)

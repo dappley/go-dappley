@@ -66,7 +66,7 @@ func (bp *BlockProducer) IsIdle() bool {
 func (bp *BlockProducer) prepareBlock() {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
-		logger.WithError(err).Error("BlockProducer: cannot get the current tail block")
+		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
 	}
 
 	// Retrieve all valid transactions from tx pool

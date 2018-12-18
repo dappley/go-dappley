@@ -108,14 +108,14 @@ func (tx *Transaction) Hash() []byte {
 // Sign signs each input of a Transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	if tx.IsCoinbase() {
-		logger.Warning("Transaction: will not sign a coinbase transaction")
+		logger.Warn("Transaction: will not sign a coinbase transaction.")
 		return nil
 	}
 
 	txCopy := tx.TrimmedCopy()
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
-		logger.WithError(err).Error("Transaction: failed to get private key")
+		logger.WithError(err).Error("Transaction: failed to get private key.")
 		return err
 	}
 
@@ -129,7 +129,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 
 		signature, err := secp256k1.Sign(txCopy.ID, privData)
 		if err != nil {
-			logger.WithError(err).Error("Transaction: failed to create a signature")
+			logger.WithError(err).Error("Transaction: failed to create a signature.")
 			return err
 		}
 
@@ -292,7 +292,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for _, utxo := range prevUtxos {
 		if utxo.PubKeyHash.GetPubKeyHash() == nil {
-			logger.Error("Transaction: previous transaction is not correct")
+			logger.Error("Transaction: previous transaction is not correct.")
 			return false
 		}
 	}
@@ -313,7 +313,7 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if err != nil || verifyResult == false {
-			logger.WithError(err).Error("Transaction: signature cannot be verified")
+			logger.WithError(err).Error("Transaction: signature cannot be verified.")
 			return false
 		}
 	}

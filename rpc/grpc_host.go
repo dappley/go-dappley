@@ -56,15 +56,16 @@ func (s *Server) Start(port uint32) {
 		}
 		lis, err := net.Listen("tcp", fmt.Sprint(":", port))
 		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{"port": port}).
-				Panic("Server: failed to listen to TCP port")
+			logger.WithError(err).WithFields(logger.Fields{
+				"port": port,
+			}).Panic("Server: failed to listen to TCP port.")
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
 		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
 		if err := srv.Serve(lis); err != nil {
-			logger.WithError(err).Fatal("Server: encounters an error while serving")
+			logger.WithError(err).Fatal("Server: encounters an error while serving.")
 		}
 	}()
 }

@@ -179,7 +179,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	// Assign changes to receiver
 	*bc = *bcTemp
 
-	blockLogger.Info("Blockchain: added a new block to tail")
+	blockLogger.Info("Blockchain: added a new block to tail.")
 
 	return nil
 }
@@ -324,7 +324,7 @@ func VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool {
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
-		}).Debug("VerifyTransactions: is verifying a block in the fork")
+		}).Debug("VerifyTransactions: is verifying a block in the fork.")
 
 		if !forkBlks[i].VerifyTransactions(utxo) {
 			return false

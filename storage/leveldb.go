@@ -51,7 +51,7 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 }
 
 func (ldb *LevelDB) Close() error {
-	logger.Info("LevelDB: is closing the database connection")
+	logger.Info("LevelDB: is closing the database connection.")
 	return ldb.db.Close()
 }
 
@@ -85,7 +85,7 @@ func (ldb *LevelDB) EnableBatch() {
 
 func (ldb *LevelDB) Flush() error {
 	if ldb.batch != nil {
-		logger.Debugf("LevelDB: is flushing %d operations to storage", ldb.batch.Len())
+		logger.Debugf("LevelDB: is flushing %d operations to storage.", ldb.batch.Len())
 		return ldb.db.Write(ldb.batch, nil)
 	}
 	return nil

@@ -262,7 +262,7 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
 		err := stream.Send(response)
 		if err != nil {
-			logger.WithError(err).Info("RPCService: failed to send transaction to client")
+			logger.WithError(err).Info("RPCService: failed to send transaction to client.")
 			rpcService.node.GetBlockchain().GetTxPool().EventBus.Unsubscribe(core.NewTransactionTopic, txHandler)
 			quitCh <- true
 		}

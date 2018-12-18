@@ -97,7 +97,7 @@ func main() {
 	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": minerAddr,
-	}).Info("Consensus is set")
+	}).Info("Consensus is configured.")
 
 	logic.SetLockWallet() //lock the wallet
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())

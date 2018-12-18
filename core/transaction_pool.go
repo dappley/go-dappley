@@ -154,14 +154,14 @@ func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Tran
 
 func (txPool *TransactionPool) Push(tx Transaction) {
 	if txPool.limit == 0 {
-		logger.Warn("TransactionPool: transaction is not pushed to pool because limit is set to 0")
+		logger.Warn("TransactionPool: transaction is not pushed to pool because limit is set to 0.")
 		return
 	}
 
 	if txPool.Transactions.Len() >= int(txPool.limit) {
 		logger.WithFields(logger.Fields{
 			"limit": txPool.limit,
-		}).Warn("TransactionPool: is full")
+		}).Warn("TransactionPool: is full.")
 
 		leastTipTx := txPool.Transactions.Left().(Transaction)
 		if tx.Tip <= leastTipTx.Tip {
@@ -173,7 +173,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 	}
 
 	if _, exists := txPool.index[string(tx.ID)]; exists {
-		logger.Warn("TransactionPool: transaction is not pushed to pool because transaction ID already exists")
+		logger.Warn("TransactionPool: transaction is not pushed to pool because transaction ID already exists.")
 	}
 
 	txPool.Transactions.Push(tx)
@@ -183,7 +183,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 
 func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
 	if _, exists := txPool.index[string(txId)]; !exists {
-		logger.Warn("TransactionPool: transaction does not exist")
+		logger.Warn("TransactionPool: transaction does not exist.")
 		return nil
 	}
 

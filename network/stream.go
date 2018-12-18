@@ -79,8 +79,9 @@ func (s *Stream) Start(quitCh chan<- *Stream, dh dapHandler) {
 }
 
 func (s *Stream) StopStream() {
-	logger.WithFields(logger.Fields{"peer_address": s.remoteAddr}).
-		Debug("Stream: is terminated!")
+	logger.WithFields(logger.Fields{
+		"peer_address": s.remoteAddr,
+	}).Debug("Stream: is terminated!")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()

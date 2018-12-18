@@ -55,16 +55,16 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	logger.WithFields(logger.Fields{
 		"from": pid.String(),
 		"hash": hex.EncodeToString(block.GetHash()),
-	}).Info("BlockChainManager: received a new block")
+	}).Info("BlockChainManager: received a new block.")
 	if !bm.blockPool.Verify(block) {
 		return
 	}
-	logger.Debug("BlockChainManager: block is verified")
+	logger.Debug("BlockChainManager: block is verified.")
 	if !(bm.blockchain.GetConsensus().Validate(block)) {
 		logger.Warn("BlockChainManager: block is invalid according to consensus!")
 		return
 	}
-	logger.Debug("BlockChainManager: block is valid according to consensus")
+	logger.Debug("BlockChainManager: block is valid according to consensus.")
 	tree, _ := common.NewTree(block.GetHash().String(), block)
 	forkheadParentHash := bm.blockPool.HandleRecvdBlock(tree, bm.blockchain.GetMaxHeight())
 	if forkheadParentHash == nil {
@@ -74,7 +74,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		logger.WithFields(logger.Fields{
 			"parent_hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
 			"parent_height": tree.GetValue().(*Block).GetHeight() - 1,
-		}).Info("BlockChainManager: cannot find the parent of the received block in blockchain")
+		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain.")
 		bm.blockPool.requestPrevBlock(tree, pid)
 		return
 	}

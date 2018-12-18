@@ -28,12 +28,12 @@ import (
 func LoadConfig(filename string, pb proto.Message) {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		logger.WithError(err).Warn("LoadConfig: cannot read the config file")
+		logger.WithError(err).Warn("LoadConfig: cannot read the config file!")
 		return
 	}
 
 	err = proto.UnmarshalText(string(bytes), pb)
 	if err != nil {
-		logger.WithError(err).Warn("LoadConfig: cannot parse content of the config file")
+		logger.WithError(err).Warn("LoadConfig: cannot parse content of the config file!")
 	}
 }

@@ -74,9 +74,9 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 }
 
 func (pool *BlockPool) Verify(block *Block) bool {
-	logger.Info("BlockPool: received a new block")
+	logger.Info("BlockPool: received a new block.")
 	if pool.syncState {
-		logger.Debug("BlockPool: is syncing already, tossing block")
+		logger.Debug("BlockPool: is syncing already, tossing block.")
 		return false
 	}
 	if !block.VerifyHash() {
@@ -119,7 +119,7 @@ func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) [
 
 func (pool *BlockPool) CleanCache(tree *common.Tree) {
 	tree.Delete()
-	logger.Debug("BlockPool: merge finished or exited, setting syncstate to false")
+	logger.Debug("BlockPool: merge finished or exited, setting syncstate to false.")
 	pool.SetSyncState(false)
 }
 
@@ -140,7 +140,7 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 				logger.WithFields(logger.Fields{
 					"tree_height":        tree.GetValue().(*Block).GetHeight(),
 					"cache_block_height": cachedBlk.(*common.Tree).GetValue().(*Block).GetHeight(),
-				}).Info("BlockPool: added a child block to the tree")
+				}).Info("BlockPool: added a child block to the tree.")
 				tree.AddChild(cachedBlk.(*common.Tree))
 			}
 		}
@@ -153,7 +153,7 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	logger.WithFields(logger.Fields{
 		"height": tree.GetValue().(*Block).GetHeight(),
 		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
-	}).Debug("BlockPool: finished updating BlockPoolCache")
+	}).Debug("BlockPool: finished updating BlockPoolCache.")
 }
 
 func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
@@ -161,7 +161,7 @@ func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
 		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
 		"height": tree.GetValue().(*Block).GetHeight() - 1,
 		"from":   sender,
-	}).Info("BlockPool: is requesting a block")
+	}).Info("BlockPool: is requesting a block.")
 	pool.blockRequestCh <- BlockRequestPars{tree.GetValue().(*Block).GetPrevHash(), sender}
 }
 
