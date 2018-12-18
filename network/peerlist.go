@@ -26,6 +26,8 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+	"math/rand"
+	"time"
 )
 
 var PEERLISTMAXSIZE = 20
@@ -104,11 +106,11 @@ func (pl *PeerList) ListIsFull() bool {
 	return true
 }
 
-//remove old ip give space for new ip
-func (pl *PeerList) RemoveOneIP(p *Peer) {
-	if !pl.IsInPeerlist(p) {
-		pl.peers = append(pl.peers[:0], pl.peers[1:]...)
-	}
+//remove a random ip to add a new ip
+func (pl *PeerList) RemoveRandomIP() {
+	rand.Seed(time.Now().UnixNano())
+	randPeer := rand.Intn(PEERLISTMAXSIZE)
+	pl.peers = append(pl.peers[:randPeer], pl.peers[randPeer + 1:]...)
 }
 
 func (pl *PeerList) DeletePeer(p *Peer) {

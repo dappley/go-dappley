@@ -244,7 +244,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 
 	// Add the peer list
 	if n.peerList.ListIsFull() {
-		n.peerList.RemoveOneIP(&Peer{peerid, targetAddr})
+		n.peerList.RemoveRandomIP()
 	}
 	n.peerList.Add(&Peer{peerid, targetAddr})
 
