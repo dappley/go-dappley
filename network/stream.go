@@ -20,7 +20,6 @@ package network
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"math/big"
 	"reflect"
@@ -57,18 +56,20 @@ var (
 
 var (
 	startBytes = []byte{0x7E, 0x7E}
-	endBytes   = []byte{}
 )
 
 type dapHandler func(*DapMsg, *Stream)
 
 type Stream struct {
-	peerID     peer.ID
-	remoteAddr multiaddr.Multiaddr
-	stream     net.Stream
-	dataCh     chan []byte
-	quitRdCh   chan bool
-	quitWrCh   chan bool
+	peerID      peer.ID
+	remoteAddr  multiaddr.Multiaddr
+	stream      net.Stream
+	msglength 		int
+	rawByteRead []byte
+	msgReadCh   chan []byte
+	dataCh      chan []byte
+	quitRdCh    chan bool
+	quitWrCh    chan bool
 }
 
 func NewStream(s net.Stream) *Stream {
@@ -76,6 +77,9 @@ func NewStream(s net.Stream) *Stream {
 		s.Conn().RemotePeer(),
 		s.Conn().RemoteMultiaddr(),
 		s,
+		0,
+		[]byte{},
+		make(chan []byte, 100),
 		make(chan []byte, 5), //TODO: Redefine the size of the channel
 		make(chan bool, 1),   //two channels to stop
 		make(chan bool, 1),
@@ -87,10 +91,11 @@ func (s *Stream) Start(quitCh chan<- *Stream, dh dapHandler) {
 	s.startLoop(rw, quitCh, dh)
 }
 
-func (s *Stream) StopStream() {
+func (s *Stream) StopStream(err error) {
 	logger.WithFields(logger.Fields{
-		"peer_address": s.remoteAddr,
-	}).Debug("Stream: is terminated!")
+		"peer_address" : s.remoteAddr,
+		"error"	:err,
+	}).Warn("Stream: is terminated!!")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
@@ -105,52 +110,35 @@ func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHa
 	go s.writeLoop(rw)
 }
 
-func readMsg(rw *bufio.ReadWriter) ([]byte, error) {
-	var rawBytes []byte
-	length := 0
+func (s *Stream) read(rw *bufio.ReadWriter) {
+	buffer := make([]byte, 1024)
+	var err error
 
-	for {
-		b, err := rw.ReadByte()
-
-		if err != nil {
-			return rawBytes, err
-		}
-
-		rawBytes = append(rawBytes, b)
-
-		//if the first two bytes are not starting bytes, return error
-		if len(rawBytes) == startByteLength {
-			if bytes.Compare(rawBytes, startBytes) != 0 {
-				return nil, ErrInvalidMessageFormat
-			}
-		}
-
-		if len(rawBytes) == headerLength {
-			if err = verifyHeader(rawBytes); err != nil {
-				return nil, err
-			}
-			length = getLength(rawBytes)
-			continue
-		}
-
-		if len(rawBytes) == headerLength+length {
-			return rawBytes, nil
-		}
-	}
-}
-
-func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
-	//read stream with delimiter
-	bytes, err := readMsg(rw)
-
+	n, err := rw.Read(buffer)
 	if err != nil {
-		logger.WithError(err).Warn("Stream: Failed to read message")
-		s.StopStream()
-		return
+		s.StopStream(err)
+	}
+	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
+
+	for{
+		if len(s.rawByteRead) < headerLength {
+			return
+		}
+
+
+		if err = verifyHeader(s.rawByteRead[:headerLength]); err!=nil{
+			s.StopStream(err)
+		}
+		s.msglength = getLength(s.rawByteRead[:headerLength])
+
+		if len(s.rawByteRead) < headerLength + s.msglength {
+			return
+		}
+
+		s.msgReadCh <- s.rawByteRead[:headerLength+s.msglength]
+		s.rawByteRead = s.rawByteRead[headerLength+s.msglength:]
 	}
 
-	dm := s.parseData(bytes)
-	dh(dm, s)
 }
 
 func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
@@ -160,8 +148,11 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHan
 			quitCh <- s
 			logger.Debug("Stream: read loop is terminated!")
 			return
+		case msg := <- s.msgReadCh:
+			dm := s.parseData(msg)
+			dh(dm, s)
 		default:
-			s.read(rw, dh)
+			s.read(rw)
 		}
 	}
 }
@@ -174,13 +165,13 @@ func encodeMessage(data []byte) []byte {
 
 func constructHeader(data []byte) []byte {
 	length := len(data)
-	bytes := make([]byte, lengthByteLength)
+	msg := make([]byte, lengthByteLength)
 	lengthBytes := big.NewInt(int64(length)).Bytes()
-	lenDiff := len(bytes) - len(lengthBytes)
-	for i, b := range lengthBytes {
-		bytes[i+lenDiff] = b
+	lenDiff := len(msg) - len(lengthBytes)
+	for i, b := range lengthBytes{
+		msg[i + lenDiff] = b
 	}
-	ret := append(startBytes, bytes...)
+	ret := append(startBytes, msg...)
 	cs := checkSum(ret)
 	ret = append(ret, cs)
 	return ret
@@ -205,7 +196,7 @@ func decodeMessage(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if len(data) != getLength(header)+headerLength {
+	if len(data) != getLength(header) + headerLength {
 		return nil, ErrFragmentedData
 	}
 
@@ -266,7 +257,8 @@ func (s *Stream) parseData(data []byte) *DapMsg {
 	dataDecoded, err := decodeMessage(data)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"data": data,
+			"data"	: data,
+			"length": len(data),
 		}).Warn("Stream: cannot decode the message.")
 		return nil
 	}
