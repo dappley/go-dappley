@@ -53,6 +53,10 @@ var (
 	ErrDapMsgNoCmd  = errors.New("command not specified")
 	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
+type msg struct {
+	msg *DapMsg
+	from peer.ID
+}
 
 type Node struct {
 	host                   host.Host
@@ -65,8 +69,15 @@ type Node struct {
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
+	queue				   chan *msg
 }
 
+func (n *Node) dispatch(msg *DapMsg, id peer.ID){
+	n.queue <- newMsg(msg, id)
+}
+func newMsg(dapMsg *DapMsg, id peer.ID) *msg {
+	return &msg{dapMsg, id}
+}
 //create new Node instance
 func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	placeholder := uint64(0)
@@ -83,6 +94,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		&sync.Map{},
 		&placeholder,
 		nil,
+		make(chan *msg, 1000),
 	}
 }
 
@@ -112,6 +124,7 @@ func (n *Node) Start(listenPort int) error {
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
+	n.StartListenLoop()
 	n.StartExitListener()
 	return err
 }
@@ -141,6 +154,20 @@ func (n *Node) StartRequestLoop() {
 	}()
 
 }
+
+func (n *Node) StartListenLoop() {
+
+	go func() {
+		for {
+			select {
+			case msg := <-n.queue:
+				n.handle(msg.msg, msg.from)
+			}
+		}
+	}()
+
+}
+
 
 //LoadNetworkKeyFromFile reads the network privatekey from a file
 func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
@@ -255,19 +282,19 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
-func (n *Node) dispatch(msg *DapMsg, s *Stream) {
+func (n *Node) handle(msg *DapMsg, id peer.ID) {
 	switch msg.GetCmd() {
 	case SyncBlock:
-		n.SyncBlockHandler(msg, s.peerID)
+		n.SyncBlockHandler(msg, id)
 	case SyncPeerList:
 		n.AddMultiPeers(msg.GetData())
 	case RequestBlock:
-		n.SendRequestedBlock(msg.GetData(), s.peerID)
+		n.SendRequestedBlock(msg.GetData(), id)
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 	default:
 		logger.WithFields(logger.Fields{
-			"from": s.peerID,
+			"from": id,
 		}).Debug("Node: received an invalid command.")
 	}
 }

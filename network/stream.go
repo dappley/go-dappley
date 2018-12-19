@@ -60,7 +60,7 @@ var (
 	endBytes   = []byte{}
 )
 
-type dapHandler func(*DapMsg, *Stream)
+type dispatch func(*DapMsg, peer.ID)
 
 type Stream struct {
 	peerID     peer.ID
@@ -82,9 +82,9 @@ func NewStream(s net.Stream) *Stream {
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, dh dapHandler) {
+func (s *Stream) Start(quitCh chan<- *Stream, dispatch dispatch) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw, quitCh, dh)
+	s.startLoop(rw, quitCh, dispatch)
 }
 
 func (s *Stream) StopStream() {
@@ -100,8 +100,8 @@ func (s *Stream) Send(data []byte) {
 	s.dataCh <- data
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
-	go s.readLoop(rw, quitCh, dh)
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch dispatch) {
+	go s.readLoop(rw, quitCh, dispatch)
 	go s.writeLoop(rw)
 }
 
@@ -139,7 +139,7 @@ func readMsg(rw *bufio.ReadWriter) ([]byte, error) {
 	}
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
+func (s *Stream) read(rw *bufio.ReadWriter, dispatch dispatch) {
 	//read stream with delimiter
 	bytes, err := readMsg(rw)
 
@@ -150,10 +150,12 @@ func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
 	}
 
 	dm := s.parseData(bytes)
-	dh(dm, s)
+
+	dispatch(dm, s.peerID)
+
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch dispatch) {
 	for {
 		select {
 		case <-s.quitRdCh:
@@ -161,7 +163,7 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHan
 			logger.Debug("Stream: read loop is terminated!")
 			return
 		default:
-			s.read(rw, dh)
+			s.read(rw, dispatch)
 		}
 	}
 }
