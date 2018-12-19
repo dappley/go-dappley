@@ -19,10 +19,11 @@
 package consensus
 
 import (
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
-	logger "github.com/sirupsen/logrus"
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
@@ -84,7 +85,7 @@ func (bp *BlockProducer) IsIdle() bool {
 func (bp *BlockProducer) prepareBlock() {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
-		logger.Error(err)
+		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
 		return
 	}
 

@@ -96,14 +96,14 @@ func (txPool *TransactionPool) Push(tx *Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	if txPool.limit == 0 {
-		logger.Warn("TransactionPool: transaction not pushed to pool because limit is set to 0")
+		logger.Warn("TransactionPool: transaction is not pushed to pool because limit is set to 0.")
 		return
 	}
 
 	if len(txPool.txs) >= int(txPool.limit) {
 		logger.WithFields(logger.Fields{
 			"limit": txPool.limit,
-		}).Debug("TransactionPool: transaction pool limit reached")
+		}).Warn("TransactionPool: is full.")
 
 		minTx, exist := txPool.txs[txPool.minTipTxId]
 		if exist && tx.Tip <= minTx.value.Tip {

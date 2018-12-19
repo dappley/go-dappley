@@ -20,12 +20,15 @@ package network
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 var PEERLISTMAXSIZE = 20
@@ -88,7 +91,9 @@ func NewPeerListStr(strs []string) *PeerList {
 		peer, err := CreatePeerFromString(str)
 
 		if err != nil {
-			logger.Warn("Address Unrecognized:", str)
+			logger.WithFields(logger.Fields{
+				"address": str,
+			}).Warn("PeerList: cannot recognize address.")
 		} else {
 			ps = append(ps, peer)
 		}
@@ -104,11 +109,11 @@ func (pl *PeerList) ListIsFull() bool {
 	return true
 }
 
-//remove old ip give space for new ip
-func (pl *PeerList) RemoveOneIP(p *Peer) {
-	if !pl.IsInPeerlist(p) {
-		pl.peers = append(pl.peers[:0], pl.peers[1:]...)
-	}
+//remove a random ip to add a new ip
+func (pl *PeerList) RemoveRandomIP() {
+	rand.Seed(time.Now().UnixNano())
+	randPeer := rand.Intn(PEERLISTMAXSIZE)
+	pl.peers = append(pl.peers[:randPeer], pl.peers[randPeer + 1:]...)
 }
 
 func (pl *PeerList) DeletePeer(p *Peer) {

@@ -26,13 +26,14 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -277,18 +278,18 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 
 func (b *Block) SignBlock(key string, data []byte) bool {
 	if len(key) <= 0 {
-		logger.Warn("Block: key length not enough for signature!")
+		logger.Warn("Block: the key is too short for signature!")
 		return false
 	}
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
-		logger.Warn("Block: private key decode error for signature!")
+		logger.Warn("Block: cannot decode private key for signature!")
 		return false
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
-		logger.Warnf("Block: signature calculation error!, %v\n", err.Error())
+		logger.WithError(err).Warn("Block: failed to calculate signature!")
 		return false
 	}
 

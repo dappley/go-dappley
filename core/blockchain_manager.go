@@ -20,9 +20,10 @@ package core
 import (
 	"encoding/hex"
 
-	"github.com/dappley/go-dappley/common"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common"
 )
 
 type BlockChainManager struct {
@@ -54,27 +55,32 @@ func (bm *BlockChainManager) verifyBlock(block *Block) bool{
 	if !bm.blockPool.Verify(block) {
 		return false
 	}
+	logger.Debug("BlockChainManager: block is verified.")
 	if !(bm.blockchain.GetConsensus().Validate(block)) {
-		logger.Warn("BlockPool: The received block is invalid according to consensus!")
+		logger.Warn("BlockChainManager: block is invalid according to consensus!")
 		return false
 	}
-	logger.Debug("BlockPool: Block has been verified")
+	logger.Debug("BlockChainManager: block is valid according to consensus.")
 	return true
 }
 func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
+	logger.WithFields(logger.Fields{
+		"from": pid.String(),
+		"hash": hex.EncodeToString(block.GetHash()),
+	}).Info("BlockChainManager: received a new block.")
 	if !bm.verifyBlock(block){
 		return
 	}
 	tree, _ := common.NewTree(block.GetHash().String(), block)
-	logger.WithFields(logger.Fields{
-		"From": pid.String(),
-		"hash": hex.EncodeToString(block.GetHash()),
-	}).Info("BlockPool: Received a new block: ")
 	forkheadParentHash := bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
 	if forkheadParentHash == nil {
 		return
 	}
 	if parent, _ := bm.blockchain.GetBlockByHash(forkheadParentHash); parent == nil {
+		logger.WithFields(logger.Fields{
+			"parent_hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
+			"parent_height": tree.GetValue().(*Block).GetHeight() - 1,
+		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain.")
 		bm.blockPool.requestPrevBlock(tree, pid)
 		return
 	}
@@ -99,7 +105,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
 	if err != nil {
-		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
+		logger.Error("BlockChainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return
 	}
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
