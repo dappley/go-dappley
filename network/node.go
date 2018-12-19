@@ -195,6 +195,18 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	return basicHost, fullAddr, nil
 }
 
+//AddStreamsByString adds streams by their full addresses
+func (n *Node) AddStreamsByString(targetFullAddrs []string){
+	for _, fullAddr := range targetFullAddrs{
+		err := n.AddStreamByString(fullAddr)
+		if err!=nil{
+			logger.WithError(err).WithFields(logger.Fields{
+				"full_addr"	: fullAddr,
+			}).Warn("Node: not able to add stream")
+		}
+	}
+}
+
 func (n *Node) AddStreamByString(targetFullAddr string) error {
 	addr, err := ma.NewMultiaddr(targetFullAddr)
 	if err != nil {
