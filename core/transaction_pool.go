@@ -112,7 +112,7 @@ func (txPool *TransactionPool) Push(tx *Transaction) {
 
 		toRemoveTxs := txPool.getToRemoveTxs(txPool.minTipTxId)
 		if checkDependTxInMap(tx, toRemoveTxs) == true {
-			logger.Warn("TransactionPool: Depend transaction must remove from pool, push failed")
+			logger.Warn("TransactionPool: failed to push because dependent transactions are not removed from pool.")
 			return
 		}
 

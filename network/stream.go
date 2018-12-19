@@ -36,28 +36,28 @@ import (
 )
 
 const (
-	SyncBlock    = "SyncBlock"
-	SyncPeerList = "SyncPeerList"
-	RequestBlock = "requestBlock"
-	BroadcastTx  = "BroadcastTx"
-	Unicast      = 0
-	Broadcast    = 1
+	SyncBlock        = "SyncBlock"
+	SyncPeerList     = "SyncPeerList"
+	RequestBlock     = "requestBlock"
+	BroadcastTx      = "BroadcastTx"
+	Unicast          = 0
+	Broadcast        = 1
 	lengthByteLength = 8
-	startByteLength = 2
-	checkSumLength = 1
-	headerLength = lengthByteLength + startByteLength + checkSumLength
+	startByteLength  = 2
+	checkSumLength   = 1
+	headerLength     = lengthByteLength + startByteLength + checkSumLength
 )
 
 var (
 	ErrInvalidMessageFormat = errors.New("invalid message format")
-	ErrLengthTooShort 		= errors.New("message length is too short")
-	ErrFragmentedData 		= errors.New("Fragmented data")
-	ErrCheckSumIncorrect	= errors.New("Incorrect checksum")
+	ErrLengthTooShort       = errors.New("message length is too short")
+	ErrFragmentedData       = errors.New("Fragmented data")
+	ErrCheckSumIncorrect    = errors.New("Incorrect checksum")
 )
 
 var (
 	startBytes = []byte{0x7E, 0x7E}
-	endBytes = []byte{}
+	endBytes   = []byte{}
 )
 
 type dapHandler func(*DapMsg, *Stream)
@@ -119,21 +119,21 @@ func readMsg(rw *bufio.ReadWriter) ([]byte, error) {
 		rawBytes = append(rawBytes, b)
 
 		//if the first two bytes are not starting bytes, return error
-		if len(rawBytes) == startByteLength{
-			if bytes.Compare(rawBytes, startBytes)!=0{
+		if len(rawBytes) == startByteLength {
+			if bytes.Compare(rawBytes, startBytes) != 0 {
 				return nil, ErrInvalidMessageFormat
 			}
 		}
 
-		if len(rawBytes) == headerLength{
-			if err = verifyHeader(rawBytes); err!=nil{
+		if len(rawBytes) == headerLength {
+			if err = verifyHeader(rawBytes); err != nil {
 				return nil, err
 			}
 			length = getLength(rawBytes)
 			continue
 		}
 
-		if len(rawBytes) == headerLength + length{
+		if len(rawBytes) == headerLength+length {
 			return rawBytes, nil
 		}
 	}
@@ -144,9 +144,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
 	bytes, err := readMsg(rw)
 
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"error"	:err,
-		}).Warn("Stream: Failed to read message")
+		logger.WithError(err).Warn("Stream: Failed to read message")
 		s.StopStream()
 		return
 	}
@@ -179,8 +177,8 @@ func constructHeader(data []byte) []byte {
 	bytes := make([]byte, lengthByteLength)
 	lengthBytes := big.NewInt(int64(length)).Bytes()
 	lenDiff := len(bytes) - len(lengthBytes)
-	for i, b := range lengthBytes{
-		bytes[i + lenDiff] = b
+	for i, b := range lengthBytes {
+		bytes[i+lenDiff] = b
 	}
 	ret := append(startBytes, bytes...)
 	cs := checkSum(ret)
@@ -188,9 +186,9 @@ func constructHeader(data []byte) []byte {
 	return ret
 }
 
-func checkSum(data []byte) byte{
+func checkSum(data []byte) byte {
 	sum := byte(0)
-	for _, d := range data{
+	for _, d := range data {
 		sum += d
 	}
 	return sum
@@ -203,36 +201,36 @@ func decodeMessage(data []byte) ([]byte, error) {
 	}
 
 	header := data[:headerLength]
-	if err := verifyHeader(header); err!=nil{
+	if err := verifyHeader(header); err != nil {
 		return nil, err
 	}
 
-	if len(data) != getLength(header) + headerLength {
+	if len(data) != getLength(header)+headerLength {
 		return nil, ErrFragmentedData
 	}
 
 	return data[headerLength:], nil
 }
 
-func verifyHeader(header []byte) error{
+func verifyHeader(header []byte) error {
 	if !containStartingBytes(header) {
 		return ErrInvalidMessageFormat
 	}
 
-	if len(header) != headerLength{
+	if len(header) != headerLength {
 		return ErrLengthTooShort
 	}
 
 	cs := checkSum(header[:headerLength-1])
 
-	if cs!=header[headerLength-1] {
+	if cs != header[headerLength-1] {
 		return ErrCheckSumIncorrect
 	}
 	return nil
 }
 
-func getLength(header []byte) int{
-	lengthByte := header[2: 2+lengthByteLength]
+func getLength(header []byte) int {
+	lengthByte := header[2 : 2+lengthByteLength]
 	l := *new(big.Int).SetBytes(lengthByte)
 	return int(l.Uint64())
 }
@@ -243,7 +241,6 @@ func containStartingBytes(data []byte) bool {
 	}
 	return reflect.DeepEqual(data[0:len(startBytes)], startBytes)
 }
-
 
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 	var mutex = &sync.Mutex{}
@@ -268,10 +265,9 @@ func (s *Stream) parseData(data []byte) *DapMsg {
 
 	dataDecoded, err := decodeMessage(data)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"error"	: err,
-			"data"	: data,
-		}).Warn("Stream: Can not decode received message")
+		logger.WithError(err).WithFields(logger.Fields{
+			"data": data,
+		}).Warn("Stream: cannot decode the message.")
 		return nil
 	}
 

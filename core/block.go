@@ -231,7 +231,7 @@ func (bh *BlockHeader) ToProto() proto.Message {
 }
 
 func (bh *BlockHeader) FromProto(pb proto.Message) {
-	if pb==nil{
+	if pb == nil {
 		return
 	}
 	bh.hash = pb.(*corepb.BlockHeader).Hash
@@ -303,8 +303,9 @@ func (b *Block) VerifyHash() bool {
 
 func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager, parentBlk *Block) bool {
 	if len(b.GetTransactions()) == 0 {
-		logger.WithFields(logger.Fields{"blkHash": b.GetHash()}).
-			Debug("No transactions to verify in this block")
+		logger.WithFields(logger.Fields{
+			"hash": b.GetHash(),
+		}).Debug("Block: there is no transaction to verify in this block.")
 		return true
 	}
 
@@ -317,7 +318,7 @@ L:
 		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
 			if rewardTX != nil {
-				logger.Warn("Block contains more than 1 reward transaction")
+				logger.Warn("Block: contains more than 1 reward transaction.")
 				return false
 			}
 			rewardTX = tx
@@ -334,8 +335,9 @@ L:
 					continue L
 				}
 			}
-			logger.WithFields(logger.Fields{"tx": tx}).
-				Debug("The contract source of this generated tx is not in the same block")
+			logger.WithFields(logger.Fields{
+				"tx": tx,
+			}).Debug("Block: the contract source of this generated tx is not in the same block.")
 			// TODO: Execute the contract in source tx
 			//sourceTX, err := Blockchain{}.FindTransaction(contractSource)
 			//if err != nil || !sourceTX.IsContract() {
@@ -350,12 +352,12 @@ L:
 		if tx.IsContract() {
 			// Run the contract and collect generated transactions
 			if manager == nil {
-				logger.Warn("Smart contract cannot be verified")
-				logger.Debug("missing SCEngineManager")
+				logger.Warn("Block: smart contract cannot be verified.")
+				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(),parentBlk)
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			utxo.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {

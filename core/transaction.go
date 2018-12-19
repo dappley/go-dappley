@@ -161,7 +161,7 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 			usedUTXO := index.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
-			logger.Debug("Transaction: using utxo from multiple wallets")
+			logger.Debug("Transaction: using UTXO from multiple wallets.")
 		}
 	}
 	for _, vout := range tx.Vout {
@@ -221,7 +221,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	}
 
 	if tx.IsRewardTx() {
-		logger.Warning("Reward transaction could not be signed")
+		logger.Warn("Transaction: will not sign a reward transaction.")
 		return nil
 	}
 
@@ -305,24 +305,24 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		return true
 	}
 
-var prevUtxos []*UTXO
+	var prevUtxos []*UTXO
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"txId":       hex.EncodeToString(tx.ID),
-				"vin TxId":   hex.EncodeToString(vin.Txid),
-				"vin Pubkey": hex.EncodeToString(vin.PubKey),
-			}).Warn("Transaction: Get vin PubKeyHash Failed")
+				"tx_id":          hex.EncodeToString(tx.ID),
+				"vin_tx_id":      hex.EncodeToString(vin.Txid),
+				"vin_public_key": hex.EncodeToString(vin.PubKey),
+			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return false
 		}
 		utxo := utxoIndex.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
-				"txId":     hex.EncodeToString(tx.ID),
-				"vinTxId":  hex.EncodeToString(vin.Txid),
-				"vinIndex": vin.Vout,
-			}).Warn("Transaction: Vin not found")
+				"tx_id":     hex.EncodeToString(tx.ID),
+				"vin_tx_id": hex.EncodeToString(vin.Txid),
+				"vin_index": vin.Vout,
+			}).Warn("Transaction: cannot find vin.")
 			return false
 		}
 		prevUtxos = append(prevUtxos, utxo)
@@ -330,29 +330,29 @@ var prevUtxos []*UTXO
 
 	if !tx.verifyPublicKeyHash(prevUtxos) {
 		logger.WithFields(logger.Fields{
-			"txId": hex.EncodeToString(tx.ID),
-		}).Warn("Transaction: Pubkey is invalid")
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: pubkey is invalid.")
 		return false
 	}
 
 	if !tx.verifyAmount(prevUtxos) {
 		logger.WithFields(logger.Fields{
-			"txId": hex.EncodeToString(tx.ID),
-		}).Warn("Transaction: Amount is invalid")
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: amount is invalid.")
 		return false
 	}
 
 	if !tx.verifyTip(prevUtxos) {
 		logger.WithFields(logger.Fields{
-			"txId": hex.EncodeToString(tx.ID),
-		}).Warn("Transaction: Tip is invalid")
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: tip is invalid.")
 		return false
 	}
 
 	if !tx.verifySignatures(prevUtxos) {
 		logger.WithFields(logger.Fields{
-			"txId": hex.EncodeToString(tx.ID),
-		}).Warn("Transaction: Signature is invalid")
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: signature is invalid.")
 		return false
 	}
 
@@ -483,11 +483,10 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
 		if err != nil {
-			logger.WithFields(logger.Fields{
+			logger.WithError(err).WithFields(logger.Fields{
 				"address": address,
 				"amount":  amount,
-				"error":   err,
-			}).Warn("Transaction: Not able to parse reward amount")
+			}).Warn("Transaction: failed to parse reward amount")
 		}
 		txOutputs = append(txOutputs, *NewTXOutput(amt, NewAddress(address)))
 	}
@@ -602,7 +601,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
 	if err != nil {
-		logger.Errorf("ERROR: %v", err)
+		logger.Error(err)
 		return nil
 	}
 
@@ -614,10 +613,10 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	totalArgs := util.PrepareArgs(args)
 	address := utxos[0].PubKeyHash.GenerateAddress()
 	logger.WithFields(logger.Fields{
-		"contractAddr":    address.String(),
-		"invokedFunction": function,
-		"arguments":       totalArgs,
-	}).Debug("Executing smart contract...")
+		"contract_address": address.String(),
+		"invoked_function": function,
+		"arguments":        totalArgs,
+	}).Debug("Transaction: is executing the smart contract...")
 	engine.ImportSourceCode(utxos[0].Contract)
 	engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
 	engine.ImportContractAddr(address)
@@ -653,12 +652,12 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 
 	if tx == nil {
-		logger.Debug("Transaction: Transaction does not exist")
+		logger.Debug("Transaction: does not exist")
 		return false
 	}
 
 	if !tx.IsRewardTx() {
-		logger.Debug("Transaction: Transaction is not a reward transaction")
+		logger.Debug("Transaction: is not a reward transaction")
 		return false
 	}
 

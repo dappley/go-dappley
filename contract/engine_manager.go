@@ -1,8 +1,9 @@
 package vm
 
 import (
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 const scheduleFuncName = "dapp_schedule"
@@ -26,8 +27,8 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
 	blkHeight uint64,
 	seed int64) {
 	logger.WithFields(logger.Fields{
-		"numOfSmartContract": len(contractUtxos),
-	}).Info("Running Scheduled Events...")
+		"smart_contracts": len(contractUtxos),
+	}).Info("V8EngineManager: is running scheduled events...")
 
 	for _, utxo := range contractUtxos {
 		addr := utxo.PubKeyHash.GenerateAddress()

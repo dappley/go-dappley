@@ -35,8 +35,9 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 var (
@@ -191,7 +192,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 	logger.WithFields(logger.Fields{
 		"result": res,
 		"status": status,
-	}).Info("Smart Contract Execution Ends.")
+	}).Info("V8Engine: smart contract execution ends.")
 	return res
 }
 

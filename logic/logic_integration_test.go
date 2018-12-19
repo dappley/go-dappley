@@ -22,14 +22,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
 const testport_msg_relay = 19999
@@ -41,7 +41,6 @@ const testport_fork_segment = 10211
 
 //test send
 func TestSend(t *testing.T) {
-	logger.Warn("Enter", t)
 	var mineReward = common.NewAmount(10000000)
 	testCases := []struct {
 		name             string
@@ -159,7 +158,6 @@ func TestSend(t *testing.T) {
 
 //test send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
-	logger.Warn("Enter", t)
 	//setup: clean up database and files
 	setup()
 
@@ -202,7 +200,6 @@ func TestSendToInvalidAddress(t *testing.T) {
 
 //insufficient fund
 func TestSendInsufficientBalance(t *testing.T) {
-	logger.Warn("Enter", t)
 	//setup: clean up database and files
 	setup()
 
@@ -263,7 +260,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 }
 
 func TestBlockMsgRelaySingleMiner(t *testing.T) {
-	logger.Warn("Enter", t)
 	const (
 		timeBetweenBlock = 1
 		dposRounds       = 2
@@ -330,7 +326,6 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 
 // Test if network radiation bounces forever
 func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
-	logger.Warn("Enter", t)
 	const (
 		timeBetweenBlock = 1
 		dposRounds       = 2
@@ -406,7 +401,6 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 }
 
 func TestForkChoice(t *testing.T) {
-	logger.Warn("Enter", t)
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	var dbs []storage.Storage
@@ -477,7 +471,6 @@ func TestForkChoice(t *testing.T) {
 }
 
 func TestForkSegmentHandling(t *testing.T) {
-	logger.Warn("Enter", t)
 	var pows []*consensus.ProofOfWork
 	var bcs []*core.Blockchain
 	var dbs []storage.Storage
@@ -565,7 +558,6 @@ func TestForkSegmentHandling(t *testing.T) {
 
 // Integration test for adding balance
 func TestAddBalance(t *testing.T) {
-	logger.Warn("Enter", t)
 	testCases := []struct {
 		name         string
 		addAmount    *common.Amount
@@ -624,7 +616,6 @@ func TestAddBalance(t *testing.T) {
 
 // Integration test for adding balance to invalid address
 func TestAddBalanceWithInvalidAddress(t *testing.T) {
-	logger.Warn("Enter", t)
 	testCases := []struct {
 		name    string
 		address string
@@ -651,7 +642,6 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 }
 
 func TestSmartContractLocalStorage(t *testing.T) {
-	logger.Warn("Enter", t)
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -746,7 +736,6 @@ func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockcha
 	return core.CreateBlockchain(addr, db, pow, 128, nil), pow
 }
 func TestDoubleMint(t *testing.T) {
-	logger.Warn("Enter", t)
 	var sendNode *network.Node
 	var recvNode *network.Node
 	var blks []*core.Block

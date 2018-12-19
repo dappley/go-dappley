@@ -1,15 +1,18 @@
 package vm
+
 import "C"
 import (
 	"crypto/sha256"
 	"encoding/hex"
+
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	logger "github.com/sirupsen/logrus"
 )
 
 //export VerifySignatureFunc
-func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
+func VerifySignatureFunc(msg, pubkey, sig *C.char) bool {
 	goMsg := C.GoString(msg)
 	goPubkey := C.GoString(pubkey)
 	goSig := C.GoString(sig)
@@ -17,22 +20,20 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
 	data := sha256.Sum256([]byte(goMsg))
 
 	sigBytes, err := hex.DecodeString(goSig)
-	if err!= nil{
-		logger.WithFields(logger.Fields{
-			"content"	: goMsg,
-			"Signature" : sigBytes,
-			"error" 	: err,
-		}).Debug("Smart Contract: VerifySignature failed. Unable to decode signature")
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"content":   goMsg,
+			"signature": sigBytes,
+		}).Debug("SmartContract: failed to decode signature.")
 		return false
 	}
 
-	pubKeyBytes, err :=	hex.DecodeString(goPubkey)
-	if err!= nil{
-		logger.WithFields(logger.Fields{
-			"content"	: goMsg,
-			"pubKey" 	: pubKeyBytes,
-			"error" 	: err,
-		}).Debug("Smart Contract: VerifySignature failed. Unable to decode public key")
+	pubKeyBytes, err := hex.DecodeString(goPubkey)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"content":    goMsg,
+			"public_key": pubKeyBytes,
+		}).Debug("SmartContract: failed to decode public key.")
 		return false
 	}
 
@@ -41,13 +42,12 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
 	copy(originPub[1:], pubKeyBytes)
 
 	res, err := secp256k1.Verify(data[:], sigBytes, originPub)
-	if err!= nil{
-		logger.WithFields(logger.Fields{
-			"content"	: goMsg,
-			"pubKey" 	: pubKeyBytes,
-			"Signature" : sigBytes,
-			"error" 	: err,
-		}).Debug("Smart Contract: VerifySignature failed.")
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"content":    goMsg,
+			"public_key": pubKeyBytes,
+			"signature":  sigBytes,
+		}).Debug("SmartContract: failed to verify signature.")
 		return false
 	}
 
@@ -55,27 +55,25 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool{
 }
 
 //export VerifyPublicKeyFunc
-func VerifyPublicKeyFunc(addr, pubkey *C.char) bool{
+func VerifyPublicKeyFunc(addr, pubkey *C.char) bool {
 	goAddr := C.GoString(addr)
 	goPubkey := C.GoString(pubkey)
 
-	pubKeyBytes, err :=	hex.DecodeString(goPubkey)
-	if err!= nil{
-		logger.WithFields(logger.Fields{
-			"address"	: goAddr,
-			"pubKey" 	: pubKeyBytes,
-			"error" 	: err,
-		}).Debug("Smart Contract: VerifyPublicKey failed. Unable to decode public key")
+	pubKeyBytes, err := hex.DecodeString(goPubkey)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"address":    goAddr,
+			"public_key": pubKeyBytes,
+		}).Debug("SmartContract: failed to decode public key.")
 		return false
 	}
 
 	pubKeyHash, err := core.NewUserPubKeyHash(pubKeyBytes)
-	if err!= nil{
-		logger.WithFields(logger.Fields{
-			"content"	: goAddr,
-			"pubKey" 	: pubKeyBytes,
-			"error" 	: err,
-		}).Debug("Smart Contract: VerifyPublicKey failed. Unable to hash public key")
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"content":    goAddr,
+			"public_key": pubKeyBytes,
+		}).Debug("SmartContract: failed to hash public key.")
 		return false
 	}
 

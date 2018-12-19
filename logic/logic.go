@@ -277,13 +277,13 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 		if to.String() == contractAddr.String() {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),
-				"data":         contract,
-			}).Info("Smart Contract Invoke Transaction Sent Successful!")
+				"data":             contract,
+			}).Info("Smart contract invocation transaction is sent.")
 		} else {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),
-				"contract":     contract,
-			}).Info("Smart Contract Deployement Transaction Sent Successful!")
+				"contract":         contract,
+			}).Info("Smart contract deployment transaction is sent.")
 		}
 	}
 

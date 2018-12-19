@@ -154,7 +154,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	parentBlk, err := bc.GetTailBlock()
 	if err != nil {
-		blockLogger.Debug("Blockchain: Not able to get tail block")
+		blockLogger.Debug("Blockchain: failed to get tail block.")
 	}
 
 	bcTemp.db.EnableBatch()
@@ -174,10 +174,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight(), parentBlk)
 		parentBlk, err := bc.GetTailBlock()
 		if err != nil {
-			logger.WithFields(logger.Fields{
-				"height": block.GetHeight(),
-				"hash":   hex.EncodeToString(block.GetHash()),
-			}).Error("Blockchain: Can not get parent block!")
+			blockLogger.Error("Blockchain: Can not get parent block!")
 			return err
 		}
 		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, block.GetHeight(), parentBlk.GetTimestamp())
@@ -194,7 +191,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	err = bcTemp.AddBlockToDb(block)
 	if err != nil {
-		blockLogger.Warn("Blockchain: failed to add block to database")
+		blockLogger.Warn("Blockchain: failed to add block to database.")
 		return err
 	}
 

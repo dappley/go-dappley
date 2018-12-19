@@ -25,13 +25,14 @@ import (
 	"testing"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
 var sendAmount = common.NewAmount(7)
@@ -360,7 +361,10 @@ func TestBlockProducer_InvalidTransactions(t *testing.T) {
 func printBalances(bc *core.Blockchain, addrs []core.Address) {
 	for _, addr := range addrs {
 		b, _ := getBalance(bc, addr.String())
-		logger.Debug("addr", addr, ":", b)
+		logger.WithFields(logger.Fields{
+			"address": addr,
+			"balance": b,
+		}).Debug("Printing balance...")
 	}
 }
 

@@ -51,7 +51,7 @@ func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockChainManager) verifyBlock(block *Block) bool{
+func (bm *BlockChainManager) verifyBlock(block *Block) bool {
 	if !bm.blockPool.Verify(block) {
 		return false
 	}
@@ -68,7 +68,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		"from": pid.String(),
 		"hash": hex.EncodeToString(block.GetHash()),
 	}).Info("BlockChainManager: received a new block.")
-	if !bm.verifyBlock(block){
+	if !bm.verifyBlock(block) {
 		return
 	}
 	tree, _ := common.NewTree(block.GetHash().String(), block)
@@ -122,12 +122,12 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 
 //Verify all transactions in a fork
 func (bm *BlockChainManager) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScState, forkBlks []*Block, parentBlk *Block) bool {
-	logger.Info("Verifying transactions")
+	logger.Info("BlockChainManager: is verifying transactions...")
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
-		}).Debug("Verifying block before merge")
+		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
 		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, bm.blockchain.GetSCManager(), parentBlk) {
 			return false

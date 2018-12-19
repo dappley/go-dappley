@@ -24,12 +24,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -104,7 +104,7 @@ func (n *Node) Start(listenPort int) error {
 
 	h, addr, err := createBasicHost(listenPort, n.privKey)
 	if err != nil {
-		logger.Error("Create basic host failed", err)
+		logger.WithError(err).Error("Node: failed to create basic host.")
 		return err
 	}
 
@@ -178,7 +178,7 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	basicHost, err := libp2p.New(context.Background(), opts...)
 
 	if err != nil {
-		logger.Error("New p2p failed", err)
+		logger.WithError(err).Error("Failed to create a new libp2p node.")
 		return nil, nil, err
 	}
 
@@ -434,7 +434,7 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
-	if blockpb.Header == nil{
+	if blockpb.Header == nil {
 		spew.Dump(blockpb)
 		spew.Dump(data)
 	}
@@ -452,16 +452,16 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	if len(dm.data)==0{
+	if len(dm.data) == 0 {
 		logger.WithFields(logger.Fields{
-			"cmd"	: "sync block",
-		}).Warn("No block information is found")
+			"cmd": "sync block",
+		}).Warn("Node: cannot find block information.")
 		return
 	}
 	n.cacheDapMsg(*dm)
 	blk := n.getFromProtoBlockMsg(dm.GetData())
 	n.addBlockToPool(blk, pid)
-	if(dm.uniOrBroadcast == Broadcast){
+	if dm.uniOrBroadcast == Broadcast {
 		n.RelayDapMsg(*dm)
 	}
 }
