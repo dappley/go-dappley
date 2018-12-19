@@ -51,8 +51,8 @@ const (
 var (
 	ErrInvalidMessageFormat = errors.New("invalid message format")
 	ErrLengthTooShort       = errors.New("message length is too short")
-	ErrFragmentedData       = errors.New("Fragmented data")
-	ErrCheckSumIncorrect    = errors.New("Incorrect checksum")
+	ErrFragmentedData       = errors.New("fragmented data")
+	ErrCheckSumIncorrect    = errors.New("incorrect checksum")
 )
 
 var (
