@@ -23,6 +23,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
+	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"time"
 
@@ -202,7 +203,27 @@ func (b *Block) ToProto() proto.Message {
 		Transactions: txArray,
 	}
 }
+func FromProtoBlockMsg(data []byte) *Block {
+	//create a block proto
+	blockpb := &corepb.Block{}
 
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(data, blockpb); err != nil {
+		logger.Warn(err)
+	}
+	if blockpb.Header == nil{
+		spew.Dump(blockpb)
+		spew.Dump(data)
+	}
+
+	//create an empty block
+	block := &Block{}
+
+	//load the block with proto
+	block.FromProto(blockpb)
+
+	return block
+}
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}

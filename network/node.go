@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -39,7 +38,6 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
@@ -426,27 +424,7 @@ func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	n.bm.Push(block, pid)
 }
 
-func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
-	//create a block proto
-	blockpb := &corepb.Block{}
 
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err != nil {
-		logger.Warn(err)
-	}
-	if blockpb.Header == nil {
-		spew.Dump(blockpb)
-		spew.Dump(data)
-	}
-
-	//create an empty block
-	block := &core.Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	return block
-}
 func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
 		return
@@ -459,7 +437,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 	n.cacheDapMsg(*dm)
-	blk := n.getFromProtoBlockMsg(dm.GetData())
+	blk := core.FromProtoBlockMsg(dm.GetData())
 	n.addBlockToPool(blk, pid)
 	if dm.uniOrBroadcast == Broadcast {
 		n.RelayDapMsg(*dm)
