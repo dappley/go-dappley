@@ -817,8 +817,12 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		fmt.Println("ERROR: Send failed. ERR:", err)
 		return
 	}
-	fmt.Println(response1)
-	fmt.Println(proto.MarshalTextString(response1))
+	if response1.ErrorCode != 0 {
+		fmt.Println("ERROR: Send failed. ERR:", response1.ErrorCode)
+		return
+	}
+
+	fmt.Println("Send transaction succeed!")
 }
 
 func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount) ([]*core.UTXO, error) {
