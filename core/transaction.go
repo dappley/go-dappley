@@ -746,7 +746,9 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
-	outputs = append(outputs, *NewTXOutput(change, from))
+	if !change.IsZero(){
+		outputs = append(outputs, *NewTXOutput(change, from))
+	}
 	return outputs
 }
 
