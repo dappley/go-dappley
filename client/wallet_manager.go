@@ -28,20 +28,21 @@ import (
 	"sync"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
 
 var (
 	ErrPasswordIncorrect = errors.New("password is incorrect")
-	ErrAddressNotFound = errors.New("address not found in local wallets")
+	ErrAddressNotFound   = errors.New("address not found in local wallets")
 )
 
 type WalletManager struct {
@@ -120,8 +121,7 @@ func (wm *WalletManager) LoadFromFile() error {
 	err = decoder.Decode(&walletdata)
 	if err != nil {
 		wm.mutex.Unlock()
-		logger.Error("WalletManager: Load Wallets failed!")
-		logger.Error(err)
+		logger.WithError(err).Error("WalletManager: failed to load wallets from file!")
 		return err
 	}
 
@@ -154,8 +154,7 @@ func (wm *WalletManager) SaveWalletToFile() {
 	walletdata.Locked = wm.Locked
 	err := encoder.Encode(walletdata)
 	if err != nil {
-		logger.Error("WalletManager: save Wallets to file failed!")
-		logger.Error(err)
+		logger.WithError(err).Error("WalletManager: failed to save Wallets to file!")
 	}
 	wm.fileLoader.SaveToFile(content)
 }

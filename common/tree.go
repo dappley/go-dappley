@@ -86,7 +86,7 @@ func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 			parentTrees = append(parentTrees, parent)
 		}
 	} else {
-		logger.Error("Fork tail or head is empty!")
+		logger.Error("Tree: fork tail or head is empty!")
 		return nil
 	}
 	parentTrees = append(parentTrees, head)

@@ -22,8 +22,9 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 const defaultTargetBits = 0
@@ -77,20 +78,20 @@ func (pow *ProofOfWork) Stop() {
 }
 
 func (pow *ProofOfWork) mineBlocks() {
-	logger.Info("Mining starts")
+	logger.Info("PoW: mining starts.")
 	for {
 		select {
 		case <-pow.stopCh:
-			logger.Info("Mining stopped")
+			logger.Info("PoW: mining stopped.")
 			return
 		default:
 			if pow.node.GetBlockPool().GetSyncState() {
-				logger.Debug("BlockProducer: Paused while block pool is syncing")
+				logger.Debug("PoW: block producer paused because block pool is syncing.")
 				continue
 			}
 			newBlock := pow.miner.ProduceBlock()
 			if !pow.Validate(newBlock) {
-				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: No valid block is mined")
+				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
 				return
 			}
 			pow.updateNewBlock(newBlock)
@@ -149,15 +150,15 @@ func (pow *ProofOfWork) Validate(block *core.Block) bool {
 func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
 	nonce := block.GetNonce()
 	if nonce >= maxNonce {
-		logger.Warn("PoW: Tried all possible nonce")
+		logger.Warn("PoW: tried all possible nonce.")
 	}
 	block.SetNonce(nonce + 1)
 }
 
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
-	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: Minted a new block")
+	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: minted a new block.")
 	if !newBlock.VerifyHash() {
-		logger.Warn("PoW: Invalid hash in new block (mining might have been interrupted)")
+		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
 		return
 	}
 	err := pow.node.GetBlockchain().AddBlockToTail(newBlock)
