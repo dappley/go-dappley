@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -39,7 +38,6 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
@@ -55,6 +53,10 @@ var (
 	ErrDapMsgNoCmd  = errors.New("command not specified")
 	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
+type msg struct {
+	msg *DapMsg
+	from peer.ID
+}
 
 type Node struct {
 	host                   host.Host
@@ -67,8 +69,15 @@ type Node struct {
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
+	queue				   chan *msg
 }
 
+func (n *Node) dispatch(msg *DapMsg, id peer.ID){
+	n.queue <- newMsg(msg, id)
+}
+func newMsg(dapMsg *DapMsg, id peer.ID) *msg {
+	return &msg{dapMsg, id}
+}
 //create new Node instance
 func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	placeholder := uint64(0)
@@ -85,6 +94,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		&sync.Map{},
 		&placeholder,
 		nil,
+		make(chan *msg, 1000),
 	}
 }
 
@@ -114,6 +124,7 @@ func (n *Node) Start(listenPort int) error {
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
+	n.StartListenLoop()
 	n.StartExitListener()
 	return err
 }
@@ -143,6 +154,20 @@ func (n *Node) StartRequestLoop() {
 	}()
 
 }
+
+func (n *Node) StartListenLoop() {
+
+	go func() {
+		for {
+			select {
+			case msg := <-n.queue:
+				n.handle(msg.msg, msg.from)
+			}
+		}
+	}()
+
+}
+
 
 //LoadNetworkKeyFromFile reads the network privatekey from a file
 func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
@@ -269,19 +294,19 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
 }
 
-func (n *Node) dispatch(msg *DapMsg, s *Stream) {
+func (n *Node) handle(msg *DapMsg, id peer.ID) {
 	switch msg.GetCmd() {
 	case SyncBlock:
-		n.SyncBlockHandler(msg, s.peerID)
+		n.SyncBlockHandler(msg, id)
 	case SyncPeerList:
 		n.AddMultiPeers(msg.GetData())
 	case RequestBlock:
-		n.SendRequestedBlock(msg.GetData(), s.peerID)
+		n.SendRequestedBlock(msg.GetData(), id)
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 	default:
 		logger.WithFields(logger.Fields{
-			"from": s.peerID,
+			"from": id,
 		}).Debug("Node: received an invalid command.")
 	}
 }
@@ -438,27 +463,7 @@ func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	n.bm.Push(block, pid)
 }
 
-func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
-	//create a block proto
-	blockpb := &corepb.Block{}
 
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err != nil {
-		logger.Warn(err)
-	}
-	if blockpb.Header == nil {
-		spew.Dump(blockpb)
-		spew.Dump(data)
-	}
-
-	//create an empty block
-	block := &core.Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	return block
-}
 func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if n.isNetworkRadiation(*dm) {
 		return
@@ -471,7 +476,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 	n.cacheDapMsg(*dm)
-	blk := n.getFromProtoBlockMsg(dm.GetData())
+	blk := core.FromProtoBlockMsg(dm.GetData())
 	n.addBlockToPool(blk, pid)
 	if dm.uniOrBroadcast == Broadcast {
 		n.RelayDapMsg(*dm)
