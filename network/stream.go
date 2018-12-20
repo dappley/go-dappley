@@ -58,7 +58,6 @@ var (
 	startBytes = []byte{0x7E, 0x7E}
 )
 
-type dispatch func(*DapMsg, peer.ID)
 
 type Stream struct {
 	peerID      peer.ID
@@ -86,7 +85,7 @@ func NewStream(s net.Stream) *Stream {
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, dispatch dispatch) {
+func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, dispatch)
 }
@@ -105,7 +104,7 @@ func (s *Stream) Send(data []byte) {
 	s.dataCh <- data
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch dispatch) {
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
 	go s.readLoop(rw, quitCh, dispatch)
 	go s.writeLoop(rw)
 }
@@ -141,7 +140,7 @@ func (s *Stream) read(rw *bufio.ReadWriter) {
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch dispatch) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
 	for {
 		select {
 		case <-s.quitRdCh:
@@ -150,7 +149,7 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch 
 			return
 		case msg := <- s.msgReadCh:
 			dm := s.parseData(msg)
-			dispatch(dm, s.peerID)
+			dispatch<-newMsg(dm, s.peerID)
 		default:
 			s.read(rw)
 		}

@@ -24,23 +24,23 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/libp2p/go-libp2p-net"
 	"io/ioutil"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-host"
-	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -53,7 +53,7 @@ var (
 	ErrDapMsgNoCmd  = errors.New("command not specified")
 	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
-type msg struct {
+type streamMsg struct {
 	msg *DapMsg
 	from peer.ID
 }
@@ -69,14 +69,11 @@ type Node struct {
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
-	queue				   chan *msg
+	dispatch				   chan *streamMsg
 }
 
-func (n *Node) dispatch(msg *DapMsg, id peer.ID){
-	n.queue <- newMsg(msg, id)
-}
-func newMsg(dapMsg *DapMsg, id peer.ID) *msg {
-	return &msg{dapMsg, id}
+func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
+	return &streamMsg{dapMsg, id}
 }
 //create new Node instance
 func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
@@ -94,7 +91,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		&sync.Map{},
 		&placeholder,
 		nil,
-		make(chan *msg, 1000),
+		make(chan *streamMsg, 1000),
 	}
 }
 
@@ -132,8 +129,7 @@ func (n *Node) Start(listenPort int) error {
 func (n *Node) StartExitListener() {
 	go func() {
 		for {
-			select {
-			case s := <-n.streamExitCh:
+			if s,ok := <-n.streamExitCh; ok {
 				n.DisconnectPeer(s.peerID, s.remoteAddr)
 			}
 		}
@@ -156,12 +152,10 @@ func (n *Node) StartRequestLoop() {
 }
 
 func (n *Node) StartListenLoop() {
-
 	go func() {
 		for {
-			select {
-			case msg := <-n.queue:
-				n.handle(msg.msg, msg.from)
+			if streamMsg, ok := <-n.dispatch; ok {
+				n.handle(streamMsg.msg, streamMsg.from)
 			}
 		}
 	}()
