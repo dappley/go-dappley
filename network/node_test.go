@@ -20,6 +20,8 @@ package network
 
 import (
 	"bytes"
+	"crypto/rand"
+	"github.com/libp2p/go-libp2p-crypto"
 	"os"
 	"testing"
 
@@ -82,4 +84,9 @@ func TestNode_prepareData(t *testing.T) {
 			assert.Equal(t, tt.retErr, err)
 		})
 	}
+}
+
+func TestNewNode(t *testing.T) {
+	priv, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+	crypto.MarshalPrivateKey(priv)
 }

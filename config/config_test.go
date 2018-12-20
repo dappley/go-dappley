@@ -45,7 +45,7 @@ func TestLoadConfig(t *testing.T) {
 				},
 				NodeConfig: &configpb.NodeConfig{
 					Port:    5,
-					Seed:    "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs",
+					Seed:    []string{"/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs"},
 					DbPath:  "dbPath",
 					RpcPort: 200,
 				},
@@ -61,7 +61,6 @@ func TestLoadConfig(t *testing.T) {
 				},
 				NodeConfig: &configpb.NodeConfig{
 					Port: 5,
-					Seed: "",
 				},
 			},
 		},

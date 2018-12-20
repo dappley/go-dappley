@@ -139,9 +139,7 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 		logger.Error(err)
 		return nil, err
 	}
-	seed := nodeConfig.GetSeed()
-	if seed != "" {
-		node.AddStreamByString(seed)
-	}
+	seeds := nodeConfig.GetSeed()
+	node.AddStreamsByString(seeds)
 	return node, nil
 }
