@@ -98,6 +98,8 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
+
 	publicKeyHash, err := core.NewAddress(in.Address).GetPubKeyHash()
 	if err == false {
 		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
@@ -224,8 +226,6 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 	rpcService.node.TxBroadcast(&tx)
 
-	utxoIndex.UpdateUtxoState([]*core.Transaction{&tx})
-	_ = utxoIndex.Save(rpcService.node.GetBlockchain().GetDb())
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
 
