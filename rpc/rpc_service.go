@@ -224,6 +224,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 	rpcService.node.TxBroadcast(&tx)
 
+	utxoIndex.UpdateUtxoState([]*core.Transaction{&tx})
+	_ = utxoIndex.Save(rpcService.node.GetBlockchain().GetDb())
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
 
