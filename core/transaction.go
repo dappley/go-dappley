@@ -56,7 +56,7 @@ type Transaction struct {
 	ID   []byte
 	Vin  []TXInput
 	Vout []TXOutput
-	Tip  uint64
+	Tip  *common.Amount
 }
 
 type TxIndex struct {
@@ -199,8 +199,9 @@ func (tx *Transaction) GetToHashBytes() []byte {
 		bytes = append(bytes, vout.PubKeyHash.GetPubKeyHash()...)
 		bytes = append(bytes, []byte(vout.Contract)...)
 	}
-
-	bytes = append(bytes, byteutils.FromUint64(tx.Tip)...)
+	if tx.Tip != nil {
+		bytes = append(bytes, tx.Tip.Bytes()...)
+	}
 	return bytes
 }
 
@@ -378,7 +379,7 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 			return false
 		}
 	}
-	return tx.Tip == sum.Uint64()
+	return tx.Tip.Cmp(sum) == 0
 }
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
@@ -466,7 +467,7 @@ func NewCoinbaseTX(to Address, data string, blockHeight uint64, tip *common.Amou
 
 	txin := TXInput{nil, -1, bh, []byte(data)}
 	txout := NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -490,7 +491,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 		}
 		txOutputs = append(txOutputs, *NewTXOutput(amt, NewAddress(address)))
 	}
-	tx := Transaction{nil, []TXInput{txin}, txOutputs, 0}
+	tx := Transaction{nil, []TXInput{txin}, txOutputs, common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -510,7 +511,7 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 		nil,
 		prepareInputLists(utxos, senderKeyPair.PublicKey, nil),
 		prepareOutputLists(from, to, amount, change, contract),
-		tip.Uint64()}
+		tip}
 	tx.ID = tx.Hash()
 
 	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
@@ -541,7 +542,7 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 		nil,
 		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
 		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
-		tip.Uint64(),
+		tip,
 	}
 	tx.ID = tx.Hash()
 
@@ -768,13 +769,13 @@ func (tx *Transaction) ToProto() proto.Message {
 		ID:   tx.ID,
 		Vin:  vinArray,
 		Vout: voutArray,
-		Tip:  tx.Tip,
+		Tip:  tx.Tip.Bytes(),
 	}
 }
 
 func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*corepb.Transaction).ID
-	tx.Tip = pb.(*corepb.Transaction).Tip
+	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).Tip)
 
 	var vinArray []TXInput
 	txin := TXInput{}

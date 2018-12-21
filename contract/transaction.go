@@ -41,7 +41,7 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx := C.struct_transaction_t{}
 	tx.id = C.CString(hex.EncodeToString(engine.tx.ID))
 	defer C.free(unsafe.Pointer(tx.id))
-	tx.tip = C.ulonglong(engine.tx.Tip)
+	tx.tip = C.ulonglong(engine.tx.Tip.Int64())
 
 	tx.vin_length = C.int(len(engine.tx.Vin))
 	vinAddr := (*C.struct_transaction_vin_t)(C.malloc(C.size_t(C.sizeof_struct_transaction_vin_t * tx.vin_length)))

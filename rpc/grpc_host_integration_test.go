@@ -136,7 +136,7 @@ func TestRpcSend(t *testing.T) {
 		To:         receiverWallet.GetAddress().String(),
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
-		Tip:        2,
+		Tip:        common.NewAmount(2).Bytes(),
 		Data:       "",
 	})
 	assert.Nil(t, err)
@@ -222,7 +222,7 @@ func TestRpcSendContract(t *testing.T) {
 		To:         "",
 		Amount:     common.NewAmount(7).Bytes(),
 		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
-		Tip:        2,
+		Tip:        common.NewAmount(2).Bytes(),
 		Data:       contract,
 	})
 	assert.Nil(t, err)
@@ -339,7 +339,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
@@ -824,7 +824,7 @@ func TestGetNewTransactions(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
+	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, conn1Step1, true)
@@ -832,12 +832,12 @@ func TestGetNewTransactions(t *testing.T) {
 	assert.Equal(t, conn2Step1, true)
 	conn2.Close()
 
-	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), 0, "", rpcContext.bc, rpcContext.node)
+	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, conn1Step2, true)
 	conn1.Close()
 
-	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), 0, "", rpcContext.bc, rpcContext.node)
+	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic), false)
 

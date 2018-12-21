@@ -126,7 +126,7 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range txs {
-		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+		totalTips = totalTips.Add(tx.Tip)
 	}
 	cbtx := core.NewCoinbaseTX(core.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	return &cbtx

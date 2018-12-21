@@ -19,11 +19,11 @@
 package core
 
 import (
-	"math"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/common"
 )
 
 const (
@@ -106,7 +106,7 @@ func (txPool *TransactionPool) Push(tx *Transaction) {
 		}).Warn("TransactionPool: is full.")
 
 		minTx, exist := txPool.txs[txPool.minTipTxId]
-		if exist && tx.Tip <= minTx.value.Tip {
+		if exist && tx.Tip.Cmp(minTx.value.Tip) < 1{
 			return
 		}
 
@@ -214,7 +214,7 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 	txPool.txs[string(tx.ID)] = &txNode
 
 	if minTx, exist := txPool.txs[txPool.minTipTxId]; exist {
-		if tx.Tip < minTx.value.Tip {
+		if tx.Tip.Cmp(minTx.value.Tip) < 0 {
 			txPool.minTipTxId = string(tx.ID)
 		}
 	} else {
@@ -225,12 +225,20 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 }
 
 func (txPool *TransactionPool) resetMinTipTransaction() {
-	var minTip uint64 = math.MaxUint64
+	var minTip *common.Amount// = math.MaxUint64
 	txPool.minTipTxId = ""
+	first := true
+
 	for txId, txNode := range txPool.txs {
-		if txNode.value.Tip < minTip {
+		if first {
+			first = false
 			minTip = txNode.value.Tip
 			txPool.minTipTxId = txId
+			} else {
+			if txNode.value.Tip.Cmp(minTip) < 0 {
+				minTip = txNode.value.Tip
+				txPool.minTipTxId = txId
+			}
 		}
 	}
 }

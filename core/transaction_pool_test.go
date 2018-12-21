@@ -23,34 +23,35 @@ import (
 
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/common"
 )
 
 var tx1 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
-	Tip:  2,
+	Tip:  common.NewAmount(2),
 }
 var tx2 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
-	Tip:  5,
+	Tip:  common.NewAmount(5),
 }
 var tx3 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
-	Tip:  10,
+	Tip:  common.NewAmount(10),
 }
 var tx4 = Transaction{
 	ID:   util.GenerateRandomAoB(1),
 	Vin:  GenerateFakeTxInputs(),
 	Vout: GenerateFakeTxOutputs(),
-	Tip:  20,
+	Tip:  common.NewAmount(20),
 }
 
-var expectPopOrder = []uint64{20, 10, 5, 2}
+var expectPopOrder = []*common.Amount{common.NewAmount(20), common.NewAmount(10), common.NewAmount(5), common.NewAmount(2)}
 
 var popInputOrder = []struct {
 	order []*Transaction
@@ -94,7 +95,7 @@ func TestTransactionPoolLimit(t *testing.T) {
 
 func TestTransactionPool_Pop(t *testing.T) {
 	for _, tt := range popInputOrder {
-		var popOrder []uint64
+		var popOrder []*common.Amount
 		txPool := NewTransactionPool(128)
 		for _, tx := range tt.order {
 			txPool.Push(tx)

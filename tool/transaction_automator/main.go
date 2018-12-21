@@ -230,7 +230,7 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		From:       from,
 		To:         to,
 		Amount:     common.NewAmount(amount).Bytes(),
-		Tip:        0,
+		Tip:        common.NewAmount(0).Bytes(),
 		Walletpath: client.GetWalletFilePath(),
 		Data:       "",
 	})

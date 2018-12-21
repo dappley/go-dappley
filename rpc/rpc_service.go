@@ -30,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/common"
 )
 
 const (
@@ -209,7 +210,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 
 // RpcSendTransaction Send transaction to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
-	tx := core.Transaction{nil, nil, nil, 0}
+	tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 	tx.FromProto(in.Transaction)
 
 	if tx.IsCoinbase() {
@@ -235,7 +236,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 	for _, txInReq := range in.Transaction {
-		tx := core.Transaction{nil, nil, nil, 0}
+		tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 		tx.FromProto(txInReq)
 
 		if tx.IsCoinbase() {

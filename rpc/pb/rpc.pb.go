@@ -299,7 +299,7 @@ type SendRequest struct {
 	To                   string   `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
 	Amount               []byte   `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
 	Walletpath           string   `protobuf:"bytes,4,opt,name=Walletpath,proto3" json:"Walletpath,omitempty"`
-	Tip                  uint64   `protobuf:"varint,5,opt,name=tip,proto3" json:"tip,omitempty"`
+	Tip                  []byte   `protobuf:"bytes,5,opt,name=tip,proto3" json:"tip,omitempty"`
 	Data                 string   `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -358,11 +358,11 @@ func (m *SendRequest) GetWalletpath() string {
 	return ""
 }
 
-func (m *SendRequest) GetTip() uint64 {
+func (m *SendRequest) GetTip() []byte {
 	if m != nil {
 		return m.Tip
 	}
-	return 0
+	return nil
 }
 
 func (m *SendRequest) GetData() string {

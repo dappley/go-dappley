@@ -80,7 +80,7 @@ func MockUtxoTransactionWithoutInputs() *Transaction {
 		ID:   []byte("tx1"),
 		Vin:  []TXInput{},
 		Vout: MockUtxoOutputsWithoutInputs(),
-		Tip:  5,
+		Tip:  common.NewAmount(5),
 	}
 }
 
@@ -89,7 +89,7 @@ func MockUtxoTransactionWithInputs() *Transaction {
 		ID:   []byte("tx2"),
 		Vin:  MockUtxoInputs(),
 		Vout: MockUtxoOutputsWithInputs(),
-		Tip:  5,
+		Tip:  common.NewAmount(5),
 	}
 }
 
@@ -219,7 +219,7 @@ func TestUpdate(t *testing.T) {
 			{common.NewAmount(5), pkHash1,""},
 			{common.NewAmount(10), pkHash2,""},
 		},
-		Tip: 3,
+		Tip: common.NewAmount(3),
 	}
 	dependentTx1.ID = dependentTx1.Hash()
 
@@ -232,7 +232,7 @@ func TestUpdate(t *testing.T) {
 			{common.NewAmount(5), pkHash3,""},
 			{common.NewAmount(3), pkHash4,""},
 		},
-		Tip: 2,
+		Tip: common.NewAmount(2),
 	}
 	dependentTx2.ID = dependentTx2.Hash()
 
@@ -244,7 +244,7 @@ func TestUpdate(t *testing.T) {
 		Vout: []TXOutput{
 			{common.NewAmount(1), pkHash4,""},
 		},
-		Tip: 4,
+		Tip: common.NewAmount(4),
 	}
 	dependentTx3.ID = dependentTx3.Hash()
 
@@ -257,7 +257,7 @@ func TestUpdate(t *testing.T) {
 		Vout: []TXOutput{
 			{common.NewAmount(3), pkHash1,""},
 		},
-		Tip: 1,
+		Tip: common.NewAmount(1),
 	}
 	dependentTx4.ID = dependentTx4.Hash()
 
@@ -270,7 +270,7 @@ func TestUpdate(t *testing.T) {
 		Vout: []TXOutput{
 			{common.NewAmount(4), pkHash5,""},
 		},
-		Tip: 4,
+		Tip: common.NewAmount(4),
 	}
 	dependentTx5.ID = dependentTx5.Hash()
 

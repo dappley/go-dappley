@@ -46,17 +46,17 @@ func TestSend(t *testing.T) {
 	testCases := []struct {
 		name             string
 		transferAmount   *common.Amount
-		tipAmount        uint64
+		tipAmount        *common.Amount
 		contract         string
 		expectedTransfer *common.Amount
-		expectedTip      uint64
+		expectedTip      *common.Amount
 		expectedErr      error
 	}{
-		{"Deploy contract", common.NewAmount(7), 0, "helloworld!", common.NewAmount(7), 0, nil},
-		{"Send with no tip", common.NewAmount(7), 0, "", common.NewAmount(7), 0, nil},
-		{"Send with tips", common.NewAmount(6), 2, "", common.NewAmount(6), 2, nil},
-		{"Send zero with no tip", common.NewAmount(0), 0, "", common.NewAmount(0), 0, ErrInvalidAmount},
-		{"Send zero with tips", common.NewAmount(0), 2, "", common.NewAmount(0), 0, ErrInvalidAmount},
+		{"Deploy contract", common.NewAmount(7), common.NewAmount(0), "helloworld!", common.NewAmount(7), common.NewAmount(0), nil},
+		{"Send with no tip", common.NewAmount(7), common.NewAmount(0), "", common.NewAmount(7), common.NewAmount(0), nil},
+		{"Send with tips", common.NewAmount(6), common.NewAmount(2), "", common.NewAmount(6), common.NewAmount(2), nil},
+		{"Send zero with no tip", common.NewAmount(0), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), ErrInvalidAmount},
+		{"Send zero with tips", common.NewAmount(0), common.NewAmount(2), "", common.NewAmount(0), common.NewAmount(0), ErrInvalidAmount},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -91,7 +91,7 @@ func TestSend(t *testing.T) {
 				rcvAddr = receiverWallet.GetAddress()
 			}
 
-			_, _, err = Send(senderWallet, rcvAddr, tc.transferAmount, uint64(tc.tipAmount), tc.contract, bc, node)
+			_, _, err = Send(senderWallet, rcvAddr, tc.transferAmount, tc.tipAmount, tc.contract, bc, node)
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
@@ -118,7 +118,7 @@ func TestSend(t *testing.T) {
 				panic(err)
 			}
 			expectedBalance, _ := mineReward.Sub(tc.expectedTransfer)
-			expectedBalance, _ = expectedBalance.Sub(common.NewAmount(tc.expectedTip))
+			expectedBalance, _ = expectedBalance.Sub(tc.expectedTip)
 			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the miner's wallet should be the amount tipped + mineReward
@@ -126,7 +126,7 @@ func TestSend(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(tc.expectedTip)), minerBalance)
+			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(tc.expectedTip), minerBalance)
 
 			//check smart contract deployment
 			res := string("")
@@ -169,7 +169,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	mineReward := common.NewAmount(10000000)
 	//Transfer ammount
 	transferAmount := common.NewAmount(25)
-	tip := uint64(5)
+	tip := common.NewAmount(5)
 	//create a wallet address
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
@@ -207,7 +207,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	tip := uint64(5)
+	tip := common.NewAmount(5)
 
 	//this is internally set. Dont modify
 	mineReward := common.NewAmount(10000000)
@@ -672,7 +672,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//deploy smart contract
-	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), uint64(0), contract, bc, node)
+	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), common.NewAmount(0), contract, bc, node)
 	assert.Nil(t, err)
 
 	txp := bc.GetTxPool().GetTransactions()[0]
@@ -699,7 +699,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//store data
 	functionCall := `{"function":"set","args":["testKey","222"]}`
-	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), uint64(0), functionCall, bc, node)
+	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), functionCall, bc, node)
 	assert.Nil(t, err)
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {
@@ -708,7 +708,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//get data
 	functionCall = `{"function":"get","args":["testKey"]}`
-	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), uint64(0), functionCall, bc, node)
+	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), functionCall, bc, node)
 	assert.Nil(t, err)
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {
@@ -747,7 +747,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash, _ := core.NewAddress(validProducerAddr).GetPubKeyHash()
-	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}, ""}}, 0}
+	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}, ""}}, common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, parent)

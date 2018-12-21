@@ -112,7 +112,7 @@ func MockTransaction() *Transaction {
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  MockTxInputs(),
 		Vout: MockTxOutputs(),
-		Tip:  5,
+		Tip:  common.NewAmount(5),
 	}
 }
 
