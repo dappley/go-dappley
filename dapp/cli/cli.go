@@ -766,7 +766,8 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		return
 	}
 
-	if core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
+	//Contract deployment transaction does not need to validate to address
+	if data == "" && core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
 		fmt.Println("the 'to' address is not valid!")
 		return
 	}

@@ -227,6 +227,15 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 	rpcService.node.TxBroadcast(&tx)
 
+	contractAddr := tx.GetContractAddress()
+	message := ""
+	if contractAddr.String() != "" {
+		message = contractAddr.String()
+		logger.WithFields(logger.Fields{
+			"contractAddr": message,
+		}).Info("Smart Contract Deployed Successful!")
+	}
+
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
 
