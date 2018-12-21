@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/dappley/go-dappley/core/pb"
 	"math/rand"
 	"time"
 
@@ -27,6 +29,7 @@ var (
 	sendInterval         = time.Duration(1000) //ms
 	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
+	sentTxs				 = make(map[string]string)
 )
 
 func main() {
@@ -63,10 +66,31 @@ func main() {
 			if height > currHeight {
 				displayBalances(rpcClient, addresses)
 				currHeight = height
+				blk := getTailBlock(rpcClient, currHeight)
+				verifyTransactions(blk.Transactions)
 			} else {
 				sendRandomTransactions(adminClient, addresses)
 			}
 		}
+	}
+}
+
+func getTailBlock(serviceClient rpcpb.RpcServiceClient, blkHeight uint64) *corepb.Block{
+	resp, _ := serviceClient.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height:blkHeight})
+	return resp.Block
+}
+
+func verifyTransactions(txs []*corepb.Transaction){
+	logger.WithFields(logger.Fields{
+		"num_of_tx"	: len(txs),
+	}).Info("Transactions mined in previous block.")
+	for _, tx := range txs{
+		delete(sentTxs, hex.EncodeToString(tx.ID))
+	}
+	for txid, _ := range sentTxs{
+		logger.WithFields(logger.Fields{
+			"txid"	: txid,
+		}).Warn("Transaction is not found in previous block!")
 	}
 }
 
@@ -181,13 +205,14 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 		toIndex = rand.Intn(maxWallet)
 	}
 	sendAmount := calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
-	err := sendTransaction(adminClient, addresses[fromIndex].String(), addresses[toIndex].String(), sendAmount)
+	txid ,err := sendTransaction(adminClient, addresses[fromIndex].String(), addresses[toIndex].String(), sendAmount)
 	sendTXLogger := logger.WithFields(logger.Fields{
 		"from":             addresses[fromIndex].String(),
 		"to":               addresses[toIndex].String(),
 		"amount":           sendAmount,
 		"sender_balance":   currBalance[addresses[fromIndex].String()],
 		"receiver_balance": currBalance[addresses[toIndex].String()],
+		"txid":				txid,
 	})
 	if err != nil {
 		sendTXLogger.WithError(err).Panic("Failed to send transaction!")
@@ -225,8 +250,8 @@ func getAddrWithBalance(addresses []core.Address) int {
 	return fromIndex
 }
 
-func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amount uint64) error {
-	_, err := adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
+func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amount uint64) (string, error) {
+	resp, err := adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:       from,
 		To:         to,
 		Amount:     common.NewAmount(amount).Bytes(),
@@ -235,11 +260,12 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		Data:       "",
 	})
 	if err != nil {
-		return err
+		return resp.Txid, err
 	}
+	sentTxs[resp.Txid] = resp.Txid
 	currBalance[from] -= amount
 	currBalance[to] += amount
-	return nil
+	return resp.Txid, nil
 }
 
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
