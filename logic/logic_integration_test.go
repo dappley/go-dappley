@@ -788,3 +788,53 @@ func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey s
 	blk.SignBlock(validProducerKey, blk.CalculateHashWithoutNonce())
 	return blk
 }
+
+func TestSimultaneousSyncingAndBlockProducing(t *testing.T)  {
+	const genesisAddr     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+
+	validProducerAddress := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
+	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
+	//fmt.Println(validProducerAddress, validProducerKey)
+	conss := consensus.NewDPOS()
+	dynasty := consensus.NewDynasty([]string{validProducerAddress}, 1, 1)
+	conss.SetDynasty(dynasty)
+	bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), conss, 128, nil)
+
+	//create and start seed node
+	pool := core.NewBlockPool(0)
+	seedNode := network.NewNode(bc, pool)
+
+	seedNode.Start(testport_fork + 50)
+
+	conss.Setup(seedNode, validProducerAddress)
+	conss.SetKey(validProducerKey)
+
+	// seed node start mining
+	conss.Start()
+	core.WaitDoneOrTimeout(func() bool {
+		return bc.GetMaxHeight() > 8
+	}, 10)
+
+	// set up another node for syncing
+	dpos := consensus.NewDPOS()
+	dpos.SetDynasty(dynasty)
+
+	bc1 := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), dpos, 128, nil)
+
+	pool1 := core.NewBlockPool(0)
+	node := network.NewNode(bc1, pool1)
+	node.Start(testport_fork + 51)
+
+	dpos.Setup(node, validProducerAddress)
+	dpos.SetKey(validProducerKey)
+
+	// Trigger fork choice in node by broadcasting tail block of node[0]
+	tailBlk, _ := bc.GetTailBlock()
+
+	connectNodes(seedNode, node)
+	seedNode.BroadcastBlock(tailBlk)
+
+	time.Sleep(time.Second * 5)
+	conss.Stop()
+	assert.True(t, bc.GetMaxHeight() - bc1.GetMaxHeight() <= 1)
+}

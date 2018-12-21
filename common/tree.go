@@ -75,6 +75,16 @@ func (t *Tree) Delete() {
 	t.Parent = nil
 }
 
+func (t *Tree) GetRoot() *Tree {
+	root := t
+	parent := t.Parent
+	for parent != nil {
+		root = parent
+		parent = parent.Parent
+	}
+	return root
+}
+
 func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
 	parentTrees = append(parentTrees, t)

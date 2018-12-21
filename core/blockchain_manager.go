@@ -63,30 +63,35 @@ func (bm *BlockChainManager) verifyBlock(block *Block) bool {
 	logger.Debug("BlockChainManager: block is valid according to consensus.")
 	return true
 }
+
 func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	logger.WithFields(logger.Fields{
 		"from": pid.String(),
 		"hash": hex.EncodeToString(block.GetHash()),
+		"height": block.GetHeight(),
 	}).Info("BlockChainManager: received a new block.")
 	if !bm.verifyBlock(block) {
 		return
 	}
 	tree, _ := common.NewTree(block.GetHash().String(), block)
-	forkheadParentHash := bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
-	if forkheadParentHash == nil {
+	bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
+	forkHead := tree.GetRoot()
+	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
+	if forkHeadParentHash == nil {
 		return
 	}
-	if parent, _ := bm.blockchain.GetBlockByHash(forkheadParentHash); parent == nil {
+	parent, _ := bm.blockchain.GetBlockByHash(forkHeadParentHash)
+	if parent == nil {
 		logger.WithFields(logger.Fields{
-			"parent_hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
-			"parent_height": tree.GetValue().(*Block).GetHeight() - 1,
+			"parent_hash":   forkHeadParentHash,
+			"parent_height": forkHead.GetValue().(*Block).GetHeight() - 1,
 		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain.")
-		bm.blockPool.requestPrevBlock(tree, pid)
+		bm.blockPool.requestPrevBlock(forkHead, pid)
 		return
 	}
-	forkBlks := bm.blockPool.GenerateForkBlocks(tree, bm.blockchain.GetMaxHeight())
-	bm.MergeFork(forkBlks, forkheadParentHash)
-	bm.blockPool.CleanCache(tree)
+	forkBlks := bm.blockPool.GenerateForkBlocks(forkHead, bm.blockchain.GetMaxHeight())
+	bm.MergeFork(forkBlks, forkHeadParentHash)
+	bm.blockPool.CleanCache(forkHead)
 }
 
 func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
