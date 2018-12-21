@@ -20,17 +20,19 @@ package core
 
 import (
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
 	"github.com/dappley/go-dappley/util"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"sync"
 )
 
 var bh1 = &BlockHeader{
@@ -174,7 +176,6 @@ func TestUpdate(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
@@ -216,8 +217,8 @@ func TestUpdate(t *testing.T) {
 			{tx1.ID, 1, nil, pubkey1},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(5), pkHash1,""},
-			{common.NewAmount(10), pkHash2,""},
+			{common.NewAmount(5), pkHash1, ""},
+			{common.NewAmount(10), pkHash2, ""},
 		},
 		Tip: common.NewAmount(3),
 	}
@@ -229,8 +230,8 @@ func TestUpdate(t *testing.T) {
 			{dependentTx1.ID, 1, nil, pubkey2},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(5), pkHash3,""},
-			{common.NewAmount(3), pkHash4,""},
+			{common.NewAmount(5), pkHash3, ""},
+			{common.NewAmount(3), pkHash4, ""},
 		},
 		Tip: common.NewAmount(2),
 	}
@@ -242,7 +243,7 @@ func TestUpdate(t *testing.T) {
 			{dependentTx2.ID, 0, nil, pubkey3},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(1), pkHash4,""},
+			{common.NewAmount(1), pkHash4, ""},
 		},
 		Tip: common.NewAmount(4),
 	}
@@ -255,7 +256,7 @@ func TestUpdate(t *testing.T) {
 			{dependentTx3.ID, 0, nil, pubkey4},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(3), pkHash1,""},
+			{common.NewAmount(3), pkHash1, ""},
 		},
 		Tip: common.NewAmount(1),
 	}
@@ -268,7 +269,7 @@ func TestUpdate(t *testing.T) {
 			{dependentTx4.ID, 0, nil, pubkey1},
 		},
 		Vout: []TXOutput{
-			{common.NewAmount(4), pkHash5,""},
+			{common.NewAmount(4), pkHash5, ""},
 		},
 		Tip: common.NewAmount(4),
 	}
@@ -324,6 +325,161 @@ func TestUpdate_Failed(t *testing.T) {
 	err := utxoIndex.Save(db)
 	assert.Equal(t, simulatedFailure, err)
 	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash.GetPubKeyHash())]))
+}
+
+func TestGetUTXOIndexAtBlockHash(t *testing.T) {
+	genesisAddr := NewAddress("##@@")
+	genesisBlock := NewGenesisBlock(genesisAddr)
+
+	// prepareBlockchainWithBlocks returns a blockchain that contains the given blocks with correct utxoIndex in RAM
+	prepareBlockchainWithBlocks := func(blks []*Block) *Blockchain {
+		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, 128, nil)
+		for _, blk := range blks {
+			err := bc.AddBlockToTail(blk)
+			if err != nil {
+				logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot add the blocks to blockchain.")
+			}
+		}
+		return bc
+	}
+
+	// utxoIndexFromTXs creates a utxoIndex containing all vout of transactions in txs
+	utxoIndexFromTXs := func(txs []*Transaction) *UTXOIndex {
+		utxoIndex := NewUTXOIndex()
+		utxosMap := make(map[string][]*UTXO)
+
+		for _, tx := range txs {
+			for i, vout := range tx.Vout {
+				utxos, ok := utxosMap[string(vout.PubKeyHash.GetPubKeyHash())]
+				if !ok {
+					utxos = []*UTXO{}
+				}
+				utxos = append(utxos, newUTXO(vout, tx.ID, i))
+				utxosMap[string(vout.PubKeyHash.GetPubKeyHash())] = utxos
+			}
+		}
+		utxoIndex.index = utxosMap
+		return utxoIndex
+	}
+
+	normalTX := Transaction{
+		Hash("normal"),
+		[]TXInput{{genesisBlock.transactions[0].ID, 0, nil, nil}},
+		[]TXOutput{{common.NewAmount(13), PubKeyHash{[]byte("pkh")}, ""}},
+		common.NewAmount(0),
+	}
+	normalTX2 := Transaction{
+		Hash("normal2"),
+		[]TXInput{{normalTX.ID, 0, nil, nil}},
+		[]TXOutput{{common.NewAmount(5), PubKeyHash{[]byte("pkh")}, ""}},
+		common.NewAmount(0),
+	}
+	abnormalTX := Transaction{
+		Hash("abnormal"),
+		[]TXInput{{normalTX.ID, 1, nil, nil}},
+		[]TXOutput{{common.NewAmount(5), PubKeyHash{[]byte("pkh")}, ""}},
+		common.NewAmount(0),
+	}
+	prevBlock := NewBlock([]*Transaction{}, genesisBlock)
+	prevBlock.SetHash(prevBlock.CalculateHash())
+	emptyBlock := NewBlock([]*Transaction{}, prevBlock)
+	emptyBlock.SetHash(emptyBlock.CalculateHash())
+	normalBlock := NewBlock([]*Transaction{&normalTX}, genesisBlock)
+	normalBlock.SetHash(normalBlock.CalculateHash())
+	normalBlock2 := NewBlock([]*Transaction{&normalTX2}, normalBlock)
+	normalBlock2.SetHash(normalBlock2.CalculateHash())
+	abnormalBlock := NewBlock([]*Transaction{&abnormalTX}, normalBlock)
+	abnormalBlock.SetHash(abnormalBlock.CalculateHash())
+	corruptedUTXOBlockchain := prepareBlockchainWithBlocks([]*Block{normalBlock, normalBlock2})
+	err := utxoIndexFromTXs([]*Transaction{&normalTX}).Save(corruptedUTXOBlockchain.GetDb())
+	if err != nil {
+		logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot corrupt the utxoIndex in database.")
+	}
+
+	tests := []struct {
+		name     string
+		bc       *Blockchain
+		hash     Hash
+		expected *UTXOIndex
+		err      error
+	}{
+		{
+			name:     "current block",
+			bc:       prepareBlockchainWithBlocks([]*Block{normalBlock}),
+			hash:     normalBlock.GetHash(),
+			expected: utxoIndexFromTXs([]*Transaction{&normalTX}),
+			err:      nil,
+		},
+		{
+			name:     "previous block",
+			bc:       prepareBlockchainWithBlocks([]*Block{normalBlock, normalBlock2}),
+			hash:     normalBlock.GetHash(),
+			expected: utxoIndexFromTXs([]*Transaction{&normalTX}), // should not have utxo from normalTX2
+			err:      nil,
+		},
+		{
+			name:     "block not found",
+			bc:       CreateBlockchain(NewAddress(""), storage.NewRamStorage(), nil, 128, nil),
+			hash:     Hash("not there"),
+			expected: NewUTXOIndex(),
+			err:      ErrBlockDoesNotExist,
+		},
+		{
+			name:     "no txs in blocks",
+			bc:       prepareBlockchainWithBlocks([]*Block{prevBlock, emptyBlock}),
+			hash:     emptyBlock.GetHash(),
+			expected: utxoIndexFromTXs(genesisBlock.transactions),
+			err:      nil,
+		},
+		{
+			name:     "genesis block",
+			bc:       prepareBlockchainWithBlocks([]*Block{normalBlock, normalBlock2}),
+			hash:     genesisBlock.GetHash(),
+			expected: utxoIndexFromTXs(genesisBlock.transactions),
+			err:      nil,
+		},
+		{
+			name:     "utxo not found",
+			bc:       prepareBlockchainWithBlocks([]*Block{normalBlock, abnormalBlock}),
+			hash:     normalBlock.GetHash(),
+			expected: NewUTXOIndex(),
+			err:      ErrUTXONotFound,
+		},
+		{
+			name:     "corrupted utxoIndex",
+			bc:       corruptedUTXOBlockchain,
+			hash:     normalBlock.GetHash(),
+			expected: NewUTXOIndex(),
+			err:      ErrUTXONotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			utxoIndex, err := GetUTXOIndexAtBlockHash(tt.bc.GetDb(), tt.bc, tt.hash)
+			if !assert.Equal(t, tt.err, err) {
+				return
+			}
+			if len(tt.expected.index) != len(utxoIndex.index) {
+				// The utxoIndex maps may contain empty lists for certain pubkeyhashes, which are equivalent to
+				// nils on the other utxoIndex map we are comparing with.
+				for pkh, utxos := range tt.expected.index {
+					if len(utxos) == 0 && utxoIndex.index[pkh] == nil {
+						continue
+					}
+					assert.Equal(t, tt.expected.index[pkh], utxoIndex.index[pkh])
+				}
+				for pkh, utxos := range utxoIndex.index {
+					if len(utxos) == 0 && tt.expected.index[pkh] == nil {
+						continue
+					}
+					assert.Equal(t, tt.expected.index[pkh], utxoIndex.index[pkh])
+				}
+				return
+			}
+			assert.Equal(t, tt.expected, utxoIndex)
+		})
+	}
 }
 
 func TestCopyAndRevertUtxos(t *testing.T) {
