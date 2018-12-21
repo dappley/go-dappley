@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dappley/go-dappley/core/pb"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"time"
 
 	logger "github.com/sirupsen/logrus"
@@ -30,6 +32,15 @@ var (
 	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
 	sentTxs				 = make(map[string]string)
+	smartContractAddr    = ""
+	smartContractCounter = 0
+)
+
+const(
+	smartContractSendFreq   = 13
+	contractAddrFilePath 	= "contract/contractAddr"
+	contractFilePath		= "contract/test_contract.js"
+	contractFunctionCall    = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 )
 
 func main() {
@@ -49,8 +60,8 @@ func main() {
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
 	addresses := createWallet()
-
-	fundFromMiner(adminClient, rpcClient, addresses)
+	fundAddr := addresses[0].String()
+	fundFromMiner(adminClient, rpcClient, fundAddr)
 	logger.WithFields(logger.Fields{
 		"initial_total_amount": initialAmount,
 		"send_interval":        fmt.Sprintf("%d ms", sendInterval),
@@ -59,6 +70,7 @@ func main() {
 
 	ticker := time.NewTicker(time.Millisecond * sendInterval).C
 	currHeight := getBlockHeight(rpcClient)
+	deploySmartContract(adminClient, fundAddr)
 	for {
 		select {
 		case <-ticker:
@@ -73,6 +85,60 @@ func main() {
 			}
 		}
 	}
+}
+
+func getSmartContractAddr() string{
+	bytes, err := ioutil.ReadFile(contractAddrFilePath)
+	if err!=nil{
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path" :contractAddrFilePath,
+		}).Panic("Unable to read file!")
+	}
+	return string(bytes)
+}
+
+func recordSmartContractAddr(addr string){
+	err := ioutil.WriteFile(contractAddrFilePath, []byte(addr), os.FileMode(777))
+	if err!=nil{
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path" 	:contractAddrFilePath,
+			"contract_addr"	:addr,
+		}).Panic("Unable to record smart contract address!")
+	}
+}
+
+func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string){
+
+	smartContractAddr = getSmartContractAddr()
+	if smartContractAddr != ""{
+		logger.WithFields(logger.Fields{
+			"contractAddr"	: smartContractAddr,
+		}).Info("Smart contract has already been deployed. If you are sure it is not deployed, empty the file:", contractAddrFilePath)
+		return
+	}
+
+	data,err := ioutil.ReadFile(contractFilePath)
+	if err!=nil{
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path" : contractFilePath,
+		}).Panic("Unable to read smart contract file!")
+	}
+
+	contract := string(data)
+	resp, err := sendTransaction(serviceClient, from, "", 1, contract)
+	smartContractAddr = resp.ContractAddr
+	if err!=nil{
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path" 	: contractFilePath,
+			"contract_addr"	: smartContractAddr,
+		}).Panic("Deploy smart contract failed!")
+	}
+
+	recordSmartContractAddr(smartContractAddr)
+
+	logger.WithFields(logger.Fields{
+		"contract_addr" : smartContractAddr,
+	}).Info("Smart contract has been deployed")
 }
 
 func getTailBlock(serviceClient rpcpb.RpcServiceClient, blkHeight uint64) *corepb.Block{
@@ -125,14 +191,12 @@ func createWallet() []core.Address {
 	return addresses
 }
 
-func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
+func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, fundAddr string) {
 	logger.Info("Requesting fund from miner...")
 
-	if len(addresses) == 0 {
+	if fundAddr == ""{
 		logger.Panic("There is no wallet to receive fund.")
 	}
-
-	fundAddr := addresses[0].String()
 
 	requestFundFromMiner(adminClient, fundAddr)
 	bal, isSufficient := checkSufficientInitialAmount(rpcClient, fundAddr)
@@ -199,26 +263,46 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string)
 
 func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []core.Address) {
 
+	var resp *rpcpb.SendResponse
+	var err error
+	data := ""
+
 	fromIndex := getAddrWithBalance(addresses)
 	toIndex := rand.Intn(maxWallet)
 	for toIndex == fromIndex {
 		toIndex = rand.Intn(maxWallet)
 	}
+	toAddr := addresses[toIndex].String()
 	sendAmount := calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
-	txid ,err := sendTransaction(adminClient, addresses[fromIndex].String(), addresses[toIndex].String(), sendAmount)
+
+	if IsTheTurnToSendSmartContractTransaction(){
+		data = contractFunctionCall
+		toAddr = smartContractAddr
+	}
+
+	resp, err = sendTransaction(adminClient, addresses[fromIndex].String(), toAddr, sendAmount, data)
+
 	sendTXLogger := logger.WithFields(logger.Fields{
 		"from":             addresses[fromIndex].String(),
-		"to":               addresses[toIndex].String(),
+		"to":               toAddr,
 		"amount":           sendAmount,
 		"sender_balance":   currBalance[addresses[fromIndex].String()],
 		"receiver_balance": currBalance[addresses[toIndex].String()],
-		"txid":				txid,
+		"txid":				"",
+		"data":				data,
 	})
 	if err != nil {
 		sendTXLogger.WithError(err).Panic("Failed to send transaction!")
 		return
 	}
+	sendTXLogger.Data["txid"] = resp.Txid
+
 	sendTXLogger.Info("Transaction is sent!")
+}
+
+func IsTheTurnToSendSmartContractTransaction() bool{
+	smartContractCounter += 1
+	return smartContractCounter % smartContractSendFreq == 0
 }
 
 func calcSendAmount(from, to string) uint64 {
@@ -250,22 +334,22 @@ func getAddrWithBalance(addresses []core.Address) int {
 	return fromIndex
 }
 
-func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amount uint64) (string, error) {
+func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
 	resp, err := adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:       from,
 		To:         to,
 		Amount:     common.NewAmount(amount).Bytes(),
 		Tip:        common.NewAmount(0).Bytes(),
 		Walletpath: client.GetWalletFilePath(),
-		Data:       "",
+		Data:       data,
 	})
 	if err != nil {
-		return resp.Txid, err
+		return resp, err
 	}
 	sentTxs[resp.Txid] = resp.Txid
 	currBalance[from] -= amount
 	currBalance[to] += amount
-	return resp.Txid, nil
+	return resp, nil
 }
 
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
