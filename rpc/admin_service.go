@@ -113,6 +113,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	tip := common.NewAmountFromBytes(in.Tip)
+
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
@@ -134,14 +135,15 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	txhash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
+		return &rpcpb.SendResponse{Message: "Send transaction failed", Txid: txhashStr}, err
 	}
 
+	resp := &rpcpb.SendResponse{Message: "Send transaction Successful", Txid:txhashStr}
 	if scAddress != "" {
-		return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent ,contract Address is " + scAddress}, nil
+		resp.ContractAddr = scAddress
 	}
 
-	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
+	return resp, nil
 }
 
 func (adminRpcService *AdminRpcService) IsPrivate() bool { return true }
