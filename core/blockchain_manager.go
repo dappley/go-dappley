@@ -50,7 +50,7 @@ func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockChainManager) verifyBlock(block *Block) bool{
+func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
 	if !bm.blockPool.Verify(block) {
 		return false
 	}
@@ -62,9 +62,15 @@ func (bm *BlockChainManager) verifyBlock(block *Block) bool{
 	return true
 }
 func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
-	if !bm.verifyBlock(block){
+	if bm.blockchain.GetState() != BlockchainReady {
+		logger.Info("Blockchain not ready, discard received block")
 		return
 	}
+
+	if !bm.VerifyBlock(block) {
+		return
+	}
+
 	tree, _ := common.NewTree(block.GetHash().String(), block)
 	logger.WithFields(logger.Fields{
 		"From": pid.String(),
@@ -83,15 +89,15 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	bm.blockPool.CleanCache(tree)
 }
 
-func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
+func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) error {
 
 	//find parent block
 	if len(forkBlks) == 0 {
-		return
+		return nil
 	}
 	forkHeadBlock := forkBlks[len(forkBlks)-1]
 	if forkHeadBlock == nil {
-		return
+		return nil
 	}
 	scState := NewScState()
 	scState.LoadFromDatabase(bm.blockchain.db, forkParentHash)
@@ -100,11 +106,12 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
 	if err != nil {
 		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
-		return
+		return err
 	}
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if !bm.VerifyTransactions(*utxo, scState, forkBlks, parentBlk) {
-		return
+		logger.Error("MergeFork failed, transaction verify failed.")
+		return ErrTransactionVerifyFailed
 	}
 
 	bm.blockchain.Rollback(forkParentHash)
@@ -112,6 +119,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) {
 	//add all blocks in fork from head to tail
 	bm.blockchain.addBlocksToTail(forkBlks)
 
+	return nil
 }
 
 //Verify all transactions in a fork

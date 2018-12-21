@@ -35,8 +35,18 @@ var tipKey = []byte("tailBlockHash")
 const LengthForBlockToBeConsideredHistory = 100
 
 var (
-	ErrBlockDoesNotExist   = errors.New("block does not exist")
-	ErrTransactionNotFound = errors.New("transaction not found")
+	ErrBlockDoesNotExist       = errors.New("block does not exist")
+	ErrTransactionNotFound     = errors.New("transaction not found")
+	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
+)
+
+type BlockchainState int
+
+const (
+	BlockchainInit BlockchainState = iota
+	BlockchainDownloading
+	BlockchainSync
+	BlockchainReady
 )
 
 type Blockchain struct {
@@ -45,6 +55,7 @@ type Blockchain struct {
 	consensus     Consensus
 	txPool        *TransactionPool
 	scManager     ScEngineManager
+	state         BlockchainState
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -56,6 +67,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		consensus,
 		NewTransactionPool(transactionPoolLimit),
 		scManager,
+		BlockchainInit,
 	}
 	err := bc.AddBlockToTail(genesis)
 	if err != nil {
@@ -77,6 +89,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		consensus,
 		NewTransactionPool(transactionPoolLimit), //TODO: Need to retrieve transaction pool from db
 		scManager,
+		BlockchainInit,
 	}
 	if err != nil {
 		return nil, err
@@ -140,6 +153,14 @@ func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
 
 func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
+}
+
+func (bc *Blockchain) SetState(state BlockchainState) {
+	bc.state = state
+}
+
+func (bc *Blockchain) GetState() BlockchainState {
+	return bc.state
 }
 
 func (bc *Blockchain) AddBlockToTail(block *Block) error {
@@ -275,7 +296,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil, BlockchainInit}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

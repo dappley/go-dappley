@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"math/rand"
 	"sync"
@@ -33,6 +32,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -48,6 +48,7 @@ const (
 	protocalName           = "dappley/1.0.0"
 	syncPeerTimeLimitMs    = 1000
 	MaxMsgCountBeforeReset = 999999
+	maxGetBlocksNum        = 10
 )
 
 var (
@@ -66,6 +67,7 @@ type Node struct {
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
+	downloadManager        *DownloadManager
 }
 
 //create new Node instance
@@ -83,6 +85,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		make(chan bool, 1),
 		&sync.Map{},
 		&placeholder,
+		nil,
 		nil,
 	}
 }
@@ -258,14 +261,30 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 
 func (n *Node) dispatch(msg *DapMsg, s *Stream) {
 	switch msg.GetCmd() {
+	case GetBlockchainInfo:
+		n.GetBlockchainInfoHandler(msg, s.peerID)
+
+	case ReturnBlockchainInfo:
+		n.ReturnBlockchainInfoHandler(msg, s.peerID)
+
 	case SyncBlock:
 		n.SyncBlockHandler(msg, s.peerID)
+
 	case SyncPeerList:
 		n.AddMultiPeers(msg.GetData())
+
 	case RequestBlock:
 		n.SendRequestedBlock(msg.GetData(), s.peerID)
+
 	case BroadcastTx:
 		n.AddTxToPool(msg)
+
+	case GetBlocks:
+		n.GetBlocksHandler(msg, s.peerID)
+
+	case ReturnBlocks:
+		n.ReturnBlocksHandler(msg, s.peerID)
+
 	default:
 		logger.Debug("Received invalid command from:", s.peerID)
 
@@ -338,16 +357,28 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
 	logger.WithFields(logger.Fields{
-		"peerid": n.GetPeerID(),
-		"height": block.GetHeight(),
-		"hash":   hex.EncodeToString(block.GetHash()),
-	}).Info("Broadcasting Block: ")
+		"peer_id": n.GetPeerID(),
+		"height":  block.GetHeight(),
+		"hash":    hex.EncodeToString(block.GetHash()),
+	}).Info("Node: is broadcasting a block.")
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
 	}
 	n.broadcast(data)
 	return nil
+}
+
+func (n *Node) BroadcastGetBlockchainInfo() {
+	request := &networkpb.GetBlockchainInfo{Version: protocalName}
+	data, err := n.prepareData(request, GetBlockchainInfo, Broadcast, "")
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": err,
+		}).Warn("Broadcast GetBlockchainInfo failed.")
+	}
+
+	n.broadcast(data)
 }
 
 func (n *Node) SyncPeersBroadcast() error {
@@ -423,7 +454,7 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
-	if blockpb.Header == nil{
+	if blockpb.Header == nil {
 		spew.Dump(blockpb)
 		spew.Dump(data)
 	}
@@ -436,22 +467,162 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 
 	return block
 }
-func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
-	if n.isNetworkRadiation(*dm) {
-		return
-	}
 
-	if len(dm.data)==0{
+func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
+	if len(dm.data) == 0 {
 		logger.WithFields(logger.Fields{
-			"cmd"	: "sync block",
+			"cmd": "sync block",
 		}).Warn("No block information is found")
 		return
 	}
-	n.cacheDapMsg(*dm)
-	blk := n.getFromProtoBlockMsg(dm.GetData())
-	n.addBlockToPool(blk, pid)
-	if(dm.uniOrBroadcast == Broadcast){
-		n.RelayDapMsg(*dm)
+
+	if dm.uniOrBroadcast == Broadcast {
+		if n.isNetworkRadiation(*dm) {
+			return
+		}
+		n.cacheDapMsg(*dm)
+
+		blk := n.getFromProtoBlockMsg(dm.GetData())
+		n.addBlockToPool(blk, pid)
+
+		if dm.uniOrBroadcast == Broadcast {
+			n.RelayDapMsg(*dm)
+		}
+	} else {
+		blk := n.getFromProtoBlockMsg(dm.GetData())
+		n.addBlockToPool(blk, pid)
+	}
+}
+
+func (n *Node) GetBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
+	tailBlock, err := n.GetBlockchain().GetTailBlock()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "GetBlockchainInfoRequest",
+		}).Warn("Get tailblock failed.")
+		return
+	}
+
+	response := &networkpb.ReturnBlockchainInfo{
+		TailBlockHash: n.GetBlockchain().GetTailBlockHash(),
+		BlockHeight:   n.GetBlockchain().GetMaxHeight(),
+		Timestamp:     tailBlock.GetTimestamp(),
+	}
+
+	data, err := n.prepareData(response, ReturnBlockchainInfo, Unicast, "")
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "GetBlockchainInfoRequest",
+		}).Warn("Prepare data failed.")
+		return
+	}
+
+	n.unicast(data, pid)
+}
+
+func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
+	blockchainInfo := &networkpb.ReturnBlockchainInfo{}
+	if err := proto.Unmarshal(dm.data, blockchainInfo); err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "ReturnBlockchainInfo",
+		}).Info("Parse data failed.")
+		return
+	}
+
+	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.BlockHeight)
+}
+
+//TODO  Refactor getblocks of rpc and node
+func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
+	param := &networkpb.GetBlocks{}
+	if err := proto.Unmarshal(dm.data, param); err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "GetBlocks",
+		}).Info("Parse data failed.")
+		return
+	}
+
+	block := n.findBlockInRequestHash(param.StartBlockHashes)
+
+	// Reach the blockchain's tail
+	if block.GetHeight() >= n.GetBlockchain().GetMaxHeight() {
+		logger.WithFields(logger.Fields{
+			"cmd": "GetBlocks",
+		}).Info("Reach blockchain tail.")
+		return
+	}
+
+	var blocks []*core.Block
+
+	block, err := n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
+	for i := int32(0); i < maxGetBlocksNum && err == nil; i++ {
+		blocks = append(blocks, block)
+		block, err = n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
+	}
+
+	result := &networkpb.ReturnBlocks{}
+	for i := len(blocks) - 1; i >= 0; i-- {
+		result.Blocks = append(result.Blocks, blocks[i].ToProto().(*corepb.Block))
+	}
+
+	data, err := n.prepareData(result, ReturnBlocks, Unicast, "")
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "GetBlocks",
+		}).Warn("Prepare data failed.")
+		return
+	}
+
+	n.unicast(data, pid)
+}
+
+func (n *Node) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
+	for _, hash := range startBlockHashes {
+		// hash in blockchain, return
+		if block, err := n.GetBlockchain().GetBlockByHash(hash); err == nil {
+			return block
+		}
+	}
+
+	// Return Genesis Block
+	block, _ := n.GetBlockchain().GetBlockByHeight(0)
+	return block
+}
+
+func (n *Node) ReturnBlocksHandler(dm *DapMsg, pid peer.ID) {
+	param := &networkpb.ReturnBlocks{}
+	if err := proto.Unmarshal(dm.data, param); err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "ReturnBlocks",
+		}).Info("Parse data failed.")
+		return
+	}
+
+	var blocks []*core.Block
+	for _, pbBlock := range param.Blocks {
+		block := &core.Block{}
+		block.FromProto(pbBlock)
+
+		if !n.bm.VerifyBlock(block) {
+			logger.WithFields(logger.Fields{
+				"cmd": "ReturnBlocks",
+			}).Info("Verify block failed.")
+			return
+		}
+
+		blocks = append(blocks, block)
+	}
+
+	if err := n.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
+		logger.WithFields(logger.Fields{
+			"cmd": "ReturnBlocks",
+		}).Info("Merge fork failed.")
+		return
+	}
+
+	request := &networkpb.GetBlocks{}
+	for _, block := range blocks {
+		request.StartBlockHashes = append(request.StartBlockHashes, block.GetHash())
 	}
 }
 

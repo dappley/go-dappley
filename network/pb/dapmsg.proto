@@ -1,5 +1,6 @@
 syntax = "proto3";
 package networkpb;
+import "github.com/dappley/go-dappley/core/pb/block.proto";
 
 message Dapmsg {
     string cmd = 1;
@@ -8,4 +9,22 @@ message Dapmsg {
     string key = 4;
     int64 uniOrBroadcast = 5;
     uint64 counter = 6;
+}
+
+message GetBlockchainInfo{
+    string version = 1;
+}
+
+message ReturnBlockchainInfo {
+    bytes   tailBlockHash = 1;
+    uint64  blockHeight = 2;
+    int64   timestamp = 3;
+}
+
+message GetBlocks {
+    repeated bytes startBlockHashes = 1;  // Query start block hashes, sorted descending by height.
+}
+  
+message ReturnBlocks {
+    repeated corepb.Block blocks = 1;
 }

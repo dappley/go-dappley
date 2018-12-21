@@ -20,11 +20,11 @@ package main
 
 import (
 	"flag"
-	"github.com/dappley/go-dappley/contract"
 
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
@@ -138,8 +138,8 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 		logger.Error(err)
 		return nil, err
 	}
-	seed := nodeConfig.GetSeed()
-	if seed != "" {
+	seeds := nodeConfig.GetSeed()
+	for _, seed := range seeds {
 		node.AddStreamByString(seed)
 	}
 	return node, nil
