@@ -806,6 +806,10 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	}
 	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
 
+	if senderWallet == nil{
+		fmt.Println("ERROR: Send failed. ERR: Invalid Wallet Address.")
+		return
+	}
 	tx, err := core.NewUTXOTransaction(tx_utxos, core.NewAddress(*(flags[flagFromAddress].(*string))), core.NewAddress(*(flags[flagToAddress].(*string))),
 		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), data)
 
