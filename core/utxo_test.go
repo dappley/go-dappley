@@ -378,6 +378,7 @@ func TestFindUTXO(t *testing.T) {
 func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 	index := NewUTXOIndex()
 
+	var mu sync.Mutex
 	var readOps uint64
 	var addOps uint64
 	var deleteOps uint64
@@ -394,15 +395,23 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 				index.GetAllUTXOsByPubKeyHash([]byte("asd"))
 				atomic.AddUint64(&readOps, 1)
 				//perform a write
-				if !exists {
+
+				mu.Lock()
+				tmpExists := exists
+				mu.Unlock()
+				if !tmpExists {
 					index.addUTXO(TXOutput{}, []byte("asd"), 65)
 					atomic.AddUint64(&addOps, 1)
+					mu.Lock()
 					exists = true
+					mu.Unlock()
 
 				} else {
 					index.removeUTXO([]byte("asd"), 65)
 					atomic.AddUint64(&deleteOps, 1)
+					mu.Lock()
 					exists = false
+					mu.Unlock()
 				}
 
 				time.Sleep(time.Millisecond * 1)
