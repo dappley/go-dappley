@@ -261,41 +261,24 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
 	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
 
-	var dependentTx1 = Transaction{
-		ID: nil,
-		Vin: []TXInput{
-			{tx1.ID, 1, nil, pubkey1},
-		},
-		Vout: []TXOutput{
-			{common.NewAmount(10), pkHash2, ""},
-		},
-		Tip: common.NewAmount(3),
+	generateDependentTx := func(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash PubKeyHash, tip uint64) Transaction {
+		tx := Transaction{
+			ID: nil,
+			Vin: []TXInput{
+				{vinTxId, vinVout, nil, vinPubkey},
+			},
+			Vout: []TXOutput{
+				{common.NewAmount(voutValue), voutPubKeyHash, ""},
+			},
+			Tip: common.NewAmount(tip),
+		}
+		tx.ID = tx.Hash()
+		return tx
 	}
-	dependentTx1.ID = dependentTx1.Hash()
 
-	var dependentTx2 = Transaction{
-		ID: nil,
-		Vin: []TXInput{
-			{dependentTx1.ID, 0, nil, pubkey2},
-		},
-		Vout: []TXOutput{
-			{common.NewAmount(5), pkHash1, ""},
-		},
-		Tip: common.NewAmount(5),
-	}
-	dependentTx2.ID = dependentTx2.Hash()
-
-	var dependentTx3 = Transaction{
-		ID: nil,
-		Vin: []TXInput{
-			{dependentTx2.ID, 0, nil, pubkey1},
-		},
-		Vout: []TXOutput{
-			{common.NewAmount(1), pkHash2, ""},
-		},
-		Tip: common.NewAmount(4),
-	}
-	dependentTx3.ID = dependentTx3.Hash()
+	dependentTx1 := generateDependentTx(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
+	dependentTx2 := generateDependentTx(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
+	dependentTx3 := generateDependentTx(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
 
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
 	var utxoIndex = UTXOIndex{
