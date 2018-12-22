@@ -254,6 +254,59 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		common.NewAmount(7),
 	}
 
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
+	var pkHash1, _ = NewUserPubKeyHash(pubkey1)
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
+	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
+
+	var dependentTx1 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{tx1.ID, 1, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(10), pkHash2, ""},
+		},
+		Tip: common.NewAmount(3),
+	}
+	dependentTx1.ID = dependentTx1.Hash()
+
+	var dependentTx2 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx1.ID, 0, nil, pubkey2},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash1, ""},
+		},
+		Tip: common.NewAmount(5),
+	}
+	dependentTx2.ID = dependentTx2.Hash()
+
+	var dependentTx3 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx2.ID, 0, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(1), pkHash2, ""},
+		},
+		Tip: common.NewAmount(4),
+	}
+	dependentTx3.ID = dependentTx3.Hash()
+
+	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
+	var utxoIndex = UTXOIndex{
+		map[string][]*UTXO{
+			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+		},
+		&sync.RWMutex{},
+	}
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2.GetPubKeyHash())])
+	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
+
 	var generatedRewards map[string]string
 
 	// mockImportRewardStorage intercepts the reward storage imported to the engine
@@ -329,6 +382,20 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				Tip:  common.NewAmount(5),
 			}},
 			map[string][]*UTXO{},
+			nil,
+			false,
+		},
+		{
+			"normal dependent txs",
+			[]*Transaction{&dependentTx2, &dependentTx3},
+			utxoIndex.index,
+			nil,
+			true,
+		},
+		{
+			"invalid dependent txs",
+			[]*Transaction{&dependentTx3, &dependentTx2},
+			utxoIndex.index,
 			nil,
 			false,
 		},
