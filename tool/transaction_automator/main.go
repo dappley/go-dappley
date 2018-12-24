@@ -364,7 +364,6 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address)
 			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
 		}
 		balanceLogger.Info("Displaying wallet balance...")
-		currBalance[addr.String()] = uint64(amount)
 	}
 }
 
