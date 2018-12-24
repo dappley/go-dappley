@@ -2,6 +2,7 @@ package vm
 
 import (
 	logger "github.com/sirupsen/logrus"
+	"strings"
 
 	"github.com/dappley/go-dappley/core"
 )
@@ -31,6 +32,9 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
 	}).Info("V8EngineManager: is running scheduled events...")
 
 	for _, utxo := range contractUtxos {
+		if !strings.Contains(utxo.Contract, scheduleFuncName){
+			continue
+		}
 		addr := utxo.PubKeyHash.GenerateAddress()
 		engine := em.CreateEngine()
 		engine.ImportSourceCode(utxo.Contract)

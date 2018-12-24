@@ -34,6 +34,7 @@ var (
 	sentTxs				 = make(map[string]string)
 	smartContractAddr    = ""
 	smartContractCounter = 0
+	isContractDeployed   = false
 )
 
 const(
@@ -69,13 +70,14 @@ func main() {
 	displayBalances(rpcClient, addresses, true)
 
 	ticker := time.NewTicker(time.Millisecond * sendInterval).C
-	currHeight := getBlockHeight(rpcClient)
 	deploySmartContract(adminClient, fundAddr)
+	currHeight := getBlockHeight(rpcClient)
 	for {
 		select {
 		case <-ticker:
 			height := getBlockHeight(rpcClient)
 			if height > currHeight {
+				isContractDeployed = true
 				displayBalances(rpcClient, addresses, false)
 				currHeight = height
 				blk := getTailBlock(rpcClient, currHeight)
@@ -107,13 +109,14 @@ func recordSmartContractAddr(addr string){
 	}
 }
 
-func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string){
+func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) {
 
 	smartContractAddr = getSmartContractAddr()
 	if smartContractAddr != ""{
 		logger.WithFields(logger.Fields{
 			"contractAddr"	: smartContractAddr,
 		}).Info("Smart contract has already been deployed. If you are sure it is not deployed, empty the file:", contractAddrFilePath)
+		isContractDeployed = true
 		return
 	}
 
@@ -275,7 +278,7 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 	toAddr := addresses[toIndex].String()
 	sendAmount := calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
 
-	if IsTheTurnToSendSmartContractTransaction(){
+	if IsTheTurnToSendSmartContractTransaction() && isContractDeployed{
 		data = contractFunctionCall
 		toAddr = smartContractAddr
 	}
