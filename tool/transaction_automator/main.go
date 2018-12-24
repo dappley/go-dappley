@@ -66,7 +66,7 @@ func main() {
 		"initial_total_amount": initialAmount,
 		"send_interval":        fmt.Sprintf("%d ms", sendInterval),
 	}).Info("Funding is completed. Script starts.")
-	displayBalances(rpcClient, addresses)
+	displayBalances(rpcClient, addresses, true)
 
 	ticker := time.NewTicker(time.Millisecond * sendInterval).C
 	currHeight := getBlockHeight(rpcClient)
@@ -76,7 +76,7 @@ func main() {
 		case <-ticker:
 			height := getBlockHeight(rpcClient)
 			if height > currHeight {
-				displayBalances(rpcClient, addresses)
+				displayBalances(rpcClient, addresses, false)
 				currHeight = height
 				blk := getTailBlock(rpcClient, currHeight)
 				verifyTransactions(blk.Transactions)
@@ -352,7 +352,7 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 	return resp, nil
 }
 
-func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
+func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, update bool) {
 	for _, addr := range addresses {
 		amount, err := getBalance(rpcClient, addr.String())
 		balanceLogger := logger.WithFields(logger.Fields{
@@ -364,6 +364,9 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address)
 			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
 		}
 		balanceLogger.Info("Displaying wallet balance...")
+		if update{
+			currBalance[addr.String()] = uint64(amount)
+		}
 	}
 }
 
