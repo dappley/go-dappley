@@ -275,18 +275,18 @@ func TestRpcGetVersion(t *testing.T) {
 	// Test GetVersion with support client version
 	response, err := c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0"})
 	assert.Nil(t, err)
-	assert.Equal(t, response.ErrorCode, OK)
-	assert.Equal(t, response.ProtoVersion, "1.0.0")
+	assert.Equal(t, OK, response.ErrorCode, OK)
+	assert.Equal(t, "1.0.0", response.ProtoVersion, "1.0.0")
 
 	// Test GetVersion with unsupport client version -- invalid version length
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
 	assert.Nil(t, err)
-	assert.Equal(t, response.ErrorCode, ProtoVersionNotSupport)
+	assert.Equal(t, ProtoVersionNotSupport, response.ErrorCode)
 
 	// Test GetVersion with unsupport client version
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "2.0.0"})
 	assert.Nil(t, err)
-	assert.Equal(t, response.ErrorCode, ProtoVersionNotSupport)
+	assert.Equal(t, ProtoVersionNotSupport, response.ErrorCode)
 }
 
 func TestRpcGetBlockchainInfo(t *testing.T) {
@@ -364,18 +364,18 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.wallet.GetAddress().Address})
 	assert.Nil(t, err)
-	assert.Equal(t, senderResponse.ErrorCode, OK)
+	assert.Equal(t, OK, senderResponse.ErrorCode)
 	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
-	assert.Equal(t, len(senderResponse.BlockHeaders), int(MinUtxoBlockHeaderCount))
-	assert.Equal(t, senderResponse.BlockHeaders[0].Hash, []byte(tailBlock.GetHash()))
+	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
+	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].Hash)
 
 	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverWallet.GetAddress().Address})
 	assert.Nil(t, err)
-	assert.Equal(t, receiverResponse.ErrorCode, OK)
+	assert.Equal(t, OK, receiverResponse.ErrorCode)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
 }
 
@@ -411,12 +411,12 @@ func TestRpcGetBlocks(t *testing.T) {
 	maxGetBlocksCount := 20
 	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: [][]byte{genesisBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, err)
-	assert.Equal(t, response.ErrorCode, OK)
-	assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
+	assert.Equal(t, OK, response.ErrorCode)
+	assert.Equal(t, maxGetBlocksCount, len(response.Blocks))
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
-	assert.Equal(t, response.Blocks[0].GetHeader().Hash, []byte(block1.GetHash()))
+	assert.Equal(t, []byte(block1.GetHash()), response.Blocks[0].GetHeader().Hash)
 	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
-	assert.Equal(t, response.Blocks[19].GetHeader().Hash, []byte(block20.GetHash()))
+	assert.Equal(t, []byte(block20.GetHash()), response.Blocks[19].GetHeader().Hash)
 
 	// Check query loop
 	var startBlockHashes [][]byte
@@ -431,12 +431,12 @@ func TestRpcGetBlocks(t *testing.T) {
 		}
 		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: startBlockHashes, MaxCount: int32(maxGetBlocksCount)})
 		assert.Nil(t, err)
-		assert.Equal(t, response.ErrorCode, OK)
+		assert.Equal(t, OK, response.ErrorCode)
 		if i == (queryCount - 1) {
 			leftCount := int(rpcContext.bc.GetMaxHeight()) - queryCount*maxGetBlocksCount
-			assert.Equal(t, len(response.Blocks), leftCount)
+			assert.Equal(t, leftCount, len(response.Blocks))
 		} else {
-			assert.Equal(t, len(response.Blocks), maxGetBlocksCount)
+			assert.Equal(t, maxGetBlocksCount, len(response.Blocks))
 		}
 	}
 
@@ -793,14 +793,14 @@ func TestGetNewTransactions(t *testing.T) {
 		response1, err := stream.Recv()
 		conn1Step1 = true
 		assert.Nil(t, err)
-		assert.NotEqual(t, len(tx1ID), 0)
-		assert.Equal(t, response1.Transaction.ID, tx1ID)
+		assert.NotEqual(t, 0, len(tx1ID))
+		assert.Equal(t, tx1ID, response1.Transaction.ID)
 
 		response2, err := stream.Recv()
 		conn1Step2 = true
 		assert.Nil(t, err)
-		assert.NotEqual(t, len(tx2ID), 0)
-		assert.Equal(t, response2.Transaction.ID, tx2ID)
+		assert.NotEqual(t, 0, len(tx2ID))
+		assert.Equal(t, tx2ID, response2.Transaction.ID)
 	}()
 
 	// Create a grpc connection and a client
@@ -819,27 +819,27 @@ func TestGetNewTransactions(t *testing.T) {
 		response1, err := stream.Recv()
 		conn2Step1 = true
 		assert.Nil(t, err)
-		assert.NotEqual(t, len(tx1ID), 0)
-		assert.Equal(t, response1.Transaction.ID, tx1ID)
+		assert.NotEqual(t, 0, len(tx1ID))
+		assert.Equal(t, tx1ID, response1.Transaction.ID)
 	}()
 	time.Sleep(time.Second)
 
 	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
-	assert.Equal(t, conn1Step1, true)
-	assert.Equal(t, conn1Step2, false)
-	assert.Equal(t, conn2Step1, true)
+	assert.Equal(t, true, conn1Step1)
+	assert.Equal(t, false, conn1Step2)
+	assert.Equal(t, true, conn2Step1)
 	conn2.Close()
 
 	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
-	assert.Equal(t, conn1Step2, true)
+	assert.Equal(t, true, conn1Step2)
 	conn1.Close()
 
 	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
-	assert.Equal(t, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic), false)
+	assert.Equal(t, false, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
 
 	rpcContext.consensus.Stop()
 	core.WaitDoneOrTimeout(func() bool {

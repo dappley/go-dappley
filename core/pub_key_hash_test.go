@@ -61,8 +61,8 @@ func TestPubKeyHash_IsContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pkh := PubKeyHash{tt.pubKeyHash}
 			res,err := pkh.IsContract()
-			assert.Equal(t, res, tt.expectedRes)
-			assert.Equal(t, err, tt.expectedErr)
+			assert.Equal(t, tt.expectedRes, res)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
