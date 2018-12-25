@@ -85,8 +85,10 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		return
 	}
 	forkBlks := bm.blockPool.GenerateForkBlocks(tree, bm.blockchain.GetMaxHeight())
+	bm.blockchain.SetState(BlockchainSync)
 	bm.MergeFork(forkBlks, forkheadParentHash)
 	bm.blockPool.CleanCache(tree)
+	bm.blockchain.SetState(BlockchainReady)
 }
 
 func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) error {

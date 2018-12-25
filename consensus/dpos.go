@@ -122,7 +122,7 @@ func (dpos *DPOS) Start() {
 						"peerid": dpos.node.GetPeerID(),
 					}).Info("DPoS: My Turn to produce block...")
 					// Do not produce block if block pool is syncing
-					if dpos.node.GetBlockPool().GetSyncState() {
+					if dpos.node.GetBlockchain().GetState() != core.BlockchainReady {
 						logger.Debug("BlockProducer: Paused while block pool is syncing")
 						continue
 					}

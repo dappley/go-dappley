@@ -84,7 +84,7 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("Mining stopped")
 			return
 		default:
-			if pow.node.GetBlockPool().GetSyncState() {
+			if pow.node.GetBlockchain().GetState() != core.BlockchainReady {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}

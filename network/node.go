@@ -76,7 +76,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	bm := core.NewBlockChainManager()
 	bm.SetblockPool(pool)
 	bm.Setblockchain(bc)
-	return &Node{nil,
+	node := &Node{nil,
 		nil,
 		bm,
 		make(map[peer.ID]*Stream, 10),
@@ -88,6 +88,8 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		nil,
 		nil,
 	}
+	node.downloadManager = NewDownloadManager(node)
+	return node
 }
 
 func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
@@ -97,10 +99,11 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain    { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool      { return n.bm.GetblockPool() }
-func (n *Node) GetPeerList() *PeerList             { return n.peerList }
-func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
+func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
+func (n *Node) GetPeerList() *PeerList               { return n.peerList }
+func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map   { return n.recentlyRcvedDapMsgs }
+func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
 
 func (n *Node) Start(listenPort int) error {
 
@@ -257,6 +260,9 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	delete(n.streams, peerid)
 	n.peerList.DeletePeer(&Peer{peerid, targetAddr})
+	if n.downloadManager != nil {
+		n.downloadManager.DisconnectPeer(peerid)
+	}
 }
 
 func (n *Node) dispatch(msg *DapMsg, s *Stream) {
@@ -429,6 +435,24 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	return nil
 }
 
+func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
+	getBlockPb := &networkpb.GetBlocks{}
+
+	getBlockPb.StartBlockHashes = make([][]byte, len(hashes))
+
+	for index, hash := range hashes {
+		getBlockPb.StartBlockHashes[index] = hash
+	}
+
+	data, err := n.prepareData(getBlockPb, GetBlocks, Unicast, "")
+	if err != nil {
+		return nil
+	}
+
+	n.unicast(data, pid)
+	return nil
+}
+
 //broadcast data
 func (n *Node) broadcast(data []byte) {
 	for _, s := range n.streams {
@@ -532,7 +556,7 @@ func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.BlockHeight)
 }
 
-//TODO  Refactor getblocks of rpc and node
+//TODO  Refactor getblocks in rpcService and node
 func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 	param := &networkpb.GetBlocks{}
 	if err := proto.Unmarshal(dm.data, param); err != nil {
@@ -564,6 +588,8 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 	for i := len(blocks) - 1; i >= 0; i-- {
 		result.Blocks = append(result.Blocks, blocks[i].ToProto().(*corepb.Block))
 	}
+
+	result.StartBlockHashes = param.StartBlockHashes
 
 	data, err := n.prepareData(result, ReturnBlocks, Unicast, "")
 	if err != nil {
@@ -598,32 +624,6 @@ func (n *Node) ReturnBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	var blocks []*core.Block
-	for _, pbBlock := range param.Blocks {
-		block := &core.Block{}
-		block.FromProto(pbBlock)
-
-		if !n.bm.VerifyBlock(block) {
-			logger.WithFields(logger.Fields{
-				"cmd": "ReturnBlocks",
-			}).Info("Verify block failed.")
-			return
-		}
-
-		blocks = append(blocks, block)
-	}
-
-	if err := n.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("Merge fork failed.")
-		return
-	}
-
-	request := &networkpb.GetBlocks{}
-	for _, block := range blocks {
-		request.StartBlockHashes = append(request.StartBlockHashes, block.GetHash())
-	}
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {
@@ -652,6 +652,13 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	//load the tx with proto
 	tx.FromProto(txpb)
 	//add tx to txpool
+	utxoIndex := core.LoadUTXOIndex(n.GetBlockchain().GetDb())
+	utxoIndex.UpdateUtxoState(n.GetBlockchain().GetTxPool().GetTransactions())
+
+	if tx.Verify(utxoIndex, 0) == false {
+		logger.Info("Broadcast transaction verify failed.")
+		return
+	}
 	n.bm.Getblockchain().GetTxPool().Push(tx)
 }
 

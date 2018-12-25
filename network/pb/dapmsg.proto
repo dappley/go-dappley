@@ -27,4 +27,5 @@ message GetBlocks {
   
 message ReturnBlocks {
     repeated corepb.Block blocks = 1;
+    repeated bytes startBlockHashes = 2;
 }

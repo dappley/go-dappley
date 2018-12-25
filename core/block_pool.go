@@ -43,17 +43,10 @@ type RcvedBlock struct {
 
 type BlockPool struct {
 	blockRequestCh chan BlockRequestPars
-	syncState      bool
 	size           int
 	blkCache       *lru.Cache //cache of full blks
 }
 
-func (pool *BlockPool) GetSyncState() bool {
-	return pool.syncState
-}
-func (pool *BlockPool) SetSyncState(sync bool) {
-	pool.syncState = sync
-}
 func NewBlockPool(size int) *BlockPool {
 	if size <= 0 {
 		size = BlockPoolMaxSize
@@ -61,7 +54,6 @@ func NewBlockPool(size int) *BlockPool {
 	pool := &BlockPool{
 		size:           size,
 		blockRequestCh: make(chan BlockRequestPars, size),
-		syncState:      false,
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
 
@@ -74,10 +66,6 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 
 func (pool *BlockPool) Verify(block *Block) bool {
 	logger.Info("BlockPool: Has received a new block")
-	if pool.syncState {
-		logger.Debug("BlockPool: is syncing already, tossing block ")
-		return false
-	}
 	if !block.VerifyHash() {
 		logger.Warn("BlockPool: The received block cannot pass hash verification!")
 		return false
@@ -106,7 +94,6 @@ func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) Hash {
 func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) []*Block {
 	_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
 	if forkTailTree.GetValue().(*Block).GetHeight() > maxHeight {
-		pool.SetSyncState(true)
 	} else {
 		return nil
 	}
@@ -121,7 +108,6 @@ func (pool *BlockPool) CleanCache(tree *common.Tree) {
 	logger.WithFields(logger.Fields{
 		"syncstate": 0,
 	}).Debug("Merge finished or exited, setting syncstate to false")
-	pool.SetSyncState(false)
 }
 
 func getBlocksFromTrees(trees []*common.Tree) []*Block {
