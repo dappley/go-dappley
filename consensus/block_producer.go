@@ -115,8 +115,8 @@ func filterValidTxs(txs []*core.Transaction, utxoIndex *core.UTXOIndex, blockHei
 	for _, tx := range txs {
 		if tx.Verify(tempUtxoIndex, blockHeight) {
 			validTxs = append(validTxs, tx)
+			tempUtxoIndex.UpdateUtxo(tx)
 		}
-		tempUtxoIndex.UpdateUtxo(tx)
 	}
 
 	return validTxs
