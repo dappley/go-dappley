@@ -270,6 +270,24 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
+// TrimmedCopy creates a trimmed copy without signature of Transaction to be used for verifying ID
+func (tx *Transaction) TrimmedCopyWithoutSignature() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, vin := range tx.Vin {
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, vin.PubKey})
+	}
+
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+	}
+
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
+
+	return txCopy
+}
+
 func (tx *Transaction) DeepCopy() Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
@@ -329,6 +347,13 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		prevUtxos = append(prevUtxos, utxo)
 	}
 
+	if !tx.verifyID() {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: ID is invalid.")
+		return false
+	}
+
 	if !tx.verifyPublicKeyHash(prevUtxos) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
@@ -362,7 +387,8 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() bool {
-	if bytes.Equal(tx.ID, tx.Hash()) {
+	txCopy := tx.TrimmedCopyWithoutSignature()
+	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true
 	} else {
 		return false
