@@ -468,6 +468,7 @@ func TestForkChoice(t *testing.T) {
 		return bcs[1].GetState() != core.BlockchainSync
 	}, 20)
 
+	assert.Equal(t, bcs[0].GetMaxHeight(), bcs[1].GetMaxHeight())
 	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
 
