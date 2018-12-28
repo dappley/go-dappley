@@ -233,6 +233,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.tx.ID = tt.tx.Hash()
 			// Generate signatures for all tx inputs
 			for i := range tt.tx.Vin {
 				txCopy := tt.tx.TrimmedCopy()
@@ -240,7 +241,6 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 				txCopy.Vin[i].PubKey = pubKeyHash.GetPubKeyHash()
 				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
-				tt.tx.ID = tt.tx.Hash()
 			}
 
 			// Verify the signatures

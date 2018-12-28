@@ -24,23 +24,24 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/libp2p/go-libp2p-net"
 	"io/ioutil"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -56,7 +57,7 @@ var (
 )
 
 type streamMsg struct {
-	msg  *DapMsg
+	msg *DapMsg
 	from peer.ID
 }
 
@@ -71,7 +72,7 @@ type Node struct {
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
-	dispatch               chan *streamMsg
+	dispatch				   chan *streamMsg
 	downloadManager        *DownloadManager
 }
 
@@ -109,10 +110,10 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
-func (n *Node) GetPeerList() *PeerList               { return n.peerList }
-func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map   { return n.recentlyRcvedDapMsgs }
+func (n *Node) GetBlockchain() *core.Blockchain    { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool      { return n.bm.GetblockPool() }
+func (n *Node) GetPeerList() *PeerList             { return n.peerList }
+func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
 func (n *Node) GetStreams() map[peer.ID]*Stream      { return n.streams }
 
@@ -135,10 +136,22 @@ func (n *Node) Start(listenPort int) error {
 	return err
 }
 
+func (n *Node) Stop() {
+	n.exitCh <- true
+	for _, s := range n.streams {
+		s.StopStream(nil)
+	}
+	n.host.RemoveStreamHandler(protocalName)
+	err := n.host.Close()
+	if err != nil {
+		logger.WithError(err).Warn("Node: host was not closed properly.")
+	}
+}
+
 func (n *Node) StartExitListener() {
 	go func() {
 		for {
-			if s, ok := <-n.streamExitCh; ok {
+			if s,ok := <-n.streamExitCh; ok {
 				n.DisconnectPeer(s.peerID, s.remoteAddr)
 			}
 		}
@@ -223,12 +236,12 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 }
 
 //AddStreamsByString adds streams by their full addresses
-func (n *Node) AddStreamsByString(targetFullAddrs []string) {
-	for _, fullAddr := range targetFullAddrs {
+func (n *Node) AddStreamsByString(targetFullAddrs []string){
+	for _, fullAddr := range targetFullAddrs{
 		err := n.AddStreamByString(fullAddr)
-		if err != nil {
+		if err!=nil{
 			logger.WithError(err).WithFields(logger.Fields{
-				"full_addr": fullAddr,
+				"full_addr"	: fullAddr,
 			}).Warn("Node: not able to add stream")
 		}
 	}
