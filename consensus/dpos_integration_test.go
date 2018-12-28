@@ -39,6 +39,7 @@ func TestDpos_Start(t *testing.T) {
 	pool := core.NewBlockPool(0)
 	node := network.NewNode(bc, pool)
 	node.Start(22100)
+	defer node.Stop()
 	dpos.Setup(node, cbAddr.String())
 	dpos.SetKey(keystr)
 
@@ -71,7 +72,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
 	dynasty := NewDynasty(miners, len(miners), timeBetweenBlock)
-	dposArray := []*DPOS{}
+	var dposArray []*DPOS
+	var nodeArray []*network.Node
 	var firstNode *network.Node
 	for i := 0; i < len(miners); i++ {
 		dpos := NewDPOS()
@@ -80,6 +82,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(21200 + i)
+		nodeArray = append(nodeArray, node)
 		if i == 0 {
 			firstNode = node
 		} else {
@@ -100,6 +103,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 
 	for i := 0; i < len(miners); i++ {
 		dposArray[i].Stop()
+		nodeArray[i].Stop()
 	}
 	//Waiting block sync to other nodes
 	time.Sleep(time.Second * 2)

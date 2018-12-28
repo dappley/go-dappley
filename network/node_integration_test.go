@@ -57,6 +57,7 @@ func TestNetwork_AddStream(t *testing.T) {
 
 	//create node1
 	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port1, db)
+	defer n1.Stop()
 	assert.Nil(t, err)
 
 	//currently it should only have itself as its node
@@ -64,6 +65,7 @@ func TestNetwork_AddStream(t *testing.T) {
 
 	//create node2
 	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port2, db)
+	defer n2.Stop()
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
@@ -78,10 +80,12 @@ func TestNetwork_BroadcastBlock(t *testing.T) {
 	defer db.Close()
 
 	n1, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port3, db)
+	defer n1.Stop()
 	assert.Nil(t, err)
 
 	//setup node 1
 	n2, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port4, db)
+	defer n2.Stop()
 	assert.Nil(t, err)
 
 	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
@@ -104,10 +108,12 @@ func TestNode_SyncPeers(t *testing.T) {
 	defer db.Close()
 
 	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port7, db)
+	defer n1.Stop()
 	assert.Nil(t, err)
 
 	//create node 2 and add node1 as a peer
 	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port8, db)
+	defer n2.Stop()
 	assert.Nil(t, err)
 
 	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
@@ -115,6 +121,7 @@ func TestNode_SyncPeers(t *testing.T) {
 
 	//create node 3 and add node1 as a peer
 	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port9, db)
+	defer n3.Stop()
 	assert.Nil(t, err)
 
 	err = n3.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
@@ -142,9 +149,11 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port5, db)
+	defer n1.Stop()
 	assert.Nil(t, err)
 	//setup node 2
 	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port6, db)
+	defer n2.Stop()
 	assert.Nil(t, err)
 
 	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())

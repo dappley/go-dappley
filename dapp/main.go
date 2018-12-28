@@ -93,6 +93,7 @@ func main() {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
+	defer node.Stop()
 
 	downloadBlocks(node, bc)
 
@@ -138,6 +139,7 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 		}
 	}
 	err := node.Start(int(port))
+	defer node.Stop()
 	if err != nil {
 		logger.Error(err)
 		return nil, err

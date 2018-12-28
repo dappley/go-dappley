@@ -323,6 +323,9 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 
 	}
+	for _, node := range nodes {
+		node.Stop()
+	}
 }
 
 // Test if network radiation bounces forever
@@ -399,6 +402,9 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		})
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 	}
+	for _, node := range nodes {
+		node.Stop()
+	}
 }
 
 func TestForkChoice(t *testing.T) {
@@ -434,6 +440,8 @@ func TestForkChoice(t *testing.T) {
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 	}
+	defer nodes[0].Stop()
+	defer nodes[1].Stop()
 
 	// Mine more blocks on node[0] than on node[1]
 	pows[1].Start()
@@ -502,6 +510,8 @@ func TestForkSegmentHandling(t *testing.T) {
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 	}
+	defer nodes[0].Stop()
+	defer nodes[1].Stop()
 
 	blk1 := &core.Block{}
 	blk2 := &core.Block{}
@@ -730,6 +740,7 @@ func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchai
 	pow.Setup(node, addr.String())
 	pow.SetTargetBit(12)
 	node.Start(port)
+	defer node.Stop()
 	return node
 }
 
@@ -774,6 +785,8 @@ func TestDoubleMint(t *testing.T) {
 			recvNode.AddStream(sendNode.GetPeerID(), sendNode.GetPeerMultiaddr())
 		}
 	}
+	defer recvNode.Stop()
+	defer sendNode.Stop()
 
 	for i := 0; i < len(blks); i++ {
 		sendNode.BroadcastBlock(blks[i])
@@ -806,6 +819,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	seedNode := network.NewNode(bc, pool)
 
 	seedNode.Start(testport_fork + 50)
+	defer seedNode.Stop()
 
 	conss.Setup(seedNode, validProducerAddress)
 	conss.SetKey(validProducerKey)
@@ -825,6 +839,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	pool1 := core.NewBlockPool(0)
 	node := network.NewNode(bc1, pool1)
 	node.Start(testport_fork + 51)
+	defer node.Stop()
 
 	dpos.Setup(node, validProducerAddress)
 	dpos.SetKey(validProducerKey)
