@@ -19,18 +19,19 @@
 package network
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
-	singlePortStart          int = 10200
-	multiPortEqualStart      int = 10201
-	multiPortSuccessStart    int = 10210
-	multiPortDisconnectStart int = 10220
+	singlePortStart          int = 10300
+	multiPortEqualStart      int = 10301
+	multiPortSuccessStart    int = 10310
+	multiPortDisconnectStart int = 10320
 	//multiPortRetryStart      int = 10230
 )
 
