@@ -81,6 +81,9 @@ func main() {
 				displayBalances(rpcClient, addresses, false)
 				currHeight = height
 				blk := getTailBlock(rpcClient, currHeight)
+				logger.WithFields(logger.Fields{
+					"height"	:currHeight,
+				}).Info("New Block Height")
 				verifyTransactions(blk.Transactions)
 			} else {
 				sendRandomTransactions(adminClient, addresses)
@@ -153,6 +156,9 @@ func verifyTransactions(txs []*corepb.Transaction){
 	logger.WithFields(logger.Fields{
 		"num_of_tx"	: len(txs),
 	}).Info("Transactions mined in previous block.")
+	logger.WithFields(logger.Fields{
+		"num_of_tx"	: len(sentTxs),
+	}).Info("Transactions recorded")
 	for _, tx := range txs{
 		delete(sentTxs, hex.EncodeToString(tx.ID))
 	}

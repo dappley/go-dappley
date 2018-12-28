@@ -104,7 +104,10 @@ func (bp *BlockProducer) prepareBlock() {
 		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
 		validTxs = append(validTxs, &rtx)
 	}
-
+	logger.WithFields(logger.Fields{
+		"txs"	: len(txs),
+		"valid_txs": len(validTxs),
+	}).Info("BlockProducer: prepare block.")
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)
 }
 
@@ -141,8 +144,16 @@ func (bp *BlockProducer) executeSmartContract(txs []*core.Transaction, rewards m
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction
+
+	for _, tx := range txs {
+		if !tx.IsContract() {
+			utxoIndex.UpdateUtxo(tx)
+		}
+	}
+
 	for _, tx := range txs {
 		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
 	}
+
 	return generatedTXs
 }

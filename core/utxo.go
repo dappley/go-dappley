@@ -185,7 +185,7 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 	// Create a copy of the index so operations below are only temporal
-		for _, tx := range txs {
+	for _, tx := range txs {
 		utxos.UpdateUtxo(tx)
 	}
 }

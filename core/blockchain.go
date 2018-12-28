@@ -226,7 +226,15 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	// Assign changes to receiver
 	*bc = *bcTemp
 
-	blockLogger.Info("Blockchain: added a new block to tail.")
+	poolsize := 0
+	if bc.txPool!=nil {
+		poolsize = len(bc.txPool.GetTransactions())
+	}
+
+	blockLogger.WithFields(logger.Fields{
+		"numOfTx": len(block.GetTransactions()),
+		"poolSize": poolsize,
+	}).Info("Blockchain: added a new block to tail.")
 
 	return nil
 }

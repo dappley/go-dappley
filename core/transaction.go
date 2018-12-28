@@ -628,7 +628,9 @@ func (tx *Transaction) Execute(index UTXOIndex,
 
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
 	if err != nil {
-		logger.Error(err)
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid"	:hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return nil
 	}
 
@@ -669,6 +671,11 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		utxo := utxoPool.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
 			MetricsTxDoubleSpend.Inc(1)
+			logger.WithFields(logger.Fields{
+				"txid"		: hex.EncodeToString(tx.ID),
+				"vin_id" 	: hex.EncodeToString(vin.Txid),
+				"vin_index" : vin.Vout,
+			}).Warn("Transaction: Can not find vin")
 			return nil, ErrTXInputNotFound
 		}
 		res = append(res, utxo)
