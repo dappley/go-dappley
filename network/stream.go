@@ -20,54 +20,56 @@ package network
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"math/big"
 	"reflect"
 	"sync"
 
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
 	GetBlockchainInfo    = "GetBlockchainInfo"
 	ReturnBlockchainInfo = "ReturnGetBlockchainInfo"
-	SyncBlock            = "SyncBlock"
+	SyncBlock    = "SyncBlock"
 	GetBlocks            = "GetBlocks"
 	ReturnBlocks         = "ReturnBlocks"
-	SyncPeerList         = "SyncPeerList"
-	RequestBlock         = "requestBlock"
-	BroadcastTx          = "BroadcastTx"
-	Unicast              = 0
-	Broadcast            = 1
-	lengthByteLength     = 8
-	startByteLength      = 2
-	checkSumLength       = 1
-	headerLength         = lengthByteLength + startByteLength + checkSumLength
+	SyncPeerList = "SyncPeerList"
+	RequestBlock = "requestBlock"
+	BroadcastTx  = "BroadcastTx"
+	Unicast      = 0
+	Broadcast    = 1
+	lengthByteLength = 8
+	startByteLength = 2
+	checkSumLength = 1
+	headerLength = lengthByteLength + startByteLength + checkSumLength
 )
 
 var (
 	ErrInvalidMessageFormat = errors.New("invalid message format")
-	ErrLengthTooShort       = errors.New("message length is too short")
-	ErrFragmentedData       = errors.New("Fragmented data")
-	ErrCheckSumIncorrect    = errors.New("Incorrect checksum")
+	ErrLengthTooShort 		= errors.New("message length is too short")
+	ErrFragmentedData       = errors.New("fragmented data")
+	ErrCheckSumIncorrect    = errors.New("incorrect checksum")
 )
 
 var (
 	startBytes = []byte{0x7E, 0x7E}
 )
 
-type dapHandler func(*DapMsg, *Stream)
 
 type Stream struct {
 	peerID     peer.ID
 	remoteAddr multiaddr.Multiaddr
 	stream     net.Stream
+	msglength 		int
+	rawByteRead []byte
+	msgReadCh   chan []byte
 	dataCh     chan []byte
 	quitRdCh   chan bool
 	quitWrCh   chan bool
@@ -78,19 +80,25 @@ func NewStream(s net.Stream) *Stream {
 		s.Conn().RemotePeer(),
 		s.Conn().RemoteMultiaddr(),
 		s,
+		0,
+		[]byte{},
+		make(chan []byte, 100),
 		make(chan []byte, 5), //TODO: Redefine the size of the channel
 		make(chan bool, 1),   //two channels to stop
 		make(chan bool, 1),
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, dh dapHandler) {
+func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw, quitCh, dh)
+	s.startLoop(rw, quitCh, dispatch)
 }
 
-func (s *Stream) StopStream() {
-	logger.Debug("Stream Terminated! Peer Addr:", s.remoteAddr)
+func (s *Stream) StopStream(err error) {
+	logger.WithFields(logger.Fields{
+		"peer_address" : s.remoteAddr,
+		"error"	:err,
+	}).Warn("Stream: is terminated!!")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
@@ -100,70 +108,54 @@ func (s *Stream) Send(data []byte) {
 	s.dataCh <- data
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
-	go s.readLoop(rw, quitCh, dh)
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
+	go s.readLoop(rw, quitCh, dispatch)
 	go s.writeLoop(rw)
 }
 
-func readMsg(rw *bufio.ReadWriter) ([]byte, error) {
-	var rawBytes []byte
-	length := 0
+func (s *Stream) read(rw *bufio.ReadWriter) {
+	buffer := make([]byte, 1024)
+	var err error
 
-	for {
-		b, err := rw.ReadByte()
-
+	n, err := rw.Read(buffer)
 		if err != nil {
-			return rawBytes, err
+		s.StopStream(err)
+		}
+	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
+
+	for{
+		if len(s.rawByteRead) < headerLength {
+			return
 		}
 
-		rawBytes = append(rawBytes, b)
 
-		//if the first two bytes are not starting bytes, return error
-		if len(rawBytes) == startByteLength {
-			if bytes.Compare(rawBytes, startBytes) != 0 {
-				return nil, ErrInvalidMessageFormat
-			}
+		if err = verifyHeader(s.rawByteRead[:headerLength]); err!=nil{
+			s.StopStream(err)
 		}
+		s.msglength = getLength(s.rawByteRead[:headerLength])
 
-		if len(rawBytes) == headerLength {
-			if err = verifyHeader(rawBytes); err != nil {
-				return nil, err
-			}
-			length = getLength(rawBytes)
-			continue
-		}
-
-		if len(rawBytes) == headerLength+length {
-			return rawBytes, nil
-		}
-	}
+		if len(s.rawByteRead) < headerLength + s.msglength {
+			return
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
-	//read stream with delimiter
-	bytes, err := readMsg(rw)
-
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"error": err,
-		}).Warn("Stream: Failed to read message")
-		s.StopStream()
-		return
+		s.msgReadCh <- s.rawByteRead[:headerLength+s.msglength]
+		s.rawByteRead = s.rawByteRead[headerLength+s.msglength:]
 	}
 
-	dm := s.parseData(bytes)
-	dh(dm, s)
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
 	for {
 		select {
 		case <-s.quitRdCh:
 			quitCh <- s
-			logger.Debug("Stream ReadLoop Terminated!")
+			logger.Debug("Stream: read loop is terminated!")
 			return
+		case msg := <- s.msgReadCh:
+			dm := s.parseData(msg)
+			dispatch<-newMsg(dm, s.peerID)
 		default:
-			s.read(rw, dh)
+			s.read(rw)
 		}
 	}
 }
@@ -176,21 +168,21 @@ func encodeMessage(data []byte) []byte {
 
 func constructHeader(data []byte) []byte {
 	length := len(data)
-	bytes := make([]byte, lengthByteLength)
+	msg := make([]byte, lengthByteLength)
 	lengthBytes := big.NewInt(int64(length)).Bytes()
-	lenDiff := len(bytes) - len(lengthBytes)
-	for i, b := range lengthBytes {
-		bytes[i+lenDiff] = b
+	lenDiff := len(msg) - len(lengthBytes)
+	for i, b := range lengthBytes{
+		msg[i + lenDiff] = b
 	}
-	ret := append(startBytes, bytes...)
+	ret := append(startBytes, msg...)
 	cs := checkSum(ret)
 	ret = append(ret, cs)
 	return ret
 }
 
-func checkSum(data []byte) byte {
+func checkSum(data []byte) byte{
 	sum := byte(0)
-	for _, d := range data {
+	for _, d := range data{
 		sum += d
 	}
 	return sum
@@ -203,36 +195,36 @@ func decodeMessage(data []byte) ([]byte, error) {
 	}
 
 	header := data[:headerLength]
-	if err := verifyHeader(header); err != nil {
+	if err := verifyHeader(header); err!=nil{
 		return nil, err
 	}
 
-	if len(data) != getLength(header)+headerLength {
+	if len(data) != getLength(header) + headerLength {
 		return nil, ErrFragmentedData
 	}
 
 	return data[headerLength:], nil
 }
 
-func verifyHeader(header []byte) error {
+func verifyHeader(header []byte) error{
 	if !containStartingBytes(header) {
 		return ErrInvalidMessageFormat
 	}
 
-	if len(header) != headerLength {
+	if len(header) != headerLength{
 		return ErrLengthTooShort
 	}
 
 	cs := checkSum(header[:headerLength-1])
 
-	if cs != header[headerLength-1] {
+	if cs!=header[headerLength-1] {
 		return ErrCheckSumIncorrect
 	}
 	return nil
 }
 
-func getLength(header []byte) int {
-	lengthByte := header[2 : 2+lengthByteLength]
+func getLength(header []byte) int{
+	lengthByte := header[2: 2+lengthByteLength]
 	l := *new(big.Int).SetBytes(lengthByte)
 	return int(l.Uint64())
 }
@@ -255,7 +247,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			rw.Flush()
 			mutex.Unlock()
 		case <-s.quitWrCh:
-			logger.Debug("Stream Write Terminated!")
+			logger.Debug("Stream: write loop is terminated!")
 			return nil
 		}
 	}
@@ -267,12 +259,11 @@ func (s *Stream) parseData(data []byte) *DapMsg {
 
 	dataDecoded, err := decodeMessage(data)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"error": err,
-			"data":  data,
-		}).Warn("Stream: Can not decode received message")
+		logger.WithError(err).WithFields(logger.Fields{
+			"data"	: data,
+			"length": len(data),
+		}).Warn("Stream: cannot decode the message.")
 		return nil
-	} else {
 	}
 
 	dmpb := &networkpb.Dapmsg{}

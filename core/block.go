@@ -23,16 +23,18 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
+	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -201,7 +203,27 @@ func (b *Block) ToProto() proto.Message {
 		Transactions: txArray,
 	}
 }
+func FromProtoBlockMsg(data []byte) *Block {
+	//create a block proto
+	blockpb := &corepb.Block{}
 
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(data, blockpb); err != nil {
+		logger.Warn(err)
+	}
+	if blockpb.Header == nil{
+		spew.Dump(blockpb)
+		spew.Dump(data)
+	}
+
+	//create an empty block
+	block := &Block{}
+
+	//load the block with proto
+	block.FromProto(blockpb)
+
+	return block
+}
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
@@ -230,7 +252,7 @@ func (bh *BlockHeader) ToProto() proto.Message {
 }
 
 func (bh *BlockHeader) FromProto(pb proto.Message) {
-	if pb==nil{
+	if pb == nil {
 		return
 	}
 	bh.hash = pb.(*corepb.BlockHeader).Hash
@@ -277,18 +299,18 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 
 func (b *Block) SignBlock(key string, data []byte) bool {
 	if len(key) <= 0 {
-		logger.Warn("Block: key length not enough for signature!")
+		logger.Warn("Block: the key is too short for signature!")
 		return false
 	}
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
-		logger.Warn("Block: private key decode error for signature!")
+		logger.Warn("Block: cannot decode private key for signature!")
 		return false
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
-		logger.Warnf("Block: signature calculation error!, %v\n", err.Error())
+		logger.WithError(err).Warn("Block: failed to calculate signature!")
 		return false
 	}
 
@@ -302,8 +324,9 @@ func (b *Block) VerifyHash() bool {
 
 func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager, parentBlk *Block) bool {
 	if len(b.GetTransactions()) == 0 {
-		logger.WithFields(logger.Fields{"blkHash": b.GetHash()}).
-			Debug("No transactions to verify in this block")
+		logger.WithFields(logger.Fields{
+			"hash": b.GetHash(),
+		}).Debug("Block: there is no transaction to verify in this block.")
 		return true
 	}
 
@@ -316,7 +339,7 @@ L:
 		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
 			if rewardTX != nil {
-				logger.Warn("Block contains more than 1 reward transaction")
+				logger.Warn("Block: contains more than 1 reward transaction.")
 				return false
 			}
 			rewardTX = tx
@@ -333,8 +356,9 @@ L:
 					continue L
 				}
 			}
-			logger.WithFields(logger.Fields{"tx": tx}).
-				Debug("The contract source of this generated tx is not in the same block")
+			logger.WithFields(logger.Fields{
+				"tx": tx,
+			}).Debug("Block: the contract source of this generated tx is not in the same block.")
 			// TODO: Execute the contract in source tx
 			//sourceTX, err := Blockchain{}.FindTransaction(contractSource)
 			//if err != nil || !sourceTX.IsContract() {
@@ -349,12 +373,12 @@ L:
 		if tx.IsContract() {
 			// Run the contract and collect generated transactions
 			if manager == nil {
-				logger.Warn("Smart contract cannot be verified")
-				logger.Debug("missing SCEngineManager")
+				logger.Warn("Block: smart contract cannot be verified.")
+				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(),parentBlk)
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			utxo.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {

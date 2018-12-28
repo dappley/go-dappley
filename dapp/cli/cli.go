@@ -766,7 +766,8 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		return
 	}
 
-	if core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
+	//Contract deployment transaction does not need to validate to address
+	if data == "" && core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
 		fmt.Println("the 'to' address is not valid!")
 		return
 	}
@@ -806,6 +807,10 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	}
 	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
 
+	if senderWallet == nil{
+		fmt.Println("ERROR: Send failed. ERR: Invalid Wallet Address.")
+		return
+	}
 	tx, err := core.NewUTXOTransaction(tx_utxos, core.NewAddress(*(flags[flagFromAddress].(*string))), core.NewAddress(*(flags[flagToAddress].(*string))),
 		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), data)
 
@@ -817,8 +822,12 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		fmt.Println("ERROR: Send failed. ERR:", err)
 		return
 	}
-	fmt.Println(response1)
-	fmt.Println(proto.MarshalTextString(response1))
+	if response1.ErrorCode != 0 {
+		fmt.Println("ERROR: Send failed. ERR:", response1.ErrorCode)
+		return
+	}
+
+	fmt.Println("Send transaction succeed!")
 }
 
 func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount) ([]*core.UTXO, error) {

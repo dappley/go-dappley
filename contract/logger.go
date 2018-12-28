@@ -30,7 +30,7 @@ func LoggerFunc(level C.uint, args **C.char, length C.int) {
 	if ok == false {
 		logger.WithFields(logger.Fields{
 			"level": uint32(level),
-		}).Info("Smart Contract")
+		}).Info("SmartContract: logger level is set.")
 		return
 	}
 	var temp *C.char

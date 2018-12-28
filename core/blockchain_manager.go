@@ -20,9 +20,10 @@ package core
 import (
 	"encoding/hex"
 
-	"github.com/dappley/go-dappley/common"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common"
 )
 
 type BlockChainManager struct {
@@ -54,40 +55,49 @@ func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
 	if !bm.blockPool.Verify(block) {
 		return false
 	}
+	logger.Debug("BlockChainManager: block is verified.")
 	if !(bm.blockchain.GetConsensus().Validate(block)) {
-		logger.Warn("BlockPool: The received block is invalid according to consensus!")
+		logger.Warn("BlockChainManager: block is invalid according to consensus!")
 		return false
 	}
-	logger.Debug("BlockPool: Block has been verified")
+	logger.Debug("BlockChainManager: block is valid according to consensus.")
 	return true
 }
+
 func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
+	logger.WithFields(logger.Fields{
+		"from":   pid.String(),
+		"hash":   hex.EncodeToString(block.GetHash()),
+		"height": block.GetHeight(),
+	}).Info("BlockChainManager: received a new block.")
+
 	if bm.blockchain.GetState() != BlockchainReady {
-		logger.Info("Blockchain not ready, discard received block")
+		logger.Info("BlockChainManager: Blockchain not ready, discard received block")
 		return
 	}
-
 	if !bm.VerifyBlock(block) {
 		return
 	}
-
 	tree, _ := common.NewTree(block.GetHash().String(), block)
-	logger.WithFields(logger.Fields{
-		"From": pid.String(),
-		"hash": hex.EncodeToString(block.GetHash()),
-	}).Info("BlockPool: Received a new block: ")
-	forkheadParentHash := bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
-	if forkheadParentHash == nil {
+	bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
+	forkHead := tree.GetRoot()
+	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
+	if forkHeadParentHash == nil {
 		return
 	}
-	if parent, _ := bm.blockchain.GetBlockByHash(forkheadParentHash); parent == nil {
-		bm.blockPool.requestPrevBlock(tree, pid)
+	parent, _ := bm.blockchain.GetBlockByHash(forkHeadParentHash)
+	if parent == nil {
+		logger.WithFields(logger.Fields{
+			"parent_hash":   forkHeadParentHash,
+			"parent_height": forkHead.GetValue().(*Block).GetHeight() - 1,
+		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain.")
+		bm.blockPool.requestPrevBlock(forkHead, pid)
 		return
 	}
-	forkBlks := bm.blockPool.GenerateForkBlocks(tree, bm.blockchain.GetMaxHeight())
+	forkBlks := bm.blockPool.GenerateForkBlocks(forkHead, bm.blockchain.GetMaxHeight())
 	bm.blockchain.SetState(BlockchainSync)
-	bm.MergeFork(forkBlks, forkheadParentHash)
-	bm.blockPool.CleanCache(tree)
+	_ = bm.MergeFork(forkBlks, forkHeadParentHash)
+	bm.blockPool.CleanCache(forkHead)
 	bm.blockchain.SetState(BlockchainReady)
 }
 
@@ -107,12 +117,12 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
 	if err != nil {
-		logger.Error("Corrupt blockchain, please delete DB file and resynchronize to the network")
+		logger.Error("BlockChainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if !bm.VerifyTransactions(*utxo, scState, forkBlks, parentBlk) {
-		logger.Error("MergeFork failed, transaction verify failed.")
+		logger.Error("BlockChainManager: Verify fork blocks transaction failed")
 		return ErrTransactionVerifyFailed
 	}
 
@@ -120,18 +130,17 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 
 	//add all blocks in fork from head to tail
 	bm.blockchain.addBlocksToTail(forkBlks)
-
 	return nil
 }
 
 //Verify all transactions in a fork
 func (bm *BlockChainManager) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScState, forkBlks []*Block, parentBlk *Block) bool {
-	logger.Info("Verifying transactions")
+	logger.Info("BlockChainManager: is verifying transactions...")
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
-		}).Debug("Verifying block before merge")
+		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
 		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, bm.blockchain.GetSCManager(), parentBlk) {
 			return false

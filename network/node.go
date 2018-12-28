@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/libp2p/go-libp2p-net"
 	"io/ioutil"
 	"math/rand"
 	"sync"
@@ -32,12 +33,10 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-host"
-	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
@@ -56,6 +55,11 @@ var (
 	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
 
+type streamMsg struct {
+	msg  *DapMsg
+	from peer.ID
+}
+
 type Node struct {
 	host                   host.Host
 	info                   *Peer
@@ -67,7 +71,12 @@ type Node struct {
 	recentlyRcvedDapMsgs   *sync.Map
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
+	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
+}
+
+func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
+	return &streamMsg{dapMsg, id}
 }
 
 //create new Node instance
@@ -86,6 +95,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		&sync.Map{},
 		&placeholder,
 		nil,
+		make(chan *streamMsg, 1000),
 		nil,
 	}
 	node.downloadManager = NewDownloadManager(node)
@@ -104,12 +114,13 @@ func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool(
 func (n *Node) GetPeerList() *PeerList               { return n.peerList }
 func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map   { return n.recentlyRcvedDapMsgs }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
+func (n *Node) GetStreams() map[peer.ID]*Stream      { return n.streams }
 
 func (n *Node) Start(listenPort int) error {
 
 	h, addr, err := createBasicHost(listenPort, n.privKey)
 	if err != nil {
-		logger.Error("Create basic host failed", err)
+		logger.WithError(err).Error("Node: failed to create basic host.")
 		return err
 	}
 
@@ -119,6 +130,7 @@ func (n *Node) Start(listenPort int) error {
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
+	n.StartListenLoop()
 	n.StartExitListener()
 	return err
 }
@@ -126,8 +138,7 @@ func (n *Node) Start(listenPort int) error {
 func (n *Node) StartExitListener() {
 	go func() {
 		for {
-			select {
-			case s := <-n.streamExitCh:
+			if s, ok := <-n.streamExitCh; ok {
 				n.DisconnectPeer(s.peerID, s.remoteAddr)
 			}
 		}
@@ -143,6 +154,17 @@ func (n *Node) StartRequestLoop() {
 				return
 			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
+			}
+		}
+	}()
+
+}
+
+func (n *Node) StartListenLoop() {
+	go func() {
+		for {
+			if streamMsg, ok := <-n.dispatch; ok {
+				n.handle(streamMsg.msg, streamMsg.from)
 			}
 		}
 	}()
@@ -183,7 +205,7 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	basicHost, err := libp2p.New(context.Background(), opts...)
 
 	if err != nil {
-		logger.Error("New p2p failed", err)
+		logger.WithError(err).Error("Failed to create a new libp2p node.")
 		return nil, nil, err
 	}
 
@@ -195,9 +217,21 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 	addr := basicHost.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
 	logger.WithFields(logger.Fields{
-		"Address": fullAddr,
-	}).Info("My Address")
+		"address": fullAddr,
+	}).Info("Host is up.")
 	return basicHost, fullAddr, nil
+}
+
+//AddStreamsByString adds streams by their full addresses
+func (n *Node) AddStreamsByString(targetFullAddrs []string) {
+	for _, fullAddr := range targetFullAddrs {
+		err := n.AddStreamByString(fullAddr)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"full_addr": fullAddr,
+			}).Warn("Node: not able to add stream")
+		}
+	}
 }
 
 func (n *Node) AddStreamByString(targetFullAddr string) error {
@@ -234,7 +268,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 		logger.WithFields(logger.Fields{
 			"host":   n.GetPeerMultiaddr().String(),
 			"target": targetAddr.String(),
-		}).Debug("Node: target already added!")
+		}).Debug("Node: target has already been added before!")
 		return ErrIsInPeerlist
 	}
 
@@ -250,7 +284,7 @@ func (n *Node) AddStream(peerid peer.ID, targetAddr ma.Multiaddr) error {
 
 	// Add the peer list
 	if n.peerList.ListIsFull() {
-		n.peerList.RemoveOneIP(&Peer{peerid, targetAddr})
+		n.peerList.RemoveRandomIP()
 	}
 	n.peerList.Add(&Peer{peerid, targetAddr})
 
@@ -265,55 +299,64 @@ func (n *Node) DisconnectPeer(peerid peer.ID, targetAddr ma.Multiaddr) {
 	}
 }
 
-func (n *Node) dispatch(msg *DapMsg, s *Stream) {
+func (n *Node) handle(msg *DapMsg, id peer.ID) {
 	switch msg.GetCmd() {
 	case GetBlockchainInfo:
-		n.GetBlockchainInfoHandler(msg, s.peerID)
+		n.GetBlockchainInfoHandler(msg, id)
 
 	case ReturnBlockchainInfo:
-		n.ReturnBlockchainInfoHandler(msg, s.peerID)
+		n.ReturnBlockchainInfoHandler(msg, id)
 
 	case SyncBlock:
-		n.SyncBlockHandler(msg, s.peerID)
+		n.SyncBlockHandler(msg, id)
 
 	case SyncPeerList:
 		n.AddMultiPeers(msg.GetData())
 
 	case RequestBlock:
-		n.SendRequestedBlock(msg.GetData(), s.peerID)
-
+		n.SendRequestedBlock(msg.GetData(), id)
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 
 	case GetBlocks:
-		n.GetBlocksHandler(msg, s.peerID)
+		n.GetBlocksHandler(msg, id)
 
 	case ReturnBlocks:
-		n.ReturnBlocksHandler(msg, s.peerID)
+		n.ReturnBlocksHandler(msg, id)
 
 	default:
-		logger.Debug("Received invalid command from:", s.peerID)
-
+		logger.WithFields(logger.Fields{
+			"from": id,
+		}).Debug("Node: received an invalid command.")
 	}
 }
 
 func (n *Node) streamHandler(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
-	logger.WithFields(logger.Fields{
-		"Host":   n.GetPeerID(),
-		"Target": s.Conn().RemotePeer(),
-	}).Info("Creating stream between: ")
 	peer := &Peer{s.Conn().RemotePeer(), s.Conn().RemoteMultiaddr()}
-	if !n.peerList.ListIsFull() && !n.peerList.IsInPeerlist(peer) {
-		n.peerList.Add(peer)
-		//start stream
-		ns := NewStream(s)
-		//add stream to this.streams
-		n.streams[s.Conn().RemotePeer()] = ns
-		ns.Start(n.streamExitCh, n.dispatch)
-
-		n.SyncPeersUnicast(peer.peerid)
+	if n.peerList.ListIsFull() {
+		logger.WithFields(logger.Fields{
+			"peers": len(n.peerList.GetPeerlist()),
+		}).Warn("Node: peer list is full.")
 	}
+	if n.peerList.IsInPeerlist(peer) {
+		logger.WithFields(logger.Fields{
+			"peer": s.Conn().RemotePeer(),
+		}).Warn("Node: peer is already in the peer list.")
+	}
+	logger.WithFields(logger.Fields{
+		"host":   n.GetPeerID(),
+		"target": s.Conn().RemotePeer(),
+	}).Info("Node: is creating a new stream.")
+
+	n.peerList.Add(peer)
+	//start stream
+	ns := NewStream(s)
+	//add stream to this.streams
+	n.streams[s.Conn().RemotePeer()] = ns
+	ns.Start(n.streamExitCh, n.dispatch)
+
+	n.SyncPeersUnicast(peer.peerid)
 }
 
 func (n *Node) GetInfo() *Peer { return n.info }
@@ -478,10 +521,6 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
-	if blockpb.Header == nil {
-		spew.Dump(blockpb)
-		spew.Dump(data)
-	}
 
 	//create an empty block
 	block := &core.Block{}
@@ -496,7 +535,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 	if len(dm.data) == 0 {
 		logger.WithFields(logger.Fields{
 			"cmd": "sync block",
-		}).Warn("No block information is found")
+		}).Warn("Node: cannot find block information.")
 		return
 	}
 
@@ -505,10 +544,8 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 			return
 		}
 		n.cacheDapMsg(*dm)
-
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)
-
 		if dm.uniOrBroadcast == Broadcast {
 			n.RelayDapMsg(*dm)
 		}
@@ -580,6 +617,9 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 
 	block, err := n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
 	for i := int32(0); i < maxGetBlocksNum && err == nil; i++ {
+		if block.GetHeight() == 0 {
+			logger.Panicf("Error %v", hex.EncodeToString(block.GetHash()))
+		}
 		blocks = append(blocks, block)
 		block, err = n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
 	}
@@ -624,6 +664,9 @@ func (n *Node) ReturnBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
+	if n.downloadManager != nil {
+		n.downloadManager.GetBlocksDataHandler(param, pid)
+	}
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {
@@ -703,7 +746,7 @@ func (n *Node) AddMultiPeers(data []byte) {
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
 	if err != nil {
-		logger.Warn("Unable to get block data. Block request failed")
+		logger.Warn("Node: failed to get the requested block from database.")
 		return
 	}
 	block := core.Deserialize(blockBytes)

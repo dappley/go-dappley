@@ -27,7 +27,7 @@ import (
 
 var (
 	// ErrAlgorithmInvalid invalid Algorithm for sign.
-	ErrAlgorithmInvalid = errors.New("invalid Algorithm")
+	ErrAlgorithmInvalid = errors.New("invalid algorithm")
 )
 
 // NewPrivateKey generate a privatekey with Algorithm

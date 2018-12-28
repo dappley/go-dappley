@@ -63,7 +63,7 @@ message SendRequest {
   string to = 2;
   bytes amount = 3;
   string Walletpath = 4;
-  uint64 tip = 5;
+  bytes tip = 5;
   string data = 6;
 }
 
@@ -97,6 +97,9 @@ message SendFromMinerResponse {
 
 message SendResponse {
   string message = 1;
+  int64 errorCode = 2;
+  string contractAddr = 3;
+  string txid = 4;
 }
 
 message GetPeerInfoResponse {

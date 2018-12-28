@@ -21,14 +21,16 @@ import (
 	"context"
 	"strings"
 
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/dappley/go-dappley/common"
 )
 
 const (
@@ -97,6 +99,8 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
+
 	publicKeyHash, err := core.NewAddress(in.Address).GetPubKeyHash()
 	if err == false {
 		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
@@ -206,7 +210,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 
 // RpcSendTransaction Send transaction to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
-	tx := core.Transaction{nil, nil, nil, 0}
+	tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 	tx.FromProto(in.Transaction)
 
 	if tx.IsCoinbase() {
@@ -223,6 +227,15 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 	rpcService.node.TxBroadcast(&tx)
 
+	contractAddr := tx.GetContractAddress()
+	message := ""
+	if contractAddr.String() != "" {
+		message = contractAddr.String()
+		logger.WithFields(logger.Fields{
+			"contractAddr": message,
+		}).Info("Smart Contract Deployed Successful!")
+	}
+
 	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
 }
 
@@ -232,7 +245,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 	for _, txInReq := range in.Transaction {
-		tx := core.Transaction{nil, nil, nil, 0}
+		tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 		tx.FromProto(txInReq)
 
 		if tx.IsCoinbase() {
@@ -263,7 +276,7 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
 		err := stream.Send(response)
 		if err != nil {
-			logger.Infof("Send transaction to client failed %v\n", err)
+			logger.WithError(err).Info("RPCService: failed to send transaction to client.")
 			rpcService.node.GetBlockchain().GetTxPool().EventBus.Unsubscribe(core.NewTransactionTopic, txHandler)
 			quitCh <- true
 		}

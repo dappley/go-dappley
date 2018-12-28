@@ -21,8 +21,9 @@ package consensus
 import (
 	"errors"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 type Dynasty struct {
@@ -108,10 +109,10 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
-		logger.Debug("Current Producers:")
-		for _, producerIt := range dynasty.producers {
-			logger.Debug(producerIt)
-		}
+		logger.WithFields(logger.Fields{
+			"producer": producer,
+			"list":     dynasty.producers,
+		}).Debug("Dynasty: added a producer to list.")
 		return nil
 	}
 	if !IsProducerAddressValid(producer) {

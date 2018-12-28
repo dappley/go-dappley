@@ -126,7 +126,10 @@ func (ks *Keystore) Lock(alias string) error {
 }
 
 func (ks *Keystore) expire(alias string) {
-	if u, ok := ks.unlocked[alias]; ok == true {
+	ks.mu.Lock()
+	u, ok := ks.unlocked[alias]
+	ks.mu.Unlock()
+	if ok == true {
 		defer u.timer.Stop()
 		select {
 		case <-u.timer.C:

@@ -44,15 +44,15 @@ func TestLevelDB_PutAndGet(t *testing.T) {
 
 	val, err := ldb.Get([]byte("a"))
 	assert.Nil(t, err)
-	assert.Equal(t, val, []byte("1"))
+	assert.Equal(t, []byte("1"), val)
 
 	val, err = ldb.Get([]byte("b"))
 	assert.Nil(t, err)
-	assert.Equal(t, val, []byte("2"))
+	assert.Equal(t, []byte("2"), val)
 
 	val, err = ldb.Get([]byte("c"))
 	assert.Nil(t, err)
-	assert.Equal(t, val, []byte("3"))
+	assert.Equal(t, []byte("3"), val)
 
 	//modify value and compare
 	err = ldb.Put([]byte("c"), []byte("5"))
@@ -60,7 +60,7 @@ func TestLevelDB_PutAndGet(t *testing.T) {
 
 	val, err = ldb.Get([]byte("c"))
 	assert.Nil(t, err)
-	assert.Equal(t, val, []byte("5"))
+	assert.Equal(t, []byte("5"), val)
 
 	err = ldb.Close()
 	assert.Nil(t, err)
@@ -78,7 +78,7 @@ func TestLevelDB_Close(t *testing.T) {
 	//Currently we should be able to read it
 	val, err := ldb.Get([]byte("a"))
 	assert.Nil(t, err)
-	assert.Equal(t, val, []byte("1"))
+	assert.Equal(t, []byte("1"), val)
 
 	//Close the database
 	err = ldb.Close()

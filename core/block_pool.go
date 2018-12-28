@@ -21,10 +21,11 @@ package core
 import (
 	"encoding/hex"
 
-	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common"
 )
 
 const BlockPoolMaxSize = 100
@@ -67,7 +68,7 @@ func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 func (pool *BlockPool) Verify(block *Block) bool {
 	logger.Info("BlockPool: Has received a new block")
 	if !block.VerifyHash() {
-		logger.Warn("BlockPool: The received block cannot pass hash verification!")
+		logger.Warn("BlockPool: received block cannot pass hash verification!")
 		return false
 	}
 	//TODO: Verify double spending transactions in the same block
@@ -75,21 +76,18 @@ func (pool *BlockPool) Verify(block *Block) bool {
 	return true
 }
 
-func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) Hash {
+// CacheBlock cache the tree, update the cache and return the fork head
+func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) {
 	blkCache := pool.blkCache
 
 	if blkCache.Contains(tree.GetValue().(*Block).GetHash().String()) {
-		return nil
+		return
 	}
 	if !pool.isChildBlockInCache(tree.GetValue().(*Block).GetHash().String()) && tree.GetValue().(*Block).GetHeight() <= maxHeight {
-		return nil
+		return
 	}
 	blkCache.Add(tree.GetValue().(*Block).GetHash().String(), tree)
 	pool.updateBlkCache(tree)
-
-	forkheadParentHash := tree.GetValue().(*Block).GetPrevHash()
-	return forkheadParentHash
-
 }
 func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) []*Block {
 	_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
@@ -104,10 +102,16 @@ func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) [
 }
 
 func (pool *BlockPool) CleanCache(tree *common.Tree) {
+	_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
+	trees := forkTailTree.GetParentTreesRange(tree)
+	forkBlks := getBlocksFromTrees(trees)
+	for _, forkBlk := range forkBlks {
+		pool.blkCache.Remove(forkBlk.GetHash().String())
+	}
+
 	tree.Delete()
-	logger.WithFields(logger.Fields{
-		"syncstate": 0,
-	}).Debug("Merge finished or exited, setting syncstate to false")
+	logger.Debug("BlockPool: merge finished or exited, setting syncstate to false.")
+
 }
 
 func getBlocksFromTrees(trees []*common.Tree) []*Block {
@@ -118,6 +122,7 @@ func getBlocksFromTrees(trees []*common.Tree) []*Block {
 	return blocks
 }
 
+// updateBlkCache updates parent and children of the tree
 func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	blkCache := pool.blkCache
 	// try to link child
@@ -125,30 +130,43 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 		if cachedBlk, ok := blkCache.Get(key); ok {
 			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).GetHash().String() {
 				logger.WithFields(logger.Fields{
-					"treeheight":     tree.GetValue().(*Block).GetHeight(),
-					"cacheblkHeight": cachedBlk.(*common.Tree).GetValue().(*Block).GetHeight(),
-				}).Info("child added")
+					"tree_height":  tree.GetValue().(*Block).GetHeight(),
+					"child_height": cachedBlk.(*common.Tree).GetValue().(*Block).GetHeight(),
+				}).Info("BlockPool: added a child block to the tree.")
 				tree.AddChild(cachedBlk.(*common.Tree))
 			}
 		}
 	}
 
 	//try to link parent
-	if parent, ok := blkCache.Get(string(tree.GetValue().(*Block).GetPrevHash())); ok == true {
-		tree.AddParent(parent.(*common.Tree))
+	if parent, ok := blkCache.Get(tree.GetValue().(*Block).GetPrevHash().String()); ok == true {
+		err := tree.AddParent(parent.(*common.Tree))
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"tree_height":   tree.GetValue().(*Block).GetHeight(),
+				"parent_height": parent.(*common.Tree).GetValue().(*Block).GetHeight(),
+				"parent_hash":   parent.(*common.Tree).GetValue().(*Block).GetHash(),
+			}).Error("BlockPool: failed to add a parent block to the tree.")
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"tree_height":   tree.GetValue().(*Block).GetHeight(),
+			"parent_height": parent.(*common.Tree).GetValue().(*Block).GetHeight(),
+		}).Info("BlockPool: added a parent block to the tree.")
 	}
+
 	logger.WithFields(logger.Fields{
 		"height": tree.GetValue().(*Block).GetHeight(),
 		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
-	}).Debug("BlockPool: Finished updating BlockPoolCache")
+	}).Debug("BlockPool: finished updating BlockPoolCache.")
 }
 
 func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
 	logger.WithFields(logger.Fields{
-		"requestedHash": hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
-		"height":        tree.GetValue().(*Block).GetHeight() - 1,
-		"from":          sender,
-	}).Info("BlockPool: Parent not found, requesting block")
+		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
+		"height": tree.GetValue().(*Block).GetHeight() - 1,
+		"from":   sender,
+	}).Info("BlockPool: is requesting a block.")
 	pool.blockRequestCh <- BlockRequestPars{tree.GetValue().(*Block).GetPrevHash(), sender}
 }
 

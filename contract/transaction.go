@@ -19,29 +19,29 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 
 	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr": addr,
-		}).Debug("Smart Contract: Failed to get V8 engine!")
+			"contract_address": addr,
+		}).Debug("SmartContract: failed to get V8 engine!")
 		return
 	}
 
 	if context == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr": addr,
-		}).Debug("Smart Contract: Invalid get transaction params!")
+			"contract_address": addr,
+		}).Debug("SmartContract: get transaction params are invalid!")
 		return
 	}
 
 	if engine.tx == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr": addr,
-		}).Debug("Smart contract: Failed to get transaction in v8 engine")
+			"contract_address": addr,
+		}).Debug("SmartContract: failed to get transaction in V8 engine.")
 		return
 	}
 
 	tx := C.struct_transaction_t{}
 	tx.id = C.CString(hex.EncodeToString(engine.tx.ID))
 	defer C.free(unsafe.Pointer(tx.id))
-	tx.tip = C.ulonglong(engine.tx.Tip)
+	tx.tip = C.ulonglong(engine.tx.Tip.Int64())
 
 	tx.vin_length = C.int(len(engine.tx.Vin))
 	vinAddr := (*C.struct_transaction_vin_t)(C.malloc(C.size_t(C.sizeof_struct_transaction_vin_t * tx.vin_length)))

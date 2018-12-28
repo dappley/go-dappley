@@ -21,10 +21,11 @@ package core
 import (
 	"bytes"
 
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 type TXOutput struct {
@@ -65,9 +66,8 @@ func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) boo
 
 	amount, err := common.NewAmountFromString(val)
 	if err != nil {
-		logger.WithFields(logger.Fields{
+		logger.WithError(err).WithFields(logger.Fields{
 			"reward": val,
-			"error":  err,
 		}).Warn("TXOutput: Reward amount is in invalid format.")
 		return false
 	}
