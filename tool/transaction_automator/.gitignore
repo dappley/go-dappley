@@ -5,3 +5,4 @@ bin
 pid/*.pid
 *.log
 contract/contractAddr
+log/*

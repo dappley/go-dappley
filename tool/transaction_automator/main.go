@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -85,11 +86,32 @@ func main() {
 					"height"	:currHeight,
 				}).Info("New Block Height")
 				verifyTransactions(blk.Transactions)
+				recordTransactions(blk.Transactions)
 			} else {
 				sendRandomTransactions(adminClient, addresses)
 			}
 		}
 	}
+}
+
+func recordTransactions(txs []*corepb.Transaction){
+	f, err := os.OpenFile("log/tx.csv", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err!=nil {
+		logger.Panic("Open file failed while recording transactions")
+	}
+	w := csv.NewWriter(f)
+	for _, tx := range txs{
+		vinStr := ""
+		for _,vin := range tx.Vin{
+			vinStr += hex.EncodeToString(vin.Txid) + ":" + fmt.Sprint(vin.Vout) + ",\n"
+		}
+		voutStr := ""
+		for _,vout := range tx.Vout{
+			voutStr += core.PubKeyHash{vout.PubKeyHash}.GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
+		}
+		w.Write([]string{hex.EncodeToString(tx.ID), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
+	}
+	w.Flush()
 }
 
 func getSmartContractAddr() string{
