@@ -21,8 +21,7 @@ package secp256k1
 import (
 	"github.com/dappley/go-dappley/crypto/keystore"
 	"github.com/dappley/go-dappley/crypto/utils"
-
-	"log"
+	logger "github.com/sirupsen/logrus"
 )
 
 // PrivateKey ecdsa privatekey
@@ -66,7 +65,7 @@ func (k *PrivateKey) Clear() {
 func (k *PrivateKey) PublicKey() keystore.PublicKey {
 	pub, err := GetPublicKey(k.seckey)
 	if err != nil {
-		log.Panic(err)
+		logger.Panic(err)
 		return nil
 	}
 	return NewPublicKey(pub)

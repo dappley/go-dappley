@@ -27,7 +27,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
@@ -35,6 +34,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
+	logger "github.com/sirupsen/logrus"
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -902,7 +902,7 @@ func initRpcClient(port int) *grpc.ClientConn {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(fmt.Sprint(":", port), grpc.WithInsecure())
 	if err != nil {
-		log.Panic("ERROR: Not able to connect to RPC server. ERR:", err)
+		logger.Panic("ERROR: Not able to connect to RPC server. ERR:", err)
 	}
 	return conn
 }

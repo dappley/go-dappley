@@ -26,7 +26,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -719,7 +718,7 @@ func initRpcClient(port int) *grpc.ClientConn {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(fmt.Sprint(":", port), grpc.WithInsecure())
 	if err != nil {
-		log.Panic("ERROR: Not able to connect to RPC server. ERR:", err)
+		logger.Panic("ERROR: Not able to connect to RPC server. ERR:", err)
 	}
 	return conn
 }
