@@ -849,6 +849,62 @@ func TestGetNewTransactions(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
+func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
+	rpcContext, err := createRpcTestContext(12)
+	if err != nil {
+			panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+			panic(err)
+	}
+
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+			panic(err)
+	}
+	c1 := rpcpb.NewRpcServiceClient(conn1)
+
+	// generate new transaction
+	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
+	utxos, err := core.LoadUTXOIndex(rpcContext.store).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	assert.Nil(t, err)
+
+	transaction, err := core.NewUTXOTransaction(utxos,
+			rpcContext.wallet.GetAddress(),
+			receiverWallet.GetAddress(),
+			common.NewAmount(6),
+			rpcContext.wallet.GetKeyPair(),
+			common.NewAmount(0),
+			"",
+	)
+	// put a tx into txpool
+	c1.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+	// get a tx from txpool
+	result, err := c1.RpcGetAllTransactionsFromTxPool(ctx, &rpcpb.GetAllTransactionsRequest{})
+	if err != nil {
+		return
+}
+// assert result
+assert.Equal(t, uint32(0), result.ErrorCode)
+assert.Equal(t, 1, len(result.Transactions))
+
+rpcContext.consensus.Stop()
+core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+}, 20)
+time.Sleep(time.Second)
+
+}
+
 func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()
