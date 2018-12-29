@@ -239,7 +239,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 	startBlockHeight := downloadManager.node.GetBlockchain().GetMaxHeight()
 
 	var hashes []core.Hash
-	for i := producerNum; i > 0 && startBlockHeight-uint64(i) > 0; i-- {
+	for i := 0; i < producerNum && startBlockHeight-uint64(i) > 0; i++ {
 		block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(startBlockHeight - uint64(i))
 		if err != nil {
 			break
