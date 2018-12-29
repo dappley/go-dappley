@@ -103,9 +103,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	if err != nil {
 		return &rpcpb.SendFromMinerResponse{Message: "Add balance failed, " + err.Error()}, nil
 	}
-	sendFromMinerResponse := rpcpb.SendFromMinerResponse{}
-	sendFromMinerResponse.Message = "Add balance succeed!"
-	return &sendFromMinerResponse, nil
+	return &rpcpb.SendFromMinerResponse{Message: "Add balance succeed!"}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -117,8 +115,8 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
 	}
-	path := in.Walletpath
-	if len(in.Walletpath) == 0 {
+	path := in.WalletPath
+	if len(in.WalletPath) == 0 {
 		path = client.GetWalletFilePath()
 	}
 
@@ -138,7 +136,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		return &rpcpb.SendResponse{Message: "Send transaction failed", Txid: txhashStr}, err
 	}
 
-	resp := &rpcpb.SendResponse{Message: "Send transaction Successful", Txid:txhashStr}
+	resp := &rpcpb.SendResponse{Message: "Send transaction Successful", Txid: txhashStr}
 	if scAddress != "" {
 		resp.ContractAddr = scAddress
 	}

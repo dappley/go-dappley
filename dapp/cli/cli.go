@@ -31,6 +31,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -42,9 +46,6 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 //command names
@@ -74,7 +75,7 @@ const (
 	flagFromAddress      = "from"
 	flagAmount           = "amount"
 	flagData             = "data"
-	flagFilePath		 = "file"
+	flagFilePath         = "file"
 	flagPeerFullAddr     = "peerFullAddr"
 	flagProducerAddr     = "address"
 	flagListPrivateKey   = "privateKey"
@@ -329,8 +330,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		return
 	}
 
-	getBlocksRequest := &rpcpb.GetBlocksRequest{}
-	getBlocksRequest.MaxCount = maxCount
+	getBlocksRequest := &rpcpb.GetBlocksRequest{MaxCount: maxCount}
 
 	// set startBlockHashes of getBlocksRequest if specified in flag
 	startBlockHashesString := string(*(flags[flagStartBlockHashes].(*string)))
@@ -752,9 +752,9 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	path := *(flags[flagFilePath].(*string))
 	if path == "" {
 		data = *(flags[flagData].(*string))
-	}else{
-		script,err := ioutil.ReadFile(path)
-		if err!=nil{
+	} else {
+		script, err := ioutil.ReadFile(path)
+		if err != nil {
 			fmt.Println("Smart contract path is invalid. Path:", path)
 			return
 		}
@@ -807,16 +807,15 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	}
 	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
 
-	if senderWallet == nil{
+	if senderWallet == nil {
 		fmt.Println("ERROR: Send failed. ERR: Invalid Wallet Address.")
 		return
 	}
 	tx, err := core.NewUTXOTransaction(tx_utxos, core.NewAddress(*(flags[flagFromAddress].(*string))), core.NewAddress(*(flags[flagToAddress].(*string))),
 		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), data)
 
-	sendTransactionRequest := rpcpb.SendTransactionRequest{}
-	sendTransactionRequest.Transaction = tx.ToProto().(*corepb.Transaction)
-	response1, err := client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, &sendTransactionRequest)
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	response1, err := client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)

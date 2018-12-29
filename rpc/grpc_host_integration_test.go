@@ -26,6 +26,11 @@ import (
 	"testing"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -36,10 +41,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 type RpcTestContext struct {
@@ -135,7 +136,7 @@ func TestRpcSend(t *testing.T) {
 		From:       senderWallet.GetAddress().String(),
 		To:         receiverWallet.GetAddress().String(),
 		Amount:     common.NewAmount(7).Bytes(),
-		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		WalletPath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        common.NewAmount(2).Bytes(),
 		Data:       "",
 	})
@@ -221,7 +222,7 @@ func TestRpcSendContract(t *testing.T) {
 		From:       senderWallet.GetAddress().String(),
 		To:         "",
 		Amount:     common.NewAmount(7).Bytes(),
-		Walletpath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		WalletPath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        common.NewAmount(2).Bytes(),
 		Data:       contract,
 	})

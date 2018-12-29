@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/dappley/go-dappley/core/pb"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -20,6 +19,7 @@ import (
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
 )
@@ -32,17 +32,17 @@ var (
 	sendInterval         = time.Duration(1000) //ms
 	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
-	sentTxs				 = make(map[string]string)
+	sentTxs              = make(map[string]string)
 	smartContractAddr    = ""
 	smartContractCounter = 0
 	isContractDeployed   = false
 )
 
-const(
-	smartContractSendFreq   = 13
-	contractAddrFilePath 	= "contract/contractAddr"
-	contractFilePath		= "contract/test_contract.js"
-	contractFunctionCall    = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+const (
+	smartContractSendFreq = 13
+	contractAddrFilePath  = "contract/contractAddr"
+	contractFilePath      = "contract/test_contract.js"
+	contractFunctionCall  = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 )
 
 func main() {
@@ -83,7 +83,7 @@ func main() {
 				currHeight = height
 				blk := getTailBlock(rpcClient, currHeight)
 				logger.WithFields(logger.Fields{
-					"height"	:currHeight,
+					"height": currHeight,
 				}).Info("New Block Height")
 				verifyTransactions(blk.Transactions)
 				recordTransactions(blk.Transactions)
@@ -94,19 +94,19 @@ func main() {
 	}
 }
 
-func recordTransactions(txs []*corepb.Transaction){
+func recordTransactions(txs []*corepb.Transaction) {
 	f, err := os.OpenFile("log/tx.csv", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err!=nil {
+	if err != nil {
 		logger.Panic("Open file failed while recording transactions")
 	}
 	w := csv.NewWriter(f)
-	for _, tx := range txs{
+	for _, tx := range txs {
 		vinStr := ""
-		for _,vin := range tx.Vin{
+		for _, vin := range tx.Vin {
 			vinStr += hex.EncodeToString(vin.Txid) + ":" + fmt.Sprint(vin.Vout) + ",\n"
 		}
 		voutStr := ""
-		for _,vout := range tx.Vout{
+		for _, vout := range tx.Vout {
 			voutStr += core.PubKeyHash{vout.PubKeyHash}.GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
 		}
 		w.Write([]string{hex.EncodeToString(tx.ID), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
@@ -114,22 +114,22 @@ func recordTransactions(txs []*corepb.Transaction){
 	w.Flush()
 }
 
-func getSmartContractAddr() string{
+func getSmartContractAddr() string {
 	bytes, err := ioutil.ReadFile(contractAddrFilePath)
-	if err!=nil{
+	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"file_path" :contractAddrFilePath,
+			"file_path": contractAddrFilePath,
 		}).Panic("Unable to read file!")
 	}
 	return string(bytes)
 }
 
-func recordSmartContractAddr(addr string){
+func recordSmartContractAddr(addr string) {
 	err := ioutil.WriteFile(contractAddrFilePath, []byte(addr), os.FileMode(777))
-	if err!=nil{
+	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"file_path" 	:contractAddrFilePath,
-			"contract_addr"	:addr,
+			"file_path":     contractAddrFilePath,
+			"contract_addr": addr,
 		}).Panic("Unable to record smart contract address!")
 	}
 }
@@ -137,56 +137,56 @@ func recordSmartContractAddr(addr string){
 func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) {
 
 	smartContractAddr = getSmartContractAddr()
-	if smartContractAddr != ""{
+	if smartContractAddr != "" {
 		logger.WithFields(logger.Fields{
-			"contractAddr"	: smartContractAddr,
+			"contractAddr": smartContractAddr,
 		}).Info("Smart contract has already been deployed. If you are sure it is not deployed, empty the file:", contractAddrFilePath)
 		isContractDeployed = true
 		return
 	}
 
-	data,err := ioutil.ReadFile(contractFilePath)
-	if err!=nil{
+	data, err := ioutil.ReadFile(contractFilePath)
+	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"file_path" : contractFilePath,
+			"file_path": contractFilePath,
 		}).Panic("Unable to read smart contract file!")
 	}
 
 	contract := string(data)
 	resp, err := sendTransaction(serviceClient, from, "", 1, contract)
 	smartContractAddr = resp.ContractAddr
-	if err!=nil{
+	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"file_path" 	: contractFilePath,
-			"contract_addr"	: smartContractAddr,
+			"file_path":     contractFilePath,
+			"contract_addr": smartContractAddr,
 		}).Panic("Deploy smart contract failed!")
 	}
 
 	recordSmartContractAddr(smartContractAddr)
 
 	logger.WithFields(logger.Fields{
-		"contract_addr" : smartContractAddr,
+		"contract_addr": smartContractAddr,
 	}).Info("Smart contract has been deployed")
 }
 
-func getTailBlock(serviceClient rpcpb.RpcServiceClient, blkHeight uint64) *corepb.Block{
-	resp, _ := serviceClient.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height:blkHeight})
+func getTailBlock(serviceClient rpcpb.RpcServiceClient, blkHeight uint64) *corepb.Block {
+	resp, _ := serviceClient.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: blkHeight})
 	return resp.Block
 }
 
-func verifyTransactions(txs []*corepb.Transaction){
+func verifyTransactions(txs []*corepb.Transaction) {
 	logger.WithFields(logger.Fields{
-		"num_of_tx"	: len(txs),
+		"num_of_tx": len(txs),
 	}).Info("Transactions mined in previous block.")
 	logger.WithFields(logger.Fields{
-		"num_of_tx"	: len(sentTxs),
+		"num_of_tx": len(sentTxs),
 	}).Info("Transactions recorded")
-	for _, tx := range txs{
+	for _, tx := range txs {
 		delete(sentTxs, hex.EncodeToString(tx.ID))
 	}
-	for txid, _ := range sentTxs{
+	for txid, _ := range sentTxs {
 		logger.WithFields(logger.Fields{
-			"txid"	: txid,
+			"txid": txid,
 		}).Warn("Transaction is not found in previous block!")
 	}
 }
@@ -225,7 +225,7 @@ func createWallet() []core.Address {
 func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, fundAddr string) {
 	logger.Info("Requesting fund from miner...")
 
-	if fundAddr == ""{
+	if fundAddr == "" {
 		logger.Panic("There is no wallet to receive fund.")
 	}
 
@@ -236,8 +236,8 @@ func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServ
 		return
 	}
 	logger.WithFields(logger.Fields{
-		"address":    fundAddr,
-		"balance":    bal,
+		"address":     fundAddr,
+		"balance":     bal,
 		"target_fund": initialAmount,
 	}).Info("Current wallet balance is insufficient. Waiting for more funds...")
 	waitTilInitialAmountIsSufficient(adminClient, rpcClient, fundAddr)
@@ -306,7 +306,7 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 	toAddr := addresses[toIndex].String()
 	sendAmount := calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
 
-	if IsTheTurnToSendSmartContractTransaction() && isContractDeployed{
+	if IsTheTurnToSendSmartContractTransaction() && isContractDeployed {
 		data = contractFunctionCall
 		toAddr = smartContractAddr
 	}
@@ -319,8 +319,8 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 		"amount":           sendAmount,
 		"sender_balance":   currBalance[addresses[fromIndex].String()],
 		"receiver_balance": currBalance[addresses[toIndex].String()],
-		"txid":				"",
-		"data":				data,
+		"txid":             "",
+		"data":             data,
 	})
 	if err != nil {
 		sendTXLogger.WithError(err).Panic("Failed to send transaction!")
@@ -331,9 +331,9 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 	sendTXLogger.Info("Transaction is sent!")
 }
 
-func IsTheTurnToSendSmartContractTransaction() bool{
+func IsTheTurnToSendSmartContractTransaction() bool {
 	smartContractCounter += 1
-	return smartContractCounter % smartContractSendFreq == 0
+	return smartContractCounter%smartContractSendFreq == 0
 }
 
 func calcSendAmount(from, to string) uint64 {
@@ -371,7 +371,7 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		To:         to,
 		Amount:     common.NewAmount(amount).Bytes(),
 		Tip:        common.NewAmount(0).Bytes(),
-		Walletpath: client.GetWalletFilePath(),
+		WalletPath: client.GetWalletFilePath(),
 		Data:       data,
 	})
 	if err != nil {
@@ -395,7 +395,7 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address,
 			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
 		}
 		balanceLogger.Info("Displaying wallet balance...")
-		if update{
+		if update {
 			currBalance[addr.String()] = uint64(amount)
 		}
 	}

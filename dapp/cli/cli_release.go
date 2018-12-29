@@ -23,26 +23,27 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	"errors"
+	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	"github.com/dappley/go-dappley/core/pb"
 )
 
 //command names
@@ -283,8 +284,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		return
 	}
 
-	getBlocksRequest := &rpcpb.GetBlocksRequest{}
-	getBlocksRequest.MaxCount = maxCount
+	getBlocksRequest := &rpcpb.GetBlocksRequest{MaxCount: maxCount}
 
 	// set startBlockHashes of getBlocksRequest if specified in flag
 	startBlockHashesString := string(*(flags[flagStartBlockHashes].(*string)))
@@ -621,13 +621,11 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	}
 	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
 
-
 	tx, err := core.NewUTXOTransaction(tx_utxos, core.NewAddress(*(flags[flagFromAddress].(*string))), core.NewAddress(*(flags[flagToAddress].(*string))),
 		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), *senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), *(flags[flagContract].(*string)))
 
-	sendTransactionRequest := rpcpb.SendTransactionRequest{}
-	sendTransactionRequest.Transaction = tx.ToProto().(*corepb.Transaction)
-	response1, err := client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, &sendTransactionRequest)
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	response1, err := client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
 		fmt.Println("ERROR: Send failed. ERR:", err)
