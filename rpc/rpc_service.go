@@ -279,3 +279,13 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 }
 
 func (rpcService *RpcService) IsPrivate() bool { return false }
+
+// RpcGetAllTransactionsFromTxPool get all tractions from traction pool
+func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Context, in *rpcpb.GetAllTransactionsRequest) (*rpcpb.GetAllTransactionsResponse, error) {
+	txs := rpcService.node.GetBlockchain().GetTxPool().GetTransactions()
+	result := &rpcpb.GetAllTransactionsResponse{ErrorCode: OK}
+	for _, tx := range txs {
+			result.Transaction = append(result.Transaction, tx.ToProto().(*corepb.Transaction))
+	}
+	return result, nil
+}

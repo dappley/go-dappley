@@ -17,6 +17,7 @@ service RpcService {
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
   rpc RpcSendBatchTransaction(SendBatchTransactionRequest) returns (SendBatchTransactionResponse) {}
   rpc RpcGetNewTransactions(GetNewTransactionsRequest) returns (stream GetNewTransactionsResponse) {}
+  rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
 }
 
 service AdminService{
@@ -182,4 +183,12 @@ message SendBatchTransactionResponse {
 
 message GetNewTransactionsResponse {
   corepb.Transaction transaction = 1;
+}
+
+message GetAllTransactionsRequest{
+
+}
+message GetAllTransactionsResponse{
+  uint32 errorCode = 1;
+  repeated corepb.Transaction transaction = 2;
 }
