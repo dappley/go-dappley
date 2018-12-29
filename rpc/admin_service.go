@@ -20,7 +20,6 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -36,7 +35,7 @@ type AdminRpcService struct {
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	status := "success"
+	status := "succeed"
 	err := adminRpcService.node.AddStreamByString(in.FullAddress)
 	if err != nil {
 		status = err.Error()
@@ -49,17 +48,17 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
 	if len(in.Address) == 0 {
 		return &rpcpb.AddProducerResponse{
-			Message: "Error: Address is empty!",
-		}, nil
+			Message: "address is empty",
+		}, core.ErrInvalidAddress
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
-	if err == nil {
+	if err != nil {
 		return &rpcpb.AddProducerResponse{
-			Message: "Add producer sucessfully!",
-		}, nil
+			Message: "failed to add producer: " + err.Error(),
+		}, err
 	}
 	return &rpcpb.AddProducerResponse{
-		Message: "Error: Add producer failed! " + err.Error(),
+		Message: "producer is added",
 	}, nil
 }
 
@@ -82,14 +81,14 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendFromMinerResponse{Message: "Invalid send amount (must be >0)"}, nil
+		return &rpcpb.SendFromMinerResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
 	}
 
 	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	if err != nil {
-		return &rpcpb.SendFromMinerResponse{Message: "Add balance failed, " + err.Error()}, nil
+		return &rpcpb.SendFromMinerResponse{Message: "failed to add balance: " + err.Error()}, err
 	}
-	return &rpcpb.SendFromMinerResponse{Message: "Add balance succeed!"}, nil
+	return &rpcpb.SendFromMinerResponse{Message: "succeed"}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -99,7 +98,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	tip := common.NewAmountFromBytes(in.Tip)
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
+		return &rpcpb.SendResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
 	}
 	path := in.WalletPath
 	if len(in.WalletPath) == 0 {
@@ -108,21 +107,21 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	wm, err := logic.GetWalletManager(path)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
+		return &rpcpb.SendResponse{Message: "error loading local wallets"}, err
 	}
 
 	senderWallet := wm.GetWalletByAddress(sendFromAddress)
 	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
-		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
+		return &rpcpb.SendResponse{Message: "sender wallet is not found"}, client.ErrAddressNotFound
 	}
 
 	txhash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Send transaction failed", Txid: txhashStr}, err
+		return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, err
 	}
 
-	resp := &rpcpb.SendResponse{Message: "Send transaction Successful", Txid: txhashStr}
+	resp := &rpcpb.SendResponse{Message: "succeed", Txid: txhashStr}
 	if scAddress != "" {
 		resp.ContractAddr = scAddress
 	}
