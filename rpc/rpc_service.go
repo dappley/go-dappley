@@ -285,7 +285,7 @@ func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Contex
 	txs := rpcService.node.GetBlockchain().GetTxPool().GetTransactions()
 	result := &rpcpb.GetAllTransactionsResponse{ErrorCode: OK}
 	for _, tx := range txs {
-			result.Transaction = append(result.Transaction, tx.ToProto().(*corepb.Transaction))
+			result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
 	}
 	return result, nil
 }

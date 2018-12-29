@@ -190,5 +190,5 @@ message GetAllTransactionsRequest{
 }
 message GetAllTransactionsResponse{
   uint32 errorCode = 1;
-  repeated corepb.Transaction transaction = 2;
+  repeated corepb.Transaction transactions = 2;
 }

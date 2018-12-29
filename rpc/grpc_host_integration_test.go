@@ -895,7 +895,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 }
 // assert result
 assert.Equal(t, uint32(0), result.ErrorCode)
-assert.Equal(t, 1, len(result.Transaction))
+assert.Equal(t, 1, len(result.Transactions))
 
 rpcContext.consensus.Stop()
 core.WaitDoneOrTimeout(func() bool {
