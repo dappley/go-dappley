@@ -451,10 +451,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		return
 	}
 
-	getBalanceRequest := rpcpb.GetBalanceRequest{}
-	getBalanceRequest.Name = "getBalance"
-	getBalanceRequest.Address = address
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &getBalanceRequest)
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &rpcpb.GetBalanceRequest{Address: address})
 	if err != nil {
 		if strings.Contains(err.Error(), "connection error") {
 			fmt.Println("Error: Get balance failed. The server is not reachable!")
@@ -512,9 +509,7 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 			fmt.Printf("Create Wallet, the address is %s\n", wallet.GetAddress().Address)
 		}
 		//unlock the wallet
-		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
-			Name: "unlock",
-		})
+		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{})
 
 		if err != nil {
 			fmt.Printf("Error: Unlock Wallet Failed. %v \n", err.Error())
@@ -577,9 +572,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 			return
 		}
 		//unlock the wallet
-		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{
-			Name: "unlock",
-		})
+		client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{})
 		if !listPriv {
 			if len(addressList) == 0 {
 				fmt.Println("The addresses in the wallet is empty!")
@@ -736,7 +729,6 @@ func cliaddProducerCommandHandler(ctx context.Context, client interface{}, flags
 	}
 
 	response, err := client.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
-		Name:    "addProducer",
 		Address: *(flags[flagProducerAddr].(*string)),
 	})
 

@@ -31,22 +31,17 @@ service AdminService{
 // Requests
 
 message CreateWalletRequest {
-  string name = 1;
-  string passphrase = 2;
+  string passphrase = 1;
 }
 
-message UnlockWalletRequest {
-  string name = 1;
-}
+message UnlockWalletRequest {}
 
 message AddProducerRequest {
-  string name = 1;
-  string address = 2;
+  string address = 1;
 }
 
 message GetBalanceRequest {
-  string name = 1;
-  string address = 2;
+  string address = 1;
 }
 
 message SendFromMinerRequest {

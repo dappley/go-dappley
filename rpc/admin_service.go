@@ -52,22 +52,15 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 			Message: "Error: Address is empty!",
 		}, nil
 	}
-	if in.Name == "addProducer" {
-		err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
-		if err == nil {
-			return &rpcpb.AddProducerResponse{
-				Message: "Add producer sucessfully!",
-			}, nil
-		}
+	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+	if err == nil {
 		return &rpcpb.AddProducerResponse{
-			Message: "Error: Add producer failed! " + err.Error(),
+			Message: "Add producer sucessfully!",
 		}, nil
-
 	}
 	return &rpcpb.AddProducerResponse{
-		Message: "Error: Command not recognized!",
+		Message: "Error: Add producer failed! " + err.Error(),
 	}, nil
-
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -78,18 +71,11 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 
 //unlock the wallet through rpc service
 func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
-	msg := "failed"
-	if in.Name == "unlock" {
-		err := logic.SetUnLockWallet()
-		if err != nil {
-			msg = err.Error()
-		} else {
-			msg = "succeed"
-		}
+	err := logic.SetUnLockWallet()
+	if err != nil {
+		return &rpcpb.UnlockWalletResponse{Message: err.Error()}, err
 	}
-	return &rpcpb.UnlockWalletResponse{
-		Message: msg,
-	}, nil
+	return &rpcpb.UnlockWalletResponse{Message: "succeed"}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {

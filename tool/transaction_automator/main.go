@@ -402,10 +402,7 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address,
 }
 
 func getBalance(rpcClient rpcpb.RpcServiceClient, address string) (int64, error) {
-	getBalanceRequest := rpcpb.GetBalanceRequest{}
-	getBalanceRequest.Name = "getBalance"
-	getBalanceRequest.Address = address
-	response, err := rpcClient.RpcGetBalance(context.Background(), &getBalanceRequest)
+	response, err := rpcClient.RpcGetBalance(context.Background(), &rpcpb.GetBalanceRequest{Address: address})
 	return response.Amount, err
 }
 

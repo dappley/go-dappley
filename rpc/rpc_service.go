@@ -61,26 +61,16 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 }
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
-
-	if in.Name == "getBalance" {
-		getbalanceResp := rpcpb.GetBalanceResponse{}
-		address := in.Address
-		if core.NewAddress(address).ValidateAddress() == false {
-			getbalanceResp.Message = "The address is not valid"
-			return &getbalanceResp, nil
-		}
-
-		amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain().GetDb())
-		if err != nil {
-			getbalanceResp.Message = "Failed to get balance from blockchain"
-			return &getbalanceResp, nil
-		}
-		getbalanceResp.Amount = amount.Int64()
-		getbalanceResp.Message = "Succeed"
-		return &getbalanceResp, nil
+	address := in.Address
+	if core.NewAddress(address).ValidateAddress() == false {
+		return &rpcpb.GetBalanceResponse{Message: "The address is not valid"}, nil
 	}
-	return &rpcpb.GetBalanceResponse{Message: "Error: Get balance failded. not recognize the command!"}, nil
 
+	amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain().GetDb())
+	if err != nil {
+		return &rpcpb.GetBalanceResponse{Message: "Failed to get balance from blockchain"}, nil
+	}
+	return &rpcpb.GetBalanceResponse{Amount: amount.Int64(), Message: "Succeed"}, nil
 }
 
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
