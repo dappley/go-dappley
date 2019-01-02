@@ -281,13 +281,13 @@ func TestRpcGetVersion(t *testing.T) {
 
 	// Test GetVersion with unsupport client version -- invalid version length
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
-	assert.Nil(t, err)
-	assert.Equal(t, ProtoVersionNotSupport, response.ErrorCode)
+	assert.Nil(t, response)
+	assert.Equal(t, "rpc error: code = Unknown desc = proto version not supported" , err.Error())
 
 	// Test GetVersion with unsupport client version
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "2.0.0"})
-	assert.Nil(t, err)
-	assert.Equal(t, ProtoVersionNotSupport, response.ErrorCode)
+	assert.Nil(t, response)
+	assert.Equal(t, "rpc error: code = Unknown desc = major version mismatch", err.Error())
 }
 
 func TestRpcGetBlockchainInfo(t *testing.T) {
@@ -454,8 +454,8 @@ func TestRpcGetBlocks(t *testing.T) {
 	// Check maxGetBlocksCount overflow
 	maxGetBlocksCount = int(MaxGetBlocksCount) + 1
 	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: [][]byte{genesisBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
-	assert.Nil(t, err)
-	assert.Equal(t, GetBlocksCountOverflow, response.ErrorCode)
+	assert.Nil(t, response)
+	assert.Equal(t, "rpc error: code = Unknown desc = block count overflow", err.Error())
 }
 
 func TestRpcGetBlockByHash(t *testing.T) {
@@ -498,8 +498,8 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
 
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: []byte("noexists")})
-	assert.Nil(t, err)
-	assert.Equal(t, BlockNotFound, response.ErrorCode)
+	assert.Nil(t, response)
+	assert.Equal(t, "rpc error: code = Unknown desc = block does not exist", err.Error())
 }
 
 func TestRpcGetBlockByHeight(t *testing.T) {
@@ -542,8 +542,8 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
 
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
-	assert.Nil(t, err)
-	assert.Equal(t, BlockNotFound, response.ErrorCode)
+	assert.Nil(t, response)
+	assert.Equal(t, "rpc error: code = Unknown desc = block does not exist", err.Error())
 }
 
 func TestRpcSendTransaction(t *testing.T) {
@@ -604,8 +604,8 @@ func TestRpcSendTransaction(t *testing.T) {
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
-	assert.Nil(t, err)
-	assert.Equal(t, InvalidTransaction, failedResponse.ErrorCode)
+	assert.Nil(t, failedResponse)
+	assert.Equal(t, "rpc error: code = Unknown desc = transaction verify failed", err.Error())
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
