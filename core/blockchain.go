@@ -209,6 +209,13 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 		blockLogger.Error("Blockchain: failed to update UTXO index!")
 		return err
 	}
+	alen := len(bc.GetTxPool().GetTransactions())
+	//Remove transactions in current transaction pool
+	bc.GetTxPool().CheckAndRemoveTransactions(block.GetTransactions())
+	logger.WithFields(logger.Fields{
+		"after_txs": len(bc.GetTxPool().GetTransactions()),
+		"before_txs": alen,
+	}).Info("Blockchain : update tx pool")
 
 	err = bcTemp.AddBlockToDb(block)
 	if err != nil {
@@ -380,8 +387,6 @@ func (bc *Blockchain) addBlocksToTail(blocks []*Block) {
 				logger.WithError(err).Error("Blockchain: failed to add block to tail while concatenating fork!")
 				return
 			}
-			//Remove transactions in current transaction pool
-			bc.GetTxPool().CheckAndRemoveTransactions(blocks[i].GetTransactions())
 		}
 	}
 }

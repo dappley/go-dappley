@@ -92,7 +92,7 @@ func (bp *BlockProducer) prepareBlock() {
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
 
-	txs := bp.bc.GetTxPool().GetAndResetTransactions()
+	txs := bp.bc.GetTxPool().GetTransactions()
 	validTxs := filterValidTxs(txs, utxoIndex, parentBlock.GetHeight()+1)
 
 	cbtx := bp.calculateTips(validTxs)

@@ -129,7 +129,12 @@ func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
 	defer txPool.mutex.Unlock()
 
 	for _, tx := range txs {
-		toRemoveTxs := txPool.getToRemoveTxs(string(tx.ID))
+		//WHY REMOVE CHILDREN? REMOVE
+		txNode, ok := txPool.txs[string(tx.ID)]
+		if !ok {
+			continue
+		}
+		toRemoveTxs := map[string]*TransactionNode{string(tx.ID): txNode}
 		txPool.removeSelectedTransactions(toRemoveTxs)
 	}
 
