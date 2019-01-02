@@ -284,12 +284,7 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string)
 	sendFromMinerRequest.To = fundAddr
 	sendFromMinerRequest.Amount = common.NewAmount(initialAmount).Bytes()
 
-	_, err := adminClient.RpcSendFromMiner(context.Background(), &sendFromMinerRequest)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"fund_address": fundAddr,
-		}).Panic("Failed to get test fund from miner.")
-	}
+	adminClient.RpcSendFromMiner(context.Background(), &sendFromMinerRequest)
 }
 
 func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []core.Address) {

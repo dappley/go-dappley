@@ -115,5 +115,6 @@ func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineM
 	defer ss.mutex.Unlock()
 	for _, tx := range txs {
 		tx.Execute(index, ss, nil, manager.CreateEngine(), currBlkHeight, parentBlk)
+		index.UpdateUtxo(tx)
 	}
 }

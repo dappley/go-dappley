@@ -192,7 +192,8 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	if bc.scManager != nil && parentBlk != nil {
 		scState := NewScState()
 		scState.LoadFromDatabase(bcTemp.db, bc.GetTailBlockHash())
-		scState.Update(block.GetTransactions(), *utxoIndex, bc.scManager, block.GetHeight(), parentBlk)
+		tempUtxoIndex := utxoIndex.DeepCopy()
+		scState.Update(block.GetTransactions(), *tempUtxoIndex, bc.scManager, block.GetHeight(), parentBlk)
 		parentBlk, err := bc.GetTailBlock()
 		if err != nil {
 			blockLogger.Error("Blockchain: Can not get parent block!")
