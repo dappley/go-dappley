@@ -852,13 +852,13 @@ func TestGetNewTransactions(t *testing.T) {
 func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	rpcContext, err := createRpcTestContext(12)
 	if err != nil {
-			panic(err)
+		panic(err)
 	}
 	defer rpcContext.destroyContext()
 
 	receiverWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
 	if err != nil {
-			panic(err)
+		panic(err)
 	}
 
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
@@ -866,7 +866,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 
 	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
-			panic(err)
+		panic(err)
 	}
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 
@@ -876,12 +876,12 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	assert.Nil(t, err)
 
 	transaction, err := core.NewUTXOTransaction(utxos,
-			rpcContext.wallet.GetAddress(),
-			receiverWallet.GetAddress(),
-			common.NewAmount(6),
-			rpcContext.wallet.GetKeyPair(),
-			common.NewAmount(0),
-			"",
+		rpcContext.wallet.GetAddress(),
+		receiverWallet.GetAddress(),
+		common.NewAmount(6),
+		rpcContext.wallet.GetKeyPair(),
+		common.NewAmount(0),
+		"",
 	)
 	// put a tx into txpool
 	c1.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
@@ -890,18 +890,16 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	defer cancel()
 	// get a tx from txpool
 	result, err := c1.RpcGetAllTransactionsFromTxPool(ctx, &rpcpb.GetAllTransactionsRequest{})
-	if err != nil {
-		return
-}
-// assert result
-assert.Equal(t, uint32(0), result.ErrorCode)
-assert.Equal(t, 1, len(result.Transactions))
+	assert.Nil(t, err)
+	// assert result
+	assert.Equal(t, uint32(0), result.ErrorCode)
+	assert.Equal(t, 1, len(result.Transactions))
 
-rpcContext.consensus.Stop()
-core.WaitDoneOrTimeout(func() bool {
+	rpcContext.consensus.Stop()
+	core.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
-}, 20)
-time.Sleep(time.Second)
+	}, 20)
+	time.Sleep(time.Second)
 
 }
 

@@ -280,7 +280,7 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 
 func (rpcService *RpcService) IsPrivate() bool { return false }
 
-// RpcGetAllTransactionsFromTxPool get all tractions from traction pool
+// RpcGetAllTransactionsFromTxPool get all transactions from transaction_pool
 func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Context, in *rpcpb.GetAllTransactionsRequest) (*rpcpb.GetAllTransactionsResponse, error) {
 	txs := rpcService.node.GetBlockchain().GetTxPool().GetTransactions()
 	result := &rpcpb.GetAllTransactionsResponse{ErrorCode: OK}
