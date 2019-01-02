@@ -86,7 +86,7 @@ func main() {
 					"height": currHeight,
 				}).Info("New Block Height")
 				verifyTransactions(blk.Transactions)
-				recordTransactions(blk.Transactions)
+				recordTransactions(blk.Transactions, currHeight)
 			} else {
 				sendRandomTransactions(adminClient, addresses)
 			}
@@ -94,7 +94,7 @@ func main() {
 	}
 }
 
-func recordTransactions(txs []*corepb.Transaction) {
+func recordTransactions(txs []*corepb.Transaction, height uint64){
 	f, err := os.OpenFile("log/tx.csv", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording transactions")
@@ -109,7 +109,7 @@ func recordTransactions(txs []*corepb.Transaction) {
 		for _, vout := range tx.Vout {
 			voutStr += core.PubKeyHash{vout.PubKeyHash}.GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
 		}
-		w.Write([]string{hex.EncodeToString(tx.ID), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
+		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.ID), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
 	}
 	w.Flush()
 }
