@@ -814,6 +814,10 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		return
 	}
 
+	if *(flags[flagToAddress].(*string)) == ""{
+		fmt.Println("Contract Address:", tx.Vout[0].PubKeyHash.GenerateAddress().String())
+	}
+
 	fmt.Println("Send transaction succeed!")
 }
 
