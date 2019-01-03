@@ -34,7 +34,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	logger "github.com/sirupsen/logrus"
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -46,6 +45,7 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	logger "github.com/sirupsen/logrus"
 )
 
 //command names
@@ -456,7 +456,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		}
 		return
 	}
-	if response.Message == "Succeed" {
+	if response.Message == "succeed" {
 		fmt.Printf("The balance is: %d\n", response.Amount)
 	} else {
 		fmt.Println(response.Message)
