@@ -354,17 +354,14 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 	}
 
 	var encodedBlocks []map[string]interface{}
-	for i := 0; i < len(response.Blocks); i++ {
-		block := response.Blocks[i]
+	for _, block := range response.Blocks {
 
 		var encodedTransactions []map[string]interface{}
 
-		for j := 0; j < len(block.Transactions); j++ {
-			transaction := block.Transactions[j]
+		for _, transaction := range block.Transactions {
 
 			var encodedVin []map[string]interface{}
-			for k := 0; k < len(transaction.Vin); k++ {
-				vin := transaction.Vin[k]
+			for _, vin := range transaction.Vin {
 				encodedVin = append(encodedVin, map[string]interface{}{
 					"Vout":      vin.Vout,
 					"Signature": hex.EncodeToString(vin.Signature),
@@ -373,8 +370,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 			}
 
 			var encodedVout []map[string]interface{}
-			for l := 0; l < len(transaction.Vout); l++ {
-				vout := transaction.Vout[l]
+			for _, vout := range transaction.Vout {
 				encodedVout = append(encodedVout, map[string]interface{}{
 					"Value":      string(vout.Value),
 					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),

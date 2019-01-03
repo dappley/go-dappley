@@ -75,7 +75,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	var dposArray []*DPOS
 	var nodeArray []*network.Node
 	var firstNode *network.Node
-	for i := 0; i < len(miners); i++ {
+	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128,nil)
@@ -88,33 +88,33 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		} else {
 			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
 		}
-		dpos.Setup(node, miners[i])
+		dpos.Setup(node, miner)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
 
 	firstNode.SyncPeersBroadcast()
 
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		dposArray[i].Start()
 	}
 
 	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		dposArray[i].Stop()
 		nodeArray[i].Stop()
 	}
 	//Waiting block sync to other nodes
 	time.Sleep(time.Second * 2)
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		v := dposArray[i]
 		core.WaitDoneOrTimeout(func() bool {
 			return !v.IsProducingBlock()
 		}, 20)
 	}
 
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].node.GetBlockchain().GetMaxHeight())
 	}
 }

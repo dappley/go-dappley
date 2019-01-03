@@ -37,7 +37,7 @@ type Keys struct {
 func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys) {
 	bcs := make([]*core.Blockchain, len(files))
 	addr := core.NewAddress(genesisAddr)
-	for i := 0; i < len(files); i++ {
+	for i := range files{
 		bc := core.CreateBlockchain(addr, files[i].Db, nil, 20, nil)
 		bcs[i] = bc
 	}
@@ -48,15 +48,15 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys) {
 		time = time + defaultTimeBetweenBlk
 		b := generateBlock(bcs[index], time, d, keys)
 
-		for idx := 0; idx < len(files); idx++ {
+		for idx := range files {
 			if files[idx].DifferentFrom >= i {
 				bcs[idx].AddBlockToTail(b)
 			}
 		}
 	}
 
-	for i := 0; i < len(files); i++ {
-		makeBlockChainToSize(bcs[i], files[i].Height, time, d, keys)
+	for i, file := range files {
+		makeBlockChainToSize(bcs[i], file.Height, time, d, keys)
 		fmt.Println(bcs[i].GetMaxHeight())
 	}
 
@@ -65,9 +65,9 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys) {
 func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	max := 0
 	index := 0
-	for i := 0; i < len(files); i++ {
-		if max < files[i].DifferentFrom {
-			max = files[i].DifferentFrom
+	for i, file := range files {
+		if max < file.DifferentFrom {
+			max = file.DifferentFrom
 			index = i
 		}
 	}

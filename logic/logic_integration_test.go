@@ -315,8 +315,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	dposArray[0].Stop()
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
-	for i := 0; i < len(nodes); i++ {
-		nodes[i].GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
+	for i, node := range nodes {
+		node.GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
 			heights[i]++
 			return true
 		})
@@ -375,8 +375,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	}
 
 	//each node connects to every other node
-	for i := 0; i < len(nodes); i++ {
-		for j := 0; j < len(nodes); j++ {
+	for i := range nodes {
+		for j := range nodes {
 			if i != j {
 				connectNodes(nodes[i], nodes[j])
 			}
@@ -384,19 +384,19 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	}
 
 	//firstNode Starts Mining
-	for i := 0; i < len(dposArray); i++ {
-		dposArray[i].Start()
+	for _, dpos := range dposArray {
+		dpos.Start()
 	}
 
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
 
-	for i := 0; i < len(dposArray); i++ {
-		dposArray[i].Stop()
+	for _, dpos := range dposArray {
+		dpos.Stop()
 	}
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
-	for i := 0; i < len(nodes); i++ {
-		nodes[i].GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
+	for i, node := range nodes{
+		node.GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
 			heights[i]++
 			return true
 		})
@@ -788,8 +788,8 @@ func TestDoubleMint(t *testing.T) {
 	defer recvNode.Stop()
 	defer sendNode.Stop()
 
-	for i := 0; i < len(blks); i++ {
-		sendNode.BroadcastBlock(blks[i])
+	for _, blk := range blks {
+		sendNode.BroadcastBlock(blk)
 	}
 
 	time.Sleep(time.Second * 2)
