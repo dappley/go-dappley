@@ -19,9 +19,9 @@
 package network
 
 import (
-	"bytes"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network/pb"
+	"reflect"
 	"sync"
 	"time"
 
@@ -251,18 +251,18 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 }
 
 func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
-	downloadManager.downloadingCmd = &DownloadingCommandInfo{startHashes: hashes, retryCount: retryCount}
+	downloadManager.downloadingCmd = &DownloadingCommandInfo{startHashes: hashes}
 	downloadManager.node.DownloadBlocksUnicast(hashes, peerId)
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
 		<-downloadTimer.C
 		downloadTimer.Stop()
-		downloadManager.checkDownloadCommand(hashes, peerId)
+		downloadManager.checkDownloadCommand(hashes, peerId, retryCount)
 	}()
 }
 
-func (downloadManager *DownloadManager) checkDownloadCommand(hashes []core.Hash, peerId peer.ID) {
+func (downloadManager *DownloadManager) checkDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
@@ -270,13 +270,11 @@ func (downloadManager *DownloadManager) checkDownloadCommand(hashes []core.Hash,
 		return
 	}
 
-	if len(hashes) != 0 && len(downloadManager.downloadingCmd.startHashes) != 0 {
-		if bytes.Compare(downloadManager.downloadingCmd.startHashes[0], hashes[0]) != 0 {
-			return
-		}
+	if !reflect.DeepEqual(downloadManager.downloadingCmd.startHashes, hashes){
+		return
 	}
 
-	if downloadManager.downloadingCmd.retryCount >= MaxRetryCount {
+	if retryCount >= MaxRetryCount {
 		peerInfo, ok := downloadManager.peersInfo[peerId]
 		if ok {
 			peerInfo.status = PeerStatusFailed
@@ -286,7 +284,7 @@ func (downloadManager *DownloadManager) checkDownloadCommand(hashes []core.Hash,
 		downloadManager.downloadingCmd = nil
 		downloadManager.startDownload(0)
 	} else {
-		downloadManager.sendDownloadCommand(hashes, peerId, downloadManager.downloadingCmd.retryCount+1)
+		downloadManager.sendDownloadCommand(hashes, peerId, retryCount+1)
 	}
 }
 
