@@ -92,8 +92,7 @@ func (bp *BlockProducer) prepareBlock() {
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
 
-	txs := bp.bc.GetTxPool().GetTransactions()
-	validTxs := filterValidTxs(txs, utxoIndex, parentBlock.GetHeight()+1)
+	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoIndex, parentBlock.GetHeight()+1)
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
@@ -105,24 +104,9 @@ func (bp *BlockProducer) prepareBlock() {
 		validTxs = append(validTxs, &rtx)
 	}
 	logger.WithFields(logger.Fields{
-		"txs"	: len(txs),
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepare block.")
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)
-}
-
-func filterValidTxs(txs []*core.Transaction, utxoIndex *core.UTXOIndex, blockHeight uint64) []*core.Transaction {
-	tempUtxoIndex := utxoIndex.DeepCopy()
-	var validTxs []*core.Transaction
-
-	for _, tx := range txs {
-		if tx.Verify(tempUtxoIndex, blockHeight) {
-			validTxs = append(validTxs, tx)
-			tempUtxoIndex.UpdateUtxo(tx)
-		}
-	}
-
-	return validTxs
 }
 
 func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {
