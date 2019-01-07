@@ -32,7 +32,7 @@ var (
 	sendInterval         = time.Duration(1000) //ms
 	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
-	sentTxs              = make(map[string]string)
+	sentTxs              = make(map[string]int)
 	smartContractAddr    = ""
 	smartContractCounter = 0
 	isContractDeployed   = false
@@ -187,10 +187,14 @@ func verifyTransactions(txs []*corepb.Transaction) {
 	for _, tx := range txs {
 		delete(sentTxs, hex.EncodeToString(tx.ID))
 	}
-	for txid, _ := range sentTxs {
-		logger.WithFields(logger.Fields{
-			"txid": txid,
-		}).Warn("Transaction is not found in previous block!")
+	for txid, count := range sentTxs {
+		sentTxs[txid]++
+		if count > 0{
+			logger.WithFields(logger.Fields{
+				"txid": txid,
+				"count": count,
+			}).Warn("Transaction is not found in previous block!")
+		}
 	}
 }
 
@@ -376,7 +380,7 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		recordFailedTransaction(err, from, to, amount, data)
 		return resp, err
 	}
-	sentTxs[resp.Txid] = resp.Txid
+	sentTxs[resp.Txid] = 0
 	currBalance[from] -= amount
 	currBalance[to] += amount
 	return resp, nil
