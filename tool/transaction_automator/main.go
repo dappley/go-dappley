@@ -36,6 +36,7 @@ var (
 	smartContractAddr    = ""
 	smartContractCounter = 0
 	isContractDeployed   = false
+	currHeight			 = uint64(0)
 )
 
 const (
@@ -43,6 +44,8 @@ const (
 	contractAddrFilePath  = "contract/contractAddr"
 	contractFilePath      = "contract/test_contract.js"
 	contractFunctionCall  = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	transactionLogFilePath = "log/tx.csv"
+	failedTxLogFilePath = "log/failedTx.csv"
 )
 
 func main() {
@@ -72,7 +75,7 @@ func main() {
 
 	ticker := time.NewTicker(time.Millisecond * sendInterval).C
 	deploySmartContract(adminClient, fundAddr)
-	currHeight := getBlockHeight(rpcClient)
+	currHeight = getBlockHeight(rpcClient)
 	for {
 		select {
 		case <-ticker:
@@ -95,7 +98,7 @@ func main() {
 }
 
 func recordTransactions(txs []*corepb.Transaction, height uint64){
-	f, err := os.OpenFile("log/tx.csv", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	f, err := os.OpenFile(transactionLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording transactions")
 	}
@@ -318,7 +321,7 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 		"data":             data,
 	})
 	if err != nil {
-		sendTXLogger.WithError(err).Panic("Failed to send transaction!")
+		sendTXLogger.WithError(err).Error("Failed to send transaction!")
 		return
 	}
 	sendTXLogger.Data["txid"] = resp.Txid
@@ -370,12 +373,25 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		Data:       data,
 	})
 	if err != nil {
+		recordFailedTransaction(err, from, to, amount, data)
 		return resp, err
 	}
 	sentTxs[resp.Txid] = resp.Txid
 	currBalance[from] -= amount
 	currBalance[to] += amount
 	return resp, nil
+}
+
+func recordFailedTransaction(txErr error, from, to string, amount uint64, data string){
+	f, err := os.OpenFile(failedTxLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		logger.Panic("Open file failed while recording failed transactions")
+	}
+	w := csv.NewWriter(f)
+
+	w.Write([]string{fmt.Sprint(currHeight), from, to, fmt.Sprint(amount), txErr.Error(), data})
+
+	w.Flush()
 }
 
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, update bool) {
@@ -411,6 +427,3 @@ func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64 {
 	return resp.BlockHeight
 }
 
-func isBalanceSufficient(addr string, amount uint64) bool {
-	return currBalance[addr] >= amount
-}
