@@ -103,7 +103,7 @@ func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blo
 			validTxs = append(validTxs, tx)
 			tempUtxoIndex.UpdateUtxo(tx)
 		}else{
-			inValidTxs = append(validTxs, tx)
+			inValidTxs = append(inValidTxs, tx)
 		}
 	}
 	if len(inValidTxs)>0 {
