@@ -262,7 +262,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
