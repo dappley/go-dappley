@@ -22,8 +22,9 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 const defaultTargetBits = 0
@@ -31,7 +32,6 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	bc     *core.Blockchain
 	miner  *BlockProducer
 	target *big.Int
 	node   core.NetService
@@ -49,9 +49,8 @@ func NewProofOfWork() *ProofOfWork {
 }
 
 func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
-	pow.bc = node.GetBlockchain()
 	pow.node = node
-	pow.miner.Setup(pow.bc, cbAddr)
+	pow.miner.Setup(node.GetBlockchain(), cbAddr)
 	pow.miner.SetProcess(pow.calculateValidHash)
 }
 
@@ -79,20 +78,20 @@ func (pow *ProofOfWork) Stop() {
 }
 
 func (pow *ProofOfWork) mineBlocks() {
-	logger.Info("Mining starts")
+	logger.Info("PoW: mining starts.")
 	for {
 		select {
 		case <-pow.stopCh:
-			logger.Info("Mining stopped")
+			logger.Info("PoW: mining stopped.")
 			return
 		default:
-			if pow.miner.bc.GetBlockPool().GetSyncState() {
+			if pow.node.GetBlockchain().GetState() != core.BlockchainReady {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
 			newBlock := pow.miner.ProduceBlock()
 			if !pow.Validate(newBlock) {
-				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: No valid block is mined")
+				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
 				return
 			}
 			pow.updateNewBlock(newBlock)
@@ -151,18 +150,18 @@ func (pow *ProofOfWork) Validate(block *core.Block) bool {
 func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
 	nonce := block.GetNonce()
 	if nonce >= maxNonce {
-		logger.Warn("PoW: Tried all possible nonce")
+		logger.Warn("PoW: tried all possible nonce.")
 	}
 	block.SetNonce(nonce + 1)
 }
 
 func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
-	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: Minted a new block")
+	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: minted a new block.")
 	if !newBlock.VerifyHash() {
-		logger.Warn("PoW: Invalid hash in new block (mining might have been interrupted)")
+		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
 		return
 	}
-	err := pow.bc.AddBlockToTail(newBlock)
+	err := pow.node.GetBlockchain().AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)
 		return

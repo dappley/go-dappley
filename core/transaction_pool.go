@@ -19,11 +19,11 @@
 package core
 
 import (
-	"bytes"
+	"sync"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/dappley/go-dappley/common/sorted"
 	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/common"
 )
 
 const (
@@ -31,156 +31,239 @@ const (
 	EvictTransactionTopic = "EvictTransaction"
 )
 
+type TransactionNode struct {
+	children map[string]*Transaction
+	value    *Transaction
+}
+
 type TransactionPool struct {
-	Transactions sorted.Slice
-	index 		 map[string]*Transaction
-	limit        uint32
-	EventBus     EventBus.Bus
-}
-
-func compareTxTips(tx1 interface{}, tx2 interface{}) int {
-	t1 := tx1.(Transaction)
-	t2 := tx2.(Transaction)
-	if t1.Tip < t2.Tip {
-		return -1
-	} else if t1.Tip > t2.Tip {
-		return 1
-	} else {
-		return 0
-	}
-}
-
-// match returns true if tx1 and tx2 are Transactions and they have the same ID, false otherwise
-func match(tx1 interface{}, tx2 interface{}) bool {
-	return bytes.Compare(tx1.(Transaction).ID, tx2.(Transaction).ID) == 0
+	txs        map[string]*TransactionNode
+	minTipTxId string
+	limit      uint32
+	EventBus   EventBus.Bus
+	mutex      sync.RWMutex
 }
 
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
-		Transactions: *sorted.NewSlice(compareTxTips, match),
-		index: 		  make(map[string]*Transaction),
-		limit:        limit,
-		EventBus:     EventBus.New(),
+		txs:      make(map[string]*TransactionNode),
+		limit:    limit,
+		EventBus: EventBus.New(),
+		mutex:    sync.RWMutex{},
 	}
 }
 
-func (txPool *TransactionPool) RemoveMultipleTransactions(txs []*Transaction) {
-	for _, tx := range txs {
-		txPool.Transactions.Del(*tx)
-		delete(txPool.index, string(tx.ID))
+func (txPool *TransactionPool) deepCopy() *TransactionPool {
+	txPoolCopy := TransactionPool{
+		txs:      make(map[string]*TransactionNode),
+		limit:    txPool.limit,
+		EventBus: EventBus.New(),
+		mutex:    sync.RWMutex{},
 	}
+
+	for key, tx := range txPool.txs {
+		newTx := tx.value.DeepCopy()
+		newTxNode := TransactionNode{children: make(map[string]*Transaction), value: &newTx}
+
+		for childKey, childTx := range tx.children {
+			newTxNode.children[childKey] = childTx
+		}
+		txPoolCopy.txs[key] = &newTxNode
+	}
+
+	return &txPoolCopy
 }
 
-func (txPool *TransactionPool) PopValidTxs(utxoIndex UTXOIndex) []*Transaction {
+func (txPool *TransactionPool) GetAndResetTransactions() []*Transaction {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
+
+	txs := txPool.getSortedTransactions()
+
+	txPool.minTipTxId = ""
+	txPool.txs = make(map[string]*TransactionNode)
+	return txs
+}
+
+func (txPool *TransactionPool) GetTransactions() []*Transaction {
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
+
+	return txPool.getSortedTransactions()
+}
+
+func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blockHeight uint64) []*Transaction {
+	txs := txPool.GetTransactions()
+	tempUtxoIndex := utxoIndex.DeepCopy()
 	var validTxs []*Transaction
-	var invalidTxs []*Transaction
+	var inValidTxs []*Transaction
 
-	for _, tx := range txPool.index {
-		if contains(tx, validTxs) || contains(tx, invalidTxs) {
-			continue
-		}
-
-		if tx.Verify(utxoIndex, txPool, 0) {
-			dependentTxs := txPool.getDependentTxs(tx.ID, []*Transaction{})
-			validTxs = append(validTxs, dependentTxs...)
-		} else {
-			invalidTxs = append(invalidTxs, tx)
+	for _, tx := range txs {
+		if tx.Verify(tempUtxoIndex, blockHeight) {
+			validTxs = append(validTxs, tx)
+			tempUtxoIndex.UpdateUtxo(tx)
+		}else{
+			inValidTxs = append(inValidTxs, tx)
 		}
 	}
-
-	txPool.RemoveMultipleTransactions(validTxs)
-	txPool.RemoveMultipleTransactions(invalidTxs)
+	if len(inValidTxs)>0 {
+		txPool.CheckAndRemoveTransactions(inValidTxs)
+	}
 
 	return validTxs
 }
 
-func (txPool *TransactionPool) GetAllTransactions() []*Transaction{
-	txs := []*Transaction{}
-	for _, v := range txPool.Transactions.Get() {
-		tx := v.(Transaction)
-		txs = append(txs, &tx)
+func (txPool *TransactionPool) Push(tx *Transaction) {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
+	if txPool.limit == 0 {
+		logger.Warn("TransactionPool: transaction is not pushed to pool because limit is set to 0.")
+		return
 	}
-	return txs
+
+	if len(txPool.txs) >= int(txPool.limit) {
+		logger.WithFields(logger.Fields{
+			"limit": txPool.limit,
+		}).Warn("TransactionPool: is full.")
+
+		minTx, exist := txPool.txs[txPool.minTipTxId]
+		if exist && tx.Tip.Cmp(minTx.value.Tip) < 1{
+			return
+		}
+
+		toRemoveTxs := txPool.getToRemoveTxs(txPool.minTipTxId)
+		if checkDependTxInMap(tx, toRemoveTxs) == true {
+			logger.Warn("TransactionPool: failed to push because dependent transactions are not removed from pool.")
+			return
+		}
+
+		txPool.removeSelectedTransactions(toRemoveTxs)
+		txPool.minTipTxId = ""
+		txPool.addTransaction(tx)
+	} else {
+		txPool.addTransaction(tx)
+	}
 }
 
-func (txPool *TransactionPool) deepCopy() TransactionPool {
-	txPoolCopy := TransactionPool{
-		Transactions: *sorted.NewSlice(compareTxTips, match),
-		index:        make(map[string]*Transaction),
-		limit:        txPool.limit,
-		EventBus:     EventBus.New(),
-	}
+func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
 
-	for _, tx := range txPool.index {
-		txPoolCopy.Push(tx.DeepCopy())
-	}
-
-	return txPoolCopy
-}
-
-func contains(targetTx *Transaction, txs []*Transaction) bool {
 	for _, tx := range txs {
-		if bytes.Equal(targetTx.ID, tx.ID) {
+		txNode, ok := txPool.txs[string(tx.ID)]
+		if !ok {
+			continue
+		}
+		toRemoveTxs := map[string]*TransactionNode{string(tx.ID): txNode}
+		txPool.removeSelectedTransactions(toRemoveTxs)
+	}
+
+	txPool.resetMinTipTransaction()
+}
+
+func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
+	checkNodes := make(map[string]*TransactionNode)
+
+	for key, node := range txPool.txs {
+		checkNodes[key] = node
+	}
+
+	var sortedTxs []*Transaction
+	for len(checkNodes) > 0 {
+		for key, node := range checkNodes {
+			if !checkDependTxInMap(node.value, checkNodes) {
+				sortedTxs = append(sortedTxs, node.value)
+				delete(checkNodes, key)
+			}
+		}
+	}
+	return sortedTxs
+}
+
+func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) bool {
+	for _, vin := range tx.Vin {
+		if _, exist := existTxs[string(vin.Txid)]; exist {
 			return true
 		}
 	}
 	return false
 }
 
-func (txPool *TransactionPool) getDependentTxs(txID []byte, dependentTxs []*Transaction) []*Transaction {
-	if _, exists := txPool.index[string(txID)]; !exists {
-		return dependentTxs
-	}
-	tx := txPool.index[string(txID)]
-	dependentTxs = append(dependentTxs, tx)
+func (txPool *TransactionPool) getToRemoveTxs(startTxId string) map[string]*TransactionNode {
+	txNode, ok := txPool.txs[startTxId]
 
-	hashTxs := map[*Transaction]bool{tx: true}
-	for _, vin := range tx.Vin {
-		parentTxs := txPool.getDependentTxs(vin.Txid, dependentTxs)
-		for _, parentTx := range parentTxs {
-			if _, exists := hashTxs[parentTx]; !exists {
-				hashTxs[parentTx] = true
-				dependentTxs = append(dependentTxs, parentTx)
-			}
-		}
-	}
-	return dependentTxs
-}
-
-func (txPool *TransactionPool) Push(tx Transaction) {
-	if txPool.limit == 0 {
-		logger.Warn("TransactionPool: transaction not pushed to pool because limit is set to 0")
-		return
-	}
-
-	if txPool.Transactions.Len() >= int(txPool.limit) {
-		logger.WithFields(logger.Fields{
-			"limit": txPool.limit,
-		}).Debug("TransactionPool: transaction pool limit reached")
-
-		leastTipTx := txPool.Transactions.Left().(Transaction)
-		if tx.Tip <= leastTipTx.Tip {
-			return
-		}
-
-		txPool.Transactions.PopLeft()
-		txPool.EventBus.Publish(EvictTransactionTopic, &leastTipTx)
-	}
-
-	if _, exists := txPool.index[string(tx.ID)]; exists {
-		logger.Warn("TransactionPool: transaction not pushed to pool because transaction ID already exists")
-	}
-
-	txPool.Transactions.Push(tx)
-	txPool.index[string(tx.ID)] = &tx
-	txPool.EventBus.Publish(NewTransactionTopic, &tx)
-}
-
-func (txPool *TransactionPool) GetTxByID(txId []byte) *Transaction {
-	if _, exists := txPool.index[string(txId)]; !exists {
-		logger.Warn("TransactionPool: transaction does not exists")
+	if !ok {
 		return nil
 	}
 
-	return txPool.index[string(txId)]
+	toRemoveTxs := make(map[string]*TransactionNode)
+	var toCheckTxs []*TransactionNode
+
+	toCheckTxs = append(toCheckTxs, txNode)
+
+	for len(toCheckTxs) > 0 {
+		currentTxNode := toCheckTxs[0]
+		toCheckTxs = toCheckTxs[1:]
+		for key, _ := range currentTxNode.children {
+			toCheckTxs = append(toCheckTxs, txPool.txs[key])
+		}
+		toRemoveTxs[string(currentTxNode.value.ID)] = currentTxNode
+	}
+
+	return toRemoveTxs
+}
+
+// The param toRemoveTxs must be calculate by function getToRemoveTxs
+func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string]*TransactionNode) {
+	for txId, txNode := range toRemoveTxs {
+		for _, vin := range txNode.value.Vin {
+			parentTx, exist := txPool.txs[string(vin.Txid)]
+			if exist {
+				delete(parentTx.children, txId)
+			}
+		}
+		delete(txPool.txs, txId)
+		txPool.EventBus.Publish(EvictTransactionTopic, txNode.value)
+	}
+}
+
+func (txPool *TransactionPool) addTransaction(tx *Transaction) {
+	for _, vin := range tx.Vin {
+		parentTx, exist := txPool.txs[string(vin.Txid)]
+		if exist {
+			parentTx.children[string(tx.ID)] = tx
+		}
+	}
+
+	txNode := TransactionNode{children: make(map[string]*Transaction), value: tx}
+	txPool.txs[string(tx.ID)] = &txNode
+
+	if minTx, exist := txPool.txs[txPool.minTipTxId]; exist {
+		if tx.Tip.Cmp(minTx.value.Tip) < 0 {
+			txPool.minTipTxId = string(tx.ID)
+		}
+	} else {
+		txPool.resetMinTipTransaction()
+	}
+
+	txPool.EventBus.Publish(NewTransactionTopic, tx)
+}
+
+func (txPool *TransactionPool) resetMinTipTransaction() {
+	var minTip *common.Amount// = math.MaxUint64
+	txPool.minTipTxId = ""
+	first := true
+
+	for txId, txNode := range txPool.txs {
+		if first {
+			first = false
+			minTip = txNode.value.Tip
+			txPool.minTipTxId = txId
+			} else {
+			if txNode.value.Tip.Cmp(minTip) < 0 {
+				minTip = txNode.value.Tip
+				txPool.minTipTxId = txId
+			}
+		}
+	}
 }

@@ -30,11 +30,13 @@ func LoggerFunc(level C.uint, args **C.char, length C.int) {
 	if ok == false {
 		logger.WithFields(logger.Fields{
 			"level": uint32(level),
-		}).Info("Smart Contract")
+		}).Info("SmartContract: logger level is set.")
 		return
 	}
 	var temp *C.char
-	argSlice := (*[(math.MaxInt32 - 1)/unsafe.Sizeof(temp)]*C.char)(unsafe.Pointer(args))[:length:length]
+
+	argSlice := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(temp)]*C.char)(unsafe.Pointer(args))[:length:length]
+
 	goArgs := make([]interface{}, length+1)
 	goArgs[0] = "[Contract] "
 	for index, arg := range argSlice {

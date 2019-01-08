@@ -13,11 +13,12 @@ message ConsensusConfig{
 
 message NodeConfig{
     uint32 port = 1;
-    string seed = 2;
+    repeated string seed = 2;
     string dbPath = 3;
     uint32 rpcPort = 4;
     string keyPath = 5;
     uint32 txPoolLimit = 6;
+    string nodeAddr = 7;
 }
 
 message DynastyConfig{

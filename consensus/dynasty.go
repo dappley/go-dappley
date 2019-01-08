@@ -21,8 +21,9 @@ package consensus
 import (
 	"errors"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 type Dynasty struct {
@@ -102,23 +103,22 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 func (dynasty *Dynasty) AddProducer(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
-			return errors.New("Producer already in the producer list！")
+			return errors.New("already a producer")
 		}
 	}
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
 		dynasty.producers = append(dynasty.producers, producer)
-		logger.Debug("Current Producers:")
-		for _, producerIt := range dynasty.producers {
-			logger.Debug(producerIt)
-		}
+		logger.WithFields(logger.Fields{
+			"producer": producer,
+			"list":     dynasty.producers,
+		}).Debug("Dynasty: added a producer to list.")
 		return nil
 	}
 	if !IsProducerAddressValid(producer) {
-		return errors.New("The address of producers not valid！")
+		return errors.New("invalid producer address")
 	}
-	return errors.New("The number of producers reaches the maximum！")
-
+	return errors.New("maximum number of producers reached")
 }
 
 func (dynasty *Dynasty) GetProducers() []string {

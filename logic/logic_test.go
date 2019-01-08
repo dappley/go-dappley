@@ -19,7 +19,6 @@
 package logic
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -47,7 +46,7 @@ func TestCreateWallet(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
 	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
-	assert.Equal(t, ok, true)
+	assert.Equal(t, true, ok)
 	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, walletPubKeyHash.PubKeyHash)
@@ -57,7 +56,7 @@ func TestCreateWalletWithPassphrase(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.Nil(t, err)
 	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
-	assert.Equal(t, ok, true)
+	assert.Equal(t, true, ok)
 	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, walletPubKeyHash.PubKeyHash)
@@ -121,10 +120,10 @@ func TestGetBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	//The balance should be 10 after creating a blockchain
+	//The balance should be 10000000 after creating a blockchain
 	balance, err := GetBalance(addr, store)
 	assert.Nil(t, err)
-	assert.Equal(t, common.NewAmount(10), balance)
+	assert.Equal(t, common.NewAmount(10000000), balance)
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
@@ -139,13 +138,13 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
-	//The balance should be 10 after creating a blockchain
+	//The balance should be 10000000 after creating a blockchain
 	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), store)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance1)
 
 	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), store)
-	assert.Equal(t, errors.New("ERROR: Address is invalid"), err)
+	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
 

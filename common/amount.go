@@ -28,7 +28,7 @@ var (
 	ErrAmountUnderflow = errors.New("amount: underflow (value is negative)")
 
 	// ErrAmountInvalidString indicates the string is not valid when converted to amount.
-	ErrAmountInvalidString = errors.New("amount: invalid string to amount")
+	ErrAmountInvalidString = errors.New("amount: invalid string when converting to amount")
 )
 
 // Amount implements an unsigned integer type with arbitrary/no upper bound. It is based on big.Int.

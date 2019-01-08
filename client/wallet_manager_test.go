@@ -113,16 +113,16 @@ func TestWalletManager_GetWalletByAddress(t *testing.T) {
 func TestWalletManager_GetWalletByAddress_withPassphrase(t *testing.T) {
 	wm := NewWalletManager(nil)
 	passPhrase, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
-	assert.Equal(t, err, nil)
+	assert.Equal(t, nil, err)
 	wm.PassPhrase = passPhrase
 	wm.Locked = true
 	wallet := NewWallet()
 	wm.Wallets = append(wm.Wallets, wallet)
 	wallet1, err := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "password")
 	wallet2, err1 := wm.GetWalletByAddressWithPassphrase(wallet.GetAddress(), "none")
-	assert.NotEqual(t, wallet2, wallet)
-	assert.NotEqual(t, err1, nil)
-	assert.Equal(t, err, nil)
+	assert.NotEqual(t, wallet, wallet2)
+	assert.NotEqual(t, nil, err1)
+	assert.Equal(t, nil, err)
 	assert.Equal(t, wallet, wallet1)
 }
 
@@ -173,12 +173,14 @@ func TestNewWalletManager_UnlockTimer(t *testing.T) {
 	wm.SaveWalletToFile()
 
 	wm.SetUnlockTimer(10 * time.Second)
-	assert.Equal(t, wm.Locked, false)
+	assert.Equal(t, false, wm.Locked)
 	time.Sleep(3 * time.Second)
-	assert.Equal(t, wm.Locked, false)
+	wm.mutex.Lock()
+	assert.Equal(t, false, wm.Locked)
+	wm.mutex.Unlock()
 	time.Sleep(9 * time.Second)
 	fl2 := storage.NewFileLoader(strings.Replace(GetWalletFilePath(), "wallets", "wallets_test", -1))
 	wm2 := NewWalletManager(fl2)
 	wm2.LoadFromFile()
-	assert.Equal(t, wm2.Locked, true)
+	assert.Equal(t, true, wm2.Locked)
 }

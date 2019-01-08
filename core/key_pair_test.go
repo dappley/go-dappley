@@ -42,8 +42,8 @@ func TestGenerateAddress(t *testing.T) {
 	assert.NotNil(t, address2)
 	assert.NotNil(t, address3)
 
-	assert.Equal(t, address1, addressExpectForKey1)
-	assert.Equal(t, address2, addressExpectForKey2)
+	assert.Equal(t, addressExpectForKey1, address1)
+	assert.Equal(t, addressExpectForKey2, address2)
 	assert.Equal(t, address1, address3)
 }
 

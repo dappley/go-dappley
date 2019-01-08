@@ -28,16 +28,22 @@ import (
 	"sync"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const walletConfigFilePath = "../client/wallet.conf"
+
+var (
+	ErrPasswordIncorrect = errors.New("password is incorrect")
+	ErrAddressNotFound   = errors.New("address not found in local wallets")
+)
 
 type WalletManager struct {
 	Wallets    []*Wallet
@@ -67,15 +73,11 @@ func GetWalletFilePath() string {
 		return ""
 	}
 	walletPath := strings.Replace(conf.GetFilePath(), "/wallets.dat", "", 1)
-	walletfile := ""
-	err := errors.New("")
+	var walletfile string
 	if Exists(walletPath) {
-		walletfile, err = filepath.Abs(conf.GetFilePath())
+		walletfile, _ = filepath.Abs(conf.GetFilePath())
 	} else if Exists(strings.Replace(walletPath, "..", "../..", 1)) {
-		walletfile, err = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
-	}
-	if err != nil && err.Error() == "" {
-		return walletfile
+		walletfile, _ = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
 	}
 	return walletfile
 }
@@ -119,8 +121,7 @@ func (wm *WalletManager) LoadFromFile() error {
 	err = decoder.Decode(&walletdata)
 	if err != nil {
 		wm.mutex.Unlock()
-		logger.Error("WalletManager: Load Wallets failed!")
-		logger.Error(err)
+		logger.WithError(err).Error("WalletManager: failed to load wallets from file!")
 		return err
 	}
 
@@ -153,8 +154,7 @@ func (wm *WalletManager) SaveWalletToFile() {
 	walletdata.Locked = wm.Locked
 	err := encoder.Encode(walletdata)
 	if err != nil {
-		logger.Error("WalletManager: save Wallets to file failed!")
-		logger.Error(err)
+		logger.WithError(err).Error("WalletManager: failed to save Wallets to file!")
 	}
 	wm.fileLoader.SaveToFile(content)
 }
@@ -193,7 +193,7 @@ func (wm *WalletManager) GetAddressesWithPassphrase(password string) ([]string, 
 	err := bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
 	if err != nil {
 		wm.mutex.Unlock()
-		return nil, errors.New("Password not correct!")
+		return nil, ErrPasswordIncorrect
 	}
 	for _, wallet := range wm.Wallets {
 		address := wallet.GetAddresses()[0].String()
@@ -230,12 +230,12 @@ func (wm *WalletManager) GetWalletByAddressWithPassphrase(address core.Address, 
 	if err == nil {
 		wallet := wm.GetWalletByAddress(address)
 		if wallet == nil {
-			return nil, errors.New("Address not found in the wallets!")
+			return nil, ErrAddressNotFound
 		}
 		return wallet, nil
 
 	}
-	return nil, errors.New("Password does not match!")
+	return nil, ErrPasswordIncorrect
 
 }
 

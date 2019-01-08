@@ -1,12 +1,13 @@
 package vm
+
 import "C"
 import (
-	logger "github.com/sirupsen/logrus"
-	"unsafe"
-	"regexp"
 	"errors"
-)
+	"regexp"
+	"unsafe"
 
+	logger "github.com/sirupsen/logrus"
+)
 
 var (
 	// StorageKeyPattern the pattern of varible key stored in stateDB
@@ -23,27 +24,26 @@ var (
 	ErrInvalidStorageKey = errors.New("invalid storage key")
 )
 
-
 //export StorageGetFunc
-func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char{
+func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char {
 	addr := uint64(uintptr(address))
 	engine := getV8EngineByAddress(addr)
 	goKey := C.GoString(key)
 
-	if engine == nil{
+	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: addr,
-			"key"	  			: goKey,
-		}).Debug("Smart Contract: Failed to get storage handler!")
+			"contract_address": addr,
+			"key":              goKey,
+		}).Debug("SmartContract: failed to get storage handler!")
 		return nil
 	}
 
 	val := engine.storage[goKey]
 	if val == "" {
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: addr,
-			"key"	  			: goKey,
-		}).Debug("Smart Contract: Failed to get value from storage")
+			"contract_address": addr,
+			"key":              goKey,
+		}).Debug("SmartContract: failed to get value from storage.")
 		return nil
 	}
 
@@ -51,17 +51,17 @@ func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char{
 }
 
 //export StorageSetFunc
-func StorageSetFunc(address unsafe.Pointer, key,value *C.char) int{
+func StorageSetFunc(address unsafe.Pointer, key, value *C.char) int {
 	addr := uint64(uintptr(address))
 	engine := getV8EngineByAddress(addr)
 	goKey := C.GoString(key)
 	goVal := C.GoString(value)
 
-	if engine == nil{
+	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: addr,
-			"key"	  			: goKey,
-		}).Debug("Smart Contract: Failed to get storage handler!")
+			"contract_address": addr,
+			"key":              goKey,
+		}).Debug("SmartContract: failed to get storage handler!")
 		return 1
 	}
 
@@ -70,16 +70,16 @@ func StorageSetFunc(address unsafe.Pointer, key,value *C.char) int{
 }
 
 //export StorageDelFunc
-func StorageDelFunc(address unsafe.Pointer, key *C.char) int{
+func StorageDelFunc(address unsafe.Pointer, key *C.char) int {
 	addr := uint64(uintptr(address))
 	engine := getV8EngineByAddress(addr)
 	goKey := C.GoString(key)
 
-	if engine == nil{
+	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr"		: addr,
-			"key"	  			: goKey,
-		}).Debug("Smart Contract: Failed to get storage handler!")
+			"contract_address": addr,
+			"key":              goKey,
+		}).Debug("SmartContract: failed to get storage handler!")
 		return 1
 	}
 	delete(engine.storage, goKey)

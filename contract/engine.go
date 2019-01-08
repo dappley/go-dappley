@@ -6,8 +6,9 @@ package vm
 #include "v8/engine.h"
 //blockchain
 bool  Cgo_VerifyAddressFunc(const char *address);
-int  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
-int Cgo_GetCurrBlockHeightFunc(void *handler);
+int	  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
+int   Cgo_GetCurrBlockHeightFunc(void *handler);
+char* Cgo_GetNodeAddressFunc(void *handler);
 //storage
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
@@ -24,6 +25,9 @@ bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *si
 bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 //math
 int Cgo_RandomFunc(void *handler, int max);
+
+void* Cgo_Malloc(size_t size);
+void  Cgo_Free(void* address);
 */
 import "C"
 import (
@@ -31,8 +35,9 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 var (
@@ -53,8 +58,9 @@ type V8Engine struct {
 	sourceTXID    []byte
 	generatedTXs  []*core.Transaction
 	handler       uint64
-	blkHeight	  uint64
-	seed 		  int64
+	blkHeight     uint64
+	seed          int64
+	nodeAddr      core.Address
 }
 
 func InitializeV8Engine() {
@@ -63,6 +69,7 @@ func InitializeV8Engine() {
 		(C.FuncVerifyAddress)(unsafe.Pointer(C.Cgo_VerifyAddressFunc)),
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
 		(C.FuncGetCurrBlockHeight)(unsafe.Pointer(C.Cgo_GetCurrBlockHeightFunc)),
+		(C.FuncGetNodeAddress)(unsafe.Pointer(C.Cgo_GetNodeAddressFunc)),
 	)
 	C.InitializeStorage(
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
@@ -77,6 +84,7 @@ func InitializeV8Engine() {
 		(C.FuncVerifyPublicKey)(unsafe.Pointer(C.Cgo_VerifyPublicKeyFunc)),
 	)
 	C.InitializeMath((C.FuncRandom)(unsafe.Pointer(C.Cgo_RandomFunc)))
+	C.InitializeMemoryFunc((C.FuncMalloc)(unsafe.Pointer(C.Cgo_Malloc)), (C.FuncFree)(unsafe.Pointer(C.Cgo_Free)))
 }
 
 //NewV8Engine generates a new V8Engine instance
@@ -94,6 +102,13 @@ func NewV8Engine() *V8Engine {
 	defer storagesMutex.Unlock()
 	v8EngineList[engine.handler] = engine
 	return engine
+}
+
+//DestroyEngine destroy V8Engine instance
+func (sc *V8Engine) DestroyEngine() {
+	storagesMutex.Lock()
+	defer storagesMutex.Unlock()
+	delete(v8EngineList, sc.handler)
 }
 
 func (sc *V8Engine) ImportSourceCode(source string) {
@@ -147,6 +162,11 @@ func (sc *V8Engine) ImportSeed(seed int64) {
 	sc.seed = seed
 }
 
+// ImportCurrBlockHeight imports the current block height
+func (sc *V8Engine) ImportNodeAddress(addr core.Address) {
+	sc.nodeAddr = addr
+}
+
 func (sc *V8Engine) Execute(function, args string) string {
 	res := "\"\""
 	status := "success"
@@ -172,7 +192,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 	logger.WithFields(logger.Fields{
 		"result": res,
 		"status": status,
-	}).Info("Smart Contract Execution Ends.")
+	}).Info("V8Engine: smart contract execution ends.")
 	return res
 }
 

@@ -19,22 +19,22 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 
 	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr": addr,
-		}).Debug("Smart Contract: Failed to get V8 engine!")
+			"contract_address": addr,
+		}).Debug("SmartContract: failed to get V8 engine!")
 		return
 	}
 
 	if context == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr": addr,
-		}).Debug("Smart Contract: Invalid get utxo params!")
+			"contract_address": addr,
+		}).Debug("SmartContract: invalid get UTXO params!")
 		return
 	}
 
 	if engine.prevUtxos == nil {
 		logger.WithFields(logger.Fields{
-			"contractAddr": addr,
-		}).Debug("Smart contract: Failed to get prevUtxo in v8 engine")
+			"contract_address": addr,
+		}).Debug("SmartContract: failed to get prevUTXO in V8 engine")
 		return
 	}
 
@@ -42,7 +42,9 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	utxosAddr := (*C.struct_utxo_t)(C.malloc(C.size_t(C.sizeof_struct_utxo_t * utxoLength)))
 	defer C.free(unsafe.Pointer(utxosAddr))
 	var temp C.struct_utxo_t
-	utxos := (*[(math.MaxInt32 - 1)/unsafe.Sizeof(temp)]C.struct_utxo_t)(unsafe.Pointer(utxosAddr))[:utxoLength:utxoLength]
+
+	utxos := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(temp)]C.struct_utxo_t)(unsafe.Pointer(utxosAddr))[:utxoLength:utxoLength]
+
 	for index, prevUtxo := range engine.prevUtxos {
 		utxo := &utxos[index]
 		utxo.txid = C.CString(hex.EncodeToString(prevUtxo.Txid))

@@ -24,6 +24,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -38,15 +39,15 @@ import (
 	"github.com/dappley/go-dappley/util"
 )
 
-var subsidy = common.NewAmount(10)
+var subsidy = common.NewAmount(10000000)
 
 const ContractTxouputIndex = 0
 
 var rewardTxData = []byte("Distribute X Rewards")
 
 var (
-	ErrInsufficientFund  = errors.New("transaction: the balance is insufficient")
-	ErrInvalidAmount     = errors.New("transaction: amount is invalid (must be > 0)")
+	ErrInsufficientFund  = errors.New("transaction: insufficient balance")
+	ErrInvalidAmount     = errors.New("transaction: invalid amount (must be > 0)")
 	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
 	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
 )
@@ -55,7 +56,7 @@ type Transaction struct {
 	ID   []byte
 	Vin  []TXInput
 	Vout []TXOutput
-	Tip  uint64
+	Tip  *common.Amount
 }
 
 type TxIndex struct {
@@ -160,7 +161,7 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 			usedUTXO := index.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
-			logger.Debug("Transaction: using utxo from multiple wallets")
+			logger.Debug("Transaction: using UTXO from multiple wallets.")
 		}
 	}
 	for _, vout := range tx.Vout {
@@ -198,8 +199,9 @@ func (tx *Transaction) GetToHashBytes() []byte {
 		bytes = append(bytes, vout.PubKeyHash.GetPubKeyHash()...)
 		bytes = append(bytes, []byte(vout.Contract)...)
 	}
-
-	bytes = append(bytes, byteutils.FromUint64(tx.Tip)...)
+	if tx.Tip != nil {
+		bytes = append(bytes, tx.Tip.Bytes()...)
+	}
 	return bytes
 }
 
@@ -215,19 +217,19 @@ func (tx *Transaction) Hash() []byte {
 // Sign signs each input of a Transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	if tx.IsCoinbase() {
-		logger.Warning("Coinbase transaction could not be signed")
+		logger.Warn("Transaction: will not sign a coinbase transaction.")
 		return nil
 	}
 
 	if tx.IsRewardTx() {
-		logger.Warning("Reward transaction could not be signed")
+		logger.Warn("Transaction: will not sign a reward transaction.")
 		return nil
 	}
 
 	txCopy := tx.TrimmedCopy()
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
-		logger.Error("ERROR: Get private key failed", err)
+		logger.WithError(err).Error("Transaction: failed to get private key.")
 		return err
 	}
 
@@ -241,7 +243,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 
 		signature, err := secp256k1.Sign(txCopy.ID, privData)
 		if err != nil {
-			logger.Error("ERROR: Sign transaction.Id failed", err)
+			logger.WithError(err).Error("Transaction: failed to create a signature.")
 			return err
 		}
 
@@ -268,6 +270,24 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
+// TrimmedCopy creates a trimmed copy without signature of Transaction to be used for verifying ID
+func (tx *Transaction) TrimmedCopyWithoutSignature() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, vin := range tx.Vin {
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, vin.PubKey})
+	}
+
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+	}
+
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
+
+	return txCopy
+}
+
 func (tx *Transaction) DeepCopy() Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
@@ -277,7 +297,7 @@ func (tx *Transaction) DeepCopy() Transaction {
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
@@ -286,9 +306,10 @@ func (tx *Transaction) DeepCopy() Transaction {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
-		if tx.Vout[0].Value.Cmp(subsidy) != 0 {
+		//TODO coinbase vout check need add tip
+		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
 			return false
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
@@ -303,65 +324,71 @@ func (tx *Transaction) Verify(utxoIndex UTXOIndex, txPool *TransactionPool, bloc
 		return true
 	}
 
-	tempTxPool := txPool.deepCopy()
-	tempUtxoIndex := utxoIndex.DeepCopy()
-	return tx.verifyTxInTempPool(*tempUtxoIndex, tempTxPool)
-}
-
-// VerifyTxInPool function will change utxoIndex and txPool
-func (tx *Transaction) verifyTxInTempPool(utxoIndex UTXOIndex, txPool TransactionPool) bool {
 	var prevUtxos []*UTXO
-	var notFoundVin []TXInput
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
-			txPool.RemoveMultipleTransactions([]*Transaction{tx})
+			logger.WithFields(logger.Fields{
+				"tx_id":          hex.EncodeToString(tx.ID),
+				"vin_tx_id":      hex.EncodeToString(vin.Txid),
+				"vin_public_key": hex.EncodeToString(vin.PubKey),
+			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return false
 		}
 		utxo := utxoIndex.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
-			notFoundVin = append(notFoundVin, vin)
-		} else {
-			prevUtxos = append(prevUtxos, utxo)
+			logger.WithFields(logger.Fields{
+				"tx_id":     hex.EncodeToString(tx.ID),
+				"vin_tx_id": hex.EncodeToString(vin.Txid),
+				"vin_index": vin.Vout,
+			}).Warn("Transaction: cannot find vin.")
+			return false
 		}
+		prevUtxos = append(prevUtxos, utxo)
 	}
 
-	if notFoundVin != nil {
-		for _, vin := range notFoundVin {
-			parentTx := txPool.GetTxByID(vin.Txid)
-			if parentTx == nil {
-				// todo: change doublespend condition
-				// vin of tx not found in utxoIndex or txPool
-				MetricsTxDoubleSpend.Inc(1)
-				return false
-			}
-			pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
-			if err != nil {
-				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
-				return false
-			}
-
-			if !bytes.Equal(parentTx.Vout[vin.Vout].PubKeyHash.GetPubKeyHash(), pubKeyHash.GetPubKeyHash()) ||
-				!parentTx.verifyTxInTempPool(utxoIndex, txPool) {
-				txPool.RemoveMultipleTransactions([]*Transaction{tx, parentTx})
-				return false
-			}
-			prevUtxos = append(prevUtxos, newUTXO(parentTx.Vout[vin.Vout], vin.Txid, vin.Vout))
-		}
-	}
-
-	if tx.verifyAmount(prevUtxos) && tx.verifyTip(prevUtxos) && tx.verifySignatures(prevUtxos) && tx.verifyPublicKeyHash(prevUtxos) {
-		utxoIndex.UpdateUtxo(tx)
-		return true
-	} else {
-		txPool.RemoveMultipleTransactions([]*Transaction{tx})
+	if !tx.verifyID() {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: ID is invalid.")
 		return false
 	}
+
+	if !tx.verifyPublicKeyHash(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: pubkey is invalid.")
+		return false
+	}
+
+	if !tx.verifyAmount(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: amount is invalid.")
+		return false
+	}
+
+	if !tx.verifyTip(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: tip is invalid.")
+		return false
+	}
+
+	if !tx.verifySignatures(prevUtxos) {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: signature is invalid.")
+		return false
+	}
+
+	return true
 }
 
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() bool {
-	if bytes.Equal(tx.ID, tx.Hash()) {
+	txCopy := tx.TrimmedCopyWithoutSignature()
+	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true
 	} else {
 		return false
@@ -378,7 +405,7 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 			return false
 		}
 	}
-	return tx.Tip == sum.Uint64()
+	return tx.Tip.Cmp(sum) == 0
 }
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
@@ -411,7 +438,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for _, utxo := range prevUtxos {
 		if utxo.PubKeyHash.GetPubKeyHash() == nil {
-			logger.Error("ERROR: Previous transaction is not correct")
+			logger.Error("Transaction: previous transaction is not correct.")
 			return false
 		}
 	}
@@ -429,10 +456,10 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 		originPub[0] = 4 // uncompressed point
 		copy(originPub[1:], vin.PubKey)
 
-		verifyResult, error1 := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
-		if error1 != nil || verifyResult == false {
-			logger.Errorf("Error: Verify sign failed %v", error1)
+		if err != nil || verifyResult == false {
+			logger.WithError(err).Error("Transaction: signature cannot be verified.")
 			return false
 		}
 	}
@@ -466,7 +493,7 @@ func NewCoinbaseTX(to Address, data string, blockHeight uint64, tip *common.Amou
 
 	txin := TXInput{nil, -1, bh, []byte(data)}
 	txout := NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, 0}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -483,15 +510,14 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
 		if err != nil {
-			logger.WithFields(logger.Fields{
+			logger.WithError(err).WithFields(logger.Fields{
 				"address": address,
 				"amount":  amount,
-				"error":   err,
-			}).Warn("Transaction: Not able to parse reward amount")
+			}).Warn("Transaction: failed to parse reward amount")
 		}
 		txOutputs = append(txOutputs, *NewTXOutput(amt, NewAddress(address)))
 	}
-	tx := Transaction{nil, []TXInput{txin}, txOutputs, 0}
+	tx := Transaction{nil, []TXInput{txin}, txOutputs, common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -511,7 +537,7 @@ func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, 
 		nil,
 		prepareInputLists(utxos, senderKeyPair.PublicKey, nil),
 		prepareOutputLists(from, to, amount, change, contract),
-		tip.Uint64()}
+		tip}
 	tx.ID = tx.Hash()
 
 	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
@@ -542,7 +568,7 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 		nil,
 		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
 		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
-		tip.Uint64(),
+		tip,
 	}
 	tx.ID = tx.Hash()
 
@@ -602,7 +628,9 @@ func (tx *Transaction) Execute(index UTXOIndex,
 
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
 	if err != nil {
-		logger.Errorf("ERROR: %v", err)
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid"	:hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return nil
 	}
 
@@ -614,10 +642,10 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	totalArgs := util.PrepareArgs(args)
 	address := utxos[0].PubKeyHash.GenerateAddress()
 	logger.WithFields(logger.Fields{
-		"contractAddr":    address.String(),
-		"invokedFunction": function,
-		"arguments":       totalArgs,
-	}).Debug("Executing smart contract...")
+		"contract_address": address.String(),
+		"invoked_function": function,
+		"arguments":        totalArgs,
+	}).Debug("Transaction: is executing the smart contract...")
 	engine.ImportSourceCode(utxos[0].Contract)
 	engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
 	engine.ImportContractAddr(address)
@@ -643,6 +671,11 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		utxo := utxoPool.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
 		if utxo == nil {
 			MetricsTxDoubleSpend.Inc(1)
+			logger.WithFields(logger.Fields{
+				"txid"		: hex.EncodeToString(tx.ID),
+				"vin_id" 	: hex.EncodeToString(vin.Txid),
+				"vin_index" : vin.Vout,
+			}).Warn("Transaction: Can not find vin")
 			return nil, ErrTXInputNotFound
 		}
 		res = append(res, utxo)
@@ -653,12 +686,12 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 
 	if tx == nil {
-		logger.Debug("Transaction: Transaction does not exist")
+		logger.Debug("Transaction: does not exist")
 		return false
 	}
 
 	if !tx.IsRewardTx() {
-		logger.Debug("Transaction: Transaction is not a reward transaction")
+		logger.Debug("Transaction: is not a reward transaction")
 		return false
 	}
 
@@ -747,7 +780,9 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
-	outputs = append(outputs, *NewTXOutput(change, from))
+	if !change.IsZero(){
+		outputs = append(outputs, *NewTXOutput(change, from))
+	}
 	return outputs
 }
 
@@ -767,13 +802,13 @@ func (tx *Transaction) ToProto() proto.Message {
 		ID:   tx.ID,
 		Vin:  vinArray,
 		Vout: voutArray,
-		Tip:  tx.Tip,
+		Tip:  tx.Tip.Bytes(),
 	}
 }
 
 func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*corepb.Transaction).ID
-	tx.Tip = pb.(*corepb.Transaction).Tip
+	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).Tip)
 
 	var vinArray []TXInput
 	txin := TXInput{}

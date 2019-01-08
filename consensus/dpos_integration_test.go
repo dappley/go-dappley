@@ -24,12 +24,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDpos_Start(t *testing.T) {
@@ -37,8 +36,10 @@ func TestDpos_Start(t *testing.T) {
 	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil)
-	node := network.NewNode(bc)
-	node.Start(21100)
+	pool := core.NewBlockPool(0)
+	node := network.NewNode(bc, pool)
+	node.Start(22100)
+	defer node.Stop()
 	dpos.Setup(node, cbAddr.String())
 	dpos.SetKey(keystr)
 
@@ -71,45 +72,49 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
 	dynasty := NewDynasty(miners, len(miners), timeBetweenBlock)
-	dposArray := []*DPOS{}
+	var dposArray []*DPOS
+	var nodeArray []*network.Node
 	var firstNode *network.Node
-	for i := 0; i < len(miners); i++ {
+	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128,nil)
-		node := network.NewNode(bc)
+		pool := core.NewBlockPool(0)
+		node := network.NewNode(bc, pool)
 		node.Start(21200 + i)
+		nodeArray = append(nodeArray, node)
 		if i == 0 {
 			firstNode = node
 		} else {
 			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
 		}
-		dpos.Setup(node, miners[i])
+		dpos.Setup(node, miner)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
 
 	firstNode.SyncPeersBroadcast()
 
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		dposArray[i].Start()
 	}
 
 	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		dposArray[i].Stop()
+		nodeArray[i].Stop()
 	}
 	//Waiting block sync to other nodes
 	time.Sleep(time.Second * 2)
-	for i := 0; i < len(miners); i++ {
+	for i := range miners {
 		v := dposArray[i]
 		core.WaitDoneOrTimeout(func() bool {
 			return !v.IsProducingBlock()
 		}, 20)
 	}
 
-	for i := 0; i < len(miners); i++ {
-		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bc.GetMaxHeight())
+	for i := range miners {
+		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].node.GetBlockchain().GetMaxHeight())
 	}
 }

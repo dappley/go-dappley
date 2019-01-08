@@ -41,8 +41,8 @@ func TestAddress_IsContract(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res,err := tt.address.IsContract()
-			assert.Equal(t, res, tt.expectedRes)
-			assert.Equal(t, err, tt.expectedErr)
+			assert.Equal(t, tt.expectedRes, res)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }

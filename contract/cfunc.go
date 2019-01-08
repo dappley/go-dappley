@@ -7,6 +7,7 @@ package vm
 bool  VerifyAddressFunc(const char* address);
 int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 int   GetCurrBlockHeightFunc(void *handler);
+char* GetNodeAddressFunc(void *handler);
 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
@@ -19,6 +20,9 @@ bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
 bool  VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 int RandomFunc(void *handler, int max);
 
+void* Malloc(size_t size);
+void  Free(void* address);
+
 bool Cgo_VerifyAddressFunc(const char *address) {
 	return VerifyAddressFunc(address);
 };
@@ -29,6 +33,10 @@ int Cgo_TransferFunc(void *handler, const char *to, const char *amount, const ch
 
 int Cgo_GetCurrBlockHeightFunc(void *handler){
 	return GetCurrBlockHeightFunc(handler);
+};
+
+char* Cgo_GetNodeAddressFunc(void *handler){
+	return GetNodeAddressFunc(handler);
 };
 
 char* Cgo_StorageGetFunc(void *address, const char *key){
@@ -70,6 +78,15 @@ bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *si
 bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey){
 	return VerifyPublicKeyFunc(addr, pubkey);
 }
+
+void* Cgo_Malloc(size_t size) {
+    return Malloc(size);
+}
+
+void  Cgo_Free(void* address) {
+	Free(address);
+}
+
 
 */
 import "C"

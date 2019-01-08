@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "memory.h"
 //#include <unistd.h>
 
 char *readFile(const char *filepath, size_t *size) {
@@ -40,7 +41,7 @@ char *readFile(const char *filepath, size_t *size) {
   size_t file_size = ftell(f);
   rewind(f);
 
-  char *data = (char *)malloc(file_size + 1);
+  char *data = (char *)MyMalloc(file_size + 1);
   size_t idx = 0;
 
   size_t len = 0;
@@ -50,7 +51,7 @@ char *readFile(const char *filepath, size_t *size) {
   *(data + idx) = '\0';
 
   if (feof(f) == 0) {
-    free(static_cast<void *>(data));
+	MyFree(static_cast<void *>(data));
     return NULL;
   }
 

@@ -44,7 +44,7 @@ void RandomCallback(const FunctionCallbackInfo<Value> &info) {
     return;
   }
 
-  int ret = sRandom(handler->Value(), Number::Cast(*max)->Value());
+  int ret = sRandom(handler->Value(), (int)Number::Cast(*max)->Value());
 
   info.GetReturnValue().Set(ret);
 }

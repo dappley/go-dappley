@@ -3,7 +3,15 @@
 #include "lib/transaction_struct.h"
 #include "lib/utxo_struct.h"
 
+#ifdef WIN32 
+#ifdef V8DLL
+#define EXPORT __declspec(dllexport)
+#else 
+#define EXPORT __declspec(dllimport)
+#endif
+#else
 #define EXPORT __attribute__((__visibility__("default")))
+#endif 
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,10 +29,13 @@ extern "C" {
     typedef bool (*FuncVerifyPublicKey)(const char *addr, const char *pubKey);
     typedef int (*FuncRandom)(void *handler, int max);
     typedef int (*FuncGetCurrBlockHeight)(void *handler);
+    typedef char* (*FuncGetNodeAddress)(void *handler);
+	typedef void* (*FuncMalloc)(size_t size);
+	typedef void  (*FuncFree)(void* data);
 
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler, char **result);
-    EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight);
+    EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress);
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
@@ -36,6 +47,7 @@ extern "C" {
     EXPORT void InitializeLogger(FuncLogger logger);
     EXPORT void InitializeSmartContract(char* source);
     EXPORT void DisposeV8();
+	EXPORT void InitializeMemoryFunc(FuncMalloc mallocFunc, FuncFree freeFunc);
 #ifdef __cplusplus
 }
 #endif

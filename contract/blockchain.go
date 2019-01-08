@@ -25,25 +25,26 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"amount": amount,
-		}).Debug("Smart Contract: Invalid amount used in transfer!")
+		}).Debug("SmartContract: transfer amount is invalid!")
 		return 1
 	}
 	tipValue, err := common.NewAmountFromString(C.GoString(tip))
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"tip": tip,
-		}).Debug("Smart Contract: Invalid tip used in transfer!")
+		}).Debug("SmartContract: tip for the transfer is invalid!")
 		return 1
 	}
 
 	engine := getV8EngineByAddress(uint64(uintptr(handler)))
 	if engine == nil {
 		logger.WithFields(logger.Fields{
-			"handler": uint64(uintptr(handler)),
-			"to":      toAddr,
-			"amount":  amountValue,
-			"tip":     tipValue,
-		}).Debug("Smart Contract: Failed to get the engine instance while executing transfer!")
+			"handler":  uint64(uintptr(handler)),
+			"function": "Blockchain.TransferFunc",
+			"to":       toAddr,
+			"amount":   amountValue,
+			"tip":      tipValue,
+		}).Debug("SmartContract: failed to get the engine instance!")
 		return 1
 	}
 
@@ -57,12 +58,12 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	utxosToSpend, ok := core.PrepareUTXOs(utxos, amountValue.Add(tipValue))
 	if !ok {
 		logger.WithFields(logger.Fields{
-			"all utxos":      utxos,
-			"spending utxos": utxosToSpend,
+			"all_utxos":      utxos,
+			"spending_utxos": utxosToSpend,
 			"to":             toAddr,
 			"amount":         amountValue,
 			"tip":            tipValue,
-		}).Warn("Smart Contract: Insufficient fund for the transfer!")
+		}).Warn("SmartContract: there is insufficient fund for the transfer!")
 		return 1
 	}
 
@@ -82,10 +83,24 @@ func GetCurrBlockHeightFunc(handler unsafe.Pointer) uint64 {
 	if engine == nil {
 		logger.WithFields(logger.Fields{
 			"handler":  uint64(uintptr(handler)),
-			"function": "Math.GetCurrBlockHeightFunc",
-		}).Debug("Smart Contract: Failed to get the engine instance while executing getCurrBlockHeightFunc!")
+			"function": "Blockchain.GetCurrBlockHeightFunc",
+		}).Debug("SmartContract: failed to get the engine instance!")
 		return 0
 	}
 
 	return engine.blkHeight
+}
+
+//export GetNodeAddressFunc
+func GetNodeAddressFunc(handler unsafe.Pointer) *C.char {
+	engine := getV8EngineByAddress(uint64(uintptr(handler)))
+	if engine == nil {
+		logger.WithFields(logger.Fields{
+			"handler":  uint64(uintptr(handler)),
+			"function": "Blockchain.GetNodeAddressFunc",
+		}).Debug("SmartContract: failed to get the engine instance!")
+		return nil
+	}
+
+	return C.CString(engine.nodeAddr.String())
 }

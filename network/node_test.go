@@ -20,12 +20,18 @@ package network
 
 import (
 	"bytes"
+	"crypto/rand"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-crypto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -72,7 +78,7 @@ func TestNode_prepareData(t *testing.T) {
 			retErr:  ErrDapMsgNoCmd,
 		},
 	}
-	n := FakeNodeWithPidAndAddr(nil, "asd", "test")
+	n := FakeNodeWithPidAndAddr(nil, nil, "asd", "test")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := n.prepareData(tt.msgData, tt.cmd, Unicast, "")
@@ -81,4 +87,27 @@ func TestNode_prepareData(t *testing.T) {
 			assert.Equal(t, tt.retErr, err)
 		})
 	}
+}
+
+func TestNewNode(t *testing.T) {
+	priv, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+	crypto.MarshalPrivateKey(priv)
+}
+
+func TestNode_Stop(t *testing.T) {
+	logger.SetLevel(logger.DebugLevel)
+	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
+	mockConsensus := new(mocks.Consensus)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil)
+	pool := core.NewBlockPool(0)
+	node := NewNode(bc, pool)
+	err := node.Start(22100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(time.Second)
+	node.Stop()
+	_, ok := <- node.host.Network().Process().Closed()
+	assert.False(t, ok)
 }

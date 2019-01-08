@@ -3,3 +3,5 @@ dapp
 *.db
 cli/cli
 *.pid
+*.dll
+*.dll.a

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <v8.h>
 #include <libplatform/libplatform.h>
 #include "engine.h"
@@ -17,9 +18,12 @@
 #include "lib/prev_utxo.h"
 #include "lib/crypto.h"
 #include "lib/math.h"
+#include "lib/memory.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
+static char* wrapReturnResult(const char* src);
+
 
 void Initialize(){
     // Initialize V8.
@@ -81,6 +85,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
   Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(create_params);
+  int errorCode = 0;
 
   {
     Isolate::Scope isolate_scope(isolate);
@@ -98,7 +103,6 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
 
     // Enter the context for compiling and running the hello world script.
     Context::Scope context_scope(context);
-
     NewBlockchainInstance(isolate, context, (void *)handler);
     NewCryptoInstance(isolate, context, (void *)handler);
     NewStorageInstance(isolate, context, (void *)handler);
@@ -122,17 +126,20 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
       Local<Script> script;
       if (!Script::Compile(context, source).ToLocal(&script)) {
         reportException(isolate, &try_catch);
-        *result = strdup("1");
-        return 1;
+        *result = wrapReturnResult("1");
+        errorCode = 1;
+        goto RET;
       }
 
       // Run the script to get the result.
       Local<Value> scriptRes;
       if (!script->Run(context).ToLocal(&scriptRes)) {
+		printf("run failed\n");
         assert(try_catch.HasCaught());
         reportException(isolate, &try_catch);
-        *result = strdup("1");
-        return 1;
+        *result = wrapReturnResult("1");
+        errorCode = 1;
+        goto RET;
       }
 
       // set result.
@@ -140,18 +147,24 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
         Local<Object> obj = scriptRes.As<Object>();
         if (!obj->IsUndefined()) {
           String::Utf8Value str(isolate, obj);
-          *result = (char *)malloc(str.length() + 1);
-          strcpy(*result, *str);
+          *result = wrapReturnResult(*str);
         }
       }
     }
   }
 
+RET:
   // Dispose the isolate and tear down V8.
   isolate->Dispose();
 
   delete create_params.array_buffer_allocator;
-  return 0;
+  return errorCode;
+}
+
+char* wrapReturnResult(const char* src) {
+	char* result = (char *)MyMalloc(strlen(src) + 1);
+	strcpy(result, src);
+	return result;
 }
 
 void DisposeV8(){

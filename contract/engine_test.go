@@ -8,11 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestScEngine_Execute(t *testing.T) {
@@ -366,7 +365,7 @@ func TestMath(t *testing.T) {
 }
 
 func TestBlkHeight(t *testing.T) {
-	script, _ := ioutil.ReadFile("test/test_blockheight.js")
+	script, _ := ioutil.ReadFile("test/test_blockchain.js")
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
@@ -377,9 +376,31 @@ func TestBlkHeight(t *testing.T) {
 }
 
 func TestTrimWhiteSpaces(t *testing.T) {
-	script, _ := ioutil.ReadFile("test/test_blockheight.js")
+	script, _ := ioutil.ReadFile("test/test_blockchain.js")
 	scriptStr := string(script)
 	str := strings.Replace(scriptStr, " ", "", -1)
 	str = strings.Replace(str, "\\n", "", -1)
 	fmt.Println(str)
+}
+
+func TestGetNodeAddress(t *testing.T) {
+	script, _ := ioutil.ReadFile("test/test_blockchain.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+	sc.ImportNodeAddress(core.NewAddress("testAddr"))
+
+	assert.Equal(t, "testAddr", sc.Execute("getNodeAddress", ""))
+}
+
+func TestNewAddress(t *testing.T) {
+	kp := core.NewKeyPair()
+	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	pk := hex.EncodeToString(privData)
+	publicKey := hex.EncodeToString(kp.PublicKey)
+	pkh, _ := core.NewUserPubKeyHash(kp.PublicKey)
+	addr := pkh.GenerateAddress()
+	fmt.Println("privatekey:", pk)
+	fmt.Println("publickey:", publicKey)
+	fmt.Println("addr:", addr)
 }

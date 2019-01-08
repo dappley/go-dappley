@@ -24,13 +24,19 @@ import (
 	"errors"
 	"sync"
 
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 const utxoMapKey = "utxo"
 const contractUtxoKey = "ContractUtxos"
+
+var (
+	ErrUTXONotFound = errors.New("utxo not found when trying to remove from cache")
+	ErrTXInputInvalid = errors.New("txInput refers to non-existing transaction")
+)
 
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndex struct {
@@ -57,7 +63,7 @@ func deserializeUTXOIndex(d []byte) *UTXOIndex {
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	err := decoder.Decode(&utxos.index)
 	if err != nil {
-		logger.Panicf("failed to deserialize UTXOs: %v", err)
+		logger.WithError(err).Panic("UTXOIndex: failed to deserialize UTXOs.")
 	}
 	return utxos
 }
@@ -79,6 +85,7 @@ func LoadUTXOIndex(db storage.Storage) *UTXOIndex {
 	utxoBytes, err := db.Get([]byte(utxoMapKey))
 
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
+		logger.Debug("UTXOIndex: does not exists in database. Creating a new one.")
 		return NewUTXOIndex()
 	}
 	return deserializeUTXOIndex(utxoBytes)
@@ -129,6 +136,11 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 // for smart contract, utxos[0] is expected to be the contract
 func PrepareUTXOs(utxos []*UTXO, amount *common.Amount) ([]*UTXO, bool) {
 	sum := common.NewAmount(0)
+
+	if len(utxos) < 1{
+		return utxos, false
+	}
+
 	if isContract, _ := utxos[0].PubKeyHash.IsContract(); isContract {
 		utxos = utxos[1:]
 	}
@@ -173,22 +185,8 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
 func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 	// Create a copy of the index so operations below are only temporal
-	txLenBeforeUpdate := len(txs)
-	firstUpdate := true
-	for firstUpdate || txLenBeforeUpdate != len(txs) {
-		firstUpdate = false
-		txLenBeforeUpdate = len(txs)
-		nextTxs := make([]*Transaction, 0, len(txs))
-		for _, tx := range txs {
-			if !utxos.UpdateUtxo(tx) {
-				nextTxs = append(nextTxs, tx)
-			}
-		}
-		txs = nextTxs
-	}
-	if len(txs) != 0 {
-		// vin of tx not found in utxoIndex or txPool
-		MetricsTxDoubleSpend.Inc(1)
+	for _, tx := range txs {
+		utxos.UpdateUtxo(tx)
 	}
 }
 
@@ -199,24 +197,26 @@ func newUTXO(txout TXOutput, txid []byte, vout int) *UTXO {
 
 // undoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
 // Note that the operation does not save the index to db.
-func (utxos *UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.Storage) {
+func (utxos *UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.Storage) error {
 
-	for _, tx := range blk.GetTransactions() {
+	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
+		tx := blk.GetTransactions()[i]
 		err := utxos.excludeVoutsInTx(tx, db)
 		if err != nil {
-			logger.Panic(err)
+			return err
 		}
 		if tx.IsCoinbase() || tx.IsRewardTx() {
 			continue
 		}
 		err = utxos.unspendVinsInTx(tx, bc)
 		if err != nil {
-			logger.Panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
-// excludeVoutsInTx undoes the spending of UTXO in a transaction.
+// excludeVoutsInTx removes the UTXOs generated in a transaction from the UTXOIndex.
 func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) error {
 	for i := range tx.Vout {
 		err := utxos.removeUTXO(tx.ID, i)
@@ -227,14 +227,14 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) er
 	return nil
 }
 
-// unspendVinsInTx includes UTXO the UTXOIndex as a result of undoing the spending of UTXO in a transaction.
+// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
 func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, bc)
 		if err != nil {
 			return err
 		}
-		utxos.addUTXO(vout, tx.ID, voutIndex)
+		utxos.addUTXO(vout, vin.Txid, voutIndex)
 	}
 	return nil
 }
@@ -271,13 +271,13 @@ func (utxos *UTXOIndex) removeUTXO(txid []byte, vout int) error {
 			}
 		}
 	}
-	return errors.New("UTXO: utxo not found when trying to remove from cache")
+	return ErrUTXONotFound
 }
 
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
 	tx, err := bc.FindTransaction(in.Txid)
 	if err != nil {
-		return TXOutput{}, 0, errors.New("txInput refers to non-existing transaction")
+		return TXOutput{}, 0, ErrTXInputInvalid
 	}
 	return tx.Vout[in.Vout], in.Vout, nil
 }
@@ -320,7 +320,13 @@ func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UT
 			return NewUTXOIndex(), ErrBlockDoesNotExist
 		}
 
-		deepCopy.undoTxsInBlock(block, bc, db)
+		err = deepCopy.undoTxsInBlock(block, bc, db)
+		if  err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"hash": block.GetHash(),
+			}).Warn("UTXOIndex: failed to calculate previous state of UTXO index for the block")
+			return NewUTXOIndex(), err
+		}
 	}
 
 	return deepCopy, nil

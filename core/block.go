@@ -23,6 +23,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
+	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"time"
 
@@ -56,11 +57,11 @@ func (h Hash) String() string {
 	return hex.EncodeToString(h)
 }
 
-func NewBlock(transactions []*Transaction, parent *Block) *Block {
-	return NewBlockWithTimestamp(transactions, parent, time.Now().Unix())
+func NewBlock(txs []*Transaction, parent *Block) *Block {
+	return NewBlockWithTimestamp(txs, parent, time.Now().Unix())
 }
 
-func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp int64) *Block {
+func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -70,8 +71,8 @@ func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp
 		height = parent.GetHeight() + 1
 	}
 
-	if transactions == nil {
-		transactions = []*Transaction{}
+	if txs == nil {
+		txs = []*Transaction{}
 	}
 	return &Block{
 		header: &BlockHeader{
@@ -82,7 +83,7 @@ func NewBlockWithTimestamp(transactions []*Transaction, parent *Block, timeStamp
 			sign:      nil,
 			height:    height,
 		},
-		transactions: transactions,
+		transactions: txs,
 	}
 }
 
@@ -202,7 +203,27 @@ func (b *Block) ToProto() proto.Message {
 		Transactions: txArray,
 	}
 }
+func FromProtoBlockMsg(data []byte) *Block {
+	//create a block proto
+	blockpb := &corepb.Block{}
 
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(data, blockpb); err != nil {
+		logger.Warn(err)
+	}
+	if blockpb.Header == nil{
+		spew.Dump(blockpb)
+		spew.Dump(data)
+	}
+
+	//create an empty block
+	block := &Block{}
+
+	//load the block with proto
+	block.FromProto(blockpb)
+
+	return block
+}
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
@@ -231,6 +252,9 @@ func (bh *BlockHeader) ToProto() proto.Message {
 }
 
 func (bh *BlockHeader) FromProto(pb proto.Message) {
+	if pb == nil {
+		return
+	}
 	bh.hash = pb.(*corepb.BlockHeader).Hash
 	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
@@ -275,18 +299,18 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 
 func (b *Block) SignBlock(key string, data []byte) bool {
 	if len(key) <= 0 {
-		logger.Warn("Block: key length not enough for signature!")
+		logger.Warn("Block: the key is too short for signature!")
 		return false
 	}
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
-		logger.Warn("Block: private key decode error for signature!")
+		logger.Warn("Block: cannot decode private key for signature!")
 		return false
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
-		logger.Warnf("Block: signature calculation error!, %v\n", err.Error())
+		logger.WithError(err).Warn("Block: failed to calculate signature!")
 		return false
 	}
 
@@ -300,14 +324,10 @@ func (b *Block) VerifyHash() bool {
 
 func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager, parentBlk *Block) bool {
 	if len(b.GetTransactions()) == 0 {
-		logger.WithFields(logger.Fields{"blkHash": b.GetHash()}).
-			Debug("No transactions to verify in this block")
+		logger.WithFields(logger.Fields{
+			"hash": b.GetHash(),
+		}).Debug("Block: there is no transaction to verify in this block.")
 		return true
-	}
-
-	txPool := NewTransactionPool(uint32(len(b.transactions)))
-	for _, tx := range b.GetTransactions() {
-		txPool.Transactions.Push(*tx)
 	}
 
 	var rewardTX *Transaction
@@ -319,10 +339,11 @@ L:
 		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
 			if rewardTX != nil {
-				logger.Warn("Block contains more than 1 reward transaction")
+				logger.Warn("Block: contains more than 1 reward transaction.")
 				return false
 			}
 			rewardTX = tx
+			utxo.UpdateUtxo(tx)
 			continue L
 		}
 		if tx.IsFromContract() {
@@ -335,8 +356,9 @@ L:
 					continue L
 				}
 			}
-			logger.WithFields(logger.Fields{"tx": tx}).
-				Debug("The contract source of this generated tx is not in the same block")
+			logger.WithFields(logger.Fields{
+				"tx": tx,
+			}).Debug("Block: the contract source of this generated tx is not in the same block.")
 			// TODO: Execute the contract in source tx
 			//sourceTX, err := Blockchain{}.FindTransaction(contractSource)
 			//if err != nil || !sourceTX.IsContract() {
@@ -351,18 +373,20 @@ L:
 		if tx.IsContract() {
 			// Run the contract and collect generated transactions
 			if manager == nil {
-				logger.Warn("Smart contract cannot be verified")
-				logger.Debug("missing SCEngineManager")
+				logger.Warn("Block: smart contract cannot be verified.")
+				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
 				return false
 			}
 			scEngine := manager.CreateEngine()
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(),parentBlk)
+			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			utxo.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if !tx.Verify(utxo, txPool, b.GetHeight()) {
+			if !tx.Verify(&utxo, b.GetHeight()) {
 				return false
 			}
+			utxo.UpdateUtxo(tx)
 		}
 	}
 	// Assert that any contract-incurred transactions matches the ones generated from contract execution
@@ -372,6 +396,7 @@ L:
 	if len(contractGeneratedTXs) > 0 && !verifyGeneratedTXs(utxo, contractGeneratedTXs, allContractGeneratedTXs) {
 		return false
 	}
+	utxo.UpdateUtxoState(allContractGeneratedTXs)
 	return true
 }
 
@@ -436,7 +461,7 @@ func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
 			if !tx.IsCoinbase() && !tx.IsRewardTx() {
-				txPool.Push(*tx)
+				txPool.Push(tx)
 			}
 		}
 	}

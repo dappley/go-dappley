@@ -19,10 +19,11 @@
 package consensus
 
 import (
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
-	logger "github.com/sirupsen/logrus"
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
@@ -84,22 +85,27 @@ func (bp *BlockProducer) IsIdle() bool {
 func (bp *BlockProducer) prepareBlock() {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
-		logger.Error(err)
+		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
 		return
 	}
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
 
-	validTxs := bp.bc.GetTxPool().PopValidTxs(*utxoIndex)
+	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoIndex, parentBlock.GetHeight()+1)
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
 	scGeneratedTXs := bp.executeSmartContract(validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
-	rtx := core.NewRewardTx(bp.bc.GetMaxHeight()+1, rewards)
 	validTxs = append(validTxs, scGeneratedTXs...)
-	validTxs = append(validTxs, cbtx, &rtx)
-
+	validTxs = append(validTxs, cbtx)
+	if len(rewards) > 0 {
+		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
+		validTxs = append(validTxs, &rtx)
+	}
+	logger.WithFields(logger.Fields{
+		"valid_txs": len(validTxs),
+	}).Info("BlockProducer: prepare block.")
 	bp.newBlock = core.NewBlock(validTxs, parentBlock)
 }
 
@@ -107,7 +113,7 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range txs {
-		totalTips = totalTips.Add(common.NewAmount(tx.Tip))
+		totalTips = totalTips.Add(tx.Tip)
 	}
 	cbtx := core.NewCoinbaseTX(core.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	return &cbtx
@@ -120,9 +126,18 @@ func (bp *BlockProducer) executeSmartContract(txs []*core.Transaction, rewards m
 	scStorage := core.NewScState()
 	scStorage.LoadFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
 	engine := vm.NewV8Engine()
+	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction
+
+	for _, tx := range txs {
+		if !tx.IsContract() {
+			utxoIndex.UpdateUtxo(tx)
+		}
+	}
+
 	for _, tx := range txs {
 		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
 	}
+
 	return generatedTXs
 }

@@ -24,14 +24,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 type DPOS struct {
-	bc          *core.Blockchain
 	bp          *BlockProducer
 	producerKey string
 	newBlockCh  chan *core.Block
@@ -62,9 +62,8 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 }
 
 func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
-	dpos.bc = node.GetBlockchain()
 	dpos.node = node
-	dpos.bp.Setup(dpos.bc, cbAddr)
+	dpos.bp.Setup(node.GetBlockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
 }
 
@@ -89,10 +88,6 @@ func (dpos *DPOS) GetProducers() []string {
 	return dpos.dynasty.GetProducers()
 }
 
-func (dpos *DPOS) GetBlockChain() *core.Blockchain {
-	return dpos.bc
-}
-
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
 func (dpos *DPOS) Validate(block *core.Block) bool {
 	producerIsValid := dpos.verifyProducer(block)
@@ -101,11 +96,11 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 	}
 
 	if !dpos.beneficiaryIsProducer(block) {
-		logger.Debug("DPoS: Producer validation failed")
+		logger.Debug("DPoS: failed to validate producer.")
 		return false
 	}
 	if dpos.isDoubleMint(block) {
-		logger.Debug("DPoS: Double-minting case found!")
+		logger.Debug("DPoS: double-minting is detected.")
 		return false
 	}
 
@@ -115,7 +110,9 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 
 func (dpos *DPOS) Start() {
 	go func() {
-		logger.Info("DPoS starts...", dpos.node.GetPeerID())
+		logger.WithFields(logger.Fields{
+			"peer_id": dpos.node.GetPeerID(),
+		}).Info("DPoS starts...")
 		if len(dpos.stopCh) > 0 {
 			<-dpos.stopCh
 		}
@@ -125,16 +122,16 @@ func (dpos *DPOS) Start() {
 			case now := <-ticker:
 				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
 					logger.WithFields(logger.Fields{
-						"peerid": dpos.node.GetPeerID(),
-					}).Info("DPoS: My Turn to produce block...")
+						"peer_id": dpos.node.GetPeerID(),
+					}).Info("DPoS: it is my turn to produce block.")
 					// Do not produce block if block pool is syncing
-					if dpos.bp.bc.GetBlockPool().GetSyncState() {
-						logger.Debug("BlockProducer: Paused while block pool is syncing")
+					if dpos.node.GetBlockchain().GetState() != core.BlockchainReady {
+						logger.Debug("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}
 					newBlk := dpos.bp.ProduceBlock()
 					if !dpos.Validate(newBlk) {
-						logger.Error("DPoS: invalid block produced!")
+						logger.Error("DPoS: produced an invalid block!")
 						continue
 					}
 					dpos.updateNewBlock(newBlk)
@@ -148,7 +145,7 @@ func (dpos *DPOS) Start() {
 
 func (dpos *DPOS) Stop() {
 	logger.WithFields(logger.Fields{
-		"peerid": dpos.node.GetPeerID(),
+		"peer_id": dpos.node.GetPeerID(),
 	}).Info("DPoS stops...")
 	dpos.stopCh <- true
 }
@@ -159,7 +156,7 @@ func (dpos *DPOS) hashAndSign(block *core.Block) {
 	block.SetHash(hash)
 	ok := block.SignBlock(dpos.producerKey, hash)
 	if !ok {
-		logger.Warn("DPoS: Failed to sign the new block")
+		logger.Warn("DPoS: failed to sign the new block.")
 	}
 }
 
@@ -169,7 +166,7 @@ func (dpos *DPOS) isForking() bool {
 
 func (dpos *DPOS) isDoubleMint(block *core.Block) bool {
 	if _, exist := dpos.slot.Get(block.GetTimestamp()); exist {
-		logger.Debug("Someone is minting when they are not supposed to!")
+		logger.Debug("DPoS: someone is minting when they are not supposed to.")
 		return true
 	}
 	return false
@@ -188,30 +185,30 @@ func (dpos *DPOS) verifyProducer(block *core.Block) bool {
 	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
 
 	if hash == nil {
-		logger.Warn("DPoS: block hash empty!")
+		logger.Warn("DPoS: block hash is empty!")
 		return false
 	}
 	if sign == nil {
-		logger.Warn("DPoS: block signature empty!")
+		logger.Warn("DPoS: block signature is empty!")
 		return false
 	}
 
 	pubkey, err := secp256k1.RecoverECDSAPublicKey(hash, sign)
 	if err != nil {
-		logger.Warn("DPoS: Get pub key from block signature error!")
+		logger.WithError(err).Warn("DPoS: cannot recover the public key from the block signature!")
 		return false
 	}
 
 	pubKeyHash, err := core.NewUserPubKeyHash(pubkey[1:])
 	if err != nil {
-		logger.Warn("DPoS: Invalid Public Key!")
+		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 		return false
 	}
 
 	address := pubKeyHash.GenerateAddress()
 
 	if strings.Compare(address.String(), producer) != 0 {
-		logger.Warn("DPoS: Address is not current producer's")
+		logger.Warn("DPoS: the signer is not the producer in this time slot.")
 		return false
 	}
 
@@ -221,7 +218,7 @@ func (dpos *DPOS) verifyProducer(block *core.Block) bool {
 // beneficiaryIsProducer is a requirement that ensures the reward is paid to the producer at the time slot
 func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 	if block == nil {
-		logger.Debug("beneficiaryIsProducer requirement failed: block is empty")
+		logger.Debug("DPoS: block is empty.")
 		return false
 	}
 
@@ -230,12 +227,12 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {
-		logger.Debug("beneficiaryIsProducer requirement failed: coinbase tx is empty")
+		logger.Debug("DPoS: coinbase tx is empty.")
 		return false
 	}
 
 	if len(cbtx.Vout) == 0 {
-		logger.Debug("beneficiaryIsProducer requirement failed: coinbase Vout is empty")
+		logger.Debug("DPoS: coinbase vout is empty.")
 		return false
 	}
 
@@ -248,15 +245,15 @@ func (dpos *DPOS) IsProducingBlock() bool {
 
 func (dpos *DPOS) updateNewBlock(newBlock *core.Block) {
 	logger.WithFields(logger.Fields{
-		"peerid": dpos.node.GetPeerID(),
+		"peer_id": dpos.node.GetPeerID(),
 		"height": newBlock.GetHeight(),
 		"hash":   hex.EncodeToString(newBlock.GetHash()),
-	}).Info("DPoS: Produced a new block")
+	}).Info("DPoS: produced a new block.")
 	if !newBlock.VerifyHash() {
-		logger.Warn("DPoS: Invalid hash in new block")
+		logger.Warn("DPoS: hash of the new block is invalid.")
 		return
 	}
-	err := dpos.bc.AddBlockToTail(newBlock)
+	err := dpos.node.GetBlockchain().AddBlockToTail(newBlock)
 	if err != nil {
 		logger.Warn(err)
 		return

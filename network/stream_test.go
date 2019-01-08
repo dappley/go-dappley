@@ -32,27 +32,33 @@ func TestStream_decode(t *testing.T) {
 	}{
 		{
 			name:    "CorrectData",
-			input:   []byte{0x7E, 0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x00},
-			retData: []byte{0x55, 0x44},
+			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x1, 0x1, 0x2, 0x3, 0x4, 0x5},
+			retData: []byte{1,2,3,4,5},
 			retErr:  nil,
 		},
 		{
 			name:    "IncorrectStartingByte",
-			input:   []byte{0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x00},
+			input:   []byte{0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x00, 0x44, 0x7F, 0x7F, 0x00, 0x44, 0x7F, 0x7F, 0x00},
 			retData: nil,
 			retErr:  ErrInvalidMessageFormat,
 		},
 		{
-			name:    "IncorrectEndingingByte",
+			name:    "Not enough bytes for header",
 			input:   []byte{0x7E, 0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x01},
 			retData: nil,
-			retErr:  ErrInvalidMessageFormat,
+			retErr:  ErrLengthTooShort,
 		},
 		{
-			name:    "IncorrectData",
-			input:   []byte{0x55, 0x44},
+			name:    "Fragmented data",
+			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x1, 0x1, 0x2, 0x3, 0x4},
 			retData: nil,
-			retErr:  ErrInvalidMessageFormat,
+			retErr:  ErrFragmentedData,
+		},
+		{
+			name:    "Incorrect checksum",
+			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x3, 0x1, 0x2, 0x3, 0x4, 0x5},
+			retData: nil,
+			retErr:  ErrCheckSumIncorrect,
 		},
 	}
 
@@ -105,42 +111,18 @@ func TestStream_containStartingBytes(t *testing.T) {
 	}
 }
 
-func TestStream_containEndingBytes(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []byte
-		expected bool
-	}{
-		{
-			name:     "containAtBeginning",
-			input:    []byte{0x7F, 0x7F, 0x00, 0x00},
-			expected: false,
-		},
-		{
-			name:     "containAtTheEnd",
-			input:    []byte{0x33, 0x33, 0x7F, 0x7F, 0x00},
-			expected: true,
-		},
-		{
-			name:     "containInTheMiddle",
-			input:    []byte{0x33, 0x33, 0x7F, 0x7F, 0x00, 0x33, 0x33},
-			expected: false,
-		},
-		{
-			name:     "NotContaining",
-			input:    []byte{0xDF, 0x23},
-			expected: false,
-		},
-		{
-			name:     "EmptyInput",
-			input:    []byte{},
-			expected: false,
-		},
+func TestStream_constructHeader(t *testing.T) {
+	bytes := []byte{}
+	for i:=0;i<300;i++{
+		bytes = append(bytes, byte(i))
 	}
+	assert.Equal(t, []byte{0x7E, 0x7E,0,0,0,0,0,0,1,44, 0x29}, constructHeader(bytes))
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, containEndingBytes(tt.input))
-		})
+func TestStream_checkSum(t *testing.T) {
+	bytes := []byte{}
+	for i:=0;i<300;i++{
+		bytes = append(bytes, byte(i))
 	}
+	assert.Equal(t, byte(50), checkSum(bytes))
 }

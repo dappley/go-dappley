@@ -25,18 +25,19 @@ import (
 	"testing"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
 var sendAmount = common.NewAmount(7)
 var sendAmount2 = common.NewAmount(6)
-var mineReward = common.NewAmount(10)
+var mineReward = common.NewAmount(10000000)
 
 func TestMain(m *testing.M) {
 
@@ -75,10 +76,11 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(tx)
+	bc.GetTxPool().Push(&tx)
 
 	//start a miner
-	n := network.FakeNodeWithPidAndAddr(bc, "asd", "test")
+	pool := core.NewBlockPool(0)
+	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
 	pow.Setup(n, wallet1.GetAddress().String())
 
 	pow.Start()
@@ -130,8 +132,8 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//start a miner
-
-	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pool := core.NewBlockPool(0)
+	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
 	pow.Setup(n, wallet.GetAddress().String())
 	pow.Start()
 
@@ -187,10 +189,11 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(tx)
+	bc.GetTxPool().Push(&tx)
 
 	//start a producer
-	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pool := core.NewBlockPool(0)
+	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
 	pow.Setup(n, wallet1.GetAddress().String())
 	pow.Start()
 
@@ -207,7 +210,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, keyPair, common.NewAmount(0), "")
 	assert.Nil(t, err)
 
-	bc.GetTxPool().Push(tx2)
+	bc.GetTxPool().Push(&tx2)
 
 	//Make sure there are blocks have been mined
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
@@ -248,7 +251,8 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		nil,
 	)
 	defer bc.GetDb().Close()
-	n := network.FakeNodeWithPidAndAddr(bc, "asd", "asd")
+	pool := core.NewBlockPool(0)
+	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
 	pow.Setup(n, cbAddr.String())
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
@@ -313,11 +317,12 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(tx1)
-	bc.GetTxPool().Push(tx2)
+	bc.GetTxPool().Push(&tx1)
+	bc.GetTxPool().Push(&tx2)
 
 	//start a miner
-	n := network.FakeNodeWithPidAndAddr(bc, "asd", "test")
+	pool := core.NewBlockPool(0)
+	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
 	pow.Setup(n, wallet1.GetAddress().Address)
 
 	pow.Start()
@@ -329,7 +334,11 @@ func TestPreventDoubleSpend(t *testing.T) {
 	}
 	pow.Stop()
 
-	assert.True(t, core.MetricsTxDoubleSpend.Count() > 0)
+	block, _ := bc.GetBlockByHeight(1)
+	// Only one transaction packaged(1 coinbase + 1 transaction)
+	assert.Equal(t, 2, len(block.GetTransactions()))
+
+	assert.False(t, core.MetricsTxDoubleSpend.Count() > 0)
 }
 
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
@@ -352,7 +361,10 @@ func TestBlockProducer_InvalidTransactions(t *testing.T) {
 func printBalances(bc *core.Blockchain, addrs []core.Address) {
 	for _, addr := range addrs {
 		b, _ := getBalance(bc, addr.String())
-		logger.Debug("addr", addr, ":", b)
+		logger.WithFields(logger.Fields{
+			"address": addr,
+			"balance": b,
+		}).Debug("Printing balance...")
 	}
 }
 

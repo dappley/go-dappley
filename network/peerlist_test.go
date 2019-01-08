@@ -554,7 +554,7 @@ func TestPeerList_IsFull(t *testing.T) {
 	assert.True(t, pl1.ListIsFull())
 }
 
-func TestPeerList_RemoveOneIP(t *testing.T) {
+func TestPeerList_RemoveRandomIP(t *testing.T) {
 	strs1 := []string{
 		"/ip4/192.168.10.110/tcp/10000/ipfs/QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
 		"/ip4/192.168.10.101/tcp/10000/ipfs/QmWeMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ",
@@ -593,7 +593,7 @@ func TestPeerList_RemoveOneIP(t *testing.T) {
 	pl1.Add(p2)
 
 	assert.Equal(t, 20, len(pl1.peers))
-	pl1.RemoveOneIP(p2)
+	pl1.RemoveRandomIP()
 	assert.Equal(t, 19, len(pl1.peers))
 	assert.False(t, pl1.IsInPeerlist(p2))
 	pl1.Add(p2)

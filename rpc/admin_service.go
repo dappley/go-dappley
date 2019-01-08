@@ -20,7 +20,6 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -36,7 +35,7 @@ type AdminRpcService struct {
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	status := "success"
+	status := "succeed"
 	err := adminRpcService.node.AddStreamByString(in.FullAddress)
 	if err != nil {
 		status = err.Error()
@@ -49,25 +48,18 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
 	if len(in.Address) == 0 {
 		return &rpcpb.AddProducerResponse{
-			Message: "Error: Address is empty!",
-		}, nil
+			Message: "address is empty",
+		}, core.ErrInvalidAddress
 	}
-	if in.Name == "addProducer" {
-		err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
-		if err == nil {
-			return &rpcpb.AddProducerResponse{
-				Message: "Add producer sucessfully!",
-			}, nil
-		}
+	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+	if err != nil {
 		return &rpcpb.AddProducerResponse{
-			Message: "Error: Add producer failed! " + err.Error(),
-		}, nil
-
+			Message: "failed to add producer: " + err.Error(),
+		}, err
 	}
 	return &rpcpb.AddProducerResponse{
-		Message: "Error: Command not recognized!",
+		Message: "producer is added",
 	}, nil
-
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -78,65 +70,63 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 
 //unlock the wallet through rpc service
 func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
-	msg := "failed"
-	if in.Name == "unlock" {
-		err := logic.SetUnLockWallet()
-		if err != nil {
-			msg = err.Error()
-		} else {
-			msg = "succeed"
-		}
+	err := logic.SetUnLockWallet()
+	if err != nil {
+		return &rpcpb.UnlockWalletResponse{Message: err.Error()}, err
 	}
-	return &rpcpb.UnlockWalletResponse{
-		Message: msg,
-	}, nil
+	return &rpcpb.UnlockWalletResponse{Message: "succeed"}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendFromMinerResponse{Message: "Invalid send amount (must be >0)"}, nil
+		return &rpcpb.SendFromMinerResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
 	}
 
-	_, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	if err != nil {
-		return &rpcpb.SendFromMinerResponse{Message: "Add balance failed, " + err.Error()}, nil
+		return &rpcpb.SendFromMinerResponse{Message: "failed to add balance: " + err.Error()}, err
 	}
-	sendFromMinerResponse := rpcpb.SendFromMinerResponse{}
-	sendFromMinerResponse.Message = "Add balance succeed!"
-	return &sendFromMinerResponse, nil
+	return &rpcpb.SendFromMinerResponse{Message: "succeed"}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
 	sendFromAddress := core.NewAddress(in.From)
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
+	tip := common.NewAmountFromBytes(in.Tip)
+
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendResponse{Message: "Invalid send amount"}, core.ErrInvalidAmount
+		return &rpcpb.SendResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
 	}
-	path := in.Walletpath
-	if len(in.Walletpath) == 0 {
+	path := in.WalletPath
+	if len(in.WalletPath) == 0 {
 		path = client.GetWalletFilePath()
 	}
 
 	wm, err := logic.GetWalletManager(path)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error loading local wallets"}, err
+		return &rpcpb.SendResponse{Message: "error loading local wallets"}, err
 	}
 
 	senderWallet := wm.GetWalletByAddress(sendFromAddress)
-	if len(senderWallet.Addresses) == 0 {
-		return &rpcpb.SendResponse{Message: "Sender wallet not found"}, errors.New("sender address not found in local wallet")
+	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
+		return &rpcpb.SendResponse{Message: "sender wallet is not found"}, client.ErrAddressNotFound
 	}
 
-	txhash, err := logic.Send(senderWallet, sendToAddress, sendAmount, in.Tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	txhash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "Error sending [" + txhashStr + "]"}, err
+		return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, err
 	}
 
-	return &rpcpb.SendResponse{Message: "[" + txhashStr + "] Sent"}, nil
+	resp := &rpcpb.SendResponse{Message: "succeed", Txid: txhashStr}
+	if scAddress != "" {
+		resp.ContractAddr = scAddress
+	}
+
+	return resp, nil
 }
 
 func (adminRpcService *AdminRpcService) IsPrivate() bool { return true }
