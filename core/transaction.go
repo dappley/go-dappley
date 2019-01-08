@@ -103,6 +103,13 @@ func (tx *Transaction) IsContract() bool {
 	return isContract
 }
 
+func (tx *Transaction) IsExecutionContract() bool {
+	if tx.IsContract() && !strings.Contains(tx.GetContract(), scheduleFuncName) {
+		return true
+	}
+	return false
+}
+
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
 func (tx *Transaction) IsFromContract() bool {
 	if len(tx.Vin) == 0 {
@@ -305,6 +312,17 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
+func (tx *Transaction) IsContractDeployed(utxos *UTXOIndex) bool {
+	contractAddress := tx.GetContractAddress()
+	contractUtxos := utxos.GetContractUtxos()
+	for _, utxo := range contractUtxos {
+		if utxo.PubKeyHash.GenerateAddress() == contractAddress {
+			return true
+		}
+	}
+	return false
+}
+
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
@@ -317,6 +335,10 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 			return false
 		}
 		return true
+	}
+
+	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoIndex) {
+		return false
 	}
 
 	if tx.IsRewardTx() {

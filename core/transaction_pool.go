@@ -29,6 +29,7 @@ import (
 const (
 	NewTransactionTopic   = "NewTransaction"
 	EvictTransactionTopic = "EvictTransaction"
+	scheduleFuncName = "dapp_schedule"
 )
 
 type TransactionNode struct {
@@ -163,9 +164,14 @@ func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 	checkNodes := make(map[string]*TransactionNode)
+	contractNodes := make(map[string]*TransactionNode)
 
 	for key, node := range txPool.txs {
-		checkNodes[key] = node
+		if node.value.IsContract() {
+			contractNodes[key] = node
+		} else {
+			checkNodes[key] = node
+		}
 	}
 
 	var sortedTxs []*Transaction
@@ -177,6 +183,18 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 			}
 		}
 	}
+
+	for key, node := range contractNodes {
+		if !node.value.IsExecutionContract() {
+			sortedTxs = append(sortedTxs, node.value)
+			delete(contractNodes, key)
+		}
+	}
+
+	for _, node := range contractNodes {
+		sortedTxs = append(sortedTxs, node.value)
+	}
+
 	return sortedTxs
 }
 

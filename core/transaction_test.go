@@ -250,6 +250,46 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	}
 }
 
+func TestInvalidExecutionTx(t *testing.T) {
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
+	var pkHash1, _ = NewUserPubKeyHash(pubkey1)
+	var deploymentTx = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{tx1.ID, 1, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash1, "dapp_schedule"},
+		},
+		Tip: common.NewAmount(1),
+	}
+	deploymentTx.ID = deploymentTx.Hash()
+	contractPubkeyHash := deploymentTx.Vout[0].PubKeyHash
+
+	utxoIndex := UTXOIndex{
+		map[string][]*UTXO{
+			string(pkHash1.GetPubKeyHash()): {&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0}},
+		},
+		&sync.RWMutex{},
+	}
+	var executionTx = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{deploymentTx.ID, 0, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(3), contractPubkeyHash, "execution"},
+		},
+		Tip: common.NewAmount(2),
+	}
+	executionTx.ID = executionTx.Hash()
+	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.index[string(pkHash1.GetPubKeyHash())])
+
+	assert.False(t, executionTx.Verify(NewUTXOIndex(), 0))
+	assert.True(t, executionTx.Verify(&utxoIndex, 0))
+}
+
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX(NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
