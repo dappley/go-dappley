@@ -110,7 +110,7 @@ func recordTransactions(txs []*corepb.Transaction, height uint64){
 		}
 		voutStr := ""
 		for _, vout := range tx.Vout {
-			voutStr += core.PubKeyHash{vout.PubKeyHash}.GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
+			voutStr += core.PubKeyHash(vout.PubKeyHash).GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
 		}
 		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.ID), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
 	}
