@@ -269,7 +269,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 
 	utxoIndex := UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash1.GetPubKeyHash()): {&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0}},
+			string(pkHash1): {&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
@@ -284,7 +284,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.index[string(pkHash1.GetPubKeyHash())])
+	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.index[string(pkHash1)])
 
 	assert.False(t, executionTx.Verify(NewUTXOIndex(), 0))
 	assert.True(t, executionTx.Verify(&utxoIndex, 0))

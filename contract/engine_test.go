@@ -98,7 +98,7 @@ var transferTest = new MathTest;`
 			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[0].Txid)
 			assert.Equal(t, 1, sc.generatedTXs[0].Vin[0].Vout)
 			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[0].Signature)
-			assert.Equal(t, contractPubKeyHash.GetPubKeyHash(), sc.generatedTXs[0].Vin[0].PubKey)
+			assert.Equal(t, []byte(contractPubKeyHash), sc.generatedTXs[0].Vin[0].PubKey)
 		}
 		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vout)) {
 			// payout
@@ -107,7 +107,7 @@ var transferTest = new MathTest;`
 			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
 
 			assert.Equal(t, core.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
-			assert.Equal(t, contractPubKeyHash.GetPubKeyHash(), sc.generatedTXs[0].Vout[1].PubKeyHash.GetPubKeyHash())
+			assert.Equal(t, contractPubKeyHash, sc.generatedTXs[0].Vout[1].PubKeyHash)
 		}
 	}
 }

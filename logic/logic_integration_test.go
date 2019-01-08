@@ -759,7 +759,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash, _ := core.NewAddress(validProducerAddr).GetPubKeyHash()
-	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}, ""}}, common.NewAmount(0)}
+	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash(producerHash), ""}}, common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, parent)
