@@ -246,10 +246,10 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	defer utxos.mutex.Unlock()
 	//if it is a smart contract deployment utxo add it to contract utxos
 	if isContract, _ := txout.PubKeyHash.IsContract();isContract &&
-	 	len(utxos.index[string(u.PubKeyHash.GetPubKeyHash())]) == 0 {
+	 	len(utxos.index[string(u.PubKeyHash)]) == 0 {
 		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
 	}
-	utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(utxos.index[string(u.PubKeyHash.GetPubKeyHash())], u)
+	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
 
 }
 
@@ -265,8 +265,8 @@ func (utxos *UTXOIndex) removeUTXO(txid []byte, vout int) error {
 	for _, utxoArray := range utxos.index {
 		for i, u := range utxoArray {
 			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
-				userUTXOs := utxos.index[string(u.PubKeyHash.GetPubKeyHash())]
-				utxos.index[string(u.PubKeyHash.GetPubKeyHash())] = append(userUTXOs[:i], userUTXOs[i+1:]...)
+				userUTXOs := utxos.index[string(u.PubKeyHash)]
+				utxos.index[string(u.PubKeyHash)] = append(userUTXOs[:i], userUTXOs[i+1:]...)
 				return nil
 			}
 		}

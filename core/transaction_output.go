@@ -36,11 +36,11 @@ type TXOutput struct {
 
 func (out *TXOutput) Lock(address Address) {
 	hash, _ := address.GetPubKeyHash()
-	out.PubKeyHash = PubKeyHash{hash}
+	out.PubKeyHash = PubKeyHash(hash)
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
-	return bytes.Compare(out.PubKeyHash.GetPubKeyHash(), pubKeyHash) == 0
+	return bytes.Compare([]byte(out.PubKeyHash), pubKeyHash) == 0
 }
 
 func NewTXOutput(value *common.Amount, address Address) *TXOutput {
@@ -52,7 +52,8 @@ func NewContractTXOutput(address Address, contract string) *TXOutput {
 }
 
 func NewTxOut(value *common.Amount, address Address, contract string) *TXOutput {
-	txo := &TXOutput{value, PubKeyHash{}, contract}
+	var pubKeyHash PubKeyHash
+	txo := &TXOutput{value, pubKeyHash, contract}
 	txo.Lock(address)
 	return txo
 }
@@ -78,13 +79,13 @@ func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) boo
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),
-		PubKeyHash: out.PubKeyHash.GetPubKeyHash(),
+		PubKeyHash: []byte(out.PubKeyHash),
 		Contract:   out.Contract,
 	}
 }
 
 func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).Value)
-	out.PubKeyHash = PubKeyHash{pb.(*corepb.TXOutput).PubKeyHash}
+	out.PubKeyHash = PubKeyHash(pb.(*corepb.TXOutput).PubKeyHash)
 	out.Contract = pb.(*corepb.TXOutput).Contract
 }

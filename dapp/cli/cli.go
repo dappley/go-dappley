@@ -773,7 +773,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		uu := core.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
-		uu.PubKeyHash = core.PubKeyHash{u.PublicKeyHash}
+		uu.PubKeyHash = core.PubKeyHash(u.PublicKeyHash)
 		if err != nil {
 			fmt.Println("ERROR: Send failed. ERR:", err)
 			return

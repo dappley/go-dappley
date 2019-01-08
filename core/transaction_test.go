@@ -47,8 +47,8 @@ func GenerateFakeTxInputs() []TXInput {
 
 func GenerateFakeTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(1), PubKeyHash{getAoB(2)}, ""},
-		{common.NewAmount(2), PubKeyHash{getAoB(2)}, ""},
+		{common.NewAmount(1), PubKeyHash(getAoB(2)), ""},
+		{common.NewAmount(2), PubKeyHash(getAoB(2)), ""},
 	}
 }
 
@@ -119,7 +119,7 @@ func TestSign(t *testing.T) {
 			if assert.NotNil(t, vin.Signature) {
 				txCopy := tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
-				txCopy.Vin[i].PubKey = pubKeyHash.GetPubKeyHash()
+				txCopy.Vin[i].PubKey = []byte(pubKeyHash)
 
 				verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
 				assert.Nil(t, err)
@@ -202,7 +202,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
-		string(pubKeyHash.GetPubKeyHash()): {
+		string(pubKeyHash): {
 			{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0},
 			{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1},
 		},
@@ -238,7 +238,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			for i := range tt.tx.Vin {
 				txCopy := tt.tx.TrimmedCopy()
 				txCopy.Vin[i].Signature = nil
-				txCopy.Vin[i].PubKey = pubKeyHash.GetPubKeyHash()
+				txCopy.Vin[i].PubKey = []byte(pubKeyHash)
 				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
 			}
@@ -253,7 +253,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestNewCoinbaseTX(t *testing.T) {
 	t1 := NewCoinbaseTX(NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
 	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := TXOutput{common.NewAmount(10000000), PubKeyHash{[]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}}, ""}
+	expectVout := TXOutput{common.NewAmount(10000000), PubKeyHash([]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}), ""}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
 	assert.Equal(t, 1, len(t1.Vout))
@@ -381,7 +381,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 				nil,
 				[]TXOutput{
 					{nil,
-						PubKeyHash{pkh},
+						PubKeyHash(pkh),
 						"",
 					},
 				},
@@ -432,12 +432,12 @@ func TestTransaction_Execute(t *testing.T) {
 				TxIndex: 0,
 				Txid:    nil,
 				TXOutput: TXOutput{
-					PubKeyHash: PubKeyHash{scPKH},
+					PubKeyHash: PubKeyHash(scPKH),
 					Contract:   contract,
 				},
 			}
 			tx := Transaction{
-				Vout: []TXOutput{{nil, PubKeyHash{toPKH}, "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
+				Vout: []TXOutput{{nil, PubKeyHash(toPKH), "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
 			}
 
 			index := NewUTXOIndex()
@@ -480,10 +480,10 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(1),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				}},
 				common.NewAmount(0),
@@ -507,10 +507,10 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(1),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				}},
 				common.NewAmount(0),
@@ -524,10 +524,10 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(1),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				}},
 				common.NewAmount(0),
@@ -541,10 +541,10 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(3),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				}},
 				common.NewAmount(0),
@@ -558,17 +558,17 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(1),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				},
 					{
 						common.NewAmount(4),
-						PubKeyHash{[]byte{
+						PubKeyHash([]byte{
 							90, 13, 39, 130, 118, 11, 160, 130, 83, 126, 86, 102, 252, 178, 87,
-							218, 57, 174, 123, 244, 229}},
+							218, 57, 174, 123, 244, 229}),
 						"",
 					}},
 				common.NewAmount(0),
@@ -585,17 +585,17 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(1),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				},
 					{
 						common.NewAmount(4),
-						PubKeyHash{[]byte{
+						PubKeyHash([]byte{
 							90, 13, 39, 130, 118, 11, 160, 130, 83, 126, 86, 102, 252, 178, 87,
-							218, 57, 174, 123, 244, 229}},
+							218, 57, 174, 123, 244, 229}),
 						"",
 					}},
 				common.NewAmount(0),
@@ -613,17 +613,17 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{{
 					common.NewAmount(1),
-					PubKeyHash{[]byte{
+					PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 						0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
-						0xe5, 0x27, 0xf0, 0x42, 0x5d}},
+						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				},
 					{
 						common.NewAmount(4),
-						PubKeyHash{[]byte{
+						PubKeyHash([]byte{
 							90, 13, 39, 130, 118, 11, 160, 130, 83, 126, 86, 102, 252, 178, 87,
-							218, 57, 174, 123, 244, 229}},
+							218, 57, 174, 123, 244, 229}),
 						"",
 					}},
 				common.NewAmount(0),
@@ -724,8 +724,8 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var utxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
-			string(pkHash1.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			string(pkHash2): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
+			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
@@ -735,7 +735,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2.GetPubKeyHash())])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
 	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
 	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})

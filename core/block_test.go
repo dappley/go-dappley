@@ -244,8 +244,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	generatedTX := &Transaction{
 		[]byte("contractGenerated"),
 		[]TXInput{
-			{[]byte("prevtxid"), 0, []byte("txid"), contractPubKeyHash.GetPubKeyHash()},
-			{[]byte("prevtxid"), 1, []byte("txid"), contractPubKeyHash.GetPubKeyHash()},
+			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
+			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
 		},
 		[]TXOutput{
 			*NewTxOut(common.NewAmount(23), userAddr, ""),
@@ -283,11 +283,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
 	var utxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			string(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2.GetPubKeyHash())])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
 	var generatedRewards map[string]string
@@ -393,10 +393,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"reward tx",
 			[]*Transaction{contractTX, &rewardTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash.GetPubKeyHash()): {
+				string(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0},
 				},
-				string(userPubKeyHash.GetPubKeyHash()): {
+				string(userPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
@@ -407,11 +407,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"generated tx",
 			[]*Transaction{contractTX, generatedTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash.GetPubKeyHash()): {
+				string(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0},
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1},
 				},
-				string(userPubKeyHash.GetPubKeyHash()): {
+				string(userPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
@@ -422,7 +422,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"no manager",
 			[]*Transaction{contractTX, &rewardTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash.GetPubKeyHash()): {
+				string(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("txid"), 0},
 				},
 			},
