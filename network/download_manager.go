@@ -19,11 +19,12 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network/pb"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/network/pb"
 
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
@@ -39,7 +40,7 @@ const (
 	DownloadStatusFinish      int = 2
 
 	CheckMaxWaitTime    time.Duration = 5
-	DownloadMaxWaitTime time.Duration = 10
+	DownloadMaxWaitTime time.Duration = 250
 	MaxRetryCount       int           = 3
 	MinRequestHashesNum int           = 20
 )
@@ -270,7 +271,7 @@ func (downloadManager *DownloadManager) checkDownloadCommand(hashes []core.Hash,
 		return
 	}
 
-	if !reflect.DeepEqual(downloadManager.downloadingCmd.startHashes, hashes){
+	if !reflect.DeepEqual(downloadManager.downloadingCmd.startHashes, hashes) {
 		return
 	}
 
