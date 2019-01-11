@@ -96,7 +96,9 @@ func TestNetwork_BroadcastBlock(t *testing.T) {
 
 	//wait for node 1 to receive response
 	core.WaitDoneOrTimeout(func() bool {
-		blk, _ := n2.recentlyRcvedDapMsgs.Load(hex.EncodeToString(blk.GetHash()))
+		n2.mux.Lock()
+		defer n2.mux.Unlock()
+		blk, _ := n2.recentlyRcvedDapMsgs.Get(hex.EncodeToString(blk.GetHash()))
 		return blk != nil
 	}, 5)
 
@@ -167,7 +169,9 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	n2.RequestBlockUnicast(blk.GetHash(), n1.GetPeerID())
 	//wait for node 1 to receive response
 	core.WaitDoneOrTimeout(func() bool {
-		blk, _ := n2.recentlyRcvedDapMsgs.Load(hex.EncodeToString(blk.GetHash()))
+		n2.mux.Lock()
+		defer n2.mux.Unlock()
+		blk, _ := n2.recentlyRcvedDapMsgs.Get(hex.EncodeToString(blk.GetHash()))
 		return blk != nil
 	}, 5)
 

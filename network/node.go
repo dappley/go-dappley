@@ -42,6 +42,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/golang/groupcache/lru"
 )
 
 const (
@@ -57,7 +58,7 @@ var (
 )
 
 type streamMsg struct {
-	msg *DapMsg
+	msg  *DapMsg
 	from peer.ID
 }
 
@@ -69,11 +70,12 @@ type Node struct {
 	streamExitCh           chan *Stream
 	peerList               *PeerList
 	exitCh                 chan bool
-	recentlyRcvedDapMsgs   *sync.Map
+	recentlyRcvedDapMsgs   *lru.Cache
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
-	dispatch				   chan *streamMsg
+	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
+	mux                    *sync.Mutex
 }
 
 func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
@@ -86,6 +88,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	bm := core.NewBlockChainManager()
 	bm.SetblockPool(pool)
 	bm.Setblockchain(bc)
+	cache := lru.New(32)
 	node := &Node{nil,
 		nil,
 		bm,
@@ -93,27 +96,30 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 		make(chan *Stream, 10),
 		NewPeerList(nil),
 		make(chan bool, 1),
-		&sync.Map{},
+		cache,
 		&placeholder,
 		nil,
 		make(chan *streamMsg, 1000),
 		nil,
+		new(sync.Mutex),
 	}
 	node.downloadManager = NewDownloadManager(node)
 	return node
 }
 
 func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
-	if _, value := n.recentlyRcvedDapMsgs.Load(dapmsg.GetKey()); value == true {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	if value, _ := n.recentlyRcvedDapMsgs.Get(dapmsg.GetKey()); value == true {
 		return true
 	}
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain    { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool      { return n.bm.GetblockPool() }
-func (n *Node) GetPeerList() *PeerList             { return n.peerList }
-func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map { return n.recentlyRcvedDapMsgs }
+func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
+func (n *Node) GetPeerList() *PeerList               { return n.peerList }
+func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache  { return n.recentlyRcvedDapMsgs }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
 func (n *Node) GetStreams() map[peer.ID]*Stream      { return n.streams }
 
@@ -151,7 +157,7 @@ func (n *Node) Stop() {
 func (n *Node) StartExitListener() {
 	go func() {
 		for {
-			if s,ok := <-n.streamExitCh; ok {
+			if s, ok := <-n.streamExitCh; ok {
 				n.DisconnectPeer(s.peerID, s.remoteAddr)
 			}
 		}
@@ -236,12 +242,12 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, ma.Multiad
 }
 
 //AddStreamsByString adds streams by their full addresses
-func (n *Node) AddStreamsByString(targetFullAddrs []string){
-	for _, fullAddr := range targetFullAddrs{
+func (n *Node) AddStreamsByString(targetFullAddrs []string) {
+	for _, fullAddr := range targetFullAddrs {
 		err := n.AddStreamByString(fullAddr)
-		if err!=nil{
+		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
-				"full_addr"	: fullAddr,
+				"full_addr": fullAddr,
 			}).Warn("Node: not able to add stream")
 		}
 	}
@@ -683,7 +689,9 @@ func (n *Node) ReturnBlocksHandler(dm *DapMsg, pid peer.ID) {
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {
-	n.recentlyRcvedDapMsgs.Store(dm.GetKey(), true)
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	n.recentlyRcvedDapMsgs.Add(dm.GetKey(), true)
 }
 
 func (n *Node) AddTxToPool(dm *DapMsg) {
