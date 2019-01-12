@@ -603,6 +603,21 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 	return tx, nil
 }
 
+func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash PubKeyHash, tip uint64) Transaction {
+	tx := Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{vinTxId, vinVout, nil, vinPubkey},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(voutValue), voutPubKeyHash, ""},
+		},
+		Tip: common.NewAmount(tip),
+	}
+	tx.ID = tx.Hash()
+	return tx
+}
+
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
 func (tx *Transaction) GetContractAddress() Address {
 	if len(tx.Vout) == 0 {

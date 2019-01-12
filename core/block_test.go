@@ -261,24 +261,9 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
 	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
 
-	generateDependentTx := func(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash PubKeyHash, tip uint64) Transaction {
-		tx := Transaction{
-			ID: nil,
-			Vin: []TXInput{
-				{vinTxId, vinVout, nil, vinPubkey},
-			},
-			Vout: []TXOutput{
-				{common.NewAmount(voutValue), voutPubKeyHash, ""},
-			},
-			Tip: common.NewAmount(tip),
-		}
-		tx.ID = tx.Hash()
-		return tx
-	}
-
-	dependentTx1 := generateDependentTx(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
-	dependentTx2 := generateDependentTx(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
-	dependentTx3 := generateDependentTx(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
+	dependentTx1 := NewTransactionByVin(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
+	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
+	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
 
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
 	var utxoIndex = UTXOIndex{
