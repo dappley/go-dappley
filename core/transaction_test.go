@@ -60,10 +60,10 @@ func TestTrimmedCopy(t *testing.T) {
 		Tip:  common.NewAmount(2),
 	}
 
-	t2 := tx1.TrimmedCopy()
+	t2 := tx1.TrimmedCopy(false)
 
 	t3 := NewCoinbaseTX(NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
-	t4 := t3.TrimmedCopy()
+	t4 := t3.TrimmedCopy(false)
 	assert.Equal(t, tx1.ID, t2.ID)
 	assert.Equal(t, tx1.Tip, t2.Tip)
 	assert.Equal(t, tx1.Vout, t2.Vout)
@@ -117,7 +117,7 @@ func TestSign(t *testing.T) {
 		for i, vin := range tx.Vin {
 
 			if assert.NotNil(t, vin.Signature) {
-				txCopy := tx.TrimmedCopy()
+				txCopy := tx.TrimmedCopy(false)
 				txCopy.Vin[i].Signature = nil
 				txCopy.Vin[i].PubKey = []byte(pubKeyHash)
 
@@ -236,7 +236,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			tt.tx.ID = tt.tx.Hash()
 			// Generate signatures for all tx inputs
 			for i := range tt.tx.Vin {
-				txCopy := tt.tx.TrimmedCopy()
+				txCopy := tt.tx.TrimmedCopy(false)
 				txCopy.Vin[i].Signature = nil
 				txCopy.Vin[i].PubKey = []byte(pubKeyHash)
 				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)

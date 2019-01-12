@@ -233,7 +233,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 		return nil
 	}
 
-	txCopy := tx.TrimmedCopy()
+	txCopy := tx.TrimmedCopy(false)
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
 		logger.WithError(err).Error("Transaction: failed to get private key.")
@@ -260,12 +260,18 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 }
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
-func (tx *Transaction) TrimmedCopy() Transaction {
+func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
+	var pubkey []byte
 
 	for _, vin := range tx.Vin {
-		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, nil})
+		if withSignature {
+			pubkey = vin.PubKey
+		} else {
+			pubkey = nil
+		}
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, pubkey})
 	}
 
 	for _, vout := range tx.Vout {
@@ -409,7 +415,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() bool {
-	txCopy := tx.TrimmedCopyWithoutSignature()
+	txCopy := tx.TrimmedCopy(true)
 	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true
 	} else {
@@ -465,7 +471,7 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 		}
 	}
 
-	txCopy := tx.TrimmedCopy()
+	txCopy := tx.TrimmedCopy(false)
 
 	for i, vin := range tx.Vin {
 		txCopy.Vin[i].Signature = nil
