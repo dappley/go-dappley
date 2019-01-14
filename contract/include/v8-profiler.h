@@ -445,7 +445,7 @@ class V8_EXPORT OutputStream {  // NOLINT
     kContinue = 0,
     kAbort = 1
   };
-  virtual ~OutputStream() = default;
+  virtual ~OutputStream() {}
   /** Notify about the end of stream. */
   virtual void EndOfStream() = 0;
   /** Get preferred output chunk size. Called only once. */
@@ -539,7 +539,7 @@ class V8_EXPORT ActivityControl {  // NOLINT
     kContinue = 0,
     kAbort = 1
   };
-  virtual ~ActivityControl() = default;
+  virtual ~ActivityControl() {}
   /**
    * Notify about current progress. The activity can be stopped by
    * returning kAbort as the callback result.
@@ -606,11 +606,6 @@ class V8_EXPORT AllocationProfile {
     int column_number;
 
     /**
-     * Unique id of the node.
-     */
-    uint32_t node_id;
-
-    /**
      * List of callees called from this node for which we have sampled
      * allocations. The lifetime of the children is scoped to the containing
      * AllocationProfile.
@@ -624,40 +619,13 @@ class V8_EXPORT AllocationProfile {
   };
 
   /**
-   * Represent a single sample recorded for an allocation.
-   */
-  struct Sample {
-    /**
-     * id of the node in the profile tree.
-     */
-    uint32_t node_id;
-
-    /**
-     * Size of the sampled allocation object.
-     */
-    size_t size;
-
-    /**
-     * The number of objects of such size that were sampled.
-     */
-    unsigned int count;
-
-    /**
-     * Unique time-ordered id of the allocation sample. Can be used to track
-     * what samples were added or removed between two snapshots.
-     */
-    uint64_t sample_id;
-  };
-
-  /**
    * Returns the root node of the call-graph. The root node corresponds to an
    * empty JS call-stack. The lifetime of the returned Node* is scoped to the
    * containing AllocationProfile.
    */
   virtual Node* GetRootNode() = 0;
-  virtual const std::vector<Sample>& GetSamples() = 0;
 
-  virtual ~AllocationProfile() = default;
+  virtual ~AllocationProfile() {}
 
   static const int kNoLineNumberInfo = Message::kNoLineNumberInfo;
   static const int kNoColumnNumberInfo = Message::kNoColumnInfo;
@@ -825,15 +793,15 @@ class V8_EXPORT HeapProfiler {
     virtual const char* GetName(Local<Object> object) = 0;
 
    protected:
-    virtual ~ObjectNameResolver() = default;
+    virtual ~ObjectNameResolver() {}
   };
 
   /**
    * Takes a heap snapshot and returns it.
    */
   const HeapSnapshot* TakeHeapSnapshot(
-      ActivityControl* control = nullptr,
-      ObjectNameResolver* global_object_name_resolver = nullptr);
+      ActivityControl* control = NULL,
+      ObjectNameResolver* global_object_name_resolver = NULL);
 
   /**
    * Starts tracking of heap objects population statistics. After calling
@@ -860,7 +828,7 @@ class V8_EXPORT HeapProfiler {
    * method.
    */
   SnapshotObjectId GetHeapStats(OutputStream* stream,
-                                int64_t* timestamp_us = nullptr);
+                                int64_t* timestamp_us = NULL);
 
   /**
    * Stops tracking of heap objects population statistics, cleans up all
@@ -1017,8 +985,8 @@ class V8_EXPORT RetainedObjectInfo {  // NOLINT
   virtual intptr_t GetSizeInBytes() { return -1; }
 
  protected:
-  RetainedObjectInfo() = default;
-  virtual ~RetainedObjectInfo() = default;
+  RetainedObjectInfo() {}
+  virtual ~RetainedObjectInfo() {}
 
  private:
   RetainedObjectInfo(const RetainedObjectInfo&);

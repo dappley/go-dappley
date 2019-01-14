@@ -54,15 +54,6 @@ class TaskRunner {
   virtual void PostTask(std::unique_ptr<Task> task) = 0;
 
   /**
-   * Schedules a task to be invoked by this TaskRunner. The TaskRunner
-   * implementation takes ownership of |task|. The |task| cannot be nested
-   * within other task executions.
-   *
-   * Requires that |TaskRunner::NonNestableTasksEnabled()| is true.
-   */
-  virtual void PostNonNestableTask(std::unique_ptr<Task> task) {}
-
-  /**
    * Schedules a task to be invoked by this TaskRunner. The task is scheduled
    * after the given number of seconds |delay_in_seconds|. The TaskRunner
    * implementation takes ownership of |task|.
@@ -73,7 +64,7 @@ class TaskRunner {
   /**
    * Schedules an idle task to be invoked by this TaskRunner. The task is
    * scheduled when the embedder is idle. Requires that
-   * |TaskRunner::IdleTasksEnabled()| is true. Idle tasks may be reordered
+   * TaskRunner::SupportsIdleTasks(isolate) is true. Idle tasks may be reordered
    * relative to other task types and may be starved for an arbitrarily long
    * time if no idle time is available. The TaskRunner implementation takes
    * ownership of |task|.
@@ -84,11 +75,6 @@ class TaskRunner {
    * Returns true if idle tasks are enabled for this TaskRunner.
    */
   virtual bool IdleTasksEnabled() = 0;
-
-  /**
-   * Returns true if non-nestable tasks are enabled for this TaskRunner.
-   */
-  virtual bool NonNestableTasksEnabled() const { return false; }
 
   TaskRunner() = default;
   virtual ~TaskRunner() = default;
@@ -250,13 +236,6 @@ class PageAllocator {
    */
   virtual bool SetPermissions(void* address, size_t length,
                               Permission permissions) = 0;
-
-  /**
-   * Frees memory in the given [address, address + size) range. address and size
-   * should be operating system page-aligned. The next write to this
-   * memory area brings the memory transparently back.
-   */
-  virtual bool DiscardSystemPages(void* address, size_t size) { return true; }
 };
 
 /**
@@ -343,9 +322,7 @@ class Platform {
    * |isolate|. Tasks posted for the same isolate should be execute in order of
    * scheduling. The definition of "foreground" is opaque to V8.
    */
-  V8_DEPRECATE_SOON(
-      "Use a taskrunner acquired by GetForegroundTaskRunner instead.",
-      virtual void CallOnForegroundThread(Isolate* isolate, Task* task)) = 0;
+  virtual void CallOnForegroundThread(Isolate* isolate, Task* task) = 0;
 
   /**
    * Schedules a task to be invoked on a foreground thread wrt a specific
@@ -353,10 +330,8 @@ class Platform {
    * Tasks posted for the same isolate should be execute in order of
    * scheduling. The definition of "foreground" is opaque to V8.
    */
-  V8_DEPRECATE_SOON(
-      "Use a taskrunner acquired by GetForegroundTaskRunner instead.",
-      virtual void CallDelayedOnForegroundThread(Isolate* isolate, Task* task,
-                                                 double delay_in_seconds)) = 0;
+  virtual void CallDelayedOnForegroundThread(Isolate* isolate, Task* task,
+                                             double delay_in_seconds) = 0;
 
   /**
    * Schedules a task to be invoked on a foreground thread wrt a specific
@@ -366,10 +341,7 @@ class Platform {
    * starved for an arbitrarily long time if no idle time is available.
    * The definition of "foreground" is opaque to V8.
    */
-  V8_DEPRECATE_SOON(
-      "Use a taskrunner acquired by GetForegroundTaskRunner instead.",
-      virtual void CallIdleOnForegroundThread(Isolate* isolate,
-                                              IdleTask* task)) {
+  virtual void CallIdleOnForegroundThread(Isolate* isolate, IdleTask* task) {
     // This must be overriden if |IdleTasksEnabled()|.
     abort();
   }
@@ -408,12 +380,6 @@ class Platform {
    * Returns an instance of a v8::TracingController. This must be non-nullptr.
    */
   virtual TracingController* GetTracingController() = 0;
-
-  /**
-   * Tells the embedder to generate and upload a crashdump during an unexpected
-   * but non-critical scenario.
-   */
-  virtual void DumpWithoutCrashing() {}
 
  protected:
   /**
