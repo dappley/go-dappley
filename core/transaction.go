@@ -283,24 +283,6 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 	return txCopy
 }
 
-// TrimmedCopy creates a trimmed copy without signature of Transaction to be used for verifying ID
-func (tx *Transaction) TrimmedCopyWithoutSignature() Transaction {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	for _, vin := range tx.Vin {
-		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, vin.PubKey})
-	}
-
-	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
-	}
-
-	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
-
-	return txCopy
-}
-
 func (tx *Transaction) DeepCopy() Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
