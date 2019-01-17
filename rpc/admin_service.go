@@ -21,6 +21,9 @@ import (
 	"context"
 	"encoding/hex"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
@@ -49,13 +52,13 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	if len(in.Address) == 0 {
 		return &rpcpb.AddProducerResponse{
 			Message: "address is empty",
-		}, core.ErrInvalidAddress
+		}, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
 	if err != nil {
 		return &rpcpb.AddProducerResponse{
 			Message: "failed to add producer: " + err.Error(),
-		}, err
+		}, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	return &rpcpb.AddProducerResponse{
 		Message: "producer is added",
@@ -72,7 +75,7 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
 	err := logic.SetUnLockWallet()
 	if err != nil {
-		return &rpcpb.UnlockWalletResponse{Message: err.Error()}, err
+		return &rpcpb.UnlockWalletResponse{Message: err.Error()}, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	return &rpcpb.UnlockWalletResponse{Message: "succeed"}, nil
 }
@@ -81,12 +84,19 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendFromMinerResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
+		return &rpcpb.SendFromMinerResponse{Message: "invalid send amount (must be > 0)"}, status.Error(codes.FailedPrecondition, core.ErrInvalidAmount.Error())
 	}
 
 	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	if err != nil {
-		return &rpcpb.SendFromMinerResponse{Message: "failed to add balance: " + err.Error()}, err
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return &rpcpb.SendFromMinerResponse{Message: err.Error()}, status.Error(codes.InvalidArgument, err.Error())
+		case core.ErrInsufficientFund:
+			return &rpcpb.SendFromMinerResponse{Message: err.Error()}, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return &rpcpb.SendFromMinerResponse{Message: err.Error()}, status.Error(codes.Unknown, err.Error())
+		}
 	}
 	return &rpcpb.SendFromMinerResponse{Message: "succeed"}, nil
 }
@@ -98,7 +108,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	tip := common.NewAmountFromBytes(in.Tip)
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
+		return &rpcpb.SendResponse{Message: "invalid send amount (must be > 0)"}, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
 	}
 	path := in.WalletPath
 	if len(in.WalletPath) == 0 {
@@ -107,18 +117,25 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	wm, err := logic.GetWalletManager(path)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "error loading local wallets"}, err
+		return &rpcpb.SendResponse{Message: "error loading local wallets"}, status.Error(codes.Unknown, err.Error())
 	}
 
 	senderWallet := wm.GetWalletByAddress(sendFromAddress)
 	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
-		return &rpcpb.SendResponse{Message: "sender wallet is not found"}, client.ErrAddressNotFound
+		return &rpcpb.SendResponse{Message: "sender wallet is not found"}, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 
 	txhash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txhashStr := hex.EncodeToString(txhash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, err
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, status.Error(codes.InvalidArgument, err.Error())
+		case core.ErrInsufficientFund:
+			return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, status.Error(codes.Unknown, err.Error())
+		}
 	}
 
 	resp := &rpcpb.SendResponse{Message: "succeed", Txid: txhashStr}
