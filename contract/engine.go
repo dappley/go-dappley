@@ -49,7 +49,7 @@ var (
 
 type V8Engine struct {
 	source        string
-	storage       map[string]string
+	state         *core.ScState
 	tx            *core.Transaction
 	rewards       map[string]string
 	contractAddr  core.Address
@@ -92,7 +92,7 @@ func NewV8Engine() *V8Engine {
 	v8once.Do(func() { InitializeV8Engine() })
 	engine := &V8Engine{
 		source:       "",
-		storage:      make(map[string]string),
+		state:        nil,
 		tx:           nil,
 		contractAddr: core.NewAddress(""),
 		handler:      currHandler,
@@ -115,8 +115,8 @@ func (sc *V8Engine) ImportSourceCode(source string) {
 	sc.source = source
 }
 
-func (sc *V8Engine) ImportLocalStorage(storage map[string]string) {
-	sc.storage = storage
+func (sc *V8Engine) ImportLocalStorage(state *core.ScState) {
+	sc.state = state
 }
 
 func (sc *V8Engine) ImportTransaction(tx *core.Transaction) {

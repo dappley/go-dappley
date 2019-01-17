@@ -54,9 +54,9 @@ func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
 	_m.Called(currBlkHeight)
 }
 
-// ImportLocalStorage provides a mock function with given fields: storage
-func (_m *MockScEngine) ImportLocalStorage(storage map[string]string) {
-	_m.Called(storage)
+// ImportLocalStorage provides a mock function with given fields: state
+func (_m *MockScEngine) ImportLocalStorage(state *ScState) {
+	_m.Called(state)
 }
 
 // ImportNodeAddress provides a mock function with given fields: addr
