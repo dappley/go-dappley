@@ -19,7 +19,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	logger "github.com/sirupsen/logrus"
@@ -48,14 +47,14 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
 
 	if len(clientProtoVersions) != 3 {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, errors.New("proto version not supported")
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, status.Error(codes.InvalidArgument, "proto version not supported")
 	}
 
 	serverProtoVersions := strings.Split(ProtoVersion, ".")
 
 	// Major version must equal
 	if serverProtoVersions[0] != clientProtoVersions[0] {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, errors.New("major version mismatch")
+		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, status.Error(codes.FailedPrecondition, "major version mismatch")
 	}
 
 	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
@@ -64,12 +63,17 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.Address
 	if !core.NewAddress(address).ValidateAddress() {
-		return &rpcpb.GetBalanceResponse{Message: "address is not valid"}, core.ErrInvalidAddress
+		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 
 	amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain().GetDb())
 	if err != nil {
-		return &rpcpb.GetBalanceResponse{Message: "failed to get balance from blockchain"}, nil
+		switch err {
+		case logic.ErrInvalidAddress:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
 	return &rpcpb.GetBalanceResponse{Amount: amount.Int64(), Message: "succeed"}, nil
 }
@@ -77,7 +81,12 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	tailBlock, err := rpcService.node.GetBlockchain().GetTailBlock()
 	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
+		switch err {
+		case core.ErrBlockDoesNotExist:
+			return nil, status.Error(codes.NotFound, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
 
 	return &rpcpb.GetBlockchainInfoResponse{
@@ -146,7 +155,7 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 	var blocks []*core.Block
 	maxBlockCount := in.MaxCount
 	if maxBlockCount > MaxGetBlocksCount {
-		return &rpcpb.GetBlocksResponse{ErrorCode: GetBlocksCountOverflow}, errors.New("block count overflow")
+		return &rpcpb.GetBlocksResponse{ErrorCode: GetBlocksCountOverflow}, status.Error(codes.InvalidArgument, "block count overflow")
 	}
 
 	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
@@ -182,7 +191,7 @@ func (rpcService *RpcService) RpcGetBlockByHash(ctx context.Context, in *rpcpb.G
 	block, err := rpcService.node.GetBlockchain().GetBlockByHash(in.Hash)
 
 	if err != nil {
-		return &rpcpb.GetBlockByHashResponse{ErrorCode: BlockNotFound}, err
+		return &rpcpb.GetBlockByHashResponse{ErrorCode: BlockNotFound}, status.Error(codes.NotFound, err.Error())
 	}
 
 	return &rpcpb.GetBlockByHashResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
@@ -193,7 +202,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(in.Height)
 
 	if err != nil {
-		return &rpcpb.GetBlockByHeightResponse{ErrorCode: BlockNotFound}, err
+		return &rpcpb.GetBlockByHeightResponse{ErrorCode: BlockNotFound}, status.Error(codes.NotFound, err.Error())
 	}
 
 	return &rpcpb.GetBlockByHeightResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
@@ -205,14 +214,14 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	tx.FromProto(in.Transaction)
 
 	if tx.IsCoinbase() {
-		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, errors.New("cannot send coinbase transaction")
+		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
 	}
 
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	if !tx.Verify(utxoIndex, 0) {
-		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, core.ErrTransactionVerifyFailed
+		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
