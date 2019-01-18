@@ -54,7 +54,7 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 	// Major version must equal
 	if serverProtoVersions[0] != clientProtoVersions[0] {
-		return nil, status.Error(codes.FailedPrecondition, "major version mismatch")
+		return nil, status.Error(codes.Unimplemented, "major version mismatch")
 	}
 
 	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
