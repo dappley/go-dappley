@@ -49,16 +49,12 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.Address) == 0 {
-		return &rpcpb.AddProducerResponse{
-			Message: "address is empty",
-		}, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
+	if len(in.Address) == 0 || !core.NewAddress(in.Address).ValidateAddress() {
+		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
 	if err != nil {
-		return &rpcpb.AddProducerResponse{
-			Message: "failed to add producer: " + err.Error(),
-		}, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	return &rpcpb.AddProducerResponse{
 		Message: "producer is added",
@@ -75,7 +71,7 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
 	err := logic.SetUnLockWallet()
 	if err != nil {
-		return &rpcpb.UnlockWalletResponse{Message: err.Error()}, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	return &rpcpb.UnlockWalletResponse{Message: "succeed"}, nil
 }
@@ -84,18 +80,18 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendFromMinerResponse{Message: "invalid send amount (must be > 0)"}, status.Error(codes.FailedPrecondition, core.ErrInvalidAmount.Error())
+		return nil, status.Error(codes.FailedPrecondition, logic.ErrInvalidAmount.Error())
 	}
 
 	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
-			return &rpcpb.SendFromMinerResponse{Message: err.Error()}, status.Error(codes.InvalidArgument, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case core.ErrInsufficientFund:
-			return &rpcpb.SendFromMinerResponse{Message: err.Error()}, status.Error(codes.FailedPrecondition, err.Error())
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
-			return &rpcpb.SendFromMinerResponse{Message: err.Error()}, status.Error(codes.Unknown, err.Error())
+			return nil, status.Error(codes.Unknown, err.Error())
 		}
 	}
 	return &rpcpb.SendFromMinerResponse{Message: "succeed"}, nil

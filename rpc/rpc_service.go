@@ -47,14 +47,14 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
 
 	if len(clientProtoVersions) != 3 {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, status.Error(codes.InvalidArgument, "proto version not supported")
+		return nil, status.Error(codes.InvalidArgument, "proto version not supported")
 	}
 
 	serverProtoVersions := strings.Split(ProtoVersion, ".")
 
 	// Major version must equal
 	if serverProtoVersions[0] != clientProtoVersions[0] {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, status.Error(codes.FailedPrecondition, "major version mismatch")
+		return nil, status.Error(codes.FailedPrecondition, "major version mismatch")
 	}
 
 	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
@@ -101,9 +101,9 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
-	publicKeyHash, err := core.NewAddress(in.Address).GetPubKeyHash()
-	if err == false {
-		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
+	publicKeyHash, ok := core.NewAddress(in.Address).GetPubKeyHash()
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}
 
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
