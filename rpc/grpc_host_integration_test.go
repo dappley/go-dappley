@@ -22,6 +22,8 @@ package rpc
 
 import (
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"strings"
 	"testing"
 	"time"
@@ -605,7 +607,8 @@ func TestRpcSendTransaction(t *testing.T) {
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, failedResponse)
-	assert.Equal(t, "rpc error: code = Unknown desc = transaction verify failed", err.Error())
+	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
+	assert.Equal(t, core.ErrTransactionVerifyFailed.Error(), status.Convert(err).Message())
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
