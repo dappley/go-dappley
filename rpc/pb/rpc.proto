@@ -100,27 +100,19 @@ message GetNewTransactionsRequest {}
 
 // Responses
 
-message AddProducerResponse {
-  string message = 1;
-}
+message AddProducerResponse {}
 
-message UnlockWalletResponse {
-  string message = 1;
-}
+message UnlockWalletResponse {}
 
 message GetBalanceResponse {
-  string message = 1;
-  int64 amount = 2;
+  int64 amount = 1;
 }
 
-message SendFromMinerResponse {
-  string message = 1;
-}
+message SendFromMinerResponse {}
 
 message SendResponse {
-  string message = 1;
-  string contractAddr = 2;
-  string txid = 3;
+  string contractAddr = 1;
+  string txid = 2;
 }
 
 message GetPeerInfoResponse {
@@ -134,20 +126,16 @@ message GetBlockchainInfoResponse {
   int64   timestamp = 4;
 }
 
-message AddPeerResponse {
-  string status = 1;
-}
+message AddPeerResponse {}
 
 message GetVersionResponse {
-  uint32 errorCode = 1;
-  string protoVersion = 2;
-  string serverVersion = 3;
+  string protoVersion = 1;
+  string serverVersion = 2;
 }
 
 message GetUTXOResponse {
-  uint32 errorCode = 1;
-  repeated UTXO utxos = 2;
-  repeated corepb.BlockHeader blockHeaders = 3; //The latest block headers
+  repeated UTXO utxos = 1;
+  repeated corepb.BlockHeader blockHeaders = 2; //The latest block headers
 }
 
 // TODO: Refactor to corepb.UTXO
@@ -159,26 +147,21 @@ message UTXO {
 }
 
 message GetBlocksResponse {
-  uint32 errorCode = 1;
-  repeated corepb.Block blocks = 2;
+  repeated corepb.Block blocks = 1;
 }
 
 message GetBlockByHashResponse {
-  uint32 errorCode = 1;
-  corepb.Block block = 2;
+  corepb.Block block = 1;
 }
 
 message GetBlockByHeightResponse {
-  uint32 errorCode = 1;
-  corepb.Block block = 2;
+  corepb.Block block = 1;
 }
 
-message SendTransactionResponse {
-  uint32 errorCode = 1;
-}
+message SendTransactionResponse {}
 
 message SendBatchTransactionResponse {
-  repeated uint32 errorCode = 1;
+  repeated bool results = 1;
 }
 
 message GetNewTransactionsResponse {
@@ -189,6 +172,5 @@ message GetAllTransactionsRequest{
 
 }
 message GetAllTransactionsResponse{
-  uint32 errorCode = 1;
-  repeated corepb.Transaction transactions = 2;
+  repeated corepb.Transaction transactions = 1;
 }

@@ -441,11 +441,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 		}
 		return
 	}
-	if response.Message == "succeed" {
-		fmt.Printf("The balance is: %d\n", response.Amount)
-	} else {
-		fmt.Println(response.Message)
-	}
+	fmt.Printf("The balance is: %d\n", response.GetAmount())
 }
 
 func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -744,7 +740,7 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), data)
 
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
-	response1, err := client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
+	_, err = client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
 		switch status.Code(err) {
@@ -755,12 +751,12 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		}
 		return
 	}
-	if response1.ErrorCode != 0 {
-		fmt.Println("Error:", response1.ErrorCode)
-		return
+
+	if *(flags[flagToAddress].(*string)) == "" {
+		fmt.Println("Contract address:", tx.Vout[0].PubKeyHash.GenerateAddress().String())
 	}
 
-	fmt.Println("Transaction is sent!")
+	fmt.Println("Transaction is sent! Pending approval from network.")
 }
 
 func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount) ([]*core.UTXO, error) {

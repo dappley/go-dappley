@@ -38,14 +38,11 @@ type AdminRpcService struct {
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	status := "succeed"
 	err := adminRpcService.node.AddStreamByString(in.FullAddress)
 	if err != nil {
-		status = err.Error()
+		return nil, status.Error(codes.Unknown, err.Error())
 	}
-	return &rpcpb.AddPeerResponse{
-		Status: status,
-	}, nil
+	return &rpcpb.AddPeerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
@@ -56,9 +53,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
-	return &rpcpb.AddProducerResponse{
-		Message: "producer is added",
-	}, nil
+	return &rpcpb.AddProducerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
@@ -73,7 +68,7 @@ func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in 
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
-	return &rpcpb.UnlockWalletResponse{Message: "succeed"}, nil
+	return &rpcpb.UnlockWalletResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
@@ -94,7 +89,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 			return nil, status.Error(codes.Unknown, err.Error())
 		}
 	}
-	return &rpcpb.SendFromMinerResponse{Message: "succeed"}, nil
+	return &rpcpb.SendFromMinerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -104,7 +99,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	tip := common.NewAmountFromBytes(in.Tip)
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendResponse{Message: "invalid send amount (must be > 0)"}, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
+		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
 	}
 	path := in.WalletPath
 	if len(in.WalletPath) == 0 {
@@ -113,28 +108,28 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	wm, err := logic.GetWalletManager(path)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "error loading local wallets"}, status.Error(codes.Unknown, err.Error())
+		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
 	senderWallet := wm.GetWalletByAddress(sendFromAddress)
 	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
-		return &rpcpb.SendResponse{Message: "sender wallet is not found"}, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
+		return nil, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 
-	txhash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
-	txhashStr := hex.EncodeToString(txhash)
+	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
-			return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, status.Error(codes.InvalidArgument, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case core.ErrInsufficientFund:
-			return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, status.Error(codes.FailedPrecondition, err.Error())
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
-			return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, status.Error(codes.Unknown, err.Error())
+			return nil, status.Error(codes.Unknown, err.Error())
 		}
 	}
 
-	resp := &rpcpb.SendResponse{Message: "succeed", Txid: txhashStr}
+	resp := &rpcpb.SendResponse{Txid: txHashStr}
 	if scAddress != "" {
 		resp.ContractAddr = scAddress
 	}
