@@ -207,6 +207,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 			return err
 		}
 		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, block.GetHeight(), parentBlk.GetTimestamp())
+		bc.eventManager.Trigger(scState.GetEvents())
 		scState.SaveToDatabase(bcTemp.db, block.GetHash())
 	}
 

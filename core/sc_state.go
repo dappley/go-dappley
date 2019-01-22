@@ -25,6 +25,8 @@ func NewScState() *ScState {
 	return &ScState{make(map[string]map[string]string),make([]*Event, 0), &sync.RWMutex{}}
 }
 
+func (ss *ScState) GetEvents() []*Event{ return ss.events }
+
 func deserializeScState(d []byte) map[string]map[string]string {
 	scState := make(map[string]map[string]string)
 	decoder := gob.NewDecoder(bytes.NewReader(d))
