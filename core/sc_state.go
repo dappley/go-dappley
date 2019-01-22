@@ -12,6 +12,7 @@ import (
 
 type ScState struct {
 	states map[string]map[string]string
+	events []*Event
 	mutex  *sync.RWMutex
 }
 
@@ -21,7 +22,7 @@ const (
 )
 
 func NewScState() *ScState {
-	return &ScState{make(map[string]map[string]string), &sync.RWMutex{}}
+	return &ScState{make(map[string]map[string]string),make([]*Event, 0), &sync.RWMutex{}}
 }
 
 func deserializeScState(d []byte) map[string]map[string]string {
