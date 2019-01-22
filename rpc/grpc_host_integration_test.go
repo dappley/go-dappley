@@ -709,7 +709,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 
 	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, err)
-	assert.Equal(t, []bool{true, true, true}, successResponse.Results)
+	assert.NotNil(t, successResponse)
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
@@ -735,8 +735,16 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
-	assert.Nil(t, err)
-	assert.Equal(t, []bool{false, true}, failedResponse.Results)
+	assert.Nil(t, failedResponse)
+	st := status.Convert(err)
+	assert.Equal(t, codes.Unknown, st.Code())
+
+	detail0 := st.Details()[0].(*rpcpb.SendTransactionFailure)
+	detail1 := st.Details()[1].(*rpcpb.SendTransactionFailure)
+	assert.Equal(t, errTransaction.ID, detail0.Txid)
+	assert.Equal(t, uint32(codes.FailedPrecondition), detail0.Code)
+	assert.Equal(t, transaction4.ID, detail1.Txid)
+	assert.Equal(t, uint32(codes.OK), detail1.Code)
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {

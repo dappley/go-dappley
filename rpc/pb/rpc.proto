@@ -160,8 +160,12 @@ message GetBlockByHeightResponse {
 
 message SendTransactionResponse {}
 
-message SendBatchTransactionResponse {
-  repeated bool results = 1;
+message SendBatchTransactionResponse {}
+
+message SendTransactionFailure {
+  bytes txid = 1; // Transactions that are sent
+  uint32 code = 2; // grpc status code
+  string msg = 3;
 }
 
 message GetNewTransactionsResponse {
