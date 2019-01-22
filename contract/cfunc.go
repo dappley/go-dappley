@@ -12,6 +12,7 @@ char* GetNodeAddressFunc(void *handler);
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
 int   StorageDelFunc(void *address,const char *key);
+int   TriggerEventFunc(void *address, const char *topic, const char *data);
 void  TransactionGetFunc(void *address, void *context);
 void  LoggerFunc(unsigned int level, char ** args, int length);
 int	  RecordRewardFunc(void *handler, const char *address, const char *amount);
@@ -49,6 +50,10 @@ int Cgo_StorageSetFunc(void *address, const char *key, const char *value){
 
 int Cgo_StorageDelFunc(void *address, const char *key){
 	return StorageDelFunc(address,key);
+};
+
+int Cgo_TriggerEventFunc(void *address, const char *topic, const char *data){
+	return TriggerEventFunc(address, topic, data);
 };
 
 void Cgo_TransactionGetFunc(void *address, void *context) {

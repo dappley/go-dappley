@@ -379,7 +379,19 @@ func TestBlkHeight(t *testing.T) {
 	sc.ImportCurrBlockHeight(22334)
 
 	assert.Equal(t, "22334", sc.Execute("getBlkHeight", ""))
+}
 
+func TestRecordEvent(t *testing.T) {
+	script, _ := ioutil.ReadFile("test/test_event.js")
+
+	ss := core.NewScState()
+	sc := NewV8Engine()
+	sc.ImportLocalStorage(ss)
+	sc.ImportSourceCode(string(script))
+
+	assert.Equal(t, "0", sc.Execute("trigger", "\"topic\",\"data\""))
+	assert.Equal(t, "topic", ss.GetEvents()[0].GetTopic())
+	assert.Equal(t, "data", ss.GetEvents()[0].GetData())
 }
 
 func TestTrimWhiteSpaces(t *testing.T) {

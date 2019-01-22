@@ -26,6 +26,9 @@ func NewScState() *ScState {
 }
 
 func (ss *ScState) GetEvents() []*Event{ return ss.events }
+func (ss *ScState) RecordEvent(event *Event){
+	ss.events = append(ss.events, event)
+}
 
 func deserializeScState(d []byte) map[string]map[string]string {
 	scState := make(map[string]map[string]string)

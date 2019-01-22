@@ -13,6 +13,7 @@ char* Cgo_GetNodeAddressFunc(void *handler);
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
 int   Cgo_StorageDelFunc(void *address, const char *key);
+int   Cgo_TriggerEventFunc(void *address, const char *topic, const char *data);
 int	  Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount);
 //transaction
 struct transaction_t* Cgo_TransactionGetFunc(void *address);
@@ -78,6 +79,7 @@ func InitializeV8Engine() {
 	C.InitializeTransaction((C.FuncTransactionGet)(unsafe.Pointer(C.Cgo_TransactionGetFunc)))
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
+	C.InitializeEvent((C.FuncTriggerEvent)(unsafe.Pointer(C.Cgo_TriggerEventFunc)))
 	C.InitializePrevUtxo((C.FuncPrevUtxoGet)(unsafe.Pointer(C.Cgo_PrevUtxoGetFunc)))
 	C.InitializeCrypto(
 		(C.FuncVerifySignature)(unsafe.Pointer(C.Cgo_VerifySignatureFunc)),
