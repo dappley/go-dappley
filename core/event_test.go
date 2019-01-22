@@ -8,14 +8,14 @@ import (
 
 func TestNewEventManager(t *testing.T) {
 	em := NewEventManager()
-	assert.NotNil(t, em.EventBus)
+	assert.NotNil(t, em.eventBus)
 }
 
 func TestEventManager_Trigger(t *testing.T) {
 	em := NewEventManager()
 
 	count := 0
-	cb := func(s string){
+	cb := func(s *Event) {
 		count = 1
 	}
 
@@ -31,7 +31,7 @@ func TestEventManager_Unsubscribe(t *testing.T) {
 	em := NewEventManager()
 
 	count := 0
-	cb := func(s string){
+	cb := func(s *Event) {
 		count = 1
 	}
 

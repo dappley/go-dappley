@@ -278,6 +278,26 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 	return nil
 }
 
+func (rpcService *RpcService) RpcSubscribe(in *rpcpb.SubscribeRequest, stream rpcpb.RpcService_RpcSubscribeServer) error {
+	quitCh := make(chan bool, 1)
+	var cb interface{}
+	cb = func(event *core.Event) {
+		response := &rpcpb.SubscribeResponse{Data: event.GetData()}
+		err := stream.Send(response)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"topic": event.GetTopic(),
+				"data":  event.GetData(),
+			}).Warn("RPCService: failed to send published data")
+			rpcService.node.GetBlockchain().GetEventManager().Unsubscribe(event.GetTopic(), cb)
+			quitCh <- true
+		}
+	}
+	rpcService.node.GetBlockchain().GetEventManager().SubscribeMultiple(in.Topics, cb)
+	<-quitCh
+	return nil
+}
+
 func (rpcService *RpcService) IsPrivate() bool { return false }
 
 // RpcGetAllTransactionsFromTxPool get all transactions from transaction_pool
@@ -285,7 +305,7 @@ func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Contex
 	txs := rpcService.node.GetBlockchain().GetTxPool().GetTransactions()
 	result := &rpcpb.GetAllTransactionsResponse{ErrorCode: OK}
 	for _, tx := range txs {
-			result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
+		result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
 	}
 	return result, nil
 }
