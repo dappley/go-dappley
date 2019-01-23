@@ -672,7 +672,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 		"arguments":        totalArgs,
 	}).Debug("Transaction: is executing the smart contract...")
 	engine.ImportSourceCode(utxos[0].Contract)
-	engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
+	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
 	engine.ImportUTXOs(utxos[1:])
 	engine.ImportSourceTXID(tx.ID)

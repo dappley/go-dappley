@@ -13,6 +13,7 @@ char* Cgo_GetNodeAddressFunc(void *handler);
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
 int   Cgo_StorageDelFunc(void *address, const char *key);
+int   Cgo_TriggerEventFunc(void *address, const char *topic, const char *data);
 int	  Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount);
 //transaction
 struct transaction_t* Cgo_TransactionGetFunc(void *address);
@@ -49,7 +50,7 @@ var (
 
 type V8Engine struct {
 	source        string
-	storage       map[string]string
+	state         *core.ScState
 	tx            *core.Transaction
 	rewards       map[string]string
 	contractAddr  core.Address
@@ -78,6 +79,7 @@ func InitializeV8Engine() {
 	C.InitializeTransaction((C.FuncTransactionGet)(unsafe.Pointer(C.Cgo_TransactionGetFunc)))
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))
+	C.InitializeEvent((C.FuncTriggerEvent)(unsafe.Pointer(C.Cgo_TriggerEventFunc)))
 	C.InitializePrevUtxo((C.FuncPrevUtxoGet)(unsafe.Pointer(C.Cgo_PrevUtxoGetFunc)))
 	C.InitializeCrypto(
 		(C.FuncVerifySignature)(unsafe.Pointer(C.Cgo_VerifySignatureFunc)),
@@ -92,7 +94,7 @@ func NewV8Engine() *V8Engine {
 	v8once.Do(func() { InitializeV8Engine() })
 	engine := &V8Engine{
 		source:       "",
-		storage:      make(map[string]string),
+		state:        nil,
 		tx:           nil,
 		contractAddr: core.NewAddress(""),
 		handler:      currHandler,
@@ -115,8 +117,8 @@ func (sc *V8Engine) ImportSourceCode(source string) {
 	sc.source = source
 }
 
-func (sc *V8Engine) ImportLocalStorage(storage map[string]string) {
-	sc.storage = storage
+func (sc *V8Engine) ImportLocalStorage(state *core.ScState) {
+	sc.state = state
 }
 
 func (sc *V8Engine) ImportTransaction(tx *core.Transaction) {

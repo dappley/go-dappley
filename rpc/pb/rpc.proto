@@ -17,6 +17,7 @@ service RpcService {
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
   rpc RpcSendBatchTransaction(SendBatchTransactionRequest) returns (SendBatchTransactionResponse) {}
   rpc RpcGetNewTransactions(GetNewTransactionsRequest) returns (stream GetNewTransactionsResponse) {}
+  rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
 }
 
@@ -98,6 +99,10 @@ message SendBatchTransactionRequest {
 
 message GetNewTransactionsRequest {}
 
+message SubscribeRequest{
+  repeated string topics = 1;
+}
+
 // Responses
 
 message AddProducerResponse {}
@@ -170,6 +175,10 @@ message SendTransactionFailure {
 
 message GetNewTransactionsResponse {
   corepb.Transaction transaction = 1;
+}
+
+message SubscribeResponse {
+  string data = 1;
 }
 
 message GetAllTransactionsRequest{

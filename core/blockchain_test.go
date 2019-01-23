@@ -140,7 +140,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit}
+	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit, nil}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)

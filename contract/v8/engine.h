@@ -21,6 +21,7 @@ extern "C" {
     typedef char* (*FuncStorageGet)(void *address, const char *key);
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
+    typedef int (*FuncTriggerEvent)(void *address, const char *topic, const char *data);
     typedef void (*FuncTransactionGet)(void* address, void* context);
     typedef void (*FuncPrevUtxoGet)(void* address, void* context);
     typedef void (*FuncLogger)(unsigned int level, char** args, int length);
@@ -38,6 +39,7 @@ extern "C" {
     EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress);
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
+    EXPORT void InitializeEvent(FuncTriggerEvent triggerEvent);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
     EXPORT void InitializeCrypto(FuncVerifySignature verifySignature, FuncVerifyPublicKey verifyPublicKey);
     EXPORT void InitializeMath(FuncRandom random);

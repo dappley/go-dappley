@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var dummyAddr = "dummyAddr"
+
 func TestScEngine_Execute(t *testing.T) {
 	script := `'use strict';
 
@@ -129,10 +131,12 @@ StorageTest.prototype = {
 };
 var storageTest = new StorageTest;
 `
-	ss := make(map[string]string)
-	ss["key"] = "7"
+
+	ss := core.NewScState()
+	ss.GetStorageByAddress(dummyAddr)["key"] = "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
+	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	sc.ImportLocalStorage(ss)
 	assert.Equal(t, "7", sc.Execute("get", "\"key\""))
 }
@@ -162,10 +166,11 @@ StorageTest.prototype = {
 };
 var storageTest = new StorageTest;
 `
-	ss := make(map[string]string)
+	ss := core.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
+	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 
 	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
 	assert.Equal(t, "6", sc.Execute("get", "\"key\""))
@@ -196,10 +201,11 @@ StorageTest.prototype = {
 };
 var storageTest = new StorageTest;
 `
-	ss := make(map[string]string)
+	ss := core.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
+	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
 	assert.Equal(t, "0", sc.Execute("del", "\"key\""))
 	assert.Equal(t, "null", sc.Execute("get", "\"key\""))
@@ -260,7 +266,7 @@ TransactionTest.prototype = {
 };
 var transactionTest = new TransactionTest;
 `
-	ss := make(map[string]string)
+	ss := core.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -273,23 +279,24 @@ var transactionTest = new TransactionTest;
 func TestStepRecord(t *testing.T) {
 	script, _ := ioutil.ReadFile("jslib/step_recorder.js")
 
-	ss := make(map[string]string)
 	reward := make(map[string]string)
+	ss := core.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 	sc.ImportLocalStorage(ss)
+	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
 
 	assert.Equal(t, "0", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20"))
-	assert.Equal(t, "20", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "20", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "0", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15"))
-	assert.Equal(t, "35", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "0", sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10"))
-	assert.Equal(t, "10", ss["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "10", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "35", ss["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 }
 
@@ -372,7 +379,19 @@ func TestBlkHeight(t *testing.T) {
 	sc.ImportCurrBlockHeight(22334)
 
 	assert.Equal(t, "22334", sc.Execute("getBlkHeight", ""))
+}
 
+func TestRecordEvent(t *testing.T) {
+	script, _ := ioutil.ReadFile("test/test_event.js")
+
+	ss := core.NewScState()
+	sc := NewV8Engine()
+	sc.ImportLocalStorage(ss)
+	sc.ImportSourceCode(string(script))
+
+	assert.Equal(t, "0", sc.Execute("trigger", "\"topic\",\"data\""))
+	assert.Equal(t, "topic", ss.GetEvents()[0].GetTopic())
+	assert.Equal(t, "data", ss.GetEvents()[0].GetData())
 }
 
 func TestTrimWhiteSpaces(t *testing.T) {

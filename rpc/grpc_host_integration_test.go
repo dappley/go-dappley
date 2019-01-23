@@ -284,6 +284,7 @@ func TestRpcGetVersion(t *testing.T) {
 	// Test GetVersion with unsupport client version -- invalid version length
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
 	assert.Nil(t, response)
+
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 	assert.Equal(t, "proto version not supported", status.Convert(err).Message())
 
@@ -917,6 +918,104 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
+}
+
+func TestRpcService_RpcSubscribe(t *testing.T) {
+	rpcContext, err := createRpcTestContext(13)
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn1.Close()
+	c1 := rpcpb.NewRpcServiceClient(conn1)
+
+	// Create a grpc connection and a client
+	conn2, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	//defer conn2.Close()
+	c2 := rpcpb.NewRpcServiceClient(conn2)
+
+	// Test GetVersion with support client version
+	count1 := 0
+	count2 := 0
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		cc, err := c1.RpcSubscribe(ctx, &rpcpb.SubscribeRequest{Topics: []string{"topic1", "topic2"}})
+		assert.Nil(t, err)
+
+		resp, err := cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data1")
+		count1 += 1
+
+		resp, err = cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data2")
+		count1 += 1
+
+		resp, err = cc.Recv()
+		count2 += 1
+	}()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		cc, err := c2.RpcSubscribe(ctx, &rpcpb.SubscribeRequest{Topics: []string{"topic1", "topic3"}})
+		assert.Nil(t, err)
+
+		resp, err := cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data1")
+		count2 += 1
+
+		resp, err = cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data3")
+		count2 += 1
+
+		resp, err = cc.Recv()
+		count2 += 1
+	}()
+	time.Sleep(time.Second)
+
+	//publish topic 1. Both nodes will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic1", "data1")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 1, count1)
+	assert.Equal(t, 1, count2)
+
+	//publish topic2. Only node 1 will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic2", "data2")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 2, count1)
+	assert.Equal(t, 1, count2)
+
+	//publish topic3. Only node 2 will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic3", "data3")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 2, count1)
+	assert.Equal(t, 2, count2)
+
+	//publish topic4. No nodes will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic4", "data4")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 2, count1)
+	assert.Equal(t, 2, count2)
 }
 
 func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {

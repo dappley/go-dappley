@@ -38,7 +38,7 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
 		addr := utxo.PubKeyHash.GenerateAddress()
 		engine := em.CreateEngine()
 		engine.ImportSourceCode(utxo.Contract)
-		engine.ImportLocalStorage(scStorage.GetStorageByAddress(addr.String()))
+		engine.ImportLocalStorage(scStorage)
 		engine.ImportContractAddr(addr)
 		engine.ImportSourceTXID(utxo.Txid)
 		engine.ImportCurrBlockHeight(blkHeight)
