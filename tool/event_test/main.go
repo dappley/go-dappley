@@ -38,7 +38,7 @@ func main(){
 		logger.Panic(err)
 	}
 	fmt.Println("Contract addr:", resp.ContractAddr)
-	//contractAddr := resp.ContractAddr
+	contractAddr := resp.ContractAddr
 	//contractAddr := "cTuDnSBeqDuqwfQiRrS2UrCRywEfKQJeGs"
 	count := 0
 	for {
