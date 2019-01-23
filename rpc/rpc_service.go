@@ -288,7 +288,7 @@ func (rpcService *RpcService) RpcSubscribe(in *rpcpb.SubscribeRequest, stream rp
 			logger.WithError(err).WithFields(logger.Fields{
 				"topic": event.GetTopic(),
 				"data":  event.GetData(),
-			}).Warn("RPCService: failed to send published data")
+			}).Info("RPCService: failed to send published data")
 			rpcService.node.GetBlockchain().GetEventManager().Unsubscribe(event.GetTopic(), cb)
 			quitCh <- true
 		}
