@@ -216,7 +216,7 @@ func TestRpcSendContract(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewAdminServiceClient(conn)
 
-	contract := "dapp_schedule"
+	contract := "dapp_schedule1"
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:       senderWallet.GetAddress().String(),
