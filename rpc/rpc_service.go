@@ -19,7 +19,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	logger "github.com/sirupsen/logrus"
@@ -48,36 +47,46 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 	clientProtoVersions := strings.Split(in.ProtoVersion, ".")
 
 	if len(clientProtoVersions) != 3 {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, errors.New("proto version not supported")
+		return nil, status.Error(codes.InvalidArgument, "proto version not supported")
 	}
 
 	serverProtoVersions := strings.Split(ProtoVersion, ".")
 
 	// Major version must equal
 	if serverProtoVersions[0] != clientProtoVersions[0] {
-		return &rpcpb.GetVersionResponse{ErrorCode: ProtoVersionNotSupport, ProtoVersion: ProtoVersion, ServerVersion: ""}, errors.New("major version mismatch")
+		return nil, status.Error(codes.Unimplemented, "major version mismatch")
 	}
 
-	return &rpcpb.GetVersionResponse{ErrorCode: OK, ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
+	return &rpcpb.GetVersionResponse{ProtoVersion: ProtoVersion, ServerVersion: ""}, nil
 }
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.Address
 	if !core.NewAddress(address).ValidateAddress() {
-		return &rpcpb.GetBalanceResponse{Message: "address is not valid"}, core.ErrInvalidAddress
+		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 
 	amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain().GetDb())
 	if err != nil {
-		return &rpcpb.GetBalanceResponse{Message: "failed to get balance from blockchain"}, nil
+		switch err {
+		case logic.ErrInvalidAddress:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
-	return &rpcpb.GetBalanceResponse{Amount: amount.Int64(), Message: "succeed"}, nil
+	return &rpcpb.GetBalanceResponse{Amount: amount.Int64()}, nil
 }
 
 func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcpb.GetBlockchainInfoRequest) (*rpcpb.GetBlockchainInfoResponse, error) {
 	tailBlock, err := rpcService.node.GetBlockchain().GetTailBlock()
 	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
+		switch err {
+		case core.ErrBlockDoesNotExist:
+			return nil, status.Error(codes.NotFound, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
 
 	return &rpcpb.GetBlockchainInfoResponse{
@@ -92,19 +101,19 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
-	publicKeyHash, err := core.NewAddress(in.Address).GetPubKeyHash()
-	if err == false {
-		return &rpcpb.GetUTXOResponse{ErrorCode: InvalidAddress}, nil
+	publicKeyHash, ok := core.NewAddress(in.Address).GetPubKeyHash()
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}
 
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
-	response := rpcpb.GetUTXOResponse{ErrorCode: OK}
+	response := rpcpb.GetUTXOResponse{}
 	for _, utxo := range utxos {
 		response.Utxos = append(
 			response.Utxos,
 			&rpcpb.UTXO{
 				Amount:        utxo.Value.Bytes(),
-				PublicKeyHash: utxo.PubKeyHash.GetPubKeyHash(),
+				PublicKeyHash: []byte(utxo.PubKeyHash),
 				Txid:          utxo.Txid,
 				TxIndex:       uint32(utxo.TxIndex),
 			},
@@ -140,13 +149,13 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 
 	// Reach the blockchain's tail
 	if block.GetHeight() >= rpcService.node.GetBlockchain().GetMaxHeight() {
-		return &rpcpb.GetBlocksResponse{ErrorCode: OK}, nil
+		return &rpcpb.GetBlocksResponse{}, nil
 	}
 
 	var blocks []*core.Block
 	maxBlockCount := in.MaxCount
 	if maxBlockCount > MaxGetBlocksCount {
-		return &rpcpb.GetBlocksResponse{ErrorCode: GetBlocksCountOverflow}, errors.New("block count overflow")
+		return nil, status.Error(codes.InvalidArgument, "block count overflow")
 	}
 
 	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
@@ -155,7 +164,7 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 		block, err = rpcService.node.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
 	}
 
-	result := &rpcpb.GetBlocksResponse{ErrorCode: OK}
+	result := &rpcpb.GetBlocksResponse{}
 
 	for _, block = range blocks {
 		result.Blocks = append(result.Blocks, block.ToProto().(*corepb.Block))
@@ -182,10 +191,10 @@ func (rpcService *RpcService) RpcGetBlockByHash(ctx context.Context, in *rpcpb.G
 	block, err := rpcService.node.GetBlockchain().GetBlockByHash(in.Hash)
 
 	if err != nil {
-		return &rpcpb.GetBlockByHashResponse{ErrorCode: BlockNotFound}, err
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetBlockByHashResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlockByHashResponse{Block: block.ToProto().(*corepb.Block)}, nil
 }
 
 // RpcGetBlockByHeight Get single block in blockchain by height
@@ -193,10 +202,10 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	block, err := rpcService.node.GetBlockchain().GetBlockByHeight(in.Height)
 
 	if err != nil {
-		return &rpcpb.GetBlockByHeightResponse{ErrorCode: BlockNotFound}, err
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetBlockByHeightResponse{ErrorCode: OK, Block: block.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlockByHeightResponse{Block: block.ToProto().(*corepb.Block)}, nil
 }
 
 // RpcSendTransaction Send transaction to blockchain created by wallet client
@@ -205,14 +214,14 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	tx.FromProto(in.Transaction)
 
 	if tx.IsCoinbase() {
-		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, errors.New("cannot send coinbase transaction")
+		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
 	}
 
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	if !tx.Verify(utxoIndex, 0) {
-		return &rpcpb.SendTransactionResponse{ErrorCode: InvalidTransaction}, core.ErrTransactionVerifyFailed
+		return nil, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
@@ -227,12 +236,12 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		}).Info("Smart Contract Deployed Successful!")
 	}
 
-	return &rpcpb.SendTransactionResponse{ErrorCode: OK}, nil
+	return &rpcpb.SendTransactionResponse{}, nil
 }
 
 // RpcSendBatchTransaction sends a batch of transactions to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
-	respErrorCode := []uint32{}
+	st := status.New(codes.OK, "")
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 	for _, txInReq := range in.Transaction {
@@ -240,12 +249,26 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		tx.FromProto(txInReq)
 
 		if tx.IsCoinbase() {
-			respErrorCode = append(respErrorCode, InvalidTransaction)
+			if st.Code() == codes.OK {
+				st = status.New(codes.Unknown, "one or more transactions are invalid")
+			}
+			st, _ = st.WithDetails(&rpcpb.SendTransactionFailure{
+				Txid: tx.ID,
+				Code: uint32(codes.InvalidArgument),
+				Msg:  "cannot send coinbase transaction",
+			})
 			continue
 		}
 
 		if tx.Verify(utxoIndex, 0) == false {
-			respErrorCode = append(respErrorCode, InvalidTransaction)
+			if st.Code() == codes.OK {
+				st = status.New(codes.Unknown, "one or more transactions are invalid")
+			}
+			st, _ = st.WithDetails(&rpcpb.SendTransactionFailure{
+				Txid: tx.ID,
+				Code: uint32(codes.FailedPrecondition),
+				Msg:  core.ErrTransactionVerifyFailed.Error(),
+			})
 			continue
 		}
 
@@ -253,9 +276,21 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 		rpcService.node.TxBroadcast(&tx)
 
-		respErrorCode = append(respErrorCode, OK)
+		if tx.IsContract() {
+			contractAddr := tx.GetContractAddress()
+			message := contractAddr.String()
+			logger.WithFields(logger.Fields{
+				"contractAddr": message,
+			}).Info("Smart Contract Deployed Successful!")
+		}
+
+		st, _ = st.WithDetails(&rpcpb.SendTransactionFailure{
+			Txid: tx.ID,
+			Code: uint32(codes.OK),
+			Msg:  "",
+		})
 	}
-	return &rpcpb.SendBatchTransactionResponse{ErrorCode: respErrorCode}, nil
+	return &rpcpb.SendBatchTransactionResponse{}, st.Err()
 }
 
 func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
@@ -278,14 +313,34 @@ func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactions
 	return nil
 }
 
+func (rpcService *RpcService) RpcSubscribe(in *rpcpb.SubscribeRequest, stream rpcpb.RpcService_RpcSubscribeServer) error {
+	quitCh := make(chan bool, 1)
+	var cb interface{}
+	cb = func(event *core.Event) {
+		response := &rpcpb.SubscribeResponse{Data: event.GetData()}
+		err := stream.Send(response)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"topic": event.GetTopic(),
+				"data":  event.GetData(),
+			}).Info("RPCService: failed to send published data")
+			rpcService.node.GetBlockchain().GetEventManager().Unsubscribe(event.GetTopic(), cb)
+			quitCh <- true
+		}
+	}
+	rpcService.node.GetBlockchain().GetEventManager().SubscribeMultiple(in.Topics, cb)
+	<-quitCh
+	return nil
+}
+
 func (rpcService *RpcService) IsPrivate() bool { return false }
 
 // RpcGetAllTransactionsFromTxPool get all transactions from transaction_pool
 func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Context, in *rpcpb.GetAllTransactionsRequest) (*rpcpb.GetAllTransactionsResponse, error) {
 	txs := rpcService.node.GetBlockchain().GetTxPool().GetTransactions()
-	result := &rpcpb.GetAllTransactionsResponse{ErrorCode: OK}
+	result := &rpcpb.GetAllTransactionsResponse{}
 	for _, tx := range txs {
-			result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
+		result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
 	}
 	return result, nil
 }

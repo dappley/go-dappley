@@ -124,3 +124,40 @@ func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
 	assert.Equal(t, 0, len(txPool.GetTransactions()))
 
 }
+
+func TestTransactionPool_GetTransactions(t *testing.T) {
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
+	var contractPubkeyHash = NewContractPubKeyHash()
+
+	var deploymentTx = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{tx1.ID, 1, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), contractPubkeyHash, "dapp_schedule"},
+		},
+		Tip: common.NewAmount(1),
+	}
+	deploymentTx.ID = deploymentTx.Hash()
+
+	var executionTx = Transaction{
+		ID: nil,
+		Vin: GenerateFakeTxInputs(),
+		Vout: []TXOutput{
+			{common.NewAmount(5), contractPubkeyHash, "execution"},
+		},
+		Tip: common.NewAmount(2),
+	}
+	executionTx.ID = executionTx.Hash()
+
+	txPool := NewTransactionPool(10)
+	txPool.Push(&executionTx)
+	txPool.Push(&deploymentTx)
+
+	// deployment transaction should be ahead of execution transaction
+	txs := txPool.GetTransactions()
+	assert.Equal(t, &deploymentTx, txs[0])
+	assert.Equal(t, &executionTx, txs[1])
+}

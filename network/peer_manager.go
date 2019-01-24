@@ -251,7 +251,9 @@ func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
 	if pm.isSyncPeerFinish() {
 		pm.collectSyncPeersResult()
 		pm.saveSyncPeers()
-		pm.startConnectSyncPeers()
+		go func() {
+			pm.startConnectSyncPeers()
+		}()
 	}
 }
 
@@ -285,8 +287,10 @@ func (pm *PeerManager) StopStream(stream *Stream) {
 	pm.mutex.Unlock()
 
 	if streamLen == 0 {
-		pm.startConnectSeeds()
-		pm.startConnectSyncPeers()
+		go func() {
+			pm.startConnectSeeds()
+			pm.startConnectSyncPeers()
+		}()
 	}
 }
 

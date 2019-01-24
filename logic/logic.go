@@ -263,7 +263,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetTransactions())
 
-	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash.GetPubKeyHash(), amount)
+	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), amount)
 	if err != nil {
 		return nil, "", err
 	}

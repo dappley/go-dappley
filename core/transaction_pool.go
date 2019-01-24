@@ -29,6 +29,7 @@ import (
 const (
 	NewTransactionTopic   = "NewTransaction"
 	EvictTransactionTopic = "EvictTransaction"
+	scheduleFuncName = "dapp_schedule"
 )
 
 type TransactionNode struct {
@@ -92,6 +93,27 @@ func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	return txPool.getSortedTransactions()
 }
 
+func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blockHeight uint64) []*Transaction {
+	txs := txPool.GetTransactions()
+	tempUtxoIndex := utxoIndex.DeepCopy()
+	var validTxs []*Transaction
+	var inValidTxs []*Transaction
+
+	for _, tx := range txs {
+		if tx.Verify(tempUtxoIndex, blockHeight) {
+			validTxs = append(validTxs, tx)
+			tempUtxoIndex.UpdateUtxo(tx)
+		}else{
+			inValidTxs = append(inValidTxs, tx)
+		}
+	}
+	if len(inValidTxs)>0 {
+		txPool.CheckAndRemoveTransactions(inValidTxs)
+	}
+
+	return validTxs
+}
+
 func (txPool *TransactionPool) Push(tx *Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -129,7 +151,6 @@ func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
 	defer txPool.mutex.Unlock()
 
 	for _, tx := range txs {
-		//WHY REMOVE CHILDREN? REMOVE
 		txNode, ok := txPool.txs[string(tx.ID)]
 		if !ok {
 			continue
@@ -143,9 +164,14 @@ func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 	checkNodes := make(map[string]*TransactionNode)
+	contractNodes := make(map[string]*TransactionNode)
 
 	for key, node := range txPool.txs {
-		checkNodes[key] = node
+		if node.value.IsContract() {
+			contractNodes[key] = node
+		} else {
+			checkNodes[key] = node
+		}
 	}
 
 	var sortedTxs []*Transaction
@@ -157,6 +183,18 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 			}
 		}
 	}
+
+	for key, node := range contractNodes {
+		if !node.value.IsExecutionContract() {
+			sortedTxs = append(sortedTxs, node.value)
+			delete(contractNodes, key)
+		}
+	}
+
+	for _, node := range contractNodes {
+		sortedTxs = append(sortedTxs, node.value)
+	}
+
 	return sortedTxs
 }
 
