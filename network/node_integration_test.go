@@ -26,6 +26,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,13 +40,36 @@ const (
 	test_port7
 	test_port8
 	test_port9
+	test_port10
+	test_port11
+	test_port12
+	test_port13
+	test_port14
 )
 
-func initNode(address string, port int, db storage.Storage) (*Node, error) {
+func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
 	addr := core.Address{address}
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil)
 	pool := core.NewBlockPool(0)
 	n := NewNode(bc, pool)
+
+	if seedPeer != nil {
+		n.GetPeerManager().AddSeedByPeerInfo(seedPeer)
+	}
+	err := n.Start(port)
+	return n, err
+}
+
+func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
+	addr := core.Address{address}
+	bc := core.CreateBlockchain(addr, db, nil, 128, nil)
+	pool := core.NewBlockPool(0)
+	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
+	n := NewNodeWithConfig(bc, pool, config)
+
+	if seedPeer != nil {
+		n.GetPeerManager().AddSeedByPeerInfo(seedPeer)
+	}
 	err := n.Start(port)
 	return n, err
 }
@@ -56,7 +80,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	defer db.Close()
 
 	//create node1
-	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port1, db)
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port1, nil, db)
 	defer n1.Stop()
 	assert.Nil(t, err)
 
@@ -64,12 +88,12 @@ func TestNetwork_AddStream(t *testing.T) {
 	assert.Len(t, n1.host.Network().Peerstore().Peers(), 1)
 
 	//create node2
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port2, db)
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port2, nil, db)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
-	err = n1.AddStream(n2.GetPeerID(), n2.GetPeerMultiaddr())
+	err = n1.GetPeerManager().AddAndConnectPeer(n2.GetInfo())
 	assert.Nil(t, err)
 	assert.Len(t, n1.host.Network().Peerstore().Peers(), 2)
 }
@@ -79,16 +103,16 @@ func TestNetwork_BroadcastBlock(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	n1, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port3, db)
+	n1, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port3, nil, db)
 	defer n1.Stop()
 	assert.Nil(t, err)
 
 	//setup node 1
-	n2, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port4, db)
+	n2, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port4, nil, db)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
-	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
+	err = n2.GetPeerManager().AddAndConnectPeer(n1.GetInfo())
 	assert.Nil(t, err)
 
 	blk := core.GenerateMockBlock()
@@ -103,60 +127,20 @@ func TestNetwork_BroadcastBlock(t *testing.T) {
 	assert.True(t, true)
 }
 
-func TestNode_SyncPeers(t *testing.T) {
-	db := storage.NewRamStorage()
-	defer db.Close()
-
-	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port7, db)
-	defer n1.Stop()
-	assert.Nil(t, err)
-
-	//create node 2 and add node1 as a peer
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port8, db)
-	defer n2.Stop()
-	assert.Nil(t, err)
-
-	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
-	assert.Nil(t, err)
-
-	//create node 3 and add node1 as a peer
-	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port9, db)
-	defer n3.Stop()
-	assert.Nil(t, err)
-
-	err = n3.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
-	assert.Nil(t, err)
-
-	//node 1 broadcast syncpeers
-	n1.SyncPeersBroadcast()
-
-	core.WaitDoneOrTimeout(func() bool {
-		//no condition to be checked
-		return false
-	}, 5)
-
-	//node2 should have node 3 as its peer
-	assert.True(t, n2.peerList.IsInPeerlist(n3.GetInfo()))
-
-	//node3 should have node 2 as its peer
-	assert.True(t, n3.peerList.IsInPeerlist(n2.GetInfo()))
-
-}
-
 func TestNode_RequestBlockUnicast(t *testing.T) {
 
 	//setup node 1
 	db := storage.NewRamStorage()
 	defer db.Close()
-	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port5, db)
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port5, nil, db)
 	defer n1.Stop()
 	assert.Nil(t, err)
 	//setup node 2
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port6, db)
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port6, nil, db)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
-	err = n2.AddStream(n1.GetPeerID(), n1.GetPeerMultiaddr())
+	err = n2.GetPeerManager().AddAndConnectPeer(n1.GetInfo())
 	assert.Nil(t, err)
 
 	blk := core.GenerateMockBlock()
@@ -172,4 +156,113 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	}, 5)
 
 	assert.True(t, true)
+}
+
+func TestNode_SyncPeers(t *testing.T) {
+	db1 := storage.NewRamStorage()
+	defer db1.Close()
+
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port7, nil, db1)
+	defer n1.Stop()
+	assert.Nil(t, err)
+
+	//create node 2 and add node1 as a peer
+	db2 := storage.NewRamStorage()
+	defer db2.Close()
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port8, n1.GetInfo(), db2)
+	defer n2.Stop()
+	assert.Nil(t, err)
+
+	core.WaitDoneOrTimeout(func() bool {
+		//no condition to be checked
+		return false
+	}, 1)
+
+	//create node 3 and add node1 as a peer
+	db3 := storage.NewRamStorage()
+	defer db3.Close()
+	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port9, n1.GetInfo(), db3)
+	defer n3.Stop()
+	assert.Nil(t, err)
+
+	core.WaitDoneOrTimeout(func() bool {
+		//no condition to be checked
+		return false
+	}, 2)
+
+	//node2 should have node 3 as its peer
+	_, ok := n2.GetPeerManager().streams[n3.GetPeerID()]
+	assert.True(t, ok)
+	assert.Equal(t, 1, n2.GetPeerManager().connectionInCount)
+
+	//node3 should have node 2 as its peer
+	_, ok = n3.GetPeerManager().streams[n2.GetPeerID()]
+	assert.True(t, ok)
+	assert.Equal(t, 1, n3.GetPeerManager().connectionOutCount)
+}
+
+func TestNode_ConnectionFull(t *testing.T) {
+	logger.SetLevel(logger.InfoLevel)
+	db1 := storage.NewRamStorage()
+	defer db1.Close()
+
+	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port10, nil, db1)
+	defer n1.Stop()
+	assert.Nil(t, err)
+
+	//create node 2 and add node1 as a peer
+	db2 := storage.NewRamStorage()
+	defer db2.Close()
+	n2, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port11, 2, 2, n1.GetInfo(), db2)
+	defer n2.Stop()
+	assert.Nil(t, err)
+
+	core.WaitDoneOrTimeout(func() bool {
+		return false
+	}, 1)
+
+	//create node 3 and add node1 as a peer
+	db3 := storage.NewRamStorage()
+	defer db3.Close()
+	n3, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port12, 2, 2, n1.GetInfo(), db3)
+	defer n3.Stop()
+	assert.Nil(t, err)
+
+	core.WaitDoneOrTimeout(func() bool {
+		return false
+	}, 1)
+
+	//create node 3 and add node1 as a peer
+	db4 := storage.NewRamStorage()
+	defer db4.Close()
+	n4, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port13, 2, 2, n1.GetInfo(), db4)
+	defer n4.Stop()
+	assert.Nil(t, err)
+
+	core.WaitDoneOrTimeout(func() bool {
+		return false
+	}, 1)
+
+	//create node 3 and add node1 as a peer
+	db5 := storage.NewRamStorage()
+	defer db5.Close()
+	n5, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port14, nil, db5)
+	defer n5.Stop()
+	assert.Nil(t, err)
+
+	n5.GetPeerManager().AddAndConnectPeer(n2.GetInfo())
+	n4.GetPeerManager().AddAndConnectPeer(n5.GetInfo())
+
+	core.WaitDoneOrTimeout(func() bool {
+		return false
+	}, 2)
+
+	assert.Equal(t, 2, n2.GetPeerManager().connectionInCount)
+	assert.Equal(t, 0, n2.GetPeerManager().connectionOutCount)
+	assert.Equal(t, 1, n3.GetPeerManager().connectionInCount)
+	assert.Equal(t, 1, n3.GetPeerManager().connectionOutCount)
+	assert.Equal(t, 0, n4.GetPeerManager().connectionInCount)
+	assert.Equal(t, 2, n4.GetPeerManager().connectionOutCount)
+	assert.Equal(t, 0, n5.GetPeerManager().connectionInCount)
+	assert.Equal(t, 0, n5.GetPeerManager().connectionOutCount)
 }

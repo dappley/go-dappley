@@ -21,6 +21,10 @@ package network
 import (
 	"bytes"
 	"crypto/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/network/pb"
@@ -29,9 +33,6 @@ import (
 	"github.com/libp2p/go-libp2p-crypto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -51,7 +52,7 @@ func TestNode_prepareData(t *testing.T) {
 	}{
 		{
 			name:    "CorrectProtoMsg",
-			msgData: &networkpb.Peer{Peerid: "pid", Addr: "addr"},
+			msgData: &networkpb.Peer{Peerid: "pid", Addr: []string{"addr"}},
 			cmd:     SyncPeerList,
 			retData: []byte{10, 12, 83, 121, 110, 99, 80, 101, 101, 114, 76, 105, 115, 116, 18, 11, 10, 3, 112, 105, 100, 18, 4, 97, 100, 100, 114},
 			retErr:  nil,
@@ -65,7 +66,7 @@ func TestNode_prepareData(t *testing.T) {
 		},
 		{
 			name:    "NoCmdInput",
-			msgData: &networkpb.Peer{Peerid: "pid", Addr: "addr"},
+			msgData: &networkpb.Peer{Peerid: "pid", Addr: []string{"addr"}},
 			cmd:     "",
 			retData: nil,
 			retErr:  ErrDapMsgNoCmd,
@@ -108,6 +109,6 @@ func TestNode_Stop(t *testing.T) {
 
 	time.Sleep(time.Second)
 	node.Stop()
-	_, ok := <- node.host.Network().Process().Closed()
+	_, ok := <-node.host.Network().Process().Closed()
 	assert.False(t, ok)
 }

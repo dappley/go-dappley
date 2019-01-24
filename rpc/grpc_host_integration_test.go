@@ -26,11 +26,6 @@ import (
 	"testing"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -41,6 +36,10 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 type RpcTestContext struct {
@@ -73,11 +72,7 @@ func TestServer_StartRPC(t *testing.T) {
 	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
-
-	ret := &network.PeerList{}
-	ret.FromProto(response.PeerList)
-	assert.Equal(t, node.GetPeerList(), ret)
-
+	assert.Equal(t, 0, len(response.PeerList.Peerlist))
 }
 
 func TestRpcSend(t *testing.T) {
@@ -282,7 +277,7 @@ func TestRpcGetVersion(t *testing.T) {
 	// Test GetVersion with unsupport client version -- invalid version length
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
 	assert.Nil(t, response)
-	assert.Equal(t, "rpc error: code = Unknown desc = proto version not supported" , err.Error())
+	assert.Equal(t, "rpc error: code = Unknown desc = proto version not supported", err.Error())
 
 	// Test GetVersion with unsupport client version
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "2.0.0"})

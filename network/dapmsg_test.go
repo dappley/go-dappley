@@ -19,23 +19,22 @@
 package network
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestDapmsg_ToProto(t *testing.T) {
-	new := networkpb.Peer{}
-	msg := DapMsg{"cmd", []byte{1, 2, 3, 4}, 11111111, new.Addr, Unicast, uint64(0)}
-	retMsg := &networkpb.Dapmsg{Cmd: "cmd", Data: []byte{1, 2, 3, 4}, UnixTimeRecvd: 11111111, Key: new.Addr, UniOrBroadcast: Unicast, Counter: uint64(0)}
+	msg := DapMsg{"cmd", []byte{1, 2, 3, 4}, 11111111, "", Unicast, uint64(0)}
+	retMsg := &networkpb.Dapmsg{Cmd: "cmd", Data: []byte{1, 2, 3, 4}, UnixTimeRecvd: 11111111, Key: "", UniOrBroadcast: Unicast, Counter: uint64(0)}
 
 	assert.Equal(t, msg.ToProto(), retMsg)
 }
 
 func TestDapMsg_FromProto(t *testing.T) {
-	new := networkpb.Peer{}
-	msg := DapMsg{"cmd", []byte{1, 2, 3, 4}, 11111111, new.Addr, Unicast, uint64(0)}
-	retMsg := &networkpb.Dapmsg{Cmd: "cmd", Data: []byte{1, 2, 3, 4}, UnixTimeRecvd: 11111111, Key: new.Addr, UniOrBroadcast: Unicast, Counter: uint64(0)}
+	msg := DapMsg{"cmd", []byte{1, 2, 3, 4}, 11111111, "", Unicast, uint64(0)}
+	retMsg := &networkpb.Dapmsg{Cmd: "cmd", Data: []byte{1, 2, 3, 4}, UnixTimeRecvd: 11111111, Key: "", UniOrBroadcast: Unicast, Counter: uint64(0)}
 	msg2 := DapMsg{}
 	msg2.FromProto(retMsg)
 
