@@ -29,14 +29,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10000000)
@@ -316,16 +315,19 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
+			logger.Warn("Transaction: subsidy check failed.")
 			return false
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 		if blockHeight != bh {
+			logger.Warn("Transaction: block height check failed.")
 			return false
 		}
 		return true
 	}
 
 	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoIndex) {
+		logger.Warn("Transaction: contract state check failed.")
 		return false
 	}
 
@@ -654,7 +656,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"txid"	:hex.EncodeToString(tx.ID),
+			"txid": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return nil
 	}
@@ -697,9 +699,9 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		if utxo == nil {
 			MetricsTxDoubleSpend.Inc(1)
 			logger.WithFields(logger.Fields{
-				"txid"		: hex.EncodeToString(tx.ID),
-				"vin_id" 	: hex.EncodeToString(vin.Txid),
-				"vin_index" : vin.Vout,
+				"txid":      hex.EncodeToString(tx.ID),
+				"vin_id":    hex.EncodeToString(vin.Txid),
+				"vin_index": vin.Vout,
 			}).Warn("Transaction: Can not find vin")
 			return nil, ErrTXInputNotFound
 		}
@@ -805,7 +807,7 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
-	if !change.IsZero(){
+	if !change.IsZero() {
 		outputs = append(outputs, *NewTXOutput(change, from))
 	}
 	return outputs

@@ -23,18 +23,17 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
-	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"time"
-
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -211,7 +210,7 @@ func FromProtoBlockMsg(data []byte) *Block {
 	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
-	if blockpb.Header == nil{
+	if blockpb.Header == nil {
 		spew.Dump(blockpb)
 		spew.Dump(data)
 	}
@@ -391,9 +390,11 @@ L:
 	}
 	// Assert that any contract-incurred transactions matches the ones generated from contract execution
 	if rewardTX != nil && !rewardTX.MatchRewards(rewards) {
+		logger.Warn("Block: reward tx cannot be verified.")
 		return false
 	}
 	if len(contractGeneratedTXs) > 0 && !verifyGeneratedTXs(utxo, contractGeneratedTXs, allContractGeneratedTXs) {
+		logger.Warn("Block: generated tx cannot be verified.")
 		return false
 	}
 	utxo.UpdateUtxoState(allContractGeneratedTXs)
