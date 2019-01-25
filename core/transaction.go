@@ -320,7 +320,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 		if blockHeight != bh {
-			logger.Warn("Transaction: block height check failed.")
+			logger.Warnf("Transaction: block height check failed expected=%v actual=%v.", blockHeight, bh)
 			return false
 		}
 		return true

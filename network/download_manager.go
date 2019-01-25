@@ -212,6 +212,8 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		blocks = append(blocks, block)
 	}
 
+	logger.Infof("DownloadManager: Receive Blocks from %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+
 	if err := downloadManager.node.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		logger.WithFields(logger.Fields{
 			"cmd": "ReturnBlocks",
