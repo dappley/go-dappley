@@ -37,8 +37,8 @@ const testport_msg_relay = 19999
 const testport_msg_relay_port1 = 31202
 const testport_msg_relay_port2 = 31212
 const testport_msg_relay_port3 = 31222
-const testport_fork = 10200
-const testport_fork_segment = 10211
+const testport_fork = 10500
+const testport_fork_segment = 10511
 
 //test send
 func TestSend(t *testing.T) {
