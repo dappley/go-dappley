@@ -119,8 +119,10 @@ func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error {
 func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager, currBlkHeight uint64, parentBlk *Block) {
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
+	scEngine := manager.CreateEngine()
+	defer scEngine.DestroyEngine()
 	for _, tx := range txs {
-		tx.Execute(index, ss, nil, manager.CreateEngine(), currBlkHeight, parentBlk)
+		tx.Execute(index, ss, nil, scEngine, currBlkHeight, parentBlk)
 		index.UpdateUtxo(tx)
 	}
 }

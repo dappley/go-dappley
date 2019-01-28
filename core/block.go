@@ -333,6 +333,13 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScE
 	var contractGeneratedTXs []*Transaction
 	rewards := make(map[string]string)
 	var allContractGeneratedTXs []*Transaction
+	var scEngine ScEngine
+
+	if manager != nil {
+		scEngine = manager.CreateEngine()
+		defer scEngine.DestroyEngine()
+	}
+
 L:
 	for _, tx := range b.GetTransactions() {
 		// Collect the contract-incurred transactions in this block
@@ -371,12 +378,12 @@ L:
 
 		if tx.IsContract() {
 			// Run the contract and collect generated transactions
-			if manager == nil {
+			if scEngine == nil {
 				logger.Warn("Block: smart contract cannot be verified.")
 				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
 				return false
 			}
-			scEngine := manager.CreateEngine()
+
 			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			utxo.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
