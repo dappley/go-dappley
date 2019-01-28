@@ -37,8 +37,8 @@ const testport_msg_relay = 19999
 const testport_msg_relay_port1 = 31202
 const testport_msg_relay_port2 = 31212
 const testport_msg_relay_port3 = 31222
-const testport_fork = 10200
-const testport_fork_segment = 10211
+const testport_fork = 10500
+const testport_fork_segment = 10511
 
 //test send
 func TestSend(t *testing.T) {
@@ -52,7 +52,7 @@ func TestSend(t *testing.T) {
 		expectedTip      *common.Amount
 		expectedErr      error
 	}{
-		{"Deploy contract", common.NewAmount(7), common.NewAmount(0), "helloworld!", common.NewAmount(7), common.NewAmount(0), nil},
+		{"Deploy contract", common.NewAmount(7), common.NewAmount(0), "dapp_schedule!", common.NewAmount(7), common.NewAmount(0), nil},
 		{"Send with no tip", common.NewAmount(7), common.NewAmount(0), "", common.NewAmount(7), common.NewAmount(0), nil},
 		{"Send with tips", common.NewAmount(6), common.NewAmount(2), "", common.NewAmount(6), common.NewAmount(2), nil},
 		{"Send zero with no tip", common.NewAmount(0), common.NewAmount(0), "", common.NewAmount(0), common.NewAmount(0), ErrInvalidAmount},
@@ -296,7 +296,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		if i == 0 {
 			firstNode = node
 		} else {
-			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
+			node.GetPeerManager().AddAndConnectPeer(firstNode.GetInfo())
 		}
 		dpos.Setup(node, producerAddrs[0])
 		dpos.SetKey(producerKey[0])
@@ -367,7 +367,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		if i == 0 {
 			firstNode = node
 		} else {
-			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
+			node.GetPeerManager().AddAndConnectPeer(firstNode.GetInfo())
 		}
 		dpos.Setup(node, producerAddrs[0])
 		dpos.SetKey(producerKey[0])
@@ -395,7 +395,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	}
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
-	for i, node := range nodes{
+	for i, node := range nodes {
 		node.GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
 			heights[i]++
 			return true
@@ -728,10 +728,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 }
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
-	node1.AddStream(
-		node2.GetPeerID(),
-		node2.GetPeerMultiaddr(),
-	)
+	node1.GetPeerManager().AddAndConnectPeer(node2.GetInfo())
 }
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
@@ -759,7 +756,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash, _ := core.NewAddress(validProducerAddr).GetPubKeyHash()
-	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash{producerHash}, ""}}, common.NewAmount(0)}
+	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash(producerHash), ""}}, common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, parent)
@@ -782,7 +779,7 @@ func TestDoubleMint(t *testing.T) {
 			sendNode = node
 		} else {
 			recvNode = node
-			recvNode.AddStream(sendNode.GetPeerID(), sendNode.GetPeerMultiaddr())
+			recvNode.GetPeerManager().AddAndConnectPeer(sendNode.GetInfo())
 		}
 	}
 	defer recvNode.Stop()

@@ -21,6 +21,9 @@ import (
 	"context"
 	"encoding/hex"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
@@ -35,36 +38,34 @@ type AdminRpcService struct {
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	status := "succeed"
-	err := adminRpcService.node.AddStreamByString(in.FullAddress)
+	err := adminRpcService.node.GetPeerManager().AddAndConnectPeerByString(in.FullAddress)
 	if err != nil {
-		status = err.Error()
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	return &rpcpb.AddPeerResponse{
-		Status: status,
-	}, nil
+	return &rpcpb.AddPeerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.Address) == 0 {
-		return &rpcpb.AddProducerResponse{
-			Message: "address is empty",
-		}, core.ErrInvalidAddress
+	if len(in.Address) == 0 || !core.NewAddress(in.Address).ValidateAddress() {
+		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
 	if err != nil {
-		return &rpcpb.AddProducerResponse{
-			Message: "failed to add producer: " + err.Error(),
-		}, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
-	return &rpcpb.AddProducerResponse{
-		Message: "producer is added",
-	}, nil
+	return &rpcpb.AddProducerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
+	peers := adminRpcService.node.GetPeerManager().CloneStreamsToPeerInfoSlice()
+
+	peersPb := networkpb.Peerlist{}
+	for _, peerInfo := range peers {
+		peersPb.Peerlist = append(peersPb.Peerlist, peerInfo.ToProto().(*networkpb.Peer))
+	}
+
 	return &rpcpb.GetPeerInfoResponse{
-		PeerList: adminRpcService.node.GetPeerList().ToProto().(*networkpb.Peerlist),
+		PeerList: &peersPb,
 	}, nil
 }
 
@@ -72,23 +73,30 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
 	err := logic.SetUnLockWallet()
 	if err != nil {
-		return &rpcpb.UnlockWalletResponse{Message: err.Error()}, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &rpcpb.UnlockWalletResponse{Message: "succeed"}, nil
+	return &rpcpb.UnlockWalletResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendFromMinerResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
+		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
 
 	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	if err != nil {
-		return &rpcpb.SendFromMinerResponse{Message: "failed to add balance: " + err.Error()}, err
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case core.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
 	}
-	return &rpcpb.SendFromMinerResponse{Message: "succeed"}, nil
+	}
+	return &rpcpb.SendFromMinerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
@@ -98,7 +106,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	tip := common.NewAmountFromBytes(in.Tip)
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return &rpcpb.SendResponse{Message: "invalid send amount (must be > 0)"}, core.ErrInvalidAmount
+		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
 	}
 	path := in.WalletPath
 	if len(in.WalletPath) == 0 {
@@ -107,21 +115,28 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	wm, err := logic.GetWalletManager(path)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "error loading local wallets"}, err
+		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
 	senderWallet := wm.GetWalletByAddress(sendFromAddress)
 	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
-		return &rpcpb.SendResponse{Message: "sender wallet is not found"}, client.ErrAddressNotFound
+		return nil, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 
-	txhash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
-	txhashStr := hex.EncodeToString(txhash)
+	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
-		return &rpcpb.SendResponse{Message: "failed to send transaction", Txid: txhashStr}, err
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case core.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
 
-	resp := &rpcpb.SendResponse{Message: "succeed", Txid: txhashStr}
+	resp := &rpcpb.SendResponse{Txid: txHashStr}
 	if scAddress != "" {
 		resp.ContractAddr = scAddress
 	}

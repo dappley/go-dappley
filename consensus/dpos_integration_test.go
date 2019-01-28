@@ -78,7 +78,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128,nil)
+		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(21200 + i)
@@ -86,7 +86,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		if i == 0 {
 			firstNode = node
 		} else {
-			node.AddStream(firstNode.GetPeerID(), firstNode.GetPeerMultiaddr())
+			node.GetPeerManager().AddAndConnectPeer(firstNode.GetInfo())
 		}
 		dpos.Setup(node, miner)
 		dpos.SetKey(keystrs[i])

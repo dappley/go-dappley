@@ -20,6 +20,7 @@ package network
 
 import (
 	"testing"
+	"time"
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
@@ -28,10 +29,12 @@ import (
 )
 
 const (
+	genesisAddr                  = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	singlePortStart          int = 10300
 	multiPortEqualStart      int = 10301
 	multiPortSuccessStart    int = 10310
 	multiPortDisconnectStart int = 10320
+	multiPortNotEqualStart   int = 10330
 	//multiPortRetryStart      int = 10230
 )
 
@@ -43,7 +46,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 		address := keyPair.GenerateAddress(false)
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bc := core.CreateBlockchain(address, storage.NewRamStorage(), pow, 128, nil)
+		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil)
 		bc.SetState(core.BlockchainReady)
 		blockchains[i] = bc
 		pool := core.NewBlockPool(100)
@@ -101,8 +104,7 @@ func TestMultiEqualNode(t *testing.T) {
 	node := nodes[0]
 
 	for i := 1; i < len(nodes); i++ {
-		currNode := nodes[i]
-		node.AddStream(currNode.GetPeerID(), currNode.GetPeerMultiaddr())
+		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
 	}
 
 	oldHeight := blockchain.GetMaxHeight()
@@ -116,6 +118,44 @@ func TestMultiEqualNode(t *testing.T) {
 	blockchain.SetState(core.BlockchainReady)
 
 	assert.Equal(t, oldHeight, blockchain.GetMaxHeight())
+}
+
+func TestMultiNotEqualNode(t *testing.T) {
+	blockchains, nodes := createTestBlockchains(5, multiPortNotEqualStart)
+	fillBlockchains(blockchains)
+
+	for _, blockchain := range blockchains {
+		blockchain.GetConsensus().Start()
+	}
+	time.Sleep(3 * time.Second)
+	for _, blockchain := range blockchains {
+		blockchain.GetConsensus().Stop()
+	}
+
+	blockchain := blockchains[0]
+	blockchain.SetState(core.BlockchainInit)
+	node := nodes[0]
+
+	highestChain := blockchains[1]
+	highestChain.GetConsensus().Start()
+	nextHeight := highestChain.GetMaxHeight() + 100
+	for highestChain.GetMaxHeight() < nextHeight {
+	}
+	highestChain.GetConsensus().Stop()
+
+	for i := 1; i < len(nodes); i++ {
+		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
+	}
+
+	downloadManager := node.GetDownloadManager()
+	finishChan := make(chan bool, 1)
+
+	blockchain.SetState(core.BlockchainDownloading)
+	downloadManager.StartDownloadBlockchain(finishChan)
+	<-finishChan
+	blockchain.SetState(core.BlockchainReady)
+
+	assert.Equal(t, highestChain.GetMaxHeight(), blockchain.GetMaxHeight())
 }
 
 func TestMultiSuccessNode(t *testing.T) {
@@ -133,8 +173,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	highestChain.GetConsensus().Stop()
 
 	for i := 1; i < len(nodes); i++ {
-		currNode := nodes[i]
-		node.AddStream(currNode.GetPeerID(), currNode.GetPeerMultiaddr())
+		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
 	}
 
 	downloadManager := node.GetDownloadManager()
@@ -169,8 +208,7 @@ func TestDisconnectNode(t *testing.T) {
 	secondChain.GetConsensus().Stop()
 
 	for i := 1; i < len(nodes); i++ {
-		currNode := nodes[i]
-		node.AddStream(currNode.GetPeerID(), currNode.GetPeerMultiaddr())
+		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
 	}
 
 	downloadManager := node.GetDownloadManager()

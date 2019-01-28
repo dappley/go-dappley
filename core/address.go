@@ -50,7 +50,7 @@ func (a Address) IsContract() (bool, error) {
 	if !ok {
 		return false, ErrInvalidAddress
 	}
-	pkh := PubKeyHash{pubKeyHash}
+	pkh := PubKeyHash(pubKeyHash)
 	return pkh.IsContract()
 }
 

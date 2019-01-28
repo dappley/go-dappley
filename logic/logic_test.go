@@ -49,7 +49,7 @@ func TestCreateWallet(t *testing.T) {
 	assert.Equal(t, true, ok)
 	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, walletPubKeyHash.PubKeyHash)
+	assert.Equal(t, pubKeyHash, []byte(walletPubKeyHash))
 }
 
 func TestCreateWalletWithPassphrase(t *testing.T) {
@@ -59,7 +59,7 @@ func TestCreateWalletWithPassphrase(t *testing.T) {
 	assert.Equal(t, true, ok)
 	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, walletPubKeyHash.PubKeyHash)
+	assert.Equal(t, pubKeyHash, []byte(walletPubKeyHash))
 }
 
 func TestCreateBlockchain(t *testing.T) {

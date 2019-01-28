@@ -29,3 +29,13 @@ message ReturnBlocks {
     repeated corepb.Block blocks = 1;
     repeated bytes startBlockHashes = 2;
 }
+
+message GetCommonBlocks {
+    int32 msgId  = 1;
+    repeated corepb.BlockHeader blockHeaders = 2;
+}
+
+message ReturnCommonBlocks {
+    int32 msgId = 1;
+    repeated corepb.BlockHeader blockHeaders = 2;
+}

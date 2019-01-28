@@ -12,6 +12,7 @@
 #include "lib/load_lib.h"
 #include "lib/load_sc.h"
 #include "lib/storage.h"
+#include "lib/event.h"
 #include "lib/logger.h"
 #include "lib/transaction.h"
 #include "lib/reward_distributor.h"
@@ -111,6 +112,7 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     NewRewardDistributorInstance(isolate, context, (void *)handler);
     NewPrevUtxoInstance(isolate, context, (void *)handler);
     NewMathInstance(isolate, context, (void *)handler);
+    NewEventInstance(isolate, context, (void *)handler);
 
     LoadLibraries(isolate, context);
     {

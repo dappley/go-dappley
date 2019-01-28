@@ -21,8 +21,6 @@ package main
 import (
 	"flag"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -32,6 +30,7 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -138,14 +137,16 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 			logger.Error(err)
 		}
 	}
+
+	seeds := nodeConfig.GetSeed()
+	for _, seed := range seeds {
+		node.GetPeerManager().AddSeedByString(seed)
+	}
+
 	err := node.Start(int(port))
 	if err != nil {
 		logger.Error(err)
 		return nil, err
-	}
-	seeds := nodeConfig.GetSeed()
-	for _, seed := range seeds {
-		node.AddStreamByString(seed)
 	}
 	return node, nil
 }

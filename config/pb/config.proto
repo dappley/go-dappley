@@ -19,6 +19,7 @@ message NodeConfig{
     string keyPath = 5;
     uint32 txPoolLimit = 6;
     string nodeAddr = 7;
+    string genesisPath = 8;
 }
 
 message DynastyConfig{

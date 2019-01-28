@@ -22,6 +22,8 @@ package rpc
 
 import (
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"strings"
 	"testing"
 	"time"
@@ -73,11 +75,7 @@ func TestServer_StartRPC(t *testing.T) {
 	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
-
-	ret := &network.PeerList{}
-	ret.FromProto(response.PeerList)
-	assert.Equal(t, node.GetPeerList(), ret)
-
+	assert.Equal(t, 0, len(response.PeerList.Peerlist))
 }
 
 func TestRpcSend(t *testing.T) {
@@ -216,7 +214,7 @@ func TestRpcSendContract(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewAdminServiceClient(conn)
 
-	contract := "helloworld!"
+	contract := "dapp_schedule"
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:       senderWallet.GetAddress().String(),
@@ -276,18 +274,21 @@ func TestRpcGetVersion(t *testing.T) {
 	// Test GetVersion with support client version
 	response, err := c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0"})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode, OK)
+	assert.NotNil(t, response)
 	assert.Equal(t, "1.0.0", response.ProtoVersion, "1.0.0")
 
 	// Test GetVersion with unsupport client version -- invalid version length
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
 	assert.Nil(t, response)
-	assert.Equal(t, "rpc error: code = Unknown desc = proto version not supported" , err.Error())
+
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	assert.Equal(t, "proto version not supported", status.Convert(err).Message())
 
 	// Test GetVersion with unsupport client version
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "2.0.0"})
 	assert.Nil(t, response)
-	assert.Equal(t, "rpc error: code = Unknown desc = major version mismatch", err.Error())
+	assert.Equal(t, codes.Unimplemented, status.Code(err))
+	assert.Equal(t, "major version mismatch", status.Convert(err).Message())
 }
 
 func TestRpcGetBlockchainInfo(t *testing.T) {
@@ -365,7 +366,7 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.wallet.GetAddress().Address})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, senderResponse.ErrorCode)
+	assert.NotNil(t, senderResponse)
 	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
@@ -376,7 +377,7 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverWallet.GetAddress().Address})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, receiverResponse.ErrorCode)
+	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
 }
 
@@ -412,7 +413,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	maxGetBlocksCount := 20
 	response, err := c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: [][]byte{genesisBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode)
+	assert.NotNil(t, response)
 	assert.Equal(t, maxGetBlocksCount, len(response.Blocks))
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
 	assert.Equal(t, []byte(block1.GetHash()), response.Blocks[0].GetHeader().Hash)
@@ -432,7 +433,7 @@ func TestRpcGetBlocks(t *testing.T) {
 		}
 		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: startBlockHashes, MaxCount: int32(maxGetBlocksCount)})
 		assert.Nil(t, err)
-		assert.Equal(t, OK, response.ErrorCode)
+		assert.NotNil(t, response)
 		if i == (queryCount - 1) {
 			leftCount := int(rpcContext.bc.GetMaxHeight()) - queryCount*maxGetBlocksCount
 			assert.Equal(t, leftCount, len(response.Blocks))
@@ -448,14 +449,15 @@ func TestRpcGetBlocks(t *testing.T) {
 	// Check query reach tailblock
 	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: [][]byte{tailBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode)
+	assert.NotNil(t, response)
 	assert.Equal(t, 0, len(response.Blocks))
 
 	// Check maxGetBlocksCount overflow
 	maxGetBlocksCount = int(MaxGetBlocksCount) + 1
 	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: [][]byte{genesisBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
 	assert.Nil(t, response)
-	assert.Equal(t, "rpc error: code = Unknown desc = block count overflow", err.Error())
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+	assert.Equal(t, "block count overflow", status.Convert(err).Message())
 }
 
 func TestRpcGetBlockByHash(t *testing.T) {
@@ -488,18 +490,19 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	block20, err := rpcContext.bc.GetBlockByHeight(20)
 	response, err := c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode)
+	assert.NotNil(t, response)
 	assert.Equal(t, []byte(block20.GetHash()), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode)
+	assert.NotNil(t, response)
 	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
 
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: []byte("noexists")})
 	assert.Nil(t, response)
-	assert.Equal(t, "rpc error: code = Unknown desc = block does not exist", err.Error())
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.Equal(t, core.ErrBlockDoesNotExist.Error(), status.Convert(err).Message())
 }
 
 func TestRpcGetBlockByHeight(t *testing.T) {
@@ -532,18 +535,19 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	block20, err := rpcContext.bc.GetBlockByHeight(20)
 	response, err := c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: 20})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode)
+	assert.NotNil(t, response)
 	assert.Equal(t, []byte(block20.GetHash()), response.Block.Header.GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, response.ErrorCode)
+	assert.NotNil(t, response)
 	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
 
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
 	assert.Nil(t, response)
-	assert.Equal(t, "rpc error: code = Unknown desc = block does not exist", err.Error())
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.Equal(t, core.ErrBlockDoesNotExist.Error(), status.Convert(err).Message())
 }
 
 func TestRpcSendTransaction(t *testing.T) {
@@ -587,7 +591,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
-	assert.Equal(t, OK, successResponse.ErrorCode)
+	assert.NotNil(t, successResponse)
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
@@ -605,7 +609,8 @@ func TestRpcSendTransaction(t *testing.T) {
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, failedResponse)
-	assert.Equal(t, "rpc error: code = Unknown desc = transaction verify failed", err.Error())
+	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
+	assert.Equal(t, core.ErrTransactionVerifyFailed.Error(), status.Convert(err).Message())
 
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
@@ -626,6 +631,7 @@ func TestRpcSendTransaction(t *testing.T) {
 }
 
 func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
+	logger.SetLevel(logger.DebugLevel)
 	rpcContext, err := createRpcTestContext(9)
 	if err != nil {
 		panic(err)
@@ -637,10 +643,6 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		panic(err)
 	}
 	receiverWallet2, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test2")
-	if err != nil {
-		panic(err)
-	}
-	receiverWallet3, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test3")
 	if err != nil {
 		panic(err)
 	}
@@ -656,6 +658,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	for maxHeight < 2 {
 		maxHeight = rpcContext.bc.GetMaxHeight()
 	}
+
 	// Create a grpc connection and a client
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -688,24 +691,28 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"",
 	)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction2})
-	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	pubKeyHash1, _ := receiverWallet1.GetAddress().GetPubKeyHash()
+	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
 	transaction3, err := core.NewUTXOTransaction(utxos,
-		rpcContext.wallet.GetAddress(),
-		receiverWallet3.GetAddress(),
+		receiverWallet1.GetAddress(),
+		receiverWallet2.GetAddress(),
 		common.NewAmount(1),
-		rpcContext.wallet.GetKeyPair(),
+		receiverWallet1.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
 
-	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
+	rpcContext.consensus.Stop()
+	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, err)
-	assert.Equal(t, []uint32{OK, OK, OK}, successResponse.ErrorCode)
+	assert.NotNil(t, successResponse)
 
+	rpcContext.consensus.Start()
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
+	rpcContext.consensus.Stop()
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	errTransaction, err := core.NewUTXOTransaction(utxos2,
@@ -726,10 +733,18 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"",
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
-	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
-	assert.Nil(t, err)
-	assert.Equal(t, []uint32{InvalidTransaction, OK}, failedResponse.ErrorCode)
+	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
+	assert.Nil(t, failedResponse)
+	st := status.Convert(err)
+	assert.Equal(t, codes.Unknown, st.Code())
 
+	detail0 := st.Details()[1].(*rpcpb.SendTransactionStatus)
+	detail1 := st.Details()[0].(*rpcpb.SendTransactionStatus)
+	assert.Equal(t, errTransaction.ID, detail0.Txid)
+	assert.Equal(t, uint32(codes.FailedPrecondition), detail0.Code)
+	assert.Equal(t, uint32(codes.OK), detail1.Code)
+
+	rpcContext.consensus.Start()
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
@@ -738,23 +753,20 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	core.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
-	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10000000)
-	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(9))
+	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(8))
 	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, leftAmount, realAmount)
 	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.store)
 	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.store)
-	recvAmount3, err := logic.GetBalance(receiverWallet3.GetAddress(), rpcContext.store)
 	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.store)
-	assert.Equal(t, common.NewAmount(3), recvAmount1)
-	assert.Equal(t, common.NewAmount(2), recvAmount2)
-	assert.Equal(t, common.NewAmount(1), recvAmount3)
+	assert.Equal(t, common.NewAmount(2), recvAmount1)
+	assert.Equal(t, common.NewAmount(3), recvAmount2)
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
 }
 
-func TestGetNewTransactions(t *testing.T) {
+func TestGetNewTransaction(t *testing.T) {
 	logger.SetLevel(logger.WarnLevel)
 	rpcContext, err := createRpcTestContext(11)
 	if err != nil {
@@ -786,7 +798,7 @@ func TestGetNewTransactions(t *testing.T) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
-		stream, err := c1.RpcGetNewTransactions(ctx, &rpcpb.GetNewTransactionsRequest{})
+		stream, err := c1.RpcGetNewTransaction(ctx, &rpcpb.GetNewTransactionRequest{})
 		if err != nil {
 			return
 		}
@@ -813,7 +825,7 @@ func TestGetNewTransactions(t *testing.T) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
-		stream, err := c2.RpcGetNewTransactions(ctx, &rpcpb.GetNewTransactionsRequest{})
+		stream, err := c2.RpcGetNewTransaction(ctx, &rpcpb.GetNewTransactionRequest{})
 		if err != nil {
 			return
 		}
@@ -892,7 +904,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	result, err := c1.RpcGetAllTransactionsFromTxPool(ctx, &rpcpb.GetAllTransactionsRequest{})
 	assert.Nil(t, err)
 	// assert result
-	assert.Equal(t, uint32(0), result.ErrorCode)
+	assert.NotNil(t, result)
 	assert.Equal(t, 1, len(result.Transactions))
 
 	rpcContext.consensus.Stop()
@@ -901,6 +913,104 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
+}
+
+func TestRpcService_RpcSubscribe(t *testing.T) {
+	rpcContext, err := createRpcTestContext(13)
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn1.Close()
+	c1 := rpcpb.NewRpcServiceClient(conn1)
+
+	// Create a grpc connection and a client
+	conn2, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	//defer conn2.Close()
+	c2 := rpcpb.NewRpcServiceClient(conn2)
+
+	// Test GetVersion with support client version
+	count1 := 0
+	count2 := 0
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		cc, err := c1.RpcSubscribe(ctx, &rpcpb.SubscribeRequest{Topics: []string{"topic1", "topic2"}})
+		assert.Nil(t, err)
+
+		resp, err := cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data1")
+		count1 += 1
+
+		resp, err = cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data2")
+		count1 += 1
+
+		resp, err = cc.Recv()
+		count2 += 1
+	}()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		cc, err := c2.RpcSubscribe(ctx, &rpcpb.SubscribeRequest{Topics: []string{"topic1", "topic3"}})
+		assert.Nil(t, err)
+
+		resp, err := cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data1")
+		count2 += 1
+
+		resp, err = cc.Recv()
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Data, "data3")
+		count2 += 1
+
+		resp, err = cc.Recv()
+		count2 += 1
+	}()
+	time.Sleep(time.Second)
+
+	//publish topic 1. Both nodes will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic1", "data1")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 1, count1)
+	assert.Equal(t, 1, count2)
+
+	//publish topic2. Only node 1 will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic2", "data2")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 2, count1)
+	assert.Equal(t, 1, count2)
+
+	//publish topic3. Only node 2 will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic3", "data3")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 2, count1)
+	assert.Equal(t, 2, count2)
+
+	//publish topic4. No nodes will get the message
+	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic4", "data4")})
+	assert.Nil(t, err)
+	time.Sleep(time.Second)
+	assert.Equal(t, 2, count1)
+	assert.Equal(t, 2, count2)
 }
 
 func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {

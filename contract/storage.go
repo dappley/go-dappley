@@ -20,8 +20,8 @@ var (
 	StorageKeyPattern = regexp.MustCompile("^@([a-zA-Z_$][a-zA-Z0-9_]+?)\\[(.*?)\\]$")
 	// DefaultDomainKey the default domain key
 	DefaultDomainKey = "_"
-	// ErrInvalidStorageKey invalid storage key error
-	ErrInvalidStorageKey = errors.New("invalid storage key")
+	// ErrInvalidStorageKey invalid state key error
+	ErrInvalidStorageKey = errors.New("invalid state key")
 )
 
 //export StorageGetFunc
@@ -34,16 +34,16 @@ func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char {
 		logger.WithFields(logger.Fields{
 			"contract_address": addr,
 			"key":              goKey,
-		}).Debug("SmartContract: failed to get storage handler!")
+		}).Debug("SmartContract: failed to get state handler!")
 		return nil
 	}
 
-	val := engine.storage[goKey]
+	val := engine.state.GetStorageByAddress(engine.contractAddr.String())[goKey]
 	if val == "" {
 		logger.WithFields(logger.Fields{
 			"contract_address": addr,
 			"key":              goKey,
-		}).Debug("SmartContract: failed to get value from storage.")
+		}).Debug("SmartContract: failed to get value from state.")
 		return nil
 	}
 
@@ -61,11 +61,11 @@ func StorageSetFunc(address unsafe.Pointer, key, value *C.char) int {
 		logger.WithFields(logger.Fields{
 			"contract_address": addr,
 			"key":              goKey,
-		}).Debug("SmartContract: failed to get storage handler!")
+		}).Debug("SmartContract: failed to get state handler!")
 		return 1
 	}
 
-	engine.storage[goKey] = goVal
+	engine.state.GetStorageByAddress(engine.contractAddr.String())[goKey] = goVal
 	return 0
 }
 
@@ -79,9 +79,9 @@ func StorageDelFunc(address unsafe.Pointer, key *C.char) int {
 		logger.WithFields(logger.Fields{
 			"contract_address": addr,
 			"key":              goKey,
-		}).Debug("SmartContract: failed to get storage handler!")
+		}).Debug("SmartContract: failed to get state handler!")
 		return 1
 	}
-	delete(engine.storage, goKey)
+	delete(engine.state.GetStorageByAddress(engine.contractAddr.String()), goKey)
 	return 0
 }

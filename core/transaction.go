@@ -29,14 +29,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10000000)
@@ -103,13 +102,20 @@ func (tx *Transaction) IsContract() bool {
 	return isContract
 }
 
+func (tx *Transaction) IsExecutionContract() bool {
+	if tx.IsContract() && !strings.Contains(tx.GetContract(), scheduleFuncName) {
+		return true
+	}
+	return false
+}
+
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
 func (tx *Transaction) IsFromContract() bool {
 	if len(tx.Vin) == 0 {
 		return false
 	}
 	for _, vin := range tx.Vin {
-		pubKey := PubKeyHash{vin.PubKey}
+		pubKey := PubKeyHash(vin.PubKey)
 		if IsContract, _ := pubKey.IsContract(); !IsContract {
 			return false
 		}
@@ -138,7 +144,7 @@ func (tx *Transaction) Serialize() []byte {
 func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, amount, tip *common.Amount, error error) {
 	var receiverAddress Address
 	vinPubKey := tx.Vin[0].PubKey
-	pubKeyHash := PubKeyHash{[]byte("")}
+	pubKeyHash := PubKeyHash([]byte(""))
 	inputAmount := common.NewAmount(0)
 	outputAmount := common.NewAmount(0)
 	payoutAmount := common.NewAmount(0)
@@ -146,11 +152,11 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 		if bytes.Compare(vin.PubKey, vinPubKey) == 0 {
 			switch {
 			case tx.IsRewardTx():
-				pubKeyHash = PubKeyHash{rewardTxData}
+				pubKeyHash = PubKeyHash(rewardTxData)
 				continue
 			case tx.IsFromContract():
 				// vinPubKey is the pubKeyHash if it is a sc generated tx
-				pubKeyHash = PubKeyHash{vinPubKey}
+				pubKeyHash = PubKeyHash(vinPubKey)
 			default:
 				pkh, err := NewUserPubKeyHash(vin.PubKey)
 				if err != nil {
@@ -158,14 +164,14 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 				}
 				pubKeyHash = pkh
 			}
-			usedUTXO := index.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
+			usedUTXO := index.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
 			logger.Debug("Transaction: using UTXO from multiple wallets.")
 		}
 	}
 	for _, vout := range tx.Vout {
-		if bytes.Compare(vout.PubKeyHash.GetPubKeyHash(), vinPubKey) == 0 {
+		if bytes.Compare([]byte(vout.PubKeyHash), vinPubKey) == 0 {
 			outputAmount = outputAmount.Add(vout.Value)
 		} else {
 			receiverAddress = vout.PubKeyHash.GenerateAddress()
@@ -196,7 +202,7 @@ func (tx *Transaction) GetToHashBytes() []byte {
 
 	for _, vout := range tx.Vout {
 		bytes = append(bytes, vout.Value.Bytes()...)
-		bytes = append(bytes, vout.PubKeyHash.GetPubKeyHash()...)
+		bytes = append(bytes, []byte(vout.PubKeyHash)...)
 		bytes = append(bytes, []byte(vout.Contract)...)
 	}
 	if tx.Tip != nil {
@@ -226,7 +232,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 		return nil
 	}
 
-	txCopy := tx.TrimmedCopy()
+	txCopy := tx.TrimmedCopy(false)
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
 		logger.WithError(err).Error("Transaction: failed to get private key.")
@@ -236,7 +242,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 	for i, vin := range txCopy.Vin {
 		txCopy.Vin[i].Signature = nil
 		oldPubKey := vin.PubKey
-		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash.GetPubKeyHash()
+		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
 		txCopy.ID = txCopy.Hash()
 
 		txCopy.Vin[i].PubKey = oldPubKey
@@ -253,30 +259,18 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 }
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
-func (tx *Transaction) TrimmedCopy() Transaction {
+func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
+	var pubkey []byte
 
 	for _, vin := range tx.Vin {
-		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, nil})
-	}
-
-	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, ""})
-	}
-
-	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip}
-
-	return txCopy
-}
-
-// TrimmedCopy creates a trimmed copy without signature of Transaction to be used for verifying ID
-func (tx *Transaction) TrimmedCopyWithoutSignature() Transaction {
-	var inputs []TXInput
-	var outputs []TXOutput
-
-	for _, vin := range tx.Vin {
-		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, vin.PubKey})
+		if withSignature {
+			pubkey = vin.PubKey
+		} else {
+			pubkey = nil
+		}
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, pubkey})
 	}
 
 	for _, vout := range tx.Vout {
@@ -305,18 +299,36 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
+func (tx *Transaction) IsContractDeployed(utxos *UTXOIndex) bool {
+	contractAddress := tx.GetContractAddress()
+	contractUtxos := utxos.GetContractUtxos()
+	for _, utxo := range contractUtxos {
+		if utxo.PubKeyHash.GenerateAddress() == contractAddress {
+			return true
+		}
+	}
+	return false
+}
+
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
+			logger.Warn("Transaction: subsidy check failed.")
 			return false
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 		if blockHeight != bh {
+			logger.Warnf("Transaction: block height check failed expected=%v actual=%v.", blockHeight, bh)
 			return false
 		}
 		return true
+	}
+
+	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoIndex) {
+		logger.Warn("Transaction: contract state check failed.")
+		return false
 	}
 
 	if tx.IsRewardTx() {
@@ -335,7 +347,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return false
 		}
-		utxo := utxoIndex.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
+		utxo := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
 				"tx_id":     hex.EncodeToString(tx.ID),
@@ -387,7 +399,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() bool {
-	txCopy := tx.TrimmedCopyWithoutSignature()
+	txCopy := tx.TrimmedCopy(true)
 	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true
 	} else {
@@ -428,7 +440,7 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 		if err != nil {
 			return false
 		}
-		if !bytes.Equal(pubKeyHash.GetPubKeyHash(), prevUtxos[i].PubKeyHash.GetPubKeyHash()) {
+		if !bytes.Equal([]byte(pubKeyHash), []byte(prevUtxos[i].PubKeyHash)) {
 			return false
 		}
 	}
@@ -437,18 +449,18 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	for _, utxo := range prevUtxos {
-		if utxo.PubKeyHash.GetPubKeyHash() == nil {
+		if utxo.PubKeyHash == nil {
 			logger.Error("Transaction: previous transaction is not correct.")
 			return false
 		}
 	}
 
-	txCopy := tx.TrimmedCopy()
+	txCopy := tx.TrimmedCopy(false)
 
 	for i, vin := range tx.Vin {
 		txCopy.Vin[i].Signature = nil
 		oldPubKey := txCopy.Vin[i].PubKey
-		txCopy.Vin[i].PubKey = prevUtxos[i].PubKeyHash.GetPubKeyHash()
+		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[i].PubKey = oldPubKey
 
@@ -553,7 +565,7 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 	if !ok {
 		return Transaction{}, ErrInvalidAddress
 	}
-	if isContract, err := (PubKeyHash{contractPubKeyHash}).IsContract(); !isContract {
+	if isContract, err := (PubKeyHash(contractPubKeyHash)).IsContract(); !isContract {
 		return Transaction{}, err
 	}
 
@@ -573,6 +585,21 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 	tx.ID = tx.Hash()
 
 	return tx, nil
+}
+
+func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash PubKeyHash, tip uint64) Transaction {
+	tx := Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{vinTxId, vinVout, nil, vinPubkey},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(voutValue), voutPubKeyHash, ""},
+		},
+		Tip: common.NewAmount(tip),
+	}
+	tx.ID = tx.Hash()
+	return tx
 }
 
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
@@ -619,7 +646,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	if isContract, _ := vout.PubKeyHash.IsContract(); !isContract {
 		return nil
 	}
-	utxos := index.GetAllUTXOsByPubKeyHash(vout.PubKeyHash.GetPubKeyHash())
+	utxos := index.GetAllUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
 	if len(utxos) == 0 {
@@ -629,7 +656,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"txid"	:hex.EncodeToString(tx.ID),
+			"txid": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return nil
 	}
@@ -647,7 +674,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 		"arguments":        totalArgs,
 	}).Debug("Transaction: is executing the smart contract...")
 	engine.ImportSourceCode(utxos[0].Contract)
-	engine.ImportLocalStorage(scStorage.GetStorageByAddress(address.String()))
+	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
 	engine.ImportUTXOs(utxos[1:])
 	engine.ImportSourceTXID(tx.ID)
@@ -668,13 +695,13 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		if err != nil {
 			return nil, ErrNewUserPubKeyHash
 		}
-		utxo := utxoPool.FindUTXOByVin(pubKeyHash.GetPubKeyHash(), vin.Txid, vin.Vout)
+		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
 			MetricsTxDoubleSpend.Inc(1)
 			logger.WithFields(logger.Fields{
-				"txid"		: hex.EncodeToString(tx.ID),
-				"vin_id" 	: hex.EncodeToString(vin.Txid),
-				"vin_index" : vin.Vout,
+				"txid":      hex.EncodeToString(tx.ID),
+				"vin_id":    hex.EncodeToString(vin.Txid),
+				"vin_index": vin.Vout,
 			}).Warn("Transaction: Can not find vin")
 			return nil, ErrTXInputNotFound
 		}
@@ -721,7 +748,7 @@ func (tx *Transaction) String() string {
 	for i, output := range tx.Vout {
 		lines = append(lines, fmt.Sprintf("     Output %d:", i))
 		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
-		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash.GetPubKeyHash()))
+		lines = append(lines, fmt.Sprintf("       Script: %x", []byte(output.PubKeyHash)))
 		lines = append(lines, fmt.Sprintf("       Contract: %s", output.Contract))
 	}
 	lines = append(lines, "\n")
@@ -780,7 +807,7 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
-	if !change.IsZero(){
+	if !change.IsZero() {
 		outputs = append(outputs, *NewTXOutput(change, from))
 	}
 	return outputs

@@ -57,7 +57,7 @@ type ScEngineManager interface {
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
-	ImportLocalStorage(storage map[string]string)
+	ImportLocalStorage(state *ScState)
 	ImportContractAddr(contractAddr Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*UTXO)

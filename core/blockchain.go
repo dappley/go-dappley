@@ -57,6 +57,7 @@ type Blockchain struct {
 	txPool        *TransactionPool
 	scManager     ScEngineManager
 	state         BlockchainState
+	eventManager  *EventManager
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -69,6 +70,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		NewTransactionPool(transactionPoolLimit),
 		scManager,
 		BlockchainReady,
+		NewEventManager(),
 	}
 	err := bc.AddBlockToTail(genesis)
 	if err != nil {
@@ -91,6 +93,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		NewTransactionPool(transactionPoolLimit), //TODO: Need to retrieve transaction pool from db
 		scManager,
 		BlockchainReady,
+		NewEventManager(),
 	}
 	if err != nil {
 		return nil, err
@@ -116,6 +119,10 @@ func (bc *Blockchain) GetConsensus() Consensus {
 
 func (bc *Blockchain) GetTxPool() *TransactionPool {
 	return bc.txPool
+}
+
+func (bc *Blockchain) GetEventManager() *EventManager{
+	return bc.eventManager
 }
 
 func (bc *Blockchain) GetTailBlock() (*Block, error) {
@@ -200,6 +207,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 			return err
 		}
 		bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, block.GetHeight(), parentBlk.GetTimestamp())
+		bc.eventManager.Trigger(scState.GetEvents())
 		scState.SaveToDatabase(bcTemp.db, block.GetHash())
 	}
 
@@ -295,7 +303,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil, BlockchainInit}
+	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil, BlockchainInit, nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

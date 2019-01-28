@@ -72,7 +72,7 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	for index, txVout := range engine.tx.Vout {
 		vout := &vouts[index]
 		vout.amount = C.longlong(txVout.Value.Int64())
-		vout.pubkeyhash = C.CString(hex.EncodeToString(txVout.PubKeyHash.PubKeyHash))
+		vout.pubkeyhash = C.CString(hex.EncodeToString([]byte(txVout.PubKeyHash)))
 		defer C.free(unsafe.Pointer(vout.pubkeyhash))
 	}
 	tx.vout = voutAddr

@@ -25,14 +25,13 @@ import (
 	"testing"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 var sendAmount = common.NewAmount(7)
@@ -276,7 +275,7 @@ loop:
 	//there should be not block produced anymore
 	blk, err := bc.GetTailBlock()
 	assert.Nil(t, err)
-	assert.Equal(t, blkHeight, blk.GetHeight())
+	assert.True(t, blkHeight <= blk.GetHeight())
 
 	//it should be able to start again
 	pow.Start()

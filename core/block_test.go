@@ -244,8 +244,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	generatedTX := &Transaction{
 		[]byte("contractGenerated"),
 		[]TXInput{
-			{[]byte("prevtxid"), 0, []byte("txid"), contractPubKeyHash.GetPubKeyHash()},
-			{[]byte("prevtxid"), 1, []byte("txid"), contractPubKeyHash.GetPubKeyHash()},
+			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
+			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
 		},
 		[]TXOutput{
 			*NewTxOut(common.NewAmount(23), userAddr, ""),
@@ -261,33 +261,18 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
 	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
 
-	generateDependentTx := func(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash PubKeyHash, tip uint64) Transaction {
-		tx := Transaction{
-			ID: nil,
-			Vin: []TXInput{
-				{vinTxId, vinVout, nil, vinPubkey},
-			},
-			Vout: []TXOutput{
-				{common.NewAmount(voutValue), voutPubKeyHash, ""},
-			},
-			Tip: common.NewAmount(tip),
-		}
-		tx.ID = tx.Hash()
-		return tx
-	}
-
-	dependentTx1 := generateDependentTx(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
-	dependentTx2 := generateDependentTx(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
-	dependentTx3 := generateDependentTx(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
+	dependentTx1 := NewTransactionByVin(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
+	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
+	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
 
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
 	var utxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash2.GetPubKeyHash()): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			string(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2.GetPubKeyHash())])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
 	var generatedRewards map[string]string
@@ -315,6 +300,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	rewardEngine.On("GetGeneratedTXs").Return([]*Transaction{})
 	rewardEngine.On("ImportCurrBlockHeight", mock.Anything)
 	rewardEngine.On("ImportSeed", mock.Anything)
+	rewardEngine.On("DestroyEngine")
 	rewardEngine.On("Execute", mock.Anything, mock.Anything).Run(mockRewardExecute).Return("0")
 	rewardEngineManager := new(MockScEngineManager)
 	rewardEngineManager.On("CreateEngine").Return(rewardEngine)
@@ -332,6 +318,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	genTXEngine.On("GetGeneratedTXs").Return([]*Transaction{generatedTX})
 	genTXEngine.On("ImportCurrBlockHeight", mock.Anything)
 	genTXEngine.On("ImportSeed", mock.Anything)
+	genTXEngine.On("DestroyEngine")
 	genTXEngine.On("Execute", mock.Anything, mock.Anything).Return("0")
 	genTXEngineManager := new(MockScEngineManager)
 	genTXEngineManager.On("CreateEngine").Return(genTXEngine)
@@ -393,10 +380,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"reward tx",
 			[]*Transaction{contractTX, &rewardTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash.GetPubKeyHash()): {
+				string(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0},
 				},
-				string(userPubKeyHash.GetPubKeyHash()): {
+				string(userPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
@@ -407,11 +394,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"generated tx",
 			[]*Transaction{contractTX, generatedTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash.GetPubKeyHash()): {
+				string(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0},
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1},
 				},
-				string(userPubKeyHash.GetPubKeyHash()): {
+				string(userPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
@@ -422,7 +409,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"no manager",
 			[]*Transaction{contractTX, &rewardTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash.GetPubKeyHash()): {
+				string(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("txid"), 0},
 				},
 			},

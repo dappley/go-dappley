@@ -20,10 +20,9 @@ package core
 import (
 	"encoding/hex"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/common"
 )
 
 type BlockChainManager struct {
@@ -122,7 +121,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	}
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if !bm.VerifyTransactions(*utxo, scState, forkBlks, parentBlk) {
-		logger.Error("BlockChainManager: Verify fork blocks transaction failed")
+		logger.Errorf("BlockChainManager: Verify fork blocks transaction failed with parent height %v", parentBlk.GetHeight())
 		return ErrTransactionVerifyFailed
 	}
 

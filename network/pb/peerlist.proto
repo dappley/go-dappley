@@ -7,5 +7,9 @@ message Peerlist {
 
 message Peer {
     string peerid = 1;
-    string addr = 2;
+    repeated string addr = 2;
+}
+
+message GetPeerlist {
+    int32 maxNum = 1;
 }
