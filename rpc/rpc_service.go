@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -241,55 +242,75 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 // RpcSendBatchTransaction sends a batch of transactions to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
-	st := status.New(codes.OK, "")
+	statusCode := codes.OK
+	var details []proto.Message
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
-	for _, txInReq := range in.Transactions {
+
+	txs := make(map[int]core.Transaction, len(in.Transactions))
+	for key, txInReq := range in.Transactions {
 		tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 		tx.FromProto(txInReq)
+		txs[key] = tx
+	}
 
-		if tx.IsCoinbase() {
-			if st.Code() == codes.OK {
-				st = status.New(codes.Unknown, "one or more transactions are invalid")
+	lastTxsLen := 0
+	for len(txs) != lastTxsLen {
+		lastTxsLen = len(txs)
+		for key, txPointer := range txs {
+			tx := txPointer.DeepCopy()
+			if tx.IsCoinbase() {
+				if statusCode == codes.OK {
+					statusCode = codes.Unknown
+				}
+				details = append(details, &rpcpb.SendTransactionStatus{
+					Txid: tx.ID,
+					Code: uint32(codes.InvalidArgument),
+					Msg:  "cannot send coinbase transaction",
+				})
+				delete(txs, key)
+				continue
 			}
-			st, _ = st.WithDetails(&rpcpb.SendTransactionStatus{
+
+			if tx.Verify(utxoIndex, 0) == false {
+				continue
+			}
+
+			utxoIndex.UpdateUtxo(&tx)
+			rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
+			rpcService.node.TxBroadcast(&tx)
+
+			if tx.IsContract() {
+				contractAddr := tx.GetContractAddress()
+				message := contractAddr.String()
+				logger.WithFields(logger.Fields{
+					"contractAddr": message,
+				}).Info("Smart Contract Deployed Successful!")
+			}
+
+			details = append(details, &rpcpb.SendTransactionStatus{
 				Txid: tx.ID,
-				Code: uint32(codes.InvalidArgument),
-				Msg:  "cannot send coinbase transaction",
+				Code: uint32(codes.OK),
+				Msg:  "",
 			})
-			continue
+			delete(txs, key)
 		}
+	}
 
-		if tx.Verify(utxoIndex, 0) == false {
-			if st.Code() == codes.OK {
-				st = status.New(codes.Unknown, "one or more transactions are invalid")
-			}
-			st, _ = st.WithDetails(&rpcpb.SendTransactionStatus{
+	st := status.New(codes.OK, "")
+	if statusCode == codes.Unknown || len(txs) > 0 {
+		st = status.New(codes.Unknown, "one or more transactions are invalid")
+		for _, tx := range txs {
+			details = append(details, &rpcpb.SendTransactionStatus{
 				Txid: tx.ID,
 				Code: uint32(codes.FailedPrecondition),
 				Msg:  core.ErrTransactionVerifyFailed.Error(),
 			})
-			continue
+
 		}
-
-		utxoIndex.UpdateUtxo(&tx)
-		rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
-		rpcService.node.TxBroadcast(&tx)
-
-		if tx.IsContract() {
-			contractAddr := tx.GetContractAddress()
-			message := contractAddr.String()
-			logger.WithFields(logger.Fields{
-				"contractAddr": message,
-			}).Info("Smart Contract Deployed Successful!")
-		}
-
-		st, _ = st.WithDetails(&rpcpb.SendTransactionStatus{
-			Txid: tx.ID,
-			Code: uint32(codes.OK),
-			Msg:  "",
-		})
 	}
+	st, _ = st.WithDetails(details...)
+
 	return &rpcpb.SendBatchTransactionResponse{}, st.Err()
 }
 

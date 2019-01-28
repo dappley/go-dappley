@@ -65,7 +65,7 @@ func (bp *BlockProducer) SetProcess(process process) {
 
 // ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it
 func (bp *BlockProducer) ProduceBlock() *core.Block {
-
+	logger.Info("BlockProducer: started producing new block...")
 	bp.idle = false
 	bp.prepareBlock()
 	if bp.process != nil {
@@ -91,7 +91,6 @@ func (bp *BlockProducer) prepareBlock() {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
-
 	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoIndex, parentBlock.GetHeight()+1)
 
 	cbtx := bp.calculateTips(validTxs)
@@ -110,10 +109,10 @@ func (bp *BlockProducer) prepareBlock() {
 		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
 		validTxs = append(validTxs, &rtx)
 	}
+	bp.newBlock = core.NewBlock(validTxs, parentBlock)
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
-	}).Info("BlockProducer: prepare block.")
-	bp.newBlock = core.NewBlock(validTxs, parentBlock)
+	}).Info("BlockProducer: prepared a block.")
 }
 
 func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {

@@ -631,6 +631,7 @@ func TestRpcSendTransaction(t *testing.T) {
 }
 
 func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
+	logger.SetLevel(logger.DebugLevel)
 	rpcContext, err := createRpcTestContext(9)
 	if err != nil {
 		panic(err)
@@ -642,10 +643,6 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		panic(err)
 	}
 	receiverWallet2, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test2")
-	if err != nil {
-		panic(err)
-	}
-	receiverWallet3, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test3")
 	if err != nil {
 		panic(err)
 	}
@@ -661,6 +658,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	for maxHeight < 2 {
 		maxHeight = rpcContext.bc.GetMaxHeight()
 	}
+
 	// Create a grpc connection and a client
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -693,24 +691,28 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"",
 	)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction2})
-	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	pubKeyHash1, _ := receiverWallet1.GetAddress().GetPubKeyHash()
+	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
 	transaction3, err := core.NewUTXOTransaction(utxos,
-		rpcContext.wallet.GetAddress(),
-		receiverWallet3.GetAddress(),
+		receiverWallet1.GetAddress(),
+		receiverWallet2.GetAddress(),
 		common.NewAmount(1),
-		rpcContext.wallet.GetKeyPair(),
+		receiverWallet1.GetKeyPair(),
 		common.NewAmount(0),
 		"",
 	)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
 
+	rpcContext.consensus.Stop()
 	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
 
+	rpcContext.consensus.Start()
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
+	rpcContext.consensus.Stop()
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	errTransaction, err := core.NewUTXOTransaction(utxos2,
@@ -736,13 +738,13 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	st := status.Convert(err)
 	assert.Equal(t, codes.Unknown, st.Code())
 
-	detail0 := st.Details()[0].(*rpcpb.SendTransactionStatus)
-	detail1 := st.Details()[1].(*rpcpb.SendTransactionStatus)
+	detail0 := st.Details()[1].(*rpcpb.SendTransactionStatus)
+	detail1 := st.Details()[0].(*rpcpb.SendTransactionStatus)
 	assert.Equal(t, errTransaction.ID, detail0.Txid)
 	assert.Equal(t, uint32(codes.FailedPrecondition), detail0.Code)
-	assert.Equal(t, transaction4.ID, detail1.Txid)
 	assert.Equal(t, uint32(codes.OK), detail1.Code)
 
+	rpcContext.consensus.Start()
 	maxHeight = rpcContext.bc.GetMaxHeight()
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
@@ -751,19 +753,16 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	core.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
-	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10000000)
-	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(9))
+	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(8))
 	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
 	assert.Equal(t, leftAmount, realAmount)
 	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.store)
 	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.store)
-	recvAmount3, err := logic.GetBalance(receiverWallet3.GetAddress(), rpcContext.store)
 	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.store)
-	assert.Equal(t, common.NewAmount(3), recvAmount1)
-	assert.Equal(t, common.NewAmount(2), recvAmount2)
-	assert.Equal(t, common.NewAmount(1), recvAmount3)
+	assert.Equal(t, common.NewAmount(2), recvAmount1)
+	assert.Equal(t, common.NewAmount(3), recvAmount2)
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
 }
 
