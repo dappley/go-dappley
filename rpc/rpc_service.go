@@ -83,7 +83,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	if err != nil {
 		switch err {
 		case core.ErrBlockDoesNotExist:
-			return nil, status.Error(codes.NotFound, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
 		}
@@ -244,7 +244,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	st := status.New(codes.OK, "")
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
-	for _, txInReq := range in.Transaction {
+	for _, txInReq := range in.Transactions {
 		tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 		tx.FromProto(txInReq)
 
@@ -252,7 +252,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			if st.Code() == codes.OK {
 				st = status.New(codes.Unknown, "one or more transactions are invalid")
 			}
-			st, _ = st.WithDetails(&rpcpb.SendTransactionFailure{
+			st, _ = st.WithDetails(&rpcpb.SendTransactionStatus{
 				Txid: tx.ID,
 				Code: uint32(codes.InvalidArgument),
 				Msg:  "cannot send coinbase transaction",
@@ -264,7 +264,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			if st.Code() == codes.OK {
 				st = status.New(codes.Unknown, "one or more transactions are invalid")
 			}
-			st, _ = st.WithDetails(&rpcpb.SendTransactionFailure{
+			st, _ = st.WithDetails(&rpcpb.SendTransactionStatus{
 				Txid: tx.ID,
 				Code: uint32(codes.FailedPrecondition),
 				Msg:  core.ErrTransactionVerifyFailed.Error(),
@@ -284,7 +284,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			}).Info("Smart Contract Deployed Successful!")
 		}
 
-		st, _ = st.WithDetails(&rpcpb.SendTransactionFailure{
+		st, _ = st.WithDetails(&rpcpb.SendTransactionStatus{
 			Txid: tx.ID,
 			Code: uint32(codes.OK),
 			Msg:  "",
@@ -293,13 +293,13 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	return &rpcpb.SendBatchTransactionResponse{}, st.Err()
 }
 
-func (rpcService *RpcService) RpcGetNewTransactions(in *rpcpb.GetNewTransactionsRequest, stream rpcpb.RpcService_RpcGetNewTransactionsServer) error {
+func (rpcService *RpcService) RpcGetNewTransaction(in *rpcpb.GetNewTransactionRequest, stream rpcpb.RpcService_RpcGetNewTransactionServer) error {
 	var txHandler interface{}
 
 	quitCh := make(chan bool, 1)
 
 	txHandler = func(tx *core.Transaction) {
-		response := &rpcpb.GetNewTransactionsResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
+		response := &rpcpb.GetNewTransactionResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
 		err := stream.Send(response)
 		if err != nil {
 			logger.WithError(err).Info("RPCService: failed to send transaction to client.")

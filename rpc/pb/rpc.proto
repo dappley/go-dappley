@@ -16,7 +16,7 @@ service RpcService {
   rpc RpcGetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {}
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
   rpc RpcSendBatchTransaction(SendBatchTransactionRequest) returns (SendBatchTransactionResponse) {}
-  rpc RpcGetNewTransactions(GetNewTransactionsRequest) returns (stream GetNewTransactionsResponse) {}
+  rpc RpcGetNewTransaction(GetNewTransactionRequest) returns (stream GetNewTransactionResponse) {}
   rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
 }
@@ -94,10 +94,10 @@ message SendTransactionRequest {
 }
 
 message SendBatchTransactionRequest {
-  repeated corepb.Transaction transaction = 1;
+  repeated corepb.Transaction transactions = 1;
 }
 
-message GetNewTransactionsRequest {}
+message GetNewTransactionRequest {}
 
 message SubscribeRequest{
   repeated string topics = 1;
@@ -167,13 +167,13 @@ message SendTransactionResponse {}
 
 message SendBatchTransactionResponse {}
 
-message SendTransactionFailure {
+message SendTransactionStatus {
   bytes txid = 1; // Transactions that are sent
   uint32 code = 2; // grpc status code
   string msg = 3;
 }
 
-message GetNewTransactionsResponse {
+message GetNewTransactionResponse {
   corepb.Transaction transaction = 1;
 }
 

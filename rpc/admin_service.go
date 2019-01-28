@@ -40,7 +40,7 @@ type AdminRpcService struct {
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
 	err := adminRpcService.node.GetPeerManager().AddAndConnectPeerByString(in.FullAddress)
 	if err != nil {
-		return nil, status.Error(codes.Unknown, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	return &rpcpb.AddPeerResponse{}, nil
 }
@@ -73,7 +73,7 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
 	err := logic.SetUnLockWallet()
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &rpcpb.UnlockWalletResponse{}, nil
 }
@@ -82,7 +82,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 	sendToAddress := core.NewAddress(in.To)
 	sendAmount := common.NewAmountFromBytes(in.Amount)
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.FailedPrecondition, logic.ErrInvalidAmount.Error())
+		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
 
 	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)

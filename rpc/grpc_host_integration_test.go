@@ -704,7 +704,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
 
-	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
+	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
 
@@ -731,13 +731,13 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"",
 	)
 	errTransaction.Vin[0].Signature = []byte("invalid")
-	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transaction: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
+	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, failedResponse)
 	st := status.Convert(err)
 	assert.Equal(t, codes.Unknown, st.Code())
 
-	detail0 := st.Details()[0].(*rpcpb.SendTransactionFailure)
-	detail1 := st.Details()[1].(*rpcpb.SendTransactionFailure)
+	detail0 := st.Details()[0].(*rpcpb.SendTransactionStatus)
+	detail1 := st.Details()[1].(*rpcpb.SendTransactionStatus)
 	assert.Equal(t, errTransaction.ID, detail0.Txid)
 	assert.Equal(t, uint32(codes.FailedPrecondition), detail0.Code)
 	assert.Equal(t, transaction4.ID, detail1.Txid)
@@ -767,7 +767,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
 }
 
-func TestGetNewTransactions(t *testing.T) {
+func TestGetNewTransaction(t *testing.T) {
 	logger.SetLevel(logger.WarnLevel)
 	rpcContext, err := createRpcTestContext(11)
 	if err != nil {
@@ -799,7 +799,7 @@ func TestGetNewTransactions(t *testing.T) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
-		stream, err := c1.RpcGetNewTransactions(ctx, &rpcpb.GetNewTransactionsRequest{})
+		stream, err := c1.RpcGetNewTransaction(ctx, &rpcpb.GetNewTransactionRequest{})
 		if err != nil {
 			return
 		}
@@ -826,7 +826,7 @@ func TestGetNewTransactions(t *testing.T) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
-		stream, err := c2.RpcGetNewTransactions(ctx, &rpcpb.GetNewTransactionsRequest{})
+		stream, err := c2.RpcGetNewTransaction(ctx, &rpcpb.GetNewTransactionRequest{})
 		if err != nil {
 			return
 		}
