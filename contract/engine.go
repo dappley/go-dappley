@@ -132,7 +132,8 @@ func (sc *V8Engine) ImportContractAddr(contractAddr core.Address) {
 
 // ImportUTXOs supplies the list of contract's UTXOs to the engine
 func (sc *V8Engine) ImportUTXOs(utxos []*core.UTXO) {
-	sc.contractUTXOs = utxos
+	sc.contractUTXOs = make([]*core.UTXO, len(utxos))
+	copy(sc.contractUTXOs, utxos)
 }
 
 // ImportSourceTXID supplies the id of the transaction which executes the contract
