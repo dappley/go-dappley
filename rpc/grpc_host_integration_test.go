@@ -22,16 +22,9 @@ package rpc
 
 import (
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"strings"
 	"testing"
 	"time"
-
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -43,6 +36,12 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type RpcTestContext struct {
@@ -873,9 +872,6 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
-	rpcContext.consensus.Start()
-
 	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -907,12 +903,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, 1, len(result.Transactions))
 
-	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
-	}, 20)
 	time.Sleep(time.Second)
-
 }
 
 func TestRpcService_RpcSubscribe(t *testing.T) {

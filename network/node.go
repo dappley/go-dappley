@@ -697,6 +697,10 @@ func (n *Node) cacheDapMsg(dm DapMsg) {
 }
 
 func (n *Node) AddTxToPool(dm *DapMsg) {
+	if n.GetBlockchain().GetState() != core.BlockchainReady {
+		return
+	}
+
 	if n.isNetworkRadiation(*dm) {
 		return
 	}
