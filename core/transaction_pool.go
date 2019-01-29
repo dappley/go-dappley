@@ -277,7 +277,7 @@ func (txPool *TransactionPool) resetMinTipTransaction() {
 			first = false
 			minTip = txNode.value.Tip
 			txPool.minTipTxId = txId
-			} else {
+		} else {
 			if txNode.value.Tip.Cmp(minTip) < 0 {
 				minTip = txNode.value.Tip
 				txPool.minTipTxId = txId
