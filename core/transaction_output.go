@@ -79,13 +79,13 @@ func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) boo
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
 		Value:      out.Value.Bytes(),
-		PubKeyHash: []byte(out.PubKeyHash),
+		PublicKeyHash: []byte(out.PubKeyHash),
 		Contract:   out.Contract,
 	}
 }
 
 func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).Value)
-	out.PubKeyHash = PubKeyHash(pb.(*corepb.TXOutput).PubKeyHash)
+	out.PubKeyHash = PubKeyHash(pb.(*corepb.TXOutput).PublicKeyHash)
 	out.Contract = pb.(*corepb.TXOutput).Contract
 }

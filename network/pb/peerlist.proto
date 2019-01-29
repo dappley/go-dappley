@@ -2,14 +2,14 @@ syntax = "proto3";
 package networkpb;
 
 message Peerlist {
-    repeated Peer peerlist = 1;
+    repeated Peer peer_list = 1;
 }
 
 message Peer {
-    string peerid = 1;
-    repeated string addr = 2;
+    string id = 1;
+    repeated string address = 2;
 }
 
 message GetPeerlist {
-    int32 maxNum = 1;
+    int32 max_number = 1;
 }

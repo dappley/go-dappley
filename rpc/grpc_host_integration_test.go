@@ -74,7 +74,7 @@ func TestServer_StartRPC(t *testing.T) {
 	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(response.PeerList.Peerlist))
+	assert.Equal(t, 0, len(response.PeerList.PeerList))
 }
 
 func TestRpcSend(t *testing.T) {
@@ -806,13 +806,13 @@ func TestGetNewTransaction(t *testing.T) {
 		conn1Step1 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, 0, len(tx1ID))
-		assert.Equal(t, tx1ID, response1.Transaction.ID)
+		assert.Equal(t, tx1ID, response1.Transaction.Id)
 
 		response2, err := stream.Recv()
 		conn1Step2 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, 0, len(tx2ID))
-		assert.Equal(t, tx2ID, response2.Transaction.ID)
+		assert.Equal(t, tx2ID, response2.Transaction.Id)
 	}()
 
 	// Create a grpc connection and a client
@@ -832,7 +832,7 @@ func TestGetNewTransaction(t *testing.T) {
 		conn2Step1 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, 0, len(tx1ID))
-		assert.Equal(t, tx1ID, response1.Transaction.ID)
+		assert.Equal(t, tx1ID, response1.Transaction.Id)
 	}()
 	time.Sleep(time.Second)
 

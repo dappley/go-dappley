@@ -372,7 +372,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 				encodedVin = append(encodedVin, map[string]interface{}{
 					"Vout":      vin.Vout,
 					"Signature": hex.EncodeToString(vin.Signature),
-					"PubKey":    string(vin.PubKey),
+					"PubKey":    string(vin.PublicKey),
 				})
 			}
 
@@ -380,13 +380,13 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 			for _, vout := range transaction.Vout {
 				encodedVout = append(encodedVout, map[string]interface{}{
 					"Value":      string(vout.Value),
-					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
+					"PubKeyHash": hex.EncodeToString(vout.PublicKeyHash),
 					"Contract":   vout.Contract,
 				})
 			}
 
 			encodedTransaction := map[string]interface{}{
-				"ID":   hex.EncodeToString(transaction.ID),
+				"ID":   hex.EncodeToString(transaction.Id),
 				"Vin":  encodedVin,
 				"Vout": encodedVout,
 			}
@@ -396,9 +396,9 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		encodedBlock := map[string]interface{}{
 			"Header": map[string]interface{}{
 				"Hash":      hex.EncodeToString(block.Header.Hash),
-				"Prevhash":  hex.EncodeToString(block.Header.Prevhash),
+				"Prevhash":  hex.EncodeToString(block.Header.PreviousHash),
 				"Timestamp": block.Header.Timestamp,
-				"Sign":      hex.EncodeToString(block.Header.Sign),
+				"Sign":      hex.EncodeToString(block.Header.Signature),
 				"height":    block.Header.Height,
 			},
 			"Transactions": encodedTransactions,

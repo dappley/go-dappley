@@ -66,7 +66,7 @@ func (dm *DapMsg) ToProto() proto.Message {
 	return &networkpb.Dapmsg{
 		Cmd:           dm.cmd,
 		Data:          dm.data,
-		UnixTimeRecvd: dm.unixTimeRecvd,
+		UnixTimeReceived: dm.unixTimeRecvd,
 		Key:           dm.key,
 	}
 }
@@ -74,7 +74,7 @@ func (dm *DapMsg) ToProto() proto.Message {
 func (dm *DapMsg) FromProto(pb proto.Message) {
 	dm.cmd = pb.(*networkpb.Dapmsg).Cmd
 	dm.data = pb.(*networkpb.Dapmsg).Data
-	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).UnixTimeRecvd
+	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).UnixTimeReceived
 	dm.key = pb.(*networkpb.Dapmsg).Key
 
 }

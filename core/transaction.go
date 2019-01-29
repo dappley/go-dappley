@@ -826,7 +826,7 @@ func (tx *Transaction) ToProto() proto.Message {
 	}
 
 	return &corepb.Transaction{
-		ID:   tx.ID,
+		Id:   tx.ID,
 		Vin:  vinArray,
 		Vout: voutArray,
 		Tip:  tx.Tip.Bytes(),
@@ -834,7 +834,7 @@ func (tx *Transaction) ToProto() proto.Message {
 }
 
 func (tx *Transaction) FromProto(pb proto.Message) {
-	tx.ID = pb.(*corepb.Transaction).ID
+	tx.ID = pb.(*corepb.Transaction).Id
 	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).Tip)
 
 	var vinArray []TXInput

@@ -110,9 +110,9 @@ func recordTransactions(txs []*corepb.Transaction, height uint64){
 		}
 		voutStr := ""
 		for _, vout := range tx.Vout {
-			voutStr += core.PubKeyHash(vout.PubKeyHash).GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
+			voutStr += core.PubKeyHash(vout.PublicKeyHash).GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
 		}
-		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.ID), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
+		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.Id), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
 	}
 	w.Flush()
 }
@@ -185,7 +185,7 @@ func verifyTransactions(txs []*corepb.Transaction) {
 		"num_of_tx": len(sentTxs),
 	}).Info("Transactions recorded")
 	for _, tx := range txs {
-		delete(sentTxs, hex.EncodeToString(tx.ID))
+		delete(sentTxs, hex.EncodeToString(tx.Id))
 	}
 	for txid, count := range sentTxs {
 		sentTxs[txid]++

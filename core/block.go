@@ -242,10 +242,10 @@ func (b *Block) FromProto(pb proto.Message) {
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
 		Hash:      bh.hash,
-		Prevhash:  bh.prevHash,
+		PreviousHash:  bh.prevHash,
 		Nonce:     bh.nonce,
 		Timestamp: bh.timestamp,
-		Sign:      bh.sign,
+		Signature:      bh.sign,
 		Height:    bh.height,
 	}
 }
@@ -255,10 +255,10 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 		return
 	}
 	bh.hash = pb.(*corepb.BlockHeader).Hash
-	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
+	bh.prevHash = pb.(*corepb.BlockHeader).PreviousHash
 	bh.nonce = pb.(*corepb.BlockHeader).Nonce
 	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
-	bh.sign = pb.(*corepb.BlockHeader).Sign
+	bh.sign = pb.(*corepb.BlockHeader).Signature
 	bh.height = pb.(*corepb.BlockHeader).Height
 }
 

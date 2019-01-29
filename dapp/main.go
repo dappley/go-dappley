@@ -76,7 +76,7 @@ func main() {
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
-	nodeAddr := conf.GetNodeConfig().GetNodeAddr()
+	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))
 	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager)
 	if err != nil {
@@ -102,15 +102,15 @@ func main() {
 	defer server.Stop()
 
 	//start mining
-	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
+	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
 	conss.Setup(node, minerAddr)
-	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
+	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": minerAddr,
 	}).Info("Consensus is configured.")
 
 	logic.SetLockWallet() //lock the wallet
-	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 	conss.Start()
 	defer conss.Stop()
 

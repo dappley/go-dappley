@@ -61,7 +61,7 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 
 	peersPb := networkpb.Peerlist{}
 	for _, peerInfo := range peers {
-		peersPb.Peerlist = append(peersPb.Peerlist, peerInfo.ToProto().(*networkpb.Peer))
+		peersPb.PeerList = append(peersPb.PeerList, peerInfo.ToProto().(*networkpb.Peer))
 	}
 
 	return &rpcpb.GetPeerInfoResponse{

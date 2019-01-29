@@ -496,7 +496,7 @@ func (pm *PeerManager) saveSyncPeers() {
 	peersPb := networkpb.Peerlist{}
 
 	for _, peerInfo := range syncPeers {
-		peersPb.Peerlist = append(peersPb.Peerlist, peerInfo.ToProto().(*networkpb.Peer))
+		peersPb.PeerList = append(peersPb.PeerList, peerInfo.ToProto().(*networkpb.Peer))
 	}
 
 	bytes, err := proto.Marshal(&peersPb)
@@ -683,7 +683,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
 	}
 
-	for _, peerPb := range peerlistPb.Peerlist {
+	for _, peerPb := range peerlistPb.PeerList {
 		peerInfo := &PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
@@ -719,11 +719,11 @@ func createPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
 //convert to protobuf
 func (p *PeerInfo) ToProto() proto.Message {
 	peerPb := &networkpb.Peer{
-		Peerid: peer.IDB58Encode(p.PeerId),
+		Id: peer.IDB58Encode(p.PeerId),
 	}
 
 	for _, addr := range p.Addrs {
-		peerPb.Addr = append(peerPb.Addr, addr.String())
+		peerPb.Address = append(peerPb.Address, addr.String())
 		//logger.Infof("---Save peer addr %v", addr.String())
 	}
 
@@ -732,13 +732,13 @@ func (p *PeerInfo) ToProto() proto.Message {
 
 //convert from protobuf
 func (p *PeerInfo) FromProto(pb proto.Message) error {
-	pid, err := peer.IDB58Decode(pb.(*networkpb.Peer).Peerid)
+	pid, err := peer.IDB58Decode(pb.(*networkpb.Peer).Id)
 	if err != nil {
 		return err
 	}
 	p.PeerId = pid
 
-	for _, addr := range pb.(*networkpb.Peer).Addr {
+	for _, addr := range pb.(*networkpb.Peer).Address {
 		multiaddr, err := ma.NewMultiaddr(addr)
 		if err != nil {
 			return err

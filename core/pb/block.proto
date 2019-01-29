@@ -5,15 +5,15 @@ import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 
 message Block{
     BlockHeader Header = 1;
-    repeated Transaction Transactions = 2;
-    bytes parentHash = 3;
+    repeated Transaction transactions = 2;
+    bytes parent_hash = 3;
 }
 
 message BlockHeader{
-    bytes Hash = 1;
-    bytes Prevhash = 2;
-    int64 Nonce = 3;
-    int64 Timestamp = 4;
-    bytes Sign = 5;
-    uint64 Height = 6;
+    bytes hash = 1;
+    bytes previous_hash = 2;
+    int64 nonce = 3;
+    int64 timestamp = 4;
+    bytes signature = 5;
+    uint64 height = 6;
 }
