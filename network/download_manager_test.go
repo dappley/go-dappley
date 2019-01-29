@@ -66,6 +66,7 @@ func fillBlockchains(blockchains []*core.Blockchain) {
 	for generateChain.GetMaxHeight() < 100 {
 	}
 	generateChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; uint64(i) <= generateChain.GetMaxHeight(); i++ {
 		block, _ := generateChain.GetBlockByHeight(uint64(i))
@@ -131,6 +132,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	for _, blockchain := range blockchains {
 		blockchain.GetConsensus().Stop()
 	}
+	time.Sleep(2 * time.Second)
 
 	blockchain := blockchains[0]
 	blockchain.SetState(core.BlockchainInit)
@@ -142,6 +144,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	for highestChain.GetMaxHeight() < nextHeight {
 	}
 	highestChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
@@ -171,6 +174,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	for highestChain.GetMaxHeight() < 200 {
 	}
 	highestChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
@@ -200,12 +204,14 @@ func TestDisconnectNode(t *testing.T) {
 	for highestChain.GetMaxHeight() < 400 {
 	}
 	highestChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	secondChain := blockchains[2]
 	secondChain.GetConsensus().Start()
 	for secondChain.GetMaxHeight() < 300 {
 	}
 	secondChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
