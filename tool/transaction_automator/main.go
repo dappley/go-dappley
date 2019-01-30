@@ -36,16 +36,16 @@ var (
 	smartContractAddr    = ""
 	smartContractCounter = 0
 	isContractDeployed   = false
-	currHeight			 = uint64(0)
+	currHeight           = uint64(0)
 )
 
 const (
-	smartContractSendFreq = 13
-	contractAddrFilePath  = "contract/contractAddr"
-	contractFilePath      = "contract/test_contract.js"
-	contractFunctionCall  = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	smartContractSendFreq  = 13
+	contractAddrFilePath   = "contract/contractAddr"
+	contractFilePath       = "contract/test_contract.js"
+	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 	transactionLogFilePath = "log/tx.csv"
-	failedTxLogFilePath = "log/failedTx.csv"
+	failedTxLogFilePath    = "log/failedTx.csv"
 )
 
 func main() {
@@ -97,7 +97,7 @@ func main() {
 	}
 }
 
-func recordTransactions(txs []*corepb.Transaction, height uint64){
+func recordTransactions(txs []*corepb.Transaction, height uint64) {
 	f, err := os.OpenFile(transactionLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording transactions")
@@ -157,7 +157,7 @@ func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) {
 
 	contract := string(data)
 	resp, err := sendTransaction(serviceClient, from, "", 1, contract)
-	smartContractAddr = resp.ContractAddr
+	smartContractAddr = resp.ContractAddress
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"file_path":     contractFilePath,
@@ -189,9 +189,9 @@ func verifyTransactions(txs []*corepb.Transaction) {
 	}
 	for txid, count := range sentTxs {
 		sentTxs[txid]++
-		if count > 0{
+		if count > 0 {
 			logger.WithFields(logger.Fields{
-				"txid": txid,
+				"txid":  txid,
 				"count": count,
 			}).Warn("Transaction is not found in previous block!")
 		}
@@ -386,7 +386,7 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 	return resp, nil
 }
 
-func recordFailedTransaction(txErr error, from, to string, amount uint64, data string){
+func recordFailedTransaction(txErr error, from, to string, amount uint64, data string) {
 	f, err := os.OpenFile(failedTxLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording failed transactions")
@@ -430,4 +430,3 @@ func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64 {
 	}
 	return resp.BlockHeight
 }
-

@@ -77,7 +77,7 @@ message GetUTXORequest {
 }
 
 message GetBlocksRequest {
-  repeated bytes startBlockHashes = 1;  // Query start block hashes, sorted descending by height.
+  repeated bytes start_block_hashes = 1;  // Query start block hashes, sorted descending by height.
   int32 max_count = 2;   // Max query block count
 }
 
@@ -116,7 +116,7 @@ message GetBalanceResponse {
 message SendFromMinerResponse {}
 
 message SendResponse {
-  string contract_addr = 1;
+  string contract_address = 1;
   string txid = 2;
 }
 
@@ -170,7 +170,7 @@ message SendBatchTransactionResponse {}
 message SendTransactionStatus {
   bytes txid = 1; // Transactions that are sent
   uint32 code = 2; // grpc status code
-  string msg = 3;
+  string message = 3;
 }
 
 message GetNewTransactionResponse {
@@ -181,9 +181,8 @@ message SubscribeResponse {
   string data = 1;
 }
 
-message GetAllTransactionsRequest{
+message GetAllTransactionsRequest{}
 
-}
 message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
 }

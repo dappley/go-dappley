@@ -31,11 +31,11 @@ message ReturnBlocks {
 }
 
 message GetCommonBlocks {
-    int32 msgId  = 1;
-    repeated corepb.BlockHeader blockHeaders = 2;
+    int32 msg_id  = 1;
+    repeated corepb.BlockHeader block_headers = 2;
 }
 
 message ReturnCommonBlocks {
-    int32 msgId = 1;
-    repeated corepb.BlockHeader blockHeaders = 2;
+    int32 msg_id = 1;
+    repeated corepb.BlockHeader block_headers = 2;
 }

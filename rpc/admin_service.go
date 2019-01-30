@@ -94,7 +94,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
-	}
+		}
 	}
 	return &rpcpb.SendFromMinerResponse{}, nil
 }
@@ -138,7 +138,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	resp := &rpcpb.SendResponse{Txid: txHashStr}
 	if scAddress != "" {
-		resp.ContractAddr = scAddress
+		resp.ContractAddress = scAddress
 	}
 
 	return resp, nil

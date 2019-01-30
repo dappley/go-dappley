@@ -21,6 +21,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,7 +32,6 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -264,9 +264,9 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 					statusCode = codes.Unknown
 				}
 				details = append(details, &rpcpb.SendTransactionStatus{
-					Txid: tx.ID,
-					Code: uint32(codes.InvalidArgument),
-					Msg:  "cannot send coinbase transaction",
+					Txid:    tx.ID,
+					Code:    uint32(codes.InvalidArgument),
+					Message: "cannot send coinbase transaction",
 				})
 				delete(txs, key)
 				continue
@@ -289,9 +289,9 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			}
 
 			details = append(details, &rpcpb.SendTransactionStatus{
-				Txid: tx.ID,
-				Code: uint32(codes.OK),
-				Msg:  "",
+				Txid:    tx.ID,
+				Code:    uint32(codes.OK),
+				Message: "",
 			})
 			delete(txs, key)
 		}
@@ -302,9 +302,9 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		st = status.New(codes.Unknown, "one or more transactions are invalid")
 		for _, tx := range txs {
 			details = append(details, &rpcpb.SendTransactionStatus{
-				Txid: tx.ID,
-				Code: uint32(codes.FailedPrecondition),
-				Msg:  core.ErrTransactionVerifyFailed.Error(),
+				Txid:    tx.ID,
+				Code:    uint32(codes.FailedPrecondition),
+				Message: core.ErrTransactionVerifyFailed.Error(),
 			})
 
 		}

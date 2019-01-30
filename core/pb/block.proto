@@ -4,7 +4,7 @@ import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 
 
 message Block{
-    BlockHeader Header = 1;
+    BlockHeader header = 1;
     repeated Transaction transactions = 2;
     bytes parent_hash = 3;
 }
