@@ -745,11 +745,13 @@ func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockcha
 	pow := consensus.NewProofOfWork()
 	return core.CreateBlockchain(addr, db, pow, 128, nil), pow
 }
+
 func TestDoubleMint(t *testing.T) {
 	var sendNode *network.Node
 	var recvNode *network.Node
 	var blks []*core.Block
 	var parent *core.Block
+	var dposArray []*consensus.DPOS
 
 	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
@@ -775,13 +777,17 @@ func TestDoubleMint(t *testing.T) {
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(testport_msg_relay_port3 + i)
+		dpos.Setup(node, validProducerAddr)
+		dpos.SetKey(validProducerKey)
 		if i == 0 {
 			sendNode = node
 		} else {
 			recvNode = node
 			recvNode.GetPeerManager().AddAndConnectPeer(sendNode.GetInfo())
 		}
+		dposArray = append(dposArray, dpos)
 	}
+
 	defer recvNode.Stop()
 	defer sendNode.Stop()
 
@@ -791,12 +797,13 @@ func TestDoubleMint(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
+	assert.False(t, dposArray[1].Validate(blks[1]))
 }
 
 func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
 	blk := core.NewBlock(tx, parent)
-	blk.SetHash(blk.CalculateHashWithoutNonce())
-	blk.SignBlock(validProducerKey, blk.CalculateHashWithoutNonce())
+	blk.SetHash(blk.CalculateHashWithNonce(0))
+	blk.SignBlock(validProducerKey, blk.CalculateHashWithNonce(0))
 	return blk
 }
 
