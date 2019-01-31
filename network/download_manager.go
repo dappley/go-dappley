@@ -24,11 +24,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p-peer"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
-	"github.com/libp2p/go-libp2p-peer"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -182,8 +183,8 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		return
 	}
 
-	hashes := make([]core.Hash, len(blocksPb.StartBlockHashes))
-	for index, hash := range blocksPb.StartBlockHashes {
+	hashes := make([]core.Hash, len(blocksPb.GetStartBlockHashes()))
+	for index, hash := range blocksPb.GetStartBlockHashes() {
 		hashes[index] = core.Hash(hash)
 	}
 	if !downloadManager.isSameDownloadCommand(hashes) {
@@ -198,7 +199,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 	downloadManager.mutex.Unlock()
 
 	var blocks []*core.Block
-	for _, pbBlock := range blocksPb.Blocks {
+	for _, pbBlock := range blocksPb.GetBlocks() {
 		block := &core.Block{}
 		block.FromProto(pbBlock)
 
@@ -249,7 +250,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 		return
 	}
 
-	if !downloadManager.isSameGetCommonBlocksCommand(blocksPb.MsgId) {
+	if !downloadManager.isSameGetCommonBlocksCommand(blocksPb.GetMsgId()) {
 		logger.WithFields(logger.Fields{
 			"cmd": "ReturnCommonBlocks",
 		}).Info("DownloadManager: response is not for waiting command.")
@@ -257,7 +258,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 		return
 	}
 
-	downloadManager.checkGetCommonBlocksResult(blocksPb.BlockHeaders)
+	downloadManager.checkGetCommonBlocksResult(blocksPb.GetBlockHeaders())
 	downloadManager.mutex.Unlock()
 }
 
@@ -301,7 +302,7 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*corepb.B
 	var commonBlock *core.Block
 
 	for index, blockHeader := range blockHeaders {
-		block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(blockHeader.Height)
+		block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(blockHeader.GetHeight())
 		if err != nil {
 			continue
 		}
@@ -424,15 +425,15 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*corepb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
-	if findIndex == 0 || blockHeaders[findIndex-1].Height-blockHeaders[findIndex].Height == 1 {
+	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
 		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
 		downloadManager.currentCmd = nil
 		downloadManager.startDownload(0)
 	} else {
 		blockHeaders := downloadManager.GetCommonBlockCheckPoint(
-			blockHeaders[findIndex].Height,
-			blockHeaders[findIndex-1].Height,
+			blockHeaders[findIndex].GetHeight(),
+			blockHeaders[findIndex-1].GetHeight(),
 		)
 		downloadManager.sendGetCommonBlockCommand(blockHeaders, downloadManager.downloadingPeer.peerid, 0)
 	}

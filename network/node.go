@@ -27,9 +27,6 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -38,6 +35,10 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -422,13 +423,12 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 }
 
 func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
-	peersPb := networkpb.Peerlist{}
-
+	var peerPbs []*networkpb.Peer
 	for _, peerInfo := range peers {
-		peersPb.PeerList = append(peersPb.PeerList, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.Peer))
 	}
 
-	data, err := n.prepareData(&peersPb, ReturnPeerList, Unicast, "")
+	data, err := n.prepareData(&networkpb.Peerlist{PeerList: peerPbs}, ReturnPeerList, Unicast, "")
 	if err != nil {
 		return err
 	}
@@ -449,14 +449,13 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 }
 
 func (n *Node) GetCommonBlocksUnicast(blockHeaders []*SyncCommandBlocksHeader, pid peer.ID, msgId int32) error {
-	getCommonBlocksPb := &networkpb.GetCommonBlocks{}
-
-	getCommonBlocksPb.MsgId = msgId
-
+	var blockHeaderPbs []*corepb.BlockHeader
 	for _, blockHeader := range blockHeaders {
-		getCommonBlocksPb.BlockHeaders = append(getCommonBlocksPb.BlockHeaders,
+		blockHeaderPbs = append(blockHeaderPbs,
 			&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
 	}
+
+	getCommonBlocksPb := &networkpb.GetCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
 
 	data, err := n.prepareData(getCommonBlocksPb, GetCommonBlocks, Unicast, "")
 	if err != nil {
@@ -468,13 +467,12 @@ func (n *Node) GetCommonBlocksUnicast(blockHeaders []*SyncCommandBlocksHeader, p
 }
 
 func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
-	getBlockPb := &networkpb.GetBlocks{}
-
-	getBlockPb.StartBlockHashes = make([][]byte, len(hashes))
-
+	blkHashes := make([][]byte, len(hashes))
 	for index, hash := range hashes {
-		getBlockPb.StartBlockHashes[index] = hash
+		blkHashes[index] = hash
 	}
+
+	getBlockPb := &networkpb.GetBlocks{StartBlockHashes: blkHashes}
 
 	data, err := n.prepareData(getBlockPb, GetBlocks, Unicast, "")
 	if err != nil {
@@ -567,7 +565,7 @@ func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.BlockHeight)
+	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.GetBlockHeight())
 }
 
 //TODO  Refactor getblocks in rpcService and node
@@ -580,7 +578,7 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	block := n.findBlockInRequestHash(param.StartBlockHashes)
+	block := n.findBlockInRequestHash(param.GetStartBlockHashes())
 
 	// Reach the blockchain's tail
 	if block.GetHeight() >= n.GetBlockchain().GetMaxHeight() {
@@ -601,12 +599,12 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		block, err = n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
 	}
 
-	result := &networkpb.ReturnBlocks{}
+	var blockPbs []*corepb.Block
 	for i := len(blocks) - 1; i >= 0; i-- {
-		result.Blocks = append(result.Blocks, blocks[i].ToProto().(*corepb.Block))
+		blockPbs = append(blockPbs, blocks[i].ToProto().(*corepb.Block))
 	}
 
-	result.StartBlockHashes = param.StartBlockHashes
+	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: param.GetStartBlockHashes()}
 
 	data, err := n.prepareData(result, ReturnBlocks, Unicast, "")
 	if err != nil {
@@ -628,21 +626,22 @@ func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	index, _ := n.downloadManager.FindCommonBlock(param.BlockHeaders)
-	result := &networkpb.ReturnCommonBlocks{MsgId: param.MsgId}
+	index, _ := n.downloadManager.FindCommonBlock(param.GetBlockHeaders())
+	var blockHeaderPbs []*corepb.BlockHeader
 	if index == 0 {
-		result.BlockHeaders = param.BlockHeaders[:1]
+		blockHeaderPbs = param.GetBlockHeaders()[:1]
 	} else {
 		blockHeaders := n.downloadManager.GetCommonBlockCheckPoint(
-			param.BlockHeaders[index].Height,
-			param.BlockHeaders[index-1].Height,
+			param.GetBlockHeaders()[index].GetHeight(),
+			param.GetBlockHeaders()[index-1].GetHeight(),
 		)
-
 		for _, blockHeader := range blockHeaders {
-			result.BlockHeaders = append(result.BlockHeaders,
+			blockHeaderPbs = append(blockHeaderPbs,
 				&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
 		}
 	}
+
+	result := &networkpb.ReturnCommonBlocks{MsgId: param.GetMsgId(), BlockHeaders: blockHeaderPbs}
 
 	data, err := n.prepareData(result, ReturnCommonBlocks, Unicast, "")
 	if err != nil {
@@ -708,7 +707,6 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	n.RelayDapMsg(*dm)
 	n.cacheDapMsg(*dm)
 
-	//create a block proto
 	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
@@ -740,7 +738,7 @@ func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
 		logger.WithError(err).Warn("Node: parse GetPeerList failed.")
 	}
 
-	peers := n.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.MaxNumber))
+	peers := n.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.GetMaxNumber()))
 	n.SendPeerListUnicast(peers, pid)
 }
 
@@ -752,7 +750,7 @@ func (n *Node) ReturnNodePeers(data []byte, pid peer.ID) {
 	}
 
 	var peers []*PeerInfo
-	for _, peerPb := range peerlistPb.PeerList {
+	for _, peerPb := range peerlistPb.GetPeerList() {
 		peerInfo := &PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("Node: parse PeerInfo failed.")

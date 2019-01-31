@@ -38,7 +38,7 @@ type AdminRpcService struct {
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	err := adminRpcService.node.GetPeerManager().AddAndConnectPeerByString(in.FullAddress)
+	err := adminRpcService.node.GetPeerManager().AddAndConnectPeerByString(in.GetFullAddress())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -46,10 +46,10 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.Address) == 0 || !core.NewAddress(in.Address).ValidateAddress() {
+	if len(in.GetAddress()) == 0 || !core.NewAddress(in.GetAddress()).ValidateAddress() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
-	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.Address)
+	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.GetAddress())
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -59,13 +59,13 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
 	peers := adminRpcService.node.GetPeerManager().CloneStreamsToPeerInfoSlice()
 
-	peersPb := networkpb.Peerlist{}
+	var peerPbs []*networkpb.Peer
 	for _, peerInfo := range peers {
-		peersPb.PeerList = append(peersPb.PeerList, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.Peer))
 	}
 
 	return &rpcpb.GetPeerInfoResponse{
-		PeerList: &peersPb,
+		PeerList: &networkpb.Peerlist{PeerList: peerPbs},
 	}, nil
 }
 
@@ -79,8 +79,8 @@ func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in 
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
-	sendToAddress := core.NewAddress(in.To)
-	sendAmount := common.NewAmountFromBytes(in.Amount)
+	sendToAddress := core.NewAddress(in.GetTo())
+	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
@@ -100,16 +100,16 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
-	sendFromAddress := core.NewAddress(in.From)
-	sendToAddress := core.NewAddress(in.To)
-	sendAmount := common.NewAmountFromBytes(in.Amount)
-	tip := common.NewAmountFromBytes(in.Tip)
+	sendFromAddress := core.NewAddress(in.GetFrom())
+	sendToAddress := core.NewAddress(in.GetTo())
+	sendAmount := common.NewAmountFromBytes(in.GetAmount())
+	tip := common.NewAmountFromBytes(in.GetTip())
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
 	}
-	path := in.WalletPath
-	if len(in.WalletPath) == 0 {
+	path := in.GetWalletPath()
+	if len(path) == 0 {
 		path = client.GetWalletFilePath()
 	}
 
@@ -123,7 +123,8 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		return nil, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 
-	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.Data, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.GetData(),
+		adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {
