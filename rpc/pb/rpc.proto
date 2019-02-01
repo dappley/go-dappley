@@ -2,7 +2,7 @@ syntax = "proto3";
 package rpcpb;
 import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
-import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
+import "github.com/dappley/go-dappley/network/pb/peer.proto";
 
 option objc_class_prefix = "HLW";
 
@@ -121,7 +121,7 @@ message SendResponse {
 }
 
 message GetPeerInfoResponse {
-  networkpb.Peerlist peer_list = 1;
+  repeated networkpb.PeerInfo peer_list = 1;
 }
 
 message GetBlockchainInfoResponse {

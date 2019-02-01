@@ -52,7 +52,7 @@ func TestNode_prepareData(t *testing.T) {
 	}{
 		{
 			name:    "CorrectProtoMsg",
-			msgData: &networkpb.Peer{Id: "pid", Address: []string{"addr"}},
+			msgData: &networkpb.PeerInfo{Id: "pid", Address: []string{"addr"}},
 			cmd:     SyncPeerList,
 			retData: []byte{10, 12, 83, 121, 110, 99, 80, 101, 101, 114, 76, 105, 115, 116, 18, 11, 10, 3, 112, 105, 100, 18, 4, 97, 100, 100, 114},
 			retErr:  nil,
@@ -66,7 +66,7 @@ func TestNode_prepareData(t *testing.T) {
 		},
 		{
 			name:    "NoCmdInput",
-			msgData: &networkpb.Peer{Id: "pid", Address: []string{"addr"}},
+			msgData: &networkpb.PeerInfo{Id: "pid", Address: []string{"addr"}},
 			cmd:     "",
 			retData: nil,
 			retErr:  ErrDapMsgNoCmd,

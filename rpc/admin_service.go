@@ -59,13 +59,13 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
 	peers := adminRpcService.node.GetPeerManager().CloneStreamsToPeerInfoSlice()
 
-	var peerPbs []*networkpb.Peer
+	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range peers {
-		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
 	return &rpcpb.GetPeerInfoResponse{
-		PeerList: &networkpb.Peerlist{PeerList: peerPbs},
+		PeerList: peerPbs,
 	}, nil
 }
 

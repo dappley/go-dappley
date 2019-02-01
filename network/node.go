@@ -382,7 +382,7 @@ func (n *Node) BroadcastGetBlockchainInfo() {
 }
 
 func (n *Node) GetPeerlistBroadcast(maxNum int) error {
-	request := &networkpb.GetPeerlist{MaxNumber: int32(maxNum)}
+	request := &networkpb.GetPeerList{MaxNumber: int32(maxNum)}
 
 	data, err := n.prepareData(request, GetPeerList, Broadcast, "")
 	if err != nil {
@@ -402,7 +402,7 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 }
 
 func (n *Node) SyncPeersBroadcast() error {
-	getPeerListPb := &networkpb.GetPeerlist{
+	getPeerListPb := &networkpb.GetPeerList{
 		MaxNumber: int32(maxSyncPeersCount),
 	}
 	data, err := n.prepareData(getPeerListPb, GetPeerList, Broadcast, "")
@@ -423,12 +423,12 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 }
 
 func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
-	var peerPbs []*networkpb.Peer
+	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range peers {
-		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
-	data, err := n.prepareData(&networkpb.Peerlist{PeerList: peerPbs}, ReturnPeerList, Unicast, "")
+	data, err := n.prepareData(&networkpb.ReturnPeerList{PeerList: peerPbs}, ReturnPeerList, Unicast, "")
 	if err != nil {
 		return err
 	}
@@ -731,7 +731,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 }
 
 func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
-	getPeerlistRequest := &networkpb.GetPeerlist{}
+	getPeerlistRequest := &networkpb.GetPeerList{}
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, getPeerlistRequest); err != nil {
@@ -743,7 +743,7 @@ func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
 }
 
 func (n *Node) ReturnNodePeers(data []byte, pid peer.ID) {
-	peerlistPb := &networkpb.Peerlist{}
+	peerlistPb := &networkpb.ReturnPeerList{}
 
 	if err := proto.Unmarshal(data, peerlistPb); err != nil {
 		logger.WithError(err).Warn("Node: parse Peerlist failed.")

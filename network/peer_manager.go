@@ -494,12 +494,12 @@ func (pm *PeerManager) saveSyncPeers() {
 	syncPeers := pm.cloneSyncPeers()
 	db := pm.node.GetBlockchain().GetDb()
 
-	var peerPbs []*networkpb.Peer
+	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range syncPeers {
-		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
-	bytes, err := proto.Marshal(&networkpb.Peerlist{PeerList: peerPbs})
+	bytes, err := proto.Marshal(&networkpb.ReturnPeerList{PeerList: peerPbs})
 	if err != nil {
 		logger.WithError(err).Info("PeerManager: serialize sync peers failed.")
 	}
@@ -677,13 +677,13 @@ func (pm *PeerManager) loadSyncPeers() error {
 		return err
 	}
 
-	peerlistPb := &networkpb.Peerlist{}
+	peerListPb := &networkpb.ReturnPeerList{}
 
-	if err := proto.Unmarshal(peersBytes, peerlistPb); err != nil {
+	if err := proto.Unmarshal(peersBytes, peerListPb); err != nil {
 		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
 	}
 
-	for _, peerPb := range peerlistPb.GetPeerList() {
+	for _, peerPb := range peerListPb.GetPeerList() {
 		peerInfo := &PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
@@ -723,18 +723,18 @@ func (p *PeerInfo) ToProto() proto.Message {
 		addresses = append(addresses, addr.String())
 	}
 
-	return &networkpb.Peer{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
+	return &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
 }
 
 //convert from protobuf
 func (p *PeerInfo) FromProto(pb proto.Message) error {
-	pid, err := peer.IDB58Decode(pb.(*networkpb.Peer).GetId())
+	pid, err := peer.IDB58Decode(pb.(*networkpb.PeerInfo).GetId())
 	if err != nil {
 		return err
 	}
 	p.PeerId = pid
 
-	for _, addr := range pb.(*networkpb.Peer).GetAddress() {
+	for _, addr := range pb.(*networkpb.PeerInfo).GetAddress() {
 		multiaddr, err := ma.NewMultiaddr(addr)
 		if err != nil {
 			return err

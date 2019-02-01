@@ -75,7 +75,7 @@ func TestServer_StartRPC(t *testing.T) {
 	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(response.PeerList.GetPeerList()))
+	assert.Equal(t, 0, len(response.GetPeerList()))
 }
 
 func TestRpcSend(t *testing.T) {
