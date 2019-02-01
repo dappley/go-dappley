@@ -30,13 +30,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -48,6 +41,12 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/gogo/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 //command names
@@ -598,7 +597,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 					i++
 				}
 				fmt.Println()
-				fmt.Println("Use the command 'cli listAddress -privateKey' to list the addresses with private keys")
+				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
 			}
 		} else {
 			privateKeyList := []string{}
@@ -647,7 +646,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 					i++
 				}
 				fmt.Println()
-				fmt.Println("Use the command 'cli listAddress -privateKey' to list the addresses with private keys")
+				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
 			}
 		} else {
 			privateKeyList := []string{}
