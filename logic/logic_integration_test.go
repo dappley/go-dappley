@@ -160,7 +160,7 @@ func TestSend(t *testing.T) {
 //test send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
 	//setup: clean up database and files
-	setup()
+	cleanUpDatabase()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -196,13 +196,13 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 	//teardown :clean up database amd files
-	teardown()
+	cleanUpDatabase()
 }
 
 //insufficient fund
 func TestSendInsufficientBalance(t *testing.T) {
 	//setup: clean up database and files
-	setup()
+	cleanUpDatabase()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -257,7 +257,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance2)
 
 	//teardown :clean up database amd files
-	teardown()
+	cleanUpDatabase()
 }
 
 func TestBlockMsgRelaySingleMiner(t *testing.T) {
@@ -266,7 +266,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		dposRounds       = 2
 		bufferTime       = 0
 	)
-	setup()
+	cleanUpDatabase()
 	var dposArray []*consensus.DPOS
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
@@ -326,6 +326,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	for _, node := range nodes {
 		node.Stop()
 	}
+	cleanUpDatabase()
 }
 
 // Test if network radiation bounces forever
@@ -335,7 +336,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		dposRounds       = 2
 		bufferTime       = 0
 	)
-	setup()
+	cleanUpDatabase()
 	var dposArray []*consensus.DPOS
 	var bcs []*core.Blockchain
 	var nodes []*network.Node
@@ -405,6 +406,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	for _, node := range nodes {
 		node.Stop()
 	}
+
+	cleanUpDatabase()
 }
 
 func TestForkChoice(t *testing.T) {

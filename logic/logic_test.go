@@ -35,10 +35,10 @@ import (
 const InvalidAddress = "Invalid Address"
 
 func TestMain(m *testing.M) {
-	setup()
+	cleanUpDatabase()
 	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()
-	teardown()
+	cleanUpDatabase()
 	os.Exit(retCode)
 }
 
@@ -149,7 +149,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 }
 
 func TestGetAllAddresses(t *testing.T) {
-	setup()
+	cleanUpDatabase()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -184,27 +184,29 @@ func TestGetAllAddresses(t *testing.T) {
 	//the length should be equal
 	assert.Equal(t, len(expectedRes), len(addrs))
 	assert.ElementsMatch(t, expectedRes, addrs)
-	teardown()
+	cleanUpDatabase()
 }
 
 func TestIsWalletEmptyWallet(t *testing.T) {
-	setup()
+	cleanUpDatabase()
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
 	assert.Nil(t, err)
 	empty, err := IsTestWalletEmpty()
 	assert.Nil(t, err)
 	assert.Equal(t, false, empty)
-	setup()
+	cleanUpDatabase()
 	empty, err = IsTestWalletEmpty()
 	assert.Nil(t, err)
 	assert.Equal(t, true, empty)
 
+	//teardown :clean up database amd files
+	cleanUpDatabase()
 }
 
 func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
-	setup()
+	cleanUpDatabase()
 	//create wallets address
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
@@ -217,7 +219,7 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	assert.ElementsMatch(t, list, addressList)
 
 	//teardown :clean up database amd files
-	teardown()
+	cleanUpDatabase()
 }
 
 func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
@@ -243,14 +245,6 @@ loop:
 		}
 	}
 	return true
-}
-
-func setup() {
-	cleanUpDatabase()
-}
-
-func teardown() {
-	cleanUpDatabase()
 }
 
 func cleanUpDatabase() {
