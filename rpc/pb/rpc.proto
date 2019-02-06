@@ -2,6 +2,7 @@ syntax = "proto3";
 package rpcpb;
 import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
+import "github.com/dappley/go-dappley/core/pb/utxo.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";
 
 option objc_class_prefix = "HLW";
@@ -139,16 +140,8 @@ message GetVersionResponse {
 }
 
 message GetUTXOResponse {
-  repeated Utxo utxos = 1;
+  repeated corepb.Utxo utxos = 1;
   repeated corepb.BlockHeader block_headers = 2; //The latest block headers
-}
-
-// TODO: Refactor to corepb.UTXO
-message Utxo {
-  bytes   amount = 1;   
-  bytes   public_key_hash = 2;
-  bytes   txid = 3;     
-  uint32  tx_index = 4;
 }
 
 message GetBlocksResponse {

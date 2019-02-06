@@ -1050,7 +1050,7 @@ func (context *RpcTestContext) destroyContext() {
 	}
 }
 
-func getBalance(utxos []*rpcpb.Utxo) *common.Amount {
+func getBalance(utxos []*corepb.Utxo) *common.Amount {
 	amount := common.NewAmount(0)
 	for _, utxo := range utxos {
 		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))
