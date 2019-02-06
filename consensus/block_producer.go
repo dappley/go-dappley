@@ -96,12 +96,6 @@ func (bp *BlockProducer) prepareBlock() {
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
 
-	for _, tx := range validTxs {
-		if !tx.IsContract() {
-			utxoIndex.UpdateUtxo(tx)
-		}
-	}
-
 	scGeneratedTXs := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
 	validTxs = append(validTxs, scGeneratedTXs...)
 	validTxs = append(validTxs, cbtx)
@@ -137,6 +131,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex, txs []*
 
 	for _, tx := range txs {
 		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		utxoIndex.UpdateUtxo(tx)
 	}
 
 	return generatedTXs
