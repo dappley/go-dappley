@@ -21,7 +21,7 @@ package core
 import (
 	"bytes"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"

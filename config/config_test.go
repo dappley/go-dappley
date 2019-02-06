@@ -19,13 +19,14 @@
 package config
 
 import (
-	"github.com/dappley/go-dappley/config/pb"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/dappley/go-dappley/config/pb"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadConfig(t *testing.T) {

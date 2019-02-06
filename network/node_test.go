@@ -29,7 +29,7 @@ import (
 	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-crypto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

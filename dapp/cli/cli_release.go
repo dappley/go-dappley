@@ -41,7 +41,7 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

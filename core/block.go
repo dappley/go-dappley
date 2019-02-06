@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
