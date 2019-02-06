@@ -20,6 +20,7 @@ package network
 
 import (
 	"bytes"
+	"errors"
 	"math"
 	"sync"
 	"time"
@@ -46,6 +47,12 @@ const (
 	DownloadMaxWaitTime time.Duration = 10
 	MaxRetryCount       int           = 3
 	MinRequestHashesNum int           = 20
+)
+
+var (
+	ErrEmptyBlocks = errors.New("received no block")
+	ErrPeerNotFound = errors.New("peerId not in checklist")
+	ErrMismatchResponse = errors.New("response is not for waiting command")
 )
 
 type PeerBlockInfo struct {
@@ -172,15 +179,21 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 	}
 }
 
-func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
+func (downloadManager *DownloadManager) ValidateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) error {
 	downloadManager.mutex.Lock()
+	defer downloadManager.mutex.Unlock()
+	returnBlocksLogger := logger.WithFields(logger.Fields{
+		"cmd": "ReturnBlocks",
+	})
 
 	if downloadManager.downloadingPeer.peerid != peerId {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("DownloadManager: peerId not in checklist")
-		downloadManager.mutex.Unlock()
-		return
+		returnBlocksLogger.Info("DownloadManager: peerId not in checklist")
+		return ErrPeerNotFound
+	}
+
+	if blocksPb.GetBlocks() == nil || len(blocksPb.GetBlocks()) == 0 {
+		returnBlocksLogger.Error("DownloadManager: received no block.")
+		return ErrEmptyBlocks
 	}
 
 	hashes := make([]core.Hash, len(blocksPb.GetStartBlockHashes()))
@@ -188,15 +201,24 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		hashes[index] = core.Hash(hash)
 	}
 	if !downloadManager.isSameDownloadCommand(hashes) {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("DownloadManager: response is not for waiting command.")
-		downloadManager.mutex.Unlock()
+		returnBlocksLogger.Info("DownloadManager: response is not for waiting command.")
+		return ErrMismatchResponse
+	}
+	return nil
+}
+
+func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
+	returnBlocksLogger := logger.WithFields(logger.Fields{
+		"cmd": "ReturnBlocks",
+	})
+
+	err := downloadManager.ValidateReturnBlocks(blocksPb, peerId)
+	if err != nil {
+		returnBlocksLogger.Error()
 		return
 	}
 
 	downloadManager.isMerging = true
-	downloadManager.mutex.Unlock()
 
 	var blocks []*core.Block
 	for _, pbBlock := range blocksPb.GetBlocks() {
@@ -204,29 +226,25 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		block.FromProto(pbBlock)
 
 		if !downloadManager.node.bm.VerifyBlock(block) {
-			logger.WithFields(logger.Fields{
-				"cmd": "ReturnBlocks",
-			}).Warn("DownloadManager: Verify block failed.")
+			returnBlocksLogger.Warn("DownloadManager: verify block failed.")
 			return
 		}
 
 		blocks = append(blocks, block)
 	}
 
-	logger.Warnf("DownloadManager: Receive Blocks from %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+	logger.Warnf("DownloadManager: receive blocks from %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
 
 	if err := downloadManager.node.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("DownloadManager: Merge fork failed.")
+		returnBlocksLogger.Info("DownloadManager: merge fork failed.")
 		return
 	}
 
 	downloadManager.mutex.Lock()
+	defer downloadManager.mutex.Unlock()
 	downloadManager.isMerging = false
 	if downloadManager.node.GetBlockchain().GetMaxHeight() >= downloadManager.downloadingPeer.height {
 		downloadManager.finishDownload()
-		downloadManager.mutex.Unlock()
 		return
 	}
 
@@ -236,7 +254,6 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 	}
 
 	downloadManager.sendDownloadCommand(nextHashes, peerId, 0)
-	downloadManager.mutex.Unlock()
 }
 
 func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *networkpb.ReturnCommonBlocks, peerId peer.ID) {

@@ -26,6 +26,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/libp2p/go-libp2p-peer"
 )
 
 const (
@@ -36,6 +38,7 @@ const (
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
 	//multiPortRetryStart      int = 10230
+	multiPortReturnBlocks	 int = 10340
 )
 
 func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node) {
@@ -228,4 +231,32 @@ func TestDisconnectNode(t *testing.T) {
 	blockchain.SetState(core.BlockchainReady)
 
 	assert.Equal(t, secondChain.GetMaxHeight(), blockchain.GetMaxHeight())
+}
+
+func TestValidateReturnBlocks(t *testing.T) {
+	// Test empty blocks in ReturnBlocks message
+	blockchains, nodes := createTestBlockchains(2, multiPortReturnBlocks)
+	fillBlockchains(blockchains)
+
+	blockchain := blockchains[0]
+	blockchain.SetState(core.BlockchainInit)
+	node := nodes[0]
+	peerNode := nodes[1]
+
+	node.GetPeerManager().AddAndConnectPeer(peerNode.GetInfo())
+	downloadManager := node.GetDownloadManager()
+	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
+
+	for _, p := range downloadManager.node.GetPeerManager().CloneStreamsToSlice() {
+		downloadManager.peersInfo[p.stream.peerID] = &PeerBlockInfo{peerid: p.stream.peerID, height: 0, status: PeerStatusInit}
+		downloadManager.downloadingPeer = downloadManager.peersInfo[p.stream.peerID]
+	}
+	blockchain.SetState(core.BlockchainDownloading)
+
+	// test invalid peer id
+	assert.Equal(t, ErrPeerNotFound, downloadManager.ValidateReturnBlocks(nil, "foo"))
+
+	// test empty blocks
+	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
+	assert.Equal(t, ErrEmptyBlocks, downloadManager.ValidateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId))
 }
