@@ -29,14 +29,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10000000)
@@ -351,9 +350,10 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		utxo := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
-				"tx_id":     hex.EncodeToString(tx.ID),
-				"vin_tx_id": hex.EncodeToString(vin.Txid),
-				"vin_index": vin.Vout,
+				"tx_id":      hex.EncodeToString(tx.ID),
+				"vin_tx_id":  hex.EncodeToString(vin.Txid),
+				"vin_index":  vin.Vout,
+				"pubKeyHash": hex.EncodeToString(pubKeyHash),
 			}).Warn("Transaction: cannot find vin.")
 			return false
 		}
