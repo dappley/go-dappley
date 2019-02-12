@@ -34,3 +34,10 @@ message BlockHeader{
     string signature = 5;
     uint64 height = 6;
 }
+
+message Utxo {
+    string   amount = 1;
+    string   public_key_hash = 2;
+    string   txid = 3;
+    uint32  tx_index = 4;
+}

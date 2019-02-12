@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -13,11 +14,6 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 )
-
-type ArgInfo struct {
-	flag     string
-	required bool
-}
 
 type HandleFunc func()
 
@@ -31,6 +27,7 @@ var commands = []CommandInfo{
 	{"getBlock", "Get block information by hash", GetBlockHandle},
 	{"getTransaction", "Get transaction information by hash", GetTransactionHandle},
 	{"getCostTransaction", "Get cost transaction block", GetCostTransactionHandle},
+	{"getUtxo", "Get utxo of address", GetUtxoHandle},
 }
 
 func GetBlockHandle() {
@@ -159,6 +156,44 @@ func GetCostTransactionHandle() {
 	}
 }
 
+func GetUtxoHandle() {
+	var dbPath string
+	var address string
+
+	flagSet := flag.NewFlagSet("getUtxo", flag.ExitOnError)
+	flagSet.StringVar(&dbPath, "d", "", "database path")
+	flagSet.StringVar(&address, "a", "", "search utxo address")
+	flagSet.Parse(os.Args[2:])
+
+	addressBytes, err := hex.DecodeString(address)
+	if err != nil {
+		panic("Decode address failed")
+	}
+
+	db := storage.OpenDatabase(dbPath)
+	defer db.Close()
+
+	utxoBytes, err := db.Get([]byte("utxo"))
+
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
+		panic("utxo load failed")
+	}
+
+	var utxos map[string][]*core.UTXO
+	decoder := gob.NewDecoder(bytes.NewReader(utxoBytes))
+	err = decoder.Decode(&utxos)
+	if err != nil {
+		panic("Decode utxo failed")
+	}
+
+	addressUtxos, ok := utxos[string(addressBytes)]
+	if !ok {
+		panic("Utxo not found")
+	}
+
+	dumpUtxos(addressUtxos)
+}
+
 func block2PrettyPb(block *core.Block) proto.Message {
 	blockHeaderPb := &db_inspect_pb.BlockHeader{
 		Hash:         hex.EncodeToString(block.GetHash()),
@@ -211,6 +246,21 @@ func block2PrettyPb(block *core.Block) proto.Message {
 
 func dumpBlock(block *core.Block) {
 	fmt.Print(proto.MarshalTextString(block2PrettyPb(block)))
+}
+
+func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
+	return &db_inspect_pb.Utxo{
+		Amount:        utxo.Value.String(),
+		PublicKeyHash: hex.EncodeToString(utxo.PubKeyHash),
+		Txid:          hex.EncodeToString(utxo.Txid),
+		TxIndex:       uint32(utxo.TxIndex),
+	}
+}
+
+func dumpUtxos(utxos []*core.UTXO) {
+	for _, utxo := range utxos {
+		fmt.Print(proto.MarshalTextString(utxo2PrettyPb(utxo)))
+	}
 }
 
 func printUsage() {
