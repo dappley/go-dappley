@@ -171,7 +171,11 @@ func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) 
 func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	if !tx.IsCoinbase() && !tx.IsRewardTx() {
 		for _, txin := range tx.Vin {
-			err := utxos.removeUTXO(txin.Txid, txin.Vout)
+			pkh,err := NewUserPubKeyHash(txin.PubKey)
+			if err != nil {
+				return false
+			}
+			err = utxos.removeUTXO(pkh, txin.Txid, txin.Vout)
 			if err != nil {
 				return false
 			}
@@ -220,8 +224,8 @@ func (utxos *UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.St
 
 // excludeVoutsInTx removes the UTXOs generated in a transaction from the UTXOIndex.
 func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) error {
-	for i := range tx.Vout {
-		err := utxos.removeUTXO(tx.ID, i)
+	for i, vout := range tx.Vout {
+		err := utxos.removeUTXO(vout.PubKeyHash, tx.ID, i)
 		if err != nil {
 			return err
 		}
@@ -252,7 +256,6 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
 	}
 	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
-
 }
 
 func (utxos *UTXOIndex) GetContractUtxos() []*UTXO{
@@ -260,19 +263,18 @@ func (utxos *UTXOIndex) GetContractUtxos() []*UTXO{
 }
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
-func (utxos *UTXOIndex) removeUTXO(txid []byte, vout int) error {
+func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error {
+	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(pkh)
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
 
-	for _, utxoArray := range utxos.index {
-		for i, u := range utxoArray {
-			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
-				userUTXOs := utxos.index[string(u.PubKeyHash)]
-				utxos.index[string(u.PubKeyHash)] = append(userUTXOs[:i], userUTXOs[i+1:]...)
-				return nil
-			}
+	for i, utxo := range originalUtxos{
+		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
+			utxos.index[string(pkh)] = append(originalUtxos[:i], originalUtxos[i+1:]...)
+			return nil
 		}
 	}
+
 	return ErrUTXONotFound
 }
 

@@ -20,6 +20,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -159,13 +160,13 @@ func TestRemoveUTXO(t *testing.T) {
 	utxoIndex.index[string(address2Hash)] = append(utxoIndex.index[string(address2Hash)],
 		&UTXO{TXOutput{common.NewAmount(4), address2Hash, ""}, []byte{1}, 2})
 
-	err := utxoIndex.removeUTXO([]byte{1}, 0)
+	err := utxoIndex.removeUTXO(address1Hash, []byte{1}, 0)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
 	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
 
-	err = utxoIndex.removeUTXO([]byte{2}, 1) // Does not exists
+	err = utxoIndex.removeUTXO(address2Hash, []byte{2}, 1) // Does not exists
 
 	assert.NotNil(t, err)
 	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
@@ -362,16 +363,15 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		return utxoIndex
 	}
 
-	normalTX := Transaction{
-		Hash("normal"),
-		[]TXInput{{genesisBlock.transactions[0].ID, 0, nil, nil}},
-		[]TXOutput{{common.NewAmount(13), PubKeyHash([]byte("pkh")), ""}},
-		common.NewAmount(0),
-	}
+	keypair := NewKeyPair()
+	pbkh,_ := NewUserPubKeyHash(keypair.PublicKey)
+	addr := pbkh.GenerateAddress()
+
+	normalTX := NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
 	normalTX2 := Transaction{
 		Hash("normal2"),
-		[]TXInput{{normalTX.ID, 0, nil, nil}},
-		[]TXOutput{{common.NewAmount(5), PubKeyHash([]byte("pkh")), ""}},
+		[]TXInput{{normalTX.ID, 0, nil, keypair.PublicKey}},
+		[]TXOutput{{common.NewAmount(5), pbkh, ""}},
 		common.NewAmount(0),
 	}
 	abnormalTX := Transaction{
@@ -457,6 +457,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			utxoIndex, err := GetUTXOIndexAtBlockHash(tt.bc.GetDb(), tt.bc, tt.hash)
+			fmt.Println("length:", len(utxoIndex.index))
 			if !assert.Equal(t, tt.err, err) {
 				return
 			}
@@ -471,6 +472,9 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 				}
 				for pkh, utxos := range utxoIndex.index {
 					if len(utxos) == 0 && tt.expected.index[pkh] == nil {
+						continue
+					}
+					if pkh == ""{
 						continue
 					}
 					assert.Equal(t, tt.expected.index[pkh], utxoIndex.index[pkh])
@@ -563,7 +567,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 					mu.Unlock()
 
 				} else {
-					index.removeUTXO([]byte("asd"), 65)
+					index.removeUTXO([]byte("asd"),[]byte("asd"), 65)
 					atomic.AddUint64(&deleteOps, 1)
 					mu.Lock()
 					exists = false
