@@ -29,13 +29,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 var subsidy = common.NewAmount(10000000)
@@ -834,12 +835,12 @@ func (tx *Transaction) ToProto() proto.Message {
 }
 
 func (tx *Transaction) FromProto(pb proto.Message) {
-	tx.ID = pb.(*corepb.Transaction).Id
-	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).Tip)
+	tx.ID = pb.(*corepb.Transaction).GetId()
+	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetTip())
 
 	var vinArray []TXInput
 	txin := TXInput{}
-	for _, txinpb := range pb.(*corepb.Transaction).Vin {
+	for _, txinpb := range pb.(*corepb.Transaction).GetVin() {
 		txin.FromProto(txinpb)
 		vinArray = append(vinArray, txin)
 	}
@@ -847,7 +848,7 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 
 	var voutArray []TXOutput
 	txout := TXOutput{}
-	for _, txoutpb := range pb.(*corepb.Transaction).Vout {
+	for _, txoutpb := range pb.(*corepb.Transaction).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)
 	}

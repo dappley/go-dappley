@@ -26,6 +26,13 @@ import (
 	"testing"
 	"time"
 
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -36,12 +43,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type RpcTestContext struct {
@@ -74,7 +75,7 @@ func TestServer_StartRPC(t *testing.T) {
 	c := rpcpb.NewAdminServiceClient(conn)
 	response, err := c.RpcGetPeerInfo(context.Background(), &rpcpb.GetPeerInfoRequest{})
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(response.PeerList.PeerList))
+	assert.Equal(t, 0, len(response.GetPeerList()))
 }
 
 func TestRpcSend(t *testing.T) {
@@ -372,7 +373,7 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
-	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].Hash)
+	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
 	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverWallet.GetAddress().Address})
 	assert.Nil(t, err)
@@ -415,9 +416,9 @@ func TestRpcGetBlocks(t *testing.T) {
 	assert.NotNil(t, response)
 	assert.Equal(t, maxGetBlocksCount, len(response.Blocks))
 	block1, err := rpcContext.bc.GetBlockByHeight(1)
-	assert.Equal(t, []byte(block1.GetHash()), response.Blocks[0].GetHeader().Hash)
+	assert.Equal(t, []byte(block1.GetHash()), response.Blocks[0].GetHeader().GetHash())
 	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
-	assert.Equal(t, []byte(block20.GetHash()), response.Blocks[19].GetHeader().Hash)
+	assert.Equal(t, []byte(block20.GetHash()), response.Blocks[19].GetHeader().GetHash())
 
 	// Check query loop
 	var startBlockHashes [][]byte
@@ -428,7 +429,7 @@ func TestRpcGetBlocks(t *testing.T) {
 		startBlockHashes = nil
 		lastBlocksCount := len(response.Blocks)
 		for j := 0; j < startHashCount; j++ {
-			startBlockHashes = append(startBlockHashes, response.Blocks[lastBlocksCount-1-j].Header.Hash)
+			startBlockHashes = append(startBlockHashes, response.Blocks[lastBlocksCount-1-j].GetHeader().GetHash())
 		}
 		response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: startBlockHashes, MaxCount: int32(maxGetBlocksCount)})
 		assert.Nil(t, err)
@@ -443,7 +444,7 @@ func TestRpcGetBlocks(t *testing.T) {
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	assert.Nil(t, err)
-	assert.Equal(t, []byte(tailBlock.GetHash()), response.Blocks[len(response.Blocks)-1].Header.GetHash())
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.Blocks[len(response.Blocks)-1].GetHeader().GetHash())
 
 	// Check query reach tailblock
 	response, err = c.RpcGetBlocks(context.Background(), &rpcpb.GetBlocksRequest{StartBlockHashes: [][]byte{tailBlock.GetHash()}, MaxCount: int32(maxGetBlocksCount)})
@@ -490,13 +491,13 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	response, err := c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
-	assert.Equal(t, []byte(block20.GetHash()), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(block20.GetHash()), response.Block.GetHeader().GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
-	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.GetHeader().GetHash())
 
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: []byte("noexists")})
 	assert.Nil(t, response)
@@ -535,13 +536,13 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	response, err := c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: 20})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
-	assert.Equal(t, []byte(block20.GetHash()), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(block20.GetHash()), response.Block.GetHeader().GetHash())
 
 	tailBlock, err := rpcContext.bc.GetTailBlock()
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
-	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.Header.GetHash())
+	assert.Equal(t, []byte(tailBlock.GetHash()), response.Block.GetHeader().GetHash())
 
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight() + 1})
 	assert.Nil(t, response)
@@ -806,13 +807,13 @@ func TestGetNewTransaction(t *testing.T) {
 		conn1Step1 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, 0, len(tx1ID))
-		assert.Equal(t, tx1ID, response1.Transaction.Id)
+		assert.Equal(t, tx1ID, response1.GetTransaction().GetId())
 
 		response2, err := stream.Recv()
 		conn1Step2 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, 0, len(tx2ID))
-		assert.Equal(t, tx2ID, response2.Transaction.Id)
+		assert.Equal(t, tx2ID, response2.GetTransaction().GetId())
 	}()
 
 	// Create a grpc connection and a client
@@ -832,7 +833,7 @@ func TestGetNewTransaction(t *testing.T) {
 		conn2Step1 = true
 		assert.Nil(t, err)
 		assert.NotEqual(t, 0, len(tx1ID))
-		assert.Equal(t, tx1ID, response1.Transaction.Id)
+		assert.Equal(t, tx1ID, response1.GetTransaction().GetId())
 	}()
 	time.Sleep(time.Second)
 
@@ -1049,7 +1050,7 @@ func (context *RpcTestContext) destroyContext() {
 	}
 }
 
-func getBalance(utxos []*rpcpb.UTXO) *common.Amount {
+func getBalance(utxos []*corepb.Utxo) *common.Amount {
 	amount := common.NewAmount(0)
 	for _, utxo := range utxos {
 		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))

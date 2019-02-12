@@ -113,3 +113,19 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		})
 	}
 }
+
+func TestDPOS_isDoubleMint(t *testing.T) {
+	dpos := NewDPOS()
+	dpos.SetDynasty(NewDynasty(nil, defaultMaxProducers, defaultTimeBetweenBlk))
+	blk1Time := int64(1548979365)
+	blk2Time := int64(1548979366)
+
+	// Both timestamps fall in the same DPoS time slot
+	assert.Equal(t, int(blk1Time/defaultTimeBetweenBlk), int(blk2Time/defaultTimeBetweenBlk))
+
+	blk1 := core.FakeNewBlockWithTimestamp(blk1Time, []*core.Transaction{}, nil)
+	dpos.AddBlockToSlot(blk1)
+	blk2 := core.FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
+
+	assert.True(t, dpos.isDoubleMint(blk2))
+}

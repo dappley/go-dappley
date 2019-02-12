@@ -61,6 +61,10 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 	return dpos.slot
 }
 
+func (dpos *DPOS) AddBlockToSlot(block *core.Block) {
+	dpos.slot.Add(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)), block)
+}
+
 func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
 	dpos.node = node
 	dpos.bp.Setup(node.GetBlockchain(), cbAddr)
@@ -104,7 +108,7 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 		return false
 	}
 
-	dpos.slot.Add(block.GetTimestamp(), block)
+	dpos.AddBlockToSlot(block)
 	return true
 }
 
@@ -165,7 +169,7 @@ func (dpos *DPOS) isForking() bool {
 }
 
 func (dpos *DPOS) isDoubleMint(block *core.Block) bool {
-	if _, exist := dpos.slot.Get(block.GetTimestamp()); exist {
+	if _, exist := dpos.slot.Get(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk))); exist {
 		logger.Debug("DPoS: someone is minting when they are not supposed to.")
 		return true
 	}

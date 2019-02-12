@@ -21,11 +21,11 @@ package core
 import (
 	"bytes"
 
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/gogo/protobuf/proto"
 )
 
 type TXOutput struct {
@@ -78,14 +78,14 @@ func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) boo
 
 func (out *TXOutput) ToProto() proto.Message {
 	return &corepb.TXOutput{
-		Value:      out.Value.Bytes(),
+		Value:         out.Value.Bytes(),
 		PublicKeyHash: []byte(out.PubKeyHash),
-		Contract:   out.Contract,
+		Contract:      out.Contract,
 	}
 }
 
 func (out *TXOutput) FromProto(pb proto.Message) {
-	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).Value)
-	out.PubKeyHash = PubKeyHash(pb.(*corepb.TXOutput).PublicKeyHash)
-	out.Contract = pb.(*corepb.TXOutput).Contract
+	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).GetValue())
+	out.PubKeyHash = PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
+	out.Contract = pb.(*corepb.TXOutput).GetContract()
 }

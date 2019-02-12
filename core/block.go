@@ -26,14 +26,15 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -210,7 +211,7 @@ func FromProtoBlockMsg(data []byte) *Block {
 	if err := proto.Unmarshal(data, blockpb); err != nil {
 		logger.Warn(err)
 	}
-	if blockpb.Header == nil {
+	if blockpb.GetHeader() == nil {
 		spew.Dump(blockpb)
 		spew.Dump(data)
 	}
@@ -226,12 +227,12 @@ func FromProtoBlockMsg(data []byte) *Block {
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
-	bh.FromProto(pb.(*corepb.Block).Header)
+	bh.FromProto(pb.(*corepb.Block).GetHeader())
 	b.header = &bh
 
 	var txs []*Transaction
 
-	for _, txpb := range pb.(*corepb.Block).Transactions {
+	for _, txpb := range pb.(*corepb.Block).GetTransactions() {
 		tx := &Transaction{}
 		tx.FromProto(txpb)
 		txs = append(txs, tx)
@@ -241,12 +242,12 @@ func (b *Block) FromProto(pb proto.Message) {
 
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
-		Hash:      bh.hash,
-		PreviousHash:  bh.prevHash,
-		Nonce:     bh.nonce,
-		Timestamp: bh.timestamp,
-		Signature:      bh.sign,
-		Height:    bh.height,
+		Hash:         bh.hash,
+		PreviousHash: bh.prevHash,
+		Nonce:        bh.nonce,
+		Timestamp:    bh.timestamp,
+		Signature:    bh.sign,
+		Height:       bh.height,
 	}
 }
 
@@ -254,12 +255,12 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	if pb == nil {
 		return
 	}
-	bh.hash = pb.(*corepb.BlockHeader).Hash
-	bh.prevHash = pb.(*corepb.BlockHeader).PreviousHash
-	bh.nonce = pb.(*corepb.BlockHeader).Nonce
-	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
-	bh.sign = pb.(*corepb.BlockHeader).Signature
-	bh.height = pb.(*corepb.BlockHeader).Height
+	bh.hash = pb.(*corepb.BlockHeader).GetHash()
+	bh.prevHash = pb.(*corepb.BlockHeader).GetPreviousHash()
+	bh.nonce = pb.(*corepb.BlockHeader).GetNonce()
+	bh.timestamp = pb.(*corepb.BlockHeader).GetTimestamp()
+	bh.sign = pb.(*corepb.BlockHeader).GetSignature()
+	bh.height = pb.(*corepb.BlockHeader).GetHeight()
 }
 
 func (b *Block) CalculateHash() Hash {

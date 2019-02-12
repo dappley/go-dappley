@@ -22,8 +22,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"github.com/dappley/go-dappley/core/pb"
 	"sync"
 
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
@@ -330,4 +332,21 @@ func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UT
 	}
 
 	return deepCopy, nil
+}
+
+func (utxo *UTXO) ToProto() proto.Message {
+	return &corepb.Utxo{
+		Amount:        utxo.Value.Bytes(),
+		PublicKeyHash: []byte(utxo.PubKeyHash),
+		Txid:          utxo.Txid,
+		TxIndex:       uint32(utxo.TxIndex),
+	}
+}
+
+func (utxo *UTXO) FromProto(pb proto.Message) {
+	utxopb := pb.(*corepb.Utxo)
+	utxo.Value = common.NewAmountFromBytes(utxopb.Amount)
+	utxo.PubKeyHash = utxopb.PublicKeyHash
+	utxo.Txid = utxopb.Txid
+	utxo.TxIndex = int(utxopb.TxIndex)
 }

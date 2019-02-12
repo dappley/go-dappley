@@ -22,6 +22,7 @@
     <ClCompile Include="..\..\engine.cc" />
     <ClCompile Include="..\..\lib\blockchain.cc" />
     <ClCompile Include="..\..\lib\crypto.cc" />
+    <ClCompile Include="..\..\lib\event.cc" />
     <ClCompile Include="..\..\lib\file.cc" />
     <ClCompile Include="..\..\lib\load_lib.cc" />
     <ClCompile Include="..\..\lib\load_sc.cc" />

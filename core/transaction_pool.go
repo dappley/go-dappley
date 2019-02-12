@@ -21,9 +21,11 @@ package core
 import (
 	"sync"
 
-	"github.com/asaskevich/EventBus"
-	logger "github.com/sirupsen/logrus"
-	"github.com/dappley/go-dappley/common"
+
+"github.com/asaskevich/EventBus"
+"github.com/dappley/go-dappley/common"
+logger "github.com/sirupsen/logrus"
+
 )
 
 const (
@@ -163,36 +165,37 @@ func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
 }
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
-	checkNodes := make(map[string]*TransactionNode)
-	contractNodes := make(map[string]*TransactionNode)
+	nodes := make(map[string]*TransactionNode)
+	isExecTxOkToInsert := true
 
 	for key, node := range txPool.txs {
-		if node.value.IsContract() {
-			contractNodes[key] = node
-		} else {
-			checkNodes[key] = node
+		nodes[key]=node
+		if node.value.IsContract() && !node.value.IsExecutionContract() {
+			isExecTxOkToInsert = false;
 		}
 	}
 
 	var sortedTxs []*Transaction
-	for len(checkNodes) > 0 {
-		for key, node := range checkNodes {
-			if !checkDependTxInMap(node.value, checkNodes) {
-				sortedTxs = append(sortedTxs, node.value)
-				delete(checkNodes, key)
+	for len(nodes) > 0 {
+		for key, node := range nodes {
+			if !checkDependTxInMap(node.value, nodes){
+				if node.value.IsContract(){
+					if node.value.IsExecutionContract(){
+						if isExecTxOkToInsert{
+							sortedTxs = append(sortedTxs, node.value)
+							delete(nodes, key)
+						}
+					}else{
+						sortedTxs = append(sortedTxs, node.value)
+						delete(nodes, key)
+						isExecTxOkToInsert = true
+					}
+				}else{
+					sortedTxs = append(sortedTxs, node.value)
+					delete(nodes, key)
+				}
 			}
 		}
-	}
-
-	for key, node := range contractNodes {
-		if !node.value.IsExecutionContract() {
-			sortedTxs = append(sortedTxs, node.value)
-			delete(contractNodes, key)
-		}
-	}
-
-	for _, node := range contractNodes {
-		sortedTxs = append(sortedTxs, node.value)
 	}
 
 	return sortedTxs

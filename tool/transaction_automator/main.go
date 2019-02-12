@@ -88,8 +88,8 @@ func main() {
 				logger.WithFields(logger.Fields{
 					"height": currHeight,
 				}).Info("New Block Height")
-				verifyTransactions(blk.Transactions)
-				recordTransactions(blk.Transactions, currHeight)
+				verifyTransactions(blk.GetTransactions())
+				recordTransactions(blk.GetTransactions(), currHeight)
 			} else {
 				sendRandomTransactions(adminClient, addresses)
 			}
@@ -105,14 +105,14 @@ func recordTransactions(txs []*corepb.Transaction, height uint64) {
 	w := csv.NewWriter(f)
 	for _, tx := range txs {
 		vinStr := ""
-		for _, vin := range tx.Vin {
-			vinStr += hex.EncodeToString(vin.Txid) + ":" + fmt.Sprint(vin.Vout) + ",\n"
+		for _, vin := range tx.GetVin() {
+			vinStr += hex.EncodeToString(vin.GetTxid()) + ":" + fmt.Sprint(vin.GetVout()) + ",\n"
 		}
 		voutStr := ""
-		for _, vout := range tx.Vout {
-			voutStr += core.PubKeyHash(vout.PublicKeyHash).GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.Value).String() + ",\n"
+		for _, vout := range tx.GetVout() {
+			voutStr += core.PubKeyHash(vout.GetPublicKeyHash()).GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.GetValue()).String() + ",\n"
 		}
-		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.Id), vinStr, voutStr, common.NewAmountFromBytes(tx.Tip).String()})
+		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.GetId()), vinStr, voutStr, common.NewAmountFromBytes(tx.GetTip()).String()})
 	}
 	w.Flush()
 }
@@ -185,7 +185,7 @@ func verifyTransactions(txs []*corepb.Transaction) {
 		"num_of_tx": len(sentTxs),
 	}).Info("Transactions recorded")
 	for _, tx := range txs {
-		delete(sentTxs, hex.EncodeToString(tx.Id))
+		delete(sentTxs, hex.EncodeToString(tx.GetId()))
 	}
 	for txid, count := range sentTxs {
 		sentTxs[txid]++
@@ -287,11 +287,9 @@ func waitTilInitialAmountIsSufficient(adminClient rpcpb.AdminServiceClient, rpcC
 
 func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string) {
 
-	sendFromMinerRequest := rpcpb.SendFromMinerRequest{}
-	sendFromMinerRequest.To = fundAddr
-	sendFromMinerRequest.Amount = common.NewAmount(initialAmount).Bytes()
+	sendFromMinerRequest := &rpcpb.SendFromMinerRequest{To: fundAddr, Amount: common.NewAmount(initialAmount).Bytes()}
 
-	adminClient.RpcSendFromMiner(context.Background(), &sendFromMinerRequest)
+	adminClient.RpcSendFromMiner(context.Background(), sendFromMinerRequest)
 }
 
 func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []core.Address) {

@@ -19,11 +19,11 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/common"
 	"testing"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,10 +54,10 @@ func TestTXOutput_Proto(t *testing.T) {
 func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 
 	tests := []struct {
-		name     		string
-		vout       		TXOutput
-		rewardStorage 	map[string]string
-		expectedRes 	bool
+		name          string
+		vout          TXOutput
+		rewardStorage map[string]string
+		expectedRes   bool
 	}{
 		{"normal",
 			TXOutput{
@@ -68,7 +68,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 				"contract",
 			},
-			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB":"1"},
+			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			true,
 		},
 		{"NotInStorage",
@@ -92,7 +92,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 				"contract",
 			},
-			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB":"1asdf"},
+			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1asdf"},
 			false,
 		},
 		{"NilInput",
@@ -116,7 +116,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 				"contract",
 			},
-			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB":"3"},
+			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "3"},
 			false,
 		},
 	}
