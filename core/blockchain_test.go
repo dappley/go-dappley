@@ -112,7 +112,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	}
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash())
+	bc.Rollback(blk.GetHash(), NewUTXOIndex())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()

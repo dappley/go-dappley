@@ -24,11 +24,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jinzhu/copier"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/jinzhu/copier"
+	logger "github.com/sirupsen/logrus"
 )
 
 var tipKey = []byte("tailBlockHash")
@@ -121,7 +120,7 @@ func (bc *Blockchain) GetTxPool() *TransactionPool {
 	return bc.txPool
 }
 
-func (bc *Blockchain) GetEventManager() *EventManager{
+func (bc *Blockchain) GetEventManager() *EventManager {
 	return bc.eventManager
 }
 
@@ -222,7 +221,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	//Remove transactions in current transaction pool
 	bc.GetTxPool().CheckAndRemoveTransactions(block.GetTransactions())
 	logger.WithFields(logger.Fields{
-		"after_txs": len(bc.GetTxPool().GetTransactions()),
+		"after_txs":  len(bc.GetTxPool().GetTransactions()),
 		"before_txs": alen,
 	}).Info("Blockchain : update tx pool")
 
@@ -243,12 +242,12 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	*bc = *bcTemp
 
 	poolsize := 0
-	if bc.txPool!=nil {
+	if bc.txPool != nil {
 		poolsize = len(bc.txPool.GetTransactions())
 	}
 
 	blockLogger.WithFields(logger.Fields{
-		"numOfTx": len(block.GetTransactions()),
+		"numOfTx":  len(block.GetTransactions()),
 		"poolSize": poolsize,
 	}).Info("Blockchain: added a new block to tail.")
 
@@ -401,7 +400,7 @@ func (bc *Blockchain) addBlocksToTail(blocks []*Block) {
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash Hash) bool {
+func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex) bool {
 
 	if !bc.IsInBlockchain(targetHash) {
 		return false
@@ -430,11 +429,16 @@ loop:
 		block.Rollback(bc.txPool)
 	}
 
+	bc.db.EnableBatch()
+	defer bc.db.DisableBatch()
+
 	err := bc.setTailBlockHash(parentblockHash)
 	if err != nil {
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
 	}
+	utxo.Save(bc.db)
+	bc.db.Flush()
 
 	return true
 }

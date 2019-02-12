@@ -115,17 +115,21 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
+
+	rollBackUtxo := utxo.DeepCopy()
+
 	if err != nil {
 		logger.Error("BlockChainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
+
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if !bm.VerifyTransactions(*utxo, scState, forkBlks, parentBlk) {
 		logger.Errorf("BlockChainManager: Verify fork blocks transaction failed with parent height %v", parentBlk.GetHeight())
 		return ErrTransactionVerifyFailed
 	}
 
-	bm.blockchain.Rollback(forkParentHash)
+	bm.blockchain.Rollback(forkParentHash, rollBackUtxo)
 
 	//add all blocks in fork from head to tail
 	bm.blockchain.addBlocksToTail(forkBlks)

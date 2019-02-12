@@ -25,14 +25,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/storage"
 )
 
 type ConnectionType int
@@ -98,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:     make(map[peer.ID]*PeerInfo),
-		syncPeers: make(map[peer.ID]*PeerInfo),
-		streams:   make(map[peer.ID]*StreamInfo),
-		mutex:     sync.RWMutex{},
+		seeds:                 make(map[peer.ID]*PeerInfo),
+		syncPeers:             make(map[peer.ID]*PeerInfo),
+		streams:               make(map[peer.ID]*StreamInfo),
+		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
@@ -241,6 +240,7 @@ func (pm *PeerManager) Unicast(data []byte, pid peer.ID) {
 		logger.WithFields(logger.Fields{
 			"pid": pid,
 		}).Warn("PeerManager: Unicast pid not found.")
+		return
 	}
 
 	streamInfo.stream.Send(data)
