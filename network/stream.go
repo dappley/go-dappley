@@ -99,6 +99,7 @@ func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
 func (s *Stream) StopStream(err error) {
 	logger.WithFields(logger.Fields{
 		"peer_address": s.remoteAddr,
+		"pid":          s.peerID,
 		"error":        err,
 	}).Info("Stream: is terminated!!")
 	s.quitRdCh <- true
@@ -107,6 +108,15 @@ func (s *Stream) StopStream(err error) {
 }
 
 func (s *Stream) Send(data []byte) {
+	defer func() {
+		if p := recover(); p != nil {
+			logger.WithFields(logger.Fields{
+				"peer_address": s.remoteAddr,
+				"pid":          s.peerID,
+				"error":        p,
+			}).Info("Stream: data channel closed.")
+		}
+	}()
 	s.dataCh <- data
 }
 
@@ -248,6 +258,9 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			rw.Flush()
 			mutex.Unlock()
 		case <-s.quitWrCh:
+			// Fix bug when send data to peer simultaneous with close stream,
+			// and send will hang because dataCh is full.
+			close(s.dataCh)
 			logger.Debug("Stream: write loop is terminated!")
 			return nil
 		}

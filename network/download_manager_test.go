@@ -24,10 +24,10 @@ import (
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-peer"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -38,7 +38,7 @@ const (
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
 	//multiPortRetryStart      int = 10230
-	multiPortReturnBlocks	 int = 10340
+	multiPortReturnBlocks int = 10340
 )
 
 func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node) {
@@ -254,9 +254,11 @@ func TestValidateReturnBlocks(t *testing.T) {
 	blockchain.SetState(core.BlockchainDownloading)
 
 	// test invalid peer id
-	assert.Equal(t, ErrPeerNotFound, downloadManager.ValidateReturnBlocks(nil, "foo"))
+	_, err := downloadManager.ValidateReturnBlocks(nil, "foo")
+	assert.Equal(t, ErrPeerNotFound, err)
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
-	assert.Equal(t, ErrEmptyBlocks, downloadManager.ValidateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId))
+	_, err = downloadManager.ValidateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId)
+	assert.Equal(t, ErrEmptyBlocks, err)
 }

@@ -25,12 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/libp2p/go-libp2p-peer"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/libp2p/go-libp2p-peer"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -50,8 +49,8 @@ const (
 )
 
 var (
-	ErrEmptyBlocks = errors.New("received no block")
-	ErrPeerNotFound = errors.New("peerId not in checklist")
+	ErrEmptyBlocks      = errors.New("received no block")
+	ErrPeerNotFound     = errors.New("peerId not in checklist")
 	ErrMismatchResponse = errors.New("response is not for waiting command")
 )
 
@@ -179,7 +178,7 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 	}
 }
 
-func (downloadManager *DownloadManager) ValidateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) error {
+func (downloadManager *DownloadManager) ValidateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) (*PeerBlockInfo, error) {
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 	returnBlocksLogger := logger.WithFields(logger.Fields{
@@ -188,12 +187,12 @@ func (downloadManager *DownloadManager) ValidateReturnBlocks(blocksPb *networkpb
 
 	if downloadManager.downloadingPeer.peerid != peerId {
 		returnBlocksLogger.Info("DownloadManager: peerId not in checklist")
-		return ErrPeerNotFound
+		return nil, ErrPeerNotFound
 	}
 
 	if blocksPb.GetBlocks() == nil || len(blocksPb.GetBlocks()) == 0 {
 		returnBlocksLogger.Error("DownloadManager: received no block.")
-		return ErrEmptyBlocks
+		return nil, ErrEmptyBlocks
 	}
 
 	hashes := make([]core.Hash, len(blocksPb.GetStartBlockHashes()))
@@ -202,9 +201,9 @@ func (downloadManager *DownloadManager) ValidateReturnBlocks(blocksPb *networkpb
 	}
 	if !downloadManager.isSameDownloadCommand(hashes) {
 		returnBlocksLogger.Info("DownloadManager: response is not for waiting command.")
-		return ErrMismatchResponse
+		return nil, ErrMismatchResponse
 	}
-	return nil
+	return downloadManager.downloadingPeer, nil
 }
 
 func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
@@ -212,7 +211,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		"cmd": "ReturnBlocks",
 	})
 
-	err := downloadManager.ValidateReturnBlocks(blocksPb, peerId)
+	checkingPeer, err := downloadManager.ValidateReturnBlocks(blocksPb, peerId)
 	if err != nil {
 		returnBlocksLogger.Error()
 		return
@@ -243,7 +242,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 	downloadManager.isMerging = false
-	if downloadManager.node.GetBlockchain().GetMaxHeight() >= downloadManager.downloadingPeer.height {
+	if downloadManager.node.GetBlockchain().GetMaxHeight() >= checkingPeer.height {
 		downloadManager.finishDownload()
 		return
 	}
