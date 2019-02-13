@@ -36,7 +36,7 @@ const utxoMapKey = "utxo"
 const contractUtxoKey = "ContractUtxos"
 
 var (
-	ErrUTXONotFound = errors.New("utxo not found when trying to remove from cache")
+	ErrUTXONotFound   = errors.New("utxo not found when trying to remove from cache")
 	ErrTXInputInvalid = errors.New("txInput refers to non-existing transaction")
 )
 
@@ -139,7 +139,7 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 func PrepareUTXOs(utxos []*UTXO, amount *common.Amount) ([]*UTXO, bool) {
 	sum := common.NewAmount(0)
 
-	if len(utxos) < 1{
+	if len(utxos) < 1 {
 		return utxos, false
 	}
 
@@ -171,7 +171,7 @@ func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) 
 func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	if !tx.IsCoinbase() && !tx.IsRewardTx() {
 		for _, txin := range tx.Vin {
-			pkh,err := NewUserPubKeyHash(txin.PubKey)
+			pkh, err := NewUserPubKeyHash(txin.PubKey)
 			if err != nil {
 				return false
 			}
@@ -251,14 +251,14 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
 	//if it is a smart contract deployment utxo add it to contract utxos
-	if isContract, _ := txout.PubKeyHash.IsContract();isContract &&
-	 	len(utxos.index[string(u.PubKeyHash)]) == 0 {
+	if isContract, _ := txout.PubKeyHash.IsContract(); isContract &&
+		len(utxos.index[string(u.PubKeyHash)]) == 0 {
 		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
 	}
 	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
 }
 
-func (utxos *UTXOIndex) GetContractUtxos() []*UTXO{
+func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
 	return utxos.index[contractUtxoKey]
 }
 
@@ -268,7 +268,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
 
-	for i, utxo := range originalUtxos{
+	for i, utxo := range originalUtxos {
 		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
 			utxos.index[string(pkh)] = append(originalUtxos[:i], originalUtxos[i+1:]...)
 			return nil
@@ -325,7 +325,7 @@ func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UT
 		}
 
 		err = deepCopy.undoTxsInBlock(block, bc, db)
-		if  err != nil {
+		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
 			}).Warn("UTXOIndex: failed to calculate previous state of UTXO index for the block")

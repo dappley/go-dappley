@@ -20,7 +20,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -457,7 +456,6 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			utxoIndex, err := GetUTXOIndexAtBlockHash(tt.bc.GetDb(), tt.bc, tt.hash)
-			fmt.Println("length:", len(utxoIndex.index))
 			if !assert.Equal(t, tt.err, err) {
 				return
 			}
