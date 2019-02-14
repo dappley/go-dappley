@@ -871,6 +871,7 @@
     "github.com/asaskevich/EventBus",
     "github.com/btcsuite/btcutil/base58",
     "github.com/davecgh/go-spew/spew",
+    "github.com/gogo/protobuf/proto",
     "github.com/golang/mock/gomock",
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/golang-lru",
