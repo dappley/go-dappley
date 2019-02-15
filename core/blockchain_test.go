@@ -21,6 +21,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common"
 	"os"
 	"testing"
 
@@ -170,4 +171,43 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
 	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
+}
+
+func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
+	//create a new block chain
+
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+
+	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	var addrs []Address
+	var kps []*KeyPair
+	var pkhs []PubKeyHash
+	for i:=0;i<10;i++{
+		kp := NewKeyPair()
+		kps = append(kps, kp)
+		pkh,_ := NewUserPubKeyHash(kp.PublicKey)
+		pkhs = append(pkhs, pkh)
+		addrs = append(addrs, pkh.GenerateAddress())
+	}
+
+
+	for i := 0; i < b.N; i++ {
+
+		tailBlk, _ := bc.GetTailBlock()
+		txs := []*Transaction{}
+		utxo := LoadUTXOIndex(s)
+		cbtx := NewCoinbaseTX(addrs[0], "", uint64(i+1), common.NewAmount(0))
+		utxo.UpdateUtxo(&cbtx)
+		txs = append(txs, &cbtx)
+		for j:=0; j< 10; j++ {
+			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]), addrs[0], addrs[i%10], common.NewAmount(1), kps[0],common.NewAmount(0), "")
+			utxo.UpdateUtxo(&tx)
+			txs = append(txs, &tx)
+		}
+
+		b := NewBlock(txs, tailBlk)
+		b.SetHash(b.CalculateHash())
+		bc.AddBlockToTail(b)
+	}
 }
