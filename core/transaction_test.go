@@ -817,3 +817,52 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	txPool.Push(&tx1)
 	assert.Equal(t, false, tx1.Verify(&utxoIndex, 0))
 }
+
+func TestTransaction_IsIdentical(t *testing.T) {
+
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
+	var pkHash1, _ = NewUserPubKeyHash(pubkey1)
+
+	var dependentTx1 = Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{tx1.ID, 1, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(5), pkHash1, ""},
+		},
+		Tip: common.NewAmount(3),
+	}
+
+	var utxoIndex = UTXOIndex{
+		map[string][]*UTXO{
+			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+		},
+		&sync.RWMutex{},
+	}
+
+	var tx = &Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx1.ID, 0, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(2), pkHash1, ""},
+		},
+		Tip: common.NewAmount(1),
+	}
+	var tx2 = &Transaction{
+		ID: nil,
+		Vin: []TXInput{
+			{dependentTx1.ID, 0, nil, pubkey1},
+		},
+		Vout: []TXOutput{
+			{common.NewAmount(2), pkHash1, ""},
+		},
+		Tip: common.NewAmount(1),
+	}
+	assert.True(t, tx.IsIdentical(utxoIndex, tx2))
+	tx2.Vout[0].Value = common.NewAmount(3)
+	assert.False(t, tx.IsIdentical(utxoIndex, tx2))
+}

@@ -711,6 +711,38 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 	return res, nil
 }
 
+func (tx *Transaction) IsIdentical(utxo UTXOIndex, tx2 *Transaction) bool {
+
+	sender, recipient, amount, tip, err := tx.Describe(utxo)
+	if err != nil {
+		return false
+	}
+
+	sender2, recipient2, amount2, tip2, err := tx2.Describe(utxo)
+	if err != nil {
+		return false
+	}
+
+	if sender.String() != sender2.String() {
+		return false
+	}
+
+	if recipient.String() != recipient2.String() {
+		return false
+	}
+
+	if amount.Cmp(amount2) != 0 {
+		return false
+	}
+
+	if tip.Cmp(tip2) != 0 {
+		return false
+	}
+
+	return true
+
+}
+
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 
 	if tx == nil {
