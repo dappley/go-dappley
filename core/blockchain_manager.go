@@ -145,7 +145,7 @@ func (bm *BlockChainManager) VerifyTransactions(utxoSnapshot UTXOIndex, scState 
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
 		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
-		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, bm.blockchain.GetSCManager(), parentBlk) {
+		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, parentBlk, bm.blockchain.GetTxPool()) {
 			return false
 		}
 		parentBlk = forkBlks[i]

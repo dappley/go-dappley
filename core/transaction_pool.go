@@ -210,9 +210,10 @@ func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) b
 	return false
 }
 
-func (txPool *TransactionPool) IsInTransactionPool(txid []byte) bool{
-	_, ok := txPool.txs[string(txid)]
-	return ok
+func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction{
+	txPool.mutex.RLock()
+	txPool.mutex.RUnlock()
+	return txPool.txs[string(txid)].value
 }
 
 func (txPool *TransactionPool) getToRemoveTxs(startTxId string) map[string]*TransactionNode {

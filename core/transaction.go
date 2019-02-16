@@ -638,6 +638,10 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	currblkHeight uint64,
 	parentBlk *Block) []*Transaction {
 
+	if engine == nil {
+		return nil
+	}
+
 	if tx.IsRewardTx() {
 		return nil
 	}

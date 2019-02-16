@@ -114,15 +114,3 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash) {
 func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error {
 	return db.Put([]byte(scStateMapKey+blkHash.String()), ss.serialize())
 }
-
-//Update updates smart contract states by executing all input transactions
-func (ss *ScState) Update(txs []*Transaction, index UTXOIndex, manager ScEngineManager, currBlkHeight uint64, parentBlk *Block) {
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
-	scEngine := manager.CreateEngine()
-	defer scEngine.DestroyEngine()
-	for _, tx := range txs {
-		tx.Execute(index, ss, nil, scEngine, currBlkHeight, parentBlk)
-		index.UpdateUtxo(tx)
-	}
-}
