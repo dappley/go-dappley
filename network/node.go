@@ -727,6 +727,11 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 		logger.Info("Node: broadcast transaction verify failed.")
 		return
 	}
+
+	if tx.IsFromContract() {
+		return
+	}
+
 	n.bm.Getblockchain().GetTxPool().Push(tx)
 }
 
