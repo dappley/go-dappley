@@ -331,5 +331,7 @@ func (txPool *TransactionPool) serialize() []byte {
 }
 
 func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error{
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
 	return db.Put([]byte(TxPoolDbKey), txPool.serialize())
 }
