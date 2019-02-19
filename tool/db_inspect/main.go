@@ -25,6 +25,7 @@ type CommandInfo struct {
 
 var commands = []CommandInfo{
 	{"getBlock", "Get block information by hash", GetBlockHandle},
+	{"getBlockByHeight", "Get block information by height", GetBlockByHeightHandle},
 	{"getTransaction", "Get transaction information by hash", GetTransactionHandle},
 	{"getCostTransaction", "Get cost transaction block", GetCostTransactionHandle},
 	{"getUtxo", "Get utxo of address", GetUtxoHandle},
@@ -36,7 +37,7 @@ func GetBlockHandle() {
 
 	flagSet := flag.NewFlagSet("getBlock", flag.ExitOnError)
 	flagSet.StringVar(&dbPath, "d", "", "database path")
-	flagSet.StringVar(&blockHash, "hash", "", "search start block hash")
+	flagSet.StringVar(&blockHash, "hash", "", "block hash")
 	flagSet.Parse(os.Args[2:])
 
 	fmt.Printf("path: %v\n", dbPath)
@@ -57,6 +58,38 @@ func GetBlockHandle() {
 	block := core.Deserialize(rawBytes)
 	if block == nil {
 		panic("Block deserialize failed with hash " + blockHash)
+	}
+
+	dumpBlock(block)
+}
+
+func GetBlockByHeightHandle() {
+	var dbPath string
+	var blockHeight uint64
+
+	flagSet := flag.NewFlagSet("getBlockByHeight", flag.ExitOnError)
+	flagSet.StringVar(&dbPath, "d", "", "database path")
+	flagSet.Uint64Var(&blockHeight, "height", 0, "block height")
+	flagSet.Parse(os.Args[2:])
+
+	fmt.Printf("path: %v\n", dbPath)
+
+	db := storage.OpenDatabase(dbPath)
+	defer db.Close()
+
+	hash, err := db.Get(util.UintToHex(blockHeight))
+	if err != nil {
+		panic(fmt.Sprintf("Block height %v not found in database ", blockHeight))
+	}
+
+	rawBytes, err := db.Get(hash)
+	if err != nil {
+		panic("Block hash not found in database " + hex.EncodeToString(hash))
+	}
+
+	block := core.Deserialize(rawBytes)
+	if block == nil {
+		panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 	}
 
 	dumpBlock(block)
