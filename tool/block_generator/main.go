@@ -12,7 +12,7 @@ import (
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/storage"
-	tool "github.com/dappley/go-dappley/tool/src"
+	tool "github.com/dappley/go-dappley/tool/block_generator/src"
 )
 
 const (
