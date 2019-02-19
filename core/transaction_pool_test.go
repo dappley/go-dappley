@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/storage"
 	"testing"
 
 	"github.com/dappley/go-dappley/util"
@@ -160,4 +161,21 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	txs := txPool.GetTransactions()
 	assert.Equal(t, &deploymentTx, txs[0])
 	assert.Equal(t, &executionTx, txs[1])
+}
+
+func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
+	txPool := NewTransactionPool(128)
+	txPool.Push(&tx1)
+	assert.Equal(t, 1, len(txPool.GetTransactions()))
+	txPool.Push(&tx2)
+	assert.Equal(t, 2, len(txPool.GetTransactions()))
+	txPool.Push(&tx3)
+	txPool.Push(&tx4)
+	assert.Equal(t, 4, len(txPool.GetTransactions()))
+	db := storage.NewRamStorage()
+	err := txPool.SaveToDatabase(db)
+	assert.Nil(t, err)
+	txPool2 := NewTransactionPool(128)
+	txPool2.LoadFromDatabase(db)
+	assert.Equal(t, 4, len(txPool2.GetTransactions()))
 }

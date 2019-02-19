@@ -151,15 +151,15 @@ func TestBlock_Proto(t *testing.T) {
 func TestBlock_VerifyHash(t *testing.T) {
 	b1 := GenerateMockBlock()
 
-	//The mocked block does not have correct hash value
+	//The mocked block does not have correct hash Value
 	assert.False(t, b1.VerifyHash())
 
-	//calculate correct hash value
+	//calculate correct hash Value
 	hash := b1.CalculateHash()
 	b1.SetHash(hash)
 	assert.True(t, b1.VerifyHash())
 
-	//calculate a hash value with a different nonce
+	//calculate a hash Value with a different nonce
 	hash = b1.CalculateHashWithNonce(b1.GetNonce() + 1)
 	b1.SetHash(hash)
 	assert.False(t, b1.VerifyHash())
@@ -341,7 +341,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
-			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated":{value: generatedTX}}},
+			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated":{Value: generatedTX}}},
 			true,
 		},
 	}

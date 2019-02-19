@@ -27,8 +27,8 @@ func TestScState_Get(t *testing.T) {
 
 func TestScState_Set(t *testing.T) {
 	ss := NewScState()
-	ss.Set("addr1","key1","value")
-	assert.Equal(t, "value", ss.Get("addr1","key1"))
+	ss.Set("addr1","key1","Value")
+	assert.Equal(t, "Value", ss.Get("addr1","key1"))
 }
 
 func TestScState_Del(t *testing.T) {
@@ -43,10 +43,10 @@ func TestScState_Del(t *testing.T) {
 func TestScState_LoadFromDatabase(t *testing.T) {
 	db := storage.NewRamStorage()
 	ss := NewScState()
-	ss.Set("addr1","key1","value")
+	ss.Set("addr1","key1","Value")
 	hash := []byte("testhash")
 	err := ss.SaveToDatabase(db, hash)
 	assert.Nil(t, err)
 	ss.LoadFromDatabase(db, hash)
-	assert.Equal(t, "value", ss.Get("addr1","key1"))
+	assert.Equal(t, "Value", ss.Get("addr1","key1"))
 }

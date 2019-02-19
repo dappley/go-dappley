@@ -122,7 +122,7 @@ func getBlocksFromTrees(trees []*common.Tree) []*Block {
 	return blocks
 }
 
-// updateBlkCache updates parent and children of the tree
+// updateBlkCache updates parent and Children of the tree
 func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	blkCache := pool.blkCache
 	// try to link child
