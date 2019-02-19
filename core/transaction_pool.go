@@ -24,18 +24,16 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"sync"
 
-
-"github.com/asaskevich/EventBus"
-"github.com/dappley/go-dappley/common"
-logger "github.com/sirupsen/logrus"
-
+	"github.com/asaskevich/EventBus"
+	"github.com/dappley/go-dappley/common"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
 	NewTransactionTopic   = "NewTransaction"
 	EvictTransactionTopic = "EvictTransaction"
-	scheduleFuncName = "dapp_schedule"
-	TxPoolDbKey = "txpool"
+	scheduleFuncName      = "dapp_schedule"
+	TxPoolDbKey           = "txpool"
 )
 
 type TransactionNode struct {
@@ -109,11 +107,11 @@ func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blo
 		if tx.Verify(tempUtxoIndex, blockHeight) {
 			validTxs = append(validTxs, tx)
 			tempUtxoIndex.UpdateUtxo(tx)
-		}else{
+		} else {
 			inValidTxs = append(inValidTxs, tx)
 		}
 	}
-	if len(inValidTxs)>0 {
+	if len(inValidTxs) > 0 {
 		txPool.CheckAndRemoveTransactions(inValidTxs)
 	}
 
@@ -134,7 +132,7 @@ func (txPool *TransactionPool) Push(tx *Transaction) {
 		}).Warn("TransactionPool: is full.")
 
 		minTx, exist := txPool.txs[txPool.minTipTxId]
-		if exist && tx.Tip.Cmp(minTx.Value.Tip) < 1{
+		if exist && tx.Tip.Cmp(minTx.Value.Tip) < 1 {
 			return
 		}
 
@@ -173,28 +171,28 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 	isExecTxOkToInsert := true
 
 	for key, node := range txPool.txs {
-		nodes[key]=node
+		nodes[key] = node
 		if node.Value.IsContract() && !node.Value.IsExecutionContract() {
-			isExecTxOkToInsert = false;
+			isExecTxOkToInsert = false
 		}
 	}
 
 	var sortedTxs []*Transaction
 	for len(nodes) > 0 {
 		for key, node := range nodes {
-			if !checkDependTxInMap(node.Value, nodes){
-				if node.Value.IsContract(){
-					if node.Value.IsExecutionContract(){
-						if isExecTxOkToInsert{
+			if !checkDependTxInMap(node.Value, nodes) {
+				if node.Value.IsContract() {
+					if node.Value.IsExecutionContract() {
+						if isExecTxOkToInsert {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)
 						}
-					}else{
+					} else {
 						sortedTxs = append(sortedTxs, node.Value)
 						delete(nodes, key)
 						isExecTxOkToInsert = true
 					}
-				}else{
+				} else {
 					sortedTxs = append(sortedTxs, node.Value)
 					delete(nodes, key)
 				}
@@ -214,7 +212,7 @@ func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) b
 	return false
 }
 
-func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction{
+func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction {
 	txPool.mutex.RLock()
 	txPool.mutex.RUnlock()
 	return txPool.txs[string(txid)].Value
@@ -281,7 +279,7 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 }
 
 func (txPool *TransactionPool) resetMinTipTransaction() {
-	var minTip *common.Amount// = math.MaxUint64
+	var minTip *common.Amount // = math.MaxUint64
 	txPool.minTipTxId = ""
 	first := true
 
@@ -309,7 +307,7 @@ func deserializeTxPool(d []byte) map[string]*TransactionNode {
 	return txs
 }
 
-func (txPool *TransactionPool) LoadFromDatabase(db storage.Storage){
+func (txPool *TransactionPool) LoadFromDatabase(db storage.Storage) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	rawBytes, err := db.Get([]byte(TxPoolDbKey))
@@ -330,7 +328,7 @@ func (txPool *TransactionPool) serialize() []byte {
 	return encoded.Bytes()
 }
 
-func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error{
+func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	return db.Put([]byte(TxPoolDbKey), txPool.serialize())

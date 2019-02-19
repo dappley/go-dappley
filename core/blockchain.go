@@ -196,9 +196,20 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	utxoIndex.UpdateUtxoState(block.GetTransactions())
 	err = utxoIndex.Save(bc.db)
 
+	if err != nil {
+		blockLogger.Warn("Blockchain: failed to save utxo to database.")
+		return err
+	}
+
 	numTxAfterExe := len(bc.GetTxPool().GetTransactions())
 	//Remove transactions in current transaction pool
 	bc.GetTxPool().CheckAndRemoveTransactions(block.GetTransactions())
+	err = bc.GetTxPool().SaveToDatabase(bc.db)
+
+	if err != nil {
+		blockLogger.Warn("Blockchain: failed to save txpool to database.")
+		return err
+	}
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_sc_exe":       numTxBeforeExe,
