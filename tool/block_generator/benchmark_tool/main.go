@@ -16,7 +16,6 @@ import (
 )
 
 const(
-	//seedDbpath = "db/test.db"
 	nodeDbPath = "db/temp.db"
 	genesisAddrTest = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	genesisFilePathTest = "../conf/genesis.conf"
