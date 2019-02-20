@@ -271,7 +271,9 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, tip, contract)
 
 	bc.GetTxPool().Push(&tx)
-	node.TxBroadcast(&tx)
+	if node!=nil{
+		node.TxBroadcast(&tx)
+	}
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
 		if to.String() == contractAddr.String() {
