@@ -46,13 +46,13 @@ type Keys struct {
 }
 
 type GeneralConfigs struct{
-	numOfNormalTx int
+	NumOfNormalTx int
 }
 
 func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, config GeneralConfigs) {
 	bcs := make([]*core.Blockchain, len(files))
 	addr := core.NewAddress(genesisAddr)
-	numOfTx = config.numOfNormalTx
+	numOfTx = config.NumOfNormalTx
 	for i := range files{
 		bc := core.CreateBlockchain(addr, files[i].Db, nil, 2000, nil)
 		bcs[i] = bc
