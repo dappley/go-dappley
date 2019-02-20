@@ -1,4 +1,4 @@
-package block_generator
+package main
 
 import (
 	"bufio"
@@ -41,6 +41,7 @@ func main() {
 		fmt.Printf("Enter file name for blockchain%d: \n", i+1)
 		text, _ := reader.ReadString('\n')
 		text = strings.TrimSuffix(text, "\n")
+		text = "db/"+text
 		db := storage.OpenDatabase(text)
 		defer db.Close()
 		files[i].Db = db
