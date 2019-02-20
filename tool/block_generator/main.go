@@ -35,8 +35,8 @@ func main() {
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 	keys := tool.LoadPrivateKey()
+	reader := bufio.NewReader(os.Stdin)
 	for i := 0; i < number; i++ {
-		reader := bufio.NewReader(os.Stdin)
 		//enter filename
 		fmt.Printf("Enter file name for blockchain%d: \n", i+1)
 		text, _ := reader.ReadString('\n')
@@ -65,5 +65,10 @@ func main() {
 
 	}
 
-	tool.GenerateNewBlockChain(files, dynasty, keys)
+	fmt.Printf("Enter number of normal transactions per block: \n")
+	numOfTx, _ := reader.ReadString('\n')
+	numOfTx = strings.TrimSuffix(numOfTx, "\n")
+	numTx, _ := strconv.Atoi(numOfTx)
+	config := tool.GeneralConfigs{numTx}
+	tool.GenerateNewBlockChain(files, dynasty, keys, config)
 }
