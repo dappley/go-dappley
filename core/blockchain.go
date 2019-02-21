@@ -126,7 +126,6 @@ func (bc *Blockchain) GetEventManager() *EventManager {
 
 func (bc *Blockchain) GetTailBlock() (*Block, error) {
 	hash := bc.GetTailBlockHash()
-	fmt.Println(hex.EncodeToString(hash))
 	return bc.GetBlockByHash(hash)
 }
 
