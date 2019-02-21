@@ -75,22 +75,27 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 
 	//max, index := GetMaxHeightOfDifferentStart(files)
 	//fund every miner
-	for i := 0; i < len(d.GetProducers()); i++ {
-		for idx := range files {
-			b := generateBlock(bcs[idx], d, keys, []*core.Transaction{})
-			bcs[idx].AddBlockToTail(b)
+	parentBlks := make([]*core.Block, len(files))
+	utxoIndexes := make([]*core.UTXOIndex, len(files))
+	for i := range files {
+		parentBlks[i],_ = bcs[i].GetTailBlock()
+		utxoIndexes[i] = core.NewUTXOIndex()
+		for j := 0; j < len(d.GetProducers()); j++ {
+			b := generateBlock(utxoIndexes[i], parentBlks[i], bcs[i], d, keys, []*core.Transaction{})
+			bcs[i].AddBlockToDb(b)
+			parentBlks[i] = b
 		}
 	}
 
 	//fund from miner
-	fundingBlock := generateFundingBlock(bcs[0], d, keys, addrs[0], key, wm)
+	fundingBlock := generateFundingBlock(utxoIndexes[0], parentBlks[0], bcs[0], d, keys, addrs[0], key, wm)
 	for idx := range files {
-		bcs[idx].AddBlockToTail(fundingBlock)
+		bcs[idx].AddBlockToDb(fundingBlock)
 	}
-
+	parentBlks[0] = fundingBlock
 
 	for i, file := range files {
-		makeBlockChainToSize(bcs[i], file.Height, d, keys, addrs, wm)
+		makeBlockChainToSize(utxoIndexes[i],parentBlks[i], bcs[i], file.Height, d, keys, addrs, wm)
 	}
 
 }
@@ -107,47 +112,51 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.WalletManager) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.WalletManager) {
 
+	tailBlk := parentBlk
 	for bc.GetMaxHeight() < uint64(size) {
-		txs := generateTransactions(addrs, bc, wm)
-		b := generateBlock(bc, d, keys, txs)
-		bc.AddBlockToTail(b)
+		txs := generateTransactions(utxoIndex, addrs, wm)
+		b := generateBlock(utxoIndex, tailBlk, bc, d, keys, txs)
+		bc.AddBlockToDb(b)
+		tailBlk = b
 	}
 }
 
-func generateBlock(bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *core.Block {
+func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *core.Block {
 	producer := core.NewAddress(d.ProducerAtATime(time))
-	logger.WithFields(logger.Fields{
-		"producer" : producer.String(),
-		"timestamp": time,
-	}).Info("Tool:Generating Block...")
 	key := keys.getPrivateKeyByAddress(producer)
-	tailBlk, _ := bc.GetTailBlock()
 	cbtx := core.NewCoinbaseTX(producer, "", bc.GetMaxHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
-	b := core.NewBlockWithTimestamp(txs, tailBlk, time)
+	utxoIndex.UpdateUtxo(&cbtx)
+	b := core.NewBlockWithTimestamp(txs, parentBlk, time)
 	hash := b.CalculateHashWithNonce(0)
 	b.SetHash(hash)
 	b.SetNonce(0)
 	b.SignBlock(key, hash)
 	time = time + defaultTimeBetweenBlk
+	logger.WithFields(logger.Fields{
+		"producer" : producer.String(),
+		"timestamp": time,
+		"blkHeight" : b.GetHeight(),
+	}).Info("Tool:Generating Block...")
 	return b
 }
 
-func generateFundingBlock(bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, minerPrivKey string, wm *client.WalletManager) *core.Block{
+func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, minerPrivKey string, wm *client.WalletManager) *core.Block{
 	logger.Info("generateFundingBlock")
 	initFund := uint64(100000)
 	initFundAmount := common.NewAmount(initFund)
 	minerKeyPair := core.GetKeyPairByString(minerPrivKey)
 	pkh,_ := core.NewUserPubKeyHash(minerKeyPair.PublicKey)
-	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, core.LoadUTXOIndex(bc.GetDb()), pkh, initFundAmount)
+	fmt.Println("value is :",utxoIndex.GetAllUTXOsByPubKeyHash(pkh)[0].Value)
+	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount)
+	utxoIndex.UpdateUtxo(tx)
 	currBalance[fundAddr.String()] = initFund
-	return generateBlock(bc, d, keys, []*core.Transaction{tx})
+	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
 }
 
-func generateTransactions(addrs []core.Address, bc *core.Blockchain,wm *client.WalletManager) []*core.Transaction{
-	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) []*core.Transaction{
 	pkhmap := getPubKeyHashes(addrs, wm)
 	txs := []*core.Transaction{}
 	for i:=0;i< numOfTx;i++{
