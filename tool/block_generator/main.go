@@ -1,4 +1,4 @@
-package block_generator
+package main
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ import (
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/storage"
-	tool "github.com/dappley/go-dappley/tool/block_generator/src"
+	"github.com/dappley/go-dappley/tool/block_generator/src"
 )
 
 const (
@@ -35,12 +35,13 @@ func main() {
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 	keys := tool.LoadPrivateKey()
+	reader := bufio.NewReader(os.Stdin)
 	for i := 0; i < number; i++ {
-		reader := bufio.NewReader(os.Stdin)
 		//enter filename
 		fmt.Printf("Enter file name for blockchain%d: \n", i+1)
 		text, _ := reader.ReadString('\n')
 		text = strings.TrimSuffix(text, "\n")
+		text = "db/"+text
 		db := storage.OpenDatabase(text)
 		defer db.Close()
 		files[i].Db = db
@@ -64,5 +65,10 @@ func main() {
 
 	}
 
-	tool.GenerateNewBlockChain(files, dynasty, keys)
+	fmt.Printf("Enter number of normal transactions per block: \n")
+	numOfTx, _ := reader.ReadString('\n')
+	numOfTx = strings.TrimSuffix(numOfTx, "\n")
+	numTx, _ := strconv.Atoi(numOfTx)
+	config := tool.GeneralConfigs{numTx}
+	tool.GenerateNewBlockChain(files, dynasty, keys, config)
 }
