@@ -20,6 +20,8 @@ const (
 	genesisFilePath       = "conf/genesis.conf"
 	defaultPassword       = "password"
 	defaultTimeBetweenBlk = 5
+	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	contractFilePath	  = "contract/test_contract.js"
 )
 
 var (
@@ -27,6 +29,7 @@ var (
 	maxWallet            = 4
 	currBalance          = make(map[string]uint64)
 	numOfTx				 = 100
+	scTxFreq			 = 5
 	time 				 = int64(1532392928)
 )
 
@@ -88,14 +91,22 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 	}
 
 	//fund from miner
-	fundingBlock := generateFundingBlock(utxoIndexes[0], parentBlks[0], bcs[0], d, keys, addrs[0], key, wm)
+	fundingBlock := generateFundingBlock(utxoIndexes[0], parentBlks[0], bcs[0], d, keys, addrs[0], key)
 	for idx := range files {
 		bcs[idx].AddBlockToDb(fundingBlock)
 	}
 	parentBlks[0] = fundingBlock
 
+	//deploy smart contract
+	scblock, scAddr := generateSmartContractDeploymentBlock(utxoIndexes[0], parentBlks[0], bcs[0], d, keys, addrs[0], wm)
+	logger.Info("smart contract address:", scAddr.String())
+	for idx := range files {
+		bcs[idx].AddBlockToDb(scblock)
+	}
+	parentBlks[0] = scblock
+
 	for i, file := range files {
-		makeBlockChainToSize(utxoIndexes[i],parentBlks[i], bcs[i], file.Height, d, keys, addrs, wm)
+		makeBlockChainToSize(utxoIndexes[i],parentBlks[i], bcs[i], file.Height, d, keys, addrs, wm, scAddr)
 	}
 
 }
@@ -112,21 +123,22 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.WalletManager) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.WalletManager, scAddr core.Address) {
 
 	tailBlk := parentBlk
-	for bc.GetMaxHeight() < uint64(size) {
-		txs := generateTransactions(utxoIndex, addrs, wm)
+	for tailBlk.GetHeight() < uint64(size) {
+		txs := generateTransactions(utxoIndex, addrs, wm, scAddr)
 		b := generateBlock(utxoIndex, tailBlk, bc, d, keys, txs)
 		bc.AddBlockToDb(b)
 		tailBlk = b
 	}
+	bc.GetDb().Put([]byte("tailBlockHash"),tailBlk.GetHash())
 }
 
 func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *core.Block {
 	producer := core.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
-	cbtx := core.NewCoinbaseTX(producer, "", bc.GetMaxHeight()+1, common.NewAmount(0))
+	cbtx := core.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
 	b := core.NewBlockWithTimestamp(txs, parentBlk, time)
@@ -143,24 +155,64 @@ func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Bl
 	return b
 }
 
-func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, minerPrivKey string, wm *client.WalletManager) *core.Block{
-	logger.Info("generateFundingBlock")
+func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, minerPrivKey string) *core.Block{
+	logger.Info("generate funding Block")
+	tx := generateFundingTransaction(utxoIndex, fundAddr, minerPrivKey)
+	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
+}
+
+func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, wm *client.WalletManager) (*core.Block, core.Address){
+	logger.Info("generate smart contract deployment block")
+	tx := generateSmartContractDeploymentTransaction(utxoIndex ,fundAddr, wm)
+
+	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
+}
+
+func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex ,sender core.Address, wm *client.WalletManager) *core.Transaction{
+	senderWallet := wm.GetWalletByAddress(sender)
+	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
+		logger.Panic("Can not find sender wallet")
+	}
+	pubKeyHash, _ := core.NewUserPubKeyHash(senderWallet.GetKeyPair().PublicKey)
+
+	data, err := ioutil.ReadFile(contractFilePath)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path": contractFilePath,
+		}).Panic("Unable to read smart contract file!")
+	}
+	contract := string(data)
+	tx := newTransaction(sender, core.Address{},senderWallet.GetKeyPair(),utxoIndex,  pubKeyHash, common.NewAmount(1), contract)
+	utxoIndex.UpdateUtxo(tx)
+	currBalance[sender.String()] -= 1
+	return tx
+}
+
+func generateFundingTransaction(utxoIndex *core.UTXOIndex,fundAddr core.Address, minerPrivKey string,) *core.Transaction{
 	initFund := uint64(100000)
 	initFundAmount := common.NewAmount(initFund)
 	minerKeyPair := core.GetKeyPairByString(minerPrivKey)
 	pkh,_ := core.NewUserPubKeyHash(minerKeyPair.PublicKey)
-	fmt.Println("value is :",utxoIndex.GetAllUTXOsByPubKeyHash(pkh)[0].Value)
-	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount)
+
+	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, "")
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[fundAddr.String()] = initFund
-	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
+	return tx
 }
 
-func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) []*core.Transaction{
+func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager, scAddr core.Address) []*core.Transaction{
 	pkhmap := getPubKeyHashes(addrs, wm)
 	txs := []*core.Transaction{}
 	for i:=0;i< numOfTx;i++{
-		tx:=generateTransaction(addrs, wm, utxoIndex, pkhmap)
+		contract := ""
+		if scTxFreq>0 && i%scTxFreq == 1 {
+			contract = contractFunctionCall
+		}
+		tx:=generateTransaction(addrs, wm, utxoIndex, pkhmap, contract, scAddr)
+		logger.WithFields(logger.Fields{
+			"to" : tx.Vout[0].PubKeyHash.GenerateAddress(),
+			"contract" : tx.Vout[0].Contract,
+		}).Info("Created a transaction")
 		utxoIndex.UpdateUtxo(tx)
 		txs = append(txs, tx)
 	}
@@ -177,24 +229,27 @@ func getPubKeyHashes(addrs []core.Address, wm *client.WalletManager) map[core.Ad
 	return res
 }
 
-func generateTransaction(addrs []core.Address, wm *client.WalletManager, utxoIndex *core.UTXOIndex, pkhmap map[core.Address]core.PubKeyHash) *core.Transaction{
+func generateTransaction(addrs []core.Address, wm *client.WalletManager, utxoIndex *core.UTXOIndex, pkhmap map[core.Address]core.PubKeyHash, contract string, scAddr core.Address) *core.Transaction{
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
 	senderWallet := wm.GetWalletByAddress(sender)
 	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
 		logger.Panic("Can not find sender wallet")
 	}
-	tx := newTransaction(sender, receiver, senderWallet.GetKeyPair(), utxoIndex, pkhmap[sender], amount)
+	if contract != "" {
+		receiver = scAddr
+	}
+	tx := newTransaction(sender, receiver, senderWallet.GetKeyPair(), utxoIndex, pkhmap[sender], amount, contract)
 	currBalance[sender.String()] -= 1
 	currBalance[receiver.String()] += 1
 
 	return tx
 }
 
-func newTransaction(sender, receiver core.Address, senderKeyPair *core.KeyPair, utxoIndex *core.UTXOIndex, senderPkh core.PubKeyHash, amount *common.Amount) *core.Transaction{
+func newTransaction(sender, receiver core.Address, senderKeyPair *core.KeyPair, utxoIndex *core.UTXOIndex, senderPkh core.PubKeyHash, amount *common.Amount, contract string) *core.Transaction{
 	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
 
-	tx, err := core.NewUTXOTransaction(utxos, sender, receiver, amount, senderKeyPair, common.NewAmount(0), "")
+	tx, err := core.NewUTXOTransaction(utxos, sender, receiver, amount, senderKeyPair, common.NewAmount(0), contract)
 
 	if err!= nil {
 		logger.WithError(err).Panic("Create transaction failed!")
