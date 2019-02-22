@@ -25,12 +25,12 @@ const (
 )
 
 var (
-	password             = "testpassword"
-	maxWallet            = 4
-	currBalance          = make(map[string]uint64)
-	numOfTx				 = 100
-	scTxFreq			 = 5
-	time 				 = int64(1532392928)
+	password    = "testpassword"
+	maxWallet   = 4
+	currBalance = make(map[string]uint64)
+	numOfTx     = 100
+	numOfScTx   = 0
+	time        = int64(1532392928)
 )
 
 type FileInfo struct {
@@ -50,12 +50,14 @@ type Keys struct {
 
 type GeneralConfigs struct{
 	NumOfNormalTx int
+	NumOfScTx int
 }
 
 func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, config GeneralConfigs) {
 	bcs := make([]*core.Blockchain, len(files))
 	addr := core.NewAddress(genesisAddr)
 	numOfTx = config.NumOfNormalTx
+	numOfScTx = config.NumOfScTx
 	for i := range files{
 		bc := core.CreateBlockchain(addr, files[i].Db, nil, 2000, nil)
 		bcs[i] = bc
@@ -189,7 +191,7 @@ func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex ,sende
 }
 
 func generateFundingTransaction(utxoIndex *core.UTXOIndex,fundAddr core.Address, minerPrivKey string,) *core.Transaction{
-	initFund := uint64(100000)
+	initFund := uint64(1000000)
 	initFundAmount := common.NewAmount(initFund)
 	minerKeyPair := core.GetKeyPairByString(minerPrivKey)
 	pkh,_ := core.NewUserPubKeyHash(minerKeyPair.PublicKey)
@@ -205,14 +207,13 @@ func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *c
 	txs := []*core.Transaction{}
 	for i:=0;i< numOfTx;i++{
 		contract := ""
-		if scTxFreq>0 && i%scTxFreq == 1 {
-			contract = contractFunctionCall
-		}
 		tx:=generateTransaction(addrs, wm, utxoIndex, pkhmap, contract, scAddr)
-		logger.WithFields(logger.Fields{
-			"to" : tx.Vout[0].PubKeyHash.GenerateAddress(),
-			"contract" : tx.Vout[0].Contract,
-		}).Info("Created a transaction")
+		utxoIndex.UpdateUtxo(tx)
+		txs = append(txs, tx)
+	}
+	for i:=0;i< numOfScTx;i++{
+		contract := contractFunctionCall
+		tx:=generateTransaction(addrs, wm, utxoIndex, pkhmap, contract, scAddr)
 		utxoIndex.UpdateUtxo(tx)
 		txs = append(txs, tx)
 	}
@@ -262,13 +263,19 @@ func getSenderAndReceiver(addrs []core.Address) (sender,receiver core.Address){
 	for i, addr := range addrs{
 		if currBalance[addr.String()] > 1000 {
 			sender = addr
-			if i == len(addrs)-1 {
+			if i == maxWallet {
 				receiver = addrs[0]
 			}else{
 				receiver = addrs[i+1]
 			}
 			return
 		}
+	}
+	for key, val := range currBalance {
+		logger.WithFields(logger.Fields{
+			"addr" : key,
+			"val"   : val,
+		}).Info("Current Balance")
 	}
 	logger.Panic("getSenderAndReceiver failed")
 	return
