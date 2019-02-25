@@ -47,7 +47,6 @@ type BlockHeader struct {
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
-	reversible   bool
 }
 
 type Hash []byte
@@ -83,7 +82,6 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *
 			height:    height,
 		},
 		transactions: txs,
-		reversible:   true,
 	}
 }
 
