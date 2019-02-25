@@ -26,14 +26,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -48,6 +47,7 @@ type BlockHeader struct {
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
+	reversible   bool
 }
 
 type Hash []byte
@@ -83,7 +83,12 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *
 			height:    height,
 		},
 		transactions: txs,
+		reversible:   true,
 	}
+}
+
+func (b *Block) BeIrreversible() {
+
 }
 
 func (b *Block) HashTransactions() []byte {
