@@ -97,16 +97,16 @@ func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	return txPool.getSortedTransactions()
 }
 
-func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blockHeight uint64) []*Transaction {
+func (txPool *TransactionPool) GetFilteredTransactions(utxoCache *UTXOCache, blockHeight uint64) []*Transaction {
 	txs := txPool.GetTransactions()
-	tempUtxoIndex := utxoIndex.DeepCopy()
+	tempUtxoCache := utxoCache
 	var validTxs []*Transaction
 	var inValidTxs []*Transaction
 
 	for _, tx := range txs {
-		if tx.Verify(tempUtxoIndex, blockHeight) {
+		if tx.Verify(tempUtxoCache, blockHeight) {
 			validTxs = append(validTxs, tx)
-			tempUtxoIndex.UpdateUtxo(tx)
+			tempUtxoCache.UpdateUtxo(tx)
 		} else {
 			inValidTxs = append(inValidTxs, tx)
 		}

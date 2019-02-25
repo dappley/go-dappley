@@ -363,7 +363,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	}
 
 	keypair := NewKeyPair()
-	pbkh,_ := NewUserPubKeyHash(keypair.PublicKey)
+	pbkh, _ := NewUserPubKeyHash(keypair.PublicKey)
 	addr := pbkh.GenerateAddress()
 
 	normalTX := NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
@@ -472,7 +472,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 					if len(utxos) == 0 && tt.expected.index[pkh] == nil {
 						continue
 					}
-					if pkh == ""{
+					if pkh == "" {
 						continue
 					}
 					assert.Equal(t, tt.expected.index[pkh], utxoIndex.index[pkh])
@@ -524,13 +524,13 @@ func TestFindUTXO(t *testing.T) {
 	Txin = append(Txin, MockTxInputs()...)
 	utxo1 := &UTXO{TXOutput{common.NewAmount(10), PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout}
 	utxo2 := &UTXO{TXOutput{common.NewAmount(9), PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout}
-	utxoIndex := NewUTXOIndex()
-	utxoIndex.index["addr1"] = []*UTXO{utxo1, utxo2}
+	utxoTx1 := NewUTXOTxWithData(*utxo1)
+	utxoTx2 := NewUTXOTxWithData(*utxo2)
 
-	assert.Equal(t, utxo1, utxoIndex.FindUTXO(Txin[0].Txid, Txin[0].Vout))
-	assert.Equal(t, utxo2, utxoIndex.FindUTXO(Txin[1].Txid, Txin[1].Vout))
-	assert.Nil(t, utxoIndex.FindUTXO(Txin[2].Txid, Txin[2].Vout))
-	assert.Nil(t, utxoIndex.FindUTXO(Txin[3].Txid, Txin[3].Vout))
+	assert.Equal(t, utxo1, utxoTx1.GetUtxo(Txin[0].Txid, Txin[0].Vout))
+	assert.Equal(t, utxo2, utxoTx2.GetUtxo(Txin[1].Txid, Txin[1].Vout))
+	assert.Nil(t, utxoTx1.GetUtxo(Txin[2].Txid, Txin[2].Vout))
+	assert.Nil(t, utxoTx2.GetUtxo(Txin[3].Txid, Txin[3].Vout))
 }
 
 func TestConcurrentUTXOindexReadWrite(t *testing.T) {
@@ -565,7 +565,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 					mu.Unlock()
 
 				} else {
-					index.removeUTXO([]byte("asd"),[]byte("asd"), 65)
+					index.removeUTXO([]byte("asd"), []byte("asd"), 65)
 					atomic.AddUint64(&deleteOps, 1)
 					mu.Lock()
 					exists = false

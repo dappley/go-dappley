@@ -299,10 +299,10 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
-func (tx *Transaction) IsContractDeployed(utxos *UTXOIndex) bool {
+func (tx *Transaction) IsContractDeployed(utxoCache *UTXOCache) bool {
 	contractAddress := tx.GetContractAddress()
-	contractUtxos := utxos.GetContractUtxos()
-	for _, utxo := range contractUtxos {
+	contractUtxoTx := utxoCache.GetContractUtxos()
+	for _, utxo := range contractUtxoTx.TxIndex {
 		if utxo.PubKeyHash.GenerateAddress() == contractAddress {
 			return true
 		}
@@ -311,7 +311,7 @@ func (tx *Transaction) IsContractDeployed(utxos *UTXOIndex) bool {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxoCache *UTXOCache, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
@@ -326,7 +326,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		return true
 	}
 
-	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoIndex) {
+	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoCache) {
 		logger.Warn("Transaction: contract state check failed.")
 		return false
 	}
@@ -347,7 +347,8 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return false
 		}
-		utxo := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
+		tempUtxoTx := utxoCache.Get(pubKeyHash)
+		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
 				"tx_id":      hex.EncodeToString(tx.ID),

@@ -91,18 +91,18 @@ func (utxos *UTXOIndex) Save(db storage.Storage) error {
 
 // FindUTXO returns the UTXO instance of the corresponding TXOutput in the transaction (identified by txid and vout)
 // if the TXOutput is unspent. Otherwise, it returns nil.
-func (utxos *UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
-	utxos.mutex.RLock()
-	defer utxos.mutex.RUnlock()
-	for _, utxoArray := range utxos.index {
-		for _, u := range utxoArray {
-			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
-				return u
-			}
-		}
-	}
-	return nil
-}
+//func (utxos *UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
+//	utxos.mutex.RLock()
+//	defer utxos.mutex.RUnlock()
+//	for _, utxoArray := range utxos.index {
+//		for _, u := range utxoArray {
+//			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
+//				return u
+//			}
+//		}
+//	}
+//	return nil
+//}
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) []*UTXO {
@@ -221,9 +221,9 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
 }
 
-func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
-	return utxos.index[contractUtxoKey]
-}
+//func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
+//	return utxos.index[contractUtxoKey]
+//}
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error {
