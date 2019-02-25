@@ -1,0 +1,6 @@
+syntax = "proto3";
+package triepb;
+
+message Node {
+    repeated bytes val = 1;
+}
