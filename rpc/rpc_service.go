@@ -220,10 +220,9 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
 	rpcService.node.TxBroadcast(&tx)
 
-	contractAddr := tx.GetContractAddress()
-	message := ""
-	if contractAddr.String() != "" {
-		message = contractAddr.String()
+	if tx.IsContract() {
+		contractAddr := tx.GetContractAddress()
+		message := contractAddr.String()
 		logger.WithFields(logger.Fields{
 			"contractAddr": message,
 		}).Info("Smart Contract Deployed Successful!")
@@ -246,6 +245,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		txs[key] = tx
 	}
 
+	// verify dependent transactions within batch of transactions
 	lastTxsLen := 0
 	for len(txs) != lastTxsLen {
 		lastTxsLen = len(txs)
@@ -264,7 +264,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				continue
 			}
 
-			if tx.Verify(utxoIndex, 0) == false {
+			if !tx.Verify(utxoIndex, 0) {
 				continue
 			}
 
@@ -290,6 +290,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	}
 
 	st := status.New(codes.OK, "")
+	// add invalid transactions to response details if exists
 	if statusCode == codes.Unknown || len(txs) > 0 {
 		st = status.New(codes.Unknown, "one or more transactions are invalid")
 		for _, tx := range txs {
