@@ -44,7 +44,7 @@ type TransactionNode struct {
 
 type TransactionPool struct {
 	txs      map[string]*TransactionNode
-	txOrder  []string
+	tipOrder []string
 	limit    uint32
 	EventBus EventBus.Bus
 	mutex    sync.RWMutex
@@ -53,7 +53,7 @@ type TransactionPool struct {
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
 		txs:      make(map[string]*TransactionNode),
-		txOrder:  make([]string, 0),
+		tipOrder: make([]string, 0),
 		limit:    limit,
 		EventBus: EventBus.New(),
 		mutex:    sync.RWMutex{},
@@ -63,13 +63,13 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 func (txPool *TransactionPool) deepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
 		txs:      make(map[string]*TransactionNode),
-		txOrder:  make([]string, 0),
+		tipOrder: make([]string, 0),
 		limit:    txPool.limit,
 		EventBus: EventBus.New(),
 		mutex:    sync.RWMutex{},
 	}
 
-	copy(txPoolCopy.txOrder, txPool.txOrder)
+	copy(txPoolCopy.tipOrder, txPool.tipOrder)
 
 	for key, tx := range txPool.txs {
 		newTx := tx.Value.DeepCopy()
@@ -84,16 +84,6 @@ func (txPool *TransactionPool) deepCopy() *TransactionPool {
 	return &txPoolCopy
 }
 
-func (txPool *TransactionPool) GetAndResetTransactions() []*Transaction {
-	txPool.mutex.Lock()
-	defer txPool.mutex.Unlock()
-
-	txs := txPool.getSortedTransactions()
-
-	txPool.txs = make(map[string]*TransactionNode)
-	return txs
-}
-
 func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
@@ -101,22 +91,25 @@ func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	return txPool.getSortedTransactions()
 }
 
-func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blockHeight uint64) []*Transaction {
-	txs := txPool.GetTransactions()
+//PopTransactionsWithMostTips pops the transactions with the most tips
+func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, numOfTx int) []*Transaction {
+
 	tempUtxoIndex := utxoIndex.DeepCopy()
 	var validTxs []*Transaction
 	var inValidTxs []*Transaction
 
-	for _, tx := range txs {
-		if tx.Verify(tempUtxoIndex, blockHeight) {
-			validTxs = append(validTxs, tx)
-			tempUtxoIndex.UpdateUtxo(tx)
+	for len(validTxs)<numOfTx && len(txPool.txs)>0 {
+		txNode := txPool.GetMaxTipTransaction()
+		txPool.tipOrder = txPool.tipOrder[1:]
+		if txNode.Value.Verify(tempUtxoIndex, 0) {
+			validTxs = append(validTxs, txNode.Value)
+			tempUtxoIndex.UpdateUtxo(txNode.Value)
+			txPool.insertChildrenIntoSortedWaitlist(txNode)
+			txPool.removeTransaction(txNode.Value)
 		} else {
-			inValidTxs = append(inValidTxs, tx)
+			inValidTxs = append(inValidTxs, txNode.Value)
+			txPool.removeTransactionNodeAndChildren(txNode.Value)
 		}
-	}
-	if len(inValidTxs) > 0 {
-		txPool.CheckAndRemoveTransactions(inValidTxs)
 	}
 
 	return validTxs
@@ -153,60 +146,32 @@ func (txPool *TransactionPool) Push(tx *Transaction) {
 
 }
 
-func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
-	txPool.mutex.Lock()
-	defer txPool.mutex.Unlock()
-
-	for _, tx := range txs {
-		txNode, ok := txPool.txs[string(tx.ID)]
-		if !ok {
-			continue
-		}
-		for _, child := range txNode.Children {
-			txPool.insertIntoSort(child)
-		}
-
-		toRemoveTxs := map[string]*TransactionNode{string(tx.ID): txNode}
-		txPool.removeSelectedTransactions(toRemoveTxs)
-	}
-
-	txPool.cleanUpTxSort()
-}
-
-//Update updates the transaction pool when a new block is added to the blockchain.
+//CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
 //It removes the packed transactions from the txpool while keeping their children
-func (txPool *TransactionPool) Update(packedTx []*Transaction) {
+func (txPool *TransactionPool) CleanUpMinedTxs(minedTxs []*Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
-	for _, tx := range packedTx {
+	for _, tx := range minedTxs {
 
 		txNode, ok := txPool.txs[string(tx.ID)]
 		if !ok {
 			continue
 		}
-
-		txPool.disconnectFromParent(txNode.Value)
-
-		for _, child := range txNode.Children {
-			txPool.insertIntoSort(child)
-		}
-
-		delete(txPool.txs, string(tx.ID))
+		txPool.insertChildrenIntoSortedWaitlist(txNode)
+		txPool.removeTransaction(txNode.Value)
 	}
-
 	txPool.cleanUpTxSort()
 }
-
 
 func (txPool *TransactionPool) cleanUpTxSort() {
 	newTxOrder := []string{}
-	for _, txid := range txPool.txOrder {
+	for _, txid := range txPool.tipOrder {
 		if _, ok := txPool.txs[txid]; ok {
 			newTxOrder = append(newTxOrder, txid)
 		}
 	}
-	txPool.txOrder = newTxOrder
+	txPool.tipOrder = newTxOrder
 }
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
@@ -281,30 +246,36 @@ func (txPool *TransactionPool) getDependentTxs(txNode *TransactionNode) map[stri
 // The param toRemoveTxs must be calculate by function getDependentTxs
 func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string]*TransactionNode) {
 	for _, txNode := range toRemoveTxs {
-		txPool.removeTransaction(txNode.Value)
+		txPool.removeTransactionNodeAndChildren(txNode.Value)
 	}
 }
 
-//removeTransaction removes the txNode from tx pool and all its children.
-//Note: this function does not remove the node from txOrder!
-func (txPool *TransactionPool) removeTransaction(tx *Transaction) {
-
-	txPool.disconnectFromParent(tx)
+//removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
+//Note: this function does not remove the node from tipOrder!
+func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction) {
 
 	txStack := stack.New()
 	txStack.Push(string(tx.ID))
 	for(txStack.Len()>0){
 		txid := txStack.Pop().(string)
-		tempTxNode, ok := txPool.txs[txid]
+		currTxNode, ok := txPool.txs[txid]
 		if !ok{
 			continue
 		}
-		for _, child := range tempTxNode.Children {
+		for _, child := range currTxNode.Children {
 			txStack.Push(string(child.ID))
 		}
 		txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[txid].Value)
-		delete(txPool.txs, txid)
+		txPool.removeTransaction(currTxNode.Value)
 	}
+}
+
+//removeTransactionNodeAndChildren removes the txNode from tx pool.
+//Note: this function does not remove the node from tipOrder!
+func (txPool *TransactionPool) removeTransaction(tx *Transaction) {
+	txPool.disconnectFromParent(tx)
+	txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[string(tx.ID)].Value)
+	delete(txPool.txs, string(tx.ID))
 }
 
 //disconnectFromParent removes itself from its parent's node's children field
@@ -321,8 +292,8 @@ func (txPool *TransactionPool) removeMinTipTx() {
 	if minTipTx == nil {
 		return
 	}
-	txPool.removeTransaction(minTipTx.Value)
-	txPool.txOrder = txPool.txOrder[:len(txPool.txOrder)-1]
+	txPool.removeTransactionNodeAndChildren(minTipTx.Value)
+	txPool.tipOrder = txPool.tipOrder[:len(txPool.tipOrder)-1]
 }
 
 func (txPool *TransactionPool) addTransaction(tx *Transaction) {
@@ -345,17 +316,25 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 		return
 	}
 
-	txPool.insertIntoSort(tx)
+	txPool.insertIntoSortedWaitlist(tx)
 }
 
-func (txPool *TransactionPool) insertIntoSort(tx *Transaction){
-	index := sort.Search(len(txPool.txOrder), func(i int) bool {
-		return txPool.txs[txPool.txOrder[i]].Value.Tip.Cmp(tx.Tip) == -1
+func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *TransactionNode){
+	for _, child := range txNode.Children {
+		txPool.insertIntoSortedWaitlist(child)
+	}
+}
+
+//insertIntoSortedWaitlist insert a transaction into txSort based on tip.
+//If the transaction is a child of another transaction, the transaction will NOT be inserted
+func (txPool *TransactionPool) insertIntoSortedWaitlist(tx *Transaction){
+	index := sort.Search(len(txPool.tipOrder), func(i int) bool {
+		return txPool.txs[txPool.tipOrder[i]].Value.Tip.Cmp(tx.Tip) == -1
 	})
 
-	txPool.txOrder = append(txPool.txOrder, "")
-	copy(txPool.txOrder[index+1:], txPool.txOrder[index:])
-	txPool.txOrder[index] = string(tx.ID)
+	txPool.tipOrder = append(txPool.tipOrder, "")
+	copy(txPool.tipOrder[index+1:], txPool.tipOrder[index:])
+	txPool.tipOrder[index] = string(tx.ID)
 }
 
 func deserializeTxPool(d []byte) map[string]*TransactionNode {
@@ -396,6 +375,15 @@ func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error {
 }
 
 //GetMinTipTransaction gets the transactionNode with minimum tip
+func (txPool *TransactionPool) GetMaxTipTransaction() *TransactionNode {
+	txid := txPool.GetMaxTipTxid()
+	if txid == "" {
+		return nil
+	}
+	return txPool.txs[txid]
+}
+
+//GetMinTipTransaction gets the transactionNode with minimum tip
 func (txPool *TransactionPool) GetMinTipTransaction() *TransactionNode {
 	txid := txPool.GetMinTipTxid()
 	if txid == "" {
@@ -405,9 +393,17 @@ func (txPool *TransactionPool) GetMinTipTransaction() *TransactionNode {
 }
 
 //GetMinTipTxid gets the txid of the transaction with minimum tip
-func (txPool *TransactionPool) GetMinTipTxid() string {
-	if len(txPool.txOrder) == 0 {
+func (txPool *TransactionPool) GetMaxTipTxid() string {
+	if len(txPool.tipOrder) == 0 {
 		return ""
 	}
-	return txPool.txOrder[len(txPool.txOrder)-1]
+	return txPool.tipOrder[0]
+}
+
+//GetMinTipTxid gets the txid of the transaction with minimum tip
+func (txPool *TransactionPool) GetMinTipTxid() string {
+	if len(txPool.tipOrder) == 0 {
+		return ""
+	}
+	return txPool.tipOrder[len(txPool.tipOrder)-1]
 }

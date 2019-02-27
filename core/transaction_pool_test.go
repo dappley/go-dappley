@@ -79,68 +79,68 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	txs := generateDependentTxs()
 
 	txPool := NewTransactionPool(128)
-	//push the first transaction. It should be in stored in txs and txOrder
+	//push the first transaction. It should be in stored in txs and tipOrder
 	txPool.addTransaction(txs[0])
 	assert.Equal(t, 1, len(txPool.txs))
-	assert.Equal(t,1, len(txPool.txOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[0])
+	assert.Equal(t,1, len(txPool.tipOrder))
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
 
-	//push ttx1. It should be stored in txs. But it should not be in txOrder since it is a child of ttx0
+	//push ttx1. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
 	txPool.addTransaction(txs[1])
 	assert.Equal(t, 2, len(txPool.txs))
-	assert.Equal(t,1, len(txPool.txOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[0])
+	assert.Equal(t,1, len(txPool.tipOrder))
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
 
-	//push ttx2. It should be stored in txs. But it should not be in txOrder since it is a child of ttx0
+	//push ttx2. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
 	txPool.addTransaction(txs[2])
 	assert.Equal(t, 3, len(txPool.txs))
-	assert.Equal(t,1, len(txPool.txOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[0])
+	assert.Equal(t,1, len(txPool.tipOrder))
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
 
-	//push ttx3. It should be stored in txs. But it should not be in txOrder since it is a child of ttx1
+	//push ttx3. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx1
 	txPool.addTransaction(txs[3])
 	assert.Equal(t, 4, len(txPool.txs))
-	assert.Equal(t,1, len(txPool.txOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[0])
+	assert.Equal(t,1, len(txPool.tipOrder))
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
 
-	//push ttx4. It should be stored in txs and txOrder
+	//push ttx4. It should be stored in txs and tipOrder
 	txPool.addTransaction(txs[4])
 	assert.Equal(t, 5, len(txPool.txs))
-	assert.Equal(t,2, len(txPool.txOrder))
-	//since ttx4 has a higher tip than ttx0, it should rank position 0 in txOrder
-	assert.Equal(t,string(txs[4].ID), txPool.txOrder[0])
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[1])
+	assert.Equal(t,2, len(txPool.tipOrder))
+	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
+	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[0])
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[1])
 
-	//push ttx5. It should be stored in txs. But it should not be in txOrder since it is a child of ttx4
+	//push ttx5. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx4
 	txPool.addTransaction(txs[5])
 	assert.Equal(t, 6, len(txPool.txs))
-	assert.Equal(t,2, len(txPool.txOrder))
-	//since ttx4 has a higher tip than ttx0, it should rank position 0 in txOrder
-	assert.Equal(t,string(txs[4].ID), txPool.txOrder[0])
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[1])
+	assert.Equal(t,2, len(txPool.tipOrder))
+	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
+	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[0])
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[1])
 
-	//push ttx6.  It should be stored in txs and txOrder
+	//push ttx6.  It should be stored in txs and tipOrder
 	txPool.addTransaction(txs[6])
 	assert.Equal(t, 7, len(txPool.txs))
-	assert.Equal(t,3, len(txPool.txOrder))
-	//since ttx4 has a higher tip than ttx0, it should rank position 0 in txOrder
-	assert.Equal(t,string(txs[6].ID), txPool.txOrder[0])
-	assert.Equal(t,string(txs[4].ID), txPool.txOrder[1])
-	assert.Equal(t,string(txs[0].ID), txPool.txOrder[2])
+	assert.Equal(t,3, len(txPool.tipOrder))
+	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
+	assert.Equal(t,string(txs[6].ID), txPool.tipOrder[0])
+	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[1])
+	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[2])
 }
 
-func TestTransactionPool_RemoveTransaction(t *testing.T) {
+func TestTransactionPool_RemoveTransactionNodeAndChildren(t *testing.T) {
 	txs := generateDependentTxs()
 	txPool := NewTransactionPool(128)
 	for _, tx := range txs {
 		txPool.addTransaction(tx)
 	}
 	//Since tx2 has no children, only tx2 will be removed
-	txPool.removeTransaction(txs[2])
+	txPool.removeTransactionNodeAndChildren(txs[2])
 	assert.Equal(t, 7, len(txPool.txs))
 
 	//Since tx0 is the root, all txs wlil be removed
-	txPool.removeTransaction(txs[0])
+	txPool.removeTransactionNodeAndChildren(txs[0])
 	assert.Equal(t, 4, len(txPool.txs))
 }
 
@@ -153,9 +153,9 @@ func TestTransactionPool_removeMinTipTx(t *testing.T) {
 	//Since tx0 is the minimum tip, all children will be removed
 	txPool.removeMinTipTx()
 	assert.Equal(t, 4, len(txPool.txs))
-	assert.Equal(t,string(txs[7].ID), txPool.txOrder[0])
-	assert.Equal(t,string(txs[6].ID), txPool.txOrder[1])
-	assert.Equal(t,string(txs[4].ID), txPool.txOrder[2])
+	assert.Equal(t,string(txs[7].ID), txPool.tipOrder[0])
+	assert.Equal(t,string(txs[6].ID), txPool.tipOrder[1])
+	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[2])
 }
 
 func TestTransactionPool_Update(t *testing.T) {
@@ -167,14 +167,14 @@ func TestTransactionPool_Update(t *testing.T) {
 
 	//Since tx0 is the root, its children will be bumped up into the sorted list
 	packedTxs := []*Transaction{txs[0]}
-	txPool.Update(packedTxs)
+	txPool.CleanUpMinedTxs(packedTxs)
 	assert.Equal(t, 7, len(txPool.txs))
-	assert.Equal(t, 5, len(txPool.txOrder))
-	assert.Equal(t,string(txs[7].ID), txPool.txOrder[0])
-	assert.Equal(t,string(txs[6].ID), txPool.txOrder[1])
-	assert.Equal(t,string(txs[4].ID), txPool.txOrder[2])
-	assert.Equal(t,string(txs[1].ID), txPool.txOrder[3])
-	assert.Equal(t,string(txs[2].ID), txPool.txOrder[4])
+	assert.Equal(t, 5, len(txPool.tipOrder))
+	assert.Equal(t,string(txs[7].ID), txPool.tipOrder[0])
+	assert.Equal(t,string(txs[6].ID), txPool.tipOrder[1])
+	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[2])
+	assert.Equal(t,string(txs[1].ID), txPool.tipOrder[3])
+	assert.Equal(t,string(txs[2].ID), txPool.tipOrder[4])
 }
 
 func TestTransactionPoolLimit(t *testing.T) {
@@ -195,38 +195,6 @@ func TestTransactionPoolLimit(t *testing.T) {
 	txPool.Push(&tx3) // Note: t3 has less tips and should be discarded
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
 	assert.Equal(t, tx4, *(txPool.GetTransactions()[0]))
-}
-
-func TestTransactionPool_Pop(t *testing.T) {
-	for _, tt := range popInputOrder {
-		var popOrder []*common.Amount
-		txPool := NewTransactionPool(128)
-		for _, tx := range tt.order {
-			txPool.Push(tx)
-		}
-
-		txs := txPool.GetAndResetTransactions()
-
-		for _, tx := range txs {
-			popOrder = append(popOrder, tx.Tip)
-		}
-		//assert.Equal(t, expectPopOrder, popOrder)
-	}
-}
-
-func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
-	txPool := NewTransactionPool(128)
-	totalTx := 5
-	var txs []*Transaction
-	for i := 0; i < totalTx; i++ {
-		tx := MockTransaction()
-		txs = append(txs, tx)
-		txPool.Push(tx)
-	}
-	txPool.CheckAndRemoveTransactions(txs)
-
-	assert.Equal(t, 0, len(txPool.GetTransactions()))
-
 }
 
 func TestTransactionPool_GetTransactions(t *testing.T) {

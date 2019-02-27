@@ -91,7 +91,7 @@ func (bp *BlockProducer) prepareBlock() {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.LoadUTXOIndex(bp.bc.GetDb())
-	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoIndex, parentBlock.GetHeight()+1)
+	validTxs := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, 100)
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
