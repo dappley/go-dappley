@@ -65,31 +65,42 @@ var popInputOrder = []struct {
 
 func TestTransactionPool_Push(t *testing.T) {
 	txPool := NewTransactionPool(128)
-	txPool.Push(&tx1)
+	txPool.Push(tx1)
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	txPool.Push(&tx2)
+	txPool.Push(tx2)
 	assert.Equal(t, 2, len(txPool.GetTransactions()))
-	txPool.Push(&tx3)
-	txPool.Push(&tx4)
+	txPool.Push(tx3)
+	txPool.Push(tx4)
 	assert.Equal(t, 4, len(txPool.GetTransactions()))
+
+	newTxPool := NewTransactionPool(128)
+	var txs = []Transaction{tx1, tx2, tx3, tx4}
+	for _, tx := range txs {
+		//txPointer := tx.DeepCopy()
+		newTxPool.Push(tx) // &txPointer)
+	}
+	diffTxs := newTxPool.GetTransactions()
+	for i := 0; i < 3; i ++ {
+		assert.NotEqual(t, diffTxs[i].ID, diffTxs[i + 1].ID)
+	}
 }
 
 func TestTransactionPoolLimit(t *testing.T) {
 	txPool := NewTransactionPool(0)
-	txPool.Push(&tx1)
+	txPool.Push(tx1)
 	assert.Equal(t, 0, len(txPool.GetTransactions()))
 
 	txPool = NewTransactionPool(1)
-	txPool.Push(&tx1)
-	txPool.Push(&tx2) // Note: t2 has higher tips and should be kept in pool in place of t1
+	txPool.Push(tx1)
+	txPool.Push(tx2) // Note: t2 has higher tips and should be kept in pool in place of t1
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
 	assert.Equal(t, tx2, *(txPool.GetTransactions()[0]))
 
-	txPool.Push(&tx4) // Note: t4 has higher tips and should be kept in pool in place of t2
+	txPool.Push(tx4) // Note: t4 has higher tips and should be kept in pool in place of t2
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
 	assert.Equal(t, tx4, *(txPool.GetTransactions()[0]))
 
-	txPool.Push(&tx3) // Note: t3 has less tips and should be discarded
+	txPool.Push(tx3) // Note: t3 has less tips and should be discarded
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
 	assert.Equal(t, tx4, *(txPool.GetTransactions()[0]))
 }
@@ -99,7 +110,7 @@ func TestTransactionPool_Pop(t *testing.T) {
 		var popOrder []*common.Amount
 		txPool := NewTransactionPool(128)
 		for _, tx := range tt.order {
-			txPool.Push(tx)
+			txPool.Push(*tx)
 		}
 
 		txs := txPool.GetAndResetTransactions()
@@ -118,7 +129,7 @@ func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
 	for i := 0; i < totalTx; i++ {
 		tx := MockTransaction()
 		txs = append(txs, tx)
-		txPool.Push(tx)
+		txPool.Push(*tx)
 	}
 	txPool.CheckAndRemoveTransactions(txs)
 
@@ -154,8 +165,8 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	executionTx.ID = executionTx.Hash()
 
 	txPool := NewTransactionPool(10)
-	txPool.Push(&executionTx)
-	txPool.Push(&deploymentTx)
+	txPool.Push(executionTx)
+	txPool.Push(deploymentTx)
 
 	// deployment transaction should be ahead of execution transaction
 	txs := txPool.GetTransactions()
@@ -165,12 +176,12 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 
 func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
 	txPool := NewTransactionPool(128)
-	txPool.Push(&tx1)
+	txPool.Push(tx1)
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	txPool.Push(&tx2)
+	txPool.Push(tx2)
 	assert.Equal(t, 2, len(txPool.GetTransactions()))
-	txPool.Push(&tx3)
-	txPool.Push(&tx4)
+	txPool.Push(tx3)
+	txPool.Push(tx4)
 	assert.Equal(t, 4, len(txPool.GetTransactions()))
 	db := storage.NewRamStorage()
 	err := txPool.SaveToDatabase(db)

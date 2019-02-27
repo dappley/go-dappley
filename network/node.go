@@ -732,7 +732,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 		return
 	}
 
-	n.bm.Getblockchain().GetTxPool().Push(tx)
+	n.bm.Getblockchain().GetTxPool().Push(*tx)
 }
 
 func (n *Node) GetNodePeers(data []byte, pid peer.ID) {

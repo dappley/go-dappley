@@ -387,7 +387,7 @@ func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
 			if !tx.IsCoinbase() && !tx.IsRewardTx() {
-				txPool.Push(tx)
+				txPool.Push(*tx)
 			}
 		}
 	}

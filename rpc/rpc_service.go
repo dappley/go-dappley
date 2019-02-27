@@ -217,7 +217,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 
-	rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
+	rpcService.node.GetBlockchain().GetTxPool().Push(tx)
 	rpcService.node.TxBroadcast(&tx)
 
 	if tx.IsContract() {
@@ -249,8 +249,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	lastTxsLen := 0
 	for len(txs) != lastTxsLen {
 		lastTxsLen = len(txs)
-		for key, txPointer := range txs {
-			tx := txPointer.DeepCopy()
+		for key, tx := range txs {
 			if tx.IsCoinbase() {
 				if statusCode == codes.OK {
 					statusCode = codes.Unknown
@@ -269,7 +268,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			}
 
 			utxoIndex.UpdateUtxo(&tx)
-			rpcService.node.GetBlockchain().GetTxPool().Push(&tx)
+			rpcService.node.GetBlockchain().GetTxPool().Push(tx)
 			rpcService.node.TxBroadcast(&tx)
 
 			if tx.IsContract() {

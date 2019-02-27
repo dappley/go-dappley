@@ -75,7 +75,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(&tx)
+	bc.GetTxPool().Push(tx)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
@@ -188,7 +188,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(&tx)
+	bc.GetTxPool().Push(tx)
 
 	//start a producer
 	pool := core.NewBlockPool(0)
@@ -209,7 +209,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, keyPair, common.NewAmount(0), "")
 	assert.Nil(t, err)
 
-	bc.GetTxPool().Push(&tx2)
+	bc.GetTxPool().Push(tx2)
 
 	//Make sure there are blocks have been mined
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
@@ -316,8 +316,8 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(&tx1)
-	bc.GetTxPool().Push(&tx2)
+	bc.GetTxPool().Push(tx1)
+	bc.GetTxPool().Push(tx2)
 
 	//start a miner
 	pool := core.NewBlockPool(0)

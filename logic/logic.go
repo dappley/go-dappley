@@ -270,7 +270,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 
 	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, tip, contract)
 
-	bc.GetTxPool().Push(&tx)
+	bc.GetTxPool().Push(tx)
 	if node!=nil{
 		node.TxBroadcast(&tx)
 	}

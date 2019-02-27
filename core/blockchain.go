@@ -270,7 +270,7 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 	for _, tx := range currBlock.GetTransactions() {
 		genTxs := tx.Execute(*utxoIndex, scState, rewards, scEngine, currBlock.GetHeight(), parentBlk)
 		for _, gtx := range genTxs {
-			bc.GetTxPool().Push(gtx)
+			bc.GetTxPool().Push(*gtx)
 		}
 
 		if tx.IsRewardTx() {
