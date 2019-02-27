@@ -190,7 +190,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 		return err
 	}
 
-	numTxBeforeExe := len(bc.GetTxPool().GetTransactions())
+	numTxBeforeExe := bc.GetTxPool().GetPoolSize()
 
 	utxoIndex := LoadUTXOIndex(bc.db)
 	tempUtxo := utxoIndex.DeepCopy()
@@ -203,7 +203,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 		return err
 	}
 
-	numTxAfterExe := len(bc.GetTxPool().GetTransactions())
+	numTxAfterExe := bc.GetTxPool().GetPoolSize()
 	//Remove transactions in current transaction pool
 	bc.GetTxPool().CleanUpMinedTxs(block.GetTransactions())
 	err = bc.GetTxPool().SaveToDatabase(bc.db)
@@ -216,7 +216,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	logger.WithFields(logger.Fields{
 		"num_txs_before_sc_exe":       numTxBeforeExe,
 		"num_txs_after_sc_exe":        numTxAfterExe,
-		"num_txs_after_update_txpool": len(bc.GetTxPool().GetTransactions()),
+		"num_txs_after_update_txpool": bc.GetTxPool().GetPoolSize(),
 	}).Info("Blockchain : update tx pool")
 
 	err = bcTemp.AddBlockToDb(block)
@@ -237,7 +237,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	poolsize := 0
 	if bc.txPool != nil {
-		poolsize = len(bc.txPool.GetTransactions())
+		poolsize = bc.txPool.GetPoolSize()
 	}
 
 	blockLogger.WithFields(logger.Fields{

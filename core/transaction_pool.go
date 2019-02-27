@@ -91,6 +91,13 @@ func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	return txPool.getSortedTransactions()
 }
 
+func (txPool *TransactionPool) GetPoolSize() int {
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
+
+	return len(txPool.txs)
+}
+
 //PopTransactionsWithMostTips pops the transactions with the most tips
 func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, numOfTx int) []*Transaction {
 
