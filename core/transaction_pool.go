@@ -173,6 +173,32 @@ func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
 	txPool.cleanUpTxSort()
 }
 
+//Update updates the transaction pool when a new block is added to the blockchain.
+//It removes the packed transactions from the txpool while keeping their children
+func (txPool *TransactionPool) Update(packedTx []*Transaction) {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
+
+	for _, tx := range packedTx {
+
+		txNode, ok := txPool.txs[string(tx.ID)]
+		if !ok {
+			continue
+		}
+
+		txPool.disconnectFromParent(txNode.Value)
+
+		for _, child := range txNode.Children {
+			txPool.insertIntoSort(child)
+		}
+
+		delete(txPool.txs, string(tx.ID))
+	}
+
+	txPool.cleanUpTxSort()
+}
+
+
 func (txPool *TransactionPool) cleanUpTxSort() {
 	newTxOrder := []string{}
 	for _, txid := range txPool.txOrder {
@@ -180,7 +206,7 @@ func (txPool *TransactionPool) cleanUpTxSort() {
 			newTxOrder = append(newTxOrder, txid)
 		}
 	}
-	copy(txPool.txOrder, newTxOrder)
+	txPool.txOrder = newTxOrder
 }
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
@@ -262,12 +288,9 @@ func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string
 //removeTransaction removes the txNode from tx pool and all its children.
 //Note: this function does not remove the node from txOrder!
 func (txPool *TransactionPool) removeTransaction(tx *Transaction) {
-	for _, vin := range tx.Vin {
-		parentTx, exist := txPool.txs[string(vin.Txid)]
-		if exist {
-			delete(parentTx.Children, string(tx.ID))
-		}
-	}
+
+	txPool.disconnectFromParent(tx)
+
 	txStack := stack.New()
 	txStack.Push(string(tx.ID))
 	for(txStack.Len()>0){
@@ -281,6 +304,15 @@ func (txPool *TransactionPool) removeTransaction(tx *Transaction) {
 		}
 		txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[txid].Value)
 		delete(txPool.txs, txid)
+	}
+}
+
+//disconnectFromParent removes itself from its parent's node's children field
+func (txPool *TransactionPool) disconnectFromParent(tx *Transaction){
+	for _, vin := range tx.Vin {
+		if parentTx, exist := txPool.txs[string(vin.Txid)]; exist {
+			delete(parentTx.Children, string(tx.ID))
+		}
 	}
 }
 

@@ -158,6 +158,25 @@ func TestTransactionPool_removeMinTipTx(t *testing.T) {
 	assert.Equal(t,string(txs[4].ID), txPool.txOrder[2])
 }
 
+func TestTransactionPool_Update(t *testing.T) {
+	txs := generateDependentTxs()
+	txPool := NewTransactionPool(128)
+	for _, tx := range txs {
+		txPool.addTransaction(tx)
+	}
+
+	//Since tx0 is the root, its children will be bumped up into the sorted list
+	packedTxs := []*Transaction{txs[0]}
+	txPool.Update(packedTxs)
+	assert.Equal(t, 7, len(txPool.txs))
+	assert.Equal(t, 5, len(txPool.txOrder))
+	assert.Equal(t,string(txs[7].ID), txPool.txOrder[0])
+	assert.Equal(t,string(txs[6].ID), txPool.txOrder[1])
+	assert.Equal(t,string(txs[4].ID), txPool.txOrder[2])
+	assert.Equal(t,string(txs[1].ID), txPool.txOrder[3])
+	assert.Equal(t,string(txs[2].ID), txPool.txOrder[4])
+}
+
 func TestTransactionPoolLimit(t *testing.T) {
 	txPool := NewTransactionPool(0)
 	txPool.Push(&tx1)
@@ -279,7 +298,7 @@ func generateDependentTxs() []*Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(2),
+		Tip:  common.NewAmount(3),
 	}
 
 	ttx1 := &Transaction{
@@ -293,7 +312,7 @@ func generateDependentTxs() []*Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  []TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(2),
+		Tip:  common.NewAmount(1),
 	}
 
 	ttx3 := &Transaction{
@@ -307,28 +326,28 @@ func generateDependentTxs() []*Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(3),
+		Tip:  common.NewAmount(4),
 	}
 
 	ttx5 := &Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  []TXInput{{Txid: ttx4.ID}},
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(4),
+		Tip:  common.NewAmount(5),
 	}
 
 	ttx6 := &Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(5),
+		Tip:  common.NewAmount(6),
 	}
 
 	ttx7 := &Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(6),
+		Tip:  common.NewAmount(7),
 	}
 	return []*Transaction{ttx0,ttx1,ttx2,ttx3,ttx4,ttx5,ttx6,ttx7}
 }

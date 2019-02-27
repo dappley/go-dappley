@@ -205,7 +205,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	numTxAfterExe := len(bc.GetTxPool().GetTransactions())
 	//Remove transactions in current transaction pool
-	bc.GetTxPool().CheckAndRemoveTransactions(block.GetTransactions())
+	bc.GetTxPool().Update(block.GetTransactions())
 	err = bc.GetTxPool().SaveToDatabase(bc.db)
 
 	if err != nil {
