@@ -15,8 +15,7 @@ func TestScState_Serialize(t *testing.T) {
 	ls["key1"] = "value1"
 	ss.states["addr1"] = ls
 	rawBytes := ss.serialize()
-	ssRet := NewScState()
-	ssRet.states = deserializeScState(rawBytes)
+	ssRet := deserializeScState(rawBytes)
 	assert.Equal(t,ss.states,ssRet.states)
 }
 
@@ -50,8 +49,8 @@ func TestScState_LoadFromDatabase(t *testing.T) {
 	hash := []byte("testhash")
 	err := ss.SaveToDatabase(db, hash)
 	assert.Nil(t, err)
-	ss.LoadFromDatabase(db, hash)
-	assert.Equal(t, "Value", ss.Get("addr1","key1"))
+	ss1 := LoadScStateFromDatabase(db, hash)
+	assert.Equal(t, "Value", ss1.Get("addr1","key1"))
 }
 
 func TestScState_ToProto(t *testing.T) {

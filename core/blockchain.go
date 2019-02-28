@@ -259,8 +259,7 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 		return nil
 	}
 
-	scState := NewScState()
-	scState.LoadFromDatabase(bc.db, bc.GetTailBlockHash())
+	scState := LoadScStateFromDatabase(bc.db, bc.GetTailBlockHash())
 	scEngine := bc.scManager.CreateEngine()
 	defer scEngine.DestroyEngine()
 

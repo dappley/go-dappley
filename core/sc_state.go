@@ -1,8 +1,6 @@
 package core
 
 import (
-	"bytes"
-	"encoding/gob"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
 	"sync"
@@ -31,25 +29,23 @@ func (ss *ScState) RecordEvent(event *Event){
 	ss.events = append(ss.events, event)
 }
 
-func deserializeScState(d []byte) map[string]map[string]string {
-	scState := make(map[string]map[string]string)
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&scState)
+func deserializeScState(d []byte) *ScState {
+	scStateProto := &corepb.ScState{}
+	err := proto.Unmarshal(d, scStateProto)
 	if err != nil {
 		logger.WithError(err).Panic("ScState: failed to deserialize UTXO states.")
 	}
-	return scState
+	ss := NewScState()
+	ss.FromProto(scStateProto)
+	return ss
 }
 
 func (ss *ScState) serialize() []byte {
-
-	var encoded bytes.Buffer
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(ss.states)
+	rawBytes, err := proto.Marshal(ss.ToProto())
 	if err != nil {
 		logger.WithError(err).Panic("ScState: failed to serialize UTXO states.")
 	}
-	return encoded.Bytes()
+	return rawBytes
 }
 
 //Get gets an item in scStorage
@@ -99,16 +95,15 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string {
 	return ss.states[address]
 }
 
-//LoadFromDatabase loads states from database
-func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash) {
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
+//LoadScStateFromDatabase loads states from database
+func LoadScStateFromDatabase(db storage.Storage, blkHash Hash) *ScState{
+
 	rawBytes, err := db.Get([]byte(scStateMapKey + blkHash.String()))
 
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return
+		return NewScState()
 	}
-	ss.states = deserializeScState(rawBytes)
+	return deserializeScState(rawBytes)
 }
 
 //SaveToDatabase saves states to database
