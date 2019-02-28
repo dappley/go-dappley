@@ -22,15 +22,14 @@ import (
 	"errors"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const unlockduration = 300 * time.Second
@@ -200,17 +199,19 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
+func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, error) {
 	pubKeyHash, valid := address.GetPubKeyHash()
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
 
 	balance := common.NewAmount(0)
-	utxoIndex := core.LoadUTXOIndex(db)
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-	for _, out := range utxos {
-		balance = balance.Add(out.Value)
+	_, utxo, nextUtxos := utxos.Iterator()
+	for utxo != nil {
+		balance = balance.Add(utxo.Value)
+		_, utxo, nextUtxos = nextUtxos.Iterator()
 	}
 
 	return balance, nil
@@ -259,7 +260,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	}
 
 	pubKeyHash, _ := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
-	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetTransactions())
 
@@ -271,7 +272,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, tip, contract)
 
 	bc.GetTxPool().Push(&tx)
-	if node!=nil{
+	if node != nil {
 		node.TxBroadcast(&tx)
 	}
 	contractAddr := tx.GetContractAddress()

@@ -113,7 +113,7 @@ func TestSend(t *testing.T) {
 				return !pow.IsProducingBlock()
 			}, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
-			senderBalance, err := GetBalance(senderWallet.GetAddress(), store)
+			senderBalance, err := GetBalance(senderWallet.GetAddress(), bc)
 			if err != nil {
 				panic(err)
 			}
@@ -122,7 +122,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the miner's wallet should be the amount tipped + mineReward
-			minerBalance, err := GetBalance(minerWallet.GetAddress(), store)
+			minerBalance, err := GetBalance(minerWallet.GetAddress(), bc)
 			if err != nil {
 				panic(err)
 			}
@@ -148,9 +148,9 @@ func TestSend(t *testing.T) {
 			// Balance of the receiver's wallet should be the amount transferred
 			var receiverBalance *common.Amount
 			if isContract {
-				receiverBalance, err = GetBalance(contractAddr, store)
+				receiverBalance, err = GetBalance(contractAddr, bc)
 			} else {
-				receiverBalance, err = GetBalance(receiverWallet.GetAddress(), store)
+				receiverBalance, err = GetBalance(receiverWallet.GetAddress(), bc)
 			}
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
@@ -181,7 +181,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
-	balance1, err := GetBalance(addr1, store)
+	balance1, err := GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 	pool := core.NewBlockPool(0)
@@ -192,7 +192,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
-	balance1, err = GetBalance(addr1, store)
+	balance1, err = GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 	//teardown :clean up database amd files
@@ -225,7 +225,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//The balance should be 10 after creating a blockchain
-	balance1, err := GetBalance(addr1, store)
+	balance1, err := GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
@@ -236,7 +236,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	addr2 := wallet2.GetAddress()
 
 	//The balance should be 0
-	balance2, err := GetBalance(addr2, store)
+	balance2, err := GetBalance(addr2, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 	pool := core.NewBlockPool(0)
@@ -247,12 +247,12 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
-	balance1, err = GetBalance(addr1, store)
+	balance1, err = GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
 	//the balance of the second wallet should be 0
-	balance2, err = GetBalance(addr2, store)
+	balance2, err = GetBalance(addr2, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 
@@ -622,7 +622,7 @@ func TestAddBalance(t *testing.T) {
 			pow.Stop()
 
 			// The wallet balance should be the expected difference
-			balance, err := GetBalance(testAddr, store)
+			balance, err := GetBalance(testAddr, bc)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedDiff, balance)
 		})

@@ -6,4 +6,9 @@ message Utxo {
     bytes   public_key_hash = 2;
     bytes   txid = 3;
     uint32  tx_index = 4;
+    uint32  utxoType = 5;
+}
+
+message UtxoList {
+    repeated Utxo utxos = 1;
 }

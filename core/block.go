@@ -26,14 +26,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 )
 
 type BlockHeader struct {
@@ -321,7 +320,7 @@ func (b *Block) VerifyHash() bool {
 	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
 
-func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, parentBlk *Block, txPool *TransactionPool) bool {
+func (b *Block) VerifyTransactions(utxoIndex *UTXOIndex, scState *ScState, parentBlk *Block, txPool *TransactionPool) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash": b.GetHash(),
@@ -341,17 +340,17 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, parentBlk *
 			rewardTX = tx
 		} else if tx.IsFromContract() {
 			txInPool := txPool.GetTransactionById(tx.ID)
-			if !tx.IsIdentical(utxo, txInPool) {
+			if !tx.IsIdentical(utxoIndex, txInPool) {
 				logger.Warn("Block: generated tx cannot be verified.")
 				return false
 			}
 		} else {
 			// tx is a normal transactions
-			if !tx.Verify(&utxo, b.GetHeight()) {
+			if !tx.Verify(utxoIndex, b.GetHeight()) {
 				return false
 			}
 		}
-		utxo.UpdateUtxo(tx)
+		utxoIndex.UpdateUtxo(tx)
 	}
 
 	return true

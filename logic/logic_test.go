@@ -121,7 +121,7 @@ func TestGetBalance(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//The balance should be 10000000 after creating a blockchain
-	balance, err := GetBalance(addr, store)
+	balance, err := GetBalance(addr, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(10000000), balance)
 }
@@ -139,11 +139,11 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	//The balance should be 10000000 after creating a blockchain
-	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), store)
+	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance1)
 
-	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), store)
+	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }

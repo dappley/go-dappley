@@ -24,39 +24,25 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+type UtxoType int
+
+const (
+	UtxoNormal UtxoType = iota
+	UtxoCreateContract
+	UtxoInvokeContract
+)
+
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
 	TXOutput
-	Txid    []byte
-	TxIndex int
-}
-
-// PrepareUTXOs returns a minimum subset of utxos valued at amount or more
-// for smart contract, utxos[0] is expected to be the contract
-func PrepareUTXOs(utxos []*UTXO, amount *common.Amount) ([]*UTXO, bool) {
-	sum := common.NewAmount(0)
-
-	if len(utxos) < 1 {
-		return utxos, false
-	}
-
-	if isContract, _ := utxos[0].PubKeyHash.IsContract(); isContract {
-		utxos = utxos[1:]
-	}
-
-	for i, u := range utxos {
-		sum = sum.Add(u.Value)
-		if sum.Cmp(amount) >= 0 {
-			return utxos[:i+1], true
-		}
-	}
-	return utxos, false
-
+	Txid     []byte
+	TxIndex  int
+	utxoType UtxoType
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
-func newUTXO(txout TXOutput, txid []byte, vout int) *UTXO {
-	return &UTXO{txout, txid, vout}
+func newUTXO(txout TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
+	return &UTXO{txout, txid, vout, utxoType}
 }
 
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
@@ -73,6 +59,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 		PublicKeyHash: []byte(utxo.PubKeyHash),
 		Txid:          utxo.Txid,
 		TxIndex:       uint32(utxo.TxIndex),
+		UtxoType:      uint32(utxo.utxoType),
 	}
 }
 
@@ -82,4 +69,5 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.PubKeyHash = utxopb.PublicKeyHash
 	utxo.Txid = utxopb.Txid
 	utxo.TxIndex = int(utxopb.TxIndex)
+	utxo.utxoType = UtxoType(utxopb.UtxoType)
 }

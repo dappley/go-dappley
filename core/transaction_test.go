@@ -22,12 +22,12 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"sync"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -94,9 +94,9 @@ func TestSign(t *testing.T) {
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*UTXO{
-		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("01"), 0},
-		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("02"), 0},
-		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("03"), 0},
+		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("01"), 0, UtxoNormal},
+		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("02"), 0, UtxoNormal},
+		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("03"), 0, UtxoNormal},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -200,13 +200,16 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
 	//wrongPubKeyHash, _ := NewUserPubKeyHash(wrongPubKey)
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
-	utxoIndex := NewUTXOIndex()
-	utxoIndex.index = map[string][]*UTXO{
-		string(pubKeyHash): {
-			{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0},
-			{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1},
-		},
-	}
+	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+
+	utxo1 := UTXO{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, UtxoNormal}
+	utxo2 := UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal}
+
+	utxoTx := NewUTXOTx()
+	utxoTx = utxoTx.PutUtxo(&utxo1)
+	utxoTx = utxoTx.PutUtxo(&utxo2)
+
+	utxoIndex.index[string(pubKeyHash)] = &utxoTx
 
 	// Prepare a transaction to be verified
 	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
@@ -267,12 +270,14 @@ func TestInvalidExecutionTx(t *testing.T) {
 	deploymentTx.ID = deploymentTx.Hash()
 	contractPubkeyHash := deploymentTx.Vout[0].PubKeyHash
 
-	utxoIndex := UTXOIndex{
-		map[string][]*UTXO{
-			string(pkHash1): {&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0}},
-		},
-		&sync.RWMutex{},
-	}
+	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+
+	utxoTx := NewUTXOTx()
+	utxo1 := UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal}
+	utxoTx = utxoTx.PutUtxo(&utxo1)
+
+	utxoIndex.index[string(pkHash1)] = &utxoTx
+
 	var executionTx = Transaction{
 		ID: nil,
 		Vin: []TXInput{
@@ -284,10 +289,10 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.index[string(pkHash1)])
+	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoTx.GetAllUtxos())
 
-	assert.False(t, executionTx.Verify(NewUTXOIndex(), 0))
-	assert.True(t, executionTx.Verify(&utxoIndex, 0))
+	assert.False(t, executionTx.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
+	assert.True(t, executionTx.Verify(utxoIndex, 0))
 }
 
 func TestNewCoinbaseTX(t *testing.T) {
@@ -480,7 +485,7 @@ func TestTransaction_Execute(t *testing.T) {
 				Vout: []TXOutput{{nil, PubKeyHash(toPKH), "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
 			}
 
-			index := NewUTXOIndex()
+			index := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {
 				index.addUTXO(scUtxo.TXOutput, nil, 0)
 			}
@@ -762,20 +767,28 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	}
 	dependentTx5.ID = dependentTx5.Hash()
 
-	var utxoIndex = UTXOIndex{
-		map[string][]*UTXO{
-			string(pkHash2): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
-			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
-		},
-		&sync.RWMutex{},
+	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+
+	pk2Utxo := &UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, UtxoNormal}
+	pk1Utxo := &UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
+
+	pk2UtxoTx := NewUTXOTx()
+	pk2UtxoTx = pk2UtxoTx.PutUtxo(pk2Utxo)
+
+	pk1UtxoTx := NewUTXOTx()
+	pk1UtxoTx = pk1UtxoTx.PutUtxo(pk1Utxo)
+
+	utxoIndex.index = map[string]*UTXOTx{
+		string(pkHash2): &pk2UtxoTx,
+		string(pkHash1): &pk1UtxoTx,
 	}
 
-	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
-	tx2Utxo2 := UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1}
-	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0}
-	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}
-	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
+	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
+	tx2Utxo2 := UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, UtxoNormal}
+	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
+	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
+	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, pk2UtxoTx.GetAllUtxos())
 	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
 	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
 	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
@@ -789,7 +802,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	//tx3-tx4-tx5
 
 	// test a transaction whose Vin is from UtxoIndex
-	assert.Equal(t, true, dependentTx2.Verify(&utxoIndex, 0))
+	assert.Equal(t, true, dependentTx2.Verify(utxoIndex, 0))
 	txPool.Push(&dependentTx2)
 
 	// test a transaction whose Vin is from another transaction in transaction pool
@@ -811,11 +824,11 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	txPool.Push(&dependentTx5)
 
 	// test UTXOs not found for parent transactions
-	assert.Equal(t, false, dependentTx3.Verify(&UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}, 0))
+	assert.Equal(t, false, dependentTx3.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
 
 	// test a standalone transaction
 	txPool.Push(&tx1)
-	assert.Equal(t, false, tx1.Verify(&utxoIndex, 0))
+	assert.Equal(t, false, tx1.Verify(utxoIndex, 0))
 }
 
 func TestTransaction_IsIdentical(t *testing.T) {
@@ -835,11 +848,14 @@ func TestTransaction_IsIdentical(t *testing.T) {
 		Tip: common.NewAmount(3),
 	}
 
-	var utxoIndex = UTXOIndex{
-		map[string][]*UTXO{
-			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
-		},
-		&sync.RWMutex{},
+	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+
+	pk1Utxo := &UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
+	pk1UtxoTx := NewUTXOTx()
+	pk1UtxoTx = pk1UtxoTx.PutUtxo(pk1Utxo)
+
+	utxoIndex.index = map[string]*UTXOTx{
+		string(pkHash1): &pk1UtxoTx,
 	}
 
 	var tx = &Transaction{

@@ -141,7 +141,7 @@ func (tx *Transaction) Serialize() []byte {
 }
 
 // Describe reverse-engineers the high-level description of a transaction
-func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, amount, tip *common.Amount, error error) {
+func (tx *Transaction) Describe(utxoIndex *UTXOIndex) (sender, recipient *Address, amount, tip *common.Amount, error error) {
 	var receiverAddress Address
 	vinPubKey := tx.Vin[0].PubKey
 	pubKeyHash := PubKeyHash([]byte(""))
@@ -164,7 +164,7 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 				}
 				pubKeyHash = pkh
 			}
-			usedUTXO := index.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
+			usedUTXO := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
 			logger.Debug("Transaction: using UTXO from multiple wallets.")
@@ -299,19 +299,18 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
-func (tx *Transaction) IsContractDeployed(utxoCache *UTXOCache) bool {
-	contractAddress := tx.GetContractAddress()
-	contractUtxoTx := utxoCache.GetContractUtxos()
-	for _, utxo := range contractUtxoTx.TxIndex {
-		if utxo.PubKeyHash.GenerateAddress() == contractAddress {
-			return true
-		}
+func (tx *Transaction) IsContractDeployed(utxoIndex *UTXOIndex) bool {
+	pubkeyhash := tx.GetContractPubKeyHash()
+	if pubkeyhash == nil {
+		return false
 	}
-	return false
+
+	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
+	return contractUtxoTx.Size() > 0
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxoCache *UTXOCache, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
@@ -326,7 +325,7 @@ func (tx *Transaction) Verify(utxoCache *UTXOCache, blockHeight uint64) bool {
 		return true
 	}
 
-	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoCache) {
+	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoIndex) {
 		logger.Warn("Transaction: contract state check failed.")
 		return false
 	}
@@ -347,7 +346,7 @@ func (tx *Transaction) Verify(utxoCache *UTXOCache, blockHeight uint64) bool {
 			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return false
 		}
-		tempUtxoTx := utxoCache.Get(pubKeyHash)
+		tempUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
@@ -631,6 +630,15 @@ func (tx *Transaction) GetContract() string {
 	return tx.Vout[ContractTxouputIndex].Contract
 }
 
+//GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
+func (tx *Transaction) GetContractPubKeyHash() PubKeyHash {
+	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
+	if !isContract {
+		return nil
+	}
+	return tx.Vout[ContractTxouputIndex].PubKeyHash
+}
+
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
 func (tx *Transaction) Execute(index UTXOIndex,
 	scStorage *ScState,
@@ -655,7 +663,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	utxos := index.GetAllUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
-	if len(utxos) == 0 {
+	if utxos.Size() == 0 {
 		return nil
 	}
 
@@ -673,16 +681,19 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	}
 
 	totalArgs := util.PrepareArgs(args)
-	address := utxos[0].PubKeyHash.GenerateAddress()
+	address := vout.PubKeyHash.GenerateAddress()
 	logger.WithFields(logger.Fields{
 		"contract_address": address.String(),
 		"invoked_function": function,
 		"arguments":        totalArgs,
 	}).Debug("Transaction: is executing the smart contract...")
-	engine.ImportSourceCode(utxos[0].Contract)
+
+	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
+
+	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
-	engine.ImportUTXOs(utxos[1:])
+	engine.ImportUTXOs(invokeUtxos)
 	engine.ImportSourceTXID(tx.ID)
 	engine.ImportRewardStorage(rewards)
 	engine.ImportTransaction(tx)
@@ -716,14 +727,14 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 	return res, nil
 }
 
-func (tx *Transaction) IsIdentical(utxo UTXOIndex, tx2 *Transaction) bool {
+func (tx *Transaction) IsIdentical(utxoIndex *UTXOIndex, tx2 *Transaction) bool {
 
-	sender, recipient, amount, tip, err := tx.Describe(utxo)
+	sender, recipient, amount, tip, err := tx.Describe(utxoIndex)
 	if err != nil {
 		return false
 	}
 
-	sender2, recipient2, amount2, tip2, err := tx2.Describe(utxo)
+	sender2, recipient2, amount2, tip2, err := tx2.Describe(utxoIndex)
 	if err != nil {
 		return false
 	}

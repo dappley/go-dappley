@@ -25,6 +25,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
+	storage2 "github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -259,22 +260,21 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
 	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
 
-	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
-	var utxoIndex = UTXOIndex{
-		map[string][]*UTXO{
-			string(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
-		},
-		&sync.RWMutex{},
+	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
+
+	tx1Utxos := map[string][]*UTXO{
+		string(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
+
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, tx1Utxos[string(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
 	tests := []struct {
-		name          string
-		txs           []*Transaction
-		utxos         map[string][]*UTXO
-		txPool 		  *TransactionPool
-		ok            bool
+		name   string
+		txs    []*Transaction
+		utxos  map[string][]*UTXO
+		txPool *TransactionPool
+		ok     bool
 	}{
 		{
 			"normal txs",
@@ -304,14 +304,14 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		{
 			"normal dependent txs",
 			[]*Transaction{&dependentTx2, &dependentTx3},
-			utxoIndex.index,
+			tx1Utxos,
 			nil,
 			true,
 		},
 		{
 			"invalid dependent txs",
 			[]*Transaction{&dependentTx3, &dependentTx2},
-			utxoIndex.index,
+			tx1Utxos,
 			nil,
 			false,
 		},
@@ -320,10 +320,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*Transaction{&rewardTX},
 			map[string][]*UTXO{
 				string(contractPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0},
+					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
 				},
 				string(userPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
+					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},
 			nil,
@@ -334,23 +334,34 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*Transaction{generatedTX},
 			map[string][]*UTXO{
 				string(contractPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0},
-					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1},
+					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
+					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, UtxoNormal},
 				},
 				string(userPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
+					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},
-			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated":{Value: generatedTX}}},
+			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated": {Value: generatedTX}}},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			utxoIndex := UTXOIndex{tt.utxos, &sync.RWMutex{}}
+			db := storage2.NewRamStorage()
+			index := make(map[string]*UTXOTx)
+
+			for key, addrUtxos := range tt.utxos {
+				utxoTx := NewUTXOTx()
+				for _, addrUtxo := range addrUtxos {
+					utxoTx = utxoTx.PutUtxo(addrUtxo)
+				}
+				index[key] = &utxoTx
+			}
+
+			utxoIndex := UTXOIndex{index, NewUTXOCache(db), &sync.RWMutex{}}
 			scState := NewScState()
 			block := NewBlock(tt.txs, blk)
-			assert.Equal(t, tt.ok, block.VerifyTransactions(utxoIndex, scState, block, tt.txPool))
+			assert.Equal(t, tt.ok, block.VerifyTransactions(&utxoIndex, scState, block, tt.txPool))
 		})
 	}
 }

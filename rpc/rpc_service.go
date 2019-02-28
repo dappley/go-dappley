@@ -21,17 +21,16 @@ import (
 	"context"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -67,7 +66,7 @@ func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBa
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 
-	amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain().GetDb())
+	amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain())
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidAddress:
@@ -99,7 +98,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 }
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
-	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	publicKeyHash, ok := core.NewAddress(in.GetAddress()).GetPubKeyHash()
@@ -109,8 +108,10 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
 	response := rpcpb.GetUTXOResponse{}
-	for _, utxo := range utxos {
+	_, utxo, nextUtxos := utxos.Iterator()
+	for utxo != nil {
 		response.Utxos = append(response.Utxos, utxo.ToProto().(*corepb.Utxo))
+		_, utxo, nextUtxos = nextUtxos.Iterator()
 	}
 
 	//TODO Race condition Blockchain update after GetUTXO
@@ -210,7 +211,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
 	}
 
-	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	if !tx.Verify(utxoIndex, 0) {
@@ -236,7 +237,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	statusCode := codes.OK
 	var details []proto.Message
-	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
+	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	txs := make(map[int]core.Transaction, len(in.Transactions))

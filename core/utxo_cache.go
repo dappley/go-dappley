@@ -33,66 +33,38 @@ type UTXOCache struct {
 }
 
 func NewUTXOCache(db storage.Storage) *UTXOCache {
-	utxoCache := &UTXOCache{}
+	utxoCache := &UTXOCache{
+		cache: nil,
+		db:    db,
+	}
 	utxoCache.cache, _ = lru.New(UtxoCacheLRUCacheLimit)
 	return utxoCache
 }
 
 // Return value from cache
-func (utxoCache UTXOCache) Get(pubKeyHash PubKeyHash) *UTXOTx {
-	mapData, ok := utxoCache.cache.Get(pubKeyHash)
-	if !ok {
-		return nil
+func (utxoCache *UTXOCache) Get(pubKeyHash PubKeyHash) *UTXOTx {
+	mapData, ok := utxoCache.cache.Get(string(pubKeyHash))
+	if ok {
+		return mapData.(*UTXOTx)
 	}
-	if mapData == nil {
-		// load from db
-		rawBytes, err := utxoCache.db.Get(pubKeyHash)
-		if err != nil {
-			return DeserializeUTXOTx(rawBytes)
-		}
-		return nil
+
+	rawBytes, err := utxoCache.db.Get(pubKeyHash)
+
+	var utxoTx UTXOTx
+	if err == nil {
+		utxoTx = DeserializeUTXOTx(rawBytes)
+		utxoCache.cache.Add(string(pubKeyHash), &utxoTx)
+	} else {
+		utxoTx = NewUTXOTx()
 	}
-	utxoTx := mapData.(*UTXOTx)
-	return utxoTx
+	return &utxoTx
 }
 
 // Add new data into cache
-func (utxoCache UTXOCache) Put(pubKeyHash PubKeyHash, value UTXOTx) {
+func (utxoCache *UTXOCache) Put(pubKeyHash PubKeyHash, value *UTXOTx) error {
 	if pubKeyHash == nil {
-		return
+		return ErrEmptyPublicKeyHash
 	}
-	utxoCache.cache.Add(pubKeyHash, value)
-}
-
-func (utxoCache *UTXOCache) GetContractUtxos() *UTXOTx {
-	return utxoCache.Get([]byte(contractUtxoKey))
-}
-
-func (utxoCache *UTXOCache) UpdateUtxo(tx *Transaction) bool {
-	if !tx.IsCoinbase() && !tx.IsRewardTx() {
-		for _, txin := range tx.Vin {
-			pkh, err := NewUserPubKeyHash(txin.PubKey)
-			if err != nil {
-				return false
-			}
-			utxoTx := utxoCache.Get(pkh)
-			utxoTx.RemoveUtxo(txin.Txid, txin.Vout)
-		}
-	}
-	for i, txout := range tx.Vout {
-		utxoCache.addUTXO(txout, tx.ID, i)
-	}
-	return true
-}
-
-func (utxoCache *UTXOCache) addUTXO(txout TXOutput, txid []byte, vout int) {
-	u := newUTXO(txout, txid, vout)
-	//if it is a smart contract deployment utxo add it to contract utxos
-	isContract, _ := txout.PubKeyHash.IsContract();
-	utxoTx := utxoCache.Get(u.PubKeyHash)
-	if isContract && len(utxoTx.txIndex) == 0 {
-		utxoTxContract := utxoCache.GetContractUtxos()
-		utxoTxContract.PutUtxo(u)
-	}
-	utxoTx.PutUtxo(u)
+	utxoCache.cache.Add(string(pubKeyHash), value)
+	return utxoCache.db.Put(pubKeyHash, value.Serialize())
 }

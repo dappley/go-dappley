@@ -21,11 +21,11 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/dappley/go-dappley/storage"
 	"sync"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -97,9 +97,9 @@ func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	return txPool.getSortedTransactions()
 }
 
-func (txPool *TransactionPool) GetFilteredTransactions(utxoCache *UTXOCache, blockHeight uint64) []*Transaction {
+func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blockHeight uint64) []*Transaction {
 	txs := txPool.GetTransactions()
-	tempUtxoCache := utxoCache
+	tempUtxoCache := utxoIndex
 	var validTxs []*Transaction
 	var inValidTxs []*Transaction
 

@@ -27,6 +27,9 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
@@ -35,10 +38,6 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -720,7 +719,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	//load the tx with proto
 	tx.FromProto(txpb)
 	//add tx to txpool
-	utxoIndex := core.LoadUTXOIndex(n.GetBlockchain().GetDb())
+	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(n.GetBlockchain().GetTxPool().GetTransactions())
 
 	if tx.Verify(utxoIndex, 0) == false {

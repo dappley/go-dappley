@@ -19,98 +19,163 @@
 package core
 
 import (
-	"bytes"
-	"encoding/gob"
-	"github.com/dappley/go-dappley/storage"
+	"hash/fnv"
 	"strconv"
-	"sync"
 
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/raviqqe/hamt"
 	logger "github.com/sirupsen/logrus"
 )
 
 // UTXOTx holds txid_vout and UTXO pairs
-type UTXOTx struct {
-	TxIndex map[string]*UTXO
-	mutex   *sync.RWMutex
+type UTXOTx hamt.Map
+
+type StringEntry string
+
+func (key *StringEntry) Hash() uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(string(*key)))
+	return h.Sum32()
 }
 
-func NewUTXOTx() *UTXOTx {
-	return &UTXOTx{make(map[string]*UTXO), &sync.RWMutex{}}
+func (key *StringEntry) Equal(other hamt.Entry) bool {
+	otherStr, ok := other.(*StringEntry)
+	if !ok {
+		return false
+	}
+
+	return string(*key) == string(*otherStr)
+}
+
+func NewUTXOTx() UTXOTx {
+	return UTXOTx(hamt.NewMap())
 }
 
 // Construct with UTXO data
-func NewUTXOTxWithData(utxo UTXO) *UTXOTx {
+func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
+	key := StringEntry(string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex))
+	return UTXOTx(hamt.NewMap().Insert(&key, utxo))
+}
+
+func DeserializeUTXOTx(d []byte) UTXOTx {
 	utxoTx := NewUTXOTx()
-	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	utxoTx.TxIndex[key] = &utxo
+
+	utxoList := &corepb.UtxoList{}
+	err := proto.Unmarshal(d, utxoList)
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: parse UtxoTx failed.")
+		return utxoTx
+	}
+
+	for _, utxoPb := range utxoList.Utxos {
+		var utxo = &UTXO{}
+		utxo.FromProto(utxoPb)
+		utxoTx = utxoTx.PutUtxo(utxo)
+	}
+
 	return utxoTx
 }
 
-func LoadFromMap(m map[string]*UTXO) *UTXOTx {
-	if m == nil {
+func (utxoTx UTXOTx) Serialize() []byte {
+	utxoList := &corepb.UtxoList{}
+
+	_, utxo, nextUtxoTx := utxoTx.Iterator()
+	for utxo != nil {
+		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*corepb.Utxo))
+		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+	}
+
+	bytes, err := proto.Marshal(utxoList)
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: serialize UtxoTx failed.")
 		return nil
 	}
-	utxoTx := NewUTXOTx()
-	utxoTx.TxIndex = m
-	return utxoTx
-}
-
-func DeserializeUTXOTx(d []byte) *UTXOTx {
-	reader := bytes.NewReader(d)
-	utxoTx := NewUTXOTx()
-	utxoTx.mutex.Lock()
-	defer utxoTx.mutex.Unlock()
-	decoder := gob.NewDecoder(reader)
-	err := decoder.Decode(&utxoTx.TxIndex)
-	if err != nil {
-		logger.WithError(err).Panic("UTXOTx: failed to deserialize UTXO.")
-	}
-	return utxoTx
-}
-
-func (utxoTx *UTXOTx) serialize() []byte {
-	var encoded bytes.Buffer
-	utxoTx.mutex.Lock()
-	defer utxoTx.mutex.Unlock()
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(utxoTx.TxIndex)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return encoded.Bytes()
+	return bytes
 }
 
 // Returns utxo info by transaction id and vout index
-func (utxoTx *UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
-	key := string(txid) + "_" + strconv.Itoa(vout)
-	return utxoTx.TxIndex[key]
+func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
+	key := StringEntry(string(txid) + "_" + strconv.Itoa(vout))
+	value := hamt.Map(utxoTx).Find(&key)
+	utxo, ok := value.(*UTXO)
+	if !ok {
+		return nil
+	}
+
+	return utxo
 }
 
 // Add new utxo to map
-func (utxoTx *UTXOTx) PutUtxo(utxo *UTXO) (ok bool) {
-	if utxo == nil {
-		return false
-	}
-	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	utxoTx.TxIndex[key] = utxo
-	return true
+func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) UTXOTx {
+	key := StringEntry(string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex))
+	return UTXOTx(hamt.Map(utxoTx).Insert(&key, utxo))
 }
 
 // Delete invalid element in map
-func (utxoTx *UTXOTx) RemoveUtxo(txid []byte, vout int) {
-	key := string(txid) + "_" + strconv.Itoa(vout)
-	delete(utxoTx.TxIndex, key)
+func (utxoTx *UTXOTx) RemoveUtxo(txid []byte, vout int) UTXOTx {
+	key := StringEntry(string(txid) + "_" + strconv.Itoa(vout))
+	newMap := UTXOTx(hamt.Map(*utxoTx).Delete(&key))
+	return newMap
 }
 
-// Save the UTXOTx to db
-func (utxoTx UTXOTx) Save(pubKeyHash PubKeyHash, db storage.Storage) error {
-	return db.Put(pubKeyHash, utxoTx.serialize())
+func (utxoTx UTXOTx) Iterator() (string, *UTXO, UTXOTx) {
+	key, value, nextMap := hamt.Map(utxoTx).FirstRest()
+	if key == nil {
+		return "", nil, NewUTXOTx()
+	}
+
+	keyStr, ok := key.(*StringEntry)
+	if !ok {
+		logger.Panic("UtxoTx: invalid key type")
+	}
+
+	utxo, ok := value.(*UTXO)
+	if !ok {
+		logger.Panic("UtxoTx: invalid value type")
+	}
+
+	return string(*keyStr), utxo, UTXOTx(nextMap)
 }
 
-// Copy data
-func (utxoTx UTXOTx) DeepCopy() *UTXOTx {
-	copy := NewUTXOTx()
-	txIndex := utxoTx.TxIndex
-	copy.TxIndex = txIndex
-	return copy
+func (utxoTx UTXOTx) Size() int {
+	return hamt.Map(utxoTx).Size()
+}
+
+func (utxoTx UTXOTx) GetAllUtxos() []*UTXO {
+	var utxos []*UTXO
+	_, utxo, nextUtxoTx := utxoTx.Iterator()
+	for utxo != nil {
+		utxos = append(utxos, utxo)
+		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+	}
+
+	return utxos
+}
+
+func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
+	sum := common.NewAmount(0)
+
+	if utxoTx.Size() < 1 {
+		return nil, false
+	}
+
+	var utxos []*UTXO
+	_, utxo, nextUtxoTx := utxoTx.Iterator()
+	for utxo != nil {
+		if utxo.utxoType == UtxoCreateContract {
+			_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+			continue
+		}
+
+		sum = sum.Add(utxo.Value)
+		utxos = append(utxos, utxo)
+		if sum.Cmp(amount) >= 0 {
+			return utxos, true
+		}
+		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+	}
+
+	return nil, false
 }

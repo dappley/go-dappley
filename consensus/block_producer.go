@@ -19,11 +19,10 @@
 package consensus
 
 import (
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
@@ -90,13 +89,13 @@ func (bp *BlockProducer) prepareBlock() {
 	}
 
 	// Retrieve all valid transactions from tx pool
-	utxoCache := core.NewUTXOCache(bp.bc.GetDb())
-	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoCache, parentBlock.GetHeight()+1)
+	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
+	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoIndex, parentBlock.GetHeight()+1)
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
 
-	scGeneratedTXs := bp.executeSmartContract(utxoCache, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
+	scGeneratedTXs := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
 	validTxs = append(validTxs, scGeneratedTXs...)
 	validTxs = append(validTxs, cbtx)
 	if len(rewards) > 0 {
@@ -120,7 +119,7 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 }
 
 //executeSmartContract executes all smart contracts
-func (bp *BlockProducer) executeSmartContract(utxoCache *core.UTXOCache, txs []*core.Transaction, rewards map[string]string, currBlkHeight uint64, parentBlk *core.Block) []*core.Transaction {
+func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex, txs []*core.Transaction, rewards map[string]string, currBlkHeight uint64, parentBlk *core.Block) []*core.Transaction {
 	//start a new smart contract engine
 
 	scStorage := core.NewScState()
@@ -130,9 +129,8 @@ func (bp *BlockProducer) executeSmartContract(utxoCache *core.UTXOCache, txs []*
 	var generatedTXs []*core.Transaction
 
 	for _, tx := range txs {
-		// TODO YD release codes
-		//generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
-		utxoCache.UpdateUtxo(tx)
+		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		utxoIndex.UpdateUtxo(tx)
 	}
 
 	return generatedTXs

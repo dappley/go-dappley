@@ -26,13 +26,6 @@ import (
 	"testing"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
@@ -43,6 +36,12 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type RpcTestContext struct {
@@ -150,11 +149,11 @@ func TestRpcSend(t *testing.T) {
 
 	// Check balance
 	minedReward := common.NewAmount(10000000)
-	senderBalance, err := logic.GetBalance(senderWallet.GetAddress(), store)
+	senderBalance, err := logic.GetBalance(senderWallet.GetAddress(), bc)
 	assert.Nil(t, err)
-	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), store)
+	receiverBalance, err := logic.GetBalance(receiverWallet.GetAddress(), bc)
 	assert.Nil(t, err)
-	minerBalance, err := logic.GetBalance(minerWallet.GetAddress(), store)
+	minerBalance, err := logic.GetBalance(minerWallet.GetAddress(), bc)
 	assert.Nil(t, err)
 
 	leftBalance, _ := minedReward.Sub(common.NewAmount(7))
@@ -578,7 +577,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(rpcContext.store).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	transaction, err := core.NewUTXOTransaction(utxos,
@@ -597,7 +596,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
 
-	utxos2, err := core.LoadUTXOIndex(rpcContext.store).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos2, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	errTransaction, err := core.NewUTXOTransaction(utxos2,
 		rpcContext.wallet.GetAddress(),
 		receiverWallet.GetAddress(),
@@ -624,9 +623,9 @@ func TestRpcSendTransaction(t *testing.T) {
 
 	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
-	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
+	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.bc)
 	assert.Equal(t, leftAmount, realAmount)
-	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.store)
+	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.bc)
 	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
@@ -668,7 +667,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
-	utxoIndex := core.LoadUTXOIndex(rpcContext.store)
+	utxoIndex := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache())
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
 
@@ -756,11 +755,11 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 
 	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(8))
-	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.store)
+	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.bc)
 	assert.Equal(t, leftAmount, realAmount)
-	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.store)
-	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.store)
-	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.store)
+	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.bc)
+	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.bc)
+	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.bc)
 	assert.Equal(t, common.NewAmount(2), recvAmount1)
 	assert.Equal(t, common.NewAmount(3), recvAmount2)
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
@@ -881,7 +880,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 
 	// generate new transaction
 	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(rpcContext.store).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	transaction, err := core.NewUTXOTransaction(utxos,

@@ -53,6 +53,7 @@ const (
 type Blockchain struct {
 	tailBlockHash []byte
 	db            storage.Storage
+	utxoCache     *UTXOCache
 	consensus     Consensus
 	txPool        *TransactionPool
 	scManager     ScEngineManager
@@ -66,6 +67,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	bc := &Blockchain{
 		genesis.GetHash(),
 		db,
+		NewUTXOCache(db),
 		consensus,
 		NewTransactionPool(transactionPoolLimit),
 		scManager,
@@ -90,6 +92,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 	bc := &Blockchain{
 		tip,
 		db,
+		NewUTXOCache(db),
 		consensus,
 		NewTransactionPool(transactionPoolLimit),
 		scManager,
@@ -102,6 +105,10 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 
 func (bc *Blockchain) GetDb() storage.Storage {
 	return bc.db
+}
+
+func (bc *Blockchain) GetUtxoCache() *UTXOCache {
+	return bc.utxoCache
 }
 
 func (bc *Blockchain) GetTailBlockHash() Hash {
@@ -190,11 +197,11 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	numTxBeforeExe := len(bc.GetTxPool().GetTransactions())
 
-	utxoIndex := LoadUTXOIndex(bc.db)
+	utxoIndex := NewUTXOIndex(bc.utxoCache)
 	tempUtxo := utxoIndex.DeepCopy()
 	bcTemp.executeTransactionsAndUpdateScState(tempUtxo, block)
 	utxoIndex.UpdateUtxoState(block.GetTransactions())
-	err = utxoIndex.Save(bc.db)
+	err = utxoIndex.Save()
 
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save utxo to database.")
@@ -345,7 +352,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil, BlockchainInit, nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -480,7 +487,7 @@ loop:
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
 	}
-	utxo.Save(bc.db)
+	utxo.Save()
 	bc.db.Flush()
 
 	return true

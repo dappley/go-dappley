@@ -21,10 +21,10 @@ package core
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/dappley/go-dappley/common"
 	"os"
 	"testing"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
@@ -113,7 +113,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	}
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), NewUTXOIndex())
+	bc.Rollback(blk.GetHash(), NewUTXOIndex(bc.GetUtxoCache()))
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -141,7 +141,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit, nil}
+	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -183,25 +183,24 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	var addrs []Address
 	var kps []*KeyPair
 	var pkhs []PubKeyHash
-	for i:=0;i<10;i++{
+	for i := 0; i < 10; i++ {
 		kp := NewKeyPair()
 		kps = append(kps, kp)
-		pkh,_ := NewUserPubKeyHash(kp.PublicKey)
+		pkh, _ := NewUserPubKeyHash(kp.PublicKey)
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 	}
-
 
 	for i := 0; i < b.N; i++ {
 
 		tailBlk, _ := bc.GetTailBlock()
 		txs := []*Transaction{}
-		utxo := LoadUTXOIndex(s)
+		utxo := NewUTXOIndex(bc.GetUtxoCache())
 		cbtx := NewCoinbaseTX(addrs[0], "", uint64(i+1), common.NewAmount(0))
 		utxo.UpdateUtxo(&cbtx)
 		txs = append(txs, &cbtx)
-		for j:=0; j< 10; j++ {
-			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]), addrs[0], addrs[i%10], common.NewAmount(1), kps[0],common.NewAmount(0), "")
+		for j := 0; j < 10; j++ {
+			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), addrs[0], addrs[i%10], common.NewAmount(1), kps[0], common.NewAmount(0), "")
 			utxo.UpdateUtxo(&tx)
 			txs = append(txs, &tx)
 		}

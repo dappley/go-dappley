@@ -20,18 +20,15 @@ package core
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"sync"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 )
 
-const utxoMapKey = "utxo"
-const contractUtxoKey = "ContractUtxos"
+var contractUtxoKey = []byte("contractUtxoKey")
 
 var (
 	ErrUTXONotFound   = errors.New("utxo not found when trying to remove from cache")
@@ -40,84 +37,75 @@ var (
 
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndex struct {
-	index map[string][]*UTXO
+	index map[string]*UTXOTx
+	cache *UTXOCache
 	mutex *sync.RWMutex
 }
 
 // NewUTXOIndex initializes an UTXOIndex instance
-func NewUTXOIndex() *UTXOIndex {
-	return &UTXOIndex{make(map[string][]*UTXO), &sync.RWMutex{}}
-}
-
-func deserializeUTXOIndex(d []byte) *UTXOIndex {
-	utxos := NewUTXOIndex()
-	utxos.mutex.Lock()
-	defer utxos.mutex.Unlock()
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&utxos.index)
-	if err != nil {
-		logger.WithError(err).Panic("UTXOIndex: failed to deserialize UTXOs.")
+func NewUTXOIndex(cache *UTXOCache) *UTXOIndex {
+	return &UTXOIndex{
+		index: make(map[string]*UTXOTx),
+		cache: cache,
+		mutex: &sync.RWMutex{},
 	}
-	return utxos
 }
 
-func (utxos *UTXOIndex) serialize() []byte {
-	var encoded bytes.Buffer
-	utxos.mutex.Lock()
-	defer utxos.mutex.Unlock()
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(utxos.index)
-	if err != nil {
-		logger.Panic(err)
+func (utxos *UTXOIndex) Save() error {
+	for key, utxoTx := range utxos.index {
+		err := utxos.cache.Put(PubKeyHash(key), utxoTx)
+		if err != nil {
+			return err
+		}
 	}
-	return encoded.Bytes()
+	return nil
 }
-
-// LoadUTXOIndex returns the UTXOIndex fetched from db.
-func LoadUTXOIndex(db storage.Storage) *UTXOIndex {
-	utxoBytes, err := db.Get([]byte(utxoMapKey))
-
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
-		logger.Debug("UTXOIndex: does not exists in database. Creating a new one.")
-		return NewUTXOIndex()
-	}
-	return deserializeUTXOIndex(utxoBytes)
-}
-
-// Save stores the index to db
-func (utxos *UTXOIndex) Save(db storage.Storage) error {
-	return db.Put([]byte(utxoMapKey), utxos.serialize())
-}
-
-// FindUTXO returns the UTXO instance of the corresponding TXOutput in the transaction (identified by txid and vout)
-// if the TXOutput is unspent. Otherwise, it returns nil.
-//func (utxos *UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
-//	utxos.mutex.RLock()
-//	defer utxos.mutex.RUnlock()
-//	for _, utxoArray := range utxos.index {
-//		for _, u := range utxoArray {
-//			if bytes.Compare(u.Txid, txid) == 0 && u.TxIndex == vout {
-//				return u
-//			}
-//		}
-//	}
-//	return nil
-//}
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
-func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) []*UTXO {
+func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) *UTXOTx {
+	key := string(pubkeyHash)
 	utxos.mutex.RLock()
-	defer utxos.mutex.RUnlock()
-	return utxos.index[string(pubkeyHash)]
+	utxoTx, ok := utxos.index[key]
+	utxos.mutex.RUnlock()
 
+	if ok {
+		return utxoTx
+	}
+
+	utxoTx = utxos.cache.Get(pubkeyHash)
+	utxos.mutex.Lock()
+	utxos.index[key] = utxoTx
+	utxos.mutex.Unlock()
+	return utxoTx
+}
+
+//SplitContractUtxo
+func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash []byte) (*UTXO, []*UTXO) {
+	if ok, _ := PubKeyHash(pubkeyHash).IsContract(); !ok {
+		return nil, nil
+	}
+
+	utxoTx := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
+
+	var invokeContractUtxos []*UTXO
+	var createContractUtxo *UTXO
+
+	_, utxo, nextUtxoTx := utxoTx.Iterator()
+	for utxo != nil {
+		if utxo.utxoType == UtxoCreateContract {
+			createContractUtxo = utxo
+		} else {
+			invokeContractUtxos = append(invokeContractUtxos, utxo)
+		}
+		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+	}
+	return createContractUtxo, invokeContractUtxos
 }
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
 func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amount) ([]*UTXO, error) {
-
 	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
-
-	retUtxos, ok := PrepareUTXOs(allUtxos, amount)
+	retUtxos, ok := allUtxos.PrepareUtxos(amount)
 	if !ok {
 		return nil, ErrInsufficientFund
 	}
@@ -128,17 +116,13 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
 func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *UTXO {
 	utxosOfKey := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
-	for _, utxo := range utxosOfKey {
-		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
-			return utxo
-		}
-	}
-	return nil
+	return utxosOfKey.GetUtxo(txid, vout)
 }
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	if !tx.IsCoinbase() && !tx.IsRewardTx() {
 		for _, txin := range tx.Vin {
+			//TODO spent contract utxo
 			pkh, err := NewUserPubKeyHash(txin.PubKey)
 			if err != nil {
 				return false
@@ -210,20 +194,42 @@ func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 
 // addUTXO adds an unspent TXOutput to index
 func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
-	u := newUTXO(txout, txid, vout)
-	utxos.mutex.Lock()
-	defer utxos.mutex.Unlock()
+	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(txout.PubKeyHash)
+
+	var utxo *UTXO
 	//if it is a smart contract deployment utxo add it to contract utxos
-	if isContract, _ := txout.PubKeyHash.IsContract(); isContract &&
-		len(utxos.index[string(u.PubKeyHash)]) == 0 {
-		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
+	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
+		if originalUtxos.Size() == 0 {
+			utxo = newUTXO(txout, txid, vout, UtxoCreateContract)
+			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
+			newContractUtxos := contractUtxos.PutUtxo(utxo)
+			utxos.mutex.Lock()
+			utxos.index[string(contractUtxoKey)] = &newContractUtxos
+			utxos.mutex.Unlock()
+		} else {
+			utxo = newUTXO(txout, txid, vout, UtxoInvokeContract)
+		}
+	} else {
+		utxo = newUTXO(txout, txid, vout, UtxoNormal)
 	}
-	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
+
+	newUtxos := originalUtxos.PutUtxo(utxo)
+	utxos.mutex.Lock()
+	utxos.index[string(txout.PubKeyHash)] = &newUtxos
+	utxos.mutex.Unlock()
 }
 
-//func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
-//	return utxos.index[contractUtxoKey]
-//}
+func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
+	utxoTx := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
+
+	var contractUtxos []*UTXO
+	_, utxo, nextUtxoTx := utxoTx.Iterator()
+	for utxo != nil {
+		contractUtxos = append(contractUtxos, utxo)
+		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+	}
+	return contractUtxos
+}
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error {
@@ -231,14 +237,14 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
 
-	for i, utxo := range originalUtxos {
-		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
-			utxos.index[string(pkh)] = append(originalUtxos[:i], originalUtxos[i+1:]...)
-			return nil
-		}
+	utxo := originalUtxos.GetUtxo(txid, vout)
+	if utxo == nil {
+		return ErrUTXONotFound
 	}
 
-	return ErrUTXONotFound
+	newUtxos := originalUtxos.RemoveUtxo(txid, vout)
+	utxos.index[string(pkh)] = &newUtxos
+	return nil
 }
 
 //creates a deepcopy of the receiver object
@@ -246,20 +252,16 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
 
-	utxocopy := NewUTXOIndex()
-	for pkh := range utxos.index {
-		utxocopy.index[pkh] = make([]*UTXO, 0)
-		for _, utxo := range utxos.index[pkh] {
-			utxocopy.index[pkh] = append(utxocopy.index[pkh], utxo)
-		}
+	utxocopy := NewUTXOIndex(utxos.cache)
+	for pkh, utxoTx := range utxos.index {
+		utxocopy.index[pkh] = utxoTx
 	}
 	return utxocopy
 }
 
 // GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
 func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UTXOIndex, error) {
-	index := LoadUTXOIndex(db)
-	deepCopy := index.DeepCopy()
+	index := NewUTXOIndex(bc.GetUtxoCache())
 	bci := bc.Iterator()
 
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
@@ -272,21 +274,21 @@ func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UT
 		}
 
 		if err != nil {
-			return NewUTXOIndex(), err
+			return nil, err
 		}
 
 		if len(block.GetPrevHash()) == 0 {
-			return NewUTXOIndex(), ErrBlockDoesNotExist
+			return nil, ErrBlockDoesNotExist
 		}
 
-		err = deepCopy.undoTxsInBlock(block, bc, db)
+		err = index.undoTxsInBlock(block, bc, db)
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
 			}).Warn("UTXOIndex: failed to calculate previous state of UTXO index for the block")
-			return NewUTXOIndex(), err
+			return nil, err
 		}
 	}
 
-	return deepCopy, nil
+	return index, nil
 }

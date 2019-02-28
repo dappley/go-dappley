@@ -115,16 +115,14 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
-
-	rollBackUtxo := utxo.DeepCopy()
-
 	if err != nil {
 		logger.Error("BlockChainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
+	rollBackUtxo := utxo.DeepCopy()
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
-	if !bm.VerifyTransactions(*utxo, scState, forkBlks, parentBlk) {
+	if !bm.VerifyTransactions(utxo, scState, forkBlks, parentBlk) {
 		logger.Errorf("BlockChainManager: Verify fork blocks transaction failed with parent height %v", parentBlk.GetHeight())
 		return ErrTransactionVerifyFailed
 	}
@@ -137,7 +135,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 }
 
 //Verify all transactions in a fork
-func (bm *BlockChainManager) VerifyTransactions(utxoSnapshot UTXOIndex, scState *ScState, forkBlks []*Block, parentBlk *Block) bool {
+func (bm *BlockChainManager) VerifyTransactions(utxoIndex *UTXOIndex, scState *ScState, forkBlks []*Block, parentBlk *Block) bool {
 	logger.Info("BlockChainManager: is verifying transactions...")
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
@@ -145,11 +143,11 @@ func (bm *BlockChainManager) VerifyTransactions(utxoSnapshot UTXOIndex, scState 
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
 		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
-		if !forkBlks[i].VerifyTransactions(utxoSnapshot, scState, parentBlk, bm.blockchain.GetTxPool()) {
+		if !forkBlks[i].VerifyTransactions(utxoIndex, scState, parentBlk, bm.blockchain.GetTxPool()) {
 			return false
 		}
 		parentBlk = forkBlks[i]
-		utxoSnapshot.UpdateUtxoState(forkBlks[i].GetTransactions())
+		utxoIndex.UpdateUtxoState(forkBlks[i].GetTransactions())
 	}
 	return true
 }

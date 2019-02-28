@@ -67,7 +67,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
@@ -180,7 +180,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
@@ -202,7 +202,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
-	utxos2, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos2, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//add second transaction
@@ -306,7 +306,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
@@ -372,10 +372,12 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
 	pubKeyHash, _ := core.NewAddress(addr).GetPubKeyHash()
-	utxoCache := core.NewUTXOCache(bc.GetDb())
-	utxoTx := utxoCache.Get(pubKeyHash)
-	for _, utxo := range utxoTx.TxIndex {
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+	_, utxo, nextUtxos := utxos.Iterator()
+	for utxo != nil {
 		balance = balance.Add(utxo.Value)
+		_, utxo, nextUtxos = nextUtxos.Iterator()
 	}
 	return balance, nil
 }
