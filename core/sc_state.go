@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 	"sync"
 
 	logger "github.com/sirupsen/logrus"
@@ -18,7 +20,6 @@ type ScState struct {
 
 const (
 	scStateMapKey = "scState"
-	scRewardKey   = "scStateRewardKey"
 )
 
 func NewScState() *ScState {
@@ -113,4 +114,20 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash) {
 //SaveToDatabase saves states to database
 func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error {
 	return db.Put([]byte(scStateMapKey+blkHash.String()), ss.serialize())
+}
+
+
+func (ss *ScState) ToProto() proto.Message{
+	scState := make(map[string]*corepb.State)
+
+	for key,val := range ss.states {
+		scState[key] = &corepb.State{State: val}
+	}
+	return &corepb.ScState{States: scState}
+}
+
+func (ss *ScState) FromProto(pb proto.Message){
+	for key, val := range pb.(*corepb.ScState).States {
+		ss.states[key] = val.State
+	}
 }
