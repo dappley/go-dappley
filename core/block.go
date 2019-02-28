@@ -25,7 +25,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
@@ -168,27 +167,7 @@ func (b *Block) ToProto() proto.Message {
 		Transactions: txArray,
 	}
 }
-func FromProtoBlockMsg(data []byte) *Block {
-	//create a block proto
-	blockpb := &corepb.Block{}
 
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err != nil {
-		logger.Warn(err)
-	}
-	if blockpb.GetHeader() == nil {
-		spew.Dump(blockpb)
-		spew.Dump(data)
-	}
-
-	//create an empty block
-	block := &Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	return block
-}
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}

@@ -20,6 +20,8 @@ package core
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/gogo/protobuf/proto"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -677,4 +679,22 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, len(utxoIndex.index))
 
 	assert.EqualValues(t, utxoCopy.index[string(address1Hash)], utxoCopy2.index[string(address1Hash)])
+}
+
+func TestUTXOIndex_Proto(t *testing.T) {
+	utxoIndex := NewUTXOIndex()
+	utxoIndex.index["1"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte("txid1"), 0}, {MockUtxoOutputsWithoutInputs()[0], []byte("txid3"), 0}}
+	utxoIndex.index["2"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte("txid2"), 0}}
+
+	rawBytes, err := proto.Marshal(utxoIndex.ToProto())
+	assert.Nil(t, err)
+
+	utxoIndexProto := &corepb.UtxoIndex{}
+	err = proto.Unmarshal(rawBytes, utxoIndexProto)
+	assert.Nil(t, err)
+
+	utxoIndex2 := NewUTXOIndex()
+	utxoIndex2.FromProto(utxoIndexProto)
+
+	assert.Equal(t, utxoIndex.index, utxoIndex2.index)
 }

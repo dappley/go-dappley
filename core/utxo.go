@@ -336,6 +336,32 @@ func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UT
 	return deepCopy, nil
 }
 
+func (utxo *UTXOIndex) ToProto() proto.Message {
+	utxoIndex := make(map[string]*corepb.Utxos)
+	for key, val := range utxo.index {
+		var utxos []*corepb.Utxo
+		for _, u := range val {
+			utxos = append(utxos, u.ToProto().(*corepb.Utxo))
+		}
+		utxoIndex[key] = &corepb.Utxos{Utxos: utxos}
+	}
+	return &corepb.UtxoIndex{
+		Index: utxoIndex,
+	}
+}
+
+func (utxo *UTXOIndex) FromProto(pb proto.Message) {
+	for key, val := range pb.(*corepb.UtxoIndex).Index {
+		var utxos []*UTXO
+		for _, utoxPb := range val.Utxos{
+			u := &UTXO{}
+			u.FromProto(utoxPb)
+			utxos = append(utxos, u)
+		}
+		utxo.index[key] = utxos
+	}
+}
+
 func (utxo *UTXO) ToProto() proto.Message {
 	return &corepb.Utxo{
 		Amount:        utxo.Value.Bytes(),

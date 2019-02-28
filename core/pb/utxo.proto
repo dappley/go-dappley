@@ -7,3 +7,11 @@ message Utxo {
     bytes   txid = 3;
     uint32  tx_index = 4;
 }
+
+message Utxos {
+    repeated Utxo utxos = 1;
+}
+
+message UtxoIndex {
+    map<string, Utxos> index = 1;
+}
