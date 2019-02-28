@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/hex"
 	"sync"
 	"testing"
 
@@ -202,7 +203,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 	utxoIndex := NewUTXOIndex()
 	utxoIndex.index = map[string][]*UTXO{
-		string(pubKeyHash): {
+		hex.EncodeToString(pubKeyHash): {
 			{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0},
 			{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1},
 		},
@@ -269,7 +270,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 
 	utxoIndex := UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash1): {&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0}},
+			hex.EncodeToString(pkHash1): {&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
@@ -284,7 +285,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.index[string(pkHash1)])
+	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.index[hex.EncodeToString(pkHash1)])
 
 	assert.False(t, executionTx.Verify(NewUTXOIndex(), 0))
 	assert.True(t, executionTx.Verify(&utxoIndex, 0))
@@ -764,8 +765,8 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var utxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash2): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
-			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			hex.EncodeToString(pkHash2): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
+			hex.EncodeToString(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
@@ -775,7 +776,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[hex.EncodeToString(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
 	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
 	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
@@ -837,7 +838,7 @@ func TestTransaction_IsIdentical(t *testing.T) {
 
 	var utxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			hex.EncodeToString(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}

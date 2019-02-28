@@ -19,7 +19,9 @@
 package core
 
 import (
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/gogo/protobuf/proto"
 	"sync"
@@ -136,7 +138,7 @@ func TestAddUTXO(t *testing.T) {
 
 	utxoIndex.addUTXO(txout, []byte{1}, 0)
 
-	addr1UTXOs := utxoIndex.index[string(address1Hash)]
+	addr1UTXOs := utxoIndex.index[hex.EncodeToString(address1Hash)]
 	assert.Equal(t, 1, len(addr1UTXOs))
 	assert.Equal(t, txout.Value, addr1UTXOs[0].Value)
 	assert.Equal(t, []byte{1}, addr1UTXOs[0].Txid)
@@ -152,26 +154,26 @@ func TestRemoveUTXO(t *testing.T) {
 
 	utxoIndex := NewUTXOIndex()
 
-	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)],
+	utxoIndex.index[hex.EncodeToString(address1Hash)] = append(utxoIndex.index[hex.EncodeToString(address1Hash)],
 		&UTXO{TXOutput{common.NewAmount(5), address1Hash, ""}, []byte{1}, 0})
-	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)],
+	utxoIndex.index[hex.EncodeToString(address1Hash)] = append(utxoIndex.index[hex.EncodeToString(address1Hash)],
 		&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{1}, 1})
-	utxoIndex.index[string(address1Hash)] = append(utxoIndex.index[string(address1Hash)],
+	utxoIndex.index[hex.EncodeToString(address1Hash)] = append(utxoIndex.index[hex.EncodeToString(address1Hash)],
 		&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{2}, 0})
-	utxoIndex.index[string(address2Hash)] = append(utxoIndex.index[string(address2Hash)],
+	utxoIndex.index[hex.EncodeToString(address2Hash)] = append(utxoIndex.index[hex.EncodeToString(address2Hash)],
 		&UTXO{TXOutput{common.NewAmount(4), address2Hash, ""}, []byte{1}, 2})
 
 	err := utxoIndex.removeUTXO(address1Hash, []byte{1}, 0)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[hex.EncodeToString(address1Hash)]))
+	assert.Equal(t, 1, len(utxoIndex.index[hex.EncodeToString(address2Hash)]))
 
 	err = utxoIndex.removeUTXO(address2Hash, []byte{2}, 1) // Does not exists
 
 	assert.NotNil(t, err)
-	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoIndex.index[string(address2Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[hex.EncodeToString(address1Hash)]))
+	assert.Equal(t, 1, len(utxoIndex.index[hex.EncodeToString(address2Hash)]))
 }
 
 func TestUpdate(t *testing.T) {
@@ -187,13 +189,13 @@ func TestUpdate(t *testing.T) {
 	// test updating UTXO index with non-dependent transactions
 	// Assert that both the original instance and the database copy are updated correctly
 	for _, index := range []UTXOIndex{*utxoIndex, *utxoIndexInDB} {
-		assert.Equal(t, 2, len(index.index[string(address1Hash)]))
-		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash)][0].Txid)
-		assert.Equal(t, 0, index.index[string(address1Hash)][0].TxIndex)
-		assert.Equal(t, blk.transactions[0].Vout[0].Value, index.index[string(address1Hash)][0].Value)
-		assert.Equal(t, blk.transactions[0].ID, index.index[string(address1Hash)][1].Txid)
-		assert.Equal(t, 1, index.index[string(address1Hash)][1].TxIndex)
-		assert.Equal(t, blk.transactions[0].Vout[1].Value, index.index[string(address1Hash)][1].Value)
+		assert.Equal(t, 2, len(index.index[hex.EncodeToString(address1Hash)]))
+		assert.Equal(t, blk.transactions[0].ID, index.index[hex.EncodeToString(address1Hash)][0].Txid)
+		assert.Equal(t, 0, index.index[hex.EncodeToString(address1Hash)][0].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[0].Value, index.index[hex.EncodeToString(address1Hash)][0].Value)
+		assert.Equal(t, blk.transactions[0].ID, index.index[hex.EncodeToString(address1Hash)][1].Txid)
+		assert.Equal(t, 1, index.index[hex.EncodeToString(address1Hash)][1].TxIndex)
+		assert.Equal(t, blk.transactions[0].Vout[1].Value, index.index[hex.EncodeToString(address1Hash)][1].Value)
 	}
 
 	// test updating UTXO index with dependent transactions
@@ -279,8 +281,8 @@ func TestUpdate(t *testing.T) {
 
 	var UtxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash2): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
-			string(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			hex.EncodeToString(pkHash2): {&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1}},
+			hex.EncodeToString(pkHash1): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
@@ -290,29 +292,29 @@ func TestUpdate(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, UtxoIndex.index[string(pkHash2)])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, UtxoIndex.index[hex.EncodeToString(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
 	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
 	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txsForUpdate := []*Transaction{&dependentTx2, &dependentTx3}
 	UtxoIndex.UpdateUtxoState(txsForUpdate)
-	assert.Equal(t, 1, len(UtxoIndex.index[string(pkHash1)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash2)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash3)]))
-	assert.Equal(t, 2, len(UtxoIndex.index[string(pkHash4)]))
+	assert.Equal(t, 1, len(UtxoIndex.index[hex.EncodeToString(pkHash1)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash2)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash3)]))
+	assert.Equal(t, 2, len(UtxoIndex.index[hex.EncodeToString(pkHash4)]))
 	txsForUpdate = []*Transaction{&dependentTx2, &dependentTx3, &dependentTx4}
 	UtxoIndex.UpdateUtxoState(txsForUpdate)
-	assert.Equal(t, 2, len(UtxoIndex.index[string(pkHash1)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash2)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash3)]))
+	assert.Equal(t, 2, len(UtxoIndex.index[hex.EncodeToString(pkHash1)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash2)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash3)]))
 	txsForUpdate = []*Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5}
 	UtxoIndex.UpdateUtxoState(txsForUpdate)
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash1)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash2)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash3)]))
-	assert.Equal(t, 0, len(UtxoIndex.index[string(pkHash4)]))
-	assert.Equal(t, 1, len(UtxoIndex.index[string(pkHash5)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash1)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash2)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash3)]))
+	assert.Equal(t, 0, len(UtxoIndex.index[hex.EncodeToString(pkHash4)]))
+	assert.Equal(t, 1, len(UtxoIndex.index[hex.EncodeToString(pkHash5)]))
 }
 
 func TestUpdate_Failed(t *testing.T) {
@@ -326,7 +328,7 @@ func TestUpdate_Failed(t *testing.T) {
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
 	err := utxoIndex.Save(db)
 	assert.Equal(t, simulatedFailure, err)
-	assert.Equal(t, 2, len(utxoIndex.index[string(address1Hash)]))
+	assert.Equal(t, 2, len(utxoIndex.index[hex.EncodeToString(address1Hash)]))
 }
 
 func TestGetUTXOIndexAtBlockHash(t *testing.T) {
@@ -352,12 +354,12 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 
 		for _, tx := range txs {
 			for i, vout := range tx.Vout {
-				utxos, ok := utxosMap[string(vout.PubKeyHash)]
+				utxos, ok := utxosMap[hex.EncodeToString(vout.PubKeyHash)]
 				if !ok {
 					utxos = []*UTXO{}
 				}
 				utxos = append(utxos, newUTXO(vout, tx.ID, i))
-				utxosMap[string(vout.PubKeyHash)] = utxos
+				utxosMap[hex.EncodeToString(vout.PubKeyHash)] = utxos
 			}
 		}
 		utxoIndex.index = utxosMap
@@ -515,10 +517,10 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 		panic(err)
 	}
 
-	assert.Equal(t, 2, len(indexSnapshot.index[string(address1Hash)]))
-	assert.Equal(t, common.NewAmount(5), indexSnapshot.index[string(address1Hash)][0].Value)
-	assert.Equal(t, common.NewAmount(7), indexSnapshot.index[string(address1Hash)][1].Value)
-	assert.Equal(t, 0, len(indexSnapshot.index[string(address2Hash)]))
+	assert.Equal(t, 2, len(indexSnapshot.index[hex.EncodeToString(address1Hash)]))
+	assert.Equal(t, common.NewAmount(5), indexSnapshot.index[hex.EncodeToString(address1Hash)][0].Value)
+	assert.Equal(t, common.NewAmount(7), indexSnapshot.index[hex.EncodeToString(address1Hash)][1].Value)
+	assert.Equal(t, 0, len(indexSnapshot.index[hex.EncodeToString(address2Hash)]))
 }
 
 func TestFindUTXO(t *testing.T) {
@@ -659,15 +661,15 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 0, len(utxoIndex.index))
 	assert.Equal(t, 0, len(utxoCopy.index))
 
-	utxoIndex.index[string(address1Hash)] = []*UTXO{}
+	utxoIndex.index[hex.EncodeToString(address1Hash)] = []*UTXO{}
 	assert.Equal(t, 1, len(utxoIndex.index))
 	assert.Equal(t, 0, len(utxoCopy.index))
 
-	utxoCopy.index[string(address1Hash)] = append(utxoCopy.index[string(address1Hash)], &UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0})
+	utxoCopy.index[hex.EncodeToString(address1Hash)] = append(utxoCopy.index[hex.EncodeToString(address1Hash)], &UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0})
 	assert.Equal(t, 1, len(utxoIndex.index))
 	assert.Equal(t, 1, len(utxoCopy.index))
-	assert.Equal(t, 0, len(utxoIndex.index[string(address1Hash)]))
-	assert.Equal(t, 1, len(utxoCopy.index[string(address1Hash)]))
+	assert.Equal(t, 0, len(utxoIndex.index[hex.EncodeToString(address1Hash)]))
+	assert.Equal(t, 1, len(utxoCopy.index[hex.EncodeToString(address1Hash)]))
 
 	utxoCopy.index["1"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}, {MockUtxoOutputsWithoutInputs()[0], []byte{}, 0}}
 	utxoCopy2 := utxoCopy.DeepCopy()
@@ -678,7 +680,7 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, len(utxoCopy2.index["1"]))
 	assert.Equal(t, 1, len(utxoIndex.index))
 
-	assert.EqualValues(t, utxoCopy.index[string(address1Hash)], utxoCopy2.index[string(address1Hash)])
+	assert.EqualValues(t, utxoCopy.index[hex.EncodeToString(address1Hash)], utxoCopy2.index[hex.EncodeToString(address1Hash)])
 }
 
 func TestUTXOIndex_Proto(t *testing.T) {
@@ -686,6 +688,7 @@ func TestUTXOIndex_Proto(t *testing.T) {
 	utxoIndex.index["1"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte("txid1"), 0}, {MockUtxoOutputsWithoutInputs()[0], []byte("txid3"), 0}}
 	utxoIndex.index["2"] = []*UTXO{{MockUtxoOutputsWithoutInputs()[0], []byte("txid2"), 0}}
 
+	fmt.Println(utxoIndex.ToProto())
 	rawBytes, err := proto.Marshal(utxoIndex.ToProto())
 	assert.Nil(t, err)
 

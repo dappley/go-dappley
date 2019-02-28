@@ -124,15 +124,13 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 
 func TestBlockchain_AddBlockToTail(t *testing.T) {
 
-	// Serialized data of an empty UTXOIndex (generated using `hex.EncodeToString(UTXOIndex{}.serialize())`)
-	serializedUTXOIndex, _ := hex.DecodeString(`0fff89040102ff8a00010c01ff8800000dff87020102ff880001ff8200002fff81030102ff82000103010854584f757470757401ff8400010454786964010a0001075478496e64657801040000003dff830301010854584f757470757401ff84000103010556616c756501ff8600010a5075624b657948617368010a000108436f6e7472616374010c0000000aff85050102ff8c0000000fff8d05010103496e7401ff8e00000004ff8a0000`)
 	// Serialized data of an empty block (generated using `utx := NewGenesisBlock(Address{}) hex.EncodeToString(utx.Serialize())`)
 	serializedBlk, _ := hex.DecodeString(`0a280a205e2d1835dd623d81317b6d896b2b541d4ccf4fd5000547f2466cd1492fe6ef4f20e0ebd9da0512430a20ba33bb7be2181496cbba9e426505e9fc4ea6f0e4c55fff708697d9c5ed9ff7bd121810ffffffffffffffffff01220b48656c6c6f20776f726c641a050a03989680`)
 	db := new(mocks.Storage)
 
 	// Storage will allow blockchain creation to succeed
 	db.On("Put", mock.Anything, mock.Anything).Return(nil)
-	db.On("Get", []byte("utxo")).Return(serializedUTXOIndex, nil)
+	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
 	db.On("Get", mock.Anything).Return(serializedBlk, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()

@@ -20,7 +20,7 @@ package core
 
 import (
 	"bytes"
-	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/core/pb"
 	"sync"
@@ -62,24 +62,24 @@ func deserializeUTXOIndex(d []byte) *UTXOIndex {
 	utxos := NewUTXOIndex()
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&utxos.index)
+
+	utxoIndexProto := &corepb.UtxoIndex{}
+	err := proto.Unmarshal(d, utxoIndexProto)
 	if err != nil {
 		logger.WithError(err).Panic("UTXOIndex: failed to deserialize UTXOs.")
 	}
+	utxos.FromProto(utxoIndexProto)
 	return utxos
 }
 
 func (utxos *UTXOIndex) serialize() []byte {
-	var encoded bytes.Buffer
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(utxos.index)
-	if err != nil {
-		logger.Panic(err)
+	rawBytes, err := proto.Marshal(utxos.ToProto())
+	if err!= nil {
+		logger.WithError(err).Panic("Utxo: Cannot serialize utxoIndex!")
 	}
-	return encoded.Bytes()
+	return rawBytes
 }
 
 // LoadUTXOIndex returns the UTXOIndex fetched from db.
@@ -117,7 +117,7 @@ func (utxos *UTXOIndex) FindUTXO(txid []byte, vout int) *UTXO {
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) []*UTXO {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
-	return utxos.index[string(pubkeyHash)]
+	return utxos.index[hex.EncodeToString(pubkeyHash)]
 
 }
 
@@ -252,10 +252,10 @@ func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
 	defer utxos.mutex.Unlock()
 	//if it is a smart contract deployment utxo add it to contract utxos
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract &&
-		len(utxos.index[string(u.PubKeyHash)]) == 0 {
+		len(utxos.index[hex.EncodeToString(u.PubKeyHash)]) == 0 {
 		utxos.index[contractUtxoKey] = append(utxos.index[contractUtxoKey], u)
 	}
-	utxos.index[string(u.PubKeyHash)] = append(utxos.index[string(u.PubKeyHash)], u)
+	utxos.index[hex.EncodeToString(u.PubKeyHash)] = append(utxos.index[hex.EncodeToString(u.PubKeyHash)], u)
 }
 
 func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
@@ -270,7 +270,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 
 	for i, utxo := range originalUtxos {
 		if bytes.Compare(utxo.Txid, txid) == 0 && utxo.TxIndex == vout {
-			utxos.index[string(pkh)] = append(originalUtxos[:i], originalUtxos[i+1:]...)
+			utxos.index[hex.EncodeToString(pkh)] = append(originalUtxos[:i], originalUtxos[i+1:]...)
 			return nil
 		}
 	}

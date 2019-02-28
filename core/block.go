@@ -97,18 +97,18 @@ func (b *Block) HashTransactions() []byte {
 }
 
 func (b *Block) Serialize() []byte {
-	rawaBytes, err := proto.Marshal(b.ToProto())
+	rawBytes, err := proto.Marshal(b.ToProto())
 	if err!= nil {
-		logger.Panic("Block: Cannot serialize block!")
+		logger.WithError(err).Panic("Block: Cannot serialize block!")
 	}
-	return  rawaBytes
+	return rawBytes
 }
 
 func Deserialize(d []byte) *Block {
 	pb := &corepb.Block{}
 	err := proto.Unmarshal(d, pb)
 	if err!= nil {
-		logger.Panic("Block: Cannot deserialize block!")
+		logger.WithError(err).Panic("Block: Cannot deserialize block!")
 	}
 	block := &Block{}
 	block.FromProto(pb)
