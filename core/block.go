@@ -21,7 +21,6 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/gob"
 	"encoding/hex"
 	"reflect"
 	"time"
@@ -99,55 +98,22 @@ func (b *Block) HashTransactions() []byte {
 }
 
 func (b *Block) Serialize() []byte {
-	var result bytes.Buffer
-	encoder := gob.NewEncoder(&result)
-
-	bs := &BlockStream{
-		Header: &BlockHeaderStream{
-			Hash:      b.header.hash,
-			PrevHash:  b.header.prevHash,
-			Nonce:     b.header.nonce,
-			Timestamp: b.header.timestamp,
-			Sign:      b.header.sign,
-			Height:    b.header.height,
-		},
-		Transactions: b.transactions,
+	rawaBytes, err := proto.Marshal(b.ToProto())
+	if err!= nil {
+		logger.Panic("Block: Cannot serialize block!")
 	}
-
-	err := encoder.Encode(bs)
-	if err != nil {
-		logger.Panic(err)
-	}
-	return result.Bytes()
+	return  rawaBytes
 }
 
 func Deserialize(d []byte) *Block {
-	var bs BlockStream
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&bs)
-	if err != nil {
-		logger.Panic(err)
+	pb := &corepb.Block{}
+	err := proto.Unmarshal(d, pb)
+	if err!= nil {
+		logger.Panic("Block: Cannot deserialize block!")
 	}
-	if bs.Header.Hash == nil {
-		bs.Header.Hash = Hash{}
-	}
-	if bs.Header.PrevHash == nil {
-		bs.Header.PrevHash = Hash{}
-	}
-	if bs.Transactions == nil {
-		bs.Transactions = []*Transaction{}
-	}
-	return &Block{
-		header: &BlockHeader{
-			hash:      bs.Header.Hash,
-			prevHash:  bs.Header.PrevHash,
-			nonce:     bs.Header.Nonce,
-			timestamp: bs.Header.Timestamp,
-			sign:      bs.Header.Sign,
-			height:    bs.Header.Height,
-		},
-		transactions: bs.Transactions,
-	}
+	block := &Block{}
+	block.FromProto(pb)
+	return block
 }
 
 func (b *Block) GetHeader() *BlockHeader {
