@@ -339,3 +339,20 @@ func TestTransactionPool_Proto(t *testing.T) {
 	txPool1.FromProto(txPoolProto)
 	assert.Equal(t, txPool, txPool1)
 }
+
+func TestNewTransactionNode(t *testing.T) {
+	ttx1 := &Transaction{
+		ID:   util.GenerateRandomAoB(5),
+		Vin:  GenerateFakeTxInputs(),
+		Vout: GenerateFakeTxOutputs(),
+		Tip:  common.NewAmount(7),
+	}
+
+	rawBytes, err := proto.Marshal(ttx1.ToProto())
+	assert.Nil(t, err)
+
+	txNode := NewTransactionNode(ttx1)
+	assert.Equal(t, ttx1, txNode.Value)
+	assert.Equal(t, 0, len(txNode.Children))
+	assert.Equal(t, len(rawBytes), txNode.Size)
+}

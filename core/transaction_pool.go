@@ -337,8 +337,8 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 		}
 	}
 
-	txNode := TransactionNode{Children: make(map[string]*Transaction), Value: tx}
-	txPool.txs[hex.EncodeToString(tx.ID)] = &txNode
+	txNode := NewTransactionNode(tx)
+	txPool.txs[hex.EncodeToString(tx.ID)] = txNode
 
 	txPool.EventBus.Publish(NewTransactionTopic, tx)
 
