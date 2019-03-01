@@ -5,9 +5,8 @@ import (
 	"encoding/gob"
 	"sync"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 )
 
 type ScState struct {
@@ -17,16 +16,17 @@ type ScState struct {
 }
 
 const (
+	scStateLogKey = "scLog"
 	scStateMapKey = "scState"
 	scRewardKey   = "scStateRewardKey"
 )
 
 func NewScState() *ScState {
-	return &ScState{make(map[string]map[string]string),make([]*Event, 0), &sync.RWMutex{}}
+	return &ScState{make(map[string]map[string]string), make([]*Event, 0), &sync.RWMutex{}}
 }
 
-func (ss *ScState) GetEvents() []*Event{ return ss.events }
-func (ss *ScState) RecordEvent(event *Event){
+func (ss *ScState) GetEvents() []*Event { return ss.events }
+func (ss *ScState) RecordEvent(event *Event) {
 	ss.events = append(ss.events, event)
 }
 
@@ -40,11 +40,45 @@ func deserializeScState(d []byte) map[string]map[string]string {
 	return scState
 }
 
-func (ss *ScState) serialize() []byte {
+func (ss *ScState) findChangedValue(newState *ScState) map[string]map[string]string {
+	change := make(map[string]map[string]string)
+
+	for address, newMap := range newState.states {
+		if oldMap, ok := ss.states[address]; !ok {
+			change[address] = nil
+		} else {
+			ls := make(map[string]string)
+			for key, value := range oldMap {
+				if newValue, ok := newMap[key]; ok {
+					if newValue != value {
+						ls[key] = value
+					}
+				} else {
+					ls[key] = value
+				}
+			}
+
+			for key, value := range newMap {
+				if oldMap[key] != value {
+					ls[key] = oldMap[key]
+				}
+			}
+
+			if len(ls) > 0 {
+				change[address] = ls
+			}
+
+		}
+	}
+
+	return change
+}
+
+func serialize(ss map[string]map[string]string) []byte {
 
 	var encoded bytes.Buffer
 	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(ss.states)
+	err := enc.Encode(ss)
 	if err != nil {
 		logger.WithError(err).Panic("ScState: failed to serialize UTXO states.")
 	}
@@ -112,5 +146,6 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash) {
 
 //SaveToDatabase saves states to database
 func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error {
-	return db.Put([]byte(scStateMapKey+blkHash.String()), ss.serialize())
+
+	return db.Put([]byte(scStateMapKey+blkHash.String()), serialize(ss.states))
 }
