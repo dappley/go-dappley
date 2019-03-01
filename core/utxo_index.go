@@ -244,6 +244,20 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 
 	newUtxos := originalUtxos.RemoveUtxo(txid, vout)
 	utxos.index[string(pkh)] = &newUtxos
+
+	if utxo.utxoType != UtxoCreateContract {
+		return nil
+	}
+	// remove contract utxos
+	isContract, _ := pkh.IsContract()
+	if isContract {
+		contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
+		if contractUtxos == nil {
+			return ErrUTXONotFound
+		}
+		newContractUtxos := contractUtxos.RemoveUtxo(txid, vout)
+		utxos.index[string(contractUtxoKey)] = &newContractUtxos
+	}
 	return nil
 }
 
