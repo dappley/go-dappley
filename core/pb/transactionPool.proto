@@ -6,6 +6,7 @@ import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 message TransactionNode{
     map<string, Transaction> children = 1;
     Transaction value = 2;
+    int64   size = 3;
 }
 
 message TransactionPool{
