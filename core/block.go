@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -277,6 +278,7 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, parentBlk *
 	var rewardTX *Transaction
 
 	for _, tx := range b.GetTransactions() {
+		fmt.Println(hex.EncodeToString(tx.ID))
 		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
 			if rewardTX != nil {
@@ -285,6 +287,7 @@ func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, parentBlk *
 			}
 			rewardTX = tx
 		} else if tx.IsFromContract() {
+
 			txInPool := txPool.GetTransactionById(tx.ID)
 			if !tx.IsIdentical(utxo, txInPool) {
 				logger.Warn("Block: generated tx cannot be verified.")

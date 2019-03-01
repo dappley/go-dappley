@@ -717,6 +717,10 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 
 func (tx *Transaction) IsIdentical(utxo UTXOIndex, tx2 *Transaction) bool {
 
+	if(tx2==nil){
+		return false
+	}
+
 	sender, recipient, amount, tip, err := tx.Describe(utxo)
 	if err != nil {
 		return false

@@ -19,6 +19,7 @@
 package core
 
 import (
+	"encoding/hex"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -85,50 +86,50 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	txPool.addTransaction(txs[0])
 	assert.Equal(t, 1, len(txPool.txs))
 	assert.Equal(t,1, len(txPool.tipOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx1. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
 	txPool.addTransaction(txs[1])
 	assert.Equal(t, 2, len(txPool.txs))
 	assert.Equal(t,1, len(txPool.tipOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx2. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
 	txPool.addTransaction(txs[2])
 	assert.Equal(t, 3, len(txPool.txs))
 	assert.Equal(t,1, len(txPool.tipOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx3. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx1
 	txPool.addTransaction(txs[3])
 	assert.Equal(t, 4, len(txPool.txs))
 	assert.Equal(t,1, len(txPool.tipOrder))
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx4. It should be stored in txs and tipOrder
 	txPool.addTransaction(txs[4])
 	assert.Equal(t, 5, len(txPool.txs))
 	assert.Equal(t,2, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
-	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[0])
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[1])
 
 	//push ttx5. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx4
 	txPool.addTransaction(txs[5])
 	assert.Equal(t, 6, len(txPool.txs))
 	assert.Equal(t,2, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
-	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[0])
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[1])
 
 	//push ttx6.  It should be stored in txs and tipOrder
 	txPool.addTransaction(txs[6])
 	assert.Equal(t, 7, len(txPool.txs))
 	assert.Equal(t,3, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
-	assert.Equal(t,string(txs[6].ID), txPool.tipOrder[0])
-	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[1])
-	assert.Equal(t,string(txs[0].ID), txPool.tipOrder[2])
+	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[0].ID), txPool.tipOrder[2])
 }
 
 func TestTransactionPool_RemoveTransactionNodeAndChildren(t *testing.T) {
@@ -155,9 +156,9 @@ func TestTransactionPool_removeMinTipTx(t *testing.T) {
 	//Since tx0 is the minimum tip, all children will be removed
 	txPool.removeMinTipTx()
 	assert.Equal(t, 4, len(txPool.txs))
-	assert.Equal(t,string(txs[7].ID), txPool.tipOrder[0])
-	assert.Equal(t,string(txs[6].ID), txPool.tipOrder[1])
-	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[2])
+	assert.Equal(t,hex.EncodeToString(txs[7].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[2])
 }
 
 func TestTransactionPool_Update(t *testing.T) {
@@ -172,11 +173,11 @@ func TestTransactionPool_Update(t *testing.T) {
 	txPool.CleanUpMinedTxs(packedTxs)
 	assert.Equal(t, 7, len(txPool.txs))
 	assert.Equal(t, 5, len(txPool.tipOrder))
-	assert.Equal(t,string(txs[7].ID), txPool.tipOrder[0])
-	assert.Equal(t,string(txs[6].ID), txPool.tipOrder[1])
-	assert.Equal(t,string(txs[4].ID), txPool.tipOrder[2])
-	assert.Equal(t,string(txs[1].ID), txPool.tipOrder[3])
-	assert.Equal(t,string(txs[2].ID), txPool.tipOrder[4])
+	assert.Equal(t,hex.EncodeToString(txs[7].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[2])
+	assert.Equal(t,hex.EncodeToString(txs[1].ID), txPool.tipOrder[3])
+	assert.Equal(t,hex.EncodeToString(txs[2].ID), txPool.tipOrder[4])
 }
 
 func TestTransactionPoolLimit(t *testing.T) {
@@ -248,8 +249,7 @@ func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
 	db := storage.NewRamStorage()
 	err := txPool.SaveToDatabase(db)
 	assert.Nil(t, err)
-	txPool2 := NewTransactionPool(128)
-	txPool2.LoadFromDatabase(db)
+	txPool2 := LoadTxPoolFromDatabase(db, 128)
 	assert.Equal(t, 4, len(txPool2.GetTransactions()))
 }
 
@@ -265,56 +265,56 @@ func generateDependentTxs() []*Transaction{
 	*/
 
 	ttx0 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(3),
 	}
 
 	ttx1 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2),
 	}
 
 	ttx2 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(1),
 	}
 
 	ttx3 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx1.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2),
 	}
 
 	ttx4 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(4),
 	}
 
 	ttx5 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx4.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(5),
 	}
 
 	ttx6 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(6),
 	}
 
 	ttx7 := &Transaction{
-		ID:   util.GenerateRandomAoB(1),
+		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(7),

@@ -19,8 +19,6 @@
 package core
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
@@ -240,7 +238,11 @@ func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) b
 func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction {
 	txPool.mutex.RLock()
 	txPool.mutex.RUnlock()
-	return txPool.txs[hex.EncodeToString(txid)].Value
+	txNode, ok := txPool.txs[hex.EncodeToString(txid)]
+	if !ok {
+		return nil
+	}
+	return txNode.Value
 }
 
 func (txPool *TransactionPool) getDependentTxs(txNode *TransactionNode) map[string]*TransactionNode {
@@ -354,35 +356,34 @@ func (txPool *TransactionPool) insertIntoSortedWaitlist(tx *Transaction){
 	txPool.tipOrder[index] = hex.EncodeToString(tx.ID)
 }
 
-func deserializeTxPool(d []byte) map[string]*TransactionNode {
-	txs := make(map[string]*TransactionNode)
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&txs)
+func deserializeTxPool(d []byte) *TransactionPool {
+
+	txPoolProto := &corepb.TransactionPool{}
+	err := proto.Unmarshal(d, txPoolProto)
 	if err != nil {
 		logger.WithError(err).Panic("TxPool: failed to deserialize TxPool transactions.")
 	}
-	return txs
+	txPool := NewTransactionPool(1)
+	txPool.FromProto(txPoolProto)
+
+	return txPool
 }
 
-func (txPool *TransactionPool) LoadFromDatabase(db storage.Storage) {
-	txPool.mutex.Lock()
-	defer txPool.mutex.Unlock()
+func LoadTxPoolFromDatabase(db storage.Storage, defaultTxPoolSize uint32) *TransactionPool{
 	rawBytes, err := db.Get([]byte(TxPoolDbKey))
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return
+		return NewTransactionPool(defaultTxPoolSize)
 	}
-	txPool.txs = deserializeTxPool(rawBytes)
+	return deserializeTxPool(rawBytes)
 }
 
 func (txPool *TransactionPool) serialize() []byte {
 
-	var encoded bytes.Buffer
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(txPool.txs)
+	rawBytes, err := proto.Marshal(txPool.ToProto())
 	if err != nil {
 		logger.WithError(err).Panic("TxPool: failed to serialize TxPool transactions.")
 	}
-	return encoded.Bytes()
+	return rawBytes
 }
 
 func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error {

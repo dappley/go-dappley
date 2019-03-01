@@ -72,7 +72,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		BlockchainReady,
 		NewEventManager(),
 	}
-	bc.txPool.LoadFromDatabase(bc.db)
+	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	err := bc.AddBlockToTail(genesis)
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
@@ -96,7 +96,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		BlockchainReady,
 		NewEventManager(),
 	}
-	bc.txPool.LoadFromDatabase(bc.db)
+	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
 }
 

@@ -20,6 +20,7 @@ package core
 
 import (
 	"encoding/hex"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -236,8 +237,12 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	contractPubKeyHash := NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
 
+	txIdStr := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	generatedTxId, err := hex.DecodeString(txIdStr)
+	assert.Nil(t, err)
+	fmt.Println(hex.EncodeToString(generatedTxId))
 	generatedTX := &Transaction{
-		[]byte("contractGenerated"),
+		generatedTxId,
 		[]TXInput{
 			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
 			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
@@ -342,7 +347,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
-			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated":{Value: generatedTX}}},
+			&TransactionPool{txs: map[string]*TransactionNode{txIdStr:{Value: generatedTX}}},
 			true,
 		},
 	}
