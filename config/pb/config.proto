@@ -18,8 +18,9 @@ message NodeConfig{
     uint32 rpc_port = 4;
     string key_path = 5;
     uint32 tx_pool_limit = 6;
-    string node_address = 7;
-    string genesis_path = 8;
+    uint32 blk_size_limit = 7;
+    string node_address = 8;
+    string genesis_path = 9;
 }
 
 message DynastyConfig{
