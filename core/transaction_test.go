@@ -803,31 +803,31 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	// test a transaction whose Vin is from UtxoIndex
 	assert.Equal(t, true, dependentTx2.Verify(utxoIndex, 0))
-	txPool.Push(&dependentTx2)
+	txPool.Push(dependentTx2)
 
 	// test a transaction whose Vin is from another transaction in transaction pool
 	utxoIndex2 := *utxoIndex.DeepCopy()
 	utxoIndex2.UpdateUtxoState(txPool.GetTransactions())
 	assert.Equal(t, true, dependentTx3.Verify(&utxoIndex2, 0))
-	txPool.Push(&dependentTx3)
+	txPool.Push(dependentTx3)
 
 	// test a transaction whose Vin is from another two transactions in transaction pool
 	utxoIndex3 := *utxoIndex.DeepCopy()
 	utxoIndex3.UpdateUtxoState(txPool.GetTransactions())
 	assert.Equal(t, true, dependentTx4.Verify(&utxoIndex3, 0))
-	txPool.Push(&dependentTx4)
+	txPool.Push(dependentTx4)
 
 	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	utxoIndex4 := *utxoIndex.DeepCopy()
 	utxoIndex4.UpdateUtxoState(txPool.GetTransactions())
 	assert.Equal(t, true, dependentTx5.Verify(&utxoIndex4, 0))
-	txPool.Push(&dependentTx5)
+	txPool.Push(dependentTx5)
 
 	// test UTXOs not found for parent transactions
 	assert.Equal(t, false, dependentTx3.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
 
 	// test a standalone transaction
-	txPool.Push(&tx1)
+	txPool.Push(tx1)
 	assert.Equal(t, false, tx1.Verify(utxoIndex, 0))
 }
 

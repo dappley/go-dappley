@@ -69,6 +69,12 @@ func main() {
 	numOfTx, _ := reader.ReadString('\n')
 	numOfTx = strings.TrimSuffix(numOfTx, "\n")
 	numTx, _ := strconv.Atoi(numOfTx)
-	config := tool.GeneralConfigs{numTx}
+
+	fmt.Printf("Enter number of smart contract transactions per block: \n")
+	numOfScTx, _ := reader.ReadString('\n')
+	numOfScTx = strings.TrimSuffix(numOfScTx, "\n")
+	numScTx, _ := strconv.Atoi(numOfScTx)
+
+	config := tool.GeneralConfigs{numTx, numScTx}
 	tool.GenerateNewBlockChain(files, dynasty, keys, config)
 }

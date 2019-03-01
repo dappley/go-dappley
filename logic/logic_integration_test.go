@@ -159,7 +159,6 @@ func TestSend(t *testing.T) {
 
 //test send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
-	//setup: clean up database and files
 	cleanUpDatabase()
 
 	store := storage.NewRamStorage()
@@ -195,13 +194,12 @@ func TestSendToInvalidAddress(t *testing.T) {
 	balance1, err = GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
-	//teardown :clean up database amd files
+
 	cleanUpDatabase()
 }
 
 //insufficient fund
 func TestSendInsufficientBalance(t *testing.T) {
-	//setup: clean up database and files
 	cleanUpDatabase()
 
 	store := storage.NewRamStorage()
@@ -256,7 +254,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 
-	//teardown :clean up database amd files
 	cleanUpDatabase()
 }
 

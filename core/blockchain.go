@@ -186,6 +186,8 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()
 
+	tailBlk, _ := bc.GetTailBlock()
+
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
@@ -199,7 +201,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	utxoIndex := NewUTXOIndex(bc.utxoCache)
 	tempUtxo := utxoIndex.DeepCopy()
-	bcTemp.executeTransactionsAndUpdateScState(tempUtxo, block)
+	bcTemp.executeTransactionsAndUpdateScState(tempUtxo, block, tailBlk)
 	utxoIndex.UpdateUtxoState(block.GetTransactions())
 	err = utxoIndex.Save()
 
@@ -253,10 +255,9 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	return nil
 }
 
-func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, currBlock *Block) error {
+func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, currBlock *Block, parentBlk *Block) error {
 
-	tailBlk, err := bc.GetTailBlock()
-	if err != nil {
+	if parentBlk == nil {
 		//if the current block is genesis block. do not run smart contract
 		return nil
 	}
@@ -274,10 +275,9 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 	var rewardTX *Transaction
 
 	for _, tx := range currBlock.GetTransactions() {
-
-		genTxs := tx.Execute(*utxoIndex, scState, rewards, scEngine, currBlock.GetHeight(), tailBlk)
+		genTxs := tx.Execute(*utxoIndex, scState, rewards, scEngine, currBlock.GetHeight(), parentBlk)
 		for _, gtx := range genTxs {
-			bc.GetTxPool().Push(gtx)
+			bc.GetTxPool().Push(*gtx)
 		}
 
 		if tx.IsRewardTx() {
@@ -292,11 +292,11 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 		return ErrRewardTxVerifyFailed
 	}
 
-	bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, currBlock.GetHeight(), tailBlk.GetTimestamp())
+	bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, currBlock.GetHeight(), parentBlk.GetTimestamp())
 
 	bc.eventManager.Trigger(scState.GetEvents())
 
-	err = scState.SaveToDatabase(bc.db, currBlock.GetHash())
+	err := scState.SaveToDatabase(bc.db, currBlock.GetHash())
 	if err != nil {
 		return err
 	}

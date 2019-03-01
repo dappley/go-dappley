@@ -85,6 +85,10 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *
 	}
 }
 
+func (b *Block) BeIrreversible() {
+
+}
+
 func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
 	var txHash [32]byte
@@ -383,7 +387,7 @@ func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
 			if !tx.IsCoinbase() && !tx.IsRewardTx() {
-				txPool.Push(tx)
+				txPool.Push(*tx)
 			}
 		}
 	}

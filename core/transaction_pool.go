@@ -118,7 +118,7 @@ func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blo
 	return validTxs
 }
 
-func (txPool *TransactionPool) Push(tx *Transaction) {
+func (txPool *TransactionPool) Push(tx Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	if txPool.limit == 0 {
@@ -137,17 +137,15 @@ func (txPool *TransactionPool) Push(tx *Transaction) {
 		}
 
 		toRemoveTxs := txPool.getToRemoveTxs(txPool.minTipTxId)
-		if checkDependTxInMap(tx, toRemoveTxs) == true {
+		if checkDependTxInMap(&tx, toRemoveTxs) {
 			logger.Warn("TransactionPool: failed to push because dependent transactions are not removed from pool.")
 			return
 		}
 
 		txPool.removeSelectedTransactions(toRemoveTxs)
 		txPool.minTipTxId = ""
-		txPool.addTransaction(tx)
-	} else {
-		txPool.addTransaction(tx)
 	}
+	txPool.addTransaction(&tx)
 }
 
 func (txPool *TransactionPool) CheckAndRemoveTransactions(txs []*Transaction) {
