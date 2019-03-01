@@ -19,12 +19,14 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/golang/protobuf/proto"
 	"testing"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/common"
 )
 
 var tx1 = Transaction{
@@ -318,4 +320,22 @@ func generateDependentTxs() []*Transaction{
 		Tip:  common.NewAmount(7),
 	}
 	return []*Transaction{ttx0,ttx1,ttx2,ttx3,ttx4,ttx5,ttx6,ttx7}
+}
+
+func TestTransactionPool_Proto(t *testing.T) {
+	txPool := NewTransactionPool(128)
+	txs := generateDependentTxs()
+	for _, tx := range txs {
+		txPool.addTransaction(tx)
+	}
+	rawBytes, err := proto.Marshal(txPool.ToProto())
+	assert.Nil(t, err)
+
+	txPoolProto := &corepb.TransactionPool{}
+	err = proto.Unmarshal(rawBytes, txPoolProto)
+	assert.Nil(t, err)
+
+	txPool1 := NewTransactionPool(1)
+	txPool1.FromProto(txPoolProto)
+	assert.Equal(t, txPool, txPool1)
 }

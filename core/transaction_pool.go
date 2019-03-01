@@ -21,7 +21,10 @@ package core
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/hex"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/golang/protobuf/proto"
 	"sort"
 	"sync"
 
@@ -57,6 +60,13 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 		limit:    limit,
 		EventBus: EventBus.New(),
 		mutex:    sync.RWMutex{},
+	}
+}
+
+func NewTransactionNode(tx *Transaction) *TransactionNode{
+	return &TransactionNode{
+		make(map[string]*Transaction),
+		tx,
 	}
 }
 
@@ -161,7 +171,7 @@ func (txPool *TransactionPool) CleanUpMinedTxs(minedTxs []*Transaction) {
 
 	for _, tx := range minedTxs {
 
-		txNode, ok := txPool.txs[string(tx.ID)]
+		txNode, ok := txPool.txs[hex.EncodeToString(tx.ID)]
 		if !ok {
 			continue
 		}
@@ -220,7 +230,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 
 func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) bool {
 	for _, vin := range tx.Vin {
-		if _, exist := existTxs[string(vin.Txid)]; exist {
+		if _, exist := existTxs[hex.EncodeToString(vin.Txid)]; exist {
 			return true
 		}
 	}
@@ -230,7 +240,7 @@ func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) b
 func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction {
 	txPool.mutex.RLock()
 	txPool.mutex.RUnlock()
-	return txPool.txs[string(txid)].Value
+	return txPool.txs[hex.EncodeToString(txid)].Value
 }
 
 func (txPool *TransactionPool) getDependentTxs(txNode *TransactionNode) map[string]*TransactionNode {
@@ -244,7 +254,7 @@ func (txPool *TransactionPool) getDependentTxs(txNode *TransactionNode) map[stri
 		for key, _ := range currentTxNode.Children {
 			toCheckTxs = append(toCheckTxs, txPool.txs[key])
 		}
-		toRemoveTxs[string(currentTxNode.Value.ID)] = currentTxNode
+		toRemoveTxs[hex.EncodeToString(currentTxNode.Value.ID)] = currentTxNode
 	}
 
 	return toRemoveTxs
@@ -262,7 +272,7 @@ func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string
 func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction) {
 
 	txStack := stack.New()
-	txStack.Push(string(tx.ID))
+	txStack.Push(hex.EncodeToString(tx.ID))
 	for(txStack.Len()>0){
 		txid := txStack.Pop().(string)
 		currTxNode, ok := txPool.txs[txid]
@@ -270,7 +280,7 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction)
 			continue
 		}
 		for _, child := range currTxNode.Children {
-			txStack.Push(string(child.ID))
+			txStack.Push(hex.EncodeToString(child.ID))
 		}
 		txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[txid].Value)
 		txPool.removeTransaction(currTxNode.Value)
@@ -281,15 +291,15 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction)
 //Note: this function does not remove the node from tipOrder!
 func (txPool *TransactionPool) removeTransaction(tx *Transaction) {
 	txPool.disconnectFromParent(tx)
-	txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[string(tx.ID)].Value)
-	delete(txPool.txs, string(tx.ID))
+	txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[hex.EncodeToString(tx.ID)].Value)
+	delete(txPool.txs, hex.EncodeToString(tx.ID))
 }
 
 //disconnectFromParent removes itself from its parent's node's children field
 func (txPool *TransactionPool) disconnectFromParent(tx *Transaction){
 	for _, vin := range tx.Vin {
-		if parentTx, exist := txPool.txs[string(vin.Txid)]; exist {
-			delete(parentTx.Children, string(tx.ID))
+		if parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
+			delete(parentTx.Children, hex.EncodeToString(tx.ID))
 		}
 	}
 }
@@ -306,15 +316,15 @@ func (txPool *TransactionPool) removeMinTipTx() {
 func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 	isDependentOnParent := false
 	for _, vin := range tx.Vin {
-		parentTx, exist := txPool.txs[string(vin.Txid)]
+		parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]
 		if exist {
-			parentTx.Children[string(tx.ID)] = tx
+			parentTx.Children[hex.EncodeToString(tx.ID)] = tx
 			isDependentOnParent = true
 		}
 	}
 
 	txNode := TransactionNode{Children: make(map[string]*Transaction), Value: tx}
-	txPool.txs[string(tx.ID)] = &txNode
+	txPool.txs[hex.EncodeToString(tx.ID)] = &txNode
 
 	txPool.EventBus.Publish(NewTransactionTopic, tx)
 
@@ -341,7 +351,7 @@ func (txPool *TransactionPool) insertIntoSortedWaitlist(tx *Transaction){
 
 	txPool.tipOrder = append(txPool.tipOrder, "")
 	copy(txPool.tipOrder[index+1:], txPool.tipOrder[index:])
-	txPool.tipOrder[index] = string(tx.ID)
+	txPool.tipOrder[index] = hex.EncodeToString(tx.ID)
 }
 
 func deserializeTxPool(d []byte) map[string]*TransactionNode {
@@ -413,4 +423,48 @@ func (txPool *TransactionPool) GetMinTipTxid() string {
 		return ""
 	}
 	return txPool.tipOrder[len(txPool.tipOrder)-1]
+}
+
+func (txNode *TransactionNode) ToProto() proto.Message{
+	childrenProto := make(map[string]*corepb.Transaction)
+	for key, val := range txNode.Children{
+		childrenProto[key] = val.ToProto().(*corepb.Transaction)
+	}
+	return &corepb.TransactionNode{
+		Children:childrenProto,
+		Value: txNode.Value.ToProto().(*corepb.Transaction),
+	}
+}
+
+func (txNode *TransactionNode) FromProto(pb proto.Message) {
+	for key,val := range pb.(*corepb.TransactionNode).Children{
+		tx := &Transaction{}
+		tx.FromProto(val)
+		txNode.Children[key] = tx
+	}
+	tx := &Transaction{}
+	tx.FromProto(pb.(*corepb.TransactionNode).Value)
+	txNode.Value = tx
+}
+
+func (txPool *TransactionPool) ToProto() proto.Message {
+	txs := make(map[string]*corepb.TransactionNode)
+	for key, val := range txPool.txs {
+		txs[key] = val.ToProto().(*corepb.TransactionNode)
+	}
+	return &corepb.TransactionPool{
+		Txs: txs,
+		TipOrder: txPool.tipOrder,
+		Limit: txPool.limit,
+	}
+}
+
+func (txPool *TransactionPool) FromProto(pb proto.Message) {
+	for key,val := range pb.(*corepb.TransactionPool).Txs {
+		txNode := NewTransactionNode(nil)
+		txNode.FromProto(val)
+		txPool.txs[key] = txNode
+	}
+	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
+	txPool.limit = pb.(*corepb.TransactionPool).Limit
 }

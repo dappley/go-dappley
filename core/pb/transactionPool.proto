@@ -1,0 +1,17 @@
+syntax = "proto3";
+package corepb;
+import "github.com/dappley/go-dappley/core/pb/transaction.proto";
+
+
+message TransactionNode{
+    map<string, Transaction> children = 1;
+    Transaction value = 2;
+}
+
+message TransactionPool{
+    map<string, TransactionNode> txs = 1;
+    repeated string tipOrder = 2;
+    uint32 limit = 3;
+}
+
+
