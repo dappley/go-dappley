@@ -156,9 +156,9 @@ func TestTransactionPool_removeMinTipTx(t *testing.T) {
 	//Since tx0 is the minimum tip, all children will be removed
 	txPool.removeMinTipTx()
 	assert.Equal(t, 4, len(txPool.txs))
-	assert.Equal(t,hex.EncodeToString(txs[7].ID), txPool.tipOrder[0])
-	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[1])
-	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[2])
+	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[7].ID), txPool.tipOrder[2])
 }
 
 func TestTransactionPool_Update(t *testing.T) {
@@ -173,10 +173,10 @@ func TestTransactionPool_Update(t *testing.T) {
 	txPool.CleanUpMinedTxs(packedTxs)
 	assert.Equal(t, 7, len(txPool.txs))
 	assert.Equal(t, 5, len(txPool.tipOrder))
-	assert.Equal(t,hex.EncodeToString(txs[7].ID), txPool.tipOrder[0])
-	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[1])
-	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[2])
-	assert.Equal(t,hex.EncodeToString(txs[1].ID), txPool.tipOrder[3])
+	assert.Equal(t,hex.EncodeToString(txs[6].ID), txPool.tipOrder[0])
+	assert.Equal(t,hex.EncodeToString(txs[4].ID), txPool.tipOrder[1])
+	assert.Equal(t,hex.EncodeToString(txs[1].ID), txPool.tipOrder[2])
+	assert.Equal(t,hex.EncodeToString(txs[7].ID), txPool.tipOrder[3])
 	assert.Equal(t,hex.EncodeToString(txs[2].ID), txPool.tipOrder[4])
 }
 
@@ -264,60 +264,68 @@ func generateDependentTxs() []*Transaction{
 	    tx3
 	*/
 
+	//size 60
 	ttx0 := &Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(3),
+		Tip:  common.NewAmount(3000),
 	}
 
+	//size 37
 	ttx1 := &Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(2),
+		Tip:  common.NewAmount(2000),
 	}
 
+	//size 37
 	ttx2 := &Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(1),
+		Tip:  common.NewAmount(1000),
 	}
 
+	//size 37
 	ttx3 := &Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx1.ID}},
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(2),
+		Tip:  common.NewAmount(2000),
 	}
 
+	//size 61
 	ttx4 := &Transaction{
-		ID:   util.GenerateRandomAoB(5),
+		ID:   util.GenerateRandomAoB(6),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(4),
+		Tip:  common.NewAmount(4000),
 	}
 
+	//size 38
 	ttx5 := &Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  []TXInput{{Txid: ttx4.ID}},
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(5),
+		Tip:  common.NewAmount(5000),
 	}
 
+	//size 62
 	ttx6 := &Transaction{
-		ID:   util.GenerateRandomAoB(5),
+		ID:   util.GenerateRandomAoB(7),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(6),
+		Tip:  common.NewAmount(6000),
 	}
 
+	//size 135
 	ttx7 := &Transaction{
-		ID:   util.GenerateRandomAoB(5),
+		ID:   util.GenerateRandomAoB(80),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(7),
+		Tip:  common.NewAmount(7000),
 	}
 	return []*Transaction{ttx0,ttx1,ttx2,ttx3,ttx4,ttx5,ttx6,ttx7}
 }

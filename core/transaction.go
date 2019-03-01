@@ -894,3 +894,12 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	}
 	tx.Vout = voutArray
 }
+
+func (tx *Transaction) GetSize() int{
+	rawBytes, err := proto.Marshal(tx.ToProto())
+	if err != nil {
+		logger.Warn("Transaction: Transaction can not be marshalled!")
+		return 0
+	}
+	return len(rawBytes)
+}

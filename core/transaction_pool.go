@@ -38,12 +38,6 @@ const (
 	TxPoolDbKey           = "txpool"
 )
 
-type TransactionNode struct {
-	Children map[string]*Transaction
-	Value    *Transaction
-	Size     int
-}
-
 type TransactionPool struct {
 	txs      map[string]*TransactionNode
 	tipOrder []string
@@ -62,24 +56,6 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 	}
 }
 
-func NewTransactionNode(tx *Transaction) *TransactionNode {
-	txNode := &TransactionNode{Children: make(map[string]*Transaction)}
-
-	if tx == nil {
-		return txNode
-	}
-
-	rawBytes, err := proto.Marshal(tx.ToProto())
-	if err != nil {
-		logger.Warn("TransactionPool: Transaction can not be marshalled!")
-		return txNode
-	}
-	txNode.Value = tx
-	txNode.Size = len(rawBytes)
-
-	return txNode
-}
-
 func (txPool *TransactionPool) deepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
 		txs:      make(map[string]*TransactionNode),
@@ -93,12 +69,12 @@ func (txPool *TransactionPool) deepCopy() *TransactionPool {
 
 	for key, tx := range txPool.txs {
 		newTx := tx.Value.DeepCopy()
-		newTxNode := TransactionNode{Children: make(map[string]*Transaction), Value: &newTx}
+		newTxNode := NewTransactionNode(&newTx)
 
 		for childKey, childTx := range tx.Children {
 			newTxNode.Children[childKey] = childTx
 		}
-		txPoolCopy.txs[key] = &newTxNode
+		txPoolCopy.txs[key] = newTxNode
 	}
 
 	return &txPoolCopy
@@ -347,25 +323,25 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 		return
 	}
 
-	txPool.insertIntoSortedWaitlist(tx)
+	txPool.insertIntoSortedWaitlist(txNode)
 }
 
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *TransactionNode) {
 	for _, child := range txNode.Children {
-		txPool.insertIntoSortedWaitlist(child)
+		txPool.insertIntoSortedWaitlist(txPool.txs[hex.EncodeToString(child.ID)])
 	}
 }
 
 //insertIntoSortedWaitlist insert a transaction into txSort based on tip.
 //If the transaction is a child of another transaction, the transaction will NOT be inserted
-func (txPool *TransactionPool) insertIntoSortedWaitlist(tx *Transaction) {
+func (txPool *TransactionPool) insertIntoSortedWaitlist(txNode *TransactionNode) {
 	index := sort.Search(len(txPool.tipOrder), func(i int) bool {
-		return txPool.txs[txPool.tipOrder[i]].Value.Tip.Cmp(tx.Tip) == -1
+		return txPool.txs[txPool.tipOrder[i]].GetTipsPerByte().Cmp(txNode.GetTipsPerByte()) == -1
 	})
 
 	txPool.tipOrder = append(txPool.tipOrder, "")
 	copy(txPool.tipOrder[index+1:], txPool.tipOrder[index:])
-	txPool.tipOrder[index] = hex.EncodeToString(tx.ID)
+	txPool.tipOrder[index] = hex.EncodeToString(txNode.Value.ID)
 }
 
 func deserializeTxPool(d []byte) *TransactionPool {
@@ -438,30 +414,6 @@ func (txPool *TransactionPool) GetMinTipTxid() string {
 	return txPool.tipOrder[len(txPool.tipOrder)-1]
 }
 
-func (txNode *TransactionNode) ToProto() proto.Message {
-	childrenProto := make(map[string]*corepb.Transaction)
-	for key, val := range txNode.Children {
-		childrenProto[key] = val.ToProto().(*corepb.Transaction)
-	}
-	return &corepb.TransactionNode{
-		Children: childrenProto,
-		Value:    txNode.Value.ToProto().(*corepb.Transaction),
-		Size:	  int64(txNode.Size),
-	}
-}
-
-func (txNode *TransactionNode) FromProto(pb proto.Message) {
-	for key, val := range pb.(*corepb.TransactionNode).Children {
-		tx := &Transaction{}
-		tx.FromProto(val)
-		txNode.Children[key] = tx
-	}
-	tx := &Transaction{}
-	tx.FromProto(pb.(*corepb.TransactionNode).Value)
-	txNode.Value = tx
-	txNode.Size = int(pb.(*corepb.TransactionNode).Size)
-}
-
 func (txPool *TransactionPool) ToProto() proto.Message {
 	txs := make(map[string]*corepb.TransactionNode)
 	for key, val := range txPool.txs {
@@ -483,3 +435,7 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
 	txPool.limit = pb.(*corepb.TransactionPool).Limit
 }
+
+
+
+
