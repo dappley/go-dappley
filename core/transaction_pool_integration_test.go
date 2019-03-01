@@ -55,7 +55,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	}
 
 	//pop out the transactions with most tips
-	poppedTxs := txPool.PopTransactionsWithMostTips(utxoIndex, 2)
+	poppedTxs := txPool.PopTransactionsWithMostTips(utxoIndex, 660)
 	assert.Equal(t, txs[3], poppedTxs[0])
 	assert.Equal(t, txs[2], poppedTxs[1])
 }
@@ -88,8 +88,8 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 		txPool.Push(&tx)
 		txs = append(txs, &tx)
 	}
-	//pop out the transactions with most tips
-	poppedTxs := txPool.PopTransactionsWithMostTips(utxoIndex, 2)
+	//pop out the transactions with most tips. Each tx is about 263 bytes
+	poppedTxs := txPool.PopTransactionsWithMostTips(utxoIndex, 600)
 
 	//tx 0 should be popped first since it is the parent of all other transactions
 	assert.Equal(t, txs[0], poppedTxs[0])

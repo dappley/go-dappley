@@ -95,16 +95,19 @@ func (txPool *TransactionPool) GetPoolSize() int {
 }
 
 //PopTransactionsWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, numOfTx int) []*Transaction {
+func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) []*Transaction {
 
 	tempUtxoIndex := utxoIndex.DeepCopy()
 	var validTxs []*Transaction
 	var inValidTxs []*Transaction
+	totalSize := 0;
 
-	for len(validTxs) < numOfTx && len(txPool.txs) > 0 {
+	for totalSize < blockLimit && len(txPool.txs) > 0 {
 		txNode := txPool.GetMaxTipTransaction()
+		totalSize += txNode.Size
 		txPool.tipOrder = txPool.tipOrder[1:]
 		if txNode.Value.Verify(tempUtxoIndex, 0) {
+
 			validTxs = append(validTxs, txNode.Value)
 			tempUtxoIndex.UpdateUtxo(txNode.Value)
 			txPool.insertChildrenIntoSortedWaitlist(txNode)

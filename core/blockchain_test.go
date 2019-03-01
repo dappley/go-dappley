@@ -44,7 +44,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -58,7 +58,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -70,7 +70,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
@@ -86,7 +86,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockToTail(blk)
@@ -139,7 +139,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit, nil}
+	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -177,7 +177,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
 	var addrs []Address
 	var kps []*KeyPair
 	var pkhs []PubKeyHash

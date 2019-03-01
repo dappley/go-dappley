@@ -58,10 +58,11 @@ type Blockchain struct {
 	scManager     ScEngineManager
 	state         BlockchainState
 	eventManager  *EventManager
+	blkSizeLimit  int
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager) *Blockchain {
+func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
@@ -71,6 +72,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
+		blkSizeLimit,
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	err := bc.AddBlockToTail(genesis)
@@ -80,7 +82,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -95,6 +97,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
+		blkSizeLimit,
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -122,6 +125,10 @@ func (bc *Blockchain) GetTxPool() *TransactionPool {
 
 func (bc *Blockchain) GetEventManager() *EventManager {
 	return bc.eventManager
+}
+
+func (bc *Blockchain) GetBlockSizeLimit() int{
+	return bc.blkSizeLimit
 }
 
 func (bc *Blockchain) GetTailBlock() (*Block, error) {
@@ -344,7 +351,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil, BlockchainInit, nil}
+	return &Blockchain{bc.tailBlockHash, bc.db, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

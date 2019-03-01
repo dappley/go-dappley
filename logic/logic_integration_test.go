@@ -176,7 +176,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr1, store, nil, 128, nil)
+	bc, err := CreateBlockchain(addr1, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -220,7 +220,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	addr1 := wallet1.GetAddress()
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr1, store, nil, 128, nil)
+	bc, err := CreateBlockchain(addr1, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -288,7 +288,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil)
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
@@ -360,7 +360,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil)
+		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
@@ -646,7 +646,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			// Create a coinbase wallet address
 			addr := core.Address{"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
 			// Create a blockchain
-			bc, err := CreateBlockchain(addr, store, nil, 128, nil)
+			bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 			assert.Nil(t, err)
 			pool := core.NewBlockPool(0)
 			node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
@@ -746,7 +746,7 @@ func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchai
 
 func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
 	pow := consensus.NewProofOfWork()
-	return core.CreateBlockchain(addr, db, pow, 128, nil), pow
+	return core.CreateBlockchain(addr, db, pow, 128, nil, 100000), pow
 }
 
 func TestDoubleMint(t *testing.T) {
@@ -776,7 +776,7 @@ func TestDoubleMint(t *testing.T) {
 
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128, nil)
+		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(testport_msg_relay_port3 + i)
@@ -819,7 +819,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	conss := consensus.NewDPOS()
 	dynasty := consensus.NewDynasty([]string{validProducerAddress}, 1, 1)
 	conss.SetDynasty(dynasty)
-	bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), conss, 128, nil)
+	bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), conss, 128, nil, 100000)
 
 	//create and start seed node
 	pool := core.NewBlockPool(0)
@@ -841,7 +841,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	dpos := consensus.NewDPOS()
 	dpos.SetDynasty(dynasty)
 
-	bc1 := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), dpos, 128, nil)
+	bc1 := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 
 	pool1 := core.NewBlockPool(0)
 	node := network.NewNode(bc1, pool1)

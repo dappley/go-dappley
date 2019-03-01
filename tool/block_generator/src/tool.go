@@ -59,7 +59,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 	numOfTx = config.NumOfNormalTx
 	numOfScTx = config.NumOfScTx
 	for i := range files{
-		bc := core.CreateBlockchain(addr, files[i].Db, nil, 2000, nil)
+		bc := core.CreateBlockchain(addr, files[i].Db, nil, 2000, nil, 1000000)
 		bcs[i] = bc
 	}
 

@@ -38,7 +38,7 @@ func TestNewDpos(t *testing.T) {
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil)
+	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	node := network.NewNode(bc, pool)
 

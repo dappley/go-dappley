@@ -78,9 +78,9 @@ func main() {
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager)
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager, 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}

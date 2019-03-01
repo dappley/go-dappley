@@ -337,7 +337,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 
 	// prepareBlockchainWithBlocks returns a blockchain that contains the given blocks with correct utxoIndex in RAM
 	prepareBlockchainWithBlocks := func(blks []*Block) *Blockchain {
-		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, 128, nil)
+		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, 128, nil, 100000)
 		for _, blk := range blks {
 			err := bc.AddBlockToTail(blk)
 			if err != nil {
@@ -422,7 +422,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		},
 		{
 			name:     "block not found",
-			bc:       CreateBlockchain(NewAddress(""), storage.NewRamStorage(), nil, 128, nil),
+			bc:       CreateBlockchain(NewAddress(""), storage.NewRamStorage(), nil, 128, nil, 100000),
 			hash:     Hash("not there"),
 			expected: NewUTXOIndex(),
 			err:      ErrBlockDoesNotExist,
@@ -493,7 +493,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	defer db.Close()
 
 	coinbaseAddr := Address{"testaddress"}
-	bc := CreateBlockchain(coinbaseAddr, db, nil, 128, nil)
+	bc := CreateBlockchain(coinbaseAddr, db, nil, 128, nil, 100000)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
 	blk2 := GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change
