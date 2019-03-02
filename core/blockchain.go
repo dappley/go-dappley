@@ -261,6 +261,8 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 
 	scState := NewScState()
 	scState.LoadFromDatabase(bc.db, bc.GetTailBlockHash())
+	scStateOld := NewScState()
+	scStateOld.LoadFromDatabase(bc.db, bc.GetTailBlockHash())
 	scEngine := bc.scManager.CreateEngine()
 	defer scEngine.DestroyEngine()
 
@@ -289,7 +291,7 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 
 	bc.eventManager.Trigger(scState.GetEvents())
 
-	err := scState.SaveToDatabase(bc.db, currBlock.GetHash())
+	err := scStateOld.SaveToDatabase(bc.db, currBlock.GetHash(), scState)
 	if err != nil {
 		return err
 	}

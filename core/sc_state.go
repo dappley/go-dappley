@@ -145,7 +145,18 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash) {
 }
 
 //SaveToDatabase saves states to database
-func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error {
+func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash, newSS *ScState) error {
+	change := ss.findChangedValue(newSS)
 
-	return db.Put([]byte(scStateMapKey+blkHash.String()), serialize(ss.states))
+	err := db.Put([]byte(scStateLogKey+blkHash.String()), serialize(change))
+	if err != nil {
+		return err
+	}
+
+	err = db.Put([]byte(scStateMapKey), serialize(newSS.states))
+	if err != nil {
+		return err
+	}
+
+	return err
 }
