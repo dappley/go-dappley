@@ -56,10 +56,10 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 	}
 }
 
-func (txPool *TransactionPool) deepCopy() *TransactionPool {
+func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	txPoolCopy := TransactionPool{
 		txs:      make(map[string]*TransactionNode),
-		tipOrder: make([]string, 0),
+		tipOrder: make([]string, len(txPool.tipOrder)),
 		limit:    txPool.limit,
 		EventBus: EventBus.New(),
 		mutex:    sync.RWMutex{},
@@ -103,7 +103,16 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 	totalSize := 0;
 
 	for totalSize < blockLimit && len(txPool.txs) > 0 {
+
 		txNode := txPool.GetMaxTipTransaction()
+		if txNode==nil{
+			logger.WithFields(logger.Fields{
+				"num_txs_in_pool" : len(txPool.txs),
+				"num_txs_in_order": len(txPool.tipOrder),
+			}).Warn("Transaction Pool: Pop max tip transaction failed!")
+			break;
+		}
+
 		totalSize += txNode.Size
 		txPool.tipOrder = txPool.tipOrder[1:]
 		if txNode.Value.Verify(tempUtxoIndex, 0) {
@@ -331,14 +340,42 @@ func (txPool *TransactionPool) addTransaction(tx *Transaction) {
 
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *TransactionNode) {
 	for _, child := range txNode.Children {
-		txPool.insertIntoSortedWaitlist(txPool.txs[hex.EncodeToString(child.ID)])
+		parentTxidsInTxPool := txPool.GetParentTxidsInTxPool(child)
+		if len(parentTxidsInTxPool)==1 {
+			txPool.insertIntoSortedWaitlist(txPool.txs[hex.EncodeToString(child.ID)])
+		}
 	}
+}
+
+func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *Transaction) []string{
+	txids := []string{}
+	for _, vin := range tx.Vin {
+		txidStr := hex.EncodeToString(vin.Txid)
+		if _, exist := txPool.txs[txidStr]; exist {
+			txids = append(txids, txidStr)
+		}
+	}
+	return txids
 }
 
 //insertIntoSortedWaitlist insert a transaction into txSort based on tip.
 //If the transaction is a child of another transaction, the transaction will NOT be inserted
 func (txPool *TransactionPool) insertIntoSortedWaitlist(txNode *TransactionNode) {
 	index := sort.Search(len(txPool.tipOrder), func(i int) bool {
+		if txPool.txs[txPool.tipOrder[i]] == nil{
+			logger.WithFields(logger.Fields{
+				"txid": txPool.tipOrder[i],
+				"len_of_tip_order": len(txPool.tipOrder),
+				"len_of_txs": len(txPool.txs),
+			}).Warn("TransactionPool: the transaction in tip order does not exist in txs!")
+		}
+		if txPool.txs[txPool.tipOrder[i]].Value == nil{
+			logger.WithFields(logger.Fields{
+				"txid": txPool.tipOrder[i],
+				"len_of_tip_order": len(txPool.tipOrder),
+				"len_of_txs": len(txPool.txs),
+			}).Warn("TransactionPool: the transaction in tip order does not exist in txs!")
+		}
 		return txPool.txs[txPool.tipOrder[i]].GetTipsPerByte().Cmp(txNode.GetTipsPerByte()) == -1
 	})
 
@@ -389,6 +426,11 @@ func (txPool *TransactionPool) GetMaxTipTransaction() *TransactionNode {
 	if txid == "" {
 		return nil
 	}
+	if txPool.txs[txid] == nil {
+		logger.WithFields(logger.Fields{
+			"txid" : txid,
+		}).Warn("TransactionPool: max tip transaction is not found in pool")
+	}
 	return txPool.txs[txid]
 }
 
@@ -404,6 +446,7 @@ func (txPool *TransactionPool) GetMinTipTransaction() *TransactionNode {
 //GetMinTipTxid gets the txid of the transaction with minimum tip
 func (txPool *TransactionPool) GetMaxTipTxid() string {
 	if len(txPool.tipOrder) == 0 {
+		logger.Warn("TransactionPool: nothing in the tip order")
 		return ""
 	}
 	return txPool.tipOrder[0]

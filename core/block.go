@@ -102,6 +102,9 @@ func (b *Block) Serialize() []byte {
 	if err!= nil {
 		logger.WithError(err).Panic("Block: Cannot serialize block!")
 	}
+	logger.WithFields(logger.Fields{
+		"size":		len(rawBytes),
+	}).Info("Block: Serialize Block!")
 	return rawBytes
 }
 
