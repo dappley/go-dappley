@@ -487,7 +487,7 @@ func TestTransaction_Execute(t *testing.T) {
 
 			index := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {
-				index.addUTXO(scUtxo.TXOutput, nil, 0)
+				index.AddUTXO(scUtxo.TXOutput, nil, 0)
 			}
 
 			if tt.expectContractRun {
