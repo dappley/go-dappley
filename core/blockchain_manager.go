@@ -25,6 +25,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+const HeightDiffThreshold = 10
+
 type BlockChainManager struct {
 	blockchain *Blockchain
 	blockPool  *BlockPool
@@ -63,7 +65,7 @@ func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
 	return true
 }
 
-func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
+func (bm *BlockChainManager) Push(block *Block, pid peer.ID, isDown *bool) {
 	logger.WithFields(logger.Fields{
 		"from":   pid.String(),
 		"hash":   hex.EncodeToString(block.GetHash()),
@@ -77,6 +79,15 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	if !bm.VerifyBlock(block) {
 		return
 	}
+
+	recieveBlockHeight := block.GetHeight()
+	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
+	if recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold && bm.blockchain.GetState() == BlockchainReady {
+			logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
+			*isDown = true
+			return
+	}
+
 	tree, _ := common.NewTree(block.GetHash().String(), block)
 	bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
 	forkHead := tree.GetRoot()
