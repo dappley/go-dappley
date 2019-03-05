@@ -75,7 +75,7 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
-	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
+	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))

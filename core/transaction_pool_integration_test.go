@@ -27,7 +27,7 @@ import (
 )
 
 func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(1280000)
 	utxoIndex := NewUTXOIndex()
 	var kps []*KeyPair
 	var pkhs []PubKeyHash
@@ -61,7 +61,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 }
 
 func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T) {
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(1280000)
 	utxoIndex := NewUTXOIndex()
 	var kps []*KeyPair
 	var pkhs []PubKeyHash

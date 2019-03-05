@@ -12,6 +12,7 @@ message TransactionNode{
 message TransactionPool{
     map<string, TransactionNode> txs = 1;
     repeated string tipOrder = 2;
+    uint32 currSize = 3;
 }
 
 

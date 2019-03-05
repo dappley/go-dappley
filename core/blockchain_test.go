@@ -139,7 +139,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
+	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(1280000), nil, BlockchainInit, nil, 1000000}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -177,7 +177,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
-	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, 128000000, nil, 100000)
 	var addrs []Address
 	var kps []*KeyPair
 	var pkhs []PubKeyHash
