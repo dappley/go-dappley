@@ -92,7 +92,7 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash []byte) (*UTXO, []*UTXO) {
 
 	_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for utxo != nil {
-		if utxo.utxoType == UtxoCreateContract {
+		if utxo.UtxoType == UtxoCreateContract {
 			createContractUtxo = utxo
 		} else {
 			invokeContractUtxos = append(invokeContractUtxos, utxo)
@@ -245,7 +245,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 	newUtxos := originalUtxos.RemoveUtxo(txid, vout)
 	utxos.index[string(pkh)] = &newUtxos
 
-	if utxo.utxoType != UtxoCreateContract {
+	if utxo.UtxoType != UtxoCreateContract {
 		return nil
 	}
 	// remove contract utxos

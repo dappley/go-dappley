@@ -164,7 +164,7 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 	var utxos []*UTXO
 	_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for utxo != nil {
-		if utxo.utxoType == UtxoCreateContract {
+		if utxo.UtxoType == UtxoCreateContract {
 			_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 			continue
 		}
