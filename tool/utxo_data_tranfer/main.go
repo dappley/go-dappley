@@ -46,6 +46,10 @@ func main() {
 	db := getDb()
 	defer db.Close()
 
+	convert(db)
+}
+
+func convert(db storage.Storage) {
 	// read old data
 	logger.Info("Utxo_data_transfer: read old data start...")
 	utxoIndexOld := readOld(db)
@@ -109,6 +113,18 @@ func deserializeUTXOIndexOld(d []byte) *UTXOIndexOld {
 		logger.WithError(err).Panic("UTXOIndex: failed to deserialize old UTXOs.")
 	}
 	return utxos
+}
+
+func (utxos *UTXOIndexOld) serializeUTXOIndexOld() []byte {
+	var encoded bytes.Buffer
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(utxos.index)
+	if err != nil {
+		logger.Panic(err)
+	}
+	return encoded.Bytes()
 }
 
 // Convert old utxoIndex data to new utxoIndex data
