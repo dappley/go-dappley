@@ -20,7 +20,6 @@ package main
 
 import (
 	"flag"
-
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -38,6 +37,7 @@ const (
 	configFilePath  = "conf/default.conf"
 	genesisFilePath = "conf/genesis.conf"
 	defaultPassword = "password"
+	size1kB 		= 1024
 )
 
 func main() {
@@ -75,12 +75,13 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
-	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
+	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
+	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager)
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager, int(blkSizeLimit))
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}

@@ -99,7 +99,7 @@ func TestNode_Stop(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
 	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	mockConsensus := new(mocks.Consensus)
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	node := NewNode(bc, pool)
 	err := node.Start(22100)

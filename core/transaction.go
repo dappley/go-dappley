@@ -717,6 +717,10 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 
 func (tx *Transaction) IsIdentical(utxo UTXOIndex, tx2 *Transaction) bool {
 
+	if(tx2==nil){
+		return false
+	}
+
 	sender, recipient, amount, tip, err := tx.Describe(utxo)
 	if err != nil {
 		return false
@@ -889,4 +893,13 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 		voutArray = append(voutArray, txout)
 	}
 	tx.Vout = voutArray
+}
+
+func (tx *Transaction) GetSize() int{
+	rawBytes, err := proto.Marshal(tx.ToProto())
+	if err != nil {
+		logger.Warn("Transaction: Transaction can not be marshalled!")
+		return 0
+	}
+	return len(rawBytes)
 }

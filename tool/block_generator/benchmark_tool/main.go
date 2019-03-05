@@ -174,9 +174,9 @@ func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node){
 	conss := consensus.NewDPOS()
 	conss.SetDynasty(dynasty)
 	txPoolLimit:=uint32(2000)
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}))
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}), 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}))
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}),  1000000)
 		if err != nil {
 			logger.Panic(err)
 		}

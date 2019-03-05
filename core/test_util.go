@@ -74,7 +74,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
@@ -95,7 +95,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()

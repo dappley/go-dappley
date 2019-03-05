@@ -19,6 +19,8 @@
 package core
 
 import (
+	"encoding/hex"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -235,8 +237,12 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	contractPubKeyHash := NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
 
+	txIdStr := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	generatedTxId, err := hex.DecodeString(txIdStr)
+	assert.Nil(t, err)
+	fmt.Println(hex.EncodeToString(generatedTxId))
 	generatedTX := &Transaction{
-		[]byte("contractGenerated"),
+		generatedTxId,
 		[]TXInput{
 			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
 			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
@@ -262,11 +268,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
 	var utxoIndex = UTXOIndex{
 		map[string][]*UTXO{
-			string(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
+			hex.EncodeToString(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
 		},
 		&sync.RWMutex{},
 	}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[hex.EncodeToString(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
 	tests := []struct {
@@ -319,10 +325,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"reward tx",
 			[]*Transaction{&rewardTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash): {
+				hex.EncodeToString(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0},
 				},
-				string(userPubKeyHash): {
+				hex.EncodeToString(userPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
@@ -333,15 +339,15 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"generated tx",
 			[]*Transaction{generatedTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash): {
+				hex.EncodeToString(contractPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0},
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1},
 				},
-				string(userPubKeyHash): {
+				hex.EncodeToString(userPubKeyHash): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
 				},
 			},
-			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated":{Value: generatedTX}}},
+			&TransactionPool{txs: map[string]*TransactionNode{txIdStr:{Value: generatedTX}}},
 			true,
 		},
 	}

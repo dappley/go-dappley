@@ -1,0 +1,10 @@
+syntax = "proto3";
+package corepb;
+
+message State {
+    map<string, string> state = 1;
+}
+
+message ScState {
+    map<string, State> states = 1;
+}

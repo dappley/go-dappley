@@ -6,4 +6,13 @@ message Utxo {
     bytes   public_key_hash = 2;
     bytes   txid = 3;
     uint32  tx_index = 4;
+    string  contract = 5;
+}
+
+message Utxos {
+    repeated Utxo utxos = 1;
+}
+
+message UtxoIndex {
+    map<string, Utxos> index = 1;
 }
