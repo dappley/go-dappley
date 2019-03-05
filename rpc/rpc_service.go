@@ -99,6 +99,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	publicKeyHash, ok := core.NewAddress(in.GetAddress()).GetPubKeyHash()
@@ -212,6 +213,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	if !tx.Verify(utxoIndex, 0) {
@@ -237,6 +239,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	statusCode := codes.OK
 	var details []proto.Message
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	txs := make(map[int]core.Transaction, len(in.Transactions))

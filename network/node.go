@@ -720,6 +720,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	tx.FromProto(txpb)
 	//add tx to txpool
 	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxoState(n.GetBlockchain().GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(n.GetBlockchain().GetTxPool().GetTransactions())
 
 	if tx.Verify(utxoIndex, 0) == false {

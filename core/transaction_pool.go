@@ -43,6 +43,7 @@ type TransactionNode struct {
 
 type TransactionPool struct {
 	txs        map[string]*TransactionNode
+	pendingTxs []*Transaction
 	minTipTxId string
 	limit      uint32
 	EventBus   EventBus.Bus
@@ -51,43 +52,12 @@ type TransactionPool struct {
 
 func NewTransactionPool(limit uint32) *TransactionPool {
 	return &TransactionPool{
-		txs:      make(map[string]*TransactionNode),
-		limit:    limit,
-		EventBus: EventBus.New(),
-		mutex:    sync.RWMutex{},
+		txs:        make(map[string]*TransactionNode),
+		pendingTxs: make([]*Transaction, 0),
+		limit:      limit,
+		EventBus:   EventBus.New(),
+		mutex:      sync.RWMutex{},
 	}
-}
-
-func (txPool *TransactionPool) deepCopy() *TransactionPool {
-	txPoolCopy := TransactionPool{
-		txs:      make(map[string]*TransactionNode),
-		limit:    txPool.limit,
-		EventBus: EventBus.New(),
-		mutex:    sync.RWMutex{},
-	}
-
-	for key, tx := range txPool.txs {
-		newTx := tx.Value.DeepCopy()
-		newTxNode := TransactionNode{Children: make(map[string]*Transaction), Value: &newTx}
-
-		for childKey, childTx := range tx.Children {
-			newTxNode.Children[childKey] = childTx
-		}
-		txPoolCopy.txs[key] = &newTxNode
-	}
-
-	return &txPoolCopy
-}
-
-func (txPool *TransactionPool) GetAndResetTransactions() []*Transaction {
-	txPool.mutex.Lock()
-	defer txPool.mutex.Unlock()
-
-	txs := txPool.getSortedTransactions()
-
-	txPool.minTipTxId = ""
-	txPool.txs = make(map[string]*TransactionNode)
-	return txs
 }
 
 func (txPool *TransactionPool) GetTransactions() []*Transaction {
@@ -115,7 +85,25 @@ func (txPool *TransactionPool) GetFilteredTransactions(utxoIndex *UTXOIndex, blo
 		txPool.CheckAndRemoveTransactions(inValidTxs)
 	}
 
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
+	txPool.pendingTxs = validTxs
+
 	return validTxs
+}
+
+func (txPool *TransactionPool) GetPendingTransactions() []*Transaction {
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
+
+	return txPool.pendingTxs
+}
+
+func (txPool *TransactionPool) ResetPendingTransactions() {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
+
+	txPool.pendingTxs = make([]*Transaction, 0)
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {

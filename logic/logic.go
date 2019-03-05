@@ -262,6 +262,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	pubKeyHash, _ := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetTransactions())
 
 	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), amount)
@@ -272,7 +273,7 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, tip, contract)
 
 	bc.GetTxPool().Push(tx)
-	if node!=nil{
+	if node != nil {
 		node.TxBroadcast(&tx)
 	}
 	contractAddr := tx.GetContractAddress()

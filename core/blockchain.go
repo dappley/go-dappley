@@ -203,6 +203,7 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	tempUtxo := utxoIndex.DeepCopy()
 	bcTemp.executeTransactionsAndUpdateScState(tempUtxo, block, tailBlk)
 	utxoIndex.UpdateUtxoState(block.GetTransactions())
+	bc.GetTxPool().ResetPendingTransactions()
 	err = utxoIndex.Save()
 
 	if err != nil {

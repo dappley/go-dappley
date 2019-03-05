@@ -19,12 +19,12 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/storage"
 	"testing"
 
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
-	"github.com/dappley/go-dappley/common"
 )
 
 var tx1 = Transaction{
@@ -80,8 +80,8 @@ func TestTransactionPool_Push(t *testing.T) {
 		newTxPool.Push(tx) // &txPointer)
 	}
 	diffTxs := newTxPool.GetTransactions()
-	for i := 0; i < 3; i ++ {
-		assert.NotEqual(t, diffTxs[i].ID, diffTxs[i + 1].ID)
+	for i := 0; i < 3; i++ {
+		assert.NotEqual(t, diffTxs[i].ID, diffTxs[i+1].ID)
 	}
 }
 
@@ -103,23 +103,6 @@ func TestTransactionPoolLimit(t *testing.T) {
 	txPool.Push(tx3) // Note: t3 has less tips and should be discarded
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
 	assert.Equal(t, tx4, *(txPool.GetTransactions()[0]))
-}
-
-func TestTransactionPool_Pop(t *testing.T) {
-	for _, tt := range popInputOrder {
-		var popOrder []*common.Amount
-		txPool := NewTransactionPool(128)
-		for _, tx := range tt.order {
-			txPool.Push(*tx)
-		}
-
-		txs := txPool.GetAndResetTransactions()
-
-		for _, tx := range txs {
-			popOrder = append(popOrder, tx.Tip)
-		}
-		//assert.Equal(t, expectPopOrder, popOrder)
-	}
 }
 
 func TestTransactionPool_RemoveMultipleTransactions(t *testing.T) {
@@ -155,7 +138,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	deploymentTx.ID = deploymentTx.Hash()
 
 	var executionTx = Transaction{
-		ID: nil,
+		ID:  nil,
 		Vin: GenerateFakeTxInputs(),
 		Vout: []TXOutput{
 			{common.NewAmount(5), contractPubkeyHash, "execution"},
