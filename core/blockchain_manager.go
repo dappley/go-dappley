@@ -113,6 +113,10 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	scState := NewScState()
 	scState.LoadFromDatabase(bm.blockchain.db)
 
+	changelog := getChangeLog(bm.blockchain.db, forkParentHash)
+	scState.ReverState(changelog)
+
+	scState.SaveToDataBase(bm.blockchain.db)
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
 
@@ -133,6 +137,8 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 
 	//add all blocks in fork from head to tail
 	bm.blockchain.addBlocksToTail(forkBlks)
+
+	deleteLog(bm.blockchain.db, forkParentHash)
 	return nil
 }
 

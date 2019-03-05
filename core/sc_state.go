@@ -129,7 +129,7 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage) {
 }
 
 //SaveToDatabase saves states to database
-func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash, newSS *ScState) error {
+func (ss *ScState) SaveNewStateToDatabase(db storage.Storage, blkHash Hash, newSS *ScState) error {
 	change := ss.findChangedValue(newSS)
 
 	err := db.Put([]byte(scStateLogKey+blkHash.String()), serialize(change))
@@ -142,6 +142,11 @@ func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash, newSS *ScSta
 		return err
 	}
 
+	return err
+}
+
+func (ss *ScState) SaveToDataBase(db storage.Storage) error {
+	err := db.Put([]byte(scStateMapKey), serialize(ss.states))
 	return err
 }
 
@@ -167,7 +172,7 @@ func (ss *ScState) ReverState(changelog map[string]map[string]string) {
 
 }
 
-func getPrevChange(db storage.Storage, prevHash Hash) map[string]map[string]string {
+func getChangeLog(db storage.Storage, prevHash Hash) map[string]map[string]string {
 	change := make(map[string]map[string]string)
 
 	rawBytes, err := db.Get([]byte(scStateLogKey + prevHash.String()))
@@ -180,8 +185,10 @@ func getPrevChange(db storage.Storage, prevHash Hash) map[string]map[string]stri
 	return change
 }
 
-func deleteLog() {
+func deleteLog(db storage.Storage, prevHash Hash) error {
+	err := db.Del([]byte(scStateLogKey + prevHash.String()))
 
+	return err
 }
 
 func deserializeScState(d []byte) map[string]map[string]string {

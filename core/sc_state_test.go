@@ -47,7 +47,7 @@ func TestScState_LoadFromDatabase(t *testing.T) {
 	ssOld := NewScState()
 	ss.Set("addr1", "key1", "Value")
 	hash := []byte("testhash")
-	err := ssOld.SaveToDatabase(db, hash, ss)
+	err := ssOld.SaveNewStateToDatabase(db, hash, ss)
 	assert.Nil(t, err)
 	ss.LoadFromDatabase(db)
 	assert.Equal(t, "Value", ss.Get("addr1", "key1"))
