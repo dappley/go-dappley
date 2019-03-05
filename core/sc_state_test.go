@@ -49,8 +49,55 @@ func TestScState_LoadFromDatabase(t *testing.T) {
 	hash := []byte("testhash")
 	err := ssOld.SaveToDatabase(db, hash, ss)
 	assert.Nil(t, err)
-	ss.LoadFromDatabase(db, hash)
+	ss.LoadFromDatabase(db)
 	assert.Equal(t, "Value", ss.Get("addr1", "key1"))
+}
+
+func TestScState_ReverState(t *testing.T) {
+	ss := NewScState()
+	ls := make(map[string]string)
+	ls["key1"] = "value1"
+	ss.states["addr1"] = ls
+
+	changeLog1 := make(map[string]map[string]string)
+	changeLog2 := make(map[string]map[string]string)
+	changeLog3 := make(map[string]map[string]string)
+
+	changePair1 := make(map[string]string)
+	changePair2 := make(map[string]string)
+	changePair3 := make(map[string]string)
+	changePair4 := make(map[string]string)
+
+	expect1 := make(map[string]map[string]string)
+	expect2 := make(map[string]map[string]string)
+	expect3 := make(map[string]map[string]string)
+
+	changePair1["key1"] = "2"
+	changePair2["key3"] = "3"
+	changePair3["key4"] = "4"
+	changePair4["key1"] = "2"
+	changePair4["key4"] = "4"
+
+	expect1["addr1"] = changePair1
+
+	expect2["addr1"] = changePair4
+	expect2["addr2"] = changePair2
+
+	changeLog1["addr1"] = changePair1
+	ss.ReverState(changeLog1)
+	assert.Equal(t, expect1, ss.states)
+
+	changeLog2["addr2"] = changePair2
+	changeLog2["addr1"] = changePair3
+	ss.ReverState(changeLog2)
+	assert.Equal(t, expect2, ss.states)
+
+	changeLog3["addr2"] = nil
+	changeLog3["addr1"] = nil
+	ss.ReverState(changeLog3)
+	assert.Equal(t, expect3, ss.states)
+	assert.Equal(t, 0, len(ss.states))
+
 }
 
 func TestScState_FindChangedValue(t *testing.T) {
@@ -77,6 +124,7 @@ func TestScState_FindChangedValue(t *testing.T) {
 	expect3 := make(map[string]map[string]string)
 	expect4 := make(map[string]map[string]string)
 	expect5 := make(map[string]map[string]string)
+	expect6 := make(map[string]map[string]string)
 
 	expect2["address1"] = nil
 	expect4["address1"] = map[string]string{
@@ -90,6 +138,8 @@ func TestScState_FindChangedValue(t *testing.T) {
 	}
 
 	expect5["address2"] = nil
+
+	expect6["address2"] = ls2
 
 	change1 := oldSS.findChangedValue(newSS)
 	assert.Equal(t, expect1, change1)
@@ -113,5 +163,12 @@ func TestScState_FindChangedValue(t *testing.T) {
 	change5 := oldSS.findChangedValue(newSS)
 	assert.Equal(t, 2, len(change5))
 	assert.Equal(t, expect5, change5)
+
+	oldSS.states["address2"] = ls2
+	oldSS.states["address1"] = ls3
+	delete(newSS.states, "address2")
+	change6 := oldSS.findChangedValue(newSS)
+	assert.Equal(t, 1, len(change6))
+	assert.Equal(t, expect6, change6)
 
 }

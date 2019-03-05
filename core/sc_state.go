@@ -30,16 +30,6 @@ func (ss *ScState) RecordEvent(event *Event) {
 	ss.events = append(ss.events, event)
 }
 
-func deserializeScState(d []byte) map[string]map[string]string {
-	scState := make(map[string]map[string]string)
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&scState)
-	if err != nil {
-		logger.WithError(err).Panic("ScState: failed to deserialize UTXO states.")
-	}
-	return scState
-}
-
 func (ss *ScState) findChangedValue(newState *ScState) map[string]map[string]string {
 	change := make(map[string]map[string]string)
 
@@ -67,22 +57,16 @@ func (ss *ScState) findChangedValue(newState *ScState) map[string]map[string]str
 			if len(ls) > 0 {
 				change[address] = ls
 			}
+		}
+	}
 
+	for address, oldMap := range ss.states {
+		if _, ok := newState.states[address]; !ok {
+			change[address] = oldMap
 		}
 	}
 
 	return change
-}
-
-func serialize(ss map[string]map[string]string) []byte {
-
-	var encoded bytes.Buffer
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(ss)
-	if err != nil {
-		logger.WithError(err).Panic("ScState: failed to serialize UTXO states.")
-	}
-	return encoded.Bytes()
 }
 
 //Get gets an item in scStorage
@@ -133,10 +117,10 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string {
 }
 
 //LoadFromDatabase loads states from database
-func (ss *ScState) LoadFromDatabase(db storage.Storage, blkHash Hash) {
+func (ss *ScState) LoadFromDatabase(db storage.Storage) {
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
-	rawBytes, err := db.Get([]byte(scStateMapKey + blkHash.String()))
+	rawBytes, err := db.Get([]byte(scStateMapKey))
 
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
 		return
@@ -159,4 +143,64 @@ func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash, newSS *ScSta
 	}
 
 	return err
+}
+
+func (ss *ScState) ReverState(changelog map[string]map[string]string) {
+	for address, pair := range changelog {
+		if pair == nil {
+			delete(ss.states, address)
+		} else {
+			if _, ok := ss.states[address]; !ok {
+				ss.states[address] = pair
+			} else {
+				for key, value := range pair {
+					if value != "" {
+						ss.states[address][key] = value
+					} else {
+						delete(ss.states[address], key)
+					}
+				}
+			}
+		}
+
+	}
+
+}
+
+func getPrevChange(db storage.Storage, prevHash Hash) map[string]map[string]string {
+	change := make(map[string]map[string]string)
+
+	rawBytes, err := db.Get([]byte(scStateLogKey + prevHash.String()))
+
+	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
+		return change
+	}
+	change = deserializeScState(rawBytes)
+
+	return change
+}
+
+func deleteLog() {
+
+}
+
+func deserializeScState(d []byte) map[string]map[string]string {
+	scState := make(map[string]map[string]string)
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	err := decoder.Decode(&scState)
+	if err != nil {
+		logger.WithError(err).Panic("ScState: failed to deserialize UTXO states.")
+	}
+	return scState
+}
+
+func serialize(ss map[string]map[string]string) []byte {
+
+	var encoded bytes.Buffer
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(ss)
+	if err != nil {
+		logger.WithError(err).Panic("ScState: failed to serialize UTXO states.")
+	}
+	return encoded.Bytes()
 }
