@@ -37,7 +37,7 @@ type UTXO struct {
 	TXOutput
 	Txid     []byte
 	TxIndex  int
-	utxoType UtxoType
+	UtxoType UtxoType
 }
 
 // newUTXO returns an UTXO instance constructed from a TXOutput.
@@ -59,7 +59,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 		PublicKeyHash: []byte(utxo.PubKeyHash),
 		Txid:          utxo.Txid,
 		TxIndex:       uint32(utxo.TxIndex),
-		UtxoType:      uint32(utxo.utxoType),
+		UtxoType:      uint32(utxo.UtxoType),
 	}
 }
 
@@ -69,5 +69,5 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.PubKeyHash = utxopb.PublicKeyHash
 	utxo.Txid = utxopb.Txid
 	utxo.TxIndex = int(utxopb.TxIndex)
-	utxo.utxoType = UtxoType(utxopb.UtxoType)
+	utxo.UtxoType = UtxoType(utxopb.UtxoType)
 }
