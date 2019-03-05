@@ -343,7 +343,7 @@ func TestTransactionPool_Proto(t *testing.T) {
 	err = proto.Unmarshal(rawBytes, txPoolProto)
 	assert.Nil(t, err)
 
-	txPool1 := NewTransactionPool(1)
+	txPool1 := NewTransactionPool(128)
 	txPool1.FromProto(txPoolProto)
 	assert.Equal(t, txPool, txPool1)
 }

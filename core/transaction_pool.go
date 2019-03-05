@@ -397,12 +397,14 @@ func deserializeTxPool(d []byte) *TransactionPool {
 	return txPool
 }
 
-func LoadTxPoolFromDatabase(db storage.Storage, defaultTxPoolSize uint32) *TransactionPool {
+func LoadTxPoolFromDatabase(db storage.Storage, txPoolSize uint32) *TransactionPool {
 	rawBytes, err := db.Get([]byte(TxPoolDbKey))
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return NewTransactionPool(defaultTxPoolSize)
+		return NewTransactionPool(txPoolSize)
 	}
-	return deserializeTxPool(rawBytes)
+	txPool := deserializeTxPool(rawBytes)
+	txPool.limit = txPoolSize
+	return txPool
 }
 
 func (txPool *TransactionPool) serialize() []byte {
@@ -468,7 +470,6 @@ func (txPool *TransactionPool) ToProto() proto.Message {
 	return &corepb.TransactionPool{
 		Txs:      txs,
 		TipOrder: txPool.tipOrder,
-		Limit:    txPool.limit,
 	}
 }
 
@@ -479,7 +480,6 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 		txPool.txs[key] = txNode
 	}
 	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
-	txPool.limit = pb.(*corepb.TransactionPool).Limit
 }
 
 
