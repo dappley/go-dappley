@@ -65,7 +65,7 @@ func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
 	return true
 }
 
-func (bm *BlockChainManager) Push(block *Block, pid peer.ID, isDown *bool) {
+func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	logger.WithFields(logger.Fields{
 		"from":   pid.String(),
 		"hash":   hex.EncodeToString(block.GetHash()),
@@ -83,9 +83,9 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID, isDown *bool) {
 	recieveBlockHeight := block.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	if recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold && bm.blockchain.GetState() == BlockchainReady {
-			logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
-			*isDown = true
-			return
+		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
+		bm.blockPool.DownloadBlocksCh() <- true
+		return
 	}
 
 	tree, _ := common.NewTree(block.GetHash().String(), block)

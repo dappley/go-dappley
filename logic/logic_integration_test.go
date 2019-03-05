@@ -39,6 +39,8 @@ const testport_msg_relay_port2 = 31212
 const testport_msg_relay_port3 = 31222
 const testport_fork = 10500
 const testport_fork_segment = 10511
+const testport_fork_syncing = 10531
+const testport_fork_download = 10600
 
 //test send
 func TestSend(t *testing.T) {
@@ -797,7 +799,7 @@ func TestDoubleMint(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
-	assert.False(t, dposArray[1].Validate(blks[1]))
+	assert.True(t, dposArray[1].Validate(blks[1]))
 }
 
 func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
@@ -822,7 +824,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	pool := core.NewBlockPool(0)
 	seedNode := network.NewNode(bc, pool)
 
-	seedNode.Start(testport_fork + 50)
+	seedNode.Start(testport_fork_syncing)
 	defer seedNode.Stop()
 
 	conss.Setup(seedNode, validProducerAddress)
@@ -842,7 +844,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	pool1 := core.NewBlockPool(0)
 	node := network.NewNode(bc1, pool1)
-	node.Start(testport_fork + 51)
+	node.Start(testport_fork_syncing + 1)
 	defer node.Stop()
 
 	dpos.Setup(node, validProducerAddress)
@@ -861,76 +863,74 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 // test download blockchian when the height of recieve block is larger than the height of own block
 func TestDownloadBlockChain(t *testing.T) {
-	var dpos1, dpos2 *consensus.DPOS
-	var bc1, bc2 *core.Blockchain
-	var db1, db2 storage.Storage
-	var pool1, pool2 *core.BlockPool
+	var pows []*consensus.ProofOfWork
+	var bcs []*core.Blockchain
+	var dbs []storage.Storage
+	var pools []*core.BlockPool
 	// Remember to close all opened databases after test
 	defer func() {
-			db1.Close()
-			db2.Close()
+		for _, db := range dbs {
+			db.Close()
+		}
 	}()
 
-	producers := []string{"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa", "dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12"}
+	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	//wait for mining for at least "targetHeight" blocks
+	//targetHeight := uint64(4)
+	//num of nodes to be created in the test
+	numOfNodes := 2
+	var nodes []*network.Node
+	for i := 0; i < numOfNodes; i++ {
+		db := storage.NewRamStorage()
+		dbs = append(dbs, db)
 
-	addr1 := core.Address{"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"}
-	addr2 := core.Address{"dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12"}
+		bc, pow := createBlockchain(addr, db)
+		bcs = append(bcs, bc)
+		pool := core.NewBlockPool(0)
+		pools = append(pools, pool)
+		node := network.NewNode(bcs[i], pool)
+		pow.Setup(node, addr.String())
+		pow.SetTargetBit(10)
+		node.Start(testport_fork_download + i)
+		pows = append(pows, pow)
+		nodes = append(nodes, node)
+	}
+	defer nodes[0].Stop()
+	defer nodes[1].Stop()
 
-	private_key1 := "300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a"
-	private_key2 := "da9282440fae188c371165e01615a2e1b14af68b3eaae51e6608c0bd86d4e6a6"
-
-	dynasty1 := consensus.NewDynastyWithConfigProducers(producers, 2)
-	dynasty2 := consensus.NewDynastyWithConfigProducers(producers, 2)
-
-	dpos1 = consensus.NewDPOS()
-	db1 = storage.NewRamStorage()
-	bc1 = core.CreateBlockchain(addr1, db1, dpos1, 128, nil)
-	bc1.SetState(core.BlockchainInit)
-	pool1 = core.NewBlockPool(0)
-	node1 := network.NewNode(bc1, pool1)
-	dpos1.Setup(node1, addr1.String())
-	dpos1.SetKey(private_key1)
-	dpos1.SetDynasty(dynasty1)
-	node1.Start(testport_fork + 1)
-
-	dpos2 = consensus.NewDPOS()
-	db2 = storage.NewRamStorage()
-	bc2 = core.CreateBlockchain(addr2, db2, dpos2, 128, nil)
-	bc2.SetState(core.BlockchainInit)
-	pool2 = core.NewBlockPool(0)
-	node2 := network.NewNode(bc2, pool2)
-	dpos2.Setup(node2, addr2.String())
-	dpos2.SetKey(private_key2)
-	dpos2.SetDynasty(dynasty2)
-	defer node1.Stop()
-	defer node2.Stop()
-
-	bc1.SetState(core.BlockchainReady)
-	bc2.SetState(core.BlockchainReady)
-
-	dpos1.Start()
+	// Mine more blocks on node[0] than on node[1]
+	pows[1].Start()
 	core.WaitDoneOrTimeout(func() bool {
-			return bc1.GetMaxHeight() > 20
-	}, 120)
-	dpos1.Stop()
-
-	tmblk, _ := bc1.GetBlockByHeight(1)
-	bc2.AddBlockToTail(tmblk)
-
-	dpos2.Start()
+		return bcs[1].GetMaxHeight() > 4
+	}, 10)
+	pows[1].Stop()
+	desiredHeight := uint64(20)
+	if bcs[1].GetMaxHeight() > desiredHeight {
+		desiredHeight = bcs[1].GetMaxHeight() + 11
+	}
+	pows[0].Start()
 	core.WaitDoneOrTimeout(func() bool {
-			return bc2.GetMaxHeight() > 3
-	}, 30)
-	dpos2.Stop()
-
-	blk1, _ := bc1.GetTailBlock()
-	connectNodes(node1, node2)
-	node1.BroadcastBlock(blk1)
+		return bcs[0].GetMaxHeight() > desiredHeight
+	}, 20)
+	pows[0].Stop()
 
 	core.WaitDoneOrTimeout(func() bool {
-			return false
-	}, 100)
+		return !pows[0].IsProducingBlock()
+	}, 5)
 
-	assert.Equal(t, bc2.GetMaxHeight(), bc1.GetMaxHeight())
-	assert.True(t, isSameBlockChain(bc2, bc1))
+	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
+	tailBlk, _ := bcs[0].GetTailBlock()
+	connectNodes(nodes[0], nodes[1])
+	nodes[0].BroadcastBlock(tailBlk)
+	// Make sure syncing starts on node[1]
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[1].GetState() == core.BlockchainDownloading
+	}, 10)
+	// Make sure syncing ends on node[1]
+	core.WaitDoneOrTimeout(func() bool {
+		return bcs[1].GetState() != core.BlockchainDownloading
+	}, 20)
+
+	assert.Equal(t, bcs[0].GetMaxHeight(), bcs[1].GetMaxHeight())
+	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
 }
