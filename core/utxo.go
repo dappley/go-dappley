@@ -368,6 +368,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 		PublicKeyHash: []byte(utxo.PubKeyHash),
 		Txid:          utxo.Txid,
 		TxIndex:       uint32(utxo.TxIndex),
+		Contract:      utxo.Contract,
 	}
 }
 
@@ -377,4 +378,5 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.PubKeyHash = utxopb.PublicKeyHash
 	utxo.Txid = utxopb.Txid
 	utxo.TxIndex = int(utxopb.TxIndex)
+	utxo.Contract = utxopb.Contract
 }
