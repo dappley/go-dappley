@@ -493,7 +493,7 @@ func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	p := false
 	n.bm.Push(block, pid, &p)
 	if p {
-			n.isDownChain <- true
+			n.isDownBlockChain <- true
 
 	}
 }
