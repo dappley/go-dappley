@@ -75,6 +75,7 @@ type Node struct {
 	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
 	peerManager            *PeerManager
+	isDownBlockChain            chan bool
 }
 
 func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
@@ -103,6 +104,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		dispatch:               make(chan *streamMsg, 1000),
 		downloadManager:        nil,
 		peerManager:            nil,
+		isDownBlockChain:		make(chan bool),
 	}
 	node.downloadManager = NewDownloadManager(node)
 	node.peerManager = NewPeerManager(node, config)
@@ -173,6 +175,10 @@ func (n *Node) StartRequestLoop() {
 				return
 			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
+			case recv := <-n.isDownBlockChain:
+				if recv {
+						n.DownloadBlocks(n.bm.Getblockchain())
+				}
 			}
 		}
 	}()
@@ -484,7 +490,12 @@ func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
 
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
-	n.bm.Push(block, pid)
+	p := false
+	n.bm.Push(block, pid, &p)
+	if p {
+			n.isDownBlockChain <- true
+
+	}
 }
 
 func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
@@ -774,4 +785,14 @@ func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	}
 	block := core.Deserialize(blockBytes)
 	n.SendBlockUnicast(block, pid)
+}
+
+func (n *Node) DownloadBlocks(bc *core.Blockchain) {
+	downloadManager := n.GetDownloadManager()
+	finishChan := make(chan bool, 1)
+
+	bc.SetState(core.BlockchainDownloading)
+	downloadManager.StartDownloadBlockchain(finishChan)
+	<-finishChan
+	bc.SetState(core.BlockchainReady)
 }

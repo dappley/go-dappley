@@ -94,7 +94,8 @@ func main() {
 	}
 	defer node.Stop()
 
-	downloadBlocks(node, bc)
+	bc.SetState(core.BlockchainReady)
+	node.DownloadBlocks(bc)
 
 	//start rpc server
 	server := rpc.NewGrpcServer(node, defaultPassword)
@@ -151,12 +152,3 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	return node, nil
 }
 
-func downloadBlocks(node *network.Node, bc *core.Blockchain) {
-	downloadManager := node.GetDownloadManager()
-	finishChan := make(chan bool, 1)
-
-	bc.SetState(core.BlockchainDownloading)
-	downloadManager.StartDownloadBlockchain(finishChan)
-	<-finishChan
-	bc.SetState(core.BlockchainReady)
-}

@@ -131,7 +131,7 @@ func TestAddUTXO(t *testing.T) {
 	txout := TXOutput{common.NewAmount(5), address1Hash, ""}
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
-	utxoIndex.addUTXO(txout, []byte{1}, 0)
+	utxoIndex.AddUTXO(txout, []byte{1}, 0)
 
 	addr1UTXOs := utxoIndex.index[string(address1Hash)]
 	assert.Equal(t, 1, addr1UTXOs.Size())
@@ -583,7 +583,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 				tmpExists := exists
 				mu.Unlock()
 				if !tmpExists {
-					index.addUTXO(TXOutput{}, []byte("asd"), 65)
+					index.AddUTXO(TXOutput{}, []byte("asd"), 65)
 					atomic.AddUint64(&addOps, 1)
 					mu.Lock()
 					exists = true
@@ -622,7 +622,7 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 
 	index := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 	for i, txoutput := range txoutputs {
-		index.addUTXO(txoutput, []byte("01"), i)
+		index.AddUTXO(txoutput, []byte("01"), i)
 	}
 
 	//start the test

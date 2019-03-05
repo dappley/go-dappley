@@ -104,8 +104,8 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 		return false
 	}
 	if dpos.isDoubleMint(block) {
-		logger.Debug("DPoS: double-minting is detected.")
-		return false
+		logger.Warn("DPoS: double-minting is detected.")
+		return true
 	}
 
 	dpos.AddBlockToSlot(block)

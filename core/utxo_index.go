@@ -134,7 +134,7 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 		}
 	}
 	for i, txout := range tx.Vout {
-		utxos.addUTXO(txout, tx.ID, i)
+		utxos.AddUTXO(txout, tx.ID, i)
 	}
 	return true
 }
@@ -187,13 +187,13 @@ func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 		if err != nil {
 			return err
 		}
-		utxos.addUTXO(vout, vin.Txid, voutIndex)
+		utxos.AddUTXO(vout, vin.Txid, voutIndex)
 	}
 	return nil
 }
 
-// addUTXO adds an unspent TXOutput to index
-func (utxos *UTXOIndex) addUTXO(txout TXOutput, txid []byte, vout int) {
+// AddUTXO adds an unspent TXOutput to index
+func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(txout.PubKeyHash)
 
 	var utxo *UTXO

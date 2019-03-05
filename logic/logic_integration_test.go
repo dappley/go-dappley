@@ -858,3 +858,79 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	conss.Stop()
 	assert.True(t, bc.GetMaxHeight()-bc1.GetMaxHeight() <= 1)
 }
+
+// test download blockchian when the height of recieve block is larger than the height of own block
+func TestDownloadBlockChain(t *testing.T) {
+	var dpos1, dpos2 *consensus.DPOS
+	var bc1, bc2 *core.Blockchain
+	var db1, db2 storage.Storage
+	var pool1, pool2 *core.BlockPool
+	// Remember to close all opened databases after test
+	defer func() {
+			db1.Close()
+			db2.Close()
+	}()
+
+	producers := []string{"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa", "dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12"}
+
+	addr1 := core.Address{"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"}
+	addr2 := core.Address{"dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12"}
+
+	private_key1 := "300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a"
+	private_key2 := "da9282440fae188c371165e01615a2e1b14af68b3eaae51e6608c0bd86d4e6a6"
+
+	dynasty1 := consensus.NewDynastyWithConfigProducers(producers, 2)
+	dynasty2 := consensus.NewDynastyWithConfigProducers(producers, 2)
+
+	dpos1 = consensus.NewDPOS()
+	db1 = storage.NewRamStorage()
+	bc1 = core.CreateBlockchain(addr1, db1, dpos1, 128, nil)
+	bc1.SetState(core.BlockchainInit)
+	pool1 = core.NewBlockPool(0)
+	node1 := network.NewNode(bc1, pool1)
+	dpos1.Setup(node1, addr1.String())
+	dpos1.SetKey(private_key1)
+	dpos1.SetDynasty(dynasty1)
+	node1.Start(testport_fork + 1)
+
+	dpos2 = consensus.NewDPOS()
+	db2 = storage.NewRamStorage()
+	bc2 = core.CreateBlockchain(addr2, db2, dpos2, 128, nil)
+	bc2.SetState(core.BlockchainInit)
+	pool2 = core.NewBlockPool(0)
+	node2 := network.NewNode(bc2, pool2)
+	dpos2.Setup(node2, addr2.String())
+	dpos2.SetKey(private_key2)
+	dpos2.SetDynasty(dynasty2)
+	defer node1.Stop()
+	defer node2.Stop()
+
+	bc1.SetState(core.BlockchainReady)
+	bc2.SetState(core.BlockchainReady)
+
+	dpos1.Start()
+	core.WaitDoneOrTimeout(func() bool {
+			return bc1.GetMaxHeight() > 20
+	}, 120)
+	dpos1.Stop()
+
+	tmblk, _ := bc1.GetBlockByHeight(1)
+	bc2.AddBlockToTail(tmblk)
+
+	dpos2.Start()
+	core.WaitDoneOrTimeout(func() bool {
+			return bc2.GetMaxHeight() > 3
+	}, 30)
+	dpos2.Stop()
+
+	blk1, _ := bc1.GetTailBlock()
+	connectNodes(node1, node2)
+	node1.BroadcastBlock(blk1)
+
+	core.WaitDoneOrTimeout(func() bool {
+			return false
+	}, 100)
+
+	assert.Equal(t, bc2.GetMaxHeight(), bc1.GetMaxHeight())
+	assert.True(t, isSameBlockChain(bc2, bc1))
+}
