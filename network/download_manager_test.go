@@ -49,7 +49,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 		address := keyPair.GenerateAddress(false)
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil)
+		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
 		bc.SetState(core.BlockchainReady)
 		blockchains[i] = bc
 		pool := core.NewBlockPool(100)

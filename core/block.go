@@ -21,8 +21,8 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/gob"
 	"encoding/hex"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -30,7 +30,6 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -102,55 +101,25 @@ func (b *Block) HashTransactions() []byte {
 }
 
 func (b *Block) Serialize() []byte {
-	var result bytes.Buffer
-	encoder := gob.NewEncoder(&result)
-
-	bs := &BlockStream{
-		Header: &BlockHeaderStream{
-			Hash:      b.header.hash,
-			PrevHash:  b.header.prevHash,
-			Nonce:     b.header.nonce,
-			Timestamp: b.header.timestamp,
-			Sign:      b.header.sign,
-			Height:    b.header.height,
-		},
-		Transactions: b.transactions,
-	}
-
-	err := encoder.Encode(bs)
+	rawBytes, err := proto.Marshal(b.ToProto())
 	if err != nil {
-		logger.Panic(err)
+		logger.WithError(err).Panic("Block: Cannot serialize block!")
 	}
-	return result.Bytes()
+	logger.WithFields(logger.Fields{
+		"size": len(rawBytes),
+	}).Info("Block: Serialize Block!")
+	return rawBytes
 }
 
 func Deserialize(d []byte) *Block {
-	var bs BlockStream
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&bs)
+	pb := &corepb.Block{}
+	err := proto.Unmarshal(d, pb)
 	if err != nil {
-		logger.Panic(err)
+		logger.WithError(err).Panic("Block: Cannot deserialize block!")
 	}
-	if bs.Header.Hash == nil {
-		bs.Header.Hash = Hash{}
-	}
-	if bs.Header.PrevHash == nil {
-		bs.Header.PrevHash = Hash{}
-	}
-	if bs.Transactions == nil {
-		bs.Transactions = []*Transaction{}
-	}
-	return &Block{
-		header: &BlockHeader{
-			hash:      bs.Header.Hash,
-			prevHash:  bs.Header.PrevHash,
-			nonce:     bs.Header.Nonce,
-			timestamp: bs.Header.Timestamp,
-			sign:      bs.Header.Sign,
-			height:    bs.Header.Height,
-		},
-		transactions: bs.Transactions,
-	}
+	block := &Block{}
+	block.FromProto(pb)
+	return block
 }
 
 func (b *Block) GetHeader() *BlockHeader {
@@ -205,27 +174,7 @@ func (b *Block) ToProto() proto.Message {
 		Transactions: txArray,
 	}
 }
-func FromProtoBlockMsg(data []byte) *Block {
-	//create a block proto
-	blockpb := &corepb.Block{}
 
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err != nil {
-		logger.Warn(err)
-	}
-	if blockpb.GetHeader() == nil {
-		spew.Dump(blockpb)
-		spew.Dump(data)
-	}
-
-	//create an empty block
-	block := &Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	return block
-}
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
@@ -335,6 +284,7 @@ func (b *Block) VerifyTransactions(utxoIndex *UTXOIndex, scState *ScState, paren
 	var rewardTX *Transaction
 
 	for _, tx := range b.GetTransactions() {
+		fmt.Println(hex.EncodeToString(tx.ID))
 		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
 			if rewardTX != nil {
@@ -343,6 +293,7 @@ func (b *Block) VerifyTransactions(utxoIndex *UTXOIndex, scState *ScState, paren
 			}
 			rewardTX = tx
 		} else if tx.IsFromContract() {
+
 			txInPool := txPool.GetTransactionById(tx.ID)
 			if !tx.IsIdentical(utxoIndex, txInPool) {
 				logger.Warn("Block: generated tx cannot be verified.")

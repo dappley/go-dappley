@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/hex"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -201,15 +202,14 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	//wrongPubKeyHash, _ := NewUserPubKeyHash(wrongPubKey)
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-
-	utxo1 := UTXO{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, UtxoNormal}
-	utxo2 := UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal}
-
 	utxoTx := NewUTXOTx()
-	utxoTx = utxoTx.PutUtxo(&utxo1)
-	utxoTx = utxoTx.PutUtxo(&utxo2)
 
-	utxoIndex.index[string(pubKeyHash)] = &utxoTx
+	utxoTx = utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, UtxoNormal})
+	utxoTx = utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal})
+
+	utxoIndex.index = map[string]*UTXOTx{
+		hex.EncodeToString(pubKeyHash): &utxoTx,
+	}
 
 	// Prepare a transaction to be verified
 	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
@@ -271,12 +271,12 @@ func TestInvalidExecutionTx(t *testing.T) {
 	contractPubkeyHash := deploymentTx.Vout[0].PubKeyHash
 
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-
 	utxoTx := NewUTXOTx()
-	utxo1 := UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal}
-	utxoTx = utxoTx.PutUtxo(&utxo1)
 
-	utxoIndex.index[string(pkHash1)] = &utxoTx
+	utxoTx = utxoTx.PutUtxo(&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal})
+	utxoIndex.index = map[string]*UTXOTx{
+		hex.EncodeToString(pkHash1): &utxoTx,
+	}
 
 	var executionTx = Transaction{
 		ID: nil,
@@ -289,7 +289,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoTx.GetAllUtxos())
+	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
 
 	assert.False(t, executionTx.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
 	assert.True(t, executionTx.Verify(utxoIndex, 0))
@@ -769,18 +769,15 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
-	pk2Utxo := &UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, UtxoNormal}
-	pk1Utxo := &UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
+	utxoTx2 := NewUTXOTx()
+	utxoTx2 = utxoTx2.PutUtxo(&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, UtxoNormal})
 
-	pk2UtxoTx := NewUTXOTx()
-	pk2UtxoTx = pk2UtxoTx.PutUtxo(pk2Utxo)
-
-	pk1UtxoTx := NewUTXOTx()
-	pk1UtxoTx = pk1UtxoTx.PutUtxo(pk1Utxo)
+	utxoTx1 := NewUTXOTx()
+	utxoTx1 = utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
-		string(pkHash2): &pk2UtxoTx,
-		string(pkHash1): &pk1UtxoTx,
+		hex.EncodeToString(pkHash2): &utxoTx2,
+		hex.EncodeToString(pkHash1): &utxoTx1,
 	}
 
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
@@ -788,12 +785,12 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, pk2UtxoTx.GetAllUtxos())
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos())
 	dependentTx3.Sign(GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
 	dependentTx4.Sign(GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
 	dependentTx5.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
 
-	txPool := NewTransactionPool(6)
+	txPool := NewTransactionPool(6000000)
 	// verify dependent txs 2,3,4,5 with relation:
 	//tx1 (UtxoIndex)
 	//|     \
@@ -850,12 +847,11 @@ func TestTransaction_IsIdentical(t *testing.T) {
 
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
-	pk1Utxo := &UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
-	pk1UtxoTx := NewUTXOTx()
-	pk1UtxoTx = pk1UtxoTx.PutUtxo(pk1Utxo)
+	utxoTx1 := NewUTXOTx()
+	utxoTx1 = utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
-		string(pkHash1): &pk1UtxoTx,
+		hex.EncodeToString(pkHash1): &utxoTx1,
 	}
 
 	var tx = &Transaction{

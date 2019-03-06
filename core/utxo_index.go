@@ -20,6 +20,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"sync"
 
@@ -53,7 +54,12 @@ func NewUTXOIndex(cache *UTXOCache) *UTXOIndex {
 
 func (utxos *UTXOIndex) Save() error {
 	for key, utxoTx := range utxos.index {
-		err := utxos.cache.Put(PubKeyHash(key), utxoTx)
+		pubKeyHash, err := hex.DecodeString(key)
+		if err != nil {
+			return err
+		}
+
+		err = utxos.cache.Put(pubKeyHash, utxoTx)
 		if err != nil {
 			return err
 		}
@@ -63,7 +69,7 @@ func (utxos *UTXOIndex) Save() error {
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) *UTXOTx {
-	key := string(pubkeyHash)
+	key := hex.EncodeToString(pubkeyHash)
 	utxos.mutex.RLock()
 	utxoTx, ok := utxos.index[key]
 	utxos.mutex.RUnlock()
@@ -204,7 +210,7 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 			newContractUtxos := contractUtxos.PutUtxo(utxo)
 			utxos.mutex.Lock()
-			utxos.index[string(contractUtxoKey)] = &newContractUtxos
+			utxos.index[hex.EncodeToString(contractUtxoKey)] = &newContractUtxos
 			utxos.mutex.Unlock()
 		} else {
 			utxo = newUTXO(txout, txid, vout, UtxoInvokeContract)
@@ -215,7 +221,7 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 
 	newUtxos := originalUtxos.PutUtxo(utxo)
 	utxos.mutex.Lock()
-	utxos.index[string(txout.PubKeyHash)] = &newUtxos
+	utxos.index[hex.EncodeToString(txout.PubKeyHash)] = &newUtxos
 	utxos.mutex.Unlock()
 }
 
@@ -243,7 +249,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 	}
 
 	newUtxos := originalUtxos.RemoveUtxo(txid, vout)
-	utxos.index[string(pkh)] = &newUtxos
+	utxos.index[hex.EncodeToString(pkh)] = &newUtxos
 
 	if utxo.UtxoType != UtxoCreateContract {
 		return nil
@@ -256,7 +262,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 			return ErrUTXONotFound
 		}
 		newContractUtxos := contractUtxos.RemoveUtxo(txid, vout)
-		utxos.index[string(contractUtxoKey)] = &newContractUtxos
+		utxos.index[hex.EncodeToString(contractUtxoKey)] = &newContractUtxos
 	}
 	return nil
 }

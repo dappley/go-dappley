@@ -121,8 +121,8 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	if forkHeadBlock == nil {
 		return nil
 	}
-	scState := NewScState()
-	scState.LoadFromDatabase(bm.blockchain.db, forkParentHash)
+
+	scState := LoadScStateFromDatabase(bm.blockchain.db, forkParentHash)
 
 	//verify transactions in the fork
 	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)

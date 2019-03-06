@@ -35,6 +35,7 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 		nil,
 		128,
 		nil,
+		100000,
 	)
 	bp.Setup(bc, cbAddr)
 	processRuns := false

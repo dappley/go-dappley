@@ -90,7 +90,7 @@ func (bp *BlockProducer) prepareBlock() {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
-	validTxs := bp.bc.GetTxPool().GetFilteredTransactions(utxoIndex, parentBlock.GetHeight()+1)
+	validTxs := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, bp.bc.GetBlockSizeLimit())
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
@@ -122,8 +122,7 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex, txs []*core.Transaction, rewards map[string]string, currBlkHeight uint64, parentBlk *core.Block) []*core.Transaction {
 	//start a new smart contract engine
 
-	scStorage := core.NewScState()
-	scStorage.LoadFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
+	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction

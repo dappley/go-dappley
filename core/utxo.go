@@ -60,6 +60,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 		Txid:          utxo.Txid,
 		TxIndex:       uint32(utxo.TxIndex),
 		UtxoType:      uint32(utxo.UtxoType),
+		Contract:      utxo.Contract,
 	}
 }
 
@@ -70,4 +71,5 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.Txid = utxopb.Txid
 	utxo.TxIndex = int(utxopb.TxIndex)
 	utxo.UtxoType = UtxoType(utxopb.UtxoType)
+	utxo.Contract = utxopb.Contract
 }

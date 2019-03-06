@@ -109,6 +109,16 @@ func (a Amount) Times(b uint64) *Amount {
 	return a.mul(NewAmount(b))
 }
 
+// Times returns the quotient of a/b where b is uint64
+func (a Amount) Div(b uint64) *Amount{
+	return a.div(NewAmount(b))
+}
+
+// Times returns the quotient of a/b
+func (a Amount) div(b *Amount) *Amount{
+	return &Amount{*new(big.Int).Div(a.BigInt(), b.BigInt())}
+}
+
 // Cmp compares a and b and returns:
 //   -1 if a <  b
 //    0 if a == b
