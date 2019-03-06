@@ -29,10 +29,10 @@ func TestTransferResult(t *testing.T) {
 		return
 	}
 	// put old data
-	Txin := core.MockTxInputs()
-	Txin = append(Txin, core.MockTxInputs()...)
-	utxo1 := &core.UTXO{core.TXOutput{common.NewAmount(10), minerPubKey, ""}, Txin[0].Txid, Txin[0].Vout, core.UtxoNormal}
-	utxo2 := &core.UTXO{core.TXOutput{common.NewAmount(9), minerPubKey, ""}, Txin[1].Txid, Txin[1].Vout, core.UtxoNormal}
+	txid1, _ := hex.DecodeString("948c984f0cdcefc4f977efcd93ae37360cc5165dfc3657f07e72306cd0e6a354")
+	txid2, _ := hex.DecodeString("4fef1c385b0cbda4092cfe245329bb18e580480e07a880ebcefe1fa7e24a089f")
+	utxo1 := &core.UTXO{core.TXOutput{common.NewAmount(10000000), minerPubKey, ""}, txid1, 0, core.UtxoNormal}
+	utxo2 := &core.UTXO{core.TXOutput{common.NewAmount(10000000), minerPubKey, ""}, txid2, 0, core.UtxoNormal}
 	utxos := []*core.UTXO{utxo1, utxo2}
 	utxoIndexOld := NewUTXOIndexOld()
 	utxoIndexOld.index[minerKey] = utxos
