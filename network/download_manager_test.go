@@ -24,9 +24,9 @@ import (
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,7 +75,7 @@ func fillBlockchains(blockchains []*core.Blockchain) {
 		block, _ := generateChain.GetBlockByHeight(uint64(i))
 		for j := 1; j < len(blockchains); j++ {
 			current := blockchains[j]
-			current.AddBlockToTail(block)
+			current.AddBlockContextToTail(core.PrepareBlockContext(current, block))
 		}
 	}
 }

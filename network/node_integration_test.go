@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	test_port1 = 10000 + iota
+	test_port1 = 20600 + iota
 	test_port2
 	test_port3
 	test_port4

@@ -33,6 +33,7 @@ var (
 	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
 	sentTxs              = make(map[string]int)
+	utxoIndex            = &core.UTXOIndex{}
 	smartContractAddr    = ""
 	smartContractCounter = 0
 	isContractDeployed   = false
@@ -40,12 +41,13 @@ var (
 )
 
 const (
-	smartContractSendFreq  = 13
+	smartContractSendFreq  = 10000000000
 	contractAddrFilePath   = "contract/contractAddr"
 	contractFilePath       = "contract/test_contract.js"
 	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 	transactionLogFilePath = "log/tx.csv"
 	failedTxLogFilePath    = "log/failedTx.csv"
+	numOfTxPerBlk		   = 30
 )
 
 func main() {
@@ -65,6 +67,7 @@ func main() {
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
 	addresses := createWallet()
+
 	fundAddr := addresses[0].String()
 	fundFromMiner(adminClient, rpcClient, fundAddr)
 	logger.WithFields(logger.Fields{
@@ -73,28 +76,76 @@ func main() {
 	}).Info("Funding is completed. Script starts.")
 	displayBalances(rpcClient, addresses, true)
 
-	ticker := time.NewTicker(time.Millisecond * sendInterval).C
+	utxoIndex = core.NewUTXOIndex()
+	updateUtxoIndex(rpcClient, addresses)
+
+
 	deploySmartContract(adminClient, fundAddr)
 	currHeight = getBlockHeight(rpcClient)
+
+	ticker := time.NewTicker(time.Millisecond * sendInterval).C
+	isSent := false
 	for {
 		select {
 		case <-ticker:
 			height := getBlockHeight(rpcClient)
 			if height > currHeight {
 				isContractDeployed = true
-				displayBalances(rpcClient, addresses, false)
+				isSent = false
 				currHeight = height
+
+				displayBalances(rpcClient, addresses, false)
+				updateUtxoIndex(rpcClient, addresses)
+
 				blk := getTailBlock(rpcClient, currHeight)
 				logger.WithFields(logger.Fields{
 					"height": currHeight,
 				}).Info("New Block Height")
 				verifyTransactions(blk.GetTransactions())
 				recordTransactions(blk.GetTransactions(), currHeight)
+
 			} else {
-				sendRandomTransactions(adminClient, addresses)
+				if !isSent {
+					sendRandomTransactions(rpcClient, addresses)
+					isSent = true
+				}
 			}
 		}
 	}
+}
+
+func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*corepb.Utxo{
+	resp , err := serviceClient.RpcGetUTXO(context.Background(),&rpcpb.GetUTXORequest{
+		Address: addr.String(),
+	})
+	if err!=nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"addr" : addr.String(),
+		}).Error("Can not update utxo")
+	}
+	return resp.Utxos
+}
+
+func updateUtxoIndex(serviceClient rpcpb.RpcServiceClient, addrs []core.Address){
+	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
+	if err!=nil {
+		logger.WithError(err).Panic("updateUtxoIndex: Unable to get wallet")
+	}
+	index := map[string]*corepb.Utxos{}
+	for _,addr := range addrs{
+		kp := wm.GetKeyPairByAddress(addr)
+		pkh, err := core.NewUserPubKeyHash(kp.PublicKey)
+		if err!=nil {
+			logger.WithError(err).Panic("updateUtxoIndex: Unable to get public key hash")
+		}
+		index[hex.EncodeToString(pkh)] = &corepb.Utxos{
+			Utxos : getUtxoByAddr(serviceClient, addr),
+		}
+	}
+	utxoIndexProto := &corepb.UtxoIndex{
+		Index: index,
+	}
+	utxoIndex.FromProto(utxoIndexProto)
 }
 
 func recordTransactions(txs []*corepb.Transaction, height uint64) {
@@ -221,7 +272,7 @@ func createWallet() []core.Address {
 			logger.WithError(err).Panic("Cannot create new wallet.")
 		}
 	}
-	wm, err = logic.GetWalletManager(client.GetWalletFilePath())
+
 	addresses = wm.GetAddresses()
 	logger.WithFields(logger.Fields{
 		"addresses": addresses,
@@ -292,10 +343,27 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string)
 	adminClient.RpcSendFromMiner(context.Background(), sendFromMinerRequest)
 }
 
-func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []core.Address) {
+func sendRandomTransactions(client rpcpb.RpcServiceClient, addresses []core.Address) {
+	txs := createBatchTransactions(addresses)
+	_, err := client.RpcSendBatchTransaction(context.Background(),&rpcpb.SendBatchTransactionRequest{
+		Transactions:  txs,
+	})
 
-	var resp *rpcpb.SendResponse
-	var err error
+	if err != nil{
+		logger.WithError(err).Panic("Unable to send batch transactions!")
+	}
+}
+
+func createBatchTransactions(addresses []core.Address) []*corepb.Transaction{
+	txs := []*corepb.Transaction{}
+	for i:=0;i<numOfTxPerBlk;i++ {
+		txs = append(txs, createRandomTransaction(addresses))
+	}
+	return txs
+}
+
+func createRandomTransaction(addresses []core.Address) *corepb.Transaction{
+
 	data := ""
 
 	fromIndex := getAddrWithBalance(addresses)
@@ -311,24 +379,53 @@ func sendRandomTransactions(adminClient rpcpb.AdminServiceClient, addresses []co
 		toAddr = smartContractAddr
 	}
 
-	resp, err = sendTransaction(adminClient, addresses[fromIndex].String(), toAddr, sendAmount, data)
+	tx := createTransaction(addresses[fromIndex], core.NewAddress(toAddr),common.NewAmount(sendAmount), common.NewAmount(0), data )
+	return tx.ToProto().(*corepb.Transaction)
+}
+
+func createTransaction(from, to core.Address, amount, tip *common.Amount, contract string) *core.Transaction{
+	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
+	if err!=nil {
+		logger.WithError(err).Panic("Unable to get wallet")
+	}
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+	if err!=nil {
+		logger.WithError(err).Panic("Unable to hash sender public key")
+	}
+	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	if err!=nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"pkh" : hex.EncodeToString(pkh),
+			"addr": pkh.GenerateAddress().String(),
+			"amount": amount.String(),
+		}).Panic("Unable to get previous utxos")
+	}
+	tx, err := core.NewUTXOTransaction(prevUtxos, from, to, amount, senderKeyPair, tip, contract)
 
 	sendTXLogger := logger.WithFields(logger.Fields{
-		"from":             addresses[fromIndex].String(),
-		"to":               toAddr,
-		"amount":           sendAmount,
-		"sender_balance":   currBalance[addresses[fromIndex].String()],
-		"receiver_balance": currBalance[addresses[toIndex].String()],
+		"from":             from.String(),
+		"to":               to.String(),
+		"amount":           amount.String(),
+		"sender_balance":   currBalance[from.String()],
+		"receiver_balance": currBalance[to.String()],
 		"txid":             "",
-		"data":             data,
+		"data":             contract,
 	})
+
 	if err != nil {
 		sendTXLogger.WithError(err).Error("Failed to send transaction!")
-		return
+		return nil
 	}
-	sendTXLogger.Data["txid"] = resp.Txid
+	sendTXLogger.Data["txid"] = hex.EncodeToString(tx.ID)
 
 	sendTXLogger.Info("Transaction is sent!")
+
+	utxoIndex.UpdateUtxo(&tx)
+	sentTxs[hex.EncodeToString(tx.ID)] = 0
+	currBalance[from.String()] -= amount.Uint64()
+	currBalance[to.String()] += amount.Uint64()
+	return &tx
 }
 
 func IsTheTurnToSendSmartContractTransaction() bool {
@@ -366,6 +463,7 @@ func getAddrWithBalance(addresses []core.Address) int {
 }
 
 func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
+
 	resp, err := adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:       from,
 		To:         to,
@@ -374,6 +472,7 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 		WalletPath: client.GetWalletFilePath(),
 		Data:       data,
 	})
+
 	if err != nil {
 		recordFailedTransaction(err, from, to, amount, data)
 		return resp, err

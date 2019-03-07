@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	storage2 "github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
@@ -332,7 +332,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				},
 			},
 			nil,
-			true,
+			false,
 		},
 		{
 			"generated tx",
@@ -366,7 +366,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			utxoIndex := UTXOIndex{index, NewUTXOCache(db), &sync.RWMutex{}}
 			scState := NewScState()
 			block := NewBlock(tt.txs, blk)
-			assert.Equal(t, tt.ok, block.VerifyTransactions(&utxoIndex, scState, block, tt.txPool))
+			assert.Equal(t, tt.ok, block.VerifyTransactions(&utxoIndex, scState, nil, block))
 		})
 	}
 }

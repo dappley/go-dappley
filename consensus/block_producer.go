@@ -20,18 +20,17 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/contract"
+	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
-type process func(block *core.Block)
+type process func(ctx *core.BlockContext)
 
 type BlockProducer struct {
 	bc          *core.Blockchain
 	beneficiary string
-	newBlock    *core.Block
 	process     process
 	idle        bool
 }
@@ -41,7 +40,6 @@ func NewBlockProducer() *BlockProducer {
 		bc:          nil,
 		beneficiary: "",
 		process:     nil,
-		newBlock:    nil,
 		idle:        true,
 	}
 }
@@ -63,14 +61,14 @@ func (bp *BlockProducer) SetProcess(process process) {
 }
 
 // ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it
-func (bp *BlockProducer) ProduceBlock() *core.Block {
+func (bp *BlockProducer) ProduceBlock() *core.BlockContext {
 	logger.Info("BlockProducer: started producing new block...")
 	bp.idle = false
-	bp.prepareBlock()
-	if bp.process != nil {
-		bp.process(bp.newBlock)
+	ctx := bp.prepareBlock()
+	if ctx != nil && bp.process != nil {
+		bp.process(ctx)
 	}
-	return bp.newBlock
+	return ctx
 }
 
 func (bp *BlockProducer) BlockProduceFinish() {
@@ -81,31 +79,36 @@ func (bp *BlockProducer) IsIdle() bool {
 	return bp.idle
 }
 
-func (bp *BlockProducer) prepareBlock() {
+func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
 		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
-		return
+		return nil
 	}
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
-	validTxs := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, bp.bc.GetBlockSizeLimit())
+	validTxs, utxoIndex := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, bp.bc.GetBlockSizeLimit())
 
 	cbtx := bp.calculateTips(validTxs)
 	rewards := make(map[string]string)
 
-	scGeneratedTXs := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
+	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
 	validTxs = append(validTxs, scGeneratedTXs...)
+	utxoIndex.UpdateUtxo(cbtx)
 	validTxs = append(validTxs, cbtx)
 	if len(rewards) > 0 {
 		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
+		utxoIndex.UpdateUtxo(&rtx)
 		validTxs = append(validTxs, &rtx)
 	}
-	bp.newBlock = core.NewBlock(validTxs, parentBlock)
+
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
+
+	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock), UtxoIndex: utxoIndex, State: state}
+	return &ctx
 }
 
 func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {
@@ -119,7 +122,9 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 }
 
 //executeSmartContract executes all smart contracts
-func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex, txs []*core.Transaction, rewards map[string]string, currBlkHeight uint64, parentBlk *core.Block) []*core.Transaction {
+func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
+	txs []*core.Transaction, rewards map[string]string,
+	currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
 	//start a new smart contract engine
 
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
@@ -132,5 +137,5 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex, txs []*
 		utxoIndex.UpdateUtxo(tx)
 	}
 
-	return generatedTXs
+	return generatedTXs, scStorage
 }

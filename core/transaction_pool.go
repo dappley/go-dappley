@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
@@ -114,7 +114,7 @@ func (txPool *TransactionPool) GetPendingTransactions() []*Transaction {
 }
 
 //PopTransactionsWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) []*Transaction {
+func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) ([]*Transaction, *UTXOIndex) {
 
 	tempUtxoIndex := utxoIndex.DeepCopy()
 	var validTxs []*Transaction
@@ -150,7 +150,7 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 	txPool.pendingTxs = validTxs
 	txPool.mutex.Unlock()
 
-	return validTxs
+	return validTxs, tempUtxoIndex
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {

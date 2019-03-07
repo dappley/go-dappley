@@ -714,7 +714,6 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		}
 		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
-			MetricsTxDoubleSpend.Inc(1)
 			logger.WithFields(logger.Fields{
 				"txid":      hex.EncodeToString(tx.ID),
 				"vin_id":    hex.EncodeToString(vin.Txid),

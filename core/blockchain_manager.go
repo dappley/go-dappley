@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -133,32 +133,40 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	rollBackUtxo := utxo.DeepCopy()
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
-	if !bm.VerifyTransactions(utxo, scState, forkBlks, parentBlk) {
-		logger.Errorf("BlockChainManager: Verify fork blocks transaction failed with parent height %v", parentBlk.GetHeight())
-		return ErrTransactionVerifyFailed
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": err,
+			"hash":  hex.EncodeToString(forkParentHash),
+		}).Error("BlockChainManager: get fork parent block failed.")
 	}
 
-	bm.blockchain.Rollback(forkParentHash, rollBackUtxo)
+	firstCheck := true
 
-	//add all blocks in fork from head to tail
-	bm.blockchain.addBlocksToTail(forkBlks)
-	return nil
-}
-
-//Verify all transactions in a fork
-func (bm *BlockChainManager) VerifyTransactions(utxoIndex *UTXOIndex, scState *ScState, forkBlks []*Block, parentBlk *Block) bool {
-	logger.Info("BlockChainManager: is verifying transactions...")
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
 		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
-		if !forkBlks[i].VerifyTransactions(utxoIndex, scState, parentBlk, bm.blockchain.GetTxPool()) {
-			return false
+		if !forkBlks[i].VerifyTransactions(utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
+			return ErrTransactionVerifyFailed
+		}
+
+		if firstCheck {
+			firstCheck = false
+			bm.blockchain.Rollback(forkParentHash, rollBackUtxo)
+		}
+
+		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
+		err = bm.blockchain.AddBlockContextToTail(&ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":  err,
+				"height": forkBlks[i].GetHeight(),
+			}).Error("BlockChainManager: add fork to tail failed.")
 		}
 		parentBlk = forkBlks[i]
-		utxoIndex.UpdateUtxoState(forkBlks[i].GetTransactions())
 	}
-	return true
+
+	return nil
 }
