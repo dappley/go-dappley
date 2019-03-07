@@ -238,18 +238,24 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	utxoIndex := core.LoadUTXOIndex(rpcService.node.GetBlockchain().GetDb())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
-	txs := make(map[int]core.Transaction, len(in.Transactions))
+	txMap := make(map[int]core.Transaction, len(in.Transactions))
+	txs := []core.Transaction{}
 	for key, txInReq := range in.Transactions {
 		tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
 		tx.FromProto(txInReq)
-		txs[key] = tx
+		txs = append(txs, tx)
+		txMap[key] = tx
 	}
 
 	// verify dependent transactions within batch of transactions
 	lastTxsLen := 0
-	for len(txs) != lastTxsLen {
-		lastTxsLen = len(txs)
+	for len(txMap) != lastTxsLen {
+		lastTxsLen = len(txMap)
 		for key, tx := range txs {
+			if _,ok:= txMap[key];!ok{
+				continue;
+			}
+
 			if tx.IsCoinbase() {
 				if statusCode == codes.OK {
 					statusCode = codes.Unknown
@@ -259,7 +265,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 					Code:    uint32(codes.InvalidArgument),
 					Message: "cannot send coinbase transaction",
 				})
-				delete(txs, key)
+				delete(txMap, key)
 				continue
 			}
 
@@ -284,15 +290,15 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				Code:    uint32(codes.OK),
 				Message: "",
 			})
-			delete(txs, key)
+			delete(txMap, key)
 		}
 	}
 
 	st := status.New(codes.OK, "")
 	// add invalid transactions to response details if exists
-	if statusCode == codes.Unknown || len(txs) > 0 {
+	if statusCode == codes.Unknown || len(txMap) > 0 {
 		st = status.New(codes.Unknown, "one or more transactions are invalid")
-		for _, tx := range txs {
+		for _, tx := range txMap {
 			details = append(details, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
 				Code:    uint32(codes.FailedPrecondition),
