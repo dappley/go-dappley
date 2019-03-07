@@ -105,7 +105,7 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 	}
 	if dpos.isDoubleMint(block) {
 		logger.Warn("DPoS: double-minting is detected.")
-		return true
+		return false
 	}
 
 	dpos.AddBlockToSlot(block)
@@ -169,9 +169,14 @@ func (dpos *DPOS) isForking() bool {
 }
 
 func (dpos *DPOS) isDoubleMint(block *core.Block) bool {
-	if _, exist := dpos.slot.Get(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk))); exist {
-		logger.Debug("DPoS: someone is minting when they are not supposed to.")
-		return true
+	if existBlock, exist := dpos.slot.Get(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk))); exist {
+		if core.IsHashEqual(existBlock.(*core.Block).GetHash(), block.GetHash()) {
+				logger.WithFields(logger.Fields{
+						"existBlock":   existBlock.(*core.Block),
+						"currentBlock": block,
+				}).Warn("DPoS: someone is minting when they are not supposed to.")
+				return true
+		}
 	}
 	return false
 }

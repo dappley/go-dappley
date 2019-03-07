@@ -799,7 +799,7 @@ func TestDoubleMint(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
-	assert.True(t, dposArray[1].Validate(blks[1]))
+	assert.False(t, dposArray[1].Validate(blks[1]))
 }
 
 func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
