@@ -25,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/network/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
@@ -45,7 +45,7 @@ const (
 
 	defaultMaxConnectionOutCount = 16
 	defaultMaxConnectionInCount  = 128
-	syncPeersWaitTime            = 10
+	syncPeersWaitTime            = 10 * time.Minute
 	syncPeersScheduleTime        = 30 * time.Second
 	checkSeedsConnectionTime     = 15 * time.Minute
 )
@@ -97,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:     make(map[peer.ID]*PeerInfo),
-		syncPeers: make(map[peer.ID]*PeerInfo),
-		streams:   make(map[peer.ID]*StreamInfo),
-		mutex:     sync.RWMutex{},
+		seeds:                 make(map[peer.ID]*PeerInfo),
+		syncPeers:             make(map[peer.ID]*PeerInfo),
+		streams:               make(map[peer.ID]*StreamInfo),
+		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
@@ -423,7 +423,7 @@ func (pm *PeerManager) startSyncPeers() {
 	pm.createSyncContext()
 	pm.node.SyncPeersBroadcast()
 
-	syncTimer := time.NewTimer(syncPeersWaitTime * time.Second)
+	syncTimer := time.NewTimer(syncPeersWaitTime)
 	go func() {
 		<-syncTimer.C
 		syncTimer.Stop()

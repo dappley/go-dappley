@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core"
@@ -62,7 +62,7 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 }
 
 func (dpos *DPOS) AddBlockToSlot(block *core.Block) {
-	dpos.slot.Add(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)), block)
+	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
 func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
@@ -133,12 +133,12 @@ func (dpos *DPOS) Start() {
 						logger.Debug("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}
-					newBlk := dpos.bp.ProduceBlock()
-					if !dpos.Validate(newBlk) {
+					ctx := dpos.bp.ProduceBlock()
+					if ctx == nil || !dpos.Validate(ctx.Block) {
 						logger.Error("DPoS: produced an invalid block!")
 						continue
 					}
-					dpos.updateNewBlock(newBlk)
+					dpos.updateNewBlock(ctx)
 				}
 			case <-dpos.stopCh:
 				return
@@ -154,11 +154,11 @@ func (dpos *DPOS) Stop() {
 	dpos.stopCh <- true
 }
 
-func (dpos *DPOS) hashAndSign(block *core.Block) {
+func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
 	//block.SetNonce(0)
-	hash := block.CalculateHash()
-	block.SetHash(hash)
-	ok := block.SignBlock(dpos.producerKey, hash)
+	hash := ctx.Block.CalculateHash()
+	ctx.Block.SetHash(hash)
+	ok := ctx.Block.SignBlock(dpos.producerKey, hash)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}
@@ -247,20 +247,20 @@ func (dpos *DPOS) IsProducingBlock() bool {
 	return !dpos.bp.IsIdle()
 }
 
-func (dpos *DPOS) updateNewBlock(newBlock *core.Block) {
+func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	logger.WithFields(logger.Fields{
 		"peer_id": dpos.node.GetPeerID(),
-		"height": newBlock.GetHeight(),
-		"hash":   hex.EncodeToString(newBlock.GetHash()),
+		"height":  ctx.Block.GetHeight(),
+		"hash":    hex.EncodeToString(ctx.Block.GetHash()),
 	}).Info("DPoS: produced a new block.")
-	if !newBlock.VerifyHash() {
+	if !ctx.Block.VerifyHash() {
 		logger.Warn("DPoS: hash of the new block is invalid.")
 		return
 	}
-	err := dpos.node.GetBlockchain().AddBlockToTail(newBlock)
+	err := dpos.node.GetBlockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	dpos.node.BroadcastBlock(newBlock)
+	dpos.node.BroadcastBlock(ctx.Block)
 }

@@ -74,7 +74,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
-	bc.AddBlockToTail(blk)
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	assert.False(t, bc.IsHigherThanBlockchain(blk))
 
@@ -89,7 +89,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
-	bc.AddBlockToTail(blk)
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	isFound := bc.IsInBlockchain([]byte("hash"))
 	assert.True(t, isFound)
@@ -128,22 +128,25 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	serializedBlk, _ := hex.DecodeString(`0a280a205e2d1835dd623d81317b6d896b2b541d4ccf4fd5000547f2466cd1492fe6ef4f20e0ebd9da0512430a20ba33bb7be2181496cbba9e426505e9fc4ea6f0e4c55fff708697d9c5ed9ff7bd121810ffffffffffffffffff01220b48656c6c6f20776f726c641a050a03989680`)
 	db := new(mocks.Storage)
 
-	// Storage will allow blockchain creation to succeed
-	db.On("Put", mock.Anything, mock.Anything).Return(nil)
-	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
-	db.On("Get", mock.Anything).Return(serializedBlk, nil)
-	db.On("EnableBatch").Return()
-	db.On("DisableBatch").Return()
-	// Flush invoked in AddBlockToTail twice
-	db.On("Flush").Return(nil).Twice()
-
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
-	err := bc.AddBlockToTail(genesis)
+
+	// Storage will allow blockchain creation to succeed
+	db.On("Put", mock.Anything, mock.Anything).Return(nil)
+	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
+	db.On("Get", GetScStateKey([]byte{})).Return([]byte{}, nil)
+	db.On("Get", GetScStateKey(genesis.GetHash())).Return([]byte{}, nil)
+	db.On("Get", mock.Anything).Return(serializedBlk, nil)
+	db.On("EnableBatch").Return()
+	db.On("DisableBatch").Return()
+	// Flush invoked in AddBlockToTail twice
+	db.On("Flush").Return(nil).Twice()
+
+	err := bc.AddBlockContextToTail(PrepareBlockContext(bc, genesis))
 
 	// Expect batch write was used
 	db.AssertCalled(t, "EnableBatch")
@@ -160,10 +163,11 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := GenerateMockBlock()
+	blk := NewBlock([]*Transaction{}, genesis)
 	blk.SetHash([]byte("hash1"))
+
 	blk.header.height = 1
-	err = bc.AddBlockToTail(blk)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil, err)
@@ -205,6 +209,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 		b := NewBlock(txs, tailBlk)
 		b.SetHash(b.CalculateHash())
-		bc.AddBlockToTail(b)
+		state := LoadScStateFromDatabase(bc.GetDb(), bc.GetTailBlockHash())
+		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }

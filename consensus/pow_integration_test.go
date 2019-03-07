@@ -375,6 +375,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	pubKeyHash, _ := core.NewAddress(addr).GetPubKeyHash()
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+	logger.Warnf("Size =%v", utxos.Size())
 	_, utxo, nextUtxos := utxos.Iterator()
 	for utxo != nil {
 		balance = balance.Add(utxo.Value)

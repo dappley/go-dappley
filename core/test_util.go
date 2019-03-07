@@ -80,9 +80,17 @@ func GenerateMockBlockchain(size int) *Blockchain {
 		tailBlk, _ := bc.GetTailBlock()
 		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk)
 		b.SetHash(b.CalculateHash())
-		bc.AddBlockToTail(b)
+		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
+}
+
+func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
+	state := LoadScStateFromDatabase(bc.GetDb(), bc.GetTailBlockHash())
+	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex.UpdateUtxoState(blk.GetTransactions())
+	ctx := BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
+	return &ctx
 }
 
 func GenerateBlockWithCbtx(addr Address, lastblock *Block) *Block {
@@ -102,7 +110,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
-		bc.AddBlockToTail(b)
+		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
 }

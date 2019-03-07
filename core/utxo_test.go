@@ -347,7 +347,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	prepareBlockchainWithBlocks := func(blks []*Block) *Blockchain {
 		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, 128, nil, 100000)
 		for _, blk := range blks {
-			err := bc.AddBlockToTail(blk)
+			err := bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 			if err != nil {
 				logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot add the blocks to blockchain.")
 			}
@@ -515,8 +515,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
 	blk2 := GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change
 
-	bc.AddBlockToTail(blk1)
-	bc.AddBlockToTail(blk2)
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
 
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address1Hash))

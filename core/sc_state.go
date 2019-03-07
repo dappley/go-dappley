@@ -1,9 +1,10 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/golang/protobuf/proto"
 	"sync"
+
+	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 
 	logger "github.com/sirupsen/logrus"
 
@@ -21,11 +22,11 @@ const (
 )
 
 func NewScState() *ScState {
-	return &ScState{make(map[string]map[string]string),make([]*Event, 0), &sync.RWMutex{}}
+	return &ScState{make(map[string]map[string]string), make([]*Event, 0), &sync.RWMutex{}}
 }
 
-func (ss *ScState) GetEvents() []*Event{ return ss.events }
-func (ss *ScState) RecordEvent(event *Event){
+func (ss *ScState) GetEvents() []*Event { return ss.events }
+func (ss *ScState) RecordEvent(event *Event) {
 	ss.events = append(ss.events, event)
 }
 
@@ -95,8 +96,12 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string {
 	return ss.states[address]
 }
 
+func GetScStateKey(blkHash Hash) []byte {
+	return []byte(scStateMapKey + blkHash.String())
+}
+
 //LoadScStateFromDatabase loads states from database
-func LoadScStateFromDatabase(db storage.Storage, blkHash Hash) *ScState{
+func LoadScStateFromDatabase(db storage.Storage, blkHash Hash) *ScState {
 
 	rawBytes, err := db.Get([]byte(scStateMapKey + blkHash.String()))
 
@@ -111,17 +116,16 @@ func (ss *ScState) SaveToDatabase(db storage.Storage, blkHash Hash) error {
 	return db.Put([]byte(scStateMapKey+blkHash.String()), ss.serialize())
 }
 
-
-func (ss *ScState) ToProto() proto.Message{
+func (ss *ScState) ToProto() proto.Message {
 	scState := make(map[string]*corepb.State)
 
-	for key,val := range ss.states {
+	for key, val := range ss.states {
 		scState[key] = &corepb.State{State: val}
 	}
 	return &corepb.ScState{States: scState}
 }
 
-func (ss *ScState) FromProto(pb proto.Message){
+func (ss *ScState) FromProto(pb proto.Message) {
 	for key, val := range pb.(*corepb.ScState).States {
 		ss.states[key] = val.State
 	}

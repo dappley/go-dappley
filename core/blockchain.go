@@ -36,6 +36,7 @@ const LengthForBlockToBeConsideredHistory = 100
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist")
+	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
 	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
@@ -49,6 +50,12 @@ const (
 	BlockchainSync
 	BlockchainReady
 )
+
+type BlockContext struct {
+	Block     *Block
+	UtxoIndex *UTXOIndex
+	State     *ScState
+}
 
 type Blockchain struct {
 	tailBlockHash []byte
@@ -77,7 +84,10 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		blkSizeLimit,
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
-	err := bc.AddBlockToTail(genesis)
+	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex.UpdateUtxoState(genesis.transactions)
+	scState := NewScState()
+	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
 	}
@@ -134,7 +144,7 @@ func (bc *Blockchain) GetEventManager() *EventManager {
 	return bc.eventManager
 }
 
-func (bc *Blockchain) GetBlockSizeLimit() int{
+func (bc *Blockchain) GetBlockSizeLimit() int {
 	return bc.blkSizeLimit
 }
 
@@ -184,21 +194,105 @@ func (bc *Blockchain) GetState() BlockchainState {
 	return bc.state
 }
 
-func (bc *Blockchain) AddBlockToTail(block *Block) error {
+//func (bc *Blockchain) AddBlockToTail(block *Block) error {
+//	blockLogger := logger.WithFields(logger.Fields{
+//		"height": block.GetHeight(),
+//		"hash":   hex.EncodeToString(block.GetHash()),
+//	})
+//
+//	// Atomically set tail block hash and update UTXO index in db
+//	bcTemp := bc.deepCopy()
+//
+//	tailBlk, _ := bc.GetTailBlock()
+//
+//	bcTemp.db.EnableBatch()
+//	defer bcTemp.db.DisableBatch()
+//
+//	err := bcTemp.setTailBlockHash(block.GetHash())
+//	if err != nil {
+//		blockLogger.Error("Blockchain: failed to set tail block hash!")
+//		return err
+//	}
+//
+//	numTxBeforeExe := bc.GetTxPool().GetPoolSize()
+//
+//	utxoIndex := NewUTXOIndex(bc.utxoCache)
+//	tempUtxo := utxoIndex.DeepCopy()
+//	bcTemp.executeTransactionsAndUpdateScState(tempUtxo, block, tailBlk)
+//	utxoIndex.UpdateUtxoState(block.GetTransactions())
+//	bc.GetTxPool().ResetPendingTransactions()
+//	err = utxoIndex.Save()
+//
+//	if err != nil {
+//		blockLogger.Warn("Blockchain: failed to save utxo to database.")
+//		return err
+//	}
+//
+//	numTxAfterExe := bc.GetTxPool().GetPoolSize()
+//	//Remove transactions in current transaction pool
+//	bc.GetTxPool().CleanUpMinedTxs(block.GetTransactions())
+//	err = bc.GetTxPool().SaveToDatabase(bc.db)
+//
+//	if err != nil {
+//		blockLogger.Warn("Blockchain: failed to save txpool to database.")
+//		return err
+//	}
+//
+//	logger.WithFields(logger.Fields{
+//		"num_txs_before_sc_exe":       numTxBeforeExe,
+//		"num_txs_after_sc_exe":        numTxAfterExe,
+//		"num_txs_after_update_txpool": bc.GetTxPool().GetPoolSize(),
+//	}).Info("Blockchain : update tx pool")
+//
+//	err = bcTemp.AddBlockToDb(block)
+//	if err != nil {
+//		blockLogger.Warn("Blockchain: failed to add block to database.")
+//		return err
+//	}
+//
+//	// Flush batch changes to storage
+//	err = bcTemp.db.Flush()
+//	if err != nil {
+//		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
+//		return err
+//	}
+//
+//	// Assign changes to receiver
+//	*bc = *bcTemp
+//
+//	poolsize := 0
+//	if bc.txPool != nil {
+//		poolsize = bc.txPool.GetPoolSize()
+//	}
+//
+//	blockLogger.WithFields(logger.Fields{
+//		"numOfTx":  len(block.GetTransactions()),
+//		"poolSize": poolsize,
+//	}).Info("Blockchain: added a new block to tail.")
+//
+//	return nil
+//}
+
+func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
+
 	blockLogger := logger.WithFields(logger.Fields{
-		"height": block.GetHeight(),
-		"hash":   hex.EncodeToString(block.GetHash()),
+		"height": ctx.Block.GetHeight(),
+		"hash":   hex.EncodeToString(ctx.Block.GetHash()),
 	})
 
 	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()
+	tailBlockHash := bcTemp.GetTailBlockHash()
+	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
+		return ErrPrevHashVerifyFailed
+	}
 
 	tailBlk, _ := bc.GetTailBlock()
 
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
-	err := bcTemp.setTailBlockHash(block.GetHash())
+	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
 		return err
@@ -206,21 +300,22 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 
 	numTxBeforeExe := bc.GetTxPool().GetPoolSize()
 
-	utxoIndex := NewUTXOIndex(bc.utxoCache)
-	tempUtxo := utxoIndex.DeepCopy()
-	bcTemp.executeTransactionsAndUpdateScState(tempUtxo, block, tailBlk)
-	utxoIndex.UpdateUtxoState(block.GetTransactions())
-	bc.GetTxPool().ResetPendingTransactions()
-	err = utxoIndex.Save()
-
+	bcTemp.runScheduleEvents(ctx, tailBlk)
+	err = ctx.UtxoIndex.Save()
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save utxo to database.")
 		return err
 	}
 
-	numTxAfterExe := bc.GetTxPool().GetPoolSize()
+	ctx.State.SaveToDatabase(bcTemp.db, ctx.Block.GetHash())
+	if err != nil {
+		blockLogger.Warn("Blockchain: failed to save scState to database.")
+		return err
+	}
+
 	//Remove transactions in current transaction pool
-	bc.GetTxPool().CleanUpMinedTxs(block.GetTransactions())
+	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
+	bcTemp.GetTxPool().ResetPendingTransactions()
 	err = bc.GetTxPool().SaveToDatabase(bc.db)
 
 	if err != nil {
@@ -229,12 +324,11 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	logger.WithFields(logger.Fields{
-		"num_txs_before_sc_exe":       numTxBeforeExe,
-		"num_txs_after_sc_exe":        numTxAfterExe,
+		"num_txs_before_add_block":    numTxBeforeExe,
 		"num_txs_after_update_txpool": bc.GetTxPool().GetPoolSize(),
 	}).Info("Blockchain : update tx pool")
 
-	err = bcTemp.AddBlockToDb(block)
+	err = bcTemp.AddBlockToDb(ctx.Block)
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to add block to database.")
 		return err
@@ -256,15 +350,62 @@ func (bc *Blockchain) AddBlockToTail(block *Block) error {
 	}
 
 	blockLogger.WithFields(logger.Fields{
-		"numOfTx":  len(block.GetTransactions()),
+		"numOfTx":  len(ctx.Block.GetTransactions()),
 		"poolSize": poolsize,
 	}).Info("Blockchain: added a new block to tail.")
 
 	return nil
 }
 
-func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, currBlock *Block, parentBlk *Block) error {
+//func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, currBlock *Block, parentBlk *Block) error {
+//
+//	if parentBlk == nil {
+//		//if the current block is genesis block. do not run smart contract
+//		return nil
+//	}
+//
+//	if bc.scManager == nil {
+//		return nil
+//	}
+//
+//	scState := LoadScStateFromDatabase(bc.db, bc.GetTailBlockHash())
+//	scEngine := bc.scManager.CreateEngine()
+//	defer scEngine.DestroyEngine()
+//
+//	rewards := make(map[string]string)
+//	var rewardTX *Transaction
+//
+//	for _, tx := range currBlock.GetTransactions() {
+//		genTxs := tx.Execute(*utxoIndex, scState, rewards, scEngine, currBlock.GetHeight(), parentBlk)
+//		for _, gtx := range genTxs {
+//			bc.GetTxPool().Push(*gtx)
+//		}
+//
+//		if tx.IsRewardTx() {
+//			rewardTX = tx
+//		}
+//
+//		utxoIndex.UpdateUtxo(tx)
+//	}
+//
+//	if rewardTX != nil && !rewardTX.MatchRewards(rewards) {
+//		logger.Warn("Block: reward tx cannot be verified.")
+//		return ErrRewardTxVerifyFailed
+//	}
+//
+//	bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, currBlock.GetHeight(), parentBlk.GetTimestamp())
+//
+//	bc.eventManager.Trigger(scState.GetEvents())
+//
+//	err := scState.SaveToDatabase(bc.db, currBlock.GetHash())
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
 
+func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *Block) error {
 	if parentBlk == nil {
 		//if the current block is genesis block. do not run smart contract
 		return nil
@@ -274,40 +415,8 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 		return nil
 	}
 
-	scState := LoadScStateFromDatabase(bc.db, bc.GetTailBlockHash())
-	scEngine := bc.scManager.CreateEngine()
-	defer scEngine.DestroyEngine()
-
-	rewards := make(map[string]string)
-	var rewardTX *Transaction
-
-	for _, tx := range currBlock.GetTransactions() {
-		genTxs := tx.Execute(*utxoIndex, scState, rewards, scEngine, currBlock.GetHeight(), parentBlk)
-		for _, gtx := range genTxs {
-			bc.GetTxPool().Push(*gtx)
-		}
-
-		if tx.IsRewardTx() {
-			rewardTX = tx
-		}
-
-		utxoIndex.UpdateUtxo(tx)
-	}
-
-	if rewardTX != nil && !rewardTX.MatchRewards(rewards) {
-		logger.Warn("Block: reward tx cannot be verified.")
-		return ErrRewardTxVerifyFailed
-	}
-
-	bc.scManager.RunScheduledEvents(utxoIndex.GetContractUtxos(), scState, currBlock.GetHeight(), parentBlk.GetTimestamp())
-
-	bc.eventManager.Trigger(scState.GetEvents())
-
-	err := scState.SaveToDatabase(bc.db, currBlock.GetHash())
-	if err != nil {
-		return err
-	}
-
+	bc.scManager.RunScheduledEvents(ctx.UtxoIndex.GetContractUtxos(), ctx.State, ctx.Block.GetHeight(), parentBlk.GetTimestamp())
+	bc.eventManager.Trigger(ctx.State.GetEvents())
 	return nil
 }
 
@@ -444,17 +553,17 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	return err == nil
 }
 
-func (bc *Blockchain) addBlocksToTail(blocks []*Block) {
-	if len(blocks) > 0 {
-		for i := len(blocks) - 1; i >= 0; i-- {
-			err := bc.AddBlockToTail(blocks[i])
-			if err != nil {
-				logger.WithError(err).Error("Blockchain: failed to add block to tail while concatenating fork!")
-				return
-			}
-		}
-	}
-}
+//func (bc *Blockchain) addBlocksToTail(blocks []*Block) {
+//	if len(blocks) > 0 {
+//		for i := len(blocks) - 1; i >= 0; i-- {
+//			err := bc.AddBlockToTail(blocks[i])
+//			if err != nil {
+//				logger.WithError(err).Error("Blockchain: failed to add block to tail while concatenating fork!")
+//				return
+//			}
+//		}
+//	}
+//}
 
 //rollback the blockchain to a block with the targetHash
 func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex) bool {
