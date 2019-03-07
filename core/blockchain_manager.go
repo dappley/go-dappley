@@ -137,8 +137,10 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 
 	//add all blocks in fork from head to tail
 	bm.blockchain.addBlocksToTail(forkBlks)
+	if len(changelog) > 0 {
+		deleteLog(bm.blockchain.db, forkParentHash)
+	}
 
-	deleteLog(bm.blockchain.db, forkParentHash)
 	return nil
 }
 
