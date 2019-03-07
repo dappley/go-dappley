@@ -86,9 +86,6 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 }
 
 func (txPool *TransactionPool) GetTransactions() []*Transaction {
-	txPool.mutex.RLock()
-	defer txPool.mutex.RUnlock()
-
 	return txPool.getSortedTransactions()
 }
 
@@ -115,6 +112,9 @@ func (txPool *TransactionPool) GetPendingTransactions() []*Transaction {
 
 //PopTransactionsWithMostTips pops the transactions with the most tips
 func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) ([]*Transaction, *UTXOIndex) {
+
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
 
 	tempUtxoIndex := utxoIndex.DeepCopy()
 	var validTxs []*Transaction
@@ -216,6 +216,9 @@ func (txPool *TransactionPool) cleanUpTxSort() {
 }
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
+
 	nodes := make(map[string]*TransactionNode)
 	isExecTxOkToInsert := true
 
@@ -263,7 +266,7 @@ func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) b
 
 func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction {
 	txPool.mutex.RLock()
-	txPool.mutex.RUnlock()
+	defer txPool.mutex.RUnlock()
 	txNode, ok := txPool.txs[hex.EncodeToString(txid)]
 	if !ok {
 		return nil
