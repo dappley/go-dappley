@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/dappley/go-dappley/storage"
+
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
@@ -47,7 +49,7 @@ const (
 	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 	transactionLogFilePath = "log/tx.csv"
 	failedTxLogFilePath    = "log/failedTx.csv"
-	numOfTxPerBlk		   = 30
+	numOfTxPerBlk          = 30
 )
 
 func main() {
@@ -76,9 +78,8 @@ func main() {
 	}).Info("Funding is completed. Script starts.")
 	displayBalances(rpcClient, addresses, true)
 
-	utxoIndex = core.NewUTXOIndex()
+	utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
 	updateUtxoIndex(rpcClient, addresses)
-
 
 	deploySmartContract(adminClient, fundAddr)
 	currHeight = getBlockHeight(rpcClient)
@@ -114,38 +115,37 @@ func main() {
 	}
 }
 
-func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*corepb.Utxo{
-	resp , err := serviceClient.RpcGetUTXO(context.Background(),&rpcpb.GetUTXORequest{
+func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*corepb.Utxo {
+	resp, err := serviceClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
 		Address: addr.String(),
 	})
-	if err!=nil {
+	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"addr" : addr.String(),
+			"addr": addr.String(),
 		}).Error("Can not update utxo")
 	}
 	return resp.Utxos
 }
 
-func updateUtxoIndex(serviceClient rpcpb.RpcServiceClient, addrs []core.Address){
+func updateUtxoIndex(serviceClient rpcpb.RpcServiceClient, addrs []core.Address) {
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err!=nil {
+	if err != nil {
 		logger.WithError(err).Panic("updateUtxoIndex: Unable to get wallet")
 	}
-	index := map[string]*corepb.Utxos{}
-	for _,addr := range addrs{
+	for _, addr := range addrs {
 		kp := wm.GetKeyPairByAddress(addr)
-		pkh, err := core.NewUserPubKeyHash(kp.PublicKey)
-		if err!=nil {
+		_, err := core.NewUserPubKeyHash(kp.PublicKey)
+		if err != nil {
 			logger.WithError(err).Panic("updateUtxoIndex: Unable to get public key hash")
 		}
-		index[hex.EncodeToString(pkh)] = &corepb.Utxos{
-			Utxos : getUtxoByAddr(serviceClient, addr),
+
+		utxos := getUtxoByAddr(serviceClient, addr)
+		for _, utxoPb := range utxos {
+			utxo := core.UTXO{}
+			utxo.FromProto(utxoPb)
+			utxoIndex.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
 		}
 	}
-	utxoIndexProto := &corepb.UtxoIndex{
-		Index: index,
-	}
-	utxoIndex.FromProto(utxoIndexProto)
 }
 
 func recordTransactions(txs []*corepb.Transaction, height uint64) {
@@ -345,24 +345,24 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string)
 
 func sendRandomTransactions(client rpcpb.RpcServiceClient, addresses []core.Address) {
 	txs := createBatchTransactions(addresses)
-	_, err := client.RpcSendBatchTransaction(context.Background(),&rpcpb.SendBatchTransactionRequest{
-		Transactions:  txs,
+	_, err := client.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{
+		Transactions: txs,
 	})
 
-	if err != nil{
+	if err != nil {
 		logger.WithError(err).Panic("Unable to send batch transactions!")
 	}
 }
 
-func createBatchTransactions(addresses []core.Address) []*corepb.Transaction{
+func createBatchTransactions(addresses []core.Address) []*corepb.Transaction {
 	txs := []*corepb.Transaction{}
-	for i:=0;i<numOfTxPerBlk;i++ {
+	for i := 0; i < numOfTxPerBlk; i++ {
 		txs = append(txs, createRandomTransaction(addresses))
 	}
 	return txs
 }
 
-func createRandomTransaction(addresses []core.Address) *corepb.Transaction{
+func createRandomTransaction(addresses []core.Address) *corepb.Transaction {
 
 	data := ""
 
@@ -379,25 +379,25 @@ func createRandomTransaction(addresses []core.Address) *corepb.Transaction{
 		toAddr = smartContractAddr
 	}
 
-	tx := createTransaction(addresses[fromIndex], core.NewAddress(toAddr),common.NewAmount(sendAmount), common.NewAmount(0), data )
+	tx := createTransaction(addresses[fromIndex], core.NewAddress(toAddr), common.NewAmount(sendAmount), common.NewAmount(0), data)
 	return tx.ToProto().(*corepb.Transaction)
 }
 
-func createTransaction(from, to core.Address, amount, tip *common.Amount, contract string) *core.Transaction{
+func createTransaction(from, to core.Address, amount, tip *common.Amount, contract string) *core.Transaction {
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err!=nil {
+	if err != nil {
 		logger.WithError(err).Panic("Unable to get wallet")
 	}
 	senderKeyPair := wm.GetKeyPairByAddress(from)
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
-	if err!=nil {
+	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
 	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
-	if err!=nil {
+	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"pkh" : hex.EncodeToString(pkh),
-			"addr": pkh.GenerateAddress().String(),
+			"pkh":    hex.EncodeToString(pkh),
+			"addr":   pkh.GenerateAddress().String(),
 			"amount": amount.String(),
 		}).Panic("Unable to get previous utxos")
 	}

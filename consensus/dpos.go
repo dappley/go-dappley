@@ -169,17 +169,12 @@ func (dpos *DPOS) isForking() bool {
 }
 
 func (dpos *DPOS) isDoubleMint(block *core.Block) bool {
-	if existBlock, exist := dpos.slot.Get(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk))); exist {
-		if core.IsHashEqual(existBlock.(*core.Block).GetHash(), block.GetHash()) {
-			logger.WithFields(logger.Fields{
-					"existBlock":   existBlock.(*core.Block),
-					"currentBlock": block,
-			}).Warn("DPoS: someone is minting when they are not supposed to.")
-			return false
-		}
-		return true
+	existBlock, exist := dpos.slot.Get(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
+	if !exist {
+		return false
 	}
-	return false
+
+	return !core.IsHashEqual(existBlock.(*core.Block).GetHash(), block.GetHash())
 }
 
 // verifyProducer verifies a given block is produced by the valid producer by verifying the signature of the block

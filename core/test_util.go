@@ -57,7 +57,7 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 	if txs == nil {
 		txs = []*Transaction{}
 	}
-	return &Block{
+	block := &Block{
 		header: &BlockHeader{
 			hash:      []byte{},
 			prevHash:  prevHash,
@@ -68,6 +68,9 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 		},
 		transactions: txs,
 	}
+	hash := block.CalculateHashWithNonce(block.GetNonce())
+	block.SetHash(hash)
+	return block
 }
 
 func GenerateMockBlockchain(size int) *Blockchain {
