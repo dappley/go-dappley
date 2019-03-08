@@ -26,6 +26,7 @@ import (
 )
 
 func LoadConfig(filename string, pb proto.Message) {
+	println(filename)
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		logger.WithError(err).Warn("LoadConfig: cannot read the config file!")
