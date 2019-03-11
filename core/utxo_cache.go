@@ -65,6 +65,8 @@ func (utxoCache *UTXOCache) Put(pubKeyHash PubKeyHash, value *UTXOTx) error {
 	if pubKeyHash == nil {
 		return ErrEmptyPublicKeyHash
 	}
-	utxoCache.cache.Add(string(pubKeyHash), value)
+
+	savedUtxoTx := value.DeepCopy()
+	utxoCache.cache.Add(string(pubKeyHash), &savedUtxoTx)
 	return utxoCache.db.Put(pubKeyHash, value.Serialize())
 }

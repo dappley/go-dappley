@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/hex"
+	"os"
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -49,10 +50,10 @@ func TestTransferResult(t *testing.T) {
 	utxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(minerPubKey)
 	newDataSize := utxoTx.Size()
 	t.Logf("ResultTest: newDataSize %d", newDataSize)
-	_, utxo, nextUtxoTx := utxoTx.Iterator();
-	for utxo != nil {
+	//_, utxo, nextUtxoTx := utxoTx.Iterator()
+	for _, utxo := range utxoTx.Indices {
 		t.Logf("ResultTest: txid:%v, txIndex:%d", hex.EncodeToString(utxo.Txid), utxo.TxIndex)
-		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
+		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 	assert.True(t, newDataSize > 0, "Data convert and save failed")
 }
