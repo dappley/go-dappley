@@ -624,6 +624,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:f7b91105744c644ef33da0707bf76133f388ae8704ce8c39d8e8c0ede62b14ba"
+  name = "github.com/raviqqe/hamt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a784a8755247b09b135718f066d5426bc6051937"
+
+[[projects]]
+  branch = "master"
   digest = "1:d38f81081a389f1466ec98192cf9115a82158854d6f01e1c23e2e7554b97db71"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
@@ -923,6 +931,7 @@
     "github.com/libp2p/go-libp2p-peerstore",
     "github.com/multiformats/go-multiaddr",
     "github.com/peterh/liner",
+    "github.com/raviqqe/hamt",
     "github.com/rcrowley/go-metrics",
     "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",

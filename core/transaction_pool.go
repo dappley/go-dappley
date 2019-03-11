@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
@@ -86,10 +86,12 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 }
 
 func (txPool *TransactionPool) GetTransactions() []*Transaction {
+	txPool.mutex.RLock()
+	defer txPool.mutex.RUnlock()
 	return txPool.getSortedTransactions()
 }
 
-func (txPool *TransactionPool) GetPoolSize() int {
+func (txPool *TransactionPool) GetNumOfTxInPool() int {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 
@@ -118,12 +120,11 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 
 	tempUtxoIndex := utxoIndex.DeepCopy()
 	var validTxs []*Transaction
-	var inValidTxs []*Transaction
 	totalSize := 0
 
 	for totalSize < blockLimit && len(txPool.txs) > 0 {
 
-		txNode := txPool.GetMaxTipTransaction()
+		txNode := txPool.getMaxTipTransaction()
 		if txNode == nil {
 			logger.WithFields(logger.Fields{
 				"num_txs_in_pool":  len(txPool.txs),
@@ -134,21 +135,18 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 
 		totalSize += txNode.Size
 		txPool.tipOrder = txPool.tipOrder[1:]
-		if txNode.Value.Verify(tempUtxoIndex, 0) {
 
+		if txNode.Value.Verify(tempUtxoIndex, 0) {
 			validTxs = append(validTxs, txNode.Value)
 			tempUtxoIndex.UpdateUtxo(txNode.Value)
 			txPool.insertChildrenIntoSortedWaitlist(txNode)
 			txPool.removeTransaction(txNode)
 		} else {
-			inValidTxs = append(inValidTxs, txNode.Value)
 			txPool.removeTransactionNodeAndChildren(txNode.Value)
 		}
 	}
 
-	txPool.mutex.Lock()
 	txPool.pendingTxs = validTxs
-	txPool.mutex.Unlock()
 
 	return validTxs, tempUtxoIndex
 }
@@ -168,7 +166,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 			"sizeLimit": txPool.sizeLimit,
 		}).Warn("TransactionPool: is full.")
 
-		minTx := txPool.GetMinTipTransaction()
+		minTx := txPool.getMinTipTransaction()
 		if minTx != nil && txNode.GetTipsPerByte().Cmp(minTx.GetTipsPerByte()) < 1 {
 			return
 		}
@@ -216,8 +214,6 @@ func (txPool *TransactionPool) cleanUpTxSort() {
 }
 
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
-	txPool.mutex.RLock()
-	defer txPool.mutex.RUnlock()
 
 	nodes := make(map[string]*TransactionNode)
 	isExecTxOkToInsert := true
@@ -338,7 +334,7 @@ func (txPool *TransactionPool) disconnectFromParent(tx *Transaction) {
 }
 
 func (txPool *TransactionPool) removeMinTipTx() {
-	minTipTx := txPool.GetMinTipTransaction()
+	minTipTx := txPool.getMinTipTransaction()
 	if minTipTx == nil {
 		return
 	}
@@ -453,9 +449,9 @@ func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error {
 	return db.Put([]byte(TxPoolDbKey), txPool.serialize())
 }
 
-//GetMinTipTransaction gets the transactionNode with minimum tip
-func (txPool *TransactionPool) GetMaxTipTransaction() *TransactionNode {
-	txid := txPool.GetMaxTipTxid()
+//getMinTipTransaction gets the transactionNode with minimum tip
+func (txPool *TransactionPool) getMaxTipTransaction() *TransactionNode {
+	txid := txPool.getMaxTipTxid()
 	if txid == "" {
 		return nil
 	}
@@ -467,17 +463,17 @@ func (txPool *TransactionPool) GetMaxTipTransaction() *TransactionNode {
 	return txPool.txs[txid]
 }
 
-//GetMinTipTransaction gets the transactionNode with minimum tip
-func (txPool *TransactionPool) GetMinTipTransaction() *TransactionNode {
-	txid := txPool.GetMinTipTxid()
+//getMinTipTransaction gets the transactionNode with minimum tip
+func (txPool *TransactionPool) getMinTipTransaction() *TransactionNode {
+	txid := txPool.getMinTipTxid()
 	if txid == "" {
 		return nil
 	}
 	return txPool.txs[txid]
 }
 
-//GetMinTipTxid gets the txid of the transaction with minimum tip
-func (txPool *TransactionPool) GetMaxTipTxid() string {
+//getMinTipTxid gets the txid of the transaction with minimum tip
+func (txPool *TransactionPool) getMaxTipTxid() string {
 	if len(txPool.tipOrder) == 0 {
 		logger.Warn("TransactionPool: nothing in the tip order")
 		return ""
@@ -485,8 +481,8 @@ func (txPool *TransactionPool) GetMaxTipTxid() string {
 	return txPool.tipOrder[0]
 }
 
-//GetMinTipTxid gets the txid of the transaction with minimum tip
-func (txPool *TransactionPool) GetMinTipTxid() string {
+//getMinTipTxid gets the txid of the transaction with minimum tip
+func (txPool *TransactionPool) getMinTipTxid() string {
 	if len(txPool.tipOrder) == 0 {
 		return ""
 	}

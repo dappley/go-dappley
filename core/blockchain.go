@@ -219,7 +219,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	numTxBeforeExe := bc.GetTxPool().GetPoolSize()
+	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 
 	bcTemp.runScheduleEvents(ctx, tailBlk)
 	err = ctx.UtxoIndex.Save()
@@ -246,7 +246,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_add_block":    numTxBeforeExe,
-		"num_txs_after_update_txpool": bc.GetTxPool().GetPoolSize(),
+		"num_txs_after_update_txpool": bc.GetTxPool().GetNumOfTxInPool(),
 	}).Info("Blockchain : update tx pool")
 
 	err = bcTemp.AddBlockToDb(ctx.Block)
@@ -267,7 +267,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	poolsize := 0
 	if bc.txPool != nil {
-		poolsize = bc.txPool.GetPoolSize()
+		poolsize = bc.txPool.GetNumOfTxInPool()
 	}
 
 	blockLogger.WithFields(logger.Fields{
