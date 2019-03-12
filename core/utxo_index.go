@@ -79,10 +79,11 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) *UTXOTx {
 	}
 
 	utxoTx = utxos.cache.Get(pubkeyHash)
+	newUtxoTx := utxoTx.DeepCopy()
 	utxos.mutex.Lock()
-	utxos.index[key] = utxoTx
+	utxos.index[key] = &newUtxoTx
 	utxos.mutex.Unlock()
-	return utxoTx
+	return &newUtxoTx
 }
 
 //SplitContractUtxo
@@ -96,14 +97,12 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash []byte) (*UTXO, []*UTXO) {
 	var invokeContractUtxos []*UTXO
 	var createContractUtxo *UTXO
 
-	_, utxo, nextUtxoTx := utxoTx.Iterator()
-	for utxo != nil {
+	for _, utxo := range utxoTx.Indices {
 		if utxo.UtxoType == UtxoCreateContract {
 			createContractUtxo = utxo
 		} else {
 			invokeContractUtxos = append(invokeContractUtxos, utxo)
 		}
-		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 	return createContractUtxo, invokeContractUtxos
 }
@@ -208,8 +207,8 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 		if originalUtxos.Size() == 0 {
 			utxo = newUTXO(txout, txid, vout, UtxoCreateContract)
 			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
-			newContractUtxos := contractUtxos.PutUtxo(utxo)
 			utxos.mutex.Lock()
+			newContractUtxos := contractUtxos.PutUtxo(utxo)
 			utxos.index[hex.EncodeToString(contractUtxoKey)] = &newContractUtxos
 			utxos.mutex.Unlock()
 		} else {
@@ -219,8 +218,8 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 		utxo = newUTXO(txout, txid, vout, UtxoNormal)
 	}
 
-	newUtxos := originalUtxos.PutUtxo(utxo)
 	utxos.mutex.Lock()
+	newUtxos := originalUtxos.PutUtxo(utxo)
 	utxos.index[hex.EncodeToString(txout.PubKeyHash)] = &newUtxos
 	utxos.mutex.Unlock()
 }
@@ -229,10 +228,8 @@ func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
 	utxoTx := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 
 	var contractUtxos []*UTXO
-	_, utxo, nextUtxoTx := utxoTx.Iterator()
-	for utxo != nil {
+	for _, utxo := range utxoTx.Indices {
 		contractUtxos = append(contractUtxos, utxo)
-		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 	return contractUtxos
 }
@@ -240,16 +237,16 @@ func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(pkh)
-	utxos.mutex.Lock()
-	defer utxos.mutex.Unlock()
 
 	utxo := originalUtxos.GetUtxo(txid, vout)
 	if utxo == nil {
 		return ErrUTXONotFound
 	}
 
+	utxos.mutex.Lock()
 	newUtxos := originalUtxos.RemoveUtxo(txid, vout)
 	utxos.index[hex.EncodeToString(pkh)] = &newUtxos
+	utxos.mutex.Unlock()
 
 	if utxo.UtxoType != UtxoCreateContract {
 		return nil
@@ -261,8 +258,10 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 		if contractUtxos == nil {
 			return ErrUTXONotFound
 		}
+		utxos.mutex.Lock()
 		newContractUtxos := contractUtxos.RemoveUtxo(txid, vout)
 		utxos.index[hex.EncodeToString(contractUtxoKey)] = &newContractUtxos
+		utxos.mutex.Unlock()
 	}
 	return nil
 }
@@ -274,7 +273,8 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 
 	utxocopy := NewUTXOIndex(utxos.cache)
 	for pkh, utxoTx := range utxos.index {
-		utxocopy.index[pkh] = utxoTx
+		newUtxoTx := utxoTx.DeepCopy()
+		utxocopy.index[pkh] = &newUtxoTx
 	}
 	return utxocopy
 }

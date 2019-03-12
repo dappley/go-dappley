@@ -30,7 +30,11 @@ import (
 )
 
 // UTXOTx holds txid_vout and UTXO pairs
-type UTXOTx hamt.Map
+//type UTXOTx hamt.Map
+
+type UTXOTx struct {
+	Indices map[string]*UTXO
+}
 
 type StringEntry string
 
@@ -50,13 +54,13 @@ func (key *StringEntry) Equal(other hamt.Entry) bool {
 }
 
 func NewUTXOTx() UTXOTx {
-	return UTXOTx(hamt.NewMap())
+	return UTXOTx{Indices: map[string]*UTXO{}}
 }
 
 // Construct with UTXO data
 func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
-	key := StringEntry(string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex))
-	return UTXOTx(hamt.NewMap().Insert(&key, utxo))
+	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
+	return UTXOTx{Indices: map[string]*UTXO{key: utxo}}
 }
 
 func DeserializeUTXOTx(d []byte) UTXOTx {
@@ -81,10 +85,8 @@ func DeserializeUTXOTx(d []byte) UTXOTx {
 func (utxoTx UTXOTx) Serialize() []byte {
 	utxoList := &corepb.UtxoList{}
 
-	_, utxo, nextUtxoTx := utxoTx.Iterator()
-	for utxo != nil {
+	for _, utxo := range utxoTx.Indices {
 		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*corepb.Utxo))
-		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 
 	bytes, err := proto.Marshal(utxoList)
@@ -97,9 +99,8 @@ func (utxoTx UTXOTx) Serialize() []byte {
 
 // Returns utxo info by transaction id and vout index
 func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
-	key := StringEntry(string(txid) + "_" + strconv.Itoa(vout))
-	value := hamt.Map(utxoTx).Find(&key)
-	utxo, ok := value.(*UTXO)
+	key := string(txid) + "_" + strconv.Itoa(vout)
+	utxo, ok := utxoTx.Indices[key]
 	if !ok {
 		return nil
 	}
@@ -109,46 +110,26 @@ func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 
 // Add new utxo to map
 func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) UTXOTx {
-	key := StringEntry(string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex))
-	return UTXOTx(hamt.Map(utxoTx).Insert(&key, utxo))
+	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
+	utxoTx.Indices[key] = utxo
+	return utxoTx
 }
 
 // Delete invalid element in map
-func (utxoTx *UTXOTx) RemoveUtxo(txid []byte, vout int) UTXOTx {
-	key := StringEntry(string(txid) + "_" + strconv.Itoa(vout))
-	newMap := UTXOTx(hamt.Map(*utxoTx).Delete(&key))
-	return newMap
-}
-
-func (utxoTx UTXOTx) Iterator() (string, *UTXO, UTXOTx) {
-	key, value, nextMap := hamt.Map(utxoTx).FirstRest()
-	if key == nil {
-		return "", nil, NewUTXOTx()
-	}
-
-	keyStr, ok := key.(*StringEntry)
-	if !ok {
-		logger.Panic("UtxoTx: invalid key type")
-	}
-
-	utxo, ok := value.(*UTXO)
-	if !ok {
-		logger.Panic("UtxoTx: invalid value type")
-	}
-
-	return string(*keyStr), utxo, UTXOTx(nextMap)
+func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) UTXOTx {
+	key := string(txid) + "_" + strconv.Itoa(vout)
+	delete(utxoTx.Indices, key)
+	return utxoTx
 }
 
 func (utxoTx UTXOTx) Size() int {
-	return hamt.Map(utxoTx).Size()
+	return len(utxoTx.Indices)
 }
 
 func (utxoTx UTXOTx) GetAllUtxos() []*UTXO {
 	var utxos []*UTXO
-	_, utxo, nextUtxoTx := utxoTx.Iterator()
-	for utxo != nil {
+	for _, utxo := range utxoTx.Indices {
 		utxos = append(utxos, utxo)
-		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 
 	return utxos
@@ -162,10 +143,8 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 	}
 
 	var utxos []*UTXO
-	_, utxo, nextUtxoTx := utxoTx.Iterator()
-	for utxo != nil {
+	for _, utxo := range utxoTx.Indices {
 		if utxo.UtxoType == UtxoCreateContract {
-			_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 			continue
 		}
 
@@ -174,8 +153,17 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 		if sum.Cmp(amount) >= 0 {
 			return utxos, true
 		}
-		_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 
 	return nil, false
+}
+
+func (utxoTx UTXOTx) DeepCopy() UTXOTx {
+
+	newUtxoTx := NewUTXOTx()
+
+	for key, utxo := range utxoTx.Indices {
+		newUtxoTx.Indices[key] = utxo
+	}
+	return newUtxoTx
 }

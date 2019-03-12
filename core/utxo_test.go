@@ -523,7 +523,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address2Hash))
 	// Expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, addr1UTXOs.Size())
-	_, utxo1, _ := addr1UTXOs.Iterator()
+	utxo1 := addr1UTXOs.GetAllUtxos()[0]
 	assert.Equal(t, common.NewAmount(4), utxo1.Value)
 
 	// Expect address2 to have 2 utxos totaling $8
