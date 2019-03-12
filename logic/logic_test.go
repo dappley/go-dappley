@@ -159,7 +159,6 @@ func TestGetAllAddresses(t *testing.T) {
 	wallet, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet)
 	addr := wallet.GetAddress()
-
 	expectedRes = append(expectedRes, addr)
 
 	//create a blockchain
