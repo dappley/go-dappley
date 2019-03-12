@@ -1,22 +1,7 @@
 syntax = "proto3";
 package corepb;
 
-message Transaction{
-    bytes id = 1;
-    repeated TXInput vin = 2;
-    repeated TXOutput vout = 3;
-    bytes tip = 4;
-}
-
-message TXInput{
-    bytes txid = 1;
-    int32 vout = 2;
-    bytes signature = 3;
-    bytes public_key = 4;
-}
-
-message TXOutput{
-    bytes   value = 1;
-    bytes   public_key_hash = 2;
-    string  contract = 3;
+message KeyPair{
+    bytes privateKey = 1;
+    bytes publicKey = 2;
 }

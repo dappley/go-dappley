@@ -20,7 +20,9 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -34,8 +36,8 @@ func NewKeyPair() *KeyPair {
 	return &KeyPair{private, public}
 }
 
-func (w KeyPair) GenerateAddress(isContract bool) Address {
-	pubKeyHash, _ := NewUserPubKeyHash(w.PublicKey)
+func (kp KeyPair) GenerateAddress(isContract bool) Address {
+	pubKeyHash, _ := NewUserPubKeyHash(kp.PublicKey)
 	return pubKeyHash.GenerateAddress()
 }
 
@@ -57,4 +59,24 @@ func GetKeyPairByString(privateKey string) *KeyPair {
 
 	pubKey, _ := secp256k1.FromECDSAPublicKey(&private.PublicKey)
 	return &KeyPair{*private, pubKey[1:]}
+}
+
+func (kp *KeyPair) ToProto() proto.Message {
+	rawBytes, err := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	if err != nil {
+		logger.Error("Keypair: ToProto: Can not convert private key to bytes")
+	}
+	return &corepb.KeyPair{
+		PrivateKey: rawBytes,
+		PublicKey:  kp.PublicKey,
+	}
+}
+
+func (kp *KeyPair) FromProto(pb proto.Message) {
+	privKey, err := secp256k1.ToECDSAPrivateKey(pb.(*corepb.KeyPair).GetPrivateKey())
+	if err != nil {
+		logger.Error("Keypair: FromProto: Can not convert bytes to private key")
+	}
+	kp.PrivateKey = *privKey
+	kp.PublicKey = pb.(*corepb.KeyPair).GetPublicKey()
 }
