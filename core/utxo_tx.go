@@ -59,7 +59,6 @@ func NewUTXOTx() UTXOTx {
 
 // Construct with UTXO data
 func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
-	//key := StringEntry(string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex))
 	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 	return UTXOTx{Indices: map[string]*UTXO{key: utxo}}
 }
@@ -86,10 +85,8 @@ func DeserializeUTXOTx(d []byte) UTXOTx {
 func (utxoTx UTXOTx) Serialize() []byte {
 	utxoList := &corepb.UtxoList{}
 
-	//_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for _, utxo := range utxoTx.Indices {
 		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*corepb.Utxo))
-		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 
 	bytes, err := proto.Marshal(utxoList)
@@ -102,11 +99,8 @@ func (utxoTx UTXOTx) Serialize() []byte {
 
 // Returns utxo info by transaction id and vout index
 func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
-	//key := StringEntry(string(txid) + "_" + strconv.Itoa(vout))
-	//value := hamt.Map(utxoTx).Find(&key)
 	key := string(txid) + "_" + strconv.Itoa(vout)
 	utxo, ok := utxoTx.Indices[key]
-	//utxo, ok := value.(*UTXO)
 	if !ok {
 		return nil
 	}
@@ -128,35 +122,14 @@ func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) UTXOTx {
 	return utxoTx
 }
 
-//func (utxoTx UTXOTx) Iterator() (string, *UTXO, UTXOTx) {
-//	key, value, nextMap := utxoTx.Indices.
-//	if key == nil {
-//		return "", nil, NewUTXOTx()
-//	}
-//
-//	keyStr, ok := key.(*StringEntry)
-//	if !ok {
-//		logger.Panic("UtxoTx: invalid key type")
-//	}
-//
-//	utxo, ok := value.(*UTXO)
-//	if !ok {
-//		logger.Panic("UtxoTx: invalid value type")
-//	}
-//
-//	return string(*keyStr), utxo, UTXOTx(nextMap)
-//}
-
 func (utxoTx UTXOTx) Size() int {
 	return len(utxoTx.Indices)
 }
 
 func (utxoTx UTXOTx) GetAllUtxos() []*UTXO {
 	var utxos []*UTXO
-	//_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for _, utxo := range utxoTx.Indices {
 		utxos = append(utxos, utxo)
-		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 
 	return utxos
@@ -170,10 +143,8 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 	}
 
 	var utxos []*UTXO
-	//_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for _, utxo := range utxoTx.Indices {
 		if utxo.UtxoType == UtxoCreateContract {
-			//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 			continue
 		}
 
@@ -182,7 +153,6 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 		if sum.Cmp(amount) >= 0 {
 			return utxos, true
 		}
-		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 
 	return nil, false
@@ -194,7 +164,6 @@ func (utxoTx UTXOTx) DeepCopy() UTXOTx {
 
 	for key, utxo := range utxoTx.Indices {
 		newUtxoTx.Indices[key] = utxo
-		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 	return newUtxoTx
 }

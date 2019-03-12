@@ -109,10 +109,8 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
 	response := rpcpb.GetUTXOResponse{}
-	//_, utxo, nextUtxos := utxos.Iterator()
 	for _, utxo := range utxos.Indices {
 		response.Utxos = append(response.Utxos, utxo.ToProto().(*corepb.Utxo))
-		//_, utxo, nextUtxos = nextUtxos.Iterator()
 	}
 
 	//TODO Race condition Blockchain update after GetUTXO

@@ -208,10 +208,8 @@ func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, erro
 	balance := common.NewAmount(0)
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-	//_, utxo, nextUtxos := utxos.Iterator()
 	for _, utxo := range utxos.Indices {
 		balance = balance.Add(utxo.Value)
-		//_, utxo, nextUtxos = nextUtxos.Iterator()
 	}
 
 	return balance, nil

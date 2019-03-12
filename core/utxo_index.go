@@ -97,14 +97,12 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash []byte) (*UTXO, []*UTXO) {
 	var invokeContractUtxos []*UTXO
 	var createContractUtxo *UTXO
 
-	//_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for _, utxo := range utxoTx.Indices {
 		if utxo.UtxoType == UtxoCreateContract {
 			createContractUtxo = utxo
 		} else {
 			invokeContractUtxos = append(invokeContractUtxos, utxo)
 		}
-		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 	return createContractUtxo, invokeContractUtxos
 }
@@ -230,10 +228,8 @@ func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
 	utxoTx := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 
 	var contractUtxos []*UTXO
-	//_, utxo, nextUtxoTx := utxoTx.Iterator()
 	for _, utxo := range utxoTx.Indices {
 		contractUtxos = append(contractUtxos, utxo)
-		//_, utxo, nextUtxoTx = nextUtxoTx.Iterator()
 	}
 	return contractUtxos
 }
