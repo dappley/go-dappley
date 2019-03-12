@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -198,33 +197,19 @@ func GetUtxoHandle() {
 	flagSet.StringVar(&address, "a", "", "search utxo address")
 	flagSet.Parse(os.Args[2:])
 
-	addressBytes, err := hex.DecodeString(address)
-	if err != nil {
+	addr := core.NewAddress(address)
+	pubKeyHash, ok := addr.GetPubKeyHash()
+	if !ok {
 		panic("Decode address failed")
 	}
 
 	db := storage.OpenDatabase(dbPath)
 	defer db.Close()
 
-	utxoBytes, err := db.Get([]byte("utxo"))
+	utxoCache := core.NewUTXOCache(db)
+	utxoTx := utxoCache.Get(pubKeyHash)
 
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(utxoBytes) == 0 {
-		panic("utxo load failed")
-	}
-
-	var utxos map[string][]*core.UTXO
-	decoder := gob.NewDecoder(bytes.NewReader(utxoBytes))
-	err = decoder.Decode(&utxos)
-	if err != nil {
-		panic("Decode utxo failed")
-	}
-
-	addressUtxos, ok := utxos[string(addressBytes)]
-	if !ok {
-		panic("Utxo not found")
-	}
-
-	dumpUtxos(addressUtxos)
+	dumpUtxos(utxoTx)
 }
 
 func block2PrettyPb(block *core.Block) proto.Message {
@@ -290,8 +275,8 @@ func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
 	}
 }
 
-func dumpUtxos(utxos []*core.UTXO) {
-	for _, utxo := range utxos {
+func dumpUtxos(utxos *core.UTXOTx) {
+	for _, utxo := range utxos.Indices {
 		fmt.Print(proto.MarshalTextString(utxo2PrettyPb(utxo)))
 	}
 }
