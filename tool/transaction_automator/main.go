@@ -11,9 +11,6 @@ import (
 	"os"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -22,6 +19,8 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -42,8 +41,8 @@ var (
 const (
 	smartContractSendFreq  = 13
 	contractAddrFilePath   = "contract/contractAddr"
-	contractFilePath       = "contract/test_contract.js"
-	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	contractFilePath       = "contract/long_String_Contract.js"
+	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"dffahfsuivkjhiuadchwijndjiefnufnuicnuncukjndsuinaujndsu\"]}"
 	transactionLogFilePath = "log/tx.csv"
 	failedTxLogFilePath    = "log/failedTx.csv"
 )
@@ -100,6 +99,7 @@ func main() {
 func recordTransactions(txs []*corepb.Transaction, height uint64) {
 	f, err := os.OpenFile(transactionLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
+		println(err)
 		logger.Panic("Open file failed while recording transactions")
 	}
 	w := csv.NewWriter(f)
@@ -218,6 +218,7 @@ func createWallet() []core.Address {
 	for i := numOfWallets; i < maxWallet; i++ {
 		_, err := logic.CreateWalletWithpassphrase(password)
 		if err != nil {
+			println(err)
 			logger.WithError(err).Panic("Cannot create new wallet.")
 		}
 	}
