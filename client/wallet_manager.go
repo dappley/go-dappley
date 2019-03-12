@@ -20,7 +20,6 @@ package client
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"os"
@@ -35,7 +34,6 @@ import (
 	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1/bitelliptic"
 	"github.com/dappley/go-dappley/storage"
 )
 
@@ -115,20 +113,14 @@ func (wm *WalletManager) LoadFromFile() error {
 		fileContent, err = wm.fileLoader.ReadFromFile()
 		wm.mutex.Lock()
 	}
+	wmProto := &walletpb.WalletManager{}
+	err = proto.Unmarshal(fileContent, wmProto)
 
-	var walletdata *WalletData
-	gob.Register(bitelliptic.S256())
-	decoder := gob.NewDecoder(bytes.NewReader(fileContent))
-	err = decoder.Decode(&walletdata)
 	if err != nil {
-		wm.mutex.Unlock()
-		logger.WithError(err).Error("WalletManager: failed to load wallets from file!")
 		return err
 	}
 
-	wm.Wallets = walletdata.Wallets
-	wm.PassPhrase = walletdata.PassPhrase
-	wm.Locked = walletdata.Locked
+	wm.FromProto(wmProto)
 	wm.mutex.Unlock()
 	return nil
 }
@@ -147,16 +139,12 @@ func (wm *WalletManager) SaveWalletToFile() {
 	var content bytes.Buffer
 	wm.mutex.Lock()
 	defer wm.mutex.Unlock()
-	gob.Register(bitelliptic.S256())
-	encoder := gob.NewEncoder(&content)
-	walletdata := WalletData{}
-	walletdata.Wallets = wm.Wallets
-	walletdata.PassPhrase = wm.PassPhrase
-	walletdata.Locked = wm.Locked
-	err := encoder.Encode(walletdata)
+	rawBytes, err := proto.Marshal(wm.ToProto())
 	if err != nil {
-		logger.WithError(err).Error("WalletManager: failed to save Wallets to file!")
+		logger.WithError(err).Error("WalletManager: Save wallet to file failed")
+		return
 	}
+	content.Write(rawBytes)
 	wm.fileLoader.SaveToFile(content)
 }
 
