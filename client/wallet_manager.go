@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"github.com/golang/protobuf/proto"
 	"os"
 	"path/filepath"
 	"strings"
@@ -255,4 +256,30 @@ func (wm *WalletManager) UnlockExpire() {
 		wm.Locked = true
 		wm.SaveWalletToFile()
 	}
+}
+
+func (wm *WalletManager) ToProto() proto.Message {
+	pbWallets := []*walletpb.Wallet{}
+	for _, wallet := range wm.Wallets {
+		pbWallets = append(pbWallets, wallet.ToProto().(*walletpb.Wallet))
+	}
+
+	return &walletpb.WalletManager{
+		Wallets:    pbWallets,
+		PassPhrase: wm.PassPhrase,
+		Locked:     wm.Locked,
+	}
+}
+
+func (wm *WalletManager) FromProto(pb proto.Message) {
+	wallets := []*Wallet{}
+	for _, walletPb := range pb.(*walletpb.WalletManager).Wallets {
+		wallet := &Wallet{}
+		wallet.FromProto(walletPb)
+		wallets = append(wallets, wallet)
+	}
+
+	wm.Wallets = wallets
+	wm.PassPhrase = pb.(*walletpb.WalletManager).PassPhrase
+	wm.Locked = pb.(*walletpb.WalletManager).Locked
 }

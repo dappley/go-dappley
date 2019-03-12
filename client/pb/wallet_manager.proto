@@ -1,0 +1,12 @@
+syntax = "proto3";
+package walletpb;
+import "github.com/dappley/go-dappley/client/pb/wallet.proto";
+
+
+message WalletManager{
+    repeated Wallet wallets = 1;
+    bytes passPhrase = 2;
+    bool locked = 3;
+}
+
+
