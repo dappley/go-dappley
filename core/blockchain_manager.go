@@ -82,7 +82,9 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 
 	recieveBlockHeight := block.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
-	if recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold && bm.blockchain.GetState() == BlockchainReady {
+	if recieveBlockHeight >= ownBlockHeight &&
+		recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
+		bm.blockchain.GetState() == BlockchainReady {
 		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
 		bm.blockPool.DownloadBlocksCh() <- true
 		return
