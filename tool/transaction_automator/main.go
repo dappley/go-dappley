@@ -10,13 +10,9 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
-
-	"github.com/dappley/go-dappley/storage"
-
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
@@ -26,7 +22,9 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
-	_ "net/http/pprof"
+	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -92,7 +90,6 @@ func main() {
 	}).Info("Funding is completed. Script starts.")
 	displayBalances(rpcClient, addresses, true)
 
-	utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
 	updateUtxoIndex(rpcClient, addresses)
 
 	deploySmartContract(adminClient, fundAddr)
@@ -148,6 +145,9 @@ func updateUtxoIndex(serviceClient rpcpb.RpcServiceClient, addrs []core.Address)
 	if err != nil {
 		logger.WithError(err).Panic("updateUtxoIndex: Unable to get wallet")
 	}
+
+	utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
+
 	for _, addr := range addrs {
 		kp := wm.GetKeyPairByAddress(addr)
 		_, err := core.NewUserPubKeyHash(kp.PublicKey)
