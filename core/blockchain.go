@@ -451,6 +451,9 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex) bool {
 	}
 
 	//keep rolling back blocks until the block with the input hash
+
+	newTxPool := NewTransactionPool(bc.txPool.GetSizeLimit())
+
 loop:
 	for {
 		if bytes.Compare(parentblockHash, targetHash) == 0 {
@@ -465,7 +468,7 @@ loop:
 			return false
 		}
 		parentblockHash = block.GetPrevHash()
-		block.Rollback(bc.txPool)
+		block.Rollback(newTxPool)
 	}
 
 	bc.db.EnableBatch()
@@ -476,6 +479,17 @@ loop:
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
 	}
+
+	newUtxo := utxo.DeepCopy()
+	for _, tx := range bc.txPool.GetTransactions() {
+		if tx.Verify(newUtxo, 0) {
+			newUtxo.UpdateUtxo(tx)
+			newTxPool.Push(*tx)
+		}
+	}
+	bc.txPool = newTxPool
+	bc.txPool.SaveToDatabase(bc.db)
+
 	utxo.Save()
 	bc.db.Flush()
 

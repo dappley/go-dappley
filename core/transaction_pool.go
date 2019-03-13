@@ -85,6 +85,10 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	return &txPoolCopy
 }
 
+func (txPool *TransactionPool) GetSizeLimit() uint32 {
+	return txPool.sizeLimit
+}
+
 func (txPool *TransactionPool) GetTransactions() []*Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
@@ -199,8 +203,20 @@ func (txPool *TransactionPool) CleanUpMinedTxs(minedTxs []*Transaction) {
 		}
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
+		txPool.removeFromTipOrder(tx.ID)
 	}
-	txPool.cleanUpTxSort()
+}
+
+func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
+	key := hex.EncodeToString(txID)
+
+	for index, value := range txPool.tipOrder {
+		if value == key {
+			txPool.tipOrder = append(txPool.tipOrder[:index], txPool.tipOrder[index+1:]...)
+			return
+		}
+	}
+
 }
 
 func (txPool *TransactionPool) cleanUpTxSort() {
@@ -309,7 +325,6 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction)
 		for _, child := range currTxNode.Children {
 			txStack.Push(hex.EncodeToString(child.ID))
 		}
-		txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[txid].Value)
 		txPool.removeTransaction(currTxNode)
 	}
 }
@@ -318,10 +333,9 @@ func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction)
 //Note: this function does not remove the node from tipOrder!
 func (txPool *TransactionPool) removeTransaction(txNode *TransactionNode) {
 	txPool.disconnectFromParent(txNode.Value)
-	txPool.EventBus.Publish(EvictTransactionTopic, txPool.txs[hex.EncodeToString(txNode.Value.ID)].Value)
+	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
-
 }
 
 //disconnectFromParent removes itself from its parent's node's children field
