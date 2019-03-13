@@ -109,17 +109,33 @@ func (tx *Transaction) IsExecutionContract() bool {
 }
 
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func (tx *Transaction) IsFromContract() bool {
+func (tx *Transaction) IsFromContract(utxoIndex *UTXOIndex) bool {
 	if len(tx.Vin) == 0 {
 		return false
 	}
+
+	contractUtxos := utxoIndex.GetContractUtxos()
+
 	for _, vin := range tx.Vin {
 		pubKey := PubKeyHash(vin.PubKey)
 		if IsContract, _ := pubKey.IsContract(); !IsContract {
 			return false
 		}
+
+		if !tx.isPubkeyInUtxos(contractUtxos, pubKey) {
+			return false
+		}
 	}
 	return true
+}
+
+func (tx *Transaction) isPubkeyInUtxos(contractUtxos []*UTXO, pubKey PubKeyHash) bool {
+	for _, contractUtxo := range contractUtxos {
+		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (tx *Transaction) isVinCoinbase() bool {
@@ -140,7 +156,7 @@ func (tx *Transaction) Describe(utxoIndex *UTXOIndex) (sender, recipient *Addres
 			case tx.IsRewardTx():
 				pubKeyHash = PubKeyHash(rewardTxData)
 				continue
-			case tx.IsFromContract():
+			case tx.IsFromContract(utxoIndex):
 				// vinPubKey is the pubKeyHash if it is a sc generated tx
 				pubKeyHash = PubKeyHash(vinPubKey)
 			default:

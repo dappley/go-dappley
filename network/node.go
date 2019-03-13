@@ -730,7 +730,7 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 		return
 	}
 
-	if tx.IsFromContract() {
+	if tx.IsFromContract(utxoIndex) {
 		return
 	}
 

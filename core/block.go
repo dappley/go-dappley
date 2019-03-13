@@ -304,7 +304,7 @@ L:
 			utxoIndex.UpdateUtxo(tx)
 			continue L
 		}
-		if tx.IsFromContract() {
+		if tx.IsFromContract(utxoIndex) {
 			contractGeneratedTXs = append(contractGeneratedTXs, tx)
 			continue L
 		}
