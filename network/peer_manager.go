@@ -45,8 +45,8 @@ const (
 
 	defaultMaxConnectionOutCount = 16
 	defaultMaxConnectionInCount  = 128
-	syncPeersWaitTime            = 10 * time.Minute
-	syncPeersScheduleTime        = 30 * time.Second
+	syncPeersWaitTime            = 10 * time.Second
+	syncPeersScheduleTime        = 10 * time.Minute
 	checkSeedsConnectionTime     = 15 * time.Minute
 )
 
