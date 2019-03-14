@@ -47,13 +47,13 @@ func TestScState_LoadFromDatabase(t *testing.T) {
 	ssOld := NewScState()
 	ss.Set("addr1", "key1", "Value")
 	hash := []byte("testhash")
-	err := ssOld.SaveNewStateToDatabase(db, hash, ss)
+	err := ssOld.Save(db, hash, ss)
 	assert.Nil(t, err)
 	ss.LoadFromDatabase(db)
 	assert.Equal(t, "Value", ss.Get("addr1", "key1"))
 }
 
-func TestScState_ReverState(t *testing.T) {
+func TestScState_RevertState(t *testing.T) {
 	ss := NewScState()
 	ls := make(map[string]string)
 	ls["key1"] = "value1"
@@ -84,17 +84,17 @@ func TestScState_ReverState(t *testing.T) {
 	expect2["addr2"] = changePair2
 
 	changeLog1["addr1"] = changePair1
-	ss.ReverState(changeLog1)
+	ss.RevertState(changeLog1)
 	assert.Equal(t, expect1, ss.states)
 
 	changeLog2["addr2"] = changePair2
 	changeLog2["addr1"] = changePair3
-	ss.ReverState(changeLog2)
+	ss.RevertState(changeLog2)
 	assert.Equal(t, expect2, ss.states)
 
 	changeLog3["addr2"] = nil
 	changeLog3["addr1"] = nil
-	ss.ReverState(changeLog3)
+	ss.RevertState(changeLog3)
 	assert.Equal(t, expect3, ss.states)
 	assert.Equal(t, 0, len(ss.states))
 

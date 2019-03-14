@@ -291,7 +291,7 @@ func (bc *Blockchain) executeTransactionsAndUpdateScState(utxoIndex *UTXOIndex, 
 
 	bc.eventManager.Trigger(scState.GetEvents())
 
-	err := scStateOld.SaveNewStateToDatabase(bc.db, currBlock.GetHash(), scState)
+	err := scStateOld.Save(bc.db, currBlock.GetHash(), scState)
 	if err != nil {
 		return err
 	}

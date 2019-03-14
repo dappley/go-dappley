@@ -99,7 +99,6 @@ func main() {
 func recordTransactions(txs []*corepb.Transaction, height uint64) {
 	f, err := os.OpenFile(transactionLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		println(err)
 		logger.Panic("Open file failed while recording transactions")
 	}
 	w := csv.NewWriter(f)
@@ -218,7 +217,6 @@ func createWallet() []core.Address {
 	for i := numOfWallets; i < maxWallet; i++ {
 		_, err := logic.CreateWalletWithpassphrase(password)
 		if err != nil {
-			println(err)
 			logger.WithError(err).Panic("Cannot create new wallet.")
 		}
 	}
