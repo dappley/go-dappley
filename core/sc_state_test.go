@@ -44,17 +44,14 @@ func TestScState_Del(t *testing.T) {
 func TestScState_LoadFromDatabase(t *testing.T) {
 	db := storage.NewRamStorage()
 	ss := NewScState()
-	ssOld := NewScState()
 	ss.Set("addr1", "key1", "Value")
-	hash := []byte("testhash")
-	err := ssOld.Save(db, hash, ss)
+	err := ss.saveToDatabase(db)
 	assert.Nil(t, err)
 	ss.LoadFromDatabase(db)
 	assert.Equal(t, "Value", ss.Get("addr1", "key1"))
 }
 
 func TestScState_RevertState(t *testing.T) {
-	store := storage.NewRamStorage()
 
 	ss := NewScState()
 	ls := make(map[string]string)
@@ -86,17 +83,17 @@ func TestScState_RevertState(t *testing.T) {
 	expect2["addr2"] = changePair2
 
 	changeLog1["addr1"] = changePair1
-	ss.RevertStateAndSave(changeLog1, store)
+	ss.revertState(changeLog1)
 	assert.Equal(t, expect1, ss.states)
 
 	changeLog2["addr2"] = changePair2
 	changeLog2["addr1"] = changePair3
-	ss.RevertStateAndSave(changeLog2, store)
+	ss.revertState(changeLog2)
 	assert.Equal(t, expect2, ss.states)
 
 	changeLog3["addr2"] = nil
 	changeLog3["addr1"] = nil
-	ss.RevertStateAndSave(changeLog3, store)
+	ss.revertState(changeLog3)
 	assert.Equal(t, expect3, ss.states)
 	assert.Equal(t, 0, len(ss.states))
 

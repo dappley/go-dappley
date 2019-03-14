@@ -129,15 +129,17 @@ func (ss *ScState) LoadFromDatabase(db storage.Storage) {
 }
 
 //Save saves states to database
-func (ss *ScState) Save(db storage.Storage, blkHash Hash, newSS *ScState) error {
-	change := ss.findChangedValue(newSS)
+func (ss *ScState) Save(db storage.Storage, blkHash Hash) error {
+	scStateOld := NewScState()
+	scStateOld.LoadFromDatabase(db)
+	change := scStateOld.findChangedValue(ss)
 
 	err := db.Put([]byte(scStateLogKey+blkHash.String()), serialize(change))
 	if err != nil {
 		return err
 	}
 
-	err = db.Put([]byte(scStateMapKey), serialize(newSS.states))
+	err = db.Put([]byte(scStateMapKey), serialize(ss.states))
 	if err != nil {
 		return err
 	}
@@ -150,7 +152,18 @@ func (ss *ScState) saveToDatabase(db storage.Storage) error {
 	return err
 }
 
-func (ss *ScState) RevertStateAndSave(changelog map[string]map[string]string, db storage.Storage) error {
+func (ss *ScState) RevertStateAndSave(db storage.Storage, prevHash Hash) error {
+	changelog := getChangeLog(db, prevHash)
+	ss.revertState(changelog)
+	err := deleteLog(db, prevHash)
+	if err != nil {
+		return err
+	}
+	return ss.saveToDatabase(db)
+
+}
+
+func (ss *ScState) revertState(changelog map[string]map[string]string) {
 	for address, pair := range changelog {
 		if pair == nil {
 			delete(ss.states, address)
@@ -167,10 +180,7 @@ func (ss *ScState) RevertStateAndSave(changelog map[string]map[string]string, db
 				}
 			}
 		}
-
 	}
-	return ss.saveToDatabase(db)
-
 }
 
 func getChangeLog(db storage.Storage, prevHash Hash) map[string]map[string]string {
