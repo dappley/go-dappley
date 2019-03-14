@@ -117,6 +117,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishChan chan 
 
 	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
 	downloadManager.finishChan = finishChan
+	downloadManager.status = DownloadStatusInit
 
 	for _, peer := range downloadManager.node.GetPeerManager().CloneStreamsToSlice() {
 		downloadManager.peersInfo[peer.stream.peerID] = &PeerBlockInfo{peerid: peer.stream.peerID, height: 0, status: PeerStatusInit}
