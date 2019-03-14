@@ -117,7 +117,7 @@ func (txPool *TransactionPool) GetPendingTransactions() []*Transaction {
 }
 
 //PopTransactionsWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) ([]*Transaction, *UTXOIndex) {
+func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) []*Transaction {
 
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -152,7 +152,7 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 
 	txPool.pendingTxs = validTxs
 
-	return validTxs, tempUtxoIndex
+	return validTxs
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
