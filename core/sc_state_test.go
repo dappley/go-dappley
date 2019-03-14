@@ -54,6 +54,8 @@ func TestScState_LoadFromDatabase(t *testing.T) {
 }
 
 func TestScState_RevertState(t *testing.T) {
+	store := storage.NewRamStorage()
+
 	ss := NewScState()
 	ls := make(map[string]string)
 	ls["key1"] = "value1"
@@ -84,17 +86,17 @@ func TestScState_RevertState(t *testing.T) {
 	expect2["addr2"] = changePair2
 
 	changeLog1["addr1"] = changePair1
-	ss.RevertState(changeLog1)
+	ss.RevertStateAndSave(changeLog1, store)
 	assert.Equal(t, expect1, ss.states)
 
 	changeLog2["addr2"] = changePair2
 	changeLog2["addr1"] = changePair3
-	ss.RevertState(changeLog2)
+	ss.RevertStateAndSave(changeLog2, store)
 	assert.Equal(t, expect2, ss.states)
 
 	changeLog3["addr2"] = nil
 	changeLog3["addr1"] = nil
-	ss.RevertState(changeLog3)
+	ss.RevertStateAndSave(changeLog3, store)
 	assert.Equal(t, expect3, ss.states)
 	assert.Equal(t, 0, len(ss.states))
 
