@@ -154,6 +154,9 @@ func (ss *ScState) saveToDatabase(db storage.Storage) error {
 
 func (ss *ScState) RevertStateAndSave(db storage.Storage, prevHash Hash) error {
 	changelog := getChangeLog(db, prevHash)
+	if len(changelog) < 1 {
+		return nil
+	}
 	ss.revertState(changelog)
 	err := deleteLog(db, prevHash)
 	if err != nil {
@@ -198,7 +201,6 @@ func getChangeLog(db storage.Storage, prevHash Hash) map[string]map[string]strin
 
 func deleteLog(db storage.Storage, prevHash Hash) error {
 	err := db.Del([]byte(scStateLogKey + prevHash.String()))
-
 	return err
 }
 
