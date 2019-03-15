@@ -43,7 +43,7 @@ const (
 	DownloadStatusFinish           int = 3
 
 	CheckMaxWaitTime    time.Duration = 5
-	DownloadMaxWaitTime time.Duration = 10
+	DownloadMaxWaitTime time.Duration = 180
 	MaxRetryCount       int           = 3
 	MinRequestHashesNum int           = 20
 )
