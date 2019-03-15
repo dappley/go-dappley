@@ -254,11 +254,11 @@ func TestValidateReturnBlocks(t *testing.T) {
 	blockchain.SetState(core.BlockchainDownloading)
 
 	// test invalid peer id
-	_, err := downloadManager.ValidateReturnBlocks(nil, "foo")
+	_, err := downloadManager.validateReturnBlocks(nil, "foo")
 	assert.Equal(t, ErrPeerNotFound, err)
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
-	_, err = downloadManager.ValidateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId)
+	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId)
 	assert.Equal(t, ErrEmptyBlocks, err)
 }
