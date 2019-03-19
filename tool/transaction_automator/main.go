@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/dappley/go-dappley/storage"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -22,7 +23,6 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -468,7 +468,7 @@ func createRandomTransaction(addresses []core.Address, wm *client.WalletManager)
 		toIndex = rand.Intn(maxWallet)
 	}
 	toAddr := addresses[toIndex].String()
-	sendAmount := calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
+	sendAmount := uint64(1) //calcSendAmount(addresses[fromIndex].String(), addresses[toIndex].String())
 
 	if IsTheTurnToSendSmartContractTransaction() && isContractDeployed {
 		data = contractFunctionCall
