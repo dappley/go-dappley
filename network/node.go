@@ -551,10 +551,6 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	logger.WithFields(logger.Fields{
-		"cmd": "sync block",
-	}).Warn("Node: Sync Block command received!")
-
 	if dm.uniOrBroadcast == Broadcast {
 		if n.isNetworkRadiation(*dm) {
 			return
