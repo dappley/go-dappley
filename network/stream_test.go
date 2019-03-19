@@ -33,7 +33,7 @@ func TestStream_decode(t *testing.T) {
 		{
 			name:    "CorrectData",
 			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x1, 0x1, 0x2, 0x3, 0x4, 0x5},
-			retData: []byte{1,2,3,4,5},
+			retData: []byte{1, 2, 3, 4, 5},
 			retErr:  nil,
 		},
 		{
@@ -113,16 +113,54 @@ func TestStream_containStartingBytes(t *testing.T) {
 
 func TestStream_constructHeader(t *testing.T) {
 	bytes := []byte{}
-	for i:=0;i<300;i++{
+	for i := 0; i < 300; i++ {
 		bytes = append(bytes, byte(i))
 	}
-	assert.Equal(t, []byte{0x7E, 0x7E,0,0,0,0,0,0,1,44, 0x29}, constructHeader(bytes))
+	assert.Equal(t, []byte{0x7E, 0x7E, 0, 0, 0, 0, 0, 0, 1, 44, 0x29}, constructHeader(bytes))
 }
 
 func TestStream_checkSum(t *testing.T) {
 	bytes := []byte{}
-	for i:=0;i<300;i++{
+	for i := 0; i < 300; i++ {
 		bytes = append(bytes, byte(i))
 	}
 	assert.Equal(t, byte(50), checkSum(bytes))
+}
+
+func TestStream_Send(t *testing.T) {
+	s := &Stream{
+		"",
+		nil,
+		nil,
+		0,
+		[]byte{},
+		make(chan []byte, 100),
+		make(chan []byte, highPriorityChLength),
+		make(chan []byte, normalPriorityChLength),
+		make(chan bool, WriteChTotalLength),
+		make(chan bool, 1), //two channels to stop
+		make(chan bool, 1),
+	}
+	data1 := []byte("data1")
+	data2 := []byte("data2")
+	s.Send(data1, NormalPriorityCommand)
+	s.Send(data2, HighPriorityCommand)
+	assert.Equal(t, 2, len(s.msgNotifyCh))
+	assert.Equal(t, 1, len(s.highPriorityWriteCh))
+	assert.Equal(t, 1, len(s.normalPriorityWriteCh))
+
+	select {
+	case receivedData := <-s.highPriorityWriteCh:
+		assert.Equal(t, data2, receivedData)
+	default:
+		assert.Error(t, nil, "No data in high priority channel")
+	}
+
+	select {
+	case receivedData := <-s.normalPriorityWriteCh:
+		assert.Equal(t, data1, receivedData)
+	default:
+		assert.Error(t, nil, "No data in normal priority channel")
+	}
+
 }

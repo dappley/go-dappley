@@ -97,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:                 make(map[peer.ID]*PeerInfo),
-		syncPeers:             make(map[peer.ID]*PeerInfo),
-		streams:               make(map[peer.ID]*StreamInfo),
-		mutex:                 sync.RWMutex{},
+		seeds:     make(map[peer.ID]*PeerInfo),
+		syncPeers: make(map[peer.ID]*PeerInfo),
+		streams:   make(map[peer.ID]*StreamInfo),
+		mutex:     sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
@@ -229,15 +229,15 @@ func (pm *PeerManager) getUnConnectedSeeds() []*PeerInfo {
 	return unConnectedSeeds
 }
 
-func (pm *PeerManager) Broadcast(data []byte) {
+func (pm *PeerManager) Broadcast(data []byte, priority int) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 	for _, s := range pm.streams {
-		s.stream.Send(data)
+		s.stream.Send(data, priority)
 	}
 }
 
-func (pm *PeerManager) Unicast(data []byte, pid peer.ID) {
+func (pm *PeerManager) Unicast(data []byte, pid peer.ID, priority int) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
@@ -249,7 +249,7 @@ func (pm *PeerManager) Unicast(data []byte, pid peer.ID) {
 		return
 	}
 
-	streamInfo.stream.Send(data)
+	streamInfo.stream.Send(data, priority)
 }
 
 func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
