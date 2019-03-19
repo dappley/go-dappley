@@ -59,6 +59,7 @@ const (
 	ReturnCommonBlocks     = "ReturnCommonBlocks"
 	Unicast                = 0
 	Broadcast              = 1
+	dispatchChLen          = 1024
 )
 
 const (
@@ -128,7 +129,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		recentlyRcvedDapMsgs:   &sync.Map{},
 		dapMsgBroadcastCounter: &placeholder,
 		privKey:                nil,
-		dispatch:               make(chan *streamMsg, 1000),
+		dispatch:               make(chan *streamMsg, dispatchChLen),
 		downloadManager:        nil,
 		peerManager:            nil,
 	}
@@ -213,10 +214,10 @@ func (n *Node) StartListenLoop() {
 	go func() {
 		for {
 			if streamMsg, ok := <-n.dispatch; ok {
-				if len(n.dispatch) > 900 {
+				if len(n.dispatch) == dispatchChLen {
 					logger.WithFields(logger.Fields{
 						"lenOfDispatchChan": len(n.dispatch),
-					}).Warn("Node: dispatch channel almost full")
+					}).Warn("Node: dispatch channel full")
 				}
 				n.handle(streamMsg.msg, streamMsg.from)
 			}
