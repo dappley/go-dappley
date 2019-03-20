@@ -127,7 +127,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
 	//start a new smart contract engine
 
-	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb(), bp.bc.GetTailBlockHash())
+	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction

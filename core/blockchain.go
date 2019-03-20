@@ -228,7 +228,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	ctx.State.SaveToDatabase(bcTemp.db, ctx.Block.GetHash())
+	ctx.State.Save(bcTemp.db, ctx.Block.GetHash())
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save scState to database.")
 		return err
