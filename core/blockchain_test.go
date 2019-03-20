@@ -209,7 +209,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 		b := NewBlock(txs, tailBlk)
 		b.SetHash(b.CalculateHash())
-		state := LoadScStateFromDatabase(bc.GetDb(), bc.GetTailBlockHash())
+		state := LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }
