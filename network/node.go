@@ -59,7 +59,7 @@ const (
 	ReturnCommonBlocks     = "ReturnCommonBlocks"
 	Unicast                = 0
 	Broadcast              = 1
-	dispatchChLen          = 1024
+	dispatchChLen          = 1024 * 4
 )
 
 const (

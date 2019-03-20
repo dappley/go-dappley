@@ -36,8 +36,8 @@ const (
 	startByteLength        = 2
 	checkSumLength         = 1
 	headerLength           = lengthByteLength + startByteLength + checkSumLength
-	highPriorityChLength   = 1024
-	normalPriorityChLength = 1024
+	highPriorityChLength   = 1024 * 4
+	normalPriorityChLength = 1024 * 4
 	WriteChTotalLength     = highPriorityChLength + normalPriorityChLength
 )
 

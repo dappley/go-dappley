@@ -56,7 +56,7 @@ const (
 	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 	transactionLogFilePath = "log/tx.csv"
 	failedTxLogFilePath    = "log/failedTx.csv"
-	numOfTxPerBatch        = 30
+	numOfTxPerBatch        = 1000
 	TimeBetweenBatch       = time.Duration(1000)
 )
 

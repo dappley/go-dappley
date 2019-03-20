@@ -130,7 +130,7 @@ func (dpos *DPOS) Start() {
 					}).Info("DPoS: it is my turn to produce block.")
 					// Do not produce block if block pool is syncing
 					if dpos.node.GetBlockchain().GetState() != core.BlockchainReady {
-						logger.Debug("DPoS: block producer paused because block pool is syncing.")
+						logger.Info("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}
 					ctx := dpos.bp.ProduceBlock()
