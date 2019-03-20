@@ -89,7 +89,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 }
 
 func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
-	state := LoadScStateFromDatabase(bc.GetDb(), bc.GetTailBlockHash())
+	state := LoadScStateFromDatabase(bc.GetDb())
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
 	ctx := BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
