@@ -46,11 +46,11 @@ func newUTXO(txout TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
 }
 
 func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
-	tx, err := bc.FindTransaction(in.Txid)
+	tx, err := bc.FindTXOutput(in)
 	if err != nil {
 		return TXOutput{}, 0, ErrTXInputInvalid
 	}
-	return tx.Vout[in.Vout], in.Vout, nil
+	return tx, in.Vout, nil
 }
 
 func (utxo *UTXO) ToProto() proto.Message {

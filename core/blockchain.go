@@ -293,28 +293,13 @@ func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *Block) err
 	return nil
 }
 
-//TODO: optimize performance
-func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
-	bci := bc.Iterator()
-
-	for {
-		block, err := bci.Next()
-		if err != nil {
-			return Transaction{}, err
-		}
-
-		for _, tx := range block.GetTransactions() {
-			if bytes.Compare(tx.ID, ID) == 0 {
-				return *tx, nil
-			}
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			break
-		}
+func (bc *Blockchain) FindTXOutput(in TXInput) (TXOutput, error) {
+	db := bc.db
+	vout, err := GetTxOutput(in, db)
+	if err != nil {
+		return TXOutput{}, err
 	}
-
-	return Transaction{}, ErrTransactionNotFound
+	return vout, err
 }
 
 func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte) (Transaction, error) {
@@ -413,7 +398,14 @@ func (bc *Blockchain) AddBlockToDb(block *Block) error {
 		logger.WithError(err).Warn("Blockchain: failed to index the block by block height in database!")
 		return err
 	}
-
+	// add transaction journals
+	for _, tx := range block.GetTransactions() {
+		err = PutJournal(*tx, bc.db)
+		if err != nil {
+			logger.WithError(err).Warn("Blockchain: failed to add block transaction journals into database!")
+			return err
+		}
+	}
 	return nil
 }
 
