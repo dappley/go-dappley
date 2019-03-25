@@ -33,6 +33,7 @@ func NewScState() *ScState {
 }
 
 func (ss *ScState) GetEvents() []*Event { return ss.events }
+
 func (ss *ScState) RecordEvent(event *Event) {
 	ss.events = append(ss.events, event)
 }
@@ -119,7 +120,7 @@ func LoadScStateFromDatabase(db storage.Storage) *ScState {
 }
 
 //SaveToDatabase saves states to database
-func (ss *ScState) saveToDatabase(db storage.Storage) error {
+func (ss *ScState) SaveToDatabase(db storage.Storage) error {
 	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
 
@@ -171,19 +172,18 @@ func (ss *ScState) Save(db storage.Storage, blkHash Hash) error {
 	return err
 }
 
-func (ss *ScState) RevertStateAndSave(db storage.Storage, prevHash Hash) error {
-	ss = LoadScStateFromDatabase(db)
+func (ss *ScState) RevertState(db storage.Storage, prevHash Hash) error {
 	changelog := getChangeLog(db, prevHash)
 	if len(changelog) < 1 {
 		return nil
 	}
 	ss.revertState(changelog)
-	err := deleteLog(db, prevHash)
-	if err != nil {
-		return err
-	}
-	return ss.saveToDatabase(db)
+	//err := deleteLog(db, prevHash)
+	//if err != nil {
+	//	return err
+	//}
 
+	return nil
 }
 
 func (ss *ScState) findChangedValue(newState *ScState) map[string]map[string]string {
@@ -280,4 +280,23 @@ func (cl *ChangeLog) serializeChangeLog() []byte {
 		logger.WithError(err).Panic("ScState: failed to serialize changelog.")
 	}
 	return rawBytes
+}
+
+func (scState *ScState) DeepCopy() *ScState {
+	newScState := &ScState{make(map[string]map[string]string), make([]*Event, 0), &sync.RWMutex{}}
+
+	for address, addressState := range scState.states {
+		newAddressState := make(map[string]string)
+		for key, value := range addressState {
+			newAddressState[key] = value
+		}
+
+		newScState.states[address] = addressState
+	}
+
+	for _, event := range scState.events {
+		newScState.events = append(newScState.events, event)
+	}
+
+	return newScState
 }

@@ -47,7 +47,7 @@ func TestScState_LoadFromDatabase(t *testing.T) {
 	db := storage.NewRamStorage()
 	ss := NewScState()
 	ss.Set("addr1", "key1", "Value")
-	err := ss.saveToDatabase(db)
+	err := ss.SaveToDatabase(db)
 	assert.Nil(t, err)
 	ss1 := LoadScStateFromDatabase(db)
 	assert.Equal(t, "Value", ss1.Get("addr1", "key1"))

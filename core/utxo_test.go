@@ -476,7 +476,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := GetUTXOIndexAtBlockHash(tt.bc.GetDb(), tt.bc, tt.hash)
+			_, err := RevertUtxoAndScStateAtBlockHash(tt.bc.GetDb(), tt.bc, tt.hash)
 			if !assert.Equal(t, tt.err, err) {
 				return
 			}
@@ -530,7 +530,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	assert.Equal(t, 2, addr2UTXOs.Size())
 
 	// Rollback to blk1, address1 has a $5 utxo and a $7 utxo, total $12, and address2 has nothing
-	indexSnapshot, err := GetUTXOIndexAtBlockHash(db, bc, blk1.GetHash())
+	indexSnapshot, err := RevertUtxoAndScStateAtBlockHash(db, bc, blk1.GetHash())
 	if err != nil {
 		panic(err)
 	}
