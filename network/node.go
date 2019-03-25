@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-host"
@@ -42,10 +42,39 @@ import (
 
 const (
 	protocalName           = "dappley/1.0.0"
-	syncPeerTimeLimitMs    = 1000
 	MaxMsgCountBeforeReset = 999999
 	maxGetBlocksNum        = 10
 	maxSyncPeersCount      = 32
+	GetBlockchainInfo      = "GetBlockchainInfo"
+	ReturnBlockchainInfo   = "ReturnGetBlockchainInfo"
+	SyncBlock              = "SyncBlock"
+	GetBlocks              = "GetBlocks"
+	ReturnBlocks           = "ReturnBlocks"
+	SyncPeerList           = "SyncPeerList"
+	GetPeerList            = "GetPeerList"
+	ReturnPeerList         = "ReturnPeerList"
+	RequestBlock           = "requestBlock"
+	BroadcastTx            = "BroadcastTx"
+	GetCommonBlocks        = "GetCommonBlocks"
+	ReturnCommonBlocks     = "ReturnCommonBlocks"
+	Unicast                = 0
+	Broadcast              = 1
+	dispatchChLen          = 1024 * 4
+)
+
+const (
+	GetBlockchainInfoPriority    = NormalPriorityCommand
+	ReturnBlockchainInfoPriority = NormalPriorityCommand
+	SyncBlockPriority            = HighPriorityCommand
+	GetBlocksPriority            = HighPriorityCommand
+	ReturnBlocksPriority         = HighPriorityCommand
+	SyncPeerListPriority         = HighPriorityCommand
+	GetPeerListPriority          = HighPriorityCommand
+	ReturnPeerListPriority       = HighPriorityCommand
+	RequestBlockPriority         = HighPriorityCommand
+	BroadcastTxPriority          = NormalPriorityCommand
+	GetCommonBlocksPriority      = HighPriorityCommand
+	ReturnCommonBlocksPriority   = HighPriorityCommand
 )
 
 var (
@@ -100,7 +129,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		recentlyRcvedDapMsgs:   &sync.Map{},
 		dapMsgBroadcastCounter: &placeholder,
 		privKey:                nil,
-		dispatch:               make(chan *streamMsg, 1000),
+		dispatch:               make(chan *streamMsg, dispatchChLen),
 		downloadManager:        nil,
 		peerManager:            nil,
 	}
@@ -173,6 +202,8 @@ func (n *Node) StartRequestLoop() {
 				return
 			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
+			case <-n.bm.GetblockPool().DownloadBlocksCh():
+				go n.DownloadBlocks(n.bm.Getblockchain())
 			}
 		}
 	}()
@@ -183,6 +214,11 @@ func (n *Node) StartListenLoop() {
 	go func() {
 		for {
 			if streamMsg, ok := <-n.dispatch; ok {
+				if len(n.dispatch) == dispatchChLen {
+					logger.WithFields(logger.Fields{
+						"lenOfDispatchChan": len(n.dispatch),
+					}).Warn("Node: dispatch channel full")
+				}
 				n.handle(streamMsg.msg, streamMsg.from)
 			}
 		}
@@ -320,10 +356,10 @@ func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
 
 func (n *Node) GetPeerID() peer.ID { return n.info.PeerId }
 
-func (n *Node) RelayDapMsg(dm DapMsg) {
+func (n *Node) RelayDapMsg(dm DapMsg, priority int) {
 	msgData := dm.ToProto()
 	bytes, _ := proto.Marshal(msgData)
-	n.peerManager.Broadcast(bytes)
+	n.peerManager.Broadcast(bytes, priority)
 }
 
 func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int, msgKey string) ([]byte, error) {
@@ -355,16 +391,18 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	logger.WithFields(logger.Fields{
-		"peer_id": n.GetPeerID(),
-		"height":  block.GetHeight(),
-		"hash":    hex.EncodeToString(block.GetHash()),
-	}).Info("Node: is broadcasting a block.")
 	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data)
+	n.peerManager.Broadcast(data, SyncBlockPriority)
+	logger.WithFields(logger.Fields{
+		"peer_id": n.GetPeerID(),
+		"height":  block.GetHeight(),
+		"hash":    hex.EncodeToString(block.GetHash()),
+		"num_streams": len(n.peerManager.streams),
+		"data_len":    len(data),
+	}).Info("Node: is broadcasting a block.")
 	return nil
 }
 
@@ -377,17 +415,17 @@ func (n *Node) BroadcastGetBlockchainInfo() {
 		}).Warn("Node: broadcast GetBlockchainInfo failed.")
 	}
 
-	n.peerManager.Broadcast(data)
+	n.peerManager.Broadcast(data, GetBlockchainInfoPriority)
 }
 
 func (n *Node) GetPeerlistBroadcast(maxNum int) error {
-	request := &networkpb.GetPeerlist{MaxNum: int32(maxNum)}
+	request := &networkpb.GetPeerList{MaxNumber: int32(maxNum)}
 
 	data, err := n.prepareData(request, GetPeerList, Broadcast, "")
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data)
+	n.peerManager.Broadcast(data, GetPeerListPriority)
 	return nil
 }
 
@@ -396,19 +434,19 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data)
+	n.peerManager.Broadcast(data, BroadcastTxPriority)
 	return nil
 }
 
 func (n *Node) SyncPeersBroadcast() error {
-	getPeerListPb := &networkpb.GetPeerlist{
-		MaxNum: int32(maxSyncPeersCount),
+	getPeerListPb := &networkpb.GetPeerList{
+		MaxNumber: int32(maxSyncPeersCount),
 	}
 	data, err := n.prepareData(getPeerListPb, GetPeerList, Broadcast, "")
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data)
+	n.peerManager.Broadcast(data, SyncPeerListPriority)
 	return nil
 }
 
@@ -417,22 +455,21 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, SyncBlockPriority)
 	return nil
 }
 
 func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
-	peersPb := networkpb.Peerlist{}
-
+	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range peers {
-		peersPb.Peerlist = append(peersPb.Peerlist, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
-	data, err := n.prepareData(&peersPb, ReturnPeerList, Unicast, "")
+	data, err := n.prepareData(&networkpb.ReturnPeerList{PeerList: peerPbs}, ReturnPeerList, Unicast, "")
 	if err != nil {
 		return err
 	}
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, ReturnPeerListPriority)
 	return nil
 }
 
@@ -444,44 +481,42 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, RequestBlockPriority)
 	return nil
 }
 
 func (n *Node) GetCommonBlocksUnicast(blockHeaders []*SyncCommandBlocksHeader, pid peer.ID, msgId int32) error {
-	getCommonBlocksPb := &networkpb.GetCommonBlocks{}
-
-	getCommonBlocksPb.MsgId = msgId
-
+	var blockHeaderPbs []*corepb.BlockHeader
 	for _, blockHeader := range blockHeaders {
-		getCommonBlocksPb.BlockHeaders = append(getCommonBlocksPb.BlockHeaders,
+		blockHeaderPbs = append(blockHeaderPbs,
 			&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
 	}
+
+	getCommonBlocksPb := &networkpb.GetCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
 
 	data, err := n.prepareData(getCommonBlocksPb, GetCommonBlocks, Unicast, "")
 	if err != nil {
 		return nil
 	}
 
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, GetCommonBlocksPriority)
 	return nil
 }
 
 func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
-	getBlockPb := &networkpb.GetBlocks{}
-
-	getBlockPb.StartBlockHashes = make([][]byte, len(hashes))
-
+	blkHashes := make([][]byte, len(hashes))
 	for index, hash := range hashes {
-		getBlockPb.StartBlockHashes[index] = hash
+		blkHashes[index] = hash
 	}
+
+	getBlockPb := &networkpb.GetBlocks{StartBlockHashes: blkHashes}
 
 	data, err := n.prepareData(getBlockPb, GetBlocks, Unicast, "")
 	if err != nil {
 		return nil
 	}
 
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, GetBlocksPriority)
 	return nil
 }
 
@@ -524,7 +559,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)
 		if dm.uniOrBroadcast == Broadcast {
-			n.RelayDapMsg(*dm)
+			n.RelayDapMsg(*dm, SyncBlockPriority)
 		}
 	} else {
 		blk := n.getFromProtoBlockMsg(dm.GetData())
@@ -555,7 +590,7 @@ func (n *Node) GetBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, ReturnBlockchainInfoPriority)
 }
 
 func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
@@ -567,7 +602,7 @@ func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.BlockHeight)
+	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.GetBlockHeight())
 }
 
 //TODO  Refactor getblocks in rpcService and node
@@ -580,7 +615,7 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	block := n.findBlockInRequestHash(param.StartBlockHashes)
+	block := n.findBlockInRequestHash(param.GetStartBlockHashes())
 
 	// Reach the blockchain's tail
 	if block.GetHeight() >= n.GetBlockchain().GetMaxHeight() {
@@ -601,12 +636,12 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		block, err = n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
 	}
 
-	result := &networkpb.ReturnBlocks{}
+	var blockPbs []*corepb.Block
 	for i := len(blocks) - 1; i >= 0; i-- {
-		result.Blocks = append(result.Blocks, blocks[i].ToProto().(*corepb.Block))
+		blockPbs = append(blockPbs, blocks[i].ToProto().(*corepb.Block))
 	}
 
-	result.StartBlockHashes = param.StartBlockHashes
+	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: param.GetStartBlockHashes()}
 
 	data, err := n.prepareData(result, ReturnBlocks, Unicast, "")
 	if err != nil {
@@ -616,7 +651,7 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, ReturnBlocksPriority)
 }
 
 func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
@@ -628,21 +663,22 @@ func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	index, _ := n.downloadManager.FindCommonBlock(param.BlockHeaders)
-	result := &networkpb.ReturnCommonBlocks{MsgId: param.MsgId}
+	index, _ := n.downloadManager.FindCommonBlock(param.GetBlockHeaders())
+	var blockHeaderPbs []*corepb.BlockHeader
 	if index == 0 {
-		result.BlockHeaders = param.BlockHeaders[:1]
+		blockHeaderPbs = param.GetBlockHeaders()[:1]
 	} else {
 		blockHeaders := n.downloadManager.GetCommonBlockCheckPoint(
-			param.BlockHeaders[index].Height,
-			param.BlockHeaders[index-1].Height,
+			param.GetBlockHeaders()[index].GetHeight(),
+			param.GetBlockHeaders()[index-1].GetHeight(),
 		)
-
 		for _, blockHeader := range blockHeaders {
-			result.BlockHeaders = append(result.BlockHeaders,
+			blockHeaderPbs = append(blockHeaderPbs,
 				&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
 		}
 	}
+
+	result := &networkpb.ReturnCommonBlocks{MsgId: param.GetMsgId(), BlockHeaders: blockHeaderPbs}
 
 	data, err := n.prepareData(result, ReturnCommonBlocks, Unicast, "")
 	if err != nil {
@@ -652,7 +688,7 @@ func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.peerManager.Unicast(data, pid)
+	n.peerManager.Unicast(data, pid, ReturnCommonBlocksPriority)
 }
 
 func (n *Node) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
@@ -697,14 +733,17 @@ func (n *Node) cacheDapMsg(dm DapMsg) {
 }
 
 func (n *Node) AddTxToPool(dm *DapMsg) {
+	if n.GetBlockchain().GetState() != core.BlockchainReady {
+		return
+	}
+
 	if n.isNetworkRadiation(*dm) {
 		return
 	}
 
-	n.RelayDapMsg(*dm)
+	n.RelayDapMsg(*dm, BroadcastTxPriority)
 	n.cacheDapMsg(*dm)
 
-	//create a block proto
 	txpb := &corepb.Transaction{}
 
 	//unmarshal byte to proto
@@ -718,37 +757,36 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	//load the tx with proto
 	tx.FromProto(txpb)
 	//add tx to txpool
-	utxoIndex := core.LoadUTXOIndex(n.GetBlockchain().GetDb())
-	utxoIndex.UpdateUtxoState(n.GetBlockchain().GetTxPool().GetTransactions())
+	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
 
-	if tx.Verify(utxoIndex, 0) == false {
-		logger.Info("Node: broadcast transaction verify failed.")
+	if tx.IsFromContract(utxoIndex) {
 		return
 	}
-	n.bm.Getblockchain().GetTxPool().Push(tx)
+
+	n.bm.Getblockchain().GetTxPool().Push(*tx)
 }
 
 func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
-	getPeerlistRequest := &networkpb.GetPeerlist{}
+	getPeerlistRequest := &networkpb.GetPeerList{}
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, getPeerlistRequest); err != nil {
 		logger.WithError(err).Warn("Node: parse GetPeerList failed.")
 	}
 
-	peers := n.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.MaxNum))
+	peers := n.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.GetMaxNumber()))
 	n.SendPeerListUnicast(peers, pid)
 }
 
 func (n *Node) ReturnNodePeers(data []byte, pid peer.ID) {
-	peerlistPb := &networkpb.Peerlist{}
+	peerlistPb := &networkpb.ReturnPeerList{}
 
 	if err := proto.Unmarshal(data, peerlistPb); err != nil {
 		logger.WithError(err).Warn("Node: parse Peerlist failed.")
 	}
 
 	var peers []*PeerInfo
-	for _, peerPb := range peerlistPb.Peerlist {
+	for _, peerPb := range peerlistPb.GetPeerList() {
 		peerInfo := &PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("Node: parse PeerInfo failed.")
@@ -767,4 +805,14 @@ func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	}
 	block := core.Deserialize(blockBytes)
 	n.SendBlockUnicast(block, pid)
+}
+
+func (n *Node) DownloadBlocks(bc *core.Blockchain) {
+	downloadManager := n.GetDownloadManager()
+	finishChan := make(chan bool, 1)
+
+	bc.SetState(core.BlockchainDownloading)
+	downloadManager.StartDownloadBlockchain(finishChan)
+	<-finishChan
+	bc.SetState(core.BlockchainReady)
 }

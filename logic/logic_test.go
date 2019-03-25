@@ -35,10 +35,10 @@ import (
 const InvalidAddress = "Invalid Address"
 
 func TestMain(m *testing.M) {
-	setup()
+	cleanUpDatabase()
 	logger.SetLevel(logger.WarnLevel)
 	retCode := m.Run()
-	teardown()
+	cleanUpDatabase()
 	os.Exit(retCode)
 }
 
@@ -71,7 +71,7 @@ func TestCreateBlockchain(t *testing.T) {
 	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 
 	//create a blockchain
-	_, err := CreateBlockchain(addr, store, nil, 128, nil)
+	_, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 }
 
@@ -104,7 +104,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a blockchain with an invalid address
-	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil, 128, nil)
+	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil, 128, nil, 1000000)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Nil(t, bc)
 }
@@ -116,12 +116,12 @@ func TestGetBalance(t *testing.T) {
 	//create a wallet address
 	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, 128, nil)
+	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//The balance should be 10000000 after creating a blockchain
-	balance, err := GetBalance(addr, store)
+	balance, err := GetBalance(addr, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(10000000), balance)
 }
@@ -134,22 +134,22 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//create a wallet address
 	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, 128, nil)
+	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//The balance should be 10000000 after creating a blockchain
-	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), store)
+	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance1)
 
-	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), store)
+	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
 
 func TestGetAllAddresses(t *testing.T) {
-	setup()
+	cleanUpDatabase()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -163,7 +163,7 @@ func TestGetAllAddresses(t *testing.T) {
 	expectedRes = append(expectedRes, addr)
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, 128, nil)
+	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -184,27 +184,29 @@ func TestGetAllAddresses(t *testing.T) {
 	//the length should be equal
 	assert.Equal(t, len(expectedRes), len(addrs))
 	assert.ElementsMatch(t, expectedRes, addrs)
-	teardown()
+	cleanUpDatabase()
 }
 
 func TestIsWalletEmptyWallet(t *testing.T) {
-	setup()
+	cleanUpDatabase()
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
 	assert.Nil(t, err)
 	empty, err := IsTestWalletEmpty()
 	assert.Nil(t, err)
 	assert.Equal(t, false, empty)
-	setup()
+	cleanUpDatabase()
 	empty, err = IsTestWalletEmpty()
 	assert.Nil(t, err)
 	assert.Equal(t, true, empty)
 
+	//teardown :clean up database amd files
+	cleanUpDatabase()
 }
 
 func TestDeleteInvalidWallet(t *testing.T) {
 	//setup: clean up database and files
-	setup()
+	cleanUpDatabase()
 	//create wallets address
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
@@ -217,7 +219,7 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	assert.ElementsMatch(t, list, addressList)
 
 	//teardown :clean up database amd files
-	teardown()
+	cleanUpDatabase()
 }
 
 func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
@@ -243,14 +245,6 @@ loop:
 		}
 	}
 	return true
-}
-
-func setup() {
-	cleanUpDatabase()
-}
-
-func teardown() {
-	cleanUpDatabase()
 }
 
 func cleanUpDatabase() {

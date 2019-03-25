@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	test_port1 = 10000 + iota
+	test_port1 = 20600 + iota
 	test_port2
 	test_port3
 	test_port4
@@ -49,7 +49,7 @@ const (
 
 func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
 	addr := core.Address{address}
-	bc := core.CreateBlockchain(addr, db, nil, 128, nil)
+	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	n := NewNode(bc, pool)
 
@@ -62,7 +62,7 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 
 func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
 	addr := core.Address{address}
-	bc := core.CreateBlockchain(addr, db, nil, 128, nil)
+	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
 	n := NewNodeWithConfig(bc, pool, config)

@@ -20,6 +20,7 @@ package network
 
 import (
 	"bytes"
+	"errors"
 	"math"
 	"sync"
 	"time"
@@ -42,9 +43,15 @@ const (
 	DownloadStatusFinish           int = 3
 
 	CheckMaxWaitTime    time.Duration = 5
-	DownloadMaxWaitTime time.Duration = 10
+	DownloadMaxWaitTime time.Duration = 180
 	MaxRetryCount       int           = 3
 	MinRequestHashesNum int           = 20
+)
+
+var (
+	ErrEmptyBlocks      = errors.New("received no block")
+	ErrPeerNotFound     = errors.New("peerId not in checklist")
+	ErrMismatchResponse = errors.New("response is not for waiting command")
 )
 
 type PeerBlockInfo struct {
@@ -60,6 +67,7 @@ type DownloadCommand struct {
 type DownloadingCommandInfo struct {
 	startHashes []core.Hash
 	retryCount  int
+	finished    bool
 }
 
 type SyncCommandBlocksHeader struct {
@@ -86,7 +94,6 @@ type DownloadManager struct {
 	status          int
 	commonHeight    uint64
 	msgId           int32
-	isMerging       bool
 	finishChan      chan bool
 }
 
@@ -100,7 +107,6 @@ func NewDownloadManager(node *Node) *DownloadManager {
 		status:          DownloadStatusInit,
 		msgId:           0,
 		commonHeight:    0,
-		isMerging:       false,
 		finishChan:      nil,
 	}
 }
@@ -110,6 +116,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishChan chan 
 
 	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
 	downloadManager.finishChan = finishChan
+	downloadManager.status = DownloadStatusInit
 
 	for _, peer := range downloadManager.node.GetPeerManager().CloneStreamsToSlice() {
 		downloadManager.peersInfo[peer.stream.peerID] = &PeerBlockInfo{peerid: peer.stream.peerID, height: 0, status: PeerStatusInit}
@@ -171,61 +178,78 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 	}
 }
 
-func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
-	downloadManager.mutex.Lock()
+func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) (*PeerBlockInfo, error) {
+	returnBlocksLogger := logger.WithFields(logger.Fields{
+		"cmd": "ReturnBlocks",
+	})
 
-	if downloadManager.downloadingPeer.peerid != peerId {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("DownloadManager: peerId not in checklist")
-		downloadManager.mutex.Unlock()
-		return
+	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
+		returnBlocksLogger.Info("DownloadManager: peerId not in checklist")
+		return nil, ErrPeerNotFound
 	}
 
-	hashes := make([]core.Hash, len(blocksPb.StartBlockHashes))
-	for index, hash := range blocksPb.StartBlockHashes {
+	if blocksPb.GetBlocks() == nil || len(blocksPb.GetBlocks()) == 0 {
+		returnBlocksLogger.Error("DownloadManager: received no block.")
+		return nil, ErrEmptyBlocks
+	}
+
+	hashes := make([]core.Hash, len(blocksPb.GetStartBlockHashes()))
+	for index, hash := range blocksPb.GetStartBlockHashes() {
 		hashes[index] = core.Hash(hash)
 	}
-	if !downloadManager.isSameDownloadCommand(hashes) {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("DownloadManager: response is not for waiting command.")
+
+	if downloadManager.isDownloadCommandFinished(hashes) {
+		returnBlocksLogger.Info("DownloadManager: response is not for waiting command.")
+		return nil, ErrMismatchResponse
+	}
+
+	return downloadManager.downloadingPeer, nil
+}
+
+func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
+	returnBlocksLogger := logger.WithFields(logger.Fields{
+		"cmd": "ReturnBlocks",
+	})
+
+	downloadManager.mutex.Lock()
+	checkingPeer, err := downloadManager.validateReturnBlocks(blocksPb, peerId)
+	if err != nil {
+		returnBlocksLogger.WithFields(logger.Fields{"error": err}).Error("DownloadManager:")
 		downloadManager.mutex.Unlock()
 		return
 	}
 
-	downloadManager.isMerging = true
+	downloadingCmd, ok := downloadManager.currentCmd.command.(*DownloadingCommandInfo)
+	if ok {
+		downloadingCmd.finished = true
+	}
+
 	downloadManager.mutex.Unlock()
 
 	var blocks []*core.Block
-	for _, pbBlock := range blocksPb.Blocks {
+	for _, pbBlock := range blocksPb.GetBlocks() {
 		block := &core.Block{}
 		block.FromProto(pbBlock)
 
 		if !downloadManager.node.bm.VerifyBlock(block) {
-			logger.WithFields(logger.Fields{
-				"cmd": "ReturnBlocks",
-			}).Warn("DownloadManager: Verify block failed.")
+			returnBlocksLogger.Warn("DownloadManager: verify block failed.")
 			return
 		}
 
 		blocks = append(blocks, block)
 	}
 
-	logger.Infof("DownloadManager: Receive Blocks from %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+	logger.Warnf("DownloadManager: receive blocks from %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
 
 	if err := downloadManager.node.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
-		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
-		}).Info("DownloadManager: Merge fork failed.")
+		returnBlocksLogger.Info("DownloadManager: merge fork failed.")
 		return
 	}
 
 	downloadManager.mutex.Lock()
-	downloadManager.isMerging = false
-	if downloadManager.node.GetBlockchain().GetMaxHeight() >= downloadManager.downloadingPeer.height {
+	defer downloadManager.mutex.Unlock()
+	if downloadManager.node.GetBlockchain().GetMaxHeight() >= checkingPeer.height {
 		downloadManager.finishDownload()
-		downloadManager.mutex.Unlock()
 		return
 	}
 
@@ -235,13 +259,12 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 	}
 
 	downloadManager.sendDownloadCommand(nextHashes, peerId, 0)
-	downloadManager.mutex.Unlock()
 }
 
 func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *networkpb.ReturnCommonBlocks, peerId peer.ID) {
 	downloadManager.mutex.Lock()
 
-	if downloadManager.downloadingPeer.peerid != peerId {
+	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
 		logger.WithFields(logger.Fields{
 			"cmd": "ReturnCommonBlocks",
 		}).Info("DownloadManager: PeerId not in checklist.")
@@ -249,7 +272,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 		return
 	}
 
-	if !downloadManager.isSameGetCommonBlocksCommand(blocksPb.MsgId) {
+	if !downloadManager.isSameGetCommonBlocksCommand(blocksPb.GetMsgId()) {
 		logger.WithFields(logger.Fields{
 			"cmd": "ReturnCommonBlocks",
 		}).Info("DownloadManager: response is not for waiting command.")
@@ -257,7 +280,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 		return
 	}
 
-	downloadManager.checkGetCommonBlocksResult(blocksPb.BlockHeaders)
+	downloadManager.checkGetCommonBlocksResult(blocksPb.GetBlockHeaders())
 	downloadManager.mutex.Unlock()
 }
 
@@ -301,7 +324,7 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*corepb.B
 	var commonBlock *core.Block
 
 	for index, blockHeader := range blockHeaders {
-		block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(blockHeader.Height)
+		block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(blockHeader.GetHeight())
 		if err != nil {
 			continue
 		}
@@ -345,11 +368,7 @@ func (downloadManager *DownloadManager) CheckDownloadCommand(hashes []core.Hash,
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
-	if !downloadManager.isSameDownloadCommand(hashes) {
-		return
-	}
-
-	if downloadManager.isMerging {
+	if downloadManager.isDownloadCommandFinished(hashes) {
 		return
 	}
 
@@ -424,15 +443,15 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*corepb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
-	if findIndex == 0 || blockHeaders[findIndex-1].Height-blockHeaders[findIndex].Height == 1 {
+	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
 		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
 		downloadManager.currentCmd = nil
 		downloadManager.startDownload(0)
 	} else {
 		blockHeaders := downloadManager.GetCommonBlockCheckPoint(
-			blockHeaders[findIndex].Height,
-			blockHeaders[findIndex-1].Height,
+			blockHeaders[findIndex].GetHeight(),
+			blockHeaders[findIndex-1].GetHeight(),
 		)
 		downloadManager.sendGetCommonBlockCommand(blockHeaders, downloadManager.downloadingPeer.peerid, 0)
 	}
@@ -464,7 +483,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 }
 
 func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
-	downloadingCmd := &DownloadingCommandInfo{startHashes: hashes}
+	downloadingCmd := &DownloadingCommandInfo{startHashes: hashes, finished: false}
 	downloadManager.currentCmd = &ExecuteCommand{command: downloadingCmd, retryCount: retryCount}
 	downloadManager.node.DownloadBlocksUnicast(hashes, peerId)
 
@@ -476,32 +495,36 @@ func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, 
 	}()
 }
 
-func (downloadManager *DownloadManager) isSameDownloadCommand(hashes []core.Hash) bool {
+func (downloadManager *DownloadManager) isDownloadCommandFinished(hashes []core.Hash) bool {
 	if downloadManager.currentCmd == nil {
-		return false
+		return true
 	}
 
 	if downloadManager.status != DownloadStatusDownloading {
-		return false
+		return true
 	}
 
 	downloadingCmd, ok := downloadManager.currentCmd.command.(*DownloadingCommandInfo)
 
 	if !ok {
-		return false
+		return true
+	}
+
+	if downloadingCmd.finished {
+		return true
 	}
 
 	if len(hashes) != len(downloadingCmd.startHashes) {
-		return false
+		return true
 	}
 
 	for index, hash := range hashes {
 		if bytes.Compare(hash, downloadingCmd.startHashes[index]) != 0 {
-			return false
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
 func (downloadManager *DownloadManager) finishDownload() {

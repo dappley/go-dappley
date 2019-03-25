@@ -4,10 +4,9 @@ import "C"
 import (
 	"unsafe"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 //VerifyAddressFunc verify address is valid
@@ -15,6 +14,22 @@ import (
 func VerifyAddressFunc(address *C.char) bool {
 	addr := core.NewAddress(C.GoString(address))
 	return addr.ValidateAddress()
+}
+
+func prepareUTXOs(utxos []*core.UTXO, amount *common.Amount) ([]*core.UTXO, bool) {
+	sum := common.NewAmount(0)
+
+	if len(utxos) < 1 {
+		return nil, false
+	}
+
+	for i, u := range utxos {
+		sum = sum.Add(u.Value)
+		if sum.Cmp(amount) >= 0 {
+			return utxos[:i+1], true
+		}
+	}
+	return nil, false
 }
 
 //TransferFunc transfer amount from contract to address
@@ -55,7 +70,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 		return 1
 	}
 
-	utxosToSpend, ok := core.PrepareUTXOs(utxos, amountValue.Add(tipValue))
+	utxosToSpend, ok := prepareUTXOs(utxos, amountValue.Add(tipValue))
 	if !ok {
 		logger.WithFields(logger.Fields{
 			"all_utxos":      utxos,

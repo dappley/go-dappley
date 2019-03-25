@@ -96,11 +96,11 @@ var transferTest = new MathTest;`
 
 	assert.Equal(t, "0", result)
 	if assert.Equal(t, 1, len(sc.generatedTXs)) {
-		if assert.Equal(t, 1, len(sc.generatedTXs[0].Vin)) {
-			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[0].Txid)
-			assert.Equal(t, 1, sc.generatedTXs[0].Vin[0].Vout)
-			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[0].Signature)
-			assert.Equal(t, []byte(contractPubKeyHash), sc.generatedTXs[0].Vin[0].PubKey)
+		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vin)) {
+			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[1].Txid)
+			assert.Equal(t, 1, sc.generatedTXs[0].Vin[1].Vout)
+			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[1].Signature)
+			assert.Equal(t, []byte(contractPubKeyHash), sc.generatedTXs[0].Vin[1].PubKey)
 		}
 		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vout)) {
 			// payout

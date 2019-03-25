@@ -19,8 +19,9 @@
 package core
 
 import (
+	"github.com/golang/protobuf/proto"
+
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/gogo/protobuf/proto"
 )
 
 type TXInput struct {
@@ -35,13 +36,13 @@ func (in *TXInput) ToProto() proto.Message {
 		Txid:      in.Txid,
 		Vout:      int32(in.Vout),
 		Signature: in.Signature,
-		PubKey:    in.PubKey,
+		PublicKey: in.PubKey,
 	}
 }
 
 func (in *TXInput) FromProto(pb proto.Message) {
-	in.Txid = pb.(*corepb.TXInput).Txid
-	in.Vout = int(pb.(*corepb.TXInput).Vout)
-	in.Signature = pb.(*corepb.TXInput).Signature
-	in.PubKey = pb.(*corepb.TXInput).PubKey
+	in.Txid = pb.(*corepb.TXInput).GetTxid()
+	in.Vout = int(pb.(*corepb.TXInput).GetVout())
+	in.Signature = pb.(*corepb.TXInput).GetSignature()
+	in.PubKey = pb.(*corepb.TXInput).GetPublicKey()
 }

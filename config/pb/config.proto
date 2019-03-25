@@ -2,29 +2,30 @@ syntax = "proto3";
 package configpb;
 
 message Config{
-    ConsensusConfig consensusConfig = 1;
-    NodeConfig      nodeConfig = 2;
+    ConsensusConfig consensus_config = 1;
+    NodeConfig      node_config = 2;
 }
 
 message ConsensusConfig{
-    string minerAddr = 1;
-    string privKey = 2;
+    string miner_address = 1;
+    string private_key = 2;
 }
 
 message NodeConfig{
     uint32 port = 1;
     repeated string seed = 2;
-    string dbPath = 3;
-    uint32 rpcPort = 4;
-    string keyPath = 5;
-    uint32 txPoolLimit = 6;
-    string nodeAddr = 7;
-    string genesisPath = 8;
+    string db_path = 3;
+    uint32 rpc_port = 4;
+    string key_path = 5;
+    uint32 tx_pool_limit = 6;
+    uint32 blk_size_limit = 7;
+    string node_address = 8;
+    string genesis_path = 9;
 }
 
 message DynastyConfig{
     repeated string producers = 1;
-    uint32 maxProducers = 2;
+    uint32 max_producers = 2;
 }
 
 message CliConfig{

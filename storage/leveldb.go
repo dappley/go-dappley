@@ -64,6 +64,11 @@ func (ldb *LevelDB) Get(key []byte) ([]byte, error) {
 }
 
 func (ldb *LevelDB) Put(key []byte, val []byte) error {
+	logger.WithFields(logger.Fields{
+		"key length"  : len(key),
+		"data length" : len(val),
+	}).Debug("Leveldb put")
+
 	if ldb.batch != nil {
 		ldb.batch.Put(key, val)
 		return nil

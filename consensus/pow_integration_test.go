@@ -63,11 +63,11 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
@@ -75,7 +75,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(&tx)
+	bc.GetTxPool().Push(tx)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
@@ -127,7 +127,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128, nil)
+	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -176,11 +176,11 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
@@ -188,7 +188,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(&tx)
+	bc.GetTxPool().Push(tx)
 
 	//start a producer
 	pool := core.NewBlockPool(0)
@@ -202,14 +202,14 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
-	utxos2, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos2, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//add second transaction
 	tx2, err := core.NewUTXOTransaction(utxos2, wallet1.GetAddress(), wallet2.GetAddress(), sendAmount2, keyPair, common.NewAmount(0), "")
 	assert.Nil(t, err)
 
-	bc.GetTxPool().Push(&tx2)
+	bc.GetTxPool().Push(tx2)
 
 	//Make sure there are blocks have been mined
 	currCount := GetNumberOfBlocks(t, bc.Iterator())
@@ -248,6 +248,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		pow,
 		128,
 		nil,
+		100000,
 	)
 	defer bc.GetDb().Close()
 	pool := core.NewBlockPool(0)
@@ -302,11 +303,11 @@ func TestPreventDoubleSpend(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
-	utxos, err := core.LoadUTXOIndex(db).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
@@ -316,8 +317,8 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
-	bc.GetTxPool().Push(&tx1)
-	bc.GetTxPool().Push(&tx2)
+	bc.GetTxPool().Push(tx1)
+	bc.GetTxPool().Push(tx2)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
@@ -336,8 +337,6 @@ func TestPreventDoubleSpend(t *testing.T) {
 	block, _ := bc.GetBlockByHeight(1)
 	// Only one transaction packaged(1 coinbase + 1 transaction)
 	assert.Equal(t, 2, len(block.GetTransactions()))
-
-	assert.False(t, core.MetricsTxDoubleSpend.Count() > 0)
 }
 
 func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
@@ -372,10 +371,12 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
 	pubKeyHash, _ := core.NewAddress(addr).GetPubKeyHash()
-	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-	for _, out := range utxos {
-		balance = balance.Add(out.Value)
+	//_, utxo, nextUtxos := utxos.Iterator()
+	for _, utxo := range utxos.Indices {
+		balance = balance.Add(utxo.Value)
+		//_, utxo, nextUtxos = nextUtxos.Iterator()
 	}
 	return balance, nil
 }

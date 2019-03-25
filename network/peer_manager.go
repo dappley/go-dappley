@@ -25,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/network/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-peer"
+	"github.com/golang/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
@@ -45,8 +45,8 @@ const (
 
 	defaultMaxConnectionOutCount = 16
 	defaultMaxConnectionInCount  = 128
-	syncPeersWaitTime            = 10
-	syncPeersScheduleTime        = 30 * time.Second
+	syncPeersWaitTime            = 10 * time.Second
+	syncPeersScheduleTime        = 10 * time.Minute
 	checkSeedsConnectionTime     = 15 * time.Minute
 )
 
@@ -97,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:                 make(map[peer.ID]*PeerInfo),
-		syncPeers:             make(map[peer.ID]*PeerInfo),
-		streams:               make(map[peer.ID]*StreamInfo),
-		mutex:                 sync.RWMutex{},
+		seeds:     make(map[peer.ID]*PeerInfo),
+		syncPeers: make(map[peer.ID]*PeerInfo),
+		streams:   make(map[peer.ID]*StreamInfo),
+		mutex:     sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
@@ -165,6 +165,9 @@ func (pm *PeerManager) AddSeedByPeerInfo(peerInfo *PeerInfo) error {
 }
 
 func (pm *PeerManager) AddAndConnectPeerByString(fullAddr string) error {
+
+	logger.Info("PeerManager: AddAndConnectPeerByString")
+
 	peerInfo, err := createPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
@@ -182,6 +185,9 @@ func (pm *PeerManager) AddAndConnectPeerByString(fullAddr string) error {
 }
 
 func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
+
+	logger.Info("PeerManager: AddAndConnectPeer")
+
 	_, err := pm.connectPeer(peerInfo, ConnectionTypeOut)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
@@ -223,15 +229,15 @@ func (pm *PeerManager) getUnConnectedSeeds() []*PeerInfo {
 	return unConnectedSeeds
 }
 
-func (pm *PeerManager) Broadcast(data []byte) {
+func (pm *PeerManager) Broadcast(data []byte, priority int) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 	for _, s := range pm.streams {
-		s.stream.Send(data)
+		s.stream.Send(data, priority)
 	}
 }
 
-func (pm *PeerManager) Unicast(data []byte, pid peer.ID) {
+func (pm *PeerManager) Unicast(data []byte, pid peer.ID, priority int) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
@@ -240,9 +246,10 @@ func (pm *PeerManager) Unicast(data []byte, pid peer.ID) {
 		logger.WithFields(logger.Fields{
 			"pid": pid,
 		}).Warn("PeerManager: Unicast pid not found.")
+		return
 	}
 
-	streamInfo.stream.Send(data)
+	streamInfo.stream.Send(data, priority)
 }
 
 func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
@@ -258,6 +265,12 @@ func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
 }
 
 func (pm *PeerManager) AddStream(stream *Stream) {
+
+	logger.WithFields(logger.Fields{
+		"peer_id": stream.peerID,
+		"addr":    stream.remoteAddr.String(),
+	}).Info("PeerManager: Add Stream")
+
 	connectionType := pm.getStreamConnectionType(stream)
 	if !pm.checkAndAddStream(stream.peerID, connectionType, stream) {
 		stream.StopStream(nil)
@@ -265,6 +278,12 @@ func (pm *PeerManager) AddStream(stream *Stream) {
 }
 
 func (pm *PeerManager) StopStream(stream *Stream) {
+
+	logger.WithFields(logger.Fields{
+		"peer_id": stream.peerID,
+		"addr":    stream.remoteAddr.String(),
+	}).Info("PeerManager: Stop Stream")
+
 	pm.mutex.Lock()
 	streamInfo, ok := pm.streams[stream.peerID]
 	if !ok || streamInfo.stream != stream {
@@ -283,6 +302,7 @@ func (pm *PeerManager) StopStream(stream *Stream) {
 		//pass
 	}
 	delete(pm.streams, stream.peerID)
+	pm.node.host.Peerstore().ClearAddrs(stream.peerID)
 	streamLen := len(pm.streams)
 	pm.mutex.Unlock()
 
@@ -312,6 +332,11 @@ func (pm *PeerManager) RandomGetConnectedPeers(number int) []*PeerInfo {
 }
 
 func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*PeerInfo) {
+
+	logger.WithFields(logger.Fields{
+		"num_of_peers": len(peers),
+	}).Info("PeerManager: Connect seed peers")
+
 	for _, peerInfo := range peers {
 		currentPeer := peerInfo
 		go func() {
@@ -322,7 +347,11 @@ func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*PeerInfo) {
 }
 
 func (pm *PeerManager) startConnectSyncPeers() {
-	logger.Infof("PeerManger: sync peer count %v", len(pm.syncPeers))
+
+	logger.WithFields(logger.Fields{
+		"num_of_peers": len(pm.syncPeers),
+	}).Info("PeerManager: Connect sync peers")
+
 	if len(pm.syncPeers) == 0 {
 		return
 	}
@@ -336,6 +365,12 @@ func (pm *PeerManager) startConnectSyncPeers() {
 	randomChoosePeers := randomChoosePeers(leftConnectionOut, toCheckPeers)
 	wg := &sync.WaitGroup{}
 	wg.Add(len(randomChoosePeers))
+
+	logger.WithFields(logger.Fields{
+		"maxConnectionOutCount":     pm.maxConnectionOutCount,
+		"connectionOutCount":        pm.connectionOutCount,
+		"num_of_reconnecting_peers": len(randomChoosePeers),
+	}).Info("PeerManager: Connect sync peers")
 
 	for _, peerInfo := range randomChoosePeers {
 		currentPeer := peerInfo
@@ -388,7 +423,7 @@ func (pm *PeerManager) startSyncPeers() {
 	pm.createSyncContext()
 	pm.node.SyncPeersBroadcast()
 
-	syncTimer := time.NewTimer(syncPeersWaitTime * time.Second)
+	syncTimer := time.NewTimer(syncPeersWaitTime)
 	go func() {
 		<-syncTimer.C
 		syncTimer.Stop()
@@ -481,9 +516,16 @@ func (pm *PeerManager) collectSyncPeersResult() bool {
 		}
 
 		pm.syncPeers[key] = &PeerInfo{PeerId: key, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
+
+		logger.WithFields(logger.Fields{
+			"peer_id": pm.syncPeers[key].PeerId,
+			"addr":    pm.syncPeers[key].Addrs[0].String(),
+		}).Infof("PeerManager: Collect sync peers")
 	}
 
-	logger.Infof("PeerManager: collect sync peers num %v.", len(pm.syncPeers))
+	logger.WithFields(logger.Fields{
+		"num_of_peers": len(pm.syncPeers),
+	}).Infof("PeerManager: Collect sync peers")
 
 	pm.syncPeerContext = nil
 	return true
@@ -493,13 +535,12 @@ func (pm *PeerManager) saveSyncPeers() {
 	syncPeers := pm.cloneSyncPeers()
 	db := pm.node.GetBlockchain().GetDb()
 
-	peersPb := networkpb.Peerlist{}
-
+	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range syncPeers {
-		peersPb.Peerlist = append(peersPb.Peerlist, peerInfo.ToProto().(*networkpb.Peer))
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
-	bytes, err := proto.Marshal(&peersPb)
+	bytes, err := proto.Marshal(&networkpb.ReturnPeerList{PeerList: peerPbs})
 	if err != nil {
 		logger.WithError(err).Info("PeerManager: serialize sync peers failed.")
 	}
@@ -616,6 +657,10 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 	}
 
 	peerStream := NewStream(stream)
+	logger.WithFields(logger.Fields{
+		"PeerId": peerStream.peerID,
+		"Addr":   peerStream.remoteAddr.String(),
+	}).Info("PeerManager: Connect peer actual stream")
 	if !pm.checkAndAddStream(peerInfo.PeerId, connectionType, peerStream) {
 		peerStream.StopStream(nil)
 		return nil, nil
@@ -635,6 +680,9 @@ func (pm *PeerManager) getStreamConnectionType(stream *Stream) ConnectionType {
 }
 
 func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType ConnectionType, stream *Stream) bool {
+
+	logger.Info("PeerManager: checkAndAddStream")
+
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 	_, ok := pm.streams[peerId]
@@ -677,19 +725,23 @@ func (pm *PeerManager) loadSyncPeers() error {
 		return err
 	}
 
-	peerlistPb := &networkpb.Peerlist{}
+	peerListPb := &networkpb.ReturnPeerList{}
 
-	if err := proto.Unmarshal(peersBytes, peerlistPb); err != nil {
+	if err := proto.Unmarshal(peersBytes, peerListPb); err != nil {
 		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
 	}
 
-	for _, peerPb := range peerlistPb.Peerlist {
+	for _, peerPb := range peerListPb.GetPeerList() {
 		peerInfo := &PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
 		}
 
 		pm.syncPeers[peerInfo.PeerId] = peerInfo
+		logger.WithFields(logger.Fields{
+			"peer_id": peerInfo.PeerId,
+			"addr":    peerInfo.Addrs[0].String(),
+		}).Info("loadSyncPeers")
 	}
 
 	logger.WithError(err).Warnf("PeerManager: load sync peers count %v.", len(pm.syncPeers))
@@ -718,27 +770,23 @@ func createPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
 
 //convert to protobuf
 func (p *PeerInfo) ToProto() proto.Message {
-	peerPb := &networkpb.Peer{
-		Peerid: peer.IDB58Encode(p.PeerId),
-	}
-
+	var addresses []string
 	for _, addr := range p.Addrs {
-		peerPb.Addr = append(peerPb.Addr, addr.String())
-		//logger.Infof("---Save peer addr %v", addr.String())
+		addresses = append(addresses, addr.String())
 	}
 
-	return peerPb
+	return &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
 }
 
 //convert from protobuf
 func (p *PeerInfo) FromProto(pb proto.Message) error {
-	pid, err := peer.IDB58Decode(pb.(*networkpb.Peer).Peerid)
+	pid, err := peer.IDB58Decode(pb.(*networkpb.PeerInfo).GetId())
 	if err != nil {
 		return err
 	}
 	p.PeerId = pid
 
-	for _, addr := range pb.(*networkpb.Peer).Addr {
+	for _, addr := range pb.(*networkpb.PeerInfo).GetAddress() {
 		multiaddr, err := ma.NewMultiaddr(addr)
 		if err != nil {
 			return err

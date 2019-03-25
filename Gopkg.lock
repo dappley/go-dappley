@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:e92f5581902c345eb4ceffdcd4a854fb8f73cf436d47d837d1ec98ef1fe0a214"
+  name = "github.com/StackExchange/wmi"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
+  version = "1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:4cf11742b199ab3aacf26b00187e72f7ff8ba2145f363b74f295d54f098f79e4"
   name = "github.com/agl/ed25519"
@@ -62,6 +70,17 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:c96d16a4451e48e2c44b2c3531fd8ec9248d822637f1911a88959ca0bcae4a64"
+  name = "github.com/go-ole/go-ole"
+  packages = [
+    ".",
+    "oleutil",
+  ]
+  pruneopts = "UT"
+  revision = "39dc8486bd0952279431257138bc428275b86797"
+  version = "v1.2.2"
+
+[[projects]]
   digest = "1:2537bea8e6a4a90946bcd145cbdbd6f54d2dc263b3dee0ad96894e555a474f8b"
   name = "github.com/gogo/protobuf"
   packages = [
@@ -71,6 +90,14 @@
   pruneopts = "UT"
   revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
   version = "v1.1.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:4a8ed9b8cf22bd03bee5d74179fa06a282e4a73b6de949f7a865ff56cd2537e0"
+  name = "github.com/golang-collections/collections"
+  packages = ["stack"]
+  pruneopts = "UT"
+  revision = "604e922904d35e97f98a774db7881f049cd8d970"
 
 [[projects]]
   digest = "1:bc38c7c481812e178d85160472e231c5e1c9a7f5845d67e23ee4e706933c10d8"
@@ -597,6 +624,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:f7b91105744c644ef33da0707bf76133f388ae8704ce8c39d8e8c0ede62b14ba"
+  name = "github.com/raviqqe/hamt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a784a8755247b09b135718f066d5426bc6051937"
+
+[[projects]]
+  branch = "master"
   digest = "1:d38f81081a389f1466ec98192cf9115a82158854d6f01e1c23e2e7554b97db71"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
@@ -610,6 +645,18 @@
   pruneopts = "UT"
   revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:a60beb391f29ba3525ad727182c89dd4b49a582640de8aa995aa2204df4a9bda"
+  name = "github.com/shirou/gopsutil"
+  packages = [
+    "cpu",
+    "internal/common",
+    "mem",
+  ]
+  pruneopts = "UT"
+  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
+  version = "v2.19.01"
 
 [[projects]]
   digest = "1:9e9193aa51197513b3abcb108970d831fbcf40ef96aa845c4f03276e1fa316d2"
@@ -870,8 +917,8 @@
   input-imports = [
     "github.com/asaskevich/EventBus",
     "github.com/btcsuite/btcutil/base58",
-    "github.com/davecgh/go-spew/spew",
     "github.com/gogo/protobuf/proto",
+    "github.com/golang-collections/collections/stack",
     "github.com/golang/mock/gomock",
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/golang-lru",
@@ -884,8 +931,11 @@
     "github.com/libp2p/go-libp2p-peerstore",
     "github.com/multiformats/go-multiaddr",
     "github.com/peterh/liner",
+    "github.com/raviqqe/hamt",
     "github.com/rcrowley/go-metrics",
     "github.com/satori/go.uuid",
+    "github.com/shirou/gopsutil/cpu",
+    "github.com/shirou/gopsutil/mem",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",

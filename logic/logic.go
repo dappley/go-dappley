@@ -22,15 +22,14 @@ import (
 	"errors"
 	"time"
 
-	logger "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const unlockduration = 300 * time.Second
@@ -47,12 +46,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
 	if !address.ValidateAddress() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, scManager)
+	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, scManager, blkSizeLimit)
 
 	return bc, nil
 }
@@ -200,17 +199,17 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address core.Address, db storage.Storage) (*common.Amount, error) {
+func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, error) {
 	pubKeyHash, valid := address.GetPubKeyHash()
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
 
 	balance := common.NewAmount(0)
-	utxoIndex := core.LoadUTXOIndex(db)
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-	for _, out := range utxos {
-		balance = balance.Add(out.Value)
+	for _, utxo := range utxos.Indices {
+		balance = balance.Add(utxo.Value)
 	}
 
 	return balance, nil
@@ -259,8 +258,9 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 	}
 
 	pubKeyHash, _ := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
-	utxoIndex := core.LoadUTXOIndex(bc.GetDb())
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetTransactions())
 
 	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), amount)
@@ -270,8 +270,10 @@ func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amo
 
 	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, tip, contract)
 
-	bc.GetTxPool().Push(&tx)
-	node.TxBroadcast(&tx)
+	bc.GetTxPool().Push(tx)
+	if node != nil {
+		node.TxBroadcast(&tx)
+	}
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
 		if to.String() == contractAddr.String() {

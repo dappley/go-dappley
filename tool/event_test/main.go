@@ -3,26 +3,27 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/common"
 	"io/ioutil"
 
-	"github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/rpc/pb"
 )
 
-func main(){
+func main() {
 	conn, _ := grpc.Dial(":50051", grpc.WithInsecure())
 	rpc := rpcpb.NewRpcServiceClient(conn)
 
-	c , err :=rpc.RpcSubscribe(context.Background(), &rpcpb.SubscribeRequest{Topics: []string{"topic1","topic2","topic3"}})
-	if err!= nil{
+	c, err := rpc.RpcSubscribe(context.Background(), &rpcpb.SubscribeRequest{Topics: []string{"topic1", "topic2", "topic3"}})
+	if err != nil {
 		logger.Panic(err)
 	}
 	admin := rpcpb.NewAdminServiceClient(conn)
 	raw, err := ioutil.ReadFile("test_event.js")
-	if err!=nil{
+	if err != nil {
 		logger.Panic(err)
 	}
 
@@ -34,11 +35,11 @@ func main(){
 		WalletPath: client.GetWalletFilePath(),
 		Data:       string(raw),
 	})
-	if err!=nil{
+	if err != nil {
 		logger.Panic(err)
 	}
-	fmt.Println("Contract addr:", resp.ContractAddr)
-	contractAddr := resp.ContractAddr
+	fmt.Println("Contract addr:", resp.ContractAddress)
+	contractAddr := resp.ContractAddress
 	//contractAddr := "cTuDnSBeqDuqwfQiRrS2UrCRywEfKQJeGs"
 	count := 0
 	for {
@@ -49,7 +50,7 @@ func main(){
 			Amount:     common.NewAmount(1).Bytes(),
 			Tip:        common.NewAmount(0).Bytes(),
 			WalletPath: client.GetWalletFilePath(),
-			Data:       fmt.Sprintf("{\"function\":\"trigger\",\"args\":[\"topic%d\",\"data%d\"]}",count%3+1,count),
+			Data:       fmt.Sprintf("{\"function\":\"trigger\",\"args\":[\"topic%d\",\"data%d\"]}", count%3+1, count),
 		})
 		if err != nil {
 			logger.Panic(err)
@@ -60,8 +61,8 @@ func main(){
 			logger.Panic(err)
 		}
 		logger.WithFields(logger.Fields{
-			"data":	resp.Data,
+			"data": resp.Data,
 		}).Info("Received data!")
-		count+=1
+		count += 1
 	}
 }

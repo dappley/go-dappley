@@ -21,37 +21,29 @@ package network
 import (
 	"bufio"
 	"errors"
-	"math/big"
-	"reflect"
-	"sync"
-
 	"github.com/dappley/go-dappley/network/pb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-net"
 	"github.com/libp2p/go-libp2p-peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+	"math/big"
+	"reflect"
 )
 
 const (
-	GetBlockchainInfo    = "GetBlockchainInfo"
-	ReturnBlockchainInfo = "ReturnGetBlockchainInfo"
-	SyncBlock            = "SyncBlock"
-	GetBlocks            = "GetBlocks"
-	ReturnBlocks         = "ReturnBlocks"
-	SyncPeerList         = "SyncPeerList"
-	GetPeerList          = "GetPeerList"
-	ReturnPeerList       = "ReturnPeerList"
-	RequestBlock         = "requestBlock"
-	BroadcastTx          = "BroadcastTx"
-	GetCommonBlocks      = "GetCommonBlocks"
-	ReturnCommonBlocks   = "ReturnCommonBlocks"
-	Unicast              = 0
-	Broadcast            = 1
-	lengthByteLength     = 8
-	startByteLength      = 2
-	checkSumLength       = 1
-	headerLength         = lengthByteLength + startByteLength + checkSumLength
+	lengthByteLength       = 8
+	startByteLength        = 2
+	checkSumLength         = 1
+	headerLength           = lengthByteLength + startByteLength + checkSumLength
+	highPriorityChLength   = 1024 * 4
+	normalPriorityChLength = 1024 * 4
+	WriteChTotalLength     = highPriorityChLength + normalPriorityChLength
+)
+
+const (
+	HighPriorityCommand = iota
+	NormalPriorityCommand
 )
 
 var (
@@ -66,15 +58,17 @@ var (
 )
 
 type Stream struct {
-	peerID      peer.ID
-	remoteAddr  multiaddr.Multiaddr
-	stream      net.Stream
-	msglength   int
-	rawByteRead []byte
-	msgReadCh   chan []byte
-	dataCh      chan []byte
-	quitRdCh    chan bool
-	quitWrCh    chan bool
+	peerID                peer.ID
+	remoteAddr            multiaddr.Multiaddr
+	stream                net.Stream
+	msglength             int
+	rawByteRead           []byte
+	msgReadCh             chan []byte
+	highPriorityWriteCh   chan []byte
+	normalPriorityWriteCh chan []byte
+	msgNotifyCh           chan bool
+	quitRdCh              chan bool
+	quitWrCh              chan bool
 }
 
 func NewStream(s net.Stream) *Stream {
@@ -85,13 +79,16 @@ func NewStream(s net.Stream) *Stream {
 		0,
 		[]byte{},
 		make(chan []byte, 100),
-		make(chan []byte, 5), //TODO: Redefine the size of the channel
-		make(chan bool, 1),   //two channels to stop
+		make(chan []byte, highPriorityChLength),
+		make(chan []byte, normalPriorityChLength),
+		make(chan bool, WriteChTotalLength),
+		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
 	}
 }
 
 func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
+	logger.Warn("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, dispatch)
 }
@@ -99,6 +96,7 @@ func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
 func (s *Stream) StopStream(err error) {
 	logger.WithFields(logger.Fields{
 		"peer_address": s.remoteAddr,
+		"pid":          s.peerID,
 		"error":        err,
 	}).Info("Stream: is terminated!!")
 	s.quitRdCh <- true
@@ -106,8 +104,51 @@ func (s *Stream) StopStream(err error) {
 	s.stream.Close()
 }
 
-func (s *Stream) Send(data []byte) {
-	s.dataCh <- data
+func (s *Stream) Send(data []byte, priority int) {
+	defer func() {
+		if p := recover(); p != nil {
+			logger.WithFields(logger.Fields{
+				"peer_address": s.remoteAddr,
+				"pid":          s.peerID,
+				"error":        p,
+			}).Info("Stream: data channel closed.")
+		}
+	}()
+
+	switch priority {
+	case HighPriorityCommand:
+		select {
+		case s.highPriorityWriteCh <- data:
+		default:
+			logger.WithFields(logger.Fields{
+				"dataCh_len": len(s.highPriorityWriteCh),
+			}).Warn("Stream: High priority message channel full!")
+			return
+		}
+	case NormalPriorityCommand:
+		select {
+		case s.normalPriorityWriteCh <- data:
+		default:
+			logger.WithFields(logger.Fields{
+				"dataCh_len": len(s.normalPriorityWriteCh),
+			}).Warn("Stream: normal priority message channel full!")
+			return
+		}
+	default:
+		logger.WithFields(logger.Fields{
+			"priority": priority,
+		}).Warn("Stream: priority is invalid!")
+		return
+	}
+
+	select {
+	case s.msgNotifyCh <- true:
+	default:
+		logger.WithFields(logger.Fields{
+			"dataCh_len": len(s.msgNotifyCh),
+		}).Warn("Stream: message notification channel full!")
+	}
+
 }
 
 func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
@@ -121,8 +162,12 @@ func (s *Stream) read(rw *bufio.ReadWriter) {
 
 	n, err := rw.Read(buffer)
 	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"num_of_byte_read": n,
+		}).Warn("Stream: Read failed")
 		s.StopStream(err)
 	}
+
 	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
 
 	for {
@@ -238,19 +283,44 @@ func containStartingBytes(data []byte) bool {
 }
 
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
-	var mutex = &sync.Mutex{}
+
 	for {
 		select {
-		case data := <-s.dataCh:
-			mutex.Lock()
-			//attach a delimiter byte of 0x00 to the end of the message
-			rw.WriteString(string(encodeMessage(data)))
-			rw.Flush()
-			mutex.Unlock()
 		case <-s.quitWrCh:
+			// Fix bug when send data to peer simultaneous with close stream,
+			// and send will hang because highPriorityWriteCh is full.
+			close(s.highPriorityWriteCh)
+			close(s.normalPriorityWriteCh)
+			close(s.msgNotifyCh)
 			logger.Debug("Stream: write loop is terminated!")
 			return nil
+		case <-s.msgNotifyCh:
+			select {
+			case data := <-s.highPriorityWriteCh:
+				n, err := s.stream.Write(encodeMessage(data))
+				if err != nil {
+					logger.WithError(err).WithFields(logger.Fields{
+						"num_of_bytes_sent": n,
+						"orig_data_size":    len(encodeMessage(data)),
+					}).Warn("Stream: Send message through high priority channel failed!")
+				}
+				continue
+			default:
+			}
+			select {
+			case data := <-s.normalPriorityWriteCh:
+				n, err := s.stream.Write(encodeMessage(data))
+				if err != nil {
+					logger.WithError(err).WithFields(logger.Fields{
+						"num_of_bytes_sent": n,
+						"orig_data_size":    len(encodeMessage(data)),
+					}).Warn("Stream: Send message through normal priority channel failed!")
+				}
+				continue
+			default:
+			}
 		}
+
 	}
 	return nil
 }

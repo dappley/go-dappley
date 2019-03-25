@@ -29,7 +29,7 @@ import (
 	"github.com/dappley/go-dappley/mocks"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-crypto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +52,7 @@ func TestNode_prepareData(t *testing.T) {
 	}{
 		{
 			name:    "CorrectProtoMsg",
-			msgData: &networkpb.Peer{Peerid: "pid", Addr: []string{"addr"}},
+			msgData: &networkpb.PeerInfo{Id: "pid", Address: []string{"addr"}},
 			cmd:     SyncPeerList,
 			retData: []byte{10, 12, 83, 121, 110, 99, 80, 101, 101, 114, 76, 105, 115, 116, 18, 11, 10, 3, 112, 105, 100, 18, 4, 97, 100, 100, 114},
 			retErr:  nil,
@@ -66,7 +66,7 @@ func TestNode_prepareData(t *testing.T) {
 		},
 		{
 			name:    "NoCmdInput",
-			msgData: &networkpb.Peer{Peerid: "pid", Addr: []string{"addr"}},
+			msgData: &networkpb.PeerInfo{Id: "pid", Address: []string{"addr"}},
 			cmd:     "",
 			retData: nil,
 			retErr:  ErrDapMsgNoCmd,
@@ -99,7 +99,7 @@ func TestNode_Stop(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
 	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	mockConsensus := new(mocks.Consensus)
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	node := NewNode(bc, pool)
 	err := node.Start(22100)

@@ -19,13 +19,14 @@
 package config
 
 import (
-	"github.com/dappley/go-dappley/config/pb"
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/dappley/go-dappley/config/pb"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -40,8 +41,8 @@ func TestLoadConfig(t *testing.T) {
 			content: fakeFileContent(),
 			expected: &configpb.Config{
 				ConsensusConfig: &configpb.ConsensusConfig{
-					MinerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					PrivKey:   "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+					MinerAddress: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					PrivateKey:   "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
 				NodeConfig: &configpb.NodeConfig{
 					Port:    5,
@@ -56,8 +57,8 @@ func TestLoadConfig(t *testing.T) {
 			content: noSeedContent(),
 			expected: &configpb.Config{
 				ConsensusConfig: &configpb.ConsensusConfig{
-					MinerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					PrivKey:   "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+					MinerAddress: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					PrivateKey:   "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 				},
 				NodeConfig: &configpb.NodeConfig{
 					Port: 5,
@@ -90,25 +91,25 @@ func TestLoadConfig(t *testing.T) {
 
 func fakeFileContent() string {
 	return `
-	consensusConfig{
-					minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+	consensus_config{
+					miner_address: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					private_key: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
-	nodeConfig{
+	node_config{
 		port: 5
 		seed: "/ip4/127.0.0.1/tcp/34836/ipfs/QmPtahvwSvnSHymR5HZiSTpkm9xHymx9QLNkUjJ7mfygGs"
-		dbPath: "dbPath"
-		rpcPort: 200
+		db_path: "dbPath"
+		rpc_port: 200
 	}`
 }
 
 func noSeedContent() string {
 	return `
-	consensusConfig{
-						minerAddr: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
-					privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+	consensus_config{
+						miner_address: "1BpXBb3uunLa9PL8MmkMtKNd3jzb5DHFkG",
+					private_key: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
 	}
-	nodeConfig{
+	node_config{
 		port: 5
 	}`
 }

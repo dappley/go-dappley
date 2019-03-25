@@ -21,6 +21,8 @@ package core
 import (
 	"bytes"
 	"errors"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/btcsuite/btcutil/base58"
 )
@@ -76,4 +78,16 @@ func (a Address) GetPubKeyHash() ([]byte, bool) {
 	}
 	return nil, false
 
+}
+
+//ToProto converts Address object to protobuf message
+func (a *Address) ToProto() proto.Message {
+	return &corepb.Address{
+		Address: a.Address,
+	}
+}
+
+//FromProto converts protobuf message to Address object
+func (a *Address) FromProto(pb proto.Message) {
+	a.Address = pb.(*corepb.Address).Address
 }

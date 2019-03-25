@@ -19,16 +19,18 @@
 package core
 
 import (
+	"encoding/hex"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
+	storage2 "github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 var header = &BlockHeader{
@@ -152,15 +154,15 @@ func TestBlock_Proto(t *testing.T) {
 func TestBlock_VerifyHash(t *testing.T) {
 	b1 := GenerateMockBlock()
 
-	//The mocked block does not have correct hash value
+	//The mocked block does not have correct hash Value
 	assert.False(t, b1.VerifyHash())
 
-	//calculate correct hash value
+	//calculate correct hash Value
 	hash := b1.CalculateHash()
 	b1.SetHash(hash)
 	assert.True(t, b1.VerifyHash())
 
-	//calculate a hash value with a different nonce
+	//calculate a hash Value with a different nonce
 	hash = b1.CalculateHashWithNonce(b1.GetNonce() + 1)
 	b1.SetHash(hash)
 	assert.False(t, b1.VerifyHash())
@@ -235,14 +237,13 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	userAddr := userPubKeyHash.GenerateAddress()
 	contractPubKeyHash := NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
-	contractTX := &Transaction{
-		[]byte("txid"),
-		[]TXInput{{[]byte("txinid"), 0, nil, userPubKey}},
-		[]TXOutput{*NewContractTXOutput(contractAddr, "{\"function\": \"foo\"}")},
-		common.NewAmount(0),
-	}
+
+	txIdStr := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	generatedTxId, err := hex.DecodeString(txIdStr)
+	assert.Nil(t, err)
+	fmt.Println(hex.EncodeToString(generatedTxId))
 	generatedTX := &Transaction{
-		[]byte("contractGenerated"),
+		generatedTxId,
 		[]TXInput{
 			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
 			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
@@ -265,70 +266,20 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
 	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
 
-	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0}
-	var utxoIndex = UTXOIndex{
-		map[string][]*UTXO{
-			string(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0}},
-		},
-		&sync.RWMutex{},
+	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
+
+	tx1Utxos := map[string][]*UTXO{
+		hex.EncodeToString(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, utxoIndex.index[string(pkHash2)])
+	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, tx1Utxos[hex.EncodeToString(pkHash2)])
 	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
-	var generatedRewards map[string]string
-
-	// mockImportRewardStorage intercepts the reward storage imported to the engine
-	mockImportRewardStorage := func(args mock.Arguments) {
-		generatedRewards = args.Get(0).(map[string]string)
-	}
-
-	// mockRewardExecute simulates the reward generating sc execution by adding rewards to reward storage
-	mockRewardExecute := func(args mock.Arguments) {
-		generatedRewards[address1Hash.GenerateAddress().String()] = "10"
-	}
-
-	// Mock smart contract engine that generate rewards
-	rewardEngine := new(MockScEngine)
-	rewardEngine.On("ImportSourceCode", mock.Anything)
-	rewardEngine.On("ImportLocalStorage", mock.Anything)
-	rewardEngine.On("ImportContractAddr", mock.Anything)
-	rewardEngine.On("ImportUTXOs", mock.Anything)
-	rewardEngine.On("ImportSourceTXID", mock.Anything)
-	rewardEngine.On("ImportRewardStorage", mock.Anything).Run(mockImportRewardStorage)
-	rewardEngine.On("ImportTransaction", mock.Anything)
-	rewardEngine.On("ImportPrevUtxos", mock.Anything)
-	rewardEngine.On("GetGeneratedTXs").Return([]*Transaction{})
-	rewardEngine.On("ImportCurrBlockHeight", mock.Anything)
-	rewardEngine.On("ImportSeed", mock.Anything)
-	rewardEngine.On("DestroyEngine")
-	rewardEngine.On("Execute", mock.Anything, mock.Anything).Run(mockRewardExecute).Return("0")
-	rewardEngineManager := new(MockScEngineManager)
-	rewardEngineManager.On("CreateEngine").Return(rewardEngine)
-
-	// Mock smart contract engine that generate contract-incurred transactions
-	genTXEngine := new(MockScEngine)
-	genTXEngine.On("ImportSourceCode", mock.Anything)
-	genTXEngine.On("ImportLocalStorage", mock.Anything)
-	genTXEngine.On("ImportContractAddr", mock.Anything)
-	genTXEngine.On("ImportUTXOs", mock.Anything)
-	genTXEngine.On("ImportSourceTXID", mock.Anything)
-	genTXEngine.On("ImportRewardStorage", mock.Anything)
-	genTXEngine.On("ImportTransaction", mock.Anything)
-	genTXEngine.On("ImportPrevUtxos", mock.Anything)
-	genTXEngine.On("GetGeneratedTXs").Return([]*Transaction{generatedTX})
-	genTXEngine.On("ImportCurrBlockHeight", mock.Anything)
-	genTXEngine.On("ImportSeed", mock.Anything)
-	genTXEngine.On("DestroyEngine")
-	genTXEngine.On("Execute", mock.Anything, mock.Anything).Return("0")
-	genTXEngineManager := new(MockScEngineManager)
-	genTXEngineManager.On("CreateEngine").Return(genTXEngine)
-
 	tests := []struct {
-		name          string
-		txs           []*Transaction
-		utxos         map[string][]*UTXO
-		engineManager ScEngineManager
-		ok            bool
+		name   string
+		txs    []*Transaction
+		utxos  map[string][]*UTXO
+		txPool *TransactionPool
+		ok     bool
 	}{
 		{
 			"normal txs",
@@ -358,78 +309,64 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		{
 			"normal dependent txs",
 			[]*Transaction{&dependentTx2, &dependentTx3},
-			utxoIndex.index,
+			tx1Utxos,
 			nil,
 			true,
 		},
 		{
 			"invalid dependent txs",
 			[]*Transaction{&dependentTx3, &dependentTx2},
-			utxoIndex.index,
+			tx1Utxos,
 			nil,
 			false,
-		},
-		{
-			"contract deployment tx",
-			[]*Transaction{contractTX},
-			map[string][]*UTXO{},
-			rewardEngineManager,
-			true,
 		},
 		{
 			"reward tx",
-			[]*Transaction{contractTX, &rewardTX},
+			[]*Transaction{&rewardTX},
 			map[string][]*UTXO{
-				string(contractPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0},
+				hex.EncodeToString(contractPubKeyHash): {
+					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
 				},
-				string(userPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
-				},
-			},
-			rewardEngineManager,
-			true,
-		},
-		{
-			"generated tx",
-			[]*Transaction{contractTX, generatedTX},
-			map[string][]*UTXO{
-				string(contractPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0},
-					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1},
-				},
-				string(userPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0},
-				},
-			},
-			genTXEngineManager,
-			true,
-		},
-		{
-			"no manager",
-			[]*Transaction{contractTX, &rewardTX},
-			map[string][]*UTXO{
-				string(contractPubKeyHash): {
-					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("txid"), 0},
+				hex.EncodeToString(userPubKeyHash): {
+					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},
 			nil,
 			false,
 		},
 		{
-			"reward tx only",
-			[]*Transaction{&rewardTX},
-			map[string][]*UTXO{},
-			rewardEngineManager,
+			"generated tx",
+			[]*Transaction{generatedTX},
+			map[string][]*UTXO{
+				hex.EncodeToString(contractPubKeyHash): {
+					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
+					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, UtxoNormal},
+				},
+				hex.EncodeToString(userPubKeyHash): {
+					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
+				},
+			},
+			&TransactionPool{txs: map[string]*TransactionNode{"contractGenerated": {Value: generatedTX}}},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			utxoIndex := UTXOIndex{tt.utxos, &sync.RWMutex{}}
+			db := storage2.NewRamStorage()
+			index := make(map[string]*UTXOTx)
+
+			for key, addrUtxos := range tt.utxos {
+				utxoTx := NewUTXOTx()
+				for _, addrUtxo := range addrUtxos {
+					utxoTx = utxoTx.PutUtxo(addrUtxo)
+				}
+				index[key] = &utxoTx
+			}
+
+			utxoIndex := UTXOIndex{index, NewUTXOCache(db), &sync.RWMutex{}}
 			scState := NewScState()
 			block := NewBlock(tt.txs, blk)
-			assert.Equal(t, tt.ok, block.VerifyTransactions(utxoIndex, scState, tt.engineManager, block))
+			assert.Equal(t, tt.ok, block.VerifyTransactions(&utxoIndex, scState, nil, block))
 		})
 	}
 }

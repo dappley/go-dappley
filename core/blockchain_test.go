@@ -24,6 +24,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
@@ -43,7 +44,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -57,7 +58,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -69,11 +70,11 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
-	bc.AddBlockToTail(blk)
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	assert.False(t, bc.IsHigherThanBlockchain(blk))
 
@@ -85,10 +86,10 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil)
+	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
-	bc.AddBlockToTail(blk)
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	isFound := bc.IsInBlockchain([]byte("hash"))
 	assert.True(t, isFound)
@@ -112,7 +113,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	}
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash())
+	bc.Rollback(blk.GetHash(), NewUTXOIndex(bc.GetUtxoCache()))
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -123,28 +124,29 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 
 func TestBlockchain_AddBlockToTail(t *testing.T) {
 
-	// Serialized data of an empty UTXOIndex (generated using `hex.EncodeToString(UTXOIndex{}.serialize())`)
-	serializedUTXOIndex, _ := hex.DecodeString(`0fff89040102ff8a00010c01ff8800000dff87020102ff880001ff8200002fff81030102ff82000103010854584f757470757401ff8400010454786964010a0001075478496e64657801040000003dff830301010854584f757470757401ff84000103010556616c756501ff8600010a5075624b657948617368010a000108436f6e7472616374010c0000000aff85050102ff8c0000000fff8d05010103496e7401ff8e00000004ff8a0000`)
 	// Serialized data of an empty block (generated using `utx := NewGenesisBlock(Address{}) hex.EncodeToString(utx.Serialize())`)
-	serializedBlk, _ := hex.DecodeString(`37ff8f0301010b426c6f636b53747265616d01ff90000102010648656164657201ff9200010c5472616e73616374696f6e7301ff9c00000061ff9103010111426c6f636b48656164657253747265616d01ff92000106010448617368010a0001085072657648617368010a0001054e6f6e6365010400010954696d657374616d7001040001045369676e010a000106486569676874010600000022ff9b020101135b5d2a636f72652e5472616e73616374696f6e01ff9c0001ff9400002fff93030102ff9400010401024944010a00010356696e01ff98000104566f757401ff9a00010354697001ff860000001dff970201010e5b5d636f72652e5458496e70757401ff980001ff96000040ff95030101075458496e70757401ff96000104010454786964010a000104566f757401040001095369676e6174757265010a0001065075624b6579010a0000001eff990201010f5b5d636f72652e54584f757470757401ff9a0001ff8400003dff830301010854584f757470757401ff84000103010556616c756501ff8600010a5075624b657948617368010a000108436f6e7472616374010c0000000aff85050102ff8c0000000fff8d05010103496e7401ff8e00000070ff900101205e2d1835dd623d81317b6d896b2b541d4ccf4fd5000547f2466cd1492fe6ef4f03fcb6acebc00001010120ba33bb7be2181496cbba9e426505e9fc4ea6f0e4c55fff708697d9c5ed9ff7bd01010201020b48656c6c6f20776f726c64000101010402989680000101020000`)
+	serializedBlk, _ := hex.DecodeString(`0a280a205e2d1835dd623d81317b6d896b2b541d4ccf4fd5000547f2466cd1492fe6ef4f20e0ebd9da0512430a20ba33bb7be2181496cbba9e426505e9fc4ea6f0e4c55fff708697d9c5ed9ff7bd121810ffffffffffffffffff01220b48656c6c6f20776f726c641a050a03989680`)
 	db := new(mocks.Storage)
+
+	// Create a blockchain for testing
+	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
+
+	// Add genesis block
+	genesis := NewGenesisBlock(addr)
 
 	// Storage will allow blockchain creation to succeed
 	db.On("Put", mock.Anything, mock.Anything).Return(nil)
-	db.On("Get", []byte("utxo")).Return(serializedUTXOIndex, nil)
+	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
+	db.On("Get", GetScStateKey([]byte{})).Return([]byte{}, nil)
+	db.On("Get", GetScStateKey(genesis.GetHash())).Return([]byte{}, nil)
 	db.On("Get", mock.Anything).Return(serializedBlk, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()
 	// Flush invoked in AddBlockToTail twice
 	db.On("Flush").Return(nil).Twice()
 
-	// Create a blockchain for testing
-	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, nil, NewTransactionPool(128), nil, BlockchainInit, nil}
-
-	// Add genesis block
-	genesis := NewGenesisBlock(addr)
-	err := bc.AddBlockToTail(genesis)
+	err := bc.AddBlockContextToTail(PrepareBlockContext(bc, genesis))
 
 	// Expect batch write was used
 	db.AssertCalled(t, "EnableBatch")
@@ -161,13 +163,53 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := GenerateMockBlock()
+	blk := NewBlock([]*Transaction{}, genesis)
 	blk.SetHash([]byte("hash1"))
+
 	blk.header.height = 1
-	err = bc.AddBlockToTail(blk)
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
 	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
+}
+
+func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
+	//create a new block chain
+
+	s := storage.NewRamStorage()
+	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+
+	bc := CreateBlockchain(addr, s, nil, 128000000, nil, 100000)
+	var addrs []Address
+	var kps []*KeyPair
+	var pkhs []PubKeyHash
+	for i := 0; i < 10; i++ {
+		kp := NewKeyPair()
+		kps = append(kps, kp)
+		pkh, _ := NewUserPubKeyHash(kp.PublicKey)
+		pkhs = append(pkhs, pkh)
+		addrs = append(addrs, pkh.GenerateAddress())
+	}
+
+	for i := 0; i < b.N; i++ {
+
+		tailBlk, _ := bc.GetTailBlock()
+		txs := []*Transaction{}
+		utxo := NewUTXOIndex(bc.GetUtxoCache())
+		cbtx := NewCoinbaseTX(addrs[0], "", uint64(i+1), common.NewAmount(0))
+		utxo.UpdateUtxo(&cbtx)
+		txs = append(txs, &cbtx)
+		for j := 0; j < 10; j++ {
+			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), addrs[0], addrs[i%10], common.NewAmount(1), kps[0], common.NewAmount(0), "")
+			utxo.UpdateUtxo(&tx)
+			txs = append(txs, &tx)
+		}
+
+		b := NewBlock(txs, tailBlk)
+		b.SetHash(b.CalculateHash())
+		state := LoadScStateFromDatabase(bc.GetDb())
+		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
+	}
 }

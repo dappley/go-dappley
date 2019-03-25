@@ -3,12 +3,10 @@
 
 package networkpb
 
-import (
-	fmt "fmt"
-	pb "github.com/dappley/go-dappley/core/pb"
-	proto "github.com/golang/protobuf/proto"
-	math "math"
-)
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+import pb "github.com/dappley/go-dappley/core/pb"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -24,9 +22,9 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type Dapmsg struct {
 	Cmd                  string   `protobuf:"bytes,1,opt,name=cmd,proto3" json:"cmd,omitempty"`
 	Data                 []byte   `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	UnixTimeRecvd        int64    `protobuf:"varint,3,opt,name=unixTimeRecvd,proto3" json:"unixTimeRecvd,omitempty"`
+	UnixTimeReceived     int64    `protobuf:"varint,3,opt,name=unix_time_received,json=unixTimeReceived,proto3" json:"unix_time_received,omitempty"`
 	Key                  string   `protobuf:"bytes,4,opt,name=key,proto3" json:"key,omitempty"`
-	UniOrBroadcast       int64    `protobuf:"varint,5,opt,name=uniOrBroadcast,proto3" json:"uniOrBroadcast,omitempty"`
+	UniOrBroadcast       int64    `protobuf:"varint,5,opt,name=uni_or_broadcast,json=uniOrBroadcast,proto3" json:"uni_or_broadcast,omitempty"`
 	Counter              uint64   `protobuf:"varint,6,opt,name=counter,proto3" json:"counter,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -37,17 +35,16 @@ func (m *Dapmsg) Reset()         { *m = Dapmsg{} }
 func (m *Dapmsg) String() string { return proto.CompactTextString(m) }
 func (*Dapmsg) ProtoMessage()    {}
 func (*Dapmsg) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{0}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{0}
 }
-
 func (m *Dapmsg) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Dapmsg.Unmarshal(m, b)
 }
 func (m *Dapmsg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Dapmsg.Marshal(b, m, deterministic)
 }
-func (m *Dapmsg) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Dapmsg.Merge(m, src)
+func (dst *Dapmsg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Dapmsg.Merge(dst, src)
 }
 func (m *Dapmsg) XXX_Size() int {
 	return xxx_messageInfo_Dapmsg.Size(m)
@@ -72,9 +69,9 @@ func (m *Dapmsg) GetData() []byte {
 	return nil
 }
 
-func (m *Dapmsg) GetUnixTimeRecvd() int64 {
+func (m *Dapmsg) GetUnixTimeReceived() int64 {
 	if m != nil {
-		return m.UnixTimeRecvd
+		return m.UnixTimeReceived
 	}
 	return 0
 }
@@ -111,17 +108,16 @@ func (m *GetBlockchainInfo) Reset()         { *m = GetBlockchainInfo{} }
 func (m *GetBlockchainInfo) String() string { return proto.CompactTextString(m) }
 func (*GetBlockchainInfo) ProtoMessage()    {}
 func (*GetBlockchainInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{1}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{1}
 }
-
 func (m *GetBlockchainInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockchainInfo.Unmarshal(m, b)
 }
 func (m *GetBlockchainInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockchainInfo.Marshal(b, m, deterministic)
 }
-func (m *GetBlockchainInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockchainInfo.Merge(m, src)
+func (dst *GetBlockchainInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockchainInfo.Merge(dst, src)
 }
 func (m *GetBlockchainInfo) XXX_Size() int {
 	return xxx_messageInfo_GetBlockchainInfo.Size(m)
@@ -140,8 +136,8 @@ func (m *GetBlockchainInfo) GetVersion() string {
 }
 
 type ReturnBlockchainInfo struct {
-	TailBlockHash        []byte   `protobuf:"bytes,1,opt,name=tailBlockHash,proto3" json:"tailBlockHash,omitempty"`
-	BlockHeight          uint64   `protobuf:"varint,2,opt,name=blockHeight,proto3" json:"blockHeight,omitempty"`
+	TailBlockHash        []byte   `protobuf:"bytes,1,opt,name=tail_block_hash,json=tailBlockHash,proto3" json:"tail_block_hash,omitempty"`
+	BlockHeight          uint64   `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
 	Timestamp            int64    `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -152,17 +148,16 @@ func (m *ReturnBlockchainInfo) Reset()         { *m = ReturnBlockchainInfo{} }
 func (m *ReturnBlockchainInfo) String() string { return proto.CompactTextString(m) }
 func (*ReturnBlockchainInfo) ProtoMessage()    {}
 func (*ReturnBlockchainInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{2}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{2}
 }
-
 func (m *ReturnBlockchainInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReturnBlockchainInfo.Unmarshal(m, b)
 }
 func (m *ReturnBlockchainInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReturnBlockchainInfo.Marshal(b, m, deterministic)
 }
-func (m *ReturnBlockchainInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReturnBlockchainInfo.Merge(m, src)
+func (dst *ReturnBlockchainInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReturnBlockchainInfo.Merge(dst, src)
 }
 func (m *ReturnBlockchainInfo) XXX_Size() int {
 	return xxx_messageInfo_ReturnBlockchainInfo.Size(m)
@@ -195,7 +190,7 @@ func (m *ReturnBlockchainInfo) GetTimestamp() int64 {
 }
 
 type GetBlocks struct {
-	StartBlockHashes     [][]byte `protobuf:"bytes,1,rep,name=startBlockHashes,proto3" json:"startBlockHashes,omitempty"`
+	StartBlockHashes     [][]byte `protobuf:"bytes,1,rep,name=start_block_hashes,json=startBlockHashes,proto3" json:"start_block_hashes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -205,17 +200,16 @@ func (m *GetBlocks) Reset()         { *m = GetBlocks{} }
 func (m *GetBlocks) String() string { return proto.CompactTextString(m) }
 func (*GetBlocks) ProtoMessage()    {}
 func (*GetBlocks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{3}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{3}
 }
-
 func (m *GetBlocks) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlocks.Unmarshal(m, b)
 }
 func (m *GetBlocks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlocks.Marshal(b, m, deterministic)
 }
-func (m *GetBlocks) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlocks.Merge(m, src)
+func (dst *GetBlocks) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlocks.Merge(dst, src)
 }
 func (m *GetBlocks) XXX_Size() int {
 	return xxx_messageInfo_GetBlocks.Size(m)
@@ -235,7 +229,7 @@ func (m *GetBlocks) GetStartBlockHashes() [][]byte {
 
 type ReturnBlocks struct {
 	Blocks               []*pb.Block `protobuf:"bytes,1,rep,name=blocks,proto3" json:"blocks,omitempty"`
-	StartBlockHashes     [][]byte    `protobuf:"bytes,2,rep,name=startBlockHashes,proto3" json:"startBlockHashes,omitempty"`
+	StartBlockHashes     [][]byte    `protobuf:"bytes,2,rep,name=start_block_hashes,json=startBlockHashes,proto3" json:"start_block_hashes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -245,17 +239,16 @@ func (m *ReturnBlocks) Reset()         { *m = ReturnBlocks{} }
 func (m *ReturnBlocks) String() string { return proto.CompactTextString(m) }
 func (*ReturnBlocks) ProtoMessage()    {}
 func (*ReturnBlocks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{4}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{4}
 }
-
 func (m *ReturnBlocks) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReturnBlocks.Unmarshal(m, b)
 }
 func (m *ReturnBlocks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReturnBlocks.Marshal(b, m, deterministic)
 }
-func (m *ReturnBlocks) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReturnBlocks.Merge(m, src)
+func (dst *ReturnBlocks) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReturnBlocks.Merge(dst, src)
 }
 func (m *ReturnBlocks) XXX_Size() int {
 	return xxx_messageInfo_ReturnBlocks.Size(m)
@@ -281,8 +274,8 @@ func (m *ReturnBlocks) GetStartBlockHashes() [][]byte {
 }
 
 type GetCommonBlocks struct {
-	MsgId                int32             `protobuf:"varint,1,opt,name=msgId,proto3" json:"msgId,omitempty"`
-	BlockHeaders         []*pb.BlockHeader `protobuf:"bytes,2,rep,name=blockHeaders,proto3" json:"blockHeaders,omitempty"`
+	MsgId                int32             `protobuf:"varint,1,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	BlockHeaders         []*pb.BlockHeader `protobuf:"bytes,2,rep,name=block_headers,json=blockHeaders,proto3" json:"block_headers,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -292,17 +285,16 @@ func (m *GetCommonBlocks) Reset()         { *m = GetCommonBlocks{} }
 func (m *GetCommonBlocks) String() string { return proto.CompactTextString(m) }
 func (*GetCommonBlocks) ProtoMessage()    {}
 func (*GetCommonBlocks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{5}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{5}
 }
-
 func (m *GetCommonBlocks) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetCommonBlocks.Unmarshal(m, b)
 }
 func (m *GetCommonBlocks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetCommonBlocks.Marshal(b, m, deterministic)
 }
-func (m *GetCommonBlocks) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetCommonBlocks.Merge(m, src)
+func (dst *GetCommonBlocks) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCommonBlocks.Merge(dst, src)
 }
 func (m *GetCommonBlocks) XXX_Size() int {
 	return xxx_messageInfo_GetCommonBlocks.Size(m)
@@ -328,8 +320,8 @@ func (m *GetCommonBlocks) GetBlockHeaders() []*pb.BlockHeader {
 }
 
 type ReturnCommonBlocks struct {
-	MsgId                int32             `protobuf:"varint,1,opt,name=msgId,proto3" json:"msgId,omitempty"`
-	BlockHeaders         []*pb.BlockHeader `protobuf:"bytes,2,rep,name=blockHeaders,proto3" json:"blockHeaders,omitempty"`
+	MsgId                int32             `protobuf:"varint,1,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	BlockHeaders         []*pb.BlockHeader `protobuf:"bytes,2,rep,name=block_headers,json=blockHeaders,proto3" json:"block_headers,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -339,17 +331,16 @@ func (m *ReturnCommonBlocks) Reset()         { *m = ReturnCommonBlocks{} }
 func (m *ReturnCommonBlocks) String() string { return proto.CompactTextString(m) }
 func (*ReturnCommonBlocks) ProtoMessage()    {}
 func (*ReturnCommonBlocks) Descriptor() ([]byte, []int) {
-	return fileDescriptor_823c192163b402a3, []int{6}
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{6}
 }
-
 func (m *ReturnCommonBlocks) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ReturnCommonBlocks.Unmarshal(m, b)
 }
 func (m *ReturnCommonBlocks) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ReturnCommonBlocks.Marshal(b, m, deterministic)
 }
-func (m *ReturnCommonBlocks) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ReturnCommonBlocks.Merge(m, src)
+func (dst *ReturnCommonBlocks) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReturnCommonBlocks.Merge(dst, src)
 }
 func (m *ReturnCommonBlocks) XXX_Size() int {
 	return xxx_messageInfo_ReturnCommonBlocks.Size(m)
@@ -374,6 +365,82 @@ func (m *ReturnCommonBlocks) GetBlockHeaders() []*pb.BlockHeader {
 	return nil
 }
 
+type GetPeerList struct {
+	MaxNumber            int32    `protobuf:"varint,1,opt,name=max_number,json=maxNumber,proto3" json:"max_number,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetPeerList) Reset()         { *m = GetPeerList{} }
+func (m *GetPeerList) String() string { return proto.CompactTextString(m) }
+func (*GetPeerList) ProtoMessage()    {}
+func (*GetPeerList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{7}
+}
+func (m *GetPeerList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetPeerList.Unmarshal(m, b)
+}
+func (m *GetPeerList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetPeerList.Marshal(b, m, deterministic)
+}
+func (dst *GetPeerList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetPeerList.Merge(dst, src)
+}
+func (m *GetPeerList) XXX_Size() int {
+	return xxx_messageInfo_GetPeerList.Size(m)
+}
+func (m *GetPeerList) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetPeerList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetPeerList proto.InternalMessageInfo
+
+func (m *GetPeerList) GetMaxNumber() int32 {
+	if m != nil {
+		return m.MaxNumber
+	}
+	return 0
+}
+
+type ReturnPeerList struct {
+	PeerList             []*PeerInfo `protobuf:"bytes,1,rep,name=peer_list,json=peerList,proto3" json:"peer_list,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *ReturnPeerList) Reset()         { *m = ReturnPeerList{} }
+func (m *ReturnPeerList) String() string { return proto.CompactTextString(m) }
+func (*ReturnPeerList) ProtoMessage()    {}
+func (*ReturnPeerList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_dapmsg_dc47d1bd96652946, []int{8}
+}
+func (m *ReturnPeerList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ReturnPeerList.Unmarshal(m, b)
+}
+func (m *ReturnPeerList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ReturnPeerList.Marshal(b, m, deterministic)
+}
+func (dst *ReturnPeerList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReturnPeerList.Merge(dst, src)
+}
+func (m *ReturnPeerList) XXX_Size() int {
+	return xxx_messageInfo_ReturnPeerList.Size(m)
+}
+func (m *ReturnPeerList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReturnPeerList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ReturnPeerList proto.InternalMessageInfo
+
+func (m *ReturnPeerList) GetPeerList() []*PeerInfo {
+	if m != nil {
+		return m.PeerList
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*Dapmsg)(nil), "networkpb.Dapmsg")
 	proto.RegisterType((*GetBlockchainInfo)(nil), "networkpb.GetBlockchainInfo")
@@ -382,38 +449,46 @@ func init() {
 	proto.RegisterType((*ReturnBlocks)(nil), "networkpb.ReturnBlocks")
 	proto.RegisterType((*GetCommonBlocks)(nil), "networkpb.GetCommonBlocks")
 	proto.RegisterType((*ReturnCommonBlocks)(nil), "networkpb.ReturnCommonBlocks")
+	proto.RegisterType((*GetPeerList)(nil), "networkpb.GetPeerList")
+	proto.RegisterType((*ReturnPeerList)(nil), "networkpb.ReturnPeerList")
 }
 
 func init() {
-	proto.RegisterFile("github.com/dappley/go-dappley/network/pb/dapmsg.proto", fileDescriptor_823c192163b402a3)
+	proto.RegisterFile("github.com/dappley/go-dappley/network/pb/dapmsg.proto", fileDescriptor_dapmsg_dc47d1bd96652946)
 }
 
-var fileDescriptor_823c192163b402a3 = []byte{
-	// 409 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x52, 0xcd, 0x6e, 0xd4, 0x30,
-	0x10, 0x56, 0xba, 0x3f, 0x68, 0x67, 0xb3, 0x50, 0x4c, 0x0f, 0x16, 0xe2, 0x10, 0x45, 0x05, 0x45,
-	0x48, 0xdd, 0x15, 0x45, 0xa8, 0xf7, 0x82, 0xd4, 0xf6, 0x84, 0x64, 0xf1, 0x00, 0x38, 0xce, 0x90,
-	0xb5, 0x76, 0x6d, 0x47, 0xb6, 0x53, 0x58, 0x89, 0x07, 0xe2, 0x31, 0x51, 0xec, 0x04, 0x9a, 0xf2,
-	0x73, 0xeb, 0x6d, 0xe6, 0x1b, 0x7f, 0x3f, 0x1e, 0x1b, 0xde, 0xd5, 0xd2, 0x6f, 0xdb, 0x72, 0x2d,
-	0x8c, 0xda, 0x54, 0xbc, 0x69, 0xf6, 0x78, 0xd8, 0xd4, 0xe6, 0x6c, 0x28, 0x35, 0xfa, 0xaf, 0xc6,
-	0xee, 0x36, 0x4d, 0xd9, 0x4d, 0x95, 0xab, 0xd7, 0x8d, 0x35, 0xde, 0x90, 0x45, 0x3f, 0x68, 0xca,
-	0xe7, 0x6f, 0xfe, 0xaf, 0x20, 0x8c, 0xc5, 0x8e, 0x5e, 0xee, 0x8d, 0xd8, 0x45, 0x76, 0xfe, 0x23,
-	0x81, 0xf9, 0x87, 0x20, 0x47, 0x8e, 0x61, 0x22, 0x54, 0x45, 0x93, 0x2c, 0x29, 0x16, 0xac, 0x2b,
-	0x09, 0x81, 0x69, 0xc5, 0x3d, 0xa7, 0x47, 0x59, 0x52, 0xa4, 0x2c, 0xd4, 0xe4, 0x14, 0x56, 0xad,
-	0x96, 0xdf, 0x3e, 0x49, 0x85, 0x0c, 0xc5, 0x6d, 0x45, 0x27, 0x59, 0x52, 0x4c, 0xd8, 0x18, 0xec,
-	0xb4, 0x76, 0x78, 0xa0, 0xd3, 0xa8, 0xb5, 0xc3, 0x03, 0x79, 0x05, 0x8f, 0x5b, 0x2d, 0x3f, 0xda,
-	0x4b, 0x6b, 0x78, 0x25, 0xb8, 0xf3, 0x74, 0x16, 0x88, 0xf7, 0x50, 0x42, 0xe1, 0x91, 0x30, 0xad,
-	0xf6, 0x68, 0xe9, 0x3c, 0x4b, 0x8a, 0x29, 0x1b, 0xda, 0xfc, 0x0c, 0x9e, 0x5e, 0xa1, 0xbf, 0xec,
-	0xc2, 0x8b, 0x2d, 0x97, 0xfa, 0x46, 0x7f, 0x31, 0xdd, 0xf1, 0x5b, 0xb4, 0x4e, 0x1a, 0xdd, 0x07,
-	0x1f, 0xda, 0xfc, 0x3b, 0x9c, 0x30, 0xf4, 0xad, 0xd5, 0xf7, 0x18, 0xa7, 0xb0, 0xf2, 0x5c, 0xee,
-	0x03, 0x7a, 0xcd, 0xdd, 0x36, 0xf0, 0x52, 0x36, 0x06, 0x49, 0x06, 0xcb, 0xb0, 0xa6, 0x6b, 0x94,
-	0xf5, 0xd6, 0x87, 0x0d, 0x4c, 0xd9, 0x5d, 0x88, 0xbc, 0x80, 0x85, 0x97, 0x0a, 0x9d, 0xe7, 0xaa,
-	0xe9, 0x97, 0xf0, 0x1b, 0xc8, 0x2f, 0x60, 0x31, 0x84, 0x75, 0xe4, 0x35, 0x1c, 0x3b, 0xcf, 0xad,
-	0xff, 0x25, 0x8f, 0x8e, 0x26, 0xd9, 0xa4, 0x48, 0xd9, 0x1f, 0x78, 0xce, 0x21, 0xbd, 0x13, 0xdb,
-	0x91, 0x97, 0x30, 0x0f, 0xae, 0x91, 0xb1, 0x3c, 0x5f, 0xad, 0xbb, 0x67, 0x6c, 0xca, 0x75, 0x98,
-	0xb3, 0x7e, 0xf8, 0x57, 0x8b, 0xa3, 0x7f, 0x58, 0x7c, 0x86, 0x27, 0x57, 0xe8, 0xdf, 0x1b, 0xa5,
-	0xcc, 0xe0, 0x72, 0x02, 0x33, 0xe5, 0xea, 0x9b, 0xf8, 0xfa, 0x33, 0x16, 0x1b, 0x72, 0x01, 0x69,
-	0x7f, 0x63, 0x5e, 0xa1, 0x8d, 0x82, 0xcb, 0xf3, 0x67, 0xa3, 0x04, 0x71, 0xc6, 0x46, 0x07, 0x73,
-	0x01, 0x24, 0x5e, 0xe2, 0x01, 0x4d, 0xca, 0x79, 0xf8, 0xc1, 0x6f, 0x7f, 0x06, 0x00, 0x00, 0xff,
-	0xff, 0xc3, 0xb7, 0x53, 0xd7, 0x38, 0x03, 0x00, 0x00,
+var fileDescriptor_dapmsg_dc47d1bd96652946 = []byte{
+	// 505 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xb4, 0x53, 0x5d, 0x6f, 0xd3, 0x30,
+	0x14, 0x55, 0xd7, 0x0f, 0xc8, 0x6d, 0xba, 0x15, 0x0f, 0xa4, 0x68, 0x02, 0x09, 0x22, 0x81, 0xf6,
+	0xb0, 0xa5, 0xb0, 0x09, 0x09, 0x5e, 0x0b, 0x12, 0x9d, 0x84, 0x00, 0x59, 0xbc, 0x47, 0x76, 0x62,
+	0x1a, 0xab, 0x4d, 0x1c, 0xd9, 0xce, 0xd8, 0x9e, 0xf8, 0x4f, 0xfc, 0x42, 0xae, 0x9d, 0xa4, 0x1b,
+	0x48, 0x43, 0xbc, 0xf0, 0xe6, 0x7b, 0xce, 0x3d, 0x3e, 0xd7, 0x47, 0xd7, 0xf0, 0x7a, 0x2d, 0x6d,
+	0xd1, 0xf0, 0x24, 0x53, 0xe5, 0x22, 0x67, 0x75, 0xbd, 0x15, 0xd7, 0x8b, 0xb5, 0x3a, 0xed, 0x8f,
+	0x95, 0xb0, 0xdf, 0x95, 0xde, 0x2c, 0x6a, 0xee, 0xd8, 0xd2, 0xac, 0x93, 0x5a, 0x2b, 0xab, 0x48,
+	0xd0, 0x11, 0x35, 0x3f, 0x7a, 0xf5, 0xf7, 0x1b, 0x32, 0xa5, 0x85, 0x93, 0xf3, 0xad, 0xca, 0x36,
+	0xad, 0xfa, 0xe8, 0xfc, 0x9f, 0x4d, 0x6b, 0x21, 0x74, 0x2b, 0x8a, 0x7f, 0x0e, 0x60, 0xf2, 0xde,
+	0xcf, 0x40, 0xe6, 0x30, 0xcc, 0xca, 0x3c, 0x1a, 0x3c, 0x1d, 0x1c, 0x07, 0xd4, 0x1d, 0x09, 0x81,
+	0x51, 0xce, 0x2c, 0x8b, 0xf6, 0x10, 0x0a, 0xa9, 0x3f, 0x93, 0x13, 0x20, 0x4d, 0x25, 0xaf, 0x52,
+	0x2b, 0x4b, 0x91, 0x6a, 0x91, 0x09, 0x79, 0x29, 0xf2, 0x68, 0x88, 0x1d, 0x43, 0x3a, 0x77, 0xcc,
+	0x57, 0x24, 0x68, 0x87, 0xbb, 0x3b, 0x37, 0xe2, 0x3a, 0x1a, 0xb5, 0x77, 0xe2, 0x91, 0x1c, 0x83,
+	0xeb, 0x4a, 0x95, 0x4e, 0xb9, 0x56, 0x2c, 0xcf, 0x98, 0xb1, 0xd1, 0xd8, 0xab, 0xf7, 0x11, 0xff,
+	0xac, 0x97, 0x3d, 0x4a, 0x22, 0xb8, 0x97, 0xa9, 0xa6, 0xb2, 0x42, 0x47, 0x13, 0x6c, 0x18, 0xd1,
+	0xbe, 0x8c, 0x4f, 0xe1, 0xc1, 0x07, 0x61, 0x97, 0xee, 0xed, 0x59, 0xc1, 0x64, 0x75, 0x51, 0x7d,
+	0x53, 0xae, 0xfd, 0x52, 0x68, 0x23, 0x55, 0xd5, 0x3d, 0xa1, 0x2f, 0xe3, 0x1f, 0xf0, 0x90, 0x0a,
+	0xdb, 0xe8, 0xea, 0x0f, 0xc5, 0x0b, 0x38, 0xb0, 0x4c, 0x6e, 0x53, 0x1f, 0x62, 0x5a, 0x30, 0x53,
+	0x78, 0x65, 0x48, 0x67, 0x0e, 0xf6, 0xcd, 0x2b, 0x04, 0xc9, 0x33, 0x08, 0xbb, 0x16, 0x21, 0xd7,
+	0x85, 0xf5, 0x71, 0x8c, 0xe8, 0xd4, 0x63, 0x2b, 0x0f, 0x91, 0xc7, 0x10, 0xb8, 0x40, 0x8c, 0x65,
+	0x65, 0xdd, 0x85, 0x71, 0x03, 0xc4, 0x6f, 0x21, 0xe8, 0xe7, 0x35, 0x2e, 0x40, 0x44, 0xb5, 0xbd,
+	0x65, 0x2b, 0x0c, 0x1a, 0x0f, 0xd1, 0x78, 0xee, 0x99, 0x9d, 0xb3, 0x30, 0x71, 0x06, 0xe1, 0xad,
+	0xd9, 0x0d, 0x79, 0x0e, 0x13, 0xaf, 0x6b, 0x15, 0xd3, 0xb3, 0x59, 0xe2, 0x56, 0xa1, 0xe6, 0x89,
+	0xe7, 0x69, 0x47, 0xde, 0x61, 0xb2, 0x77, 0x87, 0x09, 0x87, 0x03, 0x9c, 0xef, 0x9d, 0x2a, 0x4b,
+	0xd5, 0xfb, 0x3c, 0x82, 0x09, 0xee, 0x44, 0x2a, 0xdb, 0x7d, 0x18, 0xd3, 0x31, 0x56, 0x17, 0x39,
+	0x79, 0x03, 0xb3, 0x3e, 0x0a, 0x96, 0x63, 0xbc, 0xfe, 0xca, 0xe9, 0xd9, 0xe1, 0x6f, 0x53, 0xac,
+	0x3c, 0x47, 0x43, 0x7e, 0x53, 0x98, 0x58, 0x00, 0x69, 0x1f, 0xf2, 0x7f, 0x6d, 0x4e, 0x60, 0x8a,
+	0x4f, 0xf9, 0x82, 0x0b, 0xfe, 0x51, 0xe2, 0x0e, 0x3d, 0x01, 0x28, 0xd9, 0x55, 0x5a, 0x35, 0x25,
+	0xc7, 0x35, 0x6a, 0x3d, 0x02, 0x44, 0x3e, 0x79, 0x20, 0x5e, 0xc2, 0x7e, 0x3b, 0xd4, 0x4e, 0xf0,
+	0x12, 0x02, 0xf7, 0x3b, 0xd2, 0x2d, 0x16, 0x5d, 0xc4, 0x87, 0xc9, 0xee, 0x5b, 0x26, 0xae, 0xcf,
+	0xed, 0x0e, 0xbd, 0x5f, 0x77, 0x0a, 0x3e, 0xf1, 0x1f, 0xe9, 0xfc, 0x57, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0x7c, 0xea, 0x66, 0xfe, 0xf4, 0x03, 0x00, 0x00,
 }

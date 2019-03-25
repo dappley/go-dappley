@@ -20,10 +20,12 @@ package client
 import (
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mock"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 	"strings"
@@ -183,4 +185,23 @@ func TestNewWalletManager_UnlockTimer(t *testing.T) {
 	wm2 := NewWalletManager(fl2)
 	wm2.LoadFromFile()
 	assert.Equal(t, true, wm2.Locked)
+}
+
+func TestWalletManager_Proto(t *testing.T) {
+	wm := NewWalletManager(nil)
+	wallet := NewWallet()
+	wm.AddWallet(wallet)
+	wallet = NewWallet()
+	wm.AddWallet(wallet)
+
+	rawBytes, err := proto.Marshal(wm.ToProto())
+	assert.Nil(t, err)
+	wmProto := &walletpb.WalletManager{}
+	err = proto.Unmarshal(rawBytes, wmProto)
+	assert.Nil(t, err)
+	wm1 := &WalletManager{}
+	wm1.FromProto(wmProto)
+	assert.Equal(t, wm.Wallets, wm1.Wallets)
+	assert.Equal(t, wm.PassPhrase, wm1.PassPhrase)
+	assert.Equal(t, wm.Locked, wm1.Locked)
 }

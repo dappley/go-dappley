@@ -30,13 +30,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -48,6 +41,12 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 //command names
@@ -322,7 +321,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 			}
 			startBlockHashes = append(startBlockHashes, startBlockHashInByte)
 		}
-		getBlocksRequest.StartBlockHashes = startBlockHashes
+		getBlocksRequest = &rpcpb.GetBlocksRequest{MaxCount: maxCount, StartBlockHashes: startBlockHashes}
 	}
 
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
@@ -341,28 +340,28 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 
 		var encodedTransactions []map[string]interface{}
 
-		for _, transaction := range block.Transactions {
+		for _, transaction := range block.GetTransactions() {
 
 			var encodedVin []map[string]interface{}
-			for _, vin := range transaction.Vin {
+			for _, vin := range transaction.GetVin() {
 				encodedVin = append(encodedVin, map[string]interface{}{
-					"Vout":      vin.Vout,
-					"Signature": hex.EncodeToString(vin.Signature),
-					"PubKey":    string(vin.PubKey),
+					"Vout":      vin.GetVout(),
+					"Signature": hex.EncodeToString(vin.GetSignature()),
+					"PubKey":    string(vin.GetPublicKey()),
 				})
 			}
 
 			var encodedVout []map[string]interface{}
-			for _, vout := range transaction.Vout {
+			for _, vout := range transaction.GetVout() {
 				encodedVout = append(encodedVout, map[string]interface{}{
-					"Value":      string(vout.Value),
-					"PubKeyHash": hex.EncodeToString(vout.PubKeyHash),
-					"Contract":   vout.Contract,
+					"Value":      string(vout.GetValue()),
+					"PubKeyHash": hex.EncodeToString(vout.GetPublicKeyHash()),
+					"Contract":   vout.GetContract(),
 				})
 			}
 
 			encodedTransaction := map[string]interface{}{
-				"ID":   hex.EncodeToString(transaction.ID),
+				"ID":   hex.EncodeToString(transaction.GetId()),
 				"Vin":  encodedVin,
 				"Vout": encodedVout,
 			}
@@ -371,11 +370,11 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 
 		encodedBlock := map[string]interface{}{
 			"Header": map[string]interface{}{
-				"Hash":      hex.EncodeToString(block.Header.Hash),
-				"Prevhash":  hex.EncodeToString(block.Header.Prevhash),
-				"Timestamp": block.Header.Timestamp,
-				"Sign":      hex.EncodeToString(block.Header.Sign),
-				"height":    block.Header.Height,
+				"Hash":      hex.EncodeToString(block.GetHeader().GetHash()),
+				"Prevhash":  hex.EncodeToString(block.GetHeader().GetPreviousHash()),
+				"Timestamp": block.GetHeader().GetTimestamp(),
+				"Sign":      hex.EncodeToString(block.GetHeader().GetSignature()),
+				"height":    block.GetHeader().GetHeight(),
 			},
 			"Transactions": encodedTransactions,
 		}
@@ -574,7 +573,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 					i++
 				}
 				fmt.Println()
-				fmt.Println("Use the command 'cli listAddress -privateKey' to list the addresses with private keys")
+				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
 			}
 		} else {
 			privateKeyList := []string{}
@@ -623,7 +622,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 					i++
 				}
 				fmt.Println()
-				fmt.Println("Use the command 'cli listAddress -privateKey' to list the addresses with private keys")
+				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
 			}
 		} else {
 			privateKeyList := []string{}

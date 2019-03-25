@@ -24,7 +24,9 @@ import (
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,6 +38,7 @@ const (
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
 	//multiPortRetryStart      int = 10230
+	multiPortReturnBlocks int = 10340
 )
 
 func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node) {
@@ -46,7 +49,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 		address := keyPair.GenerateAddress(false)
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil)
+		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
 		bc.SetState(core.BlockchainReady)
 		blockchains[i] = bc
 		pool := core.NewBlockPool(100)
@@ -66,12 +69,13 @@ func fillBlockchains(blockchains []*core.Blockchain) {
 	for generateChain.GetMaxHeight() < 100 {
 	}
 	generateChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; uint64(i) <= generateChain.GetMaxHeight(); i++ {
 		block, _ := generateChain.GetBlockByHeight(uint64(i))
 		for j := 1; j < len(blockchains); j++ {
 			current := blockchains[j]
-			current.AddBlockToTail(block)
+			current.AddBlockContextToTail(core.PrepareBlockContext(current, block))
 		}
 	}
 }
@@ -131,6 +135,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	for _, blockchain := range blockchains {
 		blockchain.GetConsensus().Stop()
 	}
+	time.Sleep(2 * time.Second)
 
 	blockchain := blockchains[0]
 	blockchain.SetState(core.BlockchainInit)
@@ -142,6 +147,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	for highestChain.GetMaxHeight() < nextHeight {
 	}
 	highestChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
@@ -171,6 +177,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	for highestChain.GetMaxHeight() < 200 {
 	}
 	highestChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
@@ -200,12 +207,14 @@ func TestDisconnectNode(t *testing.T) {
 	for highestChain.GetMaxHeight() < 400 {
 	}
 	highestChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	secondChain := blockchains[2]
 	secondChain.GetConsensus().Start()
 	for secondChain.GetMaxHeight() < 300 {
 	}
 	secondChain.GetConsensus().Stop()
+	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
@@ -222,4 +231,34 @@ func TestDisconnectNode(t *testing.T) {
 	blockchain.SetState(core.BlockchainReady)
 
 	assert.Equal(t, secondChain.GetMaxHeight(), blockchain.GetMaxHeight())
+}
+
+func TestValidateReturnBlocks(t *testing.T) {
+	// Test empty blocks in ReturnBlocks message
+	blockchains, nodes := createTestBlockchains(2, multiPortReturnBlocks)
+	fillBlockchains(blockchains)
+
+	blockchain := blockchains[0]
+	blockchain.SetState(core.BlockchainInit)
+	node := nodes[0]
+	peerNode := nodes[1]
+
+	node.GetPeerManager().AddAndConnectPeer(peerNode.GetInfo())
+	downloadManager := node.GetDownloadManager()
+	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
+
+	for _, p := range downloadManager.node.GetPeerManager().CloneStreamsToSlice() {
+		downloadManager.peersInfo[p.stream.peerID] = &PeerBlockInfo{peerid: p.stream.peerID, height: 0, status: PeerStatusInit}
+		downloadManager.downloadingPeer = downloadManager.peersInfo[p.stream.peerID]
+	}
+	blockchain.SetState(core.BlockchainDownloading)
+
+	// test invalid peer id
+	_, err := downloadManager.validateReturnBlocks(nil, "foo")
+	assert.Equal(t, ErrPeerNotFound, err)
+
+	// test empty blocks
+	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
+	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId)
+	assert.Equal(t, ErrEmptyBlocks, err)
 }

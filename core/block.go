@@ -21,18 +21,16 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/gob"
 	"encoding/hex"
 	"reflect"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -86,6 +84,10 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *
 	}
 }
 
+func (b *Block) BeIrreversible() {
+
+}
+
 func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
 	var txHash [32]byte
@@ -99,55 +101,25 @@ func (b *Block) HashTransactions() []byte {
 }
 
 func (b *Block) Serialize() []byte {
-	var result bytes.Buffer
-	encoder := gob.NewEncoder(&result)
-
-	bs := &BlockStream{
-		Header: &BlockHeaderStream{
-			Hash:      b.header.hash,
-			PrevHash:  b.header.prevHash,
-			Nonce:     b.header.nonce,
-			Timestamp: b.header.timestamp,
-			Sign:      b.header.sign,
-			Height:    b.header.height,
-		},
-		Transactions: b.transactions,
-	}
-
-	err := encoder.Encode(bs)
+	rawBytes, err := proto.Marshal(b.ToProto())
 	if err != nil {
-		logger.Panic(err)
+		logger.WithError(err).Panic("Block: Cannot serialize block!")
 	}
-	return result.Bytes()
+	logger.WithFields(logger.Fields{
+		"size": len(rawBytes),
+	}).Info("Block: Serialize Block!")
+	return rawBytes
 }
 
 func Deserialize(d []byte) *Block {
-	var bs BlockStream
-	decoder := gob.NewDecoder(bytes.NewReader(d))
-	err := decoder.Decode(&bs)
+	pb := &corepb.Block{}
+	err := proto.Unmarshal(d, pb)
 	if err != nil {
-		logger.Panic(err)
+		logger.WithError(err).Panic("Block: Cannot deserialize block!")
 	}
-	if bs.Header.Hash == nil {
-		bs.Header.Hash = Hash{}
-	}
-	if bs.Header.PrevHash == nil {
-		bs.Header.PrevHash = Hash{}
-	}
-	if bs.Transactions == nil {
-		bs.Transactions = []*Transaction{}
-	}
-	return &Block{
-		header: &BlockHeader{
-			hash:      bs.Header.Hash,
-			prevHash:  bs.Header.PrevHash,
-			nonce:     bs.Header.Nonce,
-			timestamp: bs.Header.Timestamp,
-			sign:      bs.Header.Sign,
-			height:    bs.Header.Height,
-		},
-		transactions: bs.Transactions,
-	}
+	block := &Block{}
+	block.FromProto(pb)
+	return block
 }
 
 func (b *Block) GetHeader() *BlockHeader {
@@ -202,36 +174,16 @@ func (b *Block) ToProto() proto.Message {
 		Transactions: txArray,
 	}
 }
-func FromProtoBlockMsg(data []byte) *Block {
-	//create a block proto
-	blockpb := &corepb.Block{}
 
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err != nil {
-		logger.Warn(err)
-	}
-	if blockpb.Header == nil {
-		spew.Dump(blockpb)
-		spew.Dump(data)
-	}
-
-	//create an empty block
-	block := &Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	return block
-}
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
-	bh.FromProto(pb.(*corepb.Block).Header)
+	bh.FromProto(pb.(*corepb.Block).GetHeader())
 	b.header = &bh
 
 	var txs []*Transaction
 
-	for _, txpb := range pb.(*corepb.Block).Transactions {
+	for _, txpb := range pb.(*corepb.Block).GetTransactions() {
 		tx := &Transaction{}
 		tx.FromProto(txpb)
 		txs = append(txs, tx)
@@ -241,12 +193,12 @@ func (b *Block) FromProto(pb proto.Message) {
 
 func (bh *BlockHeader) ToProto() proto.Message {
 	return &corepb.BlockHeader{
-		Hash:      bh.hash,
-		Prevhash:  bh.prevHash,
-		Nonce:     bh.nonce,
-		Timestamp: bh.timestamp,
-		Sign:      bh.sign,
-		Height:    bh.height,
+		Hash:         bh.hash,
+		PreviousHash: bh.prevHash,
+		Nonce:        bh.nonce,
+		Timestamp:    bh.timestamp,
+		Signature:    bh.sign,
+		Height:       bh.height,
 	}
 }
 
@@ -254,12 +206,12 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	if pb == nil {
 		return
 	}
-	bh.hash = pb.(*corepb.BlockHeader).Hash
-	bh.prevHash = pb.(*corepb.BlockHeader).Prevhash
-	bh.nonce = pb.(*corepb.BlockHeader).Nonce
-	bh.timestamp = pb.(*corepb.BlockHeader).Timestamp
-	bh.sign = pb.(*corepb.BlockHeader).Sign
-	bh.height = pb.(*corepb.BlockHeader).Height
+	bh.hash = pb.(*corepb.BlockHeader).GetHash()
+	bh.prevHash = pb.(*corepb.BlockHeader).GetPreviousHash()
+	bh.nonce = pb.(*corepb.BlockHeader).GetNonce()
+	bh.timestamp = pb.(*corepb.BlockHeader).GetTimestamp()
+	bh.sign = pb.(*corepb.BlockHeader).GetSignature()
+	bh.height = pb.(*corepb.BlockHeader).GetHeight()
 }
 
 func (b *Block) CalculateHash() Hash {
@@ -321,7 +273,7 @@ func (b *Block) VerifyHash() bool {
 	return bytes.Compare(b.GetHash(), b.CalculateHash()) == 0
 }
 
-func (b *Block) VerifyTransactions(utxo UTXOIndex, scState *ScState, manager ScEngineManager, parentBlk *Block) bool {
+func (b *Block) VerifyTransactions(utxoIndex *UTXOIndex, scState *ScState, manager ScEngineManager, parentBlk *Block) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash": b.GetHash(),
@@ -349,30 +301,11 @@ L:
 				return false
 			}
 			rewardTX = tx
-			utxo.UpdateUtxo(tx)
+			utxoIndex.UpdateUtxo(tx)
 			continue L
 		}
-		if tx.IsFromContract() {
+		if tx.IsFromContract(utxoIndex) {
 			contractGeneratedTXs = append(contractGeneratedTXs, tx)
-
-			contractSource := tx.Vin[0].Signature
-			for _, t := range b.GetTransactions() {
-				if bytes.Compare(contractSource, t.ID) == 0 {
-					// source tx is found in this block
-					continue L
-				}
-			}
-			logger.WithFields(logger.Fields{
-				"tx": tx,
-			}).Debug("Block: the contract source of this generated tx is not in the same block.")
-			// TODO: Execute the contract in source tx
-			//sourceTX, err := Blockchain{}.FindTransaction(contractSource)
-			//if err != nil || !sourceTX.IsContract() {
-			//	return false
-			//}
-			//scEngine := manager.CreateEngine()
-			//sourceTX.Execute(utxo, scState, rewards, scEngine)
-			//allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 			continue L
 		}
 
@@ -384,15 +317,15 @@ L:
 				return false
 			}
 
-			tx.Execute(utxo, scState, rewards, scEngine, b.GetHeight(), parentBlk)
-			utxo.UpdateUtxo(tx)
+			tx.Execute(*utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			utxoIndex.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if !tx.Verify(&utxo, b.GetHeight()) {
+			if !tx.Verify(utxoIndex, b.GetHeight()) {
 				return false
 			}
-			utxo.UpdateUtxo(tx)
+			utxoIndex.UpdateUtxo(tx)
 		}
 	}
 	// Assert that any contract-incurred transactions matches the ones generated from contract execution
@@ -400,20 +333,20 @@ L:
 		logger.Warn("Block: reward tx cannot be verified.")
 		return false
 	}
-	if len(contractGeneratedTXs) > 0 && !verifyGeneratedTXs(utxo, contractGeneratedTXs, allContractGeneratedTXs) {
+	if len(contractGeneratedTXs) > 0 && !verifyGeneratedTXs(utxoIndex, contractGeneratedTXs, allContractGeneratedTXs) {
 		logger.Warn("Block: generated tx cannot be verified.")
 		return false
 	}
-	utxo.UpdateUtxoState(allContractGeneratedTXs)
+	utxoIndex.UpdateUtxoState(allContractGeneratedTXs)
 	return true
 }
 
 // verifyGeneratedTXs verify that all transactions in candidates can be found in generatedTXs
-func verifyGeneratedTXs(utxo UTXOIndex, candidates []*Transaction, generatedTXs []*Transaction) bool {
+func verifyGeneratedTXs(utxoIndex *UTXOIndex, candidates []*Transaction, generatedTXs []*Transaction) bool {
 	// genTXBuckets stores description of txs grouped by concatenation of sender's and recipient's public key hashes
 	genTXBuckets := make(map[string][][]*common.Amount)
 	for _, genTX := range generatedTXs {
-		sender, recipient, amount, tip, err := genTX.Describe(utxo)
+		sender, recipient, amount, tip, err := genTX.Describe(utxoIndex)
 		if err != nil {
 			continue
 		}
@@ -422,7 +355,7 @@ func verifyGeneratedTXs(utxo UTXOIndex, candidates []*Transaction, generatedTXs 
 	}
 L:
 	for _, tx := range candidates {
-		sender, recipient, amount, tip, err := tx.Describe(utxo)
+		sender, recipient, amount, tip, err := tx.Describe(utxoIndex)
 		if err != nil {
 			return false
 		}
@@ -469,7 +402,7 @@ func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
 			if !tx.IsCoinbase() && !tx.IsRewardTx() {
-				txPool.Push(tx)
+				txPool.Push(*tx)
 			}
 		}
 	}

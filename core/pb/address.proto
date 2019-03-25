@@ -1,0 +1,6 @@
+syntax = "proto3";
+package corepb;
+
+message Address{
+    string address = 1;
+}

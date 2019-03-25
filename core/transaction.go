@@ -23,7 +23,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/gob"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -34,7 +33,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -110,38 +109,41 @@ func (tx *Transaction) IsExecutionContract() bool {
 }
 
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func (tx *Transaction) IsFromContract() bool {
+func (tx *Transaction) IsFromContract(utxoIndex *UTXOIndex) bool {
 	if len(tx.Vin) == 0 {
 		return false
 	}
+
+	contractUtxos := utxoIndex.GetContractUtxos()
+
 	for _, vin := range tx.Vin {
 		pubKey := PubKeyHash(vin.PubKey)
 		if IsContract, _ := pubKey.IsContract(); !IsContract {
+			return false
+		}
+
+		if !tx.isPubkeyInUtxos(contractUtxos, pubKey) {
 			return false
 		}
 	}
 	return true
 }
 
+func (tx *Transaction) isPubkeyInUtxos(contractUtxos []*UTXO, pubKey PubKeyHash) bool {
+	for _, contractUtxo := range contractUtxos {
+		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (tx *Transaction) isVinCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
-// Serialize returns a serialized Transaction
-func (tx *Transaction) Serialize() []byte {
-	var encoded bytes.Buffer
-
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(tx)
-	if err != nil {
-		logger.Panic(err)
-	}
-
-	return encoded.Bytes()
-}
-
 // Describe reverse-engineers the high-level description of a transaction
-func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, amount, tip *common.Amount, error error) {
+func (tx *Transaction) Describe(utxoIndex *UTXOIndex) (sender, recipient *Address, amount, tip *common.Amount, error error) {
 	var receiverAddress Address
 	vinPubKey := tx.Vin[0].PubKey
 	pubKeyHash := PubKeyHash([]byte(""))
@@ -154,7 +156,7 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 			case tx.IsRewardTx():
 				pubKeyHash = PubKeyHash(rewardTxData)
 				continue
-			case tx.IsFromContract():
+			case tx.IsFromContract(utxoIndex):
 				// vinPubKey is the pubKeyHash if it is a sc generated tx
 				pubKeyHash = PubKeyHash(vinPubKey)
 			default:
@@ -164,7 +166,7 @@ func (tx *Transaction) Describe(index UTXOIndex) (sender, recipient *Address, am
 				}
 				pubKeyHash = pkh
 			}
-			usedUTXO := index.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
+			usedUTXO := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
 			logger.Debug("Transaction: using UTXO from multiple wallets.")
@@ -299,15 +301,14 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
-func (tx *Transaction) IsContractDeployed(utxos *UTXOIndex) bool {
-	contractAddress := tx.GetContractAddress()
-	contractUtxos := utxos.GetContractUtxos()
-	for _, utxo := range contractUtxos {
-		if utxo.PubKeyHash.GenerateAddress() == contractAddress {
-			return true
-		}
+func (tx *Transaction) IsContractDeployed(utxoIndex *UTXOIndex) bool {
+	pubkeyhash := tx.GetContractPubKeyHash()
+	if pubkeyhash == nil {
+		return false
 	}
-	return false
+
+	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
+	return contractUtxoTx.Size() > 0
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
@@ -347,12 +348,14 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return false
 		}
-		utxo := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
+		tempUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
-				"tx_id":     hex.EncodeToString(tx.ID),
-				"vin_tx_id": hex.EncodeToString(vin.Txid),
-				"vin_index": vin.Vout,
+				"tx_id":      hex.EncodeToString(tx.ID),
+				"vin_tx_id":  hex.EncodeToString(vin.Txid),
+				"vin_index":  vin.Vout,
+				"pubKeyHash": hex.EncodeToString(pubKeyHash),
 			}).Warn("Transaction: cannot find vin.")
 			return false
 		}
@@ -629,6 +632,15 @@ func (tx *Transaction) GetContract() string {
 	return tx.Vout[ContractTxouputIndex].Contract
 }
 
+//GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
+func (tx *Transaction) GetContractPubKeyHash() PubKeyHash {
+	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
+	if !isContract {
+		return nil
+	}
+	return tx.Vout[ContractTxouputIndex].PubKeyHash
+}
+
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
 func (tx *Transaction) Execute(index UTXOIndex,
 	scStorage *ScState,
@@ -636,6 +648,10 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	engine ScEngine,
 	currblkHeight uint64,
 	parentBlk *Block) []*Transaction {
+
+	if engine == nil {
+		return nil
+	}
 
 	if tx.IsRewardTx() {
 		return nil
@@ -649,7 +665,7 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	utxos := index.GetAllUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
-	if len(utxos) == 0 {
+	if utxos.Size() == 0 {
 		return nil
 	}
 
@@ -667,16 +683,19 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	}
 
 	totalArgs := util.PrepareArgs(args)
-	address := utxos[0].PubKeyHash.GenerateAddress()
+	address := vout.PubKeyHash.GenerateAddress()
 	logger.WithFields(logger.Fields{
 		"contract_address": address.String(),
 		"invoked_function": function,
 		"arguments":        totalArgs,
 	}).Debug("Transaction: is executing the smart contract...")
-	engine.ImportSourceCode(utxos[0].Contract)
+
+	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
+
+	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
-	engine.ImportUTXOs(utxos[1:])
+	engine.ImportUTXOs(invokeUtxos)
 	engine.ImportSourceTXID(tx.ID)
 	engine.ImportRewardStorage(rewards)
 	engine.ImportTransaction(tx)
@@ -697,7 +716,6 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		}
 		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
-			MetricsTxDoubleSpend.Inc(1)
 			logger.WithFields(logger.Fields{
 				"txid":      hex.EncodeToString(tx.ID),
 				"vin_id":    hex.EncodeToString(vin.Txid),
@@ -708,6 +726,41 @@ func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, erro
 		res = append(res, utxo)
 	}
 	return res, nil
+}
+
+func (tx *Transaction) IsIdentical(utxoIndex *UTXOIndex, tx2 *Transaction) bool {
+	if tx2 == nil {
+		return false
+	}
+
+	sender, recipient, amount, tip, err := tx.Describe(utxoIndex)
+	if err != nil {
+		return false
+	}
+
+	sender2, recipient2, amount2, tip2, err := tx2.Describe(utxoIndex)
+	if err != nil {
+		return false
+	}
+
+	if sender.String() != sender2.String() {
+		return false
+	}
+
+	if recipient.String() != recipient2.String() {
+		return false
+	}
+
+	if amount.Cmp(amount2) != 0 {
+		return false
+	}
+
+	if tip.Cmp(tip2) != 0 {
+		return false
+	}
+
+	return true
+
 }
 
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
@@ -826,7 +879,7 @@ func (tx *Transaction) ToProto() proto.Message {
 	}
 
 	return &corepb.Transaction{
-		ID:   tx.ID,
+		Id:   tx.ID,
 		Vin:  vinArray,
 		Vout: voutArray,
 		Tip:  tx.Tip.Bytes(),
@@ -834,12 +887,12 @@ func (tx *Transaction) ToProto() proto.Message {
 }
 
 func (tx *Transaction) FromProto(pb proto.Message) {
-	tx.ID = pb.(*corepb.Transaction).ID
-	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).Tip)
+	tx.ID = pb.(*corepb.Transaction).GetId()
+	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetTip())
 
 	var vinArray []TXInput
 	txin := TXInput{}
-	for _, txinpb := range pb.(*corepb.Transaction).Vin {
+	for _, txinpb := range pb.(*corepb.Transaction).GetVin() {
 		txin.FromProto(txinpb)
 		vinArray = append(vinArray, txin)
 	}
@@ -847,9 +900,18 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 
 	var voutArray []TXOutput
 	txout := TXOutput{}
-	for _, txoutpb := range pb.(*corepb.Transaction).Vout {
+	for _, txoutpb := range pb.(*corepb.Transaction).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)
 	}
 	tx.Vout = voutArray
+}
+
+func (tx *Transaction) GetSize() int {
+	rawBytes, err := proto.Marshal(tx.ToProto())
+	if err != nil {
+		logger.Warn("Transaction: Transaction can not be marshalled!")
+		return 0
+	}
+	return len(rawBytes)
 }

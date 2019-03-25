@@ -21,11 +21,10 @@ package core
 import (
 	"encoding/hex"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/common"
 )
 
 const BlockPoolMaxSize = 100
@@ -43,9 +42,10 @@ type RcvedBlock struct {
 }
 
 type BlockPool struct {
-	blockRequestCh chan BlockRequestPars
-	size           int
-	blkCache       *lru.Cache //cache of full blks
+	blockRequestCh   chan BlockRequestPars
+	downloadBlocksCh chan bool
+	size             int
+	blkCache         *lru.Cache //cache of full blks
 }
 
 func NewBlockPool(size int) *BlockPool {
@@ -53,8 +53,9 @@ func NewBlockPool(size int) *BlockPool {
 		size = BlockPoolMaxSize
 	}
 	pool := &BlockPool{
-		size:           size,
-		blockRequestCh: make(chan BlockRequestPars, size),
+		size:             size,
+		blockRequestCh:   make(chan BlockRequestPars, size),
+		downloadBlocksCh: make(chan bool, 1),
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
 
@@ -63,6 +64,10 @@ func NewBlockPool(size int) *BlockPool {
 
 func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
+}
+
+func (pool *BlockPool) DownloadBlocksCh() chan bool {
+	return pool.downloadBlocksCh
 }
 
 func (pool *BlockPool) Verify(block *Block) bool {
@@ -122,7 +127,7 @@ func getBlocksFromTrees(trees []*common.Tree) []*Block {
 	return blocks
 }
 
-// updateBlkCache updates parent and children of the tree
+// updateBlkCache updates parent and Children of the tree
 func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	blkCache := pool.blkCache
 	// try to link child

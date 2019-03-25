@@ -1,8 +1,9 @@
 syntax = "proto3";
 package rpcpb;
-import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
 import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
+import "github.com/dappley/go-dappley/core/pb/utxo.proto";
+import "github.com/dappley/go-dappley/network/pb/peer.proto";
 
 option objc_class_prefix = "HLW";
 
@@ -55,7 +56,7 @@ message SendRequest {
   string from = 1;
   string to = 2;
   bytes amount = 3;
-  string walletPath = 4;
+  string wallet_path = 4;
   bytes tip = 5;
   string data = 6;
 }
@@ -65,11 +66,11 @@ message GetPeerInfoRequest {}
 message GetBlockchainInfoRequest {}
 
 message AddPeerRequest {
-  string fullAddress = 1;
+  string full_address = 1;
 }
 
 message GetVersionRequest {
-  string protoVersion = 1;
+  string proto_version = 1;
 }
 
 message GetUTXORequest {
@@ -77,8 +78,8 @@ message GetUTXORequest {
 }
 
 message GetBlocksRequest {
-  repeated bytes startBlockHashes = 1;  // Query start block hashes, sorted descending by height.
-  int32 maxCount = 2;   // Max query block count
+  repeated bytes start_block_hashes = 1;  // Query start block hashes, sorted descending by height.
+  int32 max_count = 2;   // Max query block count
 }
 
 message GetBlockByHashRequest {
@@ -116,17 +117,17 @@ message GetBalanceResponse {
 message SendFromMinerResponse {}
 
 message SendResponse {
-  string contractAddr = 1;
+  string contract_address = 1;
   string txid = 2;
 }
 
 message GetPeerInfoResponse {
-  networkpb.Peerlist peerList = 1;
+  repeated networkpb.PeerInfo peer_list = 1;
 }
 
 message GetBlockchainInfoResponse {
-  bytes   tailBlockHash = 1;
-  uint64  blockHeight = 2;
+  bytes   tail_block_hash = 1;
+  uint64  block_height = 2;
   repeated string producers = 3; // all producers' addresses
   int64   timestamp = 4;
 }
@@ -134,21 +135,13 @@ message GetBlockchainInfoResponse {
 message AddPeerResponse {}
 
 message GetVersionResponse {
-  string protoVersion = 1;
-  string serverVersion = 2;
+  string proto_version = 1;
+  string server_version = 2;
 }
 
 message GetUTXOResponse {
-  repeated UTXO utxos = 1;
-  repeated corepb.BlockHeader blockHeaders = 2; //The latest block headers
-}
-
-// TODO: Refactor to corepb.UTXO
-message UTXO {
-  bytes   amount = 1;   
-  bytes   publicKeyHash = 2;
-  bytes   txid = 3;     
-  uint32  txIndex = 4;
+  repeated corepb.Utxo utxos = 1;
+  repeated corepb.BlockHeader block_headers = 2; //The latest block headers
 }
 
 message GetBlocksResponse {
@@ -170,7 +163,7 @@ message SendBatchTransactionResponse {}
 message SendTransactionStatus {
   bytes txid = 1; // Transactions that are sent
   uint32 code = 2; // grpc status code
-  string msg = 3;
+  string message = 3;
 }
 
 message GetNewTransactionResponse {
@@ -181,9 +174,8 @@ message SubscribeResponse {
   string data = 1;
 }
 
-message GetAllTransactionsRequest{
+message GetAllTransactionsRequest{}
 
-}
 message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
 }
