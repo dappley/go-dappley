@@ -431,7 +431,7 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 //}
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex) bool {
+func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScState) bool {
 
 	if !bc.IsInBlockchain(targetHash) {
 		return false
@@ -483,6 +483,7 @@ loop:
 	bc.txPool.SaveToDatabase(bc.db)
 
 	utxo.Save()
+	scState.SaveToDatabase(bc.db)
 	bc.db.Flush()
 
 	return true

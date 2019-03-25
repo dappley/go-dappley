@@ -19,14 +19,12 @@
 package core
 
 import (
-	"bytes"
 	"encoding/hex"
 	"errors"
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 var contractUtxoKey = []byte("contractUtxoKey")
@@ -153,9 +151,9 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 	}
 }
 
-// undoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
+// UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
 // Note that the operation does not save the index to db.
-func (utxos *UTXOIndex) undoTxsInBlock(blk *Block, bc *Blockchain, db storage.Storage) error {
+func (utxos *UTXOIndex) UndoTxsInBlock(blk *Block, bc *Blockchain, db storage.Storage) error {
 
 	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
 		tx := blk.GetTransactions()[i]
@@ -277,38 +275,4 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 		utxocopy.index[pkh] = &newUtxoTx
 	}
 	return utxocopy
-}
-
-// GetUTXOIndexAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func GetUTXOIndexAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UTXOIndex, error) {
-	index := NewUTXOIndex(bc.GetUtxoCache())
-	bci := bc.Iterator()
-
-	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
-	// in the block, until the block hash matches.
-	for {
-		block, err := bci.Next()
-
-		if bytes.Compare(block.GetHash(), hash) == 0 {
-			break
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			return nil, ErrBlockDoesNotExist
-		}
-
-		err = index.undoTxsInBlock(block, bc, db)
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
-			}).Warn("UTXOIndex: failed to calculate previous state of UTXO index for the block")
-			return nil, err
-		}
-	}
-
-	return index, nil
 }

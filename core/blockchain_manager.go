@@ -18,9 +18,11 @@
 package core
 
 import (
+	"bytes"
 	"encoding/hex"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/storage"
 	peer "github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
 )
@@ -124,16 +126,14 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 		return nil
 	}
 
-	scState := NewScState()
-	scState.RevertStateAndSave(bm.blockchain.db, forkParentHash)
-
 	//verify transactions in the fork
-	utxo, err := GetUTXOIndexAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
+	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
 	if err != nil {
 		logger.Error("BlockChainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
 	rollBackUtxo := utxo.DeepCopy()
+	rollScState := scState.DeepCopy()
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if err != nil {
@@ -157,7 +157,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 
 		if firstCheck {
 			firstCheck = false
-			bm.blockchain.Rollback(forkParentHash, rollBackUtxo)
+			bm.blockchain.Rollback(forkParentHash, rollBackUtxo, rollScState)
 		}
 
 		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
@@ -172,4 +172,47 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	}
 
 	return nil
+}
+
+// RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UTXOIndex, *ScState, error) {
+	index := NewUTXOIndex(bc.GetUtxoCache())
+	scState := LoadScStateFromDatabase(db)
+	bci := bc.Iterator()
+
+	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
+	// in the block, until the block hash matches.
+	for {
+		block, err := bci.Next()
+
+		if bytes.Compare(block.GetHash(), hash) == 0 {
+			break
+		}
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(block.GetPrevHash()) == 0 {
+			return nil, nil, ErrBlockDoesNotExist
+		}
+
+		err = index.UndoTxsInBlock(block, bc, db)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"hash": block.GetHash(),
+			}).Warn("BlockChainManager: failed to calculate previous state of UTXO index for the block")
+			return nil, nil, err
+		}
+
+		err = scState.RevertState(db, block.GetHash())
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"hash": block.GetHash(),
+			}).Warn("BlockChainManager: failed to calculate previous state of scState for the block")
+			return nil, nil, err
+		}
+	}
+
+	return index, scState, nil
 }
