@@ -400,7 +400,7 @@ func (bc *Blockchain) AddBlockToDb(block *Block) error {
 	}
 	// add transaction journals
 	for _, tx := range block.GetTransactions() {
-		err = PutJournal(*tx, bc.db)
+		err = PutTxJournal(*tx, bc.db)
 		if err != nil {
 			logger.WithError(err).Warn("Blockchain: failed to add block transaction journals into database!")
 			return err

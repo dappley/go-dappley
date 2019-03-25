@@ -49,7 +49,7 @@ func getStorageKey(txid []byte) []byte {
 }
 
 // Add new log
-func PutJournal(tx Transaction, db storage.Storage) error {
+func PutTxJournal(tx Transaction, db storage.Storage) error {
 	txJournal := NewTxJournal(tx.ID, tx.Vout)
 	return txJournal.Save(db)
 }
