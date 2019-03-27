@@ -358,7 +358,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			for key, addrUtxos := range tt.utxos {
 				utxoTx := NewUTXOTx()
 				for _, addrUtxo := range addrUtxos {
-					utxoTx = utxoTx.PutUtxo(addrUtxo)
+					utxoTx.PutUtxo(addrUtxo)
 				}
 				index[key] = &utxoTx
 			}

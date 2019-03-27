@@ -204,8 +204,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := NewUTXOTx()
 
-	utxoTx = utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, UtxoNormal})
-	utxoTx = utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal})
+	utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, UtxoNormal})
+	utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
 		hex.EncodeToString(pubKeyHash): &utxoTx,
@@ -273,7 +273,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := NewUTXOTx()
 
-	utxoTx = utxoTx.PutUtxo(&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal})
+	utxoTx.PutUtxo(&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal})
 	utxoIndex.index = map[string]*UTXOTx{
 		hex.EncodeToString(pkHash1): &utxoTx,
 	}
@@ -770,10 +770,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
 	utxoTx2 := NewUTXOTx()
-	utxoTx2 = utxoTx2.PutUtxo(&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, UtxoNormal})
+	utxoTx2.PutUtxo(&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, UtxoNormal})
 
 	utxoTx1 := NewUTXOTx()
-	utxoTx1 = utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
+	utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
 		hex.EncodeToString(pkHash2): &utxoTx2,
@@ -848,7 +848,7 @@ func TestTransaction_IsIdentical(t *testing.T) {
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
 	utxoTx1 := NewUTXOTx()
-	utxoTx1 = utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
+	utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
 		hex.EncodeToString(pkHash1): &utxoTx1,

@@ -151,12 +151,12 @@ func TestRemoveUTXO(t *testing.T) {
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
 	addr1UtxoTx := NewUTXOTx()
-	addr1UtxoTx = addr1UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(5), address1Hash, ""}, []byte{1}, 0, UtxoNormal})
-	addr1UtxoTx = addr1UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{1}, 1, UtxoNormal})
-	addr1UtxoTx = addr1UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{2}, 0, UtxoNormal})
+	addr1UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(5), address1Hash, ""}, []byte{1}, 0, UtxoNormal})
+	addr1UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{1}, 1, UtxoNormal})
+	addr1UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{2}, 0, UtxoNormal})
 
 	addr2UtxoTx := NewUTXOTx()
-	addr2UtxoTx = addr2UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(4), address2Hash, ""}, []byte{1}, 2, UtxoNormal})
+	addr2UtxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(4), address2Hash, ""}, []byte{1}, 2, UtxoNormal})
 
 	utxoIndex.index[hex.EncodeToString(address1Hash)] = &addr1UtxoTx
 	utxoIndex.index[hex.EncodeToString(address2Hash)] = &addr2UtxoTx
@@ -284,10 +284,10 @@ func TestUpdate(t *testing.T) {
 	utxoPk1 := &UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
 
 	utxoTxPk2 := NewUTXOTx()
-	utxoTxPk2 = utxoTxPk2.PutUtxo(utxoPk2)
+	utxoTxPk2.PutUtxo(utxoPk2)
 
 	utxoTxPk1 := NewUTXOTx()
-	utxoTxPk1 = utxoTxPk1.PutUtxo(utxoPk1)
+	utxoTxPk1.PutUtxo(utxoPk1)
 
 	utxoIndex2 := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 
@@ -366,7 +366,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 					newUtxos := NewUTXOTx()
 					utxos = &newUtxos
 				}
-				*utxos = utxos.PutUtxo(newUTXO(vout, tx.ID, i, UtxoNormal))
+				utxos.PutUtxo(newUTXO(vout, tx.ID, i, UtxoNormal))
 				utxosMap[hex.EncodeToString(vout.PubKeyHash)] = utxos
 			}
 		}
@@ -696,13 +696,13 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, utxoCopy.index[string(address1Hash)].Size())
 
 	copyUtxoTx1 := NewUTXOTx()
-	copyUtxoTx1 = copyUtxoTx1.PutUtxo(&UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, UtxoNormal})
-	copyUtxoTx1 = copyUtxoTx1.PutUtxo(&UTXO{MockUtxoOutputsWithoutInputs()[1], []byte{}, 1, UtxoNormal})
+	copyUtxoTx1.PutUtxo(&UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, UtxoNormal})
+	copyUtxoTx1.PutUtxo(&UTXO{MockUtxoOutputsWithoutInputs()[1], []byte{}, 1, UtxoNormal})
 	utxoCopy.index["1"] = &copyUtxoTx1
 
 	utxoCopy2 := utxoCopy.DeepCopy()
 	copy2UtxoTx1 := NewUTXOTx()
-	copy2UtxoTx1 = copy2UtxoTx1.PutUtxo(&UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, UtxoNormal})
+	copy2UtxoTx1.PutUtxo(&UTXO{MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, UtxoNormal})
 	utxoCopy2.index["1"] = &copy2UtxoTx1
 	assert.Equal(t, 2, len(utxoCopy.index))
 	assert.Equal(t, 2, len(utxoCopy2.index))

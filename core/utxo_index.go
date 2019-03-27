@@ -206,8 +206,8 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 			utxo = newUTXO(txout, txid, vout, UtxoCreateContract)
 			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 			utxos.mutex.Lock()
-			newContractUtxos := contractUtxos.PutUtxo(utxo)
-			utxos.index[hex.EncodeToString(contractUtxoKey)] = &newContractUtxos
+			contractUtxos.PutUtxo(utxo)
+			utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
 			utxos.mutex.Unlock()
 		} else {
 			utxo = newUTXO(txout, txid, vout, UtxoInvokeContract)
@@ -217,8 +217,8 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 	}
 
 	utxos.mutex.Lock()
-	newUtxos := originalUtxos.PutUtxo(utxo)
-	utxos.index[hex.EncodeToString(txout.PubKeyHash)] = &newUtxos
+	originalUtxos.PutUtxo(utxo)
+	utxos.index[hex.EncodeToString(txout.PubKeyHash)] = originalUtxos
 	utxos.mutex.Unlock()
 }
 
@@ -242,8 +242,8 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 	}
 
 	utxos.mutex.Lock()
-	newUtxos := originalUtxos.RemoveUtxo(txid, vout)
-	utxos.index[hex.EncodeToString(pkh)] = &newUtxos
+	originalUtxos.RemoveUtxo(txid, vout)
+	utxos.index[hex.EncodeToString(pkh)] = originalUtxos
 	utxos.mutex.Unlock()
 
 	if utxo.UtxoType != UtxoCreateContract {
@@ -257,8 +257,8 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 			return ErrUTXONotFound
 		}
 		utxos.mutex.Lock()
-		newContractUtxos := contractUtxos.RemoveUtxo(txid, vout)
-		utxos.index[hex.EncodeToString(contractUtxoKey)] = &newContractUtxos
+		contractUtxos.RemoveUtxo(txid, vout)
+		utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
 		utxos.mutex.Unlock()
 	}
 	return nil
