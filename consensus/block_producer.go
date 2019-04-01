@@ -20,7 +20,7 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/common"
-	vm "github.com/dappley/go-dappley/contract"
+	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -133,7 +133,11 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	var generatedTXs []*core.Transaction
 
 	for _, tx := range txs {
-		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		ctx := tx.ToContractTx()
+		if ctx == nil {
+			continue
+		}
+		generatedTXs = append(generatedTXs, ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
 		utxoIndex.UpdateUtxo(tx)
 	}
 

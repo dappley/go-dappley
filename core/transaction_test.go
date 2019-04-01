@@ -481,9 +481,9 @@ func TestTransaction_Execute(t *testing.T) {
 					Contract:   contract,
 				},
 			}
-			tx := Transaction{
+			tx := ContractTx{Transaction{
 				Vout: []TXOutput{{nil, PubKeyHash(toPKH), "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
-			}
+			}}
 
 			index := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {

@@ -236,7 +236,8 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 
 	for key, node := range txPool.txs {
 		nodes[key] = node
-		if node.Value.IsContract() && !node.Value.IsExecutionContract() {
+		ctx := node.Value.ToContractTx()
+		if ctx != nil && !ctx.IsExecutionContract() {
 			isExecTxOkToInsert = false
 		}
 	}
@@ -245,8 +246,9 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 	for len(nodes) > 0 {
 		for key, node := range nodes {
 			if !checkDependTxInMap(node.Value, nodes) {
-				if node.Value.IsContract() {
-					if node.Value.IsExecutionContract() {
+				ctx := node.Value.ToContractTx()
+				if ctx != nil {
+					if ctx.IsExecutionContract() {
 						if isExecTxOkToInsert {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)
