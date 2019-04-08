@@ -67,6 +67,7 @@ type TxIndex struct {
 	BlockIndex int
 }
 
+// Transaction parameters
 type SendTxParam struct {
 	From          Address
 	SenderKeyPair *KeyPair

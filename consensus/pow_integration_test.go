@@ -208,8 +208,8 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//add second transaction
-	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount2, common.NewAmount(0), "")
-	tx2, err := core.NewUTXOTransaction(utxos2, sendTxParam)
+	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount2, common.NewAmount(0), "")
+	tx2, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
 	assert.Nil(t, err)
 
 	bc.GetTxPool().Push(tx2)
