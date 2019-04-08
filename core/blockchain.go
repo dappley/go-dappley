@@ -195,19 +195,18 @@ func (bc *Blockchain) GetState() BlockchainState {
 }
 
 func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
+	// Atomically set tail block hash and update UTXO index in db
+	tailBlockHash := bc.GetTailBlockHash()
+	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
+		return ErrPrevHashVerifyFailed
+	}
 
 	blockLogger := logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
 		"hash":   hex.EncodeToString(ctx.Block.GetHash()),
 	})
 
-	// Atomically set tail block hash and update UTXO index in db
 	bcTemp := bc.deepCopy()
-	tailBlockHash := bcTemp.GetTailBlockHash()
-	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
-		return ErrPrevHashVerifyFailed
-	}
-
 	tailBlk, _ := bc.GetTailBlock()
 
 	bcTemp.db.EnableBatch()
