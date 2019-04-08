@@ -57,9 +57,22 @@ type Transaction struct {
 	Tip  *common.Amount
 }
 
+// ContractTx contains contract value
+type ContractTx struct {
+	Transaction
+}
+
 type TxIndex struct {
 	BlockId    []byte
 	BlockIndex int
+}
+
+// Returns structure of ContractTx
+func (tx *Transaction) ToContractTx() *ContractTx {
+	if !tx.IsContract() {
+		return nil
+	}
+	return &ContractTx{*tx}
 }
 
 func (tx *Transaction) IsCoinbase() bool {
@@ -101,8 +114,12 @@ func (tx *Transaction) IsContract() bool {
 	return isContract
 }
 
-func (tx *Transaction) IsExecutionContract() bool {
-	if tx.IsContract() && !strings.Contains(tx.GetContract(), scheduleFuncName) {
+func (ctx *ContractTx) IsContract() bool {
+	return true
+}
+
+func (ctx *ContractTx) IsExecutionContract() bool {
+	if !strings.Contains(ctx.GetContract(), scheduleFuncName) {
 		return true
 	}
 	return false
@@ -118,7 +135,7 @@ func (tx *Transaction) IsFromContract(utxoIndex *UTXOIndex) bool {
 
 	for _, vin := range tx.Vin {
 		pubKey := PubKeyHash(vin.PubKey)
-		if IsContract, _ := pubKey.IsContract(); !IsContract {
+		if isContract, _ := pubKey.IsContract(); !isContract {
 			return false
 		}
 
@@ -301,8 +318,8 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
-func (tx *Transaction) IsContractDeployed(utxoIndex *UTXOIndex) bool {
-	pubkeyhash := tx.GetContractPubKeyHash()
+func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
+	pubkeyhash := ctx.GetContractPubKeyHash()
 	if pubkeyhash == nil {
 		return false
 	}
@@ -313,6 +330,10 @@ func (tx *Transaction) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
+	ctx := tx.ToContractTx()
+	if ctx != nil {
+		return ctx.Verify(utxoIndex)
+	}
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
@@ -326,17 +347,25 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		}
 		return true
 	}
-
-	if tx.IsExecutionContract() && !tx.IsContractDeployed(utxoIndex) {
-		logger.Warn("Transaction: contract state check failed.")
-		return false
-	}
-
 	if tx.IsRewardTx() {
 		//TODO: verify reward tx here
 		return true
 	}
 
+	return verify(tx, utxoIndex)
+}
+
+// Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
+func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) bool {
+	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
+		logger.Warn("Transaction: contract state check failed.")
+		return false
+	}
+
+	return verify(&ctx.Transaction, utxoIndex)
+}
+
+func verify(tx *Transaction, utxoIndex *UTXOIndex) bool {
 	var prevUtxos []*UTXO
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
@@ -396,7 +425,6 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		}).Warn("Transaction: signature is invalid.")
 		return false
 	}
-
 	return true
 }
 
@@ -607,42 +635,26 @@ func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValu
 
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
 func (tx *Transaction) GetContractAddress() Address {
-	if len(tx.Vout) == 0 {
+	ctx := tx.ToContractTx()
+	if ctx == nil {
 		return NewAddress("")
 	}
 
-	isContract, err := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
-	if err != nil {
-		return NewAddress("")
-	}
-
-	if !isContract {
-		return NewAddress("")
-	}
-
-	return tx.Vout[ContractTxouputIndex].PubKeyHash.GenerateAddress()
+	return ctx.GetContractPubKeyHash().GenerateAddress()
 }
 
 //GetContract returns the smart contract code in a transaction
-func (tx *Transaction) GetContract() string {
-	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
-	if !isContract {
-		return ""
-	}
-	return tx.Vout[ContractTxouputIndex].Contract
+func (ctx *ContractTx) GetContract() string {
+	return ctx.Vout[ContractTxouputIndex].Contract
 }
 
 //GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
-func (tx *Transaction) GetContractPubKeyHash() PubKeyHash {
-	isContract, _ := tx.Vout[ContractTxouputIndex].PubKeyHash.IsContract()
-	if !isContract {
-		return nil
-	}
-	return tx.Vout[ContractTxouputIndex].PubKeyHash
+func (ctx *ContractTx) GetContractPubKeyHash() PubKeyHash {
+	return ctx.Vout[ContractTxouputIndex].PubKeyHash
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (tx *Transaction) Execute(index UTXOIndex,
+func (ctx *ContractTx) Execute(index UTXOIndex,
 	scStorage *ScState,
 	rewards map[string]string,
 	engine ScEngine,
@@ -653,15 +665,8 @@ func (tx *Transaction) Execute(index UTXOIndex,
 		return nil
 	}
 
-	if tx.IsRewardTx() {
-		return nil
-	}
+	vout := ctx.Vout[ContractTxouputIndex]
 
-	vout := tx.Vout[ContractTxouputIndex]
-
-	if isContract, _ := vout.PubKeyHash.IsContract(); !isContract {
-		return nil
-	}
 	utxos := index.GetAllUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
@@ -669,10 +674,10 @@ func (tx *Transaction) Execute(index UTXOIndex,
 		return nil
 	}
 
-	prevUtxos, err := tx.FindAllTxinsInUtxoPool(index)
+	prevUtxos, err := ctx.FindAllTxinsInUtxoPool(index)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"txid": hex.EncodeToString(tx.ID),
+			"txid": hex.EncodeToString(ctx.ID),
 		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return nil
 	}
@@ -696,9 +701,9 @@ func (tx *Transaction) Execute(index UTXOIndex,
 	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
 	engine.ImportUTXOs(invokeUtxos)
-	engine.ImportSourceTXID(tx.ID)
+	engine.ImportSourceTXID(ctx.ID)
 	engine.ImportRewardStorage(rewards)
-	engine.ImportTransaction(tx)
+	engine.ImportTransaction(&ctx.Transaction)
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())

@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
@@ -309,7 +309,8 @@ L:
 			continue L
 		}
 
-		if tx.IsContract() {
+		ctx := tx.ToContractTx()
+		if ctx != nil {
 			// Run the contract and collect generated transactions
 			if scEngine == nil {
 				logger.Warn("Block: smart contract cannot be verified.")
@@ -317,7 +318,7 @@ L:
 				return false
 			}
 
-			tx.Execute(*utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			ctx.Execute(*utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			utxoIndex.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {

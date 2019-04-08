@@ -20,7 +20,7 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/common"
-	vm "github.com/dappley/go-dappley/contract"
+	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -94,7 +94,9 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 	rewards := make(map[string]string)
 
 	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
+	bp.persistUtxoInTx(utxoIndex, validTxs)
 	validTxs = append(validTxs, scGeneratedTXs...)
+
 	utxoIndex.UpdateUtxo(cbtx)
 	validTxs = append(validTxs, cbtx)
 	if len(rewards) > 0 {
@@ -133,9 +135,19 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	var generatedTXs []*core.Transaction
 
 	for _, tx := range txs {
-		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
-		utxoIndex.UpdateUtxo(tx)
+		ctx := tx.ToContractTx()
+		if ctx == nil {
+			continue
+		}
+		generatedTXs = append(generatedTXs, ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
 	}
 
 	return generatedTXs, scStorage
+}
+
+// persistUtxoInTx add utxo from txs into utxoIndex
+func (bp *BlockProducer) persistUtxoInTx(utxoIndex *core.UTXOIndex, txs []*core.Transaction) {
+	for _, tx := range txs {
+		utxoIndex.UpdateUtxo(tx)
+	}
 }
