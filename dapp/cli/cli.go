@@ -824,8 +824,10 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		fmt.Println("Error: invalid wallet address.")
 		return
 	}
-	tx, err := core.NewUTXOTransaction(tx_utxos, core.NewAddress(*(flags[flagFromAddress].(*string))), core.NewAddress(*(flags[flagToAddress].(*string))),
-		common.NewAmount(uint64(*(flags[flagAmount].(*int)))), senderWallet.GetKeyPair(), common.NewAmount(*(flags[flagTip].(*uint64))), data)
+	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
+		core.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))),
+		common.NewAmount(*(flags[flagTip].(*uint64))), data)
+	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
 
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)

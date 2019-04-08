@@ -67,6 +67,20 @@ type TxIndex struct {
 	BlockIndex int
 }
 
+type SendTxParam struct {
+	From          Address
+	SenderKeyPair *KeyPair
+	To            Address
+	Amount        *common.Amount
+	Tip           *common.Amount
+	Contract      string
+}
+
+// Returns SendTxParam object
+func NewSendTxParam(from Address, senderKeyPair *KeyPair, to Address, amount *common.Amount, tip *common.Amount, contract string) SendTxParam {
+	return SendTxParam{from, senderKeyPair, to, amount, tip, contract}
+}
+
 // Returns structure of ContractTx
 func (tx *Transaction) ToContractTx() *ContractTx {
 	if !tx.IsContract() {
@@ -567,23 +581,22 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*UTXO, from, to Address, amount *common.Amount, senderKeyPair *KeyPair,
-	tip *common.Amount, contract string) (Transaction, error) {
+func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
-	change, err := calculateChange(sum, amount, tip)
+	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip)
 	if err != nil {
 		return Transaction{}, err
 	}
 
 	tx := Transaction{
 		nil,
-		prepareInputLists(utxos, senderKeyPair.PublicKey, nil),
-		prepareOutputLists(from, to, amount, change, contract),
-		tip}
+		prepareInputLists(utxos, sendTxParam.SenderKeyPair.PublicKey, nil),
+		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
+		sendTxParam.Tip}
 	tx.ID = tx.Hash()
 
-	err = tx.Sign(senderKeyPair.PrivateKey, utxos)
+	err = tx.Sign(sendTxParam.SenderKeyPair.PrivateKey, utxos)
 	if err != nil {
 		return Transaction{}, err
 	}

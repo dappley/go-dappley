@@ -503,7 +503,8 @@ func createTransaction(from, to core.Address, amount, tip *common.Amount, contra
 		//}).Warn("Unable to get previous utxos")
 		return nil
 	}
-	tx, err := core.NewUTXOTransaction(prevUtxos, from, to, amount, senderKeyPair, tip, contract)
+	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, contract)
+	tx, err := core.NewUTXOTransaction(prevUtxos, sendTxParam)
 
 	sendTXLogger := logger.WithFields(logger.Fields{
 		"from":             from.String(),

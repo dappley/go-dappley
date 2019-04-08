@@ -580,14 +580,13 @@ func TestRpcSendTransaction(t *testing.T) {
 	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
-	transaction, err := core.NewUTXOTransaction(utxos,
-		rpcContext.wallet.GetAddress(),
+	sendTxParam := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	transaction, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
@@ -597,14 +596,13 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 
 	utxos2, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
-	errTransaction, err := core.NewUTXOTransaction(utxos2,
-		rpcContext.wallet.GetAddress(),
+	sendTxParam2 := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	errTransaction, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*corepb.Transaction)})
 	assert.Nil(t, failedResponse)
@@ -671,35 +669,32 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
 
-	transaction1, err := core.NewUTXOTransaction(utxos,
-		rpcContext.wallet.GetAddress(),
+	sendTxParam1 := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet1.GetAddress(),
 		common.NewAmount(3),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	transaction1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction1})
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
-	transaction2, err := core.NewUTXOTransaction(utxos,
-		rpcContext.wallet.GetAddress(),
+	sendTxParam2 := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(2),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	transaction2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction2})
 	pubKeyHash1, _ := receiverWallet1.GetAddress().GetPubKeyHash()
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
-	transaction3, err := core.NewUTXOTransaction(utxos,
-		receiverWallet1.GetAddress(),
+	sendTxParam3 := core.NewSendTxParam(receiverWallet1.GetAddress(),
+		receiverWallet1.GetKeyPair(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(1),
-		receiverWallet1.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	transaction3, err := core.NewUTXOTransaction(utxos, sendTxParam3)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
 
 	rpcContext.consensus.Stop()
@@ -714,23 +709,21 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	rpcContext.consensus.Stop()
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
-	errTransaction, err := core.NewUTXOTransaction(utxos2,
-		rpcContext.wallet.GetAddress(),
+	sendTxParamErr := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	errTransaction, err := core.NewUTXOTransaction(utxos2, sendTxParamErr)
 
-	transaction4, err := core.NewUTXOTransaction(utxos2,
-		rpcContext.wallet.GetAddress(),
+	sendTxParam4 := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	transaction4, err := core.NewUTXOTransaction(utxos2, sendTxParam4)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{errTransaction.ToProto().(*corepb.Transaction), transaction4.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, failedResponse)
@@ -883,14 +876,13 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
-	transaction, err := core.NewUTXOTransaction(utxos,
-		rpcContext.wallet.GetAddress(),
+	sendTxParam := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
+		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
-		rpcContext.wallet.GetKeyPair(),
 		common.NewAmount(0),
-		"",
-	)
+		"")
+	transaction, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	// put a tx into txpool
 	c1.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
 
