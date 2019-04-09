@@ -381,29 +381,9 @@ func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) bool {
 }
 
 func verify(tx *Transaction, utxoIndex *UTXOIndex) bool {
-	var prevUtxos []*UTXO
-	for _, vin := range tx.Vin {
-		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"tx_id":          hex.EncodeToString(tx.ID),
-				"vin_tx_id":      hex.EncodeToString(vin.Txid),
-				"vin_public_key": hex.EncodeToString(vin.PubKey),
-			}).Warn("Transaction: failed to get PubKeyHash of vin.")
-			return false
-		}
-		tempUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
-		if utxo == nil {
-			logger.WithFields(logger.Fields{
-				"tx_id":      hex.EncodeToString(tx.ID),
-				"vin_tx_id":  hex.EncodeToString(vin.Txid),
-				"vin_index":  vin.Vout,
-				"pubKeyHash": hex.EncodeToString(pubKeyHash),
-			}).Warn("Transaction: cannot find vin.")
-			return false
-		}
-		prevUtxos = append(prevUtxos, utxo)
+	prevUtxos := getPrevUTXOs(tx, utxoIndex)
+	if prevUtxos == nil {
+		return false
 	}
 
 	if !tx.verifyID() {
@@ -420,14 +400,20 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) bool {
 		return false
 	}
 
-	if !tx.verifyAmount(prevUtxos) {
+	totalPrev := calculateUtxoSum(prevUtxos)
+	totalVoutValue, ok := tx.calculateTotalVoutValue()
+	if !ok {
+		return false
+	}
+
+	if !tx.verifyAmount(totalPrev, totalVoutValue) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: amount is invalid.")
 		return false
 	}
 
-	if !tx.verifyTip(prevUtxos) {
+	if !tx.verifyTip(totalPrev, totalVoutValue) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: tip is invalid.")
@@ -443,6 +429,40 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) bool {
 	return true
 }
 
+// Returns related previous UTXO for current transaction
+func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
+	var prevUtxos []*UTXO
+	tempUtxoTxMap := make(map[string]*UTXOTx)
+	for _, vin := range tx.Vin {
+		pubKeyHash, err := NewUserPubKeyHash(vin.PubKey)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"tx_id":          hex.EncodeToString(tx.ID),
+				"vin_tx_id":      hex.EncodeToString(vin.Txid),
+				"vin_public_key": hex.EncodeToString(vin.PubKey),
+			}).Warn("Transaction: failed to get PubKeyHash of vin.")
+			return nil
+		}
+		tempUtxoTx, ok := tempUtxoTxMap[string(pubKeyHash)]
+		if !ok {
+			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+			tempUtxoTxMap[string(pubKeyHash)] = tempUtxoTx
+		}
+		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
+		if utxo == nil {
+			logger.WithFields(logger.Fields{
+				"tx_id":      hex.EncodeToString(tx.ID),
+				"vin_tx_id":  hex.EncodeToString(vin.Txid),
+				"vin_index":  vin.Vout,
+				"pubKeyHash": hex.EncodeToString(pubKeyHash),
+			}).Warn("Transaction: cannot find vin.")
+			return nil
+		}
+		prevUtxos = append(prevUtxos, utxo)
+	}
+	return prevUtxos
+}
+
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() bool {
 	txCopy := tx.TrimmedCopy(true)
@@ -453,17 +473,31 @@ func (tx *Transaction) verifyID() bool {
 	}
 }
 
+// verifyAmount verifies if the transaction has the correct vout value
+func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *common.Amount) bool {
+	//TotalVin amount must equal or greater than total vout
+	return totalPrev.Cmp(totalVoutValue) >= 0
+}
+
 //verifyTip verifies if the transaction has the correct tip
-func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
-	sum := calculateUtxoSum(prevUtxos)
-	var err error
-	for _, vout := range tx.Vout {
-		sum, err = sum.Sub(vout.Value)
-		if err != nil {
-			return false
-		}
+func (tx *Transaction) verifyTip(totalPrev *common.Amount, totalVoutValue *common.Amount) bool {
+	sub, err := totalPrev.Sub(totalVoutValue)
+	if err != nil {
+		return false
 	}
-	return tx.Tip.Cmp(sum) == 0
+	return tx.Tip.Cmp(sub) == 0
+}
+
+//calculateTotalVoutValue returns total amout of transaction's vout
+func (tx *Transaction) calculateTotalVoutValue() (*common.Amount, bool) {
+	totalVout := &common.Amount{}
+	for _, vout := range tx.Vout {
+		if vout.Value == nil || vout.Value.Validate() != nil {
+			return nil, false
+		}
+		totalVout = totalVout.Add(vout.Value)
+	}
+	return totalVout, true
 }
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
@@ -471,6 +505,10 @@ func (tx *Transaction) verifyTip(prevUtxos []*UTXO) bool {
 func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 
 	for i, vin := range tx.Vin {
+		if prevUtxos[i].PubKeyHash == nil {
+			logger.Error("Transaction: previous transaction is not correct.")
+			return false
+		}
 
 		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
 		if err != nil {
@@ -494,13 +532,6 @@ func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) bool {
 }
 
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
-	for _, utxo := range prevUtxos {
-		if utxo.PubKeyHash == nil {
-			logger.Error("Transaction: previous transaction is not correct.")
-			return false
-		}
-	}
-
 	txCopy := tx.TrimmedCopy(false)
 
 	for i, vin := range tx.Vin {
@@ -523,22 +554,6 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) bool {
 	}
 
 	return true
-}
-
-func (tx *Transaction) verifyAmount(prevTXs []*UTXO) bool {
-	var totalVin, totalVout common.Amount
-	for _, utxo := range prevTXs {
-		totalVin = *totalVin.Add(utxo.Value)
-	}
-
-	for _, vout := range tx.Vout {
-		if vout.Value.Validate() != nil {
-			return false
-		}
-		totalVout = *totalVout.Add(vout.Value)
-	}
-	//TotalVin amount must equal or greater than total vout
-	return totalVin.Cmp(&totalVout) >= 0
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
