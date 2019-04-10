@@ -94,7 +94,6 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 	rewards := make(map[string]string)
 
 	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
-	bp.persistUtxoInTx(utxoIndex, validTxs)
 	validTxs = append(validTxs, scGeneratedTXs...)
 
 	utxoIndex.UpdateUtxo(cbtx)
@@ -137,17 +136,14 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()
 		if ctx == nil {
+			// add utxo from txs into utxoIndex
+			utxoIndex.UpdateUtxo(tx)
 			continue
 		}
 		generatedTXs = append(generatedTXs, ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		// add utxo from txs into utxoIndex
+		utxoIndex.UpdateUtxo(tx)
 	}
 
 	return generatedTXs, scStorage
-}
-
-// persistUtxoInTx add utxo from txs into utxoIndex
-func (bp *BlockProducer) persistUtxoInTx(utxoIndex *core.UTXOIndex, txs []*core.Transaction) {
-	for _, tx := range txs {
-		utxoIndex.UpdateUtxo(tx)
-	}
 }
