@@ -18,11 +18,13 @@
 package core
 
 import (
+	"sync"
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestJournalPutAndGet(t *testing.T) {
@@ -30,7 +32,7 @@ func TestJournalPutAndGet(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
+	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000, sync.Mutex{}}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)

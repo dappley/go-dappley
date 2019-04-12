@@ -95,6 +95,7 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 
 	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
 	validTxs = append(validTxs, scGeneratedTXs...)
+	utxoIndex.UpdateUtxoState(scGeneratedTXs)
 
 	utxoIndex.UpdateUtxo(cbtx)
 	validTxs = append(validTxs, cbtx)

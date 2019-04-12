@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -67,6 +68,7 @@ type Blockchain struct {
 	state         BlockchainState
 	eventManager  *EventManager
 	blkSizeLimit  int
+	mutex         sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -82,6 +84,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
+		sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
@@ -111,6 +114,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
+		sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -196,6 +200,9 @@ func (bc *Blockchain) GetState() BlockchainState {
 
 func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	// Atomically set tail block hash and update UTXO index in db
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
+
 	tailBlockHash := bc.GetTailBlockHash()
 	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
 		return ErrPrevHashVerifyFailed
@@ -325,7 +332,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit}
+	return &Blockchain{bc.tailBlockHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -431,6 +438,8 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 
 //rollback the blockchain to a block with the targetHash
 func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScState) bool {
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
 
 	if !bc.IsInBlockchain(targetHash) {
 		return false
