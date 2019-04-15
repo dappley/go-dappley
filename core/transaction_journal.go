@@ -87,9 +87,6 @@ func (txJournal *TxJournal) SerializeJournal() ([]byte, error) {
 		logger.WithError(err).Panic("TransactionJournal: Cannot serialize transactionJournal!")
 		return nil, err
 	}
-	logger.WithFields(logger.Fields{
-		"size": len(rawBytes),
-	}).Info("TransactionJournal: Serialize TransactionJournal!")
 	return rawBytes, nil
 }
 

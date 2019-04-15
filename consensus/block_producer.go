@@ -90,20 +90,13 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
 	validTxs := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, bp.bc.GetBlockSizeLimit())
 
-	cbtx := bp.calculateTips(validTxs)
-	rewards := make(map[string]string)
-
-	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
+	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, parentBlock.GetHeight()+1, parentBlock)
 	validTxs = append(validTxs, scGeneratedTXs...)
 	utxoIndex.UpdateUtxoState(scGeneratedTXs)
 
-	utxoIndex.UpdateUtxo(cbtx)
+	cbtx := bp.calculateTips(validTxs)
 	validTxs = append(validTxs, cbtx)
-	if len(rewards) > 0 {
-		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
-		utxoIndex.UpdateUtxo(&rtx)
-		validTxs = append(validTxs, &rtx)
-	}
+	utxoIndex.UpdateUtxo(cbtx)
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
@@ -125,14 +118,14 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 
 //executeSmartContract executes all smart contracts
 func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
-	txs []*core.Transaction, rewards map[string]string,
-	currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
+	txs []*core.Transaction, currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
 	//start a new smart contract engine
 
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction
+	rewards := make(map[string]string)
 
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()
@@ -146,5 +139,10 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 		utxoIndex.UpdateUtxo(tx)
 	}
 
+	// append reward transaction
+	if len(rewards) > 0 {
+		rtx := core.NewRewardTx(currBlkHeight, rewards)
+		generatedTXs = append(generatedTXs, &rtx)
+	}
 	return generatedTXs, scStorage
 }
