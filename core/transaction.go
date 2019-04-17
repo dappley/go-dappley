@@ -224,25 +224,30 @@ func (tx *Transaction) Describe(utxoIndex *UTXOIndex) (sender, recipient *Addres
 
 //GetToHashBytes Get bytes for hash
 func (tx *Transaction) GetToHashBytes() []byte {
-	var bytes []byte
+	var tempBytes []byte
 
 	for _, vin := range tx.Vin {
-		bytes = append(bytes, vin.Txid...)
-		// int size may differ from differnt platform
-		bytes = append(bytes, byteutils.FromInt32(int32(vin.Vout))...)
-		bytes = append(bytes, vin.PubKey...)
-		bytes = append(bytes, vin.Signature...)
+		tempBytes = bytes.Join([][]byte{
+			tempBytes,
+			vin.Txid,
+			byteutils.FromInt32(int32(vin.Vout)),
+			vin.PubKey,
+			vin.Signature,
+		}, []byte{})
 	}
 
 	for _, vout := range tx.Vout {
-		bytes = append(bytes, vout.Value.Bytes()...)
-		bytes = append(bytes, []byte(vout.PubKeyHash)...)
-		bytes = append(bytes, []byte(vout.Contract)...)
+		tempBytes = bytes.Join([][]byte{
+			tempBytes,
+			vout.Value.Bytes(),
+			[]byte(vout.PubKeyHash),
+			[]byte(vout.Contract),
+		}, []byte{})
 	}
 	if tx.Tip != nil {
-		bytes = append(bytes, tx.Tip.Bytes()...)
+		tempBytes = append(tempBytes, tx.Tip.Bytes()...)
 	}
-	return bytes
+	return tempBytes
 }
 
 // Hash returns the hash of the Transaction
