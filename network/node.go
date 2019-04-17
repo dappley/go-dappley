@@ -24,13 +24,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"sync"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-crypto"
 	"github.com/libp2p/go-libp2p-host"
@@ -38,6 +36,7 @@ import (
 	"github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+	"io/ioutil"
 )
 
 const (
@@ -98,7 +97,7 @@ type Node struct {
 	bm                     *core.BlockChainManager
 	streamExitCh           chan *Stream
 	exitCh                 chan bool
-	recentlyRcvedDapMsgs   *sync.Map
+	recentlyRcvedDapMsgs   *lru.Cache
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
 	dispatch               chan *streamMsg
@@ -116,6 +115,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 }
 
 func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeConfig) *Node {
+	var err error
 	placeholder := uint64(0)
 	bm := core.NewBlockChainManager()
 	bm.SetblockPool(pool)
@@ -126,12 +126,15 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		bm:                     bm,
 		streamExitCh:           make(chan *Stream, 10),
 		exitCh:                 make(chan bool, 1),
-		recentlyRcvedDapMsgs:   &sync.Map{},
 		dapMsgBroadcastCounter: &placeholder,
 		privKey:                nil,
 		dispatch:               make(chan *streamMsg, dispatchChLen),
 		downloadManager:        nil,
 		peerManager:            nil,
+	}
+	node.recentlyRcvedDapMsgs, err = lru.New(1024)
+	if err != nil {
+		logger.WithError(err).Warn("Node: Can not initialize lru cache for recentlyRcvedDapMsgs!")
 	}
 	node.downloadManager = NewDownloadManager(node)
 	node.peerManager = NewPeerManager(node, config)
@@ -139,7 +142,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 }
 
 func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
-	if _, value := n.recentlyRcvedDapMsgs.Load(dapmsg.GetKey()); value == true {
+	if n.recentlyRcvedDapMsgs.Contains(dapmsg.GetKey()) {
 		return true
 	}
 	return false
@@ -147,7 +150,7 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 
 func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
 func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
-func (n *Node) GetRecentlyRcvedDapMsgs() *sync.Map   { return n.recentlyRcvedDapMsgs }
+func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache  { return n.recentlyRcvedDapMsgs }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
 func (n *Node) GetPeerManager() *PeerManager         { return n.peerManager }
 func (n *Node) GetInfo() *PeerInfo                   { return n.info }
@@ -729,7 +732,7 @@ func (n *Node) ReturnCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 }
 
 func (n *Node) cacheDapMsg(dm DapMsg) {
-	n.recentlyRcvedDapMsgs.Store(dm.GetKey(), true)
+	n.recentlyRcvedDapMsgs.Add(dm.GetKey(), true)
 }
 
 func (n *Node) AddTxToPool(dm *DapMsg) {

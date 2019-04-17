@@ -16,7 +16,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
-//
 
 package logic
 
@@ -315,12 +314,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i, node := range nodes {
-		node.GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
-			heights[i]++
-			return true
-		})
+		heights[i] = node.GetRecentlyRcvedDapMsgs().Len()
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
-
 	}
 	for _, node := range nodes {
 		node.Stop()
@@ -396,10 +391,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
 	heights := []int{0, 0, 0, 0} //keep track of each node's blockchain height
 	for i, node := range nodes {
-		node.GetRecentlyRcvedDapMsgs().Range(func(k, v interface{}) bool {
-			heights[i]++
-			return true
-		})
+		heights[i] = node.GetRecentlyRcvedDapMsgs().Len()
 		assert.Equal(t, heights[i], int(bcs[i].GetMaxHeight()))
 	}
 	for _, node := range nodes {
