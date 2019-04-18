@@ -171,11 +171,11 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, common.NewAmount(0)}
 
 	// test valid coinbase transaction
-	assert.True(t, t5.Verify(&UTXOIndex{}, 5))
-	assert.True(t, t6.Verify(&UTXOIndex{}, 5))
+	assert.Nil(t, t5.Verify(&UTXOIndex{}, 5))
+	assert.Nil(t, t6.Verify(&UTXOIndex{}, 5))
 
 	// test coinbase transaction with incorrect blockHeight
-	assert.False(t, t5.Verify(&UTXOIndex{}, 10))
+	assert.NotNil(t, t5.Verify(&UTXOIndex{}, 10))
 
 	// test coinbase transaction with incorrect subsidy
 	bh2 := make([]byte, 8)
@@ -183,7 +183,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := NewTXOutput(common.NewAmount(9), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
 	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, common.NewAmount(0)}
-	assert.False(t, t7.Verify(&UTXOIndex{}, 5))
+	assert.NotNil(t, t7.Verify(&UTXOIndex{}, 5))
 
 }
 
@@ -291,8 +291,8 @@ func TestInvalidExecutionTx(t *testing.T) {
 	executionTx.ID = executionTx.Hash()
 	executionTx.Sign(GetKeyPairByString(prikey1).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
 
-	assert.False(t, executionTx.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
-	assert.True(t, executionTx.Verify(utxoIndex, 0))
+	assert.NotNil(t, executionTx.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
+	assert.Nil(t, executionTx.Verify(utxoIndex, 0))
 }
 
 func TestNewCoinbaseTX(t *testing.T) {
@@ -799,33 +799,33 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	//tx3-tx4-tx5
 
 	// test a transaction whose Vin is from UtxoIndex
-	assert.Equal(t, true, dependentTx2.Verify(utxoIndex, 0))
+	assert.Nil(t, dependentTx2.Verify(utxoIndex, 0))
 	txPool.Push(dependentTx2)
 
 	// test a transaction whose Vin is from another transaction in transaction pool
 	utxoIndex2 := *utxoIndex.DeepCopy()
 	utxoIndex2.UpdateUtxoState(txPool.GetTransactions())
-	assert.Equal(t, true, dependentTx3.Verify(&utxoIndex2, 0))
+	assert.Nil(t, dependentTx3.Verify(&utxoIndex2, 0))
 	txPool.Push(dependentTx3)
 
 	// test a transaction whose Vin is from another two transactions in transaction pool
 	utxoIndex3 := *utxoIndex.DeepCopy()
 	utxoIndex3.UpdateUtxoState(txPool.GetTransactions())
-	assert.Equal(t, true, dependentTx4.Verify(&utxoIndex3, 0))
+	assert.Nil(t, dependentTx4.Verify(&utxoIndex3, 0))
 	txPool.Push(dependentTx4)
 
 	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	utxoIndex4 := *utxoIndex.DeepCopy()
 	utxoIndex4.UpdateUtxoState(txPool.GetTransactions())
-	assert.Equal(t, true, dependentTx5.Verify(&utxoIndex4, 0))
+	assert.Nil(t, dependentTx5.Verify(&utxoIndex4, 0))
 	txPool.Push(dependentTx5)
 
 	// test UTXOs not found for parent transactions
-	assert.Equal(t, false, dependentTx3.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
+	assert.NotNil(t, dependentTx3.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0))
 
 	// test a standalone transaction
 	txPool.Push(tx1)
-	assert.Equal(t, false, tx1.Verify(utxoIndex, 0))
+	assert.NotNil(t, tx1.Verify(utxoIndex, 0))
 }
 
 func TestTransaction_IsIdentical(t *testing.T) {

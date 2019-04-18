@@ -349,7 +349,7 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
+func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) error {
 	ctx := tx.ToContractTx()
 	if ctx != nil {
 		return ctx.Verify(utxoIndex)
@@ -358,80 +358,80 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) bool {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
 			logger.Warn("Transaction: subsidy check failed.")
-			return false
+			return errors.New("Transaction: subsidy check failed")
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 		if blockHeight != bh {
 			logger.Warnf("Transaction: block height check failed expected=%v actual=%v.", blockHeight, bh)
-			return false
+			return fmt.Errorf("Transaction: block height check failed expected=%v actual=%v.", blockHeight, bh)
 		}
-		return true
+		return nil
 	}
 	if tx.IsRewardTx() {
 		//TODO: verify reward tx here
-		return true
+		return nil
 	}
 
 	return verify(tx, utxoIndex)
 }
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) bool {
+func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) error {
 	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
 		logger.Warn("Transaction: contract state check failed.")
-		return false
+		return errors.New("Transaction: contract state check failed")
 	}
 
 	return verify(&ctx.Transaction, utxoIndex)
 }
 
-func verify(tx *Transaction, utxoIndex *UTXOIndex) bool {
+func verify(tx *Transaction, utxoIndex *UTXOIndex) error {
 	prevUtxos := getPrevUTXOs(tx, utxoIndex)
 	if prevUtxos == nil {
-		return false
+		return errors.New("Transaction: prevUtxos not found")
 	}
 
 	if !tx.verifyID() {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: ID is invalid.")
-		return false
+		return errors.New("Transaction: ID is invalid")
 	}
 
 	if !tx.verifyPublicKeyHash(prevUtxos) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: pubkey is invalid.")
-		return false
+		return errors.New("Transaction: pubkey is invalid")
 	}
 
 	totalPrev := calculateUtxoSum(prevUtxos)
 	totalVoutValue, ok := tx.calculateTotalVoutValue()
 	if !ok {
-		return false
+		return errors.New("Transaction: vout is invalid")
 	}
 
 	if !tx.verifyAmount(totalPrev, totalVoutValue) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: amount is invalid.")
-		return false
+		return errors.New("Transaction: amount is invalid")
 	}
 
 	if !tx.verifyTip(totalPrev, totalVoutValue) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: tip is invalid.")
-		return false
+		return errors.New("Transaction: tip is invalid")
 	}
 
 	if !tx.verifySignatures(prevUtxos) {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
 		}).Warn("Transaction: signature is invalid.")
-		return false
+		return errors.New("Transaction: signature is invalid")
 	}
-	return true
+	return nil
 }
 
 // Returns related previous UTXO for current transaction

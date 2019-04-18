@@ -214,7 +214,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
-	if !tx.Verify(utxoIndex, 0) {
+	if tx.Verify(utxoIndex, 0) != nil {
 		return nil, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 
@@ -271,7 +271,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				continue
 			}
 
-			if !tx.Verify(utxoIndex, 0) {
+			if tx.Verify(utxoIndex, 0) != nil {
 				continue
 			}
 

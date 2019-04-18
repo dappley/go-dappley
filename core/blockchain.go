@@ -482,7 +482,7 @@ loop:
 
 	newUtxo := utxo.DeepCopy()
 	for _, tx := range bc.txPool.GetTransactions() {
-		if tx.Verify(newUtxo, 0) {
+		if tx.Verify(newUtxo, 0) == nil {
 			newUtxo.UpdateUtxo(tx)
 			newTxPool.Push(*tx)
 		}
