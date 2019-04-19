@@ -132,7 +132,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		downloadManager:        nil,
 		peerManager:            nil,
 	}
-	node.recentlyRcvedDapMsgs, err = lru.New(1024)
+	node.recentlyRcvedDapMsgs, err = lru.New(1024000)
 	if err != nil {
 		logger.WithError(err).Warn("Node: Can not initialize lru cache for recentlyRcvedDapMsgs!")
 	}
