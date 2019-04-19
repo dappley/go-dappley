@@ -23,6 +23,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -225,14 +226,14 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		name     string
 		tx       Transaction
 		signWith []byte
-		ok       bool
+		ok       error
 	}{
-		{"normal", Transaction{nil, txin1, txout, common.NewAmount(0)}, privKeyByte, true},
-		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, common.NewAmount(0)}, privKeyByte, false},
-		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, common.NewAmount(0)}, privKeyByte, false},
-		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, common.NewAmount(0)}, privKeyByte, false},
-		{"Amount invalid", Transaction{nil, txin1, txout2, common.NewAmount(0)}, privKeyByte, false},
-		{"Sign invalid", Transaction{nil, txin1, txout, common.NewAmount(0)}, wrongPrivKeyByte, false},
+		{"normal", Transaction{nil, txin1, txout, common.NewAmount(0)}, privKeyByte, nil},
+		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"Amount invalid", Transaction{nil, txin1, txout2, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: ID is invalid")},
+		{"Sign invalid", Transaction{nil, txin1, txout, common.NewAmount(0)}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
