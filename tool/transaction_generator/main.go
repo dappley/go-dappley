@@ -22,16 +22,21 @@ var (
 	maxWallet     = 5
 	initialAmount = uint64(100000)
 	fundTimeout   = time.Duration(time.Minute * 5)
+	txSenders     = []transctionSender{sendNormalTransaction, sendUsingUnexistingUTXOrpcClient}
 )
 
 const (
 	rpcFilePath = "default.conf"
 )
 
+type transctionSender func(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager)
+
 func main() {
 	logger.SetFormatter(&logger.TextFormatter{
 		FullTimestamp: true,
 	})
+
+	var utxoIndex *core.UTXOIndex
 
 	cliConfig := &configpb.CliConfig{}
 	config.LoadConfig(rpcFilePath, cliConfig)
@@ -41,42 +46,97 @@ func main() {
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
 	addrs := createWallet()
-	utxoIndex := updateUtxoIndex(rpcClient, addrs)
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		logger.Panic("Can not get access to wallet")
 	}
 
 	fundFromMiner(adminClient, rpcClient, addrs[0].String())
-	displayBalances(rpcClient, addrs)
 
-	sendNormalTransaction(rpcClient, utxoIndex, addrs, wm)
-	//ticker := time.NewTicker(time.Millisecond * 200).C
-	//for {
-	//	select {
-	//	case <-ticker:
-	//		height := getBlockHeight(rpcClient)
-	//		if height > currHeight {
-	//			cmdChan <- cmdStop
-	//
-	//			isContractDeployed = true
-	//			currHeight = height
-	//
-	//			displayBalances(rpcClient, addresses, true)
-	//			updateUtxoIndex(rpcClient, addresses)
-	//
-	//			//blk := getTailBlock(rpcClient, currHeight)
-	//			//logger.WithFields(logger.Fields{
-	//			//	"height": currHeight,
-	//			//}).Info("New Block Height")
-	//			//verifyTransactions(blk.GetTransactions())
-	//			//recordTransactions(blk.GetTransactions(), currHeight)
-	//
-	//		} else {
-	//			cmdChan <- cmdStart
-	//		}
-	//	}
-	//}
+	ticker := time.NewTicker(time.Millisecond * 200).C
+	currHeight := uint64(0)
+	index := 0
+	for {
+		select {
+		case <-ticker:
+			height := getBlockHeight(rpcClient)
+			if height > currHeight {
+				currHeight = height
+				displayBalances(rpcClient, addrs)
+				utxoIndex = updateUtxoIndex(rpcClient, addrs)
+				logger.Info("Transaction ", index)
+				txSenders[index](rpcClient, utxoIndex, addrs, wm)
+				index = index + 1
+				if index >= len(txSenders) {
+					logger.Info("All transactions are sent. Exiting...")
+					return
+				}
+			}
+		}
+	}
+}
+
+func sendUsingUnexistingUTXOrpcClient(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+	from := addrs[0]
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	to := addrs[1]
+	amount := common.NewAmount(10)
+
+	tx := createTransactionUsingUnexistingUTXO(utxoIndex,
+		from,
+		to,
+		amount,
+		common.NewAmount(0),
+		senderKeyPair)
+
+	txpb := tx.ToProto().(*corepb.Transaction)
+
+	_, err := rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{Transaction: txpb},
+	)
+
+	logger.WithFields(logger.Fields{
+		"From":   from,
+		"To":     to,
+		"Amount": amount,
+	}).Info("Sending a transaction with unexisitng utxo...")
+
+	if err != nil {
+		logger.WithError(err).Warn("Unable to send transaction!")
+	}
+}
+
+func sendNormalTransaction(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+
+	from := addrs[0]
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	to := addrs[1]
+	amount := common.NewAmount(10)
+
+	tx := createNormalTransaction(utxoIndex,
+		from,
+		to,
+		amount,
+		common.NewAmount(0),
+		senderKeyPair)
+
+	txpb := tx.ToProto().(*corepb.Transaction)
+
+	_, err := rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{Transaction: txpb},
+	)
+
+	logger.WithFields(logger.Fields{
+		"From":   from,
+		"To":     to,
+		"Amount": amount,
+	}).Info("Sending a normal transaction...")
+
+	if err != nil {
+		logger.WithError(err).Panic("Unable to send transaction!")
+	}
 }
 
 func initRpcClient(port int) *grpc.ClientConn {
@@ -147,30 +207,6 @@ func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*c
 	return resp.Utxos
 }
 
-func sendNormalTransaction(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
-	from := addrs[0]
-	senderKeyPair := wm.GetKeyPairByAddress(from)
-	to := addrs[1]
-
-	tx := createNormalTransaction(utxoIndex,
-		from,
-		to,
-		common.NewAmount(10),
-		common.NewAmount(0),
-		senderKeyPair)
-
-	txpb := tx.ToProto().(*corepb.Transaction)
-
-	_, err := rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
-
-	if err != nil {
-		logger.WithError(err).Panic("Unable to send batch transactions!")
-	}
-}
-
 func createNormalTransaction(utxoIndex *core.UTXOIndex, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
 
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
@@ -178,6 +214,28 @@ func createNormalTransaction(utxoIndex *core.UTXOIndex, from, to core.Address, a
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
 	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
+}
+
+func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
+
+	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+	if err != nil {
+		logger.WithError(err).Panic("Unable to hash sender public key")
+	}
+	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	unexistingUtxo := &core.UTXO{
+		TXOutput: *core.NewTXOutput(common.NewAmount(10), from),
+		Txid:     []byte("FakeTxId"),
+		TxIndex:  0,
+		UtxoType: core.UtxoNormal,
+	}
+	prevUtxos = append(prevUtxos, unexistingUtxo)
+	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
+}
+
+func createTransaction(prevUtxos []*core.UTXO, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
+
 	sum := calculateUtxoSum(prevUtxos)
 	change := calculateChange(sum, amount, tip)
 	vouts := prepareOutputLists(from, to, amount, change)
@@ -326,4 +384,14 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address)
 		}
 		balanceLogger.Info("Displaying wallet balance...")
 	}
+}
+
+func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64 {
+	resp, err := rpcClient.RpcGetBlockchainInfo(
+		context.Background(),
+		&rpcpb.GetBlockchainInfoRequest{})
+	if err != nil {
+		logger.WithError(err).Panic("Cannot get block height.")
+	}
+	return resp.BlockHeight
 }
