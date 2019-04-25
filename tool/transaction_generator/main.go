@@ -12,6 +12,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/tool"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"time"
@@ -20,7 +21,7 @@ import (
 var (
 	password      = "testpassword"
 	maxWallet     = 5
-	initialAmount = uint64(100000)
+	initialAmount = common.NewAmount(100000)
 	fundTimeout   = time.Duration(time.Minute * 5)
 	txSenders     = []transctionSender{
 		sendNormalTransaction,
@@ -56,9 +57,8 @@ func main() {
 	if err != nil {
 		logger.Panic("Can not get access to wallet")
 	}
-
-	fundFromMiner(adminClient, rpcClient, addrs[0].String())
-	fundFromMiner(adminClient, rpcClient, addrs[2].String())
+	tool.FundFromMiner(adminClient, rpcClient, addrs[0].String(), initialAmount)
+	tool.FundFromMiner(adminClient, rpcClient, addrs[2].String(), initialAmount)
 
 	ticker := time.NewTicker(time.Millisecond * 200).C
 	currHeight := uint64(0)
@@ -421,69 +421,6 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 		logger.Panic("Insufficient input")
 	}
 	return change
-}
-
-func fundFromMiner(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, fundAddr string) {
-	logger.Info("Requesting fund from miner...")
-
-	if fundAddr == "" {
-		logger.Panic("There is no wallet to receive fund.")
-	}
-
-	requestFundFromMiner(adminClient, fundAddr)
-	bal, isSufficient := checkSufficientInitialAmount(rpcClient, fundAddr)
-	if isSufficient {
-		//continue if the initial amount is sufficient
-		return
-	}
-	logger.WithFields(logger.Fields{
-		"address":     fundAddr,
-		"balance":     bal,
-		"target_fund": initialAmount,
-	}).Info("Current wallet balance is insufficient. Waiting for more funds...")
-	waitTilInitialAmountIsSufficient(adminClient, rpcClient, fundAddr)
-}
-
-func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string) {
-
-	sendFromMinerRequest := &rpcpb.SendFromMinerRequest{To: fundAddr, Amount: common.NewAmount(initialAmount).Bytes()}
-
-	adminClient.RpcSendFromMiner(context.Background(), sendFromMinerRequest)
-}
-
-func checkSufficientInitialAmount(rpcClient rpcpb.RpcServiceClient, addr string) (uint64, bool) {
-	balance, err := getBalance(rpcClient, addr)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"address": addr,
-		}).Panic("Failed to get balance.")
-	}
-	return uint64(balance), uint64(balance) >= initialAmount
-}
-
-func waitTilInitialAmountIsSufficient(adminClient rpcpb.AdminServiceClient, rpcClient rpcpb.RpcServiceClient, addr string) {
-	checkBalanceTicker := time.NewTicker(time.Second * 5).C
-	timeout := time.NewTicker(fundTimeout).C
-	for {
-		select {
-		case <-checkBalanceTicker:
-			bal, isSufficient := checkSufficientInitialAmount(rpcClient, addr)
-			if isSufficient {
-				//continue if the initial amount is sufficient
-				return
-			}
-			logger.WithFields(logger.Fields{
-				"address":     addr,
-				"balance":     bal,
-				"target_fund": initialAmount,
-			}).Info("Current wallet balance is insufficient. Waiting for more funds...")
-			requestFundFromMiner(adminClient, addr)
-		case <-timeout:
-			logger.WithFields(logger.Fields{
-				"target_fund": initialAmount,
-			}).Panic("Timed out while waiting for sufficient fund from miner!")
-		}
-	}
 }
 
 func getBalance(rpcClient rpcpb.RpcServiceClient, address string) (int64, error) {
