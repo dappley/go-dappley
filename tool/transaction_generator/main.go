@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
@@ -11,10 +10,8 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/tool"
 	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"time"
 )
 
@@ -47,7 +44,7 @@ func main() {
 
 	cliConfig := &configpb.CliConfig{}
 	config.LoadConfig(rpcFilePath, cliConfig)
-	conn := initRpcClient(int(cliConfig.GetPort()))
+	conn := tool.InitRpcClient(int(cliConfig.GetPort()))
 
 	adminClient := rpcpb.NewAdminServiceClient(conn)
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
@@ -66,11 +63,11 @@ func main() {
 	for {
 		select {
 		case <-ticker:
-			height := getBlockHeight(rpcClient)
+			height := tool.GetBlockHeight(rpcClient)
 			if height > currHeight {
 				currHeight = height
 				displayBalances(rpcClient, addrs)
-				utxoIndex = updateUtxoIndex(rpcClient, addrs)
+				utxoIndex = tool.UpdateUtxoIndex(rpcClient, addrs)
 				logger.Info("Transaction ", index)
 				txSenders[index](rpcClient, utxoIndex, addrs, wm)
 				index = index + 1
@@ -210,15 +207,6 @@ func sendDoubleSpendingTransactions(rpcClient rpcpb.RpcServiceClient, utxoIndex 
 		logger.WithError(err).Warn("Unable to send transaction!")
 	}
 }
-func initRpcClient(port int) *grpc.ClientConn {
-	//prepare grpc client
-	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprint(":", port), grpc.WithInsecure())
-	if err != nil {
-		logger.WithError(err).Panic("Connection to RPC server failed.")
-	}
-	return conn
-}
 
 func createWallet() []core.Address {
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
@@ -239,43 +227,6 @@ func createWallet() []core.Address {
 		"addresses": addresses,
 	}).Info("Wallets are created")
 	return addresses
-}
-
-func updateUtxoIndex(serviceClient rpcpb.RpcServiceClient, addrs []core.Address) *core.UTXOIndex {
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err != nil {
-		logger.WithError(err).Panic("updateUtxoIndex: Unable to get wallet")
-	}
-
-	utxoIndex := core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
-
-	for _, addr := range addrs {
-		kp := wm.GetKeyPairByAddress(addr)
-		_, err := core.NewUserPubKeyHash(kp.PublicKey)
-		if err != nil {
-			logger.WithError(err).Panic("updateUtxoIndex: Unable to get public key hash")
-		}
-
-		utxos := getUtxoByAddr(serviceClient, addr)
-		for _, utxoPb := range utxos {
-			utxo := core.UTXO{}
-			utxo.FromProto(utxoPb)
-			utxoIndex.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
-		}
-	}
-	return utxoIndex
-}
-
-func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*corepb.Utxo {
-	resp, err := serviceClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
-		Address: addr.String(),
-	})
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"addr": addr.String(),
-		}).Error("Can not update utxo")
-	}
-	return resp.Utxos
 }
 
 func createNormalTransaction(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
@@ -423,14 +374,9 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 	return change
 }
 
-func getBalance(rpcClient rpcpb.RpcServiceClient, address string) (int64, error) {
-	response, err := rpcClient.RpcGetBalance(context.Background(), &rpcpb.GetBalanceRequest{Address: address})
-	return response.Amount, err
-}
-
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
 	for _, addr := range addresses {
-		amount, err := getBalance(rpcClient, addr.String())
+		amount, err := tool.GetBalance(rpcClient, addr.String())
 		balanceLogger := logger.WithFields(logger.Fields{
 			"address": addr.String(),
 			"amount":  amount,
@@ -440,14 +386,4 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address)
 		}
 		balanceLogger.Info("Displaying wallet balance...")
 	}
-}
-
-func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64 {
-	resp, err := rpcClient.RpcGetBlockchainInfo(
-		context.Background(),
-		&rpcpb.GetBlockchainInfoRequest{})
-	if err != nil {
-		logger.WithError(err).Panic("Cannot get block height.")
-	}
-	return resp.BlockHeight
 }

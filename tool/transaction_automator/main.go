@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/tool"
 	"io/ioutil"
 	"log"
@@ -25,7 +24,6 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 var (
@@ -76,7 +74,7 @@ func main() {
 
 	cliConfig := &configpb.CliConfig{}
 	config.LoadConfig(filePath, cliConfig)
-	conn := initRpcClient(int(cliConfig.GetPort()))
+	conn := tool.InitRpcClient(int(cliConfig.GetPort()))
 
 	adminClient := rpcpb.NewAdminServiceClient(conn)
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
@@ -91,10 +89,10 @@ func main() {
 	}).Info("Funding is completed. Script starts.")
 	displayBalances(rpcClient, addresses, true)
 
-	updateUtxoIndex(rpcClient, addresses)
+	utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
 
 	deploySmartContract(adminClient, fundAddr)
-	currHeight = getBlockHeight(rpcClient)
+	currHeight = tool.GetBlockHeight(rpcClient)
 
 	ticker := time.NewTicker(time.Millisecond * 200).C
 
@@ -105,7 +103,7 @@ func main() {
 	for {
 		select {
 		case <-ticker:
-			height := getBlockHeight(rpcClient)
+			height := tool.GetBlockHeight(rpcClient)
 			if height > currHeight {
 				cmdChan <- cmdStop
 
@@ -113,7 +111,7 @@ func main() {
 				currHeight = height
 
 				displayBalances(rpcClient, addresses, true)
-				updateUtxoIndex(rpcClient, addresses)
+				utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
 
 				//blk := getTailBlock(rpcClient, currHeight)
 				//logger.WithFields(logger.Fields{
@@ -125,42 +123,6 @@ func main() {
 			} else {
 				cmdChan <- cmdStart
 			}
-		}
-	}
-}
-
-func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*corepb.Utxo {
-	resp, err := serviceClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
-		Address: addr.String(),
-	})
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"addr": addr.String(),
-		}).Error("Can not update utxo")
-	}
-	return resp.Utxos
-}
-
-func updateUtxoIndex(serviceClient rpcpb.RpcServiceClient, addrs []core.Address) {
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err != nil {
-		logger.WithError(err).Panic("updateUtxoIndex: Unable to get wallet")
-	}
-
-	utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
-
-	for _, addr := range addrs {
-		kp := wm.GetKeyPairByAddress(addr)
-		_, err := core.NewUserPubKeyHash(kp.PublicKey)
-		if err != nil {
-			logger.WithError(err).Panic("updateUtxoIndex: Unable to get public key hash")
-		}
-
-		utxos := getUtxoByAddr(serviceClient, addr)
-		for _, utxoPb := range utxos {
-			utxo := core.UTXO{}
-			utxo.FromProto(utxoPb)
-			utxoIndex.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
 		}
 	}
 }
@@ -270,16 +232,6 @@ func verifyTransactions(txs []*corepb.Transaction) {
 	}
 }
 
-func initRpcClient(port int) *grpc.ClientConn {
-	//prepare grpc client
-	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprint(":", port), grpc.WithInsecure())
-	if err != nil {
-		logger.WithError(err).Panic("Connection to RPC server failed.")
-	}
-	return conn
-}
-
 func createWallet() []core.Address {
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
@@ -360,7 +312,7 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 					updateCurrBal()
 				} else {
 					//if the send failed, the current utxo is not up to date
-					updateUtxoIndex(rpcClient, addresses)
+					utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
 					//isRunning = false
 				}
 				txs = []*corepb.Transaction{}
@@ -535,7 +487,7 @@ func recordFailedTransaction(txErr error, from, to string, amount uint64, data s
 
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, update bool) {
 	for _, addr := range addresses {
-		amount, err := getBalance(rpcClient, addr.String())
+		amount, err := tool.GetBalance(rpcClient, addr.String())
 		balanceLogger := logger.WithFields(logger.Fields{
 			"address": addr.String(),
 			"amount":  amount,
@@ -550,19 +502,4 @@ func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address,
 			tempBalance[addr.String()] = uint64(amount)
 		}
 	}
-}
-
-func getBalance(rpcClient rpcpb.RpcServiceClient, address string) (int64, error) {
-	response, err := rpcClient.RpcGetBalance(context.Background(), &rpcpb.GetBalanceRequest{Address: address})
-	return response.Amount, err
-}
-
-func getBlockHeight(rpcClient rpcpb.RpcServiceClient) uint64 {
-	resp, err := rpcClient.RpcGetBlockchainInfo(
-		context.Background(),
-		&rpcpb.GetBlockchainInfoRequest{})
-	if err != nil {
-		logger.WithError(err).Panic("Cannot get block height.")
-	}
-	return resp.BlockHeight
 }
