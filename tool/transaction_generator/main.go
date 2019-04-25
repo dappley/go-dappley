@@ -22,7 +22,11 @@ var (
 	maxWallet     = 5
 	initialAmount = uint64(100000)
 	fundTimeout   = time.Duration(time.Minute * 5)
-	txSenders     = []transctionSender{sendNormalTransaction, sendUsingUnexistingUTXOrpcClient}
+	txSenders     = []transctionSender{
+		sendNormalTransaction,
+		sendTransactionUsingUnexistingUTXO,
+		sendTransactionUsingUnAuthorizedUTXO,
+	}
 )
 
 const (
@@ -52,6 +56,7 @@ func main() {
 	}
 
 	fundFromMiner(adminClient, rpcClient, addrs[0].String())
+	fundFromMiner(adminClient, rpcClient, addrs[2].String())
 
 	ticker := time.NewTicker(time.Millisecond * 200).C
 	currHeight := uint64(0)
@@ -76,18 +81,14 @@ func main() {
 	}
 }
 
-func sendUsingUnexistingUTXOrpcClient(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
-	from := addrs[0]
-	senderKeyPair := wm.GetKeyPairByAddress(from)
-	to := addrs[1]
-	amount := common.NewAmount(10)
+func sendTransactionUsingUnexistingUTXO(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
 
+	amount := common.NewAmount(10)
 	tx := createTransactionUsingUnexistingUTXO(utxoIndex,
-		from,
-		to,
+		addrs,
 		amount,
 		common.NewAmount(0),
-		senderKeyPair)
+		wm)
 
 	txpb := tx.ToProto().(*corepb.Transaction)
 
@@ -96,11 +97,7 @@ func sendUsingUnexistingUTXOrpcClient(rpcClient rpcpb.RpcServiceClient, utxoInde
 		&rpcpb.SendTransactionRequest{Transaction: txpb},
 	)
 
-	logger.WithFields(logger.Fields{
-		"From":   from,
-		"To":     to,
-		"Amount": amount,
-	}).Info("Sending a transaction with unexisitng utxo...")
+	logger.Info("Sending a transaction with unexisitng utxo...")
 
 	if err != nil {
 		logger.WithError(err).Warn("Unable to send transaction!")
@@ -109,17 +106,13 @@ func sendUsingUnexistingUTXOrpcClient(rpcClient rpcpb.RpcServiceClient, utxoInde
 
 func sendNormalTransaction(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
 
-	from := addrs[0]
-	senderKeyPair := wm.GetKeyPairByAddress(from)
-	to := addrs[1]
 	amount := common.NewAmount(10)
 
 	tx := createNormalTransaction(utxoIndex,
-		from,
-		to,
+		addrs,
 		amount,
 		common.NewAmount(0),
-		senderKeyPair)
+		wm)
 
 	txpb := tx.ToProto().(*corepb.Transaction)
 
@@ -128,14 +121,33 @@ func sendNormalTransaction(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTX
 		&rpcpb.SendTransactionRequest{Transaction: txpb},
 	)
 
-	logger.WithFields(logger.Fields{
-		"From":   from,
-		"To":     to,
-		"Amount": amount,
-	}).Info("Sending a normal transaction...")
+	logger.Info("Sending a normal transaction...")
 
 	if err != nil {
 		logger.WithError(err).Panic("Unable to send transaction!")
+	}
+}
+
+func sendTransactionUsingUnAuthorizedUTXO(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+
+	amount := common.NewAmount(10)
+	tx := createTransactionUsingUnauthorizedUTXO(utxoIndex,
+		addrs,
+		amount,
+		common.NewAmount(0),
+		wm)
+
+	txpb := tx.ToProto().(*corepb.Transaction)
+
+	_, err := rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{Transaction: txpb},
+	)
+
+	logger.Info("Sending a transaction with unauthorized utxo...")
+
+	if err != nil {
+		logger.WithError(err).Warn("Unable to send transaction!")
 	}
 }
 
@@ -207,9 +219,13 @@ func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*c
 	return resp.Utxos
 }
 
-func createNormalTransaction(utxoIndex *core.UTXOIndex, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
+func createNormalTransaction(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
 
+	from := addrs[0]
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	to := addrs[1]
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
@@ -217,9 +233,13 @@ func createNormalTransaction(utxoIndex *core.UTXOIndex, from, to core.Address, a
 	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
 }
 
-func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
+func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
 
+	from := addrs[0]
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	to := addrs[1]
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
@@ -234,6 +254,24 @@ func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, from, to co
 	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
 }
 
+func createTransactionUsingUnauthorizedUTXO(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
+
+	from := addrs[0]
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	to := addrs[1]
+	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+
+	if err != nil {
+		logger.WithError(err).Panic("Unable to hash sender public key")
+	}
+	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	unauthorizedpkh, err := core.NewUserPubKeyHash(wm.GetKeyPairByAddress(addrs[2]).PublicKey)
+	unauthorizedUtxo := utxoIndex.GetAllUTXOsByPubKeyHash(unauthorizedpkh).GetAllUtxos()
+	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
+
+	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
+}
+
 func createTransaction(prevUtxos []*core.UTXO, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
 
 	sum := calculateUtxoSum(prevUtxos)
@@ -241,6 +279,11 @@ func createTransaction(prevUtxos []*core.UTXO, from, to core.Address, amount, ti
 	vouts := prepareOutputLists(from, to, amount, change)
 
 	tx := newTransaction(prevUtxos, vouts, tip, senderKeyPair)
+	logger.WithFields(logger.Fields{
+		"From":   from,
+		"To":     to,
+		"Amount": amount,
+	}).Info("Creating a transaction...")
 	return tx
 }
 
