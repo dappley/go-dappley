@@ -26,6 +26,8 @@ var (
 		sendNormalTransaction,
 		sendTransactionUsingUnexistingUTXO,
 		sendTransactionUsingUnAuthorizedUTXO,
+		sendTransactionWithInsufficientBalance,
+		sendDoubleSpendingTransactions,
 	}
 )
 
@@ -151,6 +153,63 @@ func sendTransactionUsingUnAuthorizedUTXO(rpcClient rpcpb.RpcServiceClient, utxo
 	}
 }
 
+func sendTransactionWithInsufficientBalance(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+
+	amount := common.NewAmount(10)
+	tx := createTransactionWithInsufficientBalance(utxoIndex,
+		addrs,
+		amount,
+		common.NewAmount(0),
+		wm)
+
+	txpb := tx.ToProto().(*corepb.Transaction)
+
+	_, err := rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{Transaction: txpb},
+	)
+
+	logger.Info("Sending a transaction with Insufficient Balance...")
+
+	if err != nil {
+		logger.WithError(err).Warn("Unable to send transaction!")
+	}
+}
+
+func sendDoubleSpendingTransactions(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+
+	amount := common.NewAmount(10)
+
+	tx := createNormalTransaction(utxoIndex,
+		addrs,
+		amount,
+		common.NewAmount(0),
+		wm)
+
+	txpb := tx.ToProto().(*corepb.Transaction)
+
+	_, err := rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{Transaction: txpb},
+	)
+
+	logger.Info("Sending double spending transactions: Sending Tx 1")
+
+	if err != nil {
+		logger.WithError(err).Warn("Unable to send transaction!")
+	}
+
+	_, err = rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{Transaction: txpb},
+	)
+
+	logger.Info("Sending double spending transactions: Sending Tx 2")
+
+	if err != nil {
+		logger.WithError(err).Warn("Unable to send transaction!")
+	}
+}
 func initRpcClient(port int) *grpc.ClientConn {
 	//prepare grpc client
 	var conn *grpc.ClientConn
@@ -270,6 +329,23 @@ func createTransactionUsingUnauthorizedUTXO(utxoIndex *core.UTXOIndex, addrs []c
 	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
 
 	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
+}
+
+func createTransactionWithInsufficientBalance(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
+
+	from := addrs[0]
+	senderKeyPair := wm.GetKeyPairByAddress(from)
+	to := addrs[1]
+	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+
+	if err != nil {
+		logger.WithError(err).Panic("Unable to hash sender public key")
+	}
+	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	tx := createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
+	tx.Vin = tx.Vin[:len(tx.Vin)-1]
+
+	return tx
 }
 
 func createTransaction(prevUtxos []*core.UTXO, from, to core.Address, amount, tip *common.Amount, senderKeyPair *core.KeyPair) *core.Transaction {
