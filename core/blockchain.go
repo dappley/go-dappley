@@ -32,6 +32,7 @@ import (
 )
 
 var tipKey = []byte("tailBlockHash")
+var libKey = []byte("lastIrreversibleBlockHash")
 
 const LengthForBlockToBeConsideredHistory = 100
 
@@ -60,6 +61,7 @@ type BlockContext struct {
 
 type Blockchain struct {
 	tailBlockHash []byte
+	libHash       []byte
 	db            storage.Storage
 	utxoCache     *UTXOCache
 	consensus     Consensus
@@ -76,6 +78,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
+		nil,
 		db,
 		NewUTXOCache(db),
 		consensus,
@@ -103,9 +106,14 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 	if err != nil {
 		return nil, err
 	}
+	lib, err := db.Get(libKey)
+	if err != nil {
+		return nil, err
+	}
 
 	bc := &Blockchain{
 		tip,
+		lib,
 		db,
 		NewUTXOCache(db),
 		consensus,
@@ -132,6 +140,10 @@ func (bc *Blockchain) GetTailBlockHash() Hash {
 	return bc.tailBlockHash
 }
 
+func (bc *Blockchain) GetLIBHash() Hash {
+	return bc.libHash
+}
+
 func (bc *Blockchain) GetSCManager() ScEngineManager {
 	return bc.scManager
 }
@@ -154,6 +166,11 @@ func (bc *Blockchain) GetBlockSizeLimit() int {
 
 func (bc *Blockchain) GetTailBlock() (*Block, error) {
 	hash := bc.GetTailBlockHash()
+	return bc.GetBlockByHash(hash)
+}
+
+func (bc *Blockchain) GetLIB() (*Block, error) {
+	hash := bc.GetLIBHash()
 	return bc.GetBlockByHash(hash)
 }
 
@@ -332,7 +349,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
+	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -510,4 +527,13 @@ func (bc *Blockchain) deepCopy() *Blockchain {
 	newCopy := &Blockchain{}
 	copier.Copy(&newCopy, &bc)
 	return newCopy
+}
+
+func (bc *Blockchain) SetLIBHash(hash Hash) error {
+	err := bc.db.Put(libKey, hash)
+	if err != nil {
+		return err
+	}
+	bc.libHash = hash
+	return nil
 }
