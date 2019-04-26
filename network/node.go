@@ -54,6 +54,7 @@ const (
 	ReturnPeerList         = "ReturnPeerList"
 	RequestBlock           = "requestBlock"
 	BroadcastTx            = "BroadcastTx"
+	BroadcastBatchTxs      = "BraodcastBatchTxs"
 	GetCommonBlocks        = "GetCommonBlocks"
 	ReturnCommonBlocks     = "ReturnCommonBlocks"
 	Unicast                = 0
@@ -72,6 +73,7 @@ const (
 	ReturnPeerListPriority       = HighPriorityCommand
 	RequestBlockPriority         = HighPriorityCommand
 	BroadcastTxPriority          = NormalPriorityCommand
+	BroadcastBatchTxsPriority    = NormalPriorityCommand
 	GetCommonBlocksPriority      = HighPriorityCommand
 	ReturnCommonBlocksPriority   = HighPriorityCommand
 )
@@ -438,6 +440,21 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 		return err
 	}
 	n.peerManager.Broadcast(data, BroadcastTxPriority)
+	return nil
+}
+
+func (n *Node) BatchTxBroadcast(txs []*core.Transaction) error {
+	if len(txs) == 0 {
+		return nil
+	}
+
+	transactions := core.NewTransactions(txs)
+
+	data, err := n.prepareData(transactions.ToProto(), BroadcastBatchTxs, Broadcast, hex.EncodeToString(txs[0].ID))
+	if err != nil {
+		return err
+	}
+	n.peerManager.Broadcast(data, BroadcastBatchTxsPriority)
 	return nil
 }
 

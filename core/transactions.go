@@ -9,6 +9,10 @@ type Transactions struct {
 	transactions []*Transaction
 }
 
+func NewTransactions(txs []*Transaction) *Transactions {
+	return &Transactions{txs}
+}
+
 func (txs *Transactions) ToProto() proto.Message {
 
 	var txspb []*corepb.Transaction
