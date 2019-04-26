@@ -13,6 +13,10 @@ func NewTransactions(txs []*Transaction) *Transactions {
 	return &Transactions{txs}
 }
 
+func (txs *Transactions) GetTransactions() []*Transaction {
+	return txs.transactions
+}
+
 func (txs *Transactions) ToProto() proto.Message {
 
 	var txspb []*corepb.Transaction

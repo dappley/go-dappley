@@ -321,6 +321,9 @@ func (n *Node) handle(msg *DapMsg, id peer.ID) {
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 
+	case BroadcastBatchTxs:
+		n.AddBatchTxsToPool(msg)
+
 	case GetBlocks:
 		n.GetBlocksHandler(msg, id)
 
@@ -784,6 +787,42 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	}
 
 	n.bm.Getblockchain().GetTxPool().Push(*tx)
+}
+
+func (n *Node) AddBatchTxsToPool(dm *DapMsg) {
+	if n.GetBlockchain().GetState() != core.BlockchainReady {
+		return
+	}
+
+	if n.isNetworkRadiation(*dm) {
+		return
+	}
+
+	n.RelayDapMsg(*dm, BroadcastBatchTxsPriority)
+	n.cacheDapMsg(*dm)
+
+	txspb := &corepb.Transactions{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(dm.GetData(), txspb); err != nil {
+		logger.Warn(err)
+	}
+
+	//create an empty tx
+	txs := &core.Transactions{}
+
+	//load the tx with proto
+	txs.FromProto(txspb)
+	//add tx to txpool
+	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+
+	for _, tx := range txs.GetTransactions() {
+		if tx.IsFromContract(utxoIndex) {
+			continue
+		}
+		n.bm.Getblockchain().GetTxPool().Push(*tx)
+	}
+
 }
 
 func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
