@@ -755,7 +755,7 @@ func TestDoubleMint(t *testing.T) {
 	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash(producerHash), ""}}, common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
-		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, validProducerAddr, parent)
+		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, parent)
 		blks = append(blks, blk)
 		parent = blk
 	}
@@ -794,8 +794,8 @@ func TestDoubleMint(t *testing.T) {
 	assert.False(t, dposArray[1].Validate(blks[1]))
 }
 
-func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey, validProducerAddr string, parent *core.Block) *core.Block {
-	blk := core.NewBlock(tx, parent, validProducerAddr)
+func createValidBlock(hash core.Hash, tx []*core.Transaction, validProducerKey string, parent *core.Block) *core.Block {
+	blk := core.NewBlock(tx, parent)
 	blk.SetHash(blk.CalculateHashWithNonce(0))
 	blk.SignBlock(validProducerKey, blk.CalculateHashWithNonce(0))
 	return blk
