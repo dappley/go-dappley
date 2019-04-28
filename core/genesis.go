@@ -16,10 +16,15 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 package core
+
 import (
 	"github.com/dappley/go-dappley/common"
 )
-const genesisCoinbaseData = "Hello world"
+
+const (
+	genesisCoinbaseData = "Hello world"
+	BlockHashLength     = 32
+)
 
 func NewGenesisBlock(address Address) *Block {
 	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
@@ -45,4 +50,14 @@ func NewGenesisBlock(address Address) *Block {
 
 	b.SetHash(b.CalculateHash())
 	return b
+}
+
+func CheckGenesisBlock(block *Block) bool {
+	if block == nil {
+		return false
+	}
+	if block.GetPrevHash().Equals([]byte{}) {
+		return true
+	}
+	return false
 }

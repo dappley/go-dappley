@@ -78,7 +78,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
-		nil,
+		genesis.GetHash(),
 		db,
 		NewUTXOCache(db),
 		consensus,
@@ -240,6 +240,13 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
 		return err
+	}
+	if CheckGenesisBlock(ctx.Block) {
+		err = bcTemp.SetLIBHash(ctx.Block.GetHash())
+		if err != nil {
+			blockLogger.Error("Blockchain: failed to set last irreversible block hash!")
+			return err
+		}
 	}
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
