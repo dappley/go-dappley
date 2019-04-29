@@ -6,14 +6,14 @@ import (
 )
 
 type Transactions struct {
-	transactions []*Transaction
+	transactions []Transaction
 }
 
-func NewTransactions(txs []*Transaction) *Transactions {
+func NewTransactions(txs []Transaction) *Transactions {
 	return &Transactions{txs}
 }
 
-func (txs *Transactions) GetTransactions() []*Transaction {
+func (txs *Transactions) GetTransactions() []Transaction {
 	return txs.transactions
 }
 
@@ -30,10 +30,10 @@ func (txs *Transactions) ToProto() proto.Message {
 }
 
 func (txs *Transactions) FromProto(pb proto.Message) {
-	var transactions []*Transaction
+	var transactions []Transaction
 
 	for _, txpb := range pb.(*corepb.Transactions).GetTransactions() {
-		tx := &Transaction{}
+		tx := Transaction{}
 		tx.FromProto(txpb)
 		transactions = append(transactions, tx)
 	}

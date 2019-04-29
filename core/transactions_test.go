@@ -10,14 +10,14 @@ import (
 )
 
 func TestTransactions_FromProto(t *testing.T) {
-	tx1 := &Transaction{
+	tx1 := Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(5),
 	}
 
-	tx2 := &Transaction{
+	tx2 := Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
@@ -25,7 +25,7 @@ func TestTransactions_FromProto(t *testing.T) {
 	}
 
 	txs := Transactions{
-		transactions: []*Transaction{tx1, tx2},
+		transactions: []Transaction{tx1, tx2},
 	}
 
 	pb := txs.ToProto()

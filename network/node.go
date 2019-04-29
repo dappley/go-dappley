@@ -446,7 +446,7 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	return nil
 }
 
-func (n *Node) BatchTxBroadcast(txs []*core.Transaction) error {
+func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
 	if len(txs) == 0 {
 		return nil
 	}
@@ -820,7 +820,7 @@ func (n *Node) AddBatchTxsToPool(dm *DapMsg) {
 		if tx.IsFromContract(utxoIndex) {
 			continue
 		}
-		n.bm.Getblockchain().GetTxPool().Push(*tx)
+		n.bm.Getblockchain().GetTxPool().Push(tx)
 	}
 
 }

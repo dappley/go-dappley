@@ -251,6 +251,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 
 	// verify dependent transactions within batch of transactions
 	lastTxsLen := 0
+	verifiedTxs := []core.Transaction{}
 	for len(txMap) != lastTxsLen {
 		lastTxsLen = len(txMap)
 		for key, tx := range txs {
@@ -277,7 +278,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 
 			utxoIndex.UpdateUtxo(&tx)
 			rpcService.node.GetBlockchain().GetTxPool().Push(tx)
-			rpcService.node.TxBroadcast(&tx)
+			verifiedTxs = append(verifiedTxs, tx)
 
 			if tx.IsContract() {
 				contractAddr := tx.GetContractAddress()
@@ -295,6 +296,8 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			delete(txMap, key)
 		}
 	}
+
+	rpcService.node.BatchTxBroadcast(verifiedTxs)
 
 	st := status.New(codes.OK, "")
 	// add invalid transactions to response details if exists
