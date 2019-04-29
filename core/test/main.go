@@ -33,7 +33,7 @@ func main() {
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
-		Tip:  *common.NewAmount(2),
+		Tip:  common.NewAmount(2),
 	}
 	txpb := tx1.ToProto()
 	go func() {
