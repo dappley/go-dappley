@@ -388,7 +388,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
-	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx {
+	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx || dm.cmd == BroadcastBatchTxs {
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())

@@ -411,6 +411,7 @@ func (txPool *TransactionPool) insertIntoSortedWaitlist(txNode *TransactionNode)
 				"len_of_tip_order": len(txPool.tipOrder),
 				"len_of_txs":       len(txPool.txs),
 			}).Warn("TransactionPool: the transaction in tip order does not exist in txs!")
+			return false
 		}
 		if txPool.txs[txPool.tipOrder[i]].Value == nil {
 			logger.WithFields(logger.Fields{
@@ -471,10 +472,15 @@ func (txPool *TransactionPool) getMaxTipTransaction() *TransactionNode {
 	if txid == "" {
 		return nil
 	}
-	if txPool.txs[txid] == nil {
+	for txPool.txs[txid] == nil {
 		logger.WithFields(logger.Fields{
 			"txid": txid,
 		}).Warn("TransactionPool: max tip transaction is not found in pool")
+		txPool.tipOrder = txPool.tipOrder[1:]
+		txid = txPool.getMaxTipTxid()
+		if txid == "" {
+			return nil
+		}
 	}
 	return txPool.txs[txid]
 }
