@@ -4,13 +4,10 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"github.com/dappley/go-dappley/tool"
 	"io/ioutil"
-	"log"
 	"math/rand"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"time"
@@ -27,12 +24,6 @@ import (
 )
 
 var (
-	password             = "testpassword"
-	maxWallet            = 10
-	initialAmount        = uint64(1000)
-	maxDefaultSendAmount = uint64(5)
-	sendInterval         = time.Duration(5000) //ms
-	fundTimeout          = time.Duration(time.Minute * 5)
 	currBalance          = make(map[string]uint64)
 	tempBalance          = make(map[string]uint64)
 	sentTxs              = make(map[string]int)
@@ -49,14 +40,19 @@ const (
 )
 
 const (
-	smartContractSendFreq  = 10000000000
-	contractAddrFilePath   = "contract/contractAddr"
-	contractFilePath       = "contract/test_contract.js"
-	contractFunctionCall   = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
-	transactionLogFilePath = "log/tx.csv"
-	failedTxLogFilePath    = "log/failedTx.csv"
-	numOfTxPerBatch        = 1000
-	TimeBetweenBatch       = time.Duration(1000)
+	smartContractSendFreq = 10000000000
+	contractAddrFilePath  = "contract/contractAddr"
+	contractFilePath      = "contract/test_contract.js"
+	contractFunctionCall  = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	failedTxLogFilePath   = "log/failedTx.csv"
+	numOfTxPerBatch       = 1000
+	TimeBetweenBatch      = time.Duration(1000)
+	password              = "testpassword"
+	maxWallet             = 10
+	initialAmount         = uint64(1000)
+	maxDefaultSendAmount  = uint64(5)
+	sendInterval          = time.Duration(5000) //ms
+	configFilePath        = "default.conf"
 )
 
 func main() {
@@ -64,16 +60,8 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	var filePath string
-	flag.StringVar(&filePath, "f", "conf/default_cli.conf", "CLI config file path")
-	flag.Parse()
-
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6061", nil))
-	}()
-
 	cliConfig := &configpb.CliConfig{}
-	config.LoadConfig(filePath, cliConfig)
+	config.LoadConfig(configFilePath, cliConfig)
 	conn := tool.InitRpcClient(int(cliConfig.GetPort()))
 
 	adminClient := rpcpb.NewAdminServiceClient(conn)
@@ -113,38 +101,11 @@ func main() {
 				displayBalances(rpcClient, addresses, true)
 				utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
 
-				//blk := getTailBlock(rpcClient, currHeight)
-				//logger.WithFields(logger.Fields{
-				//	"height": currHeight,
-				//}).Info("New Block Height")
-				//verifyTransactions(blk.GetTransactions())
-				//recordTransactions(blk.GetTransactions(), currHeight)
-
 			} else {
 				cmdChan <- cmdStart
 			}
 		}
 	}
-}
-
-func recordTransactions(txs []*corepb.Transaction, height uint64) {
-	f, err := os.OpenFile(transactionLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		logger.Panic("Open file failed while recording transactions")
-	}
-	w := csv.NewWriter(f)
-	for _, tx := range txs {
-		vinStr := ""
-		for _, vin := range tx.GetVin() {
-			vinStr += hex.EncodeToString(vin.GetTxid()) + ":" + fmt.Sprint(vin.GetVout()) + ",\n"
-		}
-		voutStr := ""
-		for _, vout := range tx.GetVout() {
-			voutStr += core.PubKeyHash(vout.GetPublicKeyHash()).GenerateAddress().String() + ":" + common.NewAmountFromBytes(vout.GetValue()).String() + ",\n"
-		}
-		w.Write([]string{fmt.Sprint(height), hex.EncodeToString(tx.GetId()), vinStr, voutStr, common.NewAmountFromBytes(tx.GetTip()).String()})
-	}
-	w.Flush()
 }
 
 func getSmartContractAddr() string {
@@ -200,36 +161,6 @@ func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) {
 	logger.WithFields(logger.Fields{
 		"contract_addr": smartContractAddr,
 	}).Info("Smart contract has been deployed")
-}
-
-func getTailBlock(serviceClient rpcpb.RpcServiceClient, blkHeight uint64) *corepb.Block {
-	resp, err := serviceClient.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: blkHeight})
-	for err != nil {
-		logger.WithError(err).Error("GetTailBlock failed")
-		resp, err = serviceClient.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: blkHeight})
-	}
-	return resp.Block
-}
-
-func verifyTransactions(txs []*corepb.Transaction) {
-	logger.WithFields(logger.Fields{
-		"num_of_tx": len(txs),
-	}).Info("Transactions mined in previous block.")
-	logger.WithFields(logger.Fields{
-		"num_of_tx": len(sentTxs),
-	}).Info("Transactions recorded")
-	for _, tx := range txs {
-		delete(sentTxs, hex.EncodeToString(tx.GetId()))
-	}
-	for txid, count := range sentTxs {
-		sentTxs[txid]++
-		if count > 0 {
-			logger.WithFields(logger.Fields{
-				"txid":  txid,
-				"count": count,
-			}).Warn("Transaction is not found in previous block!")
-		}
-	}
 }
 
 func createWallet() []core.Address {
@@ -386,11 +317,6 @@ func createTransaction(from, to core.Address, amount, tip *common.Amount, contra
 	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
 
 	if err != nil {
-		//logger.WithError(err).WithFields(logger.Fields{
-		//	"pkh" : hex.EncodeToString(pkh),
-		//	"addr": pkh.GenerateAddress().String(),
-		//	"amount": amount.String(),
-		//}).Warn("Unable to get previous utxos")
 		return nil
 	}
 	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, contract)

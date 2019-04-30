@@ -83,6 +83,9 @@ func requestFundFromMiner(adminClient rpcpb.AdminServiceClient, fundAddr string,
 
 func GetBalance(rpcClient rpcpb.RpcServiceClient, address string) (int64, error) {
 	response, err := rpcClient.RpcGetBalance(context.Background(), &rpcpb.GetBalanceRequest{Address: address})
+	if err != nil {
+		return 0, err
+	}
 	return response.Amount, err
 }
 
