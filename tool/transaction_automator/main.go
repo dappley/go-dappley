@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/dappley/go-dappley/tool"
+	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"io/ioutil"
 	"math/rand"
 	_ "net/http/pprof"
@@ -15,7 +16,6 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
@@ -24,14 +24,16 @@ import (
 )
 
 var (
-	currBalance          = make(map[string]uint64)
-	tempBalance          = make(map[string]uint64)
-	sentTxs              = make(map[string]int)
-	utxoIndex            = &core.UTXOIndex{}
-	smartContractAddr    = ""
-	smartContractCounter = 0
-	isContractDeployed   = false
-	currHeight           = uint64(0)
+	currBalance           = make(map[string]uint64)
+	tempBalance           = make(map[string]uint64)
+	sentTxs               = make(map[string]int)
+	utxoIndex             = &core.UTXOIndex{}
+	smartContractAddr     = ""
+	smartContractCounter  = uint32(0)
+	isContractDeployed    = false
+	currHeight            = uint64(0)
+	numOfTxPerBatch       = uint32(1000)
+	smartContractSendFreq = uint32(1000000000)
 )
 
 const (
@@ -40,19 +42,17 @@ const (
 )
 
 const (
-	smartContractSendFreq = 10000000000
-	contractAddrFilePath  = "contract/contractAddr"
-	contractFilePath      = "contract/test_contract.js"
-	contractFunctionCall  = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
-	failedTxLogFilePath   = "log/failedTx.csv"
-	numOfTxPerBatch       = 1000
-	TimeBetweenBatch      = time.Duration(1000)
-	password              = "testpassword"
-	maxWallet             = 10
-	initialAmount         = uint64(1000)
-	maxDefaultSendAmount  = uint64(5)
-	sendInterval          = time.Duration(5000) //ms
-	configFilePath        = "default.conf"
+	contractAddrFilePath = "contract/contractAddr"
+	contractFilePath     = "contract/test_contract.js"
+	contractFunctionCall = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	failedTxLogFilePath  = "log/failedTx.csv"
+	TimeBetweenBatch     = time.Duration(1000)
+	password             = "testpassword"
+	maxWallet            = 10
+	initialAmount        = uint64(1000)
+	maxDefaultSendAmount = uint64(5)
+	sendInterval         = time.Duration(5000) //ms
+	configFilePath       = "default.conf"
 )
 
 func main() {
@@ -60,8 +60,10 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	cliConfig := &configpb.CliConfig{}
+	cliConfig := &tx_automator_configpb.Config{}
 	config.LoadConfig(configFilePath, cliConfig)
+	numOfTxPerBatch = cliConfig.GetTps()
+	smartContractSendFreq = cliConfig.GetScFreq()
 	conn := tool.InitRpcClient(int(cliConfig.GetPort()))
 
 	adminClient := rpcpb.NewAdminServiceClient(conn)
@@ -80,8 +82,8 @@ func main() {
 	utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
 
 	deploySmartContract(adminClient, fundAddr)
-	currHeight = tool.GetBlockHeight(rpcClient)
 
+	currHeight = tool.GetBlockHeight(rpcClient)
 	ticker := time.NewTicker(time.Millisecond * 200).C
 
 	cmdChan := make(chan int, 5)
@@ -105,26 +107,6 @@ func main() {
 				cmdChan <- cmdStart
 			}
 		}
-	}
-}
-
-func getSmartContractAddr() string {
-	bytes, err := ioutil.ReadFile(contractAddrFilePath)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"file_path": contractAddrFilePath,
-		}).Panic("Unable to read file!")
-	}
-	return string(bytes)
-}
-
-func recordSmartContractAddr(addr string) {
-	err := ioutil.WriteFile(contractAddrFilePath, []byte(addr), os.FileMode(777))
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"file_path":     contractAddrFilePath,
-			"contract_addr": addr,
-		}).Panic("Unable to record smart contract address!")
 	}
 }
 
@@ -161,6 +143,26 @@ func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) {
 	logger.WithFields(logger.Fields{
 		"contract_addr": smartContractAddr,
 	}).Info("Smart contract has been deployed")
+}
+
+func getSmartContractAddr() string {
+	bytes, err := ioutil.ReadFile(contractAddrFilePath)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path": contractAddrFilePath,
+		}).Panic("Unable to read file!")
+	}
+	return string(bytes)
+}
+
+func recordSmartContractAddr(addr string) {
+	err := ioutil.WriteFile(contractAddrFilePath, []byte(addr), os.FileMode(777))
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path":     contractAddrFilePath,
+			"contract_addr": addr,
+		}).Panic("Unable to record smart contract address!")
+	}
 }
 
 func createWallet() []core.Address {
@@ -233,7 +235,7 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 			if !isRunning {
 				continue
 			}
-			if len(txs) >= numOfTxPerBatch {
+			if len(txs) >= int(numOfTxPerBatch) {
 				logger.WithFields(logger.Fields{
 					"invalidTxCount": count,
 				}).Info("Send Batch Txs!")
@@ -253,7 +255,7 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 			if !isRunning {
 				continue
 			}
-			if len(txs) >= numOfTxPerBatch {
+			if len(txs) >= int(numOfTxPerBatch) {
 				continue
 			}
 			tx := createRandomTransaction(addresses, wm)
