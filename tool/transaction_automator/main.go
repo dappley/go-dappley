@@ -61,10 +61,10 @@ func main() {
 	numOfTxPerBatch = toolConfigs.GetTps()
 	smartContractSendFreq = toolConfigs.GetScFreq()
 
-	sdkConn := sdk.NewDappleySdk(toolConfigs.GetPort())
+	sdkConn := sdk.NewDappSdk(toolConfigs.GetPort())
 	wm := sdk.NewDappleySdkWallet(sdkConn, maxWallet, password)
 	blockchain := sdk.NewDappSdkBlockchain(sdkConn)
-	utxoIndex := sdk.NewDappleySdkUtxoIndex(sdkConn, wm)
+	utxoIndex := sdk.NewDappSdkUtxoIndex(sdkConn, wm)
 
 	fundAddr := wm.GetAddrs()[0].String()
 	funder := sdk.NewDappSdkFundRequest(sdkConn, blockchain)

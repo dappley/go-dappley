@@ -16,7 +16,7 @@ type DappSdkUtxoIndex struct {
 	mutex     *sync.Mutex
 }
 
-func NewDappleySdkUtxoIndex(conn *DappSdkConn, sdkWallet *DappSdkWallet) *DappSdkUtxoIndex {
+func NewDappSdkUtxoIndex(conn *DappSdkConn, sdkWallet *DappSdkWallet) *DappSdkUtxoIndex {
 	return &DappSdkUtxoIndex{
 		conn:      conn,
 		utxoIndex: core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage())),
