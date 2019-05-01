@@ -145,3 +145,25 @@ func getUtxoByAddr(serviceClient rpcpb.RpcServiceClient, addr core.Address) []*c
 	}
 	return resp.Utxos
 }
+
+func CreateWallet(numOfWallet int, password string) []core.Address {
+	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
+	if err != nil {
+		logger.Panic("Cannot get wallet manager.")
+	}
+
+	addresses := wm.GetAddresses()
+	numOfWallets := len(addresses)
+	for i := numOfWallets; i < numOfWallet; i++ {
+		_, err := logic.CreateWalletWithpassphrase(password)
+		if err != nil {
+			logger.WithError(err).Panic("Cannot create new wallet.")
+		}
+	}
+
+	addresses = wm.GetAddresses()
+	logger.WithFields(logger.Fields{
+		"addresses": addresses,
+	}).Info("Wallets are created")
+	return addresses
+}

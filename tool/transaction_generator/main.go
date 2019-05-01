@@ -49,7 +49,7 @@ func main() {
 	adminClient := rpcpb.NewAdminServiceClient(conn)
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
-	addrs := createWallet()
+	addrs := tool.CreateWallet(maxWallet, password)
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		logger.Panic("Can not get access to wallet")
@@ -206,27 +206,6 @@ func sendDoubleSpendingTransactions(rpcClient rpcpb.RpcServiceClient, utxoIndex 
 	if err != nil {
 		logger.WithError(err).Warn("Unable to send transaction!")
 	}
-}
-
-func createWallet() []core.Address {
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err != nil {
-		logger.Panic("Cannot get wallet manager.")
-	}
-	addresses := wm.GetAddresses()
-	numOfWallets := len(addresses)
-	for i := numOfWallets; i < maxWallet; i++ {
-		_, err := logic.CreateWalletWithpassphrase(password)
-		if err != nil {
-			logger.WithError(err).Panic("Cannot create new wallet.")
-		}
-	}
-
-	addresses = wm.GetAddresses()
-	logger.WithFields(logger.Fields{
-		"addresses": addresses,
-	}).Info("Wallets are created")
-	return addresses
 }
 
 func createNormalTransaction(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {

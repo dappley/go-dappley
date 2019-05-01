@@ -66,7 +66,7 @@ func main() {
 	adminClient := rpcpb.NewAdminServiceClient(conn)
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
-	addresses := createWallet()
+	addresses := tool.CreateWallet(maxWallet, password)
 
 	fundAddr := addresses[0].String()
 	tool.FundFromMiner(adminClient, rpcClient, fundAddr, common.NewAmount(initialAmount))
@@ -160,27 +160,6 @@ func recordSmartContractAddr(addr string) {
 			"contract_addr": addr,
 		}).Panic("Unable to record smart contract address!")
 	}
-}
-
-func createWallet() []core.Address {
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err != nil {
-		logger.Panic("Cannot get wallet manager.")
-	}
-	addresses := wm.GetAddresses()
-	numOfWallets := len(addresses)
-	for i := numOfWallets; i < maxWallet; i++ {
-		_, err := logic.CreateWalletWithpassphrase(password)
-		if err != nil {
-			logger.WithError(err).Panic("Cannot create new wallet.")
-		}
-	}
-
-	addresses = wm.GetAddresses()
-	logger.WithFields(logger.Fields{
-		"addresses": addresses,
-	}).Info("Wallets are created")
-	return addresses
 }
 
 func sendBatchTransactions(client rpcpb.RpcServiceClient, txs []*corepb.Transaction) error {
