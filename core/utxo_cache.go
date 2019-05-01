@@ -70,3 +70,10 @@ func (utxoCache *UTXOCache) Put(pubKeyHash PubKeyHash, value *UTXOTx) error {
 	utxoCache.cache.Add(string(pubKeyHash), &savedUtxoTx)
 	return utxoCache.db.Put(pubKeyHash, value.Serialize())
 }
+
+func (utxoCache *UTXOCache) Delete(pubKeyHash PubKeyHash) error {
+	if pubKeyHash == nil {
+		return ErrEmptyPublicKeyHash
+	}
+	return utxoCache.db.Del(pubKeyHash)
+}

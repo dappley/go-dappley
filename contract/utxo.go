@@ -60,3 +60,7 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 
 	C.SetPrevUtxoData(utxosAddr, utxoLength, context)
 }
+
+func DeleteUtxo() {
+
+}

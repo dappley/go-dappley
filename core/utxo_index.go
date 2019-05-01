@@ -65,6 +65,10 @@ func (utxos *UTXOIndex) Save() error {
 	return nil
 }
 
+func (utxos *UTXOIndex) Delete() error {
+	return nil
+}
+
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) *UTXOTx {
 	key := hex.EncodeToString(pubkeyHash)

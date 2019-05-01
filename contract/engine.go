@@ -36,9 +36,8 @@ import (
 	"sync"
 	"unsafe"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 var (
@@ -211,4 +210,8 @@ func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	return v8EngineList[handler]
+}
+
+func destorySmartContract() {
+
 }

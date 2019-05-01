@@ -433,6 +433,7 @@ func deserializeTxPool(d []byte) *TransactionPool {
 	txPoolProto := &corepb.TransactionPool{}
 	err := proto.Unmarshal(d, txPoolProto)
 	if err != nil {
+		println(err)
 		logger.WithError(err).Panic("TxPool: failed to deserialize TxPool transactions.")
 	}
 	txPool := NewTransactionPool(1)
