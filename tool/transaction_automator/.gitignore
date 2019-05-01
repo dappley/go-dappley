@@ -4,4 +4,5 @@ transaction_automator
 bin
 pid/*.pid
 *.log
+contract/contractAddr
 log/*
