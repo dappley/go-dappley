@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/csv"
 	"encoding/hex"
 	"fmt"
 	"github.com/dappley/go-dappley/tool"
@@ -26,7 +25,6 @@ import (
 var (
 	currBalance           = make(map[string]uint64)
 	tempBalance           = make(map[string]uint64)
-	sentTxs               = make(map[string]int)
 	utxoIndex             = &core.UTXOIndex{}
 	smartContractAddr     = ""
 	smartContractCounter  = uint32(0)
@@ -45,7 +43,6 @@ const (
 	contractAddrFilePath = "contract/contractAddr"
 	contractFilePath     = "contract/test_contract.js"
 	contractFunctionCall = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
-	failedTxLogFilePath  = "log/failedTx.csv"
 	TimeBetweenBatch     = time.Duration(1000)
 	password             = "testpassword"
 	maxWallet            = 10
@@ -60,11 +57,11 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	cliConfig := &tx_automator_configpb.Config{}
-	config.LoadConfig(configFilePath, cliConfig)
-	numOfTxPerBatch = cliConfig.GetTps()
-	smartContractSendFreq = cliConfig.GetScFreq()
-	conn := tool.InitRpcClient(int(cliConfig.GetPort()))
+	toolConfigs := &tx_automator_configpb.Config{}
+	config.LoadConfig(configFilePath, toolConfigs)
+	numOfTxPerBatch = toolConfigs.GetTps()
+	smartContractSendFreq = toolConfigs.GetScFreq()
+	conn := tool.InitRpcClient(int(toolConfigs.GetPort()))
 
 	adminClient := rpcpb.NewAdminServiceClient(conn)
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
@@ -204,23 +201,17 @@ func sendBatchTransactions(client rpcpb.RpcServiceClient, txs []*corepb.Transact
 	return nil
 }
 
-func updateRecordAfterSend(txs []*corepb.Transaction) {
-	for _, tx := range txs {
-		sentTxs[hex.EncodeToString(tx.GetId())] = 0
-	}
-}
-
 func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, cmdChan chan int) {
 	txs := []*corepb.Transaction{}
 	isRunning := false
 
-	count := 0
-
 	ticker := time.NewTicker(time.Millisecond * TimeBetweenBatch).C
+
 	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
 		logger.WithError(err).Panic("Unable to get wallet")
 	}
+
 	for {
 		select {
 		case cmd := <-cmdChan:
@@ -232,25 +223,24 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 				txs = []*corepb.Transaction{}
 			}
 		case <-ticker:
+
 			if !isRunning {
 				continue
 			}
+
 			if len(txs) >= int(numOfTxPerBatch) {
-				logger.WithFields(logger.Fields{
-					"invalidTxCount": count,
-				}).Info("Send Batch Txs!")
-				count = 0
+				logger.Info("Send Batch Txs!")
+
 				if sendBatchTransactions(rpcClient, txs) == nil {
-					updateRecordAfterSend(txs)
 					updateCurrBal()
 				} else {
 					//if the send failed, the current utxo is not up to date
 					utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
-					//isRunning = false
 				}
 				txs = []*corepb.Transaction{}
 				tempBalance = getCurrBalanceDeepCopy(currBalance)
 			}
+
 		default:
 			if !isRunning {
 				continue
@@ -261,8 +251,6 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 			tx := createRandomTransaction(addresses, wm)
 			if tx != nil {
 				txs = append(txs, tx)
-			} else {
-				count++
 			}
 		}
 	}
@@ -351,24 +339,6 @@ func IsTheTurnToSendSmartContractTransaction() bool {
 	return smartContractCounter%smartContractSendFreq == 0
 }
 
-func calcSendAmount(from, to string) uint64 {
-	fromBalance, _ := tempBalance[from]
-	toBalance, _ := tempBalance[to]
-	amount := uint64(0)
-	if fromBalance < toBalance {
-		amount = 1
-	} else if fromBalance == toBalance {
-		amount = fromBalance - 1
-	} else {
-		amount = (fromBalance - toBalance) / 3
-	}
-
-	if amount == 0 {
-		amount = 1
-	}
-	return amount
-}
-
 func getAddrWithBalance(addresses []core.Address) int {
 	fromIndex := rand.Intn(maxWallet)
 	amount := tempBalance[addresses[fromIndex].String()]
@@ -392,25 +362,11 @@ func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amou
 	})
 
 	if err != nil {
-		recordFailedTransaction(err, from, to, amount, data)
 		return resp, err
 	}
-	sentTxs[resp.Txid] = 0
 	currBalance[from] -= amount
 	currBalance[to] += amount
 	return resp, nil
-}
-
-func recordFailedTransaction(txErr error, from, to string, amount uint64, data string) {
-	f, err := os.OpenFile(failedTxLogFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		logger.Panic("Open file failed while recording failed transactions")
-	}
-	w := csv.NewWriter(f)
-
-	w.Write([]string{fmt.Sprint(currHeight), from, to, fmt.Sprint(amount), txErr.Error(), data})
-
-	w.Flush()
 }
 
 func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, update bool) {
