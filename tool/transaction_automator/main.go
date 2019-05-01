@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/sdk"
 	"github.com/dappley/go-dappley/tool"
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"io/ioutil"
@@ -25,11 +26,9 @@ import (
 var (
 	currBalance           = make(map[string]uint64)
 	tempBalance           = make(map[string]uint64)
-	utxoIndex             = &core.UTXOIndex{}
 	smartContractAddr     = ""
 	smartContractCounter  = uint32(0)
 	isContractDeployed    = false
-	currHeight            = uint64(0)
 	numOfTxPerBatch       = uint32(1000)
 	smartContractSendFreq = uint32(1000000000)
 )
@@ -61,44 +60,53 @@ func main() {
 	config.LoadConfig(configFilePath, toolConfigs)
 	numOfTxPerBatch = toolConfigs.GetTps()
 	smartContractSendFreq = toolConfigs.GetScFreq()
-	conn := tool.InitRpcClient(int(toolConfigs.GetPort()))
 
-	adminClient := rpcpb.NewAdminServiceClient(conn)
-	rpcClient := rpcpb.NewRpcServiceClient(conn)
+	sdkConn := sdk.NewDappleySdk(toolConfigs.GetPort())
+	wm := sdk.NewDappleySdkWallet(sdkConn, maxWallet, password)
+	blockchain := sdk.NewDappSdkBlockchain(sdkConn)
+	utxoIndex := sdk.NewDappleySdkUtxoIndex(sdkConn, wm)
 
-	addresses := tool.CreateWallet(maxWallet, password)
+	fundAddr := wm.GetAddrs()[0].String()
+	funder := sdk.NewDappSdkFundRequest(sdkConn, blockchain)
+	funder.Fund(fundAddr, common.NewAmount(initialAmount))
 
-	fundAddr := addresses[0].String()
-	tool.FundFromMiner(adminClient, rpcClient, fundAddr, common.NewAmount(initialAmount))
 	logger.WithFields(logger.Fields{
 		"initial_total_amount": initialAmount,
 		"send_interval":        fmt.Sprintf("%d ms", sendInterval),
 	}).Info("Funding is completed. Script starts.")
-	displayBalances(rpcClient, addresses, true)
+	displayBalances(sdkConn.GetRpcClient(), wm.GetAddrs(), true)
 
-	utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
+	utxoIndex.Update()
 
-	deploySmartContract(adminClient, fundAddr)
+	deploySmartContract(sdkConn.GetAdminClient(), fundAddr)
 
-	currHeight = tool.GetBlockHeight(rpcClient)
+	currHeight, err := blockchain.GetBlockHeight()
+	if err != nil {
+		logger.WithError(err).Panic("Get Blockheight failed!")
+	}
+
 	ticker := time.NewTicker(time.Millisecond * 200).C
 
 	cmdChan := make(chan int, 5)
-	go sendRandomTransactions(rpcClient, addresses, cmdChan)
+	go sendRandomTransactions(sdkConn.GetRpcClient(), wm.GetAddrs(), cmdChan, utxoIndex)
 	cmdChan <- cmdStart
 
 	for {
 		select {
 		case <-ticker:
-			height := tool.GetBlockHeight(rpcClient)
+			height, err := blockchain.GetBlockHeight()
+			if err != nil {
+				logger.WithError(err).Panic("Get Blockheight failed!")
+			}
+
 			if height > currHeight {
 				cmdChan <- cmdStop
 
 				isContractDeployed = true
 				currHeight = height
 
-				displayBalances(rpcClient, addresses, true)
-				utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
+				displayBalances(sdkConn.GetRpcClient(), wm.GetAddrs(), true)
+				utxoIndex.Update()
 
 			} else {
 				cmdChan <- cmdStart
@@ -180,7 +188,7 @@ func sendBatchTransactions(client rpcpb.RpcServiceClient, txs []*corepb.Transact
 	return nil
 }
 
-func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, cmdChan chan int) {
+func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.Address, cmdChan chan int, utxoIndex *sdk.DappSdkUtxoIndex) {
 	txs := []*corepb.Transaction{}
 	isRunning := false
 
@@ -214,7 +222,7 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 					updateCurrBal()
 				} else {
 					//if the send failed, the current utxo is not up to date
-					utxoIndex = tool.UpdateUtxoIndex(rpcClient, addresses)
+					utxoIndex.Update()
 				}
 				txs = []*corepb.Transaction{}
 				tempBalance = getCurrBalanceDeepCopy(currBalance)
@@ -227,7 +235,7 @@ func sendRandomTransactions(rpcClient rpcpb.RpcServiceClient, addresses []core.A
 			if len(txs) >= int(numOfTxPerBatch) {
 				continue
 			}
-			tx := createRandomTransaction(addresses, wm)
+			tx := createRandomTransaction(addresses, wm, utxoIndex)
 			if tx != nil {
 				txs = append(txs, tx)
 			}
@@ -248,7 +256,7 @@ func getCurrBalanceDeepCopy(original map[string]uint64) map[string]uint64 {
 	return temp
 }
 
-func createRandomTransaction(addresses []core.Address, wm *client.WalletManager) *corepb.Transaction {
+func createRandomTransaction(addresses []core.Address, wm *client.WalletManager, utxoIndex *sdk.DappSdkUtxoIndex) *corepb.Transaction {
 
 	data := ""
 
@@ -266,7 +274,7 @@ func createRandomTransaction(addresses []core.Address, wm *client.WalletManager)
 	}
 
 	senderKeyPair := wm.GetKeyPairByAddress(addresses[fromIndex])
-	tx := createTransaction(addresses[fromIndex], core.NewAddress(toAddr), common.NewAmount(sendAmount), common.NewAmount(0), data, senderKeyPair)
+	tx := createTransaction(utxoIndex, addresses[fromIndex], core.NewAddress(toAddr), common.NewAmount(sendAmount), common.NewAmount(0), data, senderKeyPair)
 	if tx == nil {
 		return nil
 	}
@@ -277,13 +285,13 @@ func createRandomTransaction(addresses []core.Address, wm *client.WalletManager)
 	return tx.ToProto().(*corepb.Transaction)
 }
 
-func createTransaction(from, to core.Address, amount, tip *common.Amount, contract string, senderKeyPair *core.KeyPair) *core.Transaction {
+func createTransaction(utxoIndex *sdk.DappSdkUtxoIndex, from, to core.Address, amount, tip *common.Amount, contract string, senderKeyPair *core.KeyPair) *core.Transaction {
 
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := utxoIndex.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 
 	if err != nil {
 		return nil
@@ -307,9 +315,7 @@ func createTransaction(from, to core.Address, amount, tip *common.Amount, contra
 	}
 	sendTXLogger.Data["txid"] = hex.EncodeToString(tx.ID)
 
-	//sendTXLogger.Info("Transaction is created!")
-
-	utxoIndex.UpdateUtxo(&tx)
+	utxoIndex.GetUtxoIndex().UpdateUtxo(&tx)
 	return &tx
 }
 

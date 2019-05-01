@@ -6,12 +6,14 @@ import (
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
+	"sync"
 )
 
 type DappSdkUtxoIndex struct {
 	conn      *DappSdkConn
 	sdkWallet *DappSdkWallet
 	utxoIndex *core.UTXOIndex
+	mutex     *sync.Mutex
 }
 
 func NewDappleySdkUtxoIndex(conn *DappSdkConn, sdkWallet *DappSdkWallet) *DappSdkUtxoIndex {
@@ -19,10 +21,15 @@ func NewDappleySdkUtxoIndex(conn *DappSdkConn, sdkWallet *DappSdkWallet) *DappSd
 		conn:      conn,
 		utxoIndex: core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage())),
 		sdkWallet: sdkWallet,
+		mutex:     &sync.Mutex{},
 	}
 }
 
-func (sdkui *DappSdkUtxoIndex) update() error {
+func (sdkui *DappSdkUtxoIndex) Update() error {
+	sdkui.mutex.Lock()
+	defer sdkui.mutex.Unlock()
+
+	sdkui.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
 
 	for _, addr := range sdkui.sdkWallet.addrs {
 
@@ -48,6 +55,7 @@ func (sdkui *DappSdkUtxoIndex) update() error {
 }
 
 func (sdkui *DappSdkUtxoIndex) getUtxoByAddr(addr core.Address) ([]*corepb.Utxo, error) {
+
 	resp, err := sdkui.conn.rpcClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
 		Address: addr.String(),
 	})
@@ -58,3 +66,5 @@ func (sdkui *DappSdkUtxoIndex) getUtxoByAddr(addr core.Address) ([]*corepb.Utxo,
 
 	return resp.Utxos, nil
 }
+
+func (sdkui *DappSdkUtxoIndex) GetUtxoIndex() *core.UTXOIndex { return sdkui.utxoIndex }

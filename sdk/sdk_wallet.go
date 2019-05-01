@@ -46,3 +46,7 @@ func NewDappleySdkWallet(conn *DappSdkConn, numOfWallets int, password string) *
 
 	return dappleySdkWallet
 }
+
+func (sdkw *DappSdkWallet) GetAddrs() []core.Address {
+	return sdkw.addrs
+}
