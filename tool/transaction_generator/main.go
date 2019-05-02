@@ -47,8 +47,6 @@ func main() {
 	fundRequest.Fund(wallet.GetAddrs()[0].String(), initialAmount)
 	fundRequest.Fund(wallet.GetAddrs()[2].String(), initialAmount)
 
-	wallet.UpdateFromServer()
-
 	ticker := time.NewTicker(time.Millisecond * 200).C
 	currHeight := uint64(0)
 	index := 0
@@ -240,9 +238,18 @@ func createTransactionWithInsufficientBalance(wallet *sdk.DappSdkWallet, addrs [
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
 	prevUtxos, err := wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
-	tx := createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
-	tx.Vin = tx.Vin[:len(tx.Vin)-1]
 
+	sum := calculateUtxoSum(prevUtxos)
+	change := calculateChange(sum, amount, tip)
+	vouts := prepareOutputLists(from, to, amount, change)
+	vouts[0].Value = vouts[0].Value.Add(common.NewAmount(1))
+
+	tx := newTransaction(prevUtxos, vouts, tip, senderKeyPair)
+	logger.WithFields(logger.Fields{
+		"From":   from,
+		"To":     to,
+		"Amount": amount,
+	}).Info("Creating a transaction...")
 	return tx
 }
 
