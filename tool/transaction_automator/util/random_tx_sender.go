@@ -19,8 +19,7 @@ const (
 type BatchTxSender struct {
 	tps         uint32
 	wallet      *sdk.DappSdkWallet
-	utxoIndex   *sdk.DappSdkUtxoIndex
-	blockchain  *sdk.DappSdkBlockchain
+	dappSdk     *sdk.DappSdk
 	isRunning   bool
 	pendingTxs  []*corepb.Transaction
 	isScEnabled bool
@@ -29,12 +28,11 @@ type BatchTxSender struct {
 	scCounter   uint32
 }
 
-func NewBatchTxSender(tps uint32, wallet *sdk.DappSdkWallet, utxoIndex *sdk.DappSdkUtxoIndex, blockchain *sdk.DappSdkBlockchain, smartContractSendFreq uint32, scAddr string) *BatchTxSender {
+func NewBatchTxSender(tps uint32, wallet *sdk.DappSdkWallet, dappSdk *sdk.DappSdk, smartContractSendFreq uint32, scAddr string) *BatchTxSender {
 	return &BatchTxSender{
 		tps:         tps,
 		wallet:      wallet,
-		utxoIndex:   utxoIndex,
-		blockchain:  blockchain,
+		dappSdk:     dappSdk,
 		isRunning:   false,
 		isScEnabled: false,
 		scAddr:      scAddr,
@@ -78,14 +76,13 @@ func (sender *BatchTxSender) Run() {
 		for {
 			select {
 			case <-ticker:
-
 				if !sender.IsRunning() {
 					continue
 				}
 
 				if sender.IsPendingTxsReady() {
-					if sender.blockchain.SendBatchTransactions(sender.pendingTxs) != nil {
-						sender.utxoIndex.Update()
+					if sender.dappSdk.SendBatchTransactions(sender.pendingTxs) != nil {
+						sender.wallet.UpdateUTXOIndex()
 					}
 					sender.ClearPendingTx()
 				}
@@ -159,7 +156,7 @@ func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, ti
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := sender.utxoIndex.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := sender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 
 	if err != nil {
 		return nil
@@ -181,7 +178,7 @@ func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, ti
 	}
 	sendTXLogger.Data["txid"] = hex.EncodeToString(tx.ID)
 
-	sender.utxoIndex.GetUtxoIndex().UpdateUtxo(&tx)
+	sender.wallet.GetUtxoIndex().UpdateUtxo(&tx)
 	return &tx
 }
 

@@ -45,33 +45,31 @@ func main() {
 	numOfTxPerBatch = toolConfigs.GetTps()
 	smartContractSendFreq = toolConfigs.GetScFreq()
 
-	conn := sdk.NewDappSdk(toolConfigs.GetPort())
-	wallet := sdk.NewDappleySdkWallet(conn, maxWallet, password)
-	blockchain := sdk.NewDappSdkBlockchain(conn)
-	utxoIndex := sdk.NewDappSdkUtxoIndex(conn, wallet)
+	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
+	dappSdk := sdk.NewDappSdk(grpcClient)
+
+	wallet := sdk.NewDappleySdkWallet(maxWallet, password, dappSdk)
 
 	fundAddr := wallet.GetAddrs()[0].String()
-	fundRequest := sdk.NewDappSdkFundRequest(conn, blockchain)
+	fundRequest := sdk.NewDappSdkFundRequest(grpcClient, dappSdk)
 	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
 
 	logger.WithFields(logger.Fields{
 		"initial_total_amount": initialAmount,
 		"send_interval":        fmt.Sprintf("%d ms", sendInterval),
 	}).Info("Funding is completed. Script starts.")
-	wallet.UpdateBalancesFromServer(blockchain)
+	wallet.UpdateFromServer()
 
-	utxoIndex.Update()
+	isDeployedAlready := deploySmartContract(grpcClient.GetAdminClient(), fundAddr)
 
-	isDeployedAlready := deploySmartContract(conn.GetAdminClient(), fundAddr)
-
-	currHeight, err := blockchain.GetBlockHeight()
+	currHeight, err := dappSdk.GetBlockHeight()
 	if err != nil {
 		logger.WithError(err).Panic("Get Blockheight failed!")
 	}
 
 	ticker := time.NewTicker(time.Millisecond * 200).C
 
-	sender := util.NewBatchTxSender(numOfTxPerBatch, wallet, utxoIndex, blockchain, smartContractSendFreq, smartContractAddr)
+	sender := util.NewBatchTxSender(numOfTxPerBatch, wallet, dappSdk, smartContractSendFreq, smartContractAddr)
 	if isDeployedAlready {
 		sender.EnableSmartContract()
 	}
@@ -81,7 +79,7 @@ func main() {
 	for {
 		select {
 		case <-ticker:
-			height, err := blockchain.GetBlockHeight()
+			height, err := dappSdk.GetBlockHeight()
 			if err != nil {
 				logger.WithError(err).Panic("Get Blockheight failed!")
 			}
@@ -92,8 +90,7 @@ func main() {
 				sender.EnableSmartContract()
 				currHeight = height
 
-				wallet.UpdateBalancesFromServer(blockchain)
-				utxoIndex.Update()
+				wallet.UpdateFromServer()
 
 			} else {
 				sender.Start()
