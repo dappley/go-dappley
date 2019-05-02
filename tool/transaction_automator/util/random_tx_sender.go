@@ -40,11 +40,11 @@ func NewBatchTxSender(tps uint32, wallet *sdk.DappSdkWallet, dappSdk *sdk.DappSd
 	}
 }
 
-func (sender *BatchTxSender) Start() {
+func (sender *BatchTxSender) Resume() {
 	sender.isRunning = true
 }
 
-func (sender *BatchTxSender) Stop() {
+func (sender *BatchTxSender) Pause() {
 	sender.isRunning = false
 	sender.ClearPendingTx()
 }
@@ -71,6 +71,8 @@ func (sender *BatchTxSender) IsPendingTxsReady() bool {
 
 func (sender *BatchTxSender) Run() {
 	ticker := time.NewTicker(time.Millisecond * TimeBetweenBatch1).C
+	sender.isRunning = true
+
 	go func() {
 		for {
 			select {

@@ -62,7 +62,6 @@ func main() {
 		sender.EnableSmartContract()
 	}
 	sender.Run()
-	sender.Start()
 
 	for {
 		select {
@@ -73,7 +72,7 @@ func main() {
 			}
 
 			if height > currHeight {
-				sender.Stop()
+				sender.Pause()
 
 				sender.EnableSmartContract()
 				currHeight = height
@@ -82,7 +81,7 @@ func main() {
 				wallet.DisplayBalances()
 
 			} else {
-				sender.Start()
+				sender.Resume()
 			}
 		}
 	}
