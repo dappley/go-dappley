@@ -82,7 +82,7 @@ func (sender *BatchTxSender) Run() {
 
 				if sender.IsPendingTxsReady() {
 					if sender.dappSdk.SendBatchTransactions(sender.pendingTxs) != nil {
-						sender.wallet.UpdateUTXOIndex()
+						sender.wallet.UpdateFromServer()
 					}
 					sender.ClearPendingTx()
 				}

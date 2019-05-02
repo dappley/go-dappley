@@ -58,7 +58,9 @@ func main() {
 		"initial_total_amount": initialAmount,
 		"send_interval":        fmt.Sprintf("%d ms", sendInterval),
 	}).Info("Funding is completed. Script starts.")
+
 	wallet.UpdateFromServer()
+	wallet.DisplayBalances()
 
 	isDeployedAlready := deploySmartContract(grpcClient.GetAdminClient(), fundAddr)
 
@@ -91,6 +93,7 @@ func main() {
 				currHeight = height
 
 				wallet.UpdateFromServer()
+				wallet.DisplayBalances()
 
 			} else {
 				sender.Start()

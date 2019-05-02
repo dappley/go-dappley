@@ -49,7 +49,7 @@ func NewDappleySdkWallet(numOfWallets int, password string, sdk *DappSdk) *DappS
 	}
 
 	dappSdkWallet.addrs = dappSdkWallet.wm.GetAddresses()
-	dappSdkWallet.balances = make([]uint64, len(dappSdkWallet.addrs))
+	dappSdkWallet.ClearBalances()
 
 	return dappSdkWallet
 }
@@ -62,37 +62,31 @@ func (sdkw *DappSdkWallet) GetWalletManager() *client.WalletManager { return sdk
 
 func (sdkw *DappSdkWallet) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
 
-//UpdateFromServer updates the balance and utxos of all addresses in the wallet from the server
-func (sdkw *DappSdkWallet) UpdateFromServer() {
-	sdkw.UpdateBalances()
-	sdkw.UpdateUTXOIndex()
+func (sdkw *DappSdkWallet) ClearBalances() {
+	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
+	sdkw.balances = make([]uint64, len(sdkw.addrs))
 }
 
 //UpdateBalances updates all the balances of the addresses in the wallet
-func (sdkw *DappSdkWallet) UpdateBalances() {
+func (sdkw *DappSdkWallet) DisplayBalances() {
 	for i, addr := range sdkw.GetAddrs() {
-		amount, err := sdkw.sdk.GetBalance(addr.String())
-		balanceLogger := logger.WithFields(logger.Fields{
+		logger.WithFields(logger.Fields{
 			"address": addr.String(),
-			"amount":  amount,
-			"record":  sdkw.balances[i],
-		})
-		if err != nil {
-			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
-		}
-		balanceLogger.Info("Updating wallet balance...")
-		sdkw.balances[i] = uint64(amount)
+			"balance": sdkw.balances[i],
+		}).Info("Updating wallet balance...")
 	}
 }
 
-//UpdateUTXOIndex updates all the utxos of the addresses in the wallet from the server
-func (sdkw *DappSdkWallet) UpdateUTXOIndex() error {
+//UpdateFromServer updates the balance and utxos of all addresses in the wallet from the server
+func (sdkw *DappSdkWallet) UpdateFromServer() error {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 
-	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
+	logger.Info("DappSdkWallet: Updating from server")
 
-	for _, addr := range sdkw.addrs {
+	sdkw.ClearBalances()
+
+	for i, addr := range sdkw.addrs {
 
 		kp := sdkw.wm.GetKeyPairByAddress(addr)
 		_, err := core.NewUserPubKeyHash(kp.PublicKey)
@@ -109,6 +103,7 @@ func (sdkw *DappSdkWallet) UpdateUTXOIndex() error {
 			utxo := core.UTXO{}
 			utxo.FromProto(utxoPb)
 			sdkw.utxoIndex.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
+			sdkw.AddToBalance(i, utxo.TXOutput.Value.Uint64())
 		}
 	}
 
