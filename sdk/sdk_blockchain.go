@@ -2,7 +2,9 @@ package sdk
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/rpc/pb"
+	logger "github.com/sirupsen/logrus"
 )
 
 type DappSdkBlockchain struct {
@@ -32,4 +34,24 @@ func (sdkb *DappSdkBlockchain) GetBalance(address string) (int64, error) {
 		return 0, err
 	}
 	return response.Amount, err
+}
+
+func (sdktx *DappSdkBlockchain) SendBatchTransactions(txs []*corepb.Transaction) error {
+	_, err := sdktx.conn.rpcClient.RpcSendBatchTransaction(
+		context.Background(),
+		&rpcpb.SendBatchTransactionRequest{
+			Transactions: txs,
+		},
+	)
+
+	if err != nil {
+		logger.WithError(err).Error("Unable to send batch transactions!")
+		return err
+	}
+
+	logger.WithFields(logger.Fields{
+		"num_of_txs": len(txs),
+	}).Info("Batch Transactions are sent!")
+
+	return nil
 }
