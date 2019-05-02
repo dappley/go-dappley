@@ -8,9 +8,10 @@ import (
 )
 
 type DappSdkWallet struct {
-	conn  *DappSdkConn
-	addrs []core.Address
-	wm    *client.WalletManager
+	conn     *DappSdkConn
+	addrs    []core.Address
+	balances []uint64
+	wm       *client.WalletManager
 }
 
 //NewDappleySdkWallet creates a new NewDappleySdkWallet instance that connects to a Dappley node with grpc port
@@ -43,10 +44,43 @@ func NewDappleySdkWallet(conn *DappSdkConn, numOfWallets int, password string) *
 	}
 
 	dappleySdkWallet.addrs = dappleySdkWallet.wm.GetAddresses()
+	dappleySdkWallet.balances = make([]uint64, len(dappleySdkWallet.addrs))
 
 	return dappleySdkWallet
 }
 
 func (sdkw *DappSdkWallet) GetAddrs() []core.Address {
 	return sdkw.addrs
+}
+
+func (sdkw *DappSdkWallet) GetConn() *DappSdkConn {
+	return sdkw.conn
+}
+
+func (sdkw *DappSdkWallet) GetBalances() []uint64 { return sdkw.balances }
+
+func (sdkw *DappSdkWallet) GetWalletManager() *client.WalletManager { return sdkw.wm }
+
+func (sdkw *DappSdkWallet) UpdateBalancesFromServer(blockchain *DappSdkBlockchain) {
+	for i, addr := range sdkw.GetAddrs() {
+		amount, err := blockchain.GetBalance(addr.String())
+		balanceLogger := logger.WithFields(logger.Fields{
+			"address": addr.String(),
+			"amount":  amount,
+			"record":  sdkw.balances[i],
+		})
+		if err != nil {
+			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
+		}
+		balanceLogger.Info("Updating wallet balance...")
+		sdkw.balances[i] = uint64(amount)
+	}
+}
+
+func (sdkw *DappSdkWallet) AddToBalance(index int, difference uint64) {
+	sdkw.balances[index] += difference
+}
+
+func (sdkw *DappSdkWallet) SubstractFromBalance(index int, difference uint64) {
+	sdkw.balances[index] -= difference
 }
