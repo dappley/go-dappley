@@ -1,61 +1,53 @@
 package main
 
 import (
-	"context"
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/tool"
+	"github.com/dappley/go-dappley/sdk"
+	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	logger "github.com/sirupsen/logrus"
 	"time"
 )
 
-var (
-	password      = "testpassword"
-	maxWallet     = 5
-	initialAmount = common.NewAmount(100000)
-	fundTimeout   = time.Duration(time.Minute * 5)
-	txSenders     = []transctionSender{
-		sendNormalTransaction,
-		sendTransactionUsingUnexistingUTXO,
-		sendTransactionUsingUnAuthorizedUTXO,
-		sendTransactionWithInsufficientBalance,
-		sendDoubleSpendingTransactions,
-	}
-)
+var txSenders = []transctionSender{
+	sendNormalTransaction,
+	sendTransactionUsingUnexistingUTXO,
+	sendTransactionUsingUnAuthorizedUTXO,
+	sendTransactionWithInsufficientBalance,
+	sendDoubleSpendingTransactions,
+}
 
-const (
-	rpcFilePath = "default.conf"
-)
+const configFilePath = "default.conf"
 
-type transctionSender func(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager)
+type transctionSender func(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, addrs []core.Address, wm *client.WalletManager)
 
 func main() {
 	logger.SetFormatter(&logger.TextFormatter{
 		FullTimestamp: true,
 	})
 
-	var utxoIndex *core.UTXOIndex
+	toolConfigs := &tx_automator_configpb.Config{}
+	config.LoadConfig(configFilePath, toolConfigs)
 
-	cliConfig := &configpb.CliConfig{}
-	config.LoadConfig(rpcFilePath, cliConfig)
-	conn := tool.InitRpcClient(int(cliConfig.GetPort()))
+	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
+	dappSdk := sdk.NewDappSdk(grpcClient)
+	wallet := sdk.NewDappSdkWallet(
+		toolConfigs.GetMaxWallet(),
+		toolConfigs.GetPassword(),
+		dappSdk,
+	)
 
-	adminClient := rpcpb.NewAdminServiceClient(conn)
-	rpcClient := rpcpb.NewRpcServiceClient(conn)
+	addrs := wallet.GetAddrs()
+	wm := wallet.GetWalletManager()
+	fundRequest := sdk.NewDappSdkFundRequest(grpcClient, dappSdk)
+	initialAmount := common.NewAmount(toolConfigs.GetInitialAmount())
+	fundRequest.Fund(wallet.GetAddrs()[0].String(), initialAmount)
+	fundRequest.Fund(wallet.GetAddrs()[2].String(), initialAmount)
 
-	addrs := tool.CreateWallet(maxWallet, password)
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
-	if err != nil {
-		logger.Panic("Can not get access to wallet")
-	}
-	tool.FundFromMiner(adminClient, rpcClient, addrs[0].String(), initialAmount)
-	tool.FundFromMiner(adminClient, rpcClient, addrs[2].String(), initialAmount)
+	wallet.UpdateFromServer()
 
 	ticker := time.NewTicker(time.Millisecond * 200).C
 	currHeight := uint64(0)
@@ -63,13 +55,15 @@ func main() {
 	for {
 		select {
 		case <-ticker:
-			height := tool.GetBlockHeight(rpcClient)
+			height, err := dappSdk.GetBlockHeight()
+			if err != nil {
+				logger.Panic("Can not get block height from server")
+			}
+
 			if height > currHeight {
 				currHeight = height
-				displayBalances(rpcClient, addrs)
-				utxoIndex = tool.UpdateUtxoIndex(rpcClient, addrs)
-				logger.Info("Transaction ", index)
-				txSenders[index](rpcClient, utxoIndex, addrs, wm)
+				wallet.UpdateFromServer()
+				txSenders[index](dappSdk, wallet, addrs, wm)
 				index = index + 1
 				if index >= len(txSenders) {
 					logger.Info("All transactions are sent. Exiting...")
@@ -80,135 +74,109 @@ func main() {
 	}
 }
 
-func sendTransactionUsingUnexistingUTXO(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
-
-	amount := common.NewAmount(10)
-	tx := createTransactionUsingUnexistingUTXO(utxoIndex,
-		addrs,
-		amount,
-		common.NewAmount(0),
-		wm)
-
-	txpb := tx.ToProto().(*corepb.Transaction)
-
-	_, err := rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
+func sendTransactionUsingUnexistingUTXO(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, addrs []core.Address, wm *client.WalletManager) {
 
 	logger.Info("Sending a transaction with unexisitng utxo...")
 
-	if err != nil {
-		logger.WithError(err).Warn("Unable to send transaction!")
-	}
-}
-
-func sendNormalTransaction(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
-
 	amount := common.NewAmount(10)
-
-	tx := createNormalTransaction(utxoIndex,
+	tx := createTransactionUsingUnexistingUTXO(wallet,
 		addrs,
 		amount,
 		common.NewAmount(0),
 		wm)
 
-	txpb := tx.ToProto().(*corepb.Transaction)
+	_, err := dappSdk.SendTransaction(tx.ToProto().(*corepb.Transaction))
 
-	_, err := rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
+	if err != nil {
+		logger.WithError(err).Error("Unable to send transaction!")
+	}
+}
+
+func sendNormalTransaction(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, addrs []core.Address, wm *client.WalletManager) {
+
+	amount := common.NewAmount(10)
+
+	tx := createNormalTransaction(wallet,
+		addrs,
+		amount,
+		common.NewAmount(0),
+		wm)
+
+	_, err := dappSdk.SendTransaction(tx.ToProto().(*corepb.Transaction))
 
 	logger.Info("Sending a normal transaction...")
 
 	if err != nil {
 		logger.WithError(err).Panic("Unable to send transaction!")
 	}
+
+	logger.Info("Send is successful!")
 }
 
-func sendTransactionUsingUnAuthorizedUTXO(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+func sendTransactionUsingUnAuthorizedUTXO(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, addrs []core.Address, wm *client.WalletManager) {
 
 	amount := common.NewAmount(10)
-	tx := createTransactionUsingUnauthorizedUTXO(utxoIndex,
+	tx := createTransactionUsingUnauthorizedUTXO(wallet,
 		addrs,
 		amount,
 		common.NewAmount(0),
 		wm)
 
-	txpb := tx.ToProto().(*corepb.Transaction)
-
-	_, err := rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
+	_, err := dappSdk.SendTransaction(tx.ToProto().(*corepb.Transaction))
 
 	logger.Info("Sending a transaction with unauthorized utxo...")
 
 	if err != nil {
-		logger.WithError(err).Warn("Unable to send transaction!")
+		logger.WithError(err).Error("Unable to send transaction!")
 	}
 }
 
-func sendTransactionWithInsufficientBalance(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+func sendTransactionWithInsufficientBalance(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, addrs []core.Address, wm *client.WalletManager) {
 
 	amount := common.NewAmount(10)
-	tx := createTransactionWithInsufficientBalance(utxoIndex,
+	tx := createTransactionWithInsufficientBalance(wallet,
 		addrs,
 		amount,
 		common.NewAmount(0),
 		wm)
 
-	txpb := tx.ToProto().(*corepb.Transaction)
-
-	_, err := rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
+	_, err := dappSdk.SendTransaction(tx.ToProto().(*corepb.Transaction))
 
 	logger.Info("Sending a transaction with Insufficient Balance...")
 
 	if err != nil {
-		logger.WithError(err).Warn("Unable to send transaction!")
+		logger.WithError(err).Error("Unable to send transaction!")
 	}
 }
 
-func sendDoubleSpendingTransactions(rpcClient rpcpb.RpcServiceClient, utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager) {
+func sendDoubleSpendingTransactions(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, addrs []core.Address, wm *client.WalletManager) {
 
 	amount := common.NewAmount(10)
 
-	tx := createNormalTransaction(utxoIndex,
+	tx := createNormalTransaction(wallet,
 		addrs,
 		amount,
 		common.NewAmount(0),
 		wm)
 
-	txpb := tx.ToProto().(*corepb.Transaction)
-
-	_, err := rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
+	_, err := dappSdk.SendTransaction(tx.ToProto().(*corepb.Transaction))
 
 	logger.Info("Sending double spending transactions: Sending Tx 1")
 
 	if err != nil {
-		logger.WithError(err).Warn("Unable to send transaction!")
+		logger.WithError(err).Panic("Unable to send transaction!")
 	}
 
-	_, err = rpcClient.RpcSendTransaction(
-		context.Background(),
-		&rpcpb.SendTransactionRequest{Transaction: txpb},
-	)
+	_, err = dappSdk.SendTransaction(tx.ToProto().(*corepb.Transaction))
 
 	logger.Info("Sending double spending transactions: Sending Tx 2")
 
 	if err != nil {
-		logger.WithError(err).Warn("Unable to send transaction!")
+		logger.WithError(err).Error("Unable to send transaction!")
 	}
 }
 
-func createNormalTransaction(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
+func createNormalTransaction(wallet *sdk.DappSdkWallet, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
 
 	from := addrs[0]
 	senderKeyPair := wm.GetKeyPairByAddress(from)
@@ -218,11 +186,11 @@ func createNormalTransaction(utxoIndex *core.UTXOIndex, addrs []core.Address, am
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
 }
 
-func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
+func createTransactionUsingUnexistingUTXO(wallet *sdk.DappSdkWallet, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
 
 	from := addrs[0]
 	senderKeyPair := wm.GetKeyPairByAddress(from)
@@ -232,7 +200,7 @@ func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, addrs []cor
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 	unexistingUtxo := &core.UTXO{
 		TXOutput: *core.NewTXOutput(common.NewAmount(10), from),
 		Txid:     []byte("FakeTxId"),
@@ -243,7 +211,7 @@ func createTransactionUsingUnexistingUTXO(utxoIndex *core.UTXOIndex, addrs []cor
 	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
 }
 
-func createTransactionUsingUnauthorizedUTXO(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
+func createTransactionUsingUnauthorizedUTXO(wallet *sdk.DappSdkWallet, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
 
 	from := addrs[0]
 	senderKeyPair := wm.GetKeyPairByAddress(from)
@@ -253,15 +221,15 @@ func createTransactionUsingUnauthorizedUTXO(utxoIndex *core.UTXOIndex, addrs []c
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 	unauthorizedpkh, err := core.NewUserPubKeyHash(wm.GetKeyPairByAddress(addrs[2]).PublicKey)
-	unauthorizedUtxo := utxoIndex.GetAllUTXOsByPubKeyHash(unauthorizedpkh).GetAllUtxos()
+	unauthorizedUtxo := wallet.GetUtxoIndex().GetAllUTXOsByPubKeyHash(unauthorizedpkh).GetAllUtxos()
 	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
 
 	return createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
 }
 
-func createTransactionWithInsufficientBalance(utxoIndex *core.UTXOIndex, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
+func createTransactionWithInsufficientBalance(wallet *sdk.DappSdkWallet, addrs []core.Address, amount, tip *common.Amount, wm *client.WalletManager) *core.Transaction {
 
 	from := addrs[0]
 	senderKeyPair := wm.GetKeyPairByAddress(from)
@@ -271,7 +239,7 @@ func createTransactionWithInsufficientBalance(utxoIndex *core.UTXOIndex, addrs [
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := utxoIndex.GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 	tx := createTransaction(prevUtxos, from, to, amount, tip, senderKeyPair)
 	tx.Vin = tx.Vin[:len(tx.Vin)-1]
 
@@ -351,18 +319,4 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 		logger.Panic("Insufficient input")
 	}
 	return change
-}
-
-func displayBalances(rpcClient rpcpb.RpcServiceClient, addresses []core.Address) {
-	for _, addr := range addresses {
-		amount, err := tool.GetBalance(rpcClient, addr.String())
-		balanceLogger := logger.WithFields(logger.Fields{
-			"address": addr.String(),
-			"amount":  amount,
-		})
-		if err != nil {
-			balanceLogger.WithError(err).Warn("Failed to get wallet balance.")
-		}
-		balanceLogger.Info("Displaying wallet balance...")
-	}
 }

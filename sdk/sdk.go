@@ -42,8 +42,8 @@ func (sdk *DappSdk) GetBalance(address string) (int64, error) {
 	return response.Amount, err
 }
 
-//SendTransaction send a transaction to the network
-func (sdk *DappSdk) SendTransaction(from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
+//Send send a transaction to the network
+func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
 	return sdk.conn.adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:       from,
 		To:         to,
@@ -52,6 +52,16 @@ func (sdk *DappSdk) SendTransaction(from, to string, amount uint64, data string)
 		WalletPath: client.GetWalletFilePath(),
 		Data:       data,
 	})
+}
+
+//SendTransaction send a transaction to the network
+func (sdk *DappSdk) SendTransaction(tx *corepb.Transaction) (*rpcpb.SendTransactionResponse, error) {
+	return sdk.conn.rpcClient.RpcSendTransaction(
+		context.Background(),
+		&rpcpb.SendTransactionRequest{
+			Transaction: tx,
+		},
+	)
 }
 
 //SendBatchTransactions sends a batch of transactions to the network

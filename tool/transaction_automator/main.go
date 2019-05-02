@@ -30,7 +30,7 @@ func main() {
 
 	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
 	dappSdk := sdk.NewDappSdk(grpcClient)
-	wallet := sdk.NewDappleySdkWallet(
+	wallet := sdk.NewDappSdkWallet(
 		toolConfigs.GetMaxWallet(),
 		toolConfigs.GetPassword(),
 		dappSdk,
@@ -105,7 +105,7 @@ func deploySmartContract(dappSdk *sdk.DappSdk, from string) (bool, string) {
 	}
 
 	contract := string(data)
-	resp, err := dappSdk.SendTransaction(from, "", 1, contract)
+	resp, err := dappSdk.Send(from, "", 1, contract)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"file_path":     contractFilePath,

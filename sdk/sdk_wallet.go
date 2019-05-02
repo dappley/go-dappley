@@ -18,8 +18,8 @@ type DappSdkWallet struct {
 	mutex     *sync.Mutex
 }
 
-//NewDappleySdkWallet creates a new NewDappleySdkWallet instance that connects to a Dappley node with grpc port
-func NewDappleySdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappSdkWallet {
+//NewDappSdkWallet creates a new NewDappSdkWallet instance that connects to a Dappley node with grpc port
+func NewDappSdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappSdkWallet {
 
 	dappSdkWallet := &DappSdkWallet{
 		sdk:   sdk,
