@@ -1,7 +1,6 @@
 package util
 
 import (
-	"encoding/hex"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
@@ -125,6 +124,7 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 		return nil
 	}
 
+	sender.wallet.GetUtxoIndex().UpdateUtxo(tx)
 	sender.wallet.AddToBalance(toIndex, sendAmount)
 	sender.wallet.SubstractFromBalance(fromIndex, sendAmount)
 
@@ -164,21 +164,17 @@ func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, ti
 	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, contract)
 	tx, err := core.NewUTXOTransaction(prevUtxos, sendTxParam)
 
-	sendTXLogger := logger.WithFields(logger.Fields{
-		"from":   from.String(),
-		"to":     to.String(),
-		"amount": amount.String(),
-		"txid":   "",
-		"data":   contract,
-	})
-
 	if err != nil {
-		sendTXLogger.WithError(err).Error("Failed to send transaction!")
+		logger.WithFields(logger.Fields{
+			"from":   from.String(),
+			"to":     to.String(),
+			"amount": amount.String(),
+			"txid":   "",
+			"data":   contract,
+		}).WithError(err).Error("Failed to send transaction!")
 		return nil
 	}
-	sendTXLogger.Data["txid"] = hex.EncodeToString(tx.ID)
 
-	sender.wallet.GetUtxoIndex().UpdateUtxo(&tx)
 	return &tx
 }
 

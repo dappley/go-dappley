@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
@@ -41,7 +42,19 @@ func (sdk *DappSdk) GetBalance(address string) (int64, error) {
 	return response.Amount, err
 }
 
-//SendBatchTransactions sends a batch of transactions to the server
+//SendTransaction send a transaction to the network
+func (sdk *DappSdk) SendTransaction(from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
+	return sdk.conn.adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
+		From:       from,
+		To:         to,
+		Amount:     common.NewAmount(amount).Bytes(),
+		Tip:        common.NewAmount(0).Bytes(),
+		WalletPath: client.GetWalletFilePath(),
+		Data:       data,
+	})
+}
+
+//SendBatchTransactions sends a batch of transactions to the network
 func (sdk *DappSdk) SendBatchTransactions(txs []*corepb.Transaction) error {
 	_, err := sdk.conn.rpcClient.RpcSendBatchTransaction(
 		context.Background(),

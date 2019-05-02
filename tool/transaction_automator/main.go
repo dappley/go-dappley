@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"github.com/dappley/go-dappley/sdk"
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_automator/util"
@@ -11,27 +9,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
-)
-
-var (
-	currBalance           = make(map[string]uint64)
-	smartContractAddr     = ""
-	numOfTxPerBatch       = uint32(1000)
-	smartContractSendFreq = uint32(1000000000)
 )
 
 const (
 	contractAddrFilePath = "contract/contractAddr"
 	contractFilePath     = "contract/test_contract.js"
-	password             = "testpassword"
-	maxWallet            = 10
-	initialAmount        = uint64(1000)
-	sendInterval         = time.Duration(5000) //ms
 	configFilePath       = "default.conf"
 )
 
@@ -42,27 +27,28 @@ func main() {
 
 	toolConfigs := &tx_automator_configpb.Config{}
 	config.LoadConfig(configFilePath, toolConfigs)
-	numOfTxPerBatch = toolConfigs.GetTps()
-	smartContractSendFreq = toolConfigs.GetScFreq()
 
 	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
 	dappSdk := sdk.NewDappSdk(grpcClient)
-
-	wallet := sdk.NewDappleySdkWallet(maxWallet, password, dappSdk)
+	wallet := sdk.NewDappleySdkWallet(
+		toolConfigs.GetMaxWallet(),
+		toolConfigs.GetPassword(),
+		dappSdk,
+	)
 
 	fundAddr := wallet.GetAddrs()[0].String()
 	fundRequest := sdk.NewDappSdkFundRequest(grpcClient, dappSdk)
+	initialAmount := toolConfigs.GetInitialAmount()
 	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
 
 	logger.WithFields(logger.Fields{
 		"initial_total_amount": initialAmount,
-		"send_interval":        fmt.Sprintf("%d ms", sendInterval),
 	}).Info("Funding is completed. Script starts.")
 
 	wallet.UpdateFromServer()
 	wallet.DisplayBalances()
 
-	isDeployedAlready := deploySmartContract(grpcClient.GetAdminClient(), fundAddr)
+	isScDeployed, scAddr := deploySmartContract(dappSdk, fundAddr)
 
 	currHeight, err := dappSdk.GetBlockHeight()
 	if err != nil {
@@ -71,8 +57,8 @@ func main() {
 
 	ticker := time.NewTicker(time.Millisecond * 200).C
 
-	sender := util.NewBatchTxSender(numOfTxPerBatch, wallet, dappSdk, smartContractSendFreq, smartContractAddr)
-	if isDeployedAlready {
+	sender := util.NewBatchTxSender(toolConfigs.GetTps(), wallet, dappSdk, toolConfigs.GetScFreq(), scAddr)
+	if isScDeployed {
 		sender.EnableSmartContract()
 	}
 	sender.Run()
@@ -102,14 +88,14 @@ func main() {
 	}
 }
 
-func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) bool {
+func deploySmartContract(dappSdk *sdk.DappSdk, from string) (bool, string) {
 
-	smartContractAddr = getSmartContractAddr()
+	smartContractAddr := getSmartContractAddr()
 	if smartContractAddr != "" {
 		logger.WithFields(logger.Fields{
 			"contractAddr": smartContractAddr,
 		}).Info("Smart contract has already been deployed. If you are sure it is not deployed, empty the file:", contractAddrFilePath)
-		return true
+		return true, smartContractAddr
 	}
 
 	data, err := ioutil.ReadFile(contractFilePath)
@@ -120,14 +106,14 @@ func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) bo
 	}
 
 	contract := string(data)
-	resp, err := sendTransaction(serviceClient, from, "", 1, contract)
-	smartContractAddr = resp.ContractAddress
+	resp, err := dappSdk.SendTransaction(from, "", 1, contract)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"file_path":     contractFilePath,
 			"contract_addr": smartContractAddr,
 		}).Panic("Deploy smart contract failed!")
 	}
+	smartContractAddr = resp.ContractAddress
 
 	recordSmartContractAddr(smartContractAddr)
 
@@ -135,7 +121,7 @@ func deploySmartContract(serviceClient rpcpb.AdminServiceClient, from string) bo
 		"contract_addr": smartContractAddr,
 	}).Info("Smart contract has been deployed")
 
-	return false
+	return false, smartContractAddr
 }
 
 func getSmartContractAddr() string {
@@ -156,23 +142,4 @@ func recordSmartContractAddr(addr string) {
 			"contract_addr": addr,
 		}).Panic("Unable to record smart contract address!")
 	}
-}
-
-func sendTransaction(adminClient rpcpb.AdminServiceClient, from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
-
-	resp, err := adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:       from,
-		To:         to,
-		Amount:     common.NewAmount(amount).Bytes(),
-		Tip:        common.NewAmount(0).Bytes(),
-		WalletPath: client.GetWalletFilePath(),
-		Data:       data,
-	})
-
-	if err != nil {
-		return resp, err
-	}
-	currBalance[from] -= amount
-	currBalance[to] += amount
-	return resp, nil
 }

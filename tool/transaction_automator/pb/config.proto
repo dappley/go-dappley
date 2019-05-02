@@ -5,4 +5,7 @@ message Config{
     uint32 port = 1;
     uint32 tps = 2;
     uint32 scFreq = 3;
+    string password = 4;
+    uint32 maxWallet = 5;
+    uint64 initialAmount = 6;
 }

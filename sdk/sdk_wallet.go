@@ -19,7 +19,7 @@ type DappSdkWallet struct {
 }
 
 //NewDappleySdkWallet creates a new NewDappleySdkWallet instance that connects to a Dappley node with grpc port
-func NewDappleySdkWallet(numOfWallets int, password string, sdk *DappSdk) *DappSdkWallet {
+func NewDappleySdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappSdkWallet {
 
 	dappSdkWallet := &DappSdkWallet{
 		sdk:   sdk,
@@ -30,22 +30,22 @@ func NewDappleySdkWallet(numOfWallets int, password string, sdk *DappSdk) *DappS
 
 	dappSdkWallet.wm, err = logic.GetWalletManager(client.GetWalletFilePath())
 	if err != nil {
-		logger.WithError(err).Error("Cannot get wallet manager.")
+		logger.WithError(err).Error("DappSdkWallet: Cannot get wallet manager.")
 		return nil
 	}
 
 	dappSdkWallet.addrs = dappSdkWallet.wm.GetAddresses()
 	numOfExisitingWallets := len(dappSdkWallet.addrs)
 
-	for i := numOfExisitingWallets; i < numOfWallets; i++ {
+	for i := numOfExisitingWallets; i < int(numOfWallets); i++ {
 		_, err := logic.CreateWalletWithpassphrase(password)
 		if err != nil {
-			logger.WithError(err).Error("Cannot create new wallet.")
+			logger.WithError(err).Error("DappSdkWallet: Cannot create new wallet.")
 			return nil
 		}
 		logger.WithFields(logger.Fields{
 			"address": dappSdkWallet.addrs[i],
-		}).Info("Wallet is created")
+		}).Info("DappSdkWallet: Wallet is created")
 	}
 
 	dappSdkWallet.addrs = dappSdkWallet.wm.GetAddresses()
@@ -73,7 +73,7 @@ func (sdkw *DappSdkWallet) DisplayBalances() {
 		logger.WithFields(logger.Fields{
 			"address": addr.String(),
 			"balance": sdkw.balances[i],
-		}).Info("Updating wallet balance...")
+		}).Info("DappSdkWallet: Updating wallet balance...")
 	}
 }
 
