@@ -31,12 +31,17 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
+const (
+	ConsensusSize = defaultMaxProducers*2/3 + 1
+)
+
 type DPOS struct {
 	bp          *BlockProducer
 	producerKey string
 	newBlockCh  chan *core.Block
 	node        core.NetService
 	stopCh      chan bool
+	stopLibCh   chan bool
 	dynasty     *Dynasty
 	slot        *lru.Cache
 }
@@ -47,6 +52,7 @@ func NewDPOS() *DPOS {
 		newBlockCh: make(chan *core.Block, 1),
 		node:       nil,
 		stopCh:     make(chan bool, 1),
+		stopLibCh:  make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -141,6 +147,20 @@ func (dpos *DPOS) Start() {
 					dpos.updateNewBlock(ctx)
 				}
 			case <-dpos.stopCh:
+				dpos.stopLibCh <- true
+				return
+
+			}
+		}
+	}()
+
+	go func() {
+		updateLibTicker := time.NewTicker(time.Second * defaultTimeBetweenBlk).C
+		for {
+			select {
+			case <-updateLibTicker:
+				dpos.UpdateLIB()
+			case <-dpos.stopLibCh:
 				return
 			}
 		}
@@ -264,4 +284,59 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 		return
 	}
 	dpos.node.BroadcastBlock(ctx.Block)
+}
+
+func (dpos *DPOS) UpdateLIB() {
+	bc := dpos.node.GetBlockchain()
+	lib, _ := bc.GetLIB()
+	tailBlock, _ := bc.GetTailBlock()
+	cur := tailBlock
+	miners := make(map[string]bool)
+
+	for !cur.GetHash().Equals(lib.GetHash()) {
+		producer := dpos.dynasty.ProducerAtATime(cur.GetTimestamp())
+		if int(cur.GetHeight())-int(lib.GetHeight()) < ConsensusSize-len(miners) {
+			logger.WithFields(logger.Fields{
+				"miners.limit":     ConsensusSize,
+				"miners.supported": len(miners),
+			}).Info("DPoS: failed to update latest irreversible block.")
+			return
+		}
+		miners[producer] = true
+		logger.Warn("Dpos: len(miners) is ", len(miners))
+		if len(miners) >= ConsensusSize {
+			if err := dpos.node.GetBlockchain().SetLIBHash(cur.GetHash()); err != nil {
+				logger.WithFields(logger.Fields{
+					"tail_hash": tailBlock.GetHash(),
+					"lib_hash":  cur.GetHash(),
+				}).Info("DPoS: failed to store latest irreversible block.")
+				return
+			}
+			logger.WithFields(logger.Fields{
+				"lib.new":          cur,
+				"lib.old":          lib,
+				"tail":             tailBlock,
+				"miners.limit":     ConsensusSize,
+				"miners.supported": len(miners),
+			}).Info("DPoS: Succeed to update latest irreversible block.")
+			return
+		}
+		tmp := cur
+		cur, _ = dpos.node.GetBlockchain().GetBlockByHash(cur.GetPrevHash())
+		if cur == nil || core.CheckGenesisBlock(cur) {
+			logger.WithFields(logger.Fields{
+				"tail": tailBlock,
+				"cur":  tmp,
+			}).Info("DPoS: failed to find latest irreversible block.")
+			return
+		}
+	}
+	logger.WithFields(logger.Fields{
+		"cur":              cur.GetHash(),
+		"lib":              lib.GetHash(),
+		"tail":             tailBlock.GetHash(),
+		"err":              "supported miners is not enough",
+		"miners.limit":     ConsensusSize,
+		"miners.supported": len(miners),
+	}).Info("DPoS: failed to update latest irreversible block.")
 }

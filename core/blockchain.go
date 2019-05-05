@@ -544,3 +544,22 @@ func (bc *Blockchain) SetLIBHash(hash Hash) error {
 	bc.libHash = hash
 	return nil
 }
+
+func (bc *Blockchain) IsLIB(block *Block) bool {
+	block, err := bc.GetBlockByHash(block.GetHash())
+	if err != nil {
+		logger.Error("Blockchain:get block by hash from blockchain error: ", err)
+		return false
+	}
+	if block == nil {
+		logger.Error("Blockchain:block is not exist in blockchain")
+		return false
+	}
+
+	lib, _ := bc.GetLIB()
+
+	if lib.GetHeight() >= block.GetHeight() {
+		return true
+	}
+	return false
+}
