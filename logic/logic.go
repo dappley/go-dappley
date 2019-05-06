@@ -97,11 +97,10 @@ func GetWallet() (*client.Wallet, error) {
 
 // Returns default wallet file path or first argument of argument vector
 func getWalletFilePath(argv []string) string {
-	if len(argv) != 1 {
-		return client.GetWalletFilePath()
-	} else {
+	if len(argv) == 1 {
 		return argv[0]
 	}
+	return client.GetWalletFilePath()
 }
 
 //Get lock flag
