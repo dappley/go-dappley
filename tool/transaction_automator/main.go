@@ -1,17 +1,15 @@
 package main
 
 import (
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/sdk"
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_automator/util"
+	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 	_ "net/http/pprof"
 	"os"
-	"time"
-
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/config"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -50,39 +48,23 @@ func main() {
 
 	isScDeployed, scAddr := deploySmartContract(dappSdk, fundAddr)
 
-	currHeight, err := dappSdk.GetBlockHeight()
-	if err != nil {
-		logger.WithError(err).Panic("Get Blockheight failed!")
-	}
-
-	ticker := time.NewTicker(time.Millisecond * 200).C
-
 	sender := util.NewBatchTxSender(toolConfigs.GetTps(), wallet, dappSdk, toolConfigs.GetScFreq(), scAddr)
 	if isScDeployed {
 		sender.EnableSmartContract()
 	}
 	sender.Run()
 
+	nextBlockTicker := sdk.NewDappSdkNextBlockTicker(dappSdk)
+	nextBlockTicker.Run()
+
 	for {
 		select {
-		case <-ticker:
-			height, err := dappSdk.GetBlockHeight()
-			if err != nil {
-				logger.WithError(err).Panic("Get Blockheight failed!")
-			}
-
-			if height > currHeight {
-				sender.Pause()
-
-				sender.EnableSmartContract()
-				currHeight = height
-
-				wallet.UpdateFromServer()
-				wallet.DisplayBalances()
-
-			} else {
-				sender.Resume()
-			}
+		case <-nextBlockTicker.GetTickerChan():
+			sender.Pause()
+			sender.EnableSmartContract()
+			wallet.UpdateFromServer()
+			wallet.DisplayBalances()
+			sender.Resume()
 		}
 	}
 }
