@@ -62,6 +62,8 @@ type V8Engine struct {
 	blkHeight     uint64
 	seed          int64
 	nodeAddr      core.Address
+
+	v8engine *C.V8Engine
 }
 
 func InitializeV8Engine() {
@@ -98,6 +100,7 @@ func NewV8Engine() *V8Engine {
 		tx:           nil,
 		contractAddr: core.NewAddress(""),
 		handler:      currHandler,
+		v8engine:     C.CreateEngine(),
 	}
 	currHandler++
 	storagesMutex.Lock()
@@ -111,6 +114,8 @@ func (sc *V8Engine) DestroyEngine() {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	delete(v8EngineList, sc.handler)
+
+	C.DeleteEngine(sc.v8engine)
 }
 
 func (sc *V8Engine) ImportSourceCode(source string) {
@@ -183,7 +188,7 @@ func (sc *V8Engine) Execute(function, args string) string {
 	cFunction := C.CString(functionCallScript)
 	defer C.free(unsafe.Pointer(cFunction))
 
-	if C.executeV8Script(cFunction, C.uintptr_t(sc.handler), &result) > 0 {
+	if C.executeV8Script(cFunction, C.uintptr_t(sc.handler), &result, sc.v8engine) > 0 {
 		status = "failed"
 	}
 

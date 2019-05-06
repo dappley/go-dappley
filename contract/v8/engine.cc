@@ -8,6 +8,8 @@
 #include <v8.h>
 #include <libplatform/libplatform.h>
 #include "engine.h"
+#include "lib/allocator.h"
+#include "lib/instruction_counter.h"
 #include "lib/blockchain.h"
 #include "lib/load_lib.h"
 #include "lib/load_sc.h"
@@ -20,17 +22,23 @@
 #include "lib/crypto.h"
 #include "lib/math.h"
 #include "lib/memory.h"
+#include "lib/vm_error.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
 static char* wrapReturnResult(const char* src);
 
+#define ExecuteTimeOut  5*1000*1000
+void EngineLimitsCheckDelegate(Isolate *isolate, size_t count, void *listenerContext);
 
 void Initialize(){
     // Initialize V8.
     platformPtr = platform::NewDefaultPlatform();
     V8::InitializePlatform(platformPtr.get());
     V8::Initialize();
+
+    // Initialize V8Engine.
+    SetInstructionCounterIncrListener(EngineLimitsCheckDelegate);
 }
 
 const char* toCString(const v8::String::Utf8Value& value) {
@@ -80,12 +88,10 @@ void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
   }
 }
 
-int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
-
+int executeV8Script(const char *sourceCode, uintptr_t handler, char **result, V8Engine *e) {
   // Create a new Isolate and make it the current one.
-  Isolate::CreateParams create_params;
-  create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
-  Isolate* isolate = Isolate::New(create_params);
+  Isolate* isolate = static_cast<Isolate *>(e->isolate);
+  Locker locker(isolate);
   int errorCode = 0;
 
   {
@@ -114,6 +120,8 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     NewMathInstance(isolate, context, (void *)handler);
     NewEventInstance(isolate, context, (void *)handler);
 
+    NewInstructionCounterInstance(isolate, context,
+                                    &(e->stats.count_of_executed_instructions), e);
     LoadLibraries(isolate, context);
     {
 
@@ -130,18 +138,16 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
         reportException(isolate, &try_catch);
         *result = wrapReturnResult("1");
         errorCode = 1;
-        goto RET;
+        return errorCode;
       }
-
       // Run the script to get the result.
       Local<Value> scriptRes;
       if (!script->Run(context).ToLocal(&scriptRes)) {
-		printf("run failed\n");
         assert(try_catch.HasCaught());
         reportException(isolate, &try_catch);
         *result = wrapReturnResult("1");
         errorCode = 1;
-        goto RET;
+        return errorCode;
       }
 
       // set result.
@@ -155,11 +161,6 @@ int executeV8Script(const char *sourceCode, uintptr_t handler, char **result) {
     }
   }
 
-RET:
-  // Dispose the isolate and tear down V8.
-  isolate->Dispose();
-
-  delete create_params.array_buffer_allocator;
   return errorCode;
 }
 
@@ -170,6 +171,96 @@ char* wrapReturnResult(const char* src) {
 }
 
 void DisposeV8(){
-  V8::Dispose();
-  V8::ShutdownPlatform();
+    V8::Dispose();
+    V8::ShutdownPlatform();
+    if (platformPtr) {
+        platformPtr = NULL;
+    }
+}
+
+V8Engine *CreateEngine() {
+  ArrayBuffer::Allocator *allocator = new ArrayBufferAllocator();
+
+  Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator = allocator;
+
+  Isolate *isolate = Isolate::New(create_params);
+
+  V8Engine *e = (V8Engine *)calloc(1, sizeof(V8Engine));
+  e->allocator = allocator;
+  e->isolate = isolate;
+  e->timeout = ExecuteTimeOut;
+  e->ver = BUILD_DEFAULT_VER; //default load initial com
+  return e;
+}
+
+void ReadMemoryStatistics(V8Engine *e) {
+  Isolate *isolate = static_cast<Isolate *>(e->isolate);
+  ArrayBufferAllocator *allocator =
+      static_cast<ArrayBufferAllocator *>(e->allocator);
+
+  HeapStatistics heap_stats;
+  isolate->GetHeapStatistics(&heap_stats);
+
+  V8EngineStats *stats = &(e->stats);
+  stats->heap_size_limit = heap_stats.heap_size_limit();
+  stats->malloced_memory = heap_stats.malloced_memory();
+  stats->peak_malloced_memory = heap_stats.peak_malloced_memory();
+  stats->total_available_size = heap_stats.total_available_size();
+  stats->total_heap_size = heap_stats.total_heap_size();
+  stats->total_heap_size_executable = heap_stats.total_heap_size_executable();
+  stats->total_physical_size = heap_stats.total_physical_size();
+  stats->used_heap_size = heap_stats.used_heap_size();
+  stats->total_array_buffer_size = allocator->total_available_size();
+  stats->peak_array_buffer_size = allocator->peak_allocated_size();
+
+  stats->total_memory_size =
+      stats->total_heap_size + stats->peak_array_buffer_size;
+}
+
+void TerminateExecution(V8Engine *e) {
+  if (e->is_requested_terminate_execution) {
+    return;
+  }
+  Isolate *isolate = static_cast<Isolate *>(e->isolate);
+  isolate->TerminateExecution();
+  e->is_requested_terminate_execution = true;
+}
+
+void SetInnerContractErrFlag(V8Engine *e) {
+  e->is_inner_nvm_error_happen = true;
+}
+
+void DeleteEngine(V8Engine *e) {
+  Isolate *isolate = static_cast<Isolate *>(e->isolate);
+  isolate->Dispose();
+
+  delete static_cast<ArrayBuffer::Allocator *>(e->allocator);
+
+  free(e);
+}
+
+int IsEngineLimitsExceeded(V8Engine *e) {
+  // TODO: read memory stats everytime may impact the performance.
+  ReadMemoryStatistics(e);
+  if (e->limits_of_executed_instructions > 0 &&
+      e->limits_of_executed_instructions <
+          e->stats.count_of_executed_instructions) {
+    // Reach instruction limits.
+    return VM_GAS_LIMIT_ERR;
+  } else if (e->limits_of_total_memory_size > 0 &&
+             e->limits_of_total_memory_size < e->stats.total_memory_size) {
+    // reach memory limits.
+    return VM_MEM_LIMIT_ERR;
+  }
+  return 0;
+}
+
+void EngineLimitsCheckDelegate(Isolate *isolate, size_t count,
+                               void *listenerContext) {
+  V8Engine *e = static_cast<V8Engine *>(listenerContext);
+
+  if (IsEngineLimitsExceeded(e)) {
+    TerminateExecution(e);
+  }
 }
