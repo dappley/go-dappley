@@ -127,17 +127,21 @@ func IsWalletEmpty(optionalWalletFilePath ...string) (bool, error) {
 //Set lock flag
 func SetLockWallet(optionalWalletFilePath ...string) error {
 	wm, err1 := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
-	empty, err2 := wm.IsFileEmpty()
-	if empty {
-		return nil
-	}
+
 	if err1 != nil {
 		return err1
 	}
 
+	empty, err2 := wm.IsFileEmpty()
+
 	if err2 != nil {
 		return err2
 	}
+
+	if empty {
+		return nil
+	}
+
 	wm.Locked = true
 	wm.SaveWalletToFile()
 	return nil
