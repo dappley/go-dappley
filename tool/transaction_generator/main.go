@@ -8,7 +8,6 @@ import (
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_generator/util"
 	logger "github.com/sirupsen/logrus"
-	"time"
 )
 
 const configFilePath = "default.conf"
@@ -18,9 +17,9 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	logger.Info("*******************************************")
-	logger.Info("*Invalid transaction generator tool starts*")
-	logger.Info("*******************************************")
+	logger.Info("*********************************************")
+	logger.Info("**Invalid transaction generator tool starts**")
+	logger.Info("*********************************************")
 
 	toolConfigs := &tx_automator_configpb.Config{}
 	config.LoadConfig(configFilePath, toolConfigs)
@@ -43,7 +42,7 @@ func main() {
 	fundRequest.Fund(fromAddr.String(), initialAmount)
 	fundRequest.Fund(unauthorizedAddr.String(), initialAmount)
 
-	txSenders := []util.TestTransaction{
+	testTransactions := []util.TestTransaction{
 		util.NewNormalTransaction(dappSdk, wallet),
 		util.NewUnexistingUtxoTxSender(dappSdk, wallet),
 		util.NewInsufficientBalanceTxSender(dappSdk, wallet),
@@ -60,30 +59,21 @@ func main() {
 		"",
 	}
 
-	ticker := time.NewTicker(time.Millisecond * 200).C
-	currHeight := uint64(0)
-	index := 0
-	for {
-		select {
-		case <-ticker:
-			height, err := dappSdk.GetBlockHeight()
-			if err != nil {
-				logger.Panic("Can not get block height from server")
-			}
+	nextBlockTicker := sdk.NewDappSdkNextBlockTicker(dappSdk)
+	nextBlockTicker.Run()
 
-			if height > currHeight {
-				currHeight = height
-				wallet.UpdateFromServer()
-				logger.Info("Running test case #", index)
-				txSenders[index].Generate(params)
-				txSenders[index].Send()
-				index = index + 1
-				logger.Info("Waiting for next block...")
-				if index >= len(txSenders) {
-					logger.Info("All transactions are sent. Exiting...")
-					return
-				}
-			}
-		}
+	for i, testTx := range testTransactions {
+		logger.Info("Waiting for next block...")
+		<-nextBlockTicker.GetTickerChan()
+		logger.Info("")
+		logger.Info("Running test #", i)
+		wallet.UpdateFromServer()
+		testTx.Generate(params)
+		testTx.Send()
 	}
+
+	logger.Info("**************************************")
+	logger.Info("**All transactions are sent. Exiting**")
+	logger.Info("**************************************")
+
 }
