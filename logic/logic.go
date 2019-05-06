@@ -95,59 +95,70 @@ func GetWallet() (*client.Wallet, error) {
 	return nil, err
 }
 
+// Returns default wallet file path or first argument of argument vector
+func getWalletFilePath(argv []string) string {
+	if len(argv) == 1 {
+		return argv[0]
+	}
+	return client.GetWalletFilePath()
+}
+
 //Get lock flag
-func IsWalletLocked() (bool, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+func IsWalletLocked(optionalWalletFilePath ...string) (bool, error) {
+	wm, err := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
 	return wm.Locked, err
 }
 
 //Tell if the file empty or not exist
-func IsWalletEmpty() (bool, error) {
-	if client.Exists(client.GetWalletFilePath()) {
-		wm, _ := GetWalletManager(client.GetWalletFilePath())
+func IsWalletEmpty(optionalWalletFilePath ...string) (bool, error) {
+	walletFilePath := getWalletFilePath(optionalWalletFilePath)
+
+	if client.Exists(walletFilePath) {
+		wm, _ := GetWalletManager(walletFilePath)
 		if len(wm.Wallets) == 0 {
 			return true, nil
 		}
 		return wm.IsFileEmpty()
 	}
 	return true, nil
-
 }
 
 //Set lock flag
-func SetLockWallet() error {
-	wm, err1 := GetWalletManager(client.GetWalletFilePath())
-	empty, err2 := wm.IsFileEmpty()
-	if empty {
-		return nil
-	}
+func SetLockWallet(optionalWalletFilePath ...string) error {
+	wm, err1 := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
+
 	if err1 != nil {
 		return err1
 	}
 
+	empty, err2 := wm.IsFileEmpty()
+
 	if err2 != nil {
 		return err2
 	}
+
+	if empty {
+		return nil
+	}
+
 	wm.Locked = true
 	wm.SaveWalletToFile()
 	return nil
-
 }
 
 //Set unlock and timer
-func SetUnLockWallet() error {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+func SetUnLockWallet(optionalWalletFilePath ...string) error {
+	wm, err := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
 	if err != nil {
 		return err
 	}
 	wm.SetUnlockTimer(unlockduration)
 	return nil
-
 }
 
 //create a wallet with passphrase
-func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+func CreateWalletWithpassphrase(password string, optionalWalletFilePath ...string) (*client.Wallet, error) {
+	wm, err := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
 	if err != nil {
 		return nil, err
 	}

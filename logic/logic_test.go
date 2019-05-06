@@ -53,13 +53,21 @@ func TestCreateWallet(t *testing.T) {
 }
 
 func TestCreateWalletWithPassphrase(t *testing.T) {
-	wallet, err := CreateWallet(GetTestWalletPath(), "test")
+	wallet, err := CreateWalletWithpassphrase("test", GetTestWalletPath())
 	assert.Nil(t, err)
 	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
 	assert.Equal(t, true, ok)
 	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, []byte(walletPubKeyHash))
+}
+
+func TestCreateWalletWithPassphraseMismatch(t *testing.T) {
+	_, err := CreateWalletWithpassphrase("test", GetTestWalletPath())
+	assert.Nil(t, err)
+
+	_, err = CreateWalletWithpassphrase("wrong_password", GetTestWalletPath())
+	assert.Error(t, err)
 }
 
 func TestCreateBlockchain(t *testing.T) {
@@ -188,25 +196,19 @@ func TestGetAllAddresses(t *testing.T) {
 }
 
 func TestIsWalletEmptyWallet(t *testing.T) {
-	cleanUpDatabase()
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
 	assert.Nil(t, err)
-	empty, err := IsTestWalletEmpty()
+	empty, err := IsWalletEmpty(GetTestWalletPath())
 	assert.Nil(t, err)
 	assert.Equal(t, false, empty)
 	cleanUpDatabase()
-	empty, err = IsTestWalletEmpty()
+	empty, err = IsWalletEmpty(GetTestWalletPath())
 	assert.Nil(t, err)
 	assert.Equal(t, true, empty)
-
-	//teardown :clean up database amd files
-	cleanUpDatabase()
 }
 
 func TestDeleteInvalidWallet(t *testing.T) {
-	//setup: clean up database and files
-	cleanUpDatabase()
 	//create wallets address
 	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
 	assert.NotEmpty(t, wallet1)
@@ -217,9 +219,45 @@ func TestDeleteInvalidWallet(t *testing.T) {
 	list, err := GetAllAddressesByPath(GetTestWalletPath())
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
+}
 
-	//teardown :clean up database amd files
+func TestIsWalletLocked(t *testing.T) {
+	_, err := CreateWallet(GetTestWalletPath(), "test")
+	assert.Nil(t, err)
+
+	status, err := IsWalletLocked(GetTestWalletPath())
+	assert.Nil(t, err)
+	assert.True(t, status)
+}
+
+func TestNilSetLockWallet(t *testing.T) {
+	assert.Nil(t, SetLockWallet(GetTestWalletPath()))
+}
+
+func TestSetLockWallet(t *testing.T) {
+	_, err := CreateWallet(GetTestWalletPath(), "test")
+	assert.Nil(t, err)
+
+	assert.Nil(t, SetLockWallet(GetTestWalletPath()))
+	status, err := IsWalletLocked(GetTestWalletPath())
+	assert.Nil(t, err)
+	assert.True(t, status)
+
 	cleanUpDatabase()
+
+	status, err = IsWalletLocked(GetTestWalletPath())
+	assert.Nil(t, err)
+	assert.False(t, status)
+}
+
+func TestSetUnLockWallet(t *testing.T) {
+	_, err := CreateWallet(GetTestWalletPath(), "test")
+	assert.Nil(t, err)
+
+	assert.Nil(t, SetUnLockWallet(GetTestWalletPath()))
+	status, err := IsWalletLocked(GetTestWalletPath())
+	assert.Nil(t, err)
+	assert.False(t, status)
 }
 
 func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
