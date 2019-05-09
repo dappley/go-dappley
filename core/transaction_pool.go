@@ -140,12 +140,13 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 		totalSize += txNode.Size
 		txPool.tipOrder = txPool.tipOrder[1:]
 
-		if txNode.Value.Verify(tempUtxoIndex, 0) == nil {
+		if result, err := txNode.Value.Verify(tempUtxoIndex, 0); result {
 			validTxs = append(validTxs, txNode.Value)
 			tempUtxoIndex.UpdateUtxo(txNode.Value)
 			txPool.insertChildrenIntoSortedWaitlist(txNode)
 			txPool.removeTransaction(txNode)
 		} else {
+			logger.Warn(err.Error)
 			txPool.removeTransactionNodeAndChildren(txNode.Value)
 		}
 	}
