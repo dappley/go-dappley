@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/metrics/api"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
@@ -97,6 +98,9 @@ func main() {
 
 	bc.SetState(core.BlockchainReady)
 	node.DownloadBlocks(bc)
+
+	//start metrics api server
+	go metrics.StartAPI(conf.GetNodeConfig().GetMetricsPort())
 
 	//start rpc server
 	server := rpc.NewGrpcServer(node, defaultPassword)

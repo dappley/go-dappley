@@ -21,6 +21,7 @@ message NodeConfig{
     uint32 blk_size_limit = 7;
     string node_address = 8;
     string genesis_path = 9;
+    uint32 metrics_port = 10;
 }
 
 message DynastyConfig{

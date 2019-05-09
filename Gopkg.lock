@@ -632,9 +632,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d38f81081a389f1466ec98192cf9115a82158854d6f01e1c23e2e7554b97db71"
+  digest = "1:a37a3be95cba73a129a51109b6044a8e08b9794f97e7856ce94f0a42e34807dc"
   name = "github.com/rcrowley/go-metrics"
-  packages = ["."]
+  packages = [
+    ".",
+    "exp",
+  ]
   pruneopts = "UT"
   revision = "3113b8401b8a98917cde58f8bbd42a1b1c03b1fd"
 
@@ -933,6 +936,7 @@
     "github.com/peterh/liner",
     "github.com/raviqqe/hamt",
     "github.com/rcrowley/go-metrics",
+    "github.com/rcrowley/go-metrics/exp",
     "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/mem",
