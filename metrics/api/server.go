@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/rcrowley/go-metrics"
@@ -9,16 +10,29 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+
+func startServer(listener net.Listener) {
+	err := http.Serve(listener, http.DefaultServeMux)
+	if err != nil {
+		logger.Panic("Unable to start metrics api server: ", err)
+	}
+}
+
 // starts the metrics api
-func StartAPI(port uint32) {
+func StartAPI(port uint32) int {
 
 	// expose metrics at /debug/metrics
 	exp.Exp(metrics.DefaultRegistry)
 
-	logger.Info("Starting metrics api...")
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), http.DefaultServeMux)
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 
 	if err != nil {
-		logger.Panic("Unable to start metrics api server: ", err)
+		logger.Panic(err)
 	}
+
+	logger.Info(fmt.Sprintf("Start metrics api at %v/debug/metrics ...", listener.Addr()))
+
+	go startServer(listener)
+
+	return listener.Addr().(*net.TCPAddr).Port
 }
