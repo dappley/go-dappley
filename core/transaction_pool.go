@@ -337,6 +337,7 @@ func (txPool *TransactionPool) removeTransaction(txNode *TransactionNode) {
 	txPool.disconnectFromParent(txNode.Value)
 	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
+	MetricsTransactionPoolSize.Dec(int64(txNode.Size))
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
 }
 
@@ -370,6 +371,7 @@ func (txPool *TransactionPool) addTransaction(txNode *TransactionNode) {
 
 	txPool.txs[hex.EncodeToString(txNode.Value.ID)] = txNode
 	txPool.currSize += uint32(txNode.Size)
+	MetricsTransactionPoolSize.Inc(int64(txNode.Size))
 
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
