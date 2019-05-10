@@ -49,7 +49,7 @@ func NewDappSdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappS
 	}
 
 	dappSdkWallet.addrs = dappSdkWallet.wm.GetAddresses()
-	dappSdkWallet.ClearBalances()
+	dappSdkWallet.Initialize()
 
 	return dappSdkWallet
 }
@@ -62,7 +62,7 @@ func (sdkw *DappSdkWallet) GetWalletManager() *client.WalletManager { return sdk
 
 func (sdkw *DappSdkWallet) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
 
-func (sdkw *DappSdkWallet) ClearBalances() {
+func (sdkw *DappSdkWallet) Initialize() {
 	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
 	sdkw.balances = make(map[core.Address]uint64)
 }
@@ -84,7 +84,7 @@ func (sdkw *DappSdkWallet) Update() error {
 
 	logger.Info("DappSdkWallet: Updating from server")
 
-	sdkw.ClearBalances()
+	sdkw.Initialize()
 
 	for _, addr := range sdkw.addrs {
 
