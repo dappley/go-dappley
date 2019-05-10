@@ -8,6 +8,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/sdk"
+	"github.com/dappley/go-dappley/tool/tool_util"
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_automator/util"
 	logger "github.com/sirupsen/logrus"
@@ -36,7 +37,7 @@ func main() {
 	)
 
 	fundAddr := wallet.GetAddrs()[0].String()
-	fundRequest := sdk.NewDappSdkFundRequest(grpcClient, dappSdk)
+	fundRequest := tool.NewFundRequest(dappSdk)
 	initialAmount := toolConfigs.GetInitialAmount()
 	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
 
@@ -44,7 +45,7 @@ func main() {
 		"initial_total_amount": initialAmount,
 	}).Info("Funding is completed. Script starts.")
 
-	wallet.UpdateFromServer()
+	wallet.Update()
 	wallet.DisplayBalances()
 
 	isScDeployed, scAddr := deploySmartContract(dappSdk, fundAddr)
@@ -55,7 +56,7 @@ func main() {
 	}
 	sender.Run()
 
-	nextBlockTicker := sdk.NewDappSdkNextBlockTicker(dappSdk)
+	nextBlockTicker := tool.NewNextBlockTicker(dappSdk)
 	nextBlockTicker.Run()
 
 	for {
@@ -63,7 +64,7 @@ func main() {
 		case <-nextBlockTicker.GetTickerChan():
 			sender.Pause()
 			sender.EnableSmartContract()
-			wallet.UpdateFromServer()
+			wallet.Update()
 			wallet.DisplayBalances()
 			sender.Resume()
 		}

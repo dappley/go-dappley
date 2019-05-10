@@ -5,6 +5,7 @@ import (
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/sdk"
+	"github.com/dappley/go-dappley/tool/tool_util"
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_generator/util"
 	logger "github.com/sirupsen/logrus"
@@ -49,7 +50,7 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet) {
 	fromAddr := addrs[0]
 	unauthorizedAddr := addrs[2]
 
-	fundRequest := sdk.NewDappSdkFundRequest(grpcClient, dappSdk)
+	fundRequest := tool.NewFundRequest(dappSdk)
 	initialAmount := common.NewAmount(toolConfigs.GetInitialAmount())
 	fundRequest.Fund(fromAddr.String(), initialAmount)
 	fundRequest.Fund(unauthorizedAddr.String(), initialAmount)
@@ -86,7 +87,7 @@ func prepareSendParameters(wallet *sdk.DappSdkWallet) core.SendTxParam {
 }
 
 func sendTestTransactions(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, testTransactions []util.TestTransaction) {
-	nextBlockTicker := sdk.NewDappSdkNextBlockTicker(dappSdk)
+	nextBlockTicker := tool.NewNextBlockTicker(dappSdk)
 	nextBlockTicker.Run()
 
 	for i, testTx := range testTransactions {
@@ -95,7 +96,7 @@ func sendTestTransactions(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, testT
 		logger.Info("")
 		logger.Info("Running test #", i)
 		testTx.Print()
-		wallet.UpdateFromServer()
+		wallet.Update()
 		testTx.Generate(prepareSendParameters(wallet))
 		testTx.Send()
 	}

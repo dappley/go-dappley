@@ -83,7 +83,7 @@ func (sender *BatchTxSender) Run() {
 
 				if sender.IsPendingTxsReady() {
 					if sender.dappSdk.SendBatchTransactions(sender.pendingTxs) != nil {
-						sender.wallet.UpdateFromServer()
+						sender.wallet.Update()
 					}
 					sender.ClearPendingTx()
 				}
@@ -110,36 +110,41 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 
 	data := ""
 
-	fromIndex := sender.getAddrWithBalance()
+	fromIndex := sender.getAddrWithNoneZeroBalance()
+	fromAddr := sender.wallet.GetAddrs()[fromIndex]
+
 	toIndex := getDifferentIndex(fromIndex, len(sender.wallet.GetAddrs()))
-	toAddr := sender.wallet.GetAddrs()[toIndex].String()
+	toAddr := sender.wallet.GetAddrs()[toIndex]
+
 	sendAmount := uint64(1)
 
 	if sender.IsTheTurnToSendSmartContractTransaction() && sender.isScEnabled {
 		data = contractFunctionCall
-		toAddr = sender.scAddr
+		toAddr = core.NewAddress(sender.scAddr)
 	}
 
 	senderKeyPair := sender.wallet.GetWalletManager().GetKeyPairByAddress(sender.wallet.GetAddrs()[fromIndex])
-	tx := sender.createTransaction(sender.wallet.GetAddrs()[fromIndex], core.NewAddress(toAddr), common.NewAmount(sendAmount), common.NewAmount(0), data, senderKeyPair)
+	tx := sender.createTransaction(fromAddr, toAddr, common.NewAmount(sendAmount), common.NewAmount(0), data, senderKeyPair)
 	if tx == nil {
 		return nil
 	}
 
 	sender.wallet.GetUtxoIndex().UpdateUtxo(tx)
-	sender.wallet.AddToBalance(toIndex, sendAmount)
-	sender.wallet.SubstractFromBalance(fromIndex, sendAmount)
+	sender.wallet.UpdateBalance(toAddr, sender.wallet.GetBalance(toAddr)+sendAmount)
+	sender.wallet.UpdateBalance(fromAddr, sender.wallet.GetBalance(fromAddr)-sendAmount)
 
 	return tx.ToProto().(*corepb.Transaction)
 }
 
-func (sender *BatchTxSender) getAddrWithBalance() int {
+func (sender *BatchTxSender) getAddrWithNoneZeroBalance() int {
 	fromIndex := rand.Intn(len(sender.wallet.GetAddrs()))
-	amount := sender.wallet.GetBalances()[fromIndex]
+	fromAddr := sender.wallet.GetAddrs()[fromIndex]
+	amount := sender.wallet.GetBalance(fromAddr)
 	//TODO: add time out to this loop
 	for amount <= 1 {
 		fromIndex = rand.Intn(len(sender.wallet.GetAddrs()))
-		amount = sender.wallet.GetBalances()[fromIndex]
+		fromAddr = sender.wallet.GetAddrs()[fromIndex]
+		amount = sender.wallet.GetBalance(fromAddr)
 	}
 	return fromIndex
 }
