@@ -25,30 +25,9 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	toolConfigs := &tx_automator_configpb.Config{}
-	config.LoadConfig(configFilePath, toolConfigs)
+	dappSdk, wallet, toolConfigs := initial_setup()
 
-	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
-	dappSdk := sdk.NewDappSdk(grpcClient)
-	wallet := sdk.NewDappSdkWallet(
-		toolConfigs.GetMaxWallet(),
-		toolConfigs.GetPassword(),
-		dappSdk,
-	)
-
-	fundAddr := wallet.GetAddrs()[0].String()
-	fundRequest := tool.NewFundRequest(dappSdk)
-	initialAmount := toolConfigs.GetInitialAmount()
-	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
-
-	logger.WithFields(logger.Fields{
-		"initial_total_amount": initialAmount,
-	}).Info("Funding is completed. Script starts.")
-
-	wallet.Update()
-	wallet.DisplayBalances()
-
-	isScDeployed, scAddr := deploySmartContract(dappSdk, fundAddr)
+	isScDeployed, scAddr := deploySmartContract(dappSdk, getFundAddr(wallet))
 
 	sender := util.NewBatchTxSender(toolConfigs.GetTps(), wallet, dappSdk, toolConfigs.GetScFreq(), scAddr)
 	if isScDeployed {
@@ -69,6 +48,37 @@ func main() {
 			sender.Resume()
 		}
 	}
+}
+
+func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet, *tx_automator_configpb.Config) {
+	toolConfigs := &tx_automator_configpb.Config{}
+	config.LoadConfig(configFilePath, toolConfigs)
+
+	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
+	dappSdk := sdk.NewDappSdk(grpcClient)
+	wallet := sdk.NewDappSdkWallet(
+		toolConfigs.GetMaxWallet(),
+		toolConfigs.GetPassword(),
+		dappSdk,
+	)
+
+	fundAddr := getFundAddr(wallet)
+	fundRequest := tool.NewFundRequest(dappSdk)
+	initialAmount := toolConfigs.GetInitialAmount()
+	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
+
+	logger.WithFields(logger.Fields{
+		"initial_total_amount": initialAmount,
+	}).Info("Funding is completed. Script starts.")
+
+	wallet.Update()
+	wallet.DisplayBalances()
+
+	return dappSdk, wallet, toolConfigs
+}
+
+func getFundAddr(wallet *sdk.DappSdkWallet) string {
+	return wallet.GetAddrs()[0].String()
 }
 
 func deploySmartContract(dappSdk *sdk.DappSdk, from string) (bool, string) {
