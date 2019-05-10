@@ -324,7 +324,7 @@ L:
 		} else {
 			// tx is a normal transactions
 			if result, err := tx.Verify(utxoIndex, b.GetHeight()); !result {
-				logger.Warn(err.Error)
+				logger.Warn(err.Error())
 				return false
 			}
 			utxoIndex.UpdateUtxo(tx)

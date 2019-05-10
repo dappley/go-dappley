@@ -215,7 +215,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
 
 	if result, err := tx.Verify(utxoIndex, 0); !result {
-		logger.Warn(err.Error)
+		logger.Warn(err.Error())
 		return nil, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 

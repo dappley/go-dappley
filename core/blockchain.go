@@ -486,7 +486,7 @@ loop:
 			newUtxo.UpdateUtxo(tx)
 			newTxPool.Push(*tx)
 		} else {
-			logger.Warn(err.Error)
+			logger.Warn(err.Error())
 		}
 	}
 	bc.txPool = newTxPool

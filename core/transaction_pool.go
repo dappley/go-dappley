@@ -146,7 +146,7 @@ func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex,
 			txPool.insertChildrenIntoSortedWaitlist(txNode)
 			txPool.removeTransaction(txNode)
 		} else {
-			logger.Warn(err.Error)
+			logger.Warn(err.Error())
 			txPool.removeTransactionNodeAndChildren(txNode.Value)
 		}
 	}

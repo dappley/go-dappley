@@ -415,7 +415,7 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) (bool, error) {
 	}
 	result, err = tx.verifySignatures(prevUtxos)
 	if !result {
-		return result, err
+		return false, err
 	}
 	return true, nil
 }
@@ -545,7 +545,7 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) (bool, error) {
 		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
 
 		if err != nil || verifyResult == false {
-			return false, err
+			return false, errors.New("Transaction: Signatures is invalid")
 		}
 	}
 
