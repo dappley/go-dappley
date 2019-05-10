@@ -29,10 +29,16 @@ func (sdkTicker *DappSdkNextBlockTicker) Run() {
 			select {
 			case <-timeTicker:
 				height, err := sdkTicker.dappSdk.GetBlockHeight()
+
 				if err != nil {
 					logger.Error("DappSdkNewBlockticker: Can not get block height from server")
 					return
 				}
+
+				if currHeight == 0 {
+					currHeight = height
+				}
+
 				if height > currHeight {
 					logger.WithFields(logger.Fields{
 						"height": height,

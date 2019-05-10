@@ -45,11 +45,14 @@ func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
 }
 
 func (txSender *UnauthorizedUtxoTxSender) Send() {
-	logger.Info("Sending a transaction with an unauthrized utxo...")
 
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
 	if err != nil {
 		logger.WithError(err).Error("UnauthorizedUtxoTx: Unable to send transaction!")
 	}
+}
+
+func (txSender *UnauthorizedUtxoTxSender) Print() {
+	logger.Info("Sending a transaction with an unauthrized utxo...")
 }

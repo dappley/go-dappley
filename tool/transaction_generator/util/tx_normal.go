@@ -38,7 +38,6 @@ func (txSender *NormalTxSender) Generate(params core.SendTxParam) {
 }
 
 func (txSender *NormalTxSender) Send() {
-	logger.Info("Sending a normal transaction ...")
 
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
@@ -47,4 +46,8 @@ func (txSender *NormalTxSender) Send() {
 	}
 
 	logger.Info("Sending is successful!")
+}
+
+func (txSender *NormalTxSender) Print() {
+	logger.Info("Sending a normal transaction ...")
 }

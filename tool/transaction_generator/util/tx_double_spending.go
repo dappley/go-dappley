@@ -55,3 +55,7 @@ func (txSender *DoubleSpendingTxSender) Send() {
 		logger.WithError(err).Error("DoubleSpendingTx: Unable to send transaction!")
 	}
 }
+
+func (txSender *DoubleSpendingTxSender) Print() {
+	logger.Info("Sending double spending transactions")
+}

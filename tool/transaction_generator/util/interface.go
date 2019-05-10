@@ -14,4 +14,5 @@ type TxSender struct {
 type TestTransaction interface {
 	Generate(params core.SendTxParam)
 	Send()
+	Print()
 }
