@@ -19,12 +19,12 @@ func startServer(listener net.Listener) {
 }
 
 // starts the metrics api
-func StartAPI(port uint32) int {
+func StartAPI(host string, port uint32) int {
 
 	// expose metrics at /debug/metrics
 	exp.Exp(metrics.DefaultRegistry)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 
 	if err != nil {
 		logger.Panic(err)

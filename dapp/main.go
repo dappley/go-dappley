@@ -100,7 +100,7 @@ func main() {
 	node.DownloadBlocks(bc)
 
 	//start metrics api server
-	metrics.StartAPI(conf.GetNodeConfig().GetMetricsPort())
+	metrics.StartAPI(conf.GetNodeConfig().GetMetricsHost(), conf.GetNodeConfig().GetMetricsPort())
 
 	//start rpc server
 	server := rpc.NewGrpcServer(node, defaultPassword)
