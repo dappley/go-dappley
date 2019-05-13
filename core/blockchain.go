@@ -182,6 +182,14 @@ func (bc *Blockchain) GetMaxHeight() uint64 {
 	return block.GetHeight()
 }
 
+func (bc *Blockchain) GetLIBHeight() uint64 {
+	block, err := bc.GetLIB()
+	if err != nil {
+		return 0
+	}
+	return block.GetHeight()
+}
+
 func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {

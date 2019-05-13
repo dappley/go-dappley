@@ -303,7 +303,6 @@ func (dpos *DPOS) UpdateLIB() {
 			return
 		}
 		miners[producer] = true
-		logger.Warn("Dpos: len(miners) is ", len(miners))
 		if len(miners) >= ConsensusSize {
 			if err := dpos.node.GetBlockchain().SetLIBHash(cur.GetHash()); err != nil {
 				logger.WithFields(logger.Fields{
@@ -313,11 +312,11 @@ func (dpos *DPOS) UpdateLIB() {
 				return
 			}
 			logger.WithFields(logger.Fields{
-				"lib.new":          cur,
-				"lib.old":          lib,
-				"tail":             tailBlock,
-				"miners.limit":     ConsensusSize,
-				"miners.supported": len(miners),
+				"new lib_hash":     cur.GetHash(),
+				"old lib_hash":     lib.GetHash(),
+				"tail hash":        tailBlock.GetHash(),
+				"miners limit":     ConsensusSize,
+				"miners supported": len(miners),
 			}).Info("DPoS: Succeed to update latest irreversible block.")
 			return
 		}
