@@ -14,7 +14,7 @@ import (
 func startServer(listener net.Listener) {
 	err := http.Serve(listener, http.DefaultServeMux)
 	if err != nil {
-		logger.Panic("Unable to start metrics api server: ", err)
+		logger.WithError(err).Panic("Unable to start metrics api server")
 	}
 }
 
