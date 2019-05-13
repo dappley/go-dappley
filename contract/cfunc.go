@@ -21,6 +21,8 @@ bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
 bool  VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 int RandomFunc(void *handler, int max);
 
+int DeleteContract(void *address);
+
 void* Malloc(size_t size);
 void  Free(void* address);
 
@@ -39,6 +41,10 @@ int Cgo_GetCurrBlockHeightFunc(void *handler){
 char* Cgo_GetNodeAddressFunc(void *handler){
 	return GetNodeAddressFunc(handler);
 };
+
+int Cgo_DeleteContract(void *address){
+	return DeleteContract(address);
+}
 
 char* Cgo_StorageGetFunc(void *address, const char *key){
 	return StorageGetFunc(address,key);

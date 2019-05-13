@@ -26,6 +26,8 @@ bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *si
 bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 //math
 int Cgo_RandomFunc(void *handler, int max);
+//contract
+int Cgo_DeleteContract(void *address);
 
 void* Cgo_Malloc(size_t size);
 void  Cgo_Free(void* address);
@@ -70,6 +72,9 @@ func InitializeV8Engine() {
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
 		(C.FuncGetCurrBlockHeight)(unsafe.Pointer(C.Cgo_GetCurrBlockHeightFunc)),
 		(C.FuncGetNodeAddress)(unsafe.Pointer(C.Cgo_GetNodeAddressFunc)),
+	)
+	C.InitializeContract(
+		(C.FuncContractDel)(unsafe.Pointer(C.Cgo_DeleteContract)),
 	)
 	C.InitializeStorage(
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),

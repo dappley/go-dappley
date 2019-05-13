@@ -21,6 +21,7 @@ extern "C" {
     typedef char* (*FuncStorageGet)(void *address, const char *key);
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
+    typedef int (*FuncContractDel)(void *address);
     typedef int (*FuncTriggerEvent)(void *address, const char *topic, const char *data);
     typedef void (*FuncTransactionGet)(void* address, void* context);
     typedef void (*FuncPrevUtxoGet)(void* address, void* context);
@@ -40,6 +41,7 @@ extern "C" {
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeEvent(FuncTriggerEvent triggerEvent);
+    EXPORT void InitializeContract(FuncContractDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
     EXPORT void InitializeCrypto(FuncVerifySignature verifySignature, FuncVerifyPublicKey verifyPublicKey);
     EXPORT void InitializeMath(FuncRandom random);
