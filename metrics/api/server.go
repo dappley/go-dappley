@@ -7,11 +7,13 @@ import (
 
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
+	"github.com/rs/cors"
 	logger "github.com/sirupsen/logrus"
 )
 
 func startServer(listener net.Listener) {
-	err := http.Serve(listener, http.DefaultServeMux)
+	handler := cors.New(cors.Options{AllowedOrigins: []string{"*"}})
+	err := http.Serve(listener, handler.Handler(http.DefaultServeMux))
 	if err != nil {
 		logger.WithError(err).Panic("Metrics: unable to start api server.")
 	}
