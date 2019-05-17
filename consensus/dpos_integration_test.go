@@ -48,11 +48,11 @@ func TestDpos_Start(t *testing.T) {
 	dpos.SetDynasty(dynasty)
 	//wait for the block gets mined
 	currentTime := time.Now().UTC().Unix()
-	dpos.Start()
+	dpos.StartMining()
 	//wait for the block gets mined
 	for bc.GetMaxHeight() <= 0 && !util.IsTimeOut(currentTime, int64(50)) {
 	}
-	dpos.Stop()
+	dpos.StopMining()
 
 	assert.True(t, bc.GetMaxHeight() >= 1)
 }
@@ -96,13 +96,13 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	firstNode.SyncPeersBroadcast()
 
 	for i := range miners {
-		dposArray[i].Start()
+		dposArray[i].StartMining()
 	}
 
 	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
 
 	for i := range miners {
-		dposArray[i].Stop()
+		dposArray[i].StopMining()
 		nodeArray[i].Stop()
 	}
 	//Waiting block sync to other nodes

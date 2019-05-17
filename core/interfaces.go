@@ -47,6 +47,7 @@ type NetService interface {
 	GetPeerID() peer.ID
 	GetBlockchain() *Blockchain
 	GetBlockPool() *BlockPool
+	GetConnectSeedNum() chan int
 }
 
 type ScEngineManager interface {

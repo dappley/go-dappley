@@ -318,7 +318,10 @@ func (downloadManager *DownloadManager) GetCommonBlockCheckPoint(startHeight uin
 		currentHeight := startHeight + interval*uint64(i)/uint64(32)
 		if lastHeight != currentHeight {
 			lastHeight = currentHeight
-			block, _ := downloadManager.node.GetBlockchain().GetBlockByHeight(currentHeight)
+			block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(currentHeight)
+			if err != nil {
+				continue
+			}
 			blockHeaders = append(blockHeaders, &SyncCommandBlocksHeader{hash: block.GetHash(), height: currentHeight})
 		}
 	}
