@@ -1,3 +1,0 @@
-SHELL=/bin/bash
-PATH=/usr/bin:/bin
-0 0 * * * find /var/lib/collectd/csv/ -type f -mtime +1 -exec rm -vf {} \; 2>&1 | logger -t 'Metrics API'
