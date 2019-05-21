@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
@@ -8,8 +9,32 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 	"github.com/rs/cors"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	logger "github.com/sirupsen/logrus"
 )
+
+func init() {
+	expvar.Publish("memory.stats", expvar.Func(func () interface{} {
+		res, err := mem.VirtualMemory()
+		if err != nil {
+			logger.Warn(err)
+			return nil
+		}
+
+		return res
+	}))
+
+	expvar.Publish("cpu.stats", expvar.Func(func () interface{} {
+		res, err := cpu.Times(true)
+		if err != nil {
+			logger.Warn(err)
+			return nil
+		}
+
+		return res
+	}))
+}
 
 func startServer(listener net.Listener) {
 	handler := cors.New(cors.Options{AllowedOrigins: []string{"*"}})
@@ -21,7 +46,6 @@ func startServer(listener net.Listener) {
 
 // starts the metrics api
 func StartAPI(host string, port uint32) int {
-
 	// expose metrics at /debug/metrics
 	exp.Exp(metrics.DefaultRegistry)
 
