@@ -658,16 +658,27 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:a60beb391f29ba3525ad727182c89dd4b49a582640de8aa995aa2204df4a9bda"
+  digest = "1:affb500bedd63a0305fd1cca4b37009592c117cadf2cdfbc7a1c71727c1b20eb"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
+    "host",
     "internal/common",
     "mem",
+    "net",
+    "process",
   ]
   pruneopts = "UT"
   revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
   version = "v2.19.01"
+
+[[projects]]
+  branch = "master"
+  digest = "1:99c6a6dab47067c9b898e8c8b13d130c6ab4ffbcc4b7cc6236c2cd0b1e344f5b"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   digest = "1:9e9193aa51197513b3abcb108970d831fbcf40ef96aa845c4f03276e1fa316d2"
@@ -949,6 +960,7 @@
     "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/mem",
+    "github.com/shirou/gopsutil/process",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",

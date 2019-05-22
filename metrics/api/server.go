@@ -5,34 +5,33 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 	"github.com/rs/cors"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 )
 
 func init() {
-	expvar.Publish("memory.stats", expvar.Func(func () interface{} {
-		res, err := mem.VirtualMemory()
+
+	pid := int32(os.Getpid())
+
+	expvar.Publish("dapp.cpu.percent", expvar.Func(func() interface{} {
+		proc, err := process.NewProcess(pid)
 		if err != nil {
 			logger.Warn(err)
 			return nil
 		}
 
-		return res
-	}))
-
-	expvar.Publish("cpu.stats", expvar.Func(func () interface{} {
-		res, err := cpu.Times(true)
+		percentageUsed, err := proc.CPUPercent()
 		if err != nil {
 			logger.Warn(err)
 			return nil
 		}
 
-		return res
+		return percentageUsed
 	}))
 }
 
