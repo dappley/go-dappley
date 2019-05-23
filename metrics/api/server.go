@@ -6,15 +6,19 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
+	"time"
 
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 	"github.com/rs/cors"
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
-func init() {
+func initAPI() {
 
 	pid := int32(os.Getpid())
 
@@ -32,6 +36,44 @@ func init() {
 		}
 
 		return percentageUsed
+	}))
+
+	// 2 hr of data at 5 sec interval
+	ds := NewDataStore(1440, 5 * time.Second)
+
+	ds.RegisterNewMetric("dapp.cpu.percent", func() interface{} {
+		proc, err := process.NewProcess(pid)
+		if err != nil {
+			logger.Warn(err)
+		}
+
+		percentageUsed, err := proc.CPUPercent()
+		if err != nil {
+			logger.Warn(err)
+		}
+
+		return percentageUsed
+	})
+
+	ds.RegisterNewMetric("dapp.txpool.size", func() interface{} {
+		return core.MetricsTransactionPoolSize.Count()
+	})
+
+	type MemStat struct {
+		HeapInuse uint64 `json:"heapInUse"`
+		HeapSys uint64 `json:"heapSys"`
+	}
+
+	ds.RegisterNewMetric("dapp.memstats", func() interface{} {
+		stats := &runtime.MemStats{}
+		runtime.ReadMemStats(stats)
+		return MemStat{stats.HeapInuse, stats.HeapSys}
+	})
+
+	ds.StartUpdate()
+
+	expvar.Publish("stats", expvar.Func(func() interface{} {
+		return ds
 	}))
 }
 
@@ -57,6 +99,8 @@ func StartAPI(host string, port uint32) int {
 	logger.WithFields(logger.Fields{
 		"endpoint": fmt.Sprintf("%v/debug/metrics", listener.Addr()),
 	}).Info("Metrics: API starts...")
+
+	initAPI()
 
 	go startServer(listener)
 
