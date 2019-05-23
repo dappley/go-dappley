@@ -39,9 +39,9 @@ func initAPI() {
 	}))
 
 	// 2 hr of data at 5 sec interval
-	ds := NewDataStore(1440, 5 * time.Second)
+	ds := newDataStore(1440, 5 * time.Second)
 
-	ds.RegisterNewMetric("dapp.cpu.percent", func() interface{} {
+	ds.registerNewMetric("dapp.cpu.percent", func() interface{} {
 		proc, err := process.NewProcess(pid)
 		if err != nil {
 			logger.Warn(err)
@@ -55,7 +55,7 @@ func initAPI() {
 		return percentageUsed
 	})
 
-	ds.RegisterNewMetric("dapp.txpool.size", func() interface{} {
+	ds.registerNewMetric("dapp.txpool.size", func() interface{} {
 		return core.MetricsTransactionPoolSize.Count()
 	})
 
@@ -64,13 +64,13 @@ func initAPI() {
 		HeapSys uint64 `json:"heapSys"`
 	}
 
-	ds.RegisterNewMetric("dapp.memstats", func() interface{} {
+	ds.registerNewMetric("dapp.memstats", func() interface{} {
 		stats := &runtime.MemStats{}
 		runtime.ReadMemStats(stats)
 		return MemStat{stats.HeapInuse, stats.HeapSys}
 	})
 
-	ds.StartUpdate()
+	ds.startUpdate()
 
 	expvar.Publish("stats", expvar.Func(func() interface{} {
 		return ds
