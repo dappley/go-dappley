@@ -20,10 +20,10 @@ package trie
 
 import (
 	"errors"
+
 	"github.com/dappley/go-dappley/common/trie/pb"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/storage"
-
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -612,16 +612,6 @@ func (t *Trie) deleteWhenMeetSingleBranch(rootNode *node) ([]byte, error) {
 
 	}
 	return nil, nil
-}
-
-// Clone the trie to create a new trie sharing the same storage
-func (t *Trie) Clone() (*Trie, error) {
-	return &Trie{rootHash: t.rootHash, storage: t.storage, needChangelog: t.needChangelog}, nil
-}
-
-// CopyTo copy the trie structure into the given storage
-func (t *Trie) CopyTo(storage storage.Storage, needChangelog bool) (*Trie, error) {
-	return &Trie{rootHash: t.rootHash, storage: storage, needChangelog: needChangelog}, nil
 }
 
 // Replay return roothash not save key to storage
