@@ -39,7 +39,7 @@ var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
-	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
+	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
 )
 
