@@ -270,7 +270,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	// Assign changes to receiver
 	*bc = *bcTemp
-	bcTemp.mutex.Unlock()
+
 	poolsize := 0
 	if bc.txPool != nil {
 		poolsize = bc.txPool.GetNumOfTxInPool()
