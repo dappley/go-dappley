@@ -68,7 +68,7 @@ type Blockchain struct {
 	state         BlockchainState
 	eventManager  *EventManager
 	blkSizeLimit  int
-	mutex         sync.Mutex
+	mutex         *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -84,7 +84,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
@@ -114,7 +114,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -270,7 +270,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	// Assign changes to receiver
 	*bc = *bcTemp
-
+	bcTemp.mutex.Unlock()
 	poolsize := 0
 	if bc.txPool != nil {
 		poolsize = bc.txPool.GetNumOfTxInPool()
