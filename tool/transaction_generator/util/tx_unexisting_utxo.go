@@ -51,7 +51,7 @@ func (txSender *UnexistingUtxoTxSender) Send() {
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
 	if err != nil {
-		logger.WithError(err).Error("UnexisitingUtxoTx: Unable to send transaction!")
+		logger.WithError(err).Error("UnexisitingUtxoTx: Sending transaction failed!")
 	}
 }
 

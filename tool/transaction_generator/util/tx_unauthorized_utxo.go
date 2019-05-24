@@ -49,7 +49,7 @@ func (txSender *UnauthorizedUtxoTxSender) Send() {
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
 	if err != nil {
-		logger.WithError(err).Error("UnauthorizedUtxoTx: Unable to send transaction!")
+		logger.WithError(err).Error("UnauthorizedUtxoTx: Sending transaction failed!")
 	}
 }
 

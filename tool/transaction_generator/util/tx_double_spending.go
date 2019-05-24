@@ -39,21 +39,22 @@ func (txSender *DoubleSpendingTxSender) Generate(params core.SendTxParam) {
 
 func (txSender *DoubleSpendingTxSender) Send() {
 
-	logger.Info("DoubleSpendingTx: Sending Tx 1")
-
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
-	if err != nil {
-		logger.WithError(err).Panic("DoubleSpendingTx: Unable to send transaction!")
+	if err == nil {
+		logger.WithError(err).Info("DoubleSpendingTx: Sending transaction 1 succeeded")
+	} else {
+		logger.WithError(err).Panic("DoubleSpendingTx: Sending transaction 1 failed!")
 	}
-
-	logger.Info("DoubleSpendingTx: Sending Tx 2")
 
 	_, err = txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
-	if err != nil {
-		logger.WithError(err).Error("DoubleSpendingTx: Unable to send transaction!")
+	if err == nil {
+		logger.WithError(err).Info("DoubleSpendingTx: Sending transaction 2 succeeded")
+	} else {
+		logger.WithError(err).Error("DoubleSpendingTx: Sending transaction 2 failed!")
 	}
+
 }
 
 func (txSender *DoubleSpendingTxSender) Print() {

@@ -45,7 +45,7 @@ func (txSender *InsufficientBalanceTxSender) Send() {
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
 	if err != nil {
-		logger.WithError(err).Error("InsufficientBalanceTx: Unable to send transaction!")
+		logger.WithError(err).Error("InsufficientBalanceTx: Sending transaction failed!")
 	}
 }
 
