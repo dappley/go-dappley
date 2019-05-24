@@ -4,6 +4,8 @@ import (
     "encoding/json"
     "fmt"
     "net/http"
+
+    "github.com/dappley/go-dappley/config/pb"
 )
 
 const (
@@ -20,7 +22,8 @@ type response struct {
 
 func InitAPI() {
     if metricsURL == "" {
-        metricsURL = fmt.Sprintf("http://localhost:%d/debug/metrics", StartAPI("", 0))
+        metricsURL = fmt.Sprintf("http://localhost:%d/debug/metrics", StartAPI(
+            &configpb.NodeConfig{MetricsHost: "", MetricsPort:0, MetricsPollingInterval: 5, MetricsInterval: 7200}))
     }
 }
 

@@ -23,6 +23,8 @@ message NodeConfig{
     string genesis_path = 9;
     string metrics_host = 10;
     uint32 metrics_port = 11;
+    int64 metrics_polling_interval = 12; // seconds
+    int64 metrics_interval = 13; // seconds
 }
 
 message DynastyConfig{
