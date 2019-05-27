@@ -1,10 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
-	_ "net/http/pprof"
-	"os"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/sdk"
@@ -12,6 +8,9 @@ import (
 	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_automator/util"
 	logger "github.com/sirupsen/logrus"
+	"io/ioutil"
+	_ "net/http/pprof"
+	"os"
 )
 
 const (
@@ -41,11 +40,8 @@ func main() {
 	for {
 		select {
 		case <-nextBlockTicker.GetTickerChan():
-			sender.Pause()
 			sender.EnableSmartContract()
-			wallet.Update()
 			wallet.DisplayBalances()
-			sender.Resume()
 		}
 	}
 }

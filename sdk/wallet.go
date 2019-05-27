@@ -38,13 +38,13 @@ func NewDappSdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappS
 	numOfExisitingWallets := len(dappSdkWallet.addrs)
 
 	for i := numOfExisitingWallets; i < int(numOfWallets); i++ {
-		_, err := logic.CreateWalletWithpassphrase(password)
+		w, err := logic.CreateWalletWithpassphrase(password)
 		if err != nil {
 			logger.WithError(err).Error("DappSdkWallet: Cannot create new wallet.")
 			return nil
 		}
 		logger.WithFields(logger.Fields{
-			"address": dappSdkWallet.addrs[i],
+			"address": w.Addresses[0],
 		}).Info("DappSdkWallet: Wallet is created")
 	}
 
