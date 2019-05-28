@@ -66,17 +66,14 @@ type SyncPeerContext struct {
 }
 
 type PeerManager struct {
-	seeds        map[peer.ID]*PeerInfo
-	syncPeers    map[peer.ID]*PeerInfo
-	connectSeeds map[peer.ID]*PeerInfo
+	seeds     map[peer.ID]*PeerInfo
+	syncPeers map[peer.ID]*PeerInfo
 
 	streams               map[peer.ID]*StreamInfo
 	maxConnectionOutCount int
 	connectionOutCount    int //Connection that current node connect to other nodes, exclude seed nodes
 	maxConnectionInCount  int
 	connectionInCount     int //Connection that other node connection to current node.
-
-	connectSeedNum chan int
 
 	syncPeerContext *SyncPeerContext
 
@@ -102,13 +99,11 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	return &PeerManager{
 		seeds:                 make(map[peer.ID]*PeerInfo),
 		syncPeers:             make(map[peer.ID]*PeerInfo),
-		connectSeeds:          make(map[peer.ID]*PeerInfo),
 		streams:               make(map[peer.ID]*StreamInfo),
 		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
-		connectSeedNum:        make(chan int, 21),
 	}
 }
 
@@ -200,10 +195,6 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
 		}).Warn("PeerManager: connect PeerInfo failed.")
 	}
 	return err
-}
-
-func (pm *PeerManager) GetConnectSeedNum() chan int {
-	return pm.connectSeedNum
 }
 
 func (pm *PeerManager) Start() {
@@ -311,11 +302,9 @@ func (pm *PeerManager) StopStream(stream *Stream) {
 		//pass
 	}
 	delete(pm.streams, stream.peerID)
-	delete(pm.connectSeeds, stream.peerID)
 	pm.node.host.Peerstore().ClearAddrs(stream.peerID)
 	streamLen := len(pm.streams)
 	pm.mutex.Unlock()
-	pm.connectSeedNum <- len(pm.connectSeeds)
 	if streamLen == 0 {
 		go func() {
 			pm.startConnectSeeds()
@@ -718,11 +707,6 @@ func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType Connecti
 		//Pass
 	}
 	pm.streams[peerId] = &StreamInfo{stream: stream, connectionType: connectionType}
-
-	if pm.connectSeeds[peerId] == nil && pm.seeds[peerId] != nil {
-		pm.connectSeeds[peerId] = pm.seeds[peerId]
-		pm.connectSeedNum <- len(pm.connectSeeds)
-	}
 
 	return true
 }

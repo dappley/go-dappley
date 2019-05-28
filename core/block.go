@@ -41,6 +41,7 @@ type BlockHeader struct {
 	timestamp int64
 	sign      Hash
 	height    uint64
+	producer  string
 }
 
 type Block struct {
@@ -58,11 +59,11 @@ func (h Hash) Equals(nh Hash) bool {
 	return bytes.Compare(h, nh) == 0
 }
 
-func NewBlock(txs []*Transaction, parent *Block) *Block {
-	return NewBlockWithTimestamp(txs, parent, time.Now().Unix())
+func NewBlock(txs []*Transaction, parent *Block, producer string) *Block {
+	return NewBlockWithTimestamp(txs, parent, time.Now().Unix(), producer)
 }
 
-func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *Block {
+func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64, producer string) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -83,6 +84,7 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *
 			timestamp: timeStamp,
 			sign:      nil,
 			height:    height,
+			producer:  producer,
 		},
 		transactions: txs,
 	}
@@ -162,6 +164,10 @@ func (b *Block) GetTimestamp() int64 {
 	return b.header.timestamp
 }
 
+func (b *Block) GetProducer() string {
+	return b.header.producer
+}
+
 func (b *Block) GetTransactions() []*Transaction {
 	return b.transactions
 }
@@ -203,6 +209,7 @@ func (bh *BlockHeader) ToProto() proto.Message {
 		Timestamp:    bh.timestamp,
 		Signature:    bh.sign,
 		Height:       bh.height,
+		Producer:     bh.producer,
 	}
 }
 
@@ -216,6 +223,7 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.timestamp = pb.(*corepb.BlockHeader).GetTimestamp()
 	bh.sign = pb.(*corepb.BlockHeader).GetSignature()
 	bh.height = pb.(*corepb.BlockHeader).GetHeight()
+	bh.producer = pb.(*corepb.BlockHeader).GetProducer()
 }
 
 func (b *Block) CalculateHash() Hash {
@@ -228,6 +236,7 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 			b.GetPrevHash(),
 			b.HashTransactions(),
 			util.IntToHex(b.GetTimestamp()),
+			[]byte(b.GetProducer()),
 		},
 		[]byte{},
 	)
@@ -245,6 +254,7 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 			util.IntToHex(b.GetTimestamp()),
 			//util.IntToHex(targetBits),
 			util.IntToHex(nonce),
+			[]byte(b.GetProducer()),
 		},
 		[]byte{},
 	)

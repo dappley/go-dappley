@@ -42,10 +42,8 @@ type DPOS struct {
 	node        core.NetService
 	stopCh      chan bool
 	stopLibCh   chan bool
-	stopMinCh   chan bool
 	dynasty     *Dynasty
 	slot        *lru.Cache
-	status      bool
 }
 
 func NewDPOS() *DPOS {
@@ -55,7 +53,6 @@ func NewDPOS() *DPOS {
 		node:       nil,
 		stopCh:     make(chan bool, 1),
 		stopLibCh:  make(chan bool, 1),
-		stopMinCh:  make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -121,8 +118,7 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 	return true
 }
 
-func (dpos *DPOS) StartMining() {
-	dpos.status = true
+func (dpos *DPOS) Start() {
 	go func() {
 		logger.WithFields(logger.Fields{
 			"peer_id": dpos.node.GetPeerID(),
@@ -174,11 +170,10 @@ func (dpos *DPOS) StartMining() {
 	}()
 }
 
-func (dpos *DPOS) StopMining() {
+func (dpos *DPOS) Stop() {
 	logger.WithFields(logger.Fields{
 		"peer_id": dpos.node.GetPeerID(),
 	}).Info("DPoS stops...")
-	dpos.status = false
 	dpos.stopCh <- true
 }
 
@@ -346,32 +341,4 @@ func (dpos *DPOS) UpdateLIB() {
 		"miners.limit":     ConsensusSize,
 		"miners.supported": len(miners),
 	}).Info("DPoS: failed to update latest irreversible block.")
-}
-
-func (dpos *DPOS) Start() {
-	go func() {
-		for {
-			select {
-			case num := <-dpos.node.GetConnectSeedNum():
-				if num+1 >= ConsensusSize {
-					dpos.StartMining()
-				} else {
-					if dpos.status {
-						dpos.StopMining()
-					}
-				}
-			case <-dpos.stopMinCh:
-				dpos.StopMining()
-				return
-
-			}
-		}
-	}()
-}
-
-func (dpos *DPOS) Stop() {
-	logger.WithFields(logger.Fields{
-		"peer_id": dpos.node.GetPeerID(),
-	}).Info("DPoS stops mining...")
-	dpos.stopMinCh <- true
 }

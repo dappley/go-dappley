@@ -821,7 +821,3 @@ func (n *Node) DownloadBlocks(bc *core.Blockchain) {
 	<-finishChan
 	bc.SetState(core.BlockchainReady)
 }
-
-func (n *Node) GetConnectSeedNum() chan int {
-	return n.peerManager.GetConnectSeedNum()
-}
