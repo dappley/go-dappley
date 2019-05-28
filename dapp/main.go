@@ -101,7 +101,7 @@ func main() {
 
 	//start metrics api server
 	nodeConf := conf.GetNodeConfig()
-	metrics.StartAPI(nodeConf.GetMetricsHost(), nodeConf.GetMetricsPort(),
+	metrics.StartAPI(node, nodeConf.GetMetricsHost(), nodeConf.GetMetricsPort(),
 		nodeConf.GetMetricsInterval(), nodeConf.GetMetricsPollingInterval())
 
 	//start rpc server

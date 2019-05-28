@@ -156,6 +156,7 @@ func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache  { return n.recentlyRcvedDap
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
 func (n *Node) GetPeerManager() *PeerManager         { return n.peerManager }
 func (n *Node) GetInfo() *PeerInfo                   { return n.info }
+func (n *Node) GetHost() host.Host                   { return n.host }
 
 func (n *Node) Start(listenPort int) error {
 

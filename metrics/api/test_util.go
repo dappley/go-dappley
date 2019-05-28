@@ -21,7 +21,7 @@ type response struct {
 func InitAPI() {
     if metricsURL == "" {
         metricsURL = fmt.Sprintf("http://localhost:%d/debug/metrics",
-            StartAPI("", 0, 5, 7200))
+            StartAPI(nil, "", 0, 5, 7200))
     }
 }
 

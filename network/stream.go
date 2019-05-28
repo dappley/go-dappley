@@ -88,7 +88,7 @@ func NewStream(s net.Stream) *Stream {
 }
 
 func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
-	logger.Warn("Stream: Start new stream")
+	logger.Info("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, dispatch)
 }
