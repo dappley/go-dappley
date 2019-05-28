@@ -15,53 +15,49 @@ import (
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
 )
 
+type memStat struct {
+	HeapInuse uint64 `json:"heapInUse"`
+	HeapSys uint64 `json:"heapSys"`
+}
 
+func getCPUPercent() interface{} {
+	pid := int32(os.Getpid())
+	proc, err := process.NewProcess(pid)
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+
+	percentageUsed, err := proc.CPUPercent()
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+
+	return percentageUsed
+}
+
+func getMemoryStats() interface{} {
+	stats := &runtime.MemStats{}
+	runtime.ReadMemStats(stats)
+	return memStat{stats.HeapInuse, stats.HeapSys}
+}
+
+func getTransactionPoolSize() interface{} {
+	return core.MetricsTransactionPoolSize.Count()
+}
 
 func initAPI(interval, pollingInterval int64) {
-
-	pid := int32(os.Getpid())
-
-	getCPUPercent := expvar.Func(func() interface{} {
-		proc, err := process.NewProcess(pid)
-		if err != nil {
-			logger.Warn(err)
-			return nil
-		}
-
-		percentageUsed, err := proc.CPUPercent()
-		if err != nil {
-			logger.Warn(err)
-			return nil
-		}
-
-		return percentageUsed
-	})
-
-	expvar.Publish("dapp.cpu.percent", getCPUPercent)
-
 	ds := newDataStore(int(interval / pollingInterval), time.Duration(pollingInterval) * time.Second)
 
 	_ = ds.registerNewMetric("dapp.cpu.percent", getCPUPercent)
+	_ = ds.registerNewMetric("dapp.txpool.size", getTransactionPoolSize)
+	_ = ds.registerNewMetric("dapp.memstats", getMemoryStats)
 
-	_ = ds.registerNewMetric("dapp.txpool.size", func() interface{} {
-		return core.MetricsTransactionPoolSize.Count()
-	})
-
-	type MemStat struct {
-		HeapInuse uint64 `json:"heapInUse"`
-		HeapSys uint64 `json:"heapSys"`
-	}
-
-	_ = ds.registerNewMetric("dapp.memstats", func() interface{} {
-		stats := &runtime.MemStats{}
-		runtime.ReadMemStats(stats)
-		return MemStat{stats.HeapInuse, stats.HeapSys}
-	})
-
+	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
 	expvar.Publish("stats", ds)
 	ds.startUpdate()
 }
@@ -75,11 +71,11 @@ func startServer(listener net.Listener) {
 }
 
 // starts the metrics api
-func StartAPI(conf *configpb.NodeConfig) int {
+func StartAPI(host string, port uint32, interval int64, pollingInterval int64) int {
 	// expose metrics at /debug/metrics
 	exp.Exp(metrics.DefaultRegistry)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", conf.GetMetricsHost(), conf.GetMetricsPort()))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 
 	if err != nil {
 		logger.Panic(err)
@@ -89,7 +85,7 @@ func StartAPI(conf *configpb.NodeConfig) int {
 		"endpoint": fmt.Sprintf("%v/debug/metrics", listener.Addr()),
 	}).Info("Metrics: API starts...")
 
-	initAPI(conf.GetMetricsInterval(), conf.GetMetricsPollingInterval())
+	initAPI(interval, pollingInterval)
 
 	go startServer(listener)
 
