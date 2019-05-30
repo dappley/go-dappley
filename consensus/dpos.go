@@ -297,7 +297,7 @@ func (dpos *DPOS) UpdateLIB() {
 	miners := make(map[string]bool)
 
 	for !cur.GetHash().Equals(lib.GetHash()) {
-		producer := dpos.dynasty.ProducerAtATime(cur.GetTimestamp())
+		producer := cur.GetProducer()
 		if int(cur.GetHeight())-int(lib.GetHeight()) < ConsensusSize-len(miners) {
 			logger.WithFields(logger.Fields{
 				"miners.limit":     ConsensusSize,

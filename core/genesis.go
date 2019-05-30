@@ -42,6 +42,7 @@ func NewGenesisBlock(address Address) *Block {
 		nonce:     0,
 		timestamp: 1532392928, //July 23,2018 17:42 PST
 		height:    0,
+		producer:  "",
 	}
 	b := &Block{
 		header:       header,

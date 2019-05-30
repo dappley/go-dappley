@@ -34,7 +34,11 @@ import (
 var tipKey = []byte("tailBlockHash")
 var libKey = []byte("lastIrreversibleBlockHash")
 
-const LengthForBlockToBeConsideredHistory = 100
+const (
+	LengthForBlockToBeConsideredHistory = 100
+	defaultMaxProducers                 = 5
+	ConsensusSize                       = defaultMaxProducers*2/3 + 1
+)
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist")
@@ -42,6 +46,7 @@ var (
 	ErrTransactionNotFound     = errors.New("transaction not found")
 	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
+	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 )
 
 type BlockchainState int
@@ -71,6 +76,7 @@ type Blockchain struct {
 	eventManager  *EventManager
 	blkSizeLimit  int
 	mutex         sync.Mutex
+	producerMap   map[string]bool
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -88,6 +94,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		NewEventManager(),
 		blkSizeLimit,
 		sync.Mutex{},
+		make(map[string]bool),
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
@@ -123,6 +130,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		NewEventManager(),
 		blkSizeLimit,
 		sync.Mutex{},
+		make(map[string]bool),
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -231,6 +239,26 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	tailBlockHash := bc.GetTailBlockHash()
 	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
 		return ErrPrevHashVerifyFailed
+	}
+
+	// process block when producer number is less than ConsensusSize
+	if bc.GetState() == BlockchainReady || bc.GetState() == BlockchainSync {
+		if !ctx.Block.GetPrevHash().Equals([]byte{}) {
+			lib, _ := bc.GetLIB()
+			if _, ok := bc.producerMap[lib.GetProducer()]; ok {
+				delete(bc.producerMap, lib.GetProducer())
+			}
+
+			_, ok := bc.producerMap[ctx.Block.GetProducer()]
+			if ok && len(bc.producerMap) < ConsensusSize {
+				return ErrProducerNotEnough
+			}
+			if !ok {
+
+				bc.producerMap[ctx.Block.GetProducer()] = true
+			}
+		}
+
 	}
 
 	blockLogger := logger.WithFields(logger.Fields{
@@ -364,7 +392,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
+	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex, bc.producerMap}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
