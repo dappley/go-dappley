@@ -54,7 +54,11 @@ func getTransactionPoolSize() interface{} {
 
 func getConnectedPeersFunc(node *network.Node) func() interface{} {
 	return func() interface{} {
-		return peerstore.PeerInfos(node.GetHost().Peerstore(), node.GetHost().Peerstore().Peers())
+		var peers []peerstore.PeerInfo
+		for _, peer := range node.GetPeerManager().CloneStreamsToPeerInfoSlice() {
+			peers = append(peers, peerstore.PeerInfo{peer.PeerId, peer.Addrs})
+		}
+		return peers
 	}
 }
 
