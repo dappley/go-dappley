@@ -38,7 +38,7 @@ const (
 	configFilePath  = "conf/default.conf"
 	genesisFilePath = "conf/genesis.conf"
 	defaultPassword = "password"
-	size1kB 		= 1024
+	size1kB         = 1024
 )
 
 func main() {
@@ -158,4 +158,3 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	}
 	return node, nil
 }
-

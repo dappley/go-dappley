@@ -97,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:     make(map[peer.ID]*PeerInfo),
-		syncPeers: make(map[peer.ID]*PeerInfo),
-		streams:   make(map[peer.ID]*StreamInfo),
-		mutex:     sync.RWMutex{},
+		seeds:                 make(map[peer.ID]*PeerInfo),
+		syncPeers:             make(map[peer.ID]*PeerInfo),
+		streams:               make(map[peer.ID]*StreamInfo),
+		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
