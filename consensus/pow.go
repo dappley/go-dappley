@@ -89,7 +89,7 @@ func (pow *ProofOfWork) mineBlocks() {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
-			newBlock := pow.miner.ProduceBlock()
+			newBlock := pow.miner.ProduceBlock(0)
 			if newBlock == nil || !pow.Validate(newBlock.Block) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
 				return
