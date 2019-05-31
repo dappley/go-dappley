@@ -38,7 +38,7 @@ const (
 	configFilePath  = "conf/default.conf"
 	genesisFilePath = "conf/genesis.conf"
 	defaultPassword = "password"
-	size1kB 		= 1024
+	size1kB         = 1024
 )
 
 func main() {
@@ -101,7 +101,7 @@ func main() {
 
 	//start metrics api server
 	nodeConf := conf.GetNodeConfig()
-	metrics.StartAPI(nodeConf.GetMetricsHost(), nodeConf.GetMetricsPort(),
+	metrics.StartAPI(node, nodeConf.GetMetricsHost(), nodeConf.GetMetricsPort(),
 		nodeConf.GetMetricsInterval(), nodeConf.GetMetricsPollingInterval())
 
 	//start rpc server
@@ -158,4 +158,3 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	}
 	return node, nil
 }
-

@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 	"github.com/rs/cors"
@@ -16,11 +17,18 @@ import (
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/network"
 )
 
 type memStat struct {
 	HeapInuse uint64 `json:"heapInUse"`
-	HeapSys uint64 `json:"heapSys"`
+	HeapSys   uint64 `json:"heapSys"`
+}
+
+func getMemoryStats() interface{} {
+	stats := &runtime.MemStats{}
+	runtime.ReadMemStats(stats)
+	return memStat{stats.HeapInuse, stats.HeapSys}
 }
 
 func getCPUPercent() interface{} {
@@ -40,18 +48,29 @@ func getCPUPercent() interface{} {
 	return percentageUsed
 }
 
-func getMemoryStats() interface{} {
-	stats := &runtime.MemStats{}
-	runtime.ReadMemStats(stats)
-	return memStat{stats.HeapInuse, stats.HeapSys}
-}
-
 func getTransactionPoolSize() interface{} {
 	return core.MetricsTransactionPoolSize.Count()
 }
 
-func initAPI(interval, pollingInterval int64) {
-	ds := newDataStore(int(interval / pollingInterval), time.Duration(pollingInterval) * time.Second)
+func getConnectedPeersFunc(node *network.Node) expvar.Func {
+	getConnectedPeers := func() interface{} {
+		var peers []peerstore.PeerInfo
+		for _, peer := range node.GetPeerManager().CloneStreamsToPeerInfoSlice() {
+			peers = append(peers, peerstore.PeerInfo{peer.PeerId, peer.Addrs})
+		}
+		return peers
+	}
+	return getConnectedPeers
+}
+
+func initPeerMetrics(node *network.Node) {
+	if node != nil {
+		expvar.Publish("peers", getConnectedPeersFunc(node))
+	}
+}
+
+func initIntervalMetrics(interval, pollingInterval int64) {
+	ds := newDataStore(int(interval/pollingInterval), time.Duration(pollingInterval)*time.Second)
 
 	_ = ds.registerNewMetric("dapp.cpu.percent", getCPUPercent)
 	_ = ds.registerNewMetric("dapp.txpool.size", getTransactionPoolSize)
@@ -71,7 +90,7 @@ func startServer(listener net.Listener) {
 }
 
 // starts the metrics api
-func StartAPI(host string, port uint32, interval int64, pollingInterval int64) int {
+func StartAPI(node *network.Node, host string, port uint32, interval int64, pollingInterval int64) int {
 	// expose metrics at /debug/metrics
 	exp.Exp(metrics.DefaultRegistry)
 
@@ -85,7 +104,8 @@ func StartAPI(host string, port uint32, interval int64, pollingInterval int64) i
 		"endpoint": fmt.Sprintf("%v/debug/metrics", listener.Addr()),
 	}).Info("Metrics: API starts...")
 
-	initAPI(interval, pollingInterval)
+	initPeerMetrics(node)
+	initIntervalMetrics(interval, pollingInterval)
 
 	go startServer(listener)
 

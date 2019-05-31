@@ -97,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:     make(map[peer.ID]*PeerInfo),
-		syncPeers: make(map[peer.ID]*PeerInfo),
-		streams:   make(map[peer.ID]*StreamInfo),
-		mutex:     sync.RWMutex{},
+		seeds:                 make(map[peer.ID]*PeerInfo),
+		syncPeers:             make(map[peer.ID]*PeerInfo),
+		streams:               make(map[peer.ID]*StreamInfo),
+		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
@@ -652,7 +652,7 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"PeerId": peerInfo.PeerId,
-		}).Info("PeerManager: Connect to peer failed")
+		}).Warn("PeerManager: Connect to peer failed")
 		return nil, err
 	}
 
@@ -744,7 +744,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 		}).Info("loadSyncPeers")
 	}
 
-	logger.WithError(err).Warnf("PeerManager: load sync peers count %v.", len(pm.syncPeers))
+	logger.Infof("PeerManager: load sync peers count %v.", len(pm.syncPeers))
 
 	return nil
 }

@@ -1,49 +1,49 @@
 package metrics
 
 import (
-    "encoding/json"
-    "fmt"
-    "net/http"
+	"encoding/json"
+	"fmt"
+	"net/http"
 )
 
 const (
-    maxRetries = 3
+	maxRetries = 3
 )
 
 var (
-    metricsURL string
+	metricsURL string
 )
 
 type response struct {
-    TransactionPoolSize int `json:"dap.txPool.currSize"`
+	TransactionPoolSize int `json:"dap.txPool.currSize"`
 }
 
 func InitAPI() {
-    if metricsURL == "" {
-        metricsURL = fmt.Sprintf("http://localhost:%d/debug/metrics",
-            StartAPI("", 0, 5, 7200))
-    }
+	if metricsURL == "" {
+		metricsURL = fmt.Sprintf("http://localhost:%d/debug/metrics",
+			StartAPI(nil, "", 0, 5, 7200))
+	}
 }
 
 func GetTransactionPoolSize() (int, error) {
-    var resp *http.Response
-    var err error
-    for i := 0; i < maxRetries; i++ {
-        resp, err = http.Get(metricsURL)
-        if err == nil {
-            break
-        }
-    }
+	var resp *http.Response
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		resp, err = http.Get(metricsURL)
+		if err == nil {
+			break
+		}
+	}
 
-    if err != nil {
-        return -1, err
-    }
+	if err != nil {
+		return -1, err
+	}
 
-    response := &response{}
-    err = json.NewDecoder(resp.Body).Decode(response)
-    if err != nil {
-        return -1, err
-    }
+	response := &response{}
+	err = json.NewDecoder(resp.Body).Decode(response)
+	if err != nil {
+		return -1, err
+	}
 
-    return response.TransactionPoolSize, nil
+	return response.TransactionPoolSize, nil
 }
