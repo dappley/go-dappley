@@ -342,3 +342,26 @@ func (dpos *DPOS) UpdateLIB() {
 		"miners.supported": len(miners),
 	}).Info("DPoS: failed to update latest irreversible block.")
 }
+
+func (dpos *DPOS) IsAcceptBlock(b *core.Block) bool {
+
+	bc := dpos.node.GetBlockchain()
+	lib, _ := bc.GetLIB()
+	tailBlock, _ := bc.GetTailBlock()
+	cur := tailBlock
+	miners := make(map[string]bool)
+
+	for !cur.GetHash().Equals(lib.GetHash()) {
+
+		producer := cur.GetProducer()
+		miners[producer] = true
+		cur, _ = dpos.node.GetBlockchain().GetBlockByHash(cur.GetPrevHash())
+
+	}
+
+	if _, ok := miners[b.GetProducer()]; ok && len(miners) < ConsensusSize {
+		return false
+	}
+
+	return true
+}

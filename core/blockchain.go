@@ -75,8 +75,7 @@ type Blockchain struct {
 	state         BlockchainState
 	eventManager  *EventManager
 	blkSizeLimit  int
-	mutex         sync.Mutex
-	producerMap   map[string]bool
+	mutex         *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -93,8 +92,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
-		make(map[string]bool),
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
@@ -129,8 +127,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
-		make(map[string]bool),
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -240,25 +237,15 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
 		return ErrPrevHashVerifyFailed
 	}
-
-	// process block when producer number is less than ConsensusSize
-	if bc.GetState() == BlockchainReady || bc.GetState() == BlockchainSync {
+	if bc.GetState() == BlockchainSync || bc.GetState() == BlockchainReady {
 		if !ctx.Block.GetPrevHash().Equals([]byte{}) {
-			lib, _ := bc.GetLIB()
-			if _, ok := bc.producerMap[lib.GetProducer()]; ok {
-				delete(bc.producerMap, lib.GetProducer())
+			if bc.consensus != nil {
+				if !bc.consensus.IsAcceptBlock(ctx.Block) {
+					return ErrProducerNotEnough
+				}
 			}
 
-			_, ok := bc.producerMap[ctx.Block.GetProducer()]
-			if ok && len(bc.producerMap) < ConsensusSize {
-				return ErrProducerNotEnough
-			}
-			if !ok {
-
-				bc.producerMap[ctx.Block.GetProducer()] = true
-			}
 		}
-
 	}
 
 	blockLogger := logger.WithFields(logger.Fields{
@@ -392,7 +379,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex, bc.producerMap}
+	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {

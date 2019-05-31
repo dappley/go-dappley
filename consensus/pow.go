@@ -176,3 +176,7 @@ func (pow *ProofOfWork) AddProducer(producer string) error {
 func (pow *ProofOfWork) GetProducers() []string {
 	return nil
 }
+
+func (pow *ProofOfWork) IsAcceptBlock(b *core.Block) bool {
+	return true
+}

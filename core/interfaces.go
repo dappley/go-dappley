@@ -40,6 +40,7 @@ type Consensus interface {
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
 	GetProducers() []string
+	IsAcceptBlock(b *Block) bool
 }
 
 type NetService interface {
