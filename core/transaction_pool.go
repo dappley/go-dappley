@@ -108,11 +108,20 @@ func (txPool *TransactionPool) ResetPendingTransactions() {
 	txPool.pendingTxs = make([]*Transaction, 0)
 }
 
-func (txPool *TransactionPool) GetPendingTransactions() []*Transaction {
+func (txPool *TransactionPool) GetAllTransactions() []*Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 
-	return txPool.pendingTxs
+	txs := []*Transaction{}
+	for _, tx := range txPool.pendingTxs {
+		txs = append(txs, tx)
+	}
+
+	for _, tx := range txPool.getSortedTransactions() {
+		txs = append(txs, tx)
+	}
+
+	return txs
 }
 
 //PopTransactionWithMostTips pops the transactions with the most tips

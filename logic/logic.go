@@ -273,7 +273,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 	pubKeyHash, _ := core.NewUserPubKeyHash(sendTxParam.SenderKeyPair.PublicKey)
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
-	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetPendingTransactions())
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 
 	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), sendTxParam.Amount)
 	if err != nil {
