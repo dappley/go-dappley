@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\engine.cc" />
     <ClCompile Include="..\..\lib\blockchain.cc" />
+    <ClCompile Include="..\..\lib\contract.cc" />
     <ClCompile Include="..\..\lib\crypto.cc" />
     <ClCompile Include="..\..\lib\event.cc" />
     <ClCompile Include="..\..\lib\file.cc" />
@@ -37,7 +38,9 @@
   <ItemGroup>
     <ClInclude Include="..\..\engine.h" />
     <ClInclude Include="..\..\lib\blockchain.h" />
+    <ClInclude Include="..\..\lib\contract.h" />
     <ClInclude Include="..\..\lib\crypto.h" />
+    <ClInclude Include="..\..\lib\event.h" />
     <ClInclude Include="..\..\lib\file.h" />
     <ClInclude Include="..\..\lib\load_lib.h" />
     <ClInclude Include="..\..\lib\load_sc.h" />
