@@ -47,7 +47,7 @@ var (
 
 //create a blockchain
 func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
-	if !address.ValidateAddress() {
+	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
@@ -257,12 +257,12 @@ func GetWalletManager(path string) (*client.WalletManager, error) {
 }
 
 func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	if !sendTxParam.From.ValidateAddress() {
+	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if !sendTxParam.To.ValidateAddress() && sendTxParam.Contract == "" {
+	if !sendTxParam.To.IsValid() && sendTxParam.Contract == "" {
 		return nil, "", ErrInvalidRcverAddress
 	}
 

@@ -13,7 +13,7 @@ import (
 //export VerifyAddressFunc
 func VerifyAddressFunc(address *C.char) bool {
 	addr := core.NewAddress(C.GoString(address))
-	return addr.ValidateAddress()
+	return addr.IsValid()
 }
 
 func prepareUTXOs(utxos []*core.UTXO, amount *common.Amount) ([]*core.UTXO, bool) {
@@ -66,7 +66,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	contractAddr := engine.contractAddr
 	utxos := engine.contractUTXOs
 	sourceTXID := engine.sourceTXID
-	if !contractAddr.ValidateAddress() {
+	if !contractAddr.IsValid() {
 		return 1
 	}
 

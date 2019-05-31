@@ -62,7 +62,7 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	if !core.NewAddress(address).ValidateAddress() {
+	if !core.NewAddress(address).IsValid() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 
