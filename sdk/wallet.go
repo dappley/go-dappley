@@ -15,7 +15,7 @@ type DappSdkWallet struct {
 	wm        *client.WalletManager
 	sdk       *DappSdk
 	utxoIndex *core.UTXOIndex
-	mutex     *sync.Mutex
+	mutex     *sync.RWMutex
 }
 
 //NewDappSdkWallet creates a new NewDappSdkWallet instance that connects to a Dappley node with grpc port
@@ -23,7 +23,7 @@ func NewDappSdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappS
 
 	dappSdkWallet := &DappSdkWallet{
 		sdk:   sdk,
-		mutex: &sync.Mutex{},
+		mutex: &sync.RWMutex{},
 	}
 
 	var err error
@@ -56,19 +56,30 @@ func NewDappSdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappS
 
 func (sdkw *DappSdkWallet) GetAddrs() []core.Address { return sdkw.addrs }
 
-func (sdkw *DappSdkWallet) GetBalance(address core.Address) uint64 { return sdkw.balances[address] }
+func (sdkw *DappSdkWallet) GetBalance(address core.Address) uint64 {
+	sdkw.mutex.RLock()
+	defer sdkw.mutex.RUnlock()
+
+	return sdkw.balances[address]
+}
 
 func (sdkw *DappSdkWallet) GetWalletManager() *client.WalletManager { return sdkw.wm }
 
 func (sdkw *DappSdkWallet) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
 
 func (sdkw *DappSdkWallet) Initialize() {
+	sdkw.mutex.Lock()
+	defer sdkw.mutex.Unlock()
+
 	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
 	sdkw.balances = make(map[core.Address]uint64)
 }
 
 //UpdateBalances updates all the balances of the addresses in the wallet
 func (sdkw *DappSdkWallet) DisplayBalances() {
+	sdkw.mutex.RLock()
+	defer sdkw.mutex.RUnlock()
+
 	for _, addr := range sdkw.GetAddrs() {
 		logger.WithFields(logger.Fields{
 			"address": addr.String(),
@@ -79,8 +90,6 @@ func (sdkw *DappSdkWallet) DisplayBalances() {
 
 //Update updates the balance and utxos of all addresses in the wallet from the server
 func (sdkw *DappSdkWallet) Update() error {
-	sdkw.mutex.Lock()
-	defer sdkw.mutex.Unlock()
 
 	logger.Info("DappSdkWallet: Updating from server")
 
@@ -112,5 +121,7 @@ func (sdkw *DappSdkWallet) Update() error {
 
 //AddToBalance adds the difference to the current balance
 func (sdkw *DappSdkWallet) UpdateBalance(addr core.Address, amount uint64) {
+	sdkw.mutex.Lock()
+	defer sdkw.mutex.Unlock()
 	sdkw.balances[addr] = amount
 }
