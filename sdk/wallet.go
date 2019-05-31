@@ -75,6 +75,17 @@ func (sdkw *DappSdkWallet) Initialize() {
 	sdkw.balances = make(map[core.Address]uint64)
 }
 
+func (sdkw *DappSdkWallet) IsZeroBalance() bool {
+	sdkw.mutex.RLock()
+	defer sdkw.mutex.RUnlock()
+	for _, addr := range sdkw.GetAddrs() {
+		if sdkw.balances[addr] > 0 {
+			return false
+		}
+	}
+	return true
+}
+
 //UpdateBalances updates all the balances of the addresses in the wallet
 func (sdkw *DappSdkWallet) DisplayBalances() {
 	sdkw.mutex.RLock()

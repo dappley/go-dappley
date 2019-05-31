@@ -24,7 +24,19 @@ func main() {
 		FullTimestamp: true,
 	})
 
+	logger.Info("*************************************")
+	logger.Info("**Transaction automator tool starts**")
+	logger.Info("*************************************")
+
 	dappSdk, wallet, toolConfigs := initial_setup()
+
+	nextBlockTicker := tool.NewNextBlockTicker(dappSdk)
+	nextBlockTicker.Run()
+
+	logger.Info("Start funding...")
+
+	waitTillBlockHeightTwo(nextBlockTicker, dappSdk)
+	fund(dappSdk, wallet, toolConfigs.GetInitialAmount())
 
 	isScDeployed, scAddr := deploySmartContract(dappSdk, getFundAddr(wallet))
 
@@ -33,9 +45,6 @@ func main() {
 		sender.EnableSmartContract()
 	}
 	sender.Run()
-
-	nextBlockTicker := tool.NewNextBlockTicker(dappSdk)
-	nextBlockTicker.Run()
 
 	for {
 		select {
@@ -58,9 +67,25 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet, *tx_automator_configpb.C
 		dappSdk,
 	)
 
+	return dappSdk, wallet, toolConfigs
+}
+
+func waitTillBlockHeightTwo(ticker *tool.NextBlockTicker, dappSdk *sdk.DappSdk) {
+	logger.Info("Waiting till the second block is mined...")
+	for {
+		select {
+		case <-ticker.GetTickerChan():
+			blkHeight, _ := dappSdk.GetBlockHeight()
+			if blkHeight > 1 {
+				return
+			}
+		}
+	}
+}
+
+func fund(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, initialAmount uint64) {
 	fundAddr := getFundAddr(wallet)
 	fundRequest := tool.NewFundRequest(dappSdk)
-	initialAmount := toolConfigs.GetInitialAmount()
 	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
 
 	logger.WithFields(logger.Fields{
@@ -69,8 +94,6 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet, *tx_automator_configpb.C
 
 	wallet.Update()
 	wallet.DisplayBalances()
-
-	return dappSdk, wallet, toolConfigs
 }
 
 func getFundAddr(wallet *sdk.DappSdkWallet) string {

@@ -13,6 +13,7 @@ import (
 const (
 	contractFunctionCall = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
 	TimeBetweenBatch1    = time.Duration(1000)
+	timeoutInSec         = 1
 )
 
 type BatchTxSender struct {
@@ -97,6 +98,10 @@ func (sender *BatchTxSender) Run() {
 					continue
 				}
 
+				if sender.wallet.IsZeroBalance() {
+					continue
+				}
+
 				tx := sender.createRandomTransaction()
 				if tx != nil {
 					sender.AddTxToPendingTxs(tx)
@@ -140,8 +145,10 @@ func (sender *BatchTxSender) getAddrWithNoneZeroBalance() int {
 	fromIndex := rand.Intn(len(sender.wallet.GetAddrs()))
 	fromAddr := sender.wallet.GetAddrs()[fromIndex]
 	amount := sender.wallet.GetBalance(fromAddr)
-	//TODO: add time out to this loop
-	for amount <= 1 {
+
+	deadline := time.Now().Unix() + timeoutInSec
+
+	for amount <= 1 && time.Now().Unix() < deadline {
 		fromIndex = rand.Intn(len(sender.wallet.GetAddrs()))
 		fromAddr = sender.wallet.GetAddrs()[fromIndex]
 		amount = sender.wallet.GetBalance(fromAddr)
