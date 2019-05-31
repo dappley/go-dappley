@@ -274,7 +274,6 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetPendingTransactions())
-	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetTransactions())
 
 	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), sendTxParam.Amount)
 	if err != nil {

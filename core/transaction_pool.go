@@ -20,15 +20,14 @@ package core
 
 import (
 	"encoding/hex"
-	"sort"
-	"sync"
-
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
+	"sort"
+	"sync"
 )
 
 const (
@@ -116,44 +115,30 @@ func (txPool *TransactionPool) GetPendingTransactions() []*Transaction {
 	return txPool.pendingTxs
 }
 
-//PopTransactionsWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionsWithMostTips(utxoIndex *UTXOIndex, blockLimit int) []*Transaction {
-
+//PopTransactionWithMostTips pops the transactions with the most tips
+func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) *TransactionNode {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
+	txNode := txPool.getMaxTipTransaction()
 	tempUtxoIndex := utxoIndex.DeepCopy()
-	var validTxs []*Transaction
-	totalSize := 0
+	if txNode == nil {
+		return txNode
+	}
+	//remove the transaction from tip order
+	txPool.tipOrder = txPool.tipOrder[1:]
 
-	for totalSize < blockLimit && len(txPool.txs) > 0 {
-
-		txNode := txPool.getMaxTipTransaction()
-		if txNode == nil {
-			logger.WithFields(logger.Fields{
-				"num_txs_in_pool":  len(txPool.txs),
-				"num_txs_in_order": len(txPool.tipOrder),
-			}).Warn("Transaction Pool: Pop max tip transaction failed!")
-			break
-		}
-
-		totalSize += txNode.Size
-		txPool.tipOrder = txPool.tipOrder[1:]
-
-		if result, err := txNode.Value.Verify(tempUtxoIndex, 0); result {
-			validTxs = append(validTxs, txNode.Value)
-			tempUtxoIndex.UpdateUtxo(txNode.Value)
-			txPool.insertChildrenIntoSortedWaitlist(txNode)
-			txPool.removeTransaction(txNode)
-		} else {
-			logger.Warn(err.Error())
-			txPool.removeTransactionNodeAndChildren(txNode.Value)
-		}
+	if result, err := txNode.Value.Verify(tempUtxoIndex, 0); result {
+		txPool.insertChildrenIntoSortedWaitlist(txNode)
+		txPool.removeTransaction(txNode)
+	} else {
+		logger.WithError(err).Warn("Transaction Pool: Pop max tip transaction failed!")
+		txPool.removeTransactionNodeAndChildren(txNode.Value)
+		return nil
 	}
 
-	txPool.pendingTxs = validTxs
-
-	return validTxs
+	txPool.pendingTxs = append(txPool.pendingTxs, txNode.Value)
+	return txNode
 }
 
 func (txPool *TransactionPool) Push(tx Transaction) {
@@ -306,7 +291,7 @@ func (txPool *TransactionPool) getDependentTxs(txNode *TransactionNode) map[stri
 	return toRemoveTxs
 }
 
-// The param toRemoveTxs must be calculate by function getDependentTxs
+// The param toRemoveTxs must be calculated by function getDependentTxs
 func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string]*TransactionNode) {
 	for _, txNode := range toRemoveTxs {
 		txPool.removeTransactionNodeAndChildren(txNode.Value)

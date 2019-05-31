@@ -234,16 +234,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	ctx.State.Save(bcTemp.db, ctx.Block.GetHash())
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save scState to database.")
-		return err
-	}
-
 	//Remove transactions in current transaction pool
-	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
+	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bcTemp.GetTxPool().ResetPendingTransactions()
-	err = bc.GetTxPool().SaveToDatabase(bc.db)
+	err = bcTemp.GetTxPool().SaveToDatabase(bc.db)
 
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save txpool to database.")

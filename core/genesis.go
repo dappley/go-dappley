@@ -16,9 +16,11 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 package core
+
 import (
 	"github.com/dappley/go-dappley/common"
 )
+
 const genesisCoinbaseData = "Hello world"
 
 func NewGenesisBlock(address Address) *Block {
