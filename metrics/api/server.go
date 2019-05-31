@@ -52,19 +52,20 @@ func getTransactionPoolSize() interface{} {
 	return core.MetricsTransactionPoolSize.Count()
 }
 
-func getConnectedPeersFunc(node *network.Node) func() interface{} {
-	return func() interface{} {
+func getConnectedPeersFunc(node *network.Node) expvar.Func {
+	getConnectedPeers := func() interface{} {
 		var peers []peerstore.PeerInfo
 		for _, peer := range node.GetPeerManager().CloneStreamsToPeerInfoSlice() {
 			peers = append(peers, peerstore.PeerInfo{peer.PeerId, peer.Addrs})
 		}
 		return peers
 	}
+	return getConnectedPeers
 }
 
 func initPeerMetrics(node *network.Node) {
 	if node != nil {
-		expvar.Publish("peers", expvar.Func(getConnectedPeersFunc(node)))
+		expvar.Publish("peers", getConnectedPeersFunc(node))
 	}
 }
 
