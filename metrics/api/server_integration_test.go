@@ -5,7 +5,6 @@ package metrics
 import (
 	"testing"
 
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -71,7 +70,7 @@ func TestGetConnectedPeersFunc(t *testing.T) {
 	err = node0.GetPeerManager().AddAndConnectPeer(node1.GetInfo())
 	assert.Nil(t, err)
 
-	peers := fun().([]peerstore.PeerInfo)
+	peers := fun().([]peerInfo)
 	assert.Equal(t, 1, len(peers))
-	assert.Equal(t, node1.GetPeerID(), peers[0].ID)
+	assert.Equal(t, node1.GetPeerID(), peers[0].Info.ID)
 }

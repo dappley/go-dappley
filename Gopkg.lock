@@ -189,6 +189,14 @@
   revision = "1395d1447324cbea88d249fbfcfd70ea878fdfca"
 
 [[projects]]
+  digest = "1:0b4439ae69776549e6489b261f66894a1390140dad53f1c3b1fbfc074478590d"
+  name = "github.com/ipfs/go-ipfs-util"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a4bb5361e49427531f9a716ead2ce4bd9bdd7959"
+  version = "v0.0.1"
+
+[[projects]]
   digest = "1:2a491fe250b1058b3aa1565e16858712021dc8462e2b94b4c58a6ea8ea53fc24"
   name = "github.com/ipfs/go-log"
   packages = [
@@ -282,7 +290,7 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:8bf306bdfb5d7ec574320de425882f9e6a16ae08313b85efd2f9c445d177e314"
+  digest = "1:cd363fe03595c414cde4046777e8ce21140412405e0f9e4d7f4ecf175226a759"
   name = "github.com/libp2p/go-libp2p"
   packages = [
     ".",
@@ -290,6 +298,7 @@
     "p2p/host/basic",
     "p2p/protocol/identify",
     "p2p/protocol/identify/pb",
+    "p2p/protocol/ping",
   ]
   pruneopts = "UT"
   revision = "cdc6d1940763222a9f338a14903bb383384dc46c"
@@ -951,6 +960,7 @@
     "github.com/libp2p/go-libp2p-net",
     "github.com/libp2p/go-libp2p-peer",
     "github.com/libp2p/go-libp2p-peerstore",
+    "github.com/libp2p/go-libp2p/p2p/protocol/ping",
     "github.com/multiformats/go-multiaddr",
     "github.com/peterh/liner",
     "github.com/raviqqe/hamt",
