@@ -88,6 +88,6 @@ func (_m *Consensus) Validate(block *core.Block) bool {
 	return r0
 }
 
-func (_m *Consensus) IsAcceptBlock(block *core.Block) bool {
-	return true
+func (_m *Consensus) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }
