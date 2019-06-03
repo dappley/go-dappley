@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"time"
 
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 	"github.com/rs/cors"
@@ -52,18 +51,9 @@ func getTransactionPoolSize() interface{} {
 	return core.MetricsTransactionPoolSize.Count()
 }
 
-type peerInfo struct {
-	Info    *peerstore.PeerInfo `json:"info"`
-	Latency string              `json:"latency"`
-}
-
 func getConnectedPeersFunc(node *network.Node) expvar.Func {
 	getConnectedPeers := func() interface{} {
-		var peers []peerInfo
-		for _, peer := range node.GetPeerManager().CloneStreamsToPeerInfoSlice() {
-			peers = append(peers, peerInfo{&peerstore.PeerInfo{peer.PeerId, peer.Addrs}, peer.Latency.String()})
-		}
-		return peers
+		return node.GetPeerManager().CloneStreamsToPeerInfoSlice()
 	}
 	return getConnectedPeers
 }

@@ -70,7 +70,7 @@ func TestGetConnectedPeersFunc(t *testing.T) {
 	err = node0.GetPeerManager().AddAndConnectPeer(node1.GetInfo())
 	assert.Nil(t, err)
 
-	peers := fun().([]peerInfo)
+	peers := fun().([]*network.PeerInfo)
 	assert.Equal(t, 1, len(peers))
-	assert.Equal(t, node1.GetPeerID(), peers[0].Info.ID)
+	assert.Equal(t, node1.GetPeerID(), peers[0].PeerId)
 }

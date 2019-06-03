@@ -20,6 +20,7 @@ package network
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -55,13 +56,13 @@ const (
 type PeerInfo struct {
 	PeerId  peer.ID
 	Addrs   []ma.Multiaddr
-	Latency time.Duration
+	Latency *float64 // average rtt of ping over last 10 seconds in milliseconds
 }
 
 type StreamInfo struct {
 	stream         *Stream
 	connectionType ConnectionType
-	latency        time.Duration
+	latency        *float64 // refer to PeerInfo.Latency
 }
 
 type SyncPeerContext struct {
@@ -364,6 +365,7 @@ func (pm *PeerManager) StartNewPingService(interval time.Duration) {
 func (pm *PeerManager) StopPingService() {
 	if pm.ping != nil {
 		pm.ping.stop <- true
+		pm.ping = nil
 	}
 }
 
@@ -371,15 +373,39 @@ func (pm *PeerManager) pingPeers() {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 	logger.Debug("PeerManager: pinging peers...")
+	var wg sync.WaitGroup
+	wg.Add(len(pm.streams))
 	for peerId, streamInfo := range pm.streams {
-		result, err := pm.ping.service.Ping(context.Background(), peerId)
-		if err != nil {
-			logger.WithError(err).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
+		go func() {
+			defer wg.Done()
+			pm.updatePeerLatency(peerId, streamInfo)
+		}()
+	}
+	wg.Wait()
+	logger.Debug("PeerManager: done pinging peers...")
+}
+
+func (pm *PeerManager) updatePeerLatency(peerId peer.ID, streamInfo *StreamInfo) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	result, err := pm.ping.service.Ping(ctx, peerId)
+	if err != nil {
+		logger.WithError(err).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
+		streamInfo.latency = nil
+	} else {
+		var count int64 = 0
+		var sum time.Duration = 0
+		for res := range result {
+			sum += res
+			count++
+		}
+		if count > 0 {
+			avg := float64(sum) / float64(count) / 1e6
+			streamInfo.latency = &avg
 		} else {
-			streamInfo.latency = <-result
+			streamInfo.latency = nil
 		}
 	}
-	logger.Debug("PeerManager: done pinging peers...")
 }
 
 func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*PeerInfo) {
@@ -846,4 +872,22 @@ func (p *PeerInfo) FromProto(pb proto.Message) error {
 	}
 
 	return nil
+}
+
+func (p *PeerInfo) MarshalJSON() ([]byte, error) {
+	peerInfo := &struct {
+		PeerInfo pstore.PeerInfo `json:"peerInfo"`
+		Latency  *float64        `json:"latency"` // encoded as value
+	}{
+		pstore.PeerInfo{ID: p.PeerId, Addrs: p.Addrs},
+		p.Latency,
+	}
+
+	bytes, err := json.Marshal(peerInfo)
+
+	if err != nil {
+		logger.WithField("peerInfo", peerInfo).Debug("PeerManager: unable to marshall peerInfo")
+	}
+
+	return bytes, err
 }
