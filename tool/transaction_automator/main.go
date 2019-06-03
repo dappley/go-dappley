@@ -71,7 +71,7 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet, *tx_automator_configpb.C
 }
 
 func waitTillBlockHeightTwo(ticker *tool.NextBlockTicker, dappSdk *sdk.DappSdk) {
-	logger.Info("Waiting till the second block is mined...")
+	logger.Info("Waiting till the next block is mined...")
 	for {
 		select {
 		case <-ticker.GetTickerChan():

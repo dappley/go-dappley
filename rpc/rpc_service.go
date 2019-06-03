@@ -278,14 +278,6 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			rpcService.node.GetBlockchain().GetTxPool().Push(tx)
 			verifiedTxs = append(verifiedTxs, tx)
 
-			if tx.IsContract() {
-				contractAddr := tx.GetContractAddress()
-				message := contractAddr.String()
-				logger.WithFields(logger.Fields{
-					"contractAddr": message,
-				}).Info("Smart Contract Deployed Successful!")
-			}
-
 			details = append(details, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
 				Code:    uint32(codes.OK),
