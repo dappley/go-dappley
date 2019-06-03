@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -95,6 +96,13 @@ func main() {
 	}
 	defer node.Stop()
 
+	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
+	conss.Setup(node, minerAddr)
+	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
+	logger.WithFields(logger.Fields{
+		"miner_address": minerAddr,
+	}).Info("Consensus is configured.")
+
 	bc.SetState(core.BlockchainReady)
 	node.DownloadBlocks(bc)
 
@@ -104,13 +112,6 @@ func main() {
 	defer server.Stop()
 
 	//start mining
-	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
-	conss.Setup(node, minerAddr)
-	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
-	logger.WithFields(logger.Fields{
-		"miner_address": minerAddr,
-	}).Info("Consensus is configured.")
-
 	logic.SetLockWallet() //lock the wallet
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 	conss.Start()

@@ -42,7 +42,7 @@ func NewGenesisBlock(address Address) *Block {
 		nonce:     0,
 		timestamp: 1532392928, //July 23,2018 17:42 PST
 		height:    0,
-		producer:  "",
+		producer:  address.Address,
 	}
 	b := &Block{
 		header:       header,
@@ -51,14 +51,4 @@ func NewGenesisBlock(address Address) *Block {
 
 	b.SetHash(b.CalculateHash())
 	return b
-}
-
-func CheckGenesisBlock(block *Block) bool {
-	if block == nil {
-		return false
-	}
-	if block.GetPrevHash().Equals([]byte{}) {
-		return true
-	}
-	return false
 }

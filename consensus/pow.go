@@ -22,9 +22,8 @@ import (
 	"math"
 	"math/big"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 const defaultTargetBits = 0
@@ -177,6 +176,6 @@ func (pow *ProofOfWork) GetProducers() []string {
 	return nil
 }
 
-func (pow *ProofOfWork) IsAcceptBlock(b *core.Block) bool {
-	return true
+func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }

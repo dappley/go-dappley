@@ -60,6 +60,7 @@ const (
 
 type BlockContext struct {
 	Block     *Block
+	Lib       *Block
 	UtxoIndex *UTXOIndex
 	State     *ScState
 }
@@ -237,16 +238,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
 		return ErrPrevHashVerifyFailed
 	}
-	if bc.GetState() == BlockchainSync || bc.GetState() == BlockchainReady {
-		if !ctx.Block.GetPrevHash().Equals([]byte{}) {
-			if bc.consensus != nil {
-				if !bc.consensus.IsAcceptBlock(ctx.Block) {
-					return ErrProducerNotEnough
-				}
-			}
-
-		}
-	}
 
 	blockLogger := logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
@@ -259,17 +250,18 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
+	if ctx.Lib != nil {
+		err := bcTemp.SetLIBHash(ctx.Lib.GetHash())
+		if err != nil {
+			blockLogger.Error("Blockchain: failed to set lib hash!")
+			return err
+		}
+	}
+
 	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
 		return err
-	}
-	if CheckGenesisBlock(ctx.Block) {
-		err = bcTemp.SetLIBHash(ctx.Block.GetHash())
-		if err != nil {
-			blockLogger.Error("Blockchain: failed to set last irreversible block hash!")
-			return err
-		}
 	}
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()

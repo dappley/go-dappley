@@ -59,7 +59,7 @@ func TestDpos_Start(t *testing.T) {
 
 func TestDpos_MultipleMiners(t *testing.T) {
 	const (
-		timeBetweenBlock = 5
+		timeBetweenBlock = 2
 		dposRounds       = 3
 	)
 
@@ -126,7 +126,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 
 func TestDPOS_UpdateLIB(t *testing.T) {
 	const (
-		timeBetweenBlock = 5
+		timeBetweenBlock = 2
 		dposRounds       = 3
 	)
 

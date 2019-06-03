@@ -24,15 +24,14 @@ import (
 	"strings"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	lru "github.com/hashicorp/golang-lru"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
-	ConsensusSize = defaultMaxProducers*2/3 + 1
+	MinConsensusSize = 4
 )
 
 type DPOS struct {
@@ -147,24 +146,8 @@ func (dpos *DPOS) Start() {
 					dpos.updateNewBlock(ctx)
 				}
 			case <-dpos.stopCh:
-				dpos.stopLibCh <- true
 				return
 
-			}
-		}
-	}()
-
-	go func() {
-		if len(dpos.stopLibCh) > 0 {
-			<-dpos.stopLibCh
-		}
-		updateLibTicker := time.NewTicker(time.Second * defaultTimeBetweenBlk).C
-		for {
-			select {
-			case <-updateLibTicker:
-				dpos.UpdateLIB()
-			case <-dpos.stopLibCh:
-				return
 			}
 		}
 	}()
@@ -281,6 +264,15 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn("DPoS: hash of the new block is invalid.")
 		return
 	}
+
+	// TODO Refactoring lib calculate position, check lib when create BlockContext instance
+	lib, ok := dpos.CheckLibPolicy(ctx.Block)
+	if !ok {
+		logger.Warn("DPoS: new block can not pass lib policy check.")
+		return
+	}
+	ctx.Lib = lib
+
 	err := dpos.node.GetBlockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
@@ -289,79 +281,53 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	dpos.node.BroadcastBlock(ctx.Block)
 }
 
-func (dpos *DPOS) UpdateLIB() {
-	bc := dpos.node.GetBlockchain()
-	lib, _ := bc.GetLIB()
-	tailBlock, _ := bc.GetTailBlock()
-	cur := tailBlock
-	miners := make(map[string]bool)
-
-	for !cur.GetHash().Equals(lib.GetHash()) {
-		producer := cur.GetProducer()
-		if int(cur.GetHeight())-int(lib.GetHeight()) < ConsensusSize-len(miners) {
-			logger.WithFields(logger.Fields{
-				"miners.limit":     ConsensusSize,
-				"miners.supported": len(miners),
-			}).Info("DPoS: failed to update latest irreversible block.")
-			return
-		}
-		miners[producer] = true
-		if len(miners) >= ConsensusSize {
-			if err := dpos.node.GetBlockchain().SetLIBHash(cur.GetHash()); err != nil {
-				logger.WithFields(logger.Fields{
-					"tail_hash": tailBlock.GetHash(),
-					"lib_hash":  cur.GetHash(),
-				}).Info("DPoS: failed to store latest irreversible block.")
-				return
-			}
-			logger.WithFields(logger.Fields{
-				"new lib_hash":     cur.GetHash(),
-				"old lib_hash":     lib.GetHash(),
-				"tail hash":        tailBlock.GetHash(),
-				"miners limit":     ConsensusSize,
-				"miners supported": len(miners),
-			}).Info("DPoS: Succeed to update latest irreversible block.")
-			return
-		}
-		tmp := cur
-		cur, _ = dpos.node.GetBlockchain().GetBlockByHash(cur.GetPrevHash())
-		if cur == nil || core.CheckGenesisBlock(cur) {
-			logger.WithFields(logger.Fields{
-				"tail": tailBlock,
-				"cur":  tmp,
-			}).Info("DPoS: failed to find latest irreversible block.")
-			return
-		}
+func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	//Do not check genesis block
+	if b.GetHeight() == 0 {
+		return b, true
 	}
-	logger.WithFields(logger.Fields{
-		"cur":              cur.GetHash(),
-		"lib":              lib.GetHash(),
-		"tail":             tailBlock.GetHash(),
-		"err":              "supported miners is not enough",
-		"miners.limit":     ConsensusSize,
-		"miners.supported": len(miners),
-	}).Info("DPoS: failed to update latest irreversible block.")
+
+	// If producers number is less than MinConsensusSize, pass all blocks
+	if len(dpos.dynasty.GetProducers()) < MinConsensusSize {
+		return nil, true
+	}
+
+	lib, err := dpos.node.GetBlockchain().GetLIB()
+	if err != nil {
+		logger.WithError(err).Warn("DPoS: get lib failed.")
+	}
+
+	libProduerNum := dpos.getLibProducerNum()
+	existProducers := make(map[string]int)
+
+	checkingBlock := b
+
+	for lib.GetHash().Equals(checkingBlock.GetHash()) == false {
+		_, ok := existProducers[checkingBlock.GetProducer()]
+		if ok {
+			logger.WithFields(logger.Fields{
+				"producer": checkingBlock.GetProducer(),
+			}).Info("DPoS: duplicate producer when check lib.")
+			return nil, false
+		}
+
+		existProducers[checkingBlock.GetProducer()] = 1
+		if len(existProducers) >= libProduerNum {
+			return checkingBlock, true
+		}
+
+		newBlock, err := dpos.node.GetBlockchain().GetBlockByHash(checkingBlock.GetPrevHash())
+		if err != nil {
+			logger.WithError(err).Warn("DPoS: get parent block failed.")
+		}
+
+		checkingBlock = newBlock
+	}
+
+	// No enough checking blocks
+	return nil, true
 }
 
-func (dpos *DPOS) IsAcceptBlock(b *core.Block) bool {
-
-	bc := dpos.node.GetBlockchain()
-	lib, _ := bc.GetLIB()
-	tailBlock, _ := bc.GetTailBlock()
-	cur := tailBlock
-	miners := make(map[string]bool)
-
-	for !cur.GetHash().Equals(lib.GetHash()) {
-
-		producer := cur.GetProducer()
-		miners[producer] = true
-		cur, _ = dpos.node.GetBlockchain().GetBlockByHash(cur.GetPrevHash())
-
-	}
-
-	if _, ok := miners[b.GetProducer()]; ok && len(miners) < ConsensusSize {
-		return false
-	}
-
-	return true
+func (dpos *DPOS) getLibProducerNum() int {
+	return len(dpos.dynasty.GetProducers())*2/3 + 1
 }
