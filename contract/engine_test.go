@@ -33,7 +33,8 @@ var addrChecker = new AddrChecker;
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	assert.Equal(t, "35", sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
+	ret, _ := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	assert.Equal(t, "35", ret)
 }
 
 func TestScEngine_Execute_SyntaxError(t *testing.T) {
@@ -54,7 +55,8 @@ var addrChecker = new AddrChecker;
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	assert.Equal(t, "1", sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
+	ret, _ := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	assert.Equal(t, "1", ret)
 }
 
 func TestScEngine_BlockchainTransfer(t *testing.T) {
@@ -92,7 +94,7 @@ var transferTest = new MathTest;`
 	sc.ImportContractAddr(contractAddr)
 	sc.ImportSourceTXID([]byte("thatTX"))
 	sc.ImportUTXOs(contractUTXOs)
-	result := sc.Execute("transfer", "'16PencPNnF8CiSx2EBGEd1axhf7vuHCouj','10','2'")
+	result, _ := sc.Execute("transfer", "'16PencPNnF8CiSx2EBGEd1axhf7vuHCouj','10','2'")
 
 	assert.Equal(t, "0", result)
 	if assert.Equal(t, 1, len(sc.generatedTXs)) {
@@ -138,7 +140,8 @@ var storageTest = new StorageTest;
 	sc.ImportSourceCode(script)
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	sc.ImportLocalStorage(ss)
-	assert.Equal(t, "7", sc.Execute("get", "\"key\""))
+	ret, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "7", ret)
 }
 
 func TestScEngine_StorageSet(t *testing.T) {
@@ -172,12 +175,18 @@ var storageTest = new StorageTest;
 	sc.ImportLocalStorage(ss)
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 
-	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
-	assert.Equal(t, "6", sc.Execute("get", "\"key\""))
-	assert.Equal(t, "0", sc.Execute("set", "\"key\",\"abcd\""))
-	assert.Equal(t, "abcd", sc.Execute("get", "\"key\""))
-	assert.Equal(t, "0", sc.Execute("setColor", "\"key\",\"BLACK\""))
-	assert.Equal(t, "BLACK", sc.Execute("getColor", "\"key\""))
+	ret, _ := sc.Execute("set", "\"key\",6")
+	assert.Equal(t, "0", ret)
+	ret2, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "6", ret2)
+	ret3, _ := sc.Execute("set", "\"key\",\"abcd\"")
+	assert.Equal(t, "0", ret3)
+	ret4, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "abcd", ret4)
+	ret5, _ := sc.Execute("setColor", "\"key\",\"BLACK\"")
+	assert.Equal(t, "0", ret5)
+	ret6, _ := sc.Execute("getColor", "\"key\"")
+	assert.Equal(t, "BLACK", ret6)
 }
 
 func TestScEngine_StorageDel(t *testing.T) {
@@ -206,9 +215,12 @@ var storageTest = new StorageTest;
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
-	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
-	assert.Equal(t, "0", sc.Execute("del", "\"key\""))
-	assert.Equal(t, "null", sc.Execute("get", "\"key\""))
+	ret, _ := sc.Execute("set", "\"key\",6")
+	assert.Equal(t, "0", ret)
+	ret2, _ := sc.Execute("del", "\"key\"")
+	assert.Equal(t, "0", ret2)
+	ret3, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "null", ret3)
 }
 
 func TestScEngine_Reward(t *testing.T) {
@@ -231,8 +243,10 @@ var rewardTest = new RewardTest;
 	sc.ImportSourceCode(script)
 	sc.ImportRewardStorage(ss)
 
-	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"8\""))
-	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"9\""))
+	ret, _ := sc.Execute("reward", "\"myAddr\",\"8\"")
+	assert.Equal(t, "0", ret)
+	ret2, _ := sc.Execute("reward", "\"myAddr\",\"9\"")
+	assert.Equal(t, "0", ret2)
 	assert.Equal(t, "17", ss["myAddr"])
 }
 
@@ -287,13 +301,16 @@ func TestStepRecord(t *testing.T) {
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
 
-	assert.Equal(t, "0", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20"))
+	ret, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20")
+	assert.Equal(t, "0", ret)
 	assert.Equal(t, "20", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "0", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15"))
+	ret2, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15")
+	assert.Equal(t, "0", ret2)
 	assert.Equal(t, "35", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "0", sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10"))
+	ret3, _ := sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10")
+	assert.Equal(t, "0", ret3)
 	assert.Equal(t, "10", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
@@ -311,17 +328,17 @@ func TestCrypto_VerifySignature(t *testing.T) {
 	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
 	data := sha256.Sum256([]byte(msg))
 	signature, _ := secp256k1.Sign(data[:], privData)
-
+	ret, _ := sc.Execute("verifySig",
+		fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
+			msg,
+			hex.EncodeToString(kp.PublicKey),
+			hex.EncodeToString(signature),
+		),
+	)
 	assert.Equal(
 		t,
 		"true",
-		sc.Execute("verifySig",
-			fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
-				msg,
-				hex.EncodeToString(kp.PublicKey),
-				hex.EncodeToString(signature),
-			),
-		),
+		ret,
 	)
 }
 
@@ -338,25 +355,27 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	addr := pkh.GenerateAddress()
 	fmt.Println(addr)
 
+	ret, _ := sc.Execute("verifyPk",
+		fmt.Sprintf("\"%s\", \"%s\"",
+			addr,
+			hex.EncodeToString(kp.PublicKey),
+		),
+	)
 	assert.Equal(
 		t,
 		"true",
-		sc.Execute("verifyPk",
-			fmt.Sprintf("\"%s\", \"%s\"",
-				addr,
-				hex.EncodeToString(kp.PublicKey),
-			),
+		ret,
+	)
+	ret2, _ := sc.Execute("verifyPk",
+		fmt.Sprintf("\"%s\", \"%s\"",
+			"IncorrectAddress",
+			hex.EncodeToString(kp.PublicKey),
 		),
 	)
 	assert.Equal(
 		t,
 		"false",
-		sc.Execute("verifyPk",
-			fmt.Sprintf("\"%s\", \"%s\"",
-				"IncorrectAddress",
-				hex.EncodeToString(kp.PublicKey),
-			),
-		),
+		ret2,
 	)
 }
 
@@ -367,7 +386,7 @@ func TestMath(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportSeed(10)
 
-	res := sc.Execute("random", "20")
+	res, _ := sc.Execute("random", "20")
 	assert.Equal(t, "14", res)
 }
 
@@ -378,7 +397,8 @@ func TestBlkHeight(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportCurrBlockHeight(22334)
 
-	assert.Equal(t, "22334", sc.Execute("getBlkHeight", ""))
+	ret, _ := sc.Execute("getBlkHeight", "")
+	assert.Equal(t, "22334", ret)
 }
 
 func TestRecordEvent(t *testing.T) {
@@ -389,7 +409,8 @@ func TestRecordEvent(t *testing.T) {
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
 
-	assert.Equal(t, "0", sc.Execute("trigger", "\"topic\",\"data\""))
+	ret, _ := sc.Execute("trigger", "\"topic\",\"data\"")
+	assert.Equal(t, "0", ret)
 	assert.Equal(t, "topic", ss.GetEvents()[0].GetTopic())
 	assert.Equal(t, "data", ss.GetEvents()[0].GetData())
 }
@@ -409,7 +430,8 @@ func TestGetNodeAddress(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportNodeAddress(core.NewAddress("testAddr"))
 
-	assert.Equal(t, "testAddr", sc.Execute("getNodeAddress", ""))
+	ret, _ := sc.Execute("getNodeAddress", "")
+	assert.Equal(t, "testAddr", ret)
 }
 
 func TestNewAddress(t *testing.T) {

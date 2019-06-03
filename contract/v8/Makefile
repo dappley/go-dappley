@@ -19,7 +19,7 @@ LIB_OBJ_FILES := $(patsubst $(LIB_SRC_DIR)/%.cc,$(LIB_SRC_DIR)/%.cc.o,$(LIB_SRC_
 %.cc.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $<.o
 
-build: engine.cc.o $(LIB_OBJ_FILES)
+build: engine.cc.o thread_engine.cc.o $(LIB_OBJ_FILES)
 	$(CXX) -shared -fvisibility=hidden $^ -o ../lib/libdappleyv8.$(FILESUFFIX) -L../lib -lv8 -lv8_libbase -lv8_libplatform -licui18n -licuuc -lc++ -lpthread
 
 install: build

@@ -17,28 +17,13 @@
 // <http://www.gnu.org/licenses/>.
 //
 
-#ifndef _NEBULAS_NF_NVM_V8_LIB_FILE_H_
-#define _NEBULAS_NF_NVM_V8_LIB_FILE_H_
+#ifndef _NEBULAS_NF_NVM_V8_LIB_EXECUTION_ENV_H_
+#define _NEBULAS_NF_NVM_V8_LIB_EXECUTION_ENV_H_
 
-#include <stddef.h>
+#include <v8.h>
 
-#define MAX_PATH_LEN    1024
-#define MAX_VERSION_LEN 64
-#define MAX_VERSIONED_PATH_LEN 1088
+using namespace v8;
 
-/*#ifdef _WIN32
-    #define FILE_SEPARATOR "\\"
-    #define LIB_DIR     "\\lib"
-    #define EXECUTION_FILE  "\\execution_env.js"
-#else
-    #define FILE_SEPARATOR "/"
-    #define LIB_DIR     "/lib"
-    #define EXECUTION_FILE  "/execution_env.js"
-#endif //WIN32*/
+int SetupExecutionEnv(Isolate *isolate, Local<Context> &context);
 
-char *readFile(const char *filepath, size_t *size);
-
-bool isFile(const char *file);
-bool getCurAbsolute(char *curCwd, int len);
-
-#endif // _NEBULAS_NF_NVM_V8_LIB_FILE_H_
+#endif // _NEBULAS_NF_NVM_V8_LIB_EXECUTION_ENV_H_

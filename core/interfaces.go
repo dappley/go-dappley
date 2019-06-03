@@ -68,5 +68,7 @@ type ScEngine interface {
 	ImportSeed(seed int64)
 	ImportNodeAddress(addr Address)
 	GetGeneratedTXs() []*Transaction
-	Execute(function, args string) string
+	Execute(function, args string) (string, error)
+	SetExecutionLimits(uint64, uint64) error
+	ExecutionInstructions() uint64
 }

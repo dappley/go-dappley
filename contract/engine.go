@@ -4,6 +4,10 @@ package vm
 #cgo LDFLAGS: -L${SRCDIR}/lib -ldappleyv8
 #include <stdlib.h>
 #include "v8/engine.h"
+
+char *Cgo_RequireDelegateFunc(void *handler, const char *filename, size_t *lineOffset);
+char *Cgo_AttachLibVersionDelegateFunc(void *handler, const char *libname);
+
 //blockchain
 bool  Cgo_VerifyAddressFunc(const char *address);
 int	  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
@@ -33,6 +37,9 @@ void  Cgo_Free(void* address);
 import "C"
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/crypto/byteutils"
+	"github.com/dappley/go-dappley/crypto/hash"
+	"github.com/hashicorp/golang-lru"
 	"sync"
 	"unsafe"
 
@@ -42,10 +49,25 @@ import (
 )
 
 var (
-	v8once        = sync.Once{}
-	v8EngineList  = make(map[uint64]*V8Engine)
-	storagesMutex = sync.RWMutex{}
-	currHandler   = uint64(100)
+	v8once               = sync.Once{}
+	v8EngineList         = make(map[uint64]*V8Engine)
+	storagesMutex        = sync.RWMutex{}
+	currHandler          = uint64(100)
+	sourceModuleCache, _ = lru.New(40960)
+	engines              = make(map[*C.V8Engine]*V8Engine, 1024)
+	enginesLock          = sync.RWMutex{}
+)
+
+const (
+	ExecutionFailedErr  = 1
+	ExecutionTimeOutErr = 2
+
+	// ExecutionTimeout max v8 execution timeout.
+	ExecutionTimeout                 = 15 * 1000 * 1000
+	OriginExecutionTimeout           = 5 * 1000 * 1000
+	CompatibleExecutionTimeout       = 20 * 1000 * 1000
+	TimeoutGasLimitCost              = 100000000
+	MaxLimitsOfExecutionInstructions = 10000000 // TODO: set max gasLimit with execution 5s *0.8
 )
 
 type V8Engine struct {
@@ -63,11 +85,31 @@ type V8Engine struct {
 	seed          int64
 	nodeAddr      core.Address
 
-	v8engine *C.V8Engine
+	modules                                 Modules
+	v8engine                                *C.V8Engine
+	strictDisallowUsageOfInstructionCounter int
+	enableLimits                            bool
+	limitsOfExecutionInstructions           uint64
+	limitsOfTotalMemorySize                 uint64
+	actualCountOfExecutionInstructions      uint64
+	actualTotalMemorySize                   uint64
+	innerErrMsg                             string
+	innerErr                                error
+}
+
+type sourceModuleItem struct {
+	source                    string
+	sourceLineOffset          int
+	traceableSource           string
+	traceableSourceLineOffset int
 }
 
 func InitializeV8Engine() {
 	C.Initialize()
+	// Require.
+	C.InitializeRequireDelegate((C.RequireDelegate)(unsafe.Pointer(C.Cgo_RequireDelegateFunc)), (C.AttachLibVersionDelegate)(unsafe.Pointer(C.Cgo_AttachLibVersionDelegateFunc)))
+	// execution_env require
+	C.InitializeExecutionEnvDelegate((C.AttachLibVersionDelegate)(unsafe.Pointer(C.Cgo_AttachLibVersionDelegateFunc)))
 	C.InitializeBlockchain(
 		(C.FuncVerifyAddress)(unsafe.Pointer(C.Cgo_VerifyAddressFunc)),
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
@@ -95,17 +137,30 @@ func InitializeV8Engine() {
 func NewV8Engine() *V8Engine {
 	v8once.Do(func() { InitializeV8Engine() })
 	engine := &V8Engine{
-		source:       "",
-		state:        nil,
-		tx:           nil,
-		contractAddr: core.NewAddress(""),
-		handler:      currHandler,
-		v8engine:     C.CreateEngine(),
+		source:                             "",
+		state:                              nil,
+		tx:                                 nil,
+		contractAddr:                       core.NewAddress(""),
+		handler:                            currHandler,
+		modules:                            NewModules(),
+		v8engine:                           C.CreateEngine(),
+		enableLimits:                       true,
+		limitsOfExecutionInstructions:      0,
+		limitsOfTotalMemorySize:            0,
+		actualCountOfExecutionInstructions: 0,
+		actualTotalMemorySize:              0,
 	}
 	currHandler++
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	v8EngineList[engine.handler] = engine
+
+	(func() {
+		enginesLock.Lock()
+		defer enginesLock.Unlock()
+		engines[engine.v8engine] = engine
+	})()
+
 	return engine
 }
 
@@ -116,6 +171,7 @@ func (sc *V8Engine) DestroyEngine() {
 	delete(v8EngineList, sc.handler)
 
 	C.DeleteEngine(sc.v8engine)
+	delete(engines, sc.v8engine)
 }
 
 func (sc *V8Engine) ImportSourceCode(source string) {
@@ -175,45 +231,257 @@ func (sc *V8Engine) ImportNodeAddress(addr core.Address) {
 	sc.nodeAddr = addr
 }
 
-func (sc *V8Engine) Execute(function, args string) string {
-	res := "\"\""
-	status := "success"
-	var result *C.char
+// ClearModuleCache ..
+func ClearSourceModuleCache() {
+	sourceModuleCache.Purge()
+}
+
+// AddModule add module.
+func (e *V8Engine) AddModule(id, source string, sourceLineOffset int) error {
+	// inject tracing instruction when enable limits.
+	if e.enableLimits {
+		var item *sourceModuleItem
+		sourceHash := byteutils.Hex(hash.Sha3256([]byte(source)))
+
+		// try read from cache.
+		if sourceModuleCache.Contains(sourceHash) { //ToDo cache whether need into db
+			value, _ := sourceModuleCache.Get(sourceHash)
+			item = value.(*sourceModuleItem)
+		}
+		if item == nil {
+			traceableSource, lineOffset, err := e.InjectTracingInstructions(source)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"err": err,
+				}).Debug("Failed to inject tracing instruction.")
+				return err
+			}
+
+			item = &sourceModuleItem{
+				source:                    source,
+				sourceLineOffset:          sourceLineOffset,
+				traceableSource:           traceableSource,
+				traceableSourceLineOffset: lineOffset,
+			}
+			// put to cache.
+			sourceModuleCache.Add(sourceHash, item)
+		}
+
+		source = item.traceableSource
+		sourceLineOffset = item.traceableSourceLineOffset
+	}
+	e.modules.Add(NewModule(id, source, sourceLineOffset))
+	return nil
+}
+
+func (sc *V8Engine) Execute(function, args string) (string, error) {
+	var err error
 
 	cSource := C.CString(sc.source)
 	defer C.free(unsafe.Pointer(cSource))
 	C.InitializeSmartContract(cSource)
 
-	functionCallScript := prepareFuncCallScript(function, args)
-	cFunction := C.CString(functionCallScript)
-	defer C.free(unsafe.Pointer(cFunction))
-
-	if C.executeV8Script(cFunction, C.uintptr_t(sc.handler), &result, sc.v8engine) > 0 {
-		status = "failed"
+	var runnableSource string
+	var sourceLineOffset int
+	runnableSource, sourceLineOffset, err = sc.prepareFuncCallScript(sc.source, function, args)
+	if err != nil {
+		logger.Error(err)
+		return "", err
 	}
-
-	if result != nil {
-		res = C.GoString(result)
-		C.free(unsafe.Pointer(result))
-	}
-
+	logger.Error("before CollectTracingStats")
+	sc.CollectTracingStats()
+	mem := sc.actualTotalMemorySize + core.DefaultLimitsOfTotalMemorySize
 	logger.WithFields(logger.Fields{
-		"result": res,
-		"status": status,
+		"actualTotalMemorySize": sc.actualTotalMemorySize,
+		"limit":                 mem,
+	}).Info("mem limit")
+	if err := sc.SetExecutionLimits(sc.limitsOfExecutionInstructions, mem); err != nil {
+		logger.Error(err)
+		return "", err
+	}
+	// set max
+	if sc.limitsOfExecutionInstructions > MaxLimitsOfExecutionInstructions {
+		sc.SetExecutionLimits(MaxLimitsOfExecutionInstructions, sc.limitsOfTotalMemorySize)
+	}
+
+	result, err := sc.RunScriptSource(runnableSource, sourceLineOffset)
+
+	if sc.limitsOfExecutionInstructions == MaxLimitsOfExecutionInstructions && err == ErrInsufficientGas {
+		err = ErrExecutionTimeout
+		result = "\"null\""
+	}
+	logger.WithFields(logger.Fields{
+		"result": result,
 	}).Info("V8Engine: smart contract execution ends.")
-	return res
+	return result, err
 }
 
-func prepareFuncCallScript(function, args string) string {
-	return fmt.Sprintf(
-		`var instance = new _native_require();instance["%s"].apply(instance, [%s]);`,
-		function,
-		args,
+// RunScriptSource run js source.
+func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int) (string, error) {
+	var (
+		result  string
+		err     error
+		ret     C.int
+		cResult *C.char
 	)
+	cFunction := C.CString(runnableSource)
+	defer C.free(unsafe.Pointer(cFunction))
+	logger.Info("before executeV8Script...")
+	ret = C.executeV8Script(cFunction, C.int(sourceLineOffset), C.uintptr_t(sc.handler), &cResult, sc.v8engine)
+	sc.CollectTracingStats()
+
+	if sc.innerErr != nil {
+		if sc.innerErrMsg == "" { //the first call of muti-nvm
+			result = "Inner Contract: \"\""
+		} else {
+			result = "Inner Contract: " + sc.innerErrMsg
+		}
+		err := sc.innerErr
+		if cResult != nil {
+			C.free(unsafe.Pointer(cResult))
+		}
+		if sc.actualCountOfExecutionInstructions > sc.limitsOfExecutionInstructions {
+			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
+		}
+		return result, err
+	}
+	logger.WithFields(logger.Fields{
+		"ret":                           ret,
+		"insr":                          sc.actualCountOfExecutionInstructions,
+		"memo":                          sc.actualTotalMemorySize,
+		"limitsOfExecutionInstructions": sc.limitsOfExecutionInstructions,
+		"limitsOfTotalMemorySize":       sc.limitsOfTotalMemorySize,
+	}).Info("V8Engine: ret.")
+
+	if ret == C.VM_EXE_TIMEOUT_ERR {
+		err = ErrExecutionTimeout
+		if TimeoutGasLimitCost > sc.limitsOfExecutionInstructions {
+			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
+		} else {
+			sc.actualCountOfExecutionInstructions = TimeoutGasLimitCost
+		}
+	} else if ret == C.VM_UNEXPECTED_ERR {
+		err = ErrUnexpected
+	} else if ret == C.VM_INNER_EXE_ERR {
+		err = ErrInnerExecutionFailed
+		if sc.limitsOfExecutionInstructions < sc.actualCountOfExecutionInstructions {
+			logger.WithFields(logger.Fields{
+				"actualGas": sc.actualCountOfExecutionInstructions,
+				"limitGas":  sc.limitsOfExecutionInstructions,
+			}).Error("Unexpected error: actual gas exceed the limit")
+		}
+	} else {
+		if ret != C.VM_SUCCESS {
+			err = ErrExecutionFailed
+		}
+		if sc.limitsOfExecutionInstructions > 0 &&
+			sc.limitsOfExecutionInstructions < sc.actualCountOfExecutionInstructions {
+			// Reach instruction limits.
+			err = ErrInsufficientGas
+			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
+		} else if sc.limitsOfTotalMemorySize > 0 && sc.limitsOfTotalMemorySize < sc.actualTotalMemorySize {
+			// reach memory limits.
+			err = ErrExceedMemoryLimits
+			sc.actualCountOfExecutionInstructions = sc.limitsOfExecutionInstructions
+		}
+	}
+
+	if cResult != nil {
+		result = C.GoString(cResult)
+		C.free(unsafe.Pointer(cResult))
+	} else if ret == C.VM_SUCCESS {
+		result = "\"\"" // default JSON String.
+	}
+
+	return result, err
+}
+
+func (sc *V8Engine) prepareFuncCallScript(source, function, args string) (string, int, error) {
+	sourceLineOffset := 0
+
+	// add module.
+	const ModuleID string = "contract.js"
+	if err := sc.AddModule(ModuleID, source, sourceLineOffset); err != nil {
+		logger.WithFields(logger.Fields{
+			"ModuleID": ModuleID,
+		}).Error(err)
+		return "", 0, err
+	}
+	var runnableSource string
+	runnableSource = fmt.Sprintf(`var __contract = require("%s");var __instance = new __contract();__instance["%s"].apply(__instance, [%s]);`,
+		ModuleID, function, args) //TODO: freeze?
+	logger.WithFields(logger.Fields{
+		"runnableSource": runnableSource,
+	}).Error("prepareFuncCallScript runnableSource")
+	return runnableSource, 0, nil
 }
 
 func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	return v8EngineList[handler]
+}
+
+func getEngineByEngineHandler(handler unsafe.Pointer) *V8Engine {
+	v8engine := (*C.V8Engine)(handler)
+	enginesLock.RLock()
+	defer enginesLock.RUnlock()
+
+	return engines[v8engine]
+}
+
+// CollectTracingStats collect tracing data from v8 engine.
+func (sc *V8Engine) CollectTracingStats() {
+	// read memory stats.
+	C.ReadMemoryStatistics(sc.v8engine)
+
+	sc.actualCountOfExecutionInstructions = uint64(sc.v8engine.stats.count_of_executed_instructions)
+	sc.actualTotalMemorySize = uint64(sc.v8engine.stats.total_memory_size)
+}
+
+// SetExecutionLimits set execution limits of V8 Engine, prevent Halting Problem.
+func (e *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
+
+	e.v8engine.limits_of_executed_instructions = C.size_t(limitsOfExecutionInstructions)
+	e.v8engine.limits_of_total_memory_size = C.size_t(limitsOfTotalMemorySize)
+
+	logger.WithFields(logger.Fields{
+		"limits_of_executed_instructions": limitsOfExecutionInstructions,
+		"limits_of_total_memory_size":     limitsOfTotalMemorySize,
+	}).Debug("set execution limits.")
+
+	e.limitsOfExecutionInstructions = limitsOfExecutionInstructions
+	e.limitsOfTotalMemorySize = limitsOfTotalMemorySize
+
+	if limitsOfExecutionInstructions == 0 || limitsOfTotalMemorySize == 0 {
+		logger.Error("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, limitsOfTotalMemorySize)
+		return ErrLimitHasEmpty
+	}
+	// V8 needs at least 6M heap memory.
+	if limitsOfTotalMemorySize > 0 && limitsOfTotalMemorySize < 6000000 {
+		logger.Error("V8 needs at least 6M (6000000) heap memory, your limitsOfTotalMemorySize (%d) is too low.", limitsOfTotalMemorySize)
+		return ErrSetMemorySmall
+	}
+	return nil
+}
+
+// InjectTracingInstructions process the source to inject tracing instructions.
+func (e *V8Engine) InjectTracingInstructions(source string) (string, int, error) {
+	cSource := C.CString(source)
+	defer C.free(unsafe.Pointer(cSource))
+
+	lineOffset := C.int(0)
+
+	traceableCSource := C.InjectTracingInstructionsThread(e.v8engine, cSource, &lineOffset, C.int(e.strictDisallowUsageOfInstructionCounter))
+	if traceableCSource == nil {
+		return "", 0, ErrInjectTracingInstructionFailed
+	}
+
+	defer C.free(unsafe.Pointer(traceableCSource))
+	return C.GoString(traceableCSource), int(lineOffset), nil
+}
+
+// ExecutionInstructions returns the execution instructions
+func (e *V8Engine) ExecutionInstructions() uint64 {
+	return e.actualCountOfExecutionInstructions
 }

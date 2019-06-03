@@ -34,6 +34,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
+
 type BlockHeader struct {
 	hash      Hash
 	prevHash  Hash
@@ -317,7 +319,10 @@ L:
 				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
 				return false
 			}
-
+			// TODO GAS LIMIT
+			if err := scEngine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
+				return false
+			}
 			ctx.Execute(*utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			utxoIndex.UpdateUtxo(tx)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)

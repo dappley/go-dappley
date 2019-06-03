@@ -134,7 +134,19 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			utxoIndex.UpdateUtxo(tx)
 			continue
 		}
-		generatedTXs = append(generatedTXs, ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		gasCount, newTxs, err := ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+		if err != nil {
+			// add utxo from txs into utxoIndex
+			utxoIndex.UpdateUtxo(tx)
+			continue
+		}
+		// TODO recored gas used
+		logger.WithFields(logger.Fields{
+			"gasCount": gasCount,
+		}).Info("Gas used.")
+		//minerAddr := core.NewAddress(bp.beneficiary)
+
+		generatedTXs = append(generatedTXs, newTxs...)
 		// add utxo from txs into utxoIndex
 		utxoIndex.UpdateUtxo(tx)
 	}

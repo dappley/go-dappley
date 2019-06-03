@@ -8,6 +8,7 @@
 #include <v8.h>
 #include <libplatform/libplatform.h>
 #include "engine.h"
+#include "engine_int.h"
 #include "lib/allocator.h"
 #include "lib/instruction_counter.h"
 #include "lib/blockchain.h"
@@ -23,13 +24,17 @@
 #include "lib/math.h"
 #include "lib/memory.h"
 #include "lib/vm_error.h"
+#include "lib/global.h"
+#include "lib/execution_env.h"
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
-static char* wrapReturnResult(const char* src);
+//static char* wrapReturnResult(const char* src);
 
 #define ExecuteTimeOut  5*1000*1000
 void EngineLimitsCheckDelegate(Isolate *isolate, size_t count, void *listenerContext);
+void PrintException(Isolate *isolate, Local<Context> context, TryCatch &trycatch);
+void PrintAndReturnException(Isolate *isolate, char **exception, Local<Context> context, TryCatch &trycatch);
 
 void Initialize(){
     // Initialize V8.
@@ -88,87 +93,152 @@ void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
   }
 }
 
-int executeV8Script(const char *sourceCode, uintptr_t handler, char **result, V8Engine *e) {
+//int ExecuteSourceDataDelegate(char **result, Isolate *isolate, const char *sourceCode,
+//                             int source_line_offset, Local<Context> context,
+//                             TryCatch &trycatch, void *delegateContext){
+//// Create a string containing the JavaScript source code.
+//      printf("ExecuteSourceDataDelegate source %s\n", sourceCode);
+//     Local<String> source = String::NewFromUtf8(
+//       isolate,
+//       sourceCode,
+//       NewStringType::kNormal
+//     ).ToLocalChecked();
+//
+//     // Compile the source code.
+//     ScriptOrigin sourceSrcOrigin(
+//         String::NewFromUtf8(isolate, "_contract_runner.js"),
+//         Integer::New(isolate, source_line_offset));
+//     MaybeLocal<Script> script = Script::Compile(context, source, &sourceSrcOrigin);
+//
+//     if (script.IsEmpty()) {
+//     printf("ExecuteSourceDataDelegate IsEmpty\n");
+//       reportException(isolate, &trycatch);
+//       *result = wrapReturnResult("1");
+//       return VM_EXCEPTION_ERR;
+//     }
+//
+//     // Run the script to get the result.
+//     Local<Value> scriptRes;
+//     if (!script.ToLocalChecked()->Run(context).ToLocal(&scriptRes)) {
+//     printf("ExecuteSourceDataDelegate VM_EXCEPTION_ERR\n");
+//       assert(trycatch.HasCaught());
+//       reportException(isolate, &trycatch);
+//       *result = wrapReturnResult("1");
+//       return VM_EXCEPTION_ERR;
+//     }
+//
+//     // set result.
+//     if (result != NULL)  {
+//     printf("ExecuteSourceDataDelegate hashresult\n");
+//       Local<Object> obj = scriptRes.As<Object>();
+//       if (!obj->IsUndefined()) {
+//       printf("ExecuteSourceDataDelegate result end\n");
+//         String::Utf8Value str(isolate, obj);
+//         *result = wrapReturnResult(*str);
+//       }
+//     }
+//
+// return VM_SUCCESS;
+//}
+
+ int ExecuteSourceDataDelegate(char **result, Isolate *isolate,
+                               const char *source, int source_line_offset,
+                               Local<Context> context, TryCatch &trycatch,
+                               void *delegateContext) {
+   // Create a string containing the JavaScript source code.
+   Local<String> src =
+       String::NewFromUtf8(isolate, source, NewStringType::kNormal)
+           .ToLocalChecked();
+
+   // Compile the source code.
+   ScriptOrigin sourceSrcOrigin(
+       String::NewFromUtf8(isolate, "_contract_runner.js"),
+       Integer::New(isolate, source_line_offset));
+   MaybeLocal<Script> script = Script::Compile(context, src, &sourceSrcOrigin);
+
+   if (script.IsEmpty()) {
+     PrintAndReturnException(isolate, result, context, trycatch);
+     return VM_EXCEPTION_ERR;
+   }
+   // Run the script to get the result.
+   MaybeLocal<Value> ret = script.ToLocalChecked()->Run(context);
+   if (ret.IsEmpty()) {
+     PrintAndReturnException(isolate, result, context, trycatch);
+     return VM_EXCEPTION_ERR;
+   }
+   // set result.
+   if (result != NULL) {
+     Local<Object> obj = ret.ToLocalChecked().As<Object>();
+     if (!obj->IsUndefined()) {
+       MaybeLocal<String> json_result = v8::JSON::Stringify(context, obj);
+       if (!json_result.IsEmpty()) {
+         String::Utf8Value str(isolate, json_result.ToLocalChecked());
+         *result = (char *)malloc(str.length() + 1);
+         strcpy(*result, *str);
+       }
+     }
+   }
+
+   return VM_SUCCESS;
+ }
+
+int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e){
+//    return Execute(sourceCode, source_line_offset, handler, result, e, ExecuteSourceDataDelegate, NULL);
+    return RunScriptSourceThread(result, e, sourceCode, source_line_offset, 0L, 0L);
+}
+
+int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext)
+{
   // Create a new Isolate and make it the current one.
-  Isolate* isolate = static_cast<Isolate *>(e->isolate);
+  Isolate *isolate = static_cast<Isolate *>(e->isolate);
   Locker locker(isolate);
-  int errorCode = 0;
 
+  Isolate::Scope isolate_scope(isolate);
+
+  // Create a stack-allocated handle scope.
+  HandleScope handle_scope(isolate);
+  //
+  Local<ObjectTemplate> globalTpl = CreateGlobalObjectTemplate(isolate);
+
+  // Set up an exception handler
+  TryCatch try_catch(isolate);
+
+  // Create a new context.
+  Local<Context> context = v8::Context::New(isolate, NULL, globalTpl);
+
+  // Enter the context for compiling and running the hello world script.
+  Context::Scope context_scope(context);
+
+  printf("before NewBlockchainInstance .... \n");
+  // Continue put objects to global object.
+  SetGlobalObjectProperties(isolate, context, e, (void *)handler);
+
+  // Setup execution env.
+  if (SetupExecutionEnv(isolate, context))
   {
-    Isolate::Scope isolate_scope(isolate);
-
-    // Create a stack-allocated handle scope.
-    HandleScope handle_scope(isolate);
-    //
-    Local<ObjectTemplate> globalTpl = NewNativeRequireFunction(isolate);
-
-    // Set up an exception handler
-    TryCatch try_catch(isolate);
-
-    // Create a new context.
-    Local<Context> context = v8::Context::New(isolate, NULL, globalTpl);
-
-    // Enter the context for compiling and running the hello world script.
-    Context::Scope context_scope(context);
-    NewBlockchainInstance(isolate, context, (void *)handler);
-    NewCryptoInstance(isolate, context, (void *)handler);
-    NewStorageInstance(isolate, context, (void *)handler);
-    NewLoggerInstance(isolate, context, (void *)handler);
-    NewTransactionInstance(isolate, context, (void *)handler);
-    NewRewardDistributorInstance(isolate, context, (void *)handler);
-    NewPrevUtxoInstance(isolate, context, (void *)handler);
-    NewMathInstance(isolate, context, (void *)handler);
-    NewEventInstance(isolate, context, (void *)handler);
-
-    NewInstructionCounterInstance(isolate, context,
-                                    &(e->stats.count_of_executed_instructions), e);
-    LoadLibraries(isolate, context);
-    {
-
-      // Create a string containing the JavaScript source code.
-      Local<String> source = String::NewFromUtf8(
-        isolate,
-        sourceCode,
-        NewStringType::kNormal
-      ).ToLocalChecked();
-
-      // Compile the source code.
-      Local<Script> script;
-      if (!Script::Compile(context, source).ToLocal(&script)) {
-        reportException(isolate, &try_catch);
-        *result = wrapReturnResult("1");
-        errorCode = 1;
-        return errorCode;
-      }
-      // Run the script to get the result.
-      Local<Value> scriptRes;
-      if (!script->Run(context).ToLocal(&scriptRes)) {
-        assert(try_catch.HasCaught());
-        reportException(isolate, &try_catch);
-        *result = wrapReturnResult("1");
-        errorCode = 1;
-        return errorCode;
-      }
-
-      // set result.
-      if (result != NULL)  {
-        Local<Object> obj = scriptRes.As<Object>();
-        if (!obj->IsUndefined()) {
-          String::Utf8Value str(isolate, obj);
-          *result = wrapReturnResult(*str);
-        }
-      }
-    }
+    printf("SetupExecutionEnv error .... \n");
+    PrintAndReturnException(isolate, result, context, try_catch);
+    return VM_EXCEPTION_ERR;
   }
 
-  return errorCode;
+  LoadLibraries(isolate, context);
+
+  int retTmp = delegate(result, isolate, sourceCode, source_line_offset, context,
+                        try_catch, delegateContext);
+
+  if (e->is_unexpected_error_happen)
+  {
+    return VM_UNEXPECTED_ERR;
+  }
+
+  return retTmp;
 }
 
-char* wrapReturnResult(const char* src) {
-	char* result = (char *)MyMalloc(strlen(src) + 1);
-	strcpy(result, src);
-	return result;
-}
+//char* wrapReturnResult(const char* src) {
+//	char* result = (char *)MyMalloc(strlen(src) + 1);
+//	strcpy(result, src);
+//	return result;
+//}
 
 void DisposeV8(){
     V8::Dispose();
@@ -262,5 +332,85 @@ void EngineLimitsCheckDelegate(Isolate *isolate, size_t count,
 
   if (IsEngineLimitsExceeded(e)) {
     TerminateExecution(e);
+  }
+}
+
+void PrintException(Isolate* isolate, Local<Context> context, TryCatch &trycatch) {
+  PrintAndReturnException(isolate, NULL, context, trycatch);
+}
+
+void PrintAndReturnException(Isolate* isolate, char **exception, Local<Context> context,
+                             TryCatch &trycatch) {
+  static char SOURCE_INFO_PLACEHOLDER[] = "";
+  char *source_info = NULL;
+
+  // print source line.
+  Local<Message> message = trycatch.Message();
+  if (!message.IsEmpty()) {
+    // Print (filename):(line number): (message).
+    ScriptOrigin origin = message->GetScriptOrigin();
+    String::Utf8Value filename(isolate, message->GetScriptResourceName());
+    int linenum = message->GetLineNumber(context).FromMaybe(0);
+
+    // Print line of source code.
+    String::Utf8Value sourceline(isolate, message->GetSourceLine(context).ToLocalChecked());
+    int script_start = (linenum - origin.ResourceLineOffset()->Value()) == 1
+                           ? origin.ResourceColumnOffset()->Value()
+                           : 0;
+    int start = message->GetStartColumn(context).FromMaybe(0);
+    int end = message->GetEndColumn(context).FromMaybe(0);
+    if (start >= script_start) {
+      start -= script_start;
+      end -= script_start;
+    }
+
+    char arrow[start + 1];
+    for (int i = 0; i < start; i++) {
+      char c = (*sourceline)[i];
+      if (c == '\t') {
+        arrow[i] = c;
+      } else {
+        arrow[i] = ' ';
+      }
+    }
+    arrow[start] = '^';
+    arrow[start + 1] = '\0';
+
+    asprintf(&source_info, "%s:%d\n%s\n%s\n", *filename, linenum, *sourceline,
+             arrow);
+  }
+
+  if (source_info == NULL) {
+    source_info = SOURCE_INFO_PLACEHOLDER;
+  }
+
+  // get stack trace.
+  MaybeLocal<Value> stacktrace_ret = trycatch.StackTrace(context);
+  if (!stacktrace_ret.IsEmpty()) {
+    // print full stack trace.
+    String::Utf8Value stack_str(isolate, stacktrace_ret.ToLocalChecked());
+    printf("V8 Exception:\n%s%s", source_info, *stack_str);
+  }
+
+  // exception message.
+  Local<Value> exceptionValue = trycatch.Exception();
+  String::Utf8Value exception_str(isolate, exceptionValue);
+  if (stacktrace_ret.IsEmpty()) {
+    // print exception when stack trace is not available.
+    printf("V8 Exception:\n%s%s", source_info, *exception_str);
+  }
+
+  if (source_info != NULL && source_info != SOURCE_INFO_PLACEHOLDER) {
+    free(source_info);
+  }
+
+  // return exception message.
+  if (exception != NULL) {
+    *exception = (char *)malloc(exception_str.length() + 1);
+    if (exception_str.length() == 0) {
+      strcpy(*exception, "");
+    } else {
+      strcpy(*exception, *exception_str);
+    }
   }
 }

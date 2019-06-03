@@ -33,6 +33,7 @@ void NewInstructionCounterInstance(Isolate *isolate, Local<Context> context,
 }
 
 void IncrCounterCallback(const FunctionCallbackInfo<Value> &info) {
+    printf("IncrCounterCallback start\n");
   Isolate *isolate = info.GetIsolate();
   Local<Object> thisArg = info.Holder();
   Local<External> count = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -62,7 +63,7 @@ void IncrCounterCallback(const FunctionCallbackInfo<Value> &info) {
 
   size_t *cnt = static_cast<size_t *>(count->Value());
   *cnt += val;
-
+    printf("IncrCounterCallback val %I32u\n",val);
   if (sListener != NULL) {
     sListener(isolate, *cnt, listenerContext->Value());
   }
@@ -79,6 +80,7 @@ void CountGetterCallback(Local<String> property,
 }
 
 void IncrCounter(Isolate *isolate, Local<Context> context, size_t val) {
+    printf("IncrCounter start\n");
   if (val == 0) {
     return;
   }
@@ -95,7 +97,7 @@ void IncrCounter(Isolate *isolate, Local<Context> context, size_t val) {
 
   size_t *cnt = static_cast<size_t *>(count->Value());
   *cnt += val;
-
+ printf("IncrCounter val %zu\n",val);
   if (sListener != NULL) {
     sListener(isolate, *cnt, listenerContext->Value());
   }

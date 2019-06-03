@@ -1,14 +1,13 @@
 'use strict';
 
-var Blockchain = function () {
-    Object.defineProperty(this, "nativeBlockchain", {
+var Blockchain = {}
+    Object.defineProperty(Blockchain, "nativeBlockchain", {
         configurable: false,
         enumerable: false,
         get: function(){
             return _native_blockchain;
         }
     });
-};
 
 Blockchain.prototype = {
     verifyAddress: function (address) {
@@ -25,4 +24,3 @@ Blockchain.prototype = {
     }
 };
 
-var Blockchain = new Blockchain();

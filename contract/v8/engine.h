@@ -12,7 +12,7 @@
 #endif
 #else
 #define EXPORT __attribute__((__visibility__("default")))
-#endif 
+#endif
 
 #define BUILD_MATH            0x0000000000000001
 #define BUILD_MATH_RANDOM       0x0000000000000002
@@ -21,6 +21,13 @@
 
 #ifndef _DAPPLEY_NF_VM_V8_ENGINE_H_
 #define _DAPPLEY_NF_VM_V8_ENGINE_H_
+
+enum OptType {
+  INSTRUCTION     = 1,
+  INSTRUCTIONTS  = 2,
+  RUNSCRIPT       = 3,
+};
+
 typedef struct V8EngineStats {
   size_t count_of_executed_instructions;
   size_t total_memory_size;
@@ -51,13 +58,35 @@ typedef struct V8Engine {
   V8EngineStats stats;
 
 } V8Engine;
+
+typedef struct v8ThreadContextInput {
+  uintptr_t lcs;
+  uintptr_t gcs;
+  enum OptType opt;
+  int line_offset;
+  int allow_usage;
+  const char *source;
+} v8ThreadContextInput;
+
+typedef struct v8ThreadContextOutput {
+  int ret;  //output
+  int line_offset;
+  char *result; //output
+} v8ThreadContextOutput;
+
+typedef struct v8ThreadContext_ {
+  V8Engine *e;
+  v8ThreadContextInput input;
+  v8ThreadContextOutput output;
+  bool is_finished;
+} v8ThreadContext;
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    typedef bool (*FuncVerifyAddress)(const char *address);
-    typedef int (*FuncTransfer)(void *handler, const char *to, const char *amount, const char *tip);
+    typedef bool (*FuncVerifyAddress)(const char *address, size_t *counterVal);
+    typedef int (*FuncTransfer)(void *handler, const char *to, const char *amount, const char *tip, size_t *gasCnt);
     typedef char* (*FuncStorageGet)(void *address, const char *key);
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
@@ -76,7 +105,7 @@ extern "C" {
 
     EXPORT V8Engine *CreateEngine();
     EXPORT void Initialize();
-    EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler, char **result, V8Engine *e);
+    EXPORT int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e);
     EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress);
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
@@ -92,7 +121,22 @@ extern "C" {
     EXPORT void DisposeV8();
 	EXPORT void InitializeMemoryFunc(FuncMalloc mallocFunc, FuncFree freeFunc);
 	EXPORT void DeleteEngine(V8Engine *e);
+	EXPORT void ReadMemoryStatistics(V8Engine *e);
+	EXPORT void TerminateExecution(V8Engine *e);
 
+	// require callback.
+    typedef char *(*RequireDelegate)(void *handler, const char *filename,
+                                     size_t *lineOffset);
+    typedef char *(*AttachLibVersionDelegate)(void *handler, const char *libname);
+
+    EXPORT void InitializeRequireDelegate(RequireDelegate delegate, AttachLibVersionDelegate libDelegate);
+
+    EXPORT void InitializeExecutionEnvDelegate(AttachLibVersionDelegate libDelegate);
+
+    EXPORT char *InjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage);
+    EXPORT int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t lcs_handler, uintptr_t gcs_handler);
+    bool CreateScriptThread(v8ThreadContext *pc);
+    void SetRunScriptArgs(v8ThreadContext *pc, V8Engine *e, int opt, const char *source, int line_offset, int allow_usage);
 #ifdef __cplusplus
 }
 #endif

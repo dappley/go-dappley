@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/contract"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
@@ -352,8 +353,10 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) error {
 	ctx := tx.ToContractTx()
 	if ctx != nil {
+		logger.Warn("Verify ctx.")
 		return ctx.Verify(utxoIndex)
 	}
+	logger.Warn("Verify not ctx.")
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
@@ -377,6 +380,8 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) error {
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) error {
+	logger.Warn("IsExecutionContract.", ctx.IsExecutionContract())
+	logger.Warn("IsContractDeployed.", ctx.IsContractDeployed(utxoIndex))
 	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
 		logger.Warn("Transaction: contract state check failed.")
 		return errors.New("Transaction: contract state check failed")
@@ -693,10 +698,10 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	rewards map[string]string,
 	engine ScEngine,
 	currblkHeight uint64,
-	parentBlk *Block) []*Transaction {
+	parentBlk *Block) (uint64, []*Transaction, error) {
 
 	if engine == nil {
-		return nil
+		return 0, nil, nil
 	}
 
 	vout := ctx.Vout[ContractTxouputIndex]
@@ -705,7 +710,7 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
 	if utxos.Size() == 0 {
-		return nil
+		return 0, nil, ErrUTXONotFound
 	}
 
 	prevUtxos, err := ctx.FindAllTxinsInUtxoPool(index)
@@ -713,12 +718,12 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(ctx.ID),
 		}).Warn("Transaction: cannot find vin while executing smart contract")
-		return nil
+		return 0, nil, ErrUTXONotFound
 	}
 
 	function, args := util.DecodeScInput(vout.Contract)
 	if function == "" {
-		return nil
+		return 0, nil, vm.ErrUnsupportedSourceType
 	}
 
 	totalArgs := util.PrepareArgs(args)
@@ -730,7 +735,11 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	}).Debug("Transaction: is executing the smart contract...")
 
 	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
-
+	// TODO GAS LIMIT
+	if err := engine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
+		logger.Info("Transaction: Execute SetExecutionLimits...")
+		return 0, nil, vm.ErrEngineNotFound
+	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
@@ -741,8 +750,13 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())
-	engine.Execute(function, totalArgs)
-	return engine.GetGeneratedTXs()
+	logger.Info("before engine.Execute...")
+	_, err = engine.Execute(function, totalArgs)
+	gasCount := engine.ExecutionInstructions()
+	if err != nil {
+		return gasCount, nil, err
+	}
+	return gasCount, engine.GetGeneratedTXs(), err
 }
 
 //FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool

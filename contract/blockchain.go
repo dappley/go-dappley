@@ -11,7 +11,9 @@ import (
 
 //VerifyAddressFunc verify address is valid
 //export VerifyAddressFunc
-func VerifyAddressFunc(address *C.char) bool {
+func VerifyAddressFunc(address *C.char, gasCnt *C.size_t) bool {
+	// calculate Gas.
+	*gasCnt = C.size_t(VerifyAddressGasBase)
 	addr := core.NewAddress(C.GoString(address))
 	return addr.ValidateAddress()
 }
@@ -34,7 +36,8 @@ func prepareUTXOs(utxos []*core.UTXO, amount *common.Amount) ([]*core.UTXO, bool
 
 //TransferFunc transfer amount from contract to address
 //export TransferFunc
-func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.char) int {
+func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.char, gasCnt *C.size_t) int {
+	logger.Info("TransferFunc start!")
 	toAddr := core.NewAddress(C.GoString(to))
 	amountValue, err := common.NewAmountFromString(C.GoString(amount))
 	if err != nil {
@@ -63,7 +66,13 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 		return 1
 	}
 
+	// calculate Gas.
+	*gasCnt = C.size_t(TransferGasBase)
+
 	contractAddr := engine.contractAddr
+	logger.WithFields(logger.Fields{
+		"contractAddr":  contractAddr,
+	}).Info("SmartContract: contractAddr!")
 	utxos := engine.contractUTXOs
 	sourceTXID := engine.sourceTXID
 	if !contractAddr.ValidateAddress() {

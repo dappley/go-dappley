@@ -1,6 +1,7 @@
 #include "blockchain.h"
 #include "memory.h"
 #include "../engine.h"
+#include "instruction_counter.h"
 
 static FuncVerifyAddress sVerifyAddress = NULL;
 static FuncTransfer sTransfer = NULL;
@@ -67,12 +68,18 @@ void VerifyAddressCallback(const FunctionCallbackInfo<Value> &info) {
         String::NewFromUtf8(isolate, "address must be string"));
     return;
   }
-  int ret = sVerifyAddress(*String::Utf8Value(isolate, address));
+
+  size_t cnt = 0;
+
+  int ret = sVerifyAddress(*String::Utf8Value(isolate, address), &cnt);
   info.GetReturnValue().Set(ret);
 
+  // record storage usage.
+  IncrCounter(isolate, isolate->GetCurrentContext(), cnt);
 }
 
 void TransferCallback(const FunctionCallbackInfo<Value> &info) {
+printf("TransferCallback start");
   Isolate *isolate = info.GetIsolate();
   Local<Object> thisArg = info.Holder();
   Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -104,14 +111,19 @@ void TransferCallback(const FunctionCallbackInfo<Value> &info) {
     return;
   }
 
+  size_t cnt = 0;
+
   int ret = sTransfer(
     handler->Value(),
     *String::Utf8Value(isolate, to),
     *String::Utf8Value(isolate, amount),
-    *String::Utf8Value(isolate, tip)
+    *String::Utf8Value(isolate, tip),
+    &cnt
   );
   info.GetReturnValue().Set(ret);
 
+  // record storage usage.
+  IncrCounter(isolate, isolate->GetCurrentContext(), cnt);
 }
 
 void GetCurrBlockHeightCallback(const FunctionCallbackInfo<Value> &info) {

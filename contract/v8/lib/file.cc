@@ -24,7 +24,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "memory.h"
-//#include <unistd.h>
+#include <unistd.h>
 
 char *readFile(const char *filepath, size_t *size) {
   if (size != NULL) {
@@ -62,4 +62,40 @@ char *readFile(const char *filepath, size_t *size) {
   }
 
   return data;
+}
+
+bool isFile(const char *file) {
+  struct stat buf;
+  if (stat(file, &buf) != 0) {
+    return false;
+  }
+  if (S_ISREG(buf.st_mode)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool getCurAbsolute(char *curCwd, int len) {
+  char tmp[MAX_VERSIONED_PATH_LEN] = {0};
+  if (!getcwd(tmp, MAX_VERSIONED_PATH_LEN)) {
+    return false;
+  }
+
+  strncat(tmp, "/jslib/execution_env.js", MAX_VERSIONED_PATH_LEN - strlen(tmp) - 1);
+
+  char *pc = realpath(tmp, NULL);
+  if (pc == NULL) {
+    return false;
+  }
+  int pcLen = strlen(pc);
+  if (pcLen >= len) {
+    free(pc);
+    return false;
+  }
+  memcpy(curCwd, pc, pcLen - strlen("/execution_env.js"));
+  //strncpy(curCwd, pc, len - 1);
+  curCwd[pcLen - strlen("/execution_env.js")] = 0x00;
+  free(pc);
+  return true;
 }
