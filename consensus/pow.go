@@ -91,6 +91,7 @@ func (pow *ProofOfWork) mineBlocks() {
 			newBlock := pow.miner.ProduceBlock()
 			if newBlock == nil || !pow.Validate(newBlock.Block) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
+				pow.miner.BlockProduceFinish()
 				return
 			}
 			pow.updateNewBlock(newBlock)

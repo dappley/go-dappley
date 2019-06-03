@@ -140,10 +140,12 @@ func (dpos *DPOS) Start() {
 					}
 					ctx := dpos.bp.ProduceBlock()
 					if ctx == nil || !dpos.Validate(ctx.Block) {
+						dpos.bp.BlockProduceFinish()
 						logger.Error("DPoS: produced an invalid block!")
 						continue
 					}
 					dpos.updateNewBlock(ctx)
+					dpos.bp.BlockProduceFinish()
 				}
 			case <-dpos.stopCh:
 				return
