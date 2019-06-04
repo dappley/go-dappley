@@ -38,7 +38,7 @@ func main() {
 	waitTillBlockHeightTwo(nextBlockTicker, dappSdk)
 	fund(dappSdk, wallet, toolConfigs.GetInitialAmount())
 
-	isScDeployed, scAddr := deploySmartContract(dappSdk, getFundAddr(wallet))
+	isScDeployed, scAddr := deploySmartContract(dappSdk, wallet)
 
 	sender := util.NewBatchTxSender(toolConfigs.GetTps(), wallet, dappSdk, toolConfigs.GetScFreq(), scAddr)
 	if isScDeployed {
@@ -100,8 +100,9 @@ func getFundAddr(wallet *sdk.DappSdkWallet) string {
 	return wallet.GetAddrs()[0].String()
 }
 
-func deploySmartContract(dappSdk *sdk.DappSdk, from string) (bool, string) {
+func deploySmartContract(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) (bool, string) {
 
+	from := getFundAddr(wallet)
 	smartContractAddr := getSmartContractAddr()
 	if smartContractAddr != "" {
 		logger.WithFields(logger.Fields{
@@ -132,6 +133,8 @@ func deploySmartContract(dappSdk *sdk.DappSdk, from string) (bool, string) {
 	logger.WithFields(logger.Fields{
 		"contract_addr": smartContractAddr,
 	}).Info("Smart contract has been deployed")
+
+	wallet.Update()
 
 	return false, smartContractAddr
 }
