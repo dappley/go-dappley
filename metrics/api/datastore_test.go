@@ -40,6 +40,8 @@ func TestDataStoreCapacityConstraint(t *testing.T) {
 
 	ds.startUpdate()
 	time.Sleep(3 * time.Second)
+	ds.stopUpdate()
+	time.Sleep(time.Second)
 	// ensure capacity constraint is not violated
 	assert.Equal(t, 1, len(ds.Metrics["test"].Stats))
 }

@@ -20,18 +20,21 @@ package network
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
-	networkpb "github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
+	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/storage"
 )
 
 type ConnectionType int
@@ -51,18 +54,25 @@ const (
 )
 
 type PeerInfo struct {
-	PeerId peer.ID
-	Addrs  []ma.Multiaddr
+	PeerId  peer.ID
+	Addrs   []ma.Multiaddr
+	Latency *float64 // rtt of ping in milliseconds
 }
 
 type StreamInfo struct {
 	stream         *Stream
 	connectionType ConnectionType
+	latency        *float64 // refer to PeerInfo.Latency
 }
 
 type SyncPeerContext struct {
 	checkingStreams map[peer.ID]*StreamInfo
 	newPeers        map[peer.ID]*PeerInfo
+}
+
+type PingService struct {
+	service *ping.PingService
+	stop    chan bool
 }
 
 type PeerManager struct {
@@ -79,6 +89,7 @@ type PeerManager struct {
 
 	mutex sync.RWMutex
 	node  *Node
+	ping  *PingService
 }
 
 func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
@@ -329,6 +340,60 @@ func (pm *PeerManager) RandomGetConnectedPeers(number int) []*PeerInfo {
 		peers[i] = &PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
 	}
 	return peers
+}
+
+func (pm *PeerManager) StartNewPingService(interval time.Duration) {
+	if pm.ping == nil {
+		pm.ping = &PingService{ping.NewPingService(pm.node.host), make(chan bool, 1)}
+		go func() {
+			logger.Debug("PeerManager: Starting ping service...")
+			ticker := time.NewTicker(interval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					pm.pingPeers()
+				case <-pm.ping.stop:
+					logger.Debug("PeerManager: Stopping ping service...")
+					return
+				}
+			}
+		}()
+	}
+}
+
+func (pm *PeerManager) StopPingService() {
+	if pm.ping != nil {
+		pm.ping.stop <- true
+		pm.ping = nil
+	}
+}
+
+func (pm *PeerManager) pingPeers() {
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
+	logger.Debug("PeerManager: pinging peers...")
+	var wg sync.WaitGroup
+	wg.Add(len(pm.streams))
+	for peerId, streamInfo := range pm.streams {
+		go func() {
+			defer wg.Done()
+			pm.updatePeerLatency(peerId, streamInfo)
+		}()
+	}
+	wg.Wait()
+	logger.Debug("PeerManager: done pinging peers...")
+}
+
+func (pm *PeerManager) updatePeerLatency(peerId peer.ID, streamInfo *StreamInfo) {
+	result, err := pm.ping.service.Ping(context.Background(), peerId)
+	if err != nil {
+		logger.WithError(err).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
+		streamInfo.latency = nil
+	} else {
+		rtt := float64(<-result) / 1e6
+		streamInfo.latency = &rtt
+	}
 }
 
 func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*PeerInfo) {
@@ -603,7 +668,7 @@ func (pm *PeerManager) CloneStreamsToPeerInfoSlice() []*PeerInfo {
 	peers := make([]*PeerInfo, len(streams))
 
 	for i, streamInfo := range streams {
-		peers[i] = &PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
+		peers[i] = &PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}, Latency: streamInfo.latency}
 	}
 
 	return peers
@@ -795,4 +860,22 @@ func (p *PeerInfo) FromProto(pb proto.Message) error {
 	}
 
 	return nil
+}
+
+func (p *PeerInfo) MarshalJSON() ([]byte, error) {
+	peerInfo := &struct {
+		PeerInfo pstore.PeerInfo `json:"peerInfo"`
+		Latency  *float64        `json:"latency"` // encoded as value
+	}{
+		pstore.PeerInfo{ID: p.PeerId, Addrs: p.Addrs},
+		p.Latency,
+	}
+
+	bytes, err := json.Marshal(peerInfo)
+
+	if err != nil {
+		logger.WithField("peerInfo", peerInfo).Debug("PeerManager: unable to marshall peerInfo")
+	}
+
+	return bytes, err
 }

@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"time"
 
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 	"github.com/rs/cors"
@@ -54,18 +53,15 @@ func getTransactionPoolSize() interface{} {
 
 func getConnectedPeersFunc(node *network.Node) expvar.Func {
 	getConnectedPeers := func() interface{} {
-		var peers []peerstore.PeerInfo
-		for _, peer := range node.GetPeerManager().CloneStreamsToPeerInfoSlice() {
-			peers = append(peers, peerstore.PeerInfo{peer.PeerId, peer.Addrs})
-		}
-		return peers
+		return node.GetPeerManager().CloneStreamsToPeerInfoSlice()
 	}
 	return getConnectedPeers
 }
 
-func initPeerMetrics(node *network.Node) {
+func initPeerMetrics(node *network.Node, interval int64) {
 	if node != nil {
 		expvar.Publish("peers", getConnectedPeersFunc(node))
+		node.GetPeerManager().StartNewPingService(time.Duration(interval) * time.Second)
 	}
 }
 
@@ -104,7 +100,7 @@ func StartAPI(node *network.Node, host string, port uint32, interval int64, poll
 		"endpoint": fmt.Sprintf("%v/debug/metrics", listener.Addr()),
 	}).Info("Metrics: API starts...")
 
-	initPeerMetrics(node)
+	initPeerMetrics(node, pollingInterval)
 	initIntervalMetrics(interval, pollingInterval)
 
 	go startServer(listener)
