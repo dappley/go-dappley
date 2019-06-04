@@ -56,7 +56,7 @@ const (
 type PeerInfo struct {
 	PeerId  peer.ID
 	Addrs   []ma.Multiaddr
-	Latency *float64 // average rtt of ping over last 10 seconds in milliseconds
+	Latency *float64 // rtt of ping in milliseconds
 }
 
 type StreamInfo struct {
@@ -386,25 +386,13 @@ func (pm *PeerManager) pingPeers() {
 }
 
 func (pm *PeerManager) updatePeerLatency(peerId peer.ID, streamInfo *StreamInfo) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	result, err := pm.ping.service.Ping(ctx, peerId)
+	result, err := pm.ping.service.Ping(context.Background(), peerId)
 	if err != nil {
 		logger.WithError(err).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
 		streamInfo.latency = nil
 	} else {
-		var count int64 = 0
-		var sum time.Duration = 0
-		for res := range result {
-			sum += res
-			count++
-		}
-		if count > 0 {
-			avg := float64(sum) / float64(count) / 1e6
-			streamInfo.latency = &avg
-		} else {
-			streamInfo.latency = nil
-		}
+		rtt := float64(<-result) / 1e6
+		streamInfo.latency = &rtt
 	}
 }
 
