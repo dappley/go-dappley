@@ -227,13 +227,13 @@ func (txPool *TransactionPool) cleanUpTxSort() {
 func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 
 	nodes := make(map[string]*TransactionNode)
-	isExecTxOkToInsert := true
+	scDeploymentTxExists := make(map[string]bool)
 
 	for key, node := range txPool.txs {
 		nodes[key] = node
 		ctx := node.Value.ToContractTx()
 		if ctx != nil && !ctx.IsExecutionContract() {
-			isExecTxOkToInsert = false
+			scDeploymentTxExists[key] = true
 		}
 	}
 
@@ -244,14 +244,14 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 				ctx := node.Value.ToContractTx()
 				if ctx != nil {
 					if ctx.IsExecutionContract() {
-						if isExecTxOkToInsert {
+						if !scDeploymentTxExists[key] {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)
 						}
 					} else {
 						sortedTxs = append(sortedTxs, node.Value)
 						delete(nodes, key)
-						isExecTxOkToInsert = true
+						scDeploymentTxExists[key] = false
 					}
 				} else {
 					sortedTxs = append(sortedTxs, node.Value)
