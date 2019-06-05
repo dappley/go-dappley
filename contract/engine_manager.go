@@ -39,7 +39,7 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
 
 		engine := em.CreateEngine()
 		// TODO confirm whether we need to set limit
-		if err := engine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
+		if err := engine.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize); err != nil {
 			logger.Error("Transaction: Execute SetExecutionLimits...")
 			continue
 		}

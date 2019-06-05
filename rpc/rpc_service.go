@@ -203,7 +203,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 
 // RpcSendTransaction Send transaction to blockchain created by wallet client
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
-	tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
+	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.FromProto(in.GetTransaction())
 
 	if tx.IsCoinbase() {
@@ -243,7 +243,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	txMap := make(map[int]core.Transaction, len(in.Transactions))
 	txs := []core.Transaction{}
 	for key, txInReq := range in.Transactions {
-		tx := core.Transaction{nil, nil, nil, common.NewAmount(0)}
+		tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 		tx.FromProto(txInReq)
 		txs = append(txs, tx)
 		txMap[key] = tx

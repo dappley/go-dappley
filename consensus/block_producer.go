@@ -140,7 +140,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			utxoIndex.UpdateUtxo(tx)
 			continue
 		}
-		// TODO recored gas used
+		// TODO record gas used
 		logger.WithFields(logger.Fields{
 			"gasCount": gasCount,
 		}).Info("Gas used.")
