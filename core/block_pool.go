@@ -20,11 +20,13 @@ package core
 
 import (
 	"encoding/hex"
+	"sync"
+
+	lru "github.com/hashicorp/golang-lru"
+	peer "github.com/libp2p/go-libp2p-peer"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/hashicorp/golang-lru"
-	"github.com/libp2p/go-libp2p-peer"
-	logger "github.com/sirupsen/logrus"
 )
 
 const BlockPoolMaxSize = 100
@@ -45,7 +47,8 @@ type BlockPool struct {
 	blockRequestCh   chan BlockRequestPars
 	downloadBlocksCh chan bool
 	size             int
-	blkCache         *lru.Cache //cache of full blks
+	blkCache         *lru.Cache   //cache of full blks
+	blkCacheValMutex sync.RWMutex // lock for all the tree values in the blkCache
 }
 
 func NewBlockPool(size int) *BlockPool {
@@ -94,6 +97,7 @@ func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) {
 	blkCache.Add(tree.GetValue().(*Block).GetHash().String(), tree)
 	pool.updateBlkCache(tree)
 }
+
 func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) []*Block {
 	_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
 	if forkTailTree.GetValue().(*Block).GetHeight() > maxHeight {
@@ -107,6 +111,8 @@ func (pool *BlockPool) GenerateForkBlocks(tree *common.Tree, maxHeight uint64) [
 }
 
 func (pool *BlockPool) CleanCache(tree *common.Tree) {
+	pool.blkCacheValMutex.Lock()
+	defer pool.blkCacheValMutex.Unlock()
 	_, forkTailTree := tree.FindHeightestChild(&common.Tree{}, 0, 0)
 	trees := forkTailTree.GetParentTreesRange(tree)
 	forkBlks := getBlocksFromTrees(trees)
@@ -116,7 +122,6 @@ func (pool *BlockPool) CleanCache(tree *common.Tree) {
 
 	tree.Delete()
 	logger.Debug("BlockPool: merge finished or exited, setting syncstate to false.")
-
 }
 
 func getBlocksFromTrees(trees []*common.Tree) []*Block {
@@ -129,6 +134,8 @@ func getBlocksFromTrees(trees []*common.Tree) []*Block {
 
 // updateBlkCache updates parent and Children of the tree
 func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
+	pool.blkCacheValMutex.Lock()
+	defer pool.blkCacheValMutex.Unlock()
 	blkCache := pool.blkCache
 	// try to link child
 	for _, key := range blkCache.Keys() {
@@ -180,7 +187,6 @@ func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
 		return val.(*Block)
 	}
 	return nil
-
 }
 
 func (pool BlockPool) isChildBlockInCache(hashString string) bool {
@@ -193,4 +199,35 @@ func (pool BlockPool) isChildBlockInCache(hashString string) bool {
 		}
 	}
 	return false
+}
+
+/* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
+func (pool *BlockPool) NumForks(bm *Blockchain) (int64, int64) {
+	pool.blkCacheValMutex.RLock()
+	defer pool.blkCacheValMutex.RUnlock()
+	var numForks, maxHeight int64 = 0, 0
+
+	visited := make(map[string]bool)
+	for _, blkHash := range pool.blkCache.Keys() {
+		if cachedBlk, ok := pool.blkCache.Get(blkHash); ok {
+			root := cachedBlk.(*common.Tree).GetRoot()
+			rootBlk := root.GetValue().(*Block)
+
+			if _, ok := visited[rootBlk.GetHash().String()]; !ok {
+				_, err := bm.GetBlockByHash(root.GetValue().(*Block).GetPrevHash())
+
+				if err == nil {
+					/* the cached block is rooted in the BlockChain */
+					numForks += root.NumLeaves()
+					t := root.Height()
+					if t > maxHeight {
+						maxHeight = t
+					}
+				}
+				visited[rootBlk.GetHash().String()] = true
+			}
+		}
+	}
+
+	return numForks, maxHeight
 }

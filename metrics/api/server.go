@@ -58,6 +58,19 @@ func getConnectedPeersFunc(node *network.Node) expvar.Func {
 	return getConnectedPeers
 }
 
+type ForkInfo struct {
+	NumForks    int64 `json:"numForks"`
+	LongestFork int64 `json:"longestFork"`
+}
+
+func getNumForksInBlockChainFunc(node *network.Node) expvar.Func {
+	getNumForksInBlockChain := func() interface{} {
+		numForks, longestFork := node.GetBlockPool().NumForks(node.GetBlockchain())
+		return ForkInfo{NumForks: numForks, LongestFork: longestFork}
+	}
+	return getNumForksInBlockChain
+}
+
 func initPeerMetrics(node *network.Node, interval int64) {
 	if node != nil {
 		expvar.Publish("peers", getConnectedPeersFunc(node))
@@ -65,12 +78,13 @@ func initPeerMetrics(node *network.Node, interval int64) {
 	}
 }
 
-func initIntervalMetrics(interval, pollingInterval int64) {
+func initIntervalMetrics(node *network.Node, interval, pollingInterval int64) {
 	ds := newDataStore(int(interval/pollingInterval), time.Duration(pollingInterval)*time.Second)
 
 	_ = ds.registerNewMetric("dapp.cpu.percent", getCPUPercent)
 	_ = ds.registerNewMetric("dapp.txpool.size", getTransactionPoolSize)
 	_ = ds.registerNewMetric("dapp.memstats", getMemoryStats)
+	_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
 
 	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
 	expvar.Publish("stats", ds)
@@ -101,7 +115,7 @@ func StartAPI(node *network.Node, host string, port uint32, interval int64, poll
 	}).Info("Metrics: API starts...")
 
 	initPeerMetrics(node, pollingInterval)
-	initIntervalMetrics(interval, pollingInterval)
+	initIntervalMetrics(node, interval, pollingInterval)
 
 	go startServer(listener)
 
