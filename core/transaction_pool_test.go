@@ -248,8 +248,8 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 
 	// deployment transaction should be ahead of execution transaction
 	txs := txPool.GetTransactions()
-	assert.Equal(t, &deploymentTx, txs[0])
-	assert.Equal(t, &executionTx, txs[1])
+	assert.Equal(t, &executionTx, txs[0])
+	assert.Equal(t, &deploymentTx, txs[1])
 }
 
 func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
