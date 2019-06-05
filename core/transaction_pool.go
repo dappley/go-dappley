@@ -160,24 +160,12 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 
 	txNode := NewTransactionNode(&tx)
 
-	for txPool.currSize != 0 && txPool.currSize+uint32(txNode.Size) >= txPool.sizeLimit {
+	if txPool.currSize != 0 && txPool.currSize+uint32(txNode.Size) >= txPool.sizeLimit {
 		logger.WithFields(logger.Fields{
 			"sizeLimit": txPool.sizeLimit,
 		}).Warn("TransactionPool: is full.")
 
-		minTx := txPool.getMinTipTransaction()
-		if minTx != nil && txNode.GetTipsPerByte().Cmp(minTx.GetTipsPerByte()) < 1 {
-			return
-		}
-
-		toRemoveTxs := txPool.getDependentTxs(minTx)
-		if checkDependTxInMap(&tx, toRemoveTxs) == true {
-
-			logger.Warn("TransactionPool: failed to push because dependent transactions are not removed from pool.")
-			return
-		}
-
-		txPool.removeMinTipTx()
+		return
 	}
 
 	txPool.addTransaction(txNode)
@@ -233,7 +221,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 		nodes[key] = node
 		ctx := node.Value.ToContractTx()
 		if ctx != nil && !ctx.IsExecutionContract() {
-			scDeploymentTxExists[key] = true
+			scDeploymentTxExists[ctx.GetContractPubKeyHash().GenerateAddress().String()] = true
 		}
 	}
 
@@ -243,15 +231,16 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 			if !checkDependTxInMap(node.Value, nodes) {
 				ctx := node.Value.ToContractTx()
 				if ctx != nil {
+					ctxPkhStr := ctx.GetContractPubKeyHash().GenerateAddress().String()
 					if ctx.IsExecutionContract() {
-						if !scDeploymentTxExists[key] {
+						if !scDeploymentTxExists[ctxPkhStr] {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)
 						}
 					} else {
 						sortedTxs = append(sortedTxs, node.Value)
 						delete(nodes, key)
-						scDeploymentTxExists[key] = false
+						scDeploymentTxExists[ctxPkhStr] = false
 					}
 				} else {
 					sortedTxs = append(sortedTxs, node.Value)

@@ -202,17 +202,10 @@ func TestTransactionPoolLimit(t *testing.T) {
 
 	txPool = NewTransactionPool(1)
 	txPool.Push(tx1)
-	txPool.Push(tx2) // Note: t2 has higher tips and should be kept in pool in place of t1
+	txPool.Push(tx2) // Note: t2 should be ignore
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	assert.Equal(t, tx2, *(txPool.GetTransactions()[0]))
+	assert.Equal(t, tx1, *(txPool.GetTransactions()[0]))
 
-	txPool.Push(tx4) // Note: t4 has higher tips and should be kept in pool in place of t2
-	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	assert.Equal(t, tx4, *(txPool.GetTransactions()[0]))
-
-	txPool.Push(tx3) // Note: t3 has less tips and should be discarded
-	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	assert.Equal(t, tx4, *(txPool.GetTransactions()[0]))
 }
 
 func TestTransactionPool_GetTransactions(t *testing.T) {
@@ -248,8 +241,8 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 
 	// deployment transaction should be ahead of execution transaction
 	txs := txPool.GetTransactions()
-	assert.Equal(t, &executionTx, txs[0])
-	assert.Equal(t, &deploymentTx, txs[1])
+	assert.Equal(t, &deploymentTx, txs[0])
+	assert.Equal(t, &executionTx, txs[1])
 }
 
 func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
