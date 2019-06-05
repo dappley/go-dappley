@@ -186,5 +186,5 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 }
 
 func isExceedingDeadline(deadlineInMs int64) bool {
-	return deadlineInMs > 0 && time.Now().Unix()*1000 >= deadlineInMs
+	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
