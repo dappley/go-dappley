@@ -55,9 +55,10 @@ var (
 )
 
 type PeerBlockInfo struct {
-	peerid peer.ID
-	height uint64
-	status int
+	peerid    peer.ID
+	height    uint64
+	libHeight uint64
+	status    int
 }
 
 type DownloadCommand struct {
@@ -119,7 +120,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishChan chan 
 	downloadManager.status = DownloadStatusInit
 
 	for _, peer := range downloadManager.node.GetPeerManager().CloneStreamsToSlice() {
-		downloadManager.peersInfo[peer.stream.peerID] = &PeerBlockInfo{peerid: peer.stream.peerID, height: 0, status: PeerStatusInit}
+		downloadManager.peersInfo[peer.stream.peerID] = &PeerBlockInfo{peerid: peer.stream.peerID, height: 0, libHeight: 0, status: PeerStatusInit}
 	}
 	peersNum := len(downloadManager.peersInfo)
 
@@ -154,7 +155,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishChan chan 
 	}()
 }
 
-func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, height uint64) {
+func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, height uint64, libHeight uint64) {
 	logger.Debugf("DownloadManager: Receive blockchain info %v %v \n", peerId, height)
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
@@ -171,6 +172,7 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 	}
 
 	blockPeerInfo.height = height
+	blockPeerInfo.libHeight = libHeight
 	blockPeerInfo.status = PeerStatusReady
 
 	if downloadManager.canStartDownload() {
@@ -250,6 +252,11 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 	defer downloadManager.mutex.Unlock()
 	if downloadManager.node.GetBlockchain().GetMaxHeight() >= checkingPeer.height {
 		downloadManager.finishDownload()
+		lib, _ := downloadManager.node.GetBlockchain().GetBlockByHeight(checkingPeer.libHeight)
+		downloadManager.node.GetBlockchain().SetLIBHash(lib.GetHash())
+		logger.WithFields(logger.Fields{
+			"lib_hash": lib.GetHash(),
+		}).Info("DownloadManager: finishing download blocks.")
 		return
 	}
 
@@ -311,7 +318,10 @@ func (downloadManager *DownloadManager) GetCommonBlockCheckPoint(startHeight uin
 		currentHeight := startHeight + interval*uint64(i)/uint64(32)
 		if lastHeight != currentHeight {
 			lastHeight = currentHeight
-			block, _ := downloadManager.node.GetBlockchain().GetBlockByHeight(currentHeight)
+			block, err := downloadManager.node.GetBlockchain().GetBlockByHeight(currentHeight)
+			if err != nil {
+				continue
+			}
 			blockHeaders = append(blockHeaders, &SyncCommandBlocksHeader{hash: block.GetHash(), height: currentHeight})
 		}
 	}
@@ -546,13 +556,16 @@ func (downloadManager *DownloadManager) canStartDownload() bool {
 
 func (downloadManager *DownloadManager) selectHighestPeer() *PeerBlockInfo {
 	currentBlockInfo := &PeerBlockInfo{
-		peerid: downloadManager.node.GetPeerID(),
-		height: downloadManager.node.GetBlockchain().GetMaxHeight(),
-		status: PeerStatusReady,
+		peerid:    downloadManager.node.GetPeerID(),
+		height:    downloadManager.node.GetBlockchain().GetMaxHeight(),
+		libHeight: downloadManager.node.GetBlockchain().GetLIBHeight(),
+		status:    PeerStatusReady,
 	}
 
 	for _, peerInfo := range downloadManager.peersInfo {
-		if peerInfo.status == PeerStatusReady && peerInfo.height > currentBlockInfo.height {
+		if peerInfo.status == PeerStatusReady && peerInfo.libHeight > currentBlockInfo.libHeight {
+			currentBlockInfo = peerInfo
+		} else if peerInfo.status == PeerStatusReady && peerInfo.libHeight == currentBlockInfo.libHeight && peerInfo.height > currentBlockInfo.height {
 			currentBlockInfo = peerInfo
 		}
 	}

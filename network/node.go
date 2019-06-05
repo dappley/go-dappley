@@ -603,6 +603,8 @@ func (n *Node) GetBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		TailBlockHash: n.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   n.GetBlockchain().GetMaxHeight(),
 		Timestamp:     tailBlock.GetTimestamp(),
+		LibHash:       n.GetBlockchain().GetLIBHash(),
+		LibHeight:     n.GetBlockchain().GetLIBHeight(),
 	}
 
 	data, err := n.prepareData(response, ReturnBlockchainInfo, Unicast, "")
@@ -625,7 +627,7 @@ func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.GetBlockHeight())
+	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.GetBlockHeight(), blockchainInfo.GetLibHeight())
 }
 
 //TODO  Refactor getblocks in rpcService and node

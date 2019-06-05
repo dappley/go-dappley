@@ -143,7 +143,7 @@ func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Bl
 	cbtx := core.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
-	b := core.NewBlockWithTimestamp(txs, parentBlk, time)
+	b := core.NewBlockWithTimestamp(txs, parentBlk, time, producer.String())
 	hash := b.CalculateHashWithNonce(0)
 	b.SetHash(hash)
 	b.SetNonce(0)

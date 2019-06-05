@@ -22,9 +22,8 @@ import (
 	"math"
 	"math/big"
 
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/core"
+	logger "github.com/sirupsen/logrus"
 )
 
 const defaultTargetBits = 0
@@ -92,6 +91,7 @@ func (pow *ProofOfWork) mineBlocks() {
 			newBlock := pow.miner.ProduceBlock(0)
 			if newBlock == nil || !pow.Validate(newBlock.Block) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
+				pow.miner.BlockProduceFinish()
 				return
 			}
 			pow.updateNewBlock(newBlock)
@@ -175,4 +175,8 @@ func (pow *ProofOfWork) AddProducer(producer string) error {
 
 func (pow *ProofOfWork) GetProducers() []string {
 	return nil
+}
+
+func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }

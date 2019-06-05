@@ -21,7 +21,10 @@ import (
 	"github.com/dappley/go-dappley/common"
 )
 
-const genesisCoinbaseData = "Hello world"
+const (
+	genesisCoinbaseData = "Hello world"
+	BlockHashLength     = 32
+)
 
 func NewGenesisBlock(address Address) *Block {
 	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
@@ -39,6 +42,7 @@ func NewGenesisBlock(address Address) *Block {
 		nonce:     0,
 		timestamp: 1532392928, //July 23,2018 17:42 PST
 		height:    0,
+		producer:  address.Address,
 	}
 	b := &Block{
 		header:       header,
