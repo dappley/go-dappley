@@ -26,9 +26,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/dappley/go-dappley/core"
-	corepb "github.com/dappley/go-dappley/core/pb"
-	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/golang/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p"
@@ -38,6 +35,10 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
+	corepb "github.com/dappley/go-dappley/core/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 )
 
 const (
@@ -151,12 +152,13 @@ func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 	return false
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
-func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache  { return n.recentlyRcvedDapMsgs }
-func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
-func (n *Node) GetPeerManager() *PeerManager         { return n.peerManager }
-func (n *Node) GetInfo() *PeerInfo                   { return n.info }
+func (n *Node) GetBlockchain() *core.Blockchain               { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool                 { return n.bm.GetblockPool() }
+func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache           { return n.recentlyRcvedDapMsgs }
+func (n *Node) GetDownloadManager() *DownloadManager          { return n.downloadManager }
+func (n *Node) GetPeerManager() *PeerManager                  { return n.peerManager }
+func (n *Node) GetInfo() *PeerInfo                            { return n.info }
+func (n *Node) GetBlockChainManager() *core.BlockChainManager { return n.bm }
 
 func (n *Node) Start(listenPort int) error {
 

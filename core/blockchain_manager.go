@@ -20,6 +20,7 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
+	"sync"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
@@ -30,12 +31,14 @@ import (
 const HeightDiffThreshold = 10
 
 type BlockChainManager struct {
-	blockchain *Blockchain
-	blockPool  *BlockPool
+	blockchain       *Blockchain
+	blockPool        *BlockPool
+	cachedForks      map[string]*common.Tree
+	cachedForksMutex sync.RWMutex
 }
 
 func NewBlockChainManager() *BlockChainManager {
-	return &BlockChainManager{}
+	return &BlockChainManager{cachedForks: make(map[string]*common.Tree)}
 }
 
 func (bm *BlockChainManager) SetblockPool(blockPool *BlockPool) {
@@ -93,8 +96,12 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	}
 
 	tree, _ := common.NewTree(block.GetHash().String(), block)
+	bm.cachedForksMutex.Lock()
 	bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
 	forkHead := tree.GetRoot()
+	forkHeadHash := forkHead.GetValue().(*Block).GetHash()
+	bm.cachedForks[forkHeadHash.String()] = forkHead
+	bm.cachedForksMutex.Unlock()
 	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
 	if forkHeadParentHash == nil {
 		return
@@ -111,7 +118,10 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	forkBlks := bm.blockPool.GenerateForkBlocks(forkHead, bm.blockchain.GetMaxHeight())
 	bm.blockchain.SetState(BlockchainSync)
 	_ = bm.MergeFork(forkBlks, forkHeadParentHash)
+	bm.cachedForksMutex.Lock()
 	bm.blockPool.CleanCache(forkHead)
+	delete(bm.cachedForks, forkHeadHash.String())
+	bm.cachedForksMutex.Unlock()
 	bm.blockchain.SetState(BlockchainReady)
 }
 
@@ -215,4 +225,28 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash Ha
 	}
 
 	return index, scState, nil
+}
+
+/* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
+func (bm *BlockChainManager) NumForks() (int64, int64) {
+	bm.cachedForksMutex.RLock()
+	defer bm.cachedForksMutex.RUnlock()
+	var numForks, maxHeight int64 = 0, 0
+
+	for _, root := range bm.cachedForks {
+		rootBlk := root.GetValue().(*Block)
+		_, err := bm.blockchain.GetBlockByHash(rootBlk.GetPrevHash())
+		if err == nil {
+			/* the cached block is rooted in the BlockChain */
+			numForks += root.NumLeaves()
+			t := root.Height()
+			if t > maxHeight {
+				maxHeight = t
+			}
+		} else {
+			delete(bm.cachedForks, rootBlk.GetHash().String())
+		}
+	}
+
+	return numForks, maxHeight
 }

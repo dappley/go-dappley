@@ -65,7 +65,7 @@ type ForkInfo struct {
 
 func getNumForksInBlockChainFunc(node *network.Node) expvar.Func {
 	getNumForksInBlockChain := func() interface{} {
-		numForks, longestFork := node.GetBlockPool().NumForks(node.GetBlockchain())
+		numForks, longestFork := node.GetBlockChainManager().NumForks()
 		return ForkInfo{NumForks: numForks, LongestFork: longestFork}
 	}
 	return getNumForksInBlockChain
