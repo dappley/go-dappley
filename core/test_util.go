@@ -34,7 +34,6 @@ func GenerateMockBlock() *Block {
 		time.Now().Unix(),
 		nil,
 		0,
-		"",
 	}
 
 	t1 := MockTransaction()
@@ -82,7 +81,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
@@ -100,7 +99,7 @@ func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
 func GenerateBlockWithCbtx(addr Address, lastblock *Block) *Block {
 	//create a new block chain
 	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
-	b := NewBlock([]*Transaction{&cbtx}, lastblock, "")
+	b := NewBlock([]*Transaction{&cbtx}, lastblock)
 	return b
 }
 func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
@@ -112,7 +111,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
 		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}

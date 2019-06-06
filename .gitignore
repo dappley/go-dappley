@@ -4,4 +4,3 @@ tool/*.db
 .vscode/
 .vendor-new/
 tool/tool
-bin

@@ -40,8 +40,6 @@ type Consensus interface {
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
 	GetProducers() []string
-	//Return the lib block and new block whether pass lib policy
-	CheckLibPolicy(b *Block) (*Block, bool)
 }
 
 type NetService interface {

@@ -21,8 +21,9 @@ package consensus
 import (
 	"errors"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 type Dynasty struct {
@@ -33,11 +34,17 @@ type Dynasty struct {
 }
 
 const (
-	defaultMaxProducers   = 21
+	defaultMaxProducers   = 5
 	defaultTimeBetweenBlk = 5
 )
 
 func (dynasty *Dynasty) trimProducers() {
+	//if producer conf file does not have all producers
+	if len(dynasty.producers) < defaultMaxProducers {
+		for len(dynasty.producers) < defaultMaxProducers {
+			dynasty.producers = append(dynasty.producers, "")
+		}
+	}
 	//if producer conf file has too many producers
 	if len(dynasty.producers) > defaultMaxProducers {
 		dynasty.producers = dynasty.producers[:defaultMaxProducers]

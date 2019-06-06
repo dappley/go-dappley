@@ -42,7 +42,6 @@ var bh1 = &BlockHeader{
 	time.Now().Unix(),
 	nil,
 	0,
-	"",
 }
 
 var bh2 = &BlockHeader{
@@ -52,7 +51,6 @@ var bh2 = &BlockHeader{
 	time.Now().Unix(),
 	nil,
 	1,
-	"",
 }
 
 // Padding Address to 32 Byte
@@ -393,15 +391,15 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		[]TXOutput{{common.NewAmount(5), PubKeyHash([]byte("pkh")), ""}},
 		common.NewAmount(0),
 	}
-	prevBlock := NewBlock([]*Transaction{}, genesisBlock, "")
+	prevBlock := NewBlock([]*Transaction{}, genesisBlock)
 	prevBlock.SetHash(prevBlock.CalculateHash())
-	emptyBlock := NewBlock([]*Transaction{}, prevBlock, "")
+	emptyBlock := NewBlock([]*Transaction{}, prevBlock)
 	emptyBlock.SetHash(emptyBlock.CalculateHash())
-	normalBlock := NewBlock([]*Transaction{&normalTX}, genesisBlock, "")
+	normalBlock := NewBlock([]*Transaction{&normalTX}, genesisBlock)
 	normalBlock.SetHash(normalBlock.CalculateHash())
-	normalBlock2 := NewBlock([]*Transaction{&normalTX2}, normalBlock, "")
+	normalBlock2 := NewBlock([]*Transaction{&normalTX2}, normalBlock)
 	normalBlock2.SetHash(normalBlock2.CalculateHash())
-	abnormalBlock := NewBlock([]*Transaction{&abnormalTX}, normalBlock, "")
+	abnormalBlock := NewBlock([]*Transaction{&abnormalTX}, normalBlock)
 	abnormalBlock.SetHash(abnormalBlock.CalculateHash())
 	corruptedUTXOBlockchain := prepareBlockchainWithBlocks([]*Block{normalBlock, normalBlock2})
 	err := utxoIndexFromTXs([]*Transaction{&normalTX}, corruptedUTXOBlockchain.GetUtxoCache()).Save()

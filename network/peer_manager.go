@@ -97,10 +97,10 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 
 	return &PeerManager{
-		seeds:                 make(map[peer.ID]*PeerInfo),
-		syncPeers:             make(map[peer.ID]*PeerInfo),
-		streams:               make(map[peer.ID]*StreamInfo),
-		mutex:                 sync.RWMutex{},
+		seeds:     make(map[peer.ID]*PeerInfo),
+		syncPeers: make(map[peer.ID]*PeerInfo),
+		streams:   make(map[peer.ID]*StreamInfo),
+		mutex:     sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		node:                  node,
@@ -305,6 +305,7 @@ func (pm *PeerManager) StopStream(stream *Stream) {
 	pm.node.host.Peerstore().ClearAddrs(stream.peerID)
 	streamLen := len(pm.streams)
 	pm.mutex.Unlock()
+
 	if streamLen == 0 {
 		go func() {
 			pm.startConnectSeeds()
@@ -706,6 +707,7 @@ func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType Connecti
 	default:
 		//Pass
 	}
+
 	pm.streams[peerId] = &StreamInfo{stream: stream, connectionType: connectionType}
 
 	return true

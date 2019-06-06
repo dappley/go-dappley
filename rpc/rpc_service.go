@@ -358,14 +358,3 @@ func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Contex
 	}
 	return result, nil
 }
-
-// RpcGetLastIrreversibleBlock get last irreversible block
-func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, in *rpcpb.GetLastIrreversibleBlockRequest) (*rpcpb.GetLastIrreversibleBlockResponse, error) {
-	block, err := rpcService.node.GetBlockchain().GetLIB()
-
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	return &rpcpb.GetLastIrreversibleBlockResponse{Block: block.ToProto().(*corepb.Block)}, nil
-}
