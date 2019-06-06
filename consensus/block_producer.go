@@ -139,6 +139,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 	if len(rewards) > 0 {
 		rtx := core.NewRewardTx(currBlkHeight, rewards)
 		validTxs = append(validTxs, &rtx)
+		utxoIndex.UpdateUtxo(&rtx)
 	}
 
 	return validTxs, scStorage
