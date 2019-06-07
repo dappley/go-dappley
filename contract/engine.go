@@ -9,6 +9,7 @@ bool  Cgo_VerifyAddressFunc(const char *address);
 int	  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 int   Cgo_GetCurrBlockHeightFunc(void *handler);
 char* Cgo_GetNodeAddressFunc(void *handler);
+int   Cgo_DeleteContractFunc(void *handler);
 //storage
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
@@ -26,8 +27,6 @@ bool Cgo_VerifySignatureFunc(const char *msg, const char *pubkey, const char *si
 bool Cgo_VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 //math
 int Cgo_RandomFunc(void *handler, int max);
-//contract
-int Cgo_DeleteContract(void *address);
 
 void* Cgo_Malloc(size_t size);
 void  Cgo_Free(void* address);
@@ -72,9 +71,7 @@ func InitializeV8Engine() {
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
 		(C.FuncGetCurrBlockHeight)(unsafe.Pointer(C.Cgo_GetCurrBlockHeightFunc)),
 		(C.FuncGetNodeAddress)(unsafe.Pointer(C.Cgo_GetNodeAddressFunc)),
-	)
-	C.InitializeContract(
-		(C.FuncContractDel)(unsafe.Pointer(C.Cgo_DeleteContract)),
+		(C.FuncDeleteContract)(unsafe.Pointer(C.Cgo_DeleteContractFunc)),
 	)
 	C.InitializeStorage(
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
@@ -215,8 +212,4 @@ func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	return v8EngineList[handler]
-}
-
-func destorySmartContract() {
-
 }

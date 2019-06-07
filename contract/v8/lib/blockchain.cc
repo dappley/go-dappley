@@ -6,13 +6,15 @@ static FuncVerifyAddress sVerifyAddress = NULL;
 static FuncTransfer sTransfer = NULL;
 static FuncGetCurrBlockHeight sGetCurrBlockHeight = NULL;
 static FuncGetNodeAddress sGetNodeAddress = NULL;
+static FuncDeleteContract sDeleteContract = NULL;
 
 
-void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress){
+void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress,FuncDeleteContract deleteContract){
   sVerifyAddress = verifyAddress;
   sTransfer = transfer;
   sGetCurrBlockHeight = getCurrBlockHeight;
   sGetNodeAddress = getNodeAddress;
+  sDeleteContract = deleteContract;
 }
 
 void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handler) {
@@ -36,6 +38,11 @@ void NewBlockchainInstance(Isolate *isolate, Local<Context> context, void *handl
 
   blockTpl->Set(String::NewFromUtf8(isolate, "getNodeAddress"),
                 FunctionTemplate::New(isolate, GetNodeAddressCallback),
+                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
+                                               PropertyAttribute::ReadOnly));
+
+  blockTpl->Set(String::NewFromUtf8(isolate, "deleteContract"),
+                FunctionTemplate::New(isolate, DeleteContractCallback),
                 static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
                                                PropertyAttribute::ReadOnly));
 
@@ -128,6 +135,21 @@ void GetCurrBlockHeightCallback(const FunctionCallbackInfo<Value> &info) {
   int ret = sGetCurrBlockHeight(handler->Value());
   info.GetReturnValue().Set(ret);
 
+}
+
+void DeleteContractCallback(const FunctionCallbackInfo<Value> &info){
+  Isolate *isolate = info.GetIsolate();
+  Local<Object> thisArg = info.Holder();
+  Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
+
+  if (info.Length() != 0) {
+    isolate->ThrowException(String::NewFromUtf8(
+        isolate, "Blockchain.DeleteContractCallback() does not require any argument"));
+    return;
+  }
+
+  int ret = sDeleteContract(handler->Value());
+  info.GetReturnValue().Set(ret);
 }
 
 void GetNodeAddressCallback(const FunctionCallbackInfo<Value> &info) {

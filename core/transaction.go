@@ -39,7 +39,10 @@ import (
 
 var subsidy = common.NewAmount(10000000)
 
-const ContractTxouputIndex = 0
+const (
+	ContractTxouputIndex = 0
+	SCDestroyAddress     = ""
+)
 
 var rewardTxData = []byte("Distribute X Rewards")
 
@@ -550,6 +553,14 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func NewSmartContractDestoryTX(utxos []*UTXO, contractAddr Address, sourceTXID []byte) Transaction {
+	sum := calculateUtxoSum(utxos)
+	tips := common.NewAmount(0)
+
+	tx, _ := NewContractTransferTX(utxos, contractAddr, NewAddress(SCDestroyAddress), sum, tips, sourceTXID)
+	return tx
 }
 
 // NewCoinbaseTX creates a new coinbase transaction

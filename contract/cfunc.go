@@ -8,6 +8,7 @@ bool  VerifyAddressFunc(const char* address);
 int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 int   GetCurrBlockHeightFunc(void *handler);
 char* GetNodeAddressFunc(void *handler);
+int   DeleteContractFunc(void *handler);
 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
@@ -20,8 +21,6 @@ void  PrevUtxoGetFunc(void *address, void* context);
 bool  VerifySignatureFunc(const char *msg, const char *pubkey, const char *sig);
 bool  VerifyPublicKeyFunc(const char *addr, const char *pubkey);
 int RandomFunc(void *handler, int max);
-
-int DeleteContract(void *address);
 
 void* Malloc(size_t size);
 void  Free(void* address);
@@ -42,8 +41,8 @@ char* Cgo_GetNodeAddressFunc(void *handler){
 	return GetNodeAddressFunc(handler);
 };
 
-int Cgo_DeleteContract(void *address){
-	return DeleteContract(address);
+int Cgo_DeleteContractFunc(void *handler){
+	return DeleteContractFunc(handler);
 }
 
 char* Cgo_StorageGetFunc(void *address, const char *key){
