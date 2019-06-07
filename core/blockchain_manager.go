@@ -229,8 +229,8 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash Ha
 
 /* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
 func (bm *BlockChainManager) NumForks() (int64, int64) {
-	bm.cachedForksMutex.RLock()
-	defer bm.cachedForksMutex.RUnlock()
+	bm.cachedForksMutex.Lock()
+	defer bm.cachedForksMutex.Unlock()
 	var numForks, maxHeight int64 = 0, 0
 
 	for _, root := range bm.cachedForks {
