@@ -271,6 +271,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	lib, ok := dpos.CheckLibPolicy(ctx.Block)
 	if !ok {
 		logger.Warn("DPoS: new block can not pass lib policy check.")
+		dpos.node.BroadcastBlock(ctx.Block)
 		return
 	}
 	ctx.Lib = lib
