@@ -91,25 +91,14 @@ func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) *common.T
 	blkCache := pool.blkCache
 
 	if blkCache.Contains(tree.GetValue().(*Block).GetHash().String()) {
-		return pool.cacheForkHead(tree)
+		return tree.GetRoot()
 	}
 	if !pool.isChildBlockInCache(tree.GetValue().(*Block).GetHash().String()) && tree.GetValue().(*Block).GetHeight() <= maxHeight {
-		return pool.cacheForkHead(tree)
+		return tree.GetRoot()
 	}
 
 	blkCache.Add(tree.GetValue().(*Block).GetHash().String(), tree)
 	pool.updateBlkCache(tree)
-	return pool.cacheForkHead(tree)
-}
-
-func (pool *BlockPool) cacheForkHead(tree *common.Tree) *common.Tree {
-	if tree.Parent == nil {
-		forkHeadHash := tree.GetValue().(*Block).GetHash()
-		pool.forkHeadsMutex.Lock()
-		pool.forkHeads[forkHeadHash.String()] = tree
-		pool.forkHeadsMutex.Unlock()
-		return tree
-	}
 	return tree.GetRoot()
 }
 
@@ -168,7 +157,7 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	}
 
 	//try to link parent
-	if parent, ok := blkCache.Get(tree.GetValue().(*Block).GetPrevHash().String()); ok == true {
+	if parent, ok := blkCache.Get(tree.GetValue().(*Block).GetPrevHash().String()); ok {
 		err := tree.AddParent(parent.(*common.Tree))
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
@@ -182,6 +171,10 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 			"tree_height":   tree.GetValue().(*Block).GetHeight(),
 			"parent_height": parent.(*common.Tree).GetValue().(*Block).GetHeight(),
 		}).Info("BlockPool: added a parent block to the tree.")
+	} else {
+		pool.forkHeadsMutex.Lock()
+		pool.forkHeads[tree.GetValue().(*Block).GetHash().String()] = tree
+		pool.forkHeadsMutex.Unlock()
 	}
 
 	logger.WithFields(logger.Fields{
