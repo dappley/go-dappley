@@ -1,10 +1,11 @@
 package core
 
-import "github.com/dappley/go-dappley/metrics"
+import (
+	dapmetrics "github.com/dappley/go-dappley/metrics"
+)
 
 // Metrics for core
 var (
-	// tx metrics
-	MetricsInvalidTx           = dapmetrics.NewCounter("dap.txPool.invalidtx")
+	MetricsBlockStats          = dapmetrics.NewBlockStatsTracker(50)
 	MetricsTransactionPoolSize = dapmetrics.NewCounter("dap.txPool.currSize")
 )

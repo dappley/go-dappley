@@ -15,6 +15,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 )
@@ -71,20 +72,31 @@ func getNumForksInBlockChainFunc(node *network.Node) expvar.Func {
 	return getNumForksInBlockChain
 }
 
-func initPeerMetrics(node *network.Node, interval int64) {
-	if node != nil {
-		expvar.Publish("peers", getConnectedPeersFunc(node))
-		node.GetPeerManager().StartNewPingService(time.Duration(interval) * time.Second)
+func getBlockStatsFunc(node *network.Node) expvar.Func {
+	getBlockStats := func() interface{} {
+		return core.MetricsBlockStats.Filter(isDPOS(node.GetBlockchain().GetConsensus()), node.IsProducer())
 	}
+	return getBlockStats
 }
 
-func initIntervalMetrics(node *network.Node, interval, pollingInterval int64) {
+func isDPOS(v interface{}) bool {
+	_, ok := v.(*consensus.DPOS)
+	return ok
+}
+
+func initMetrics(node *network.Node, interval, pollingInterval int64) {
 	ds := newDataStore(int(interval/pollingInterval), time.Duration(pollingInterval)*time.Second)
 
 	_ = ds.registerNewMetric("dapp.cpu.percent", getCPUPercent)
 	_ = ds.registerNewMetric("dapp.txpool.size", getTransactionPoolSize)
 	_ = ds.registerNewMetric("dapp.memstats", getMemoryStats)
-	_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
+
+	if node != nil {
+		expvar.Publish("peers", getConnectedPeersFunc(node))
+		node.GetPeerManager().StartNewPingService(time.Duration(pollingInterval) * time.Second)
+		_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
+		expvar.Publish("dapp.block.stats", getBlockStatsFunc(node))
+	}
 
 	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
 	expvar.Publish("stats", ds)
@@ -114,8 +126,7 @@ func StartAPI(node *network.Node, host string, port uint32, interval int64, poll
 		"endpoint": fmt.Sprintf("%v/debug/metrics", listener.Addr()),
 	}).Info("Metrics: API starts...")
 
-	initPeerMetrics(node, pollingInterval)
-	initIntervalMetrics(node, interval, pollingInterval)
+	initMetrics(node, interval, pollingInterval)
 
 	go startServer(listener)
 

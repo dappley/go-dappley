@@ -107,6 +107,7 @@ type Node struct {
 	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
 	peerManager            *PeerManager
+	isProducer             bool
 }
 
 func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
@@ -145,6 +146,10 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 	return node
 }
 
+func (n *Node) SetIsProducer(isProducer bool) {
+	n.isProducer = isProducer
+}
+
 func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
 	if n.recentlyRcvedDapMsgs.Contains(dapmsg.GetKey()) {
 		return true
@@ -159,6 +164,7 @@ func (n *Node) GetDownloadManager() *DownloadManager          { return n.downloa
 func (n *Node) GetPeerManager() *PeerManager                  { return n.peerManager }
 func (n *Node) GetInfo() *PeerInfo                            { return n.info }
 func (n *Node) GetBlockChainManager() *core.BlockChainManager { return n.bm }
+func (n *Node) IsProducer() bool                              { return n.isProducer }
 
 func (n *Node) Start(listenPort int) error {
 

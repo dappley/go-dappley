@@ -20,17 +20,19 @@ package main
 
 import (
 	"flag"
+
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/contract"
+	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/metrics/api"
+	metrics "github.com/dappley/go-dappley/metrics/api"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -75,7 +77,7 @@ func main() {
 	defer db.Close()
 
 	//create blockchain
-	conss, _ := initConsensus(genesisConf)
+	conss, dynasty := initConsensus(genesisConf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
@@ -89,7 +91,7 @@ func main() {
 	}
 	bc.SetState(core.BlockchainInit)
 
-	node, err := initNode(conf, bc)
+	node, err := initNode(conf, bc, dynasty.IsProducer(conf.GetNodeConfig().GetNodeAddress()))
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
@@ -133,9 +135,10 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 	return conss, dynasty
 }
 
-func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
+func initNode(conf *configpb.Config, bc *core.Blockchain, isProducer bool) (*network.Node, error) {
 	//create node
 	node := network.NewNode(bc, core.NewBlockPool(0))
+	node.SetIsProducer(isProducer)
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()

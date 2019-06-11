@@ -43,7 +43,7 @@ func TestDataStoreCapacityConstraint(t *testing.T) {
 	ds.stopUpdate()
 	time.Sleep(time.Second)
 	// ensure capacity constraint is not violated
-	assert.Equal(t, 1, len(ds.Metrics["test"].Stats))
+	assert.Equal(t, 1, ds.getNumStats("test"))
 }
 
 func TestDataStore_RegisterNewMetric(t *testing.T) {
@@ -54,6 +54,7 @@ func TestDataStore_RegisterNewMetric(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = ds.registerNewMetric("test", func() interface{} { return 1 })
+	assert.NotNil(t, err)
 	assert.Equal(t, "unable to register duplicate metric", err.Error())
 }
 
@@ -72,20 +73,20 @@ func TestDataStore_Update(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// ensure some stats were collected
-	numStats := len(ds.Metrics["test"].Stats)
+	numStats := ds.getNumStats("test")
 	assert.True(t, numStats > 0)
 
 	// test stop update
 	time.Sleep(2 * time.Second)
-	assert.Equal(t, numStats, len(ds.Metrics["test"].Stats))
+	assert.Equal(t, numStats, ds.getNumStats("test"))
 
 	// test restart
 	ds.startUpdate()
 	time.Sleep(2 * time.Second)
-	assert.True(t, len(ds.Metrics["test"].Stats) > numStats)
+	assert.True(t, ds.getNumStats("test") > numStats)
 	ds.stopUpdate()
 	time.Sleep(time.Second)
-	numStats = len(ds.Metrics["test"].Stats)
+	numStats = ds.getNumStats("test")
 	time.Sleep(2 * time.Second)
-	assert.Equal(t, numStats, len(ds.Metrics["test"].Stats))
+	assert.Equal(t, numStats, ds.getNumStats("test"))
 }

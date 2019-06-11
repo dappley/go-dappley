@@ -171,3 +171,12 @@ func IsProducerAddressValid(producer string) bool {
 func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
 }
+
+func (dynasty *Dynasty) IsProducer(nodeAddress string) bool {
+	for _, producer := range dynasty.GetProducers() {
+		if producer == nodeAddress {
+			return true
+		}
+	}
+	return false
+}

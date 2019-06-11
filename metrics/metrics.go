@@ -4,7 +4,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-func DeregisterAll(){
+func DeregisterAll() {
 	metrics.Each(func(s string, i interface{}) {
 		metrics.Unregister(s)
 	})
