@@ -48,6 +48,8 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 
 	bcm := NewBlockChainManager()
 	bcm.Setblockchain(bc)
+	bp := NewBlockPool(100)
+	bcm.SetblockPool(bp)
 
 	t2, _ := common.NewTree(b2.GetHash().String(), b2)
 	t4, _ := common.NewTree(b4.GetHash().String(), b4)
@@ -57,12 +59,12 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	t2.AddChild(t4)
 	t2.AddChild(t5)
 	t4.AddChild(t7)
-	bcm.cachedForks[b2.GetHash().String()] = t2
+	bp.CacheBlock(t2, 0)
 
 	// adding block that is not connected to BlockChain should be ignored
 	b8 := &Block{header: &BlockHeader{height: 4, prevHash: []byte{9}}}
 	t8, _ := common.NewTree(b8.GetHash().String(), b8)
-	bcm.cachedForks[b8.GetHash().String()] = t8
+	bp.CacheBlock(t8, 0)
 
 	numForks, longestFork := bcm.NumForks()
 	assert.EqualValues(t, 2, numForks)
@@ -72,7 +74,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b9 := &Block{header: &BlockHeader{height: 4, prevHash: b6.GetHash()}}
 	b9.header.hash = b9.CalculateHash()
 	t9, _ := common.NewTree(b9.GetHash().String(), b9)
-	bcm.cachedForks[b9.GetHash().String()] = t9
+	bp.CacheBlock(t9, 0)
 
 	numForks, longestFork = bcm.NumForks()
 	assert.EqualValues(t, 3, numForks)
