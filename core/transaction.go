@@ -41,7 +41,7 @@ var subsidy = common.NewAmount(10000000)
 
 const (
 	ContractTxouputIndex = 0
-	SCDestroyAddress     = ""
+	SCDestroyAddress     = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
 )
 
 var rewardTxData = []byte("Distribute X Rewards")
