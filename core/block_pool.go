@@ -92,14 +92,14 @@ func (pool *BlockPool) CacheBlock(block *Block, maxHeight uint64) *common.Tree {
 	blkCache := pool.blkCache
 	tree, _ := common.NewTree(block.GetHash().String(), block)
 
-	if blkCache.Contains(tree.GetValue().(*Block).GetHash().String()) {
+	if blkCache.Contains(block.GetHash().String()) {
 		return tree.GetRoot()
 	}
-	if !pool.isChildBlockInCache(tree.GetValue().(*Block).GetHash().String()) && tree.GetValue().(*Block).GetHeight() <= maxHeight {
+	if !pool.isChildBlockInCache(block.GetHash().String()) && block.GetHeight() <= maxHeight {
 		return tree.GetRoot()
 	}
 
-	blkCache.Add(tree.GetValue().(*Block).GetHash().String(), tree)
+	blkCache.Add(block.GetHash().String(), tree)
 	pool.updateBlkCache(tree)
 	return tree.GetRoot()
 }
@@ -221,8 +221,3 @@ func (pool *BlockPool) ForkHeadRange(fn func(blkHash string, tree *common.Tree))
 	}
 }
 
-func (pool *BlockPool) numForkHeads() int {
-	pool.forkHeadsMutex.RLock()
-	defer pool.forkHeadsMutex.RUnlock()
-	return len(pool.forkHeads)
-}
