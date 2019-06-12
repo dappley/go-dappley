@@ -86,9 +86,11 @@ func (pool *BlockPool) Verify(block *Block) bool {
 	return true
 }
 
-// CacheBlock cache the tree, update the cache and return the fork head
-func (pool *BlockPool) CacheBlock(tree *common.Tree, maxHeight uint64) *common.Tree {
+// CacheBlock caches the provided block if it is not a duplicate and it's height is within the upper bound of maxHeight,
+// returning the head of it's fork
+func (pool *BlockPool) CacheBlock(block *Block, maxHeight uint64) *common.Tree {
 	blkCache := pool.blkCache
+	tree, _ := common.NewTree(block.GetHash().String(), block)
 
 	if blkCache.Contains(tree.GetValue().(*Block).GetHash().String()) {
 		return tree.GetRoot()
@@ -217,4 +219,10 @@ func (pool *BlockPool) ForkHeadRange(fn func(blkHash string, tree *common.Tree))
 	for k, v := range pool.forkHeads {
 		fn(k, v)
 	}
+}
+
+func (pool *BlockPool) numForkHeads() int {
+	pool.forkHeadsMutex.RLock()
+	defer pool.forkHeadsMutex.RUnlock()
+	return len(pool.forkHeads)
 }

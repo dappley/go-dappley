@@ -1,3 +1,5 @@
+// +build integration
+
 package core
 
 import (
@@ -51,20 +53,19 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	bp := NewBlockPool(100)
 	bcm.SetblockPool(bp)
 
-	t2, _ := common.NewTree(b2.GetHash().String(), b2)
-	t4, _ := common.NewTree(b4.GetHash().String(), b4)
-	t5, _ := common.NewTree(b5.GetHash().String(), b5)
-	t7, _ := common.NewTree(b7.GetHash().String(), b7)
-
-	bp.CacheBlock(t2, 0)
-	bp.CacheBlock(t4, 0)
-	bp.CacheBlock(t5, 0)
-	bp.CacheBlock(t7, 0)
+	bp.CacheBlock(b2, 0)
+	assert.Equal(t, 1, bp.numForkHeads())
+	bp.CacheBlock(b4, 0)
+	assert.Equal(t, 1, bp.numForkHeads())
+	bp.CacheBlock(b5, 0)
+	assert.Equal(t, 1, bp.numForkHeads())
+	bp.CacheBlock(b7, 0)
+	assert.Equal(t, 1, bp.numForkHeads())
 
 	// adding block that is not connected to BlockChain should be ignored
 	b8 := &Block{header: &BlockHeader{height: 4, prevHash: []byte{9}, nonce: 8}}
-	t8, _ := common.NewTree(b8.GetHash().String(), b8)
-	bp.CacheBlock(t8, 0)
+	bp.CacheBlock(b8, 0)
+	assert.Equal(t, 2, bp.numForkHeads())
 
 	numForks, longestFork := bcm.NumForks()
 	assert.EqualValues(t, 2, numForks)
@@ -73,8 +74,12 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	// create a new fork off b6
 	b9 := &Block{header: &BlockHeader{height: 4, prevHash: b6.GetHash(), nonce: 9}}
 	b9.header.hash = b9.CalculateHash()
-	t9, _ := common.NewTree(b9.GetHash().String(), b9)
-	bp.CacheBlock(t9, 0)
+	bp.CacheBlock(b9, 0)
+	assert.Equal(t, 3, bp.numForkHeads())
+
+	bp.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+		assert.Contains(t, []string{b2.GetHash().String(), b8.GetHash().String(), b9.GetHash().String()}, blkHash)
+	})
 
 	numForks, longestFork = bcm.NumForks()
 	assert.EqualValues(t, 3, numForks)

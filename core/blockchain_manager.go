@@ -93,8 +93,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		return
 	}
 
-	tree, _ := common.NewTree(block.GetHash().String(), block)
-	forkHead := bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
+	forkHead := bm.blockPool.CacheBlock(block, bm.blockchain.GetMaxHeight())
 	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
 	if forkHeadParentHash == nil {
 		return
