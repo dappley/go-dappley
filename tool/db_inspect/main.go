@@ -249,10 +249,12 @@ func block2PrettyPb(block *core.Block) proto.Message {
 		txArray = append(
 			txArray,
 			&db_inspect_pb.Transaction{
-				Id:   hex.EncodeToString(tx.ID),
-				Vin:  txVinPbs,
-				Vout: txVoutPbs,
-				Tip:  tx.Tip.String(),
+				Id:       hex.EncodeToString(tx.ID),
+				Vin:      txVinPbs,
+				Vout:     txVoutPbs,
+				Tip:      tx.Tip.String(),
+				GasLimit: tx.GasLimit.String(),
+				GasPrice: tx.GasPrice.String(),
 			})
 	}
 

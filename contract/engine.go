@@ -153,6 +153,11 @@ func NewV8Engine() *V8Engine {
 	currHandler++
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
+	logger.WithFields(logger.Fields{
+		"engine":         engine,
+		"v8EngineList":   v8EngineList,
+		"engine.handler": engine.handler,
+	}).Error("NewV8Engine")
 	v8EngineList[engine.handler] = engine
 
 	(func() {
@@ -326,7 +331,9 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 	)
 	cFunction := C.CString(runnableSource)
 	defer C.free(unsafe.Pointer(cFunction))
-	logger.Info("before executeV8Script...")
+	logger.WithFields(logger.Fields{
+		"sc.handler": sc.handler,
+	}).Info("before executeV8Script...")
 	ret = C.executeV8Script(cFunction, C.int(sourceLineOffset), C.uintptr_t(sc.handler), &cResult, sc.v8engine)
 	sc.CollectTracingStats()
 
@@ -419,6 +426,10 @@ func (sc *V8Engine) prepareFuncCallScript(source, function, args string) (string
 func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
+	logger.WithFields(logger.Fields{
+		"v8EngineList":      v8EngineList,
+		"v8EngineList-size": len(v8EngineList),
+	}).Error("getV8EngineByAddress")
 	return v8EngineList[handler]
 }
 

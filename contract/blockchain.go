@@ -71,7 +71,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 
 	contractAddr := engine.contractAddr
 	logger.WithFields(logger.Fields{
-		"contractAddr":  contractAddr,
+		"contractAddr": contractAddr,
 	}).Info("SmartContract: contractAddr!")
 	utxos := engine.contractUTXOs
 	sourceTXID := engine.sourceTXID
@@ -91,7 +91,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 		return 1
 	}
 
-	transferTX, err := core.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, sourceTXID)
+	transferTX, err := core.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

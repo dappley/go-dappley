@@ -99,7 +99,8 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 	utxoIndex.UpdateUtxo(cbtx)
 
 	logger.WithFields(logger.Fields{
-		"valid_txs": len(validTxs),
+		"scGeneratedTXs": len(scGeneratedTXs),
+		"valid_txs":      len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
 	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock), UtxoIndex: utxoIndex, State: state}
@@ -127,6 +128,8 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	var generatedTXs []*core.Transaction
 	rewards := make(map[string]string)
 
+	minerAddr := core.NewAddress(bp.beneficiary)
+
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()
 		if ctx == nil {
@@ -135,26 +138,57 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			continue
 		}
 		gasCount, newTxs, err := ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-		if err != nil {
-			// add utxo from txs into utxoIndex
-			utxoIndex.UpdateUtxo(tx)
-			continue
-		}
-		// TODO record gas used
 		logger.WithFields(logger.Fields{
 			"gasCount": gasCount,
 		}).Info("Gas used.")
-		//minerAddr := core.NewAddress(bp.beneficiary)
 
 		generatedTXs = append(generatedTXs, newTxs...)
+		// record gas used
+		if err != nil {
+			// add utxo from txs into utxoIndex
+			logger.WithFields(logger.Fields{
+				"err": err,
+			}).Error("executeSmartContract error.")
+		}
+		if gasCount > 0 {
+			logger.WithFields(logger.Fields{
+				"gasCount": gasCount,
+			}).Info("executeSmartContract gas consumed.")
+			grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+			logger.WithFields(logger.Fields{
+				"address":      ctx.GetDefaultFromPubKeyHash().GenerateAddress(),
+				"grtx":         grtx,
+				"generatedTXs": len(generatedTXs),
+			}).Info("executeSmartContract grtx.")
+			if err == nil {
+				generatedTXs = append(generatedTXs, &grtx)
+			}
+		}
+		gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+		logger.WithFields(logger.Fields{
+			"address":      ctx.GetDefaultFromPubKeyHash().GenerateAddress(),
+			"gctx":         gctx,
+			"generatedTXs": len(generatedTXs),
+		}).Info("executeSmartContract gctx.")
+		if err == nil {
+
+			generatedTXs = append(generatedTXs, &gctx)
+		}
+
 		// add utxo from txs into utxoIndex
 		utxoIndex.UpdateUtxo(tx)
 	}
-
+	logger.WithFields(logger.Fields{
+		"len(rewards)": len(rewards),
+	}).Info("executeSmartContract len(rewards).")
 	// append reward transaction
 	if len(rewards) > 0 {
 		rtx := core.NewRewardTx(currBlkHeight, rewards)
 		generatedTXs = append(generatedTXs, &rtx)
+		logger.WithFields(logger.Fields{
+			"rtx":          rtx,
+			"generatedTXs": len(generatedTXs),
+		}).Info("executeSmartContract rewards.")
 	}
 	return generatedTXs, scStorage
 }

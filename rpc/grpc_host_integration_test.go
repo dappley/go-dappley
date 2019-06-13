@@ -340,7 +340,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
@@ -585,6 +585,8 @@ func TestRpcSendTransaction(t *testing.T) {
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"")
 	transaction, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
@@ -600,6 +602,8 @@ func TestRpcSendTransaction(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	errTransaction, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
@@ -674,6 +678,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		receiverWallet1.GetAddress(),
 		common.NewAmount(3),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"")
 	transaction1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction1})
@@ -682,6 +688,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(2),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
@@ -692,6 +700,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		receiverWallet1.GetKeyPair(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(1),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction3, err := core.NewUTXOTransaction(utxos, sendTxParam3)
@@ -714,6 +724,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"")
 	errTransaction, err := core.NewUTXOTransaction(utxos2, sendTxParamErr)
 
@@ -721,6 +733,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction4, err := core.NewUTXOTransaction(utxos2, sendTxParam4)
@@ -829,7 +843,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step1)
@@ -837,12 +851,12 @@ func TestGetNewTransaction(t *testing.T) {
 	assert.Equal(t, true, conn2Step1)
 	conn2.Close()
 
-	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step2)
 	conn1.Close()
 
-	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, false, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
 
@@ -880,6 +894,8 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction, err := core.NewUTXOTransaction(utxos, sendTxParam)

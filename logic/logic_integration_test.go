@@ -92,7 +92,7 @@ func TestSend(t *testing.T) {
 				rcvAddr = receiverWallet.GetAddress()
 			}
 
-			_, _, err = Send(senderWallet, rcvAddr, tc.transferAmount, tc.tipAmount, tc.contract, bc, node)
+			_, _, err = Send(senderWallet, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bc, node)
 			assert.Equal(t, tc.expectedErr, err)
 
 			// Create a miner wallet; Balance is 0 initially
@@ -188,7 +188,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
-	_, _, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, "", bc, node)
+	_, _, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -242,7 +242,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to addr2
-	_, _, err = Send(wallet1, addr2, transferAmount, tip, "", bc, node)
+	_, _, err = Send(wallet1, addr2, transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first wallet should be still be 10
@@ -677,7 +677,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//deploy smart contract
-	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), common.NewAmount(0), contract, bc, node)
+	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bc, node)
 	assert.Nil(t, err)
 
 	txp := bc.GetTxPool().GetTransactions()[0]
@@ -704,7 +704,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//store data
 	functionCall := `{"function":"set","args":["testKey","222"]}`
-	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), functionCall, bc, node)
+	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc, node)
 	assert.Nil(t, err)
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {
@@ -713,7 +713,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//get data
 	functionCall = `{"function":"get","args":["testKey"]}`
-	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), functionCall, bc, node)
+	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc, node)
 	assert.Nil(t, err)
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {

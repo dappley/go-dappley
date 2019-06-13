@@ -59,6 +59,8 @@ message SendRequest {
   string wallet_path = 4;
   bytes tip = 5;
   string data = 6;
+  bytes gasLimit = 7;
+  bytes gasPrice = 8;
 }
 
 message GetPeerInfoRequest {}

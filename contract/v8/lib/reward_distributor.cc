@@ -28,11 +28,10 @@ void NewRewardDistributorInstance(Isolate *isolate, Local<Context> context, void
 
 // VerifyAddressCallback
 void RecordRewardCallback(const FunctionCallbackInfo<Value> &info) {
-
+    printf("RecordRewardCallback start\n");
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
-
     if (info.Length() != 2) {
         isolate->ThrowException(String::NewFromUtf8(
             isolate, "Blockchain.verifyAddress() requires 2 arguments"));
@@ -55,4 +54,5 @@ void RecordRewardCallback(const FunctionCallbackInfo<Value> &info) {
 
     int ret = sRecordReward(handler->Value(), *String::Utf8Value(isolate, address),*String::Utf8Value(isolate, amount));
     info.GetReturnValue().Set(ret);
+    printf("RecordRewardCallback end\n");
 }

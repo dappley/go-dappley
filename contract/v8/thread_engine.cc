@@ -41,12 +41,14 @@ char *InjectTracingInstructionsThread(V8Engine *e, const char *source,
 
 int RunScriptSourceThread(char **result, V8Engine *e, const char *source,
                     int source_line_offset, uintptr_t lcs_handler,
-                    uintptr_t gcs_handler) {
+                    uintptr_t gcs_handler,uintptr_t handler) {
   v8ThreadContext ctx;
   memset(&ctx, 0x00, sizeof(ctx));
   SetRunScriptArgs(&ctx, e, RUNSCRIPT, source, source_line_offset, 1);
 	ctx.input.lcs = lcs_handler;
   ctx.input.gcs = gcs_handler;  
+  ctx.input.handler = handler;
+  printf("--------------RunScriptSourceThread handler %zu\n",handler);
 
   bool btn = CreateScriptThread(&ctx);
   if (btn == false) {
@@ -64,15 +66,15 @@ void *ExecuteThread(void *args) {
     tContext.source_line_offset = 0;
     tContext.tracable_source = NULL;
     tContext.strictDisallowUsage = ctx->input.allow_usage;
-
-    Execute(ctx->input.source, 0, 0L, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
+   printf("--------------ExecuteThread handler %zu\n",ctx->input.handler);
+    Execute(ctx->input.source, 0, ctx->input.handler, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
 
     ctx->output.line_offset = tContext.source_line_offset;
     ctx->output.result = static_cast<char *>(tContext.tracable_source);
   } else {
     // Execute(&ctx->output.result, ctx->e, ctx->input.source, ctx->input.line_offset, (void *)ctx->input.lcs,
     //             (void *)ctx->input.gcs, ExecuteSourceDataDelegate, NULL);
-    ctx->output.ret = Execute(ctx->input.source, ctx->input.line_offset, 0L, NULL, ctx->e, ExecuteSourceDataDelegate, NULL);
+    ctx->output.ret = Execute(ctx->input.source, ctx->input.line_offset, ctx->input.handler, NULL, ctx->e, ExecuteSourceDataDelegate, NULL);
     // printf("iRtn:%d--result:%s\n", ctx->output.ret, ctx->output.result);
   }
 

@@ -476,7 +476,7 @@ func createRandomTransaction(addresses []core.Address, wm *client.WalletManager)
 	}
 
 	senderKeyPair := wm.GetKeyPairByAddress(addresses[fromIndex])
-	tx := createTransaction(addresses[fromIndex], core.NewAddress(toAddr), common.NewAmount(sendAmount), common.NewAmount(0), data, senderKeyPair)
+	tx := createTransaction(addresses[fromIndex], core.NewAddress(toAddr), common.NewAmount(sendAmount), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), data, senderKeyPair)
 	if tx == nil {
 		return nil
 	}
@@ -487,7 +487,7 @@ func createRandomTransaction(addresses []core.Address, wm *client.WalletManager)
 	return tx.ToProto().(*corepb.Transaction)
 }
 
-func createTransaction(from, to core.Address, amount, tip *common.Amount, contract string, senderKeyPair *core.KeyPair) *core.Transaction {
+func createTransaction(from, to core.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *core.KeyPair) *core.Transaction {
 
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
 	if err != nil {
@@ -503,7 +503,7 @@ func createTransaction(from, to core.Address, amount, tip *common.Amount, contra
 		//}).Warn("Unable to get previous utxos")
 		return nil
 	}
-	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, contract)
+	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract)
 	tx, err := core.NewUTXOTransaction(prevUtxos, sendTxParam)
 
 	sendTXLogger := logger.WithFields(logger.Fields{

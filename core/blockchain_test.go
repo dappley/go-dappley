@@ -203,7 +203,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 		utxo.UpdateUtxo(&cbtx)
 		txs = append(txs, &cbtx)
 		for j := 0; j < 10; j++ {
-			sendTxParam := NewSendTxParam(addrs[0], kps[0], addrs[i%10], common.NewAmount(1), common.NewAmount(0), "")
+			sendTxParam := NewSendTxParam(addrs[0], kps[0], addrs[i%10], common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), sendTxParam)
 			utxo.UpdateUtxo(&tx)
 			txs = append(txs, &tx)

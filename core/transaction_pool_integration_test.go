@@ -50,7 +50,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
-		sendTxParam := NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(1), common.NewAmount(uint64(i)), "")
+		sendTxParam := NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(1), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
 		tx, err := NewUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		txPool.Push(tx)
@@ -85,7 +85,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
 		prevUTXO := tempUtxoIndex.GetAllUTXOsByPubKeyHash(pkhs[i])
-		sendTxParam := NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), "")
+		sendTxParam := NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
 		tx, err := NewUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		tempUtxoIndex.UpdateUtxo(&tx)

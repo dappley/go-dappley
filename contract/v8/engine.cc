@@ -93,54 +93,6 @@ void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
   }
 }
 
-//int ExecuteSourceDataDelegate(char **result, Isolate *isolate, const char *sourceCode,
-//                             int source_line_offset, Local<Context> context,
-//                             TryCatch &trycatch, void *delegateContext){
-//// Create a string containing the JavaScript source code.
-//      printf("ExecuteSourceDataDelegate source %s\n", sourceCode);
-//     Local<String> source = String::NewFromUtf8(
-//       isolate,
-//       sourceCode,
-//       NewStringType::kNormal
-//     ).ToLocalChecked();
-//
-//     // Compile the source code.
-//     ScriptOrigin sourceSrcOrigin(
-//         String::NewFromUtf8(isolate, "_contract_runner.js"),
-//         Integer::New(isolate, source_line_offset));
-//     MaybeLocal<Script> script = Script::Compile(context, source, &sourceSrcOrigin);
-//
-//     if (script.IsEmpty()) {
-//     printf("ExecuteSourceDataDelegate IsEmpty\n");
-//       reportException(isolate, &trycatch);
-//       *result = wrapReturnResult("1");
-//       return VM_EXCEPTION_ERR;
-//     }
-//
-//     // Run the script to get the result.
-//     Local<Value> scriptRes;
-//     if (!script.ToLocalChecked()->Run(context).ToLocal(&scriptRes)) {
-//     printf("ExecuteSourceDataDelegate VM_EXCEPTION_ERR\n");
-//       assert(trycatch.HasCaught());
-//       reportException(isolate, &trycatch);
-//       *result = wrapReturnResult("1");
-//       return VM_EXCEPTION_ERR;
-//     }
-//
-//     // set result.
-//     if (result != NULL)  {
-//     printf("ExecuteSourceDataDelegate hashresult\n");
-//       Local<Object> obj = scriptRes.As<Object>();
-//       if (!obj->IsUndefined()) {
-//       printf("ExecuteSourceDataDelegate result end\n");
-//         String::Utf8Value str(isolate, obj);
-//         *result = wrapReturnResult(*str);
-//       }
-//     }
-//
-// return VM_SUCCESS;
-//}
-
  int ExecuteSourceDataDelegate(char **result, Isolate *isolate,
                                const char *source, int source_line_offset,
                                Local<Context> context, TryCatch &trycatch,
@@ -184,7 +136,8 @@ void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
 
 int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e){
 //    return Execute(sourceCode, source_line_offset, handler, result, e, ExecuteSourceDataDelegate, NULL);
-    return RunScriptSourceThread(result, e, sourceCode, source_line_offset, 0L, 0L);
+printf("--------------executeV8Script handler %zu\n",handler);
+    return RunScriptSourceThread(result, e, sourceCode, source_line_offset, 0L, 0L, handler);
 }
 
 int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext)
@@ -211,6 +164,7 @@ int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, c
 
   printf("before NewBlockchainInstance .... \n");
   // Continue put objects to global object.
+printf("--------------Execute handler %zu\n",handler);
   SetGlobalObjectProperties(isolate, context, e, (void *)handler);
 
   // Setup execution env.
