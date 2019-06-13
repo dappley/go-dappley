@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common"
 )
 
 type stat struct {
@@ -15,12 +17,8 @@ type stat struct {
 }
 
 type metric struct {
-	Stats  []stat `json:"stats"`
+	Stats  *common.EvictingQueue `json:"stats"`
 	update func() interface{}
-}
-
-func (m *metric) setStats(stats []stat) {
-	m.Stats = stats
 }
 
 type dataStore struct {
@@ -68,7 +66,7 @@ func (ds *dataStore) registerNewMetric(name string, updateMetric func() interfac
 		return errors.New("unable to register duplicate metric")
 	}
 
-	ds.Metrics[name] = &metric{make([]stat, 0, ds.statCapacity), updateMetric}
+	ds.Metrics[name] = &metric{common.NewEvictingQueue(ds.statCapacity), updateMetric}
 	return nil
 }
 
@@ -82,12 +80,8 @@ func (ds *dataStore) startUpdate() {
 				select {
 				case t := <-tick.C:
 					ds.mutex.Lock()
-					for key := range ds.Metrics {
-						if len(ds.Metrics[key].Stats)+1 > ds.statCapacity {
-							ds.Metrics[key].setStats(ds.Metrics[key].Stats[1:])
-						}
-						ds.Metrics[key].setStats(append(ds.Metrics[key].Stats,
-							stat{t.Unix(), ds.Metrics[key].update()}))
+					for _, metric := range ds.Metrics {
+						metric.Stats.Push(stat{t.Unix(), metric.update()})
 					}
 					ds.mutex.Unlock()
 				case <-ds.quit:
@@ -110,5 +104,5 @@ func (ds *dataStore) stopUpdate() {
 func (ds *dataStore) getNumStats(metric string) int {
 	ds.mutex.RLock()
 	defer ds.mutex.RUnlock()
-	return len(ds.Metrics[metric].Stats)
+	return ds.Metrics[metric].Stats.Len()
 }

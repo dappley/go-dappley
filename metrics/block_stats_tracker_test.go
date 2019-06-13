@@ -11,17 +11,43 @@ func TestBlockStatsTracker_Update(t *testing.T) {
 	bst := NewBlockStatsTracker(2)
 	bst.Update(1, 1)
 	bst.Update(2, 2)
-	compareJSON(t, `{"NumTxPerBlock":[1,2],"BlockHeights":[1,2]}`, bst)
+	expectedJSON :=
+		`
+	[
+		{	
+			"NumTransactions": 1,
+			"Height": 1
+		},
+		{
+			"NumTransactions": 2,
+			"Height": 2
+		}
+	]
+	`
+	compareJSON(t, expectedJSON, bst)
 
 	bst.Update(3, 3)
-	compareJSON(t, `{"NumTxPerBlock":[2,3],"BlockHeights":[2,3]}`, bst)
+	expectedJSON =
+		`
+	[
+		{	
+			"NumTransactions": 2,
+			"Height": 2
+		},
+		{
+			"NumTransactions": 3,
+			"Height": 3
+		}
+	]
+	`
+	compareJSON(t, expectedJSON, bst)
 }
 
 func TestBlockStatsTracker_Filter(t *testing.T) {
 	bst := NewBlockStatsTracker(1)
 	bst.Update(1, 1)
-	compareJSON(t, `{"NumTxPerBlock":[1],"BlockHeights":[1]}`, bst.Filter(true, true))
-	compareJSON(t, `{"NumTxPerBlock":[0],"BlockHeights":[1]}`, bst.Filter(true, false))
+	compareJSON(t, `[{"NumTransactions":1,"Height":1}]`, bst.Filter(true, true))
+	compareJSON(t, `[{"NumTransactions":0,"Height":1}]`, bst.Filter(true, false))
 }
 
 func compareJSON(t *testing.T, expected string, obj interface{}) {
