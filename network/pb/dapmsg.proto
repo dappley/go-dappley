@@ -20,6 +20,8 @@ message ReturnBlockchainInfo {
     bytes   tail_block_hash = 1;
     uint64  block_height = 2;
     int64   timestamp = 3;
+    bytes   lib_hash=4;
+    uint64  lib_height=5;
 }
 
 message GetBlocks {

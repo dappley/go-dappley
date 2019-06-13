@@ -996,6 +996,46 @@ func TestRpcService_RpcSubscribe(t *testing.T) {
 	assert.Equal(t, 2, count2)
 }
 
+func TestRpcGetLastIrreversibleBlock(t *testing.T) {
+	rpcContext, err := createRpcTestContext(14)
+	if err != nil {
+		panic(err)
+	}
+	defer rpcContext.destroyContext()
+
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Start()
+
+	for rpcContext.bc.GetMaxHeight() < 50 {
+	}
+
+	rpcContext.consensus.Stop()
+	t.Log(rpcContext.bc.GetMaxHeight())
+	core.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.consensus.IsProducingBlock()
+	}, 20)
+	time.Sleep(time.Second)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+
+	block20, err := rpcContext.bc.GetBlockByHeight(20)
+	assert.Nil(t, err)
+	rpcContext.bc.SetLIBHash(block20.GetHash())
+
+	response, err := c.RpcGetLastIrreversibleBlock(context.Background(), &rpcpb.GetLastIrreversibleBlockRequest{})
+	assert.Nil(t, err)
+	assert.NotNil(t, response)
+	assert.Equal(t, []byte(block20.GetHash()), response.Block.GetHeader().GetHash())
+	assert.Equal(t, uint64(20), response.Block.GetHeader().GetHeight())
+
+}
+
 func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()

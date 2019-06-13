@@ -66,7 +66,7 @@ var blk3 = &Block{
 }
 
 func TestHashTransactions(t *testing.T) {
-	block := NewBlock([]*Transaction{{}}, blk2)
+	block := NewBlock([]*Transaction{{}}, blk2, "")
 	hash := block.HashTransactions()
 	assert.Equal(t, expectHash, hash)
 }
@@ -75,28 +75,28 @@ func TestNewBlock(t *testing.T) {
 	var emptyTx = []*Transaction([]*Transaction{})
 	var emptyHash = Hash(Hash{})
 	var expectBlock3Hash = Hash{0x61}
-	block1 := NewBlock(nil, nil)
+	block1 := NewBlock(nil, nil, "")
 	assert.Nil(t, block1.header.prevHash)
 	assert.Equal(t, emptyTx, block1.transactions)
 
-	block2 := NewBlock(nil, blk)
+	block2 := NewBlock(nil, blk, "")
 	assert.Equal(t, emptyHash, block2.header.prevHash)
 	assert.Equal(t, Hash(Hash{}), block2.header.prevHash)
 	assert.Equal(t, emptyTx, block2.transactions)
 
-	block3 := NewBlock(nil, blk2)
+	block3 := NewBlock(nil, blk2, "")
 	assert.Equal(t, expectBlock3Hash, block3.header.prevHash)
 	assert.Equal(t, Hash(Hash{'a'}), block3.header.prevHash)
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
 	assert.Equal(t, uint64(1), block3.header.height)
 	assert.Equal(t, emptyTx, block3.transactions)
 
-	block4 := NewBlock([]*Transaction{}, nil)
+	block4 := NewBlock([]*Transaction{}, nil, "")
 	assert.Nil(t, block4.header.prevHash)
 	assert.Equal(t, emptyTx, block4.transactions)
 	assert.Equal(t, Hash(nil), block4.header.prevHash)
 
-	block5 := NewBlock([]*Transaction{{}}, nil)
+	block5 := NewBlock([]*Transaction{{}}, nil, "")
 	assert.Nil(t, block5.header.prevHash)
 	assert.Equal(t, []*Transaction{{}}, block5.transactions)
 	assert.Equal(t, &Transaction{}, block5.transactions[0])
@@ -111,6 +111,7 @@ func TestBlockHeader_Proto(t *testing.T) {
 		2,
 		nil,
 		0,
+		"",
 	}
 
 	pb := bh1.ToProto()
@@ -201,8 +202,8 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 }
 
 func TestIsParentBlockHash(t *testing.T) {
-	parentBlock := NewBlock([]*Transaction{{}}, blk2)
-	childBlock := NewBlock([]*Transaction{{}}, parentBlock)
+	parentBlock := NewBlock([]*Transaction{{}}, blk2, "")
+	childBlock := NewBlock([]*Transaction{{}}, parentBlock, "")
 
 	assert.True(t, IsParentBlockHash(parentBlock, childBlock))
 	assert.False(t, IsParentBlockHash(parentBlock, nil))
@@ -211,8 +212,8 @@ func TestIsParentBlockHash(t *testing.T) {
 }
 
 func TestIsParentBlockHeight(t *testing.T) {
-	parentBlock := NewBlock([]*Transaction{{}}, blk2)
-	childBlock := NewBlock([]*Transaction{{}}, parentBlock)
+	parentBlock := NewBlock([]*Transaction{{}}, blk2, "")
+	childBlock := NewBlock([]*Transaction{{}}, parentBlock, "")
 
 	assert.True(t, IsParentBlockHeight(parentBlock, childBlock))
 	assert.False(t, IsParentBlockHeight(parentBlock, nil))
@@ -220,7 +221,7 @@ func TestIsParentBlockHeight(t *testing.T) {
 	assert.False(t, IsParentBlockHeight(childBlock, parentBlock))
 }
 func TestCalculateHashWithNonce(t *testing.T) {
-	block := NewBlock([]*Transaction{{}}, blk3)
+	block := NewBlock([]*Transaction{{}}, blk3, "")
 	block.header.timestamp = 0
 	expectHash1 := Hash{0x3f, 0x2f, 0xec, 0xb4, 0x33, 0xf0, 0xd1, 0x1a, 0xa6, 0xf4, 0xf, 0xb8, 0x7f, 0x8f, 0x99, 0x11, 0xae, 0xe7, 0x42, 0xf4, 0x69, 0x7d, 0xf1, 0xaa, 0xc8, 0xd0, 0xfc, 0x40, 0xa2, 0xd8, 0xb1, 0xa5}
 	assert.Equal(t, Hash(expectHash1), block.CalculateHashWithNonce(1))
@@ -365,7 +366,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 
 			utxoIndex := UTXOIndex{index, NewUTXOCache(db), &sync.RWMutex{}}
 			scState := NewScState()
-			block := NewBlock(tt.txs, blk)
+			block := NewBlock(tt.txs, blk, "")
 			assert.Equal(t, tt.ok, block.VerifyTransactions(&utxoIndex, scState, nil, block))
 		})
 	}
