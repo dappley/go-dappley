@@ -131,7 +131,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
+	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -164,7 +164,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := NewBlock([]*Transaction{}, genesis, "")
+	blk := NewBlock([]*Transaction{}, genesis)
 	blk.SetHash([]byte("hash1"))
 
 	blk.header.height = 1
@@ -209,7 +209,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 			txs = append(txs, &tx)
 		}
 
-		b := NewBlock(txs, tailBlk, "")
+		b := NewBlock(txs, tailBlk)
 		b.SetHash(b.CalculateHash())
 		state := LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})

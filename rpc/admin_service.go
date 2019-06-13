@@ -46,7 +46,7 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.GetAddress()) == 0 || !core.NewAddress(in.GetAddress()).ValidateAddress() {
+	if len(in.GetAddress()) == 0 || !core.NewAddress(in.GetAddress()).IsValid() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.GetAddress())

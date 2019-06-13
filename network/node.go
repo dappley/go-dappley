@@ -54,6 +54,7 @@ const (
 	ReturnPeerList         = "ReturnPeerList"
 	RequestBlock           = "requestBlock"
 	BroadcastTx            = "BroadcastTx"
+	BroadcastBatchTxs      = "BraodcastBatchTxs"
 	GetCommonBlocks        = "GetCommonBlocks"
 	ReturnCommonBlocks     = "ReturnCommonBlocks"
 	Unicast                = 0
@@ -72,6 +73,7 @@ const (
 	ReturnPeerListPriority       = HighPriorityCommand
 	RequestBlockPriority         = HighPriorityCommand
 	BroadcastTxPriority          = NormalPriorityCommand
+	BroadcastBatchTxsPriority    = NormalPriorityCommand
 	GetCommonBlocksPriority      = HighPriorityCommand
 	ReturnCommonBlocksPriority   = HighPriorityCommand
 )
@@ -134,7 +136,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 	}
 	node.recentlyRcvedDapMsgs, err = lru.New(1024000)
 	if err != nil {
-		logger.WithError(err).Warn("Node: Can not initialize lru cache for recentlyRcvedDapMsgs!")
+		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvedDapMsgs!")
 	}
 	node.downloadManager = NewDownloadManager(node)
 	node.peerManager = NewPeerManager(node, config)
@@ -319,6 +321,9 @@ func (n *Node) handle(msg *DapMsg, id peer.ID) {
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 
+	case BroadcastBatchTxs:
+		n.AddBatchTxsToPool(msg)
+
 	case GetBlocks:
 		n.GetBlocksHandler(msg, id)
 
@@ -383,7 +388,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 
 	//build a dappley message
 	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
-	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx {
+	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx || dm.cmd == BroadcastBatchTxs {
 		n.cacheDapMsg(*dm)
 	}
 	data, err := proto.Marshal(dm.ToProto())
@@ -438,6 +443,21 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 		return err
 	}
 	n.peerManager.Broadcast(data, BroadcastTxPriority)
+	return nil
+}
+
+func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
+	if len(txs) == 0 {
+		return nil
+	}
+
+	transactions := core.NewTransactions(txs)
+
+	data, err := n.prepareData(transactions.ToProto(), BroadcastBatchTxs, Broadcast, hex.EncodeToString(txs[0].ID))
+	if err != nil {
+		return err
+	}
+	n.peerManager.Broadcast(data, BroadcastBatchTxsPriority)
 	return nil
 }
 
@@ -769,6 +789,42 @@ func (n *Node) AddTxToPool(dm *DapMsg) {
 	}
 
 	n.bm.Getblockchain().GetTxPool().Push(*tx)
+}
+
+func (n *Node) AddBatchTxsToPool(dm *DapMsg) {
+	if n.GetBlockchain().GetState() != core.BlockchainReady {
+		return
+	}
+
+	if n.isNetworkRadiation(*dm) {
+		return
+	}
+
+	n.RelayDapMsg(*dm, BroadcastBatchTxsPriority)
+	n.cacheDapMsg(*dm)
+
+	txspb := &corepb.Transactions{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(dm.GetData(), txspb); err != nil {
+		logger.Warn(err)
+	}
+
+	//create an empty tx
+	txs := &core.Transactions{}
+
+	//load the tx with proto
+	txs.FromProto(txspb)
+	//add tx to txpool
+	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+
+	for _, tx := range txs.GetTransactions() {
+		if tx.IsFromContract(utxoIndex) {
+			continue
+		}
+		n.bm.Getblockchain().GetTxPool().Push(tx)
+	}
+
 }
 
 func (n *Node) GetNodePeers(data []byte, pid peer.ID) {

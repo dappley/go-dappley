@@ -158,7 +158,7 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 
 func IsProducerAddressValid(producer string) bool {
 	addr := core.NewAddress(producer)
-	return addr.ValidateAddress()
+	return addr.IsValid()
 }
 
 func (dynasty *Dynasty) GetDynastyTime() int {

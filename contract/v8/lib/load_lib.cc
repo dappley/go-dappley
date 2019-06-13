@@ -5,6 +5,7 @@
 void LoadLibraries(Isolate *isolate, Local<Context> &context){
     LoadBlockchainLibrary(isolate, context);
     LoadStorageLibrary(isolate, context);
+    LoadSenderLibrary(isolate, context);
 }
 
 void LoadBlockchainLibrary(Isolate *isolate, Local<Context> &context){
@@ -25,3 +26,11 @@ void LoadStorageLibrary(Isolate *isolate, Local<Context> &context){
     script.ToLocalChecked()->Run(context);
 }
 
+void LoadSenderLibrary(Isolate *isolate, Local<Context> &context){
+    char *source = readFile("jslib/sender.js", NULL);
+    Local<String> v8source = String::NewFromUtf8(isolate, source, NewStringType::kNormal).ToLocalChecked();
+	MyFree(source);
+    ScriptOrigin sourceSrcOrigin(String::NewFromUtf8(isolate, "sender.js"));
+    MaybeLocal<Script> script = Script::Compile(context, v8source,&sourceSrcOrigin);
+    script.ToLocalChecked()->Run(context);
+}

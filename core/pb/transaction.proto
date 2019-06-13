@@ -1,6 +1,10 @@
 syntax = "proto3";
 package corepb;
 
+message Transactions{
+    repeated Transaction transactions = 1;
+}
+
 message Transaction{
     bytes id = 1;
     repeated TXInput vin = 2;

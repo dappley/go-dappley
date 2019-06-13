@@ -21,10 +21,10 @@ package core
 import (
 	"bytes"
 	"errors"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 var (
@@ -56,8 +56,8 @@ func (a Address) IsContract() (bool, error) {
 	return pkh.IsContract()
 }
 
-//ValidateAddress checks if an address is valid
-func (a Address) ValidateAddress() bool {
+//IsValid checks if an address is valid
+func (a Address) IsValid() bool {
 	_, ok := a.GetPubKeyHash()
 	return ok
 }

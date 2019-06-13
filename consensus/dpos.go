@@ -34,6 +34,8 @@ const (
 	MinConsensusSize = 4
 )
 
+const maxMintingTimeInMs = 2000
+
 type DPOS struct {
 	bp          *BlockProducer
 	producerKey string
@@ -126,10 +128,12 @@ func (dpos *DPOS) Start() {
 			<-dpos.stopCh
 		}
 		ticker := time.NewTicker(time.Second).C
+
 		for {
 			select {
 			case now := <-ticker:
 				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
+					deadlineInMs := now.UnixNano()/1000000 + maxMintingTimeInMs
 					logger.WithFields(logger.Fields{
 						"peer_id": dpos.node.GetPeerID(),
 					}).Info("DPoS: it is my turn to produce block.")
@@ -138,7 +142,7 @@ func (dpos *DPOS) Start() {
 						logger.Info("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}
-					ctx := dpos.bp.ProduceBlock()
+					ctx := dpos.bp.ProduceBlock(deadlineInMs)
 					if ctx == nil || !dpos.Validate(ctx.Block) {
 						dpos.bp.BlockProduceFinish()
 						logger.Error("DPoS: produced an invalid block!")

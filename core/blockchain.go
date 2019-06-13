@@ -44,7 +44,7 @@ var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
-	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
+	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
 	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 )
@@ -76,7 +76,7 @@ type Blockchain struct {
 	state         BlockchainState
 	eventManager  *EventManager
 	blkSizeLimit  int
-	mutex         sync.Mutex
+	mutex         *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
@@ -93,7 +93,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
@@ -128,7 +128,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -273,16 +273,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	ctx.State.Save(bcTemp.db, ctx.Block.GetHash())
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save scState to database.")
-		return err
-	}
-
 	//Remove transactions in current transaction pool
-	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
+	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bcTemp.GetTxPool().ResetPendingTransactions()
-	err = bc.GetTxPool().SaveToDatabase(bc.db)
+	err = bcTemp.GetTxPool().SaveToDatabase(bc.db)
 
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save txpool to database.")
@@ -521,9 +515,11 @@ loop:
 
 	newUtxo := utxo.DeepCopy()
 	for _, tx := range bc.txPool.GetTransactions() {
-		if tx.Verify(newUtxo, 0) == nil {
+		if result, err := tx.Verify(newUtxo, 0); result {
 			newUtxo.UpdateUtxo(tx)
 			newTxPool.Push(*tx)
+		} else {
+			logger.Warn(err.Error())
 		}
 	}
 	bc.txPool = newTxPool

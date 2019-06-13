@@ -21,6 +21,7 @@ extern "C" {
     typedef char* (*FuncStorageGet)(void *address, const char *key);
     typedef int (*FuncStorageSet)(void *address, const char *key, const char *value);
     typedef int (*FuncStorageDel)(void *address, const char *key);
+    typedef int (*FuncContractDel)(void *address);
     typedef int (*FuncTriggerEvent)(void *address, const char *topic, const char *data);
     typedef void (*FuncTransactionGet)(void* address, void* context);
     typedef void (*FuncPrevUtxoGet)(void* address, void* context);
@@ -30,16 +31,18 @@ extern "C" {
     typedef bool (*FuncVerifyPublicKey)(const char *addr, const char *pubKey);
     typedef int (*FuncRandom)(void *handler, int max);
     typedef int (*FuncGetCurrBlockHeight)(void *handler);
+    typedef int (*FuncDeleteContract)(void *handler);
     typedef char* (*FuncGetNodeAddress)(void *handler);
 	typedef void* (*FuncMalloc)(size_t size);
 	typedef void  (*FuncFree)(void* data);
 
     EXPORT void Initialize();
     EXPORT int executeV8Script(const char *sourceCode, uintptr_t handler, char **result);
-    EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress);
+    EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight, FuncGetNodeAddress getNodeAddress,FuncDeleteContract DeleteContract);
     EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
     EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
     EXPORT void InitializeEvent(FuncTriggerEvent triggerEvent);
+    EXPORT void InitializeContract(FuncContractDel del);
     EXPORT void InitializeTransaction(FuncTransactionGet get);
     EXPORT void InitializeCrypto(FuncVerifySignature verifySignature, FuncVerifyPublicKey verifyPublicKey);
     EXPORT void InitializeMath(FuncRandom random);
