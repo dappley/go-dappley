@@ -3,7 +3,7 @@
 #include "lib/transaction_struct.h"
 #include "lib/utxo_struct.h"
 
-#ifdef WIN32 
+#ifdef _WIN32 
 #ifdef V8DLL
 #define EXPORT __declspec(dllexport)
 #else 
