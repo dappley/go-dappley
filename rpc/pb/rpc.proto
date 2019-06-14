@@ -31,6 +31,10 @@ service AdminService{
   rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
 }
 
+service MetricService {
+  rpc RpcTransactionPoolSize(MetricsServiceRequest) returns (TransactionPoolSizeResponse) {}
+}
+
 // Requests
 
 message CreateWalletRequest {
@@ -103,6 +107,8 @@ message GetNewTransactionRequest {}
 message SubscribeRequest{
   repeated string topics = 1;
 }
+
+message MetricsServiceRequest {}
 
 // Responses
 
@@ -178,4 +184,8 @@ message GetAllTransactionsRequest{}
 
 message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
+}
+
+message TransactionPoolSizeResponse {
+  int64 size = 1;
 }
