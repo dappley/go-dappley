@@ -21,10 +21,11 @@ import (
 	"bytes"
 	"encoding/hex"
 
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/storage"
 	peer "github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/storage"
 )
 
 const HeightDiffThreshold = 10
@@ -82,19 +83,17 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		return
 	}
 
-	recieveBlockHeight := block.GetHeight()
+	receiveBlockHeight := block.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
-	if recieveBlockHeight >= ownBlockHeight &&
-		recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
+	if receiveBlockHeight >= ownBlockHeight &&
+		receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == BlockchainReady {
 		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
 		bm.blockPool.DownloadBlocksCh() <- true
 		return
 	}
 
-	tree, _ := common.NewTree(block.GetHash().String(), block)
-	bm.blockPool.CacheBlock(tree, bm.blockchain.GetMaxHeight())
-	forkHead := tree.GetRoot()
+	forkHead := bm.blockPool.CacheBlock(block, bm.blockchain.GetMaxHeight())
 	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
 	if forkHeadParentHash == nil {
 		return
@@ -215,4 +214,24 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash Ha
 	}
 
 	return index, scState, nil
+}
+
+/* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
+func (bm *BlockChainManager) NumForks() (int64, int64) {
+	var numForks, maxHeight int64 = 0, 0
+
+	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+		rootBlk := tree.GetValue().(*Block)
+		_, err := bm.blockchain.GetBlockByHash(rootBlk.GetPrevHash())
+		if err == nil {
+			/* the cached block is rooted in the BlockChain */
+			numForks += tree.NumLeaves()
+			t := tree.Height()
+			if t > maxHeight {
+				maxHeight = t
+			}
+		}
+	})
+
+	return numForks, maxHeight
 }

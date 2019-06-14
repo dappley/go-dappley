@@ -35,7 +35,6 @@ func Test_AddParent(t *testing.T) {
 	assert.Equal(t, ErrNodeAlreadyHasParent, err2)
 
 	assert.Equal(t, parentNode1, childNode.Parent)
-
 }
 
 func Test_AddChild(t *testing.T) {
@@ -64,7 +63,6 @@ func Test_HasChild(t *testing.T) {
 
 	assert.True(t, parentNode1.hasChildren())
 	assert.True(t, parentNode2.hasChildren())
-
 }
 
 func Test_FindHeightestChild(t *testing.T) {
@@ -120,4 +118,77 @@ func Test_GetParentNodesRange(t *testing.T) {
 	trees := tree6.GetParentTreesRange(tree2)
 
 	assert.Equal(t, expect, trees)
+}
+
+func TestTree_Size(t *testing.T) {
+	t0, _ := NewTree("t0", "t0")
+	t1, _ := NewTree("t1", "t1")
+	t2, _ := NewTree("t2", "t2")
+	t3, _ := NewTree("t3", "t3")
+	assert.EqualValues(t, 1, t1.Size())
+	t1.AddChild(t0)
+	assert.EqualValues(t, 2, t1.Size())
+	t1.AddChild(t2)
+	assert.EqualValues(t, 3, t1.Size())
+	t2.AddChild(t3)
+	assert.EqualValues(t, 4, t1.Size())
+}
+
+func TestTree_Height(t *testing.T) {
+	t0, _ := NewTree("t0", "t0")
+	t1, _ := NewTree("t1", "t1")
+	t2, _ := NewTree("t2", "t2")
+	t3, _ := NewTree("t3", "t3")
+
+	assert.EqualValues(t, 1, t0.Height())
+	t0.AddChild(t1)
+	assert.EqualValues(t, 2, t0.Height())
+	t0.AddChild(t2)
+	assert.EqualValues(t, 2, t0.Height())
+
+	/*
+	      t0
+	   t1   t2
+	       t3
+	*/
+
+	t2.AddChild(t3)
+	assert.EqualValues(t, 3, t0.Height())
+}
+
+func TestTree_NumLeaves(t *testing.T) {
+	n1, _ := NewTree("n1", "n1")
+	n2, _ := NewTree("n2", "n2")
+	n3, _ := NewTree("n3", "n3")
+	n4, _ := NewTree("n4", "n4")
+	n5, _ := NewTree("n5", "n5")
+	n6, _ := NewTree("n6", "n6")
+	n7, _ := NewTree("n7", "n7")
+	n8, _ := NewTree("n8", "n8")
+
+	assert.EqualValues(t, 1, n1.NumLeaves())
+	n1.AddChild(n2)
+	assert.EqualValues(t, 1, n1.NumLeaves())
+	n1.AddChild(n3)
+	assert.EqualValues(t, 2, n1.NumLeaves())
+	n2.AddChild(n4)
+	assert.EqualValues(t, 2, n1.NumLeaves())
+	n2.AddChild(n5)
+	assert.EqualValues(t, 3, n1.NumLeaves())
+	n3.AddChild(n6)
+	assert.EqualValues(t, 3, n1.NumLeaves())
+	n3.AddChild(n7)
+	assert.EqualValues(t, 4, n1.NumLeaves())
+	n7.AddChild(n8)
+
+	/*
+	         n1
+	     n2     n3
+	   n4 n5  n6  n7
+	                n8
+	*/
+
+	assert.EqualValues(t, 4, n1.NumLeaves())
+	assert.EqualValues(t, 8, n1.Size())
+	assert.EqualValues(t, 4, n1.Height())
 }
