@@ -15,7 +15,6 @@ import (
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 )
@@ -72,16 +71,8 @@ func getNumForksInBlockChainFunc(node *network.Node) expvar.Func {
 	return getNumForksInBlockChain
 }
 
-func getBlockStatsFunc(node *network.Node) expvar.Func {
-	getBlockStats := func() interface{} {
-		return core.MetricsBlockStats.Filter(isDPOS(node.GetBlockchain().GetConsensus()), node.IsProducer())
-	}
-	return getBlockStats
-}
-
-func isDPOS(v interface{}) bool {
-	_, ok := v.(*consensus.DPOS)
-	return ok
+func getBlockStats() interface{} {
+	return core.MetricsBlockStats
 }
 
 func initMetrics(node *network.Node, interval, pollingInterval int64) {
@@ -95,9 +86,9 @@ func initMetrics(node *network.Node, interval, pollingInterval int64) {
 		expvar.Publish("peers", getConnectedPeersFunc(node))
 		node.GetPeerManager().StartNewPingService(time.Duration(pollingInterval) * time.Second)
 		_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
-		expvar.Publish("dapp.block.stats", getBlockStatsFunc(node))
 	}
 
+	expvar.Publish("dapp.block.stats", expvar.Func(getBlockStats))
 	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
 	expvar.Publish("stats", ds)
 	ds.startUpdate()

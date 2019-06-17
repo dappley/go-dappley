@@ -32,17 +32,6 @@ func (b *BlockStatsTracker) Update(numTx uint64, blockHeight uint64) {
 	b.Stats.Push(&BlockStats{NumTransactions: numTx, Height: blockHeight})
 }
 
-func (b *BlockStatsTracker) Filter(isDPOSConsensus bool, isProducer bool) *BlockStatsTracker {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-	if isDPOSConsensus && !isProducer {
-		b.Stats.ForEach(func(element common.Element) {
-			element.(*BlockStats).NumTransactions = 0
-		})
-	}
-	return b
-}
-
 func (b *BlockStatsTracker) MarshalJSON() ([]byte, error) {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()

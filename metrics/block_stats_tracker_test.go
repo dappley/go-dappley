@@ -43,13 +43,6 @@ func TestBlockStatsTracker_Update(t *testing.T) {
 	compareJSON(t, expectedJSON, bst)
 }
 
-func TestBlockStatsTracker_Filter(t *testing.T) {
-	bst := NewBlockStatsTracker(1)
-	bst.Update(1, 1)
-	compareJSON(t, `[{"NumTransactions":1,"Height":1}]`, bst.Filter(true, true))
-	compareJSON(t, `[{"NumTransactions":0,"Height":1}]`, bst.Filter(true, false))
-}
-
 func compareJSON(t *testing.T, expected string, obj interface{}) {
 	bytes, err := json.Marshal(obj)
 	assert.Nil(t, err)

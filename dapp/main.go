@@ -77,7 +77,7 @@ func main() {
 	defer db.Close()
 
 	//create blockchain
-	conss, dynasty := initConsensus(genesisConf)
+	conss, _ := initConsensus(genesisConf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
@@ -91,7 +91,7 @@ func main() {
 	}
 	bc.SetState(core.BlockchainInit)
 
-	node, err := initNode(conf, bc, dynasty.IsProducer(conf.GetNodeConfig().GetNodeAddress()))
+	node, err := initNode(conf, bc)
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
@@ -135,10 +135,9 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 	return conss, dynasty
 }
 
-func initNode(conf *configpb.Config, bc *core.Blockchain, isProducer bool) (*network.Node, error) {
+func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
 	node := network.NewNode(bc, core.NewBlockPool(0))
-	node.SetIsProducer(isProducer)
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
