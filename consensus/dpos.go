@@ -274,7 +274,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	// TODO Refactoring lib calculate position, check lib when create BlockContext instance
 	lib, ok := dpos.CheckLibPolicy(ctx.Block)
 	if !ok {
-		logger.Warn("DPoS: new block can not pass lib policy check.")
+		logger.Warn("DPoS: the number of producers is not enough.")
 		tailBlock, _ := dpos.node.GetBlockchain().GetTailBlock()
 		dpos.node.BroadcastBlock(tailBlock)
 		return
