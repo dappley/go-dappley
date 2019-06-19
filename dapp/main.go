@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -49,13 +50,26 @@ func main() {
 
 	logger.SetLevel(logger.InfoLevel)
 
+	viper.AddConfigPath(".")
+	viper.SetConfigFile("conf/dappley.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		logger.Errorf("Cannot load dappley configurations from file!  error： %v", err.Error())
+		return
+	}
+
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 	flag.Parse()
 
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
-	config.LoadConfig(genesisFilePath, genesisConf)
+
+	if gfp := viper.GetString("genesisFilePath"); gfp == "" {
+		config.LoadConfig(genesisFilePath, genesisConf)
+	} else {
+		logger.Infof("Get genesisFilePath:%v from dappley.yaml file", gfp)
+		config.LoadConfig(gfp, genesisConf)
+	}
 
 	if genesisConf == nil {
 		logger.Error("Cannot load genesis configurations from file! Exiting...")
