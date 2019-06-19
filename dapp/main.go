@@ -51,11 +51,15 @@ func main() {
 
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
+
+	var genesisPath string
+	flag.StringVar(&genesisPath, "g", genesisFilePath, "Genesis Configuration File Path. Default to conf/genesis.conf")
 	flag.Parse()
 
+	logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
-	config.LoadConfig(genesisFilePath, genesisConf)
+	config.LoadConfig(genesisPath, genesisConf)
 
 	if genesisConf == nil {
 		logger.Error("Cannot load genesis configurations from file! Exiting...")
