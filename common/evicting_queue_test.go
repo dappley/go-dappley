@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,14 +73,12 @@ func TestEvictingQueue_Pop(t *testing.T) {
 }
 
 func TestEvictingQueue_String(t *testing.T) {
-	fmt.Println(
+	require.Equal(t, "[1 2 3]",
 		NewEvictingQueue(3).
 			Push(1).
 			Push(2).
 			Push(3).
 			String())
-	//Output:
-	//[1,2,3]
 }
 
 func TestEvictingQueue_MarshalJSON(t *testing.T) {
@@ -91,7 +88,5 @@ func TestEvictingQueue_MarshalJSON(t *testing.T) {
 			Push(2).
 			Push(3))
 	require.Nil(t, err)
-	fmt.Println(string(bytes))
-	//Output:
-	//[1,2,3]
+	require.Equal(t, "[1,2,3]", string(bytes))
 }
