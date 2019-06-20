@@ -29,7 +29,6 @@ import (
 	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
-	metrics "github.com/dappley/go-dappley/metrics/api"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
@@ -101,11 +100,6 @@ func main() {
 	bc.SetState(core.BlockchainReady)
 	node.DownloadBlocks(bc)
 
-	//start metrics api server
-	nodeConf := conf.GetNodeConfig()
-	metrics.StartAPI(node, nodeConf.GetMetricsHost(), nodeConf.GetMetricsPort(),
-		nodeConf.GetMetricsInterval(), nodeConf.GetMetricsPollingInterval())
-
 	//start rpc server
 	server := rpc.NewGrpcServer(node, defaultPassword)
 	server.Start(conf.GetNodeConfig().GetRpcPort())
@@ -137,8 +131,8 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 
 func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
-	node := network.NewNode(bc, core.NewBlockPool(0))
 	nodeConfig := conf.GetNodeConfig()
+	node := network.NewNodeWithConfig(bc, core.NewBlockPool(0), nodeConfig)
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
 	if keyPath != "" {

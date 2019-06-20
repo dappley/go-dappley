@@ -32,7 +32,7 @@ service AdminService{
 }
 
 service MetricService {
-  rpc RpcTransactionPoolSize(MetricsServiceRequest) returns (TransactionPoolSizeResponse) {}
+  rpc RpcGetStats(MetricsServiceRequest) returns (JSONResponse) {}
 }
 
 // Requests
@@ -186,6 +186,6 @@ message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
 }
 
-message TransactionPoolSizeResponse {
-  int64 size = 1;
+message JSONResponse {
+  string json = 1;
 }

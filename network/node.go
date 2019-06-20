@@ -36,6 +36,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	networkpb "github.com/dappley/go-dappley/network/pb"
@@ -85,11 +86,6 @@ var (
 	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
 
-type NodeConfig struct {
-	MaxConnectionOutCount int
-	MaxConnectionInCount  int
-}
-
 type streamMsg struct {
 	msg  *DapMsg
 	from peer.ID
@@ -107,6 +103,7 @@ type Node struct {
 	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
 	peerManager            *PeerManager
+	nodeConfig             *configpb.NodeConfig
 }
 
 func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
@@ -118,7 +115,7 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 	return NewNodeWithConfig(bc, pool, nil)
 }
 
-func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeConfig) *Node {
+func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *configpb.NodeConfig) *Node {
 	var err error
 	placeholder := uint64(0)
 	bm := core.NewBlockChainManager()
@@ -135,6 +132,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		dispatch:               make(chan *streamMsg, dispatchChLen),
 		downloadManager:        nil,
 		peerManager:            nil,
+		nodeConfig:             config,
 	}
 	node.recentlyRcvedDapMsgs, err = lru.New(1024000)
 	if err != nil {
@@ -159,6 +157,7 @@ func (n *Node) GetDownloadManager() *DownloadManager          { return n.downloa
 func (n *Node) GetPeerManager() *PeerManager                  { return n.peerManager }
 func (n *Node) GetInfo() *PeerInfo                            { return n.info }
 func (n *Node) GetBlockChainManager() *core.BlockChainManager { return n.bm }
+func (n *Node) GetNodeConfig() *configpb.NodeConfig           { return n.nodeConfig }
 
 func (n *Node) Start(listenPort int) error {
 
