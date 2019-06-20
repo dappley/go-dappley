@@ -176,3 +176,11 @@ func (pow *ProofOfWork) AddProducer(producer string) error {
 func (pow *ProofOfWork) GetProducers() []string {
 	return nil
 }
+
+func (pow *ProofOfWork) Produced(blk *core.Block) bool {
+	if blk != nil && !blk.IsSigned() {
+		tx := blk.GetCoinbaseTransaction()
+		return tx != nil && pow.miner.Beneficiary() == tx.Vout[0].GetAddress().String()
+	}
+	return false
+}

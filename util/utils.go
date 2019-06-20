@@ -88,3 +88,14 @@ func quoteArg(arg string) string {
 	}
 	return arg
 }
+
+type GenericType interface{}
+
+// ReverseSlice returns an in-place reversal of the slice's elements
+func ReverseSlice(slice []GenericType) []GenericType {
+	for low, high := 0, len(slice)-1; low < high; low, high = low+1, high-1 {
+		slice[low], slice[high] = slice[high], slice[low]
+	}
+
+	return slice
+}

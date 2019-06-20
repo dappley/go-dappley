@@ -102,9 +102,7 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
-	blk := core.NewBlock(validTxs, parentBlock)
-	core.MetricsBlockStats.Update(uint64(len(validTxs)), blk.GetHeight())
-	ctx := core.BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
+	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 

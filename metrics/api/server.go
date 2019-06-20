@@ -17,6 +17,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/util"
 )
 
 type memStat struct {
@@ -71,8 +72,28 @@ func getNumForksInBlockChainFunc(node *network.Node) expvar.Func {
 	return getNumForksInBlockChain
 }
 
-func getBlockStats() interface{} {
-	return core.MetricsBlockStats
+type BlockStat struct {
+	NumTransactions uint64
+	Height          uint64
+}
+
+func getBlockStatsFunc(node *network.Node) expvar.Func {
+	getBlockStats := func() interface{} {
+		stats := make([]util.GenericType, 0, 50)
+		it := node.GetBlockchain().Iterator()
+		cons := node.GetBlockchain().GetConsensus()
+		blk, err := it.Next()
+		for i := 0; err == nil && i < cap(stats); i++ {
+			bs := BlockStat{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
+			if !cons.Produced(blk) {
+				bs.NumTransactions = 0
+			}
+			stats = append(stats, bs)
+			blk, err = it.Next()
+		}
+		return util.ReverseSlice(stats)
+	}
+	return getBlockStats
 }
 
 func initMetrics(node *network.Node, interval, pollingInterval int64) {
@@ -86,9 +107,9 @@ func initMetrics(node *network.Node, interval, pollingInterval int64) {
 		expvar.Publish("peers", getConnectedPeersFunc(node))
 		node.GetPeerManager().StartNewPingService(time.Duration(pollingInterval) * time.Second)
 		_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
+		expvar.Publish("dapp.block.stats", getBlockStatsFunc(node))
 	}
 
-	expvar.Publish("dapp.block.stats", expvar.Func(getBlockStats))
 	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
 	expvar.Publish("stats", ds)
 	ds.startUpdate()

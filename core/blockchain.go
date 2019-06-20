@@ -33,8 +33,6 @@ import (
 
 var tipKey = []byte("tailBlockHash")
 
-const LengthForBlockToBeConsideredHistory = 100
-
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
@@ -423,18 +421,6 @@ func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
 	_, err := bc.GetBlockByHash(hash)
 	return err == nil
 }
-
-//func (bc *Blockchain) addBlocksToTail(blocks []*Block) {
-//	if len(blocks) > 0 {
-//		for i := len(blocks) - 1; i >= 0; i-- {
-//			err := bc.AddBlockToTail(blocks[i])
-//			if err != nil {
-//				logger.WithError(err).Error("Blockchain: failed to add block to tail while concatenating fork!")
-//				return
-//			}
-//		}
-//	}
-//}
 
 //rollback the blockchain to a block with the targetHash
 func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScState) bool {

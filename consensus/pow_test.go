@@ -19,12 +19,17 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
-	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/storage"
 )
 
 func TestProofOfWork_NewPoW(t *testing.T) {
@@ -86,4 +91,27 @@ func TestProofOfWork_isHashBelowTarget(t *testing.T) {
 	blk.SetHash(hash.Bytes())
 
 	assert.True(t, pow.isHashBelowTarget(blk))
+}
+
+func TestProofOfWork_Produced(t *testing.T) {
+	// setup
+	pow := NewProofOfWork()
+	key, err := core.NewUserPubKeyHash(core.NewKeyPair().PublicKey)
+	require.Nil(t, err)
+	bc := core.CreateBlockchain(key.GenerateAddress(), storage.NewRamStorage(), pow, 100, nil, 100)
+	pow.Setup(network.NewNode(bc, core.NewBlockPool(100)), key.GenerateAddress().String())
+	// nil block
+	require.False(t, pow.Produced(nil))
+	// not signed
+	require.False(t, pow.Produced(&core.Block{}))
+	// signed block not produced by pow
+	signedBlk := core.NewBlock([]*core.Transaction{}, nil)
+	require.True(t, signedBlk.SignBlock(hex.EncodeToString([]byte("key")), core.Hash("hash")))
+	require.False(t, pow.Produced(signedBlk))
+	// signed block with different address
+	cbtx := core.NewCoinbaseTX(core.NewAddress("other-addr"), "", 1, &common.Amount{Int: *big.NewInt(100)})
+	require.False(t, pow.Produced(core.NewBlock([]*core.Transaction{&cbtx},nil)))
+	// signed block produced by pow
+	cbtx = core.NewCoinbaseTX(key.GenerateAddress(), "", 1, &common.Amount{Int: *big.NewInt(100)})
+	require.True(t, pow.Produced(core.NewBlock([]*core.Transaction{&cbtx},nil)))
 }

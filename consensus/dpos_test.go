@@ -19,13 +19,16 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDpos(t *testing.T) {
@@ -128,4 +131,13 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 	blk2 := core.FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
 
 	assert.True(t, dpos.isDoubleMint(blk2))
+}
+
+func TestDPOS_Produced(t *testing.T) {
+	dps := NewDPOS()
+	dps.SetKey(hex.EncodeToString([]byte("key")))
+	blk := core.NewBlock(nil, nil)
+	require.False(t, dps.Produced(blk))
+	dps.hashAndSign(&core.BlockContext{Block: blk})
+	require.True(t, dps.Produced(blk))
 }
