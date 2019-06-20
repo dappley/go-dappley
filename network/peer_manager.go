@@ -343,30 +343,46 @@ func (pm *PeerManager) RandomGetConnectedPeers(number int) []*PeerInfo {
 	return peers
 }
 
-func (pm *PeerManager) StartNewPingService(interval time.Duration) {
-	if pm.ping == nil {
-		pm.ping = &PingService{ping.NewPingService(pm.node.host), make(chan bool, 1)}
-		go func() {
-			logger.Debug("PeerManager: Starting ping service...")
-			ticker := time.NewTicker(interval)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ticker.C:
-					pm.pingPeers()
-				case <-pm.ping.stop:
-					logger.Debug("PeerManager: Stopping ping service...")
-					return
-				}
-			}
-		}()
+func (pm *PeerManager) StartNewPingService(interval time.Duration) bool {
+	if pm.ping != nil {
+		logger.Warn("PeerManager: Ping service already running.")
+		return false
 	}
+
+	if pm.node.host == nil {
+		logger.Warn("PeerManager: Unable to start ping service.")
+		return false
+	}
+
+	pm.ping = &PingService{ping.NewPingService(pm.node.host), make(chan bool)}
+	go func() {
+		logger.Debug("PeerManager: Starting ping service...")
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				pm.pingPeers()
+			case <-pm.ping.stop:
+				logger.Debug("PeerManager: Stopping ping service...")
+				pm.ping.stop <- true
+				return
+			}
+		}
+	}()
+	return true
 }
 
-func (pm *PeerManager) StopPingService() {
+func (pm *PeerManager) StopPingService() bool {
 	if pm.ping != nil {
+		/* send stop signal and wait for reply */
 		pm.ping.stop <- true
+		<-pm.ping.stop
 		pm.ping = nil
+		return true
+	} else {
+		logger.Warn("PeerManager: Can not stop a ping service that was never started.")
+		return false
 	}
 }
 
