@@ -77,13 +77,13 @@ type BlockStat struct {
 	Height          uint64
 }
 
-func getBlockStatsFunc(node *network.Node) expvar.Func {
+func getBlockStatsFunc(node *network.Node, interval int64) expvar.Func {
 	getBlockStats := func() interface{} {
-		stats := make([]util.GenericType, 0, 50)
+		stats := make([]util.GenericType, 0)
 		it := node.GetBlockchain().Iterator()
 		cons := node.GetBlockchain().GetConsensus()
 		blk, err := it.Next()
-		for i := 0; err == nil && i < cap(stats); i++ {
+		for t := time.Now().Unix()-interval; err == nil && blk.GetTimestamp() > t; {
 			bs := BlockStat{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
 			if !cons.Produced(blk) {
 				bs.NumTransactions = 0
@@ -107,7 +107,7 @@ func initMetrics(node *network.Node, interval, pollingInterval int64) {
 		expvar.Publish("peers", getConnectedPeersFunc(node))
 		node.GetPeerManager().StartNewPingService(time.Duration(pollingInterval) * time.Second)
 		_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
-		expvar.Publish("dapp.block.stats", getBlockStatsFunc(node))
+		expvar.Publish("dapp.block.stats", getBlockStatsFunc(node, interval))
 	}
 
 	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
