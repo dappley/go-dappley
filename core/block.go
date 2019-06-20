@@ -285,7 +285,7 @@ func (b *Block) generateSignature(key string, data Hash) (Hash, error) {
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
 		logger.WithError(err).Warn("Block: failed to calculate signature!")
-		return []byte{}, nil
+		return []byte{}, err
 	}
 
 	return signature, nil

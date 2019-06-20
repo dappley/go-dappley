@@ -19,7 +19,6 @@
 package consensus
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -135,8 +134,9 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 
 func TestDPOS_Produced(t *testing.T) {
 	dps := NewDPOS()
-	dps.SetKey(hex.EncodeToString([]byte("key")))
+	dps.SetKey("300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a")
 	blk := core.NewBlock(nil, nil)
+	blk.SetHash(blk.CalculateHash())
 	require.False(t, dps.Produced(blk))
 	dps.hashAndSign(&core.BlockContext{Block: blk})
 	require.True(t, dps.Produced(blk))
