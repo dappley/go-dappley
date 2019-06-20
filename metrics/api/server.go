@@ -17,6 +17,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/util"
 )
 
 type memStat struct {
@@ -71,20 +72,43 @@ func getNumForksInBlockChainFunc(node *network.Node) expvar.Func {
 	return getNumForksInBlockChain
 }
 
-func initPeerMetrics(node *network.Node, interval int64) {
-	if node != nil {
-		expvar.Publish("peers", getConnectedPeersFunc(node))
-		node.GetPeerManager().StartNewPingService(time.Duration(interval) * time.Second)
-	}
+type BlockStat struct {
+	NumTransactions uint64
+	Height          uint64
 }
 
-func initIntervalMetrics(node *network.Node, interval, pollingInterval int64) {
+func getBlockStatsFunc(node *network.Node, interval int64) expvar.Func {
+	getBlockStats := func() interface{} {
+		stats := make([]util.GenericType, 0)
+		it := node.GetBlockchain().Iterator()
+		cons := node.GetBlockchain().GetConsensus()
+		blk, err := it.Next()
+		for t := time.Now().Unix()-interval; err == nil && blk.GetTimestamp() > t; {
+			bs := BlockStat{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
+			if !cons.Produced(blk) {
+				bs.NumTransactions = 0
+			}
+			stats = append(stats, bs)
+			blk, err = it.Next()
+		}
+		return util.ReverseSlice(stats)
+	}
+	return getBlockStats
+}
+
+func initMetrics(node *network.Node, interval, pollingInterval int64) {
 	ds := newDataStore(int(interval/pollingInterval), time.Duration(pollingInterval)*time.Second)
 
 	_ = ds.registerNewMetric("dapp.cpu.percent", getCPUPercent)
 	_ = ds.registerNewMetric("dapp.txpool.size", getTransactionPoolSize)
 	_ = ds.registerNewMetric("dapp.memstats", getMemoryStats)
-	_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
+
+	if node != nil {
+		expvar.Publish("peers", getConnectedPeersFunc(node))
+		node.GetPeerManager().StartNewPingService(time.Duration(pollingInterval) * time.Second)
+		_ = ds.registerNewMetric("dapp.fork.info", getNumForksInBlockChainFunc(node))
+		expvar.Publish("dapp.block.stats", getBlockStatsFunc(node, interval))
+	}
 
 	expvar.Publish("dapp.cpu.percent", expvar.Func(getCPUPercent))
 	expvar.Publish("stats", ds)
@@ -114,8 +138,7 @@ func StartAPI(node *network.Node, host string, port uint32, interval int64, poll
 		"endpoint": fmt.Sprintf("%v/debug/metrics", listener.Addr()),
 	}).Info("Metrics: API starts...")
 
-	initPeerMetrics(node, pollingInterval)
-	initIntervalMetrics(node, interval, pollingInterval)
+	initMetrics(node, interval, pollingInterval)
 
 	go startServer(listener)
 

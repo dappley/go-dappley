@@ -20,17 +20,19 @@ package main
 
 import (
 	"flag"
+
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/contract"
+	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/metrics/api"
+	metrics "github.com/dappley/go-dappley/metrics/api"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (

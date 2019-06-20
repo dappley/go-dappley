@@ -20,7 +20,7 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/contract"
+	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )

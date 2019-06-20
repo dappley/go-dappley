@@ -138,6 +138,10 @@ func (b *Block) GetSign() Hash {
 	return b.header.sign
 }
 
+func (b *Block) IsSigned() bool {
+	return b.header != nil && b.header.sign != nil
+}
+
 func (b *Block) GetHeight() uint64 {
 	return b.header.height
 }
@@ -253,20 +257,38 @@ func (b *Block) SignBlock(key string, data []byte) bool {
 		logger.Warn("Block: the key is too short for signature!")
 		return false
 	}
+
+	signature, err := b.generateSignature(key, data)
+	if err != nil {
+		return false
+	}
+	b.header.sign = signature
+	return true
+}
+
+func (b *Block) WasSignedWith(key string, data Hash) bool {
+	signature, err := b.generateSignature(key, data)
+	if err != nil {
+		return false
+	}
+
+	return IsHashEqual(signature, b.GetSign())
+}
+
+func (b *Block) generateSignature(key string, data Hash) (Hash, error) {
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
 		logger.Warn("Block: cannot decode private key for signature!")
-		return false
+		return []byte{}, err
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
 		logger.WithError(err).Warn("Block: failed to calculate signature!")
-		return false
+		return []byte{}, err
 	}
 
-	b.header.sign = signature
-	return true
+	return signature, nil
 }
 
 func (b *Block) VerifyHash() bool {
