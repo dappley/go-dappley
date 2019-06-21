@@ -1,0 +1,9 @@
+version: '3'
+services:
+  dappley:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dappley/go-dappley
+    ports:
+      - "50050:50050"
