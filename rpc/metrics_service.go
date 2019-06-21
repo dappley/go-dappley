@@ -15,6 +15,7 @@ import (
 	dapmetrics "github.com/dappley/go-dappley/metrics"
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/util"
 )
 
 type MetricsService struct {
@@ -44,9 +45,11 @@ func (ms *MetricsService) RpcGetStats(context.Context, *rpcpb.MetricsServiceRequ
 	bytes, err := json.Marshal(&struct {
 		TimeSeriesData *dapmetrics.DataStore `json:"timeSeriesData"`
 		Peers          []*network.PeerInfo   `json:"peers"`
+		BlockStats     []util.GenericType    `json:"blockStats"`
 	}{
 		TimeSeriesData: ms.ds,
 		Peers:          ms.node.GetPeerManager().CloneStreamsToPeerInfoSlice(),
+		BlockStats:     ms.getBlockStats(),
 	})
 
 	if err != nil {
@@ -101,4 +104,25 @@ func (ms *MetricsService) getNumForksInBlockChain() interface{} {
 		NumForks:    numForks,
 		LongestFork: longestFork,
 	}
+}
+
+type blockStat struct {
+	NumTransactions uint64 `json:"numTransactions"`
+	Height          uint64 `json:"height"`
+}
+
+func (ms *MetricsService) getBlockStats() []util.GenericType {
+	stats := make([]util.GenericType, 0)
+	it := ms.node.GetBlockchain().Iterator()
+	cons := ms.node.GetBlockchain().GetConsensus()
+	blk, err := it.Next()
+	for t := time.Now().Unix() - ms.node.GetNodeConfig().GetMetricsInterval(); err == nil && blk.GetTimestamp() > t; {
+		bs := &blockStat{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
+		if !cons.Produced(blk) {
+			bs.NumTransactions = 0
+		}
+		stats = append(stats, bs)
+		blk, err = it.Next()
+	}
+	return util.ReverseSlice(stats)
 }
