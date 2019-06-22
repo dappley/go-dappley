@@ -19,11 +19,12 @@
 package consensus
 
 import (
+	"time"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
-	"time"
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
@@ -112,7 +113,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
-	var generatedTXs []*core.Transaction
+	var generatedTxs []*core.Transaction
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
 
@@ -126,9 +127,9 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 
 		ctx := txNode.Value.ToContractTx()
 		if ctx != nil {
-			generatedTxs := ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			generatedTxs = ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 			validTxs = append(validTxs, generatedTxs...)
-			utxoIndex.UpdateUtxoState(generatedTXs)
+			utxoIndex.UpdateUtxoState(generatedTxs)
 		}
 
 		validTxs = append(validTxs, txNode.Value)
