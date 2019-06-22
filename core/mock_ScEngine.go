@@ -94,6 +94,10 @@ func (_m *MockScEngine) ImportTransaction(tx *Transaction) {
 	_m.Called(tx)
 }
 
+func (_m *MockScEngine) ImportContractCreateUTXO(utxo *UTXO) {
+	_m.Called(utxo)
+}
+
 // ImportUTXOs provides a mock function with given fields: utxos
 func (_m *MockScEngine) ImportUTXOs(utxos []*UTXO) {
 	_m.Called(utxos)

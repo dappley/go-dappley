@@ -49,19 +49,20 @@ var (
 )
 
 type V8Engine struct {
-	source        string
-	state         *core.ScState
-	tx            *core.Transaction
-	rewards       map[string]string
-	contractAddr  core.Address
-	contractUTXOs []*core.UTXO
-	prevUtxos     []*core.UTXO
-	sourceTXID    []byte
-	generatedTXs  []*core.Transaction
-	handler       uint64
-	blkHeight     uint64
-	seed          int64
-	nodeAddr      core.Address
+	source             string
+	state              *core.ScState
+	tx                 *core.Transaction
+	rewards            map[string]string
+	contractAddr       core.Address
+	contractCreateUTXO *core.UTXO
+	contractUTXOs      []*core.UTXO
+	prevUtxos          []*core.UTXO
+	sourceTXID         []byte
+	generatedTXs       []*core.Transaction
+	handler            uint64
+	blkHeight          uint64
+	seed               int64
+	nodeAddr           core.Address
 }
 
 func InitializeV8Engine() {
@@ -124,6 +125,10 @@ func (sc *V8Engine) ImportLocalStorage(state *core.ScState) {
 
 func (sc *V8Engine) ImportTransaction(tx *core.Transaction) {
 	sc.tx = tx
+}
+
+func (sc *V8Engine) ImportContractCreateUTXO(utxo *core.UTXO) {
+	sc.contractCreateUTXO = utxo
 }
 
 // ImportContractAddr supplies the wallet address of the contract to the engine

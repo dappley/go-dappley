@@ -740,6 +740,7 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	engine.ImportSourceTXID(ctx.ID)
 	engine.ImportRewardStorage(rewards)
 	engine.ImportTransaction(&ctx.Transaction)
+	engine.ImportContractCreateUTXO(createContractUtxo)
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())

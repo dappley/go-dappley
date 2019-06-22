@@ -65,6 +65,7 @@ type ScEngine interface {
 	ImportUTXOs(utxos []*UTXO)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *Transaction)
+	ImportContractCreateUTXO(utxo *UTXO)
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
