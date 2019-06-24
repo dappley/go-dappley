@@ -4,6 +4,7 @@ import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 import "github.com/dappley/go-dappley/core/pb/utxo.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";
+import "github.com/dappley/go-dappley/metrics/pb/datastore.proto";
 
 option objc_class_prefix = "HLW";
 
@@ -32,7 +33,7 @@ service AdminService{
 }
 
 service MetricService {
-  rpc RpcGetStats(MetricsServiceRequest) returns (JSONResponse) {}
+  rpc RpcGetStats(MetricsServiceRequest) returns (GetStatsResponse) {}
 }
 
 // Requests
@@ -186,6 +187,6 @@ message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
 }
 
-message JSONResponse {
-  string json = 1;
+message GetStatsResponse {
+  metricspb.Metrics stats = 1;
 }

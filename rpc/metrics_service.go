@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"runtime"
 	"time"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	dapmetrics "github.com/dappley/go-dappley/metrics"
+	metricspb "github.com/dappley/go-dappley/metrics/pb"
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/util"
@@ -41,21 +41,14 @@ func (ms *MetricsService) init() *MetricsService {
 	return ms
 }
 
-func (ms *MetricsService) RpcGetStats(context.Context, *rpcpb.MetricsServiceRequest) (*rpcpb.JSONResponse, error) {
-	bytes, err := json.Marshal(&struct {
-		TimeSeriesData *dapmetrics.DataStore `json:"timeSeriesData"`
-		Peers          []*network.PeerInfo   `json:"peers"`
-		BlockStats     []util.GenericType    `json:"blockStats"`
-	}{
-		TimeSeriesData: ms.ds,
-		Peers:          ms.node.GetPeerManager().CloneStreamsToPeerInfoSlice(),
-		BlockStats:     ms.getBlockStats(),
-	})
-
-	if err != nil {
-		return &rpcpb.JSONResponse{}, err
-	}
-	return &rpcpb.JSONResponse{Json: string(bytes)}, nil
+func (ms *MetricsService) RpcGetStats(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetStatsResponse, error) {
+	return &rpcpb.GetStatsResponse{
+		Stats: &metricspb.Metrics{
+			DataStore:  ms.ds.ToProto(),
+			Peers:      getPeerInfo(ms.node),
+			BlockStats: ms.getBlockStats(),
+		},
+	}, nil
 }
 
 func (ms *MetricsService) IsPrivate() bool {
@@ -65,12 +58,11 @@ func (ms *MetricsService) IsPrivate() bool {
 func getMemoryStats() interface{} {
 	stats := &runtime.MemStats{}
 	runtime.ReadMemStats(stats)
-	return struct {
-		HeapInUse uint64 `json:"heapInUse"`
-		HeapSys   uint64 `json:"heapSys"`
-	}{
-		HeapInUse: stats.HeapInuse,
-		HeapSys:   stats.HeapSys,
+	return &metricspb.Stat_MemoryStats{
+		MemoryStats: &metricspb.MemoryStats{
+			HeapInUse: stats.HeapInuse,
+			HeapSys:   stats.HeapSys,
+		},
 	}
 }
 
@@ -88,41 +80,40 @@ func getCPUPercent() interface{} {
 		return nil
 	}
 
-	return percentageUsed
+	return &metricspb.Stat_CpuPercentage{
+		CpuPercentage: percentageUsed,
+	}
 }
 
 func getTransactionPoolSize() interface{} {
-	return core.MetricsTransactionPoolSize.Count()
+	return &metricspb.Stat_TransactionPoolSize{
+		TransactionPoolSize: core.MetricsTransactionPoolSize.Count(),
+	}
 }
 
 func (ms *MetricsService) getNumForksInBlockChain() interface{} {
 	numForks, longestFork := ms.node.GetBlockChainManager().NumForks()
-	return struct {
-		NumForks    int64 `json:"numForks"`
-		LongestFork int64 `json:"longestFork"`
-	}{
-		NumForks:    numForks,
-		LongestFork: longestFork,
+
+	return &metricspb.Stat_ForkStats{
+		ForkStats: &metricspb.NumForks{
+			NumForks:    numForks,
+			LongestFork: longestFork,
+		},
 	}
 }
 
-type blockStat struct {
-	NumTransactions uint64 `json:"numTransactions"`
-	Height          uint64 `json:"height"`
-}
-
-func (ms *MetricsService) getBlockStats() []util.GenericType {
-	stats := make([]util.GenericType, 0)
+func (ms *MetricsService) getBlockStats() []*metricspb.BlockStats {
+	stats := make([]*metricspb.BlockStats, 0)
 	it := ms.node.GetBlockchain().Iterator()
 	cons := ms.node.GetBlockchain().GetConsensus()
 	blk, err := it.Next()
 	for t := time.Now().Unix() - ms.node.GetNodeConfig().GetMetricsInterval(); err == nil && blk.GetTimestamp() > t; {
-		bs := &blockStat{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
+		bs := &metricspb.BlockStats{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
 		if !cons.Produced(blk) {
 			bs.NumTransactions = 0
 		}
 		stats = append(stats, bs)
 		blk, err = it.Next()
 	}
-	return util.ReverseSlice(stats)
+	return util.ReverseSlice(stats).([]*metricspb.BlockStats)
 }

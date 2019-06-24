@@ -857,7 +857,11 @@ func (p *PeerInfo) ToProto() proto.Message {
 		addresses = append(addresses, addr.String())
 	}
 
-	return &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
+	pi := &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
+	if p.Latency != nil {
+		pi.OptionalValue = &networkpb.PeerInfo_Latency{Latency: *p.Latency}
+	}
+	return pi
 }
 
 //convert from protobuf
@@ -874,6 +878,12 @@ func (p *PeerInfo) FromProto(pb proto.Message) error {
 			return err
 		}
 		p.Addrs = append(p.Addrs, multiaddr)
+	}
+
+	hasOption := pb.(*networkpb.PeerInfo).GetOptionalValue()
+	if hasOption != nil {
+		latency := pb.(*networkpb.PeerInfo).GetLatency()
+		p.Latency = &latency
 	}
 
 	return nil

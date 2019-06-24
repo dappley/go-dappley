@@ -57,15 +57,8 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
-	peers := adminRpcService.node.GetPeerManager().CloneStreamsToPeerInfoSlice()
-
-	var peerPbs []*networkpb.PeerInfo
-	for _, peerInfo := range peers {
-		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
-	}
-
 	return &rpcpb.GetPeerInfoResponse{
-		PeerList: peerPbs,
+		PeerList: getPeerInfo(adminRpcService.node),
 	}, nil
 }
 
@@ -146,3 +139,14 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 }
 
 func (adminRpcService *AdminRpcService) IsPrivate() bool { return true }
+
+func getPeerInfo(node *network.Node) []*networkpb.PeerInfo {
+	peers := node.GetPeerManager().CloneStreamsToPeerInfoSlice()
+
+	var peerPbs []*networkpb.PeerInfo
+	for _, peerInfo := range peers {
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
+	}
+
+	return peerPbs
+}

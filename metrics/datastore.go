@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
+	metricspb "github.com/dappley/go-dappley/metrics/pb"
 )
 
 type stat struct {
@@ -16,9 +17,34 @@ type stat struct {
 	Value     interface{} `json:"value"`
 }
 
+func (s stat) ToProto() *metricspb.Stat {
+	switch v := s.Value.(type) {
+	case *metricspb.Stat_TransactionPoolSize:
+		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
+	case *metricspb.Stat_MemoryStats:
+		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
+	case *metricspb.Stat_CpuPercentage:
+		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
+	case *metricspb.Stat_ForkStats:
+		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
+	case *metricspb.Stat_BlockStats:
+		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
+	default:
+		return nil
+	}
+}
+
 type metric struct {
 	Stats  *common.EvictingQueue `json:"stats"`
 	update func() interface{}
+}
+
+func (m metric) ToProto() *metricspb.Metric {
+	stats := make([]*metricspb.Stat, 0, m.Stats.Len())
+	m.Stats.ForEach(func(element common.Element) {
+		stats = append(stats, element.(stat).ToProto())
+	})
+	return &metricspb.Metric{Stats: stats}
 }
 
 type DataStore struct {
@@ -105,4 +131,14 @@ func (ds *DataStore) getNumStats(metric string) int {
 	ds.mutex.RLock()
 	defer ds.mutex.RUnlock()
 	return ds.Metrics[metric].Stats.Len()
+}
+
+func (ds *DataStore) ToProto() *metricspb.DataStore {
+	ds.mutex.RLock()
+	defer ds.mutex.RUnlock()
+	metrics := make(map[string]*metricspb.Metric)
+	for k, v := range ds.Metrics {
+		metrics[k] = v.ToProto()
+	}
+	return &metricspb.DataStore{Metrics: metrics}
 }
