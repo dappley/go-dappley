@@ -274,6 +274,33 @@
   revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
 
 [[projects]]
+  digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
+
+[[projects]]
+  digest = "1:8f5579a88f14ca4029f38f7491f12f578e38d942d9343e63aaa68f14c31df053"
+  name = "github.com/lestrrat-go/file-rotatelogs"
+  packages = [
+    ".",
+    "internal/option",
+  ]
+  pruneopts = "UT"
+  revision = "3b4f34a036f374c18d604e1b8006d9fbb9593c06"
+  version = "v2.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:8654122ef85f2bc03859b0a7ea2d36c9965888689cdac7640cceaa6edb11cff6"
+  name = "github.com/lestrrat-go/strftime"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8b31f9c59b0feb56c456ce49a7b3d2b2e93a6f18"
+
+[[projects]]
   digest = "1:18d756b50d6620ee821cf9337d34ce282230bc56ce94dd2a82ccdbbd24d24350"
   name = "github.com/libp2p/go-addr-util"
   packages = ["."]
@@ -666,6 +693,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -690,6 +725,14 @@
   revision = "3113b8401b8a98917cde58f8bbd42a1b1c03b1fd"
 
 [[projects]]
+  digest = "1:1a23fdd843129ef761ffe7651bc5fe7c5b09fbe933e92783ab06cc11c37b7b37"
+  name = "github.com/rifflock/lfshook"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b9218ef580f59a2e72dad1aa33d660150445d05a"
+  version = "v2.4"
+
+[[projects]]
   digest = "1:ff6b0586c0621a76832cf783eee58cbb9d9795d2ce8acbc199a4131db11c42a9"
   name = "github.com/satori/go.uuid"
   packages = ["."]
@@ -709,7 +752,6 @@
   revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
   version = "v2.19.01"
 
-
 [[projects]]
   digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
   name = "github.com/sirupsen/logrus"
@@ -717,7 +759,6 @@
   pruneopts = "UT"
   revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
   version = "v1.4.2"
-
 
 [[projects]]
   digest = "1:919bb3aa6d9d0b67648c219fa4925312bc3c2872da19e818fa769e9c97a2b643"
@@ -884,7 +925,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:be7198d0051c2c3e237b6bffbb20a2988b2f50c80bfb37eb83ac5f9b0e346942"
+  digest = "1:f1271968e5fa91f6fb155794d10676033519dc633c3a604a792db9aeaa103966"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -894,7 +935,6 @@
     "ripemd160",
     "scrypt",
     "sha3",
-    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
@@ -1027,6 +1067,7 @@
     "github.com/golang/protobuf/proto",
     "github.com/hashicorp/golang-lru",
     "github.com/jinzhu/copier",
+    "github.com/lestrrat-go/file-rotatelogs",
     "github.com/libp2p/go-libp2p",
     "github.com/libp2p/go-libp2p-crypto",
     "github.com/libp2p/go-libp2p-host",
@@ -1037,6 +1078,7 @@
     "github.com/peterh/liner",
     "github.com/raviqqe/hamt",
     "github.com/rcrowley/go-metrics",
+    "github.com/rifflock/lfshook",
     "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/mem",
