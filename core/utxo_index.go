@@ -130,12 +130,19 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	if !tx.IsCoinbase() && !tx.IsRewardTx() {
 		for _, txin := range tx.Vin {
 			//TODO spent contract utxo
+			isContract, _ := PubKeyHash(txin.PubKey).IsContract()
 			pkh, err := NewUserPubKeyHash(txin.PubKey)
-			if err != nil {
-				return false
+			if !isContract {
+				if err != nil {
+					return false
+				}
+			} else {
+				pkh = PubKeyHash(txin.PubKey)
 			}
+
 			err = utxos.removeUTXO(pkh, txin.Txid, txin.Vout)
 			if err != nil {
+				println(err.Error)
 				return false
 			}
 		}
@@ -257,7 +264,12 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 	isContract, _ := pkh.IsContract()
 	if isContract {
 		contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
-		if contractUtxos == nil {
+
+		contractUtxo := contractUtxos.GetUtxo(txid, vout)
+
+		println(contractUtxo.Contract)
+
+		if contractUtxo == nil {
 			return ErrUTXONotFound
 		}
 		utxos.mutex.Lock()
