@@ -29,9 +29,9 @@
   branch = "master"
   name = "golang.org/x/crypto"
 
-[[constraint]]
-  name = "github.com/sirupsen/logrus"
-  version = "v1.4.2"
+#[[constraint]]
+#  name = "github.com/sirupsen/logrus"
+#  version = "v1.4.2"
 
 [prune]
   go-tests = true
