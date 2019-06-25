@@ -50,7 +50,8 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 
 		utxo.tx_index = C.int(prevUtxo.TxIndex)
 
-		utxo.value = C.longlong(prevUtxo.Value.Int64())
+		//utxo.value = C.longlong(prevUtxo.Value.Int64())
+		utxo.value = C.CString(prevUtxo.Value.String())
 		utxo.pubkeyhash = C.CString(hex.EncodeToString([]byte(prevUtxo.PubKeyHash)))
 		defer C.free(unsafe.Pointer(utxo.pubkeyhash))
 

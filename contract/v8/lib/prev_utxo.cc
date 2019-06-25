@@ -1,5 +1,6 @@
 #include "prev_utxo.h"
 #include "../engine.h"
+#include "util.h"
 
 const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(
     PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
@@ -40,7 +41,8 @@ void SetPrevUtxoData(struct utxo_t* utxos, int length,  void* context) {
         utxoInstance->DefineOwnProperty(
             *(utxoContext->context),
             String::NewFromUtf8(utxoContext->isolate, "value"),
-            BigInt::New(utxoContext->isolate, utxos[i].value),
+//            BigInt::New(utxoContext->isolate, utxos[i].value),
+            CastStringToBigInt(utxoContext->isolate, utxos[i].value),
             DEFAULT_PROPERTY
         );
         
