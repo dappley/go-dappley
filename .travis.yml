@@ -22,7 +22,7 @@ install:
 - make
 - sudo make install
 - cd -
-- dep ensure
+- dep ensure -update
 - cd contract/v8
 - make install
 - cd -
