@@ -20,6 +20,7 @@ test:
 	done
 
 build:
+	dep ensure -update
 	make deploy-v8
 	cd dapp; go build
 	cd dapp/cli; go build
