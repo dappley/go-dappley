@@ -5,7 +5,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	metricspb "github.com/dappley/go-dappley/metrics/pb"
 )
+
+var sampleStatValueFunc = func() metricspb.StatValue { return &metricspb.Stat_TransactionPoolSize{} }
 
 func TestDataStore_String(t *testing.T) {
 	t.Parallel()
@@ -13,29 +17,15 @@ func TestDataStore_String(t *testing.T) {
 	assert.Equal(t, "{\"metrics\":{}}", ds.String())
 
 	// register new metric
-	err := ds.RegisterNewMetric("test", func() interface{} { return 1 })
+	err := ds.RegisterNewMetric("test", sampleStatValueFunc)
 	assert.Nil(t, err)
 	assert.Equal(t, "{\"metrics\":{\"test\":{\"stats\":[]}}}", ds.String())
-}
-
-func TestDataStore_StringError(t *testing.T) {
-	t.Parallel()
-	ds := NewDataStore(1, time.Second)
-	err := ds.RegisterNewMetric("new.test", func() interface{} { return func() {} })
-	assert.Nil(t, err)
-	ds.StartUpdate()
-
-	// allow time for statistic generation
-	time.Sleep(3 * time.Second)
-
-	// new.test's update returns a function which returns an unsupported type error from json.Marshal
-	assert.Equal(t, "null", ds.String())
 }
 
 func TestDataStoreCapacityConstraint(t *testing.T) {
 	t.Parallel()
 	ds := NewDataStore(1, time.Second)
-	err := ds.RegisterNewMetric("test", func() interface{} { return 1 })
+	err := ds.RegisterNewMetric("test", sampleStatValueFunc)
 	assert.Nil(t, err)
 
 	ds.StartUpdate()
@@ -50,10 +40,10 @@ func TestDataStore_RegisterNewMetric(t *testing.T) {
 	t.Parallel()
 	ds := NewDataStore(1, time.Second)
 
-	err := ds.RegisterNewMetric("test", func() interface{} { return 0 })
+	err := ds.RegisterNewMetric("test", sampleStatValueFunc)
 	assert.Nil(t, err)
 
-	err = ds.RegisterNewMetric("test", func() interface{} { return 1 })
+	err = ds.RegisterNewMetric("test", sampleStatValueFunc)
 	assert.NotNil(t, err)
 	assert.Equal(t, "unable to register duplicate metric", err.Error())
 }
@@ -62,7 +52,7 @@ func TestDataStore_Update(t *testing.T) {
 	t.Parallel()
 	ds := NewDataStore(5, time.Second)
 
-	err := ds.RegisterNewMetric("test", func() interface{} { return 1 })
+	err := ds.RegisterNewMetric("test", sampleStatValueFunc)
 	assert.Nil(t, err)
 
 	ds.StartUpdate()

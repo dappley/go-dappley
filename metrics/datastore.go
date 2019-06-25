@@ -13,30 +13,17 @@ import (
 )
 
 type stat struct {
-	Timestamp int64       `json:"timestamp"`
-	Value     interface{} `json:"value"`
+	Timestamp int64               `json:"timestamp"`
+	Value     metricspb.StatValue `json:"value"`
 }
 
 func (s stat) ToProto() *metricspb.Stat {
-	switch v := s.Value.(type) {
-	case *metricspb.Stat_TransactionPoolSize:
-		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
-	case *metricspb.Stat_MemoryStats:
-		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
-	case *metricspb.Stat_CpuPercentage:
-		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
-	case *metricspb.Stat_ForkStats:
-		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
-	case *metricspb.Stat_BlockStats:
-		return &metricspb.Stat{Timestamp: s.Timestamp, Value: v}
-	default:
-		return nil
-	}
+	return &metricspb.Stat{Timestamp: s.Timestamp, Value: s.Value}
 }
 
 type metric struct {
 	Stats  *common.EvictingQueue `json:"stats"`
-	update func() interface{}
+	update func() metricspb.StatValue
 }
 
 func (m metric) ToProto() *metricspb.Metric {
@@ -85,7 +72,7 @@ func (ds *DataStore) String() string {
 // RegisterNewMetric returns nil on success or an error if attempting to register a metric that already exists
 // name: unique id of metric
 // updateMetric: function that returns the value of the metric at any given time
-func (ds *DataStore) RegisterNewMetric(name string, updateMetric func() interface{}) error {
+func (ds *DataStore) RegisterNewMetric(name string, updateMetric func() metricspb.StatValue) error {
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 	if _, ok := ds.Metrics[name]; ok {

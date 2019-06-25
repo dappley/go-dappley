@@ -55,7 +55,7 @@ func (ms *MetricsService) IsPrivate() bool {
 	return false
 }
 
-func getMemoryStats() interface{} {
+func getMemoryStats() metricspb.StatValue {
 	stats := &runtime.MemStats{}
 	runtime.ReadMemStats(stats)
 	return &metricspb.Stat_MemoryStats{
@@ -66,7 +66,7 @@ func getMemoryStats() interface{} {
 	}
 }
 
-func getCPUPercent() interface{} {
+func getCPUPercent() metricspb.StatValue {
 	pid := int32(os.Getpid())
 	proc, err := process.NewProcess(pid)
 	if err != nil {
@@ -85,13 +85,13 @@ func getCPUPercent() interface{} {
 	}
 }
 
-func getTransactionPoolSize() interface{} {
+func getTransactionPoolSize() metricspb.StatValue {
 	return &metricspb.Stat_TransactionPoolSize{
 		TransactionPoolSize: core.MetricsTransactionPoolSize.Count(),
 	}
 }
 
-func (ms *MetricsService) getNumForksInBlockChain() interface{} {
+func (ms *MetricsService) getNumForksInBlockChain() metricspb.StatValue {
 	numForks, longestFork := ms.node.GetBlockChainManager().NumForks()
 
 	return &metricspb.Stat_ForkStats{
