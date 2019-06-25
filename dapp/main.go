@@ -101,7 +101,9 @@ func main() {
 	node.DownloadBlocks(bc)
 
 	//start rpc server
-	server := rpc.NewGrpcServer(node, defaultPassword)
+	nodeConf := conf.GetNodeConfig()
+	server := rpc.NewGrpcServerWithMetrics(node, defaultPassword, &rpc.MetricsServiceConfig{
+		PollingInterval: nodeConf.GetMetricsPollingInterval(), TimeSeriesInterval: nodeConf.GetMetricsInterval()})
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 
@@ -132,7 +134,7 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
 	nodeConfig := conf.GetNodeConfig()
-	node := network.NewNodeWithConfig(bc, core.NewBlockPool(0), nodeConfig)
+	node := network.NewNode(bc, core.NewBlockPool(0))
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
 	if keyPath != "" {

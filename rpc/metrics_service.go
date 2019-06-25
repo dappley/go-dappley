@@ -21,17 +21,17 @@ import (
 type MetricsService struct {
 	node *network.Node
 	ds   *dapmetrics.DataStore
+	*MetricsServiceConfig
 }
 
-func NewMetricsService(node *network.Node) *MetricsService {
-	return (&MetricsService{node: node}).init()
+func NewMetricsService(node *network.Node, config *MetricsServiceConfig) *MetricsService {
+	return (&MetricsService{node: node, MetricsServiceConfig: config}).init()
 }
 
 func (ms *MetricsService) init() *MetricsService {
-	config := ms.node.GetNodeConfig()
-	ms.node.GetPeerManager().StartNewPingService(time.Duration(config.GetMetricsPollingInterval()) * time.Second)
-	if config.GetMetricsPollingInterval() > 0 && config.GetMetricsInterval() > 0 {
-		ms.ds = dapmetrics.NewDataStore(int(config.GetMetricsInterval()/config.GetMetricsPollingInterval()), time.Duration(config.GetMetricsPollingInterval())*time.Second)
+	ms.node.GetPeerManager().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second)
+	if ms.PollingInterval > 0 && ms.TimeSeriesInterval > 0 {
+		ms.ds = dapmetrics.NewDataStore(int(ms.TimeSeriesInterval/ms.PollingInterval), time.Duration(ms.PollingInterval)*time.Second)
 		_ = ms.ds.RegisterNewMetric("dapp.cpu.percent", getCPUPercent)
 		_ = ms.ds.RegisterNewMetric("dapp.txpool.size", getTransactionPoolSize)
 		_ = ms.ds.RegisterNewMetric("dapp.memstats", getMemoryStats)
@@ -107,7 +107,7 @@ func (ms *MetricsService) getBlockStats() []*metricspb.BlockStats {
 	it := ms.node.GetBlockchain().Iterator()
 	cons := ms.node.GetBlockchain().GetConsensus()
 	blk, err := it.Next()
-	for t := time.Now().Unix() - ms.node.GetNodeConfig().GetMetricsInterval(); err == nil && blk.GetTimestamp() > t; {
+	for t := time.Now().Unix() - ms.TimeSeriesInterval; err == nil && blk.GetTimestamp() > t; {
 		bs := &metricspb.BlockStats{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
 		if !cons.Produced(blk) {
 			bs.NumTransactions = 0

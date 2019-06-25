@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
@@ -61,11 +60,11 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 	return n, err
 }
 
-func initNodeWithConfig(address string, port int, connectionInCount, connectionOutCount uint32, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
+func initNodeWithConfig(address string, port int, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
 	addr := core.Address{address}
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
-	config := &configpb.NodeConfig{MaxConnectionIn: connectionInCount, MaxConnectionOut: connectionOutCount}
+	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
 	n := NewNodeWithConfig(bc, pool, config)
 
 	if seedPeer != nil {

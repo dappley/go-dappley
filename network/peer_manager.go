@@ -33,7 +33,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 
-	configpb "github.com/dappley/go-dappley/config/pb"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 )
@@ -93,18 +92,18 @@ type PeerManager struct {
 	ping  *PingService
 }
 
-func NewPeerManager(node *Node, config *configpb.NodeConfig) *PeerManager {
+func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
 
 	if config != nil {
-		if config.MaxConnectionOut != 0 {
-			maxConnectionOutCount = int(config.MaxConnectionOut)
+		if config.MaxConnectionOutCount != 0 {
+			maxConnectionOutCount = config.MaxConnectionOutCount
 		}
 
-		if config.MaxConnectionIn != 0 {
-			maxConnectionInCount = int(config.MaxConnectionIn)
+		if config.MaxConnectionInCount != 0 {
+			maxConnectionInCount = config.MaxConnectionInCount
 		}
 	}
 

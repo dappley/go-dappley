@@ -45,14 +45,24 @@ var (
 	}
 )
 
+type MetricsServiceConfig struct {
+	PollingInterval    int64
+	TimeSeriesInterval int64
+}
+
 type Server struct {
-	srv      *grpc.Server
-	node     *network.Node
-	password string
+	srv           *grpc.Server
+	node          *network.Node
+	password      string
+	metricsConfig *MetricsServiceConfig
 }
 
 func NewGrpcServer(node *network.Node, adminPassword string) *Server {
-	return &Server{grpc.NewServer(), node, adminPassword}
+	return NewGrpcServerWithMetrics(node, adminPassword, nil)
+}
+
+func NewGrpcServerWithMetrics(node *network.Node, adminPassword string, config *MetricsServiceConfig) *Server {
+	return &Server{grpc.NewServer(), node, adminPassword, config}
 }
 
 func (s *Server) Start(port uint32) {
@@ -70,7 +80,9 @@ func (s *Server) Start(port uint32) {
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
 		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
-		rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node))
+		if s.metricsConfig != nil {
+			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.metricsConfig))
+		}
 		if err := srv.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Server: encounters an error while serving.")
 		}
