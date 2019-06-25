@@ -42,7 +42,7 @@ void SetPrevUtxoData(struct utxo_t* utxos, int length,  void* context) {
             *(utxoContext->context),
             String::NewFromUtf8(utxoContext->isolate, "value"),
 //            BigInt::New(utxoContext->isolate, utxos[i].value),
-            CastStringToBigInt(utxoContext->isolate, utxos[i].value),
+            CastStringToBigInt(utxoContext->context,utxoContext->isolate, utxos[i].value),
             DEFAULT_PROPERTY
         );
         

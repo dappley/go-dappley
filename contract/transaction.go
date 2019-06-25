@@ -42,6 +42,7 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	tx.id = C.CString(hex.EncodeToString(engine.tx.ID))
 	defer C.free(unsafe.Pointer(tx.id))
 	tx.tip = C.CString(engine.tx.Tip.String())
+	defer C.free(unsafe.Pointer(tx.tip))
 
 	tx.vin_length = C.int(len(engine.tx.Vin))
 	vinAddr := (*C.struct_transaction_vin_t)(C.malloc(C.size_t(C.sizeof_struct_transaction_vin_t * tx.vin_length)))
@@ -67,7 +68,10 @@ func TransactionGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	vouts := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(tempVout)]C.struct_transaction_vout_t)(unsafe.Pointer(voutAddr))[:tx.vout_length:tx.vout_length]
 	for index, txVout := range engine.tx.Vout {
 		vout := &vouts[index]
+
 		vout.amount = C.CString(txVout.Value.String())
+		defer C.free(unsafe.Pointer(vout.amount))
+
 		vout.pubkeyhash = C.CString(hex.EncodeToString([]byte(txVout.PubKeyHash)))
 		defer C.free(unsafe.Pointer(vout.pubkeyhash))
 	}
