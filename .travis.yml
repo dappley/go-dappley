@@ -22,8 +22,8 @@ install:
 - make
 - sudo make install
 - cd -
-- dep ensure 
 - rm -rf vendor
+- dep ensure 
 - cd contract/v8
 - make install
 - cd -
