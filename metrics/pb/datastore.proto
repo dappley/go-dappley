@@ -9,7 +9,7 @@ message Stat {
         int64 transaction_pool_size = 2;
         metricspb.MemoryStats memory_stats = 3;
         double cpu_percentage = 4;
-        metricspb.NumForks fork_stats = 5;
+        metricspb.ForkStats fork_stats = 5;
         metricspb.BlockStats block_stats = 6;
     }
 }
@@ -19,7 +19,7 @@ message MemoryStats {
     uint64 heap_sys = 2;
 }
 
-message NumForks {
+message ForkStats {
     int64 num_forks = 1;
     int64 longest_fork = 2;
 }

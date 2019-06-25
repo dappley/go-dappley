@@ -95,7 +95,7 @@ func (ms *MetricsService) getNumForksInBlockChain() interface{} {
 	numForks, longestFork := ms.node.GetBlockChainManager().NumForks()
 
 	return &metricspb.Stat_ForkStats{
-		ForkStats: &metricspb.NumForks{
+		ForkStats: &metricspb.ForkStats{
 			NumForks:    numForks,
 			LongestFork: longestFork,
 		},
