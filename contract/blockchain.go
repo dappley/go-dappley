@@ -45,6 +45,8 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 
 	contractAddr := engine.contractAddr
 	utxos := engine.contractUTXOs
+	createUtxo := engine.contractCreateUTXO
+	utxos = append(utxos, createUtxo)
 	sourceTXID := engine.sourceTXID
 	if !contractAddr.IsValid() {
 		return 1
