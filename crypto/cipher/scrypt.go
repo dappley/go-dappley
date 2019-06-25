@@ -108,9 +108,9 @@ func (s *Scrypt) EncryptKey(address string, data []byte, passphrase []byte) ([]b
 
 	idstring := ""
 
-	if id, err := uuid.NewV4(); err == nil {
-		idstring = id.String()
-	}
+	//if id, err := uuid.NewV4(); err == nil {
+	idstring = uuid.NewV4().String()
+	//}
 
 	encryptedKeyJSON := encryptedKeyJSON{
 		string(address),

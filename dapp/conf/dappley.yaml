@@ -1,0 +1,7 @@
+log:
+  name:  "dappley.log"
+  level:  "info"
+  count:  7
+  rotateTime:  86400
+  stdout:  true
+
