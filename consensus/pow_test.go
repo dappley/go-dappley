@@ -104,13 +104,13 @@ func TestProofOfWork_Produced(t *testing.T) {
 	// unsigned without coinbase
 	require.False(t, pow.Produced(&core.Block{}))
 	// signed block
-	signedBlk := core.NewBlock([]*core.Transaction{}, nil)
+	signedBlk := core.NewBlock([]*core.Transaction{}, nil, "")
 	require.True(t, signedBlk.SignBlock("300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a", signedBlk.CalculateHash()))
 	require.False(t, pow.Produced(signedBlk))
 	// unsigned block with different address
 	cbtx := core.NewCoinbaseTX(core.NewAddress("other-addr"), "", 1, &common.Amount{Int: *big.NewInt(100)})
-	require.False(t, pow.Produced(core.NewBlock([]*core.Transaction{&cbtx},nil)))
+	require.False(t, pow.Produced(core.NewBlock([]*core.Transaction{&cbtx}, nil, "")))
 	// unsigned block produced by pow
 	cbtx = core.NewCoinbaseTX(key.GenerateAddress(), "", 1, &common.Amount{Int: *big.NewInt(100)})
-	require.True(t, pow.Produced(core.NewBlock([]*core.Transaction{&cbtx},nil)))
+	require.True(t, pow.Produced(core.NewBlock([]*core.Transaction{&cbtx}, nil, "")))
 }
