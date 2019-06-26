@@ -1,10 +1,10 @@
 package util
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"testing"
 )
 
 func TestDecodeScInput(t *testing.T) {
@@ -22,13 +22,17 @@ func TestPrepareArgs(t *testing.T) {
 	assert.Equal(t, expectedRes, PrepareArgs(args))
 }
 
+type GenericSlice []interface{}
+
 func TestReverseSlice(t *testing.T) {
 	// len(slice) == 0
-	require.Equal(t, []GenericType{}, ReverseSlice([]GenericType{}))
+	require.Equal(t, GenericSlice{}, ReverseSlice(GenericSlice{}))
 	// len(slice) == 1
-	require.Equal(t, []GenericType{1}, ReverseSlice([]GenericType{1}))
+	require.Equal(t, GenericSlice{1}, ReverseSlice(GenericSlice{1}))
 	// len(slice) is even
-	require.Equal(t, []GenericType{2, 1}, ReverseSlice([]GenericType{1, 2}))
+	require.Equal(t, GenericSlice{2, 1}, ReverseSlice(GenericSlice{1, 2}))
 	// len(slice) is odd
-	require.Equal(t, []GenericType{3, 2, 1}, ReverseSlice([]GenericType{1, 2, 3}))
+	require.Equal(t, GenericSlice{3, 2, 1}, ReverseSlice(GenericSlice{1, 2, 3}))
+	// type assertion
+	require.Equal(t, []int{3, 2, 1}, ReverseSlice([]int{1, 2, 3}).([]int))
 }

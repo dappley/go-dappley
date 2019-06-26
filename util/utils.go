@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"reflect"
 
 	logger "github.com/sirupsen/logrus"
 )
@@ -89,13 +90,11 @@ func quoteArg(arg string) string {
 	return arg
 }
 
-type GenericType interface{}
-
 // ReverseSlice returns an in-place reversal of the slice's elements
-func ReverseSlice(slice []GenericType) []GenericType {
-	for low, high := 0, len(slice)-1; low < high; low, high = low+1, high-1 {
-		slice[low], slice[high] = slice[high], slice[low]
+func ReverseSlice(slice interface{}) interface{} {
+	swap := reflect.Swapper(slice)
+	for low, high := 0, reflect.ValueOf(slice).Len()-1; low < high; low, high = low+1, high-1 {
+		swap(low, high)
 	}
-
 	return slice
 }
