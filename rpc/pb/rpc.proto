@@ -21,6 +21,7 @@ service RpcService {
   rpc RpcGetNewTransaction(GetNewTransactionRequest) returns (stream GetNewTransactionResponse) {}
   rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
+  rpc RpcGetLastIrreversibleBlock(GetLastIrreversibleBlockRequest) returns (GetLastIrreversibleBlockResponse) {}
 }
 
 service AdminService{
@@ -111,6 +112,8 @@ message SubscribeRequest{
 
 message MetricsServiceRequest {}
 
+message GetLastIrreversibleBlockRequest {}
+
 // Responses
 
 message AddProducerResponse {}
@@ -189,4 +192,8 @@ message GetAllTransactionsResponse{
 
 message GetStatsResponse {
   metricspb.Metrics stats = 1;
+}
+
+message GetLastIrreversibleBlockResponse {
+  corepb.Block block = 1;
 }

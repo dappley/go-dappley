@@ -47,11 +47,14 @@ func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
 }
 
 func (txSender *UnexistingUtxoTxSender) Send() {
-	logger.Info("Sending a transaction with an unexisting utxo...")
 
 	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
 
 	if err != nil {
-		logger.WithError(err).Error("UnexisitingUtxoTx: Unable to send transaction!")
+		logger.WithError(err).Error("UnexisitingUtxoTx: Sending transaction failed!")
 	}
+}
+
+func (txSender *UnexistingUtxoTxSender) Print() {
+	logger.Info("Sending a transaction with an unexisting utxo...")
 }

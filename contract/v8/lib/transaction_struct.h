@@ -11,7 +11,7 @@ struct transaction_vin_t {
 } ;
 
 struct transaction_vout_t {
-    long long amount;
+    char* amount;
     char* pubkeyhash; 
 } ;
 
@@ -21,7 +21,7 @@ struct transaction_t {
     struct transaction_vin_t* vin;
     int    vout_length;
     struct transaction_vout_t* vout;
-    unsigned long long tip; 
+    char* tip;
 } ;
 
 #endif /* __TRANSACTION_STRUCT_H__ */

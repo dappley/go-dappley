@@ -13,7 +13,7 @@ import (
 //export VerifyAddressFunc
 func VerifyAddressFunc(address *C.char) bool {
 	addr := core.NewAddress(C.GoString(address))
-	return addr.ValidateAddress()
+	return addr.IsValid()
 }
 
 func prepareUTXOs(utxos []*core.UTXO, amount *common.Amount) ([]*core.UTXO, bool) {
@@ -30,6 +30,37 @@ func prepareUTXOs(utxos []*core.UTXO, amount *common.Amount) ([]*core.UTXO, bool
 		}
 	}
 	return nil, false
+}
+
+//export DeleteContractFunc
+func DeleteContractFunc(handler unsafe.Pointer) int {
+	engine := getV8EngineByAddress(uint64(uintptr(handler)))
+	if engine == nil {
+		logger.WithFields(logger.Fields{
+			"handler":  uint64(uintptr(handler)),
+			"function": "Blockchain.DeleteContractFunc",
+		}).Debug("SmartContract: failed to get the engine instance!")
+		return 1
+	}
+
+	contractAddr := engine.contractAddr
+	utxos := engine.contractUTXOs
+	createUtxo := engine.contractCreateUTXO
+	utxos = append(utxos, createUtxo)
+	sourceTXID := engine.sourceTXID
+	if !contractAddr.IsValid() {
+		return 1
+	}
+
+	transferTX := core.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
+
+	engine.generatedTXs = append(
+		engine.generatedTXs,
+		&transferTX,
+	)
+
+	return 0
+
 }
 
 //TransferFunc transfer amount from contract to address
@@ -66,7 +97,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	contractAddr := engine.contractAddr
 	utxos := engine.contractUTXOs
 	sourceTXID := engine.sourceTXID
-	if !contractAddr.ValidateAddress() {
+	if !contractAddr.IsValid() {
 		return 1
 	}
 

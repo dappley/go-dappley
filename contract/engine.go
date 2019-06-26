@@ -9,6 +9,7 @@ bool  Cgo_VerifyAddressFunc(const char *address);
 int	  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 int   Cgo_GetCurrBlockHeightFunc(void *handler);
 char* Cgo_GetNodeAddressFunc(void *handler);
+int   Cgo_DeleteContractFunc(void *handler);
 //storage
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
@@ -48,19 +49,20 @@ var (
 )
 
 type V8Engine struct {
-	source        string
-	state         *core.ScState
-	tx            *core.Transaction
-	rewards       map[string]string
-	contractAddr  core.Address
-	contractUTXOs []*core.UTXO
-	prevUtxos     []*core.UTXO
-	sourceTXID    []byte
-	generatedTXs  []*core.Transaction
-	handler       uint64
-	blkHeight     uint64
-	seed          int64
-	nodeAddr      core.Address
+	source             string
+	state              *core.ScState
+	tx                 *core.Transaction
+	rewards            map[string]string
+	contractAddr       core.Address
+	contractCreateUTXO *core.UTXO
+	contractUTXOs      []*core.UTXO
+	prevUtxos          []*core.UTXO
+	sourceTXID         []byte
+	generatedTXs       []*core.Transaction
+	handler            uint64
+	blkHeight          uint64
+	seed               int64
+	nodeAddr           core.Address
 }
 
 func InitializeV8Engine() {
@@ -70,6 +72,7 @@ func InitializeV8Engine() {
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
 		(C.FuncGetCurrBlockHeight)(unsafe.Pointer(C.Cgo_GetCurrBlockHeightFunc)),
 		(C.FuncGetNodeAddress)(unsafe.Pointer(C.Cgo_GetNodeAddressFunc)),
+		(C.FuncDeleteContract)(unsafe.Pointer(C.Cgo_DeleteContractFunc)),
 	)
 	C.InitializeStorage(
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
@@ -122,6 +125,10 @@ func (sc *V8Engine) ImportLocalStorage(state *core.ScState) {
 
 func (sc *V8Engine) ImportTransaction(tx *core.Transaction) {
 	sc.tx = tx
+}
+
+func (sc *V8Engine) ImportContractCreateUTXO(utxo *core.UTXO) {
+	sc.contractCreateUTXO = utxo
 }
 
 // ImportContractAddr supplies the wallet address of the contract to the engine
@@ -210,8 +217,4 @@ func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
 	return v8EngineList[handler]
-}
-
-func destorySmartContract() {
-
 }

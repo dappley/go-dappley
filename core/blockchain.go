@@ -32,13 +32,15 @@ import (
 )
 
 var tipKey = []byte("tailBlockHash")
+var libKey = []byte("lastIrreversibleBlockHash")
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
-	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
+	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
+	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 )
 
 type BlockchainState int
@@ -52,12 +54,14 @@ const (
 
 type BlockContext struct {
 	Block     *Block
+	Lib       *Block
 	UtxoIndex *UTXOIndex
 	State     *ScState
 }
 
 type Blockchain struct {
 	tailBlockHash []byte
+	libHash       []byte
 	db            storage.Storage
 	utxoCache     *UTXOCache
 	consensus     Consensus
@@ -66,13 +70,14 @@ type Blockchain struct {
 	state         BlockchainState
 	eventManager  *EventManager
 	blkSizeLimit  int
-	mutex         sync.Mutex
+	mutex         *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
+		genesis.GetHash(),
 		genesis.GetHash(),
 		db,
 		NewUTXOCache(db),
@@ -82,13 +87,13 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.transactions)
 	scState := NewScState()
-	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
+	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
 	}
@@ -101,9 +106,14 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 	if err != nil {
 		return nil, err
 	}
+	lib, err := db.Get(libKey)
+	if err != nil {
+		return nil, err
+	}
 
 	bc := &Blockchain{
 		tip,
+		lib,
 		db,
 		NewUTXOCache(db),
 		consensus,
@@ -112,7 +122,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
-		sync.Mutex{},
+		&sync.Mutex{},
 	}
 	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
@@ -128,6 +138,10 @@ func (bc *Blockchain) GetUtxoCache() *UTXOCache {
 
 func (bc *Blockchain) GetTailBlockHash() Hash {
 	return bc.tailBlockHash
+}
+
+func (bc *Blockchain) GetLIBHash() Hash {
+	return bc.libHash
 }
 
 func (bc *Blockchain) GetSCManager() ScEngineManager {
@@ -155,8 +169,21 @@ func (bc *Blockchain) GetTailBlock() (*Block, error) {
 	return bc.GetBlockByHash(hash)
 }
 
+func (bc *Blockchain) GetLIB() (*Block, error) {
+	hash := bc.GetLIBHash()
+	return bc.GetBlockByHash(hash)
+}
+
 func (bc *Blockchain) GetMaxHeight() uint64 {
 	block, err := bc.GetTailBlock()
+	if err != nil {
+		return 0
+	}
+	return block.GetHeight()
+}
+
+func (bc *Blockchain) GetLIBHeight() uint64 {
+	block, err := bc.GetLIB()
 	if err != nil {
 		return 0
 	}
@@ -217,6 +244,14 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
+	if ctx.Lib != nil {
+		err := bcTemp.SetLIBHash(ctx.Lib.GetHash())
+		if err != nil {
+			blockLogger.Error("Blockchain: failed to set lib hash!")
+			return err
+		}
+	}
+
 	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
@@ -232,16 +267,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	ctx.State.Save(bcTemp.db, ctx.Block.GetHash())
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save scState to database.")
-		return err
-	}
-
 	//Remove transactions in current transaction pool
-	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
+	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bcTemp.GetTxPool().ResetPendingTransactions()
-	err = bc.GetTxPool().SaveToDatabase(bc.db)
+	err = bcTemp.GetTxPool().SaveToDatabase(bc.db)
 
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save txpool to database.")
@@ -330,7 +359,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
+	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
@@ -468,9 +497,11 @@ loop:
 
 	newUtxo := utxo.DeepCopy()
 	for _, tx := range bc.txPool.GetTransactions() {
-		if tx.Verify(newUtxo, 0) == nil {
+		if result, err := tx.Verify(newUtxo, 0); result {
 			newUtxo.UpdateUtxo(tx)
 			newTxPool.Push(*tx)
+		} else {
+			logger.Warn(err.Error())
 		}
 	}
 	bc.txPool = newTxPool
@@ -494,6 +525,34 @@ func (bc *Blockchain) setTailBlockHash(hash Hash) error {
 
 func (bc *Blockchain) deepCopy() *Blockchain {
 	newCopy := &Blockchain{}
-	copier.Copy(&newCopy, &bc)
+	copier.Copy(newCopy, bc)
 	return newCopy
+}
+
+func (bc *Blockchain) SetLIBHash(hash Hash) error {
+	err := bc.db.Put(libKey, hash)
+	if err != nil {
+		return err
+	}
+	bc.libHash = hash
+	return nil
+}
+
+func (bc *Blockchain) IsLIB(block *Block) bool {
+	block, err := bc.GetBlockByHash(block.GetHash())
+	if err != nil {
+		logger.Error("Blockchain:get block by hash from blockchain error: ", err)
+		return false
+	}
+	if block == nil {
+		logger.Error("Blockchain:block is not exist in blockchain")
+		return false
+	}
+
+	lib, _ := bc.GetLIB()
+
+	if lib.GetHeight() >= block.GetHeight() {
+		return true
+	}
+	return false
 }

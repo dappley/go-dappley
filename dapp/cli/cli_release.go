@@ -425,7 +425,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	}
 
 	address := *(flags[flagAddress].(*string))
-	if core.NewAddress(address).ValidateAddress() == false {
+	if core.NewAddress(address).IsValid() == false {
 		fmt.Println("Error: address is not valid")
 		return
 	}
@@ -684,13 +684,13 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		data = string(script)
 	}
 
-	if core.NewAddress(*(flags[flagFromAddress].(*string))).ValidateAddress() == false {
+	if core.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if data == "" && core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
+	if data == "" && core.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}

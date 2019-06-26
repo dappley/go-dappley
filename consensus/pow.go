@@ -89,9 +89,10 @@ func (pow *ProofOfWork) mineBlocks() {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
-			newBlock := pow.miner.ProduceBlock()
+			newBlock := pow.miner.ProduceBlock(0)
 			if newBlock == nil || !pow.Validate(newBlock.Block) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
+				pow.miner.BlockProduceFinish()
 				return
 			}
 			pow.updateNewBlock(newBlock)
@@ -183,4 +184,8 @@ func (pow *ProofOfWork) Produced(blk *core.Block) bool {
 		return tx != nil && pow.miner.Beneficiary() == tx.Vout[0].GetAddress().String()
 	}
 	return false
+}
+
+func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }

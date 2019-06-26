@@ -52,11 +52,15 @@ func main() {
 
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
+
+	var genesisPath string
+	flag.StringVar(&genesisPath, "g", genesisFilePath, "Genesis Configuration File Path. Default to conf/genesis.conf")
 	flag.Parse()
 
+	logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
-	config.LoadConfig(genesisFilePath, genesisConf)
+	config.LoadConfig(genesisPath, genesisConf)
 
 	if genesisConf == nil {
 		logger.Error("Cannot load genesis configurations from file! Exiting...")
@@ -97,6 +101,13 @@ func main() {
 	}
 	defer node.Stop()
 
+	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
+	conss.Setup(node, minerAddr)
+	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
+	logger.WithFields(logger.Fields{
+		"miner_address": minerAddr,
+	}).Info("Consensus is configured.")
+
 	bc.SetState(core.BlockchainReady)
 	node.DownloadBlocks(bc)
 
@@ -108,13 +119,6 @@ func main() {
 	defer server.Stop()
 
 	//start mining
-	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
-	conss.Setup(node, minerAddr)
-	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
-	logger.WithFields(logger.Fields{
-		"miner_address": minerAddr,
-	}).Info("Consensus is configured.")
-
 	logic.SetLockWallet() //lock the wallet
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 	conss.Start()

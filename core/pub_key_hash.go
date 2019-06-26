@@ -12,11 +12,11 @@ const versionUser = byte(0x5A)
 const versionContract = byte(0x58)
 const addressChecksumLen = 4
 
-type PubKeyHash []byte 
+type PubKeyHash []byte
 
 var (
-	ErrIncorrectPublicKey = errors.New("public key not correct")
-	ErrEmptyPublicKeyHash = errors.New("empty public key hash")
+	ErrIncorrectPublicKey       = errors.New("public key not correct")
+	ErrEmptyPublicKeyHash       = errors.New("empty public key hash")
 	ErrInvalidPubKeyHashVersion = errors.New("invalid public key hash version")
 )
 
@@ -36,8 +36,6 @@ func NewContractPubKeyHash() PubKeyHash {
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash)
 }
-
-
 
 //GenerateAddress generates an address  from a public key hash
 func (pkh PubKeyHash) GenerateAddress() Address {

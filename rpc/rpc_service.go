@@ -62,7 +62,7 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	if !core.NewAddress(address).ValidateAddress() {
+	if !core.NewAddress(address).IsValid() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
 
@@ -99,8 +99,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
-	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetAllTransactions())
 
 	publicKeyHash, ok := core.NewAddress(in.GetAddress()).GetPubKeyHash()
 	if !ok {
@@ -211,10 +210,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
-	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetAllTransactions())
 
-	if tx.Verify(utxoIndex, 0) != nil {
+	if result, err := tx.Verify(utxoIndex, 0); !result {
+		logger.Warn(err.Error())
 		return nil, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 
@@ -237,8 +236,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	statusCode := codes.OK
 	var details []proto.Message
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
-	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetAllTransactions())
 
 	txMap := make(map[int]core.Transaction, len(in.Transactions))
 	txs := []core.Transaction{}
@@ -272,21 +270,13 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				continue
 			}
 
-			if tx.Verify(utxoIndex, 0) != nil {
+			if result, _ := tx.Verify(utxoIndex, 0); !result {
 				continue
 			}
 
 			utxoIndex.UpdateUtxo(&tx)
 			rpcService.node.GetBlockchain().GetTxPool().Push(tx)
 			verifiedTxs = append(verifiedTxs, tx)
-
-			if tx.IsContract() {
-				contractAddr := tx.GetContractAddress()
-				message := contractAddr.String()
-				logger.WithFields(logger.Fields{
-					"contractAddr": message,
-				}).Info("Smart Contract Deployed Successful!")
-			}
 
 			details = append(details, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
@@ -367,4 +357,15 @@ func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Contex
 		result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
 	}
 	return result, nil
+}
+
+// RpcGetLastIrreversibleBlock get last irreversible block
+func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, in *rpcpb.GetLastIrreversibleBlockRequest) (*rpcpb.GetLastIrreversibleBlockResponse, error) {
+	block, err := rpcService.node.GetBlockchain().GetLIB()
+
+	if err != nil {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	return &rpcpb.GetLastIrreversibleBlockResponse{Block: block.ToProto().(*corepb.Block)}, nil
 }

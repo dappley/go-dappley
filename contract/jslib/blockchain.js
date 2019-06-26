@@ -22,6 +22,9 @@ Blockchain.prototype = {
     },
     getNodeAddress : function(){
         return this.nativeBlockchain.getNodeAddress();
+    },
+    deleteContract : function(){
+        return this.nativeBlockchain.deleteContract();
     }
 };
 

@@ -20,15 +20,15 @@ package trie
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/common/trie/pb"
-	"github.com/dappley/go-dappley/crypto/byteutils"
-	"github.com/dappley/go-dappley/crypto/hash"
-	"github.com/dappley/go-dappley/storage"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/common/trie/pb"
+	"github.com/dappley/go-dappley/crypto/byteutils"
+	"github.com/dappley/go-dappley/crypto/hash"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -100,44 +100,6 @@ func TestKeyToRoute(t *testing.T) {
 	assert.Equal(t, route, []byte{0xa, 0x1, 0xb, 0x4})
 	key = routeToKey(route)
 	assert.Equal(t, key, []byte{0xa1, 0xb4})
-}
-
-func TestTrie_Clone(t *testing.T) {
-	type fields struct {
-		rootHash []byte
-		storage  storage.Storage
-	}
-	storage := storage.NewRamStorage()
-	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
-	}{
-		{
-			"case 1",
-			fields{[]byte("hello"), storage},
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tr := &Trie{
-				rootHash: tt.fields.rootHash,
-				storage:  tt.fields.storage,
-			}
-			got, err := tr.Clone()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Trie.Clone() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if &got.rootHash == &tt.fields.rootHash {
-				t.Errorf("Trie.Clone() = %p, not want %p", &got.rootHash, &tt.fields.rootHash)
-			}
-			if !reflect.DeepEqual(got.storage, tt.fields.storage) {
-				t.Errorf("Trie.Clone() = %v, want %v", got.storage, tt.fields.storage)
-			}
-		})
-	}
 }
 
 func TestTrie_Operation(t *testing.T) {

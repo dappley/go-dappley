@@ -316,7 +316,6 @@ func (pm *PeerManager) StopStream(stream *Stream) {
 	pm.node.host.Peerstore().ClearAddrs(stream.peerID)
 	streamLen := len(pm.streams)
 	pm.mutex.Unlock()
-
 	if streamLen == 0 {
 		go func() {
 			pm.startConnectSeeds()
@@ -788,7 +787,6 @@ func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType Connecti
 	default:
 		//Pass
 	}
-
 	pm.streams[peerId] = &StreamInfo{stream: stream, connectionType: connectionType}
 
 	return true

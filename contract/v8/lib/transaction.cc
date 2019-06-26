@@ -1,5 +1,6 @@
 #include "transaction.h"
 #include "../engine.h"
+#include "util.h"
 
 const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(
     PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
@@ -74,7 +75,8 @@ void SetTransactionData(struct transaction_t* tx, void* context) {
         voutInstance->DefineOwnProperty(
             *(txContext->context),
             String::NewFromUtf8(txContext->isolate, "amount"),
-            BigInt::New(txContext->isolate, tx->vout[i].amount),
+//            BigInt::New(txContext->isolate, tx->vout[i].amount),
+            CastStringToBigInt(txContext->context,txContext->isolate, tx->vout[i].amount),
             DEFAULT_PROPERTY
         );
 
@@ -96,7 +98,7 @@ void SetTransactionData(struct transaction_t* tx, void* context) {
     txInstance->DefineOwnProperty(
         *(txContext->context),
         String::NewFromUtf8(txContext->isolate, "tip"),
-        BigInt::New(txContext->isolate, tx->tip),
+        CastStringToBigInt(txContext->context,txContext->isolate, tx->tip),
         DEFAULT_PROPERTY
     );
 

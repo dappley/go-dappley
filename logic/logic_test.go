@@ -97,7 +97,7 @@ func TestLoopCreateBlockchain(t *testing.T) {
 		wallet := client.NewWallet()
 		wallet.Key = core.NewKeyPair()
 		addr := wallet.Key.GenerateAddress(false)
-		if !addr.ValidateAddress() {
+		if !addr.IsValid() {
 			fmt.Println(i, addr)
 			err = ErrInvalidAddress
 			break

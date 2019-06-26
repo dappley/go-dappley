@@ -20,7 +20,7 @@ func NewTransactionNode(tx *Transaction) *TransactionNode {
 	}
 
 	size := tx.GetSize()
-	if size == 0{
+	if size == 0 {
 		return txNode
 	}
 
@@ -30,7 +30,7 @@ func NewTransactionNode(tx *Transaction) *TransactionNode {
 	return txNode
 }
 
-func (txNode *TransactionNode) GetTipsPerByte() *common.Amount{
+func (txNode *TransactionNode) GetTipsPerByte() *common.Amount {
 	return txNode.Value.Tip.Times(uint64(100000)).Div(uint64(txNode.Size))
 }
 
@@ -42,7 +42,7 @@ func (txNode *TransactionNode) ToProto() proto.Message {
 	return &corepb.TransactionNode{
 		Children: childrenProto,
 		Value:    txNode.Value.ToProto().(*corepb.Transaction),
-		Size:	  int64(txNode.Size),
+		Size:     int64(txNode.Size),
 	}
 }
 

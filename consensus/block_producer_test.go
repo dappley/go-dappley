@@ -42,7 +42,7 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	bp.SetProcess(func(ctx *core.BlockContext) {
 		processRuns = true
 	})
-	block := bp.ProduceBlock()
+	block := bp.ProduceBlock(0)
 	assert.True(t, processRuns)
 	assert.NotNil(t, block)
 

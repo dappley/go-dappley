@@ -19,6 +19,8 @@
 package consensus
 
 import (
+	"time"
+
 	"github.com/dappley/go-dappley/common"
 	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
@@ -60,11 +62,12 @@ func (bp *BlockProducer) SetProcess(process process) {
 	bp.process = process
 }
 
-// ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it
-func (bp *BlockProducer) ProduceBlock() *core.BlockContext {
+// ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it.
+// deadlineInMs = 0 means no deadline
+func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *core.BlockContext {
 	logger.Info("BlockProducer: started producing new block...")
 	bp.idle = false
-	ctx := bp.prepareBlock()
+	ctx := bp.prepareBlock(deadlineInMs)
 	if ctx != nil && bp.process != nil {
 		bp.process(ctx)
 	}
@@ -79,7 +82,7 @@ func (bp *BlockProducer) IsIdle() bool {
 	return bp.idle
 }
 
-func (bp *BlockProducer) prepareBlock() *core.BlockContext {
+func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
 		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
@@ -88,11 +91,8 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
-	validTxs := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, bp.bc.GetBlockSizeLimit())
 
-	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, parentBlock.GetHeight()+1, parentBlock)
-	validTxs = append(validTxs, scGeneratedTXs...)
-	utxoIndex.UpdateUtxoState(scGeneratedTXs)
+	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadlineInMs)
 
 	cbtx := bp.calculateTips(validTxs)
 	validTxs = append(validTxs, cbtx)
@@ -102,8 +102,48 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
-	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock), UtxoIndex: utxoIndex, State: state}
+	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
 	return &ctx
+}
+
+func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBlk *core.Block, deadlineInMs int64) ([]*core.Transaction, *core.ScState) {
+	var validTxs []*core.Transaction
+	totalSize := 0
+
+	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
+	engine := vm.NewV8Engine()
+	defer engine.DestroyEngine()
+	var generatedTxs []*core.Transaction
+	rewards := make(map[string]string)
+	currBlkHeight := parentBlk.GetHeight() + 1
+
+	for totalSize < bp.bc.GetBlockSizeLimit() && bp.bc.GetTxPool().GetNumOfTxInPool() > 0 && !isExceedingDeadline(deadlineInMs) {
+
+		txNode := bp.bc.GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		if txNode == nil {
+			break
+		}
+		totalSize += txNode.Size
+
+		ctx := txNode.Value.ToContractTx()
+		if ctx != nil {
+			generatedTxs = ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			validTxs = append(validTxs, generatedTxs...)
+			utxoIndex.UpdateUtxoState(generatedTxs)
+		}
+
+		validTxs = append(validTxs, txNode.Value)
+		utxoIndex.UpdateUtxo(txNode.Value)
+	}
+
+	// append reward transaction
+	if len(rewards) > 0 {
+		rtx := core.NewRewardTx(currBlkHeight, rewards)
+		validTxs = append(validTxs, &rtx)
+		utxoIndex.UpdateUtxo(&rtx)
+	}
+
+	return validTxs, scStorage
 }
 
 func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {
@@ -145,4 +185,8 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 		generatedTXs = append(generatedTXs, &rtx)
 	}
 	return generatedTXs, scStorage
+}
+
+func isExceedingDeadline(deadlineInMs int64) bool {
+	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }

@@ -8,6 +8,7 @@ bool  VerifyAddressFunc(const char* address);
 int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
 int   GetCurrBlockHeightFunc(void *handler);
 char* GetNodeAddressFunc(void *handler);
+int   DeleteContractFunc(void *handler);
 
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
@@ -39,6 +40,10 @@ int Cgo_GetCurrBlockHeightFunc(void *handler){
 char* Cgo_GetNodeAddressFunc(void *handler){
 	return GetNodeAddressFunc(handler);
 };
+
+int Cgo_DeleteContractFunc(void *handler){
+	return DeleteContractFunc(handler);
+}
 
 char* Cgo_StorageGetFunc(void *address, const char *key){
 	return StorageGetFunc(address,key);
