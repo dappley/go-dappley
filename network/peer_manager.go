@@ -401,12 +401,12 @@ func (pm *PeerManager) pingPeers() {
 }
 
 func (pm *PeerManager) updatePeerLatency(peerId peer.ID, streamInfo *StreamInfo) {
-	result, err := pm.ping.service.Ping(context.Background(), peerId)
-	if err != nil {
-		logger.WithError(err).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
+	result := <-pm.ping.service.Ping(context.Background(), peerId)
+	if result.Error != nil {
+		logger.WithError(result.Error).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
 		streamInfo.latency = nil
 	} else {
-		rtt := float64(<-result) / 1e6
+		rtt := float64(result.RTT) / 1e6
 		streamInfo.latency = &rtt
 	}
 }
