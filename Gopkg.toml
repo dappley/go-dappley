@@ -54,8 +54,8 @@
   version = "0.5.1"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/jinzhu/copier"
+  revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
 
 [[constraint]]
   name = "github.com/lestrrat-go/file-rotatelogs"
