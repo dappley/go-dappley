@@ -543,7 +543,7 @@ func (bc *Blockchain) setTailBlockHash(hash Hash) error {
 
 func (bc *Blockchain) deepCopy() *Blockchain {
 	newCopy := &Blockchain{}
-	copier.Copy(&newCopy, bc)
+	copier.Copy(newCopy, bc)
 	return newCopy
 }
 
