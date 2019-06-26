@@ -5,3 +5,4 @@ tool/*.db
 .vendor-new/
 tool/tool
 bin
+Gopkg.lock
