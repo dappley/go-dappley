@@ -190,3 +190,10 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 func isExceedingDeadline(deadlineInMs int64) bool {
 	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
+
+func (bp *BlockProducer) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return bp.beneficiary == blk.GetProducer()
+	}
+	return false
+}

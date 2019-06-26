@@ -179,9 +179,8 @@ func (pow *ProofOfWork) GetProducers() []string {
 }
 
 func (pow *ProofOfWork) Produced(blk *core.Block) bool {
-	if blk != nil && !blk.IsSigned() {
-		tx := blk.GetCoinbaseTransaction()
-		return tx != nil && pow.miner.Beneficiary() == tx.Vout[0].GetAddress().String()
+	if blk != nil {
+		return pow.miner.Produced(blk)
 	}
 	return false
 }

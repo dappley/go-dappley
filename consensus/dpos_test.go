@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
@@ -130,14 +129,4 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 	blk2 := core.FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
 
 	assert.True(t, dpos.isDoubleMint(blk2))
-}
-
-func TestDPOS_Produced(t *testing.T) {
-	dps := NewDPOS()
-	dps.SetKey("300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a")
-	blk := core.NewBlock(nil, nil, "")
-	blk.SetHash(blk.CalculateHash())
-	require.False(t, dps.Produced(blk))
-	dps.hashAndSign(&core.BlockContext{Block: blk})
-	require.True(t, dps.Produced(blk))
 }

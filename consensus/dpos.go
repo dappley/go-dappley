@@ -168,7 +168,7 @@ func (dpos *DPOS) Stop() {
 
 func (dpos *DPOS) Produced(blk *core.Block) bool {
 	if blk != nil {
-		return blk.WasSignedWith(dpos.producerKey, blk.GetHash())
+		return dpos.bp.Produced(blk)
 	}
 	return false
 }
