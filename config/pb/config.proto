@@ -23,8 +23,6 @@ message NodeConfig{
     string genesis_path = 9;
     int64 metrics_polling_interval = 12; // seconds
     int64 metrics_interval = 13; // seconds
-    uint32 max_connection_out = 14;
-    uint32 max_connection_in = 15;
 }
 
 message DynastyConfig{
