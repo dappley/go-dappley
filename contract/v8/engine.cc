@@ -136,7 +136,6 @@ void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
 
 int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e){
 //    return Execute(sourceCode, source_line_offset, handler, result, e, ExecuteSourceDataDelegate, NULL);
-printf("--------------executeV8Script handler %zu\n",handler);
     return RunScriptSourceThread(result, e, sourceCode, source_line_offset, 0L, 0L, handler);
 }
 
@@ -162,15 +161,12 @@ int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, c
   // Enter the context for compiling and running the hello world script.
   Context::Scope context_scope(context);
 
-  printf("before NewBlockchainInstance .... \n");
   // Continue put objects to global object.
-printf("--------------Execute handler %zu\n",handler);
   SetGlobalObjectProperties(isolate, context, e, (void *)handler);
 
   // Setup execution env.
   if (SetupExecutionEnv(isolate, context))
   {
-    printf("SetupExecutionEnv error .... \n");
     PrintAndReturnException(isolate, result, context, try_catch);
     return VM_EXCEPTION_ERR;
   }
@@ -305,7 +301,6 @@ void PrintAndReturnException(Isolate* isolate, char **exception, Local<Context> 
     ScriptOrigin origin = message->GetScriptOrigin();
     String::Utf8Value filename(isolate, message->GetScriptResourceName());
     int linenum = message->GetLineNumber(context).FromMaybe(0);
-
     // Print line of source code.
     String::Utf8Value sourceline(isolate, message->GetSourceLine(context).ToLocalChecked());
     int script_start = (linenum - origin.ResourceLineOffset()->Value()) == 1
@@ -317,8 +312,7 @@ void PrintAndReturnException(Isolate* isolate, char **exception, Local<Context> 
       start -= script_start;
       end -= script_start;
     }
-
-    char arrow[start + 1];
+    char arrow[start + 2];
     for (int i = 0; i < start; i++) {
       char c = (*sourceline)[i];
       if (c == '\t') {

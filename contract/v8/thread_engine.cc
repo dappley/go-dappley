@@ -48,7 +48,6 @@ int RunScriptSourceThread(char **result, V8Engine *e, const char *source,
 	ctx.input.lcs = lcs_handler;
   ctx.input.gcs = gcs_handler;  
   ctx.input.handler = handler;
-  printf("--------------RunScriptSourceThread handler %zu\n",handler);
 
   bool btn = CreateScriptThread(&ctx);
   if (btn == false) {

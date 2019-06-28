@@ -128,7 +128,7 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 			//TODO spent contract utxo
 			pkh, err := NewUserPubKeyHash(txin.PubKey)
 			if err != nil {
-				return false
+				pkh = PubKeyHash(txin.PubKey)
 			}
 			err = utxos.removeUTXO(pkh, txin.Txid, txin.Vout)
 			if err != nil {
