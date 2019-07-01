@@ -1,7 +1,7 @@
 'use strict';
 
 var LocalStorage = function () {
-    Object.defineProperty(this, "nativeStorage", {
+    Object.defineProperty(this, 'nativeStorage', {
         configurable: false,
         enumerable: false,
         get: function () {
@@ -11,22 +11,22 @@ var LocalStorage = function () {
 };
 
 LocalStorage.prototype = {
-    get: function(key){
+    get: function (key) {
         var value = this.nativeStorage.get(key);
-        if (value != null){
+        if (value != null) {
             value = JSON.parse(value);
         }
         return value;
     },
 
-    set: function(key, value){
+    set: function (key, value) {
         return this.nativeStorage.set(key, JSON.stringify(value));
     },
 
-    del: function(key) {
+    del: function (key) {
         var value = this.nativeStorage.del(key);
         if (value != 0) {
-            throw new Error ("Delete failed. key: " + key);
+            throw new Error('Delete failed. key: ' + key);
         }
         return value;
     }

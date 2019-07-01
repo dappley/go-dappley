@@ -415,7 +415,7 @@ func (sc *V8Engine) prepareFuncCallScript(source, function, args string) (string
 		return "", 0, err
 	}
 	var runnableSource string
-	runnableSource = fmt.Sprintf(`var __contract = require("%s");var __instance = new __contract();__instance["%s"].apply(__instance, [%s]);`,
+	runnableSource = fmt.Sprintf(`var __instance = require("%s");__instance["%s"].apply(__instance, [%s]);`,
 		ModuleID, function, args) //TODO: freeze?
 	logger.WithFields(logger.Fields{
 		"runnableSource": runnableSource,
