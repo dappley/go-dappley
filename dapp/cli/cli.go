@@ -61,6 +61,7 @@ const (
 	cliListAddresses     = "listAddresses"
 	clisendFromMiner     = "sendFromMiner"
 	cliaddProducer       = "addProducer"
+	cliEstimateGas       = "estimateGas"
 	cliHelp              = "help"
 )
 
@@ -113,6 +114,7 @@ var cmdList = []string{
 	cliListAddresses,
 	clisendFromMiner,
 	cliaddProducer,
+	cliEstimateGas,
 	cliHelp,
 }
 
@@ -224,6 +226,56 @@ var cmdFlagsMap = map[string][]flagPars{
 		boolType,
 		"with/without this optional argument to display the private keys or not",
 	}},
+	cliEstimateGas: {
+		flagPars{
+			flagFromAddress,
+			"",
+			valueTypeString,
+			"Sender's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagToAddress,
+			"",
+			valueTypeString,
+			"Receiver's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagAmount,
+			0,
+			valueTypeInt,
+			"The amount to send from the sender to the receiver.",
+		},
+		flagPars{
+			flagTip,
+			uint64(0),
+			valueTypeUint64,
+			"Tip to miner.",
+		},
+		flagPars{
+			flagData,
+			"",
+			valueTypeString,
+			"Smart contract in JavaScript. Eg. helloworld!",
+		},
+		flagPars{
+			flagFilePath,
+			"",
+			valueTypeString,
+			"Smart contract file path. Eg. contract/smart_contract.js",
+		},
+		flagPars{
+			flagGasLimit,
+			uint64(0),
+			valueTypeUint64,
+			"Gas limit count of smart contract execution.",
+		},
+		flagPars{
+			flagGasPrice,
+			uint64(0),
+			valueTypeUint64,
+			"Gas price of smart contract execution.",
+		},
+	},
 }
 
 //map the callback function to each command
@@ -238,6 +290,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	cliaddProducer:       {adminRpcService, cliAddProducerCommandHandler},
+	cliEstimateGas:       {rpcService, estimateGasCommandHandler},
 	cliHelp:              {adminRpcService, helpCommandHandler},
 }
 
@@ -976,4 +1029,92 @@ func initRpcClient(port int) *grpc.ClientConn {
 		logger.Panic("Error:", err.Error())
 	}
 	return conn
+}
+
+func estimateGasCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	var data string
+	path := *(flags[flagFilePath].(*string))
+	if path == "" {
+		data = *(flags[flagData].(*string))
+	} else {
+		script, err := ioutil.ReadFile(path)
+		if err != nil {
+			fmt.Printf("Error: smart contract path \"%s\" is invalid.\n", path)
+			return
+		}
+		data = string(script)
+	}
+
+	if core.NewAddress(*(flags[flagFromAddress].(*string))).ValidateAddress() == false {
+		fmt.Println("Error: 'from' address is not valid!")
+		return
+	}
+
+	//Contract deployment transaction does not need to validate to address
+	if data == "" && core.NewAddress(*(flags[flagToAddress].(*string))).ValidateAddress() == false {
+		fmt.Println("Error: 'to' address is not valid!")
+		return
+	}
+
+	response, err := client.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+		Address: core.NewAddress(*(flags[flagFromAddress].(*string))).Address,
+	})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	utxos := response.GetUtxos()
+	var InputUtxos []*core.UTXO
+	for _, u := range utxos {
+		uu := core.UTXO{}
+		uu.Value = common.NewAmountFromBytes(u.Amount)
+		uu.Txid = u.Txid
+		uu.PubKeyHash = core.PubKeyHash(u.PublicKeyHash)
+		uu.TxIndex = int(u.TxIndex)
+		InputUtxos = append(InputUtxos, &uu)
+	}
+	tip := common.NewAmount(0)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+	tx_utxos, err := GetUTXOsfromAmount(InputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return
+	}
+
+	wm, err := logic.GetWalletManager(clientpkg.GetWalletFilePath())
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return
+	}
+	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
+
+	if senderWallet == nil {
+		fmt.Println("Error: invalid wallet address.")
+		return
+	}
+	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
+		core.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
+	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	gasResponse, err := client.(rpcpb.RpcServiceClient).RpcEstimateGas(ctx, estimateGasRequest)
+
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+
+	gas := gasResponse.Gas
+
+	fmt.Println("Gas estimiated num: ", gas)
 }

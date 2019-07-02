@@ -20,6 +20,7 @@ service RpcService {
   rpc RpcGetNewTransaction(GetNewTransactionRequest) returns (stream GetNewTransactionResponse) {}
   rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
+  rpc RpcEstimateGas(EstimateGasRequest) returns (EstimateGasResponse) {}
 }
 
 service AdminService{
@@ -106,6 +107,10 @@ message SubscribeRequest{
   repeated string topics = 1;
 }
 
+message EstimateGasRequest {
+  corepb.Transaction transaction = 1;
+}
+
 // Responses
 
 message AddProducerResponse {}
@@ -180,4 +185,8 @@ message GetAllTransactionsRequest{}
 
 message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
+}
+
+message EstimateGasResponse {
+    uint64 gas = 1;
 }

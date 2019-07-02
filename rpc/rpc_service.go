@@ -19,6 +19,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/contract"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
@@ -364,4 +365,29 @@ func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Contex
 		result.Transactions = append(result.Transactions, tx.ToProto().(*corepb.Transaction))
 	}
 	return result, nil
+}
+
+// RpcEstimateGas estimate gas value of contract deploy and execution.
+func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.EstimateGasRequest) (*rpcpb.EstimateGasResponse, error) {
+	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx.FromProto(in.GetTransaction())
+	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
+
+	if tx.IsCoinbase() {
+		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
+	}
+	contractTx := tx.ToContractTx()
+	if contractTx == nil {
+		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
+	}
+	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetPendingTransactions())
+	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetTransactions())
+
+	err := contractTx.VerifyInEstimate(utxoIndex)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	gas, error := vm.EstimateGas(rpcService.node.GetBlockchain(), &tx)
+	return &rpcpb.EstimateGasResponse{Gas: gas}, error
 }

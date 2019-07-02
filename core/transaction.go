@@ -417,6 +417,19 @@ func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) error {
 	return ctx.verifyGas(totalBalance)
 }
 
+// VerifyInEstimate returns whether the current tx in estimate mode is valid.
+func (ctx *ContractTx) VerifyInEstimate(utxoIndex *UTXOIndex) error {
+	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
+		return errors.New("Transaction: contract state check failed")
+	}
+
+	_, err := verify(&ctx.Transaction, utxoIndex)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
 	prevUtxos := getPrevUTXOs(tx, utxoIndex)
 	if prevUtxos == nil {

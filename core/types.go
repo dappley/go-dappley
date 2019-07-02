@@ -1,0 +1,167 @@
+package core
+
+import (
+	"errors"
+	"regexp"
+)
+
+// Payload Types
+const (
+	TxPayloadBinaryType   = "binary"
+	TxPayloadDeployType   = "deploy"
+	TxPayloadCallType     = "call"
+	TxPayloadProtocolType = "protocol"
+	TxPayloadDipType      = "dip"
+)
+
+// Const.
+const (
+	SourceTypeJavaScript = "js"
+	SourceTypeTypeScript = "ts"
+)
+
+// Const
+const (
+	ContractAcceptFunc = "accept"
+)
+
+var (
+	// PublicFuncNameChecker     in smart contract
+	PublicFuncNameChecker = regexp.MustCompile("^[a-zA-Z$][A-Za-z0-9_$]*$")
+)
+
+const (
+	// TxExecutionFailed failed status for transaction execute result.
+	TxExecutionFailed = 0
+
+	// TxExecutionSuccess success status for transaction execute result.
+	TxExecutionSuccess = 1
+
+	// TxExecutionPendding pendding status when transaction in transaction pool.
+	TxExecutionPendding = 2
+)
+
+const (
+	//InnerTransactionNonce inner tx nonce
+	InnerTransactionNonce = 0
+)
+
+// Error Types
+var (
+	ErrInvalidBlockOnCanonicalChain                      = errors.New("invalid block, it's not on canonical chain")
+	ErrNotBlockInCanonicalChain                          = errors.New("cannot find the block in canonical chain")
+	ErrInvalidBlockCannotFindParentInLocal               = errors.New("invalid block received, download its parent from others")
+	ErrCannotFindBlockAtGivenHeight                      = errors.New("cannot find a block at given height which is less than tail block's height")
+	ErrInvalidBlockCannotFindParentInLocalAndTryDownload = errors.New("invalid block received, download its parent from others")
+	ErrInvalidBlockCannotFindParentInLocalAndTrySync     = errors.New("invalid block received, sync its parent from others")
+	ErrBlockNotFound                                     = errors.New("block not found in blockchain cache nor chain")
+
+	ErrInvalidConfigChainID          = errors.New("invalid chainID, genesis chainID not equal to chainID in config")
+	ErrCannotLoadGenesisConf         = errors.New("cannot load genesis conf")
+	ErrGenesisNotEqualChainIDInDB    = errors.New("Failed to check. genesis chainID not equal in db")
+	ErrGenesisNotEqualDynastyInDB    = errors.New("Failed to check. genesis dynasty not equal in db")
+	ErrGenesisNotEqualTokenInDB      = errors.New("Failed to check. genesis TokenDistribution not equal in db")
+	ErrGenesisNotEqualDynastyLenInDB = errors.New("Failed to check. genesis dynasty length not equal in db")
+	ErrGenesisNotEqualTokenLenInDB   = errors.New("Failed to check. genesis TokenDistribution length not equal in db")
+
+	ErrLinkToWrongParentBlock = errors.New("link the block to a block who is not its parent")
+	ErrMissingParentBlock     = errors.New("cannot find the block's parent block in storage")
+	ErrInvalidBlockHash       = errors.New("invalid block hash")
+	ErrDoubleSealBlock        = errors.New("cannot seal a block twice")
+	ErrDuplicatedBlock        = errors.New("duplicated block")
+	ErrDoubleBlockMinted      = errors.New("double block minted")
+	ErrVRFProofFailed         = errors.New("VRF proof failed")
+	ErrInvalidBlockRandom     = errors.New("invalid block random")
+
+	ErrInvalidChainID           = errors.New("invalid transaction chainID")
+	ErrInvalidTransactionSigner = errors.New("invalid transaction signer")
+	ErrInvalidTransactionHash   = errors.New("invalid transaction hash")
+	ErrInvalidSignature         = errors.New("invalid transaction signature")
+	ErrInvalidTxPayloadType     = errors.New("invalid transaction data payload type")
+	ErrInvalidGasPrice          = errors.New("invalid gas price, should be in (0, 10^12]")
+	ErrInvalidGasLimit          = errors.New("invalid gas limit, should be in (0, 5*10^10]")
+
+	ErrNoTimeToPackTransactions       = errors.New("no time left to pack transactions in a block")
+	ErrTxDataPayLoadOutOfMaxLength    = errors.New("data's payload is out of max data length")
+	ErrTxDataBinPayLoadOutOfMaxLength = errors.New("data's payload is out of max data length in a binary tx")
+	ErrNilArgument                    = errors.New("argument(s) is nil")
+	ErrInvalidArgument                = errors.New("invalid argument(s)")
+
+	ErrInsufficientBalance                = errors.New("Transaction: insufficient balance, cannot pay for GasLimit")
+	ErrBelowGasPrice                      = errors.New("below the gas price")
+	ErrGasCntOverflow                     = errors.New("the count of gas used is overflow")
+	ErrGasFeeOverflow                     = errors.New("the fee of gas used is overflow")
+	ErrInvalidTransfer                    = errors.New("transfer error: overflow or insufficient balance")
+	ErrGasLimitLessOrEqualToZero          = errors.New("gas limit less or equal to 0")
+	ErrOutOfGasLimit                      = errors.New("out of gas limit")
+	ErrTxExecutionFailed                  = errors.New("transaction execution failed")
+	ErrZeroGasPrice                       = errors.New("gas price should be greater than zero")
+	ErrZeroGasLimit                       = errors.New("gas limit should be greater than zero")
+	ErrContractDeployFailed               = errors.New("contract deploy failed")
+	ErrContractCheckFailed                = errors.New("contract check failed")
+	ErrContractTransactionAddressNotEqual = errors.New("contract transaction from-address not equal to to-address")
+
+	ErrDuplicatedTransaction = errors.New("duplicated transaction")
+	ErrSmallTransactionNonce = errors.New("cannot accept a transaction with smaller nonce")
+	ErrLargeTransactionNonce = errors.New("cannot accept a transaction with too bigger nonce")
+
+	ErrInvalidAddressFormat   = errors.New("address: invalid address format")
+	ErrInvalidAddressType     = errors.New("address: invalid address type")
+	ErrInvalidAddressChecksum = errors.New("address: invalid address checksum")
+
+	ErrInvalidCandidatePayloadAction     = errors.New("invalid transaction candidate payload action")
+	ErrInvalidDelegatePayloadAction      = errors.New("invalid transaction vote payload action")
+	ErrInvalidDelegateToNonCandidate     = errors.New("cannot delegate to non-candidate")
+	ErrInvalidUnDelegateFromNonDelegatee = errors.New("cannot un-delegate from non-delegatee")
+
+	ErrCloneWorldState           = errors.New("Failed to clone world state")
+	ErrCloneAccountState         = errors.New("Failed to clone account state")
+	ErrCloneTxsState             = errors.New("Failed to clone txs state")
+	ErrCloneEventsState          = errors.New("Failed to clone events state")
+	ErrInvalidBlockStateRoot     = errors.New("invalid block state root hash")
+	ErrInvalidBlockTxsRoot       = errors.New("invalid block txs root hash")
+	ErrInvalidBlockEventsRoot    = errors.New("invalid block events root hash")
+	ErrInvalidBlockConsensusRoot = errors.New("invalid block consensus root hash")
+	ErrInvalidProtoToBlock       = errors.New("protobuf message cannot be converted into Block")
+	ErrInvalidProtoToBlockHeader = errors.New("protobuf message cannot be converted into BlockHeader")
+	ErrInvalidProtoToTransaction = errors.New("protobuf message cannot be converted into Transaction")
+	ErrInvalidTransactionData    = errors.New("invalid data in tx from Proto")
+	ErrInvalidDagBlock           = errors.New("block's dag is incorrect")
+
+	ErrCannotRevertLIB        = errors.New("cannot revert latest irreversible block")
+	ErrCannotLoadGenesisBlock = errors.New("cannot load genesis block from storage")
+	ErrCannotLoadLIBBlock     = errors.New("cannot load tail block from storage")
+	ErrCannotLoadTailBlock    = errors.New("cannot load latest irreversible block from storage")
+	ErrGenesisConfNotMatch    = errors.New("Failed to load genesis from storage, different with genesis conf")
+
+	ErrInvalidDeploySource     = errors.New("invalid source of deploy payload")
+	ErrInvalidDeploySourceType = errors.New("invalid source type of deploy payload")
+	ErrInvalidCallFunction     = errors.New("invalid function of call payload")
+
+	ErrInvalidTransactionResultEvent  = errors.New("invalid transaction result event, the last event in tx's events should be result event")
+	ErrNotFoundTransactionResultEvent = errors.New("transaction result event is not found ")
+
+	// nvm error
+	ErrExecutionFailed = errors.New("execution failed")
+	ErrUnexpected      = errors.New("Unexpected sys error")
+	// multi nvm error
+	ErrInnerExecutionFailed = errors.New("multi execution failed")
+	ErrCreateInnerTx        = errors.New("Failed to create inner transaction")
+
+	// access control
+	ErrUnsupportedKeyword    = errors.New("transaction data has unsupported keyword")
+	ErrUnsupportedFunction   = errors.New("transaction payload has unsupported function")
+	ErrRestrictedFromAddress = errors.New("transaction from address is restricted")
+	ErrRestrictedToAddress   = errors.New("transaction to address is restricted")
+
+	ErrUnsupportedSourceType = errors.New("unsupported source type")
+	ErrEngineNotFound        = errors.New("Failed to get engine")
+)
+
+// MessageType
+const (
+	MessageTypeNewBlock                   = "newblock"
+	MessageTypeParentBlockDownloadRequest = "dlblock"
+	MessageTypeBlockDownloadResponse      = "dlreply"
+	MessageTypeNewTx                      = "newtx"
+)
