@@ -41,56 +41,60 @@ cd dapp
 ```
 
 ## Running Multiple Nodes On A Machine
-### Start a seed node
+### Start node 1
 ``` bash
 cd $GOPATH/src/github.com/dappley/go-dappley/dapp
-./dapp -f conf/seed.conf
+./dapp -f conf/node1.conf
 ```
 
-### Start a peer node 
+### Start node 2
 ``` bash
-./dapp -f conf/node.conf
+./dapp -f conf/node2.conf
 ```
 
 ## Running Mutiple Nodes On Multiple Machines
-### Start a seed node
+### Start node 1
 1. On your first machine, run `ifconfig` to find your ip address.
 ``` bash
 ifconfig
 ```
 
-2. Run the following command to start your seed node.
+2. Run the following command to start your first node.
 ``` bash
 cd $GOPATH/src/github.com/dappley/go-dappley/dapp
-./dapp -f conf/seed.conf
+./dapp -f conf/node1.conf
 ```
 
-### Start a peer node 
-1. On your second machine, first go to your node.conf file
+### Start node 2 
+1. On your second machine, first go to your node2.conf file
 ``` bash
 cd $GOPATH/src/github.com/dappley/go-dappley/dapp/conf
-vim node.conf
+vim node2.conf
 ```
 
-2. Modify the ip address of your seed node. Replace `<seed node ip address>` with your seed node's ip address that you have found in the previous step
+2. Modify the ip address of the seed node. Replace `<node 1 ip address>` with your node 1 ip address that you have found in the previous step
 ```
-consensusConfig{
-    minerAddr: "1ArH9WoB9F7i6qoJiAi7McZMFVQSsBKXZR"
-    privKey: "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
+consensus_config{
+    miner_address: "dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12"
+    private_key: "da9282440fae188c371165e01615a2e1b14af68b3eaae51e6608c0bd86d4e6a6"
 }
 
-nodeConfig{
-    port:   12346
-    seed:   "/ip4/<seed node ip address>/tcp/12345/ipfs/QmNzA9rsEcM5nAzX9PzTrabJsGiifzaUU85Qe78HSDzSSE"
-    dbPath: "../bin/node.db"
-    rpcPort: 50052
+node_config{
+    port:   12342
+    seed:   ["/ip4/<node 1 ip address>/tcp/12341/ipfs/QmNzA9rsEcM5nAzX9PzTrabJsGiifzaUU85Qe78HSDzSSE"]
+    db_path: "../bin/node2.db"
+    rpc_port: 50052
+    key_path: "key/node2NetworkKey"
+    tx_pool_limit: 102400
+    blk_size_limit: 102400
+    node_address: "dWNrwKvATvPNXNtNNXSj1yzMGerxRQhwUw"
 }
 ```
 
 3. Start your peer node
 ``` bash
 cd ../
-./dapp -f conf/node.conf
+./dapp -f conf/node2.conf
 ```
 
 ## Contribution
