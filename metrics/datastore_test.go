@@ -1,4 +1,4 @@
-package dapmetrics
+package metrics
 
 import (
 	"testing"

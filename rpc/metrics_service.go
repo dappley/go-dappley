@@ -11,7 +11,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core"
-	dapmetrics "github.com/dappley/go-dappley/metrics"
+	"github.com/dappley/go-dappley/metrics"
 	metricspb "github.com/dappley/go-dappley/metrics/pb"
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
@@ -20,7 +20,7 @@ import (
 
 type MetricsService struct {
 	node *network.Node
-	ds   *dapmetrics.DataStore
+	ds   *metrics.DataStore
 	*MetricsServiceConfig
 }
 
@@ -31,7 +31,7 @@ func NewMetricsService(node *network.Node, config *MetricsServiceConfig) *Metric
 func (ms *MetricsService) init() *MetricsService {
 	ms.node.GetPeerManager().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second)
 	if ms.PollingInterval > 0 && ms.TimeSeriesInterval > 0 {
-		ms.ds = dapmetrics.NewDataStore(int(ms.TimeSeriesInterval/ms.PollingInterval), time.Duration(ms.PollingInterval)*time.Second)
+		ms.ds = metrics.NewDataStore(int(ms.TimeSeriesInterval/ms.PollingInterval), time.Duration(ms.PollingInterval)*time.Second)
 		_ = ms.ds.RegisterNewMetric("dapp.cpu.percent", getCPUPercent)
 		_ = ms.ds.RegisterNewMetric("dapp.txpool.size", getTransactionPoolSize)
 		_ = ms.ds.RegisterNewMetric("dapp.memstats", getMemoryStats)
