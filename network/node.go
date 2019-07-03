@@ -30,10 +30,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-crypto"
-	"github.com/libp2p/go-libp2p-host"
-	"github.com/libp2p/go-libp2p-net"
-	"github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -347,7 +347,7 @@ func (n *Node) StartStream(stream *Stream) {
 	stream.Start(n.streamExitCh, n.dispatch)
 }
 
-func (n *Node) streamHandler(s net.Stream) {
+func (n *Node) streamHandler(s network.Stream) {
 	//start stream
 
 	ns := NewStream(s)

@@ -23,8 +23,8 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p-net"
-	"github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 	"math/big"
@@ -60,7 +60,7 @@ var (
 type Stream struct {
 	peerID                peer.ID
 	remoteAddr            multiaddr.Multiaddr
-	stream                net.Stream
+	stream                network.Stream
 	msglength             int
 	rawByteRead           []byte
 	msgReadCh             chan []byte
@@ -71,7 +71,7 @@ type Stream struct {
 	quitWrCh              chan bool
 }
 
-func NewStream(s net.Stream) *Stream {
+func NewStream(s network.Stream) *Stream {
 	return &Stream{
 		s.Conn().RemotePeer(),
 		s.Conn().RemoteMultiaddr(),
