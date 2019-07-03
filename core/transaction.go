@@ -850,9 +850,6 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
 	//is a smart contract deployment transaction, not a smart contract execution transaction.
 	if utxos.Size() == 0 {
-		logger.WithFields(logger.Fields{
-			"txid": hex.EncodeToString(ctx.ID),
-		}).Warn("Transaction: Execute utxos are empty")
 		return 0, nil, nil
 	}
 

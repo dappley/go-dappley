@@ -222,6 +222,8 @@ func TestRpcSendContract(t *testing.T) {
 		WalletPath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        common.NewAmount(2).Bytes(),
 		Data:       contract,
+		GasLimit:   common.NewAmount(30000).Bytes(),
+		GasPrice:   common.NewAmount(1).Bytes(),
 	})
 	assert.Nil(t, err)
 
@@ -1063,4 +1065,100 @@ func getBalance(utxos []*corepb.Utxo) *common.Amount {
 		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))
 	}
 	return amount
+}
+
+func TestRpcService_RpcEstimateGas(t *testing.T) {
+	logger.SetLevel(logger.WarnLevel)
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+	client.RemoveWalletFile()
+
+	// Create wallets
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
+	pow := consensus.NewProofOfWork()
+	scManager := vm.NewV8EngineManager(core.Address{})
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 1280000, scManager, 1000000)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare a PoW node that put mining reward to the sender's address
+	pool := core.NewBlockPool(0)
+	node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.SetTargetBit(0)
+
+	// Start a grpc server
+	server := NewGrpcServer(node, "temp")
+	server.Start(defaultRpcPort + 10) // use a different port as other integration tests
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+10), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewAdminServiceClient(conn)
+	rpcClient := rpcpb.NewRpcServiceClient(conn)
+
+	// deploy contract
+	contract := "'usestrict';var StepRecorder=function(){};StepRecorder.prototype={record:function(addr,steps){var originalSteps=LocalStorage.get(addr);" +
+		"LocalStorage.set(addr,originalSteps+steps);return _native_reward.record(addr,steps);},dapp_schedule:function(){}};module.exports = new StepRecorder();"
+	// Initiate a RPC send request
+	sendResp, err := c.RpcSend(context.Background(), &rpcpb.SendRequest{
+		From:       senderWallet.GetAddress().String(),
+		To:         "",
+		Amount:     common.NewAmount(1).Bytes(),
+		WalletPath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		Tip:        common.NewAmount(0).Bytes(),
+		Data:       contract,
+		GasLimit:   common.NewAmount(30000).Bytes(),
+		GasPrice:   common.NewAmount(1).Bytes(),
+	})
+
+	assert.Nil(t, err)
+	contractAddr := sendResp.ContractAddress
+
+	// Start mining to approve the transaction
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	time.Sleep(time.Second)
+	// estimate contract
+	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
+	pubKeyHash, _ := senderWallet.GetAddress().GetPubKeyHash()
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	sendTxParam := core.NewSendTxParam(senderWallet.GetAddress(),
+		senderWallet.GetKeyPair(),
+		core.NewAddress(contractAddr),
+		common.NewAmount(1),
+		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
+		contract)
+	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
+	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	gasResp, err := rpcClient.RpcEstimateGas(context.Background(), estimateGasRequest)
+	assert.Nil(t, err)
+	gas := gasResp.Gas
+
+	assert.True(t, gas > 0)
+
+	client.RemoveWalletFile()
 }
