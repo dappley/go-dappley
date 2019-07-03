@@ -107,6 +107,7 @@ type Node struct {
 	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
 	peerManager            *PeerManager
+	IPFSAddresses          []string
 }
 
 func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
@@ -159,6 +160,8 @@ func (n *Node) GetDownloadManager() *DownloadManager          { return n.downloa
 func (n *Node) GetPeerManager() *PeerManager                  { return n.peerManager }
 func (n *Node) GetInfo() *PeerInfo                            { return n.info }
 func (n *Node) GetBlockChainManager() *core.BlockChainManager { return n.bm }
+func (n *Node) GetIPFSAddresses() []string                    { return n.IPFSAddresses }
+func (n *Node) SetIPFSAddresses(addr []string)                { n.IPFSAddresses = addr }
 
 func (n *Node) Start(listenPort int) error {
 
@@ -168,6 +171,11 @@ func (n *Node) Start(listenPort int) error {
 		return err
 	}
 
+	ipfsAddresses := make([]string, len(addrs))
+	for i, addr := range addrs {
+		ipfsAddresses[i] = addr.String()
+	}
+	n.SetIPFSAddresses(ipfsAddresses)
 	n.host = h
 	n.info, err = CreatePeerInfoFromMultiaddrs(addrs)
 

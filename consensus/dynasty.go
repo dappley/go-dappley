@@ -76,6 +76,10 @@ func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynast
 	return d
 }
 
+func (dynasty *Dynasty) GetMaxProducers() int {
+	return dynasty.maxProducers
+}
+
 func (dynasty *Dynasty) SetMaxProducers(maxProducers int) {
 	if maxProducers >= 0 {
 		dynasty.maxProducers = maxProducers

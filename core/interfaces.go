@@ -18,14 +18,13 @@
 
 package core
 
-import (
-	"github.com/libp2p/go-libp2p-peer"
-)
+import peer "github.com/libp2p/go-libp2p-peer"
 
 type Consensus interface {
 	Validate(block *Block) bool
 
 	Setup(NetService, string)
+	GetProducerAddress() string
 	SetKey(string)
 
 	// Start runs the consensus algorithm and begins to produce blocks
