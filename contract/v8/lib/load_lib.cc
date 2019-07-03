@@ -9,28 +9,22 @@ void LoadLibraries(Isolate *isolate, Local<Context> &context){
 }
 
 void LoadBlockchainLibrary(Isolate *isolate, Local<Context> &context){
-    char *source = readFile("jslib/blockchain.js", NULL);
-    Local<String> v8source = String::NewFromUtf8(isolate, source, NewStringType::kNormal).ToLocalChecked();
-	MyFree(source);
-    ScriptOrigin sourceSrcOrigin(String::NewFromUtf8(isolate, "blockchain.js"));
-    MaybeLocal<Script> script = Script::Compile(context, v8source,&sourceSrcOrigin);
-    script.ToLocalChecked()->Run(context);
+    LoadLibrary(isolate, context, "jslib/blockchain.js", "blockchain.js");
 }
 
 void LoadStorageLibrary(Isolate *isolate, Local<Context> &context){
-    char *source = readFile("jslib/storage.js", NULL);
-    Local<String> v8source = String::NewFromUtf8(isolate, source, NewStringType::kNormal).ToLocalChecked();
-	MyFree(source);
-    ScriptOrigin sourceSrcOrigin(String::NewFromUtf8(isolate, "storage.js"));
-    MaybeLocal<Script> script = Script::Compile(context, v8source,&sourceSrcOrigin);
-    script.ToLocalChecked()->Run(context);
+    LoadLibrary(isolate, context, "jslib/storage.js", "storage.js");
 }
 
 void LoadSenderLibrary(Isolate *isolate, Local<Context> &context){
-    char *source = readFile("jslib/sender.js", NULL);
+    LoadLibrary(isolate, context, "jslib/sender.js", "sender.js");
+}
+
+void LoadLibrary(Isolate *isolate, Local<Context> &context, const char *filepath, const char *filename){
+    char *source = readFile(filepath, NULL);
     Local<String> v8source = String::NewFromUtf8(isolate, source, NewStringType::kNormal).ToLocalChecked();
-	MyFree(source);
-    ScriptOrigin sourceSrcOrigin(String::NewFromUtf8(isolate, "sender.js"));
+    MyFree(source);
+    ScriptOrigin sourceSrcOrigin(String::NewFromUtf8(isolate, filename));
     MaybeLocal<Script> script = Script::Compile(context, v8source,&sourceSrcOrigin);
     script.ToLocalChecked()->Run(context);
 }

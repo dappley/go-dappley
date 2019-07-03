@@ -35,6 +35,7 @@ const (
 )
 
 const maxMintingTimeInMs = 2000
+const NanoSecsInMilliSec = 1000000
 
 type DPOS struct {
 	bp          *BlockProducer
@@ -133,7 +134,7 @@ func (dpos *DPOS) Start() {
 			select {
 			case now := <-ticker:
 				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
-					deadlineInMs := now.UnixNano()/1000000 + maxMintingTimeInMs
+					deadlineInMs := now.UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 					logger.WithFields(logger.Fields{
 						"peer_id": dpos.node.GetPeerID(),
 					}).Info("DPoS: it is my turn to produce block.")

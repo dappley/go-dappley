@@ -20,15 +20,14 @@ package network
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-peer"
-	pstore "github.com/libp2p/go-libp2p-peerstore"
+	"github.com/libp2p/go-libp2p-core/peer"
+	pstore "github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
@@ -884,22 +883,4 @@ func (p *PeerInfo) FromProto(pb proto.Message) error {
 	}
 
 	return nil
-}
-
-func (p *PeerInfo) MarshalJSON() ([]byte, error) {
-	peerInfo := &struct {
-		PeerInfo pstore.PeerInfo `json:"peerInfo"`
-		Latency  *float64        `json:"latency"` // encoded as value
-	}{
-		pstore.PeerInfo{ID: p.PeerId, Addrs: p.Addrs},
-		p.Latency,
-	}
-
-	bytes, err := json.Marshal(peerInfo)
-
-	if err != nil {
-		logger.WithField("peerInfo", peerInfo).Debug("PeerManager: unable to marshall peerInfo")
-	}
-
-	return bytes, err
 }

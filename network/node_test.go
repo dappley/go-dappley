@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p-crypto"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
