@@ -21,6 +21,7 @@ service RpcService {
   rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
   rpc RpcEstimateGas(EstimateGasRequest) returns (EstimateGasResponse) {}
+  rpc RpcGasPrice(GasPriceRequest) returns (GasPriceResponse) {}
 }
 
 service AdminService{
@@ -111,6 +112,9 @@ message EstimateGasRequest {
   corepb.Transaction transaction = 1;
 }
 
+message GasPriceRequest {
+}
+
 // Responses
 
 message AddProducerResponse {}
@@ -189,4 +193,8 @@ message GetAllTransactionsResponse{
 
 message EstimateGasResponse {
     uint64 gas = 1;
+}
+
+message GasPriceResponse {
+    uint64 gasPrice = 1;
 }

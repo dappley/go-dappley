@@ -41,6 +41,8 @@ var (
 	ErrTransactionNotFound     = errors.New("transaction not found")
 	ErrTransactionVerifyFailed = errors.New("transaction verify failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
+	// DefaultGasPrice default price of per gas
+	DefaultGasPrice uint64 = 1
 )
 
 type BlockchainState int
@@ -510,4 +512,9 @@ func (bc *Blockchain) deepCopy() *Blockchain {
 	newCopy := &Blockchain{}
 	copier.Copy(&newCopy, &bc)
 	return newCopy
+}
+
+// GasPrice returns gas price in current blockchain
+func (bc *Blockchain) GasPrice() uint64 {
+	return DefaultGasPrice
 }

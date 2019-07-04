@@ -391,3 +391,9 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 	gas, error := vm.EstimateGas(rpcService.node.GetBlockchain(), &tx)
 	return &rpcpb.EstimateGasResponse{Gas: gas}, error
 }
+
+// RpcGasPrice returns current gas price.
+func (rpcService *RpcService) RpcGasPrice(ctx context.Context, in *rpcpb.GasPriceRequest) (*rpcpb.GasPriceResponse, error) {
+	gasPrice := rpcService.node.GetBlockchain().GasPrice()
+	return &rpcpb.GasPriceResponse{GasPrice: gasPrice}, nil
+}

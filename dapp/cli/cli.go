@@ -62,6 +62,7 @@ const (
 	clisendFromMiner     = "sendFromMiner"
 	cliaddProducer       = "addProducer"
 	cliEstimateGas       = "estimateGas"
+	cliGasPrice          = "gasPrice"
 	cliHelp              = "help"
 )
 
@@ -115,6 +116,7 @@ var cmdList = []string{
 	clisendFromMiner,
 	cliaddProducer,
 	cliEstimateGas,
+	cliGasPrice,
 	cliHelp,
 }
 
@@ -291,6 +293,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	cliaddProducer:       {adminRpcService, cliAddProducerCommandHandler},
 	cliEstimateGas:       {rpcService, estimateGasCommandHandler},
+	cliGasPrice:          {rpcService, gasPriceCommandHandler},
 	cliHelp:              {adminRpcService, helpCommandHandler},
 }
 
@@ -1117,4 +1120,20 @@ func estimateGasCommandHandler(ctx context.Context, client interface{}, flags cm
 	gas := gasResponse.Gas
 
 	fmt.Println("Gas estimiated num: ", gas)
+}
+
+func gasPriceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	gasPriceRequest := &rpcpb.GasPriceRequest{}
+	gasPriceResponse, err := client.(rpcpb.RpcServiceClient).RpcGasPrice(ctx, gasPriceRequest)
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	gasPrice := gasPriceResponse.GasPrice
+	fmt.Println("Gas price: ", gasPrice)
 }

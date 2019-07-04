@@ -1162,3 +1162,68 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	client.RemoveWalletFile()
 }
+
+func TestRpcService_RpcGasPrice(t *testing.T) {
+	logger.SetLevel(logger.WarnLevel)
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+	client.RemoveWalletFile()
+
+	// Create wallets
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
+	pow := consensus.NewProofOfWork()
+	scManager := vm.NewV8EngineManager(core.Address{})
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 1280000, scManager, 1000000)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare a PoW node that put mining reward to the sender's address
+	pool := core.NewBlockPool(0)
+	node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.SetTargetBit(0)
+
+	// Start a grpc server
+	server := NewGrpcServer(node, "temp")
+	server.Start(defaultRpcPort + 15) // use a different port as other integration tests
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+15), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	rpcClient := rpcpb.NewRpcServiceClient(conn)
+
+	// Start mining to approve the transaction
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	time.Sleep(time.Second)
+
+	gasPriceRequest := &rpcpb.GasPriceRequest{}
+	gasPriceResponse, err := rpcClient.RpcGasPrice(context.Background(), gasPriceRequest)
+	assert.Nil(t, err)
+	gasPrice := gasPriceResponse.GasPrice
+
+	assert.True(t, gasPrice > 0)
+
+	client.RemoveWalletFile()
+}
