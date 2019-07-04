@@ -278,6 +278,8 @@ var cmdFlagsMap = map[string][]flagPars{
 			"Gas price of smart contract execution.",
 		},
 	},
+	cliGasPrice: {
+	},
 }
 
 //map the callback function to each command
@@ -908,14 +910,6 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
 		core.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
-	logger.WithError(err).WithFields(logger.Fields{
-		"sendTxParam": sendTxParam,
-		"Amount":      sendTxParam.Amount,
-		"Tip":         sendTxParam.Tip,
-		"GasLimit":    sendTxParam.GasLimit,
-		"GasPrice":    sendTxParam.GasPrice,
-		"tx":          tx,
-	}).Error("sendCommandHandler")
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = client.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 

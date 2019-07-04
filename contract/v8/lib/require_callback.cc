@@ -146,9 +146,6 @@ void RequireCallback(const v8::FunctionCallbackInfo<v8::Value> &info) {
     return;
   }
   free(abPath);
-if (!strcmp(*filename, LIB_WHITE)) {
-printf("RequireCallback read data: %s", data);
-}
   ScriptOrigin sourceSrcOrigin(path, Integer::New(isolate, lineOffset));
   MaybeLocal<Script> script = Script::Compile(
       context, String::NewFromUtf8(isolate, data), &sourceSrcOrigin);

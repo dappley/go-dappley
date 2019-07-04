@@ -59,13 +59,6 @@ var (
 )
 
 const (
-	ExecutionFailedErr  = 1
-	ExecutionTimeOutErr = 2
-
-	// ExecutionTimeout max v8 execution timeout.
-	ExecutionTimeout                 = 15 * 1000 * 1000
-	OriginExecutionTimeout           = 5 * 1000 * 1000
-	CompatibleExecutionTimeout       = 20 * 1000 * 1000
 	TimeoutGasLimitCost              = 100000000
 	MaxLimitsOfExecutionInstructions = 10000000 // TODO: set max gasLimit with execution 5s *0.8
 )
@@ -244,7 +237,7 @@ func (e *V8Engine) AddModule(id, source string, sourceLineOffset int) error {
 		sourceHash := byteutils.Hex(hash.Sha3256([]byte(source)))
 
 		// try read from cache.
-		if sourceModuleCache.Contains(sourceHash) { //ToDo cache whether need into db
+		if sourceModuleCache.Contains(sourceHash) {
 			value, _ := sourceModuleCache.Get(sourceHash)
 			item = value.(*sourceModuleItem)
 		}
@@ -288,13 +281,8 @@ func (sc *V8Engine) Execute(function, args string) (string, error) {
 		logger.Error(err)
 		return "", err
 	}
-	logger.Error("before CollectTracingStats")
 	sc.CollectTracingStats()
 	mem := sc.actualTotalMemorySize + core.DefaultLimitsOfTotalMemorySize
-	logger.WithFields(logger.Fields{
-		"actualTotalMemorySize": sc.actualTotalMemorySize,
-		"limit":                 mem,
-	}).Info("mem limit")
 	if err := sc.SetExecutionLimits(sc.limitsOfExecutionInstructions, mem); err != nil {
 		logger.Error(err)
 		return "", err
@@ -310,9 +298,6 @@ func (sc *V8Engine) Execute(function, args string) (string, error) {
 		err = ErrExecutionTimeout
 		result = "null"
 	}
-	logger.WithFields(logger.Fields{
-		"result": result,
-	}).Info("V8Engine: smart contract execution ends.")
 	return result, err
 }
 
@@ -326,9 +311,6 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 	)
 	cFunction := C.CString(runnableSource)
 	defer C.free(unsafe.Pointer(cFunction))
-	logger.WithFields(logger.Fields{
-		"sc.handler": sc.handler,
-	}).Info("before executeV8Script...")
 	ret = C.executeV8Script(cFunction, C.int(sourceLineOffset), C.uintptr_t(sc.handler), &cResult, sc.v8engine)
 	sc.CollectTracingStats()
 
@@ -347,13 +329,6 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 		}
 		return result, err
 	}
-	logger.WithFields(logger.Fields{
-		"ret":                           ret,
-		"insr":                          sc.actualCountOfExecutionInstructions,
-		"memo":                          sc.actualTotalMemorySize,
-		"limitsOfExecutionInstructions": sc.limitsOfExecutionInstructions,
-		"limitsOfTotalMemorySize":       sc.limitsOfTotalMemorySize,
-	}).Info("V8Engine: ret.")
 
 	if ret == C.VM_EXE_TIMEOUT_ERR {
 		err = ErrExecutionTimeout
@@ -410,21 +385,13 @@ func (sc *V8Engine) prepareFuncCallScript(source, function, args string) (string
 		return "", 0, err
 	}
 	var runnableSource string
-	runnableSource = fmt.Sprintf(`var __instance = require("%s");__instance["%s"].apply(__instance, [%s]);`,
-		ModuleID, function, args) //TODO: freeze?
-	logger.WithFields(logger.Fields{
-		"runnableSource": runnableSource,
-	}).Error("prepareFuncCallScript runnableSource")
+	runnableSource = fmt.Sprintf(`var __instance = require("%s");__instance["%s"].apply(__instance, [%s]);`, ModuleID, function, args)
 	return runnableSource, 0, nil
 }
 
 func getV8EngineByAddress(handler uint64) *V8Engine {
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
-	logger.WithFields(logger.Fields{
-		"v8EngineList":      v8EngineList,
-		"v8EngineList-size": len(v8EngineList),
-	}).Error("getV8EngineByAddress")
 	return v8EngineList[handler]
 }
 
@@ -450,11 +417,6 @@ func (e *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTot
 
 	e.v8engine.limits_of_executed_instructions = C.size_t(limitsOfExecutionInstructions)
 	e.v8engine.limits_of_total_memory_size = C.size_t(limitsOfTotalMemorySize)
-
-	logger.WithFields(logger.Fields{
-		"limits_of_executed_instructions": limitsOfExecutionInstructions,
-		"limits_of_total_memory_size":     limitsOfTotalMemorySize,
-	}).Debug("set execution limits.")
 
 	e.limitsOfExecutionInstructions = limitsOfExecutionInstructions
 	e.limitsOfTotalMemorySize = limitsOfTotalMemorySize

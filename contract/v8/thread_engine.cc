@@ -65,16 +65,12 @@ void *ExecuteThread(void *args) {
     tContext.source_line_offset = 0;
     tContext.tracable_source = NULL;
     tContext.strictDisallowUsage = ctx->input.allow_usage;
-   printf("--------------ExecuteThread handler %zu\n",ctx->input.handler);
     Execute(ctx->input.source, 0, ctx->input.handler, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
 
     ctx->output.line_offset = tContext.source_line_offset;
     ctx->output.result = static_cast<char *>(tContext.tracable_source);
   } else {
-    // Execute(&ctx->output.result, ctx->e, ctx->input.source, ctx->input.line_offset, (void *)ctx->input.lcs,
-    //             (void *)ctx->input.gcs, ExecuteSourceDataDelegate, NULL);
     ctx->output.ret = Execute(ctx->input.source, ctx->input.line_offset, ctx->input.handler, &ctx->output.result, ctx->e, ExecuteSourceDataDelegate, NULL);
-    // printf("iRtn:%d--result:%s\n", ctx->output.ret, ctx->output.result);
   }
 
   ctx->is_finished = true;
@@ -104,16 +100,13 @@ bool CreateScriptThread(v8ThreadContext *ctx) {
   bool is_kill = false;
   //thread safe
   while(1) {
-//  printf("while once\n");
     if (ctx->is_finished == true) {
         if (is_kill == true) {
           ctx->output.ret = VM_EXE_TIMEOUT_ERR; 
-          // ctx->output.ret = CodeTimeOut; 
-        } 
+        }
         else if (ctx->e->is_inner_nvm_error_happen == 1) {
           ctx->output.ret = VM_INNER_EXE_ERR;
         }
-//        printf("while break\n");
         break;
     } else {
       usleep(10); //10 micro second loop .epoll_wait optimize
@@ -129,7 +122,6 @@ bool CreateScriptThread(v8ThreadContext *ctx) {
         TerminateExecution(ctx->e);
         is_kill = true;
       }
-//      printf("while end line\n");
     }
   }
   return true;

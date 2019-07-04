@@ -79,7 +79,6 @@ void VerifyAddressCallback(const FunctionCallbackInfo<Value> &info) {
 }
 
 void TransferCallback(const FunctionCallbackInfo<Value> &info) {
-printf("TransferCallback start");
   Isolate *isolate = info.GetIsolate();
   Local<Object> thisArg = info.Holder();
   Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));

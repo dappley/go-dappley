@@ -12,8 +12,7 @@ import (
 
 // const
 const (
-	JSLibRootName    = "jslib/"
-	JSLibRootNameLen = 4
+	JSLibRootName = "jslib/"
 )
 
 var (

@@ -375,10 +375,8 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) error {
 	ctx := tx.ToContractTx()
 	if ctx != nil {
-		logger.Warn("Verify ctx.")
 		return ctx.Verify(utxoIndex)
 	}
-	logger.Warn("Verify not ctx.")
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
 		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
@@ -403,8 +401,6 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) error {
 
 // Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) error {
-	logger.Warn("IsExecutionContract.", ctx.IsExecutionContract())
-	logger.Warn("IsContractDeployed.", ctx.IsContractDeployed(utxoIndex))
 	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
 		logger.Warn("Transaction: contract state check failed.")
 		return errors.New("Transaction: contract state check failed")
@@ -478,9 +474,6 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
 	}
 	totalBalance, _ := totalPrev.Sub(totalVoutValue)
 	totalBalance, _ = totalBalance.Sub(tx.Tip)
-	logger.WithFields(logger.Fields{
-		"totalBalance": totalBalance,
-	}).Warn("Transaction: totalBalance.")
 	return totalBalance, nil
 }
 
@@ -536,10 +529,6 @@ func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *co
 
 //verifyTip verifies if the transaction has the correct tip
 func (tx *Transaction) verifyTip(totalPrev *common.Amount, totalVoutValue *common.Amount) bool {
-	logger.WithFields(logger.Fields{
-		"totalPrev":      totalPrev,
-		"totalVoutValue": totalVoutValue,
-	}).Error("verifyTip.")
 	sub, err := totalPrev.Sub(totalVoutValue)
 	if err != nil {
 		return false
@@ -551,14 +540,8 @@ func (tx *Transaction) verifyTip(totalPrev *common.Amount, totalVoutValue *commo
 func (ctx *ContractTx) verifyGas(totalBalance *common.Amount) error {
 	baseGas, err := ctx.GasCountOfTxBase()
 	if err == nil {
-		logger.WithFields(logger.Fields{
-			"baseGas":      baseGas,
-			"ctx.GasLimit": ctx.GasLimit,
-		}).Warn("verifyGas: baseGas.")
 		if ctx.GasLimit.Cmp(baseGas) < 0 {
 			logger.WithFields(logger.Fields{
-				"error":       ErrOutOfGasLimit,
-				"transaction": ctx,
 				"limit":       ctx.GasLimit,
 				"acceptedGas": baseGas,
 			}).Warn("Failed to check GasLimit >= txBaseGas.")
@@ -568,9 +551,6 @@ func (ctx *ContractTx) verifyGas(totalBalance *common.Amount) error {
 	}
 
 	limitedFee := ctx.GasLimit.Mul(ctx.GasPrice)
-	logger.WithFields(logger.Fields{
-		"limitedFee": limitedFee,
-	}).Warn("verifyGas: limitedFee.")
 	if totalBalance.Cmp(limitedFee) < 0 {
 		return ErrInsufficientBalance
 	}
@@ -693,14 +673,6 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 	if err != nil {
 		return Transaction{}, err
 	}
-	logger.WithError(err).WithFields(logger.Fields{
-		"sum":      sum,
-		"Amount":   sendTxParam.Amount,
-		"Tip":      sendTxParam.Tip,
-		"change":   change,
-		"GasLimit": sendTxParam.GasLimit,
-		"GasPrice": sendTxParam.GasPrice,
-	}).Error("NewUTXOTransaction")
 	tx := Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.PublicKey, nil),
@@ -730,14 +702,6 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, amount, tip, gasLimit, gasPrice)
-	logger.WithError(err).WithFields(logger.Fields{
-		"sum":      sum,
-		"Amount":   amount,
-		"Tip":      tip,
-		"change":   change,
-		"gasLimit": gasLimit,
-		"gasPrice": gasPrice,
-	}).Error("NewContractTransferTX")
 	if err != nil {
 		return Transaction{}, err
 	}
@@ -779,9 +743,6 @@ func NewGasRewardTx(to Address, blockHeight uint64, actualGasCount *common.Amoun
 
 	txin := TXInput{nil, -1, bh, []byte("")}
 	txout := NewTXOutput(fee, to)
-	logger.WithFields(logger.Fields{
-		"fee": fee,
-	}).Info("NewGasRewardTx.")
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	return tx, nil
@@ -803,10 +764,6 @@ func NewGasChangeTx(to Address, blockHeight uint64, actualGasCount *common.Amoun
 
 	txin := TXInput{nil, -1, bh, []byte("")}
 	txout := NewTXOutput(changeValue, to)
-	logger.WithFields(logger.Fields{
-		"change":      change.Uint64(),
-		"changeValue": changeValue,
-	}).Info("NewGasChangeTx gas changed.")
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	return tx, nil
@@ -868,15 +825,9 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 
 	totalArgs := util.PrepareArgs(args)
 	address := vout.PubKeyHash.GenerateAddress()
-	logger.WithFields(logger.Fields{
-		"contract_address": address.String(),
-		"invoked_function": function,
-		"arguments":        totalArgs,
-	}).Debug("Transaction: is executing the smart contract...")
 
 	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
 	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), DefaultLimitsOfTotalMemorySize); err != nil {
-		logger.Info("Transaction: Execute SetExecutionLimits...")
 		return 0, nil, ErrInvalidGasLimit
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
@@ -889,7 +840,6 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())
-	logger.Info("before engine.Execute...")
 	_, err = engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
 	// record base gas
@@ -1059,13 +1009,7 @@ func prepareOutputLists(from, to Address, amount *common.Amount, change *common.
 	}
 
 	outputs = append(outputs, *NewTXOutput(amount, toAddr))
-	logger.WithFields(logger.Fields{
-		"change": change,
-	}).Warn("prepareOutputLists")
 	if !change.IsZero() {
-		logger.WithFields(logger.Fields{
-			"change": change,
-		}).Warn("prepareOutputLists not zero")
 		outputs = append(outputs, *NewTXOutput(change, from))
 	}
 	return outputs
