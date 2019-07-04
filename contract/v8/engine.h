@@ -59,8 +59,6 @@ typedef struct V8Engine {
 } V8Engine;
 
 typedef struct v8ThreadContextInput {
-    uintptr_t lcs;
-    uintptr_t gcs;
     uintptr_t handler;
     enum OptType opt;
     int line_offset;
@@ -134,8 +132,7 @@ EXPORT void InitializeRequireDelegate(RequireDelegate delegate, AttachLibVersion
 EXPORT void InitializeExecutionEnvDelegate(AttachLibVersionDelegate libDelegate);
 
 EXPORT char *InjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage);
-EXPORT int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t lcs_handler, uintptr_t gcs_handler,
-                                 uintptr_t handler);
+EXPORT int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler);
 bool CreateScriptThread(v8ThreadContext *pc);
 void SetRunScriptArgs(v8ThreadContext *pc, V8Engine *e, int opt, const char *source, int line_offset, int allow_usage);
 #ifdef __cplusplus

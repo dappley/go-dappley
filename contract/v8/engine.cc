@@ -122,7 +122,7 @@ int ExecuteSourceDataDelegate(char **result, Isolate *isolate, const char *sourc
 
 int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e) {
     //    return Execute(sourceCode, source_line_offset, handler, result, e, ExecuteSourceDataDelegate, NULL);
-    return RunScriptSourceThread(result, e, sourceCode, source_line_offset, 0L, 0L, handler);
+    return RunScriptSourceThread(result, e, sourceCode, source_line_offset, handler);
 }
 
 int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext) {

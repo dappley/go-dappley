@@ -37,13 +37,10 @@ char *InjectTracingInstructionsThread(V8Engine *e, const char *source, int *sour
     return ctx.output.result;
 }
 
-int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t lcs_handler, uintptr_t gcs_handler,
-                          uintptr_t handler) {
+int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler) {
     v8ThreadContext ctx;
     memset(&ctx, 0x00, sizeof(ctx));
     SetRunScriptArgs(&ctx, e, RUNSCRIPT, source, source_line_offset, 1);
-    ctx.input.lcs = lcs_handler;
-    ctx.input.gcs = gcs_handler;
     ctx.input.handler = handler;
 
     bool btn = CreateScriptThread(&ctx);
