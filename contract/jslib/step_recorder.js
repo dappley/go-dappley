@@ -1,7 +1,6 @@
 'use strict';
 
 var StepRecorder = function () {
-
 };
 
 StepRecorder.prototype = {
@@ -13,5 +12,4 @@ StepRecorder.prototype = {
     dapp_schedule: function () {
     }
 };
-
-var stepRecorder = new StepRecorder;
+module.exports = new StepRecorder();

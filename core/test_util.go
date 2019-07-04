@@ -120,10 +120,12 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 
 func MockTransaction() *Transaction {
 	return &Transaction{
-		ID:   util.GenerateRandomAoB(1),
-		Vin:  MockTxInputs(),
-		Vout: MockTxOutputs(),
-		Tip:  common.NewAmount(5),
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      MockTxInputs(),
+		Vout:     MockTxOutputs(),
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 }
 

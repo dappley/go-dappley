@@ -153,11 +153,6 @@ func NewV8Engine() *V8Engine {
 	currHandler++
 	storagesMutex.Lock()
 	defer storagesMutex.Unlock()
-	logger.WithFields(logger.Fields{
-		"engine":         engine,
-		"v8EngineList":   v8EngineList,
-		"engine.handler": engine.handler,
-	}).Error("NewV8Engine")
 	v8EngineList[engine.handler] = engine
 
 	(func() {
@@ -313,7 +308,7 @@ func (sc *V8Engine) Execute(function, args string) (string, error) {
 
 	if sc.limitsOfExecutionInstructions == MaxLimitsOfExecutionInstructions && err == ErrInsufficientGas {
 		err = ErrExecutionTimeout
-		result = "\"null\""
+		result = "null"
 	}
 	logger.WithFields(logger.Fields{
 		"result": result,
@@ -397,7 +392,7 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 		result = C.GoString(cResult)
 		C.free(unsafe.Pointer(cResult))
 	} else if ret == C.VM_SUCCESS {
-		result = "\"\"" // default JSON String.
+		result = ""
 	}
 
 	return result, err
@@ -465,12 +460,12 @@ func (e *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTot
 	e.limitsOfTotalMemorySize = limitsOfTotalMemorySize
 
 	if limitsOfExecutionInstructions == 0 || limitsOfTotalMemorySize == 0 {
-		logger.Error("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, limitsOfTotalMemorySize)
+		logger.Errorf("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, limitsOfTotalMemorySize)
 		return ErrLimitHasEmpty
 	}
 	// V8 needs at least 6M heap memory.
 	if limitsOfTotalMemorySize > 0 && limitsOfTotalMemorySize < 6000000 {
-		logger.Error("V8 needs at least 6M (6000000) heap memory, your limitsOfTotalMemorySize (%d) is too low.", limitsOfTotalMemorySize)
+		logger.Errorf("V8 needs at least 6M (6000000) heap memory, your limitsOfTotalMemorySize (%d) is too low.", limitsOfTotalMemorySize)
 		return ErrSetMemorySmall
 	}
 	return nil

@@ -101,7 +101,6 @@ func (_m *MockScEngine) ImportUTXOs(utxos []*UTXO) {
 
 // SetExecutionLimits set execution limits of V8 Engine, prevent Halting Problem.
 func (_m *MockScEngine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
-	_m.Called(limitsOfExecutionInstructions, limitsOfTotalMemorySize)
 	return nil
 }
 

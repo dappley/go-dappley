@@ -28,11 +28,13 @@ AddrChecker.prototype = {
     	return Blockchain.verifyAddress(addr)+dummy;
     }
 };
-var addrChecker = new AddrChecker;
+module.exports = new AddrChecker();
 `
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
 	assert.Equal(t, "35", ret)
 }
@@ -46,17 +48,19 @@ var AddrChecker = function(){
 };
 
 AddrChecker.prototype = {
-		check:function(addr,dummy){
+	check:function(addr,dummy){
     	return Blockchain.verifyAddress(addr)+dummy;
-    }
+	}
 };
-var addrChecker = new AddrChecker;
+module.exports = new AddrChecker();
 `
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	ret, _ := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
-	assert.Equal(t, "1", ret)
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	_, err := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	assert.NotNil(t, err)
 }
 
 func TestScEngine_BlockchainTransfer(t *testing.T) {
@@ -67,7 +71,7 @@ MathTest.prototype = {
         return Blockchain.transfer(to, amount, tip);
     }
 };
-var transferTest = new MathTest;`
+module.exports = new MathTest();`
 
 	contractPubKeyHash := core.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
@@ -94,6 +98,8 @@ var transferTest = new MathTest;`
 	sc.ImportContractAddr(contractAddr)
 	sc.ImportSourceTXID([]byte("thatTX"))
 	sc.ImportUTXOs(contractUTXOs)
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	result, _ := sc.Execute("transfer", "'16PencPNnF8CiSx2EBGEd1axhf7vuHCouj','10','2'")
 
 	assert.Equal(t, "0", result)
@@ -131,7 +137,7 @@ StorageTest.prototype = {
     	return LocalStorage.get(key);
     }
 };
-var storageTest = new StorageTest;
+module.exports = new StorageTest();
 `
 
 	ss := core.NewScState()
@@ -140,6 +146,8 @@ var storageTest = new StorageTest;
 	sc.ImportSourceCode(script)
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	sc.ImportLocalStorage(ss)
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("get", "\"key\"")
 	assert.Equal(t, "7", ret)
 }
@@ -167,13 +175,14 @@ StorageTest.prototype = {
 		return LocalStorage.get(key).color;
 	}
 };
-var storageTest = new StorageTest;
+module.exports = new StorageTest();
 `
 	ss := core.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 
 	ret, _ := sc.Execute("set", "\"key\",6")
 	assert.Equal(t, "0", ret)
@@ -208,13 +217,14 @@ StorageTest.prototype = {
     	return LocalStorage.del(key);
     }
 };
-var storageTest = new StorageTest;
+module.exports = new StorageTest();
 `
 	ss := core.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("set", "\"key\",6")
 	assert.Equal(t, "0", ret)
 	ret2, _ := sc.Execute("del", "\"key\"")
@@ -236,13 +246,14 @@ RewardTest.prototype = {
     	return _native_reward.record(addr,amount);
     }
 };
-var rewardTest = new RewardTest;
+module.exports = new RewardTest();
 `
 	ss := make(map[string]string)
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportRewardStorage(ss)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("reward", "\"myAddr\",\"8\"")
 	assert.Equal(t, "0", ret)
 	ret2, _ := sc.Execute("reward", "\"myAddr\",\"9\"")
@@ -278,7 +289,7 @@ TransactionTest.prototype = {
 		}
 	}
 };
-var transactionTest = new TransactionTest;
+module.exports = new TransactionTest();
 `
 	ss := core.NewScState()
 	sc := NewV8Engine()
@@ -287,6 +298,7 @@ var transactionTest = new TransactionTest;
 	tx := core.MockTransaction()
 	sc.ImportTransaction(tx)
 	sc.ImportPrevUtxos(core.MockUtxos(tx.Vin))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	sc.Execute("dump", "\"dummy\"")
 }
 
@@ -301,6 +313,7 @@ func TestStepRecord(t *testing.T) {
 	sc.ImportContractAddr(core.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20")
 	assert.Equal(t, "0", ret)
 	assert.Equal(t, "20", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
@@ -328,6 +341,8 @@ func TestCrypto_VerifySignature(t *testing.T) {
 	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
 	data := sha256.Sum256([]byte(msg))
 	signature, _ := secp256k1.Sign(data[:], privData)
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("verifySig",
 		fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
 			msg,
@@ -355,6 +370,7 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	addr := pkh.GenerateAddress()
 	fmt.Println(addr)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("verifyPk",
 		fmt.Sprintf("\"%s\", \"%s\"",
 			addr,
@@ -386,6 +402,7 @@ func TestMath(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportSeed(10)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	res, _ := sc.Execute("random", "20")
 	assert.Equal(t, "14", res)
 }
@@ -397,6 +414,7 @@ func TestBlkHeight(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportCurrBlockHeight(22334)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("getBlkHeight", "")
 	assert.Equal(t, "22334", ret)
 }
@@ -409,6 +427,7 @@ func TestRecordEvent(t *testing.T) {
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("trigger", "\"topic\",\"data\"")
 	assert.Equal(t, "0", ret)
 	assert.Equal(t, "topic", ss.GetEvents()[0].GetTopic())
@@ -430,6 +449,7 @@ func TestGetNodeAddress(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportNodeAddress(core.NewAddress("testAddr"))
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("getNodeAddress", "")
 	assert.Equal(t, "testAddr", ret)
 }

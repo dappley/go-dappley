@@ -73,7 +73,7 @@ void *ExecuteThread(void *args) {
   } else {
     // Execute(&ctx->output.result, ctx->e, ctx->input.source, ctx->input.line_offset, (void *)ctx->input.lcs,
     //             (void *)ctx->input.gcs, ExecuteSourceDataDelegate, NULL);
-    ctx->output.ret = Execute(ctx->input.source, ctx->input.line_offset, ctx->input.handler, NULL, ctx->e, ExecuteSourceDataDelegate, NULL);
+    ctx->output.ret = Execute(ctx->input.source, ctx->input.line_offset, ctx->input.handler, &ctx->output.result, ctx->e, ExecuteSourceDataDelegate, NULL);
     // printf("iRtn:%d--result:%s\n", ctx->output.ret, ctx->output.result);
   }
 

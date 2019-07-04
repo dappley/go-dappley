@@ -122,12 +122,9 @@ void reportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
    if (result != NULL) {
      Local<Object> obj = ret.ToLocalChecked().As<Object>();
      if (!obj->IsUndefined()) {
-       MaybeLocal<String> json_result = v8::JSON::Stringify(context, obj);
-       if (!json_result.IsEmpty()) {
-         String::Utf8Value str(isolate, json_result.ToLocalChecked());
-         *result = (char *)malloc(str.length() + 1);
-         strcpy(*result, *str);
-       }
+        String::Utf8Value str(isolate, obj);
+        *result = (char *)malloc(str.length() + 1);
+        strcpy(*result, *str);
      }
    }
 

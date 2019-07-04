@@ -384,11 +384,15 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		[]TXInput{{normalTX.ID, 0, nil, keypair.PublicKey}},
 		[]TXOutput{{common.NewAmount(5), pbkh, ""}},
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 	}
 	abnormalTX := Transaction{
 		Hash("abnormal"),
 		[]TXInput{{normalTX.ID, 1, nil, nil}},
 		[]TXOutput{{common.NewAmount(5), PubKeyHash([]byte("pkh")), ""}},
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 	}
 	prevBlock := NewBlock([]*Transaction{}, genesisBlock)

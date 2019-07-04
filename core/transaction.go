@@ -877,7 +877,7 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
 	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), DefaultLimitsOfTotalMemorySize); err != nil {
 		logger.Info("Transaction: Execute SetExecutionLimits...")
-		return 0, nil, ErrEngineNotFound
+		return 0, nil, ErrInvalidGasLimit
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(scStorage)
@@ -1082,7 +1082,12 @@ func (tx *Transaction) ToProto() proto.Message {
 	for _, txout := range tx.Vout {
 		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
 	}
-
+	if tx.GasLimit == nil {
+		tx.GasLimit = common.NewAmount(0)
+	}
+	if tx.GasPrice == nil {
+		tx.GasPrice = common.NewAmount(0)
+	}
 	return &corepb.Transaction{
 		Id:       tx.ID,
 		Vin:      vinArray,
