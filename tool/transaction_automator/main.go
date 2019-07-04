@@ -8,8 +8,8 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/sdk"
-	"github.com/dappley/go-dappley/tool/tool_util"
-	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
+	tool "github.com/dappley/go-dappley/tool/tool_util"
+	tx_automator_configpb "github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_automator/util"
 	logger "github.com/sirupsen/logrus"
 )

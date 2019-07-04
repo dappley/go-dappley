@@ -267,8 +267,6 @@ func (utxos *UTXOIndex) removeUTXO(pkh PubKeyHash, txid []byte, vout int) error 
 
 		contractUtxo := contractUtxos.GetUtxo(txid, vout)
 
-		println(contractUtxo.Contract)
-
 		if contractUtxo == nil {
 			return ErrUTXONotFound
 		}

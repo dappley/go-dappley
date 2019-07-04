@@ -19,10 +19,11 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/contract"
+	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -126,14 +127,29 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 		totalSize += txNode.Size
 
 		ctx := txNode.Value.ToContractTx()
+
 		if ctx != nil {
-			generatedTxs = ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			if err != nil {
+				logger.WithError(err).WithFields(logger.Fields{
+					"txid": hex.EncodeToString(ctx.ID),
+				}).Warn("Transaction: cannot find vin while executing smart contract")
+				return nil, nil
+			}
+			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
+
+			validTxs = append(validTxs, txNode.Value)
+			utxoIndex.UpdateUtxo(txNode.Value)
+
+			generatedTxs = ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 			validTxs = append(validTxs, generatedTxs...)
 			utxoIndex.UpdateUtxoState(generatedTxs)
+		} else {
+			validTxs = append(validTxs, txNode.Value)
+			utxoIndex.UpdateUtxo(txNode.Value)
+
 		}
 
-		validTxs = append(validTxs, txNode.Value)
-		utxoIndex.UpdateUtxo(txNode.Value)
 	}
 
 	// append reward transaction
@@ -174,9 +190,17 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			utxoIndex.UpdateUtxo(tx)
 			continue
 		}
-		generatedTXs = append(generatedTXs, ctx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"txid": hex.EncodeToString(ctx.ID),
+			}).Warn("Transaction: cannot find vin while executing smart contract")
+			return nil, nil
+		}
+		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
 		// add utxo from txs into utxoIndex
 		utxoIndex.UpdateUtxo(tx)
+		generatedTXs = append(generatedTXs, ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
 	}
 
 	// append reward transaction

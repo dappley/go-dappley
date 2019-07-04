@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
@@ -332,8 +332,18 @@ L:
 				return false
 			}
 
-			ctx.Execute(*utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			if err != nil {
+				logger.WithError(err).WithFields(logger.Fields{
+					"txid": hex.EncodeToString(ctx.ID),
+				}).Warn("Transaction: cannot find vin while executing smart contract")
+				return false
+			}
+
+			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
+
 			utxoIndex.UpdateUtxo(tx)
+			ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
