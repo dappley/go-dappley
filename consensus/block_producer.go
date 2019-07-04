@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	vm "github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 )
 
