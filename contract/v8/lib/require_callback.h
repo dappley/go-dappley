@@ -4,10 +4,9 @@
 #include <v8.h>
 
 using namespace v8;
-#define LIB_WHITE   "jslib/contract.js"
+#define LIB_WHITE "jslib/contract.js"
 
-void NewNativeRequireFunction(Isolate *isolate,
-                              Local<ObjectTemplate> globalTpl);
+void NewNativeRequireFunction(Isolate *isolate, Local<ObjectTemplate> globalTpl);
 void RequireCallback(const v8::FunctionCallbackInfo<v8::Value> &info);
 
 #endif
