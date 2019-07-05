@@ -167,7 +167,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t5 = NewCoinbaseTX(NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
-	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
+	txin1 := TXInput{nil, -1, bh1, []byte("Reward to test")}
 	txout1 := NewTXOutput(common.NewAmount(10000000), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
 	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
