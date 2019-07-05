@@ -948,3 +948,14 @@ func (tx *Transaction) GetSize() int {
 	}
 	return len(rawBytes)
 }
+
+func (tx *Transaction) CheckContractSyntax(engine ScEngine) error {
+	TxOuts := tx.Vout
+	for _, v := range TxOuts {
+		err := v.CheckContractSyntax(engine)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

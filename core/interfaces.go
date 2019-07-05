@@ -72,4 +72,5 @@ type ScEngine interface {
 	ImportNodeAddress(addr Address)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) string
+	CheckContactSyntax(source string) error
 }

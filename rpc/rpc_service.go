@@ -19,6 +19,7 @@ package rpc
 
 import (
 	"context"
+	vm "github.com/dappley/go-dappley/contract"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
@@ -217,9 +218,19 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.FailedPrecondition, core.ErrTransactionVerifyFailed.Error())
 	}
 
+	engine := vm.NewV8Engine()
+	defer engine.DestroyEngine()
+	err := tx.CheckContractSyntax(engine)
+
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": err,
+		}).Error("Smart Contract Deployed Failed!")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	rpcService.node.GetBlockchain().GetTxPool().Push(tx)
 	rpcService.node.TxBroadcast(&tx)
-
 	if tx.IsContract() {
 		contractAddr := tx.GetContractAddress()
 		message := contractAddr.String()
