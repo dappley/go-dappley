@@ -11,10 +11,9 @@ StepRecorder.prototype = {
         return _native_reward.record(addr, steps);
     },
     destory: function(){
-        var address = Sender.getAddress()
-        if (addr == address){
+        
             Blockchain.deleteContract()
-        }
+        
     },
     dapp_schedule: function(){}
 };

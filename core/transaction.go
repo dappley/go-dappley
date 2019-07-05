@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
@@ -690,7 +690,9 @@ func (ctx *ContractTx) GetContractPubKeyHash() PubKeyHash {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (ctx *ContractTx) Execute(index UTXOIndex,
+func (ctx *ContractTx) Execute(prevUtxos []*UTXO,
+	isSCUTXO bool,
+	index UTXOIndex,
 	scStorage *ScState,
 	rewards map[string]string,
 	engine ScEngine,
@@ -703,18 +705,7 @@ func (ctx *ContractTx) Execute(index UTXOIndex,
 
 	vout := ctx.Vout[ContractTxouputIndex]
 
-	utxos := index.GetAllUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
-	//the smart contract utxo is always stored at index 0. If there is no utxos found, that means this transaction
-	//is a smart contract deployment transaction, not a smart contract execution transaction.
-	if utxos.Size() == 0 {
-		return nil
-	}
-
-	prevUtxos, err := ctx.FindAllTxinsInUtxoPool(index)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"txid": hex.EncodeToString(ctx.ID),
-		}).Warn("Transaction: cannot find vin while executing smart contract")
+	if isSCUTXO {
 		return nil
 	}
 
