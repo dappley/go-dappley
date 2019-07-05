@@ -105,6 +105,7 @@ type Node struct {
 	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
 	peerManager            *PeerManager
+	messageDispatcher      *MessageDispatcher
 }
 
 func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
@@ -166,7 +167,7 @@ func (n *Node) Start(listenPort int) error {
 	}
 
 	n.host = h
-	n.info, err = CreatePeerInfoFromMultiaddrs(addrs)
+	n.info, err = NewPeerInfoFromMultiaddrs(addrs)
 
 	//set streamhandler. streamHanlder function is called upon stream connection
 	n.host.SetStreamHandler(protocalName, n.streamHandler)
@@ -225,6 +226,7 @@ func (n *Node) StartListenLoop() {
 					}).Warn("Node: dispatch channel full")
 				}
 				n.handle(streamMsg.msg, streamMsg.from)
+				n.messageDispatcher.Dispatch(streamMsg.msg.GetCmd(), streamMsg.msg.data)
 			}
 		}
 	}()
@@ -249,6 +251,10 @@ func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
 	}
 
 	return nil
+}
+
+func (n *Node) Subscribe(cmd string, dispatcher chan []byte) error {
+	return n.messageDispatcher.Subscribe(cmd, dispatcher)
 }
 
 //create basic host. Returns host object, host address and error

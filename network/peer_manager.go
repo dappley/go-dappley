@@ -20,7 +20,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -28,7 +27,7 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pstore "github.com/libp2p/go-libp2p-core/peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
@@ -49,21 +48,6 @@ const (
 	syncPeersScheduleTime        = 10 * time.Minute
 	checkSeedsConnectionTime     = 15 * time.Minute
 )
-
-type PeerInfo struct {
-	PeerId peer.ID
-	Addrs  []ma.Multiaddr
-}
-
-type StreamInfo struct {
-	stream         *Stream
-	connectionType ConnectionType
-}
-
-type SyncPeerContext struct {
-	checkingStreams map[peer.ID]*StreamInfo
-	newPeers        map[peer.ID]*PeerInfo
-}
 
 type PeerManager struct {
 	seeds     map[peer.ID]*PeerInfo
@@ -107,48 +91,8 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 	}
 }
 
-func CreatePeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error) {
-	peerIds := make([]peer.ID, len(targetFullAddrs))
-	addrs := make([]ma.Multiaddr, len(targetFullAddrs))
-	for index, targetFullAddr := range targetFullAddrs {
-		//get pid
-		pid, err := targetFullAddr.ValueForProtocol(ma.P_IPFS)
-		if err != nil {
-			return nil, err
-		}
-
-		//get peer id
-		peerId, err := peer.IDB58Decode(pid)
-		if err != nil {
-			return nil, err
-		}
-
-		peerIds[index] = peerId
-
-		// Decapsulate the /ipfs/<peerID> part from the targetFullAddr
-		// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
-		targetPeerAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerId)))
-		targetAddr := targetFullAddr.Decapsulate(targetPeerAddr)
-		addrs[index] = targetAddr
-
-		logger.WithFields(logger.Fields{
-			"index":          index,
-			"peerID":         peerId,
-			"targetPeerAddr": targetPeerAddr,
-			"targetAddr":     targetAddr,
-		}).Info("PeerManager: create peer information.")
-	}
-
-	peerInfo := &PeerInfo{
-		PeerId: peerIds[0],
-		Addrs:  addrs,
-	}
-
-	return peerInfo, nil
-}
-
 func (pm *PeerManager) AddSeedByString(fullAddr string) error {
-	peerInfo, err := createPeerInfoFromString(fullAddr)
+	peerInfo, err := NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,
@@ -168,7 +112,7 @@ func (pm *PeerManager) AddAndConnectPeerByString(fullAddr string) error {
 
 	logger.Info("PeerManager: AddAndConnectPeerByString")
 
-	peerInfo, err := createPeerInfoFromString(fullAddr)
+	peerInfo, err := NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,
@@ -752,45 +696,4 @@ func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
 	defer pm.mutex.RUnlock()
 	_, ok := pm.streams[peerId]
 	return ok
-}
-
-func createPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
-	addr, err := ma.NewMultiaddr(fullAddr)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-			"err":       err,
-		}).Warn("PeerManager: create multiaddr failed.")
-	}
-
-	return CreatePeerInfoFromMultiaddrs([]ma.Multiaddr{addr})
-}
-
-//convert to protobuf
-func (p *PeerInfo) ToProto() proto.Message {
-	var addresses []string
-	for _, addr := range p.Addrs {
-		addresses = append(addresses, addr.String())
-	}
-
-	return &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
-}
-
-//convert from protobuf
-func (p *PeerInfo) FromProto(pb proto.Message) error {
-	pid, err := peer.IDB58Decode(pb.(*networkpb.PeerInfo).GetId())
-	if err != nil {
-		return err
-	}
-	p.PeerId = pid
-
-	for _, addr := range pb.(*networkpb.PeerInfo).GetAddress() {
-		multiaddr, err := ma.NewMultiaddr(addr)
-		if err != nil {
-			return err
-		}
-		p.Addrs = append(p.Addrs, multiaddr)
-	}
-
-	return nil
 }
