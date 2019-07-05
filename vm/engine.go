@@ -33,6 +33,7 @@ void  Cgo_Free(void* address);
 */
 import "C"
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"unsafe"
@@ -203,6 +204,17 @@ func (sc *V8Engine) Execute(function, args string) string {
 		"status": status,
 	}).Info("V8Engine: smart contract execution ends.")
 	return res
+}
+
+func (sc *V8Engine) CheckContactSyntax(source string) error {
+
+	cSource := C.CString(source)
+	defer C.free(unsafe.Pointer(cSource))
+	var err error = nil
+	if C.CheckContractSyntax(cSource) > 0 {
+		err = errors.New("error syntax")
+	}
+	return err
 }
 
 func prepareFuncCallScript(function, args string) string {

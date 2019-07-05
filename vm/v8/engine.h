@@ -53,6 +53,7 @@ extern "C" {
     EXPORT void InitializeSmartContract(char* source);
     EXPORT void DisposeV8();
 	EXPORT void InitializeMemoryFunc(FuncMalloc mallocFunc, FuncFree freeFunc);
+	EXPORT int CheckContractSyntax(const char* sourceCode);
 #ifdef __cplusplus
 }
 #endif

@@ -163,6 +163,45 @@ RET:
   return errorCode;
 }
 
+int CheckContractSyntax(const char* sourceCode)
+{
+
+  Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
+  Isolate* isolate = Isolate::New(create_params);
+  int errorCode = 0;
+  {
+      Isolate::Scope isolate_scope(isolate);
+
+      // Create a stack-allocated handle scope.
+      HandleScope handle_scope(isolate);
+
+      // Set up an exception handler
+      TryCatch try_catch(isolate);
+
+      // Create a new context.
+      Local<Context> context = v8::Context::New(isolate);
+      v8::Context::Scope context_scope(context);
+
+      Local<String> source = String::NewFromUtf8(
+          isolate,
+          sourceCode,
+          NewStringType::kNormal
+        ).ToLocalChecked();
+
+        // Compile the source code.
+      Local<Script> script;
+      if (!Script::Compile(context, source).ToLocal(&script)) {
+          reportException(isolate, &try_catch);
+          errorCode = 1;
+          script.Clear();
+      }
+      
+  }
+ 
+  return errorCode;
+}
+
 char* wrapReturnResult(const char* src) {
 	char* result = (char *)MyMalloc(strlen(src) + 1);
 	strcpy(result, src);
