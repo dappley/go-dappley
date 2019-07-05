@@ -407,7 +407,7 @@ func (b *Block) IsParentBlock(child *Block) bool {
 func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
-			if !tx.IsCoinbase() && !tx.IsRewardTx() {
+			if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
 				txPool.Push(*tx)
 			}
 		}

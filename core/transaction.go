@@ -42,6 +42,8 @@ var subsidy = common.NewAmount(10000000)
 const ContractTxouputIndex = 0
 
 var rewardTxData = []byte("Distribute X Rewards")
+var gasRewardData = []byte("Miner Gas Rewards")
+var gasChangeData = []byte("Unspent Gas Change")
 
 var (
 	// MinGasCountPerTransaction default gas for normal transaction
@@ -123,13 +125,26 @@ func (tx *Transaction) IsCoinbase() bool {
 		return false
 	}
 
+	if len(tx.Vin[0].PubKey) == 0 {
+		return false;
+	}
+
 	if bytes.Equal(tx.Vin[0].PubKey, rewardTxData) {
+		return false
+	}
+
+	if bytes.Equal(tx.Vin[0].PubKey, gasRewardData) {
+		return false
+	}
+
+	if bytes.Equal(tx.Vin[0].PubKey, gasChangeData) {
 		return false
 	}
 
 	return true
 }
 
+// IsRewardTx returns if the transaction is about the step reward
 func (tx *Transaction) IsRewardTx() bool {
 
 	if !tx.isVinCoinbase() {
@@ -137,6 +152,41 @@ func (tx *Transaction) IsRewardTx() bool {
 	}
 
 	if !bytes.Equal(tx.Vin[0].PubKey, rewardTxData) {
+		return false
+	}
+
+	return true
+}
+
+// IsRewardTx returns if the transaction is about the gas reward to miner after smart contract execution
+func (tx *Transaction) IsGasRewardTx() bool {
+
+	if !tx.isVinCoinbase() {
+		return false
+	}
+
+	if len(tx.Vout) != 1 {
+		return false
+	}
+
+	if !bytes.Equal(tx.Vin[0].PubKey, gasRewardData) {
+		return false
+	}
+	return true
+}
+
+// IsRewardTx returns if the transaction is about the gas change to from address after smart contract execution
+func (tx *Transaction) IsGasChangeTx() bool {
+
+	if !tx.isVinCoinbase() {
+		return false
+	}
+
+	if len(tx.Vout) != 1 {
+		return false
+	}
+
+	if !bytes.Equal(tx.Vin[0].PubKey, gasChangeData) {
 		return false
 	}
 
@@ -294,6 +344,16 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
 		return nil
 	}
 
+	if tx.IsGasRewardTx() {
+		logger.Warn("Transaction: will not sign a gas reward transaction.")
+		return nil
+	}
+
+	if tx.IsGasChangeTx() {
+		logger.Warn("Transaction: will not sign a gas change transaction.")
+		return nil
+	}
+
 	txCopy := tx.TrimmedCopy(false)
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
@@ -390,7 +450,7 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) error {
 		}
 		return nil
 	}
-	if tx.IsRewardTx() {
+	if tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
 		//TODO: verify reward tx here
 		return nil
 	}
@@ -741,7 +801,7 @@ func NewGasRewardTx(to Address, blockHeight uint64, actualGasCount *common.Amoun
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, []byte("")}
+	txin := TXInput{nil, -1, bh, gasRewardData}
 	txout := NewTXOutput(fee, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
@@ -762,7 +822,7 @@ func NewGasChangeTx(to Address, blockHeight uint64, actualGasCount *common.Amoun
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, []byte("")}
+	txin := TXInput{nil, -1, bh, gasChangeData}
 	txout := NewTXOutput(changeValue, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
