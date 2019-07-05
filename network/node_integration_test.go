@@ -60,7 +60,7 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 	return n, err
 }
 
-func initNodeWithConfig(address string, port int, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
+func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
 	addr := core.Address{address}
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
