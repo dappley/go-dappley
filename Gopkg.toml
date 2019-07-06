@@ -62,20 +62,8 @@
   version = "0.1.0"
 
 [[constraint]]
-  name = "github.com/libp2p/go-libp2p-host"
-  version = "0.1.0"
-
-[[constraint]]
-  name = "github.com/libp2p/go-libp2p-net"
-  version = "0.1.0"
-
-[[constraint]]
   name = "github.com/libp2p/go-libp2p-peer"
   version = "0.2.0"
-
-[[constraint]]
-  name = "github.com/libp2p/go-libp2p-peerstore"
-  version = "0.1.1"
 
 [[constraint]]
   name = "github.com/multiformats/go-multiaddr"

@@ -19,8 +19,12 @@ package rpc
 
 import (
 	"context"
-	"github.com/dappley/go-dappley/vm"
 	"strings"
+
+	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
@@ -28,10 +32,7 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
-	"github.com/golang/protobuf/proto"
-	logger "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/dappley/go-dappley/vm"
 )
 
 const (
