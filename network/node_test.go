@@ -109,6 +109,6 @@ func TestNode_Stop(t *testing.T) {
 
 	time.Sleep(time.Second)
 	node.Stop()
-	_, ok := <-node.host.Network().Process().Closed()
+	_, ok := <-node.network.host.Network().Process().Closed()
 	assert.False(t, ok)
 }

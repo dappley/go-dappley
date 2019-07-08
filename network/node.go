@@ -19,20 +19,15 @@
 package network
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/golang-lru"
-	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
@@ -40,7 +35,6 @@ import (
 )
 
 const (
-	protocalName           = "dappley/1.0.0"
 	MaxMsgCountBeforeReset = 999999
 	maxGetBlocksNum        = 10
 	maxSyncPeersCount      = 32
@@ -83,28 +77,15 @@ var (
 	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
 )
 
-type NodeConfig struct {
-	MaxConnectionOutCount int
-	MaxConnectionInCount  int
-}
-
-type streamMsg struct {
-	msg  *DapMsg
-	from peer.ID
-}
-
 type Node struct {
-	host                   host.Host
-	info                   *PeerInfo
+	network                *Network
 	bm                     *core.BlockChainManager
-	streamExitCh           chan *Stream
 	exitCh                 chan bool
 	recentlyRcvedDapMsgs   *lru.Cache
 	dapMsgBroadcastCounter *uint64
 	privKey                crypto.PrivKey
 	dispatch               chan *streamMsg
 	downloadManager        *DownloadManager
-	peerManager            *PeerManager
 	messageDispatcher      *MessageDispatcher
 }
 
@@ -124,23 +105,21 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 	bm.SetblockPool(pool)
 	bm.Setblockchain(bc)
 	node := &Node{
-		host:                   nil,
-		info:                   nil,
 		bm:                     bm,
-		streamExitCh:           make(chan *Stream, 10),
 		exitCh:                 make(chan bool, 1),
 		dapMsgBroadcastCounter: &placeholder,
 		privKey:                nil,
 		dispatch:               make(chan *streamMsg, dispatchChLen),
 		downloadManager:        nil,
-		peerManager:            nil,
 	}
+
+	node.network = NewNetwork(config, node.dispatch, node.bm.Getblockchain().GetDb())
+	node.network.SubScribeOnStreamStop(node.OnStreamStop)
 	node.recentlyRcvedDapMsgs, err = lru.New(1024000)
 	if err != nil {
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvedDapMsgs!")
 	}
 	node.downloadManager = NewDownloadManager(node)
-	node.peerManager = NewPeerManager(node, config)
 	return node
 }
 
@@ -155,48 +134,23 @@ func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain
 func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
 func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache  { return n.recentlyRcvedDapMsgs }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
-func (n *Node) GetPeerManager() *PeerManager         { return n.peerManager }
-func (n *Node) GetInfo() *PeerInfo                   { return n.info }
+func (n *Node) GetPeerManager() *PeerManager         { return n.network.peerManager }
+func (n *Node) GetInfo() *PeerInfo                   { return n.network.host.info }
 
 func (n *Node) Start(listenPort int) error {
-
-	h, addrs, err := createBasicHost(listenPort, n.privKey)
+	err := n.network.Start(listenPort, n.privKey)
 	if err != nil {
-		logger.WithError(err).Error("Node: failed to create basic host.")
 		return err
 	}
 
-	n.host = h
-	n.info, err = NewPeerInfoFromMultiaddrs(addrs)
-
-	//set streamhandler. streamHanlder function is called upon stream connection
-	n.host.SetStreamHandler(protocalName, n.streamHandler)
 	n.StartRequestLoop()
 	n.StartListenLoop()
-	n.StartExitListener()
-
-	n.peerManager.Start()
-	return err
+	return nil
 }
 
 func (n *Node) Stop() {
 	n.exitCh <- true
-	n.peerManager.StopAllStreams(nil)
-	n.host.RemoveStreamHandler(protocalName)
-	err := n.host.Close()
-	if err != nil {
-		logger.WithError(err).Warn("Node: host was not closed properly.")
-	}
-}
-
-func (n *Node) StartExitListener() {
-	go func() {
-		for {
-			if s, ok := <-n.streamExitCh; ok {
-				n.DisconnectPeer(s)
-			}
-		}
-	}()
+	n.network.Stop()
 }
 
 func (n *Node) StartRequestLoop() {
@@ -223,7 +177,7 @@ func (n *Node) StartListenLoop() {
 				if len(n.dispatch) == dispatchChLen {
 					logger.WithFields(logger.Fields{
 						"lenOfDispatchChan": len(n.dispatch),
-					}).Warn("Node: dispatch channel full")
+					}).Warn("Node: dispatcher channel full")
 				}
 				n.handle(streamMsg.msg, streamMsg.from)
 				n.messageDispatcher.Dispatch(streamMsg.msg.GetCmd(), streamMsg.msg.data)
@@ -257,48 +211,7 @@ func (n *Node) Subscribe(cmd string, dispatcher chan []byte) error {
 	return n.messageDispatcher.Subscribe(cmd, dispatcher)
 }
 
-//create basic host. Returns host object, host address and error
-func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, []ma.Multiaddr, error) {
-
-	opts := []libp2p.Option{
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", listenPort)),
-	}
-
-	if priv != nil {
-		opts = append(opts, libp2p.Identity(priv))
-	}
-
-	basicHost, err := libp2p.New(context.Background(), opts...)
-
-	if err != nil {
-		logger.WithError(err).Error("Node: failed to create a new libp2p node.")
-		return nil, nil, err
-	}
-
-	// Build host multiaddress
-	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", basicHost.ID().Pretty()))
-
-	// Now we can build a full multiaddress to reach this host
-	// by encapsulating both addresses:
-
-	fullAddrs := make([]ma.Multiaddr, len(basicHost.Addrs()))
-
-	for index, addr := range basicHost.Addrs() {
-		fullAddr := addr.Encapsulate(hostAddr)
-		logger.WithFields(logger.Fields{
-			"index":   index,
-			"address": fullAddr,
-		}).Info("Node: host is up.")
-
-		fullAddrs[index] = fullAddr
-	}
-
-	return basicHost, fullAddrs, nil
-}
-
-func (n *Node) DisconnectPeer(stream *Stream) {
-	n.peerManager.StopStream(stream)
-
+func (n *Node) OnStreamStop(stream *Stream) {
 	if n.downloadManager != nil {
 		n.downloadManager.DisconnectPeer(stream.peerID)
 	}
@@ -349,31 +262,19 @@ func (n *Node) handle(msg *DapMsg, id peer.ID) {
 	}
 }
 
-func (n *Node) StartStream(stream *Stream) {
-	stream.Start(n.streamExitCh, n.dispatch)
-}
-
-func (n *Node) streamHandler(s network.Stream) {
-	//start stream
-
-	ns := NewStream(s)
-	ns.Start(n.streamExitCh, n.dispatch)
-	n.peerManager.AddStream(ns)
-}
-
 func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
-	if n.info == nil {
+	if n.GetInfo() == nil {
 		return nil
 	}
-	return n.info.Addrs
+	return n.GetInfo().Addrs
 }
 
-func (n *Node) GetPeerID() peer.ID { return n.info.PeerId }
+func (n *Node) GetPeerID() peer.ID { return n.GetInfo().PeerId }
 
 func (n *Node) RelayDapMsg(dm DapMsg, priority int) {
 	msgData := dm.ToProto()
 	bytes, _ := proto.Marshal(msgData)
-	n.peerManager.Broadcast(bytes, priority)
+	n.network.peerManager.Broadcast(bytes, priority)
 }
 
 func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int, msgKey string) ([]byte, error) {
@@ -409,12 +310,12 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data, SyncBlockPriority)
+	n.network.peerManager.Broadcast(data, SyncBlockPriority)
 	logger.WithFields(logger.Fields{
 		"peer_id":     n.GetPeerID(),
 		"height":      block.GetHeight(),
 		"hash":        hex.EncodeToString(block.GetHash()),
-		"num_streams": len(n.peerManager.streams),
+		"num_streams": len(n.network.peerManager.streams),
 		"data_len":    len(data),
 	}).Info("Node: is broadcasting a block.")
 	return nil
@@ -429,7 +330,7 @@ func (n *Node) BroadcastGetBlockchainInfo() {
 		}).Warn("Node: broadcast GetBlockchainInfo failed.")
 	}
 
-	n.peerManager.Broadcast(data, GetBlockchainInfoPriority)
+	n.network.peerManager.Broadcast(data, GetBlockchainInfoPriority)
 }
 
 func (n *Node) GetPeerlistBroadcast(maxNum int) error {
@@ -439,7 +340,7 @@ func (n *Node) GetPeerlistBroadcast(maxNum int) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data, GetPeerListPriority)
+	n.network.peerManager.Broadcast(data, GetPeerListPriority)
 	return nil
 }
 
@@ -448,7 +349,7 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data, BroadcastTxPriority)
+	n.network.peerManager.Broadcast(data, BroadcastTxPriority)
 	return nil
 }
 
@@ -463,7 +364,7 @@ func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data, BroadcastBatchTxsPriority)
+	n.network.peerManager.Broadcast(data, BroadcastBatchTxsPriority)
 	return nil
 }
 
@@ -475,7 +376,7 @@ func (n *Node) SyncPeersBroadcast() error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Broadcast(data, SyncPeerListPriority)
+	n.network.peerManager.Broadcast(data, SyncPeerListPriority)
 	return nil
 }
 
@@ -484,7 +385,7 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Unicast(data, pid, SyncBlockPriority)
+	n.network.peerManager.Unicast(data, pid, SyncBlockPriority)
 	return nil
 }
 
@@ -498,7 +399,7 @@ func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Unicast(data, pid, ReturnPeerListPriority)
+	n.network.peerManager.Unicast(data, pid, ReturnPeerListPriority)
 	return nil
 }
 
@@ -510,7 +411,7 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.peerManager.Unicast(data, pid, RequestBlockPriority)
+	n.network.peerManager.Unicast(data, pid, RequestBlockPriority)
 	return nil
 }
 
@@ -528,7 +429,7 @@ func (n *Node) GetCommonBlocksUnicast(blockHeaders []*SyncCommandBlocksHeader, p
 		return nil
 	}
 
-	n.peerManager.Unicast(data, pid, GetCommonBlocksPriority)
+	n.network.peerManager.Unicast(data, pid, GetCommonBlocksPriority)
 	return nil
 }
 
@@ -545,7 +446,7 @@ func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
 		return nil
 	}
 
-	n.peerManager.Unicast(data, pid, GetBlocksPriority)
+	n.network.peerManager.Unicast(data, pid, GetBlocksPriority)
 	return nil
 }
 
@@ -621,7 +522,7 @@ func (n *Node) GetBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.peerManager.Unicast(data, pid, ReturnBlockchainInfoPriority)
+	n.network.peerManager.Unicast(data, pid, ReturnBlockchainInfoPriority)
 }
 
 func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
@@ -682,7 +583,7 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.peerManager.Unicast(data, pid, ReturnBlocksPriority)
+	n.network.peerManager.Unicast(data, pid, ReturnBlocksPriority)
 }
 
 func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
@@ -719,7 +620,7 @@ func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.peerManager.Unicast(data, pid, ReturnCommonBlocksPriority)
+	n.network.peerManager.Unicast(data, pid, ReturnCommonBlocksPriority)
 }
 
 func (n *Node) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
@@ -841,7 +742,7 @@ func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
 		logger.WithError(err).Warn("Node: parse GetPeerList failed.")
 	}
 
-	peers := n.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.GetMaxNumber()))
+	peers := n.network.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.GetMaxNumber()))
 	n.SendPeerListUnicast(peers, pid)
 }
 
@@ -861,7 +762,7 @@ func (n *Node) ReturnNodePeers(data []byte, pid peer.ID) {
 		peers = append(peers, peerInfo)
 	}
 
-	n.peerManager.ReceivePeers(pid, peers)
+	n.network.peerManager.ReceivePeers(pid, peers)
 }
 
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {

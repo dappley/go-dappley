@@ -40,7 +40,7 @@ func FakeNodeWithPidAndAddr(pool *core.BlockPool, bc *core.Blockchain, pid, addr
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
 	peerInfo := &PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
-	node.info = peerInfo
+	node.network.host.info = peerInfo
 
 	return node
 }

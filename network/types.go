@@ -1,10 +1,7 @@
 package network
 
 import (
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 type StreamInfo struct {
@@ -17,8 +14,12 @@ type SyncPeerContext struct {
 	newPeers        map[peer.ID]*PeerInfo
 }
 
-type Host struct {
-	host    host.Host
-	info    *PeerInfo
-	privKey crypto.PrivKey
+type NodeConfig struct {
+	MaxConnectionOutCount int
+	MaxConnectionInCount  int
+}
+
+type streamMsg struct {
+	msg  *DapMsg
+	from peer.ID
 }
