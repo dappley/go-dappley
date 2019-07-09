@@ -25,7 +25,6 @@ var (
 
 var (
 	ErrLengthTooShort       = errors.New("message length is too short")
-	ErrFragmentedData       = errors.New("fragmented data")
 	ErrInvalidMessageFormat = errors.New("invalid message format")
 	ErrCheckSumIncorrect    = errors.New("incorrect checksum")
 )
