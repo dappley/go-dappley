@@ -315,7 +315,7 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 	sc.CollectTracingStats()
 
 	if sc.innerErr != nil {
-		if sc.innerErrMsg == "" { //the first call of muti-nvm
+		if sc.innerErrMsg == "" { //the first call of muti-vm
 			result = "Inner Contract: \"\""
 		} else {
 			result = "Inner Contract: " + sc.innerErrMsg
@@ -440,7 +440,7 @@ func (e *V8Engine) InjectTracingInstructions(source string) (string, int, error)
 
 	lineOffset := C.int(0)
 
-	traceableCSource := C.InjectTracingInstructionsThread(e.v8engine, cSource, &lineOffset, C.int(e.strictDisallowUsageOfInstructionCounter))
+	traceableCSource := C.RunInjectTracingInstructionsThread(e.v8engine, cSource, &lineOffset, C.int(e.strictDisallowUsageOfInstructionCounter))
 	if traceableCSource == nil {
 		return "", 0, ErrInjectTracingInstructionFailed
 	}

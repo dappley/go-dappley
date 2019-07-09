@@ -5,7 +5,7 @@
 
 struct utxo_t {
     char* txid;
-    int   tx_index;
+    int tx_index;
     long long value;
     char* pubkeyhash;
     char* address;

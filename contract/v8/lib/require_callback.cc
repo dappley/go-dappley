@@ -112,7 +112,6 @@ void RequireCallback(const v8::FunctionCallbackInfo<v8::Value> &info) {
             return;
         }
 
-        // free(abPath);
         if (!isFile(abPath)) {
             isolate->ThrowException(Exception::Error(String::NewFromUtf8(isolate, "require path is not file")));
             free(abPath);

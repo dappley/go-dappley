@@ -29,7 +29,6 @@
 
 using namespace v8;
 std::unique_ptr<Platform> platformPtr;
-// static char* wrapReturnResult(const char* src);
 
 #define ExecuteTimeOut 5 * 1000 * 1000
 void EngineLimitsCheckDelegate(Isolate *isolate, size_t count, void *listenerContext);
@@ -121,11 +120,11 @@ int ExecuteSourceDataDelegate(char **result, Isolate *isolate, const char *sourc
 }
 
 int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e) {
-    //    return Execute(sourceCode, source_line_offset, handler, result, e, ExecuteSourceDataDelegate, NULL);
-    return RunScriptSourceThread(result, e, sourceCode, source_line_offset, handler);
+    return RunV8ScriptThread(result, e, sourceCode, source_line_offset, handler);
 }
 
-int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext) {
+// Execute delegate function
+int ExecuteDelegate(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext) {
     // Create a new Isolate and make it the current one.
     Isolate *isolate = static_cast<Isolate *>(e->isolate);
     Locker locker(isolate);
@@ -134,7 +133,6 @@ int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, c
 
     // Create a stack-allocated handle scope.
     HandleScope handle_scope(isolate);
-    //
     Local<ObjectTemplate> globalTpl = CreateGlobalObjectTemplate(isolate);
 
     // Set up an exception handler
@@ -165,12 +163,6 @@ int Execute(const char *sourceCode, int source_line_offset, uintptr_t handler, c
 
     return retTmp;
 }
-
-// char* wrapReturnResult(const char* src) {
-//	char* result = (char *)MyMalloc(strlen(src) + 1);
-//	strcpy(result, src);
-//	return result;
-//}
 
 void DisposeV8() {
     V8::Dispose();
@@ -227,7 +219,7 @@ void TerminateExecution(V8Engine *e) {
     e->is_requested_terminate_execution = true;
 }
 
-void SetInnerContractErrFlag(V8Engine *e) { e->is_inner_nvm_error_happen = true; }
+void SetInnerContractErrFlag(V8Engine *e) { e->is_inner_vm_error_happen = true; }
 
 void DeleteEngine(V8Engine *e) {
     Isolate *isolate = static_cast<Isolate *>(e->isolate);

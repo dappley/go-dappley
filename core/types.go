@@ -12,7 +12,7 @@ var (
 	ErrInsufficientBalance = errors.New("Transaction: insufficient balance, cannot pay for GasLimit")
 	ErrOutOfGasLimit       = errors.New("out of gas limit")
 
-	// nvm error
+	// vm error
 	ErrExecutionFailed = errors.New("execution failed")
 
 	ErrUnsupportedSourceType = errors.New("unsupported source type")

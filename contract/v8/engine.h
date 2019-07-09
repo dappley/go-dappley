@@ -1,3 +1,6 @@
+#ifndef _DAPPLEY_NF_VM_V8_ENGINE_H_
+#define _DAPPLEY_NF_VM_V8_ENGINE_H_
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "lib/transaction_struct.h"
@@ -18,9 +21,6 @@
 #define BUILD_MATH_RANDOM 0x0000000000000002
 #define BUILD_BLOCKCHAIN 0x0000000000000004
 #define BUILD_DEFAULT_VER (BUILD_MATH | BUILD_BLOCKCHAIN)
-
-#ifndef _DAPPLEY_NF_VM_V8_ENGINE_H_
-#define _DAPPLEY_NF_VM_V8_ENGINE_H_
 
 enum OptType {
     INSTRUCTION = 1,
@@ -50,7 +50,7 @@ typedef struct V8Engine {
     size_t limits_of_total_memory_size;
     bool is_requested_terminate_execution;
     bool is_unexpected_error_happen;
-    bool is_inner_nvm_error_happen;
+    bool is_inner_vm_error_happen;
     int testing;
     int timeout;
     uint64_t ver;
@@ -131,8 +131,11 @@ EXPORT void InitializeRequireDelegate(RequireDelegate delegate, AttachLibVersion
 
 EXPORT void InitializeExecutionEnvDelegate(AttachLibVersionDelegate libDelegate);
 
-EXPORT char *InjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage);
-EXPORT int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler);
+// add tracing instructions to source
+EXPORT char *RunInjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage);
+// run contract js source
+EXPORT int RunV8ScriptThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler);
+
 bool CreateScriptThread(v8ThreadContext *pc);
 void SetRunScriptArgs(v8ThreadContext *pc, V8Engine *e, int opt, const char *source, int line_offset, int allow_usage);
 #ifdef __cplusplus

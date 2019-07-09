@@ -98,11 +98,6 @@ func AttachLibVersionDelegateFunc(handler unsafe.Pointer, require *C.char) *C.ch
 		logger.Error("libname is empty.")
 		return nil
 	}
-
-	// for instruction_counter.js
-	//if strings.HasSuffix(libname, "instruction_counter.js") {
-	//	return C.CString(JSLibRootName + libname[JSLibRootNameLen-1:])
-	//}
 	return attachDefaultVersionLib(libname)
 }
 

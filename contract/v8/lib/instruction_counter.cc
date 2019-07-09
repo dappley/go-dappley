@@ -9,7 +9,7 @@ void NewInstructionCounterInstance(Isolate *isolate, Local<Context> context, siz
     Local<ObjectTemplate> counterTpl = ObjectTemplate::New(isolate);
     counterTpl->SetInternalFieldCount(2);
 
-    counterTpl->Set(String::NewFromUtf8(isolate, "incr"), FunctionTemplate::New(isolate, IncrCounterCallback),
+    counterTpl->Set(String::NewFromUtf8(isolate, "incr"), FunctionTemplate::New(isolate, IncrCounterJsCallback),
                     static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 
     counterTpl->SetAccessor(String::NewFromUtf8(isolate, "count"), CountGetterCallback, 0, Local<Value>(), DEFAULT,
@@ -23,7 +23,7 @@ void NewInstructionCounterInstance(Isolate *isolate, Local<Context> context, siz
                                          static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 }
 
-void IncrCounterCallback(const FunctionCallbackInfo<Value> &info) {
+void IncrCounterJsCallback(const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> count = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -64,7 +64,7 @@ void CountGetterCallback(Local<String> property, const PropertyCallbackInfo<Valu
     info.GetReturnValue().Set(Number::New(isolate, (double)*cnt));
 }
 
-void IncrCounter(Isolate *isolate, Local<Context> context, size_t val) {
+void AddIncrCount(Isolate *isolate, Local<Context> context, size_t val) {
     if (val == 0) {
         return;
     }

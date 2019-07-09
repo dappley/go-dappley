@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ArrayBufferAllocator::ArrayBufferAllocator()
-    : total_allocated_size_(0L), peak_allocated_size_(0L) {}
+ArrayBufferAllocator::ArrayBufferAllocator() : total_allocated_size_(0L), peak_allocated_size_(0L) {}
 
 ArrayBufferAllocator::~ArrayBufferAllocator() {}
 
@@ -12,11 +11,11 @@ ArrayBufferAllocator::~ArrayBufferAllocator() {}
  * Memory should be initialized to zeroes.
  */
 void *ArrayBufferAllocator::Allocate(size_t length) {
-  this->total_allocated_size_ += length;
-  if (this->total_allocated_size_ > this->peak_allocated_size_) {
-    this->peak_allocated_size_ = this->total_allocated_size_;
-  }
-  return calloc(length, 1);
+    this->total_allocated_size_ += length;
+    if (this->total_allocated_size_ > this->peak_allocated_size_) {
+        this->peak_allocated_size_ = this->total_allocated_size_;
+    }
+    return calloc(length, 1);
 }
 
 /**
@@ -24,11 +23,11 @@ void *ArrayBufferAllocator::Allocate(size_t length) {
  * Memory does not have to be initialized.
  */
 void *ArrayBufferAllocator::AllocateUninitialized(size_t length) {
-  this->total_allocated_size_ += length;
-  if (this->total_allocated_size_ > this->peak_allocated_size_) {
-    this->peak_allocated_size_ = this->total_allocated_size_;
-  }
-  return malloc(length);
+    this->total_allocated_size_ += length;
+    if (this->total_allocated_size_ > this->peak_allocated_size_) {
+        this->peak_allocated_size_ = this->total_allocated_size_;
+    }
+    return malloc(length);
 }
 
 /**
@@ -36,14 +35,10 @@ void *ArrayBufferAllocator::AllocateUninitialized(size_t length) {
  * That memory is guaranteed to be previously allocated by |Allocate|.
  */
 void ArrayBufferAllocator::Free(void *data, size_t length) {
-  this->total_allocated_size_ -= length;
-  free(data);
+    this->total_allocated_size_ -= length;
+    free(data);
 }
 
-size_t ArrayBufferAllocator::total_available_size() {
-  return this->total_allocated_size_;
-}
+size_t ArrayBufferAllocator::total_available_size() { return this->total_allocated_size_; }
 
-size_t ArrayBufferAllocator::peak_allocated_size() {
-  return this->peak_allocated_size_;
-}
+size_t ArrayBufferAllocator::peak_allocated_size() { return this->peak_allocated_size_; }

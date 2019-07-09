@@ -7,41 +7,32 @@ static FuncStorageSet sSet = NULL;
 static FuncStorageDel sDel = NULL;
 
 void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del) {
-  sGet = get;
-  sSet = set;
-  sDel = del;
+    sGet = get;
+    sSet = set;
+    sDel = del;
 }
 
 void NewStorageInstance(Isolate *isolate, Local<Context> context, void *address) {
-  Local<ObjectTemplate> storageTpl = ObjectTemplate::New(isolate);
-  storageTpl->SetInternalFieldCount(1);
+    Local<ObjectTemplate> storageTpl = ObjectTemplate::New(isolate);
+    storageTpl->SetInternalFieldCount(1);
 
-  storageTpl->Set(String::NewFromUtf8(isolate, "get"),
-                FunctionTemplate::New(isolate, storageGetCallback),
-                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
-                                               PropertyAttribute::ReadOnly));
+    storageTpl->Set(String::NewFromUtf8(isolate, "get"), FunctionTemplate::New(isolate, storageGetCallback),
+                    static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 
-  storageTpl->Set(String::NewFromUtf8(isolate, "set"),
-                FunctionTemplate::New(isolate, storageSetCallback),
-                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
-                                               PropertyAttribute::ReadOnly));
+    storageTpl->Set(String::NewFromUtf8(isolate, "set"), FunctionTemplate::New(isolate, storageSetCallback),
+                    static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 
-  storageTpl->Set(String::NewFromUtf8(isolate, "del"),
-                FunctionTemplate::New(isolate, storageDelCallback),
-                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
-                                               PropertyAttribute::ReadOnly));
+    storageTpl->Set(String::NewFromUtf8(isolate, "del"), FunctionTemplate::New(isolate, storageDelCallback),
+                    static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 
-  Local<Object> instance = storageTpl->NewInstance(context).ToLocalChecked();
-  instance->SetInternalField(0, External::New(isolate, address));
-  context->Global()->DefineOwnProperty(
-      context, String::NewFromUtf8(isolate, "_native_storage"),
-      instance,
-      static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
-                                     PropertyAttribute::ReadOnly));
+    Local<Object> instance = storageTpl->NewInstance(context).ToLocalChecked();
+    instance->SetInternalField(0, External::New(isolate, address));
+    context->Global()->DefineOwnProperty(context, String::NewFromUtf8(isolate, "_native_storage"), instance,
+                                         static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 }
 
 // storageGetCallback
-void storageGetCallback(const FunctionCallbackInfo<Value> &info){
+void storageGetCallback(const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -53,8 +44,7 @@ void storageGetCallback(const FunctionCallbackInfo<Value> &info){
 
     Local<Value> key = info[0];
     if (!key->IsString()) {
-        isolate->ThrowException(
-            String::NewFromUtf8(isolate, "key must be string"));
+        isolate->ThrowException(String::NewFromUtf8(isolate, "key must be string"));
         return;
     }
     char *res = sGet(handler->Value(), *String::Utf8Value(isolate, key));
@@ -68,7 +58,7 @@ void storageGetCallback(const FunctionCallbackInfo<Value> &info){
 }
 
 // storageSetCallback
-void storageSetCallback(const FunctionCallbackInfo<Value> &info){
+void storageSetCallback(const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -90,13 +80,13 @@ void storageSetCallback(const FunctionCallbackInfo<Value> &info){
         return;
     }
 
-    int ret = sSet(handler->Value(), *String::Utf8Value(isolate, key),*String::Utf8Value(isolate, value));
+    int ret = sSet(handler->Value(), *String::Utf8Value(isolate, key), *String::Utf8Value(isolate, value));
 
     info.GetReturnValue().Set(ret);
 }
 
 // storageDelCallback
-void storageDelCallback(const FunctionCallbackInfo<Value> &info){
+void storageDelCallback(const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -108,8 +98,7 @@ void storageDelCallback(const FunctionCallbackInfo<Value> &info){
 
     Local<Value> key = info[0];
     if (!key->IsString()) {
-        isolate->ThrowException(
-            String::NewFromUtf8(isolate, "key must be string"));
+        isolate->ThrowException(String::NewFromUtf8(isolate, "key must be string"));
         return;
     }
     int ret = sDel(handler->Value(), *String::Utf8Value(isolate, key));

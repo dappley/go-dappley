@@ -13,7 +13,7 @@
 #include <thread>
 #define MicroSecondDiff(newtv, oldtv) (1000000 * (unsigned long long)((newtv).tv_sec - (oldtv).tv_sec) + (newtv).tv_usec - (oldtv).tv_usec)  //微秒
 #define CodeExecuteErr 1
-#define CodeExecuteInnerNvmErr 2
+#define CodeExecuteInnerVmErr 2
 #define CodeTimeOut 3
 
 void SetRunScriptArgs(v8ThreadContext *ctx, V8Engine *e, int opt, const char *source, int line_offset, int allow_usage) {
@@ -24,7 +24,7 @@ void SetRunScriptArgs(v8ThreadContext *ctx, V8Engine *e, int opt, const char *so
     ctx->input.line_offset = line_offset;
 }
 
-char *InjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage) {
+char *RunInjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage) {
     v8ThreadContext ctx;
     memset(&ctx, 0x00, sizeof(ctx));
     SetRunScriptArgs(&ctx, e, INSTRUCTION, source, *source_line_offset, allow_usage);
@@ -37,7 +37,7 @@ char *InjectTracingInstructionsThread(V8Engine *e, const char *source, int *sour
     return ctx.output.result;
 }
 
-int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler) {
+int RunV8ScriptThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler) {
     v8ThreadContext ctx;
     memset(&ctx, 0x00, sizeof(ctx));
     SetRunScriptArgs(&ctx, e, RUNSCRIPT, source, source_line_offset, 1);
@@ -52,19 +52,20 @@ int RunScriptSourceThread(char **result, V8Engine *e, const char *source, int so
     return ctx.output.ret;
 }
 
-void *ExecuteThread(void *args) {
+void *ThreadExecutor(void *args) {
     v8ThreadContext *ctx = (v8ThreadContext *)args;
     if (ctx->input.opt == INSTRUCTION) {
         TracingContext tContext;
         tContext.source_line_offset = 0;
         tContext.tracable_source = NULL;
         tContext.strictDisallowUsage = ctx->input.allow_usage;
-        Execute(ctx->input.source, 0, ctx->input.handler, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
+        ExecuteDelegate(ctx->input.source, 0, ctx->input.handler, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
 
         ctx->output.line_offset = tContext.source_line_offset;
         ctx->output.result = static_cast<char *>(tContext.tracable_source);
     } else {
-        ctx->output.ret = Execute(ctx->input.source, ctx->input.line_offset, ctx->input.handler, &ctx->output.result, ctx->e, ExecuteSourceDataDelegate, NULL);
+        ctx->output.ret =
+            ExecuteDelegate(ctx->input.source, ctx->input.line_offset, ctx->input.handler, &ctx->output.result, ctx->e, ExecuteSourceDataDelegate, NULL);
     }
 
     ctx->is_finished = true;
@@ -84,7 +85,7 @@ bool CreateScriptThread(v8ThreadContext *ctx) {
         printf("CreateScriptThread get start time err:%d\n", rtn);
         return false;
     }
-    rtn = pthread_create(&thread, &attribute, ExecuteThread, (void *)ctx);
+    rtn = pthread_create(&thread, &attribute, ThreadExecutor, (void *)ctx);
     if (rtn != 0) {
         printf("CreateScriptThread pthread_create err:%d\n", rtn);
         return false;
@@ -97,7 +98,7 @@ bool CreateScriptThread(v8ThreadContext *ctx) {
         if (ctx->is_finished == true) {
             if (is_kill == true) {
                 ctx->output.ret = VM_EXE_TIMEOUT_ERR;
-            } else if (ctx->e->is_inner_nvm_error_happen == 1) {
+            } else if (ctx->e->is_inner_vm_error_happen == 1) {
                 ctx->output.ret = VM_INNER_EXE_ERR;
             }
             break;
