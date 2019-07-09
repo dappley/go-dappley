@@ -35,6 +35,10 @@ type TXOutput struct {
 	Contract   string
 }
 
+func (out *TXOutput) GetAddress() Address {
+	return out.PubKeyHash.GenerateAddress()
+}
+
 func (out *TXOutput) Lock(address Address) {
 	hash, _ := address.GetPubKeyHash()
 	out.PubKeyHash = PubKeyHash(hash)

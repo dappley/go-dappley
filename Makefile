@@ -35,4 +35,4 @@ release:
 	cd dapp/cli; go build -tags=release
 
 deploy-v8:
-	cd contract/v8; make build; make install
+	cd vm/v8; make build; make install

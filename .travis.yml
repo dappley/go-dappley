@@ -23,7 +23,7 @@ install:
 - sudo make install
 - cd -
 - dep ensure
-- cd contract/v8
+- cd vm/v8
 - make install
 - cd -
 script:

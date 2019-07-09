@@ -9,7 +9,7 @@ if "%%i" == "bin" set notest="false"
 if "%%i" == "vendor" set notest="false"
 
 if !notest! == "true" (
-    copy contract\v8\windows\lib\*.dll %%i
+    copy vm\v8\windows\lib\*.dll %%i
     
     cd %%i
     go test -tags=integration -c 

@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBlockProducer_ProduceBlock(t *testing.T) {
@@ -45,5 +46,12 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	block := bp.ProduceBlock(0)
 	assert.True(t, processRuns)
 	assert.NotNil(t, block)
+}
 
+func TestBlockProducer_Produced(t *testing.T) {
+	bp := NewBlockProducer()
+	bp.Setup(nil, "key")
+	require.False(t, bp.Produced(nil))
+	require.False(t, bp.Produced(core.NewBlock(nil, nil, "")))
+	require.True(t, bp.Produced(core.NewBlock(nil, nil, "key")))
 }

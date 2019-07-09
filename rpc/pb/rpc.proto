@@ -4,6 +4,7 @@ import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 import "github.com/dappley/go-dappley/core/pb/utxo.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";
+import "github.com/dappley/go-dappley/metrics/pb/datastore.proto";
 
 option objc_class_prefix = "HLW";
 
@@ -30,6 +31,10 @@ service AdminService{
   rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
   rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
+}
+
+service MetricService {
+  rpc RpcGetStats(MetricsServiceRequest) returns (GetStatsResponse) {}
 }
 
 // Requests
@@ -104,6 +109,8 @@ message GetNewTransactionRequest {}
 message SubscribeRequest{
   repeated string topics = 1;
 }
+
+message MetricsServiceRequest {}
 
 message GetLastIrreversibleBlockRequest {}
 
@@ -181,6 +188,10 @@ message GetAllTransactionsRequest{}
 
 message GetAllTransactionsResponse{
   repeated corepb.Transaction transactions = 1;
+}
+
+message GetStatsResponse {
+  metricspb.Metrics stats = 1;
 }
 
 message GetLastIrreversibleBlockResponse {

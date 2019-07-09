@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	vm "github.com/dappley/go-dappley/contract"
+
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -213,4 +214,11 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 
 func isExceedingDeadline(deadlineInMs int64) bool {
 	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
+}
+
+func (bp *BlockProducer) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return bp.beneficiary == blk.GetProducer()
+	}
+	return false
 }

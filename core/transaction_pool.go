@@ -321,6 +321,7 @@ func (txPool *TransactionPool) removeTransaction(txNode *TransactionNode) {
 	txPool.disconnectFromParent(txNode.Value)
 	txPool.EventBus.Publish(EvictTransactionTopic, txNode.Value)
 	txPool.currSize -= uint32(txNode.Size)
+	MetricsTransactionPoolSize.Dec(1)
 	delete(txPool.txs, hex.EncodeToString(txNode.Value.ID))
 }
 
@@ -354,6 +355,7 @@ func (txPool *TransactionPool) addTransaction(txNode *TransactionNode) {
 
 	txPool.txs[hex.EncodeToString(txNode.Value.ID)] = txNode
 	txPool.currSize += uint32(txNode.Size)
+	MetricsTransactionPoolSize.Inc(1)
 
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
@@ -516,4 +518,6 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	}
 	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
 	txPool.currSize = pb.(*corepb.TransactionPool).CurrSize
+	MetricsTransactionPoolSize.Clear()
+	MetricsTransactionPoolSize.Inc(int64(len(txPool.txs)))
 }

@@ -54,6 +54,20 @@ func (_m *Consensus) IsProducingBlock() bool {
 	return r0
 }
 
+// Produced provides a mock function with given fields: block
+func (_m *Consensus) Produced(block *core.Block) bool {
+	ret := _m.Called(block)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(*core.Block) bool); ok {
+		r0 = rf(block)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // SetKey provides a mock function with given fields: _a0
 func (_m *Consensus) SetKey(_a0 string) {
 	_m.Called(_a0)

@@ -21,16 +21,17 @@ package main
 import (
 	"flag"
 
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/contract"
+	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -111,7 +112,9 @@ func main() {
 	node.DownloadBlocks(bc)
 
 	//start rpc server
-	server := rpc.NewGrpcServer(node, defaultPassword)
+	nodeConf := conf.GetNodeConfig()
+	server := rpc.NewGrpcServerWithMetrics(node, defaultPassword, &rpc.MetricsServiceConfig{
+		PollingInterval: nodeConf.GetMetricsPollingInterval(), TimeSeriesInterval: nodeConf.GetMetricsInterval()})
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 
@@ -134,8 +137,8 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 
 func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
-	node := network.NewNode(bc, core.NewBlockPool(0))
 	nodeConfig := conf.GetNodeConfig()
+	node := network.NewNode(bc, core.NewBlockPool(0))
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
 	if keyPath != "" {

@@ -21,7 +21,6 @@ package rpc
 import (
 	"fmt"
 	"net"
-	"strings"
 
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -31,7 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
 const (
@@ -39,14 +38,31 @@ const (
 	passwordToken  = "password"
 )
 
+var (
+	authorizedIPs = map[string]bool{
+		"127.0.0.1": true,
+		"::1":       true,
+	}
+)
+
+type MetricsServiceConfig struct {
+	PollingInterval    int64
+	TimeSeriesInterval int64
+}
+
 type Server struct {
-	srv      *grpc.Server
-	node     *network.Node
-	password string
+	srv           *grpc.Server
+	node          *network.Node
+	password      string
+	metricsConfig *MetricsServiceConfig
 }
 
 func NewGrpcServer(node *network.Node, adminPassword string) *Server {
-	return &Server{grpc.NewServer(), node, adminPassword}
+	return NewGrpcServerWithMetrics(node, adminPassword, nil)
+}
+
+func NewGrpcServerWithMetrics(node *network.Node, adminPassword string, config *MetricsServiceConfig) *Server {
+	return &Server{grpc.NewServer(), node, adminPassword, config}
 }
 
 func (s *Server) Start(port uint32) {
@@ -64,6 +80,9 @@ func (s *Server) Start(port uint32) {
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
 		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
+		if s.metricsConfig != nil {
+			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.metricsConfig))
+		}
 		if err := srv.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Server: encounters an error while serving.")
 		}
@@ -76,8 +95,8 @@ func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grp
 		if !ok || len(peer.Addr.String()) == 0 {
 			return nil, status.Errorf(codes.Unauthenticated, "unknown ip")
 		}
-		ip := strings.Split(peer.Addr.String(), ":")
-		if ip[0] != "127.0.0.1" {
+		ip, _, _ := net.SplitHostPort(peer.Addr.String())
+		if _, ok := authorizedIPs[ip]; !ok {
 			return nil, status.Errorf(codes.Unauthenticated, "unauthorized access")
 		}
 

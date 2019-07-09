@@ -36,6 +36,8 @@ type Consensus interface {
 
 	// IsProducingBlock returns true if this node itself is currently producing a block
 	IsProducingBlock() bool
+	// Produced returns true iff the underlying block producer of the consensus algorithm produced the specified block
+	Produced(block *Block) bool
 
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error

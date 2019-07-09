@@ -22,8 +22,9 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/core"
 )
 
 const defaultTargetBits = 0
@@ -175,6 +176,13 @@ func (pow *ProofOfWork) AddProducer(producer string) error {
 
 func (pow *ProofOfWork) GetProducers() []string {
 	return nil
+}
+
+func (pow *ProofOfWork) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return pow.miner.Produced(blk)
+	}
+	return false
 }
 
 func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {

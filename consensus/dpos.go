@@ -167,8 +167,14 @@ func (dpos *DPOS) Stop() {
 	dpos.stopCh <- true
 }
 
+func (dpos *DPOS) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return dpos.bp.Produced(blk)
+	}
+	return false
+}
+
 func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
-	//block.SetNonce(0)
 	hash := ctx.Block.CalculateHash()
 	ctx.Block.SetHash(hash)
 	ok := ctx.Block.SignBlock(dpos.producerKey, hash)
