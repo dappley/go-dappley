@@ -69,14 +69,14 @@ type PeerManager struct {
 	syncPeerContext *SyncPeerContext
 
 	streamStopCh chan *Stream
-	dispatcher   chan *streamMsg
+	msgRcvCh     chan *StreamMsg
 	eventBus     EventBus.Bus
 	db           storage.Storage
 
 	mutex sync.RWMutex
 }
 
-func NewPeerManager(config *NodeConfig, dispatcher chan *streamMsg, db storage.Storage) *PeerManager {
+func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, db storage.Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
@@ -98,7 +98,7 @@ func NewPeerManager(config *NodeConfig, dispatcher chan *streamMsg, db storage.S
 		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
-		dispatcher:            dispatcher,
+		msgRcvCh:              msgRcvCh,
 		streamStopCh:          make(chan *Stream, 10),
 		eventBus:              EventBus.New(),
 		db:                    db,
@@ -242,7 +242,7 @@ func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
 func (pm *PeerManager) StreamHandler(s network.Stream) {
 
 	stream := NewStream(s)
-	stream.Start(pm.streamStopCh, pm.dispatcher)
+	stream.Start(pm.streamStopCh, pm.msgRcvCh)
 
 	logger.WithFields(logger.Fields{
 		"peer_id": stream.peerID,
@@ -643,7 +643,7 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 		return nil, nil
 	}
 
-	peerStream.Start(pm.streamStopCh, pm.dispatcher)
+	peerStream.Start(pm.streamStopCh, pm.msgRcvCh)
 	return peerStream, nil
 }
 

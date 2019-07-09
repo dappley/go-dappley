@@ -44,7 +44,7 @@ func NewPeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error
 
 		peerIds[index] = peerId
 
-		// Decapsulate the /ipfs/<peerID> part from the targetFullAddr
+		// Decapsulate the /ipfs/<peerID> part source the targetFullAddr
 		// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
 		targetPeerAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerId)))
 		targetAddr := targetFullAddr.Decapsulate(targetPeerAddr)
@@ -76,7 +76,7 @@ func (p *PeerInfo) ToProto() proto.Message {
 	return &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
 }
 
-//convert from protobuf
+//convert source protobuf
 func (p *PeerInfo) FromProto(pb proto.Message) error {
 	pid, err := peer.IDB58Decode(pb.(*networkpb.PeerInfo).GetId())
 	if err != nil {

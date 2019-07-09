@@ -30,7 +30,7 @@ func NewHost(listenPort int, privKey crypto.PrivKey, handler network.StreamHandl
 	info, err := NewPeerInfoFromMultiaddrs(addrs)
 
 	if err != nil {
-		logger.WithError(err).Error("Network: Failed to get multiaddr from host.")
+		logger.WithError(err).Error("Network: Failed to get multiaddr source host.")
 		return nil
 	}
 

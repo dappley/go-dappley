@@ -63,10 +63,10 @@ func NewStream(s network.Stream) *Stream {
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
+func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *StreamMsg) {
 	logger.Warn("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw, quitCh, dispatch)
+	s.startLoop(rw, quitCh, msgRcvCh)
 }
 
 func (s *Stream) StopStream(err error) {
@@ -127,12 +127,12 @@ func (s *Stream) Send(data []byte, priority int) {
 
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
-	go s.readLoop(rw, quitCh, dispatch)
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *StreamMsg) {
+	go s.readLoop(rw, quitCh, msgRcvCh)
 	go s.writeLoop(rw)
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter, dispatch chan *streamMsg) {
+func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *StreamMsg) {
 	buffer := make([]byte, 1024)
 	var err error
 
@@ -157,13 +157,12 @@ func (s *Stream) read(rw *bufio.ReadWriter, dispatch chan *streamMsg) {
 			}
 		}
 
-		dm := ParseDappMsgFromRawBytes(packet.GetData())
 		select {
-		case dispatch <- newMsg(dm, s.peerID):
+		case msgRcvCh <- &StreamMsg{packet, s.peerID}:
 		default:
 			logger.WithFields(logger.Fields{
-				"dispatchCh_len": len(dispatch),
-			}).Warn("Stream: command dispatch channel full!")
+				"dispatchCh_len": len(msgRcvCh),
+			}).Warn("Stream: message receive channel full!")
 			return
 		}
 		s.rawByteRead = s.rawByteRead[packet.GetLength():]
@@ -171,7 +170,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, dispatch chan *streamMsg) {
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *StreamMsg) {
 	for {
 		select {
 		case <-s.quitRdCh:
@@ -179,7 +178,7 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch 
 			logger.Debug("Stream: read loop is terminated!")
 			return
 		default:
-			s.read(rw, dispatch)
+			s.read(rw, msgRcvCh)
 		}
 	}
 }

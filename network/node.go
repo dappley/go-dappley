@@ -25,8 +25,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -35,25 +35,24 @@ import (
 )
 
 const (
-	MaxMsgCountBeforeReset = 999999
-	maxGetBlocksNum        = 10
-	maxSyncPeersCount      = 32
-	GetBlockchainInfo      = "GetBlockchainInfo"
-	ReturnBlockchainInfo   = "ReturnGetBlockchainInfo"
-	SyncBlock              = "SyncBlock"
-	GetBlocks              = "GetBlocks"
-	ReturnBlocks           = "ReturnBlocks"
-	SyncPeerList           = "SyncPeerList"
-	GetPeerList            = "GetPeerList"
-	ReturnPeerList         = "ReturnPeerList"
-	RequestBlock           = "requestBlock"
-	BroadcastTx            = "BroadcastTx"
-	BroadcastBatchTxs      = "BraodcastBatchTxs"
-	GetCommonBlocks        = "GetCommonBlocks"
-	ReturnCommonBlocks     = "ReturnCommonBlocks"
-	Unicast                = 0
-	Broadcast              = 1
-	dispatchChLen          = 1024 * 4
+	maxGetBlocksNum      = 10
+	maxSyncPeersCount    = 32
+	GetBlockchainInfo    = "GetBlockchainInfo"
+	ReturnBlockchainInfo = "ReturnGetBlockchainInfo"
+	SyncBlock            = "SyncBlock"
+	GetBlocks            = "GetBlocks"
+	ReturnBlocks         = "ReturnBlocks"
+	SyncPeerList         = "SyncPeerList"
+	GetPeerList          = "GetPeerList"
+	ReturnPeerList       = "ReturnPeerList"
+	RequestBlock         = "requestBlock"
+	BroadcastTx          = "BroadcastTx"
+	BroadcastBatchTxs    = "BraodcastBatchTxs"
+	GetCommonBlocks      = "GetCommonBlocks"
+	ReturnCommonBlocks   = "ReturnCommonBlocks"
+	Unicast              = 0
+	Broadcast            = 1
+	dispatchChLen        = 1024 * 4
 )
 
 const (
@@ -73,24 +72,17 @@ const (
 )
 
 var (
-	ErrDapMsgNoCmd  = errors.New("command not specified")
-	ErrIsInPeerlist = errors.New("peer already exists in peerlist")
+	ErrDapMsgNoCmd = errors.New("command not specified")
 )
 
 type Node struct {
-	network                *Network
-	bm                     *core.BlockChainManager
-	exitCh                 chan bool
-	recentlyRcvedDapMsgs   *lru.Cache
-	dapMsgBroadcastCounter *uint64
-	privKey                crypto.PrivKey
-	dispatch               chan *streamMsg
-	downloadManager        *DownloadManager
-	messageDispatcher      *MessageDispatcher
-}
-
-func newMsg(dapMsg *DapMsg, id peer.ID) *streamMsg {
-	return &streamMsg{dapMsg, id}
+	network           *Network
+	bm                *core.BlockChainManager
+	exitCh            chan bool
+	privKey           crypto.PrivKey
+	dispatcher        chan *StreamMsg
+	downloadManager   *DownloadManager
+	messageDispatcher *MessageDispatcher
 }
 
 //create new Node instance
@@ -100,39 +92,36 @@ func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
 
 func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeConfig) *Node {
 	var err error
-	placeholder := uint64(0)
+	var db storage.Storage
+
 	bm := core.NewBlockChainManager()
 	bm.SetblockPool(pool)
 	bm.Setblockchain(bc)
 	node := &Node{
-		bm:                     bm,
-		exitCh:                 make(chan bool, 1),
-		dapMsgBroadcastCounter: &placeholder,
-		privKey:                nil,
-		dispatch:               make(chan *streamMsg, dispatchChLen),
-		downloadManager:        nil,
+		bm:              bm,
+		exitCh:          make(chan bool, 1),
+		privKey:         nil,
+		dispatcher:      make(chan *StreamMsg, dispatchChLen),
+		downloadManager: nil,
+	}
+	node.messageDispatcher = NewMessageDispatcher()
+
+	if bc != nil {
+		db = node.bm.Getblockchain().GetDb()
 	}
 
-	node.network = NewNetwork(config, node.dispatch, node.bm.Getblockchain().GetDb())
-	node.network.SubScribeOnStreamStop(node.OnStreamStop)
-	node.recentlyRcvedDapMsgs, err = lru.New(1024000)
+	node.network = NewNetwork(config, node.dispatcher, db)
+	node.network.OnStreamStop(node.OnStreamStop)
+
 	if err != nil {
-		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvedDapMsgs!")
+		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")
 	}
 	node.downloadManager = NewDownloadManager(node)
 	return node
 }
 
-func (n *Node) isNetworkRadiation(dapmsg DapMsg) bool {
-	if n.recentlyRcvedDapMsgs.Contains(dapmsg.GetKey()) {
-		return true
-	}
-	return false
-}
-
 func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
 func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
-func (n *Node) GetRecentlyRcvedDapMsgs() *lru.Cache  { return n.recentlyRcvedDapMsgs }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
 func (n *Node) GetPeerManager() *PeerManager         { return n.network.peerManager }
 func (n *Node) GetInfo() *PeerInfo                   { return n.network.host.info }
@@ -173,21 +162,22 @@ func (n *Node) StartRequestLoop() {
 func (n *Node) StartListenLoop() {
 	go func() {
 		for {
-			if streamMsg, ok := <-n.dispatch; ok {
-				if len(n.dispatch) == dispatchChLen {
+			if streamMsg, ok := <-n.dispatcher; ok {
+				if len(n.dispatcher) == dispatchChLen {
 					logger.WithFields(logger.Fields{
-						"lenOfDispatchChan": len(n.dispatch),
+						"lenOfDispatchChan": len(n.dispatcher),
 					}).Warn("Node: dispatcher channel full")
 				}
-				n.handle(streamMsg.msg, streamMsg.from)
-				n.messageDispatcher.Dispatch(streamMsg.msg.GetCmd(), streamMsg.msg.data)
+				cmdMsg := ParseDappMsgFromDappPacket(streamMsg.msg)
+				n.handle(cmdMsg, streamMsg.source)
+				n.messageDispatcher.Dispatch(cmdMsg.GetCmd(), streamMsg.msg.data)
 			}
 		}
 	}()
 
 }
 
-//LoadNetworkKeyFromFile reads the network privatekey from a file
+//LoadNetworkKeyFromFile reads the network privatekey source a file
 func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -257,7 +247,7 @@ func (n *Node) handle(msg *DapMsg, id peer.ID) {
 
 	default:
 		logger.WithFields(logger.Fields{
-			"from": id,
+			"source": id,
 		}).Debug("Node: received an invalid command.")
 	}
 }
@@ -294,10 +284,8 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	}
 
 	//build a dappley message
-	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
-	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx || dm.cmd == BroadcastBatchTxs {
-		n.cacheDapMsg(*dm)
-	}
+	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast)
+
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return nil, err
@@ -406,7 +394,7 @@ func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 
-	dm := NewDapmsg(RequestBlock, hash, hex.EncodeToString(hash), Unicast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(RequestBlock, hash, hex.EncodeToString(hash), Unicast)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -482,10 +470,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 	}
 
 	if dm.uniOrBroadcast == Broadcast {
-		if n.isNetworkRadiation(*dm) {
-			return
-		}
-		n.cacheDapMsg(*dm)
+
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)
 		if dm.uniOrBroadcast == Broadcast {
@@ -660,21 +645,12 @@ func (n *Node) ReturnCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 	n.downloadManager.GetCommonBlockDataHandler(param, pid)
 }
 
-func (n *Node) cacheDapMsg(dm DapMsg) {
-	n.recentlyRcvedDapMsgs.Add(dm.GetKey(), true)
-}
-
 func (n *Node) AddTxToPool(dm *DapMsg) {
 	if n.GetBlockchain().GetState() != core.BlockchainReady {
 		return
 	}
 
-	if n.isNetworkRadiation(*dm) {
-		return
-	}
-
 	n.RelayDapMsg(*dm, BroadcastTxPriority)
-	n.cacheDapMsg(*dm)
 
 	txpb := &corepb.Transaction{}
 
@@ -703,12 +679,7 @@ func (n *Node) AddBatchTxsToPool(dm *DapMsg) {
 		return
 	}
 
-	if n.isNetworkRadiation(*dm) {
-		return
-	}
-
 	n.RelayDapMsg(*dm, BroadcastBatchTxsPriority)
-	n.cacheDapMsg(*dm)
 
 	txspb := &corepb.Transactions{}
 
@@ -768,7 +739,7 @@ func (n *Node) ReturnNodePeers(data []byte, pid peer.ID) {
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
 	if err != nil {
-		logger.WithError(err).Warn("Node: failed to get the requested block from database.")
+		logger.WithError(err).Warn("Node: failed to get the requested block source database.")
 		return
 	}
 	block := core.Deserialize(blockBytes)

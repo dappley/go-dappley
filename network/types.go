@@ -19,7 +19,7 @@ type NodeConfig struct {
 	MaxConnectionInCount  int
 }
 
-type streamMsg struct {
-	msg  *DapMsg
-	from peer.ID
+type StreamMsg struct {
+	msg    *DappPacket
+	source peer.ID
 }

@@ -111,7 +111,7 @@ func TestDappPacket_constructHeader(t *testing.T) {
 	for i := 0; i < 300; i++ {
 		bytes = append(bytes, byte(i))
 	}
-	assert.Equal(t, []byte{0x7E, 0x7E, 0, 0, 0, 0, 0, 0, 1, 44, 0x29}, constructHeader(bytes))
+	assert.Equal(t, []byte{0x7E, 0x7E, 0, 0, 0, 0, 0, 0, 1, 44, 0x32, 0x5b}, constructHeader(bytes))
 }
 
 func TestDappPacket_checkSum(t *testing.T) {

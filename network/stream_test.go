@@ -29,7 +29,6 @@ func TestStream_Send(t *testing.T) {
 		nil,
 		nil,
 		[]byte{},
-		make(chan *DappPacket, 100),
 		make(chan []byte, highPriorityChLength),
 		make(chan []byte, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),
