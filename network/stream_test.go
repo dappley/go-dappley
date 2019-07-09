@@ -23,118 +23,13 @@ import (
 	"testing"
 )
 
-func TestStream_decode(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   []byte
-		retData []byte
-		retErr  error
-	}{
-		{
-			name:    "CorrectData",
-			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x1, 0x1, 0x2, 0x3, 0x4, 0x5},
-			retData: []byte{1, 2, 3, 4, 5},
-			retErr:  nil,
-		},
-		{
-			name:    "IncorrectStartingByte",
-			input:   []byte{0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x00, 0x44, 0x7F, 0x7F, 0x00, 0x44, 0x7F, 0x7F, 0x00},
-			retData: nil,
-			retErr:  ErrInvalidMessageFormat,
-		},
-		{
-			name:    "Not enough bytes for header",
-			input:   []byte{0x7E, 0x7E, 0x55, 0x44, 0x7F, 0x7F, 0x01},
-			retData: nil,
-			retErr:  ErrLengthTooShort,
-		},
-		{
-			name:    "Fragmented data",
-			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x1, 0x1, 0x2, 0x3, 0x4},
-			retData: nil,
-			retErr:  ErrFragmentedData,
-		},
-		{
-			name:    "Incorrect checksum",
-			input:   []byte{0x7e, 0x7e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x5, 0x3, 0x1, 0x2, 0x3, 0x4, 0x5},
-			retData: nil,
-			retErr:  ErrCheckSumIncorrect,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ret, err := decodeMessage(tt.input)
-			assert.Equal(t, tt.retData, ret)
-			assert.Equal(t, tt.retErr, err)
-		})
-	}
-}
-
-func TestStream_containStartingBytes(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []byte
-		expected bool
-	}{
-		{
-			name:     "containAtBeginning",
-			input:    []byte{0x7E, 0x7E, 0x7F},
-			expected: true,
-		},
-		{
-			name:     "containAtTheEnd",
-			input:    []byte{0x7F, 0x7E, 0x7E},
-			expected: false,
-		},
-		{
-			name:     "containInTheMiddle",
-			input:    []byte{0x7F, 0x7E, 0x7E, 0x7F},
-			expected: false,
-		},
-		{
-			name:     "NotContaining",
-			input:    []byte{0x7F, 0x7F},
-			expected: false,
-		},
-		{
-			name:     "EmptyInput",
-			input:    []byte{},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, containStartingBytes(tt.input))
-		})
-	}
-}
-
-func TestStream_constructHeader(t *testing.T) {
-	bytes := []byte{}
-	for i := 0; i < 300; i++ {
-		bytes = append(bytes, byte(i))
-	}
-	assert.Equal(t, []byte{0x7E, 0x7E, 0, 0, 0, 0, 0, 0, 1, 44, 0x29}, constructHeader(bytes))
-}
-
-func TestStream_checkSum(t *testing.T) {
-	bytes := []byte{}
-	for i := 0; i < 300; i++ {
-		bytes = append(bytes, byte(i))
-	}
-	assert.Equal(t, byte(50), checkSum(bytes))
-}
-
 func TestStream_Send(t *testing.T) {
 	s := &Stream{
 		"",
 		nil,
 		nil,
-		0,
 		[]byte{},
-		make(chan []byte, 100),
+		make(chan *DappPacket, 100),
 		make(chan []byte, highPriorityChLength),
 		make(chan []byte, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),

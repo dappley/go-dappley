@@ -19,6 +19,7 @@
 package network
 
 import (
+	logger "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -62,6 +63,19 @@ func (dm *DapMsg) GetFrom() string {
 //used to lookup dapmsg cache (key:unix time of command + command in string, value: 1 if received recently, 0 if not).
 func (dm *DapMsg) GetKey() string {
 	return dm.key
+}
+
+func ParseDappMsgFromRawBytes(bytes []byte) *DapMsg {
+	dmpb := &networkpb.Dapmsg{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(bytes, dmpb); err != nil {
+		logger.WithError(err).Warn("Stream: Unable to")
+	}
+
+	dm := &DapMsg{}
+	dm.FromProto(dmpb)
+	return dm
 }
 
 func (dm *DapMsg) ToProto() proto.Message {
