@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/process"
-
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/consensus"
@@ -54,6 +54,51 @@ func (ms *MetricsService) RpcGetStats(ctx context.Context, request *rpcpb.Metric
 }
 
 func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetNodeConfig, error) {
+	return ms.getNodeConfig(), nil
+}
+
+func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.SetNodeConfigRequest) (*rpcpb.GetNodeConfig, error) {
+	for _, v := range request.GetUpdatedConfigs() {
+		if _, ok := rpcpb.SetNodeConfigRequest_ConfigType_name[int32(v)]; !ok {
+			return nil, errors.New("unrecognized node configuration type")
+		}
+
+		if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS || v == rpcpb.SetNodeConfigRequest_PRODUCERS {
+			cons, ok := ms.node.GetBlockchain().GetConsensus().(*consensus.DPOS)
+			if !ok {
+				return nil, errors.New("producer properties are only supported for DPOS Consensus")
+			}
+
+			if v == rpcpb.SetNodeConfigRequest_PRODUCERS {
+				if err := cons.GetDynasty().CanAddProducers(request.GetProducers()); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	for _, v := range request.GetUpdatedConfigs() {
+		switch v {
+		case rpcpb.SetNodeConfigRequest_TX_POOL_LIMIT:
+			ms.node.GetBlockchain().GetTxPool().SetSizeLimit(request.GetTxPoolLimit())
+		case rpcpb.SetNodeConfigRequest_BLK_SIZE_LIMIT:
+			ms.node.GetBlockchain().SetBlockSizeLimit(int(request.GetBlkSizeLimit()))
+		case rpcpb.SetNodeConfigRequest_MAX_CONN_OUT:
+			ms.node.GetPeerManager().SetMaxConnectionOutCount(int(request.GetMaxConnectionOut()))
+		case rpcpb.SetNodeConfigRequest_MAX_CONN_IN:
+			ms.node.GetPeerManager().SetMaxConnectionInCount(int(request.GetMaxConnectionIn()))
+		case rpcpb.SetNodeConfigRequest_MAX_PRODUCERS:
+			ms.node.GetBlockchain().GetConsensus().(*consensus.DPOS).
+				GetDynasty().SetMaxProducers(int(request.GetMaxProducers()))
+		case rpcpb.SetNodeConfigRequest_PRODUCERS:
+			ms.node.GetBlockchain().GetConsensus().(*consensus.DPOS).
+				GetDynasty().SetProducers(request.GetProducers())
+		}
+	}
+	return ms.getNodeConfig(), nil
+}
+
+func (ms *MetricsService) getNodeConfig() *rpcpb.GetNodeConfig {
 	return &rpcpb.GetNodeConfig{
 		TxPoolLimit:      ms.node.GetBlockchain().GetTxPool().GetSizeLimit(),
 		BlkSizeLimit:     uint32(ms.node.GetBlockchain().GetBlockSizeLimit()),
@@ -64,7 +109,7 @@ func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.M
 		MaxProducers:     ms.getMaxProducers(),
 		IpfsAddresses:    ms.node.GetIPFSAddresses(),
 		RpcPort:          ms.RPCPort,
-	}, nil
+	}
 }
 
 func (ms *MetricsService) getMaxProducers() uint32 {
