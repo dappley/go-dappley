@@ -53,11 +53,11 @@ func (ms *MetricsService) RpcGetStats(ctx context.Context, request *rpcpb.Metric
 	}, nil
 }
 
-func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetNodeConfig, error) {
+func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetNodeConfigResponse, error) {
 	return ms.getNodeConfig(), nil
 }
 
-func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.SetNodeConfigRequest) (*rpcpb.GetNodeConfig, error) {
+func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.SetNodeConfigRequest) (*rpcpb.GetNodeConfigResponse, error) {
 	for _, v := range request.GetUpdatedConfigs() {
 		if _, ok := rpcpb.SetNodeConfigRequest_ConfigType_name[int32(v)]; !ok {
 			return nil, errors.New("unrecognized node configuration type")
@@ -98,8 +98,8 @@ func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.S
 	return ms.getNodeConfig(), nil
 }
 
-func (ms *MetricsService) getNodeConfig() *rpcpb.GetNodeConfig {
-	return &rpcpb.GetNodeConfig{
+func (ms *MetricsService) getNodeConfig() *rpcpb.GetNodeConfigResponse {
+	return &rpcpb.GetNodeConfigResponse{
 		TxPoolLimit:      ms.node.GetBlockchain().GetTxPool().GetSizeLimit(),
 		BlkSizeLimit:     uint32(ms.node.GetBlockchain().GetBlockSizeLimit()),
 		MaxConnectionOut: uint32(ms.node.GetPeerManager().GetMaxConnectionOutCount()),

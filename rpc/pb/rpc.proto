@@ -37,8 +37,8 @@ service AdminService{
 
 service MetricService {
   rpc RpcGetStats(MetricsServiceRequest) returns (GetStatsResponse) {}
-  rpc RpcGetNodeConfig(MetricsServiceRequest) returns (GetNodeConfig) {}
-  rpc RpcSetNodeConfig(SetNodeConfigRequest) returns (GetNodeConfig) {}
+  rpc RpcGetNodeConfig(MetricsServiceRequest) returns (GetNodeConfigResponse) {}
+  rpc RpcSetNodeConfig(SetNodeConfigRequest) returns (GetNodeConfigResponse) {}
 }
 
 // Requests
@@ -210,7 +210,7 @@ message GetStatsResponse {
   metricspb.Metrics stats = 1;
 }
 
-message GetNodeConfig {
+message GetNodeConfigResponse {
   uint32 tx_pool_limit = 1;
   uint32 blk_size_limit = 2;
   uint32 max_connection_out = 3;
