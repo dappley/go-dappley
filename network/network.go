@@ -90,11 +90,11 @@ func (net *Network) OnStreamStop(cb onStreamStopFunc) {
 	net.peerManager.SubscribeOnStreamStop(cb)
 }
 
-func (net *Network) Unicast(data []byte, pid peer.ID, priority int) {
+func (net *Network) Unicast(data []byte, pid peer.ID, priority DappCmdPriority) {
 	net.peerManager.Unicast(data, pid, priority)
 }
 
-func (net *Network) Broadcast(data []byte, priority int) {
+func (net *Network) Broadcast(data []byte, priority DappCmdPriority) {
 	net.peerManager.Broadcast(data, priority)
 }
 

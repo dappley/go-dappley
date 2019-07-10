@@ -32,11 +32,6 @@ const (
 	WriteChTotalLength     = highPriorityChLength + normalPriorityChLength
 )
 
-const (
-	HighPriorityCommand = iota
-	NormalPriorityCommand
-)
-
 type Stream struct {
 	peerID                peer.ID
 	remoteAddr            multiaddr.Multiaddr
@@ -80,7 +75,7 @@ func (s *Stream) StopStream(err error) {
 	s.stream.Close()
 }
 
-func (s *Stream) Send(data []byte, priority int) {
+func (s *Stream) Send(data []byte, priority DappCmdPriority) {
 	defer func() {
 		if p := recover(); p != nil {
 			logger.WithFields(logger.Fields{

@@ -27,7 +27,7 @@ import (
 	"github.com/dappley/go-dappley/network/pb"
 )
 
-type DapMsg struct {
+type DappCmd struct {
 	cmd            string
 	data           []byte
 	unixTimeRecvd  int64
@@ -35,36 +35,36 @@ type DapMsg struct {
 	uniOrBroadcast int ``
 }
 
-func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int) *DapMsg {
-	return &DapMsg{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast}
+func NewDapCmd(cmd string, data []byte, msgKey string, uniOrBroadcast int) *DappCmd {
+	return &DappCmd{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast}
 }
 
-func (dm *DapMsg) GetCmd() string {
-	return dm.cmd
+func (dc *DappCmd) GetCmd() string {
+	return dc.cmd
 }
 
-func (dm *DapMsg) GetData() []byte {
-	return dm.data
+func (dc *DappCmd) GetData() []byte {
+	return dc.data
 }
 
-func (dm *DapMsg) GetTimestamp() int64 {
-	return dm.unixTimeRecvd
+func (dc *DappCmd) GetTimestamp() int64 {
+	return dc.unixTimeRecvd
 }
 
-func (dm *DapMsg) GetFrom() string {
-	return dm.key
+func (dc *DappCmd) GetFrom() string {
+	return dc.key
 }
 
 //used to lookup dapmsg cache (key:unix time of command + command in string, value: 1 if received recently, 0 if not).
-func (dm *DapMsg) GetKey() string {
-	return dm.key
+func (dc *DappCmd) GetKey() string {
+	return dc.key
 }
 
-func ParseDappMsgFromDappPacket(packet *DappPacket) *DapMsg {
+func ParseDappMsgFromDappPacket(packet *DappPacket) *DappCmd {
 	return ParseDappMsgFromRawBytes(packet.GetData())
 }
 
-func ParseDappMsgFromRawBytes(bytes []byte) *DapMsg {
+func ParseDappMsgFromRawBytes(bytes []byte) *DappCmd {
 	dmpb := &networkpb.Dapmsg{}
 
 	//unmarshal byte to proto
@@ -72,24 +72,32 @@ func ParseDappMsgFromRawBytes(bytes []byte) *DapMsg {
 		logger.WithError(err).Warn("Stream: Unable to")
 	}
 
-	dm := &DapMsg{}
+	dm := &DappCmd{}
 	dm.FromProto(dmpb)
 	return dm
 }
 
-func (dm *DapMsg) ToProto() proto.Message {
+func (dc *DappCmd) GetRawBytes() []byte {
+	data, err := proto.Marshal(dc.ToProto())
+	if err != nil {
+		logger.WithError(err).Error("DappCmd: Dapp Command can not be converted into raw bytes")
+	}
+	return data
+}
+
+func (dc *DappCmd) ToProto() proto.Message {
 	return &networkpb.Dapmsg{
-		Cmd:              dm.cmd,
-		Data:             dm.data,
-		UnixTimeReceived: dm.unixTimeRecvd,
-		Key:              dm.key,
+		Cmd:              dc.cmd,
+		Data:             dc.data,
+		UnixTimeReceived: dc.unixTimeRecvd,
+		Key:              dc.key,
 	}
 }
 
-func (dm *DapMsg) FromProto(pb proto.Message) {
-	dm.cmd = pb.(*networkpb.Dapmsg).GetCmd()
-	dm.data = pb.(*networkpb.Dapmsg).GetData()
-	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).GetUnixTimeReceived()
-	dm.key = pb.(*networkpb.Dapmsg).GetKey()
+func (dc *DappCmd) FromProto(pb proto.Message) {
+	dc.cmd = pb.(*networkpb.Dapmsg).GetCmd()
+	dc.data = pb.(*networkpb.Dapmsg).GetData()
+	dc.unixTimeRecvd = pb.(*networkpb.Dapmsg).GetUnixTimeReceived()
+	dc.key = pb.(*networkpb.Dapmsg).GetKey()
 
 }
