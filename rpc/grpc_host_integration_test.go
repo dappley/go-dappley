@@ -635,7 +635,7 @@ func TestRpcSendTransaction(t *testing.T) {
 
 func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
-	rpcContext, err := createRpcTestContext(9)
+	rpcContext, err := createRpcTestContext(99)
 	if err != nil {
 		panic(err)
 	}
@@ -710,6 +710,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
 
 	rpcContext.consensus.Stop()
+	time.Sleep(time.Second)
+
 	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
@@ -719,6 +721,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
 	rpcContext.consensus.Stop()
+	time.Sleep(time.Second)
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	sendTxParamErr := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
@@ -758,6 +761,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
+	time.Sleep(time.Second)
+
 	core.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)

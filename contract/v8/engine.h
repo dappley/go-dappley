@@ -132,7 +132,7 @@ EXPORT void InitializeRequireDelegate(RequireDelegate delegate, AttachLibVersion
 EXPORT void InitializeExecutionEnvDelegate(AttachLibVersionDelegate libDelegate);
 
 // add tracing instructions to source
-EXPORT char *RunInjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage);
+EXPORT char *RunInjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage, uintptr_t handler);
 // run contract js source
 EXPORT int RunV8ScriptThread(char **result, V8Engine *e, const char *source, int source_line_offset, uintptr_t handler);
 

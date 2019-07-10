@@ -64,8 +64,7 @@ func (ms Modules) Get(id string) *Module {
 //export RequireDelegateFunc
 func RequireDelegateFunc(handler unsafe.Pointer, filename *C.char, lineOffset *C.size_t) *C.char {
 	id := C.GoString(filename)
-
-	e := getEngineByEngineHandler(handler)
+	e := getV8EngineByAddress(uint64(uintptr(handler)))
 	if e == nil {
 		logger.WithFields(logger.Fields{
 			"filename": id,
@@ -87,7 +86,7 @@ func RequireDelegateFunc(handler unsafe.Pointer, filename *C.char, lineOffset *C
 //export AttachLibVersionDelegateFunc
 func AttachLibVersionDelegateFunc(handler unsafe.Pointer, require *C.char) *C.char {
 	libname := C.GoString(require)
-	e := getEngineByEngineHandler(handler)
+	e := getV8EngineByAddress(uint64(uintptr(handler)))
 	if e == nil {
 		logger.WithFields(logger.Fields{
 			"libname": libname,

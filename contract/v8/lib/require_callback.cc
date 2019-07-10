@@ -23,6 +23,11 @@ static char source_require_format[] =
 static RequireDelegate sRequireDelegate = NULL;
 static AttachLibVersionDelegate attachLibVersionDelegate = NULL;
 
+void NewNativeRequireFunction(Isolate *isolate, Local<ObjectTemplate> globalTpl) {
+    globalTpl->Set(String::NewFromUtf8(isolate, "_native_require"), FunctionTemplate::New(isolate, RequireCallback),
+                   static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
+}
+
 static int readSource(Local<Context> context, const char *filename, char **data, size_t *lineOffset) {
     if (strstr(filename, "\"") != NULL) {
         return -1;
@@ -34,8 +39,8 @@ static int readSource(Local<Context> context, const char *filename, char **data,
 
     // try sRequireDelegate.
     if (sRequireDelegate != NULL) {
-        V8Engine *e = GetV8EngineInstance(context);
-        content = sRequireDelegate(e, filename, lineOffset);
+        void *handler = GetV8EngineHandler(context);
+        content = sRequireDelegate((void *)handler, filename, lineOffset);
     }
 
     if (content == NULL) {
@@ -56,18 +61,13 @@ static int readSource(Local<Context> context, const char *filename, char **data,
 static void attachVersion(char *out, int maxoutlen, Local<Context> context, const char *libname) {
     char *verlib = NULL;
     if (attachLibVersionDelegate != NULL) {
-        V8Engine *e = GetV8EngineInstance(context);
-        verlib = attachLibVersionDelegate(e, libname);
+        void *handler = GetV8EngineHandler(context);
+        verlib = attachLibVersionDelegate((void *)handler, libname);
     }
     if (verlib != NULL) {
         strncat(out, verlib, maxoutlen - strlen(out) - 1);
         free(verlib);
     }
-}
-
-void NewNativeRequireFunction(Isolate *isolate, Local<ObjectTemplate> globalTpl) {
-    globalTpl->Set(String::NewFromUtf8(isolate, "_native_require"), FunctionTemplate::New(isolate, RequireCallback),
-                   static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 }
 
 void RequireCallback(const v8::FunctionCallbackInfo<v8::Value> &info) {

@@ -24,10 +24,11 @@ void SetRunScriptArgs(v8ThreadContext *ctx, V8Engine *e, int opt, const char *so
     ctx->input.line_offset = line_offset;
 }
 
-char *RunInjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage) {
+char *RunInjectTracingInstructionsThread(V8Engine *e, const char *source, int *source_line_offset, int allow_usage, uintptr_t handler) {
     v8ThreadContext ctx;
     memset(&ctx, 0x00, sizeof(ctx));
     SetRunScriptArgs(&ctx, e, INSTRUCTION, source, *source_line_offset, allow_usage);
+    ctx.input.handler = handler;
     bool btn = CreateScriptThread(&ctx);
     if (btn == false) {
         printf("Failed to create script thread");

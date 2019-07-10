@@ -17,7 +17,6 @@
 #include "lib/global.h"
 #include "lib/instruction_counter.h"
 #include "lib/load_lib.h"
-#include "lib/load_sc.h"
 #include "lib/logger.h"
 #include "lib/math.h"
 #include "lib/memory.h"

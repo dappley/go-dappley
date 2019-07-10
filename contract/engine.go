@@ -54,7 +54,6 @@ var (
 	storagesMutex        = sync.RWMutex{}
 	currHandler          = uint64(100)
 	sourceModuleCache, _ = lru.New(40960)
-	engines              = make(map[*C.V8Engine]*V8Engine, 1024)
 	enginesLock          = sync.RWMutex{}
 )
 
@@ -151,7 +150,6 @@ func NewV8Engine() *V8Engine {
 	(func() {
 		enginesLock.Lock()
 		defer enginesLock.Unlock()
-		engines[engine.v8engine] = engine
 	})()
 
 	return engine
@@ -164,7 +162,6 @@ func (sc *V8Engine) DestroyEngine() {
 	delete(v8EngineList, sc.handler)
 
 	C.DeleteEngine(sc.v8engine)
-	delete(engines, sc.v8engine)
 }
 
 func (sc *V8Engine) ImportSourceCode(source string) {
@@ -395,14 +392,6 @@ func getV8EngineByAddress(handler uint64) *V8Engine {
 	return v8EngineList[handler]
 }
 
-func getEngineByEngineHandler(handler unsafe.Pointer) *V8Engine {
-	v8engine := (*C.V8Engine)(handler)
-	enginesLock.RLock()
-	defer enginesLock.RUnlock()
-
-	return engines[v8engine]
-}
-
 // CollectTracingStats collect tracing data from v8 engine.
 func (sc *V8Engine) CollectTracingStats() {
 	// read memory stats.
@@ -439,8 +428,7 @@ func (e *V8Engine) InjectTracingInstructions(source string) (string, int, error)
 	defer C.free(unsafe.Pointer(cSource))
 
 	lineOffset := C.int(0)
-
-	traceableCSource := C.RunInjectTracingInstructionsThread(e.v8engine, cSource, &lineOffset, C.int(e.strictDisallowUsageOfInstructionCounter))
+	traceableCSource := C.RunInjectTracingInstructionsThread(e.v8engine, cSource, &lineOffset, C.int(e.strictDisallowUsageOfInstructionCounter), C.uintptr_t(e.handler))
 	if traceableCSource == nil {
 		return "", 0, ErrInjectTracingInstructionFailed
 	}

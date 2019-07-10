@@ -9,8 +9,8 @@ static AttachLibVersionDelegate alvDelegate = NULL;
 int SetupExecutionEnv(Isolate *isolate, Local<Context> &context) {
     char *verlib = NULL;
     if (alvDelegate != NULL) {
-        V8Engine *e = GetV8EngineInstance(context);
-        verlib = alvDelegate(e, "execution_env.js");
+        void *handler = GetV8EngineHandler(context);
+        verlib = alvDelegate((void *)handler, "execution_env.js");
     }
     if (verlib == NULL) {
         return 1;

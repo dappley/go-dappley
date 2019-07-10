@@ -23,7 +23,7 @@ Local<ObjectTemplate> CreateGlobalObjectTemplate(Isolate *isolate) {
 void SetGlobalObjectProperties(Isolate *isolate, Local<Context> context, V8Engine *e, void *handler) {
     // set e to global.
     Local<Object> global = context->Global();
-    global->SetInternalField(0, External::New(isolate, e));
+    global->SetInternalField(0, External::New(isolate, handler));
 
     NewBlockchainInstance(isolate, context, (void *)handler);
     NewCryptoInstance(isolate, context, (void *)handler);
@@ -38,13 +38,12 @@ void SetGlobalObjectProperties(Isolate *isolate, Local<Context> context, V8Engin
     NewInstructionCounterInstance(isolate, context, &(e->stats.count_of_executed_instructions), e);
 }
 
-V8Engine *GetV8EngineInstance(Local<Context> context) {
+void *GetV8EngineHandler(Local<Context> context) {
     Local<Object> global = context->Global();
     Local<Value> val = global->GetInternalField(0);
 
     if (!val->IsExternal()) {
         return NULL;
     }
-
-    return static_cast<V8Engine *>(Local<External>::Cast(val)->Value());
+    return static_cast<void *>(Local<External>::Cast(val)->Value());
 }
