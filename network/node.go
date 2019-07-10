@@ -50,8 +50,8 @@ const (
 	BroadcastBatchTxs    = "BraodcastBatchTxs"
 	GetCommonBlocks      = "GetCommonBlocks"
 	ReturnCommonBlocks   = "ReturnCommonBlocks"
-	Unicast              = 0
-	Broadcast            = 1
+	Unicast              = false
+	Broadcast            = true
 	dispatchChLen        = 1024 * 4
 	requestChLen         = 1024
 )
@@ -113,7 +113,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		db = node.bm.Getblockchain().GetDb()
 	}
 
-	node.network = NewNetwork(config, node.dispatcher, db)
+	node.network = NewNetwork(config, node.dispatcher, node.requestCh, db)
 	node.network.OnStreamStop(node.OnStreamStop)
 
 	if err != nil {
@@ -298,7 +298,7 @@ func (n *Node) RelayDapMsg(dm DappCmd, priority DappCmdPriority) {
 	n.network.Broadcast(bytes, priority)
 }
 
-func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int, msgKey string) ([]byte, error) {
+func (n *Node) prepareData(msgData proto.Message, cmd string, isBroadcast bool, msgKey string) ([]byte, error) {
 	if cmd == "" {
 		return nil, ErrDapMsgNoCmd
 	}
@@ -315,7 +315,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	}
 
 	//build a dappley message
-	dm := NewDapCmd(cmd, bytes, msgKey, uniOrBroadcast)
+	dm := NewDapCmd(cmd, bytes, isBroadcast)
 
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
@@ -352,17 +352,6 @@ func (n *Node) BroadcastGetBlockchainInfo() {
 	n.network.Broadcast(data, GetBlockchainInfoPriority)
 }
 
-func (n *Node) GetPeerlistBroadcast(maxNum int) error {
-	request := &networkpb.GetPeerList{MaxNumber: int32(maxNum)}
-
-	data, err := n.prepareData(request, GetPeerList, Broadcast, "")
-	if err != nil {
-		return err
-	}
-	n.network.Broadcast(data, GetPeerListPriority)
-	return nil
-}
-
 func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, hex.EncodeToString(tx.ID))
 	if err != nil {
@@ -384,18 +373,6 @@ func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
 		return err
 	}
 	n.network.Broadcast(data, BroadcastBatchTxsPriority)
-	return nil
-}
-
-func (n *Node) SyncPeersBroadcast() error {
-	getPeerListPb := &networkpb.GetPeerList{
-		MaxNumber: int32(maxSyncPeersCount),
-	}
-	data, err := n.prepareData(getPeerListPb, GetPeerList, Broadcast, "")
-	if err != nil {
-		return err
-	}
-	n.network.Broadcast(data, SyncPeerListPriority)
 	return nil
 }
 
@@ -425,7 +402,7 @@ func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 
-	dm := NewDapCmd(RequestBlock, hash, hex.EncodeToString(hash), Unicast)
+	dm := NewDapCmd(RequestBlock, hash, Unicast)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -500,11 +477,11 @@ func (n *Node) SyncBlockHandler(dm *DappCmd, pid peer.ID) {
 		return
 	}
 
-	if dm.uniOrBroadcast == Broadcast {
+	if dm.isBroadcast == Broadcast {
 
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)
-		if dm.uniOrBroadcast == Broadcast {
+		if dm.isBroadcast == Broadcast {
 			n.RelayDapMsg(*dm, SyncBlockPriority)
 		}
 	} else {

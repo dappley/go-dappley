@@ -16,14 +16,14 @@ type Network struct {
 	dispatcher          chan *StreamMsg
 }
 
-func NewNetwork(config *NodeConfig, dispatcher chan *StreamMsg, db storage.Storage) *Network {
+func NewNetwork(config *NodeConfig, dispatcher chan *StreamMsg, requestCh chan *DappMsg, db storage.Storage) *Network {
 
 	var err error
 	msgRcvCh := make(chan *StreamMsg, dispatchChLen)
 
 	net := &Network{
 		msgRcvCh:    msgRcvCh,
-		peerManager: NewPeerManager(config, msgRcvCh, db),
+		peerManager: NewPeerManager(config, msgRcvCh, requestCh, db),
 		dispatcher:  dispatcher,
 	}
 

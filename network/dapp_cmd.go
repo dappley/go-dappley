@@ -19,24 +19,20 @@
 package network
 
 import (
-	logger "github.com/sirupsen/logrus"
-	"time"
-
 	"github.com/golang/protobuf/proto"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/network/pb"
 )
 
 type DappCmd struct {
-	cmd            string
-	data           []byte
-	unixTimeRecvd  int64
-	key            string
-	uniOrBroadcast int ``
+	cmd         string
+	data        []byte
+	isBroadcast bool
 }
 
-func NewDapCmd(cmd string, data []byte, msgKey string, uniOrBroadcast int) *DappCmd {
-	return &DappCmd{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast}
+func NewDapCmd(cmd string, data []byte, isBroadcast bool) *DappCmd {
+	return &DappCmd{cmd, data, isBroadcast}
 }
 
 func (dc *DappCmd) GetCmd() string {
@@ -47,25 +43,12 @@ func (dc *DappCmd) GetData() []byte {
 	return dc.data
 }
 
-func (dc *DappCmd) GetTimestamp() int64 {
-	return dc.unixTimeRecvd
-}
-
-func (dc *DappCmd) GetFrom() string {
-	return dc.key
-}
-
-//used to lookup dapmsg cache (key:unix time of command + command in string, value: 1 if received recently, 0 if not).
-func (dc *DappCmd) GetKey() string {
-	return dc.key
-}
-
 func ParseDappMsgFromDappPacket(packet *DappPacket) *DappCmd {
 	return ParseDappMsgFromRawBytes(packet.GetData())
 }
 
 func ParseDappMsgFromRawBytes(bytes []byte) *DappCmd {
-	dmpb := &networkpb.Dapmsg{}
+	dmpb := &networkpb.DappCmd{}
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(bytes, dmpb); err != nil {
@@ -86,18 +69,15 @@ func (dc *DappCmd) GetRawBytes() []byte {
 }
 
 func (dc *DappCmd) ToProto() proto.Message {
-	return &networkpb.Dapmsg{
-		Cmd:              dc.cmd,
-		Data:             dc.data,
-		UnixTimeReceived: dc.unixTimeRecvd,
-		Key:              dc.key,
+	return &networkpb.DappCmd{
+		Cmd:         dc.cmd,
+		Data:        dc.data,
+		IsBroadcast: dc.isBroadcast,
 	}
 }
 
 func (dc *DappCmd) FromProto(pb proto.Message) {
-	dc.cmd = pb.(*networkpb.Dapmsg).GetCmd()
-	dc.data = pb.(*networkpb.Dapmsg).GetData()
-	dc.unixTimeRecvd = pb.(*networkpb.Dapmsg).GetUnixTimeReceived()
-	dc.key = pb.(*networkpb.Dapmsg).GetKey()
-
+	dc.cmd = pb.(*networkpb.DappCmd).GetCmd()
+	dc.data = pb.(*networkpb.DappCmd).GetData()
+	dc.isBroadcast = pb.(*networkpb.DappCmd).GetIsBroadcast()
 }

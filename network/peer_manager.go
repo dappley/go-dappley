@@ -70,13 +70,14 @@ type PeerManager struct {
 
 	streamStopCh chan *Stream
 	msgRcvCh     chan *StreamMsg
+	requestCh    chan *DappMsg
 	eventBus     EventBus.Bus
 	db           storage.Storage
 
 	mutex sync.RWMutex
 }
 
-func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, db storage.Storage) *PeerManager {
+func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, requestCh chan *DappMsg, db storage.Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
@@ -99,6 +100,7 @@ func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, db storage.Sto
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
 		msgRcvCh:              msgRcvCh,
+		requestCh:             requestCh,
 		streamStopCh:          make(chan *Stream, 10),
 		eventBus:              EventBus.New(),
 		db:                    db,
@@ -388,8 +390,8 @@ func (pm *PeerManager) startSyncPeers() {
 	}
 
 	pm.createSyncContext()
-	//TODO
-	//pm.node.SyncPeersBroadcast()
+
+	pm.SendSyncPeersRequest()
 
 	syncTimer := time.NewTimer(syncPeersWaitTime)
 	go func() {
@@ -400,6 +402,28 @@ func (pm *PeerManager) startSyncPeers() {
 			pm.startConnectSyncPeers()
 		}
 	}()
+}
+
+func (pm *PeerManager) SendSyncPeersRequest() {
+	getPeerListPb := &networkpb.GetPeerList{
+		MaxNumber: int32(maxSyncPeersCount),
+	}
+
+	bytes, err := proto.Marshal(getPeerListPb)
+	if err != nil {
+		logger.WithError(err).Error("PeerManager: Send syncPeer request failed")
+	}
+
+	dappMsg := NewDappMsg(GetPeerList, bytes, Broadcast, HighPriorityCommand)
+
+	select {
+	case pm.requestCh <- dappMsg:
+	default:
+		logger.WithFields(logger.Fields{
+			"lenOfDispatchChan": len(pm.requestCh),
+		}).Warn("PeerManager: request channel full")
+	}
+
 }
 
 func (pm *PeerManager) createSyncContext() {

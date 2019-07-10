@@ -24,13 +24,6 @@ type StreamMsg struct {
 	source peer.ID
 }
 
-type DappMsg struct {
-	cmd         *DappCmd
-	destination peer.ID
-	isBroadcast bool
-	priority    DappCmdPriority
-}
-
 type DappCmdPriority int
 
 const (
