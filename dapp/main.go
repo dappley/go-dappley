@@ -146,11 +146,8 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 	}
 
 	seeds := nodeConfig.GetSeed()
-	for _, seed := range seeds {
-		node.GetPeerManager().AddSeedByString(seed)
-	}
 
-	err := node.Start(int(port))
+	err := node.Start(int(port), seeds)
 	if err != nil {
 		logger.Error(err)
 		return nil, err

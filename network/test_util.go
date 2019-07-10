@@ -30,7 +30,7 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
 	peerInfo := &PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
-	node.GetPeerManager().AddSeedByPeerInfo(peerInfo)
+	node.GetNetwork().AddSeed(peerInfo)
 	return node
 }
 

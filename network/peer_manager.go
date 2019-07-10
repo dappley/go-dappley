@@ -105,7 +105,17 @@ func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, db storage.Sto
 	}
 }
 
-func (pm *PeerManager) AddSeedByString(fullAddr string) error {
+func (pm *PeerManager) AddSeeds(seeds []string) {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+
+	for _, seed := range seeds {
+		pm.addSeedByString(seed)
+	}
+}
+
+func (pm *PeerManager) addSeedByString(fullAddr string) {
+
 	peerInfo, err := NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
@@ -114,32 +124,11 @@ func (pm *PeerManager) AddSeedByString(fullAddr string) error {
 	}
 
 	pm.seeds[peerInfo.PeerId] = peerInfo
-	return nil
 }
 
 func (pm *PeerManager) AddSeedByPeerInfo(peerInfo *PeerInfo) error {
 	pm.seeds[peerInfo.PeerId] = peerInfo
 	return nil
-}
-
-func (pm *PeerManager) AddAndConnectPeerByString(fullAddr string) error {
-
-	logger.Info("PeerManager: AddAndConnectPeerByString")
-
-	peerInfo, err := NewPeerInfoFromString(fullAddr)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-		}).Warn("PeerManager: create PeerInfo failed.")
-	}
-
-	_, err = pm.connectPeer(peerInfo, ConnectionTypeOut)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-		}).Warn("PeerManager: connect PeerInfo failed.")
-	}
-	return err
 }
 
 func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
@@ -155,8 +144,9 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
 	return err
 }
 
-func (pm *PeerManager) Start(host *Host) {
+func (pm *PeerManager) Start(host *Host, seeds []string) {
 	pm.host = host
+	pm.AddSeeds(seeds)
 	pm.loadSyncPeers()
 	pm.startConnectSeeds()
 	pm.startConnectSyncPeers()

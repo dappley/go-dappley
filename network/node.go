@@ -123,11 +123,11 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
 func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
 func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
-func (n *Node) GetPeerManager() *PeerManager         { return n.network.peerManager }
 func (n *Node) GetInfo() *PeerInfo                   { return n.network.host.info }
+func (n *Node) GetNetwork() *Network                 { return n.network }
 
-func (n *Node) Start(listenPort int) error {
-	err := n.network.Start(listenPort, n.privKey)
+func (n *Node) Start(listenPort int, seeds []string) error {
+	err := n.network.Start(listenPort, n.privKey, seeds)
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (n *Node) GetPeerID() peer.ID { return n.GetInfo().PeerId }
 func (n *Node) RelayDapMsg(dm DapMsg, priority int) {
 	msgData := dm.ToProto()
 	bytes, _ := proto.Marshal(msgData)
-	n.network.peerManager.Broadcast(bytes, priority)
+	n.network.Broadcast(bytes, priority)
 }
 
 func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int, msgKey string) ([]byte, error) {
@@ -298,7 +298,7 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Broadcast(data, SyncBlockPriority)
+	n.network.Broadcast(data, SyncBlockPriority)
 	logger.WithFields(logger.Fields{
 		"peer_id":     n.GetPeerID(),
 		"height":      block.GetHeight(),
@@ -318,7 +318,7 @@ func (n *Node) BroadcastGetBlockchainInfo() {
 		}).Warn("Node: broadcast GetBlockchainInfo failed.")
 	}
 
-	n.network.peerManager.Broadcast(data, GetBlockchainInfoPriority)
+	n.network.Broadcast(data, GetBlockchainInfoPriority)
 }
 
 func (n *Node) GetPeerlistBroadcast(maxNum int) error {
@@ -328,7 +328,7 @@ func (n *Node) GetPeerlistBroadcast(maxNum int) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Broadcast(data, GetPeerListPriority)
+	n.network.Broadcast(data, GetPeerListPriority)
 	return nil
 }
 
@@ -337,7 +337,7 @@ func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Broadcast(data, BroadcastTxPriority)
+	n.network.Broadcast(data, BroadcastTxPriority)
 	return nil
 }
 
@@ -352,7 +352,7 @@ func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Broadcast(data, BroadcastBatchTxsPriority)
+	n.network.Broadcast(data, BroadcastBatchTxsPriority)
 	return nil
 }
 
@@ -364,7 +364,7 @@ func (n *Node) SyncPeersBroadcast() error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Broadcast(data, SyncPeerListPriority)
+	n.network.Broadcast(data, SyncPeerListPriority)
 	return nil
 }
 
@@ -373,7 +373,7 @@ func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Unicast(data, pid, SyncBlockPriority)
+	n.network.Unicast(data, pid, SyncBlockPriority)
 	return nil
 }
 
@@ -387,7 +387,7 @@ func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Unicast(data, pid, ReturnPeerListPriority)
+	n.network.Unicast(data, pid, ReturnPeerListPriority)
 	return nil
 }
 
@@ -399,7 +399,7 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	if err != nil {
 		return err
 	}
-	n.network.peerManager.Unicast(data, pid, RequestBlockPriority)
+	n.network.Unicast(data, pid, RequestBlockPriority)
 	return nil
 }
 
@@ -417,7 +417,7 @@ func (n *Node) GetCommonBlocksUnicast(blockHeaders []*SyncCommandBlocksHeader, p
 		return nil
 	}
 
-	n.network.peerManager.Unicast(data, pid, GetCommonBlocksPriority)
+	n.network.Unicast(data, pid, GetCommonBlocksPriority)
 	return nil
 }
 
@@ -434,7 +434,7 @@ func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
 		return nil
 	}
 
-	n.network.peerManager.Unicast(data, pid, GetBlocksPriority)
+	n.network.Unicast(data, pid, GetBlocksPriority)
 	return nil
 }
 
@@ -507,7 +507,7 @@ func (n *Node) GetBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.network.peerManager.Unicast(data, pid, ReturnBlockchainInfoPriority)
+	n.network.Unicast(data, pid, ReturnBlockchainInfoPriority)
 }
 
 func (n *Node) ReturnBlockchainInfoHandler(dm *DapMsg, pid peer.ID) {
@@ -568,7 +568,7 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.network.peerManager.Unicast(data, pid, ReturnBlocksPriority)
+	n.network.Unicast(data, pid, ReturnBlocksPriority)
 }
 
 func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
@@ -605,7 +605,7 @@ func (n *Node) GetCommonBlocksHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	n.network.peerManager.Unicast(data, pid, ReturnCommonBlocksPriority)
+	n.network.Unicast(data, pid, ReturnCommonBlocksPriority)
 }
 
 func (n *Node) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {

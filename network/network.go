@@ -4,6 +4,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -34,9 +35,13 @@ func NewNetwork(config *NodeConfig, dispatcher chan *StreamMsg, db storage.Stora
 	return net
 }
 
-func (net *Network) Start(listenPort int, privKey crypto.PrivKey) error {
+func (net *Network) GetPeers() []*PeerInfo {
+	return net.peerManager.CloneStreamsToPeerInfoSlice()
+}
+
+func (net *Network) Start(listenPort int, privKey crypto.PrivKey, seeds []string) error {
 	net.host = NewHost(listenPort, privKey, net.peerManager.StreamHandler)
-	net.peerManager.Start(net.host)
+	net.peerManager.Start(net.host, seeds)
 	net.StartReceivedMessageHandler()
 	return nil
 }
@@ -83,4 +88,32 @@ func (net *Network) Stop() {
 
 func (net *Network) OnStreamStop(cb onStreamStopFunc) {
 	net.peerManager.SubscribeOnStreamStop(cb)
+}
+
+func (net *Network) Unicast(data []byte, pid peer.ID, priority int) {
+	net.peerManager.Unicast(data, pid, priority)
+}
+
+func (net *Network) Broadcast(data []byte, priority int) {
+	net.peerManager.Broadcast(data, priority)
+}
+
+func (net *Network) AddPeer(peerInfo *PeerInfo) error {
+	return net.peerManager.AddAndConnectPeer(peerInfo)
+}
+
+func (net *Network) AddSeed(peerInfo *PeerInfo) error {
+	return net.peerManager.AddSeedByPeerInfo(peerInfo)
+}
+
+func (net *Network) AddPeerByString(fullAddr string) error {
+
+	peerInfo, err := NewPeerInfoFromString(fullAddr)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"full_addr": fullAddr,
+		}).Warn("Network: create PeerInfo failed.")
+	}
+
+	return net.peerManager.AddAndConnectPeer(peerInfo)
 }

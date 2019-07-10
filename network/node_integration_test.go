@@ -54,9 +54,10 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 	n := NewNode(bc, pool)
 
 	if seedPeer != nil {
-		n.GetPeerManager().AddSeedByPeerInfo(seedPeer)
+		n.GetNetwork().AddSeed(seedPeer)
 	}
-	err := n.Start(port)
+
+	err := n.Start(port, nil)
 	return n, err
 }
 
@@ -68,9 +69,10 @@ func initNodeWithConfig(address string, port, connectionInCount, connectionOutCo
 	n := NewNodeWithConfig(bc, pool, config)
 
 	if seedPeer != nil {
-		n.GetPeerManager().AddSeedByPeerInfo(seedPeer)
+		n.GetNetwork().AddSeed(seedPeer)
 	}
-	err := n.Start(port)
+
+	err := n.Start(port, nil)
 	return n, err
 }
 
@@ -93,7 +95,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
-	err = n1.GetPeerManager().AddAndConnectPeer(n2.GetInfo())
+	err = n1.GetNetwork().AddPeer(n2.GetInfo())
 	assert.Nil(t, err)
 	assert.Len(t, n1.network.host.Network().Peerstore().Peers(), 2)
 }
@@ -112,7 +114,7 @@ func TestNetwork_BroadcastBlock(t *testing.T) {
 	defer n2.Stop()
 	assert.Nil(t, err)
 
-	err = n2.GetPeerManager().AddAndConnectPeer(n1.GetInfo())
+	err = n2.GetNetwork().AddPeer(n1.GetInfo())
 	assert.Nil(t, err)
 
 	blk := core.GenerateMockBlock()
@@ -140,7 +142,7 @@ func TestNode_RequestBlockUnicast(t *testing.T) {
 	defer n2.Stop()
 	assert.Nil(t, err)
 
-	err = n2.GetPeerManager().AddAndConnectPeer(n1.GetInfo())
+	err = n2.GetNetwork().AddPeer(n1.GetInfo())
 	assert.Nil(t, err)
 
 	blk := core.GenerateMockBlock()
@@ -191,14 +193,14 @@ func TestNode_SyncPeers(t *testing.T) {
 	}, 2)
 
 	//node2 should have node 3 as its peer
-	_, ok := n2.GetPeerManager().streams[n3.GetPeerID()]
+	_, ok := n2.GetNetwork().peerManager.streams[n3.GetPeerID()]
 	assert.True(t, ok)
-	assert.Equal(t, 1, n2.GetPeerManager().connectionInCount)
+	assert.Equal(t, 1, n2.GetNetwork().peerManager.connectionInCount)
 
 	//node3 should have node 2 as its peer
-	_, ok = n3.GetPeerManager().streams[n2.GetPeerID()]
+	_, ok = n3.GetNetwork().peerManager.streams[n2.GetPeerID()]
 	assert.True(t, ok)
-	assert.Equal(t, 1, n3.GetPeerManager().connectionOutCount)
+	assert.Equal(t, 1, n3.GetNetwork().peerManager.connectionOutCount)
 }
 
 func TestNode_ConnectionFull(t *testing.T) {
@@ -250,19 +252,19 @@ func TestNode_ConnectionFull(t *testing.T) {
 	defer n5.Stop()
 	assert.Nil(t, err)
 
-	n5.GetPeerManager().AddAndConnectPeer(n2.GetInfo())
-	n4.GetPeerManager().AddAndConnectPeer(n5.GetInfo())
+	n5.GetNetwork().AddPeer(n2.GetInfo())
+	n4.GetNetwork().AddPeer(n5.GetInfo())
 
 	core.WaitDoneOrTimeout(func() bool {
 		return false
 	}, 2)
 
-	assert.Equal(t, 2, n2.GetPeerManager().connectionInCount)
-	assert.Equal(t, 0, n2.GetPeerManager().connectionOutCount)
-	assert.Equal(t, 1, n3.GetPeerManager().connectionInCount)
-	assert.Equal(t, 1, n3.GetPeerManager().connectionOutCount)
-	assert.Equal(t, 0, n4.GetPeerManager().connectionInCount)
-	assert.Equal(t, 2, n4.GetPeerManager().connectionOutCount)
-	assert.Equal(t, 0, n5.GetPeerManager().connectionInCount)
-	assert.Equal(t, 0, n5.GetPeerManager().connectionOutCount)
+	assert.Equal(t, 2, n2.GetNetwork().peerManager.connectionInCount)
+	assert.Equal(t, 0, n2.GetNetwork().peerManager.connectionOutCount)
+	assert.Equal(t, 1, n3.GetNetwork().peerManager.connectionInCount)
+	assert.Equal(t, 1, n3.GetNetwork().peerManager.connectionOutCount)
+	assert.Equal(t, 0, n4.GetNetwork().peerManager.connectionInCount)
+	assert.Equal(t, 2, n4.GetNetwork().peerManager.connectionOutCount)
+	assert.Equal(t, 0, n5.GetNetwork().peerManager.connectionInCount)
+	assert.Equal(t, 0, n5.GetNetwork().peerManager.connectionOutCount)
 }

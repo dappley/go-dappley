@@ -38,7 +38,7 @@ type AdminRpcService struct {
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	err := adminRpcService.node.GetPeerManager().AddAndConnectPeerByString(in.GetFullAddress())
+	err := adminRpcService.node.GetNetwork().AddPeerByString(in.GetFullAddress())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -57,7 +57,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
-	peers := adminRpcService.node.GetPeerManager().CloneStreamsToPeerInfoSlice()
+	peers := adminRpcService.node.GetNetwork().GetPeers()
 
 	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range peers {

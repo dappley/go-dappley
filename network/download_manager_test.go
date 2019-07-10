@@ -57,7 +57,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 		nodes[i] = node
 		pow.Setup(node, address.Address)
 		pow.SetTargetBit(10)
-		node.Start(portStart + i)
+		node.Start(portStart+i, nil)
 	}
 	return blockchains, nodes
 }
@@ -108,7 +108,7 @@ func TestMultiEqualNode(t *testing.T) {
 	node := nodes[0]
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetInfo())
 	}
 
 	oldHeight := blockchain.GetMaxHeight()
@@ -150,7 +150,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetInfo())
 	}
 
 	downloadManager := node.GetDownloadManager()
@@ -180,7 +180,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetInfo())
 	}
 
 	downloadManager := node.GetDownloadManager()
@@ -217,7 +217,7 @@ func TestDisconnectNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetPeerManager().AddAndConnectPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetInfo())
 	}
 
 	downloadManager := node.GetDownloadManager()
@@ -243,13 +243,13 @@ func TestValidateReturnBlocks(t *testing.T) {
 	node := nodes[0]
 	peerNode := nodes[1]
 
-	node.GetPeerManager().AddAndConnectPeer(peerNode.GetInfo())
+	node.GetNetwork().AddPeer(peerNode.GetInfo())
 	downloadManager := node.GetDownloadManager()
 	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
 
-	for _, p := range downloadManager.node.GetPeerManager().CloneStreamsToSlice() {
-		downloadManager.peersInfo[p.stream.peerID] = &PeerBlockInfo{peerid: p.stream.peerID, height: 0, status: PeerStatusInit}
-		downloadManager.downloadingPeer = downloadManager.peersInfo[p.stream.peerID]
+	for _, p := range downloadManager.node.GetNetwork().GetPeers() {
+		downloadManager.peersInfo[p.PeerId] = &PeerBlockInfo{peerid: p.PeerId, height: 0, status: PeerStatusInit}
+		downloadManager.downloadingPeer = downloadManager.peersInfo[p.PeerId]
 	}
 	blockchain.SetState(core.BlockchainDownloading)
 
