@@ -46,12 +46,30 @@ const (
 	DownloadMaxWaitTime time.Duration = 180
 	MaxRetryCount       int           = 3
 	MinRequestHashesNum int           = 20
+
+	BlockchainInfoRequest   = "BlockchainInfoRequest"
+	BlockchainInfoResponse  = "BlockchainInfoResponse"
+	GetBlocksRequest        = "GetBlocksRequest"
+	GetBlocksResponse       = "GetBlocksResponse"
+	GetCommonBlocksRequest  = "GetCommonBlocksRequest"
+	GetCommonBlocksResponse = "GetCommonBlocksResponse"
 )
 
 var (
 	ErrEmptyBlocks      = errors.New("received no block")
 	ErrPeerNotFound     = errors.New("peerId not in checklist")
 	ErrMismatchResponse = errors.New("response is not for waiting command")
+)
+
+var (
+	subscribedTopics = []string{
+		BlockchainInfoRequest,
+		BlockchainInfoResponse,
+		GetBlocksRequest,
+		GetBlocksResponse,
+		GetCommonBlocksRequest,
+		GetCommonBlocksResponse,
+	}
 )
 
 type PeerBlockInfo struct {
@@ -87,28 +105,38 @@ type ExecuteCommand struct {
 }
 
 type DownloadManager struct {
-	peersInfo       map[peer.ID]*PeerBlockInfo
-	downloadingPeer *PeerBlockInfo
-	currentCmd      *ExecuteCommand
-	node            *Node
-	mutex           sync.RWMutex
-	status          int
-	commonHeight    uint64
-	msgId           int32
-	finishChan      chan bool
+	peersInfo        map[peer.ID]*PeerBlockInfo
+	downloadingPeer  *PeerBlockInfo
+	currentCmd       *ExecuteCommand
+	node             *Node
+	mutex            sync.RWMutex
+	status           int
+	commonHeight     uint64
+	msgId            int32
+	finishChan       chan bool
+	commandSendCh    chan *DappSendCmdContext
+	commandReceiveCh chan *DappRcvdCmdContext
 }
 
-func NewDownloadManager(node *Node) *DownloadManager {
+func NewDownloadManager(node *Node, commandSendCh chan *DappSendCmdContext) *DownloadManager {
 	return &DownloadManager{
-		peersInfo:       make(map[peer.ID]*PeerBlockInfo),
-		downloadingPeer: nil,
-		currentCmd:      nil,
-		node:            node,
-		mutex:           sync.RWMutex{},
-		status:          DownloadStatusInit,
-		msgId:           0,
-		commonHeight:    0,
-		finishChan:      nil,
+		peersInfo:        make(map[peer.ID]*PeerBlockInfo),
+		downloadingPeer:  nil,
+		currentCmd:       nil,
+		node:             node,
+		mutex:            sync.RWMutex{},
+		status:           DownloadStatusInit,
+		msgId:            0,
+		commonHeight:     0,
+		finishChan:       nil,
+		commandSendCh:    commandSendCh,
+		commandReceiveCh: make(chan *DappRcvdCmdContext, 100),
+	}
+}
+
+func (downloadManager *DownloadManager) SubscribeCommandBroker(broker *CommandBroker) {
+	for _, topic := range subscribedTopics {
+		broker.Subscribe(topic, downloadManager.commandReceiveCh)
 	}
 }
 
@@ -182,7 +210,7 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 
 func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) (*PeerBlockInfo, error) {
 	returnBlocksLogger := logger.WithFields(logger.Fields{
-		"name": "ReturnBlocks",
+		"name": "GetBlocksResponse",
 	})
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
@@ -210,7 +238,7 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
 	returnBlocksLogger := logger.WithFields(logger.Fields{
-		"name": "ReturnBlocks",
+		"name": "GetBlocksResponse",
 	})
 
 	downloadManager.mutex.Lock()
@@ -273,7 +301,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
 		logger.WithFields(logger.Fields{
-			"name": "ReturnCommonBlocks",
+			"name": "GetCommonBlocksResponse",
 		}).Info("DownloadManager: PeerId not in checklist.")
 		downloadManager.mutex.Unlock()
 		return
@@ -281,7 +309,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 
 	if !downloadManager.isSameGetCommonBlocksCommand(blocksPb.GetMsgId()) {
 		logger.WithFields(logger.Fields{
-			"name": "ReturnCommonBlocks",
+			"name": "GetCommonBlocksResponse",
 		}).Info("DownloadManager: response is not for waiting command.")
 		downloadManager.mutex.Unlock()
 		return

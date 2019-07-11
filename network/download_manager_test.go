@@ -234,7 +234,7 @@ func TestDisconnectNode(t *testing.T) {
 }
 
 func TestValidateReturnBlocks(t *testing.T) {
-	// Test empty blocks in ReturnBlocks message
+	// Test empty blocks in GetBlocksResponse message
 	blockchains, nodes := createTestBlockchains(2, multiPortReturnBlocks)
 	fillBlockchains(blockchains)
 

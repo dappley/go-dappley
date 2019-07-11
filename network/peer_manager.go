@@ -50,9 +50,9 @@ const (
 	syncPeersScheduleTime        = 10 * time.Minute
 	checkSeedsConnectionTime     = 15 * time.Minute
 
-	topicStreamStop   = "StreamStop"
-	GetPeerListCmd    = "GetPeerListCmd"
-	ReturnPeerListCmd = "ReturnPeerListCmd"
+	topicStreamStop     = "StreamStop"
+	GetPeerListRequest  = "GetPeerListRequest"
+	GetPeerListResponse = "GetPeerListResponse"
 )
 
 type onStreamStopFunc func(stream *Stream)
@@ -183,9 +183,9 @@ func (pm *PeerManager) StartRequestListener() {
 			select {
 			case command := <-pm.commandReceiveCh:
 				switch command.GetCommandName() {
-				case GetPeerListCmd:
+				case GetPeerListRequest:
 					pm.SyncPeersRequestHandler(command)
-				case ReturnPeerListCmd:
+				case GetPeerListResponse:
 					pm.PeerListMessageHandler(command)
 				}
 			}
@@ -747,8 +747,8 @@ func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
 }
 
 func (pm *PeerManager) Subscirbe(broker *CommandBroker) {
-	broker.Subscribe(GetPeerListCmd, pm.commandReceiveCh)
-	broker.Subscribe(ReturnPeerListCmd, pm.commandReceiveCh)
+	broker.Subscribe(GetPeerListRequest, pm.commandReceiveCh)
+	broker.Subscribe(GetPeerListResponse, pm.commandReceiveCh)
 }
 
 func (pm *PeerManager) SendSyncPeersRequest() {
@@ -758,7 +758,7 @@ func (pm *PeerManager) SendSyncPeersRequest() {
 
 	var destination peer.ID
 
-	command := NewDappSendCmdContext(GetPeerListCmd, getPeerListPb, destination, Broadcast, HighPriorityCommand)
+	command := NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, Broadcast, HighPriorityCommand)
 
 	pm.sendCommand(command)
 
@@ -773,7 +773,7 @@ func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.I
 	}
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
-	dappMsg := NewDappSendCmdContext(ReturnPeerListCmd, peerList, destination, Unicast, HighPriorityCommand)
+	dappMsg := NewDappSendCmdContext(GetPeerListResponse, peerList, destination, Unicast, HighPriorityCommand)
 	pm.sendCommand(dappMsg)
 }
 
@@ -794,7 +794,7 @@ func (pm *PeerManager) SyncPeersRequestHandler(command *DappRcvdCmdContext) {
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(command.GetData(), getPeerlistRequest); err != nil {
-		logger.WithError(err).Warn("Node: parse GetPeerListCmd failed.")
+		logger.WithError(err).Warn("Node: parse GetPeerListRequest failed.")
 	}
 
 	pm.SendPeerListMessage(int(getPeerlistRequest.GetMaxNumber()), command.source)
