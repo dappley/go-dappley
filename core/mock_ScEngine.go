@@ -18,7 +18,7 @@ func (_m *MockScEngine) DestroyEngine() {
 }
 
 // Execute provides a mock function with given fields: function, args
-func (_m *MockScEngine) Execute(function string, args string) string {
+func (_m *MockScEngine) Execute(function string, args string) (string, error) {
 	ret := _m.Called(function, args)
 
 	var r0 string
@@ -28,7 +28,7 @@ func (_m *MockScEngine) Execute(function string, args string) string {
 		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	return r0, nil
 }
 
 // GetGeneratedTXs provides a mock function with given fields:
@@ -117,4 +117,14 @@ func (_m *MockScEngine) CheckContactSyntax(sourece string) error {
 		return errors.New("contract error syntax")
 	}
 	return nil
+}
+
+// SetExecutionLimits set execution limits of V8 Engine, prevent Halting Problem.
+func (_m *MockScEngine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
+	return nil
+}
+
+// ExecutionInstructions returns the execution instructions
+func (_m *MockScEngine) ExecutionInstructions() uint64 {
+	return uint64(100)
 }

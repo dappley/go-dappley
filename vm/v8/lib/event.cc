@@ -3,30 +3,23 @@
 
 static FuncTriggerEvent sTriggerEvent = NULL;
 
-void InitializeEvent(FuncTriggerEvent triggerEvent){
-  sTriggerEvent = triggerEvent;
-}
+void InitializeEvent(FuncTriggerEvent triggerEvent) { sTriggerEvent = triggerEvent; }
 
 void NewEventInstance(Isolate *isolate, Local<Context> context, void *address) {
-  Local<ObjectTemplate> eventTpl = ObjectTemplate::New(isolate);
-  eventTpl->SetInternalFieldCount(1);
+    Local<ObjectTemplate> eventTpl = ObjectTemplate::New(isolate);
+    eventTpl->SetInternalFieldCount(1);
 
-  eventTpl->Set(String::NewFromUtf8(isolate, "trigger"),
-                FunctionTemplate::New(isolate, triggerEventCallback),
-                static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
-                                               PropertyAttribute::ReadOnly));
+    eventTpl->Set(String::NewFromUtf8(isolate, "trigger"), FunctionTemplate::New(isolate, triggerEventCallback),
+                  static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 
-  Local<Object> instance = eventTpl->NewInstance(context).ToLocalChecked();
-  instance->SetInternalField(0, External::New(isolate, address));
-  context->Global()->DefineOwnProperty(
-      context, String::NewFromUtf8(isolate, "event"),
-      instance,
-      static_cast<PropertyAttribute>(PropertyAttribute::DontDelete |
-                                     PropertyAttribute::ReadOnly));
+    Local<Object> instance = eventTpl->NewInstance(context).ToLocalChecked();
+    instance->SetInternalField(0, External::New(isolate, address));
+    context->Global()->DefineOwnProperty(context, String::NewFromUtf8(isolate, "event"), instance,
+                                         static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly));
 }
 
 // storageSetCallback
-void triggerEventCallback(const FunctionCallbackInfo<Value> &info){
+void triggerEventCallback(const FunctionCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     Local<Object> thisArg = info.Holder();
     Local<External> handler = Local<External>::Cast(thisArg->GetInternalField(0));
@@ -48,7 +41,7 @@ void triggerEventCallback(const FunctionCallbackInfo<Value> &info){
         return;
     }
 
-    int ret = sTriggerEvent(handler->Value(), *String::Utf8Value(isolate, topic),*String::Utf8Value(isolate, data));
+    int ret = sTriggerEvent(handler->Value(), *String::Utf8Value(isolate, topic), *String::Utf8Value(isolate, data));
 
     info.GetReturnValue().Set(ret);
 }

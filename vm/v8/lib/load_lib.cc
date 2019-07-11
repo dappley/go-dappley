@@ -2,7 +2,7 @@
 #include "file.h"
 #include "memory.h"
 
-void LoadLibraries(Isolate *isolate, Local<Context> &context){
+void LoadLibraries(Isolate *isolate, Local<Context> &context) {
     LoadBlockchainLibrary(isolate, context);
     LoadStorageLibrary(isolate, context);
     LoadSenderLibrary(isolate, context);

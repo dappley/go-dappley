@@ -38,17 +38,21 @@ func TestJournalPutAndGet(t *testing.T) {
 	genesis := NewGenesisBlock(addr)
 
 	var tx1 = Transaction{
-		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(2),
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),
+		Vout:     GenerateFakeTxOutputs(),
+		Tip:      common.NewAmount(2),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 
 	var tx2 = Transaction{
-		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(5),
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),
+		Vout:     GenerateFakeTxOutputs(),
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 	txs := genesis.GetTransactions()
 	txs = append(txs, &tx1)

@@ -99,14 +99,14 @@ func (a Amount) Sub(b *Amount) (*Amount, error) {
 	return diff, nil
 }
 
-// mul returns product of a * b
-func (a Amount) mul(b *Amount) *Amount {
+// Mul returns product of a * b
+func (a Amount) Mul(b *Amount) *Amount {
 	return &Amount{*new(big.Int).Mul(a.BigInt(), b.BigInt())}
 }
 
 // Times returns product of a * b where b is uint64
 func (a Amount) Times(b uint64) *Amount {
-	return a.mul(NewAmount(b))
+	return a.Mul(NewAmount(b))
 }
 
 // Times returns the quotient of a/b where b is uint64

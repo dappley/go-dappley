@@ -110,7 +110,7 @@ func TestSign(t *testing.T) {
 	txout := []TXOutput{
 		{common.NewAmount(19), pubKeyHash, ""},
 	}
-	tx := Transaction{nil, txin, txout, common.NewAmount(0)}
+	tx := Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	// Sign the transaction
 	err := tx.Sign(*privKey, prevTXs)
@@ -167,9 +167,9 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t5 = NewCoinbaseTX(NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
-	txin1 := TXInput{nil, -1, bh1, []byte(nil)}
+	txin1 := TXInput{nil, -1, bh1, []byte("Reward to test")}
 	txout1 := NewTXOutput(common.NewAmount(10000000), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
-	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, common.NewAmount(0)}
+	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	// test valid coinbase transaction
 	_, err5 := t5.Verify(&UTXOIndex{}, 5)
@@ -186,7 +186,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	binary.BigEndian.PutUint64(bh2, 5)
 	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := NewTXOutput(common.NewAmount(9), NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
-	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, common.NewAmount(0)}
+	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	_, err7 := t7.Verify(&UTXOIndex{}, 5)
 	assert.NotNil(t, err7)
 
@@ -232,12 +232,12 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		signWith []byte
 		ok       error
 	}{
-		{"normal", Transaction{nil, txin1, txout, common.NewAmount(0)}, privKeyByte, nil},
-		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"Amount invalid", Transaction{nil, txin1, txout2, common.NewAmount(0)}, privKeyByte, errors.New("Transaction: ID is invalid")},
-		{"Sign invalid", Transaction{nil, txin1, txout, common.NewAmount(0)}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
+		{"normal", Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, nil},
+		{"previous tx not found with wrong pubkey", Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"Amount invalid", Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: ID is invalid")},
+		{"Sign invalid", Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -438,6 +438,8 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 					},
 				},
 				common.NewAmount(0),
+				common.NewAmount(0),
+				common.NewAmount(0),
 			}
 
 			assert.Equal(t, NewAddress(tt.expectedRes), tx.GetContractAddress())
@@ -489,7 +491,9 @@ func TestTransaction_Execute(t *testing.T) {
 				},
 			}
 			tx := ContractTx{Transaction{
-				Vout: []TXOutput{{nil, PubKeyHash(toPKH), "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
+				Vout:     []TXOutput{{nil, PubKeyHash(toPKH), "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
+				GasLimit: common.NewAmount(0),
+				GasPrice: common.NewAmount(0),
 			}}
 
 			index := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
@@ -545,6 +549,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 					"",
 				}},
 				common.NewAmount(0),
+				common.NewAmount(0),
+				common.NewAmount(0),
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			true,
@@ -554,6 +560,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				nil,
 				[]TXInput{{nil, -1, nil, rewardTxData}},
 				[]TXOutput{},
+				common.NewAmount(0),
+				common.NewAmount(0),
 				common.NewAmount(0),
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
@@ -572,6 +580,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 					"",
 				}},
 				common.NewAmount(0),
+				common.NewAmount(0),
+				common.NewAmount(0),
 			},
 			nil,
 			false,
@@ -589,6 +599,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 					"",
 				}},
 				common.NewAmount(0),
+				common.NewAmount(0),
+				common.NewAmount(0),
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -605,6 +617,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 						0xe5, 0x27, 0xf0, 0x42, 0x5d}),
 					"",
 				}},
+				common.NewAmount(0),
+				common.NewAmount(0),
 				common.NewAmount(0),
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
@@ -629,6 +643,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 							218, 57, 174, 123, 244, 229}),
 						"",
 					}},
+				common.NewAmount(0),
+				common.NewAmount(0),
 				common.NewAmount(0),
 			},
 			map[string]string{
@@ -657,6 +673,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 						"",
 					}},
 				common.NewAmount(0),
+				common.NewAmount(0),
+				common.NewAmount(0),
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -684,6 +702,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 							218, 57, 174, 123, 244, 229}),
 						"",
 					}},
+				common.NewAmount(0),
+				common.NewAmount(0),
 				common.NewAmount(0),
 			},
 			map[string]string{

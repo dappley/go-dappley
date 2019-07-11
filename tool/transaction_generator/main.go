@@ -82,6 +82,8 @@ func prepareSendParameters(wallet *sdk.DappSdkWallet) core.SendTxParam {
 		toAddr,
 		common.NewAmount(10),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"",
 	}
 }

@@ -65,7 +65,7 @@ func DecodeScInput(s string) (function string, args []string) {
 			"input":             s,
 			"decoded_function":  input.Function,
 			"decoded_arguments": input.Args,
-		}).Warn("DecodeScInput: cannot decode the input of the smart contract!")
+		}).Debug("DecodeScInput: cannot decode the input of the smart contract!")
 	}
 	return input.Function, input.Args
 }

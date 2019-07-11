@@ -11,7 +11,9 @@ func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.A
 		nil,
 		prepareInputLists(prevUtxos, senderKeyPair.PublicKey, nil),
 		vouts,
-		tip}
+		tip,
+		common.NewAmount(0),
+		common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	err := tx.Sign(senderKeyPair.PrivateKey, prevUtxos)

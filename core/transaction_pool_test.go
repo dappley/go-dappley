@@ -31,28 +31,36 @@ import (
 )
 
 var tx1 = Transaction{
-	ID:   util.GenerateRandomAoB(1),
-	Vin:  GenerateFakeTxInputs(),
-	Vout: GenerateFakeTxOutputs(),
-	Tip:  common.NewAmount(2),
+	ID:       util.GenerateRandomAoB(1),
+	Vin:      GenerateFakeTxInputs(),
+	Vout:     GenerateFakeTxOutputs(),
+	Tip:      common.NewAmount(2),
+	GasLimit: common.NewAmount(0),
+	GasPrice: common.NewAmount(0),
 }
 var tx2 = Transaction{
-	ID:   util.GenerateRandomAoB(1),
-	Vin:  GenerateFakeTxInputs(),
-	Vout: GenerateFakeTxOutputs(),
-	Tip:  common.NewAmount(5),
+	ID:       util.GenerateRandomAoB(1),
+	Vin:      GenerateFakeTxInputs(),
+	Vout:     GenerateFakeTxOutputs(),
+	Tip:      common.NewAmount(5),
+	GasLimit: common.NewAmount(0),
+	GasPrice: common.NewAmount(0),
 }
 var tx3 = Transaction{
-	ID:   util.GenerateRandomAoB(1),
-	Vin:  GenerateFakeTxInputs(),
-	Vout: GenerateFakeTxOutputs(),
-	Tip:  common.NewAmount(10),
+	ID:       util.GenerateRandomAoB(1),
+	Vin:      GenerateFakeTxInputs(),
+	Vout:     GenerateFakeTxOutputs(),
+	Tip:      common.NewAmount(10),
+	GasLimit: common.NewAmount(0),
+	GasPrice: common.NewAmount(0),
 }
 var tx4 = Transaction{
-	ID:   util.GenerateRandomAoB(1),
-	Vin:  GenerateFakeTxInputs(),
-	Vout: GenerateFakeTxOutputs(),
-	Tip:  common.NewAmount(20),
+	ID:       util.GenerateRandomAoB(1),
+	Vin:      GenerateFakeTxInputs(),
+	Vout:     GenerateFakeTxOutputs(),
+	Tip:      common.NewAmount(20),
+	GasLimit: common.NewAmount(0),
+	GasPrice: common.NewAmount(0),
 }
 
 var expectPopOrder = []*common.Amount{common.NewAmount(20), common.NewAmount(10), common.NewAmount(5), common.NewAmount(2)}
@@ -221,7 +229,9 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		Vout: []TXOutput{
 			{common.NewAmount(5), contractPubkeyHash, "dapp_schedule"},
 		},
-		Tip: common.NewAmount(1),
+		Tip:      common.NewAmount(1),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 	deploymentTx.ID = deploymentTx.Hash()
 
@@ -231,7 +241,9 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		Vout: []TXOutput{
 			{common.NewAmount(5), contractPubkeyHash, "execution"},
 		},
-		Tip: common.NewAmount(2),
+		Tip:      common.NewAmount(2),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 	executionTx.ID = executionTx.Hash()
 

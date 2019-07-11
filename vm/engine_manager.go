@@ -1,7 +1,6 @@
 package vm
 
 import (
-	logger "github.com/sirupsen/logrus"
 	"strings"
 
 	"github.com/dappley/go-dappley/core"
@@ -27,16 +26,18 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
 	scStorage *core.ScState,
 	blkHeight uint64,
 	seed int64) {
-	logger.WithFields(logger.Fields{
-		"smart_contracts": len(contractUtxos),
-	}).Info("V8EngineManager: is running scheduled events...")
 
 	for _, utxo := range contractUtxos {
-		if !strings.Contains(utxo.Contract, scheduleFuncName){
+		if !strings.Contains(utxo.Contract, scheduleFuncName) {
 			continue
 		}
 		addr := utxo.PubKeyHash.GenerateAddress()
+
 		engine := em.CreateEngine()
+		// TODO confirm whether we need to set limit
+		if err := engine.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize); err != nil {
+			continue
+		}
 		engine.ImportSourceCode(utxo.Contract)
 		engine.ImportLocalStorage(scStorage)
 		engine.ImportContractAddr(addr)

@@ -226,8 +226,8 @@ func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, erro
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	sendTxParam := core.NewSendTxParam(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, contract)
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+	sendTxParam := core.NewSendTxParam(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc, node)
 }
 
@@ -242,7 +242,7 @@ func GetMinerAddress() string {
 //add balance
 func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
-	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc, node)
 }
 
@@ -275,7 +275,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 
-	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), sendTxParam.Amount)
+	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), sendTxParam.TotalCost())
 	if err != nil {
 		return nil, "", err
 	}

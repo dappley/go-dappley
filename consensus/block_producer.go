@@ -115,7 +115,6 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
-	var generatedTxs []*core.Transaction
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
 
@@ -128,7 +127,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 		totalSize += txNode.Size
 
 		ctx := txNode.Value.ToContractTx()
-
+		minerAddr := core.NewAddress(bp.beneficiary)
 		if ctx != nil {
 			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
 			if err != nil {
@@ -142,15 +141,29 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
 
-			generatedTxs = ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			gasCount, generatedTxs, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+
+			// record gas used
+			if err != nil {
+				// add utxo from txs into utxoIndex
+				logger.WithError(err).Error("executeSmartContract error.")
+			}
+			if gasCount > 0 {
+				grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+				if err == nil {
+					generatedTxs = append(generatedTxs, &grtx)
+				}
+			}
+			gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+			if err == nil {
+				generatedTxs = append(generatedTxs, &gctx)
+			}
 			validTxs = append(validTxs, generatedTxs...)
 			utxoIndex.UpdateUtxoState(generatedTxs)
 		} else {
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
-
 		}
-
 	}
 
 	// append reward transaction
@@ -184,6 +197,8 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	var generatedTXs []*core.Transaction
 	rewards := make(map[string]string)
 
+	minerAddr := core.NewAddress(bp.beneficiary)
+
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()
 		if ctx == nil {
@@ -199,11 +214,30 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			return nil, nil
 		}
 		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
+		gasCount, newTxs, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+		generatedTXs = append(generatedTXs, newTxs...)
+		// record gas used
+		if err != nil {
+			// add utxo from txs into utxoIndex
+			logger.WithFields(logger.Fields{
+				"err": err,
+			}).Error("executeSmartContract error.")
+		}
+		if gasCount > 0 {
+			grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+			if err == nil {
+				generatedTXs = append(generatedTXs, &grtx)
+			}
+		}
+		gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+		if err == nil {
+
+			generatedTXs = append(generatedTXs, &gctx)
+		}
+
 		// add utxo from txs into utxoIndex
 		utxoIndex.UpdateUtxo(tx)
-		generatedTXs = append(generatedTXs, ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
 	}
-
 	// append reward transaction
 	if len(rewards) > 0 {
 		rtx := core.NewRewardTx(currBlkHeight, rewards)

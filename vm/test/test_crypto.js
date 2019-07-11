@@ -8,4 +8,4 @@ CryptoTest.prototype = {
         return crypto.verifyPublicKey(addr, pubkey);
     }
 };
-var cryptoTest = new CryptoTest;
+module.exports = new CryptoTest();

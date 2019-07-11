@@ -11,7 +11,9 @@ import (
 
 //VerifyAddressFunc verify address is valid
 //export VerifyAddressFunc
-func VerifyAddressFunc(address *C.char) bool {
+func VerifyAddressFunc(address *C.char, gasCnt *C.size_t) bool {
+	// calculate Gas.
+	*gasCnt = C.size_t(VerifyAddressGasBase)
 	addr := core.NewAddress(C.GoString(address))
 	return addr.IsValid()
 }
@@ -65,34 +67,27 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 
 //TransferFunc transfer amount from contract to address
 //export TransferFunc
-func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.char) int {
+func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.char, gasCnt *C.size_t) int {
 	toAddr := core.NewAddress(C.GoString(to))
 	amountValue, err := common.NewAmountFromString(C.GoString(amount))
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"amount": amount,
-		}).Debug("SmartContract: transfer amount is invalid!")
+		logger.Warn("SmartContract: transfer amount is invalid!")
 		return 1
 	}
 	tipValue, err := common.NewAmountFromString(C.GoString(tip))
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"tip": tip,
-		}).Debug("SmartContract: tip for the transfer is invalid!")
+		logger.Warn("SmartContract: tip for the transfer is invalid!")
 		return 1
 	}
 
 	engine := getV8EngineByAddress(uint64(uintptr(handler)))
 	if engine == nil {
-		logger.WithFields(logger.Fields{
-			"handler":  uint64(uintptr(handler)),
-			"function": "Blockchain.TransferFunc",
-			"to":       toAddr,
-			"amount":   amountValue,
-			"tip":      tipValue,
-		}).Debug("SmartContract: failed to get the engine instance!")
+		logger.Warn("SmartContract: failed to get the engine instance!")
 		return 1
 	}
+
+	// calculate Gas.
+	*gasCnt = C.size_t(TransferGasBase)
 
 	contractAddr := engine.contractAddr
 	utxos := engine.contractUTXOs
@@ -103,17 +98,11 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 
 	utxosToSpend, ok := prepareUTXOs(utxos, amountValue.Add(tipValue))
 	if !ok {
-		logger.WithFields(logger.Fields{
-			"all_utxos":      utxos,
-			"spending_utxos": utxosToSpend,
-			"to":             toAddr,
-			"amount":         amountValue,
-			"tip":            tipValue,
-		}).Warn("SmartContract: there is insufficient fund for the transfer!")
+		logger.Warn("SmartContract: there is insufficient fund for the transfer!")
 		return 1
 	}
 
-	transferTX, err := core.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, sourceTXID)
+	transferTX, err := core.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

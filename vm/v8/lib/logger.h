@@ -4,7 +4,7 @@
 #include "v8.h"
 using namespace v8;
 
-void NewLoggerInstance(Isolate *isolate, Local<Context> context, void* address);
+void NewLoggerInstance(Isolate *isolate, Local<Context> context, void *address);
 
 void LogDebugCallback(const FunctionCallbackInfo<Value> &info);
 void LogInfoCallback(const FunctionCallbackInfo<Value> &info);

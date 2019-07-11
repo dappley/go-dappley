@@ -71,7 +71,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
@@ -185,7 +185,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
@@ -208,7 +208,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//add second transaction
-	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount2, common.NewAmount(0), "")
+	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx2, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
 	assert.Nil(t, err)
 
@@ -314,8 +314,8 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam1 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), "")
-	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet3.GetAddress(), sendAmount, common.NewAmount(0), "")
+	sendTxParam1 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet3.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
 	tx2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
 

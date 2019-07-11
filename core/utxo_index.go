@@ -127,7 +127,7 @@ func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) 
 }
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
-	if !tx.IsCoinbase() && !tx.IsRewardTx() {
+	if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
 		for _, txin := range tx.Vin {
 			//TODO spent contract utxo
 			isContract, _ := PubKeyHash(txin.PubKey).IsContract()
@@ -172,7 +172,7 @@ func (utxos *UTXOIndex) UndoTxsInBlock(blk *Block, bc *Blockchain, db storage.St
 		if err != nil {
 			return err
 		}
-		if tx.IsCoinbase() || tx.IsRewardTx() {
+		if tx.IsCoinbase() || tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
 			continue
 		}
 		err = utxos.unspendVinsInTx(tx, bc)

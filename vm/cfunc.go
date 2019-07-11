@@ -3,9 +3,12 @@ package vm
 /*
 #include <stdbool.h>
 #include "v8/lib/transaction_struct.h"
+// require.
+char *RequireDelegateFunc(void *handler, const char *filename, size_t *lineOffset);
+char *AttachLibVersionDelegateFunc(void *handler, const char *libname);
 
-bool  VerifyAddressFunc(const char* address);
-int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip);
+bool  VerifyAddressFunc(const char* address, size_t *gasCnt);
+int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip, size_t *gasCnt);
 int   GetCurrBlockHeightFunc(void *handler);
 char* GetNodeAddressFunc(void *handler);
 int   DeleteContractFunc(void *handler);
@@ -25,12 +28,20 @@ int RandomFunc(void *handler, int max);
 void* Malloc(size_t size);
 void  Free(void* address);
 
-bool Cgo_VerifyAddressFunc(const char *address) {
-	return VerifyAddressFunc(address);
+char *Cgo_RequireDelegateFunc(void *handler, const char *filename, size_t *lineOffset) {
+	return RequireDelegateFunc(handler, filename, lineOffset);
+}
+
+char *Cgo_AttachLibVersionDelegateFunc(void *handler, const char *libname) {
+	return AttachLibVersionDelegateFunc(handler, libname);
+}
+
+bool Cgo_VerifyAddressFunc(const char *address, size_t *gasCnt) {
+	return VerifyAddressFunc(address, gasCnt);
 };
 
-int Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip) {
-	return TransferFunc(handler, to, amount, tip);
+int Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip, size_t *gasCnt) {
+	return TransferFunc(handler, to, amount, tip, gasCnt);
 };
 
 int Cgo_GetCurrBlockHeightFunc(void *handler){

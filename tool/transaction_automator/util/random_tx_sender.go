@@ -129,7 +129,13 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 	}
 
 	senderKeyPair := sender.wallet.GetWalletManager().GetKeyPairByAddress(sender.wallet.GetAddrs()[fromIndex])
-	tx := sender.createTransaction(fromAddr, toAddr, common.NewAmount(sendAmount), common.NewAmount(0), data, senderKeyPair)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+	if data != "" {
+		gasLimit = common.NewAmount(30000)
+		gasPrice = common.NewAmount(1)
+	}
+	tx := sender.createTransaction(fromAddr, toAddr, common.NewAmount(sendAmount), common.NewAmount(0), gasLimit, gasPrice, data, senderKeyPair)
 	if tx == nil {
 		return nil
 	}
@@ -164,7 +170,7 @@ func getDifferentIndex(index int, maxIndex int) int {
 	return newIndex
 }
 
-func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, tip *common.Amount, contract string, senderKeyPair *core.KeyPair) *core.Transaction {
+func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *core.KeyPair) *core.Transaction {
 
 	pkh, err := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
 	if err != nil {
@@ -175,7 +181,7 @@ func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, ti
 	if err != nil {
 		return nil
 	}
-	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, contract)
+	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract)
 	tx, err := core.NewUTXOTransaction(prevUtxos, sendTxParam)
 
 	if err != nil {

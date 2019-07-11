@@ -97,16 +97,13 @@ func (out *TXOutput) FromProto(pb proto.Message) {
 
 func (out *TXOutput) CheckContractSyntax(sc ScEngine) error {
 	if out.Contract != "" {
-
 		function, args := util.DecodeScInput(out.Contract)
-
+		if function == "" {
+			return sc.CheckContactSyntax(out.Contract)
+		}
 		totalArgs := util.PrepareArgs(args)
 		functionCallScript := prepareFuncCallScript(function, totalArgs)
-
-		if function != "" {
-			return sc.CheckContactSyntax(functionCallScript)
-		}
-		return sc.CheckContactSyntax(out.Contract)
+		return sc.CheckContactSyntax(functionCallScript)
 	}
 	return nil
 }

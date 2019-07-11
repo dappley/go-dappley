@@ -34,6 +34,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
+
 type BlockHeader struct {
 	hash      Hash
 	prevHash  Hash
@@ -363,8 +365,10 @@ L:
 			}
 
 			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-
-			utxoIndex.UpdateUtxo(tx)
+			// TODO GAS LIMIT
+			if err := scEngine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
+				return false
+			}
 			ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
@@ -449,7 +453,7 @@ func (b *Block) IsParentBlock(child *Block) bool {
 func (b *Block) Rollback(txPool *TransactionPool) {
 	if b != nil {
 		for _, tx := range b.GetTransactions() {
-			if !tx.IsCoinbase() && !tx.IsRewardTx() {
+			if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
 				txPool.Push(*tx)
 			}
 		}

@@ -29,13 +29,13 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -222,6 +222,8 @@ func TestRpcSendContract(t *testing.T) {
 		WalletPath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
 		Tip:        common.NewAmount(2).Bytes(),
 		Data:       contract,
+		GasLimit:   common.NewAmount(30000).Bytes(),
+		GasPrice:   common.NewAmount(1).Bytes(),
 	})
 	assert.Nil(t, err)
 
@@ -340,7 +342,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
 	rpcContext.consensus.Start()
@@ -585,6 +587,8 @@ func TestRpcSendTransaction(t *testing.T) {
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"")
 	transaction, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*corepb.Transaction)})
@@ -600,6 +604,8 @@ func TestRpcSendTransaction(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	errTransaction, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
@@ -629,7 +635,7 @@ func TestRpcSendTransaction(t *testing.T) {
 
 func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
-	rpcContext, err := createRpcTestContext(9)
+	rpcContext, err := createRpcTestContext(99)
 	if err != nil {
 		panic(err)
 	}
@@ -674,6 +680,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		receiverWallet1.GetAddress(),
 		common.NewAmount(3),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"")
 	transaction1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction1})
@@ -682,6 +690,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet2.GetAddress(),
 		common.NewAmount(2),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
@@ -693,11 +703,15 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		receiverWallet2.GetAddress(),
 		common.NewAmount(1),
 		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		"")
 	transaction3, err := core.NewUTXOTransaction(utxos, sendTxParam3)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction3})
 
 	rpcContext.consensus.Stop()
+	time.Sleep(time.Second)
+
 	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*corepb.Transaction{transaction1.ToProto().(*corepb.Transaction), transaction2.ToProto().(*corepb.Transaction), transaction3.ToProto().(*corepb.Transaction)}})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
@@ -707,12 +721,15 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
 	}
 	rpcContext.consensus.Stop()
+	time.Sleep(time.Second)
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	sendTxParamErr := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	errTransaction, err := core.NewUTXOTransaction(utxos2, sendTxParamErr)
@@ -721,6 +738,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet4.GetAddress(),
 		common.NewAmount(3),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction4, err := core.NewUTXOTransaction(utxos2, sendTxParam4)
@@ -742,6 +761,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
+	time.Sleep(time.Second)
+
 	core.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
@@ -829,7 +850,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step1)
@@ -837,12 +858,12 @@ func TestGetNewTransaction(t *testing.T) {
 	assert.Equal(t, true, conn2Step1)
 	conn2.Close()
 
-	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step2)
 	conn1.Close()
 
-	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, false, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
 
@@ -880,6 +901,8 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
 		common.NewAmount(6),
+		common.NewAmount(0),
+		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
 	transaction, err := core.NewUTXOTransaction(utxos, sendTxParam)
@@ -1087,4 +1110,165 @@ func getBalance(utxos []*corepb.Utxo) *common.Amount {
 		amount = amount.Add(common.NewAmountFromBytes(utxo.Amount))
 	}
 	return amount
+}
+
+func TestRpcService_RpcEstimateGas(t *testing.T) {
+	logger.SetLevel(logger.WarnLevel)
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+	client.RemoveWalletFile()
+
+	// Create wallets
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
+	pow := consensus.NewProofOfWork()
+	scManager := vm.NewV8EngineManager(core.Address{})
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 1280000, scManager, 1000000)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare a PoW node that put mining reward to the sender's address
+	pool := core.NewBlockPool(0)
+	node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.SetTargetBit(0)
+
+	// Start a grpc server
+	server := NewGrpcServer(node, "temp")
+	server.Start(defaultRpcPort + 15) // use a different port as other integration tests
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+15), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewAdminServiceClient(conn)
+	rpcClient := rpcpb.NewRpcServiceClient(conn)
+
+	// deploy contract
+	contract := "'usestrict';var StepRecorder=function(){};StepRecorder.prototype={record:function(addr,steps){var originalSteps=LocalStorage.get(addr);" +
+		"LocalStorage.set(addr,originalSteps+steps);return _native_reward.record(addr,steps);},dapp_schedule:function(){}};module.exports = new StepRecorder();"
+	// Initiate a RPC send request
+	sendResp, err := c.RpcSend(context.Background(), &rpcpb.SendRequest{
+		From:       senderWallet.GetAddress().String(),
+		To:         "",
+		Amount:     common.NewAmount(1).Bytes(),
+		WalletPath: strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1),
+		Tip:        common.NewAmount(0).Bytes(),
+		Data:       contract,
+		GasLimit:   common.NewAmount(30000).Bytes(),
+		GasPrice:   common.NewAmount(1).Bytes(),
+	})
+
+	assert.Nil(t, err)
+	contractAddr := sendResp.ContractAddress
+
+	// Start mining to approve the transaction
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	time.Sleep(time.Second)
+	// estimate contract
+	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
+	pubKeyHash, _ := senderWallet.GetAddress().GetPubKeyHash()
+	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	sendTxParam := core.NewSendTxParam(senderWallet.GetAddress(),
+		senderWallet.GetKeyPair(),
+		core.NewAddress(contractAddr),
+		common.NewAmount(1),
+		common.NewAmount(0),
+		common.NewAmount(0),
+		common.NewAmount(0),
+		contract)
+	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
+	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	gasResp, err := rpcClient.RpcEstimateGas(context.Background(), estimateGasRequest)
+	assert.Nil(t, err)
+	gas := gasResp.Gas
+
+	assert.True(t, gas > 0)
+
+	client.RemoveWalletFile()
+}
+
+func TestRpcService_RpcGasPrice(t *testing.T) {
+	logger.SetLevel(logger.WarnLevel)
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+	client.RemoveWalletFile()
+
+	// Create wallets
+	senderWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerWallet, err := logic.CreateWallet(strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
+	pow := consensus.NewProofOfWork()
+	scManager := vm.NewV8EngineManager(core.Address{})
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 1280000, scManager, 1000000)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare a PoW node that put mining reward to the sender's address
+	pool := core.NewBlockPool(0)
+	node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.SetTargetBit(0)
+
+	// Start a grpc server
+	server := NewGrpcServer(node, "temp")
+	server.Start(defaultRpcPort + 16) // use a different port as other integration tests
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a client
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+16), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	rpcClient := rpcpb.NewRpcServiceClient(conn)
+
+	// Start mining to approve the transaction
+	pow.Start()
+	for bc.GetMaxHeight() < 1 {
+	}
+	pow.Stop()
+
+	time.Sleep(time.Second)
+
+	gasPriceRequest := &rpcpb.GasPriceRequest{}
+	gasPriceResponse, err := rpcClient.RpcGasPrice(context.Background(), gasPriceRequest)
+	assert.Nil(t, err)
+	gasPrice := gasPriceResponse.GasPrice
+
+	assert.True(t, gasPrice > 0)
+
+	client.RemoveWalletFile()
 }

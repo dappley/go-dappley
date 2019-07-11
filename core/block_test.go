@@ -254,6 +254,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			*NewTxOut(common.NewAmount(10), contractAddr, ""),
 		},
 		common.NewAmount(7),
+		common.NewAmount(0),
+		common.NewAmount(0),
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"

@@ -41,6 +41,8 @@ var (
 	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
 	ErrRewardTxVerifyFailed    = errors.New("Verify reward transaction failed")
 	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
+	// DefaultGasPrice default price of per gas
+	DefaultGasPrice uint64 = 1
 )
 
 type BlockchainState int
@@ -555,4 +557,9 @@ func (bc *Blockchain) IsLIB(block *Block) bool {
 		return true
 	}
 	return false
+}
+
+// GasPrice returns gas price in current blockchain
+func (bc *Blockchain) GasPrice() uint64 {
+	return DefaultGasPrice
 }

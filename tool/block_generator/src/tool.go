@@ -184,7 +184,7 @@ func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sende
 		}).Panic("Unable to read smart contract file!")
 	}
 	contract := string(data)
-	tx := newTransaction(sender, core.Address{}, senderWallet.GetKeyPair(), utxoIndex, pubKeyHash, common.NewAmount(1), contract)
+	tx := newTransaction(sender, core.Address{}, senderWallet.GetKeyPair(), utxoIndex, pubKeyHash, common.NewAmount(1), common.NewAmount(10000), common.NewAmount(1), contract)
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[sender.String()] -= 1
 	return tx
@@ -196,7 +196,7 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr core.Address
 	minerKeyPair := core.GetKeyPairByString(minerPrivKey)
 	pkh, _ := core.NewUserPubKeyHash(minerKeyPair.PublicKey)
 
-	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, "")
+	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[fundAddr.String()] = initFund
 	return tx
@@ -240,17 +240,17 @@ func generateTransaction(addrs []core.Address, wm *client.WalletManager, utxoInd
 	if contract != "" {
 		receiver = scAddr
 	}
-	tx := newTransaction(sender, receiver, senderWallet.GetKeyPair(), utxoIndex, pkhmap[sender], amount, contract)
+	tx := newTransaction(sender, receiver, senderWallet.GetKeyPair(), utxoIndex, pkhmap[sender], amount, common.NewAmount(10000), common.NewAmount(1), contract)
 	currBalance[sender.String()] -= 1
 	currBalance[receiver.String()] += 1
 
 	return tx
 }
 
-func newTransaction(sender, receiver core.Address, senderKeyPair *core.KeyPair, utxoIndex *core.UTXOIndex, senderPkh core.PubKeyHash, amount *common.Amount, contract string) *core.Transaction {
+func newTransaction(sender, receiver core.Address, senderKeyPair *core.KeyPair, utxoIndex *core.UTXOIndex, senderPkh core.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *core.Transaction {
 	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
 
-	sendTxParam := core.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), contract)
+	sendTxParam := core.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 
 	if err != nil {

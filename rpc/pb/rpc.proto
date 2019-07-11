@@ -22,6 +22,8 @@ service RpcService {
   rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
   rpc RpcGetLastIrreversibleBlock(GetLastIrreversibleBlockRequest) returns (GetLastIrreversibleBlockResponse) {}
+  rpc RpcEstimateGas(EstimateGasRequest) returns (EstimateGasResponse) {}
+    rpc RpcGasPrice(GasPriceRequest) returns (GasPriceResponse) {}
 }
 
 service AdminService{
@@ -65,6 +67,8 @@ message SendRequest {
   string wallet_path = 4;
   bytes tip = 5;
   string data = 6;
+  bytes gasLimit = 7;
+  bytes gasPrice = 8;
 }
 
 message GetPeerInfoRequest {}
@@ -114,6 +118,12 @@ message MetricsServiceRequest {}
 
 message GetLastIrreversibleBlockRequest {}
 
+message EstimateGasRequest {
+  corepb.Transaction transaction = 1;
+}
+
+message GasPriceRequest {
+}
 // Responses
 
 message AddProducerResponse {}
@@ -196,4 +206,12 @@ message GetStatsResponse {
 
 message GetLastIrreversibleBlockResponse {
   corepb.Block block = 1;
+}
+
+message EstimateGasResponse {
+    uint64 gas = 1;
+}
+
+message GasPriceResponse {
+    uint64 gasPrice = 1;
 }

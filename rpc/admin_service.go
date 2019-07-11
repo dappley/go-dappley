@@ -97,6 +97,8 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	sendToAddress := core.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	tip := common.NewAmountFromBytes(in.GetTip())
+	gasLimit := common.NewAmountFromBytes(in.GetGasLimit())
+	gasPrice := common.NewAmountFromBytes(in.GetGasPrice())
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
@@ -116,7 +118,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		return nil, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 
-	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.GetData(),
+	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),
 		adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
