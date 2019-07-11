@@ -58,7 +58,7 @@ func NewStream(s network.Stream) *Stream {
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *StreamMsg) {
+func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *DappPacketContext) {
 	logger.Warn("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, msgRcvCh)
@@ -122,12 +122,12 @@ func (s *Stream) Send(data []byte, priority DappCmdPriority) {
 
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *StreamMsg) {
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *DappPacketContext) {
 	go s.readLoop(rw, quitCh, msgRcvCh)
 	go s.writeLoop(rw)
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *StreamMsg) {
+func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *DappPacketContext) {
 	buffer := make([]byte, 1024)
 	var err error
 
@@ -153,7 +153,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *StreamMsg) {
 		}
 
 		select {
-		case msgRcvCh <- &StreamMsg{packet, s.peerID}:
+		case msgRcvCh <- &DappPacketContext{packet, s.peerID}:
 		default:
 			logger.WithFields(logger.Fields{
 				"dispatchCh_len": len(msgRcvCh),
@@ -165,7 +165,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *StreamMsg) {
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *StreamMsg) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *DappPacketContext) {
 	for {
 		select {
 		case <-s.quitRdCh:

@@ -43,17 +43,16 @@ const (
 	GetBlocks            = "GetBlocks"
 	ReturnBlocks         = "ReturnBlocks"
 	SyncPeerList         = "SyncPeerList"
-	GetPeerList          = "GetPeerList"
-	ReturnPeerList       = "ReturnPeerList"
-	RequestBlock         = "requestBlock"
-	BroadcastTx          = "BroadcastTx"
-	BroadcastBatchTxs    = "BraodcastBatchTxs"
-	GetCommonBlocks      = "GetCommonBlocks"
-	ReturnCommonBlocks   = "ReturnCommonBlocks"
-	Unicast              = false
-	Broadcast            = true
-	dispatchChLen        = 1024 * 4
-	requestChLen         = 1024
+
+	RequestBlock       = "requestBlock"
+	BroadcastTx        = "BroadcastTx"
+	BroadcastBatchTxs  = "BraodcastBatchTxs"
+	GetCommonBlocks    = "GetCommonBlocks"
+	ReturnCommonBlocks = "ReturnCommonBlocks"
+	Unicast            = false
+	Broadcast          = true
+	dispatchChLen      = 1024 * 4
+	requestChLen       = 1024
 )
 
 const (
@@ -77,14 +76,14 @@ var (
 )
 
 type Node struct {
-	network           *Network
-	bm                *core.BlockChainManager
-	exitCh            chan bool
-	privKey           crypto.PrivKey
-	dispatcher        chan *StreamMsg
-	requestCh         chan *DappMsg
-	downloadManager   *DownloadManager
-	messageDispatcher *MessageDispatcher
+	network         *Network
+	bm              *core.BlockChainManager
+	exitCh          chan bool
+	privKey         crypto.PrivKey
+	dispatcher      chan *DappPacketContext
+	requestCh       chan *DappSendCmdContext
+	downloadManager *DownloadManager
+	commandBroker   *CommandBroker
 }
 
 //create new Node instance
@@ -100,13 +99,13 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 	bm.SetblockPool(pool)
 	bm.Setblockchain(bc)
 	node := &Node{
-		bm:                bm,
-		exitCh:            make(chan bool, 1),
-		privKey:           nil,
-		dispatcher:        make(chan *StreamMsg, dispatchChLen),
-		downloadManager:   nil,
-		requestCh:         make(chan *DappMsg, requestChLen),
-		messageDispatcher: NewMessageDispatcher(),
+		bm:              bm,
+		exitCh:          make(chan bool, 1),
+		privKey:         nil,
+		dispatcher:      make(chan *DappPacketContext, dispatchChLen),
+		downloadManager: nil,
+		requestCh:       make(chan *DappSendCmdContext, requestChLen),
+		commandBroker:   NewCommandBroker(),
 	}
 
 	if bc != nil {
@@ -115,6 +114,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 
 	node.network = NewNetwork(config, node.dispatcher, node.requestCh, db)
 	node.network.OnStreamStop(node.OnStreamStop)
+	node.network.Subscirbe(node.commandBroker)
 
 	if err != nil {
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")
@@ -123,12 +123,12 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 	return node
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain      { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool        { return n.bm.GetblockPool() }
-func (n *Node) GetDownloadManager() *DownloadManager { return n.downloadManager }
-func (n *Node) GetInfo() *PeerInfo                   { return n.network.host.info }
-func (n *Node) GetNetwork() *Network                 { return n.network }
-func (n *Node) GetRequestCh() chan *DappMsg          { return n.requestCh }
+func (n *Node) GetBlockchain() *core.Blockchain        { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool          { return n.bm.GetblockPool() }
+func (n *Node) GetDownloadManager() *DownloadManager   { return n.downloadManager }
+func (n *Node) GetInfo() *PeerInfo                     { return n.network.host.info }
+func (n *Node) GetNetwork() *Network                   { return n.network }
+func (n *Node) GetRequestCh() chan *DappSendCmdContext { return n.requestCh }
 
 func (n *Node) Start(listenPort int, seeds []string) error {
 	err := n.network.Start(listenPort, n.privKey, seeds)
@@ -156,13 +156,13 @@ func (n *Node) StartRequestLoop2() {
 		for {
 			select {
 			case msg := <-n.requestCh:
-				if msg.cmd == nil {
+				if msg.command == nil {
 					continue
 				}
 
-				rawBytes := msg.cmd.GetRawBytes()
+				rawBytes := msg.command.GetRawBytes()
 
-				if msg.isBroadcast {
+				if msg.IsBroadcast() {
 					n.GetNetwork().Broadcast(rawBytes, msg.priority)
 				} else {
 					n.GetNetwork().Unicast(rawBytes, msg.destination, msg.priority)
@@ -197,11 +197,16 @@ func (n *Node) StartListenLoop() {
 				if len(n.dispatcher) == dispatchChLen {
 					logger.WithFields(logger.Fields{
 						"lenOfDispatchChan": len(n.dispatcher),
-					}).Warn("Node: dispatcher channel full")
+					}).Warn("Node: streamMsgDispatcherCh channel full")
 				}
-				cmdMsg := ParseDappMsgFromDappPacket(streamMsg.msg)
+				cmdMsg := ParseDappMsgFromDappPacket(streamMsg.packet)
 				n.handle(cmdMsg, streamMsg.source)
-				n.messageDispatcher.Dispatch(cmdMsg.GetCmd(), streamMsg.msg.data)
+				dappRcvdCmd := NewDappRcvdCmdContext(cmdMsg, streamMsg.source)
+				err := n.commandBroker.Dispatch(dappRcvdCmd)
+
+				if err != nil {
+					logger.WithError(err).Warn("Node: Dispatch received message failed")
+				}
 			}
 		}
 	}()
@@ -228,10 +233,6 @@ func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
 	return nil
 }
 
-func (n *Node) Subscribe(cmd string, dispatcher chan []byte) error {
-	return n.messageDispatcher.Subscribe(cmd, dispatcher)
-}
-
 func (n *Node) OnStreamStop(stream *Stream) {
 	if n.downloadManager != nil {
 		n.downloadManager.DisconnectPeer(stream.peerID)
@@ -239,7 +240,7 @@ func (n *Node) OnStreamStop(stream *Stream) {
 }
 
 func (n *Node) handle(msg *DappCmd, id peer.ID) {
-	switch msg.GetCmd() {
+	switch msg.GetName() {
 	case GetBlockchainInfo:
 		n.GetBlockchainInfoHandler(msg, id)
 
@@ -249,11 +250,11 @@ func (n *Node) handle(msg *DappCmd, id peer.ID) {
 	case SyncBlock:
 		n.SyncBlockHandler(msg, id)
 
-	case GetPeerList:
-		n.GetNodePeers(msg.GetData(), id)
-
-	case ReturnPeerList:
-		n.ReturnNodePeers(msg.GetData(), id)
+	//case GetPeerListCmd:
+	//	n.GetNodePeers(packet.GetData(), id)
+	//
+	//case ReturnPeerListCmd:
+	//	n.ReturnNodePeers(packet.GetData(), id)
 
 	case RequestBlock:
 		n.SendRequestedBlock(msg.GetData(), id)
@@ -391,7 +392,7 @@ func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
 		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
-	data, err := n.prepareData(&networkpb.ReturnPeerList{PeerList: peerPbs}, ReturnPeerList, Unicast, "")
+	data, err := n.prepareData(&networkpb.ReturnPeerList{PeerList: peerPbs}, ReturnPeerListCmd, Unicast, "")
 	if err != nil {
 		return err
 	}
@@ -472,7 +473,7 @@ func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
 func (n *Node) SyncBlockHandler(dm *DappCmd, pid peer.ID) {
 	if len(dm.data) == 0 {
 		logger.WithFields(logger.Fields{
-			"cmd": "sync block",
+			"name": "sync block",
 		}).Warn("Node: can not find block information.")
 		return
 	}
@@ -494,7 +495,7 @@ func (n *Node) GetBlockchainInfoHandler(dm *DappCmd, pid peer.ID) {
 	tailBlock, err := n.GetBlockchain().GetTailBlock()
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetBlockchainInfoRequest",
+			"name": "GetBlockchainInfoRequest",
 		}).Warn("Node: get  tail block failed.")
 		return
 	}
@@ -510,7 +511,7 @@ func (n *Node) GetBlockchainInfoHandler(dm *DappCmd, pid peer.ID) {
 	data, err := n.prepareData(response, ReturnBlockchainInfo, Unicast, "")
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetBlockchainInfoRequest",
+			"name": "GetBlockchainInfoRequest",
 		}).Warn("Node: prepare data failed.")
 		return
 	}
@@ -522,7 +523,7 @@ func (n *Node) ReturnBlockchainInfoHandler(dm *DappCmd, pid peer.ID) {
 	blockchainInfo := &networkpb.ReturnBlockchainInfo{}
 	if err := proto.Unmarshal(dm.data, blockchainInfo); err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlockchainInfo",
+			"name": "ReturnBlockchainInfo",
 		}).Info("Node: parse data failed.")
 		return
 	}
@@ -535,7 +536,7 @@ func (n *Node) GetBlocksHandler(dm *DappCmd, pid peer.ID) {
 	param := &networkpb.GetBlocks{}
 	if err := proto.Unmarshal(dm.data, param); err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetBlocks",
+			"name": "GetBlocks",
 		}).Info("Node: parse data failed.")
 		return
 	}
@@ -545,7 +546,7 @@ func (n *Node) GetBlocksHandler(dm *DappCmd, pid peer.ID) {
 	// Reach the blockchain's tail
 	if block.GetHeight() >= n.GetBlockchain().GetMaxHeight() {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetBlocks",
+			"name": "GetBlocks",
 		}).Info("Node: reach blockchain tail.")
 		return
 	}
@@ -571,7 +572,7 @@ func (n *Node) GetBlocksHandler(dm *DappCmd, pid peer.ID) {
 	data, err := n.prepareData(result, ReturnBlocks, Unicast, "")
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetBlocks",
+			"name": "GetBlocks",
 		}).Warn("Node: prepare data failed.")
 		return
 	}
@@ -583,7 +584,7 @@ func (n *Node) GetCommonBlocksHandler(dm *DappCmd, pid peer.ID) {
 	param := &networkpb.GetCommonBlocks{}
 	if err := proto.Unmarshal(dm.data, param); err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetCommonBlocks",
+			"name": "GetCommonBlocks",
 		}).Info("Node: parse data failed.")
 		return
 	}
@@ -608,7 +609,7 @@ func (n *Node) GetCommonBlocksHandler(dm *DappCmd, pid peer.ID) {
 	data, err := n.prepareData(result, ReturnCommonBlocks, Unicast, "")
 	if err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "GetBlocks",
+			"name": "GetBlocks",
 		}).Warn("Node: prepare data failed.")
 		return
 	}
@@ -633,7 +634,7 @@ func (n *Node) ReturnBlocksHandler(dm *DappCmd, pid peer.ID) {
 	param := &networkpb.ReturnBlocks{}
 	if err := proto.Unmarshal(dm.data, param); err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "ReturnBlocks",
+			"name": "ReturnBlocks",
 		}).Info("Node: parse data failed.")
 		return
 	}
@@ -646,7 +647,7 @@ func (n *Node) ReturnCommonBlocksHandler(dm *DappCmd, pid peer.ID) {
 
 	if err := proto.Unmarshal(dm.data, param); err != nil {
 		logger.WithFields(logger.Fields{
-			"cmd": "ReturnCommonBlocks",
+			"name": "ReturnCommonBlocks",
 		}).Info("Node: parse data failed.")
 	}
 
@@ -718,7 +719,7 @@ func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(data, getPeerlistRequest); err != nil {
-		logger.WithError(err).Warn("Node: parse GetPeerList failed.")
+		logger.WithError(err).Warn("Node: parse GetPeerListCmd failed.")
 	}
 
 	peers := n.network.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.GetMaxNumber()))

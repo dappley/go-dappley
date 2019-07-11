@@ -26,7 +26,6 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
-	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -204,7 +203,6 @@ func TestNode_SyncPeers(t *testing.T) {
 }
 
 func TestNode_ConnectionFull(t *testing.T) {
-	logger.SetLevel(logger.InfoLevel)
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
 

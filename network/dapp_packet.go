@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"math/big"
 	"reflect"
 )
@@ -32,6 +33,11 @@ var (
 type DappPacket struct {
 	header []byte
 	data   []byte
+}
+
+type DappPacketContext struct {
+	packet *DappPacket
+	source peer.ID
 }
 
 func ConstructDappPacketFromData(data []byte) *DappPacket {

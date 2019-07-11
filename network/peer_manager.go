@@ -50,7 +50,9 @@ const (
 	syncPeersScheduleTime        = 10 * time.Minute
 	checkSeedsConnectionTime     = 15 * time.Minute
 
-	topicStreamStop = "StreamStop"
+	topicStreamStop   = "StreamStop"
+	GetPeerListCmd    = "GetPeerListCmd"
+	ReturnPeerListCmd = "ReturnPeerListCmd"
 )
 
 type onStreamStopFunc func(stream *Stream)
@@ -68,16 +70,17 @@ type PeerManager struct {
 
 	syncPeerContext *SyncPeerContext
 
-	streamStopCh chan *Stream
-	msgRcvCh     chan *StreamMsg
-	requestCh    chan *DappMsg
-	eventBus     EventBus.Bus
-	db           storage.Storage
+	streamStopNotificationCh chan *Stream
+	streamMsgReceiveCh       chan *DappPacketContext
+	commandSendCh            chan *DappSendCmdContext
+	commandReceiveCh         chan *DappRcvdCmdContext
+	eventNotifier            EventBus.Bus
+	db                       storage.Storage
 
 	mutex sync.RWMutex
 }
 
-func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, requestCh chan *DappMsg, db storage.Storage) *PeerManager {
+func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db storage.Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
@@ -93,17 +96,18 @@ func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, requestCh chan
 	}
 
 	return &PeerManager{
-		seeds:                 make(map[peer.ID]*PeerInfo),
-		syncPeers:             make(map[peer.ID]*PeerInfo),
-		streams:               make(map[peer.ID]*StreamInfo),
-		mutex:                 sync.RWMutex{},
-		maxConnectionOutCount: maxConnectionOutCount,
-		maxConnectionInCount:  maxConnectionInCount,
-		msgRcvCh:              msgRcvCh,
-		requestCh:             requestCh,
-		streamStopCh:          make(chan *Stream, 10),
-		eventBus:              EventBus.New(),
-		db:                    db,
+		seeds:                    make(map[peer.ID]*PeerInfo),
+		syncPeers:                make(map[peer.ID]*PeerInfo),
+		streams:                  make(map[peer.ID]*StreamInfo),
+		mutex:                    sync.RWMutex{},
+		maxConnectionOutCount:    maxConnectionOutCount,
+		maxConnectionInCount:     maxConnectionInCount,
+		streamMsgReceiveCh:       streamMessageReceiveCh,
+		commandSendCh:            commandSendCh,
+		commandReceiveCh:         make(chan *DappRcvdCmdContext, 100),
+		streamStopNotificationCh: make(chan *Stream, 10),
+		eventNotifier:            EventBus.New(),
+		db:                       db,
 	}
 }
 
@@ -148,6 +152,7 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
 
 func (pm *PeerManager) Start(host *Host, seeds []string) {
 	pm.host = host
+	pm.StartRequestListener()
 	pm.AddSeeds(seeds)
 	pm.loadSyncPeers()
 	pm.startConnectSeeds()
@@ -158,15 +163,31 @@ func (pm *PeerManager) Start(host *Host, seeds []string) {
 }
 
 func (pm *PeerManager) SubscribeOnStreamStop(cb onStreamStopFunc) {
-	pm.eventBus.SubscribeAsync(topicStreamStop, cb, false)
+	pm.eventNotifier.SubscribeAsync(topicStreamStop, cb, false)
 }
 
 func (pm *PeerManager) StartExitListener() {
 	go func() {
 		for {
-			if s, ok := <-pm.streamStopCh; ok {
-				pm.StopStream(s)
-				pm.eventBus.Publish(topicStreamStop, s)
+			if s, ok := <-pm.streamStopNotificationCh; ok {
+				pm.OnStreamStop(s)
+				pm.eventNotifier.Publish(topicStreamStop, s)
+			}
+		}
+	}()
+}
+
+func (pm *PeerManager) StartRequestListener() {
+	go func() {
+		for {
+			select {
+			case command := <-pm.commandReceiveCh:
+				switch command.GetCommandName() {
+				case GetPeerListCmd:
+					pm.SyncPeersRequestHandler(command)
+				case ReturnPeerListCmd:
+					pm.PeerListMessageHandler(command)
+				}
 			}
 		}
 	}()
@@ -234,7 +255,7 @@ func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
 func (pm *PeerManager) StreamHandler(s network.Stream) {
 
 	stream := NewStream(s)
-	stream.Start(pm.streamStopCh, pm.msgRcvCh)
+	stream.Start(pm.streamStopNotificationCh, pm.streamMsgReceiveCh)
 
 	logger.WithFields(logger.Fields{
 		"peer_id": stream.peerID,
@@ -247,7 +268,7 @@ func (pm *PeerManager) StreamHandler(s network.Stream) {
 	}
 }
 
-func (pm *PeerManager) StopStream(stream *Stream) {
+func (pm *PeerManager) OnStreamStop(stream *Stream) {
 
 	logger.WithFields(logger.Fields{
 		"peer_id": stream.peerID,
@@ -402,28 +423,6 @@ func (pm *PeerManager) startSyncPeers() {
 			pm.startConnectSyncPeers()
 		}
 	}()
-}
-
-func (pm *PeerManager) SendSyncPeersRequest() {
-	getPeerListPb := &networkpb.GetPeerList{
-		MaxNumber: int32(maxSyncPeersCount),
-	}
-
-	bytes, err := proto.Marshal(getPeerListPb)
-	if err != nil {
-		logger.WithError(err).Error("PeerManager: Send syncPeer request failed")
-	}
-
-	dappMsg := NewDappMsg(GetPeerList, bytes, Broadcast, HighPriorityCommand)
-
-	select {
-	case pm.requestCh <- dappMsg:
-	default:
-		logger.WithFields(logger.Fields{
-			"lenOfDispatchChan": len(pm.requestCh),
-		}).Warn("PeerManager: request channel full")
-	}
-
 }
 
 func (pm *PeerManager) createSyncContext() {
@@ -657,7 +656,7 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 		return nil, nil
 	}
 
-	peerStream.Start(pm.streamStopCh, pm.msgRcvCh)
+	peerStream.Start(pm.streamStopNotificationCh, pm.streamMsgReceiveCh)
 	return peerStream, nil
 }
 
@@ -745,4 +744,77 @@ func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
 	defer pm.mutex.RUnlock()
 	_, ok := pm.streams[peerId]
 	return ok
+}
+
+func (pm *PeerManager) Subscirbe(broker *CommandBroker) {
+	broker.Subscribe(GetPeerListCmd, pm.commandReceiveCh)
+	broker.Subscribe(ReturnPeerListCmd, pm.commandReceiveCh)
+}
+
+func (pm *PeerManager) SendSyncPeersRequest() {
+	getPeerListPb := &networkpb.GetPeerList{
+		MaxNumber: int32(maxSyncPeersCount),
+	}
+
+	var destination peer.ID
+
+	command := NewDappSendCmdContext(GetPeerListCmd, getPeerListPb, destination, Broadcast, HighPriorityCommand)
+
+	pm.sendCommand(command)
+
+}
+
+func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.ID) {
+
+	peers := pm.RandomGetConnectedPeers(maxNumOfPeers)
+	var peerPbs []*networkpb.PeerInfo
+	for _, peerInfo := range peers {
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
+	}
+
+	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
+	dappMsg := NewDappSendCmdContext(ReturnPeerListCmd, peerList, destination, Unicast, HighPriorityCommand)
+	pm.sendCommand(dappMsg)
+}
+
+func (pm *PeerManager) sendCommand(dappMsg *DappSendCmdContext) {
+
+	select {
+	case pm.commandSendCh <- dappMsg:
+	default:
+		logger.WithFields(logger.Fields{
+			"lenOfDispatchChan": len(pm.commandSendCh),
+		}).Warn("PeerManager: request channel full")
+	}
+}
+
+func (pm *PeerManager) SyncPeersRequestHandler(command *DappRcvdCmdContext) {
+
+	getPeerlistRequest := &networkpb.GetPeerList{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(command.GetData(), getPeerlistRequest); err != nil {
+		logger.WithError(err).Warn("Node: parse GetPeerListCmd failed.")
+	}
+
+	pm.SendPeerListMessage(int(getPeerlistRequest.GetMaxNumber()), command.source)
+}
+
+func (pm *PeerManager) PeerListMessageHandler(request *DappRcvdCmdContext) {
+	peerlistPb := &networkpb.ReturnPeerList{}
+
+	if err := proto.Unmarshal(request.GetData(), peerlistPb); err != nil {
+		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
+	}
+
+	var peers []*PeerInfo
+	for _, peerPb := range peerlistPb.GetPeerList() {
+		peerInfo := &PeerInfo{}
+		if err := peerInfo.FromProto(peerPb); err != nil {
+			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
+		}
+		peers = append(peers, peerInfo)
+	}
+
+	pm.ReceivePeers(request.source, peers)
 }

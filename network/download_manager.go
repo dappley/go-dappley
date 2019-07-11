@@ -182,7 +182,7 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 
 func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) (*PeerBlockInfo, error) {
 	returnBlocksLogger := logger.WithFields(logger.Fields{
-		"cmd": "ReturnBlocks",
+		"name": "ReturnBlocks",
 	})
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
@@ -210,7 +210,7 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 
 func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
 	returnBlocksLogger := logger.WithFields(logger.Fields{
-		"cmd": "ReturnBlocks",
+		"name": "ReturnBlocks",
 	})
 
 	downloadManager.mutex.Lock()
@@ -273,7 +273,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
 		logger.WithFields(logger.Fields{
-			"cmd": "ReturnCommonBlocks",
+			"name": "ReturnCommonBlocks",
 		}).Info("DownloadManager: PeerId not in checklist.")
 		downloadManager.mutex.Unlock()
 		return
@@ -281,7 +281,7 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 
 	if !downloadManager.isSameGetCommonBlocksCommand(blocksPb.GetMsgId()) {
 		logger.WithFields(logger.Fields{
-			"cmd": "ReturnCommonBlocks",
+			"name": "ReturnCommonBlocks",
 		}).Info("DownloadManager: response is not for waiting command.")
 		downloadManager.mutex.Unlock()
 		return

@@ -18,15 +18,3 @@ type NodeConfig struct {
 	MaxConnectionOutCount int
 	MaxConnectionInCount  int
 }
-
-type StreamMsg struct {
-	msg    *DappPacket
-	source peer.ID
-}
-
-type DappCmdPriority int
-
-const (
-	HighPriorityCommand = iota
-	NormalPriorityCommand
-)

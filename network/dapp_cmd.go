@@ -26,7 +26,7 @@ import (
 )
 
 type DappCmd struct {
-	cmd         string
+	name        string
 	data        []byte
 	isBroadcast bool
 }
@@ -35,8 +35,8 @@ func NewDapCmd(cmd string, data []byte, isBroadcast bool) *DappCmd {
 	return &DappCmd{cmd, data, isBroadcast}
 }
 
-func (dc *DappCmd) GetCmd() string {
-	return dc.cmd
+func (dc *DappCmd) GetName() string {
+	return dc.name
 }
 
 func (dc *DappCmd) GetData() []byte {
@@ -70,14 +70,14 @@ func (dc *DappCmd) GetRawBytes() []byte {
 
 func (dc *DappCmd) ToProto() proto.Message {
 	return &networkpb.DappCmd{
-		Cmd:         dc.cmd,
+		Cmd:         dc.name,
 		Data:        dc.data,
 		IsBroadcast: dc.isBroadcast,
 	}
 }
 
 func (dc *DappCmd) FromProto(pb proto.Message) {
-	dc.cmd = pb.(*networkpb.DappCmd).GetCmd()
+	dc.name = pb.(*networkpb.DappCmd).GetCmd()
 	dc.data = pb.(*networkpb.DappCmd).GetData()
 	dc.isBroadcast = pb.(*networkpb.DappCmd).GetIsBroadcast()
 }

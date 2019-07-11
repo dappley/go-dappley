@@ -9,22 +9,22 @@ import (
 )
 
 type Network struct {
-	host                *Host
-	peerManager         *PeerManager
-	msgRcvCh            chan *StreamMsg
-	recentlyRcvdDapMsgs *lru.Cache
-	dispatcher          chan *StreamMsg
+	host                  *Host
+	peerManager           *PeerManager
+	streamMsgRcvCh        chan *DappPacketContext
+	streamMsgDispatcherCh chan *DappPacketContext
+	recentlyRcvdDapMsgs   *lru.Cache
 }
 
-func NewNetwork(config *NodeConfig, dispatcher chan *StreamMsg, requestCh chan *DappMsg, db storage.Storage) *Network {
+func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db storage.Storage) *Network {
 
 	var err error
-	msgRcvCh := make(chan *StreamMsg, dispatchChLen)
+	streamMsgRcvCh := make(chan *DappPacketContext, dispatchChLen)
 
 	net := &Network{
-		msgRcvCh:    msgRcvCh,
-		peerManager: NewPeerManager(config, msgRcvCh, requestCh, db),
-		dispatcher:  dispatcher,
+		peerManager:           NewPeerManager(config, streamMsgRcvCh, commandSendCh, db),
+		streamMsgRcvCh:        streamMsgRcvCh,
+		streamMsgDispatcherCh: streamMsgDispatcherCh,
 	}
 
 	net.recentlyRcvdDapMsgs, err = lru.New(1024000)
@@ -42,26 +42,26 @@ func (net *Network) GetPeers() []*PeerInfo {
 func (net *Network) Start(listenPort int, privKey crypto.PrivKey, seeds []string) error {
 	net.host = NewHost(listenPort, privKey, net.peerManager.StreamHandler)
 	net.peerManager.Start(net.host, seeds)
-	net.StartReceivedMessageHandler()
+	net.StartReceivedMsgHandler()
 	return nil
 }
 
-func (net *Network) StartReceivedMessageHandler() {
+func (net *Network) StartReceivedMsgHandler() {
 	go func() {
 		for {
 			select {
-			case msg := <-net.msgRcvCh:
+			case msg := <-net.streamMsgRcvCh:
 
-				if net.IsNetworkRadiation(msg.msg) {
+				if net.IsNetworkRadiation(msg.packet) {
 					continue
 				}
 
 				select {
-				case net.dispatcher <- msg:
+				case net.streamMsgDispatcherCh <- msg:
 				default:
 					logger.WithFields(logger.Fields{
-						"dispatcherCh_len": len(net.dispatcher),
-					}).Warn("Stream: message dispatcher channel full! Message disgarded")
+						"dispatcherCh_len": len(net.streamMsgDispatcherCh),
+					}).Warn("Stream: message streamMsgDispatcherCh channel full! Message disgarded")
 					return
 				}
 			}
@@ -116,4 +116,8 @@ func (net *Network) AddPeerByString(fullAddr string) error {
 	}
 
 	return net.peerManager.AddAndConnectPeer(peerInfo)
+}
+
+func (net *Network) Subscirbe(broker *CommandBroker) {
+	net.peerManager.Subscirbe(broker)
 }
