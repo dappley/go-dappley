@@ -250,12 +250,6 @@ func (n *Node) handle(msg *DappCmd, id peer.ID) {
 	case SyncBlock:
 		n.SyncBlockHandler(msg, id)
 
-	//case GetPeerListCmd:
-	//	n.GetNodePeers(packet.GetData(), id)
-	//
-	//case ReturnPeerListCmd:
-	//	n.ReturnNodePeers(packet.GetData(), id)
-
 	case RequestBlock:
 		n.SendRequestedBlock(msg.GetData(), id)
 
@@ -712,37 +706,6 @@ func (n *Node) AddBatchTxsToPool(dm *DappCmd) {
 		n.bm.Getblockchain().GetTxPool().Push(tx)
 	}
 
-}
-
-func (n *Node) GetNodePeers(data []byte, pid peer.ID) {
-	getPeerlistRequest := &networkpb.GetPeerList{}
-
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, getPeerlistRequest); err != nil {
-		logger.WithError(err).Warn("Node: parse GetPeerListCmd failed.")
-	}
-
-	peers := n.network.peerManager.RandomGetConnectedPeers(int(getPeerlistRequest.GetMaxNumber()))
-	n.SendPeerListUnicast(peers, pid)
-}
-
-func (n *Node) ReturnNodePeers(data []byte, pid peer.ID) {
-	peerlistPb := &networkpb.ReturnPeerList{}
-
-	if err := proto.Unmarshal(data, peerlistPb); err != nil {
-		logger.WithError(err).Warn("Node: parse Peerlist failed.")
-	}
-
-	var peers []*PeerInfo
-	for _, peerPb := range peerlistPb.GetPeerList() {
-		peerInfo := &PeerInfo{}
-		if err := peerInfo.FromProto(peerPb); err != nil {
-			logger.WithError(err).Warn("Node: parse PeerInfo failed.")
-		}
-		peers = append(peers, peerInfo)
-	}
-
-	n.network.peerManager.ReceivePeers(pid, peers)
 }
 
 func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
