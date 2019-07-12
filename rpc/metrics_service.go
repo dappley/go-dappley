@@ -62,8 +62,8 @@ func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.M
 		ProducerAddress:  ms.node.GetBlockchain().GetConsensus().GetProducerAddress(),
 		Producers:        ms.node.GetBlockchain().GetConsensus().GetProducers(),
 		MaxProducers:     ms.getMaxProducers(),
-		IPFSAddresses:    ms.node.GetIPFSAddresses(),
-		RPCPort:          ms.RPCPort,
+		IpfsAddresses:    ms.node.GetIPFSAddresses(),
+		RpcPort:          ms.RPCPort,
 	}, nil
 }
 

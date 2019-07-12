@@ -217,8 +217,8 @@ message GetNodeConfig {
   string producer_address = 5;
   repeated string producers = 6;
   uint32 max_producers = 7;
-  repeated string IPFS_addresses = 9;
-  uint32 RPC_port = 10;
+  repeated string ipfs_addresses = 9;
+  uint32 rpc_port = 10;
 }
 
 message EstimateGasResponse {
