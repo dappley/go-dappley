@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/util"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -464,4 +465,75 @@ func TestNewAddress(t *testing.T) {
 	fmt.Println("privatekey:", pk)
 	fmt.Println("publickey:", publicKey)
 	fmt.Println("addr:", addr)
+}
+
+func TestAddGasCount(t *testing.T) {
+	vout := core.NewContractTXOutput(core.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	tx := core.Transaction{
+		Vout: []core.TXOutput{*vout},
+	}
+	ctx := tx.ToContractTx()
+	script, _ := ioutil.ReadFile("test/test_add.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+
+	function, args := util.DecodeScInput(vout.Contract)
+	assert.NotEmpty(t, function)
+
+	totalArgs := util.PrepareArgs(args)
+	_, err := sc.Execute("add", totalArgs)
+	assert.Nil(t, err)
+
+	gasCount := sc.ExecutionInstructions()
+	// record base gas
+	baseGas, _ := ctx.GasCountOfTxBase()
+	gasCount += baseGas.Uint64()
+
+	// min gas of each tx
+	minGasTx := core.MinGasCountPerTransaction.Uint64()
+	// dataLen
+	dataGas := uint64(35)
+	// instruction gas
+	instructionGas := uint64(25)
+	assert.Equal(t, minGasTx+dataGas+instructionGas, gasCount)
+}
+
+func TestStepRecordGasCount(t *testing.T) {
+	vout := core.NewContractTXOutput(core.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
+		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
+	tx := core.Transaction{
+		Vout: []core.TXOutput{*vout},
+	}
+	ctx := tx.ToContractTx()
+	script, _ := ioutil.ReadFile("test/test_step_recorder.js")
+
+	ss := core.NewScState()
+	sc := NewV8Engine()
+	sc.ImportLocalStorage(ss)
+	sc.ImportSourceCode(string(script))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+
+	function, args := util.DecodeScInput(vout.Contract)
+	assert.NotEmpty(t, function)
+
+	totalArgs := util.PrepareArgs(args)
+	_, err := sc.Execute("record", totalArgs)
+	assert.Nil(t, err)
+
+	gasCount := sc.ExecutionInstructions()
+	// record base gas
+	baseGas, _ := ctx.GasCountOfTxBase()
+	gasCount += baseGas.Uint64()
+
+	// min gas of each tx
+	minGasTx := core.MinGasCountPerTransaction.Uint64()
+	// dataLen
+	dataGas := uint64(74)
+	// instruction gas
+	instructionGas := uint64(61)
+	assert.Equal(t, minGasTx+dataGas+instructionGas, gasCount)
 }
