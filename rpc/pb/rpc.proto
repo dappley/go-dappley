@@ -213,5 +213,5 @@ message EstimateGasResponse {
 }
 
 message GasPriceResponse {
-    uint64 gasPrice = 1;
+    uint64 gas_price = 1;
 }
