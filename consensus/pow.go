@@ -66,6 +66,10 @@ func (pow *ProofOfWork) SetKey(key string) {
 	// pow does not require block signing
 }
 
+func (pow *ProofOfWork) GetProducerAddress() string {
+	return pow.miner.Beneficiary()
+}
+
 func (pow *ProofOfWork) Start() {
 	logger.Info("PoW starts...")
 	pow.resetStopCh()

@@ -91,6 +91,22 @@ type PeerManager struct {
 	ping  *PingService
 }
 
+func (pm *PeerManager) GetMaxConnectionInCount() int {
+	return pm.maxConnectionInCount
+}
+
+func (pm *PeerManager) GetMaxConnectionOutCount() int {
+	return pm.maxConnectionOutCount
+}
+
+func (pm *PeerManager) SetMaxConnectionInCount(maxConnectionInCount int) {
+	pm.maxConnectionInCount = maxConnectionInCount
+}
+
+func (pm *PeerManager) SetMaxConnectionOutCount(maxConnectionOutCount int) {
+	pm.maxConnectionOutCount = maxConnectionOutCount
+}
+
 func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount

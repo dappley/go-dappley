@@ -81,7 +81,7 @@ func (s *Server) Start(port uint32) {
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
 		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
 		if s.metricsConfig != nil {
-			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.metricsConfig))
+			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.metricsConfig, port))
 		}
 		if err := srv.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Server: encounters an error while serving.")

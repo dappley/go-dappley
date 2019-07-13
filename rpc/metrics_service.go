@@ -10,6 +10,7 @@ import (
 
 	logger "github.com/sirupsen/logrus"
 
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/metrics"
 	metricspb "github.com/dappley/go-dappley/metrics/pb"
@@ -22,10 +23,11 @@ type MetricsService struct {
 	node *network.Node
 	ds   *metrics.DataStore
 	*MetricsServiceConfig
+	RPCPort uint32
 }
 
-func NewMetricsService(node *network.Node, config *MetricsServiceConfig) *MetricsService {
-	return (&MetricsService{node: node, MetricsServiceConfig: config}).init()
+func NewMetricsService(node *network.Node, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
+	return (&MetricsService{node: node, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
 }
 
 func (ms *MetricsService) init() *MetricsService {
@@ -49,6 +51,27 @@ func (ms *MetricsService) RpcGetStats(ctx context.Context, request *rpcpb.Metric
 			BlockStats: ms.getBlockStats(),
 		},
 	}, nil
+}
+
+func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetNodeConfig, error) {
+	return &rpcpb.GetNodeConfig{
+		TxPoolLimit:      ms.node.GetBlockchain().GetTxPool().GetSizeLimit(),
+		BlkSizeLimit:     uint32(ms.node.GetBlockchain().GetBlockSizeLimit()),
+		MaxConnectionOut: uint32(ms.node.GetPeerManager().GetMaxConnectionOutCount()),
+		MaxConnectionIn:  uint32(ms.node.GetPeerManager().GetMaxConnectionInCount()),
+		ProducerAddress:  ms.node.GetBlockchain().GetConsensus().GetProducerAddress(),
+		Producers:        ms.node.GetBlockchain().GetConsensus().GetProducers(),
+		MaxProducers:     ms.getMaxProducers(),
+		IpfsAddresses:    ms.node.GetIPFSAddresses(),
+		RpcPort:          ms.RPCPort,
+	}, nil
+}
+
+func (ms *MetricsService) getMaxProducers() uint32 {
+	if dpos, ok := ms.node.GetBlockchain().GetConsensus().(*consensus.DPOS); ok {
+		return uint32(dpos.GetDynasty().GetMaxProducers())
+	}
+	return 0
 }
 
 func (ms *MetricsService) IsPrivate() bool {

@@ -100,6 +100,10 @@ func (dpos *DPOS) GetProducers() []string {
 	return dpos.dynasty.GetProducers()
 }
 
+func (dpos *DPOS) GetProducerAddress() string {
+	return dpos.bp.Beneficiary()
+}
+
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
 func (dpos *DPOS) Validate(block *core.Block) bool {
 	producerIsValid := dpos.verifyProducer(block)

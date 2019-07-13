@@ -160,6 +160,19 @@ func (n *Node) GetPeerManager() *PeerManager                  { return n.peerMan
 func (n *Node) GetInfo() *PeerInfo                            { return n.info }
 func (n *Node) GetBlockChainManager() *core.BlockChainManager { return n.bm }
 
+func (n *Node) GetIPFSAddresses() []string {
+	addresses := make([]string, len(n.info.Addrs))
+	addr, err := buildHostMultiAddress(n.host)
+	if err != nil {
+		logger.Error(err)
+		return addresses
+	}
+	for i, v := range n.info.Addrs {
+		addresses[i] = v.Encapsulate(addr).String()
+	}
+	return addresses
+}
+
 func (n *Node) Start(listenPort int) error {
 
 	h, addrs, err := createBasicHost(listenPort, n.privKey)
@@ -272,8 +285,11 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, []ma.Multi
 		return nil, nil, err
 	}
 
-	// Build host multiaddress
-	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", basicHost.ID().Pretty()))
+	hostAddr, err := buildHostMultiAddress(basicHost)
+	if err != nil {
+		logger.WithError(err).Error("Node: failed to build host multiaddress")
+		return nil, nil, err
+	}
 
 	// Now we can build a full multiaddress to reach this host
 	// by encapsulating both addresses:
@@ -291,6 +307,10 @@ func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, []ma.Multi
 	}
 
 	return basicHost, fullAddrs, nil
+}
+
+func buildHostMultiAddress(host host.Host) (ma.Multiaddr, error) {
+	return ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", host.ID().Pretty()))
 }
 
 func (n *Node) DisconnectPeer(stream *Stream) {
