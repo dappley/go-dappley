@@ -7,6 +7,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: dappley/go-dappley
-    network_mode: bridge
     ports:
       - "50050:50050"
+    networks:
+      - default
+
+networks:
+  default:
