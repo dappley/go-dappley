@@ -217,15 +217,15 @@ func (pm *PeerManager) getUnConnectedSeeds() []*PeerInfo {
 	return unConnectedSeeds
 }
 
-func (pm *PeerManager) Broadcast(data []byte, priority DappCmdPriority) {
+func (pm *PeerManager) Broadcast(packet *DappPacket, priority DappCmdPriority) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 	for _, s := range pm.streams {
-		s.stream.Send(data, priority)
+		s.stream.Send(packet, priority)
 	}
 }
 
-func (pm *PeerManager) Unicast(data []byte, pid peer.ID, priority DappCmdPriority) {
+func (pm *PeerManager) Unicast(packet *DappPacket, pid peer.ID, priority DappCmdPriority) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
@@ -237,7 +237,7 @@ func (pm *PeerManager) Unicast(data []byte, pid peer.ID, priority DappCmdPriorit
 		return
 	}
 
-	streamInfo.stream.Send(data, priority)
+	streamInfo.stream.Send(packet, priority)
 }
 
 func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {

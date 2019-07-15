@@ -55,7 +55,7 @@ func (net *Network) StartReceivedMsgHandler() {
 				if net.IsNetworkRadiation(msg.packet) {
 					continue
 				}
-
+				net.RecordMessage(msg.packet)
 				select {
 				case net.streamMsgDispatcherCh <- msg:
 				default:
@@ -70,11 +70,11 @@ func (net *Network) StartReceivedMsgHandler() {
 }
 
 func (net *Network) IsNetworkRadiation(msg *DappPacket) bool {
-	return net.recentlyRcvdDapMsgs.Contains(msg)
+	return net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
 }
 
 func (net *Network) RecordMessage(msg *DappPacket) {
-	net.recentlyRcvdDapMsgs.Add(msg, true)
+	net.recentlyRcvdDapMsgs.Add(string(msg.GetRawBytes()), true)
 }
 
 func (net *Network) Stop() {
@@ -91,11 +91,17 @@ func (net *Network) OnStreamStop(cb onStreamStopFunc) {
 }
 
 func (net *Network) Unicast(data []byte, pid peer.ID, priority DappCmdPriority) {
-	net.peerManager.Unicast(data, pid, priority)
+	packet := ConstructDappPacketFromData(data)
+
+	net.RecordMessage(packet)
+	net.peerManager.Unicast(packet, pid, priority)
 }
 
 func (net *Network) Broadcast(data []byte, priority DappCmdPriority) {
-	net.peerManager.Broadcast(data, priority)
+	packet := ConstructDappPacketFromData(data)
+
+	net.RecordMessage(packet)
+	net.peerManager.Broadcast(packet, priority)
 }
 
 func (net *Network) AddPeer(peerInfo *PeerInfo) error {

@@ -29,14 +29,15 @@ func TestStream_Send(t *testing.T) {
 		nil,
 		nil,
 		[]byte{},
-		make(chan []byte, highPriorityChLength),
-		make(chan []byte, normalPriorityChLength),
+		make(chan *DappPacket, highPriorityChLength),
+		make(chan *DappPacket, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),
 		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
 	}
-	data1 := []byte("data1")
-	data2 := []byte("data2")
+
+	data1 := ConstructDappPacketFromData([]byte("data1"))
+	data2 := ConstructDappPacketFromData([]byte("data2"))
 	s.Send(data1, NormalPriorityCommand)
 	s.Send(data2, HighPriorityCommand)
 	assert.Equal(t, 2, len(s.msgNotifyCh))

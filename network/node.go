@@ -228,6 +228,10 @@ func (n *Node) OnStreamStop(stream *Stream) {
 }
 
 func (n *Node) handle(msg *DappCmd, id peer.ID) {
+	logger.WithFields(logger.Fields{
+		"name": msg.GetName(),
+	}).Info("Node: Received command")
+
 	switch msg.GetName() {
 	case SyncBlock:
 		n.SyncBlockHandler(msg, id)
@@ -385,9 +389,8 @@ func (n *Node) SyncBlockHandler(dm *DappCmd, pid peer.ID) {
 
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)
-		if dm.isBroadcast == Broadcast {
-			n.RelayDapMsg(*dm, SyncBlockPriority)
-		}
+		n.RelayDapMsg(*dm, SyncBlockPriority)
+
 	} else {
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)

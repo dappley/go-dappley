@@ -37,8 +37,8 @@ type Stream struct {
 	remoteAddr            multiaddr.Multiaddr
 	stream                network.Stream
 	rawByteRead           []byte
-	highPriorityWriteCh   chan []byte
-	normalPriorityWriteCh chan []byte
+	highPriorityWriteCh   chan *DappPacket
+	normalPriorityWriteCh chan *DappPacket
 	msgNotifyCh           chan bool
 	quitRdCh              chan bool
 	quitWrCh              chan bool
@@ -50,8 +50,8 @@ func NewStream(s network.Stream) *Stream {
 		s.Conn().RemoteMultiaddr(),
 		s,
 		[]byte{},
-		make(chan []byte, highPriorityChLength),
-		make(chan []byte, normalPriorityChLength),
+		make(chan *DappPacket, highPriorityChLength),
+		make(chan *DappPacket, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),
 		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
@@ -75,7 +75,7 @@ func (s *Stream) StopStream(err error) {
 	s.stream.Close()
 }
 
-func (s *Stream) Send(data []byte, priority DappCmdPriority) {
+func (s *Stream) Send(packet *DappPacket, priority DappCmdPriority) {
 	defer func() {
 		if p := recover(); p != nil {
 			logger.WithFields(logger.Fields{
@@ -89,7 +89,7 @@ func (s *Stream) Send(data []byte, priority DappCmdPriority) {
 	switch priority {
 	case HighPriorityCommand:
 		select {
-		case s.highPriorityWriteCh <- data:
+		case s.highPriorityWriteCh <- packet:
 		default:
 			logger.WithFields(logger.Fields{
 				"dataCh_len": len(s.highPriorityWriteCh),
@@ -98,7 +98,7 @@ func (s *Stream) Send(data []byte, priority DappCmdPriority) {
 		}
 	case NormalPriorityCommand:
 		select {
-		case s.normalPriorityWriteCh <- data:
+		case s.normalPriorityWriteCh <- packet:
 		default:
 			logger.WithFields(logger.Fields{
 				"dataCh_len": len(s.normalPriorityWriteCh),
@@ -183,7 +183,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 	for {
 		select {
 		case <-s.quitWrCh:
-			// Fix bug when send data to peer simultaneous with close stream,
+			// Fix bug when send packet to peer simultaneous with close stream,
 			// and send will hang because highPriorityWriteCh is full.
 			close(s.highPriorityWriteCh)
 			close(s.normalPriorityWriteCh)
@@ -192,8 +192,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			return nil
 		case <-s.msgNotifyCh:
 			select {
-			case data := <-s.highPriorityWriteCh:
-				packet := ConstructDappPacketFromData(data)
+			case packet := <-s.highPriorityWriteCh:
 				n, err := s.stream.Write(packet.GetRawBytes())
 				if err != nil {
 					logger.WithError(err).WithFields(logger.Fields{
@@ -205,8 +204,7 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			default:
 			}
 			select {
-			case data := <-s.normalPriorityWriteCh:
-				packet := ConstructDappPacketFromData(data)
+			case packet := <-s.normalPriorityWriteCh:
 				n, err := s.stream.Write(packet.GetRawBytes())
 				if err != nil {
 					logger.WithError(err).WithFields(logger.Fields{
