@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -23,6 +24,9 @@ func (cb *CommandBroker) Subscribe(cmd string, dispatcherChan chan *DappRcvdCmdC
 	if _, ok := cb.subscribers[cmd]; ok {
 		return ErrTopicOccupied
 	}
+	logrus.WithFields(logrus.Fields{
+		"command": cmd,
+	}).Warn("CommandBroker: Subscribe")
 	cb.subscribers[cmd] = dispatcherChan
 	return nil
 }
@@ -34,6 +38,11 @@ func (cb *CommandBroker) Dispatch(cmd *DappRcvdCmdContext) error {
 
 	select {
 	case cb.subscribers[cmd.GetCommandName()] <- cmd:
+		logrus.WithFields(logrus.Fields{
+			"command": cmd.GetCommandName(),
+			"length":  len(cb.subscribers[cmd.GetCommandName()]),
+			"cap":     cap(cb.subscribers[cmd.GetCommandName()]),
+		}).Warn("CommandBroker: Dispatch")
 		return nil
 	default:
 		return ErrDispatcherFull

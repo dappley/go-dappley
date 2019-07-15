@@ -38,6 +38,17 @@ func NewDappSendCmdContext(cmd string, protoMessage proto.Message, destination p
 func (dcc *DappSendCmdContext) GetCommandName() string {
 	return dcc.command.name
 }
+
 func (dcc *DappSendCmdContext) IsBroadcast() bool {
 	return dcc.command.isBroadcast
+}
+
+func (dcc *DappSendCmdContext) Send(commandSendCh chan *DappSendCmdContext) {
+	select {
+	case commandSendCh <- dcc:
+	default:
+		logger.WithFields(logger.Fields{
+			"lenOfDispatchChan": len(commandSendCh),
+		}).Warn("DappSendCmdContext: request channel full")
+	}
 }

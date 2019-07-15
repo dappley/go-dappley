@@ -114,15 +114,17 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")
 	}
 	node.downloadManager = NewDownloadManager(node, node.commandSendCh)
+	node.downloadManager.SubscribeCommandBroker(node.commandBroker)
 	return node
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain        { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool          { return n.bm.GetblockPool() }
-func (n *Node) GetDownloadManager() *DownloadManager   { return n.downloadManager }
-func (n *Node) GetInfo() *PeerInfo                     { return n.network.host.info }
-func (n *Node) GetNetwork() *Network                   { return n.network }
-func (n *Node) GetRequestCh() chan *DappSendCmdContext { return n.commandSendCh }
+func (n *Node) GetBlockchain() *core.Blockchain            { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool              { return n.bm.GetblockPool() }
+func (n *Node) GetDownloadManager() *DownloadManager       { return n.downloadManager }
+func (n *Node) GetInfo() *PeerInfo                         { return n.network.host.info }
+func (n *Node) GetNetwork() *Network                       { return n.network }
+func (n *Node) GetCommandSendCh() chan *DappSendCmdContext { return n.commandSendCh }
+func (n *Node) GetCommandBroker() *CommandBroker           { return n.commandBroker }
 
 func (n *Node) Start(listenPort int, seeds []string) error {
 	err := n.network.Start(listenPort, n.privKey, seeds)
@@ -153,7 +155,9 @@ func (n *Node) StartRequestLoop2() {
 				if cmdCtx.command == nil {
 					continue
 				}
-
+				logger.WithFields(logger.Fields{
+					"command": cmdCtx.GetCommandName(),
+				}).Warn("Node: Send Command!")
 				rawBytes := cmdCtx.command.GetRawBytes()
 
 				if cmdCtx.IsBroadcast() {
@@ -259,11 +263,11 @@ func (n *Node) handle(msg *DappCmd, id peer.ID) {
 	case GetBlocksResponse:
 		n.ReturnBlocksHandler(msg, id)
 
-	case GetCommonBlocksRequest:
-		n.GetCommonBlocksHandler(msg, id)
-
-	case GetCommonBlocksResponse:
-		n.ReturnCommonBlocksHandler(msg, id)
+	//case GetCommonBlocksRequest:
+	//	n.GetCommonBlocksHandler(msg, id)
+	//
+	//case GetCommonBlocksResponse:
+	//	n.ReturnCommonBlocksHandler(msg, id)
 
 	default:
 		logger.WithFields(logger.Fields{

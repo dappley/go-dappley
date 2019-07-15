@@ -152,7 +152,7 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
 
 func (pm *PeerManager) Start(host *Host, seeds []string) {
 	pm.host = host
-	pm.StartRequestListener()
+	pm.StartCommandListener()
 	pm.AddSeeds(seeds)
 	pm.loadSyncPeers()
 	pm.startConnectSeeds()
@@ -177,7 +177,7 @@ func (pm *PeerManager) StartExitListener() {
 	}()
 }
 
-func (pm *PeerManager) StartRequestListener() {
+func (pm *PeerManager) StartCommandListener() {
 	go func() {
 		for {
 			select {
@@ -757,11 +757,9 @@ func (pm *PeerManager) SendSyncPeersRequest() {
 	}
 
 	var destination peer.ID
-
 	command := NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, Broadcast, HighPriorityCommand)
 
-	pm.sendCommand(command)
-
+	command.Send(pm.commandSendCh)
 }
 
 func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.ID) {
@@ -773,19 +771,10 @@ func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.I
 	}
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
-	dappMsg := NewDappSendCmdContext(GetPeerListResponse, peerList, destination, Unicast, HighPriorityCommand)
-	pm.sendCommand(dappMsg)
-}
 
-func (pm *PeerManager) sendCommand(dappMsg *DappSendCmdContext) {
+	command := NewDappSendCmdContext(GetPeerListResponse, peerList, destination, Unicast, HighPriorityCommand)
 
-	select {
-	case pm.commandSendCh <- dappMsg:
-	default:
-		logger.WithFields(logger.Fields{
-			"lenOfDispatchChan": len(pm.commandSendCh),
-		}).Warn("PeerManager: request channel full")
-	}
+	command.Send(pm.commandSendCh)
 }
 
 func (pm *PeerManager) SyncPeersRequestHandler(command *DappRcvdCmdContext) {
@@ -800,10 +789,10 @@ func (pm *PeerManager) SyncPeersRequestHandler(command *DappRcvdCmdContext) {
 	pm.SendPeerListMessage(int(getPeerlistRequest.GetMaxNumber()), command.source)
 }
 
-func (pm *PeerManager) PeerListMessageHandler(request *DappRcvdCmdContext) {
+func (pm *PeerManager) PeerListMessageHandler(command *DappRcvdCmdContext) {
 	peerlistPb := &networkpb.ReturnPeerList{}
 
-	if err := proto.Unmarshal(request.GetData(), peerlistPb); err != nil {
+	if err := proto.Unmarshal(command.GetData(), peerlistPb); err != nil {
 		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
 	}
 
@@ -816,5 +805,5 @@ func (pm *PeerManager) PeerListMessageHandler(request *DappRcvdCmdContext) {
 		peers = append(peers, peerInfo)
 	}
 
-	pm.ReceivePeers(request.source, peers)
+	pm.ReceivePeers(command.source, peers)
 }
