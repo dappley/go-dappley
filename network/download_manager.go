@@ -141,13 +141,14 @@ func NewDownloadManager(node *Node, commandSendCh chan *DappSendCmdContext) *Dow
 
 func (downloadManager *DownloadManager) StartCommandListener() {
 	go func() {
-		logger.Warn("DownloadManager: StartCommandListener")
 		for {
 			select {
 			case command := <-downloadManager.commandReceiveCh:
 				switch command.GetCommandName() {
 				case BlockchainInfoRequest:
+					downloadManager.GetBlockchainInfoRequestHandler(command)
 				case BlockchainInfoResponse:
+					downloadManager.GetBlockchainInfoResponseHandler(command)
 				case GetBlocksRequest:
 					downloadManager.GetBlocksRequestHandler(command)
 				case GetBlocksResponse:
@@ -181,7 +182,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishChan chan 
 	}
 	downloadManager.mutex.Unlock()
 
-	downloadManager.node.BroadcastGetBlockchainInfo()
+	downloadManager.SendGetBlockchainInfoRequest()
 	waitTimer := time.NewTimer(CheckMaxWaitTime * time.Second)
 	logger.Info("DownloadManager: wait peer information")
 	go func() {
@@ -545,7 +546,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
 	downloadingCmd := &DownloadingCommandInfo{startHashes: hashes, finished: false}
 	downloadManager.currentCmd = &ExecuteCommand{command: downloadingCmd, retryCount: retryCount}
-	downloadManager.node.DownloadBlocksUnicast(hashes, peerId)
+	downloadManager.SendGetBlocksRequest(hashes, peerId)
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
@@ -770,6 +771,57 @@ func (downloadManager *DownloadManager) GetBlocksResponseHandler(command *DappRc
 	}
 
 	downloadManager.GetBlocksDataHandler(param, command.GetSource())
+}
+
+func (downloadManager *DownloadManager) SendGetBlockchainInfoRequest() {
+	request := &networkpb.GetBlockchainInfo{Version: protocalName}
+
+	var destination peer.ID
+	command := NewDappSendCmdContext(BlockchainInfoRequest, request, destination, Broadcast, NormalPriorityCommand)
+
+	command.Send(downloadManager.commandSendCh)
+}
+
+func (downloadManager *DownloadManager) GetBlockchainInfoRequestHandler(command *DappRcvdCmdContext) {
+
+	downloadManager.SendGetBlockchainInfoResponse(command.GetSource())
+
+}
+
+func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destination peer.ID) {
+
+	tailBlock, err := downloadManager.node.GetBlockchain().GetTailBlock()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"name": "GetBlockchainInfoRequest",
+		}).Warn("DownloadManager: get tail block failed.")
+		return
+	}
+
+	result := &networkpb.ReturnBlockchainInfo{
+		TailBlockHash: downloadManager.node.GetBlockchain().GetTailBlockHash(),
+		BlockHeight:   downloadManager.node.GetBlockchain().GetMaxHeight(),
+		Timestamp:     tailBlock.GetTimestamp(),
+		LibHash:       downloadManager.node.GetBlockchain().GetLIBHash(),
+		LibHeight:     downloadManager.node.GetBlockchain().GetLIBHeight(),
+	}
+
+	command := NewDappSendCmdContext(BlockchainInfoResponse, result, destination, Unicast, NormalPriorityCommand)
+
+	command.Send(downloadManager.commandSendCh)
+
+}
+
+func (downloadManager *DownloadManager) GetBlockchainInfoResponseHandler(command *DappRcvdCmdContext) {
+	blockchainInfo := &networkpb.ReturnBlockchainInfo{}
+	if err := proto.Unmarshal(command.GetData(), blockchainInfo); err != nil {
+		logger.WithFields(logger.Fields{
+			"name": "BlockchainInfoResponse",
+		}).Info("Node: parse data failed.")
+		return
+	}
+
+	downloadManager.AddPeerBlockChainInfo(command.GetSource(), blockchainInfo.GetBlockHeight(), blockchainInfo.GetLibHeight())
 }
 
 func (downloadManager *DownloadManager) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {

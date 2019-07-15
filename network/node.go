@@ -24,7 +24,6 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -52,17 +51,10 @@ const (
 )
 
 const (
-	GetBlockchainInfoPriority    = NormalPriorityCommand
-	ReturnBlockchainInfoPriority = NormalPriorityCommand
-	SyncBlockPriority            = HighPriorityCommand
-	GetBlocksPriority            = HighPriorityCommand
-	ReturnBlocksPriority         = HighPriorityCommand
-	ReturnPeerListPriority       = HighPriorityCommand
-	RequestBlockPriority         = HighPriorityCommand
-	BroadcastTxPriority          = NormalPriorityCommand
-	BroadcastBatchTxsPriority    = NormalPriorityCommand
-	GetCommonBlocksPriority      = HighPriorityCommand
-	ReturnCommonBlocksPriority   = HighPriorityCommand
+	SyncBlockPriority         = HighPriorityCommand
+	RequestBlockPriority      = HighPriorityCommand
+	BroadcastTxPriority       = NormalPriorityCommand
+	BroadcastBatchTxsPriority = NormalPriorityCommand
 )
 
 var (
@@ -237,12 +229,6 @@ func (n *Node) OnStreamStop(stream *Stream) {
 
 func (n *Node) handle(msg *DappCmd, id peer.ID) {
 	switch msg.GetName() {
-	case BlockchainInfoRequest:
-		n.GetBlockchainInfoHandler(msg, id)
-
-	case BlockchainInfoResponse:
-		n.ReturnBlockchainInfoHandler(msg, id)
-
 	case SyncBlock:
 		n.SyncBlockHandler(msg, id)
 
@@ -254,18 +240,6 @@ func (n *Node) handle(msg *DappCmd, id peer.ID) {
 
 	case BroadcastBatchTxs:
 		n.AddBatchTxsToPool(msg)
-
-	//case GetBlocksRequest:
-	//	n.GetBlocksHandler(msg, id)
-	//
-	//case GetBlocksResponse:
-	//	n.ReturnBlocksHandler(msg, id)
-
-	//case GetCommonBlocksRequest:
-	//	n.GetCommonBlocksHandler(msg, id)
-	//
-	//case GetCommonBlocksResponse:
-	//	n.ReturnCommonBlocksHandler(msg, id)
 
 	default:
 		logger.WithFields(logger.Fields{
@@ -331,18 +305,6 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 	return nil
 }
 
-func (n *Node) BroadcastGetBlockchainInfo() {
-	request := &networkpb.GetBlockchainInfo{Version: protocalName}
-	data, err := n.prepareData(request, BlockchainInfoRequest, Broadcast, "")
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"error": err,
-		}).Warn("Node: broadcast BlockchainInfoRequest failed.")
-	}
-
-	n.network.Broadcast(data, GetBlockchainInfoPriority)
-}
-
 func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, hex.EncodeToString(tx.ID))
 	if err != nil {
@@ -388,41 +350,6 @@ func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	return nil
 }
 
-func (n *Node) GetCommonBlocksUnicast(blockHeaders []*SyncCommandBlocksHeader, pid peer.ID, msgId int32) error {
-	var blockHeaderPbs []*corepb.BlockHeader
-	for _, blockHeader := range blockHeaders {
-		blockHeaderPbs = append(blockHeaderPbs,
-			&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
-	}
-
-	getCommonBlocksPb := &networkpb.GetCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
-
-	data, err := n.prepareData(getCommonBlocksPb, GetCommonBlocksRequest, Unicast, "")
-	if err != nil {
-		return nil
-	}
-
-	n.network.Unicast(data, pid, GetCommonBlocksPriority)
-	return nil
-}
-
-func (n *Node) DownloadBlocksUnicast(hashes []core.Hash, pid peer.ID) error {
-	blkHashes := make([][]byte, len(hashes))
-	for index, hash := range hashes {
-		blkHashes[index] = hash
-	}
-
-	getBlockPb := &networkpb.GetBlocks{StartBlockHashes: blkHashes}
-
-	data, err := n.prepareData(getBlockPb, GetBlocksRequest, Unicast, "")
-	if err != nil {
-		return nil
-	}
-
-	n.network.Unicast(data, pid, GetBlocksPriority)
-	return nil
-}
-
 func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
 	//add block to blockpool. Make sure this is none blocking.
 	n.bm.Push(block, pid)
@@ -465,169 +392,6 @@ func (n *Node) SyncBlockHandler(dm *DappCmd, pid peer.ID) {
 		blk := n.getFromProtoBlockMsg(dm.GetData())
 		n.addBlockToPool(blk, pid)
 	}
-}
-
-func (n *Node) GetBlockchainInfoHandler(dm *DappCmd, pid peer.ID) {
-	tailBlock, err := n.GetBlockchain().GetTailBlock()
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlockchainInfoRequest",
-		}).Warn("Node: get  tail block failed.")
-		return
-	}
-
-	response := &networkpb.ReturnBlockchainInfo{
-		TailBlockHash: n.GetBlockchain().GetTailBlockHash(),
-		BlockHeight:   n.GetBlockchain().GetMaxHeight(),
-		Timestamp:     tailBlock.GetTimestamp(),
-		LibHash:       n.GetBlockchain().GetLIBHash(),
-		LibHeight:     n.GetBlockchain().GetLIBHeight(),
-	}
-
-	data, err := n.prepareData(response, BlockchainInfoResponse, Unicast, "")
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlockchainInfoRequest",
-		}).Warn("Node: prepare data failed.")
-		return
-	}
-
-	n.network.Unicast(data, pid, ReturnBlockchainInfoPriority)
-}
-
-func (n *Node) ReturnBlockchainInfoHandler(dm *DappCmd, pid peer.ID) {
-	blockchainInfo := &networkpb.ReturnBlockchainInfo{}
-	if err := proto.Unmarshal(dm.data, blockchainInfo); err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "BlockchainInfoResponse",
-		}).Info("Node: parse data failed.")
-		return
-	}
-
-	n.downloadManager.AddPeerBlockChainInfo(pid, blockchainInfo.GetBlockHeight(), blockchainInfo.GetLibHeight())
-}
-
-//TODO  Refactor getblocks in rpcService and node
-func (n *Node) GetBlocksHandler(dm *DappCmd, pid peer.ID) {
-	param := &networkpb.GetBlocks{}
-	if err := proto.Unmarshal(dm.data, param); err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlocksRequest",
-		}).Info("Node: parse data failed.")
-		return
-	}
-
-	block := n.findBlockInRequestHash(param.GetStartBlockHashes())
-
-	// Reach the blockchain's tail
-	if block.GetHeight() >= n.GetBlockchain().GetMaxHeight() {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlocksRequest",
-		}).Info("Node: reach blockchain tail.")
-		return
-	}
-
-	var blocks []*core.Block
-
-	block, err := n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
-	for i := int32(0); i < maxGetBlocksNum && err == nil; i++ {
-		if block.GetHeight() == 0 {
-			logger.Panicf("Error %v", hex.EncodeToString(block.GetHash()))
-		}
-		blocks = append(blocks, block)
-		block, err = n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
-	}
-
-	var blockPbs []*corepb.Block
-	for i := len(blocks) - 1; i >= 0; i-- {
-		blockPbs = append(blockPbs, blocks[i].ToProto().(*corepb.Block))
-	}
-
-	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: param.GetStartBlockHashes()}
-
-	data, err := n.prepareData(result, GetBlocksResponse, Unicast, "")
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlocksRequest",
-		}).Warn("Node: prepare data failed.")
-		return
-	}
-
-	n.network.Unicast(data, pid, ReturnBlocksPriority)
-}
-
-func (n *Node) GetCommonBlocksHandler(dm *DappCmd, pid peer.ID) {
-	param := &networkpb.GetCommonBlocks{}
-	if err := proto.Unmarshal(dm.data, param); err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetCommonBlocksRequest",
-		}).Info("Node: parse data failed.")
-		return
-	}
-
-	index, _ := n.downloadManager.FindCommonBlock(param.GetBlockHeaders())
-	var blockHeaderPbs []*corepb.BlockHeader
-	if index == 0 {
-		blockHeaderPbs = param.GetBlockHeaders()[:1]
-	} else {
-		blockHeaders := n.downloadManager.GetCommonBlockCheckPoint(
-			param.GetBlockHeaders()[index].GetHeight(),
-			param.GetBlockHeaders()[index-1].GetHeight(),
-		)
-		for _, blockHeader := range blockHeaders {
-			blockHeaderPbs = append(blockHeaderPbs,
-				&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
-		}
-	}
-
-	result := &networkpb.ReturnCommonBlocks{MsgId: param.GetMsgId(), BlockHeaders: blockHeaderPbs}
-
-	data, err := n.prepareData(result, GetCommonBlocksResponse, Unicast, "")
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlocksRequest",
-		}).Warn("Node: prepare data failed.")
-		return
-	}
-
-	n.network.Unicast(data, pid, ReturnCommonBlocksPriority)
-}
-
-func (n *Node) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
-	for _, hash := range startBlockHashes {
-		// hash in blockchain, return
-		if block, err := n.GetBlockchain().GetBlockByHash(hash); err == nil {
-			return block
-		}
-	}
-
-	// Return Genesis Block
-	block, _ := n.GetBlockchain().GetBlockByHeight(0)
-	return block
-}
-
-func (n *Node) ReturnBlocksHandler(dm *DappCmd, pid peer.ID) {
-	param := &networkpb.ReturnBlocks{}
-	if err := proto.Unmarshal(dm.data, param); err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetBlocksResponse",
-		}).Info("Node: parse data failed.")
-		return
-	}
-
-	n.downloadManager.GetBlocksDataHandler(param, pid)
-}
-
-func (n *Node) ReturnCommonBlocksHandler(dm *DappCmd, pid peer.ID) {
-	param := &networkpb.ReturnCommonBlocks{}
-
-	if err := proto.Unmarshal(dm.data, param); err != nil {
-		logger.WithFields(logger.Fields{
-			"name": "GetCommonBlocksResponse",
-		}).Info("Node: parse data failed.")
-	}
-
-	n.downloadManager.GetCommonBlockDataHandler(param, pid)
 }
 
 func (n *Node) AddTxToPool(dm *DappCmd) {
