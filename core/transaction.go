@@ -66,8 +66,8 @@ type Transaction struct {
 	Vin      []TXInput
 	Vout     []TXOutput
 	Tip      *common.Amount
-	GasPrice *common.Amount
 	GasLimit *common.Amount
+	GasPrice *common.Amount
 }
 
 // ContractTx contains contract value
@@ -311,7 +311,6 @@ func (tx *Transaction) GetToHashBytes() []byte {
 			vin.Signature,
 		}, []byte{})
 	}
-
 	for _, vout := range tx.Vout {
 		tempBytes = bytes.Join([][]byte{
 			tempBytes,
@@ -320,9 +319,17 @@ func (tx *Transaction) GetToHashBytes() []byte {
 			[]byte(vout.Contract),
 		}, []byte{})
 	}
+
 	if tx.Tip != nil {
 		tempBytes = append(tempBytes, tx.Tip.Bytes()...)
 	}
+	if tx.GasLimit != nil {
+		tempBytes = append(tempBytes, tx.GasLimit.Bytes()...)
+	}
+	if tx.GasPrice != nil {
+		tempBytes = append(tempBytes, tx.GasPrice.Bytes()...)
+	}
+
 	return tempBytes
 }
 
@@ -745,8 +752,8 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.PublicKey, nil),
 		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
 		sendTxParam.Tip,
-		sendTxParam.GasPrice,
 		sendTxParam.GasLimit,
+		sendTxParam.GasPrice,
 	}
 	tx.ID = tx.Hash()
 
@@ -779,8 +786,8 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr Address, amount, 
 		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
 		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
 		tip,
-		gasPrice,
 		gasLimit,
+		gasPrice,
 	}
 	tx.ID = tx.Hash()
 

@@ -386,7 +386,6 @@ func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, i
 func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.EstimateGasRequest) (*rpcpb.EstimateGasResponse, error) {
 	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.FromProto(in.GetTransaction())
-	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
 
 	if tx.IsCoinbase() {
 		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
@@ -402,6 +401,7 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
+	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
 	gas, error := vm.EstimateGas(rpcService.node.GetBlockchain(), &tx)
 	return &rpcpb.EstimateGasResponse{Gas: gas}, error
 }
