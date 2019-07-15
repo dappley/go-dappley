@@ -24,6 +24,10 @@ func (dcc *DappRcvdCmdContext) GetData() []byte {
 	return dcc.command.GetData()
 }
 
+func (dcc *DappRcvdCmdContext) GetSource() peer.ID {
+	return dcc.source
+}
+
 func (dcc *DappRcvdCmdContext) IsBroadcast() bool {
 	return dcc.command.isBroadcast
 }

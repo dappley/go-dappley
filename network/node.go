@@ -155,9 +155,7 @@ func (n *Node) StartRequestLoop2() {
 				if cmdCtx.command == nil {
 					continue
 				}
-				logger.WithFields(logger.Fields{
-					"command": cmdCtx.GetCommandName(),
-				}).Warn("Node: Send Command!")
+
 				rawBytes := cmdCtx.command.GetRawBytes()
 
 				if cmdCtx.IsBroadcast() {
@@ -257,11 +255,11 @@ func (n *Node) handle(msg *DappCmd, id peer.ID) {
 	case BroadcastBatchTxs:
 		n.AddBatchTxsToPool(msg)
 
-	case GetBlocksRequest:
-		n.GetBlocksHandler(msg, id)
-
-	case GetBlocksResponse:
-		n.ReturnBlocksHandler(msg, id)
+	//case GetBlocksRequest:
+	//	n.GetBlocksHandler(msg, id)
+	//
+	//case GetBlocksResponse:
+	//	n.ReturnBlocksHandler(msg, id)
 
 	//case GetCommonBlocksRequest:
 	//	n.GetCommonBlocksHandler(msg, id)
