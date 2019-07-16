@@ -51,7 +51,7 @@ func main() {
 	}
 
 	log.BuildLogAndInit()
-
+	logger.Debugf("Debug mode open!")
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 

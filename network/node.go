@@ -37,6 +37,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"time"
 )
 
 const (
@@ -224,6 +225,7 @@ func (n *Node) StartListenLoop() {
 						"lenOfDispatchChan": len(n.dispatch),
 					}).Warn("Node: dispatch channel full")
 				}
+				logger.Debugf("Receive stream message from: %v, msgType: %v, sendTime: %v, receiveTime: %v, costTime: %v, counter: %v, IsBroadcast: %v",streamMsg.from,streamMsg.msg.cmd,streamMsg.msg.unixTimeRecvd,time.Now().Unix(),time.Now().Unix()-streamMsg.msg.unixTimeRecvd,streamMsg.msg.counter,streamMsg.msg.uniOrBroadcast)
 				n.handle(streamMsg.msg, streamMsg.from)
 			}
 		}
@@ -387,10 +389,11 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 	}
 
 	//build a dappley message
-	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(cmd, bytes, msgKey, uniOrBroadcast, n.dapMsgBroadcastCounter,)
 	if dm.cmd == SyncBlock || dm.cmd == BroadcastTx || dm.cmd == BroadcastBatchTxs {
 		n.cacheDapMsg(*dm)
 	}
+
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return nil, err
@@ -574,6 +577,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
+	logger.Debugf("Receive SyncBlock stream message from: %v, msgType: %v, sendTime: %v, receiveTime: %v, costTime: %v, IsBroadcast: %v, uuid: %v",dm.GetFrom(),dm.GetCmd(),dm.GetTimestamp(),time.Now().Unix(),time.Now().Unix()-dm.GetTimestamp(),dm.GetKey(),dm.GetUuid())
 	if dm.uniOrBroadcast == Broadcast {
 		if n.isNetworkRadiation(*dm) {
 			return

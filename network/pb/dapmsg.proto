@@ -10,6 +10,7 @@ message Dapmsg {
     string key = 4;
     int64 uni_or_broadcast = 5;
     uint64 counter = 6;
+    string uuid = 7;
 }
 
 message GetBlockchainInfo{

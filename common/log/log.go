@@ -75,11 +75,12 @@ func (*LogNullWriter) Write(b []byte) (n int, err error) {
 func (logNew *Log) LogInit() {
 
 	logrus.SetReportCaller(true)
-	logrus.SetLevel(logrus.InfoLevel)
+	logrus.SetLevel(logNew.level)
 	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:true,
 		ForceColors:               true,
 		EnvironmentOverrideColors: true,
-		TimestampFormat:           "2006-01-02 15:04:05",
+		TimestampFormat:           time.RFC3339Nano,
 	})
 
 	if logNew.stdout {
@@ -107,6 +108,7 @@ func (logNew *Log) LogInit() {
 		logrus.FatalLevel: writer,
 		logrus.PanicLevel: writer,
 	}, &logrus.TextFormatter{DisableColors: true})
+
 
 	logrus.AddHook(lfsHook)
 }
