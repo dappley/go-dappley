@@ -6,9 +6,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
@@ -60,18 +61,18 @@ func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.M
 func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.SetNodeConfigRequest) (*rpcpb.GetNodeConfigResponse, error) {
 	for _, v := range request.GetUpdatedConfigs() {
 		if _, ok := rpcpb.SetNodeConfigRequest_ConfigType_name[int32(v)]; !ok {
-			return nil, errors.New("unrecognized node configuration type")
+			return nil, status.Error(codes.InvalidArgument, "unrecognized node configuration type")
 		}
 
 		if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS || v == rpcpb.SetNodeConfigRequest_PRODUCERS {
 			cons, ok := ms.node.GetBlockchain().GetConsensus().(*consensus.DPOS)
 			if !ok {
-				return nil, errors.New("producer properties are only supported for DPOS Consensus")
+				return nil, status.Error(codes.InvalidArgument, "producer properties are only supported for DPOS Consensus")
 			}
 
 			if v == rpcpb.SetNodeConfigRequest_PRODUCERS {
 				if err := cons.GetDynasty().CanAddProducers(request.GetProducers()); err != nil {
-					return nil, err
+					return nil, status.Error(codes.InvalidArgument, err.Error())
 				}
 			}
 		}
