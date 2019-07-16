@@ -71,6 +71,7 @@ var (
 		GetBlocksResponse,
 		GetCommonBlocksRequest,
 		GetCommonBlocksResponse,
+		TopicOnStreamStop,
 	}
 )
 

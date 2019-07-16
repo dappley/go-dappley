@@ -44,6 +44,8 @@ const (
 	BroadcastTx       = "BroadcastTx"
 	BroadcastBatchTxs = "BraodcastBatchTxs"
 
+	TopicOnStreamStop = "TopicOnStreamStop"
+
 	Unicast       = false
 	Broadcast     = true
 	dispatchChLen = 1024 * 4
@@ -59,6 +61,12 @@ const (
 
 var (
 	ErrDapMsgNoCmd = errors.New("command not specified")
+)
+
+var (
+	reservedTopics = []string{
+		TopicOnStreamStop,
+	}
 )
 
 type Node struct {
@@ -91,7 +99,7 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 		dispatcher:      make(chan *DappPacketContext, dispatchChLen),
 		downloadManager: nil,
 		commandSendCh:   make(chan *DappSendCmdContext, requestChLen),
-		commandBroker:   NewCommandBroker(),
+		commandBroker:   NewCommandBroker(reservedTopics),
 	}
 
 	if bc != nil {
@@ -182,6 +190,7 @@ func (n *Node) StartListenLoop() {
 	go func() {
 		for {
 			if streamMsg, ok := <-n.dispatcher; ok {
+
 				if len(n.dispatcher) == dispatchChLen {
 					logger.WithFields(logger.Fields{
 						"lenOfDispatchChan": len(n.dispatcher),
@@ -191,7 +200,9 @@ func (n *Node) StartListenLoop() {
 				n.handle(cmdMsg, streamMsg.source)
 				dappRcvdCmd := NewDappRcvdCmdContext(cmdMsg, streamMsg.source)
 				err := n.commandBroker.Dispatch(dappRcvdCmd)
-
+				logger.WithFields(logger.Fields{
+					"command": dappRcvdCmd.GetCommandName(),
+				}).Warn("Node: Received command")
 				if err != nil {
 					logger.WithError(err).Warn("Node: Dispatch received message failed")
 				}
