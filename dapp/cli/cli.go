@@ -1111,9 +1111,9 @@ func estimateGasCommandHandler(ctx context.Context, client interface{}, flags cm
 		return
 	}
 
-	gas := gasResponse.Gas
+	gasCount := gasResponse.GasCount
 
-	fmt.Println("Gas estimiated num: ", gas)
+	fmt.Println("Gas estimiated num: ", common.NewAmountFromBytes(gasCount).String())
 }
 
 func gasPriceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
@@ -1129,5 +1129,5 @@ func gasPriceCommandHandler(ctx context.Context, client interface{}, flags cmdFl
 		return
 	}
 	gasPrice := gasPriceResponse.GasPrice
-	fmt.Println("Gas price: ", gasPrice)
+	fmt.Println("Gas price: ", common.NewAmountFromBytes(gasPrice).String())
 }

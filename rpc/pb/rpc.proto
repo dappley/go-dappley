@@ -23,7 +23,7 @@ service RpcService {
   rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
   rpc RpcGetLastIrreversibleBlock(GetLastIrreversibleBlockRequest) returns (GetLastIrreversibleBlockResponse) {}
   rpc RpcEstimateGas(EstimateGasRequest) returns (EstimateGasResponse) {}
-    rpc RpcGasPrice(GasPriceRequest) returns (GasPriceResponse) {}
+  rpc RpcGasPrice(GasPriceRequest) returns (GasPriceResponse) {}
 }
 
 service AdminService{
@@ -222,9 +222,9 @@ message GetNodeConfig {
 }
 
 message EstimateGasResponse {
-    uint64 gas = 1;
+    bytes gas_count = 1;
 }
 
 message GasPriceResponse {
-    uint64 gas_price = 1;
+    bytes gas_price = 1;
 }

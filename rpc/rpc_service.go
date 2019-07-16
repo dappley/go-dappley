@@ -19,6 +19,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/crypto/byteutils"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -402,12 +403,12 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
-	gas, error := vm.EstimateGas(rpcService.node.GetBlockchain(), &tx)
-	return &rpcpb.EstimateGasResponse{Gas: gas}, error
+	gasCount, error := vm.EstimateGas(rpcService.node.GetBlockchain(), &tx)
+	return &rpcpb.EstimateGasResponse{GasCount: byteutils.FromUint64(gasCount)}, error
 }
 
 // RpcGasPrice returns current gas price.
 func (rpcService *RpcService) RpcGasPrice(ctx context.Context, in *rpcpb.GasPriceRequest) (*rpcpb.GasPriceResponse, error) {
 	gasPrice := rpcService.node.GetBlockchain().GasPrice()
-	return &rpcpb.GasPriceResponse{GasPrice: gasPrice}, nil
+	return &rpcpb.GasPriceResponse{GasPrice: byteutils.FromUint64(gasPrice)}, nil
 }
