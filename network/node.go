@@ -577,7 +577,7 @@ func (n *Node) SyncBlockHandler(dm *DapMsg, pid peer.ID) {
 		return
 	}
 
-	logger.Debugf("Receive SyncBlock stream message from: %v, msgType: %v, sendTime: %v, receiveTime: %v, costTime: %v, IsBroadcast: %v, uuid: %v",dm.GetFrom(),dm.GetCmd(),dm.GetTimestamp(),time.Now().Unix(),time.Now().Unix()-dm.GetTimestamp(),dm.GetKey(),dm.GetUuid())
+	logger.Debugf("Receive SyncBlock stream message from: %v, msgType: %v, sendTime: %v, receiveTime: %v, costTime: %v, IsBroadcast: %v, uuid: %v",dm.GetFrom(),dm.GetCmd(),dm.GetTimestamp(),time.Now().Unix(),time.Now().Unix()-dm.GetTimestamp(),dm.uniOrBroadcast,dm.GetUuid())
 	if dm.uniOrBroadcast == Broadcast {
 		if n.isNetworkRadiation(*dm) {
 			return
