@@ -178,9 +178,14 @@ func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
 }
 
-func (dynasty *Dynasty) CanSetProducers(producers []string) error {
+func (dynasty *Dynasty) CanSetProducers(producers []string, maxProducers...int) error {
 
-	if len(producers) > dynasty.maxProducers {
+	maxProd := dynasty.maxProducers
+	if len(maxProducers) > 0 {
+		maxProd = maxProducers[0]
+	}
+
+	if len(producers) > maxProd {
 		return errors.New("can not exceed maximum number of producers")
 	}
 

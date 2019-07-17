@@ -71,7 +71,13 @@ func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.S
 			}
 
 			if v == rpcpb.SetNodeConfigRequest_PRODUCERS {
-				if err := cons.GetDynasty().CanSetProducers(request.GetProducers()); err != nil {
+				maxProducers := cons.GetDynasty().GetMaxProducers()
+				for _, v := range request.GetUpdatedConfigs() {
+					if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS {
+						maxProducers = int(request.GetMaxProducers())
+					}
+				}
+				if err := cons.GetDynasty().CanSetProducers(request.GetProducers(), maxProducers); err != nil {
 					return nil, status.Error(codes.InvalidArgument, err.Error())
 				}
 			}
