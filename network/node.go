@@ -112,7 +112,6 @@ func NewNodeWithConfig(bm *core.BlockChainManager, config *NodeConfig) *Node {
 }
 
 func (n *Node) GetBlockchain() *core.Blockchain               { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool                 { return n.bm.GetblockPool() }
 func (n *Node) GetInfo() *PeerInfo                            { return n.network.host.info }
 func (n *Node) GetNetwork() *Network                          { return n.network }
 func (n *Node) GetCommandSendCh() chan *DappSendCmdContext    { return n.commandSendCh }

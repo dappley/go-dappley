@@ -48,7 +48,6 @@ type NetService interface {
 	BroadcastBlock(block *Block) error
 	GetPeerID() peer.ID
 	GetBlockchain() *Blockchain
-	GetBlockPool() *BlockPool
 }
 
 type ScEngineManager interface {

@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/download_manager"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
@@ -32,7 +31,7 @@ const HeightDiffThreshold = 10
 type BlockChainManager struct {
 	blockchain      *Blockchain
 	blockPool       *BlockPool
-	downloadManager *download_manager.DownloadManager
+	downloadManager *DownloadManager
 }
 
 func NewBlockChainManager() *BlockChainManager {
@@ -47,7 +46,7 @@ func (bm *BlockChainManager) SetBlockchain(blockchain *Blockchain) {
 	bm.blockchain = blockchain
 }
 
-func (bm *BlockChainManager) SetDownloadManager(downloadManager *download_manager.DownloadManager) {
+func (bm *BlockChainManager) SetDownloadManager(downloadManager *DownloadManager) {
 	bm.downloadManager = downloadManager
 }
 
@@ -59,7 +58,7 @@ func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockChainManager) GetDownloadManager() *download_manager.DownloadManager {
+func (bm *BlockChainManager) GetDownloadManager() *DownloadManager {
 	return bm.downloadManager
 }
 

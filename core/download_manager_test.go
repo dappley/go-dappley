@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package download_manager
+package core
 
 import (
 	"github.com/dappley/go-dappley/network"
@@ -24,8 +24,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core"
-	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
@@ -42,19 +41,19 @@ const (
 	multiPortReturnBlocks int = 10340
 )
 
-func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, []*network.Node) {
-	bms := make([]*core.BlockChainManager, size)
+func createTestBlockchains(size int, portStart int) ([]*BlockChainManager, []*network.Node) {
+	bms := make([]*BlockChainManager, size)
 	nodes := make([]*network.Node, size)
 	for i := 0; i < size; i++ {
-		keyPair := core.NewKeyPair()
+		keyPair := NewKeyPair()
 		address := keyPair.GenerateAddress(false)
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bm := core.NewBlockChainManager()
-		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
-		bc.SetState(core.BlockchainReady)
+		bm := NewBlockChainManager()
+		bc := CreateBlockchain(NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
+		bc.SetState(BlockchainReady)
 		bm.SetBlockchain(bc)
-		bm.SetBlockPool(core.NewBlockPool(100))
+		bm.SetBlockPool(NewBlockPool(100))
 		node := network.NewNode(bm)
 		bm.SetDownloadManager(NewDownloadManager(node))
 		bms[i] = bm
@@ -66,7 +65,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 	return bms, nodes
 }
 
-func fillBlockchains(bms []*core.BlockChainManager) {
+func fillBlockchains(bms []*BlockChainManager) {
 	generateChain := bms[0].Getblockchain()
 
 	generateChain.GetConsensus().Start()
@@ -79,7 +78,7 @@ func fillBlockchains(bms []*core.BlockChainManager) {
 		block, _ := generateChain.GetBlockByHeight(uint64(i))
 		for j := 1; j < len(bms); j++ {
 			current := bms[j].Getblockchain()
-			current.AddBlockContextToTail(core.PrepareBlockContext(current, block))
+			current.AddBlockContextToTail(PrepareBlockContext(current, block))
 		}
 	}
 }
@@ -88,14 +87,14 @@ func TestSingleNode(t *testing.T) {
 	bms, _ := createTestBlockchains(1, singlePortStart)
 
 	bm := bms[0]
-	bm.Getblockchain().SetState(core.BlockchainInit)
+	bm.Getblockchain().SetState(BlockchainInit)
 
 	finishChan := make(chan bool, 1)
 
-	bm.Getblockchain().SetState(core.BlockchainDownloading)
+	bm.Getblockchain().SetState(BlockchainDownloading)
 	bm.GetDownloadManager().StartDownloadBlockchain(finishChan)
 	<-finishChan
-	bm.Getblockchain().SetState(core.BlockchainReady)
+	bm.Getblockchain().SetState(BlockchainReady)
 
 	assert.Equal(t, uint64(0), bm.Getblockchain().GetMaxHeight())
 }
@@ -105,7 +104,7 @@ func TestMultiEqualNode(t *testing.T) {
 	fillBlockchains(bms)
 
 	bm := bms[0]
-	bm.Getblockchain().SetState(core.BlockchainInit)
+	bm.Getblockchain().SetState(BlockchainInit)
 	node := nodes[0]
 
 	for i := 1; i < len(nodes); i++ {
@@ -116,10 +115,10 @@ func TestMultiEqualNode(t *testing.T) {
 
 	finishChan := make(chan bool, 1)
 
-	bm.Getblockchain().SetState(core.BlockchainDownloading)
+	bm.Getblockchain().SetState(BlockchainDownloading)
 	bm.GetDownloadManager().StartDownloadBlockchain(finishChan)
 	<-finishChan
-	bm.Getblockchain().SetState(core.BlockchainReady)
+	bm.Getblockchain().SetState(BlockchainReady)
 
 	assert.Equal(t, oldHeight, bm.Getblockchain().GetMaxHeight())
 }
@@ -138,7 +137,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	bm := bms[0]
-	bm.Getblockchain().SetState(core.BlockchainInit)
+	bm.Getblockchain().SetState(BlockchainInit)
 	node := nodes[0]
 
 	highestChain := bms[1]
@@ -163,7 +162,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	fillBlockchains(bms)
 
 	bm := bms[0]
-	bm.Getblockchain().SetState(core.BlockchainInit)
+	bm.Getblockchain().SetState(BlockchainInit)
 	node := nodes[0]
 
 	highestChain := bms[1]
@@ -187,7 +186,7 @@ func TestDisconnectNode(t *testing.T) {
 	fillBlockchains(bms)
 
 	bm := bms[0]
-	bm.Getblockchain().SetState(core.BlockchainInit)
+	bm.Getblockchain().SetState(BlockchainInit)
 	node := nodes[0]
 
 	highestChain := bms[1]
@@ -220,7 +219,7 @@ func TestValidateReturnBlocks(t *testing.T) {
 	fillBlockchains(bms)
 
 	bm := bms[0]
-	bm.Getblockchain().SetState(core.BlockchainInit)
+	bm.Getblockchain().SetState(BlockchainInit)
 	node := nodes[0]
 	peerNode := nodes[1]
 
@@ -232,7 +231,7 @@ func TestValidateReturnBlocks(t *testing.T) {
 		downloadManager.peersInfo[p.PeerId] = &PeerBlockInfo{peerid: p.PeerId, height: 0, status: PeerStatusInit}
 		downloadManager.downloadingPeer = downloadManager.peersInfo[p.PeerId]
 	}
-	bm.Getblockchain().SetState(core.BlockchainDownloading)
+	bm.Getblockchain().SetState(BlockchainDownloading)
 
 	// test invalid peer id
 	_, err := downloadManager.validateReturnBlocks(nil, "foo")
