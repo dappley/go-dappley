@@ -8,20 +8,24 @@ import (
 )
 
 const (
-	lengthByteLength     = 8
-	startByteLength      = 2
-	checkSumLength       = 1
-	headerCheckSumLength = 1
-	headerLength         = startByteLength + lengthByteLength + checkSumLength + headerCheckSumLength
+	startByteLength       = 2
+	lengthByteLength      = 8
+	isBroadcastByteLength = 1
+	checkSumLength        = 1
+	headerCheckSumLength  = 1
+	headerLength          = startByteLength + lengthByteLength + isBroadcastByteLength + checkSumLength + headerCheckSumLength
 
 	startBytesIndex         = 0
 	lengthBytesIndex        = startBytesIndex + startByteLength
-	checkSumByteIndex       = lengthBytesIndex + lengthByteLength
+	isBroadcastByteIndex    = lengthBytesIndex + lengthByteLength
+	checkSumByteIndex       = isBroadcastByteIndex + isBroadcastByteLength
 	headerCheckSumByteIndex = checkSumByteIndex + checkSumLength
 )
 
 var (
-	startBytes = []byte{0x7E, 0x7E}
+	startBytes    = []byte{0x7E, 0x7E}
+	broadcastByte = byte(1)
+	unitcastByte  = byte(0)
 )
 
 var (
@@ -40,10 +44,10 @@ type DappPacketContext struct {
 	source peer.ID
 }
 
-func ConstructDappPacketFromData(data []byte) *DappPacket {
+func ConstructDappPacketFromData(data []byte, isBroadcast bool) *DappPacket {
 	packet := &DappPacket{}
 
-	packet.header = constructHeader(data)
+	packet.header = constructHeader(data, isBroadcast)
 	packet.data = data
 	return packet
 }
@@ -82,6 +86,9 @@ func (packet *DappPacket) GetData() []byte   { return packet.data }
 func (packet *DappPacket) GetStartBytes() []byte {
 	return packet.header[startBytesIndex : startBytesIndex+len(startBytes)]
 }
+func (packet *DappPacket) GetBroadcastByte() byte {
+	return packet.header[isBroadcastByteIndex]
+}
 func (packet *DappPacket) GetLengthBytes() []byte {
 	return packet.header[lengthBytesIndex : lengthBytesIndex+lengthByteLength]
 }
@@ -94,6 +101,10 @@ func (packet *DappPacket) GetPacketDataLength() int {
 
 func (packet *DappPacket) GetLength() int {
 	return len(packet.header) + len(packet.data)
+}
+
+func (packet *DappPacket) IsBroadcast() bool {
+	return packet.GetBroadcastByte() == broadcastByte
 }
 
 func (packet *DappPacket) GetRawBytes() []byte {
@@ -135,7 +146,7 @@ func (packet *DappPacket) containStartingBytes() bool {
 	return reflect.DeepEqual(packet.GetStartBytes(), startBytes)
 }
 
-func constructHeader(data []byte) []byte {
+func constructHeader(data []byte, isBroadcast bool) []byte {
 
 	length := len(data)
 	msg := make([]byte, lengthByteLength)
@@ -146,6 +157,14 @@ func constructHeader(data []byte) []byte {
 	}
 
 	header := append(startBytes, msg...)
+
+	isBroadcastByte := unitcastByte
+	if isBroadcast {
+		isBroadcastByte = broadcastByte
+	}
+
+	header = append(header, isBroadcastByte)
+
 	cs := checkSum(data)
 	header = append(header, cs)
 	headerCs := checkSum(header)

@@ -7,6 +7,7 @@ message DappCmd {
     string cmd = 1;
     bytes data = 2;
     bool is_broadcast = 3;
+    uint32 magic_number = 4;
 }
 
 message GetBlockchainInfo{

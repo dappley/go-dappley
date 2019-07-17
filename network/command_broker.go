@@ -2,7 +2,6 @@ package network
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -35,9 +34,7 @@ func (cb *CommandBroker) Subscribe(cmd string, dispatcherChan chan *DappRcvdCmdC
 	if _, isTopicOccupied := cb.subscribers[cmd]; isTopicOccupied && !isReservedTopic {
 		return ErrTopicOccupied
 	}
-	logrus.WithFields(logrus.Fields{
-		"cmd": cmd,
-	}).Warn("CommandBroker: subscribe")
+
 	cb.subscribers[cmd] = append(cb.subscribers[cmd], dispatcherChan)
 	return nil
 }

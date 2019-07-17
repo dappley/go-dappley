@@ -200,9 +200,7 @@ func (n *Node) StartListenLoop() {
 				n.handle(cmdMsg, streamMsg.source)
 				dappRcvdCmd := NewDappRcvdCmdContext(cmdMsg, streamMsg.source)
 				err := n.commandBroker.Dispatch(dappRcvdCmd)
-				logger.WithFields(logger.Fields{
-					"command": dappRcvdCmd.GetCommandName(),
-				}).Warn("Node: Received command")
+
 				if err != nil {
 					logger.WithError(err).Warn("Node: Dispatch received message failed")
 				}

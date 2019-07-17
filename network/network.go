@@ -70,7 +70,7 @@ func (net *Network) StartReceivedMsgHandler() {
 }
 
 func (net *Network) IsNetworkRadiation(msg *DappPacket) bool {
-	return net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
+	return msg.IsBroadcast() && net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
 }
 
 func (net *Network) RecordMessage(msg *DappPacket) {
@@ -91,14 +91,14 @@ func (net *Network) OnStreamStop(cb onStreamStopFunc) {
 }
 
 func (net *Network) Unicast(data []byte, pid peer.ID, priority DappCmdPriority) {
-	packet := ConstructDappPacketFromData(data)
+	packet := ConstructDappPacketFromData(data, false)
 
 	net.RecordMessage(packet)
 	net.peerManager.Unicast(packet, pid, priority)
 }
 
 func (net *Network) Broadcast(data []byte, priority DappCmdPriority) {
-	packet := ConstructDappPacketFromData(data)
+	packet := ConstructDappPacketFromData(data, true)
 
 	net.RecordMessage(packet)
 	net.peerManager.Broadcast(packet, priority)

@@ -20,6 +20,7 @@ package network
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/network/pb"
@@ -29,10 +30,12 @@ type DappCmd struct {
 	name        string
 	data        []byte
 	isBroadcast bool
+	magicNum    uint32
 }
 
 func NewDapCmd(cmd string, data []byte, isBroadcast bool) *DappCmd {
-	return &DappCmd{cmd, data, isBroadcast}
+	id, _ := uuid.NewUUID()
+	return &DappCmd{cmd, data, isBroadcast, id.ID()}
 }
 
 func (dc *DappCmd) GetName() string {
@@ -73,6 +76,7 @@ func (dc *DappCmd) ToProto() proto.Message {
 		Cmd:         dc.name,
 		Data:        dc.data,
 		IsBroadcast: dc.isBroadcast,
+		MagicNumber: dc.magicNum,
 	}
 }
 
@@ -80,4 +84,5 @@ func (dc *DappCmd) FromProto(pb proto.Message) {
 	dc.name = pb.(*networkpb.DappCmd).GetCmd()
 	dc.data = pb.(*networkpb.DappCmd).GetData()
 	dc.isBroadcast = pb.(*networkpb.DappCmd).GetIsBroadcast()
+	dc.magicNum = pb.(*networkpb.DappCmd).GetMagicNumber()
 }
