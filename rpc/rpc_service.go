@@ -19,8 +19,9 @@ package rpc
 
 import (
 	"context"
-	"github.com/dappley/go-dappley/crypto/byteutils"
 	"strings"
+
+	"github.com/dappley/go-dappley/crypto/byteutils"
 
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -29,10 +30,10 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/vm"
 )
 
@@ -203,7 +204,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	return &rpcpb.GetBlockByHeightResponse{Block: block.ToProto().(*corepb.Block)}, nil
 }
 
-// RpcSendTransaction Send transaction to blockchain created by wallet client
+// RpcSendTransaction Send transaction to blockchain created by account client
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.FromProto(in.GetTransaction())
@@ -244,7 +245,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	return &rpcpb.SendTransactionResponse{}, nil
 }
 
-// RpcSendBatchTransaction sends a batch of transactions to blockchain created by wallet client
+// RpcSendBatchTransaction sends a batch of transactions to blockchain created by account client
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	statusCode := codes.OK
 	var details []proto.Message

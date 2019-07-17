@@ -3,7 +3,7 @@ package util
 import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -12,11 +12,11 @@ type UnexistingUtxoTxSender struct {
 	TxSender
 }
 
-func NewUnexistingUtxoTxSender(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) *UnexistingUtxoTxSender {
+func NewUnexistingUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) *UnexistingUtxoTxSender {
 	return &UnexistingUtxoTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: account,
 		},
 	}
 }
@@ -28,7 +28,7 @@ func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")
 	}
 
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to get UTXOs to match the amount")

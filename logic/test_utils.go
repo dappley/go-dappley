@@ -11,17 +11,17 @@ import (
 //get all addresses
 func GetAllAddressesByPath(path string) ([]core.Address, error) {
 	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	am := client.NewAccountManager(fl)
+	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err
 	}
 
-	addresses := wm.GetAddresses()
+	addresses := am.GetAddresses()
 
 	return addresses, err
 }
 
-func GetTestWalletPath() string {
-	return strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1)
+func GetTestAccountPath() string {
+	return strings.Replace(client.GetAccountFilePath(), "accounts", "accounts_test", -1)
 }

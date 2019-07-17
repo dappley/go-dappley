@@ -29,8 +29,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/rpc/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
 type AdminRpcService struct {
@@ -62,13 +62,13 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 	}, nil
 }
 
-//unlock the wallet through rpc service
-func (adminRpcService *AdminRpcService) RpcUnlockWallet(ctx context.Context, in *rpcpb.UnlockWalletRequest) (*rpcpb.UnlockWalletResponse, error) {
-	err := logic.SetUnLockWallet()
+//unlock the account through rpc service
+func (adminRpcService *AdminRpcService) RpcUnlockAccount(ctx context.Context, in *rpcpb.UnlockAccountRequest) (*rpcpb.UnlockAccountResponse, error) {
+	err := logic.SetUnLockAccount()
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &rpcpb.UnlockWalletResponse{}, nil
+	return &rpcpb.UnlockAccountResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
@@ -103,22 +103,22 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
 	}
-	path := in.GetWalletPath()
+	path := in.GetAccountPath()
 	if len(path) == 0 {
-		path = client.GetWalletFilePath()
+		path = client.GetAccountFilePath()
 	}
 
-	wm, err := logic.GetWalletManager(path)
+	am, err := logic.GetAccountManager(path)
 	if err != nil {
 		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
-	senderWallet := wm.GetWalletByAddress(sendFromAddress)
-	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
+	senderAccount := am.GetAccountByAddress(sendFromAddress)
+	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
 		return nil, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 
-	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),
+	txHash, scAddress, err := logic.Send(senderAccount, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),
 		adminRpcService.node.GetBlockchain(), adminRpcService.node)
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {

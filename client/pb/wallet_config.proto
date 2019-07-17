@@ -1,6 +1,0 @@
-syntax = "proto3";
-package walletpb;
-
-message WalletConfig{
-    string file_path = 1;
-}

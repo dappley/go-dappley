@@ -2,7 +2,7 @@ package util
 
 import (
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -12,13 +12,13 @@ type UnauthorizedUtxoTxSender struct {
 	unauthorizedAddrPkh core.PubKeyHash
 }
 
-func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, unauthorizedAddr core.Address) *UnauthorizedUtxoTxSender {
-	unauthorizedpkh, _ := core.NewUserPubKeyHash(wallet.GetWalletManager().GetKeyPairByAddress(unauthorizedAddr).PublicKey)
+func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount, unauthorizedAddr core.Address) *UnauthorizedUtxoTxSender {
+	unauthorizedpkh, _ := core.NewUserPubKeyHash(account.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr).PublicKey)
 
 	return &UnauthorizedUtxoTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: account,
 		},
 		unauthorizedpkh,
 	}
@@ -31,13 +31,13 @@ func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
 		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to hash sender public key")
 	}
 
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to get UTXOs to match the amount")
 	}
 
-	unauthorizedUtxo := txSender.wallet.GetUtxoIndex().GetAllUTXOsByPubKeyHash(txSender.unauthorizedAddrPkh).GetAllUtxos()
+	unauthorizedUtxo := txSender.account.GetUtxoIndex().GetAllUTXOsByPubKeyHash(txSender.unauthorizedAddrPkh).GetAllUtxos()
 	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
 
 	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)

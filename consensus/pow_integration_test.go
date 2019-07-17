@@ -48,30 +48,30 @@ func TestMain(m *testing.M) {
 //mine multiple transactions
 func TestBlockProducer_SingleValidTx(t *testing.T) {
 
-	//create new wallet
-	wallets := &client.WalletManager{}
+	//create new account
+	accounts := &client.AccountManager{}
 
-	wallet1 := client.NewWallet()
-	wallet2 := client.NewWallet()
-	wallets.AddWallet(wallet1)
-	wallets.AddWallet(wallet2)
+	account1 := client.NewAccount()
+	account2 := client.NewAccount()
+	accounts.AddAccount(account1)
+	accounts.AddAccount(account2)
 
-	keyPair := wallets.GetKeyPairByAddress(wallet1.GetAddress())
+	keyPair := accounts.GetKeyPairByAddress(account1.GetAddress())
 
 	//create a blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
+	pubKeyHash, _ := account1.GetAddress().GetPubKeyHash()
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
@@ -81,7 +81,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, wallet1.GetAddress().String())
+	pow.Setup(n, account1.GetAddress().String())
 
 	pow.Start()
 
@@ -98,15 +98,15 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
-	//set the expected wallet value for all wallets
+	//set the expected account value for all accounts
 	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount)
 
 	if err != nil {
 		panic(err)
 	}
 	var expectedVal = map[core.Address]*common.Amount{
-		wallet1.GetAddress(): remaining,  //balance should be all mining rewards minus sendAmount
-		wallet2.GetAddress(): sendAmount, //balance should be the amount rcved from wallet1
+		account1.GetAddress(): remaining,  //balance should be all mining rewards minus sendAmount
+		account2.GetAddress(): sendAmount, //balance should be the amount rcved from account1
 	}
 
 	//check balance
@@ -116,25 +116,25 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 //mine empty blocks
 func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
-	//create new wallet
-	walletManager := &client.WalletManager{}
+	//create new account
+	accountManager := &client.AccountManager{}
 
-	wallet := client.NewWallet()
-	walletManager.AddWallet(wallet)
-	assert.NotNil(t, wallet)
+	account := client.NewAccount()
+	accountManager.AddAccount(account)
+	assert.NotNil(t, account)
 
 	//Create Blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, wallet.GetAddress().String())
+	pow.Setup(n, account.GetAddress().String())
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -152,7 +152,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//set expected mining rewarded
 	var expectedVal = map[core.Address]*common.Amount{
-		wallet.GetAddress(): mineReward.Times(uint64(count)),
+		account.GetAddress(): mineReward.Times(uint64(count)),
 	}
 
 	//check balance
@@ -162,30 +162,30 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 //mine multiple transactions
 func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
-	//create new wallet
-	wallets := &client.WalletManager{}
+	//create new account
+	accounts := &client.AccountManager{}
 
-	wallet1 := client.NewWallet()
-	wallet2 := client.NewWallet()
-	wallets.AddWallet(wallet1)
-	wallets.AddWallet(wallet2)
+	account1 := client.NewAccount()
+	account2 := client.NewAccount()
+	accounts.AddAccount(account1)
+	accounts.AddAccount(account2)
 
-	keyPair := wallets.GetKeyPairByAddress(wallet1.GetAddress())
+	keyPair := accounts.GetKeyPairByAddress(account1.GetAddress())
 
 	//create a blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
+	pubKeyHash, _ := account1.GetAddress().GetPubKeyHash()
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
@@ -195,7 +195,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	//start a producer
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, wallet1.GetAddress().String())
+	pow.Setup(n, account1.GetAddress().String())
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -208,7 +208,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//add second transaction
-	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam2 := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx2, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
 	assert.Nil(t, err)
 
@@ -230,11 +230,11 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//get the number of blocks
 	count = GetNumberOfBlocks(t, bc.Iterator())
-	//set the expected wallet value for all wallets
+	//set the expected account value for all accounts
 	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount.Add(sendAmount2))
 	var expectedVal = map[core.Address]*common.Amount{
-		wallet1.GetAddress(): remaining,                   //balance should be all mining rewards minus sendAmount
-		wallet2.GetAddress(): sendAmount.Add(sendAmount2), //balance should be the amount rcved from wallet1
+		account1.GetAddress(): remaining,                   //balance should be all mining rewards minus sendAmount
+		account2.GetAddress(): sendAmount.Add(sendAmount2), //balance should be the amount rcved from account1
 	}
 
 	//check balance
@@ -287,35 +287,35 @@ loop:
 }
 
 func TestPreventDoubleSpend(t *testing.T) {
-	//create new wallet
-	wallets := &client.WalletManager{}
+	//create new account
+	accounts := &client.AccountManager{}
 
-	wallet1 := client.NewWallet()
-	wallet2 := client.NewWallet()
-	wallet3 := client.NewWallet()
+	account1 := client.NewAccount()
+	account2 := client.NewAccount()
+	account3 := client.NewAccount()
 
-	wallets.AddWallet(wallet1)
-	wallets.AddWallet(wallet2)
-	wallets.AddWallet(wallet3)
+	accounts.AddAccount(account1)
+	accounts.AddAccount(account2)
+	accounts.AddAccount(account3)
 
 	sendAmount := common.NewAmount(10)
-	keyPair := wallets.GetKeyPairByAddress(wallet1.GetAddress())
+	keyPair := accounts.GetKeyPairByAddress(account1.GetAddress())
 
 	//create a blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
+	pubKeyHash, _ := account1.GetAddress().GetPubKeyHash()
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam1 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	sendTxParam2 := core.NewSendTxParam(wallet1.GetAddress(), keyPair, wallet3.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam1 := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam2 := core.NewSendTxParam(account1.GetAddress(), keyPair, account3.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
 	tx2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
 
@@ -328,7 +328,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, wallet1.GetAddress().Address)
+	pow.Setup(n, account1.GetAddress().Address)
 
 	pow.Start()
 

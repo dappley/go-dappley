@@ -2,7 +2,7 @@ package util
 
 import (
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -11,11 +11,11 @@ type DoubleSpendingTxSender struct {
 	TxSender
 }
 
-func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) *DoubleSpendingTxSender {
+func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) *DoubleSpendingTxSender {
 	return &DoubleSpendingTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: account,
 		},
 	}
 }
@@ -27,7 +27,7 @@ func (txSender *DoubleSpendingTxSender) Generate(params core.SendTxParam) {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to hash sender public key")
 	}
 
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to get UTXOs to match the amount")

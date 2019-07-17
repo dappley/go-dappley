@@ -39,11 +39,12 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/crypto/byteutils"
-	"github.com/dappley/go-dappley/crypto/hash"
-	"github.com/hashicorp/golang-lru"
 	"sync"
 	"unsafe"
+
+	"github.com/dappley/go-dappley/crypto/byteutils"
+	"github.com/dappley/go-dappley/crypto/hash"
+	lru "github.com/hashicorp/golang-lru"
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
@@ -64,20 +65,20 @@ const (
 )
 
 type V8Engine struct {
-	source        string
-	state         *core.ScState
-	tx            *core.Transaction
-	rewards       map[string]string
-	contractAddr  core.Address
+	source             string
+	state              *core.ScState
+	tx                 *core.Transaction
+	rewards            map[string]string
+	contractAddr       core.Address
 	contractCreateUTXO *core.UTXO
-	contractUTXOs []*core.UTXO
-	prevUtxos     []*core.UTXO
-	sourceTXID    []byte
-	generatedTXs  []*core.Transaction
-	handler       uint64
-	blkHeight     uint64
-	seed          int64
-	nodeAddr      core.Address
+	contractUTXOs      []*core.UTXO
+	prevUtxos          []*core.UTXO
+	sourceTXID         []byte
+	generatedTXs       []*core.Transaction
+	handler            uint64
+	blkHeight          uint64
+	seed               int64
+	nodeAddr           core.Address
 
 	modules                                 Modules
 	v8engine                                *C.V8Engine
@@ -183,7 +184,7 @@ func (sc *V8Engine) ImportContractCreateUTXO(utxo *core.UTXO) {
 	sc.contractCreateUTXO = utxo
 }
 
-// ImportContractAddr supplies the wallet address of the contract to the engine
+// ImportContractAddr supplies the account address of the contract to the engine
 func (sc *V8Engine) ImportContractAddr(contractAddr core.Address) {
 	sc.contractAddr = contractAddr
 }

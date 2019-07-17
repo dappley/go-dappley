@@ -277,7 +277,7 @@ func (tx *Transaction) Describe(utxoIndex *UTXOIndex) (sender, recipient *Addres
 			usedUTXO := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
-			logger.Debug("Transaction: using UTXO from multiple wallets.")
+			logger.Debug("Transaction: using UTXO from multiple accounts.")
 		}
 	}
 	for _, vout := range tx.Vout {

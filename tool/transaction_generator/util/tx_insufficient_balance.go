@@ -3,7 +3,7 @@ package util
 import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -12,11 +12,11 @@ type InsufficientBalanceTxSender struct {
 	TxSender
 }
 
-func NewInsufficientBalanceTxSender(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) *InsufficientBalanceTxSender {
+func NewInsufficientBalanceTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) *InsufficientBalanceTxSender {
 	return &InsufficientBalanceTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: account,
 		},
 	}
 }
@@ -28,7 +28,7 @@ func (txSender *InsufficientBalanceTxSender) Generate(params core.SendTxParam) {
 		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to hash sender public key")
 	}
 
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to get UTXOs to match the amount")

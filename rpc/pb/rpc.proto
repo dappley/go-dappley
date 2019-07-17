@@ -32,7 +32,7 @@ service AdminService{
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
-  rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
+  rpc RpcUnlockAccount (UnlockAccountRequest) returns (UnlockAccountResponse) {}
 }
 
 service MetricService {
@@ -42,11 +42,11 @@ service MetricService {
 
 // Requests
 
-message CreateWalletRequest {
+message CreateAccountRequest {
   string passphrase = 1;
 }
 
-message UnlockWalletRequest {}
+message UnlockAccountRequest {}
 
 message AddProducerRequest {
   string address = 1;
@@ -65,7 +65,7 @@ message SendRequest {
   string from = 1;
   string to = 2;
   bytes amount = 3;
-  string wallet_path = 4;
+  string account_path = 4;
   bytes tip = 5;
   string data = 6;
   bytes gas_limit = 7;
@@ -85,7 +85,7 @@ message GetVersionRequest {
 }
 
 message GetUTXORequest {
-  string address = 1;  //wallet address
+  string address = 1;  //account address
 }
 
 message GetBlocksRequest {
@@ -129,7 +129,7 @@ message GasPriceRequest {
 
 message AddProducerResponse {}
 
-message UnlockWalletResponse {}
+message UnlockAccountResponse {}
 
 message GetBalanceResponse {
   int64 amount = 1;

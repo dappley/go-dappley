@@ -2,7 +2,7 @@ package util
 
 import (
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -11,11 +11,11 @@ type NormalTxSender struct {
 	TxSender
 }
 
-func NewNormalTransaction(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) *NormalTxSender {
+func NewNormalTransaction(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) *NormalTxSender {
 	return &NormalTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: account,
 		},
 	}
 }
@@ -27,7 +27,7 @@ func (txSender *NormalTxSender) Generate(params core.SendTxParam) {
 		logger.WithError(err).Panic("NormalTx: Unable to hash sender public key")
 	}
 
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("NormalTx: Unable to get UTXOs to match the amount")

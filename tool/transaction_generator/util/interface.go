@@ -8,7 +8,7 @@ import (
 type TxSender struct {
 	tx      *core.Transaction
 	dappSdk *sdk.DappSdk
-	wallet  *sdk.DappSdkWallet
+	account *sdk.DappSdkAccount
 }
 
 type TestTransaction interface {

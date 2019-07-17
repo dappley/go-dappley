@@ -26,7 +26,7 @@ func TestTransferResult(t *testing.T) {
 	minerKey := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
 	minerPubKey, ok := core.NewAddress(minerKey).GetPubKeyHash()
 	if !ok {
-		t.Error("ResultTest: wallet address is error!")
+		t.Error("ResultTest: account address is error!")
 		return
 	}
 	// put old data

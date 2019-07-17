@@ -1,73 +1,74 @@
 package sdk
 
 import (
+	"sync"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"sync"
 )
 
-type DappSdkWallet struct {
+type DappSdkAccount struct {
 	addrs     []core.Address
 	balances  map[core.Address]uint64
-	wm        *client.WalletManager
+	wm        *client.AccountManager
 	sdk       *DappSdk
 	utxoIndex *core.UTXOIndex
 	mutex     *sync.RWMutex
 }
 
-//NewDappSdkWallet creates a new NewDappSdkWallet instance that connects to a Dappley node with grpc port
-func NewDappSdkWallet(numOfWallets uint32, password string, sdk *DappSdk) *DappSdkWallet {
+//NewDappSdkAccount creates a new NewDappSdkAccount instance that connects to a Dappley node with grpc port
+func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *DappSdkAccount {
 
-	dappSdkWallet := &DappSdkWallet{
+	dappSdkAccount := &DappSdkAccount{
 		sdk:   sdk,
 		mutex: &sync.RWMutex{},
 	}
 
 	var err error
 
-	dappSdkWallet.wm, err = logic.GetWalletManager(client.GetWalletFilePath())
+	dappSdkAccount.wm, err = logic.GetAccountManager(client.GetAccountFilePath())
 	if err != nil {
-		logger.WithError(err).Error("DappSdkWallet: Cannot get wallet manager.")
+		logger.WithError(err).Error("DappSdkAccount: Cannot get account manager.")
 		return nil
 	}
 
-	dappSdkWallet.addrs = dappSdkWallet.wm.GetAddresses()
-	numOfExisitingWallets := len(dappSdkWallet.addrs)
+	dappSdkAccount.addrs = dappSdkAccount.wm.GetAddresses()
+	numOfExisitingAccounts := len(dappSdkAccount.addrs)
 
-	for i := numOfExisitingWallets; i < int(numOfWallets); i++ {
-		w, err := logic.CreateWalletWithpassphrase(password)
+	for i := numOfExisitingAccounts; i < int(numOfAccounts); i++ {
+		w, err := logic.CreateAccountWithpassphrase(password)
 		if err != nil {
-			logger.WithError(err).Error("DappSdkWallet: Cannot create new wallet.")
+			logger.WithError(err).Error("DappSdkAccount: Cannot create new account.")
 			return nil
 		}
 		logger.WithFields(logger.Fields{
 			"address": w.Addresses[0],
-		}).Info("DappSdkWallet: Wallet is created")
+		}).Info("DappSdkAccount: Account is created")
 	}
 
-	dappSdkWallet.addrs = dappSdkWallet.wm.GetAddresses()
-	dappSdkWallet.Initialize()
+	dappSdkAccount.addrs = dappSdkAccount.wm.GetAddresses()
+	dappSdkAccount.Initialize()
 
-	return dappSdkWallet
+	return dappSdkAccount
 }
 
-func (sdkw *DappSdkWallet) GetAddrs() []core.Address { return sdkw.addrs }
+func (sdkw *DappSdkAccount) GetAddrs() []core.Address { return sdkw.addrs }
 
-func (sdkw *DappSdkWallet) GetBalance(address core.Address) uint64 {
+func (sdkw *DappSdkAccount) GetBalance(address core.Address) uint64 {
 	sdkw.mutex.RLock()
 	defer sdkw.mutex.RUnlock()
 
 	return sdkw.balances[address]
 }
 
-func (sdkw *DappSdkWallet) GetWalletManager() *client.WalletManager { return sdkw.wm }
+func (sdkw *DappSdkAccount) GetAccountManager() *client.AccountManager { return sdkw.wm }
 
-func (sdkw *DappSdkWallet) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
+func (sdkw *DappSdkAccount) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
 
-func (sdkw *DappSdkWallet) Initialize() {
+func (sdkw *DappSdkAccount) Initialize() {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 
@@ -75,7 +76,7 @@ func (sdkw *DappSdkWallet) Initialize() {
 	sdkw.balances = make(map[core.Address]uint64)
 }
 
-func (sdkw *DappSdkWallet) IsZeroBalance() bool {
+func (sdkw *DappSdkAccount) IsZeroBalance() bool {
 	sdkw.mutex.RLock()
 	defer sdkw.mutex.RUnlock()
 	for _, addr := range sdkw.GetAddrs() {
@@ -86,8 +87,8 @@ func (sdkw *DappSdkWallet) IsZeroBalance() bool {
 	return true
 }
 
-//UpdateBalances updates all the balances of the addresses in the wallet
-func (sdkw *DappSdkWallet) DisplayBalances() {
+//UpdateBalances updates all the balances of the addresses in the account
+func (sdkw *DappSdkAccount) DisplayBalances() {
 	sdkw.mutex.RLock()
 	defer sdkw.mutex.RUnlock()
 
@@ -95,14 +96,14 @@ func (sdkw *DappSdkWallet) DisplayBalances() {
 		logger.WithFields(logger.Fields{
 			"address": addr.String(),
 			"balance": sdkw.balances[addr],
-		}).Info("DappSdkWallet: Updating wallet balance...")
+		}).Info("DappSdkAccount: Updating account balance...")
 	}
 }
 
-//Update updates the balance and utxos of all addresses in the wallet from the server
-func (sdkw *DappSdkWallet) Update() error {
+//Update updates the balance and utxos of all addresses in the account from the server
+func (sdkw *DappSdkAccount) Update() error {
 
-	logger.Info("DappSdkWallet: Updating from server")
+	logger.Info("DappSdkAccount: Updating from server")
 
 	sdkw.Initialize()
 
@@ -131,7 +132,7 @@ func (sdkw *DappSdkWallet) Update() error {
 }
 
 //AddToBalance adds the difference to the current balance
-func (sdkw *DappSdkWallet) UpdateBalance(addr core.Address, amount uint64) {
+func (sdkw *DappSdkAccount) UpdateBalance(addr core.Address, amount uint64) {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 	sdkw.balances[addr] = amount

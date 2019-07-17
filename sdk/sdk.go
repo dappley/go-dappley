@@ -2,11 +2,12 @@ package sdk
 
 import (
 	"context"
+
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/rpc/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -45,12 +46,12 @@ func (sdk *DappSdk) GetBalance(address string) (int64, error) {
 //Send send a transaction to the network
 func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
 	return sdk.conn.adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:       from,
-		To:         to,
-		Amount:     common.NewAmount(amount).Bytes(),
-		Tip:        common.NewAmount(0).Bytes(),
-		WalletPath: client.GetWalletFilePath(),
-		Data:       data,
+		From:        from,
+		To:          to,
+		Amount:      common.NewAmount(amount).Bytes(),
+		Tip:         common.NewAmount(0).Bytes(),
+		AccountPath: client.GetAccountFilePath(),
+		Data:        data,
 	})
 }
 

@@ -33,12 +33,12 @@ import (
 	clientpkg "github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
@@ -57,7 +57,7 @@ const (
 	cliGetPeerInfo       = "getPeerInfo"
 	cliSend              = "send"
 	cliAddPeer           = "addPeer"
-	clicreateWallet      = "createWallet"
+	clicreateAccount      = "createAccount"
 	cliListAddresses     = "listAddresses"
 	clisendFromMiner     = "sendFromMiner"
 	cliaddProducer       = "addProducer"
@@ -111,7 +111,7 @@ var cmdList = []string{
 	cliGetPeerInfo,
 	cliSend,
 	cliAddPeer,
-	clicreateWallet,
+	clicreateAccount,
 	cliListAddresses,
 	clisendFromMiner,
 	cliaddProducer,
@@ -171,13 +171,13 @@ var cmdFlagsMap = map[string][]flagPars{
 			flagFromAddress,
 			"",
 			valueTypeString,
-			"Sender's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			"Sender's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		},
 		flagPars{
 			flagToAddress,
 			"",
 			valueTypeString,
-			"Receiver's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			"Receiver's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		},
 		flagPars{
 			flagAmount,
@@ -233,13 +233,13 @@ var cmdFlagsMap = map[string][]flagPars{
 			flagFromAddress,
 			"",
 			valueTypeString,
-			"Sender's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			"Sender's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		},
 		flagPars{
 			flagToAddress,
 			"",
 			valueTypeString,
-			"Receiver's wallet address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+			"Receiver's account address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		},
 		flagPars{
 			flagAmount,
@@ -278,8 +278,7 @@ var cmdFlagsMap = map[string][]flagPars{
 			"Gas price of smart contract execution.",
 		},
 	},
-	cliGasPrice: {
-	},
+	cliGasPrice: {},
 }
 
 //map the callback function to each command
@@ -290,7 +289,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetPeerInfo:       {adminRpcService, getPeerInfoCommandHandler},
 	cliSend:              {rpcService, sendCommandHandler},
 	cliAddPeer:           {adminRpcService, addPeerCommandHandler},
-	clicreateWallet:      {adminRpcService, createWalletCommandHandler},
+	clicreateAccount:      {adminRpcService, createAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
 	cliaddProducer:       {adminRpcService, cliAddProducerCommandHandler},
@@ -539,28 +538,28 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	fmt.Printf("The balance is: %d\n", response.GetAmount())
 }
 
-func createWalletCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	empty, err := logic.IsWalletEmpty()
+func createAccountCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+	empty, err := logic.IsAccountEmpty()
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
 	if empty {
-		passphrase = prompter.GetPassPhrase("Please input the password for the new wallet: ", true)
+		passphrase = prompter.GetPassPhrase("Please input the password for the new account: ", true)
 		if passphrase == "" {
 			fmt.Println("Error: password cannot be empty!")
 			return
 		}
-		wallet, err := logic.CreateWalletWithpassphrase(passphrase)
+		account, err := logic.CreateAccountWithpassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
 		}
-		if wallet != nil {
-			fmt.Printf("Wallet is created. The address is %s \n", wallet.GetAddress().Address)
+		if account != nil {
+			fmt.Printf("Account is created. The address is %s \n", account.GetAddress().Address)
 			return
 		}
 	}
 
-	locked, err := logic.IsWalletLocked()
+	locked, err := logic.IsAccountLocked()
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
@@ -572,16 +571,16 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 			fmt.Println("Error: password should not be empty!")
 			return
 		}
-		wallet, err := logic.CreateWalletWithpassphrase(passphrase)
+		account, err := logic.CreateAccountWithpassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
 		}
-		if wallet != nil {
-			fmt.Printf("Wallet is created. The address is %s\n", wallet.GetAddress().Address)
+		if account != nil {
+			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().Address)
 		}
-		//unlock the wallet
-		_, err = client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{})
+		//unlock the account
+		_, err = client.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
 
 		if err != nil {
 			switch status.Code(err) {
@@ -593,13 +592,13 @@ func createWalletCommandHandler(ctx context.Context, client interface{}, flags c
 			return
 		}
 	} else {
-		wallet, err := logic.AddWallet()
+		account, err := logic.AddAccount()
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
 		}
-		if wallet != nil {
-			fmt.Printf("Wallet is created. The address is %s\n", wallet.GetAddress().Address)
+		if account != nil {
+			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().Address)
 		}
 	}
 
@@ -619,17 +618,17 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 	passphrase := ""
 	prompter := util.NewTerminalPrompter()
 
-	empty, err := logic.IsWalletEmpty()
+	empty, err := logic.IsAccountEmpty()
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
 	}
 	if empty {
-		fmt.Println("Please use cli createWallet to generate a wallet first!")
+		fmt.Println("Please use cli createAccount to generate a account first!")
 		return
 	}
 
-	locked, err := logic.IsWalletLocked()
+	locked, err := logic.IsAccountLocked()
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
@@ -640,16 +639,16 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 			fmt.Println("Password should not be empty!")
 			return
 		}
-		fl := storage.NewFileLoader(clientpkg.GetWalletFilePath())
-		wm := clientpkg.NewWalletManager(fl)
-		err := wm.LoadFromFile()
-		addressList, err := wm.GetAddressesWithPassphrase(passphrase)
+		fl := storage.NewFileLoader(clientpkg.GetAccountFilePath())
+		am := clientpkg.NewAccountManager(fl)
+		err := am.LoadFromFile()
+		addressList, err := am.GetAddressesWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
 		}
-		//unlock the wallet
-		_, err = client.(rpcpb.AdminServiceClient).RpcUnlockWallet(ctx, &rpcpb.UnlockWalletRequest{})
+		//unlock the account
+		_, err = client.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
 		if err != nil {
 			switch status.Code(err) {
 			case codes.Unavailable:
@@ -660,7 +659,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 		}
 		if !listPriv {
 			if len(addressList) == 0 {
-				fmt.Println("The addresses in the wallet is empty!")
+				fmt.Println("The addresses in the account is empty!")
 			} else {
 				i := 1
 				fmt.Println("The address list:")
@@ -674,7 +673,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 		} else {
 			privateKeyList := []string{}
 			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
+				keyPair := am.GetKeyPairByAddress(core.NewAddress(addr))
 				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
 				if err1 != nil {
 					err = err1
@@ -684,7 +683,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 				err = err1
 			}
 			if len(addressList) == 0 {
-				fmt.Println("The addresses in the wallet is empty!")
+				fmt.Println("The addresses in the account is empty!")
 			} else {
 				i := 1
 				fmt.Println("The address list with private keys:")
@@ -699,17 +698,17 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 
 		}
 	} else {
-		fl := storage.NewFileLoader(clientpkg.GetWalletFilePath())
-		wm := clientpkg.NewWalletManager(fl)
-		err := wm.LoadFromFile()
+		fl := storage.NewFileLoader(clientpkg.GetAccountFilePath())
+		am := clientpkg.NewAccountManager(fl)
+		err := am.LoadFromFile()
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
 		}
-		addressList := wm.GetAddresses()
+		addressList := am.GetAddresses()
 		if !listPriv {
 			if len(addressList) == 0 {
-				fmt.Println("The addresses in the wallet is empty!")
+				fmt.Println("The addresses in the account is empty!")
 			} else {
 				i := 1
 				fmt.Println("The address list:")
@@ -723,7 +722,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 		} else {
 			privateKeyList := []string{}
 			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(addr)
+				keyPair := am.GetKeyPairByAddress(addr)
 				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
 				if err1 != nil {
 					err = err1
@@ -733,7 +732,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 				err = err1
 			}
 			if len(addressList) == 0 {
-				fmt.Println("The addresses in the wallet is empty!")
+				fmt.Println("The addresses in the account is empty!")
 			} else {
 				i := 1
 				fmt.Println("The address list with private keys:")
@@ -896,18 +895,18 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		return
 	}
 
-	wm, err := logic.GetWalletManager(clientpkg.GetWalletFilePath())
+	am, err := logic.GetAccountManager(clientpkg.GetAccountFilePath())
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
+	senderAccount := am.GetAccountByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
 
-	if senderWallet == nil {
-		fmt.Println("Error: invalid wallet address.")
+	if senderAccount == nil {
+		fmt.Println("Error: invalid account address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
+	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		core.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
@@ -957,8 +956,8 @@ func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount, tip *com
 
 func helpCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
 	fmt.Println("-----------------------------------------------------------------")
-	fmt.Println("Command: cli ", "createWallet")
-	fmt.Println("Usage Example: cli createWallet")
+	fmt.Println("Command: cli ", "createAccount")
+	fmt.Println("Usage Example: cli createAccount")
 	for cmd, pars := range cmdFlagsMap {
 		fmt.Println("-----------------------------------------------------------------")
 		fmt.Println("Command: cli ", cmd)
@@ -1084,18 +1083,18 @@ func estimateGasCommandHandler(ctx context.Context, client interface{}, flags cm
 		return
 	}
 
-	wm, err := logic.GetWalletManager(clientpkg.GetWalletFilePath())
+	am, err := logic.GetAccountManager(clientpkg.GetAccountFilePath())
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
+	senderAccount := am.GetAccountByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
 
-	if senderWallet == nil {
-		fmt.Println("Error: invalid wallet address.")
+	if senderAccount == nil {
+		fmt.Println("Error: invalid account address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
+	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		core.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}

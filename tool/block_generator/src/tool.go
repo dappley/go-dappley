@@ -26,7 +26,7 @@ const (
 
 var (
 	password    = "testpassword"
-	maxWallet   = 4
+	maxAccount  = 4
 	currBalance = make(map[string]uint64)
 	numOfTx     = 100
 	numOfScTx   = 0
@@ -69,11 +69,11 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 		}).Info("Producer:", i)
 	}
 
-	wm, err := logic.GetWalletManager(client.GetWalletFilePath())
+	wm, err := logic.GetAccountManager(client.GetAccountFilePath())
 	if err != nil {
-		logger.Panic("Cannot get wallet manager.")
+		logger.Panic("Cannot get account manager.")
 	}
-	addrs := CreateWallet(wm)
+	addrs := CreateAccount(wm)
 	producer := core.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
 	logic.SetMinerKeyPair(key)
@@ -125,7 +125,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.WalletManager, scAddr core.Address) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.AccountManager, scAddr core.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -163,19 +163,19 @@ func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, wm *client.WalletManager) (*core.Block, core.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, wm *client.AccountManager) (*core.Block, core.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
 }
 
-func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender core.Address, wm *client.WalletManager) *core.Transaction {
-	senderWallet := wm.GetWalletByAddress(sender)
-	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
-		logger.Panic("Can not find sender wallet")
+func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender core.Address, wm *client.AccountManager) *core.Transaction {
+	senderAccount := wm.GetAccountByAddress(sender)
+	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
+		logger.Panic("Can not find sender account")
 	}
-	pubKeyHash, _ := core.NewUserPubKeyHash(senderWallet.GetKeyPair().PublicKey)
+	pubKeyHash, _ := core.NewUserPubKeyHash(senderAccount.GetKeyPair().PublicKey)
 
 	data, err := ioutil.ReadFile(contractFilePath)
 	if err != nil {
@@ -184,7 +184,7 @@ func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sende
 		}).Panic("Unable to read smart contract file!")
 	}
 	contract := string(data)
-	tx := newTransaction(sender, core.Address{}, senderWallet.GetKeyPair(), utxoIndex, pubKeyHash, common.NewAmount(1), common.NewAmount(10000), common.NewAmount(1), contract)
+	tx := newTransaction(sender, core.Address{}, senderAccount.GetKeyPair(), utxoIndex, pubKeyHash, common.NewAmount(1), common.NewAmount(10000), common.NewAmount(1), contract)
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[sender.String()] -= 1
 	return tx
@@ -202,7 +202,7 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr core.Address
 	return tx
 }
 
-func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.WalletManager, scAddr core.Address) []*core.Transaction {
+func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.AccountManager, scAddr core.Address) []*core.Transaction {
 	pkhmap := getPubKeyHashes(addrs, wm)
 	txs := []*core.Transaction{}
 	for i := 0; i < numOfTx; i++ {
@@ -220,27 +220,27 @@ func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *c
 	return txs
 }
 
-func getPubKeyHashes(addrs []core.Address, wm *client.WalletManager) map[core.Address]core.PubKeyHash {
+func getPubKeyHashes(addrs []core.Address, wm *client.AccountManager) map[core.Address]core.PubKeyHash {
 	res := make(map[core.Address]core.PubKeyHash)
 	for _, addr := range addrs {
-		wallet := wm.GetWalletByAddress(addr)
-		pubKeyHash, _ := core.NewUserPubKeyHash(wallet.GetKeyPair().PublicKey)
+		account := wm.GetAccountByAddress(addr)
+		pubKeyHash, _ := core.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 		res[addr] = pubKeyHash
 	}
 	return res
 }
 
-func generateTransaction(addrs []core.Address, wm *client.WalletManager, utxoIndex *core.UTXOIndex, pkhmap map[core.Address]core.PubKeyHash, contract string, scAddr core.Address) *core.Transaction {
+func generateTransaction(addrs []core.Address, wm *client.AccountManager, utxoIndex *core.UTXOIndex, pkhmap map[core.Address]core.PubKeyHash, contract string, scAddr core.Address) *core.Transaction {
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
-	senderWallet := wm.GetWalletByAddress(sender)
-	if senderWallet == nil || len(senderWallet.Addresses) == 0 {
-		logger.Panic("Can not find sender wallet")
+	senderAccount := wm.GetAccountByAddress(sender)
+	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
+		logger.Panic("Can not find sender account")
 	}
 	if contract != "" {
 		receiver = scAddr
 	}
-	tx := newTransaction(sender, receiver, senderWallet.GetKeyPair(), utxoIndex, pkhmap[sender], amount, common.NewAmount(10000), common.NewAmount(1), contract)
+	tx := newTransaction(sender, receiver, senderAccount.GetKeyPair(), utxoIndex, pkhmap[sender], amount, common.NewAmount(10000), common.NewAmount(1), contract)
 	currBalance[sender.String()] -= 1
 	currBalance[receiver.String()] += 1
 
@@ -264,7 +264,7 @@ func getSenderAndReceiver(addrs []core.Address) (sender, receiver core.Address) 
 	for i, addr := range addrs {
 		if currBalance[addr.String()] > 1000 {
 			sender = addr
-			if i == maxWallet {
+			if i == maxAccount {
 				receiver = addrs[0]
 			} else {
 				receiver = addrs[i+1]
@@ -286,21 +286,21 @@ func CreateRandomTransactions([]core.Address) []*core.Transaction {
 	return nil
 }
 
-func CreateWallet(wm *client.WalletManager) []core.Address {
+func CreateAccount(wm *client.AccountManager) []core.Address {
 
 	addresses := wm.GetAddresses()
-	numOfWallets := len(addresses)
-	for i := numOfWallets; i < maxWallet; i++ {
-		_, err := logic.CreateWalletWithpassphrase(password)
+	numOfAccounts := len(addresses)
+	for i := numOfAccounts; i < maxAccount; i++ {
+		_, err := logic.CreateAccountWithpassphrase(password)
 		if err != nil {
-			logger.WithError(err).Panic("Cannot create new wallet.")
+			logger.WithError(err).Panic("Cannot create new account.")
 		}
 	}
 
 	addresses = wm.GetAddresses()
 	logger.WithFields(logger.Fields{
 		"addresses": addresses,
-	}).Info("Wallets are created")
+	}).Info("Accounts are created")
 	return addresses
 }
 

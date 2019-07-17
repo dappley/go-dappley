@@ -24,10 +24,10 @@ import (
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -56,8 +56,8 @@ func CreateBlockchain(address core.Address, db storage.Storage, consensus core.C
 	return bc, nil
 }
 
-//create a wallet from path
-func CreateWallet(path string, password string) (*client.Wallet, error) {
+//create a account from path
+func CreateAccount(path string, password string) (*client.Account, error) {
 	if len(path) == 0 {
 		return nil, ErrPathEmpty
 	}
@@ -67,71 +67,71 @@ func CreateWallet(path string, password string) (*client.Wallet, error) {
 	}
 
 	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
+	am := client.NewAccountManager(fl)
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
-	wm.PassPhrase = passBytes
-	wm.Locked = true
-	err = wm.LoadFromFile()
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
+	am.PassPhrase = passBytes
+	am.Locked = true
+	err = am.LoadFromFile()
+	account := client.NewAccount()
+	am.AddAccount(account)
+	am.SaveAccountToFile()
 
-	return wallet, err
+	return account, err
 }
 
-//get wallet
-func GetWallet() (*client.Wallet, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
-	empty, err := wm.IsFileEmpty()
+//get account
+func GetAccount() (*client.Account, error) {
+	am, err := GetAccountManager(client.GetAccountFilePath())
+	empty, err := am.IsFileEmpty()
 	if empty {
 		return nil, nil
 	}
-	if len(wm.Wallets) > 0 {
-		return wm.Wallets[0], err
+	if len(am.Accounts) > 0 {
+		return am.Accounts[0], err
 	}
 	return nil, err
 }
 
-// Returns default wallet file path or first argument of argument vector
-func getWalletFilePath(argv []string) string {
+// Returns default account file path or first argument of argument vector
+func getAccountFilePath(argv []string) string {
 	if len(argv) == 1 {
 		return argv[0]
 	}
-	return client.GetWalletFilePath()
+	return client.GetAccountFilePath()
 }
 
 //Get lock flag
-func IsWalletLocked(optionalWalletFilePath ...string) (bool, error) {
-	wm, err := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
-	return wm.Locked, err
+func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
+	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
+	return am.Locked, err
 }
 
 //Tell if the file empty or not exist
-func IsWalletEmpty(optionalWalletFilePath ...string) (bool, error) {
-	walletFilePath := getWalletFilePath(optionalWalletFilePath)
+func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
+	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
-	if client.Exists(walletFilePath) {
-		wm, _ := GetWalletManager(walletFilePath)
-		if len(wm.Wallets) == 0 {
+	if client.Exists(accountFilePath) {
+		am, _ := GetAccountManager(accountFilePath)
+		if len(am.Accounts) == 0 {
 			return true, nil
 		}
-		return wm.IsFileEmpty()
+		return am.IsFileEmpty()
 	}
 	return true, nil
 }
 
 //Set lock flag
-func SetLockWallet(optionalWalletFilePath ...string) error {
-	wm, err1 := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
+func SetLockAccount(optionalAccountFilePath ...string) error {
+	am, err1 := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 
 	if err1 != nil {
 		return err1
 	}
 
-	empty, err2 := wm.IsFileEmpty()
+	empty, err2 := am.IsFileEmpty()
 
 	if err2 != nil {
 		return err2
@@ -141,67 +141,67 @@ func SetLockWallet(optionalWalletFilePath ...string) error {
 		return nil
 	}
 
-	wm.Locked = true
-	wm.SaveWalletToFile()
+	am.Locked = true
+	am.SaveAccountToFile()
 	return nil
 }
 
 //Set unlock and timer
-func SetUnLockWallet(optionalWalletFilePath ...string) error {
-	wm, err := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
+func SetUnLockAccount(optionalAccountFilePath ...string) error {
+	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
 		return err
 	}
-	wm.SetUnlockTimer(unlockduration)
+	am.SetUnlockTimer(unlockduration)
 	return nil
 }
 
-//create a wallet with passphrase
-func CreateWalletWithpassphrase(password string, optionalWalletFilePath ...string) (*client.Wallet, error) {
-	wm, err := GetWalletManager(getWalletFilePath(optionalWalletFilePath))
+//create a account with passphrase
+func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...string) (*client.Account, error) {
+	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
 		return nil, err
 	}
 
-	if len(wm.Wallets) > 0 && wm.PassPhrase != nil {
-		err = bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+	if len(am.Accounts) > 0 && am.PassPhrase != nil {
+		err = bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 		if err != nil {
 			return nil, ErrPasswordNotMatch
 		}
-		wallet := client.NewWallet()
-		wm.AddWallet(wallet)
-		wm.SaveWalletToFile()
-		return wallet, err
+		account := client.NewAccount()
+		am.AddAccount(account)
+		am.SaveAccountToFile()
+		return account, err
 
 	}
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
-	wm.PassPhrase = passBytes
-	logger.Info("Wallet password is set!")
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.Locked = true
-	wm.SaveWalletToFile()
-	return wallet, err
+	am.PassPhrase = passBytes
+	logger.Info("Account password is set!")
+	account := client.NewAccount()
+	am.AddAccount(account)
+	am.Locked = true
+	am.SaveAccountToFile()
+	return account, err
 
 }
 
-//create a wallet
-func AddWallet() (*client.Wallet, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+//create a account
+func AddAccount() (*client.Account, error) {
+	am, err := GetAccountManager(client.GetAccountFilePath())
 	if err != nil {
 		return nil, err
 	}
 
-	wallet := client.NewWallet()
-	if len(wm.Wallets) == 0 {
-		wm.Locked = true
+	account := client.NewAccount()
+	if len(am.Accounts) == 0 {
+		am.Locked = true
 	}
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-	return wallet, err
+	am.AddAccount(account)
+	am.SaveAccountToFile()
+	return account, err
 }
 
 //Get duration
@@ -226,8 +226,8 @@ func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, erro
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	sendTxParam := core.NewSendTxParam(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
+func Send(senderAccount *client.Account, to core.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+	sendTxParam := core.NewSendTxParam(senderAccount.GetAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc, node)
 }
 
@@ -246,14 +246,14 @@ func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockch
 	return sendTo(sendTxParam, bc, node)
 }
 
-func GetWalletManager(path string) (*client.WalletManager, error) {
+func GetAccountManager(path string) (*client.AccountManager, error) {
 	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	am := client.NewAccountManager(fl)
+	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err
 	}
-	return wm, nil
+	return am, nil
 }
 
 func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {

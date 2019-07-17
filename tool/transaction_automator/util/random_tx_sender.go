@@ -1,13 +1,14 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/sdk"
-	logger "github.com/sirupsen/logrus"
 	"math/rand"
 	"time"
+
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
+	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/sdk"
+	logger "github.com/sirupsen/logrus"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 
 type BatchTxSender struct {
 	tps         uint32
-	wallet      *sdk.DappSdkWallet
+	account     *sdk.DappSdkAccount
 	dappSdk     *sdk.DappSdk
 	isRunning   bool
 	pendingTxs  []*corepb.Transaction
@@ -28,10 +29,10 @@ type BatchTxSender struct {
 	scCounter   uint32
 }
 
-func NewBatchTxSender(tps uint32, wallet *sdk.DappSdkWallet, dappSdk *sdk.DappSdk, smartContractSendFreq uint32, scAddr string) *BatchTxSender {
+func NewBatchTxSender(tps uint32, account *sdk.DappSdkAccount, dappSdk *sdk.DappSdk, smartContractSendFreq uint32, scAddr string) *BatchTxSender {
 	return &BatchTxSender{
 		tps:         tps,
-		wallet:      wallet,
+		account:     account,
 		dappSdk:     dappSdk,
 		isRunning:   false,
 		isScEnabled: false,
@@ -84,7 +85,7 @@ func (sender *BatchTxSender) Run() {
 
 				if sender.IsPendingTxsReady() {
 					if sender.dappSdk.SendBatchTransactions(sender.pendingTxs) != nil {
-						sender.wallet.Update()
+						sender.account.Update()
 					}
 					sender.ClearPendingTx()
 				}
@@ -98,7 +99,7 @@ func (sender *BatchTxSender) Run() {
 					continue
 				}
 
-				if sender.wallet.IsZeroBalance() {
+				if sender.account.IsZeroBalance() {
 					continue
 				}
 
@@ -116,10 +117,10 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 	data := ""
 
 	fromIndex := sender.getAddrWithNoneZeroBalance()
-	fromAddr := sender.wallet.GetAddrs()[fromIndex]
+	fromAddr := sender.account.GetAddrs()[fromIndex]
 
-	toIndex := getDifferentIndex(fromIndex, len(sender.wallet.GetAddrs()))
-	toAddr := sender.wallet.GetAddrs()[toIndex]
+	toIndex := getDifferentIndex(fromIndex, len(sender.account.GetAddrs()))
+	toAddr := sender.account.GetAddrs()[toIndex]
 
 	sendAmount := uint64(1)
 
@@ -128,7 +129,7 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 		toAddr = core.NewAddress(sender.scAddr)
 	}
 
-	senderKeyPair := sender.wallet.GetWalletManager().GetKeyPairByAddress(sender.wallet.GetAddrs()[fromIndex])
+	senderKeyPair := sender.account.GetAccountManager().GetKeyPairByAddress(sender.account.GetAddrs()[fromIndex])
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
 	if data != "" {
@@ -140,24 +141,24 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 		return nil
 	}
 
-	sender.wallet.GetUtxoIndex().UpdateUtxo(tx)
-	sender.wallet.UpdateBalance(toAddr, sender.wallet.GetBalance(toAddr)+sendAmount)
-	sender.wallet.UpdateBalance(fromAddr, sender.wallet.GetBalance(fromAddr)-sendAmount)
+	sender.account.GetUtxoIndex().UpdateUtxo(tx)
+	sender.account.UpdateBalance(toAddr, sender.account.GetBalance(toAddr)+sendAmount)
+	sender.account.UpdateBalance(fromAddr, sender.account.GetBalance(fromAddr)-sendAmount)
 
 	return tx.ToProto().(*corepb.Transaction)
 }
 
 func (sender *BatchTxSender) getAddrWithNoneZeroBalance() int {
-	fromIndex := rand.Intn(len(sender.wallet.GetAddrs()))
-	fromAddr := sender.wallet.GetAddrs()[fromIndex]
-	amount := sender.wallet.GetBalance(fromAddr)
+	fromIndex := rand.Intn(len(sender.account.GetAddrs()))
+	fromAddr := sender.account.GetAddrs()[fromIndex]
+	amount := sender.account.GetBalance(fromAddr)
 
 	deadline := time.Now().Unix() + timeoutInSec
 
 	for amount <= 1 && time.Now().Unix() < deadline {
-		fromIndex = rand.Intn(len(sender.wallet.GetAddrs()))
-		fromAddr = sender.wallet.GetAddrs()[fromIndex]
-		amount = sender.wallet.GetBalance(fromAddr)
+		fromIndex = rand.Intn(len(sender.account.GetAddrs()))
+		fromAddr = sender.account.GetAddrs()[fromIndex]
+		amount = sender.account.GetBalance(fromAddr)
 	}
 	return fromIndex
 }
@@ -176,7 +177,7 @@ func (sender *BatchTxSender) createTransaction(from, to core.Address, amount, ti
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := sender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := sender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
 
 	if err != nil {
 		return nil

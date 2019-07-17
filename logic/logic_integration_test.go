@@ -67,38 +67,38 @@ func TestSend(t *testing.T) {
 			store := storage.NewRamStorage()
 			defer store.Close()
 
-			// Create a wallet address
-			senderWallet, err := CreateWallet(GetTestWalletPath(), "test")
+			// Create a account address
+			senderAccount, err := CreateAccount(GetTestAccountPath(), "test")
 			if err != nil {
 				panic(err)
 			}
 
-			// Create a PoW blockchain with the sender wallet's address as the coinbase address
-			// i.e. sender's wallet would have mineReward amount after blockchain created
-			bc, pow := createBlockchain(senderWallet.GetAddress(), store)
+			// Create a PoW blockchain with the sender account's address as the coinbase address
+			// i.e. sender's account would have mineReward amount after blockchain created
+			bc, pow := createBlockchain(senderAccount.GetAddress(), store)
 			pool := core.NewBlockPool(0)
 			node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
-			// Create a receiver wallet; Balance is 0 initially
-			receiverWallet, err := CreateWallet(GetTestWalletPath(), "test")
+			// Create a receiver account; Balance is 0 initially
+			receiverAccount, err := CreateAccount(GetTestAccountPath(), "test")
 			if err != nil {
 				panic(err)
 			}
 
-			// Send coins from senderWallet to receiverWallet
+			// Send coins from senderAccount to receiverAccount
 			var rcvAddr core.Address
 			isContract := (tc.contract != "")
 			if isContract {
 				rcvAddr = core.NewAddress("")
 			} else {
-				rcvAddr = receiverWallet.GetAddress()
+				rcvAddr = receiverAccount.GetAddress()
 			}
 
-			_, _, err = Send(senderWallet, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bc, node)
+			_, _, err = Send(senderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bc, node)
 			assert.Equal(t, tc.expectedErr, err)
 
-			// Create a miner wallet; Balance is 0 initially
-			minerWallet, err := CreateWallet(GetTestWalletPath(), "test")
+			// Create a miner account; Balance is 0 initially
+			minerAccount, err := CreateAccount(GetTestAccountPath(), "test")
 			if err != nil {
 				panic(err)
 			}
@@ -107,7 +107,7 @@ func TestSend(t *testing.T) {
 			time.Sleep(time.Millisecond * 500)
 
 			// Make sender the miner and mine for 1 block (which should include the transaction)
-			pow.Setup(node, minerWallet.GetAddress().String())
+			pow.Setup(node, minerAccount.GetAddress().String())
 			pow.Start()
 			for bc.GetMaxHeight() < 1 {
 			}
@@ -115,8 +115,8 @@ func TestSend(t *testing.T) {
 			core.WaitDoneOrTimeout(func() bool {
 				return !pow.IsProducingBlock()
 			}, 20)
-			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
-			senderBalance, err := GetBalance(senderWallet.GetAddress(), bc)
+			// Verify balance of sender's account (genesis "mineReward" - transferred amount)
+			senderBalance, err := GetBalance(senderAccount.GetAddress(), bc)
 			if err != nil {
 				panic(err)
 			}
@@ -124,8 +124,8 @@ func TestSend(t *testing.T) {
 			expectedBalance, _ = expectedBalance.Sub(tc.expectedTip)
 			assert.Equal(t, expectedBalance, senderBalance)
 
-			// Balance of the miner's wallet should be the amount tipped + mineReward
-			minerBalance, err := GetBalance(minerWallet.GetAddress(), bc)
+			// Balance of the miner's account should be the amount tipped + mineReward
+			minerBalance, err := GetBalance(minerAccount.GetAddress(), bc)
 			if err != nil {
 				panic(err)
 			}
@@ -148,12 +148,12 @@ func TestSend(t *testing.T) {
 			}
 			assert.Equal(t, tc.contract, res)
 
-			// Balance of the receiver's wallet should be the amount transferred
+			// Balance of the receiver's account should be the amount transferred
 			var receiverBalance *common.Amount
 			if isContract {
 				receiverBalance, err = GetBalance(contractAddr, bc)
 			} else {
-				receiverBalance, err = GetBalance(receiverWallet.GetAddress(), bc)
+				receiverBalance, err = GetBalance(receiverAccount.GetAddress(), bc)
 			}
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
@@ -172,10 +172,10 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//Transfer ammount
 	transferAmount := common.NewAmount(25)
 	tip := common.NewAmount(5)
-	//create a wallet address
-	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
-	assert.NotEmpty(t, wallet1)
-	addr1 := wallet1.GetAddress()
+	//create a account address
+	account1, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.NotEmpty(t, account1)
+	addr1 := account1.GetAddress()
 
 	//create a blockchain
 	bc, err := CreateBlockchain(addr1, store, nil, 128, nil, 1000000)
@@ -190,10 +190,10 @@ func TestSendToInvalidAddress(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
-	_, _, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
+	_, _, err = Send(account1, core.NewAddress(InvalidAddress), transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
 	assert.NotNil(t, err)
 
-	//the balance of the first wallet should be still be 10
+	//the balance of the first account should be still be 10
 	balance1, err = GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
@@ -215,10 +215,10 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//Transfer ammount is larger than the balance
 	transferAmount := common.NewAmount(250000000)
 
-	//create a wallet address
-	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
-	assert.NotEmpty(t, wallet1)
-	addr1 := wallet1.GetAddress()
+	//create a account address
+	account1, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.NotEmpty(t, account1)
+	addr1 := account1.GetAddress()
 
 	//create a blockchain
 	bc, err := CreateBlockchain(addr1, store, nil, 128, nil, 1000000)
@@ -230,11 +230,11 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
-	//Create a second wallet
-	wallet2, err := CreateWallet(GetTestWalletPath(), "test")
-	assert.NotEmpty(t, wallet2)
+	//Create a second account
+	account2, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.NotEmpty(t, account2)
 	assert.Nil(t, err)
-	addr2 := wallet2.GetAddress()
+	addr2 := account2.GetAddress()
 
 	//The balance should be 0
 	balance2, err := GetBalance(addr2, bc)
@@ -244,15 +244,15 @@ func TestSendInsufficientBalance(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to addr2
-	_, _, err = Send(wallet1, addr2, transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
+	_, _, err = Send(account1, addr2, transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
 	assert.NotNil(t, err)
 
-	//the balance of the first wallet should be still be 10
+	//the balance of the first account should be still be 10
 	balance1, err = GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
-	//the balance of the second wallet should be 0
+	//the balance of the second account should be 0
 	balance2, err = GetBalance(addr2, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
@@ -584,14 +584,14 @@ func TestAddBalance(t *testing.T) {
 			// Create a coinbase address
 			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
 			minerKeyPair := core.GetKeyPairByString(key)
-			minerWallet := &client.Wallet{}
-			minerWallet.Key = minerKeyPair
+			minerAccount := &client.Account{}
+			minerAccount.Key = minerKeyPair
 
-			addr := minerWallet.Key.GenerateAddress(false)
+			addr := minerAccount.Key.GenerateAddress(false)
 
 			bc, pow := createBlockchain(addr, store)
 
-			// Create a new wallet address for testing
+			// Create a new account address for testing
 			testAddr := core.Address{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"}
 
 			// Start mining to approve the transaction
@@ -605,7 +605,7 @@ func TestAddBalance(t *testing.T) {
 			for bc.GetMaxHeight() <= 1 {
 			}
 
-			// Add `addAmount` to the balance of the new wallet
+			// Add `addAmount` to the balance of the new account
 			_, _, err := SendFromMiner(testAddr, tc.addAmount, bc, node)
 			height := bc.GetMaxHeight()
 			assert.Equal(t, err, tc.expectedErr)
@@ -614,7 +614,7 @@ func TestAddBalance(t *testing.T) {
 
 			pow.Stop()
 
-			// The wallet balance should be the expected difference
+			// The account balance should be the expected difference
 			balance, err := GetBalance(testAddr, bc)
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedDiff, balance)
@@ -636,7 +636,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			store := storage.NewRamStorage()
 			defer store.Close()
 
-			// Create a coinbase wallet address
+			// Create a coinbase account address
 			addr := core.Address{"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
 			// Create a blockchain
 			bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
@@ -670,23 +670,23 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	var storageTest = new StorageTest;
 	`
 
-	// Create a wallet address
-	senderWallet, err := CreateWallet(GetTestWalletPath(), "test")
+	// Create a account address
+	senderAccount, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
 
-	bc, pow := createBlockchain(senderWallet.GetAddress(), store)
+	bc, pow := createBlockchain(senderAccount.GetAddress(), store)
 	pool := core.NewBlockPool(0)
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//deploy smart contract
-	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bc, node)
+	_, _, err = Send(senderAccount, core.Address{""}, common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bc, node)
 	assert.Nil(t, err)
 
 	txp := bc.GetTxPool().GetTransactions()[0]
 	contractAddr := txp.GetContractAddress()
 
-	// Create a miner wallet; Balance is 0 initially
-	minerWallet, err := CreateWallet(GetTestWalletPath(), "test")
+	// Create a miner account; Balance is 0 initially
+	minerAccount, err := CreateAccount(GetTestAccountPath(), "test")
 	if err != nil {
 		panic(err)
 	}
@@ -695,7 +695,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Make sender the miner and mine for 1 block (which should include the transaction)
-	pow.Setup(node, minerWallet.GetAddress().String())
+	pow.Setup(node, minerAccount.GetAddress().String())
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {
 	}
@@ -706,7 +706,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//store data
 	functionCall := `{"function":"set","args":["testKey","222"]}`
-	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc, node)
+	_, _, err = Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc, node)
 	assert.Nil(t, err)
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {
@@ -715,7 +715,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//get data
 	functionCall = `{"function":"get","args":["testKey"]}`
-	_, _, err = Send(senderWallet, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc, node)
+	_, _, err = Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc, node)
 	assert.Nil(t, err)
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {

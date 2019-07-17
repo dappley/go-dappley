@@ -5,8 +5,8 @@ import (
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/sdk"
-	"github.com/dappley/go-dappley/tool/tool_util"
-	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
+	tool "github.com/dappley/go-dappley/tool/tool_util"
+	tx_automator_configpb "github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_generator/util"
 	logger "github.com/sirupsen/logrus"
 )
@@ -22,11 +22,11 @@ func main() {
 	logger.Info("**Invalid transaction generator tool starts**")
 	logger.Info("*********************************************")
 
-	dappSdk, wallet := initial_setup()
+	dappSdk, account := initial_setup()
 
-	testTransactions := prepareTestTransactions(dappSdk, wallet)
+	testTransactions := prepareTestTransactions(dappSdk, account)
 
-	sendTestTransactions(dappSdk, wallet, testTransactions)
+	sendTestTransactions(dappSdk, account, testTransactions)
 
 	logger.Info("**************************************")
 	logger.Info("**All transactions are sent. Exiting**")
@@ -34,19 +34,19 @@ func main() {
 
 }
 
-func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet) {
+func initial_setup() (*sdk.DappSdk, *sdk.DappSdkAccount) {
 	toolConfigs := &tx_automator_configpb.Config{}
 	config.LoadConfig(configFilePath, toolConfigs)
 
 	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
 	dappSdk := sdk.NewDappSdk(grpcClient)
-	wallet := sdk.NewDappSdkWallet(
-		toolConfigs.GetMaxWallet(),
+	account := sdk.NewDappSdkAccount(
+		toolConfigs.GetMaxAccount(),
 		toolConfigs.GetPassword(),
 		dappSdk,
 	)
 
-	addrs := wallet.GetAddrs()
+	addrs := account.GetAddrs()
 	fromAddr := addrs[0]
 	unauthorizedAddr := addrs[2]
 
@@ -55,30 +55,30 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet) {
 	fundRequest.Fund(fromAddr.String(), initialAmount)
 	fundRequest.Fund(unauthorizedAddr.String(), initialAmount)
 
-	return dappSdk, wallet
+	return dappSdk, account
 }
 
-func getUnauthroizedAddr(wallet *sdk.DappSdkWallet) core.Address {
-	return wallet.GetAddrs()[2]
+func getUnauthroizedAddr(account *sdk.DappSdkAccount) core.Address {
+	return account.GetAddrs()[2]
 }
 
-func prepareTestTransactions(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) []util.TestTransaction {
+func prepareTestTransactions(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) []util.TestTransaction {
 	return []util.TestTransaction{
-		util.NewNormalTransaction(dappSdk, wallet),
-		util.NewUnexistingUtxoTxSender(dappSdk, wallet),
-		util.NewInsufficientBalanceTxSender(dappSdk, wallet),
-		util.NewDoubleSpendingTxSender(dappSdk, wallet),
-		util.NewUnauthorizedUtxoTxSender(dappSdk, wallet, getUnauthroizedAddr(wallet)),
+		util.NewNormalTransaction(dappSdk, account),
+		util.NewUnexistingUtxoTxSender(dappSdk, account),
+		util.NewInsufficientBalanceTxSender(dappSdk, account),
+		util.NewDoubleSpendingTxSender(dappSdk, account),
+		util.NewUnauthorizedUtxoTxSender(dappSdk, account, getUnauthroizedAddr(account)),
 	}
 }
 
-func prepareSendParameters(wallet *sdk.DappSdkWallet) core.SendTxParam {
+func prepareSendParameters(account *sdk.DappSdkAccount) core.SendTxParam {
 
-	fromAddr := wallet.GetAddrs()[0]
-	toAddr := wallet.GetAddrs()[1]
+	fromAddr := account.GetAddrs()[0]
+	toAddr := account.GetAddrs()[1]
 	return core.SendTxParam{
 		fromAddr,
-		wallet.GetWalletManager().GetKeyPairByAddress(fromAddr),
+		account.GetAccountManager().GetKeyPairByAddress(fromAddr),
 		toAddr,
 		common.NewAmount(10),
 		common.NewAmount(0),
@@ -88,7 +88,7 @@ func prepareSendParameters(wallet *sdk.DappSdkWallet) core.SendTxParam {
 	}
 }
 
-func sendTestTransactions(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, testTransactions []util.TestTransaction) {
+func sendTestTransactions(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount, testTransactions []util.TestTransaction) {
 	nextBlockTicker := tool.NewNextBlockTicker(dappSdk)
 	nextBlockTicker.Run()
 
@@ -98,8 +98,8 @@ func sendTestTransactions(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, testT
 		logger.Info("")
 		logger.Info("Running test #", i)
 		testTx.Print()
-		wallet.Update()
-		testTx.Generate(prepareSendParameters(wallet))
+		account.Update()
+		testTx.Generate(prepareSendParameters(account))
 		testTx.Send()
 	}
 }
