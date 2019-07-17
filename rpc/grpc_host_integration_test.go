@@ -1201,9 +1201,10 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	gasResp, err := rpcClient.RpcEstimateGas(context.Background(), estimateGasRequest)
 	assert.Nil(t, err)
-	gas := gasResp.Gas
+	gasCount := gasResp.GasCount
+	gas := common.NewAmountFromBytes(gasCount)
 
-	assert.True(t, gas > 0)
+	assert.True(t, gas.Cmp(common.NewAmount(0)) > 0)
 
 	client.RemoveWalletFile()
 }
@@ -1267,8 +1268,9 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	gasPriceResponse, err := rpcClient.RpcGasPrice(context.Background(), gasPriceRequest)
 	assert.Nil(t, err)
 	gasPrice := gasPriceResponse.GasPrice
+	price := common.NewAmountFromBytes(gasPrice)
 
-	assert.True(t, gasPrice > 0)
+	assert.True(t, price.Cmp(common.NewAmount(0)) > 0)
 
 	client.RemoveWalletFile()
 }
