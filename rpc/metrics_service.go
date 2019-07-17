@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -61,7 +60,7 @@ func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.M
 
 func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.SetNodeConfigRequest) (*rpcpb.GetNodeConfigResponse, error) {
 	for _, v := range request.GetUpdatedConfigs() {
-		if _, ok := proto.EnumValueMap("rpcpb.SetNodeConfigRequest_ConfigType")[v.String()]; !ok {
+		if !util.InProtoEnum("rpcpb.SetNodeConfigRequest_ConfigType", v.String()) {
 			return nil, status.Error(codes.InvalidArgument, "unrecognized node configuration type")
 		}
 
@@ -72,7 +71,7 @@ func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.S
 			}
 
 			if v == rpcpb.SetNodeConfigRequest_PRODUCERS {
-				if err := cons.GetDynasty().CanAddProducers(request.GetProducers()); err != nil {
+				if err := cons.GetDynasty().CanSetProducers(request.GetProducers()); err != nil {
 					return nil, status.Error(codes.InvalidArgument, err.Error())
 				}
 			}

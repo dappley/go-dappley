@@ -20,6 +20,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
@@ -98,7 +99,7 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 }
 
 func (dynasty *Dynasty) AddProducer(producer string) error {
-	if err := dynasty.canAddProducer(producer, false); err != nil {
+	if err := dynasty.canAddProducer(producer); err != nil {
 		return err
 	}
 	dynasty.producers = append(dynasty.producers, producer)
@@ -109,12 +110,10 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 	return nil
 }
 
-func (dynasty *Dynasty) canAddProducer(producer string, ignoreDuplicate bool) error {
-	if !ignoreDuplicate {
-		for _, producerNow := range dynasty.producers {
-			if producerNow == producer {
-				return errors.New("already a producer")
-			}
+func (dynasty *Dynasty) canAddProducer(producer string) error {
+	for _, producerNow := range dynasty.producers {
+		if producerNow == producer {
+			return errors.New("already a producer")
 		}
 	}
 
@@ -179,11 +178,22 @@ func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
 }
 
-func (dynasty *Dynasty) CanAddProducers(producers []string) error {
+func (dynasty *Dynasty) CanSetProducers(producers []string) error {
+
+	if len(producers) > dynasty.maxProducers {
+		return errors.New("can not exceed maximum number of producers")
+	}
+
+	seen := make(map[string]bool)
 	for _, producer := range producers {
-		if err := dynasty.canAddProducer(producer, true); err != nil {
-			return err
+		if seen[producer] {
+			return errors.New(fmt.Sprintf("can not add a duplicate producer: \"%v\"", producer))
 		}
+
+		if !IsProducerAddressValid(producer) {
+			return errors.New(fmt.Sprintf("\"%v\" is a invalid producer", producer))
+		}
+		seen[producer] = true
 	}
 
 	return nil
