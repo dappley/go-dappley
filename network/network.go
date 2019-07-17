@@ -79,7 +79,7 @@ func (net *Network) RecordMessage(msg *DappPacket) {
 
 func (net *Network) Stop() {
 	net.peerManager.StopAllStreams(nil)
-	net.host.RemoveStreamHandler(protocalName)
+	net.host.RemoveStreamHandler(ProtocalName)
 	err := net.host.Close()
 	if err != nil {
 		logger.WithError(err).Warn("Node: host was not closed properly.")

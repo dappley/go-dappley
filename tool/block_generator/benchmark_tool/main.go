@@ -128,8 +128,8 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	db2 := storage.OpenDatabase(nodeDbPath)
 	defer db2.Close()
 
-	bc, node1 := prepareNode(db1)
-	bc2, node2 := prepareNode(db2)
+	bm, node1 := prepareNode(db1)
+	bm2, node2 := prepareNode(db2)
 
 	node1.Start(testport1, nil)
 	defer node1.Stop()
@@ -138,8 +138,8 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 
 	node1.GetNetwork().AddPeer(node2.GetInfo())
 
-	blkHeight := bc.GetMaxHeight()
-	tailBlock, _ := bc.GetTailBlock()
+	blkHeight := bm.Getblockchain().GetMaxHeight()
+	tailBlock, _ := bm.Getblockchain().GetTailBlock()
 	numOfTx := len(tailBlock.GetTransactions())
 
 	logger.WithFields(logger.Fields{
@@ -150,7 +150,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	time.Sleep(time.Second)
 
 	start := time.Now()
-	downloadBlocks(node2, bc2)
+	bm2.DownloadBlocks()
 	elapsed := time.Since(start)
 
 	logger.WithFields(logger.Fields{
@@ -162,7 +162,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	return elapsed, blkHeight, numOfTx
 }
 
-func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node) {
+func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
@@ -179,15 +179,10 @@ func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node) {
 	}
 
 	bc.SetState(core.BlockchainInit)
-	node := network.NewNode(bc, core.NewBlockPool(0))
-	return bc, node
-}
-
-func downloadBlocks(node *network.Node, bc *core.Blockchain) {
-	downloadManager := node.GetDownloadManager()
-	finishChan := make(chan bool, 1)
-	bc.SetState(core.BlockchainDownloading)
-	downloadManager.StartDownloadBlockchain(finishChan)
-	<-finishChan
-	bc.SetState(core.BlockchainReady)
+	bm := core.NewBlockChainManager()
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(core.NewBlockPool(0))
+	node := network.NewNode(bm)
+	bm.SetDownloadManager(network.NewDownloadManager(node))
+	return bm, node
 }

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	protocalName = "dappley/1.0.0"
+	ProtocalName = "dappley/1.0.0"
 )
 
 type Host struct {
@@ -34,7 +34,7 @@ func NewHost(listenPort int, privKey crypto.PrivKey, handler network.StreamHandl
 		return nil
 	}
 
-	h.SetStreamHandler(protocalName, handler)
+	h.SetStreamHandler(ProtocalName, handler)
 
 	return &Host{
 		h,

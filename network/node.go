@@ -34,7 +34,6 @@ import (
 )
 
 const (
-	maxGetBlocksNum   = 10
 	maxSyncPeersCount = 32
 
 	SyncBlock    = "SyncBlock"
@@ -70,39 +69,34 @@ var (
 )
 
 type Node struct {
-	network         *Network
-	bm              *core.BlockChainManager
-	exitCh          chan bool
-	privKey         crypto.PrivKey
-	dispatcher      chan *DappPacketContext
-	commandSendCh   chan *DappSendCmdContext
-	downloadManager *DownloadManager
-	commandBroker   *CommandBroker
+	network       *Network
+	bm            *core.BlockChainManager
+	exitCh        chan bool
+	privKey       crypto.PrivKey
+	dispatcher    chan *DappPacketContext
+	commandSendCh chan *DappSendCmdContext
+	commandBroker *CommandBroker
 }
 
 //create new Node instance
-func NewNode(bc *core.Blockchain, pool *core.BlockPool) *Node {
-	return NewNodeWithConfig(bc, pool, nil)
+func NewNode(bm *core.BlockChainManager) *Node {
+	return NewNodeWithConfig(bm, nil)
 }
 
-func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeConfig) *Node {
+func NewNodeWithConfig(bm *core.BlockChainManager, config *NodeConfig) *Node {
 	var err error
 	var db storage.Storage
 
-	bm := core.NewBlockChainManager()
-	bm.SetblockPool(pool)
-	bm.Setblockchain(bc)
 	node := &Node{
-		bm:              bm,
-		exitCh:          make(chan bool, 1),
-		privKey:         nil,
-		dispatcher:      make(chan *DappPacketContext, dispatchChLen),
-		downloadManager: nil,
-		commandSendCh:   make(chan *DappSendCmdContext, requestChLen),
-		commandBroker:   NewCommandBroker(reservedTopics),
+		bm:            bm,
+		exitCh:        make(chan bool, 1),
+		privKey:       nil,
+		dispatcher:    make(chan *DappPacketContext, dispatchChLen),
+		commandSendCh: make(chan *DappSendCmdContext, requestChLen),
+		commandBroker: NewCommandBroker(reservedTopics),
 	}
 
-	if bc != nil {
+	if bm != nil && bm.Getblockchain() != nil {
 		db = node.bm.Getblockchain().GetDb()
 	}
 
@@ -113,18 +107,17 @@ func NewNodeWithConfig(bc *core.Blockchain, pool *core.BlockPool, config *NodeCo
 	if err != nil {
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")
 	}
-	node.downloadManager = NewDownloadManager(node, node.commandSendCh)
-	node.downloadManager.SubscribeCommandBroker(node.commandBroker)
+
 	return node
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain            { return n.bm.Getblockchain() }
-func (n *Node) GetBlockPool() *core.BlockPool              { return n.bm.GetblockPool() }
-func (n *Node) GetDownloadManager() *DownloadManager       { return n.downloadManager }
-func (n *Node) GetInfo() *PeerInfo                         { return n.network.host.info }
-func (n *Node) GetNetwork() *Network                       { return n.network }
-func (n *Node) GetCommandSendCh() chan *DappSendCmdContext { return n.commandSendCh }
-func (n *Node) GetCommandBroker() *CommandBroker           { return n.commandBroker }
+func (n *Node) GetBlockchain() *core.Blockchain               { return n.bm.Getblockchain() }
+func (n *Node) GetBlockPool() *core.BlockPool                 { return n.bm.GetblockPool() }
+func (n *Node) GetInfo() *PeerInfo                            { return n.network.host.info }
+func (n *Node) GetNetwork() *Network                          { return n.network }
+func (n *Node) GetCommandSendCh() chan *DappSendCmdContext    { return n.commandSendCh }
+func (n *Node) GetCommandBroker() *CommandBroker              { return n.commandBroker }
+func (n *Node) GetBlockchainManager() *core.BlockChainManager { return n.bm }
 
 func (n *Node) Start(listenPort int, seeds []string) error {
 	err := n.network.Start(listenPort, n.privKey, seeds)
@@ -178,8 +171,6 @@ func (n *Node) StartRequestLoop() {
 				return
 			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
 				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
-			case <-n.bm.GetblockPool().DownloadBlocksCh():
-				go n.DownloadBlocks(n.bm.Getblockchain())
 			}
 		}
 	}()
@@ -231,9 +222,16 @@ func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
 }
 
 func (n *Node) OnStreamStop(stream *Stream) {
-	if n.downloadManager != nil {
-		n.downloadManager.DisconnectPeer(stream.peerID)
-	}
+
+	peerInfo := PeerInfo{PeerId: stream.peerID}
+	bytes, err := proto.Marshal(peerInfo.ToProto())
+
+	logger.WithError(err).Warn("Node: Marshal peerInfo failed")
+
+	dappCmd := NewDapCmd(TopicOnStreamStop, bytes, false)
+	dappCmdCtx := NewDappRcvdCmdContext(dappCmd, n.network.host.ID())
+
+	n.commandBroker.Dispatch(dappCmdCtx)
 }
 
 func (n *Node) handle(msg *DappCmd, id peer.ID) {
@@ -474,14 +472,4 @@ func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
 	}
 	block := core.Deserialize(blockBytes)
 	n.SendBlockUnicast(block, pid)
-}
-
-func (n *Node) DownloadBlocks(bc *core.Blockchain) {
-	downloadManager := n.GetDownloadManager()
-	finishChan := make(chan bool, 1)
-
-	bc.SetState(core.BlockchainDownloading)
-	downloadManager.StartDownloadBlockchain(finishChan)
-	<-finishChan
-	bc.SetState(core.BlockchainReady)
 }

@@ -20,30 +20,35 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
-
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/download_manager"
 	"github.com/dappley/go-dappley/storage"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
 )
 
 const HeightDiffThreshold = 10
 
 type BlockChainManager struct {
-	blockchain *Blockchain
-	blockPool  *BlockPool
+	blockchain      *Blockchain
+	blockPool       *BlockPool
+	downloadManager *download_manager.DownloadManager
 }
 
 func NewBlockChainManager() *BlockChainManager {
 	return &BlockChainManager{}
 }
 
-func (bm *BlockChainManager) SetblockPool(blockPool *BlockPool) {
+func (bm *BlockChainManager) SetBlockPool(blockPool *BlockPool) {
 	bm.blockPool = blockPool
 }
 
-func (bm *BlockChainManager) Setblockchain(blockchain *Blockchain) {
+func (bm *BlockChainManager) SetBlockchain(blockchain *Blockchain) {
 	bm.blockchain = blockchain
+}
+
+func (bm *BlockChainManager) SetDownloadManager(downloadManager *download_manager.DownloadManager) {
+	bm.downloadManager = downloadManager
 }
 
 func (bm *BlockChainManager) Getblockchain() *Blockchain {
@@ -52,6 +57,10 @@ func (bm *BlockChainManager) Getblockchain() *Blockchain {
 
 func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
+}
+
+func (bm *BlockChainManager) GetDownloadManager() *download_manager.DownloadManager {
+	return bm.downloadManager
 }
 
 func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
@@ -88,7 +97,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == BlockchainReady {
 		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
-		bm.blockPool.DownloadBlocksCh() <- true
+		go bm.DownloadBlocks()
 		return
 	}
 
@@ -177,6 +186,15 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	}
 
 	return nil
+}
+
+func (bm *BlockChainManager) DownloadBlocks() {
+	finishChan := make(chan bool, 1)
+
+	bm.blockchain.SetState(BlockchainDownloading)
+	bm.downloadManager.StartDownloadBlockchain(finishChan)
+	<-finishChan
+	bm.blockchain.SetState(BlockchainReady)
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.

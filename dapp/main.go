@@ -93,11 +93,17 @@ func main() {
 	}
 	bc.SetState(core.BlockchainInit)
 
-	node, err := initNode(conf, bc)
+	bm := core.NewBlockChainManager()
+	bm.SetBlockPool(core.NewBlockPool(0))
+	bm.SetBlockchain(bc)
+
+	node, err := initNode(conf, bm)
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
+	downloadManager := network.NewDownloadManager(node)
+	bm.SetDownloadManager(downloadManager)
 	defer node.Stop()
 
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
@@ -107,8 +113,9 @@ func main() {
 		"miner_address": minerAddr,
 	}).Info("Consensus is configured.")
 
-	bc.SetState(core.BlockchainReady)
-	node.DownloadBlocks(bc)
+	bm.Getblockchain().SetState(core.BlockchainReady)
+
+	bm.DownloadBlocks()
 
 	//start rpc server
 	server := rpc.NewGrpcServer(node, defaultPassword)
@@ -132,9 +139,10 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 	return conss, dynasty
 }
 
-func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
+func initNode(conf *configpb.Config, bm *core.BlockChainManager) (*network.Node, error) {
 	//create node
-	node := network.NewNode(bc, core.NewBlockPool(0))
+	node := network.NewNode(bm)
+
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()

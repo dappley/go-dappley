@@ -638,7 +638,7 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 
 	pm.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, pstore.PermanentAddrTTL)
 	// make a new stream
-	stream, err := pm.host.NewStream(context.Background(), peerInfo.PeerId, protocalName)
+	stream, err := pm.host.NewStream(context.Background(), peerInfo.PeerId, ProtocalName)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"PeerId": peerInfo.PeerId,

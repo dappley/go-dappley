@@ -289,7 +289,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(bc, pool)
+		node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
 		node.Start(testport_msg_relay_port1+i, nil)
 		if i == 0 {
 			firstNode = node
@@ -357,7 +357,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(bc, pool)
+		node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
 		node.Start(testport_msg_relay_port2+i, nil)
 		if i == 0 {
 			firstNode = node
@@ -427,7 +427,7 @@ func TestForkChoice(t *testing.T) {
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		pools = append(pools, pool)
-		node := network.NewNode(bcs[i], pool)
+		node := network.NewNode(&core.BlockChainManager{bcs[i], pool, nil})
 		pow.Setup(node, addr.String())
 		pow.SetTargetBit(10)
 		node.Start(testport_fork+i, nil)
@@ -497,7 +497,7 @@ func TestForkSegmentHandling(t *testing.T) {
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		pools = append(pools, pool)
-		node := network.NewNode(bcs[i], pool)
+		node := network.NewNode(&core.BlockChainManager{bcs[i], pool, nil})
 		pow.Setup(node, addr.String())
 		pow.SetTargetBit(10)
 		node.Start(testport_fork_segment+i, nil)
@@ -727,7 +727,7 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(bc, pool)
+	node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
 	pow.Setup(node, addr.String())
 	pow.SetTargetBit(12)
 	node.Start(port, nil)
@@ -769,7 +769,7 @@ func TestDoubleMint(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(bc, pool)
+		node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
 		node.Start(testport_msg_relay_port3+i, nil)
 		dpos.Setup(node, validProducerAddr)
 		dpos.SetKey(validProducerKey)
@@ -814,7 +814,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	//create and start seed node
 	pool := core.NewBlockPool(0)
-	seedNode := network.NewNode(bc, pool)
+	seedNode := network.NewNode(&core.BlockChainManager{bc, pool, nil})
 
 	seedNode.Start(testport_fork_syncing, nil)
 	defer seedNode.Stop()
@@ -835,7 +835,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	bc1 := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 
 	pool1 := core.NewBlockPool(0)
-	node := network.NewNode(bc1, pool1)
+	node := network.NewNode(&core.BlockChainManager{bc1, pool1, nil})
 	node.Start(testport_fork_syncing+1, nil)
 	defer node.Stop()
 
@@ -880,7 +880,7 @@ func TestDownloadBlockChain(t *testing.T) {
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		pools = append(pools, pool)
-		node := network.NewNode(bcs[i], pool)
+		node := network.NewNode(&core.BlockChainManager{bcs[i], pool, nil})
 		pow.Setup(node, addr.String())
 		pow.SetTargetBit(10)
 		node.Start(testport_fork_download+i, nil)

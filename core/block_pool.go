@@ -42,10 +42,9 @@ type RcvedBlock struct {
 }
 
 type BlockPool struct {
-	blockRequestCh   chan BlockRequestPars
-	downloadBlocksCh chan bool
-	size             int
-	blkCache         *lru.Cache //cache of full blks
+	blockRequestCh chan BlockRequestPars
+	size           int
+	blkCache       *lru.Cache //cache of full blks
 }
 
 func NewBlockPool(size int) *BlockPool {
@@ -53,9 +52,8 @@ func NewBlockPool(size int) *BlockPool {
 		size = BlockPoolMaxSize
 	}
 	pool := &BlockPool{
-		size:             size,
-		blockRequestCh:   make(chan BlockRequestPars, size),
-		downloadBlocksCh: make(chan bool, 1),
+		size:           size,
+		blockRequestCh: make(chan BlockRequestPars, size),
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
 
@@ -64,10 +62,6 @@ func NewBlockPool(size int) *BlockPool {
 
 func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
 	return pool.blockRequestCh
-}
-
-func (pool *BlockPool) DownloadBlocksCh() chan bool {
-	return pool.downloadBlocksCh
 }
 
 func (pool *BlockPool) Verify(block *Block) bool {
