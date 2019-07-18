@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
@@ -39,7 +40,7 @@ func TestNewDpos(t *testing.T) {
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
+	bc := core.CreateBlockchain(client.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	node := network.NewNode(bc, pool)
 
@@ -55,8 +56,8 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
 
-	cbtx := core.NewCoinbaseTX(core.NewAddress(producers[0]), "", 0, common.NewAmount(0))
-	cbtxInvalidProducer := core.NewCoinbaseTX(core.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtx := core.NewCoinbaseTX(client.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtxInvalidProducer := core.NewCoinbaseTX(client.NewAddress(producers[0]), "", 0, common.NewAmount(0))
 
 	tests := []struct {
 		name     string

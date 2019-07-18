@@ -55,7 +55,7 @@ type GeneralConfigs struct {
 
 func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, config GeneralConfigs) {
 	bcs := make([]*core.Blockchain, len(files))
-	addr := core.NewAddress(genesisAddr)
+	addr := client.NewAddress(genesisAddr)
 	numOfTx = config.NumOfNormalTx
 	numOfScTx = config.NumOfScTx
 	for i := range files {
@@ -74,7 +74,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 		logger.Panic("Cannot get account manager.")
 	}
 	addrs := CreateAccount(wm)
-	producer := core.NewAddress(d.ProducerAtATime(time))
+	producer := client.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
 	logic.SetMinerKeyPair(key)
 
@@ -125,7 +125,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []core.Address, wm *client.AccountManager, scAddr core.Address) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []client.Address, wm *client.AccountManager, scAddr client.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -138,7 +138,7 @@ func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *
 }
 
 func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *core.Block {
-	producer := core.NewAddress(d.ProducerAtATime(time))
+	producer := client.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
 	cbtx := core.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
@@ -157,25 +157,25 @@ func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Bl
 	return b
 }
 
-func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, minerPrivKey string) *core.Block {
+func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr client.Address, minerPrivKey string) *core.Block {
 	logger.Info("generate funding Block")
 	tx := generateFundingTransaction(utxoIndex, fundAddr, minerPrivKey)
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr core.Address, wm *client.AccountManager) (*core.Block, core.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr client.Address, wm *client.AccountManager) (*core.Block, client.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
 }
 
-func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender core.Address, wm *client.AccountManager) *core.Transaction {
+func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender client.Address, wm *client.AccountManager) *core.Transaction {
 	senderAccount := wm.GetAccountByAddress(sender)
 	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
 		logger.Panic("Can not find sender account")
 	}
-	pubKeyHash, _ := core.NewUserPubKeyHash(senderAccount.GetKeyPair().PublicKey)
+	pubKeyHash, _ := client.NewUserPubKeyHash(senderAccount.GetKeyPair().PublicKey)
 
 	data, err := ioutil.ReadFile(contractFilePath)
 	if err != nil {
@@ -184,17 +184,17 @@ func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sende
 		}).Panic("Unable to read smart contract file!")
 	}
 	contract := string(data)
-	tx := newTransaction(sender, core.Address{}, senderAccount.GetKeyPair(), utxoIndex, pubKeyHash, common.NewAmount(1), common.NewAmount(10000), common.NewAmount(1), contract)
+	tx := newTransaction(sender, client.Address{}, senderAccount.GetKeyPair(), utxoIndex, pubKeyHash, common.NewAmount(1), common.NewAmount(10000), common.NewAmount(1), contract)
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[sender.String()] -= 1
 	return tx
 }
 
-func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr core.Address, minerPrivKey string) *core.Transaction {
+func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr client.Address, minerPrivKey string) *core.Transaction {
 	initFund := uint64(1000000)
 	initFundAmount := common.NewAmount(initFund)
-	minerKeyPair := core.GetKeyPairByString(minerPrivKey)
-	pkh, _ := core.NewUserPubKeyHash(minerKeyPair.PublicKey)
+	minerKeyPair := client.GetKeyPairByString(minerPrivKey)
+	pkh, _ := client.NewUserPubKeyHash(minerKeyPair.PublicKey)
 
 	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
 	utxoIndex.UpdateUtxo(tx)
@@ -202,7 +202,7 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr core.Address
 	return tx
 }
 
-func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *client.AccountManager, scAddr core.Address) []*core.Transaction {
+func generateTransactions(utxoIndex *core.UTXOIndex, addrs []client.Address, wm *client.AccountManager, scAddr client.Address) []*core.Transaction {
 	pkhmap := getPubKeyHashes(addrs, wm)
 	txs := []*core.Transaction{}
 	for i := 0; i < numOfTx; i++ {
@@ -220,17 +220,17 @@ func generateTransactions(utxoIndex *core.UTXOIndex, addrs []core.Address, wm *c
 	return txs
 }
 
-func getPubKeyHashes(addrs []core.Address, wm *client.AccountManager) map[core.Address]core.PubKeyHash {
-	res := make(map[core.Address]core.PubKeyHash)
+func getPubKeyHashes(addrs []client.Address, wm *client.AccountManager) map[client.Address]client.PubKeyHash {
+	res := make(map[client.Address]client.PubKeyHash)
 	for _, addr := range addrs {
 		account := wm.GetAccountByAddress(addr)
-		pubKeyHash, _ := core.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
+		pubKeyHash, _ := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 		res[addr] = pubKeyHash
 	}
 	return res
 }
 
-func generateTransaction(addrs []core.Address, wm *client.AccountManager, utxoIndex *core.UTXOIndex, pkhmap map[core.Address]core.PubKeyHash, contract string, scAddr core.Address) *core.Transaction {
+func generateTransaction(addrs []client.Address, wm *client.AccountManager, utxoIndex *core.UTXOIndex, pkhmap map[client.Address]client.PubKeyHash, contract string, scAddr client.Address) *core.Transaction {
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
 	senderAccount := wm.GetAccountByAddress(sender)
@@ -247,7 +247,7 @@ func generateTransaction(addrs []core.Address, wm *client.AccountManager, utxoIn
 	return tx
 }
 
-func newTransaction(sender, receiver core.Address, senderKeyPair *core.KeyPair, utxoIndex *core.UTXOIndex, senderPkh core.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *core.Transaction {
+func newTransaction(sender, receiver client.Address, senderKeyPair *client.KeyPair, utxoIndex *core.UTXOIndex, senderPkh client.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *core.Transaction {
 	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
 
 	sendTxParam := core.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
@@ -260,7 +260,7 @@ func newTransaction(sender, receiver core.Address, senderKeyPair *core.KeyPair, 
 	return &tx
 }
 
-func getSenderAndReceiver(addrs []core.Address) (sender, receiver core.Address) {
+func getSenderAndReceiver(addrs []client.Address) (sender, receiver client.Address) {
 	for i, addr := range addrs {
 		if currBalance[addr.String()] > 1000 {
 			sender = addr
@@ -282,11 +282,11 @@ func getSenderAndReceiver(addrs []core.Address) (sender, receiver core.Address) 
 	return
 }
 
-func CreateRandomTransactions([]core.Address) []*core.Transaction {
+func CreateRandomTransactions([]client.Address) []*core.Transaction {
 	return nil
 }
 
-func CreateAccount(wm *client.AccountManager) []core.Address {
+func CreateAccount(wm *client.AccountManager) []client.Address {
 
 	addresses := wm.GetAddresses()
 	numOfAccounts := len(addresses)
@@ -318,7 +318,7 @@ func LoadPrivateKey() Keys {
 	return keys
 }
 
-func (k Keys) getPrivateKeyByAddress(address core.Address) string {
+func (k Keys) getPrivateKeyByAddress(address client.Address) string {
 	for _, key := range k.Keys {
 		if key.Address == address.Address {
 			return key.Key

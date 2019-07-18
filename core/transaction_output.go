@@ -21,43 +21,45 @@ package core
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 )
 
 type TXOutput struct {
 	Value      *common.Amount
-	PubKeyHash PubKeyHash
+	PubKeyHash client.PubKeyHash
 	Contract   string
 }
 
-func (out *TXOutput) GetAddress() Address {
+func (out *TXOutput) GetAddress() client.Address {
 	return out.PubKeyHash.GenerateAddress()
 }
 
-func (out *TXOutput) Lock(address Address) {
+func (out *TXOutput) Lock(address client.Address) {
 	hash, _ := address.GetPubKeyHash()
-	out.PubKeyHash = PubKeyHash(hash)
+	out.PubKeyHash = client.PubKeyHash(hash)
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare([]byte(out.PubKeyHash), pubKeyHash) == 0
 }
 
-func NewTXOutput(value *common.Amount, address Address) *TXOutput {
+func NewTXOutput(value *common.Amount, address client.Address) *TXOutput {
 	return NewTxOut(value, address, "")
 }
 
-func NewContractTXOutput(address Address, contract string) *TXOutput {
+func NewContractTXOutput(address client.Address, contract string) *TXOutput {
 	return NewTxOut(common.NewAmount(0), address, contract)
 }
 
-func NewTxOut(value *common.Amount, address Address, contract string) *TXOutput {
-	var pubKeyHash PubKeyHash
+func NewTxOut(value *common.Amount, address client.Address, contract string) *TXOutput {
+	var pubKeyHash client.PubKeyHash
 	txo := &TXOutput{value, pubKeyHash, contract}
 	txo.Lock(address)
 	return txo
@@ -91,7 +93,7 @@ func (out *TXOutput) ToProto() proto.Message {
 
 func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).GetValue())
-	out.PubKeyHash = PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
+	out.PubKeyHash = client.PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
 	out.Contract = pb.(*corepb.TXOutput).GetContract()
 }
 

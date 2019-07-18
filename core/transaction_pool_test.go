@@ -20,10 +20,12 @@ package core
 
 import (
 	"encoding/hex"
-	"github.com/dappley/go-dappley/core/pb"
+	"testing"
+
+	"github.com/dappley/go-dappley/client"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/util"
@@ -218,8 +220,8 @@ func TestTransactionPoolLimit(t *testing.T) {
 
 func TestTransactionPool_GetTransactions(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
-	var contractPubkeyHash = NewContractPubKeyHash()
+	var pubkey1 = client.GetKeyPairByString(prikey1).PublicKey
+	var contractPubkeyHash = client.NewContractPubKeyHash()
 
 	var deploymentTx = Transaction{
 		ID: nil,

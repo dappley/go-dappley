@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 
 	"github.com/dappley/go-dappley/core"
@@ -127,7 +128,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 		totalSize += txNode.Size
 
 		ctx := txNode.Value.ToContractTx()
-		minerAddr := core.NewAddress(bp.beneficiary)
+		minerAddr := client.NewAddress(bp.beneficiary)
 		if ctx != nil {
 			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
 			if err != nil {
@@ -182,7 +183,7 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := core.NewCoinbaseTX(core.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := core.NewCoinbaseTX(client.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	return &cbtx
 }
 
@@ -197,7 +198,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	var generatedTXs []*core.Transaction
 	rewards := make(map[string]string)
 
-	minerAddr := core.NewAddress(bp.beneficiary)
+	minerAddr := client.NewAddress(bp.beneficiary)
 
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()

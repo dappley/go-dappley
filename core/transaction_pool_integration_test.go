@@ -23,6 +23,7 @@ package core
 import (
 	"testing"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
@@ -31,15 +32,15 @@ import (
 func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	txPool := NewTransactionPool(1280000)
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-	var kps []*KeyPair
-	var pkhs []PubKeyHash
-	var addrs []Address
+	var kps []*client.KeyPair
+	var pkhs []client.PubKeyHash
+	var addrs []client.Address
 	var prevUTXOs []*UTXOTx
 	var txs []*Transaction
 
 	for i := 0; i < 5; i++ {
-		kps = append(kps, NewKeyPair())
-		pkh, _ := NewUserPubKeyHash(kps[i].PublicKey)
+		kps = append(kps, client.NewKeyPair())
+		pkh, _ := client.NewUserPubKeyHash(kps[i].PublicKey)
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 		cbtx := NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
@@ -65,14 +66,14 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T) {
 	txPool := NewTransactionPool(1280000)
 	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-	var kps []*KeyPair
-	var pkhs []PubKeyHash
-	var addrs []Address
+	var kps []*client.KeyPair
+	var pkhs []client.PubKeyHash
+	var addrs []client.Address
 	var txs []*Transaction
 
 	for i := 0; i < 5; i++ {
-		kps = append(kps, NewKeyPair())
-		pkh, _ := NewUserPubKeyHash(kps[i].PublicKey)
+		kps = append(kps, client.NewKeyPair())
+		pkh, _ := client.NewUserPubKeyHash(kps[i].PublicKey)
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 		if i == 0 {

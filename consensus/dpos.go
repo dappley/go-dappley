@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	lru "github.com/hashicorp/golang-lru"
@@ -227,7 +228,7 @@ func (dpos *DPOS) verifyProducer(block *core.Block) bool {
 		return false
 	}
 
-	pubKeyHash, err := core.NewUserPubKeyHash(pubkey[1:])
+	pubKeyHash, err := client.NewUserPubKeyHash(pubkey[1:])
 	if err != nil {
 		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 		return false
@@ -251,7 +252,7 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 	}
 
 	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash, _ := core.NewAddress(producer).GetPubKeyHash()
+	producerHash, _ := client.NewAddress(producer).GetPubKeyHash()
 
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	corepb "github.com/dappley/go-dappley/core/pb"
@@ -22,7 +23,7 @@ func NewUnexistingUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 }
 
 func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
-	pkh, err := core.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
+	pkh, err := client.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")

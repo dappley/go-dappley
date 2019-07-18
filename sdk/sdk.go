@@ -5,7 +5,6 @@ import (
 
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
@@ -92,7 +91,7 @@ func (sdk *DappSdk) RequestFund(fundAddr string, amount *common.Amount) {
 }
 
 //GetUtxoByAddr gets all utxos related to an address from the server
-func (sdk *DappSdk) GetUtxoByAddr(addr core.Address) ([]*corepb.Utxo, error) {
+func (sdk *DappSdk) GetUtxoByAddr(addr client.Address) ([]*corepb.Utxo, error) {
 
 	resp, err := sdk.conn.rpcClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
 		Address: addr.String(),

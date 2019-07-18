@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
@@ -58,7 +59,7 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkAccount) {
 	return dappSdk, account
 }
 
-func getUnauthroizedAddr(account *sdk.DappSdkAccount) core.Address {
+func getUnauthroizedAddr(account *sdk.DappSdkAccount) client.Address {
 	return account.GetAddrs()[2]
 }
 

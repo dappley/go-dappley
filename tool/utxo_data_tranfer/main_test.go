@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
@@ -24,7 +25,7 @@ func TestTransferResult(t *testing.T) {
 	defer db.Close()
 
 	minerKey := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
-	minerPubKey, ok := core.NewAddress(minerKey).GetPubKeyHash()
+	minerPubKey, ok := client.NewAddress(minerKey).GetPubKeyHash()
 	if !ok {
 		t.Error("ResultTest: account address is error!")
 		return

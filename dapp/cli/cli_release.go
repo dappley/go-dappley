@@ -439,7 +439,7 @@ func getBalanceCommandHandler(ctx context.Context, client interface{}, flags cmd
 	}
 
 	address := *(flags[flagAddress].(*string))
-	if core.NewAddress(address).IsValid() == false {
+	if client.NewAddress(address).IsValid() == false {
 		fmt.Println("Error: address is not valid")
 		return
 	}
@@ -592,7 +592,7 @@ func listAddressesCommandHandler(ctx context.Context, client interface{}, flags 
 		} else {
 			privateKeyList := []string{}
 			for _, addr := range addressList {
-				keyPair := wm.GetKeyPairByAddress(core.NewAddress(addr))
+				keyPair := wm.GetKeyPairByAddress(client.NewAddress(addr))
 				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
 				if err1 != nil {
 					err = err1
@@ -698,19 +698,19 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		data = string(script)
 	}
 
-	if core.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
+	if client.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if data == "" && core.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
+	if data == "" && client.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
 
 	response, err := client.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
-		Address: core.NewAddress(*(flags[flagFromAddress].(*string))).Address,
+		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).Address,
 	})
 	if err != nil {
 		switch status.Code(err) {
@@ -754,14 +754,14 @@ func sendCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	senderWallet := wm.GetWalletByAddress(core.NewAddress(*(flags[flagFromAddress].(*string))))
+	senderWallet := wm.GetWalletByAddress(client.NewAddress(*(flags[flagFromAddress].(*string))))
 
 	if senderWallet == nil {
 		fmt.Println("Error: invalid wallet address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(core.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
-		core.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+	sendTxParam := core.NewSendTxParam(client.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
+		client.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
 
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}

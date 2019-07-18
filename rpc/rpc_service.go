@@ -21,6 +21,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 
 	"github.com/golang/protobuf/proto"
@@ -66,11 +67,11 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	if !core.NewAddress(address).IsValid() {
-		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
+	if !client.NewAddress(address).IsValid() {
+		return nil, status.Error(codes.InvalidArgument, client.ErrInvalidAddress.Error())
 	}
 
-	amount, err := logic.GetBalance(core.NewAddress(address), rpcService.node.GetBlockchain())
+	amount, err := logic.GetBalance(client.NewAddress(address), rpcService.node.GetBlockchain())
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidAddress:
@@ -105,7 +106,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetAllTransactions())
 
-	publicKeyHash, ok := core.NewAddress(in.GetAddress()).GetPubKeyHash()
+	publicKeyHash, ok := client.NewAddress(in.GetAddress()).GetPubKeyHash()
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}

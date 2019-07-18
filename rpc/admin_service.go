@@ -46,8 +46,8 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.GetAddress()) == 0 || !core.NewAddress(in.GetAddress()).IsValid() {
-		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
+	if len(in.GetAddress()) == 0 || !client.NewAddress(in.GetAddress()).IsValid() {
+		return nil, status.Error(codes.InvalidArgument, client.ErrInvalidAddress.Error())
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.GetAddress())
 	if err != nil {
@@ -72,7 +72,7 @@ func (adminRpcService *AdminRpcService) RpcUnlockAccount(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
-	sendToAddress := core.NewAddress(in.GetTo())
+	sendToAddress := client.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
@@ -93,8 +93,8 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
-	sendFromAddress := core.NewAddress(in.GetFrom())
-	sendToAddress := core.NewAddress(in.GetTo())
+	sendFromAddress := client.NewAddress(in.GetFrom())
+	sendToAddress := client.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	tip := common.NewAmountFromBytes(in.GetTip())
 	gasLimit := common.NewAmountFromBytes(in.GetGasLimit())

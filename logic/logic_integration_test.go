@@ -86,10 +86,10 @@ func TestSend(t *testing.T) {
 			}
 
 			// Send coins from senderAccount to receiverAccount
-			var rcvAddr core.Address
+			var rcvAddr client.Address
 			isContract := (tc.contract != "")
 			if isContract {
-				rcvAddr = core.NewAddress("")
+				rcvAddr = client.NewAddress("")
 			} else {
 				rcvAddr = receiverAccount.GetAddress()
 			}
@@ -133,7 +133,7 @@ func TestSend(t *testing.T) {
 
 			//check smart contract deployment
 			res := string("")
-			contractAddr := core.NewAddress("")
+			contractAddr := client.NewAddress("")
 		loop:
 			for i := bc.GetMaxHeight(); i > 0; i-- {
 				blk, err := bc.GetBlockByHeight(i)
@@ -190,7 +190,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
-	_, _, err = Send(account1, core.NewAddress(InvalidAddress), transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
+	_, _, err = Send(account1, client.NewAddress(InvalidAddress), transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc, node)
 	assert.NotNil(t, err)
 
 	//the balance of the first account should be still be 10
@@ -288,7 +288,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(client.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
@@ -356,7 +356,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
 
-		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(client.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
@@ -415,7 +415,7 @@ func TestForkChoice(t *testing.T) {
 		}
 	}()
 
-	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	addr := client.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 	//wait for mining for at least "targetHeight" blocks
 	//targetHeight := uint64(4)
 	//num of nodes to be created in the test
@@ -487,7 +487,7 @@ func TestForkSegmentHandling(t *testing.T) {
 			db.Close()
 		}
 	}()
-	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	addr := client.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 
 	numOfNodes := 2
 	var nodes []*network.Node
@@ -583,7 +583,7 @@ func TestAddBalance(t *testing.T) {
 
 			// Create a coinbase address
 			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
-			minerKeyPair := core.GetKeyPairByString(key)
+			minerKeyPair := client.GetKeyPairByString(key)
 			minerAccount := &client.Account{}
 			minerAccount.Key = minerKeyPair
 
@@ -592,7 +592,7 @@ func TestAddBalance(t *testing.T) {
 			bc, pow := createBlockchain(addr, store)
 
 			// Create a new account address for testing
-			testAddr := core.Address{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"}
+			testAddr := client.Address{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"}
 
 			// Start mining to approve the transaction
 			pool := core.NewBlockPool(0)
@@ -637,13 +637,13 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			defer store.Close()
 
 			// Create a coinbase account address
-			addr := core.Address{"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
+			addr := client.Address{"dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
 			// Create a blockchain
 			bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 			assert.Nil(t, err)
 			pool := core.NewBlockPool(0)
 			node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
-			_, _, err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc, node)
+			_, _, err = SendFromMiner(client.Address{tc.address}, common.NewAmount(8), bc, node)
 			assert.Equal(t, ErrInvalidRcverAddress, err)
 		})
 	}
@@ -679,7 +679,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
 	//deploy smart contract
-	_, _, err = Send(senderAccount, core.Address{""}, common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bc, node)
+	_, _, err = Send(senderAccount, client.Address{""}, common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bc, node)
 	assert.Nil(t, err)
 
 	txp := bc.GetTxPool().GetTransactions()[0]
@@ -727,7 +727,7 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.GetPeerManager().AddAndConnectPeer(node2.GetInfo())
 }
 
-func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
+func setupNode(addr client.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	pool := core.NewBlockPool(0)
 	node := network.NewNode(bc, pool)
 	pow.Setup(node, addr.String())
@@ -737,7 +737,7 @@ func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchai
 	return node
 }
 
-func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
+func createBlockchain(addr client.Address, db *storage.RamStorage) (*core.Blockchain, *consensus.ProofOfWork) {
 	pow := consensus.NewProofOfWork()
 	return core.CreateBlockchain(addr, db, pow, 128, nil, 100000), pow
 }
@@ -753,8 +753,8 @@ func TestDoubleMint(t *testing.T) {
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
-	producerHash, _ := core.NewAddress(validProducerAddr).GetPubKeyHash()
-	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), core.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	producerHash, _ := client.NewAddress(validProducerAddr).GetPubKeyHash()
+	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), client.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock(producerHash, []*core.Transaction{tx}, validProducerKey, validProducerAddr, parent)
@@ -769,7 +769,7 @@ func TestDoubleMint(t *testing.T) {
 
 		dpos := consensus.NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(client.Address{validProducerAddr}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(testport_msg_relay_port3 + i)
@@ -812,7 +812,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	conss := consensus.NewDPOS()
 	dynasty := consensus.NewDynasty([]string{validProducerAddress}, 1, 1)
 	conss.SetDynasty(dynasty)
-	bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), conss, 128, nil, 100000)
+	bc := core.CreateBlockchain(client.NewAddress(genesisAddr), storage.NewRamStorage(), conss, 128, nil, 100000)
 
 	//create and start seed node
 	pool := core.NewBlockPool(0)
@@ -834,7 +834,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	dpos := consensus.NewDPOS()
 	dpos.SetDynasty(dynasty)
 
-	bc1 := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
+	bc1 := core.CreateBlockchain(client.NewAddress(genesisAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 
 	pool1 := core.NewBlockPool(0)
 	node := network.NewNode(bc1, pool1)
@@ -868,7 +868,7 @@ func TestDownloadBlockChain(t *testing.T) {
 		}
 	}()
 
-	addr := core.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
+	addr := client.Address{"17DgRtQVvaytkiKAfXx9XbV23MESASSwUz"}
 	//wait for mining for at least "targetHeight" blocks
 	//targetHeight := uint64(4)
 	//num of nodes to be created in the test

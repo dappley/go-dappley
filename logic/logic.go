@@ -46,7 +46,7 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
+func CreateBlockchain(address client.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
@@ -210,7 +210,7 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, error) {
+func GetBalance(address client.Address, bc *core.Blockchain) (*common.Amount, error) {
 	pubKeyHash, valid := address.GetPubKeyHash()
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
@@ -226,7 +226,7 @@ func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, erro
 	return balance, nil
 }
 
-func Send(senderAccount *client.Account, to core.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func Send(senderAccount *client.Account, to client.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	sendTxParam := core.NewSendTxParam(senderAccount.GetAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc, node)
 }
@@ -240,8 +240,8 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
+func SendFromMiner(address client.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+	minerKeyPair := client.GetKeyPairByString(minerPrivateKey)
 	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc, node)
 }
@@ -270,7 +270,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 		return nil, "", ErrInvalidAmount
 	}
 
-	pubKeyHash, _ := core.NewUserPubKeyHash(sendTxParam.SenderKeyPair.PublicKey)
+	pubKeyHash, _ := client.NewUserPubKeyHash(sendTxParam.SenderKeyPair.PublicKey)
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())

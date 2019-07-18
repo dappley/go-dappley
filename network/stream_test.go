@@ -19,8 +19,9 @@
 package network
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStream_decode(t *testing.T) {

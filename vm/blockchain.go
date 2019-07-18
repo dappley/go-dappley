@@ -4,6 +4,7 @@ import "C"
 import (
 	"unsafe"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
@@ -14,7 +15,7 @@ import (
 func VerifyAddressFunc(address *C.char, gasCnt *C.size_t) bool {
 	// calculate Gas.
 	*gasCnt = C.size_t(VerifyAddressGasBase)
-	addr := core.NewAddress(C.GoString(address))
+	addr := client.NewAddress(C.GoString(address))
 	return addr.IsValid()
 }
 
@@ -68,7 +69,7 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 //TransferFunc transfer amount from contract to address
 //export TransferFunc
 func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.char, gasCnt *C.size_t) int {
-	toAddr := core.NewAddress(C.GoString(to))
+	toAddr := client.NewAddress(C.GoString(to))
 	amountValue, err := common.NewAmountFromString(C.GoString(amount))
 	if err != nil {
 		logger.Warn("SmartContract: transfer amount is invalid!")

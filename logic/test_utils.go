@@ -4,12 +4,11 @@ import (
 	"strings"
 
 	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 )
 
 //get all addresses
-func GetAllAddressesByPath(path string) ([]core.Address, error) {
+func GetAllAddressesByPath(path string) ([]client.Address, error) {
 	fl := storage.NewFileLoader(path)
 	am := client.NewAccountManager(fl)
 	err := am.LoadFromFile()

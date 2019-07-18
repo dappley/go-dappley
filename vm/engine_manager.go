@@ -3,16 +3,17 @@ package vm
 import (
 	"strings"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 )
 
 const scheduleFuncName = "dapp_schedule"
 
 type V8EngineManager struct {
-	address core.Address
+	address client.Address
 }
 
-func NewV8EngineManager(address core.Address) *V8EngineManager {
+func NewV8EngineManager(address client.Address) *V8EngineManager {
 	return &V8EngineManager{address}
 }
 

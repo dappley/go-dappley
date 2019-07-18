@@ -101,7 +101,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(core.Address{})
+	scManager := vm.NewV8EngineManager(client.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -186,7 +186,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(core.Address{})
+	scManager := vm.NewV8EngineManager(client.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -237,7 +237,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	//check smart contract deployment
 	res := string("")
-	contractAddr := core.NewAddress("")
+	contractAddr := client.NewAddress("")
 loop:
 	for i := bc.GetMaxHeight(); i > 0; i-- {
 		blk, err := bc.GetBlockByHeight(i)
@@ -1075,7 +1075,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	context.consensus = consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(core.Address{})
+	scManager := vm.NewV8EngineManager(client.Address{})
 	bc, err := logic.CreateBlockchain(account.GetAddress(), context.store, context.consensus, 1280000, scManager, 1000000)
 	if err != nil {
 		context.destroyContext()
@@ -1132,7 +1132,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(core.Address{})
+	scManager := vm.NewV8EngineManager(client.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -1191,7 +1191,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := core.NewSendTxParam(senderAccount.GetAddress(),
 		senderAccount.GetKeyPair(),
-		core.NewAddress(contractAddr),
+		client.NewAddress(contractAddr),
 		common.NewAmount(1),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -1229,7 +1229,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(core.Address{})
+	scManager := vm.NewV8EngineManager(client.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)

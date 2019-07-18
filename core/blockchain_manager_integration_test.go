@@ -7,12 +7,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/storage"
 )
 
 func TestBlockChainManager_NumForks(t *testing.T) {
 	// create BlockChain
-	bc := CreateBlockchain(NewAddress(""), storage.NewRamStorage(), nil, 100, nil, 100)
+	bc := CreateBlockchain(client.NewAddress(""), storage.NewRamStorage(), nil, 100, nil, 100)
 	blk, err := bc.GetTailBlock()
 	require.Nil(t, err)
 	b1 := &Block{header: &BlockHeader{height: 1, prevHash: blk.GetHash(), nonce: 1}}

@@ -25,6 +25,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
@@ -44,7 +45,7 @@ func TestCreateBlockchain(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
@@ -58,7 +59,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
@@ -70,7 +71,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
@@ -86,7 +87,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
@@ -130,7 +131,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db := new(mocks.Storage)
 
 	// Create a blockchain for testing
-	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	addr := client.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
@@ -180,16 +181,16 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	//create a new block chain
 
 	s := storage.NewRamStorage()
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
 	bc := CreateBlockchain(addr, s, nil, 128000000, nil, 100000)
-	var addrs []Address
-	var kps []*KeyPair
-	var pkhs []PubKeyHash
+	var addrs []client.Address
+	var kps []*client.KeyPair
+	var pkhs []client.PubKeyHash
 	for i := 0; i < 10; i++ {
-		kp := NewKeyPair()
+		kp := client.NewKeyPair()
 		kps = append(kps, kp)
-		pkh, _ := NewUserPubKeyHash(kp.PublicKey)
+		pkh, _ := client.NewUserPubKeyHash(kp.PublicKey)
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 	}

@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
@@ -33,7 +34,7 @@ import (
 
 func TestDpos_Start(t *testing.T) {
 	dpos := NewDPOS()
-	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
+	cbAddr := client.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
@@ -84,7 +85,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(client.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(21200 + i)
@@ -152,7 +153,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(client.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
 		node := network.NewNode(bc, pool)
 		node.Start(22200 + i)

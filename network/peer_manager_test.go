@@ -6,13 +6,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 )
 
 var (
-	bc   = core.CreateBlockchain(core.NewAddress(""), storage.NewRamStorage(), consensus.NewDPOS(), 100, nil, 100)
+	bc   = core.CreateBlockchain(client.NewAddress(""), storage.NewRamStorage(), consensus.NewDPOS(), 100, nil, 100)
 	bp   = core.NewBlockPool(100)
 	node = NewNode(bc, bp)
 )

@@ -18,12 +18,13 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 )
 
 const genesisCoinbaseData = "Hello world"
 
-func NewGenesisBlock(address Address) *Block {
+func NewGenesisBlock(address client.Address) *Block {
 	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
 
 	txin := TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}

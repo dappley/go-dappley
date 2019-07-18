@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/util"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
+
+	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/util"
 )
 
 func getAoB(length int64) []byte {
@@ -23,8 +25,8 @@ func GenerateFakeTxInputs() []core.TXInput {
 
 func GenerateFakeTxOutputs() []core.TXOutput {
 	return []core.TXOutput{
-		{common.NewAmount(1), core.PubKeyHash(getAoB(2)), ""},
-		{common.NewAmount(2), core.PubKeyHash(getAoB(2)), ""},
+		{common.NewAmount(1), client.PubKeyHash(getAoB(2)), ""},
+		{common.NewAmount(2), client.PubKeyHash(getAoB(2)), ""},
 	}
 }
 

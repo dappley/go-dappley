@@ -11,8 +11,8 @@ import (
 )
 
 type DappSdkAccount struct {
-	addrs     []core.Address
-	balances  map[core.Address]uint64
+	addrs     []client.Address
+	balances  map[client.Address]uint64
 	wm        *client.AccountManager
 	sdk       *DappSdk
 	utxoIndex *core.UTXOIndex
@@ -55,9 +55,9 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 	return dappSdkAccount
 }
 
-func (sdkw *DappSdkAccount) GetAddrs() []core.Address { return sdkw.addrs }
+func (sdkw *DappSdkAccount) GetAddrs() []client.Address { return sdkw.addrs }
 
-func (sdkw *DappSdkAccount) GetBalance(address core.Address) uint64 {
+func (sdkw *DappSdkAccount) GetBalance(address client.Address) uint64 {
 	sdkw.mutex.RLock()
 	defer sdkw.mutex.RUnlock()
 
@@ -73,7 +73,7 @@ func (sdkw *DappSdkAccount) Initialize() {
 	defer sdkw.mutex.Unlock()
 
 	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
-	sdkw.balances = make(map[core.Address]uint64)
+	sdkw.balances = make(map[client.Address]uint64)
 }
 
 func (sdkw *DappSdkAccount) IsZeroBalance() bool {
@@ -110,7 +110,7 @@ func (sdkw *DappSdkAccount) Update() error {
 	for _, addr := range sdkw.addrs {
 
 		kp := sdkw.wm.GetKeyPairByAddress(addr)
-		_, err := core.NewUserPubKeyHash(kp.PublicKey)
+		_, err := client.NewUserPubKeyHash(kp.PublicKey)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (sdkw *DappSdkAccount) Update() error {
 }
 
 //AddToBalance adds the difference to the current balance
-func (sdkw *DappSdkAccount) UpdateBalance(addr core.Address, amount uint64) {
+func (sdkw *DappSdkAccount) UpdateBalance(addr client.Address, amount uint64) {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 	sdkw.balances[addr] = amount

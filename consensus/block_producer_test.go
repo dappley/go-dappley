@@ -21,6 +21,7 @@ package consensus
 import (
 	"testing"
 
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	bp := NewBlockProducer()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	bc := core.CreateBlockchain(
-		core.NewAddress(cbAddr),
+		client.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,
 		128,

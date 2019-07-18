@@ -220,4 +220,3 @@ func (pool *BlockPool) ForkHeadRange(fn func(blkHash string, tree *common.Tree))
 		fn(k, v)
 	}
 }
-

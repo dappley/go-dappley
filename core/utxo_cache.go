@@ -19,8 +19,9 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 const UtxoCacheLRUCacheLimit = 1024
@@ -42,7 +43,7 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 }
 
 // Return value from cache
-func (utxoCache *UTXOCache) Get(pubKeyHash PubKeyHash) *UTXOTx {
+func (utxoCache *UTXOCache) Get(pubKeyHash client.PubKeyHash) *UTXOTx {
 	mapData, ok := utxoCache.cache.Get(string(pubKeyHash))
 	if ok {
 		return mapData.(*UTXOTx)
@@ -61,9 +62,9 @@ func (utxoCache *UTXOCache) Get(pubKeyHash PubKeyHash) *UTXOTx {
 }
 
 // Add new data into cache
-func (utxoCache *UTXOCache) Put(pubKeyHash PubKeyHash, value *UTXOTx) error {
+func (utxoCache *UTXOCache) Put(pubKeyHash client.PubKeyHash, value *UTXOTx) error {
 	if pubKeyHash == nil {
-		return ErrEmptyPublicKeyHash
+		return client.ErrEmptyPublicKeyHash
 	}
 
 	savedUtxoTx := value.DeepCopy()
@@ -71,9 +72,9 @@ func (utxoCache *UTXOCache) Put(pubKeyHash PubKeyHash, value *UTXOTx) error {
 	return utxoCache.db.Put(pubKeyHash, value.Serialize())
 }
 
-func (utxoCache *UTXOCache) Delete(pubKeyHash PubKeyHash) error {
+func (utxoCache *UTXOCache) Delete(pubKeyHash client.PubKeyHash) error {
 	if pubKeyHash == nil {
-		return ErrEmptyPublicKeyHash
+		return client.ErrEmptyPublicKeyHash
 	}
 	return utxoCache.db.Del(pubKeyHash)
 }

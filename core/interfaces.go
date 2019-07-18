@@ -18,7 +18,10 @@
 
 package core
 
-import peer "github.com/libp2p/go-libp2p-peer"
+import (
+	"github.com/dappley/go-dappley/client"
+	peer "github.com/libp2p/go-libp2p-peer"
+)
 
 type Consensus interface {
 	Validate(block *Block) bool
@@ -61,7 +64,7 @@ type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
 	ImportLocalStorage(state *ScState)
-	ImportContractAddr(contractAddr Address)
+	ImportContractAddr(contractAddr client.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*UTXO)
 	ImportRewardStorage(rewards map[string]string)
@@ -70,7 +73,7 @@ type ScEngine interface {
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
-	ImportNodeAddress(addr Address)
+	ImportNodeAddress(addr client.Address)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) (string, error)
 	SetExecutionLimits(uint64, uint64) error

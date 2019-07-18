@@ -4,30 +4,32 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"time"
+
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/dappley/go-dappley/vm"
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	logger "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"os"
-	"time"
 )
 
-const(
-	nodeDbPath = "db/temp.db"
-	reportFilePath = "report.csv"
-	genesisAddrTest = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+const (
+	nodeDbPath          = "db/temp.db"
+	reportFilePath      = "report.csv"
+	genesisAddrTest     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	genesisFilePathTest = "../conf/genesis.conf"
-	testport1 = 10851
-	testport2 = 10852
-	cdBtwTest = time.Second*10
+	testport1           = 10851
+	testport2           = 10852
+	cdBtwTest           = time.Second * 10
 )
 
 func main() {
@@ -44,10 +46,10 @@ func main() {
 	reader.ReadString('\n')
 
 	files, err := ioutil.ReadDir("./db")
-	if err!= nil{
+	if err != nil {
 		logger.WithError(err).Panic("can not read db files")
 	}
-	if len(files)==0 {
+	if len(files) == 0 {
 		logger.Warn("No db files are found. Exiting...")
 		return
 	}
@@ -61,18 +63,18 @@ func main() {
 	initRecordFile(filePath)
 
 	for _, file := range files {
-		elapsed, blkHeight, numOfTx = runTest("./db/"+file.Name())
+		elapsed, blkHeight, numOfTx = runTest("./db/" + file.Name())
 		recordResult(filePath, file.Name(), elapsed, blkHeight, numOfTx)
 		logger.WithFields(logger.Fields{
-			"time_elapsed" : elapsed,
-			"ave_blk_time"  : elapsed/time.Duration(blkHeight),
-			"ave_tx_time"  : elapsed/time.Duration(blkHeight)/time.Duration(numOfTx),
+			"time_elapsed": elapsed,
+			"ave_blk_time": elapsed / time.Duration(blkHeight),
+			"ave_tx_time":  elapsed / time.Duration(blkHeight) / time.Duration(numOfTx),
 		}).Info("Test Finished")
 		time.Sleep(cdBtwTest)
 	}
 }
 
-func initRecordFile(filePath string){
+func initRecordFile(filePath string) {
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording failed transactions")
@@ -81,11 +83,11 @@ func initRecordFile(filePath string){
 	vmStat, err := mem.VirtualMemory()
 	cpuStat, err := cpu.Info()
 	w.Write([]string{
-		"","","","","","","Memory",
+		"", "", "", "", "", "", "Memory",
 		vmStat.String(),
 	})
 	w.Write([]string{
-		"","","","","","","Cpu",
+		"", "", "", "", "", "", "Cpu",
 		cpuStat[0].String(),
 	})
 	w.Write([]string{
@@ -100,7 +102,7 @@ func initRecordFile(filePath string){
 	w.Flush()
 }
 
-func recordResult(filePath string, dbfileName string, elapsed time.Duration, blkHeight uint64, numOfTx int){
+func recordResult(filePath string, dbfileName string, elapsed time.Duration, blkHeight uint64, numOfTx int) {
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording failed transactions")
@@ -112,15 +114,15 @@ func recordResult(filePath string, dbfileName string, elapsed time.Duration, blk
 		fmt.Sprint(blkHeight),
 		fmt.Sprint(numOfTx),
 		elapsed.String(),
-		(elapsed/time.Duration(blkHeight)).String(),
-		(elapsed/time.Duration(blkHeight)/time.Duration(numOfTx)).String(),
+		(elapsed / time.Duration(blkHeight)).String(),
+		(elapsed / time.Duration(blkHeight) / time.Duration(numOfTx)).String(),
 	})
 	w.Flush()
 }
 
-func runTest(fileName string) (time.Duration, uint64, int){
+func runTest(fileName string) (time.Duration, uint64, int) {
 	logger.WithFields(logger.Fields{
-		"db_file_path" : fileName,
+		"db_file_path": fileName,
 	}).Info("Test starts...")
 	defer os.RemoveAll(nodeDbPath)
 	db1 := storage.OpenDatabase(fileName)
@@ -139,12 +141,12 @@ func runTest(fileName string) (time.Duration, uint64, int){
 	node1.GetPeerManager().AddAndConnectPeer(node2.GetInfo())
 
 	blkHeight := bc.GetMaxHeight()
-	tailBlock,_ := bc.GetTailBlock()
+	tailBlock, _ := bc.GetTailBlock()
 	numOfTx := len(tailBlock.GetTransactions())
 
 	logger.WithFields(logger.Fields{
-		"blk_height" : blkHeight,
-		"num_of_tx"  : numOfTx,
+		"blk_height": blkHeight,
+		"num_of_tx":  numOfTx,
 	}).Info("Start Downloading...")
 
 	time.Sleep(time.Second)
@@ -154,29 +156,25 @@ func runTest(fileName string) (time.Duration, uint64, int){
 	elapsed := time.Since(start)
 
 	logger.WithFields(logger.Fields{
-		"time_elapsed" : elapsed,
-		"ave_blk_time"  : elapsed/time.Duration(blkHeight),
-		"ave_tx_time"  : elapsed/time.Duration(blkHeight)/time.Duration(numOfTx),
+		"time_elapsed": elapsed,
+		"ave_blk_time": elapsed / time.Duration(blkHeight),
+		"ave_tx_time":  elapsed / time.Duration(blkHeight) / time.Duration(numOfTx),
 	}).Info("Downloading ends... Cleaning up files...")
-
-
 
 	return elapsed, blkHeight, numOfTx
 }
 
-
-
-func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node){
+func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 	conss := consensus.NewDPOS()
 	conss.SetDynasty(dynasty)
-	txPoolLimit:=uint32(2000)
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}), 1000000)
+	txPoolLimit := uint32(2000)
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(client.Address{}), 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}),  1000000)
+		bc, err = logic.CreateBlockchain(client.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(client.Address{}), 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}

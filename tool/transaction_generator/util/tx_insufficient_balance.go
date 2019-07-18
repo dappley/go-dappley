@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	corepb "github.com/dappley/go-dappley/core/pb"
@@ -22,7 +23,7 @@ func NewInsufficientBalanceTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAc
 }
 
 func (txSender *InsufficientBalanceTxSender) Generate(params core.SendTxParam) {
-	pkh, err := core.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
+	pkh, err := client.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
 
 	if err != nil {
 		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to hash sender public key")
