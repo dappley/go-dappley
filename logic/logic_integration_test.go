@@ -668,7 +668,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			bm := core.NewBlockChainManager(nil, nil)
 			bm.SetBlockchain(bc)
 			bm.SetBlockPool(pool)
-			node := network.FakeNodeWithPidAndAddr(bbc.GetDb()m, "a", "b")
+			node := network.FakeNodeWithPidAndAddr(bbc.GetDb(), "a", "b")
 			_, _, err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc, node)
 			assert.Equal(t, ErrInvalidRcverAddress, err)
 		})
