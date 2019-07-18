@@ -56,11 +56,11 @@ type Node struct {
 }
 
 //create new Node instance
-func NewNode(db storage.Storage) *Node {
+func NewNode(db Storage) *Node {
 	return NewNodeWithConfig(db, nil)
 }
 
-func NewNodeWithConfig(db storage.Storage, config *NodeConfig) *Node {
+func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 	var err error
 
 	node := &Node{

@@ -75,12 +75,12 @@ type PeerManager struct {
 	commandSendCh            chan *DappSendCmdContext
 	commandReceiveCh         chan *DappRcvdCmdContext
 	eventNotifier            EventBus.Bus
-	db                       storage.Storage
+	db                       Storage
 
 	mutex sync.RWMutex
 }
 
-func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db storage.Storage) *PeerManager {
+func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount

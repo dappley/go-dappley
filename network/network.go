@@ -1,7 +1,6 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/storage"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -16,7 +15,7 @@ type Network struct {
 	recentlyRcvdDapMsgs   *lru.Cache
 }
 
-func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db storage.Storage) *Network {
+func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db Storage) *Network {
 
 	var err error
 	streamMsgRcvCh := make(chan *DappPacketContext, dispatchChLen)
