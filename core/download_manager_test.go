@@ -49,13 +49,13 @@ func createTestBlockchains(size int, portStart int) ([]*BlockChainManager, []*ne
 		address := keyPair.GenerateAddress(false)
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bm := NewBlockChainManager()
+		bm := NewBlockChainManager(nil, nil)
 		bc := CreateBlockchain(NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
 		bc.SetState(BlockchainReady)
 		bm.SetBlockchain(bc)
 		bm.SetBlockPool(NewBlockPool(100))
 		node := network.NewNode(bm)
-		bm.SetDownloadManager(NewDownloadManager(node))
+		bm.SetDownloadManager(NewDownloadManager(node, bm))
 		bms[i] = bm
 		nodes[i] = node
 		pow.Setup(node, address.Address, bm)

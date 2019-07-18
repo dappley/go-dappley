@@ -102,7 +102,7 @@ func main() {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
-	downloadManager := core.NewDownloadManager(node)
+	downloadManager := core.NewDownloadManager(node, bm)
 	bm.SetDownloadManager(downloadManager)
 	defer node.Stop()
 
