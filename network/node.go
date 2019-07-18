@@ -297,49 +297,6 @@ func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
 	return nil
 }
 
-func (n *Node) addBlockToPool(block *core.Block, pid peer.ID) {
-	//add block to blockpool. Make sure this is none blocking.
-	n.bm.Push(block, pid)
-}
-
-func (n *Node) getFromProtoBlockMsg(data []byte) *core.Block {
-	//create a block proto
-	blockpb := &corepb.Block{}
-
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(data, blockpb); err != nil {
-		logger.Warn(err)
-	}
-
-	//create an empty block
-	block := &core.Block{}
-
-	//load the block with proto
-	block.FromProto(blockpb)
-
-	return block
-}
-
-func (n *Node) SyncBlockHandler(dm *DappCmd, pid peer.ID) {
-	if len(dm.data) == 0 {
-		logger.WithFields(logger.Fields{
-			"name": "sync block",
-		}).Warn("Node: can not find block information.")
-		return
-	}
-
-	if dm.isBroadcast == Broadcast {
-
-		blk := n.getFromProtoBlockMsg(dm.GetData())
-		n.addBlockToPool(blk, pid)
-		n.RelayDapMsg(*dm, SyncBlockPriority)
-
-	} else {
-		blk := n.getFromProtoBlockMsg(dm.GetData())
-		n.addBlockToPool(blk, pid)
-	}
-}
-
 func (n *Node) AddTxToPool(dm *DappCmd) {
 	if n.GetBlockchain().GetState() != core.BlockchainReady {
 		return
