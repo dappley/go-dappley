@@ -20,9 +20,8 @@ package main
 
 import (
 	"flag"
-
 	logger "github.com/sirupsen/logrus"
-
+	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -32,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -43,13 +43,15 @@ const (
 )
 
 func main() {
+	viper.AddConfigPath(".")
+	viper.SetConfigFile("conf/dappley.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		logger.Errorf("Cannot load dappley configurations from file!  error： %v", err.Error())
+		return
+	}
 
-	logger.SetFormatter(&logger.TextFormatter{
-		FullTimestamp: true,
-	})
-
-	logger.SetLevel(logger.InfoLevel)
-
+	log.BuildLogAndInit()
+	logger.Debugf("Debug mode open!")
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 

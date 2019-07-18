@@ -139,9 +139,10 @@ func (dpos *DPOS) Start() {
 			case now := <-ticker:
 				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
 					deadlineInMs := now.UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
+					index := dpos.dynasty.GetProducerIndex(dpos.bp.Beneficiary())
 					logger.WithFields(logger.Fields{
 						"peer_id": dpos.node.GetPeerID(),
-					}).Info("DPoS: it is my turn to produce block.")
+					}).Infof("DPoS: it is my turn to produce block. ***node is %v,time is %v***",index,now.Unix())
 					// Do not produce block if block pool is syncing
 					if dpos.node.GetBlockchain().GetState() != core.BlockchainReady {
 						logger.Info("DPoS: block producer paused because block pool is syncing.")

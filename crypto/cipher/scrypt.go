@@ -106,7 +106,6 @@ func (s *Scrypt) EncryptKey(address string, data []byte, passphrase []byte) ([]b
 	}
 
 	idstring := uuid.NewV4().String()
-
 	encryptedKeyJSON := encryptedKeyJSON{
 		string(address),
 		*crypto,

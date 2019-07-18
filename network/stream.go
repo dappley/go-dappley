@@ -29,6 +29,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"math/big"
 	"reflect"
+	"time"
 )
 
 const (
@@ -199,9 +200,13 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch 
 			return
 		case msg := <-s.msgReadCh:
 			dm := s.parseData(msg)
+
 			dispatch <- newMsg(dm, s.peerID)
 		default:
+			t1 := time.Now().UnixNano()/1e6
 			s.read(rw)
+			cost := time.Now().UnixNano()/1e6-t1
+			logger.Debugf("read cost time: %v, stream remote addr: %v, stream local addr: %v, peerId: %v",cost,s.stream.Conn().RemotePeer(), s.stream.Conn().LocalPeer(), s.peerID)
 		}
 	}
 }
@@ -297,7 +302,10 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 		case <-s.msgNotifyCh:
 			select {
 			case data := <-s.highPriorityWriteCh:
+				t1 := time.Now().UnixNano()
 				n, err := s.stream.Write(encodeMessage(data))
+				cost := (time.Now().UnixNano()-t1)/1e6
+				logger.Debugf("High priority write cost : %v, peerId: %v", cost, s.peerID)
 				if err != nil {
 					logger.WithError(err).WithFields(logger.Fields{
 						"num_of_bytes_sent": n,
@@ -309,7 +317,10 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			}
 			select {
 			case data := <-s.normalPriorityWriteCh:
+				t1 := time.Now().UnixNano()
 				n, err := s.stream.Write(encodeMessage(data))
+				cost := (time.Now().UnixNano()-t1)/1e6
+				logger.Debugf("Normal priority write cost : %v, peerId: %v", cost, s.peerID)
 				if err != nil {
 					logger.WithError(err).WithFields(logger.Fields{
 						"num_of_bytes_sent": n,
