@@ -19,7 +19,6 @@
 package rpc
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"testing"
 
 	"github.com/dappley/go-dappley/network"
@@ -27,7 +26,7 @@ import (
 )
 
 func TestNewGrpcServer(t *testing.T) {
-	node := network.NewNode(&core.BlockChainManager{})
+	node := network.NewNode(nil)
 	grpcServer := NewGrpcServer(node, nil, "password")
 	assert.Equal(t, node, grpcServer.node)
 	assert.Equal(t, "password", grpcServer.password)

@@ -49,7 +49,7 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 	addr := core.Address{address}
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
-	n := NewNode(&core.BlockChainManager{bc, pool, nil})
+	n := NewNode(db)
 
 	if seedPeer != nil {
 		n.GetNetwork().AddSeed(seedPeer)
@@ -64,7 +64,7 @@ func initNodeWithConfig(address string, port, connectionInCount, connectionOutCo
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
-	n := NewNodeWithConfig(bc, pool, config)
+	n := NewNodeWithConfig(db, pool, config)
 
 	if seedPeer != nil {
 		n.GetNetwork().AddSeed(seedPeer)

@@ -44,7 +44,7 @@ func TestDpos_Setup(t *testing.T) {
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
 
-	node := network.NewNode(bm)
+	node := network.NewNode(bc.GetDb())
 
 	dpos.Setup(node, cbAddr, bm)
 

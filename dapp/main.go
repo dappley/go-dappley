@@ -97,7 +97,7 @@ func main() {
 	bm.SetBlockPool(core.NewBlockPool(0))
 	bm.SetBlockchain(bc)
 
-	node, err := initNode(conf, bm)
+	node, err := initNode(conf, db)
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
@@ -139,9 +139,9 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 	return conss, dynasty
 }
 
-func initNode(conf *configpb.Config, bm *core.BlockChainManager) (*network.Node, error) {
+func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) {
 	//create node
-	node := network.NewNode(bm)
+	node := network.NewNode(db)
 
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()

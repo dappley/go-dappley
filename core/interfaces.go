@@ -46,7 +46,6 @@ type Consensus interface {
 
 type NetService interface {
 	GetPeerID() peer.ID
-	GetBlockchain() *Blockchain
 }
 
 type ScEngineManager interface {

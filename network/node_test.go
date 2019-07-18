@@ -52,8 +52,7 @@ func TestNode_Stop(t *testing.T) {
 	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	mockConsensus := new(mocks.Consensus)
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil, 100000)
-	pool := core.NewBlockPool(0)
-	node := NewNode(&core.BlockChainManager{bc, pool, nil})
+	node := NewNode(bc.GetDb())
 	err := node.Start(22100, nil)
 	if err != nil {
 		t.Fatal(err)

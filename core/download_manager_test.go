@@ -54,7 +54,7 @@ func createTestBlockchains(size int, portStart int) ([]*BlockChainManager, []*ne
 		bc.SetState(BlockchainReady)
 		bm.SetBlockchain(bc)
 		bm.SetBlockPool(NewBlockPool(100))
-		node := network.NewNode(bm)
+		node := network.NewNode(bc.GetDb())
 		bm.SetDownloadManager(NewDownloadManager(node, bm))
 		bms[i] = bm
 		nodes[i] = node

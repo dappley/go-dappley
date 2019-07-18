@@ -20,7 +20,6 @@ package network
 
 import (
 	"encoding/base64"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -49,7 +48,6 @@ var (
 
 type Node struct {
 	network       *Network
-	bm            *core.BlockChainManager
 	exitCh        chan bool
 	privKey       crypto.PrivKey
 	dispatcher    chan *DappPacketContext
@@ -58,25 +56,19 @@ type Node struct {
 }
 
 //create new Node instance
-func NewNode(bm *core.BlockChainManager) *Node {
-	return NewNodeWithConfig(bm, nil)
+func NewNode(db storage.Storage) *Node {
+	return NewNodeWithConfig(db, nil)
 }
 
-func NewNodeWithConfig(bm *core.BlockChainManager, config *NodeConfig) *Node {
+func NewNodeWithConfig(db storage.Storage, config *NodeConfig) *Node {
 	var err error
-	var db storage.Storage
 
 	node := &Node{
-		bm:            bm,
 		exitCh:        make(chan bool, 1),
 		privKey:       nil,
 		dispatcher:    make(chan *DappPacketContext, dispatchChLen),
 		commandSendCh: make(chan *DappSendCmdContext, requestChLen),
 		commandBroker: NewCommandBroker(reservedTopics),
-	}
-
-	if bm != nil && bm.Getblockchain() != nil {
-		db = node.bm.Getblockchain().GetDb()
 	}
 
 	node.network = NewNetwork(config, node.dispatcher, node.commandSendCh, db)
@@ -90,12 +82,10 @@ func NewNodeWithConfig(bm *core.BlockChainManager, config *NodeConfig) *Node {
 	return node
 }
 
-func (n *Node) GetBlockchain() *core.Blockchain               { return n.bm.Getblockchain() }
-func (n *Node) GetInfo() *PeerInfo                            { return n.network.host.info }
-func (n *Node) GetNetwork() *Network                          { return n.network }
-func (n *Node) GetCommandSendCh() chan *DappSendCmdContext    { return n.commandSendCh }
-func (n *Node) GetCommandBroker() *CommandBroker              { return n.commandBroker }
-func (n *Node) GetBlockchainManager() *core.BlockChainManager { return n.bm }
+func (n *Node) GetInfo() *PeerInfo                         { return n.network.host.info }
+func (n *Node) GetNetwork() *Network                       { return n.network }
+func (n *Node) GetCommandSendCh() chan *DappSendCmdContext { return n.commandSendCh }
+func (n *Node) GetCommandBroker() *CommandBroker           { return n.commandBroker }
 
 func (n *Node) Start(listenPort int, seeds []string) error {
 	err := n.network.Start(listenPort, n.privKey, seeds)
