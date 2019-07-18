@@ -51,7 +51,7 @@ func NewProofOfWork() *ProofOfWork {
 func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
 	pow.node = node
 	pow.bm = bm
-	pow.miner.Setup(node.GetBlockchain(), cbAddr)
+	pow.miner.Setup(bm.Getblockchain(), cbAddr)
 	pow.miner.SetProcess(pow.calculateValidHash)
 }
 
@@ -86,7 +86,7 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("PoW: mining stopped.")
 			return
 		default:
-			if pow.node.GetBlockchain().GetState() != core.BlockchainReady {
+			if pow.bm.Getblockchain().GetState() != core.BlockchainReady {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
@@ -163,7 +163,7 @@ func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
 		return
 	}
-	err := pow.node.GetBlockchain().AddBlockContextToTail(ctx)
+	err := pow.bm.Getblockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return

@@ -777,6 +777,7 @@ func createBlockchain(addr core.Address, db *storage.RamStorage) (*core.Blockcha
 func TestDoubleMint(t *testing.T) {
 	var sendNode *network.Node
 	var recvNode *network.Node
+	var recvNodeBc *core.Blockchain
 	var blks []*core.Block
 	var parent *core.Block
 	var dposArray []*consensus.DPOS
@@ -817,6 +818,7 @@ func TestDoubleMint(t *testing.T) {
 		} else {
 			recvNode = node
 			recvNode.GetNetwork().AddPeer(sendNode.GetInfo())
+			recvNodeBc = bc
 		}
 		dposArray = append(dposArray, dpos)
 	}
@@ -829,7 +831,7 @@ func TestDoubleMint(t *testing.T) {
 	}
 
 	time.Sleep(time.Second * 2)
-	assert.True(t, recvNode.GetBlockchain().GetMaxHeight() < 2)
+	assert.True(t, recvNodeBc.GetMaxHeight() < 2)
 	assert.False(t, dposArray[1].Validate(blks[1]))
 }
 

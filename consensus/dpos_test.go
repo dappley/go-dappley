@@ -48,7 +48,7 @@ func TestDpos_Setup(t *testing.T) {
 
 	dpos.Setup(node, cbAddr, bm)
 
-	assert.Equal(t, bc, dpos.node.GetBlockchain())
+	assert.Equal(t, bc, dpos.bm.Getblockchain())
 	assert.Equal(t, node, dpos.node)
 }
 

@@ -42,7 +42,7 @@ func TestProofOfWork_Setup(t *testing.T) {
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
 	pow.Setup(network.NewNode(bm), cbAddr, bm)
-	assert.Equal(t, bc, pow.node.GetBlockchain())
+	assert.Equal(t, bc, pow.bm.Getblockchain())
 }
 
 func TestProofOfWork_SetTargetBit(t *testing.T) {

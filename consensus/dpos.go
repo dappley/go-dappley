@@ -76,7 +76,7 @@ func (dpos *DPOS) AddBlockToSlot(block *core.Block) {
 
 func (dpos *DPOS) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
 	dpos.node = node
-	dpos.bp.Setup(node.GetBlockchain(), cbAddr)
+	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
 	dpos.bm = bm
 }
@@ -141,7 +141,7 @@ func (dpos *DPOS) Start() {
 						"peer_id": dpos.node.GetPeerID(),
 					}).Info("DPoS: it is my turn to produce block.")
 					// Do not produce block if block pool is syncing
-					if dpos.node.GetBlockchain().GetState() != core.BlockchainReady {
+					if dpos.bm.Getblockchain().GetState() != core.BlockchainReady {
 						logger.Info("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}
@@ -278,13 +278,13 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	lib, ok := dpos.CheckLibPolicy(ctx.Block)
 	if !ok {
 		logger.Warn("DPoS: the number of producers is not enough.")
-		tailBlock, _ := dpos.node.GetBlockchain().GetTailBlock()
+		tailBlock, _ := dpos.bm.Getblockchain().GetTailBlock()
 		dpos.bm.BroadcastBlock(tailBlock)
 		return
 	}
 	ctx.Lib = lib
 
-	err := dpos.node.GetBlockchain().AddBlockContextToTail(ctx)
+	err := dpos.bm.Getblockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return
@@ -303,7 +303,7 @@ func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
 		return nil, true
 	}
 
-	lib, err := dpos.node.GetBlockchain().GetLIB()
+	lib, err := dpos.bm.Getblockchain().GetLIB()
 	if err != nil {
 		logger.WithError(err).Warn("DPoS: get lib failed.")
 	}
@@ -327,7 +327,7 @@ func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
 			return checkingBlock, true
 		}
 
-		newBlock, err := dpos.node.GetBlockchain().GetBlockByHash(checkingBlock.GetPrevHash())
+		newBlock, err := dpos.bm.Getblockchain().GetBlockByHash(checkingBlock.GetPrevHash())
 		if err != nil {
 			logger.WithError(err).Warn("DPoS: get parent block failed.")
 		}
