@@ -177,12 +177,12 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 			logger.Panic(err)
 		}
 	}
-
+	node := network.NewNode(db)
 	bc.SetState(core.BlockchainInit)
-	bm := core.NewBlockChainManager()
+	bm := core.NewBlockChainManager(node.GetCommandSendCh(), node.GetCommandBroker())
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(core.NewBlockPool(0))
-	node := network.NewNode(db)
+
 	bm.SetDownloadManager(core.NewDownloadManager(node, bm))
 	return bm, node
 }
