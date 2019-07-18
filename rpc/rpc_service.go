@@ -218,7 +218,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	rpcService.node.GetBlockchain().GetTxPool().Push(tx)
-	rpcService.node.TxBroadcast(&tx)
+	rpcService.node.GetBlockchain().GetTxPool().BroadcastTx(&tx)
 
 	if tx.IsContract() {
 		contractAddr := tx.GetContractAddress()
@@ -287,7 +287,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		}
 	}
 
-	rpcService.node.BatchTxBroadcast(verifiedTxs)
+	rpcService.node.GetBlockchain().GetTxPool().BroadcastBatchTxs(verifiedTxs)
 
 	st := status.New(codes.OK, "")
 	// add invalid transactions to response details if exists

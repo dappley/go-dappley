@@ -284,7 +284,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 
 	bc.GetTxPool().Push(tx)
 	if node != nil {
-		node.TxBroadcast(&tx)
+		bc.GetTxPool().BroadcastTx(&tx)
 	}
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {

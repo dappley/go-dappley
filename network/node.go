@@ -20,10 +20,7 @@ package network
 
 import (
 	"encoding/base64"
-	"encoding/hex"
-	"errors"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -36,26 +33,12 @@ import (
 const (
 	maxSyncPeersCount = 32
 
-	SyncPeerList = "SyncPeerList"
-
-	BroadcastTx       = "BroadcastTx"
-	BroadcastBatchTxs = "BraodcastBatchTxs"
-
 	TopicOnStreamStop = "TopicOnStreamStop"
 
 	Unicast       = false
 	Broadcast     = true
-	dispatchChLen = 1024 * 4
 	requestChLen  = 1024
-)
-
-const (
-	BroadcastTxPriority       = NormalPriorityCommand
-	BroadcastBatchTxsPriority = NormalPriorityCommand
-)
-
-var (
-	ErrDapMsgNoCmd = errors.New("command not specified")
+	dispatchChLen = 1024 * 4
 )
 
 var (
@@ -166,7 +149,6 @@ func (n *Node) StartListenLoop() {
 					}).Warn("Node: streamMsgDispatcherCh channel full")
 				}
 				cmdMsg := ParseDappMsgFromDappPacket(streamMsg.packet)
-				n.handle(cmdMsg, streamMsg.source)
 				dappRcvdCmd := NewDappRcvdCmdContext(cmdMsg, streamMsg.source)
 				err := n.commandBroker.Dispatch(dappRcvdCmd)
 
@@ -212,25 +194,6 @@ func (n *Node) OnStreamStop(stream *Stream) {
 	n.commandBroker.Dispatch(dappCmdCtx)
 }
 
-func (n *Node) handle(msg *DappCmd, id peer.ID) {
-	logger.WithFields(logger.Fields{
-		"name": msg.GetName(),
-	}).Info("Node: Received command")
-
-	switch msg.GetName() {
-	case BroadcastTx:
-		n.AddTxToPool(msg)
-
-	case BroadcastBatchTxs:
-		n.AddBatchTxsToPool(msg)
-
-	default:
-		logger.WithFields(logger.Fields{
-			"source": id,
-		}).Debug("Node: received an invalid command.")
-	}
-}
-
 func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
 	if n.GetInfo() == nil {
 		return nil
@@ -239,119 +202,3 @@ func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
 }
 
 func (n *Node) GetPeerID() peer.ID { return n.GetInfo().PeerId }
-
-func (n *Node) RelayDapMsg(dm DappCmd, priority DappCmdPriority) {
-	msgData := dm.ToProto()
-	bytes, _ := proto.Marshal(msgData)
-	n.network.Broadcast(bytes, priority)
-}
-
-func (n *Node) prepareData(msgData proto.Message, cmd string, isBroadcast bool, msgKey string) ([]byte, error) {
-	if cmd == "" {
-		return nil, ErrDapMsgNoCmd
-	}
-
-	bytes := []byte{}
-	var err error
-
-	if msgData != nil {
-		//marshal the block to wire format
-		bytes, err = proto.Marshal(msgData)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	//build a dappley message
-	dm := NewDapCmd(cmd, bytes, isBroadcast)
-
-	data, err := proto.Marshal(dm.ToProto())
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-func (n *Node) TxBroadcast(tx *core.Transaction) error {
-	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, hex.EncodeToString(tx.ID))
-	if err != nil {
-		return err
-	}
-	n.network.Broadcast(data, BroadcastTxPriority)
-	return nil
-}
-
-func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
-	if len(txs) == 0 {
-		return nil
-	}
-
-	transactions := core.NewTransactions(txs)
-
-	data, err := n.prepareData(transactions.ToProto(), BroadcastBatchTxs, Broadcast, hex.EncodeToString(txs[0].ID))
-	if err != nil {
-		return err
-	}
-	n.network.Broadcast(data, BroadcastBatchTxsPriority)
-	return nil
-}
-
-func (n *Node) AddTxToPool(dm *DappCmd) {
-	if n.GetBlockchain().GetState() != core.BlockchainReady {
-		return
-	}
-
-	n.RelayDapMsg(*dm, BroadcastTxPriority)
-
-	txpb := &corepb.Transaction{}
-
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(dm.GetData(), txpb); err != nil {
-		logger.Warn(err)
-	}
-
-	//create an empty tx
-	tx := &core.Transaction{}
-
-	//load the tx with proto
-	tx.FromProto(txpb)
-	//add tx to txpool
-	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
-
-	if tx.IsFromContract(utxoIndex) {
-		return
-	}
-
-	n.bm.Getblockchain().GetTxPool().Push(*tx)
-}
-
-func (n *Node) AddBatchTxsToPool(dm *DappCmd) {
-	if n.GetBlockchain().GetState() != core.BlockchainReady {
-		return
-	}
-
-	n.RelayDapMsg(*dm, BroadcastBatchTxsPriority)
-
-	txspb := &corepb.Transactions{}
-
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(dm.GetData(), txspb); err != nil {
-		logger.Warn(err)
-	}
-
-	//create an empty tx
-	txs := &core.Transactions{}
-
-	//load the tx with proto
-	txs.FromProto(txspb)
-	//add tx to txpool
-	utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
-
-	for _, tx := range txs.GetTransactions() {
-		if tx.IsFromContract(utxoIndex) {
-			continue
-		}
-		n.bm.Getblockchain().GetTxPool().Push(tx)
-	}
-
-}

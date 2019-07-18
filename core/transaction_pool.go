@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 	"sort"
 	"sync"
@@ -102,7 +103,9 @@ func (txPool *TransactionPool) StartCommandListener() {
 			case command := <-txPool.commandReceiveCh:
 				switch command.GetCommandName() {
 				case BroadcastTx:
+					txPool.BroadcastTxHandler(command)
 				case BroadcastBatchTxs:
+					txPool.BroadcastBatchTxsHandler(command)
 				}
 			}
 		}
@@ -566,4 +569,86 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	}
 	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
 	txPool.currSize = pb.(*corepb.TransactionPool).CurrSize
+}
+
+func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
+	var broadcastPid peer.ID
+	command := network.NewDappSendCmdContext(BroadcastTx, tx.ToProto(), broadcastPid, network.Broadcast, network.NormalPriorityCommand)
+	command.Send(txPool.commandSendCh)
+}
+
+func (txPool *TransactionPool) BroadcastTxHandler(command *network.DappRcvdCmdContext) {
+	//TODO: Check if the blockchain state is ready
+	txpb := &corepb.Transaction{}
+
+	if err := proto.Unmarshal(command.GetData(), txpb); err != nil {
+		logger.Warn(err)
+	}
+
+	tx := &Transaction{}
+	tx.FromProto(txpb)
+	//TODO: Check if the transaction is generated from running a smart contract
+	//utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+	//if tx.IsFromContract(utxoIndex) {
+	//	return
+	//}
+
+	txPool.Push(*tx)
+
+	if command.IsBroadcast() {
+		//relay the original command
+		var broadcastPid peer.ID
+		commandSendCtx := &network.DappSendCmdContext{
+			command.GetCommand(),
+			broadcastPid,
+			network.NormalPriorityCommand}
+		commandSendCtx.Send(txPool.commandSendCh)
+	}
+}
+
+func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
+
+	if len(txs) == 0 {
+		return
+	}
+
+	transactions := NewTransactions(txs)
+
+	var broadcastPid peer.ID
+	command := network.NewDappSendCmdContext(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network.Broadcast, network.NormalPriorityCommand)
+	command.Send(txPool.commandSendCh)
+}
+
+func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network.DappRcvdCmdContext) {
+	//TODO: Check if the blockchain state is ready
+	txspb := &corepb.Transactions{}
+
+	if err := proto.Unmarshal(command.GetData(), txspb); err != nil {
+		logger.Warn(err)
+	}
+
+	txs := &Transactions{}
+
+	//load the tx with proto
+	txs.FromProto(txspb)
+
+	for _, tx := range txs.GetTransactions() {
+		//TODO: Check if the transaction is generated from running a smart contract
+		//utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+		//if tx.IsFromContract(utxoIndex) {
+		//	return
+		//}
+		txPool.Push(tx)
+	}
+
+	if command.IsBroadcast() {
+		//relay the original command
+		var broadcastPid peer.ID
+		commandSendCtx := &network.DappSendCmdContext{
+			command.GetCommand(),
+			broadcastPid,
+			network.NormalPriorityCommand}
+		commandSendCtx.Send(txPool.commandSendCh)
+	}
+
 }
