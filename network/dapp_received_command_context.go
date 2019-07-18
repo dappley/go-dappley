@@ -16,6 +16,10 @@ func NewDappRcvdCmdContext(command *DappCmd, source peer.ID) *DappRcvdCmdContext
 	}
 }
 
+func (dcc *DappRcvdCmdContext) GetCommand() *DappCmd {
+	return dcc.command
+}
+
 func (dcc *DappRcvdCmdContext) GetCommandName() string {
 	return dcc.command.GetName()
 }

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package corepb;
+
+message RequestBlock{
+    bytes hash = 1;
+}

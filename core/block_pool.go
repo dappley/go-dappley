@@ -42,9 +42,8 @@ type RcvedBlock struct {
 }
 
 type BlockPool struct {
-	blockRequestCh chan BlockRequestPars
-	size           int
-	blkCache       *lru.Cache //cache of full blks
+	size     int
+	blkCache *lru.Cache //cache of full blks
 }
 
 func NewBlockPool(size int) *BlockPool {
@@ -52,16 +51,11 @@ func NewBlockPool(size int) *BlockPool {
 		size = BlockPoolMaxSize
 	}
 	pool := &BlockPool{
-		size:           size,
-		blockRequestCh: make(chan BlockRequestPars, size),
+		size: size,
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
 
 	return pool
-}
-
-func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
-	return pool.blockRequestCh
 }
 
 func (pool *BlockPool) Verify(block *Block) bool {
@@ -158,15 +152,6 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 		"height": tree.GetValue().(*Block).GetHeight(),
 		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
 	}).Debug("BlockPool: finished updating BlockPoolCache.")
-}
-
-func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
-	logger.WithFields(logger.Fields{
-		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
-		"height": tree.GetValue().(*Block).GetHeight() - 1,
-		"from":   sender,
-	}).Info("BlockPool: is requesting a block.")
-	pool.blockRequestCh <- BlockRequestPars{tree.GetValue().(*Block).GetPrevHash(), sender}
 }
 
 func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {

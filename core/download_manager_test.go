@@ -58,7 +58,7 @@ func createTestBlockchains(size int, portStart int) ([]*BlockChainManager, []*ne
 		bm.SetDownloadManager(NewDownloadManager(node))
 		bms[i] = bm
 		nodes[i] = node
-		pow.Setup(node, address.Address)
+		pow.Setup(node, address.Address, bm)
 		pow.SetTargetBit(10)
 		node.Start(portStart+i, nil)
 	}

@@ -40,9 +40,13 @@ func TestDpos_Setup(t *testing.T) {
 	cbAddr := "abcdefg"
 	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
 
-	dpos.Setup(node, cbAddr)
+	node := network.NewNode(bm)
+
+	dpos.Setup(node, cbAddr, bm)
 
 	assert.Equal(t, bc, dpos.node.GetBlockchain())
 	assert.Equal(t, node, dpos.node)

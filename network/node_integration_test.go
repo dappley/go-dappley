@@ -21,7 +21,6 @@
 package network
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/dappley/go-dappley/core"
@@ -97,66 +96,6 @@ func TestNetwork_AddStream(t *testing.T) {
 	err = n1.GetNetwork().AddPeer(n2.GetInfo())
 	assert.Nil(t, err)
 	assert.Len(t, n1.network.host.Network().Peerstore().Peers(), 2)
-}
-
-func TestNetwork_BroadcastBlock(t *testing.T) {
-	//setup node 0
-	db := storage.NewRamStorage()
-	defer db.Close()
-
-	n1, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port3, nil, db)
-	defer n1.Stop()
-	assert.Nil(t, err)
-
-	//setup node 1
-	n2, err := initNode("QmWyMUMBeWxwU4R5ukBiKmSiGT8cDqmkfrXCb2qTVHpofJ", test_port4, nil, db)
-	defer n2.Stop()
-	assert.Nil(t, err)
-
-	err = n2.GetNetwork().AddPeer(n1.GetInfo())
-	assert.Nil(t, err)
-
-	blk := core.GenerateMockBlock()
-	n1.BroadcastBlock(blk)
-
-	//wait for node 1 to receive response
-	core.WaitDoneOrTimeout(func() bool {
-		blk, _ := n2.GetNetwork().recentlyRcvdDapMsgs.Get(hex.EncodeToString(blk.GetHash()))
-		return blk != nil
-	}, 5)
-
-	assert.True(t, true)
-}
-
-func TestNode_RequestBlockUnicast(t *testing.T) {
-
-	//setup node 1
-	db := storage.NewRamStorage()
-	defer db.Close()
-	n1, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port5, nil, db)
-	defer n1.Stop()
-	assert.Nil(t, err)
-	//setup node 2
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port6, nil, db)
-	defer n2.Stop()
-	assert.Nil(t, err)
-
-	err = n2.GetNetwork().AddPeer(n1.GetInfo())
-	assert.Nil(t, err)
-
-	blk := core.GenerateMockBlock()
-
-	err = n1.GetBlockchain().GetDb().Put(blk.GetHash(), blk.Serialize())
-	assert.Nil(t, err)
-
-	n2.RequestBlockUnicast(blk.GetHash(), n1.GetPeerID())
-	//wait for node 1 to receive response
-	core.WaitDoneOrTimeout(func() bool {
-		blk, _ := n2.GetNetwork().recentlyRcvdDapMsgs.Get(hex.EncodeToString(blk.GetHash()))
-		return blk != nil
-	}, 5)
-
-	assert.True(t, true)
 }
 
 func TestNode_SyncPeers(t *testing.T) {

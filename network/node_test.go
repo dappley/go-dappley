@@ -79,7 +79,8 @@ func TestNode_prepareData(t *testing.T) {
 			retErr:  ErrDapMsgNoCmd,
 		},
 	}
-	n := FakeNodeWithPidAndAddr(nil, nil, "asd", "test")
+	bm := core.NewBlockChainManager(nil, nil)
+	n := FakeNodeWithPidAndAddr(bm, "asd", "test")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := n.prepareData(tt.msgData, tt.cmd, Unicast, "")

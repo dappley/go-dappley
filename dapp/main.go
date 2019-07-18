@@ -102,12 +102,12 @@ func main() {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
-	downloadManager := network.NewDownloadManager(node)
+	downloadManager := core.NewDownloadManager(node)
 	bm.SetDownloadManager(downloadManager)
 	defer node.Stop()
 
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
-	conss.Setup(node, minerAddr)
+	conss.Setup(node, minerAddr, bm)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": minerAddr,

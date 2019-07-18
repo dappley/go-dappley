@@ -37,10 +37,13 @@ func TestDpos_Start(t *testing.T) {
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	node := network.NewNode(bm)
 	node.Start(22100, nil)
 	defer node.Stop()
-	dpos.Setup(node, cbAddr.String())
+	dpos.Setup(node, cbAddr.String(), bm)
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.String()}
@@ -86,10 +89,13 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
+		bm := core.NewBlockChainManager(nil, nil)
+		bm.SetBlockchain(bc)
+		bm.SetBlockPool(pool)
+		node := network.NewNode(bm)
 		node.Start(21200+i, nil)
 		nodeArray = append(nodeArray, node)
-		dpos.Setup(node, miner)
+		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
@@ -154,11 +160,14 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(&core.BlockChainManager{bc, pool, nil})
+		bm := core.NewBlockChainManager(nil, nil)
+		bm.SetBlockchain(bc)
+		bm.SetBlockPool(pool)
+		node := network.NewNode(bm)
 		node.Start(22200+i, nil)
 		nodeArray = append(nodeArray, node)
 
-		dpos.Setup(node, miner)
+		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}

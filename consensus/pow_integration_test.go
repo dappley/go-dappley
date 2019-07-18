@@ -80,8 +80,11 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, wallet1.GetAddress().String())
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	n := network.FakeNodeWithPidAndAddr(bm, "asd", "test")
+	pow.Setup(n, wallet1.GetAddress().String(), bm)
 
 	pow.Start()
 
@@ -133,8 +136,11 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, wallet.GetAddress().String())
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	n := network.FakeNodeWithPidAndAddr(bm, "asd", "asd")
+	pow.Setup(n, wallet.GetAddress().String(), bm)
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -194,8 +200,11 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//start a producer
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, wallet1.GetAddress().String())
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	n := network.FakeNodeWithPidAndAddr(bm, "asd", "asd")
+	pow.Setup(n, wallet1.GetAddress().String(), bm)
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -255,8 +264,11 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	)
 	defer bc.GetDb().Close()
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, cbAddr.String())
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	n := network.FakeNodeWithPidAndAddr(bm, "asd", "asd")
+	pow.Setup(n, cbAddr.String(), bm)
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -327,8 +339,11 @@ func TestPreventDoubleSpend(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, wallet1.GetAddress().Address)
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	n := network.FakeNodeWithPidAndAddr(bm, "asd", "test")
+	pow.Setup(n, wallet1.GetAddress().Address, bm)
 
 	pow.Start()
 

@@ -34,6 +34,7 @@ type ProofOfWork struct {
 	miner  *BlockProducer
 	target *big.Int
 	node   core.NetService
+	bm     *core.BlockChainManager
 	stopCh chan bool
 }
 
@@ -47,8 +48,9 @@ func NewProofOfWork() *ProofOfWork {
 	return p
 }
 
-func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
+func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
 	pow.node = node
+	pow.bm = bm
 	pow.miner.Setup(node.GetBlockchain(), cbAddr)
 	pow.miner.SetProcess(pow.calculateValidHash)
 }
@@ -166,7 +168,8 @@ func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn(err)
 		return
 	}
-	pow.node.BroadcastBlock(ctx.Block)
+
+	pow.bm.BroadcastBlock(ctx.Block)
 }
 
 func (pow *ProofOfWork) AddProducer(producer string) error {

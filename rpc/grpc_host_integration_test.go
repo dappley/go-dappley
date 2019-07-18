@@ -109,8 +109,11 @@ func TestRpcSend(t *testing.T) {
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
-	node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
-	pow.Setup(node, minerWallet.GetAddress().String())
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	node := network.FakeNodeWithPidAndAddr(bm, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -194,8 +197,11 @@ func TestRpcSendContract(t *testing.T) {
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
-	node := network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
-	pow.Setup(node, minerWallet.GetAddress().String())
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	node := network.FakeNodeWithPidAndAddr(bm, "a", "b")
+	pow.Setup(node, minerWallet.GetAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -1062,7 +1068,10 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
-	context.node = network.FakeNodeWithPidAndAddr(pool, bc, "a", "b")
+	bm := core.NewBlockChainManager(nil, nil)
+	bm.SetBlockchain(bc)
+	bm.SetBlockPool(pool)
+	context.node = network.FakeNodeWithPidAndAddr(bm, "a", "b")
 
 	// Start a grpc server
 	context.rpcServer = NewGrpcServer(context.node, "temp")

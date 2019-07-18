@@ -26,7 +26,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -42,6 +42,7 @@ type DPOS struct {
 	producerKey string
 	newBlockCh  chan *core.Block
 	node        core.NetService
+	bm          *core.BlockChainManager
 	stopCh      chan bool
 	stopLibCh   chan bool
 	dynasty     *Dynasty
@@ -73,10 +74,11 @@ func (dpos *DPOS) AddBlockToSlot(block *core.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
-func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
+func (dpos *DPOS) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
 	dpos.node = node
 	dpos.bp.Setup(node.GetBlockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
+	dpos.bm = bm
 }
 
 func (dpos *DPOS) SetKey(key string) {
@@ -277,7 +279,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	if !ok {
 		logger.Warn("DPoS: the number of producers is not enough.")
 		tailBlock, _ := dpos.node.GetBlockchain().GetTailBlock()
-		dpos.node.BroadcastBlock(tailBlock)
+		dpos.bm.BroadcastBlock(tailBlock)
 		return
 	}
 	ctx.Lib = lib
@@ -287,7 +289,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn(err)
 		return
 	}
-	dpos.node.BroadcastBlock(ctx.Block)
+	dpos.bm.BroadcastBlock(ctx.Block)
 }
 
 func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {

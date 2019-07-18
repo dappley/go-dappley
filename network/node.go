@@ -36,10 +36,8 @@ import (
 const (
 	maxSyncPeersCount = 32
 
-	SyncBlock    = "SyncBlock"
 	SyncPeerList = "SyncPeerList"
 
-	RequestBlock      = "requestBlock"
 	BroadcastTx       = "BroadcastTx"
 	BroadcastBatchTxs = "BraodcastBatchTxs"
 
@@ -53,7 +51,6 @@ const (
 
 const (
 	SyncBlockPriority         = HighPriorityCommand
-	RequestBlockPriority      = HighPriorityCommand
 	BroadcastTxPriority       = NormalPriorityCommand
 	BroadcastBatchTxsPriority = NormalPriorityCommand
 )
@@ -124,11 +121,7 @@ func (n *Node) Start(listenPort int, seeds []string) error {
 		return err
 	}
 
-	//TODO: Remove this later
 	n.StartRequestLoop()
-
-	//TODO: Rename this to StartRequestLoop later
-	n.StartRequestLoop2()
 	n.StartListenLoop()
 	return nil
 }
@@ -138,11 +131,13 @@ func (n *Node) Stop() {
 	n.network.Stop()
 }
 
-func (n *Node) StartRequestLoop2() {
+func (n *Node) StartRequestLoop() {
 
 	go func() {
 		for {
 			select {
+			case <-n.exitCh:
+				return
 			case cmdCtx := <-n.commandSendCh:
 				if cmdCtx.command == nil {
 					continue
@@ -159,21 +154,6 @@ func (n *Node) StartRequestLoop2() {
 			}
 		}
 	}()
-}
-
-func (n *Node) StartRequestLoop() {
-
-	go func() {
-		for {
-			select {
-			case <-n.exitCh:
-				return
-			case brPars := <-n.bm.GetblockPool().BlockRequestCh():
-				n.RequestBlockUnicast(brPars.BlockHash, brPars.Pid)
-			}
-		}
-	}()
-
 }
 
 func (n *Node) StartListenLoop() {
@@ -239,12 +219,6 @@ func (n *Node) handle(msg *DappCmd, id peer.ID) {
 	}).Info("Node: Received command")
 
 	switch msg.GetName() {
-	case SyncBlock:
-		n.SyncBlockHandler(msg, id)
-
-	case RequestBlock:
-		n.SendRequestedBlock(msg.GetData(), id)
-
 	case BroadcastTx:
 		n.AddTxToPool(msg)
 
@@ -299,22 +273,6 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, isBroadcast bool, 
 	return data, nil
 }
 
-func (n *Node) BroadcastBlock(block *core.Block) error {
-	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
-	if err != nil {
-		return err
-	}
-	n.network.Broadcast(data, SyncBlockPriority)
-	logger.WithFields(logger.Fields{
-		"peer_id":     n.GetPeerID(),
-		"height":      block.GetHeight(),
-		"hash":        hex.EncodeToString(block.GetHash()),
-		"num_streams": len(n.network.peerManager.streams),
-		"data_len":    len(data),
-	}).Info("Node: is broadcasting a block.")
-	return nil
-}
-
 func (n *Node) TxBroadcast(tx *core.Transaction) error {
 	data, err := n.prepareData(tx.ToProto(), BroadcastTx, Broadcast, hex.EncodeToString(tx.ID))
 	if err != nil {
@@ -336,27 +294,6 @@ func (n *Node) BatchTxBroadcast(txs []core.Transaction) error {
 		return err
 	}
 	n.network.Broadcast(data, BroadcastBatchTxsPriority)
-	return nil
-}
-
-func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
-	data, err := n.prepareData(block.ToProto(), SyncBlock, Unicast, hex.EncodeToString(block.GetHash()))
-	if err != nil {
-		return err
-	}
-	n.network.Unicast(data, pid, SyncBlockPriority)
-	return nil
-}
-
-func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
-	//build a deppley message
-
-	dm := NewDapCmd(RequestBlock, hash, Unicast)
-	data, err := proto.Marshal(dm.ToProto())
-	if err != nil {
-		return err
-	}
-	n.network.Unicast(data, pid, RequestBlockPriority)
 	return nil
 }
 
@@ -461,14 +398,4 @@ func (n *Node) AddBatchTxsToPool(dm *DappCmd) {
 		n.bm.Getblockchain().GetTxPool().Push(tx)
 	}
 
-}
-
-func (n *Node) SendRequestedBlock(hash []byte, pid peer.ID) {
-	blockBytes, err := n.bm.Getblockchain().GetDb().Get(hash)
-	if err != nil {
-		logger.WithError(err).Warn("Node: failed to get the requested block source database.")
-		return
-	}
-	block := core.Deserialize(blockBytes)
-	n.SendBlockUnicast(block, pid)
 }

@@ -25,7 +25,7 @@ import (
 type Consensus interface {
 	Validate(block *Block) bool
 
-	Setup(NetService, string)
+	Setup(NetService, string, *BlockChainManager)
 	SetKey(string)
 
 	// Start runs the consensus algorithm and begins to produce blocks

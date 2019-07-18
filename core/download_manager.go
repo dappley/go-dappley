@@ -66,7 +66,7 @@ var (
 )
 
 var (
-	subscribedTopics = []string{
+	dmSubscribedTopics = []string{
 		BlockchainInfoRequest,
 		BlockchainInfoResponse,
 		GetBlocksRequest,
@@ -630,7 +630,7 @@ func (downloadManager *DownloadManager) selectHighestPeer() *PeerBlockInfo {
 }
 
 func (downloadManager *DownloadManager) SubscribeCommandBroker(broker *network.CommandBroker) {
-	for _, topic := range subscribedTopics {
+	for _, topic := range dmSubscribedTopics {
 		err := broker.Subscribe(topic, downloadManager.commandReceiveCh)
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
