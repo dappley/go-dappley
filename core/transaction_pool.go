@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
@@ -35,28 +36,77 @@ const (
 	EvictTransactionTopic = "EvictTransaction"
 	scheduleFuncName      = "dapp_schedule"
 	TxPoolDbKey           = "txpool"
+
+	BroadcastTx       = "BroadcastTx"
+	BroadcastBatchTxs = "BraodcastBatchTxs"
+)
+
+var (
+	txPoolSubscribedTopics = []string{
+		BroadcastTx,
+		BroadcastBatchTxs,
+	}
 )
 
 type TransactionPool struct {
-	txs        map[string]*TransactionNode
-	pendingTxs []*Transaction
-	tipOrder   []string
-	sizeLimit  uint32
-	currSize   uint32
-	EventBus   EventBus.Bus
-	mutex      sync.RWMutex
+	txs              map[string]*TransactionNode
+	pendingTxs       []*Transaction
+	tipOrder         []string
+	sizeLimit        uint32
+	currSize         uint32
+	EventBus         EventBus.Bus
+	mutex            sync.RWMutex
+	commandSendCh    chan *network.DappSendCmdContext
+	commandReceiveCh chan *network.DappRcvdCmdContext
 }
 
 func NewTransactionPool(limit uint32) *TransactionPool {
-	return &TransactionPool{
-		txs:        make(map[string]*TransactionNode),
-		pendingTxs: make([]*Transaction, 0),
-		tipOrder:   make([]string, 0),
-		sizeLimit:  limit,
-		currSize:   0,
-		EventBus:   EventBus.New(),
-		mutex:      sync.RWMutex{},
+	txPool := &TransactionPool{
+		txs:              make(map[string]*TransactionNode),
+		pendingTxs:       make([]*Transaction, 0),
+		tipOrder:         make([]string, 0),
+		sizeLimit:        limit,
+		currSize:         0,
+		EventBus:         EventBus.New(),
+		mutex:            sync.RWMutex{},
+		commandReceiveCh: make(chan *network.DappRcvdCmdContext, 100),
 	}
+	txPool.StartCommandListener()
+	return txPool
+}
+
+func (txPool *TransactionPool) SetCommandSendCh(commandSendCh chan *network.DappSendCmdContext) {
+	txPool.commandSendCh = commandSendCh
+}
+
+func (txPool *TransactionPool) SubscribeCommandBroker(broker *network.CommandBroker) {
+	if txPool.commandReceiveCh == nil {
+		logger.Warn("TransactionPool: Unable to subscribe to a command. CommandReceiveCh is empty")
+		return
+	}
+
+	for _, topic := range txPoolSubscribedTopics {
+		err := broker.Subscribe(topic, txPool.commandReceiveCh)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"command": topic,
+			}).Warn("TransactionPool: Unable to subscribe to a command")
+		}
+	}
+}
+
+func (txPool *TransactionPool) StartCommandListener() {
+	go func() {
+		for {
+			select {
+			case command := <-txPool.commandReceiveCh:
+				switch command.GetCommandName() {
+				case BroadcastTx:
+				case BroadcastBatchTxs:
+				}
+			}
+		}
+	}()
 }
 
 func (txPool *TransactionPool) DeepCopy() *TransactionPool {

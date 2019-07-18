@@ -50,7 +50,6 @@ const (
 )
 
 const (
-	SyncBlockPriority         = HighPriorityCommand
 	BroadcastTxPriority       = NormalPriorityCommand
 	BroadcastBatchTxsPriority = NormalPriorityCommand
 )

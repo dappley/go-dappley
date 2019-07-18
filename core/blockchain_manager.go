@@ -58,6 +58,7 @@ func NewBlockChainManager(commandSendCh chan *network.DappSendCmdContext, comman
 	if commandBroker != nil {
 		bm.SubscribeCommandBroker(commandBroker)
 	}
+	bm.StartCommandListener()
 	return bm
 }
 
