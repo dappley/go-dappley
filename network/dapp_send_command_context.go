@@ -35,6 +35,14 @@ func NewDappSendCmdContext(cmd string, protoMessage proto.Message, destination p
 	}
 }
 
+func NewDappSendCmdContextFromDappCmd(cmd *DappCmd, destination peer.ID, priority DappCmdPriority) *DappSendCmdContext {
+	return &DappSendCmdContext{
+		command:     cmd,
+		destination: destination,
+		priority:    priority,
+	}
+}
+
 func (dcc *DappSendCmdContext) GetCommandName() string {
 	return dcc.command.name
 }

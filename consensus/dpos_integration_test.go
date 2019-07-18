@@ -120,7 +120,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	for i := range miners {
 		v := dposArray[i]
-		core.WaitDoneOrTimeout(func() bool {
+		util.WaitDoneOrTimeout(func() bool {
 			return !v.IsProducingBlock()
 		}, 20)
 	}
@@ -193,7 +193,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	for i := range miners {
 		v := dposArray[i]
-		core.WaitDoneOrTimeout(func() bool {
+		util.WaitDoneOrTimeout(func() bool {
 			return !v.IsProducingBlock()
 		}, 20)
 	}

@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/util"
 	"strings"
 	"testing"
 	"time"
@@ -112,7 +113,7 @@ func TestRpcSend(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	node := network.FakeNodeWithPidAndAddr(bm, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 	pow.Setup(node, minerWallet.GetAddress().String(), bm)
 	pow.SetTargetBit(0)
 
@@ -200,7 +201,7 @@ func TestRpcSendContract(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	node := network.FakeNodeWithPidAndAddr(bm, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 	pow.Setup(node, minerWallet.GetAddress().String(), bm)
 	pow.SetTargetBit(0)
 
@@ -311,7 +312,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -356,7 +357,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -400,7 +401,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -479,7 +480,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -524,7 +525,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -620,7 +621,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -748,7 +749,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 
@@ -853,7 +854,7 @@ func TestGetNewTransaction(t *testing.T) {
 	assert.Equal(t, false, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
 
 	rpcContext.consensus.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -1017,7 +1018,7 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 
 	rpcContext.consensus.Stop()
 	t.Log(rpcContext.bc.GetMaxHeight())
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -1071,7 +1072,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	context.node = network.FakeNodeWithPidAndAddr(bm, "a", "b")
+	context.node = network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 
 	// Start a grpc server
 	context.rpcServer = NewGrpcServer(context.node, bm, "temp")

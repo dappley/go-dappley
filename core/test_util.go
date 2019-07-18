@@ -175,11 +175,3 @@ func MockTxOutputs() []TXOutput {
 		{common.NewAmount(7), PubKeyHash(util.GenerateRandomAoB(2)), ""},
 	}
 }
-
-type Done func() bool
-
-func WaitDoneOrTimeout(done Done, timeOut int) {
-	currentTime := time.Now().UTC().Unix()
-	for !done() && !util.IsTimeOut(currentTime, int64(timeOut)) {
-	}
-}

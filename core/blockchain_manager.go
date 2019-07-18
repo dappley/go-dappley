@@ -311,10 +311,10 @@ func (bm *BlockChainManager) SendBlockHandler(command *network.DappRcvdCmdContex
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := &network.DappSendCmdContext{
+		commandSendCtx := network.NewDappSendCmdContextFromDappCmd(
 			command.GetCommand(),
 			broadcastPid,
-			network.HighPriorityCommand}
+			network.HighPriorityCommand)
 		commandSendCtx.Send(bm.commandSendCh)
 	}
 }

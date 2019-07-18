@@ -19,17 +19,12 @@
 package network
 
 import (
-	"bytes"
 	"crypto/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/mocks"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -49,10 +44,7 @@ func TestNewNode(t *testing.T) {
 
 func TestNode_Stop(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
-	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
-	mockConsensus := new(mocks.Consensus)
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil, 100000)
-	node := NewNode(bc.GetDb())
+	node := NewNode(storage.NewRamStorage())
 	err := node.Start(22100, nil, "")
 	if err != nil {
 		t.Fatal(err)

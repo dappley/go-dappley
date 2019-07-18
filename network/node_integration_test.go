@@ -21,9 +21,9 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/util"
 	"testing"
 
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,9 +46,7 @@ const (
 )
 
 func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
-	addr := core.Address{address}
-	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
-	pool := core.NewBlockPool(0)
+
 	n := NewNode(db)
 
 	if seedPeer != nil {
@@ -60,11 +58,9 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 }
 
 func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
-	addr := core.Address{address}
-	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
-	pool := core.NewBlockPool(0)
+
 	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
-	n := NewNodeWithConfig(db, pool, config)
+	n := NewNodeWithConfig(db, config)
 
 	if seedPeer != nil {
 		n.GetNetwork().AddSeed(seedPeer)
@@ -113,7 +109,7 @@ func TestNode_SyncPeers(t *testing.T) {
 	defer n2.Stop()
 	assert.Nil(t, err)
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		//no condition to be checked
 		return false
 	}, 1)
@@ -125,7 +121,7 @@ func TestNode_SyncPeers(t *testing.T) {
 	defer n3.Stop()
 	assert.Nil(t, err)
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		//no condition to be checked
 		return false
 	}, 2)
@@ -156,7 +152,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	defer n2.Stop()
 	assert.Nil(t, err)
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return false
 	}, 1)
 
@@ -167,7 +163,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	defer n3.Stop()
 	assert.Nil(t, err)
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return false
 	}, 1)
 
@@ -178,7 +174,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	defer n4.Stop()
 	assert.Nil(t, err)
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return false
 	}, 1)
 
@@ -192,7 +188,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	n5.GetNetwork().AddPeer(n2.GetInfo())
 	n4.GetNetwork().AddPeer(n5.GetInfo())
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return false
 	}, 2)
 

@@ -19,7 +19,6 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -34,9 +33,9 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 	return node
 }
 
-func FakeNodeWithPidAndAddr(bm *core.BlockChainManager, pid, addr string) *Node {
+func FakeNodeWithPidAndAddr(db Storage, pid, addr string) *Node {
 
-	node := NewNode(bm.Getblockchain().GetDb())
+	node := NewNode(db)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
 	peerInfo := &PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}

@@ -78,7 +78,7 @@ func TestSend(t *testing.T) {
 			bm := core.NewBlockChainManager(nil, nil)
 			bm.SetBlockchain(bc)
 			bm.SetBlockPool(pool)
-			node := network.FakeNodeWithPidAndAddr(bm, "test", "test")
+			node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
 
 			// Create a receiver wallet; Balance is 0 initially
 			receiverWallet, err := CreateWallet(GetTestWalletPath(), "test")
@@ -113,7 +113,7 @@ func TestSend(t *testing.T) {
 			for bc.GetMaxHeight() < 1 {
 			}
 			pow.Stop()
-			core.WaitDoneOrTimeout(func() bool {
+			util.WaitDoneOrTimeout(func() bool {
 				return !pow.IsProducingBlock()
 			}, 20)
 			// Verify balance of sender's wallet (genesis "mineReward" - transferred amount)
@@ -191,7 +191,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	node := network.FakeNodeWithPidAndAddr(bm, "test", "test")
+	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
 
 	//Send 5 coins from addr1 to an invalid address
 	_, _, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, "", bc, node)
@@ -248,7 +248,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	node := network.FakeNodeWithPidAndAddr(bm, "test", "test")
+	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
 
 	//Send 5 coins from addr1 to addr2
 	_, _, err = Send(wallet1, addr2, transferAmount, tip, "", bc, node)
@@ -319,7 +319,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 
 	//firstNode Starts Mining
 	dposArray[0].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() >= 5
 	}, 8)
 	dposArray[0].Stop()
@@ -459,7 +459,7 @@ func TestForkChoice(t *testing.T) {
 
 	// Mine more blocks on node[0] than on node[1]
 	pows[1].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetMaxHeight() > 4
 	}, 10)
 	pows[1].Stop()
@@ -468,12 +468,12 @@ func TestForkChoice(t *testing.T) {
 		desiredHeight = bcs[1].GetMaxHeight() + 1
 	}
 	pows[0].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > desiredHeight
 	}, 20)
 	pows[0].Stop()
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pows[0].IsProducingBlock()
 	}, 5)
 
@@ -482,11 +482,11 @@ func TestForkChoice(t *testing.T) {
 	connectNodes(nodes[0], nodes[1])
 	bms[0].BroadcastBlock(tailBlk)
 	// Make sure syncing starts on node[1]
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() == core.BlockchainSync
 	}, 10)
 	// Make sure syncing ends on node[1]
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() != core.BlockchainSync
 	}, 20)
 
@@ -534,19 +534,19 @@ func TestForkSegmentHandling(t *testing.T) {
 
 	// Ensure node[1] mined some blocks
 	pows[1].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetMaxHeight() > 3
 	}, 10)
 	pows[1].Stop()
 
 	// Ensure node[0] mines more blocks than node[1]
 	pows[0].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > 12
 	}, 30)
 	pows[0].Stop()
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pows[0].IsProducingBlock()
 	}, 5)
 
@@ -561,7 +561,7 @@ func TestForkSegmentHandling(t *testing.T) {
 	connectNodes(nodes[0], nodes[1])
 	bms[0].BroadcastBlock(blk1)
 	// Wait for node[1] to start syncing
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() == core.BlockchainSync
 	}, 10)
 
@@ -569,15 +569,15 @@ func TestForkSegmentHandling(t *testing.T) {
 	bms[0].BroadcastBlock(blk2)
 
 	// Make sure previous syncing ends
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() != core.BlockchainSync
 	}, 10)
 	// Make sure node[1] is syncing again
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() == core.BlockchainSync
 	}, 10)
 	// Make sure syncing ends
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() != core.BlockchainSync
 	}, 10)
 
@@ -619,7 +619,7 @@ func TestAddBalance(t *testing.T) {
 			bm := core.NewBlockChainManager(nil, nil)
 			bm.SetBlockchain(bc)
 			bm.SetBlockPool(pool)
-			node := network.FakeNodeWithPidAndAddr(bm, "a", "b")
+			node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 			SetMinerKeyPair(key)
 			pow.Setup(node, addr.String(), bm)
 			pow.SetTargetBit(0)
@@ -668,7 +668,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			bm := core.NewBlockChainManager(nil, nil)
 			bm.SetBlockchain(bc)
 			bm.SetBlockPool(pool)
-			node := network.FakeNodeWithPidAndAddr(bm, "a", "b")
+			node := network.FakeNodeWithPidAndAddr(bbc.GetDb()m, "a", "b")
 			_, _, err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc, node)
 			assert.Equal(t, ErrInvalidRcverAddress, err)
 		})
@@ -705,7 +705,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	node := network.FakeNodeWithPidAndAddr(bm, "test", "test")
+	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
 
 	//deploy smart contract
 	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), common.NewAmount(0), contract, bc, node)
@@ -868,7 +868,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	// seed node start mining
 	conss.Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bc.GetMaxHeight() > 8
 	}, 10)
 
@@ -944,7 +944,7 @@ func TestDownloadBlockChain(t *testing.T) {
 
 	// Mine more blocks on node[0] than on node[1]
 	pows[1].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetMaxHeight() > 4
 	}, 10)
 	pows[1].Stop()
@@ -953,12 +953,12 @@ func TestDownloadBlockChain(t *testing.T) {
 		desiredHeight = bcs[1].GetMaxHeight() + 11
 	}
 	pows[0].Start()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[0].GetMaxHeight() > desiredHeight
 	}, 20)
 	pows[0].Stop()
 
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pows[0].IsProducingBlock()
 	}, 5)
 
@@ -967,11 +967,11 @@ func TestDownloadBlockChain(t *testing.T) {
 	connectNodes(nodes[0], nodes[1])
 	bms[0].BroadcastBlock(tailBlk)
 	// Make sure syncing starts on node[1]
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() == core.BlockchainDownloading
 	}, 10)
 	// Make sure syncing ends on node[1]
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return bcs[1].GetState() != core.BlockchainDownloading
 	}, 20)
 

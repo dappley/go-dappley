@@ -598,10 +598,10 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network.DappRcvdCmdCo
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := &network.DappSendCmdContext{
+		commandSendCtx := network.NewDappSendCmdContextFromDappCmd(
 			command.GetCommand(),
 			broadcastPid,
-			network.NormalPriorityCommand}
+			network.NormalPriorityCommand)
 		commandSendCtx.Send(txPool.commandSendCh)
 	}
 }
@@ -644,10 +644,10 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network.DappRcv
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := &network.DappSendCmdContext{
+		commandSendCtx := network.NewDappSendCmdContextFromDappCmd(
 			command.GetCommand(),
 			broadcastPid,
-			network.NormalPriorityCommand}
+			network.NormalPriorityCommand)
 		commandSendCtx.Send(txPool.commandSendCh)
 	}
 

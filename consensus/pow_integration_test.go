@@ -83,7 +83,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	n := network.FakeNodeWithPidAndAddr(bm, "asd", "test")
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
 	pow.Setup(n, wallet1.GetAddress().String(), bm)
 
 	pow.Start()
@@ -94,7 +94,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 
@@ -139,7 +139,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	n := network.FakeNodeWithPidAndAddr(bm, "asd", "asd")
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 	pow.Setup(n, wallet.GetAddress().String(), bm)
 	pow.Start()
 
@@ -149,7 +149,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -203,7 +203,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	n := network.FakeNodeWithPidAndAddr(bm, "asd", "asd")
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 	pow.Setup(n, wallet1.GetAddress().String(), bm)
 	pow.Start()
 
@@ -232,7 +232,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//stop mining
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -267,7 +267,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	n := network.FakeNodeWithPidAndAddr(bm, "asd", "asd")
+	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
 	pow.Setup(n, cbAddr.String(), bm)
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
@@ -285,7 +285,7 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 	//there should be not block produced anymore
@@ -342,7 +342,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	bm := core.NewBlockChainManager(nil, nil)
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(pool)
-	n := network.FakeNodeWithPidAndAddr(bm, "asd", "test")
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
 	pow.Setup(n, wallet1.GetAddress().Address, bm)
 
 	pow.Start()
