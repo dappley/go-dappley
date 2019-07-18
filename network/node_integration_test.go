@@ -55,7 +55,7 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 		n.GetNetwork().AddSeed(seedPeer)
 	}
 
-	err := n.Start(port, nil)
+	err := n.Start(port, nil, "")
 	return n, err
 }
 
@@ -70,7 +70,7 @@ func initNodeWithConfig(address string, port, connectionInCount, connectionOutCo
 		n.GetNetwork().AddSeed(seedPeer)
 	}
 
-	err := n.Start(port, nil)
+	err := n.Start(port, nil, "")
 	return n, err
 }
 

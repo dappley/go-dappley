@@ -53,7 +53,7 @@ func TestNode_Stop(t *testing.T) {
 	mockConsensus := new(mocks.Consensus)
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil, 100000)
 	node := NewNode(bc.GetDb())
-	err := node.Start(22100, nil)
+	err := node.Start(22100, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

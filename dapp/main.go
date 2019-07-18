@@ -146,16 +146,10 @@ func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) 
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
-	if keyPath != "" {
-		err := node.LoadNetworkKeyFromFile(keyPath)
-		if err != nil {
-			logger.Error(err)
-		}
-	}
 
 	seeds := nodeConfig.GetSeed()
 
-	err := node.Start(int(port), seeds)
+	err := node.Start(int(port), seeds, keyPath)
 	if err != nil {
 		logger.Error(err)
 		return nil, err

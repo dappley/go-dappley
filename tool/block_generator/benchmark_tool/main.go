@@ -131,9 +131,9 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	bm, node1 := prepareNode(db1)
 	bm2, node2 := prepareNode(db2)
 
-	node1.Start(testport1, nil)
+	node1.Start(testport1, nil, "")
 	defer node1.Stop()
-	node2.Start(testport2, nil)
+	node2.Start(testport2, nil, "")
 	defer node2.Stop()
 
 	node1.GetNetwork().AddPeer(node2.GetInfo())

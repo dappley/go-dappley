@@ -44,6 +44,7 @@ const (
 	ConnectionTypeIn   ConnectionType = 1
 	ConnectionTypeOut  ConnectionType = 2
 
+	maxSyncPeersCount            = 32
 	defaultMaxConnectionOutCount = 16
 	defaultMaxConnectionInCount  = 128
 	syncPeersWaitTime            = 10 * time.Second

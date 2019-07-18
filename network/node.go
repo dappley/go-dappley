@@ -20,7 +20,6 @@ package network
 
 import (
 	"encoding/base64"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -30,8 +29,6 @@ import (
 )
 
 const (
-	maxSyncPeersCount = 32
-
 	TopicOnStreamStop = "TopicOnStreamStop"
 
 	Unicast       = false
@@ -49,7 +46,6 @@ var (
 type Node struct {
 	network       *Network
 	exitCh        chan bool
-	privKey       crypto.PrivKey
 	dispatcher    chan *DappPacketContext
 	commandSendCh chan *DappSendCmdContext
 	commandBroker *CommandBroker
@@ -65,7 +61,6 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 
 	node := &Node{
 		exitCh:        make(chan bool, 1),
-		privKey:       nil,
 		dispatcher:    make(chan *DappPacketContext, dispatchChLen),
 		commandSendCh: make(chan *DappSendCmdContext, requestChLen),
 		commandBroker: NewCommandBroker(reservedTopics),
@@ -87,8 +82,11 @@ func (n *Node) GetNetwork() *Network                       { return n.network }
 func (n *Node) GetCommandSendCh() chan *DappSendCmdContext { return n.commandSendCh }
 func (n *Node) GetCommandBroker() *CommandBroker           { return n.commandBroker }
 
-func (n *Node) Start(listenPort int, seeds []string) error {
-	err := n.network.Start(listenPort, n.privKey, seeds)
+func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) error {
+
+	privKey := loadNetworkKeyFromFile(privKeyFilePath)
+
+	err := n.network.Start(listenPort, privKey, seeds)
 	if err != nil {
 		return err
 	}
@@ -133,15 +131,9 @@ func (n *Node) StartListenLoop() {
 		for {
 			if streamMsg, ok := <-n.dispatcher; ok {
 
-				if len(n.dispatcher) == dispatchChLen {
-					logger.WithFields(logger.Fields{
-						"lenOfDispatchChan": len(n.dispatcher),
-					}).Warn("Node: streamMsgDispatcherCh channel full")
-				}
 				cmdMsg := ParseDappMsgFromDappPacket(streamMsg.packet)
 				dappRcvdCmd := NewDappRcvdCmdContext(cmdMsg, streamMsg.source)
 				err := n.commandBroker.Dispatch(dappRcvdCmd)
-
 				if err != nil {
 					logger.WithError(err).Warn("Node: Dispatch received message failed")
 				}
@@ -151,24 +143,40 @@ func (n *Node) StartListenLoop() {
 
 }
 
-//LoadNetworkKeyFromFile reads the network privatekey source a file
-func (n *Node) LoadNetworkKeyFromFile(filePath string) error {
+func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
+	if n.GetInfo() == nil {
+		return nil
+	}
+	return n.GetInfo().Addrs
+}
+
+func (n *Node) GetPeerID() peer.ID { return n.GetInfo().PeerId }
+
+//loadNetworkKeyFromFile reads the network privatekey source a file
+func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {
+	if filePath == "" {
+		return nil
+	}
+
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return err
+		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
+		return nil
 	}
 
 	data, err := base64.StdEncoding.DecodeString(string(bytes))
 	if err != nil {
-		return err
+		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
+		return nil
 	}
 
-	n.privKey, err = crypto.UnmarshalPrivateKey(data)
+	privKey, err := crypto.UnmarshalPrivateKey(data)
 	if err != nil {
-		return err
+		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
+		return nil
 	}
 
-	return nil
+	return privKey
 }
 
 func (n *Node) OnStreamStop(stream *Stream) {
@@ -183,12 +191,3 @@ func (n *Node) OnStreamStop(stream *Stream) {
 
 	n.commandBroker.Dispatch(dappCmdCtx)
 }
-
-func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
-	if n.GetInfo() == nil {
-		return nil
-	}
-	return n.GetInfo().Addrs
-}
-
-func (n *Node) GetPeerID() peer.ID { return n.GetInfo().PeerId }
