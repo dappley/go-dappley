@@ -259,6 +259,11 @@ func (pm *PeerManager) Broadcast(data []byte, priority int) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 	for _, s := range pm.streams {
+		pbDm := networkpb.Dapmsg{}
+		if err := proto.Unmarshal(data,&pbDm); err != nil{
+			logger.Debugf("Unmarshal failed: %v", err.Error())
+		}
+		logger.Debugf("Broadcast to stream of peerID %v, type: %v, sendTime: %v,counter: %v, uuid: %v",s.stream.peerID,pbDm.Cmd,pbDm.UnixTimeReceived,pbDm.Counter, pbDm.Uuid)
 		s.stream.Send(data, priority)
 	}
 }
@@ -803,7 +808,9 @@ func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType Connecti
 		//Pass
 	}
 	pm.streams[peerId] = &StreamInfo{stream: stream, connectionType: connectionType}
-
+	for k,v:= range pm.streams{
+		logger.Printf("pm streams pid: %v, type: %v",k,v.connectionType)
+	}
 	return true
 }
 

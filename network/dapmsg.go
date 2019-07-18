@@ -24,6 +24,8 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/dappley/go-dappley/network/pb"
+
+	"github.com/google/uuid"
 )
 
 type DapMsg struct {
@@ -33,6 +35,7 @@ type DapMsg struct {
 	key            string
 	uniOrBroadcast int ``
 	counter        uint64
+	uuid		   string
 }
 
 func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int, counter *uint64) *DapMsg {
@@ -40,7 +43,8 @@ func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int, count
 		*counter = 0
 	}
 	*counter++
-	return &DapMsg{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast, *counter}
+	uuidByte,_ := uuid.NewUUID()
+	return &DapMsg{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast, *counter,uuidByte.String()}
 }
 
 func (dm *DapMsg) GetCmd() string {
@@ -64,12 +68,19 @@ func (dm *DapMsg) GetKey() string {
 	return dm.key
 }
 
+func (dm *DapMsg) GetUuid() string {
+	return dm.uuid
+}
+
 func (dm *DapMsg) ToProto() proto.Message {
 	return &networkpb.Dapmsg{
 		Cmd:              dm.cmd,
 		Data:             dm.data,
 		UnixTimeReceived: dm.unixTimeRecvd,
 		Key:              dm.key,
+		Counter:    	  dm.counter,
+		UniOrBroadcast:	  int64(dm.uniOrBroadcast),
+		Uuid: dm.uuid,
 	}
 }
 
@@ -78,5 +89,7 @@ func (dm *DapMsg) FromProto(pb proto.Message) {
 	dm.data = pb.(*networkpb.Dapmsg).GetData()
 	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).GetUnixTimeReceived()
 	dm.key = pb.(*networkpb.Dapmsg).GetKey()
-
+	dm.uniOrBroadcast = int(pb.(*networkpb.Dapmsg).GetUniOrBroadcast())
+	dm.counter = pb.(*networkpb.Dapmsg).GetCounter()
+	dm.uuid = pb.(*networkpb.Dapmsg).GetUuid()
 }
