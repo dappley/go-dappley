@@ -60,7 +60,7 @@ func TestServer_StartRPC(t *testing.T) {
 	addr := "/ip4/127.0.0.1/tcp/10000"
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
-	server := NewGrpcServer(node, "temp")
+	server := NewGrpcServer(node, nil, "temp")
 	server.Start(defaultRpcPort)
 	defer server.Stop()
 
@@ -117,7 +117,7 @@ func TestRpcSend(t *testing.T) {
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
-	server := NewGrpcServer(node, "temp")
+	server := NewGrpcServer(node, bm, "temp")
 	server.Start(defaultRpcPort + 1) // use a different port as other integration tests
 	defer server.Stop()
 
@@ -205,7 +205,7 @@ func TestRpcSendContract(t *testing.T) {
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
-	server := NewGrpcServer(node, "temp")
+	server := NewGrpcServer(node, bm, "temp")
 	server.Start(defaultRpcPort + 10) // use a different port as other integration tests
 	defer server.Stop()
 
@@ -1074,7 +1074,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.node = network.FakeNodeWithPidAndAddr(bm, "a", "b")
 
 	// Start a grpc server
-	context.rpcServer = NewGrpcServer(context.node, "temp")
+	context.rpcServer = NewGrpcServer(context.node, bm, "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 	return &context, nil

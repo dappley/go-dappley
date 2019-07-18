@@ -20,6 +20,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/core"
 	"net"
 	"strings"
 
@@ -36,17 +37,17 @@ import (
 
 const (
 	defaultRpcPort = 50051
-	passwordToken  = "password"
 )
 
 type Server struct {
 	srv      *grpc.Server
 	node     *network.Node
+	bm       *core.BlockChainManager
 	password string
 }
 
-func NewGrpcServer(node *network.Node, adminPassword string) *Server {
-	return &Server{grpc.NewServer(), node, adminPassword}
+func NewGrpcServer(node *network.Node, bm *core.BlockChainManager, adminPassword string) *Server {
+	return &Server{grpc.NewServer(), node, bm, adminPassword}
 }
 
 func (s *Server) Start(port uint32) {
@@ -62,8 +63,8 @@ func (s *Server) Start(port uint32) {
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
-		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
-		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
+		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node})
 		if err := srv.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Server: encounters an error while serving.")
 		}

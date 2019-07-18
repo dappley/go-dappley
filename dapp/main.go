@@ -118,7 +118,7 @@ func main() {
 	bm.DownloadBlocks()
 
 	//start rpc server
-	server := rpc.NewGrpcServer(node, defaultPassword)
+	server := rpc.NewGrpcServer(node, bm, defaultPassword)
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 

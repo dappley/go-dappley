@@ -34,6 +34,7 @@ import (
 )
 
 type AdminRpcService struct {
+	bm   *core.BlockChainManager
 	node *network.Node
 }
 
@@ -49,7 +50,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	if len(in.GetAddress()) == 0 || !core.NewAddress(in.GetAddress()).IsValid() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
-	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.GetAddress())
+	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(in.GetAddress())
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -85,7 +86,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
 
-	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain(), adminRpcService.node)
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
@@ -124,7 +125,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 
 	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.GetData(),
-		adminRpcService.node.GetBlockchain(), adminRpcService.node)
+		adminRpcService.bm.Getblockchain(), adminRpcService.node)
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {
