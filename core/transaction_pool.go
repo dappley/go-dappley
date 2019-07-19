@@ -23,6 +23,7 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
@@ -57,8 +58,8 @@ type TransactionPool struct {
 	currSize         uint32
 	EventBus         EventBus.Bus
 	mutex            sync.RWMutex
-	commandSendCh    chan *network.DappSendCmdContext
-	commandReceiveCh chan *network.DappRcvdCmdContext
+	commandSendCh    chan *network_model.DappSendCmdContext
+	commandReceiveCh chan *network_model.DappRcvdCmdContext
 }
 
 func NewTransactionPool(limit uint32) *TransactionPool {
@@ -70,13 +71,13 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 		currSize:         0,
 		EventBus:         EventBus.New(),
 		mutex:            sync.RWMutex{},
-		commandReceiveCh: make(chan *network.DappRcvdCmdContext, 100),
+		commandReceiveCh: make(chan *network_model.DappRcvdCmdContext, 100),
 	}
 	txPool.StartCommandListener()
 	return txPool
 }
 
-func (txPool *TransactionPool) SetCommandSendCh(commandSendCh chan *network.DappSendCmdContext) {
+func (txPool *TransactionPool) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
 	txPool.commandSendCh = commandSendCh
 }
 

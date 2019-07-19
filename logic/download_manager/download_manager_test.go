@@ -48,12 +48,11 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 		address := keyPair.GenerateAddress(false)
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bm := core.NewBlockChainManager(nil, nil)
 		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
+		bm := core.NewBlockChainManager(bc, core.NewBlockPool(100))
 		bc.SetState(core.BlockchainReady)
-		bm.SetBlockchain(bc)
-		bm.SetBlockPool(core.NewBlockPool(100))
 		node := network.NewNode(bc.GetDb())
+		node.RegisterSubscriber(bm)
 		bms[i] = bm
 		nodes[i] = node
 		pow.Setup(node, address.Address, bm)
