@@ -21,6 +21,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/util"
 	"os"
 	"testing"
 	"time"

@@ -89,12 +89,15 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
 		pool := core.NewBlockPool(0)
-		bm := core.NewBlockChainManager(nil, nil)
-		bm.SetBlockchain(bc)
-		bm.SetBlockPool(pool)
+
 		node := network.NewNode(bc.GetDb())
 		node.Start(21200+i, nil, "")
 		nodeArray = append(nodeArray, node)
+
+		bm := core.NewBlockChainManager(node.GetCommandSendCh(), node.GetCommandBroker())
+		bm.SetBlockchain(bc)
+		bm.SetBlockPool(pool)
+
 		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)

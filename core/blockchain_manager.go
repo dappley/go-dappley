@@ -308,7 +308,7 @@ func (bm *BlockChainManager) SendBlockHandler(command *network.DappRcvdCmdContex
 		return
 	}
 
-	var block *Block
+	block := &Block{}
 	block.FromProto(blockpb)
 	bm.Push(block, command.GetSource())
 
