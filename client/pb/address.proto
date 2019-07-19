@@ -1,0 +1,6 @@
+syntax = "proto3";
+package accountpb;
+
+message Address{
+    string address = 1;
+}
