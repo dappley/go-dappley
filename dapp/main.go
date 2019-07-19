@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/logic/download_manager"
 
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
@@ -107,8 +108,8 @@ func main() {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
-	downloadManager := core.NewDownloadManager(node, bm)
-	bm.SetDownloadManager(downloadManager)
+	downloadManager := download_manager.NewDownloadManager(node, bm)
+	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
 	conss.Setup(node, minerAddr, bm)
@@ -118,8 +119,6 @@ func main() {
 	}).Info("Consensus is configured.")
 
 	bm.Getblockchain().SetState(core.BlockchainReady)
-
-	bm.DownloadBlocks()
 
 	//start rpc server
 	server := rpc.NewGrpcServer(node, bm, defaultPassword)
@@ -131,6 +130,8 @@ func main() {
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 	conss.Start()
 	defer conss.Stop()
+
+	bm.RequestDownloadBlockchain()
 
 	select {}
 }

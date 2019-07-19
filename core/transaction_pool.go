@@ -569,6 +569,7 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	}
 	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
 	txPool.currSize = pb.(*corepb.TransactionPool).CurrSize
+	txPool.commandReceiveCh = make(chan *network.DappRcvdCmdContext, 100)
 }
 
 func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {

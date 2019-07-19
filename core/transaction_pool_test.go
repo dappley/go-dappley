@@ -355,7 +355,11 @@ func TestTransactionPool_Proto(t *testing.T) {
 
 	txPool1 := NewTransactionPool(128)
 	txPool1.FromProto(txPoolProto)
-	assert.Equal(t, txPool, txPool1)
+	assert.Equal(t, txPool.pendingTxs, txPool1.pendingTxs)
+	assert.Equal(t, txPool.tipOrder, txPool1.tipOrder)
+	assert.Equal(t, txPool.txs, txPool1.txs)
+	assert.Equal(t, txPool.currSize, txPool1.currSize)
+	assert.Equal(t, txPool.sizeLimit, txPool1.sizeLimit)
 }
 
 func TestNewTransactionNode(t *testing.T) {

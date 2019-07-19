@@ -43,11 +43,11 @@ var (
 )
 
 type BlockChainManager struct {
-	blockchain       *Blockchain
-	blockPool        *BlockPool
-	downloadManager  *DownloadManager
-	commandSendCh    chan *network.DappSendCmdContext
-	commandReceiveCh chan *network.DappRcvdCmdContext
+	blockchain        *Blockchain
+	blockPool         *BlockPool
+	downloadRequestCh chan chan bool
+	commandSendCh     chan *network.DappSendCmdContext
+	commandReceiveCh  chan *network.DappRcvdCmdContext
 }
 
 func NewBlockChainManager(commandSendCh chan *network.DappSendCmdContext, commandBroker *network.CommandBroker) *BlockChainManager {
@@ -60,6 +60,27 @@ func NewBlockChainManager(commandSendCh chan *network.DappSendCmdContext, comman
 	}
 	bm.StartCommandListener()
 	return bm
+}
+
+func (bm *BlockChainManager) SetDownloadRequestCh(requestCh chan chan bool) {
+	bm.downloadRequestCh = requestCh
+}
+
+func (bm *BlockChainManager) RequestDownloadBlockchain() {
+	go func() {
+		finishChan := make(chan bool, 1)
+
+		bm.Getblockchain().SetState(BlockchainDownloading)
+
+		select {
+		case bm.downloadRequestCh <- finishChan:
+		default:
+			logger.Warn("BlockchainManager: Request download failed! download request channel is full!")
+		}
+
+		<-finishChan
+		bm.Getblockchain().SetState(BlockchainReady)
+	}()
 }
 
 func (bm *BlockChainManager) StartCommandListener() {
@@ -86,20 +107,12 @@ func (bm *BlockChainManager) SetBlockchain(blockchain *Blockchain) {
 	bm.blockchain = blockchain
 }
 
-func (bm *BlockChainManager) SetDownloadManager(downloadManager *DownloadManager) {
-	bm.downloadManager = downloadManager
-}
-
 func (bm *BlockChainManager) Getblockchain() *Blockchain {
 	return bm.blockchain
 }
 
 func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
-}
-
-func (bm *BlockChainManager) GetDownloadManager() *DownloadManager {
-	return bm.downloadManager
 }
 
 func (bm *BlockChainManager) SubscribeCommandBroker(broker *network.CommandBroker) {
@@ -147,7 +160,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		recieveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == BlockchainReady {
 		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
-		go bm.DownloadBlocks()
+		bm.RequestDownloadBlockchain()
 		return
 	}
 
@@ -237,15 +250,6 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	}
 
 	return nil
-}
-
-func (bm *BlockChainManager) DownloadBlocks() {
-	finishChan := make(chan bool, 1)
-
-	bm.blockchain.SetState(BlockchainDownloading)
-	bm.downloadManager.StartDownloadBlockchain(finishChan)
-	<-finishChan
-	bm.blockchain.SetState(BlockchainReady)
 }
 
 //RequestBlock sends a requestBlock command to its peer with pid through network module

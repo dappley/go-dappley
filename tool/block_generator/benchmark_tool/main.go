@@ -10,6 +10,7 @@ import (
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/logic/download_manager"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/shirou/gopsutil/cpu"
@@ -128,8 +129,12 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	db2 := storage.OpenDatabase(nodeDbPath)
 	defer db2.Close()
 
-	bm, node1 := prepareNode(db1)
+	bm1, node1 := prepareNode(db1)
 	bm2, node2 := prepareNode(db2)
+	dm1 := download_manager.NewDownloadManager(node1, bm1)
+	bm1.SetDownloadRequestCh(dm1.GetDownloadRequestCh())
+	dm2 := download_manager.NewDownloadManager(node2, bm2)
+	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
 
 	node1.Start(testport1, nil, "")
 	defer node1.Stop()
@@ -138,8 +143,8 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 
 	node1.GetNetwork().AddPeer(node2.GetInfo())
 
-	blkHeight := bm.Getblockchain().GetMaxHeight()
-	tailBlock, _ := bm.Getblockchain().GetTailBlock()
+	blkHeight := bm1.Getblockchain().GetMaxHeight()
+	tailBlock, _ := bm1.Getblockchain().GetTailBlock()
 	numOfTx := len(tailBlock.GetTransactions())
 
 	logger.WithFields(logger.Fields{
@@ -150,7 +155,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	time.Sleep(time.Second)
 
 	start := time.Now()
-	bm2.DownloadBlocks()
+	bm2.RequestDownloadBlockchain()
 	elapsed := time.Since(start)
 
 	logger.WithFields(logger.Fields{
@@ -183,6 +188,7 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 	bm.SetBlockchain(bc)
 	bm.SetBlockPool(core.NewBlockPool(0))
 
-	bm.SetDownloadManager(core.NewDownloadManager(node, bm))
+	downloadManager := download_manager.NewDownloadManager(node, bm)
+	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 	return bm, node
 }
