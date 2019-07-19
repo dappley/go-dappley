@@ -4,6 +4,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+type CommandHandlerFunc func(command *DappRcvdCmdContext)
+
 type DappRcvdCmdContext struct {
 	command *DappCmd
 	source  peer.ID
