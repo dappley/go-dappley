@@ -49,7 +49,7 @@ type RpcTestContext struct {
 	store      storage.Storage
 	wallet     *client.Wallet
 	consensus  core.Consensus
-	bc         *core.Blockchain
+	bm         *core.BlockChainManager
 	node       *network.Node
 	rpcServer  *Server
 	serverPort uint32
@@ -304,10 +304,10 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	for rpcContext.bc.GetMaxHeight() < 5 {
+	for rpcContext.bm.Getblockchain().GetMaxHeight() < 5 {
 
 	}
 
@@ -327,7 +327,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	response, err := c.RpcGetBlockchainInfo(context.Background(), &rpcpb.GetBlockchainInfoRequest{})
 	assert.Nil(t, err)
 
-	tailBlock, err := rpcContext.bc.GetTailBlock()
+	tailBlock, err := rpcContext.bm.Getblockchain().GetTailBlock()
 	assert.Nil(t, err)
 
 	assert.Equal(t, []byte(tailBlock.GetHash()), response.TailBlockHash)
@@ -347,12 +347,12 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	for rpcContext.bc.GetMaxHeight() < MinUtxoBlockHeaderCount {
+	for rpcContext.bm.Getblockchain().GetMaxHeight() < MinUtxoBlockHeaderCount {
 
 	}
 
@@ -374,10 +374,10 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 	minedReward := common.NewAmount(10000000)
-	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
+	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
 
-	tailBlock, err := rpcContext.bc.GetTailBlock()
+	tailBlock, err := rpcContext.bm.Getblockchain().GetTailBlock()
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
 	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
@@ -394,10 +394,10 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	for rpcContext.bc.GetMaxHeight() < 500 {
+	for rpcContext.bm.Getblockchain().GetMaxHeight() < 500 {
 	}
 
 	rpcContext.consensus.Stop()
@@ -421,14 +421,14 @@ func TestRpcGetBlocks(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 	assert.Equal(t, maxGetBlocksCount, len(response.Blocks))
-	block1, err := rpcContext.bc.GetBlockByHeight(1)
+	block1, err := rpcContext.bm.Getblockchain().GetBlockByHeight(1)
 	assert.Equal(t, []byte(block1.GetHash()), response.Blocks[0].GetHeader().GetHash())
-	block20, err := rpcContext.bc.GetBlockByHeight(uint64(maxGetBlocksCount))
+	block20, err := rpcContext.bm.Getblockchain().GetBlockByHeight(uint64(maxGetBlocksCount))
 	assert.Equal(t, []byte(block20.GetHash()), response.Blocks[19].GetHeader().GetHash())
 
 	// Check query loop
 	var startBlockHashes [][]byte
-	queryCount := (int(rpcContext.bc.GetMaxHeight())+maxGetBlocksCount-1)/maxGetBlocksCount - 1
+	queryCount := (int(rpcContext.bm.Getblockchain().GetMaxHeight())+maxGetBlocksCount-1)/maxGetBlocksCount - 1
 	startHashCount := 3 // suggest value is 2/3 * producersnum +1
 
 	for i := 0; i < queryCount; i++ {
@@ -441,14 +441,14 @@ func TestRpcGetBlocks(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, response)
 		if i == (queryCount - 1) {
-			leftCount := int(rpcContext.bc.GetMaxHeight()) - queryCount*maxGetBlocksCount
+			leftCount := int(rpcContext.bm.Getblockchain().GetMaxHeight()) - queryCount*maxGetBlocksCount
 			assert.Equal(t, leftCount, len(response.Blocks))
 		} else {
 			assert.Equal(t, maxGetBlocksCount, len(response.Blocks))
 		}
 	}
 
-	tailBlock, err := rpcContext.bc.GetTailBlock()
+	tailBlock, err := rpcContext.bm.Getblockchain().GetTailBlock()
 	assert.Nil(t, err)
 	assert.Equal(t, []byte(tailBlock.GetHash()), response.Blocks[len(response.Blocks)-1].GetHeader().GetHash())
 
@@ -473,10 +473,10 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	for rpcContext.bc.GetMaxHeight() < 50 {
+	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
 	}
 
 	rpcContext.consensus.Stop()
@@ -493,13 +493,13 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	block20, err := rpcContext.bc.GetBlockByHeight(20)
+	block20, err := rpcContext.bm.Getblockchain().GetBlockByHeight(20)
 	response, err := c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: block20.GetHash()})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 	assert.Equal(t, []byte(block20.GetHash()), response.Block.GetHeader().GetHash())
 
-	tailBlock, err := rpcContext.bc.GetTailBlock()
+	tailBlock, err := rpcContext.bm.Getblockchain().GetTailBlock()
 	response, err = c.RpcGetBlockByHash(context.Background(), &rpcpb.GetBlockByHashRequest{Hash: tailBlock.GetHash()})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
@@ -518,10 +518,10 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	for rpcContext.bc.GetMaxHeight() < 50 {
+	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
 	}
 
 	rpcContext.consensus.Stop()
@@ -538,13 +538,13 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	block20, err := rpcContext.bc.GetBlockByHeight(20)
+	block20, err := rpcContext.bm.Getblockchain().GetBlockByHeight(20)
 	response, err := c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: 20})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 	assert.Equal(t, []byte(block20.GetHash()), response.Block.GetHeader().GetHash())
 
-	tailBlock, err := rpcContext.bc.GetTailBlock()
+	tailBlock, err := rpcContext.bm.Getblockchain().GetTailBlock()
 	response, err = c.RpcGetBlockByHeight(context.Background(), &rpcpb.GetBlockByHeightRequest{Height: tailBlock.GetHeight()})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
@@ -568,12 +568,12 @@ func TestRpcSendTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	maxHeight := rpcContext.bc.GetMaxHeight()
+	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
 	for maxHeight < 2 {
-		maxHeight = rpcContext.bc.GetMaxHeight()
+		maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
 	}
 	// Create a grpc connection and a client
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
@@ -584,7 +584,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
-	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := core.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	sendTxParam := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
@@ -598,11 +598,11 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
 
-	maxHeight = rpcContext.bc.GetMaxHeight()
-	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
+	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
+	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
-	utxos2, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos2, err := core.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	sendTxParam2 := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
 		rpcContext.wallet.GetKeyPair(),
 		receiverWallet.GetAddress(),
@@ -616,8 +616,8 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
 	assert.Equal(t, core.ErrTransactionVerifyFailed.Error(), status.Convert(err).Message())
 
-	maxHeight = rpcContext.bc.GetMaxHeight()
-	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
+	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
+	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
 	rpcContext.consensus.Stop()
@@ -627,10 +627,10 @@ func TestRpcSendTransaction(t *testing.T) {
 	time.Sleep(time.Second)
 
 	minedReward := common.NewAmount(10000000)
-	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(6))
-	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.bc)
+	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(6))
+	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, leftAmount, realAmount)
-	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.bc)
+	recvAmount, err := logic.GetBalance(receiverWallet.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
@@ -655,12 +655,12 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	maxHeight := rpcContext.bc.GetMaxHeight()
+	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
 	for maxHeight < 2 {
-		maxHeight = rpcContext.bc.GetMaxHeight()
+		maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
 	}
 
 	// Create a grpc connection and a client
@@ -672,7 +672,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
-	utxoIndex := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache())
+	utxoIndex := core.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
 
@@ -710,8 +710,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	assert.NotNil(t, successResponse)
 
 	rpcContext.consensus.Start()
-	maxHeight = rpcContext.bc.GetMaxHeight()
-	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
+	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
+	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 	rpcContext.consensus.Stop()
 
@@ -744,8 +744,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	assert.Equal(t, uint32(codes.OK), detail1.Code)
 
 	rpcContext.consensus.Start()
-	maxHeight = rpcContext.bc.GetMaxHeight()
-	for (rpcContext.bc.GetMaxHeight() - maxHeight) < 2 {
+	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
+	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
 	rpcContext.consensus.Stop()
@@ -754,12 +754,12 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}, 20)
 
 	minedReward := common.NewAmount(10000000)
-	leftAmount, err := minedReward.Times(rpcContext.bc.GetMaxHeight() + 1).Sub(common.NewAmount(8))
-	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.bc)
+	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(8))
+	realAmount, err := logic.GetBalance(rpcContext.wallet.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, leftAmount, realAmount)
-	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.bc)
-	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.bc)
-	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.bc)
+	recvAmount1, err := logic.GetBalance(receiverWallet1.GetAddress(), rpcContext.bm.Getblockchain())
+	recvAmount2, err := logic.GetBalance(receiverWallet2.GetAddress(), rpcContext.bm.Getblockchain())
+	recvAmount4, err := logic.GetBalance(receiverWallet4.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, common.NewAmount(2), recvAmount1)
 	assert.Equal(t, common.NewAmount(3), recvAmount2)
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
@@ -778,7 +778,7 @@ func TestGetNewTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	// Create a grpc connection and a client
@@ -836,7 +836,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step1)
@@ -844,14 +844,14 @@ func TestGetNewTransaction(t *testing.T) {
 	assert.Equal(t, true, conn2Step1)
 	conn2.Close()
 
-	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step2)
 	conn1.Close()
 
-	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
+	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
 	time.Sleep(time.Second)
-	assert.Equal(t, false, rpcContext.bc.GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
+	assert.Equal(t, false, rpcContext.bm.Getblockchain().GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
 
 	rpcContext.consensus.Stop()
 	util.WaitDoneOrTimeout(func() bool {
@@ -880,7 +880,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 
 	// generate new transaction
 	pubKeyHash, _ := rpcContext.wallet.GetAddress().GetPubKeyHash()
-	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := core.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	sendTxParam := core.NewSendTxParam(rpcContext.wallet.GetAddress(),
@@ -975,28 +975,28 @@ func TestRpcService_RpcSubscribe(t *testing.T) {
 	time.Sleep(time.Second)
 
 	//publish topic 1. Both nodes will get the message
-	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic1", "data1")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic1", "data1")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 1, count1)
 	assert.Equal(t, 1, count2)
 
 	//publish topic2. Only node 1 will get the message
-	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic2", "data2")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic2", "data2")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 2, count1)
 	assert.Equal(t, 1, count2)
 
 	//publish topic3. Only node 2 will get the message
-	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic3", "data3")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic3", "data3")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 2, count1)
 	assert.Equal(t, 2, count2)
 
 	//publish topic4. No nodes will get the message
-	rpcContext.bc.GetEventManager().Trigger([]*core.Event{core.NewEvent("topic4", "data4")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic4", "data4")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 2, count1)
@@ -1010,14 +1010,14 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
 
-	for rpcContext.bc.GetMaxHeight() < 50 {
+	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
 	}
 
 	rpcContext.consensus.Stop()
-	t.Log(rpcContext.bc.GetMaxHeight())
+	t.Log(rpcContext.bm.Getblockchain().GetMaxHeight())
 	util.WaitDoneOrTimeout(func() bool {
 		return !rpcContext.consensus.IsProducingBlock()
 	}, 20)
@@ -1031,9 +1031,9 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	block20, err := rpcContext.bc.GetBlockByHeight(20)
+	block20, err := rpcContext.bm.Getblockchain().GetBlockByHeight(20)
 	assert.Nil(t, err)
-	rpcContext.bc.SetLIBHash(block20.GetHash())
+	rpcContext.bm.Getblockchain().SetLIBHash(block20.GetHash())
 
 	response, err := c.RpcGetLastIrreversibleBlock(context.Background(), &rpcpb.GetLastIrreversibleBlockRequest{})
 	assert.Nil(t, err)
@@ -1065,17 +1065,17 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 		context.destroyContext()
 		panic(err)
 	}
-	context.bc = bc
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(nil, nil)
-	bm.SetBlockchain(bc)
-	bm.SetBlockPool(pool)
+
 	context.node = network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
+	context.bm = core.NewBlockChainManager(context.node.GetCommandSendCh(), context.node.GetCommandBroker())
+	context.bm.SetBlockchain(bc)
+	context.bm.SetBlockPool(pool)
 
 	// Start a grpc server
-	context.rpcServer = NewGrpcServer(context.node, bm, "temp")
+	context.rpcServer = NewGrpcServer(context.node, context.bm, "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 	return &context, nil
