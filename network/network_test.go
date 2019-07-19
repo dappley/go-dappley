@@ -7,7 +7,7 @@ import (
 )
 
 func TestNetwork_RecordMessage(t *testing.T) {
-	net := NewNetwork(nil, nil, nil, nil)
+	net := NewNetwork(nil, nil, nil)
 	data1 := network_model.ConstructDappPacketFromData([]byte("data1"), Broadcast)
 	data2 := network_model.ConstructDappPacketFromData([]byte("data2"), Broadcast)
 	net.RecordMessage(data1)

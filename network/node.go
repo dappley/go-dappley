@@ -67,9 +67,9 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 		commandBroker: NewCommandBroker(reservedTopics),
 	}
 
-	node.network = NewNetwork(config, node.dispatcher, node.commandSendCh, db)
+	node.network = NewNetwork(config, node.dispatcher, db)
 	node.network.OnStreamStop(node.OnStreamStop)
-	node.network.Subscirbe(node.commandBroker)
+	node.RegisterSubscriber(node.network.peerManager)
 
 	if err != nil {
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")
@@ -97,13 +97,14 @@ func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) err
 	return nil
 }
 
-func (n *Node) Register(subscriber Subscriber) {
+func (n *Node) RegisterSubscriber(subscriber Subscriber) {
+	subscriber.SetCommandSendCh(n.commandSendCh)
 	n.commandBroker.Subscribe(subscriber)
 }
 
-func (n *Node) RegisterMultiple(subscribers []Subscriber) {
+func (n *Node) RegisterMultipleSubscribers(subscribers []Subscriber) {
 	for _, subscriber := range subscribers {
-		n.Register(subscriber)
+		n.RegisterSubscriber(subscriber)
 	}
 }
 

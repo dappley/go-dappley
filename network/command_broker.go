@@ -55,6 +55,9 @@ func (cb *CommandBroker) Dispatch(cmd *network_model.DappRcvdCmdContext) {
 	}
 
 	for _, subscriber := range cb.subscribers[cmd.GetCommandName()] {
-		go subscriber.GetCommandHandler(cmd.GetCommandName())(cmd)
+		handler := subscriber.GetCommandHandler(cmd.GetCommandName())
+		if handler != nil {
+			go handler(cmd)
+		}
 	}
 }

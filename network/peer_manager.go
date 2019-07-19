@@ -57,6 +57,13 @@ const (
 	GetPeerListResponse = "GetPeerListResponse"
 )
 
+var (
+	subscribedTopics = []string{
+		GetPeerListRequest,
+		GetPeerListResponse,
+	}
+)
+
 type onStreamStopFunc func(stream *Stream)
 
 type PeerManager struct {
@@ -75,14 +82,13 @@ type PeerManager struct {
 	streamStopNotificationCh chan *Stream
 	streamMsgReceiveCh       chan *network_model.DappPacketContext
 	commandSendCh            chan *network_model.DappSendCmdContext
-	commandReceiveCh         chan *network_model.DappRcvdCmdContext
 	eventNotifier            EventBus.Bus
 	db                       Storage
 
 	mutex sync.RWMutex
 }
 
-func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, commandSendCh chan *network_model.DappSendCmdContext, db Storage) *PeerManager {
+func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, db Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
@@ -105,12 +111,29 @@ func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_mod
 		maxConnectionOutCount:    maxConnectionOutCount,
 		maxConnectionInCount:     maxConnectionInCount,
 		streamMsgReceiveCh:       streamMessageReceiveCh,
-		commandSendCh:            commandSendCh,
-		commandReceiveCh:         make(chan *network_model.DappRcvdCmdContext, 100),
+		commandSendCh:            nil,
 		streamStopNotificationCh: make(chan *Stream, 10),
 		eventNotifier:            EventBus.New(),
 		db:                       db,
 	}
+}
+
+func (pm *PeerManager) GetSubscribedTopics() []string {
+	return subscribedTopics
+}
+
+func (pm *PeerManager) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
+	pm.commandSendCh = commandSendCh
+}
+
+func (pm *PeerManager) GetCommandHandler(cmd string) network_model.CommandHandlerFunc {
+	switch cmd {
+	case GetPeerListRequest:
+		return pm.GetPeerListRequestHandler
+	case GetPeerListResponse:
+		return pm.GetPeerListResponseHandler
+	}
+	return nil
 }
 
 func (pm *PeerManager) AddSeeds(seeds []string) {
@@ -154,7 +177,6 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
 
 func (pm *PeerManager) Start(host *Host, seeds []string) {
 	pm.host = host
-	pm.StartCommandListener()
 	pm.AddSeeds(seeds)
 	pm.loadSyncPeers()
 	pm.startConnectSeeds()
@@ -174,22 +196,6 @@ func (pm *PeerManager) StartExitListener() {
 			if s, ok := <-pm.streamStopNotificationCh; ok {
 				pm.OnStreamStop(s)
 				pm.eventNotifier.Publish(topicStreamStop, s)
-			}
-		}
-	}()
-}
-
-func (pm *PeerManager) StartCommandListener() {
-	go func() {
-		for {
-			select {
-			case command := <-pm.commandReceiveCh:
-				switch command.GetCommandName() {
-				case GetPeerListRequest:
-					pm.SyncPeersRequestHandler(command)
-				case GetPeerListResponse:
-					pm.PeerListMessageHandler(command)
-				}
 			}
 		}
 	}()
@@ -748,11 +754,6 @@ func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
 	return ok
 }
 
-func (pm *PeerManager) Subscirbe(broker *CommandBroker) {
-	//broker.Subscribe(GetPeerListRequest, pm.commandReceiveCh)
-	//broker.Subscribe(GetPeerListResponse, pm.commandReceiveCh)
-}
-
 func (pm *PeerManager) SendSyncPeersRequest() {
 	getPeerListPb := &networkpb.GetPeerList{
 		MaxNumber: int32(maxSyncPeersCount),
@@ -779,7 +780,7 @@ func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.I
 	command.Send(pm.commandSendCh)
 }
 
-func (pm *PeerManager) SyncPeersRequestHandler(command *network_model.DappRcvdCmdContext) {
+func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvdCmdContext) {
 
 	getPeerlistRequest := &networkpb.GetPeerList{}
 
@@ -791,7 +792,7 @@ func (pm *PeerManager) SyncPeersRequestHandler(command *network_model.DappRcvdCm
 	pm.SendPeerListMessage(int(getPeerlistRequest.GetMaxNumber()), command.GetSource())
 }
 
-func (pm *PeerManager) PeerListMessageHandler(command *network_model.DappRcvdCmdContext) {
+func (pm *PeerManager) GetPeerListResponseHandler(command *network_model.DappRcvdCmdContext) {
 	peerlistPb := &networkpb.ReturnPeerList{}
 
 	if err := proto.Unmarshal(command.GetData(), peerlistPb); err != nil {

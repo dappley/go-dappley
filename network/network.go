@@ -16,13 +16,13 @@ type Network struct {
 	recentlyRcvdDapMsgs   *lru.Cache
 }
 
-func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, commandSendCh chan *network_model.DappSendCmdContext, db Storage) *Network {
+func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, db Storage) *Network {
 
 	var err error
 	streamMsgRcvCh := make(chan *network_model.DappPacketContext, dispatchChLen)
 
 	net := &Network{
-		peerManager:           NewPeerManager(config, streamMsgRcvCh, commandSendCh, db),
+		peerManager:           NewPeerManager(config, streamMsgRcvCh, db),
 		streamMsgRcvCh:        streamMsgRcvCh,
 		streamMsgDispatcherCh: streamMsgDispatcherCh,
 	}
@@ -122,8 +122,4 @@ func (net *Network) AddPeerByString(fullAddr string) error {
 	}
 
 	return net.peerManager.AddAndConnectPeer(peerInfo)
-}
-
-func (net *Network) Subscirbe(broker *CommandBroker) {
-	net.peerManager.Subscirbe(broker)
 }
