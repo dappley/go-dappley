@@ -24,6 +24,7 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"math"
 	"sync"
@@ -122,8 +123,8 @@ type DownloadManager struct {
 	msgId             int32
 	downloadRequestCh chan chan bool
 	finishCh          chan bool
-	commandSendCh     chan *network.DappSendCmdContext
-	commandReceiveCh  chan *network.DappRcvdCmdContext
+	commandSendCh     chan *network_model.DappSendCmdContext
+	commandReceiveCh  chan *network_model.DappRcvdCmdContext
 }
 
 func NewDownloadManager(node *network.Node, bm *core.BlockChainManager) *DownloadManager {
@@ -140,10 +141,9 @@ func NewDownloadManager(node *network.Node, bm *core.BlockChainManager) *Downloa
 		commonHeight:      0,
 		downloadRequestCh: make(chan chan bool, 100),
 		finishCh:          nil,
-		commandSendCh:     node.GetCommandSendCh(),
-		commandReceiveCh:  make(chan *network.DappRcvdCmdContext, 100),
+		commandSendCh:     nil,
+		commandReceiveCh:  make(chan *network_model.DappRcvdCmdContext, 100),
 	}
-	downloadManager.SubscribeCommandBroker(node.GetCommandBroker())
 	return downloadManager
 }
 
@@ -152,7 +152,6 @@ func (downloadManager *DownloadManager) GetDownloadRequestCh() chan chan bool {
 }
 
 func (downloadManager *DownloadManager) Start() {
-	downloadManager.StartCommandListener()
 	downloadManager.StartDownloadRequestListener()
 }
 
@@ -173,30 +172,33 @@ func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 	}()
 }
 
-func (downloadManager *DownloadManager) StartCommandListener() {
-	go func() {
-		for {
-			select {
-			case command := <-downloadManager.commandReceiveCh:
-				switch command.GetCommandName() {
-				case network.TopicOnStreamStop:
-					downloadManager.OnStreamStopHandler(command)
-				case BlockchainInfoRequest:
-					downloadManager.GetBlockchainInfoRequestHandler(command)
-				case BlockchainInfoResponse:
-					downloadManager.GetBlockchainInfoResponseHandler(command)
-				case GetBlocksRequest:
-					downloadManager.GetBlocksRequestHandler(command)
-				case GetBlocksResponse:
-					downloadManager.GetBlocksResponseHandler(command)
-				case GetCommonBlocksRequest:
-					downloadManager.GetCommonBlockRequestHandler(command)
-				case GetCommonBlocksResponse:
-					downloadManager.GetCommonBlockResponseHandler(command)
-				}
-			}
-		}
-	}()
+func (downloadManager *DownloadManager) GetSubscribedTopics() []string {
+	return dmSubscribedTopics
+}
+
+func (downloadManager *DownloadManager) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
+	downloadManager.commandSendCh = commandSendCh
+}
+
+func (downloadManager *DownloadManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+
+	switch commandName {
+	case network.TopicOnStreamStop:
+		return downloadManager.OnStreamStopHandler
+	case BlockchainInfoRequest:
+		return downloadManager.GetBlockchainInfoRequestHandler
+	case BlockchainInfoResponse:
+		return downloadManager.GetBlockchainInfoResponseHandler
+	case GetBlocksRequest:
+		return downloadManager.GetBlocksRequestHandler
+	case GetBlocksResponse:
+		return downloadManager.GetBlocksResponseHandler
+	case GetCommonBlocksRequest:
+		return downloadManager.GetCommonBlockRequestHandler
+	case GetCommonBlocksResponse:
+		return downloadManager.GetCommonBlockResponseHandler
+	}
+	return nil
 }
 
 func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bool) {
@@ -658,17 +660,6 @@ func (downloadManager *DownloadManager) selectHighestPeer() *PeerBlockInfo {
 	return peerWithHighestBlockHeight
 }
 
-func (downloadManager *DownloadManager) SubscribeCommandBroker(broker *network.CommandBroker) {
-	for _, topic := range dmSubscribedTopics {
-		err := broker.Subscribe(topic, downloadManager.commandReceiveCh)
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"command": topic,
-			}).Warn("DownloadManager: Unable to subscribe to a command")
-		}
-	}
-}
-
 func (downloadManager *DownloadManager) SendGetCommonBlockRequest(blockHeaders []*SyncCommandBlocksHeader, pid peer.ID, msgId int32) {
 	var blockHeaderPbs []*corepb.BlockHeader
 	for _, blockHeader := range blockHeaders {
@@ -678,12 +669,12 @@ func (downloadManager *DownloadManager) SendGetCommonBlockRequest(blockHeaders [
 
 	getCommonBlocksPb := &networkpb.GetCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
 
-	command := network.NewDappSendCmdContext(GetCommonBlocksRequest, getCommonBlocksPb, pid, network.Unicast, network.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetCommonBlocksRequest, getCommonBlocksPb, pid, network.Unicast, network_model.HighPriorityCommand)
 
 	command.Send(downloadManager.commandSendCh)
 }
 
-func (downloadManager *DownloadManager) GetCommonBlockRequestHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) GetCommonBlockRequestHandler(command *network_model.DappRcvdCmdContext) {
 
 	param := &networkpb.GetCommonBlocks{}
 	if err := proto.Unmarshal(command.GetData(), param); err != nil {
@@ -715,13 +706,13 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 
 	result := &networkpb.ReturnCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
 
-	command := network.NewDappSendCmdContext(GetCommonBlocksResponse, result, destination, network.Unicast, network.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetCommonBlocksResponse, result, destination, network.Unicast, network_model.HighPriorityCommand)
 
 	command.Send(downloadManager.commandSendCh)
 
 }
 
-func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(command *network_model.DappRcvdCmdContext) {
 	param := &networkpb.ReturnCommonBlocks{}
 
 	if err := proto.Unmarshal(command.GetData(), param); err != nil {
@@ -741,12 +732,12 @@ func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash,
 
 	getBlockPb := &networkpb.GetBlocks{StartBlockHashes: blkHashes}
 
-	command := network.NewDappSendCmdContext(GetBlocksRequest, getBlockPb, pid, network.Unicast, network.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetBlocksRequest, getBlockPb, pid, network.Unicast, network_model.HighPriorityCommand)
 
 	command.Send(downloadManager.commandSendCh)
 }
 
-func (downloadManager *DownloadManager) GetBlocksRequestHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) GetBlocksRequestHandler(command *network_model.DappRcvdCmdContext) {
 
 	param := &networkpb.GetBlocks{}
 	if err := proto.Unmarshal(command.GetData(), param); err != nil {
@@ -790,13 +781,13 @@ func (downloadManager *DownloadManager) SendGetBlocksResponse(startBlockHashes [
 
 	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: startBlockHashes}
 
-	command := network.NewDappSendCmdContext(GetBlocksResponse, result, destination, network.Unicast, network.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetBlocksResponse, result, destination, network.Unicast, network_model.HighPriorityCommand)
 
 	command.Send(downloadManager.commandSendCh)
 
 }
 
-func (downloadManager *DownloadManager) GetBlocksResponseHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) GetBlocksResponseHandler(command *network_model.DappRcvdCmdContext) {
 	param := &networkpb.ReturnBlocks{}
 	if err := proto.Unmarshal(command.GetData(), param); err != nil {
 		logger.WithFields(logger.Fields{
@@ -812,12 +803,12 @@ func (downloadManager *DownloadManager) SendGetBlockchainInfoRequest() {
 	request := &networkpb.GetBlockchainInfo{Version: network.ProtocalName}
 
 	var destination peer.ID
-	command := network.NewDappSendCmdContext(BlockchainInfoRequest, request, destination, network.Broadcast, network.NormalPriorityCommand)
+	command := network_model.NewDappSendCmdContext(BlockchainInfoRequest, request, destination, network.Broadcast, network_model.NormalPriorityCommand)
 
 	command.Send(downloadManager.commandSendCh)
 }
 
-func (downloadManager *DownloadManager) GetBlockchainInfoRequestHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) GetBlockchainInfoRequestHandler(command *network_model.DappRcvdCmdContext) {
 
 	downloadManager.SendGetBlockchainInfoResponse(command.GetSource())
 
@@ -841,13 +832,13 @@ func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destinatio
 		LibHeight:     downloadManager.bm.Getblockchain().GetLIBHeight(),
 	}
 
-	command := network.NewDappSendCmdContext(BlockchainInfoResponse, result, destination, network.Unicast, network.NormalPriorityCommand)
+	command := network_model.NewDappSendCmdContext(BlockchainInfoResponse, result, destination, network.Unicast, network_model.NormalPriorityCommand)
 
 	command.Send(downloadManager.commandSendCh)
 
 }
 
-func (downloadManager *DownloadManager) GetBlockchainInfoResponseHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) GetBlockchainInfoResponseHandler(command *network_model.DappRcvdCmdContext) {
 	blockchainInfo := &networkpb.ReturnBlockchainInfo{}
 	if err := proto.Unmarshal(command.GetData(), blockchainInfo); err != nil {
 		logger.WithFields(logger.Fields{
@@ -858,7 +849,7 @@ func (downloadManager *DownloadManager) GetBlockchainInfoResponseHandler(command
 
 	downloadManager.AddPeerBlockChainInfo(command.GetSource(), blockchainInfo.GetBlockHeight(), blockchainInfo.GetLibHeight())
 }
-func (downloadManager *DownloadManager) OnStreamStopHandler(command *network.DappRcvdCmdContext) {
+func (downloadManager *DownloadManager) OnStreamStopHandler(command *network_model.DappRcvdCmdContext) {
 
 	peerInfopb := &networkpb.PeerInfo{}
 	if err := proto.Unmarshal(command.GetData(), peerInfopb); err != nil {

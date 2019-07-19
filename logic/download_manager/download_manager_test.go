@@ -33,13 +33,11 @@ import (
 
 const (
 	genesisAddr                  = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	singlePortStart          int = 10300
 	multiPortEqualStart      int = 10301
 	multiPortSuccessStart    int = 10310
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
-	//multiPortRetryStart      int = 10230
-	multiPortReturnBlocks int = 10340
+	multiPortReturnBlocks    int = 10340
 )
 
 func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, []*network.Node) {

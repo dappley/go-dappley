@@ -10,5 +10,5 @@ type Storage interface {
 type Subscriber interface {
 	GetSubscribedTopics() []string
 	SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext)
-	GetCommandHandler(cmd string) network_model.CommandHandlerFunc
+	GetCommandHandler(commandName string) network_model.CommandHandlerFunc
 }
