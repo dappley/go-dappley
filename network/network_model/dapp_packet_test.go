@@ -1,4 +1,4 @@
-package network
+package network_model
 
 import (
 	"github.com/stretchr/testify/assert"

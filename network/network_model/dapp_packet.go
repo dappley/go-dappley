@@ -1,4 +1,4 @@
-package network
+package network_model
 
 import (
 	"errors"
@@ -40,8 +40,8 @@ type DappPacket struct {
 }
 
 type DappPacketContext struct {
-	packet *DappPacket
-	source peer.ID
+	Packet *DappPacket
+	Source peer.ID
 }
 
 func ConstructDappPacketFromData(data []byte, isBroadcast bool) *DappPacket {

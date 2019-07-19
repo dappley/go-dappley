@@ -21,6 +21,7 @@ package network
 import (
 	"context"
 	"github.com/asaskevich/EventBus"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/libp2p/go-libp2p-core/network"
 	"math/rand"
 	"sync"
@@ -72,16 +73,16 @@ type PeerManager struct {
 	syncPeerContext *SyncPeerContext
 
 	streamStopNotificationCh chan *Stream
-	streamMsgReceiveCh       chan *DappPacketContext
-	commandSendCh            chan *DappSendCmdContext
-	commandReceiveCh         chan *DappRcvdCmdContext
+	streamMsgReceiveCh       chan *network_model.DappPacketContext
+	commandSendCh            chan *network_model.DappSendCmdContext
+	commandReceiveCh         chan *network_model.DappRcvdCmdContext
 	eventNotifier            EventBus.Bus
 	db                       Storage
 
 	mutex sync.RWMutex
 }
 
-func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db Storage) *PeerManager {
+func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, commandSendCh chan *network_model.DappSendCmdContext, db Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
@@ -105,7 +106,7 @@ func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *DappPacketC
 		maxConnectionInCount:     maxConnectionInCount,
 		streamMsgReceiveCh:       streamMessageReceiveCh,
 		commandSendCh:            commandSendCh,
-		commandReceiveCh:         make(chan *DappRcvdCmdContext, 100),
+		commandReceiveCh:         make(chan *network_model.DappRcvdCmdContext, 100),
 		streamStopNotificationCh: make(chan *Stream, 10),
 		eventNotifier:            EventBus.New(),
 		db:                       db,
@@ -218,7 +219,7 @@ func (pm *PeerManager) getUnConnectedSeeds() []*PeerInfo {
 	return unConnectedSeeds
 }
 
-func (pm *PeerManager) Broadcast(packet *DappPacket, priority DappCmdPriority) {
+func (pm *PeerManager) Broadcast(packet *network_model.DappPacket, priority network_model.DappCmdPriority) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 	for _, s := range pm.streams {
@@ -226,7 +227,7 @@ func (pm *PeerManager) Broadcast(packet *DappPacket, priority DappCmdPriority) {
 	}
 }
 
-func (pm *PeerManager) Unicast(packet *DappPacket, pid peer.ID, priority DappCmdPriority) {
+func (pm *PeerManager) Unicast(packet *network_model.DappPacket, pid peer.ID, priority network_model.DappCmdPriority) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
@@ -748,8 +749,8 @@ func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
 }
 
 func (pm *PeerManager) Subscirbe(broker *CommandBroker) {
-	broker.Subscribe(GetPeerListRequest, pm.commandReceiveCh)
-	broker.Subscribe(GetPeerListResponse, pm.commandReceiveCh)
+	//broker.Subscribe(GetPeerListRequest, pm.commandReceiveCh)
+	//broker.Subscribe(GetPeerListResponse, pm.commandReceiveCh)
 }
 
 func (pm *PeerManager) SendSyncPeersRequest() {
@@ -758,7 +759,7 @@ func (pm *PeerManager) SendSyncPeersRequest() {
 	}
 
 	var destination peer.ID
-	command := NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, Broadcast, HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, Broadcast, network_model.HighPriorityCommand)
 
 	command.Send(pm.commandSendCh)
 }
@@ -773,12 +774,12 @@ func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.I
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
 
-	command := NewDappSendCmdContext(GetPeerListResponse, peerList, destination, Unicast, HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetPeerListResponse, peerList, destination, Unicast, network_model.HighPriorityCommand)
 
 	command.Send(pm.commandSendCh)
 }
 
-func (pm *PeerManager) SyncPeersRequestHandler(command *DappRcvdCmdContext) {
+func (pm *PeerManager) SyncPeersRequestHandler(command *network_model.DappRcvdCmdContext) {
 
 	getPeerlistRequest := &networkpb.GetPeerList{}
 
@@ -787,10 +788,10 @@ func (pm *PeerManager) SyncPeersRequestHandler(command *DappRcvdCmdContext) {
 		logger.WithError(err).Warn("Node: parse GetPeerListRequest failed.")
 	}
 
-	pm.SendPeerListMessage(int(getPeerlistRequest.GetMaxNumber()), command.source)
+	pm.SendPeerListMessage(int(getPeerlistRequest.GetMaxNumber()), command.GetSource())
 }
 
-func (pm *PeerManager) PeerListMessageHandler(command *DappRcvdCmdContext) {
+func (pm *PeerManager) PeerListMessageHandler(command *network_model.DappRcvdCmdContext) {
 	peerlistPb := &networkpb.ReturnPeerList{}
 
 	if err := proto.Unmarshal(command.GetData(), peerlistPb); err != nil {
@@ -806,5 +807,5 @@ func (pm *PeerManager) PeerListMessageHandler(command *DappRcvdCmdContext) {
 		peers = append(peers, peerInfo)
 	}
 
-	pm.ReceivePeers(command.source, peers)
+	pm.ReceivePeers(command.GetSource(), peers)
 }

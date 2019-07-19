@@ -1,6 +1,8 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/network/mocks"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -43,11 +45,13 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			md := NewCommandBroker(reservedTopics)
-			var dispatcher chan *DappRcvdCmdContext
-			err := md.Subscribe(tt.cmd1, dispatcher)
-
+			subscriber := new(mocks.Subscriber)
+			subscriber.On("GetSubscribedTopics").Return([]string{tt.cmd1}).Once()
+			err := md.Subscribe(subscriber)
 			assert.Equal(t, tt.expectedErr1, err)
-			err = md.Subscribe(tt.cmd2, dispatcher)
+
+			subscriber.On("GetSubscribedTopics").Return([]string{tt.cmd2}).Once()
+			err = md.Subscribe(subscriber)
 			assert.Equal(t, tt.expectedErr2, err)
 			assert.Equal(t, tt.expectedNumOfSubscribers, len(md.subscribers))
 		})
@@ -56,62 +60,70 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 
 func TestCommandBroker_Dispatch(t *testing.T) {
 	tests := []struct {
-		name             string
-		cmd              string
-		dispatcherChSize int
-		expectedErr      error
+		name          string
+		subScribedCmd string
+		dispatchedCmd string
+		expectedCb    bool
 	}{
 		{
-			name:             "normal case",
-			cmd:              "cmd",
-			dispatcherChSize: 10,
-			expectedErr:      nil,
+			name:          "normal case",
+			subScribedCmd: "cmd",
+			dispatchedCmd: "cmd",
+			expectedCb:    true,
 		},
 		{
-			name:             "Dispatch to uninitialized channel",
-			cmd:              "cmd",
-			dispatcherChSize: 0,
-			expectedErr:      ErrDispatcherFull,
+			name:          "unsubscribed cmd",
+			subScribedCmd: "cmd",
+			dispatchedCmd: "cmd1",
+			expectedCb:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			md := NewCommandBroker(reservedTopics)
-			dispatcherCh := make(chan *DappRcvdCmdContext, tt.dispatcherChSize)
+			var handler network_model.CommandHandlerFunc
+			handler = func(command *network_model.DappRcvdCmdContext) {}
 
-			dappCmd := NewDapCmd("testCmd", []byte("test"), false)
-			var source peer.ID
-			rcvdCmd := NewDappRcvdCmdContext(dappCmd, source)
-
-			md.Subscribe(rcvdCmd.GetCommandName(), dispatcherCh)
-			err := md.Dispatch(rcvdCmd)
-			assert.Equal(t, tt.expectedErr, err)
-			if err == nil {
-				rcvedData := <-dispatcherCh
-				assert.Equal(t, rcvdCmd, rcvedData)
+			subscriber := new(mocks.Subscriber)
+			subscriber.On("GetSubscribedTopics").Return([]string{tt.subScribedCmd}).Once()
+			if tt.expectedCb {
+				subscriber.On("GetCommandHandler", tt.subScribedCmd).Return(handler).Once()
 			}
 
+			dappCmd := network_model.NewDapCmd(tt.dispatchedCmd, []byte("test"), false)
+			var source peer.ID
+			rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
+
+			md.Subscribe(subscriber)
+			md.Dispatch(rcvdCmd)
 		})
 	}
 }
 
 func TestCommandBroker_DispatchMultiple(t *testing.T) {
 	md := NewCommandBroker(reservedTopics)
-	dispatcherCh1 := make(chan *DappRcvdCmdContext, 10)
-	dispatcherCh2 := make(chan *DappRcvdCmdContext, 10)
+	var handler network_model.CommandHandlerFunc
+	handler = func(command *network_model.DappRcvdCmdContext) {}
 
-	dappCmd := NewDapCmd(reservedTopics[0], []byte("test"), false)
+	//Both subscribers subscribe to reserved topic
+	subscriber1 := new(mocks.Subscriber)
+	subscriber2 := new(mocks.Subscriber)
+	topic := reservedTopics[0]
+
+	dappCmd := network_model.NewDapCmd(topic, []byte("test"), false)
 	var source peer.ID
-	rcvdCmd := NewDappRcvdCmdContext(dappCmd, source)
+	rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
 
-	md.Subscribe(rcvdCmd.GetCommandName(), dispatcherCh1)
-	md.Subscribe(rcvdCmd.GetCommandName(), dispatcherCh2)
-	err := md.Dispatch(rcvdCmd)
-	assert.Nil(t, err)
+	//both subscribers' callback function should be invoked
+	subscriber1.On("GetSubscribedTopics").Return([]string{topic}).Once()
+	subscriber2.On("GetSubscribedTopics").Return([]string{topic}).Once()
 
-	rcvedData := <-dispatcherCh1
-	assert.Equal(t, rcvdCmd, rcvedData)
-	rcvedData = <-dispatcherCh2
-	assert.Equal(t, rcvdCmd, rcvedData)
+	subscriber1.On("GetCommandHandler", topic).Return(handler).Once()
+	subscriber2.On("GetCommandHandler", topic).Return(handler).Once()
+
+	md.Subscribe(subscriber1)
+	md.Subscribe(subscriber2)
+
+	md.Dispatch(rcvdCmd)
 
 }

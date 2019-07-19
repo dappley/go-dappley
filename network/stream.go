@@ -20,6 +20,7 @@ package network
 
 import (
 	"bufio"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
@@ -37,8 +38,8 @@ type Stream struct {
 	remoteAddr            multiaddr.Multiaddr
 	stream                network.Stream
 	rawByteRead           []byte
-	highPriorityWriteCh   chan *DappPacket
-	normalPriorityWriteCh chan *DappPacket
+	highPriorityWriteCh   chan *network_model.DappPacket
+	normalPriorityWriteCh chan *network_model.DappPacket
 	msgNotifyCh           chan bool
 	quitRdCh              chan bool
 	quitWrCh              chan bool
@@ -50,15 +51,15 @@ func NewStream(s network.Stream) *Stream {
 		s.Conn().RemoteMultiaddr(),
 		s,
 		[]byte{},
-		make(chan *DappPacket, highPriorityChLength),
-		make(chan *DappPacket, normalPriorityChLength),
+		make(chan *network_model.DappPacket, highPriorityChLength),
+		make(chan *network_model.DappPacket, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),
 		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *DappPacketContext) {
+func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	logger.Warn("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, msgRcvCh)
@@ -75,7 +76,7 @@ func (s *Stream) StopStream(err error) {
 	s.stream.Close()
 }
 
-func (s *Stream) Send(packet *DappPacket, priority DappCmdPriority) {
+func (s *Stream) Send(packet *network_model.DappPacket, priority network_model.DappCmdPriority) {
 	defer func() {
 		if p := recover(); p != nil {
 			logger.WithFields(logger.Fields{
@@ -87,7 +88,7 @@ func (s *Stream) Send(packet *DappPacket, priority DappCmdPriority) {
 	}()
 
 	switch priority {
-	case HighPriorityCommand:
+	case network_model.HighPriorityCommand:
 		select {
 		case s.highPriorityWriteCh <- packet:
 		default:
@@ -96,7 +97,7 @@ func (s *Stream) Send(packet *DappPacket, priority DappCmdPriority) {
 			}).Warn("Stream: High priority message channel full!")
 			return
 		}
-	case NormalPriorityCommand:
+	case network_model.NormalPriorityCommand:
 		select {
 		case s.normalPriorityWriteCh <- packet:
 		default:
@@ -122,12 +123,12 @@ func (s *Stream) Send(packet *DappPacket, priority DappCmdPriority) {
 
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *DappPacketContext) {
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	go s.readLoop(rw, quitCh, msgRcvCh)
 	go s.writeLoop(rw)
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *DappPacketContext) {
+func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPacketContext) {
 	buffer := make([]byte, 1024)
 	var err error
 
@@ -142,10 +143,10 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *DappPacketContext) {
 	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
 
 	for {
-		packet, err := ExtractDappPacketFromRawBytes(s.rawByteRead)
+		packet, err := network_model.ExtractDappPacketFromRawBytes(s.rawByteRead)
 
 		if err != nil {
-			if err == ErrLengthTooShort {
+			if err == network_model.ErrLengthTooShort {
 				return
 			} else {
 				s.StopStream(err)
@@ -153,7 +154,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *DappPacketContext) {
 		}
 
 		select {
-		case msgRcvCh <- &DappPacketContext{packet, s.peerID}:
+		case msgRcvCh <- &network_model.DappPacketContext{packet, s.peerID}:
 		default:
 			logger.WithFields(logger.Fields{
 				"dispatchCh_len": len(msgRcvCh),
@@ -165,7 +166,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *DappPacketContext) {
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *DappPacketContext) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	for {
 		select {
 		case <-s.quitRdCh:

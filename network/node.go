@@ -20,6 +20,7 @@ package network
 
 import (
 	"encoding/base64"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -46,8 +47,8 @@ var (
 type Node struct {
 	network       *Network
 	exitCh        chan bool
-	dispatcher    chan *DappPacketContext
-	commandSendCh chan *DappSendCmdContext
+	dispatcher    chan *network_model.DappPacketContext
+	commandSendCh chan *network_model.DappSendCmdContext
 	commandBroker *CommandBroker
 }
 
@@ -61,8 +62,8 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 
 	node := &Node{
 		exitCh:        make(chan bool, 1),
-		dispatcher:    make(chan *DappPacketContext, dispatchChLen),
-		commandSendCh: make(chan *DappSendCmdContext, requestChLen),
+		dispatcher:    make(chan *network_model.DappPacketContext, dispatchChLen),
+		commandSendCh: make(chan *network_model.DappSendCmdContext, requestChLen),
 		commandBroker: NewCommandBroker(reservedTopics),
 	}
 
@@ -77,10 +78,10 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 	return node
 }
 
-func (n *Node) GetInfo() *PeerInfo                         { return n.network.host.info }
-func (n *Node) GetNetwork() *Network                       { return n.network }
-func (n *Node) GetCommandSendCh() chan *DappSendCmdContext { return n.commandSendCh }
-func (n *Node) GetCommandBroker() *CommandBroker           { return n.commandBroker }
+func (n *Node) GetInfo() *PeerInfo                                       { return n.network.host.info }
+func (n *Node) GetNetwork() *Network                                     { return n.network }
+func (n *Node) GetCommandSendCh() chan *network_model.DappSendCmdContext { return n.commandSendCh }
+func (n *Node) GetCommandBroker() *CommandBroker                         { return n.commandBroker }
 
 func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) error {
 
@@ -96,6 +97,16 @@ func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) err
 	return nil
 }
 
+func (n *Node) Register(subscriber Subscriber) {
+	n.commandBroker.Subscribe(subscriber)
+}
+
+func (n *Node) RegisterMultiple(subscribers []Subscriber) {
+	for _, subscriber := range subscribers {
+		n.Register(subscriber)
+	}
+}
+
 func (n *Node) Stop() {
 	n.exitCh <- true
 	n.network.Stop()
@@ -109,16 +120,16 @@ func (n *Node) StartRequestLoop() {
 			case <-n.exitCh:
 				return
 			case cmdCtx := <-n.commandSendCh:
-				if cmdCtx.command == nil {
+				if cmdCtx.GetCommand() == nil {
 					continue
 				}
 
-				rawBytes := cmdCtx.command.GetRawBytes()
+				rawBytes := cmdCtx.GetCommand().GetRawBytes()
 
 				if cmdCtx.IsBroadcast() {
-					n.GetNetwork().Broadcast(rawBytes, cmdCtx.priority)
+					n.GetNetwork().Broadcast(rawBytes, cmdCtx.GetPriority())
 				} else {
-					n.GetNetwork().Unicast(rawBytes, cmdCtx.destination, cmdCtx.priority)
+					n.GetNetwork().Unicast(rawBytes, cmdCtx.GetDestination(), cmdCtx.GetPriority())
 				}
 
 			}
@@ -131,12 +142,10 @@ func (n *Node) StartListenLoop() {
 		for {
 			if streamMsg, ok := <-n.dispatcher; ok {
 
-				cmdMsg := ParseDappMsgFromDappPacket(streamMsg.packet)
-				dappRcvdCmd := NewDappRcvdCmdContext(cmdMsg, streamMsg.source)
-				err := n.commandBroker.Dispatch(dappRcvdCmd)
-				if err != nil {
-					logger.WithError(err).Warn("Node: Dispatch received message failed")
-				}
+				cmdMsg := network_model.ParseDappMsgFromDappPacket(streamMsg.Packet)
+				dappRcvdCmd := network_model.NewDappRcvdCmdContext(cmdMsg, streamMsg.Source)
+				n.commandBroker.Dispatch(dappRcvdCmd)
+
 			}
 		}
 	}()
@@ -186,8 +195,8 @@ func (n *Node) OnStreamStop(stream *Stream) {
 
 	logger.WithError(err).Warn("Node: Marshal peerInfo failed")
 
-	dappCmd := NewDapCmd(TopicOnStreamStop, bytes, false)
-	dappCmdCtx := NewDappRcvdCmdContext(dappCmd, n.network.host.ID())
+	dappCmd := network_model.NewDapCmd(TopicOnStreamStop, bytes, false)
+	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.host.ID())
 
 	n.commandBroker.Dispatch(dappCmdCtx)
 }

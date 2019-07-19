@@ -1,6 +1,7 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -10,15 +11,15 @@ import (
 type Network struct {
 	host                  *Host
 	peerManager           *PeerManager
-	streamMsgRcvCh        chan *DappPacketContext
-	streamMsgDispatcherCh chan *DappPacketContext
+	streamMsgRcvCh        chan *network_model.DappPacketContext
+	streamMsgDispatcherCh chan *network_model.DappPacketContext
 	recentlyRcvdDapMsgs   *lru.Cache
 }
 
-func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *DappPacketContext, commandSendCh chan *DappSendCmdContext, db Storage) *Network {
+func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, commandSendCh chan *network_model.DappSendCmdContext, db Storage) *Network {
 
 	var err error
-	streamMsgRcvCh := make(chan *DappPacketContext, dispatchChLen)
+	streamMsgRcvCh := make(chan *network_model.DappPacketContext, dispatchChLen)
 
 	net := &Network{
 		peerManager:           NewPeerManager(config, streamMsgRcvCh, commandSendCh, db),
@@ -51,10 +52,10 @@ func (net *Network) StartReceivedMsgHandler() {
 			select {
 			case msg := <-net.streamMsgRcvCh:
 
-				if net.IsNetworkRadiation(msg.packet) {
+				if net.IsNetworkRadiation(msg.Packet) {
 					continue
 				}
-				net.RecordMessage(msg.packet)
+				net.RecordMessage(msg.Packet)
 				select {
 				case net.streamMsgDispatcherCh <- msg:
 				default:
@@ -68,11 +69,11 @@ func (net *Network) StartReceivedMsgHandler() {
 	}()
 }
 
-func (net *Network) IsNetworkRadiation(msg *DappPacket) bool {
+func (net *Network) IsNetworkRadiation(msg *network_model.DappPacket) bool {
 	return msg.IsBroadcast() && net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
 }
 
-func (net *Network) RecordMessage(msg *DappPacket) {
+func (net *Network) RecordMessage(msg *network_model.DappPacket) {
 	net.recentlyRcvdDapMsgs.Add(string(msg.GetRawBytes()), true)
 }
 
@@ -89,15 +90,15 @@ func (net *Network) OnStreamStop(cb onStreamStopFunc) {
 	net.peerManager.SubscribeOnStreamStop(cb)
 }
 
-func (net *Network) Unicast(data []byte, pid peer.ID, priority DappCmdPriority) {
-	packet := ConstructDappPacketFromData(data, false)
+func (net *Network) Unicast(data []byte, pid peer.ID, priority network_model.DappCmdPriority) {
+	packet := network_model.ConstructDappPacketFromData(data, false)
 
 	net.RecordMessage(packet)
 	net.peerManager.Unicast(packet, pid, priority)
 }
 
-func (net *Network) Broadcast(data []byte, priority DappCmdPriority) {
-	packet := ConstructDappPacketFromData(data, true)
+func (net *Network) Broadcast(data []byte, priority network_model.DappCmdPriority) {
+	packet := network_model.ConstructDappPacketFromData(data, true)
 
 	net.RecordMessage(packet)
 	net.peerManager.Broadcast(packet, priority)

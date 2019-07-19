@@ -1,4 +1,4 @@
-package network
+package network_model
 
 import (
 	"github.com/golang/protobuf/proto"
@@ -45,6 +45,18 @@ func NewDappSendCmdContextFromDappCmd(cmd *DappCmd, destination peer.ID, priorit
 
 func (dcc *DappSendCmdContext) GetCommandName() string {
 	return dcc.command.name
+}
+
+func (dcc *DappSendCmdContext) GetCommand() *DappCmd {
+	return dcc.command
+}
+
+func (dcc *DappSendCmdContext) GetPriority() DappCmdPriority {
+	return dcc.priority
+}
+
+func (dcc *DappSendCmdContext) GetDestination() peer.ID {
+	return dcc.destination
 }
 
 func (dcc *DappSendCmdContext) IsBroadcast() bool {
