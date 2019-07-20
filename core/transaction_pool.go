@@ -51,29 +51,26 @@ var (
 )
 
 type TransactionPool struct {
-	txs              map[string]*TransactionNode
-	pendingTxs       []*Transaction
-	tipOrder         []string
-	sizeLimit        uint32
-	currSize         uint32
-	EventBus         EventBus.Bus
-	mutex            sync.RWMutex
-	commandSendCh    chan *network_model.DappSendCmdContext
-	commandReceiveCh chan *network_model.DappRcvdCmdContext
+	txs           map[string]*TransactionNode
+	pendingTxs    []*Transaction
+	tipOrder      []string
+	sizeLimit     uint32
+	currSize      uint32
+	EventBus      EventBus.Bus
+	mutex         sync.RWMutex
+	commandSendCh chan *network_model.DappSendCmdContext
 }
 
 func NewTransactionPool(limit uint32) *TransactionPool {
 	txPool := &TransactionPool{
-		txs:              make(map[string]*TransactionNode),
-		pendingTxs:       make([]*Transaction, 0),
-		tipOrder:         make([]string, 0),
-		sizeLimit:        limit,
-		currSize:         0,
-		EventBus:         EventBus.New(),
-		mutex:            sync.RWMutex{},
-		commandReceiveCh: make(chan *network_model.DappRcvdCmdContext, 100),
+		txs:        make(map[string]*TransactionNode),
+		pendingTxs: make([]*Transaction, 0),
+		tipOrder:   make([]string, 0),
+		sizeLimit:  limit,
+		currSize:   0,
+		EventBus:   EventBus.New(),
+		mutex:      sync.RWMutex{},
 	}
-	txPool.StartCommandListener()
 	return txPool
 }
 
@@ -81,36 +78,19 @@ func (txPool *TransactionPool) SetCommandSendCh(commandSendCh chan *network_mode
 	txPool.commandSendCh = commandSendCh
 }
 
-func (txPool *TransactionPool) SubscribeCommandBroker(broker *network.CommandBroker) {
-	if txPool.commandReceiveCh == nil {
-		logger.Warn("TransactionPool: Unable to subscribe to a command. CommandReceiveCh is empty")
-		return
-	}
-
-	for _, topic := range txPoolSubscribedTopics {
-		err := broker.Subscribe(topic, txPool.commandReceiveCh)
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"command": topic,
-			}).Warn("TransactionPool: Unable to subscribe to a command")
-		}
-	}
+func (txPool *TransactionPool) GetSubscribedTopics() []string {
+	return txPoolSubscribedTopics
 }
 
-func (txPool *TransactionPool) StartCommandListener() {
-	go func() {
-		for {
-			select {
-			case command := <-txPool.commandReceiveCh:
-				switch command.GetCommandName() {
-				case BroadcastTx:
-					txPool.BroadcastTxHandler(command)
-				case BroadcastBatchTxs:
-					txPool.BroadcastBatchTxsHandler(command)
-				}
-			}
-		}
-	}()
+func (txPool *TransactionPool) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+
+	switch commandName {
+	case BroadcastTx:
+		return txPool.BroadcastTxHandler
+	case BroadcastBatchTxs:
+		return txPool.BroadcastBatchTxsHandler
+	}
+	return nil
 }
 
 func (txPool *TransactionPool) DeepCopy() *TransactionPool {
@@ -570,16 +550,15 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	}
 	txPool.tipOrder = pb.(*corepb.TransactionPool).TipOrder
 	txPool.currSize = pb.(*corepb.TransactionPool).CurrSize
-	txPool.commandReceiveCh = make(chan *network.DappRcvdCmdContext, 100)
 }
 
 func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
 	var broadcastPid peer.ID
-	command := network.NewDappSendCmdContext(BroadcastTx, tx.ToProto(), broadcastPid, network.Broadcast, network.NormalPriorityCommand)
+	command := network_model.NewDappSendCmdContext(BroadcastTx, tx.ToProto(), broadcastPid, network.Broadcast, network_model.NormalPriorityCommand)
 	command.Send(txPool.commandSendCh)
 }
 
-func (txPool *TransactionPool) BroadcastTxHandler(command *network.DappRcvdCmdContext) {
+func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
 	//TODO: Check if the blockchain state is ready
 	txpb := &corepb.Transaction{}
 
@@ -600,10 +579,10 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network.DappRcvdCmdCo
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := network.NewDappSendCmdContextFromDappCmd(
+		commandSendCtx := network_model.NewDappSendCmdContextFromDappCmd(
 			command.GetCommand(),
 			broadcastPid,
-			network.NormalPriorityCommand)
+			network_model.NormalPriorityCommand)
 		commandSendCtx.Send(txPool.commandSendCh)
 	}
 }
@@ -617,11 +596,11 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 	transactions := NewTransactions(txs)
 
 	var broadcastPid peer.ID
-	command := network.NewDappSendCmdContext(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network.Broadcast, network.NormalPriorityCommand)
+	command := network_model.NewDappSendCmdContext(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network.Broadcast, network_model.NormalPriorityCommand)
 	command.Send(txPool.commandSendCh)
 }
 
-func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network.DappRcvdCmdContext) {
+func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
 	//TODO: Check if the blockchain state is ready
 	txspb := &corepb.Transactions{}
 
@@ -646,10 +625,10 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network.DappRcv
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := network.NewDappSendCmdContextFromDappCmd(
+		commandSendCtx := network_model.NewDappSendCmdContextFromDappCmd(
 			command.GetCommand(),
 			broadcastPid,
-			network.NormalPriorityCommand)
+			network_model.NormalPriorityCommand)
 		commandSendCtx.Send(txPool.commandSendCh)
 	}
 

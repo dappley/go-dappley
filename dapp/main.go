@@ -97,19 +97,23 @@ func main() {
 	node, err := initNode(conf, db)
 	defer node.Stop()
 
-	bc.GetTxPool().SetCommandSendCh(node.GetCommandSendCh())
-	bc.GetTxPool().SubscribeCommandBroker(node.GetCommandBroker())
-
 	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0))
-	node.RegisterSubscriber(bm)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
+
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
-	node.RegisterSubscriber(downloadManager)
+
+	node.RegisterMultipleSubscribers(
+		[]network.Subscriber{
+			bm,
+			downloadManager,
+			bm.Getblockchain().GetTxPool(),
+		},
+	)
 
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
 	conss.Setup(node, minerAddr, bm)
