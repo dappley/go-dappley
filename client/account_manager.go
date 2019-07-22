@@ -36,7 +36,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const accountConfigFilePath = "../client/Account.conf"
+const accountConfigFilePath = "../client/account.conf"
 
 var (
 	ErrPasswordIncorrect = errors.New("password is incorrect")
