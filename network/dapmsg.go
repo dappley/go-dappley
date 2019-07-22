@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/dappley/go-dappley/network/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 )
 
 type DapMsg struct {

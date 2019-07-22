@@ -47,7 +47,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 	nodes := make([]*Node, size)
 	for i := 0; i < size; i++ {
 		keyPair := client.NewKeyPair()
-		address := keyPair.GenerateAddress(false)
+		address := keyPair.GenerateAddress()
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
 		bc := core.CreateBlockchain(client.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)

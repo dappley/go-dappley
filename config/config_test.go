@@ -23,7 +23,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

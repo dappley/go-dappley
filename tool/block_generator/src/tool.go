@@ -196,7 +196,7 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr client.Addre
 	minerKeyPair := client.GetKeyPairByString(minerPrivKey)
 	pkh, _ := client.NewUserPubKeyHash(minerKeyPair.PublicKey)
 
-	tx := newTransaction(minerKeyPair.GenerateAddress(false), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
+	tx := newTransaction(minerKeyPair.GenerateAddress(), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[fundAddr.String()] = initFund
 	return tx

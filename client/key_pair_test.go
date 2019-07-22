@@ -36,10 +36,10 @@ func TestGenerateAddress(t *testing.T) {
 
 	addressExpectForKey1 := Address{Address: "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"}
 	addressExpectForKey2 := Address{Address: "dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"}
-	address1 := key1.GenerateAddress(false)
-	address2 := key2.GenerateAddress(false)
+	address1 := key1.GenerateAddress()
+	address2 := key2.GenerateAddress()
 
-	address3 := key1.GenerateAddress(false)
+	address3 := key1.GenerateAddress()
 
 	assert.NotNil(t, address1)
 	assert.NotNil(t, address2)

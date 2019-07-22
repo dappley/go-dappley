@@ -96,7 +96,7 @@ func TestLoopCreateBlockchain(t *testing.T) {
 		err = nil
 		account := client.NewAccount()
 		account.Key = client.NewKeyPair()
-		addr := account.Key.GenerateAddress(false)
+		addr := account.Key.GenerateAddress()
 		if !addr.IsValid() {
 			fmt.Println(i, addr)
 			err = ErrInvalidAddress
