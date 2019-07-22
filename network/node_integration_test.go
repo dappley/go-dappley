@@ -21,6 +21,7 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/util"
 	"testing"
 
@@ -45,7 +46,7 @@ const (
 	test_port14
 )
 
-func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
+func initNode(address string, port int, seedPeer *network_model.PeerInfo, db storage.Storage) (*Node, error) {
 
 	n := NewNode(db)
 
@@ -57,7 +58,7 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 	return n, err
 }
 
-func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
+func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *network_model.PeerInfo, db storage.Storage) (*Node, error) {
 
 	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
 	n := NewNodeWithConfig(db, config)

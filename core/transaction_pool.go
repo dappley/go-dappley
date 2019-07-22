@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
@@ -554,7 +553,7 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 
 func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
 	var broadcastPid peer.ID
-	command := network_model.NewDappSendCmdContext(BroadcastTx, tx.ToProto(), broadcastPid, network.Broadcast, network_model.NormalPriorityCommand)
+	command := network_model.NewDappSendCmdContext(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
 	command.Send(txPool.commandSendCh)
 }
 
@@ -596,7 +595,7 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 	transactions := NewTransactions(txs)
 
 	var broadcastPid peer.ID
-	command := network_model.NewDappSendCmdContext(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network.Broadcast, network_model.NormalPriorityCommand)
+	command := network_model.NewDappSendCmdContext(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
 	command.Send(txPool.commandSendCh)
 }
 

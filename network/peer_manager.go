@@ -760,7 +760,7 @@ func (pm *PeerManager) SendSyncPeersRequest() {
 	}
 
 	var destination peer.ID
-	command := network_model.NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, Broadcast, network_model.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, network_model.Broadcast, network_model.HighPriorityCommand)
 
 	command.Send(pm.commandSendCh)
 }
@@ -775,7 +775,7 @@ func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.I
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
 
-	command := network_model.NewDappSendCmdContext(GetPeerListResponse, peerList, destination, Unicast, network_model.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(GetPeerListResponse, peerList, destination, network_model.Unicast, network_model.HighPriorityCommand)
 
 	command.Send(pm.commandSendCh)
 }

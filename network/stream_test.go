@@ -36,8 +36,8 @@ func TestStream_Send(t *testing.T) {
 		make(chan bool, 1),
 	}
 
-	data1 := network_model.ConstructDappPacketFromData([]byte("data1"), Unicast)
-	data2 := network_model.ConstructDappPacketFromData([]byte("data2"), Unicast)
+	data1 := network_model.ConstructDappPacketFromData([]byte("data1"), network_model.Unicast)
+	data2 := network_model.ConstructDappPacketFromData([]byte("data2"), network_model.Unicast)
 	s.Send(data1, network_model.NormalPriorityCommand)
 	s.Send(data2, network_model.HighPriorityCommand)
 	assert.Equal(t, 2, len(s.msgNotifyCh))

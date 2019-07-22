@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -235,7 +234,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 func (bm *BlockChainManager) RequestBlock(hash Hash, pid peer.ID) {
 	request := &corepb.RequestBlock{Hash: hash}
 
-	command := network_model.NewDappSendCmdContext(RequestBlock, request, pid, network.Unicast, network_model.HighPriorityCommand)
+	command := network_model.NewDappSendCmdContext(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
 	command.Send(bm.commandSendCh)
 }
 
@@ -261,13 +260,13 @@ func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvd
 //SendBlockToPeer unicasts a block to the peer with peer id "pid"
 func (bm *BlockChainManager) SendBlockToPeer(block *Block, pid peer.ID) {
 
-	bm.SendBlock(block, pid, network.Unicast)
+	bm.SendBlock(block, pid, network_model.Unicast)
 }
 
 //BroadcastBlock broadcasts a block to all peers
 func (bm *BlockChainManager) BroadcastBlock(block *Block) {
 	var broadcastPid peer.ID
-	bm.SendBlock(block, broadcastPid, network.Broadcast)
+	bm.SendBlock(block, broadcastPid, network_model.Broadcast)
 }
 
 //SendBlock sends a SendBlock command to its peer with pid by finding the block from its database

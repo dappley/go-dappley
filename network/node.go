@@ -30,8 +30,6 @@ import (
 const (
 	TopicOnStreamStop = "TopicOnStreamStop"
 
-	Unicast       = false
-	Broadcast     = true
 	requestChLen  = 1024
 	dispatchChLen = 1024 * 4
 )

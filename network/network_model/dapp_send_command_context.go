@@ -15,6 +15,11 @@ type DappSendCmdContext struct {
 type DappCmdPriority int
 
 const (
+	Unicast   = false
+	Broadcast = true
+)
+
+const (
 	HighPriorityCommand = iota
 	NormalPriorityCommand
 )
