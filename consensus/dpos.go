@@ -125,7 +125,7 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 func (dpos *DPOS) Start() {
 	go func() {
 		logger.WithFields(logger.Fields{
-			"peer_id": dpos.node.GetPeerID(),
+			"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 		}).Info("DPoS starts...")
 		if len(dpos.stopCh) > 0 {
 			<-dpos.stopCh
@@ -138,7 +138,7 @@ func (dpos *DPOS) Start() {
 				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
 					deadlineInMs := now.UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 					logger.WithFields(logger.Fields{
-						"peer_id": dpos.node.GetPeerID(),
+						"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 					}).Info("DPoS: it is my turn to produce block.")
 					// Do not produce block if block pool is syncing
 					if dpos.bm.Getblockchain().GetState() != core.BlockchainReady {
@@ -164,7 +164,7 @@ func (dpos *DPOS) Start() {
 
 func (dpos *DPOS) Stop() {
 	logger.WithFields(logger.Fields{
-		"peer_id": dpos.node.GetPeerID(),
+		"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 	}).Info("DPoS stops...")
 	dpos.stopCh <- true
 }
@@ -265,7 +265,7 @@ func (dpos *DPOS) IsProducingBlock() bool {
 
 func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	logger.WithFields(logger.Fields{
-		"peer_id": dpos.node.GetPeerID(),
+		"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 		"height":  ctx.Block.GetHeight(),
 		"hash":    hex.EncodeToString(ctx.Block.GetHash()),
 	}).Info("DPoS: produced a new block.")

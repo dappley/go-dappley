@@ -19,7 +19,7 @@
 package core
 
 import (
-	"github.com/libp2p/go-libp2p-peer"
+	"github.com/dappley/go-dappley/network/network_model"
 )
 
 type Consensus interface {
@@ -45,7 +45,7 @@ type Consensus interface {
 }
 
 type NetService interface {
-	GetPeerID() peer.ID
+	GetHostPeerInfo() *network_model.PeerInfo
 }
 
 type ScEngineManager interface {
