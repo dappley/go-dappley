@@ -33,24 +33,29 @@ type DappCmd struct {
 	magicNum    uint32
 }
 
+//NewDappCmd creates a new instance of DappCmd
 func NewDappCmd(cmd string, data []byte, isBroadcast bool) *DappCmd {
 	id, _ := uuid.NewUUID()
 	return &DappCmd{cmd, data, isBroadcast, id.ID()}
 }
 
+//GetName returns the name of the DappCmd
 func (dc *DappCmd) GetName() string {
 	return dc.name
 }
 
+//GetData returns the content of the DappCmd
 func (dc *DappCmd) GetData() []byte {
 	return dc.data
 }
 
+//ParseDappMsgFromDappPacket creates a new DappCmd from a DappPacket
 func ParseDappMsgFromDappPacket(packet *DappPacket) *DappCmd {
-	return ParseDappMsgFromRawBytes(packet.GetData())
+	return DeserializeDappCmd(packet.GetData())
 }
 
-func ParseDappMsgFromRawBytes(bytes []byte) *DappCmd {
+//DeserializeDappCmd deserializes bytes into a DappCmd
+func DeserializeDappCmd(bytes []byte) *DappCmd {
 	dmpb := &networkpb.DappCmd{}
 
 	//unmarshal byte to proto
@@ -63,7 +68,8 @@ func ParseDappMsgFromRawBytes(bytes []byte) *DappCmd {
 	return dm
 }
 
-func (dc *DappCmd) GetRawBytes() []byte {
+//Serialize serializes a DappCmd into rawa bytes
+func (dc *DappCmd) Serialize() []byte {
 	data, err := proto.Marshal(dc.ToProto())
 	if err != nil {
 		logger.WithError(err).Error("DappCmd: Dapp Command can not be converted into raw bytes")
@@ -71,6 +77,7 @@ func (dc *DappCmd) GetRawBytes() []byte {
 	return data
 }
 
+//ToProto converts a DappCmd into proto message
 func (dc *DappCmd) ToProto() proto.Message {
 	return &networkpb.DappCmd{
 		Cmd:         dc.name,
@@ -80,6 +87,7 @@ func (dc *DappCmd) ToProto() proto.Message {
 	}
 }
 
+//FromProto extracts a DappCmd from a proto message
 func (dc *DappCmd) FromProto(pb proto.Message) {
 	dc.name = pb.(*networkpb.DappCmd).GetCmd()
 	dc.data = pb.(*networkpb.DappCmd).GetData()

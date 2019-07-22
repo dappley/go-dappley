@@ -126,7 +126,7 @@ func (n *Node) StartRequestLoop() {
 					continue
 				}
 
-				rawBytes := cmdCtx.GetCommand().GetRawBytes()
+				rawBytes := cmdCtx.GetCommand().Serialize()
 
 				if cmdCtx.IsBroadcast() {
 					n.GetNetwork().Broadcast(rawBytes, cmdCtx.GetPriority())
