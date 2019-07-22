@@ -44,6 +44,7 @@ type DappPacketContext struct {
 	Source peer.ID
 }
 
+//ConstructDappPacketFromData creates a header for the input content and returns a DappPacket
 func ConstructDappPacketFromData(data []byte, isBroadcast bool) *DappPacket {
 	packet := &DappPacket{}
 
@@ -52,7 +53,8 @@ func ConstructDappPacketFromData(data []byte, isBroadcast bool) *DappPacket {
 	return packet
 }
 
-func ExtractDappPacketFromRawBytes(bytes []byte) (*DappPacket, error) {
+//DeserializeIntoDappPacket deserializes raw bytes into DappPacket
+func DeserializeIntoDappPacket(bytes []byte) (*DappPacket, error) {
 	packet := &DappPacket{}
 
 	if len(bytes) <= headerLength {
@@ -81,36 +83,55 @@ func ExtractDappPacketFromRawBytes(bytes []byte) (*DappPacket, error) {
 	return packet, nil
 }
 
+//GetHeader returns the header bytes
 func (packet *DappPacket) GetHeader() []byte { return packet.header }
-func (packet *DappPacket) GetData() []byte   { return packet.data }
+
+//GetData returns the data bytes
+func (packet *DappPacket) GetData() []byte { return packet.data }
+
+//GetStartBytes returns the start bytes in the header
 func (packet *DappPacket) GetStartBytes() []byte {
 	return packet.header[startBytesIndex : startBytesIndex+len(startBytes)]
 }
+
+//GetBroadcastByte returns the broadcast byte in the header
 func (packet *DappPacket) GetBroadcastByte() byte {
 	return packet.header[isBroadcastByteIndex]
 }
+
+//GetLengthBytes returns the length byte in the header
 func (packet *DappPacket) GetLengthBytes() []byte {
 	return packet.header[lengthBytesIndex : lengthBytesIndex+lengthByteLength]
 }
-func (packet *DappPacket) GetCheckSum() byte       { return packet.header[checkSumByteIndex] }
+
+//GetCheckSum returns the checksum byte in the header
+func (packet *DappPacket) GetCheckSum() byte { return packet.header[checkSumByteIndex] }
+
+//GetHeaderCheckSum returns the header checksum byte in the header
 func (packet *DappPacket) GetHeaderCheckSum() byte { return packet.header[headerCheckSumByteIndex] }
+
+//GetPacketDataLength returns the length of the data section in bytes.
 func (packet *DappPacket) GetPacketDataLength() int {
 	l := *new(big.Int).SetBytes(packet.GetLengthBytes())
 	return int(l.Uint64())
 }
 
+//GetLength returns the total length of the packet in bytes
 func (packet *DappPacket) GetLength() int {
 	return len(packet.header) + len(packet.data)
 }
 
+//IsBroadcast returns if the packet is a broadcast
 func (packet *DappPacket) IsBroadcast() bool {
 	return packet.GetBroadcastByte() == broadcastByte
 }
 
+//GetRawBytes returns the whole packet in raw bytes
 func (packet *DappPacket) GetRawBytes() []byte {
 	return append(packet.header, packet.data...)
 }
 
+//verifyHeader verifies if the header bytes are correct
 func (packet *DappPacket) verifyHeader() error {
 	if len(packet.header) != headerLength {
 		return ErrLengthTooShort
@@ -128,6 +149,7 @@ func (packet *DappPacket) verifyHeader() error {
 	return nil
 }
 
+//verifyDataChecksum verifies if the data checksum is correct
 func (packet *DappPacket) verifyDataChecksum() error {
 	dataCheckSum := checkSum(packet.data)
 
@@ -138,6 +160,7 @@ func (packet *DappPacket) verifyDataChecksum() error {
 	return nil
 }
 
+//containStartingBytes checks if the DappPacket contains starting bytes
 func (packet *DappPacket) containStartingBytes() bool {
 	if len(packet.header) < startByteLength {
 		return false
@@ -146,6 +169,7 @@ func (packet *DappPacket) containStartingBytes() bool {
 	return reflect.DeepEqual(packet.GetStartBytes(), startBytes)
 }
 
+//constructHeader constructs the header bytes from the given data bytes
 func constructHeader(data []byte, isBroadcast bool) []byte {
 
 	length := len(data)
@@ -172,6 +196,7 @@ func constructHeader(data []byte, isBroadcast bool) []byte {
 	return header
 }
 
+//checkSum returns the checksum of a slice of bytes
 func checkSum(data []byte) byte {
 	sum := byte(0)
 	for _, d := range data {

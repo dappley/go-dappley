@@ -144,7 +144,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPac
 	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
 
 	for {
-		packet, err := network_model.ExtractDappPacketFromRawBytes(s.rawByteRead)
+		packet, err := network_model.DeserializeIntoDappPacket(s.rawByteRead)
 
 		if err != nil {
 			if err == network_model.ErrLengthTooShort {

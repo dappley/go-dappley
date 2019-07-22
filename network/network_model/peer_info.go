@@ -26,6 +26,7 @@ func NewPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
 	return NewPeerInfoFromMultiaddrs([]ma.Multiaddr{addr})
 }
 
+//NewPeerInfoFromMultiaddrs generates PeerInfo object from multiaddresses
 func NewPeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error) {
 	peerIds := make([]peer.ID, len(targetFullAddrs))
 	addrs := make([]ma.Multiaddr, len(targetFullAddrs))

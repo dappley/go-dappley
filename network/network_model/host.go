@@ -20,6 +20,7 @@ type Host struct {
 	Info *PeerInfo
 }
 
+//NewHost starts a p2p host with a listening port, network private key and a stream handler
 func NewHost(listenPort int, privKey crypto.PrivKey, handler network.StreamHandler) *Host {
 	h, addrs, err := createBasicHost(listenPort, privKey)
 	if err != nil {
@@ -42,6 +43,7 @@ func NewHost(listenPort int, privKey crypto.PrivKey, handler network.StreamHandl
 	}
 }
 
+//GetPeerInfo returns the peerInfo of the host
 func (host *Host) GetPeerInfo() *PeerInfo { return host.Info }
 
 //create basic host. Returns host object, host address and error

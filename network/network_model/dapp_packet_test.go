@@ -58,7 +58,7 @@ func TestDappPacket_ExtractDappPacketFromRawBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			packet, err := ExtractDappPacketFromRawBytes(tt.input)
+			packet, err := DeserializeIntoDappPacket(tt.input)
 			assert.Equal(t, tt.retErr, err)
 			assert.Equal(t, tt.retData, packet)
 		})

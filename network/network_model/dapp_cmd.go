@@ -51,11 +51,11 @@ func (dc *DappCmd) GetData() []byte {
 
 //ParseDappMsgFromDappPacket creates a new DappCmd from a DappPacket
 func ParseDappMsgFromDappPacket(packet *DappPacket) *DappCmd {
-	return DeserializeDappCmd(packet.GetData())
+	return DeserializeToDappCmd(packet.GetData())
 }
 
-//DeserializeDappCmd deserializes bytes into a DappCmd
-func DeserializeDappCmd(bytes []byte) *DappCmd {
+//DeserializeToDappCmd deserializes bytes into a DappCmd
+func DeserializeToDappCmd(bytes []byte) *DappCmd {
 	dmpb := &networkpb.DappCmd{}
 
 	//unmarshal byte to proto
