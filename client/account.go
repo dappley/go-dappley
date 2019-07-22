@@ -30,7 +30,7 @@ type Account struct {
 func NewAccount() *Account {
 	account := &Account{}
 	account.Key = NewKeyPair()
-	account.Addresses = append(account.Addresses, account.Key.GenerateAddress(false))
+	account.Addresses = append(account.Addresses, account.Key.GenerateAddress())
 	return account
 }
 

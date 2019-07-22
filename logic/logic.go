@@ -242,7 +242,7 @@ func GetMinerAddress() string {
 //add balance
 func SendFromMiner(address client.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	minerKeyPair := client.GetKeyPairByString(minerPrivateKey)
-	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc, node)
 }
 

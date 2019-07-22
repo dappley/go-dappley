@@ -37,7 +37,7 @@ func NewKeyPair() *KeyPair {
 	return &KeyPair{private, public}
 }
 
-func (kp KeyPair) GenerateAddress(isContract bool) Address {
+func (kp KeyPair) GenerateAddress() Address {
 	pubKeyHash, _ := NewUserPubKeyHash(kp.PublicKey)
 	return pubKeyHash.GenerateAddress()
 }
