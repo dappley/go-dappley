@@ -14,8 +14,3 @@ type SyncPeerContext struct {
 	checkingStreams map[peer.ID]*StreamInfo
 	newPeers        map[peer.ID]*network_model.PeerInfo
 }
-
-type NodeConfig struct {
-	MaxConnectionOutCount int
-	MaxConnectionInCount  int
-}

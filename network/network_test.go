@@ -7,7 +7,7 @@ import (
 )
 
 func TestNetwork_RecordMessage(t *testing.T) {
-	net := NewNetwork(nil, nil, nil)
+	net := NewNetwork(network_model.PeerConnectionConfig{}, nil, nil)
 	data1 := network_model.ConstructDappPacketFromData([]byte("data1"), network_model.Broadcast)
 	data2 := network_model.ConstructDappPacketFromData([]byte("data2"), network_model.Broadcast)
 	net.RecordMessage(data1)

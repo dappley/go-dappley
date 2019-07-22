@@ -50,11 +50,11 @@ type Node struct {
 
 //NewNode creates a new Node instance
 func NewNode(db Storage) *Node {
-	return NewNodeWithConfig(db, nil)
+	return NewNodeWithConfig(db, network_model.PeerConnectionConfig{})
 }
 
 //NewNodeWithConfig creates a new Node instance with configurations
-func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
+func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig) *Node {
 	var err error
 
 	node := &Node{

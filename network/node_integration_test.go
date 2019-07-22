@@ -60,7 +60,7 @@ func initNode(address string, port int, seedPeer *network_model.PeerInfo, db sto
 
 func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *network_model.PeerInfo, db storage.Storage) (*Node, error) {
 
-	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}
+	config := network_model.NewPeerConnectionConfig(connectionOutCount, connectionInCount)
 	n := NewNodeWithConfig(db, config)
 
 	if seedPeer != nil {

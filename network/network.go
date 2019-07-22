@@ -17,7 +17,7 @@ type Network struct {
 }
 
 //NewNetwork creates a network instance
-func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, db Storage) *Network {
+func NewNetwork(config network_model.PeerConnectionConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, db Storage) *Network {
 
 	var err error
 	streamMsgRcvCh := make(chan *network_model.DappPacketContext, dispatchChLen)

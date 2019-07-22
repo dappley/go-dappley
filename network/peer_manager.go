@@ -71,11 +71,10 @@ type PeerManager struct {
 	seeds     map[peer.ID]*network_model.PeerInfo
 	syncPeers map[peer.ID]*network_model.PeerInfo
 
-	streams               map[peer.ID]*StreamInfo
-	maxConnectionOutCount int
-	connectionOutCount    int //Connection that current node connect to other nodes, exclude seed nodes
-	maxConnectionInCount  int
-	connectionInCount     int //Connection that other node connection to current node.
+	streams            map[peer.ID]*StreamInfo
+	connectionConfig   network_model.PeerConnectionConfig
+	connectionOutCount int //Connection that current node connect to other nodes, exclude seed nodes
+	connectionInCount  int //Connection that other node connection to current node.
 
 	syncPeerContext *SyncPeerContext
 
@@ -89,19 +88,14 @@ type PeerManager struct {
 }
 
 //NewPeerManager create a new peer manager object
-func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, db Storage) *PeerManager {
+func NewPeerManager(config network_model.PeerConnectionConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, db Storage) *PeerManager {
 
-	maxConnectionOutCount := defaultMaxConnectionOutCount
-	maxConnectionInCount := defaultMaxConnectionInCount
+	if config.GetMaxConnectionOutCount() == 0 {
+		config.SetMaxConnectionOutCount(defaultMaxConnectionOutCount)
+	}
 
-	if config != nil {
-		if config.MaxConnectionOutCount != 0 {
-			maxConnectionOutCount = config.MaxConnectionOutCount
-		}
-
-		if config.MaxConnectionInCount != 0 {
-			maxConnectionInCount = config.MaxConnectionInCount
-		}
+	if config.GetMaxConnectionInCount() == 0 {
+		config.SetMaxConnectionInCount(defaultMaxConnectionInCount)
 	}
 
 	return &PeerManager{
@@ -109,8 +103,7 @@ func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_mod
 		syncPeers:                make(map[peer.ID]*network_model.PeerInfo),
 		streams:                  make(map[peer.ID]*StreamInfo),
 		mutex:                    sync.RWMutex{},
-		maxConnectionOutCount:    maxConnectionOutCount,
-		maxConnectionInCount:     maxConnectionInCount,
+		connectionConfig:         config,
 		streamMsgReceiveCh:       streamMessageReceiveCh,
 		commandSendCh:            nil,
 		streamStopNotificationCh: make(chan *Stream, 10),
@@ -376,7 +369,7 @@ func (pm *PeerManager) startConnectSyncPeers() {
 		return
 	}
 
-	leftConnectionOut := pm.maxConnectionOutCount - pm.connectionOutCount
+	leftConnectionOut := pm.connectionConfig.GetMaxConnectionOutCount() - pm.connectionOutCount
 	if leftConnectionOut < 0 {
 		return
 	}
@@ -387,7 +380,7 @@ func (pm *PeerManager) startConnectSyncPeers() {
 	wg.Add(len(randomChoosePeers))
 
 	logger.WithFields(logger.Fields{
-		"maxConnectionOutCount":     pm.maxConnectionOutCount,
+		"maxConnectionOutCount":     pm.connectionConfig.GetMaxConnectionOutCount(),
 		"connectionOutCount":        pm.connectionOutCount,
 		"num_of_reconnecting_peers": len(randomChoosePeers),
 	}).Info("PeerManager: Connect sync peers")
@@ -719,13 +712,13 @@ func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType Connecti
 
 	switch connectionType {
 	case ConnectionTypeIn:
-		if pm.connectionInCount >= pm.maxConnectionInCount {
+		if pm.connectionInCount >= pm.connectionConfig.GetMaxConnectionInCount() {
 			logger.Info("PeerManager: connection in is full.")
 			return false
 		}
 		pm.connectionInCount++
 	case ConnectionTypeOut:
-		if pm.connectionOutCount >= pm.maxConnectionOutCount {
+		if pm.connectionOutCount >= pm.connectionConfig.GetMaxConnectionOutCount() {
 			logger.Info("PeerManager: connection out is full.")
 			return false
 		}
