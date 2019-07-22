@@ -162,6 +162,10 @@ func (bc *Blockchain) GetEventManager() *EventManager {
 	return bc.eventManager
 }
 
+func (bc *Blockchain) SetBlockSizeLimit(limit int) {
+	bc.blkSizeLimit = limit
+}
+
 func (bc *Blockchain) GetBlockSizeLimit() int {
 	return bc.blkSizeLimit
 }

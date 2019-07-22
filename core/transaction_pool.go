@@ -84,6 +84,10 @@ func (txPool *TransactionPool) DeepCopy() *TransactionPool {
 	return &txPoolCopy
 }
 
+func (txPool *TransactionPool) SetSizeLimit(sizeLimit uint32) {
+	txPool.sizeLimit = sizeLimit
+}
+
 func (txPool *TransactionPool) GetSizeLimit() uint32 {
 	return txPool.sizeLimit
 }
