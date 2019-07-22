@@ -95,7 +95,7 @@ func TestMultiEqualNode(t *testing.T) {
 
 	//Connect all other nodes to the first node
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
 	}
 
 	oldHeight := bm.Getblockchain().GetMaxHeight()
@@ -138,7 +138,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
 	}
 
 	highestChain.Getblockchain().SetState(core.BlockchainInit)
@@ -175,7 +175,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
 	}
 
 	highestChain.Getblockchain().SetState(core.BlockchainInit)
@@ -227,7 +227,7 @@ func TestDisconnectNode(t *testing.T) {
 	secondChainNode.RegisterSubscriber(secondChainDownloadManager)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetInfo())
+		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
 	}
 
 	finishCh := make(chan bool, 1)
@@ -254,10 +254,10 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	peerNode := nodes[1]
 
-	node.GetNetwork().AddPeer(peerNode.GetInfo())
+	node.GetNetwork().AddPeer(peerNode.GetHostPeerInfo())
 	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
 
-	for _, p := range downloadManager.node.GetNetwork().GetPeers() {
+	for _, p := range downloadManager.node.GetPeers() {
 		downloadManager.peersInfo[p.PeerId] = &PeerBlockInfo{peerid: p.PeerId, height: 0, status: PeerStatusInit}
 		downloadManager.downloadingPeer = downloadManager.peersInfo[p.PeerId]
 	}
@@ -269,6 +269,6 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	// test empty blocks
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
-	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetInfo().PeerId)
+	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
 	assert.Equal(t, ErrEmptyBlocks, err)
 }

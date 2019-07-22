@@ -141,7 +141,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	node2.Start(testport2, nil, "")
 	defer node2.Stop()
 
-	node1.GetNetwork().AddPeer(node2.GetInfo())
+	node1.GetNetwork().AddPeer(node2.GetHostPeerInfo())
 
 	blkHeight := bm1.Getblockchain().GetMaxHeight()
 	tailBlock, _ := bm1.Getblockchain().GetTailBlock()

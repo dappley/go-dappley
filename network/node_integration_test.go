@@ -89,7 +89,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	assert.Nil(t, err)
 
 	//set node2 as the peer of node1
-	err = n1.GetNetwork().AddPeer(n2.GetInfo())
+	err = n1.GetNetwork().AddPeer(n2.GetHostPeerInfo())
 	assert.Nil(t, err)
 	assert.Len(t, n1.network.host.Network().Peerstore().Peers(), 2)
 }
@@ -105,7 +105,7 @@ func TestNode_SyncPeers(t *testing.T) {
 	//create node 2 and add node1 as a peer
 	db2 := storage.NewRamStorage()
 	defer db2.Close()
-	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port8, n1.GetInfo(), db2)
+	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port8, n1.GetHostPeerInfo(), db2)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
@@ -117,7 +117,7 @@ func TestNode_SyncPeers(t *testing.T) {
 	//create node 3 and add node1 as a peer
 	db3 := storage.NewRamStorage()
 	defer db3.Close()
-	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port9, n1.GetInfo(), db3)
+	n3, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port9, n1.GetHostPeerInfo(), db3)
 	defer n3.Stop()
 	assert.Nil(t, err)
 
@@ -127,12 +127,12 @@ func TestNode_SyncPeers(t *testing.T) {
 	}, 2)
 
 	//node2 should have node 3 as its peer
-	_, ok := n2.GetNetwork().peerManager.streams[n3.GetPeerID()]
+	_, ok := n2.GetNetwork().peerManager.streams[n3.GetHostPeerInfo().PeerId]
 	assert.True(t, ok)
 	assert.Equal(t, 1, n2.GetNetwork().peerManager.connectionInCount)
 
 	//node3 should have node 2 as its peer
-	_, ok = n3.GetNetwork().peerManager.streams[n2.GetPeerID()]
+	_, ok = n3.GetNetwork().peerManager.streams[n2.GetHostPeerInfo().PeerId]
 	assert.True(t, ok)
 	assert.Equal(t, 1, n3.GetNetwork().peerManager.connectionOutCount)
 }
@@ -148,7 +148,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	//create node 2 and add node1 as a peer
 	db2 := storage.NewRamStorage()
 	defer db2.Close()
-	n2, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port11, 2, 2, n1.GetInfo(), db2)
+	n2, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port11, 2, 2, n1.GetHostPeerInfo(), db2)
 	defer n2.Stop()
 	assert.Nil(t, err)
 
@@ -159,7 +159,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	//create node 3 and add node1 as a peer
 	db3 := storage.NewRamStorage()
 	defer db3.Close()
-	n3, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port12, 2, 2, n1.GetInfo(), db3)
+	n3, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port12, 2, 2, n1.GetHostPeerInfo(), db3)
 	defer n3.Stop()
 	assert.Nil(t, err)
 
@@ -170,7 +170,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	//create node 3 and add node1 as a peer
 	db4 := storage.NewRamStorage()
 	defer db4.Close()
-	n4, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port13, 2, 2, n1.GetInfo(), db4)
+	n4, err := initNodeWithConfig("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port13, 2, 2, n1.GetHostPeerInfo(), db4)
 	defer n4.Stop()
 	assert.Nil(t, err)
 
@@ -185,8 +185,8 @@ func TestNode_ConnectionFull(t *testing.T) {
 	defer n5.Stop()
 	assert.Nil(t, err)
 
-	n5.GetNetwork().AddPeer(n2.GetInfo())
-	n4.GetNetwork().AddPeer(n5.GetInfo())
+	n5.GetNetwork().AddPeer(n2.GetHostPeerInfo())
+	n4.GetNetwork().AddPeer(n5.GetHostPeerInfo())
 
 	util.WaitDoneOrTimeout(func() bool {
 		return false

@@ -103,7 +103,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i := range miners {
 		for j := range miners {
 			if i != j {
-				nodeArray[i].GetNetwork().AddPeer(nodeArray[j].GetInfo())
+				nodeArray[i].GetNetwork().AddPeer(nodeArray[j].GetHostPeerInfo())
 			}
 		}
 
@@ -173,7 +173,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i := range miners {
 		for j := range miners {
 			if i != j {
-				nodeArray[i].GetNetwork().AddPeer(nodeArray[j].GetInfo())
+				nodeArray[i].GetNetwork().AddPeer(nodeArray[j].GetHostPeerInfo())
 			}
 		}
 

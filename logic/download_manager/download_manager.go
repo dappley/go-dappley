@@ -116,7 +116,7 @@ type DownloadManager struct {
 	downloadingPeer   *PeerBlockInfo
 	currentCmd        *ExecuteCommand
 	bm                *core.BlockChainManager
-	node              *network.Node
+	node              NetService
 	mutex             sync.RWMutex
 	status            int
 	commonHeight      uint64
@@ -127,7 +127,7 @@ type DownloadManager struct {
 	commandReceiveCh  chan *network_model.DappRcvdCmdContext
 }
 
-func NewDownloadManager(node *network.Node, bm *core.BlockChainManager) *DownloadManager {
+func NewDownloadManager(node NetService, bm *core.BlockChainManager) *DownloadManager {
 
 	downloadManager := &DownloadManager{
 		peersInfo:         make(map[peer.ID]*PeerBlockInfo),
@@ -208,7 +208,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bo
 	downloadManager.finishCh = finishCh
 	downloadManager.status = DownloadStatusInit
 
-	for _, peer := range downloadManager.node.GetNetwork().GetPeers() {
+	for _, peer := range downloadManager.node.GetPeers() {
 		downloadManager.peersInfo[peer.PeerId] = &PeerBlockInfo{peerid: peer.PeerId, height: 0, libHeight: 0, status: PeerStatusInit}
 	}
 
@@ -493,7 +493,7 @@ func (downloadManager *DownloadManager) startGetCommonBlocks(retryCount int) {
 	downloadManager.status = DownloadStatusSyncCommonBlocks
 	highestPeer := downloadManager.selectHighestPeer()
 
-	if highestPeer.peerid == downloadManager.node.GetPeerID() {
+	if highestPeer.peerid == downloadManager.node.GetHostPeerInfo().PeerId {
 		downloadManager.finishDownload()
 		logger.Info("DownloadManager: Current node has the highest block")
 		return
@@ -644,7 +644,7 @@ func (downloadManager *DownloadManager) canStartDownload() bool {
 
 func (downloadManager *DownloadManager) selectHighestPeer() *PeerBlockInfo {
 	peerWithHighestBlockHeight := &PeerBlockInfo{
-		peerid:    downloadManager.node.GetPeerID(),
+		peerid:    downloadManager.node.GetHostPeerInfo().PeerId,
 		height:    downloadManager.bm.Getblockchain().GetMaxHeight(),
 		libHeight: downloadManager.bm.Getblockchain().GetLIBHeight(),
 		status:    PeerStatusReady,

@@ -23,8 +23,6 @@ import (
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 )
@@ -78,10 +76,15 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 	return node
 }
 
-func (n *Node) GetInfo() *network_model.PeerInfo                         { return n.network.host.GetPeerInfo() }
-func (n *Node) GetNetwork() *Network                                     { return n.network }
+func (n *Node) GetHostPeerInfo() *network_model.PeerInfo { return n.network.host.GetPeerInfo() }
+
+func (n *Node) GetPeers() []*network_model.PeerInfo { return n.network.GetPeers() }
+
+func (n *Node) GetNetwork() *Network { return n.network }
+
 func (n *Node) GetCommandSendCh() chan *network_model.DappSendCmdContext { return n.commandSendCh }
-func (n *Node) GetCommandBroker() *CommandBroker                         { return n.commandBroker }
+
+func (n *Node) GetCommandBroker() *CommandBroker { return n.commandBroker }
 
 func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) error {
 
@@ -152,15 +155,6 @@ func (n *Node) StartListenLoop() {
 	}()
 
 }
-
-func (n *Node) GetPeerMultiaddr() []ma.Multiaddr {
-	if n.GetInfo() == nil {
-		return nil
-	}
-	return n.GetInfo().Addrs
-}
-
-func (n *Node) GetPeerID() peer.ID { return n.GetInfo().PeerId }
 
 //loadNetworkKeyFromFile reads the network privatekey source a file
 func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {

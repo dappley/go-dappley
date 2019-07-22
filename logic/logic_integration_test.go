@@ -366,7 +366,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		if i == 0 {
 			firstNode = node
 		} else {
-			node.GetNetwork().AddPeer(firstNode.GetInfo())
+			node.GetNetwork().AddPeer(firstNode.GetHostPeerInfo())
 		}
 		nodes = append(nodes, node)
 
@@ -751,7 +751,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 }
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
-	node1.GetNetwork().AddPeer(node2.GetInfo())
+	node1.GetNetwork().AddPeer(node2.GetHostPeerInfo())
 }
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
@@ -816,7 +816,7 @@ func TestDoubleMint(t *testing.T) {
 			sendBm = bm
 		} else {
 			recvNode = node
-			recvNode.GetNetwork().AddPeer(sendNode.GetInfo())
+			recvNode.GetNetwork().AddPeer(sendNode.GetHostPeerInfo())
 			recvNodeBc = bc
 		}
 		dposArray = append(dposArray, dpos)
