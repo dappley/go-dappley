@@ -266,12 +266,12 @@ func (pm *PeerManager) StreamHandler(s network.Stream) {
 	stream.Start(pm.streamStopNotificationCh, pm.streamMsgReceiveCh)
 
 	logger.WithFields(logger.Fields{
-		"peer_id": stream.peerID,
-		"addr":    stream.remoteAddr.String(),
+		"peer_id": stream.GetPeerId(),
+		"addr":    stream.GetRemoteAddr().String(),
 	}).Info("PeerManager: Add Stream")
 
 	connectionType := pm.getStreamConnectionType(stream)
-	if !pm.checkAndAddStream(stream.peerID, connectionType, stream) {
+	if !pm.checkAndAddStream(stream.GetPeerId(), connectionType, stream) {
 		stream.StopStream(nil)
 	}
 }
@@ -279,12 +279,12 @@ func (pm *PeerManager) StreamHandler(s network.Stream) {
 func (pm *PeerManager) OnStreamStop(stream *Stream) {
 
 	logger.WithFields(logger.Fields{
-		"peer_id": stream.peerID,
-		"addr":    stream.remoteAddr.String(),
+		"peer_id": stream.GetPeerId(),
+		"addr":    stream.GetRemoteAddr().String(),
 	}).Info("PeerManager: Stop Stream")
 
 	pm.mutex.Lock()
-	streamInfo, ok := pm.streams[stream.peerID]
+	streamInfo, ok := pm.streams[stream.GetPeerId()]
 	if !ok || streamInfo.stream != stream {
 		pm.mutex.Unlock()
 		return
@@ -300,8 +300,8 @@ func (pm *PeerManager) OnStreamStop(stream *Stream) {
 	default:
 		//pass
 	}
-	delete(pm.streams, stream.peerID)
-	pm.host.Peerstore().ClearAddrs(stream.peerID)
+	delete(pm.streams, stream.peerInfo.PeerId)
+	pm.host.Peerstore().ClearAddrs(stream.GetPeerId())
 	streamLen := len(pm.streams)
 	pm.mutex.Unlock()
 	if streamLen == 0 {
@@ -324,7 +324,7 @@ func (pm *PeerManager) RandomGetConnectedPeers(number int) []*network_model.Peer
 	peers := make([]*network_model.PeerInfo, len(chooseStreams))
 
 	for i, streamInfo := range chooseStreams {
-		peers[i] = &network_model.PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
+		peers[i] = &network_model.PeerInfo{PeerId: streamInfo.stream.GetPeerId(), Addrs: []ma.Multiaddr{streamInfo.stream.GetRemoteAddr()}}
 	}
 	return peers
 }
@@ -514,7 +514,7 @@ func (pm *PeerManager) collectSyncPeersResult() bool {
 			continue
 		}
 
-		pm.syncPeers[key] = &network_model.PeerInfo{PeerId: key, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
+		pm.syncPeers[key] = &network_model.PeerInfo{PeerId: key, Addrs: []ma.Multiaddr{streamInfo.stream.GetRemoteAddr()}}
 
 		logger.WithFields(logger.Fields{
 			"peer_id": pm.syncPeers[key].PeerId,
@@ -601,7 +601,7 @@ func (pm *PeerManager) CloneStreamsToPeerInfoSlice() []*network_model.PeerInfo {
 	peers := make([]*network_model.PeerInfo, len(streams))
 
 	for i, streamInfo := range streams {
-		peers[i] = &network_model.PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
+		peers[i] = &network_model.PeerInfo{PeerId: streamInfo.stream.GetPeerId(), Addrs: []ma.Multiaddr{streamInfo.stream.GetRemoteAddr()}}
 	}
 
 	return peers
@@ -656,8 +656,8 @@ func (pm *PeerManager) connectPeer(peerInfo *network_model.PeerInfo, connectionT
 
 	peerStream := NewStream(stream)
 	logger.WithFields(logger.Fields{
-		"PeerId": peerStream.peerID,
-		"Addr":   peerStream.remoteAddr.String(),
+		"PeerId": peerStream.GetPeerId(),
+		"Addr":   peerStream.GetRemoteAddr().String(),
 	}).Info("PeerManager: Connect peer actual stream")
 	if !pm.checkAndAddStream(peerInfo.PeerId, connectionType, peerStream) {
 		peerStream.StopStream(nil)
@@ -672,7 +672,7 @@ func (pm *PeerManager) getStreamConnectionType(stream *Stream) ConnectionType {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
-	if _, ok := pm.seeds[stream.peerID]; ok {
+	if _, ok := pm.seeds[stream.GetPeerId()]; ok {
 		return ConnectionTypeSeed
 	}
 	return ConnectionTypeIn

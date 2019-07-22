@@ -34,8 +34,7 @@ const (
 )
 
 type Stream struct {
-	peerID                peer.ID
-	remoteAddr            multiaddr.Multiaddr
+	peerInfo              network_model.PeerInfo
 	stream                network.Stream
 	rawByteRead           []byte
 	highPriorityWriteCh   chan *network_model.DappPacket
@@ -47,8 +46,7 @@ type Stream struct {
 
 func NewStream(s network.Stream) *Stream {
 	return &Stream{
-		s.Conn().RemotePeer(),
-		s.Conn().RemoteMultiaddr(),
+		network_model.PeerInfo{s.Conn().RemotePeer(), []multiaddr.Multiaddr{s.Conn().RemoteMultiaddr()}},
 		s,
 		[]byte{},
 		make(chan *network_model.DappPacket, highPriorityChLength),
@@ -59,6 +57,9 @@ func NewStream(s network.Stream) *Stream {
 	}
 }
 
+func (s *Stream) GetPeerId() peer.ID                 { return s.peerInfo.PeerId }
+func (s *Stream) GetRemoteAddr() multiaddr.Multiaddr { return s.peerInfo.Addrs[0] }
+
 func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	logger.Warn("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
@@ -67,8 +68,8 @@ func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *network_model.DappP
 
 func (s *Stream) StopStream(err error) {
 	logger.WithFields(logger.Fields{
-		"peer_address": s.remoteAddr,
-		"pid":          s.peerID,
+		"peer_address": s.GetRemoteAddr(),
+		"pid":          s.GetPeerId(),
 		"error":        err,
 	}).Info("Stream: is terminated!!")
 	s.quitRdCh <- true
@@ -80,8 +81,8 @@ func (s *Stream) Send(packet *network_model.DappPacket, priority network_model.D
 	defer func() {
 		if p := recover(); p != nil {
 			logger.WithFields(logger.Fields{
-				"peer_address": s.remoteAddr,
-				"pid":          s.peerID,
+				"peer_address": s.GetRemoteAddr(),
+				"pid":          s.GetPeerId(),
 				"error":        p,
 			}).Info("Stream: data channel closed.")
 		}
@@ -154,7 +155,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPac
 		}
 
 		select {
-		case msgRcvCh <- &network_model.DappPacketContext{packet, s.peerID}:
+		case msgRcvCh <- &network_model.DappPacketContext{packet, s.GetPeerId()}:
 		default:
 			logger.WithFields(logger.Fields{
 				"dispatchCh_len": len(msgRcvCh),

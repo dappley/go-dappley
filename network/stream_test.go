@@ -26,8 +26,7 @@ import (
 
 func TestStream_Send(t *testing.T) {
 	s := &Stream{
-		"",
-		nil,
+		network_model.PeerInfo{},
 		nil,
 		[]byte{},
 		make(chan *network_model.DappPacket, highPriorityChLength),

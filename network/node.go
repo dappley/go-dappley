@@ -191,7 +191,7 @@ func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {
 
 func (n *Node) OnStreamStop(stream *Stream) {
 
-	peerInfo := network_model.PeerInfo{PeerId: stream.peerID}
+	peerInfo := network_model.PeerInfo{PeerId: stream.GetPeerId()}
 	bytes, err := proto.Marshal(peerInfo.ToProto())
 
 	logger.WithError(err).Warn("Node: Marshal peerInfo failed")
