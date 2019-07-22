@@ -516,7 +516,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	coinbaseAddr := client.Address{"testaddress"}
+	coinbaseAddr := client.NewAddress("testaddress")
 	bc := CreateBlockchain(coinbaseAddr, db, nil, 128, nil, 100000)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1

@@ -299,7 +299,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	for rpcContext.bc.GetMaxHeight() < 5 {
@@ -344,7 +344,7 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	logic.Send(rpcContext.account, receiverAccount.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bc, rpcContext.node)
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	for rpcContext.bc.GetMaxHeight() < MinUtxoBlockHeaderCount {
@@ -365,7 +365,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().Address})
+	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 	minedReward := common.NewAmount(10000000)
@@ -376,7 +376,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
 	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
-	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().Address})
+	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
@@ -389,7 +389,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	for rpcContext.bc.GetMaxHeight() < 500 {
@@ -468,7 +468,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	for rpcContext.bc.GetMaxHeight() < 50 {
@@ -513,7 +513,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	for rpcContext.bc.GetMaxHeight() < 50 {
@@ -563,7 +563,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	maxHeight := rpcContext.bc.GetMaxHeight()
@@ -654,7 +654,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	maxHeight := rpcContext.bc.GetMaxHeight()
@@ -792,7 +792,7 @@ func TestGetNewTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	// Create a grpc connection and a client
@@ -1026,7 +1026,7 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().Address)
+	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetAddress().String())
 	rpcContext.consensus.Start()
 
 	for rpcContext.bc.GetMaxHeight() < 50 {

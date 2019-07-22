@@ -32,18 +32,18 @@ var (
 )
 
 type Address struct {
-	Address string
+	address string
 }
 
 func NewAddress(addressString string) Address {
 	address := Address{}
-	address.Address = addressString
+	address.address = addressString
 	return address
 }
 
 //String returns the address in string type
 func (a Address) String() string {
-	return a.Address
+	return a.address
 }
 
 //isContract checks if an address is a Contract address
@@ -83,11 +83,11 @@ func (a Address) GetPubKeyHash() ([]byte, bool) {
 //ToProto converts Address object to protobuf message
 func (a *Address) ToProto() proto.Message {
 	return &accountpb.Address{
-		Address: a.Address,
+		Address: a.address,
 	}
 }
 
 //FromProto converts protobuf message to Address object
 func (a *Address) FromProto(pb proto.Message) {
-	a.Address = pb.(*accountpb.Address).Address
+	a.address = pb.(*accountpb.Address).Address
 }

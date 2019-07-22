@@ -56,7 +56,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 		pool := core.NewBlockPool(100)
 		node := NewNode(bc, pool)
 		nodes[i] = node
-		pow.Setup(node, address.Address)
+		pow.Setup(node, address.String())
 		pow.SetTargetBit(10)
 		node.Start(portStart + i)
 	}

@@ -320,7 +320,7 @@ func LoadPrivateKey() Keys {
 
 func (k Keys) getPrivateKeyByAddress(address client.Address) string {
 	for _, key := range k.Keys {
-		if key.Address == address.Address {
+		if key.Address == address.String() {
 			return key.Key
 		}
 	}

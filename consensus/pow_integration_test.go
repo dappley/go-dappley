@@ -244,7 +244,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 func TestProofOfWork_StartAndStop(t *testing.T) {
 
 	pow := NewProofOfWork()
-	cbAddr := client.Address{"121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"}
+	cbAddr := client.NewAddress("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD")
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
@@ -328,7 +328,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, account1.GetAddress().Address)
+	pow.Setup(n, account1.GetAddress().String())
 
 	pow.Start()
 

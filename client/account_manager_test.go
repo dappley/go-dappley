@@ -136,7 +136,7 @@ func TestAccountManager_GetAccountByUnfoundAddress(t *testing.T) {
 
 func TestAccountManager_GetAccountByAddressNilInput(t *testing.T) {
 	am := NewAccountManager(nil)
-	assert.Nil(t, am.GetAccountByAddress(Address{}))
+	assert.Nil(t, am.GetAccountByAddress(NewAddress("")))
 }
 
 func TestAccountManager_GetKeyPairByAddress(t *testing.T) {

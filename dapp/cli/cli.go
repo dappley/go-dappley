@@ -555,7 +555,7 @@ func createAccountCommandHandler(ctx context.Context, client interface{}, flags 
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s \n", account.GetAddress().Address)
+			fmt.Printf("Account is created. The address is %s \n", account.GetAddress().String())
 			return
 		}
 	}
@@ -578,7 +578,7 @@ func createAccountCommandHandler(ctx context.Context, client interface{}, flags 
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().Address)
+			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().String())
 		}
 		//unlock the account
 		_, err = client.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
@@ -599,7 +599,7 @@ func createAccountCommandHandler(ctx context.Context, client interface{}, flags 
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().Address)
+			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().String())
 		}
 	}
 
@@ -714,7 +714,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 				i := 1
 				fmt.Println("The address list:")
 				for _, addr := range addressList {
-					fmt.Printf("Address[%d]: %s\n", i, addr.Address)
+					fmt.Printf("Address[%d]: %s\n", i, addr.String())
 					i++
 				}
 				fmt.Println()
@@ -739,7 +739,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 				fmt.Println("The address list with private keys:")
 				for _, addr := range addressList {
 					fmt.Println("--------------------------------------------------------------------------------")
-					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr.Address, i, privateKeyList[i-1])
+					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr.String(), i, privateKeyList[i-1])
 					fmt.Println()
 					i++
 				}
@@ -857,7 +857,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	}
 
 	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
-		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).Address,
+		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {
 		switch status.Code(err) {
@@ -1054,7 +1054,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	}
 
 	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
-		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).Address,
+		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {
 		switch status.Code(err) {

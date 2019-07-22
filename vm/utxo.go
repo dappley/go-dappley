@@ -57,7 +57,7 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 		utxo.pubkeyhash = C.CString(hex.EncodeToString([]byte(prevUtxo.PubKeyHash)))
 		defer C.free(unsafe.Pointer(utxo.pubkeyhash))
 
-		utxo.address = C.CString(prevUtxo.PubKeyHash.GenerateAddress().Address)
+		utxo.address = C.CString(prevUtxo.PubKeyHash.GenerateAddress().String())
 		defer C.free(unsafe.Pointer(utxo.address))
 	}
 
