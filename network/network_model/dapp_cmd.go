@@ -33,7 +33,7 @@ type DappCmd struct {
 	magicNum    uint32
 }
 
-func NewDapCmd(cmd string, data []byte, isBroadcast bool) *DappCmd {
+func NewDappCmd(cmd string, data []byte, isBroadcast bool) *DappCmd {
 	id, _ := uuid.NewUUID()
 	return &DappCmd{cmd, data, isBroadcast, id.ID()}
 }

@@ -31,7 +31,7 @@ func NewDappSendCmdContext(cmd string, protoMessage proto.Message, destination p
 		logger.WithError(err).Error("DappSendCmdContext: Marshal proto message failed")
 	}
 
-	dm := NewDapCmd(cmd, bytes, isBroadcast)
+	dm := NewDappCmd(cmd, bytes, isBroadcast)
 
 	return &DappSendCmdContext{
 		command:     dm,

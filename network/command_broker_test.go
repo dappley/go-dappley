@@ -90,7 +90,7 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 				subscriber.On("GetCommandHandler", tt.subScribedCmd).Return(handler).Once()
 			}
 
-			dappCmd := network_model.NewDapCmd(tt.dispatchedCmd, []byte("test"), false)
+			dappCmd := network_model.NewDappCmd(tt.dispatchedCmd, []byte("test"), false)
 			var source peer.ID
 			rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
 
@@ -110,7 +110,7 @@ func TestCommandBroker_DispatchMultiple(t *testing.T) {
 	subscriber2 := new(mocks.Subscriber)
 	topic := reservedTopics[0]
 
-	dappCmd := network_model.NewDapCmd(topic, []byte("test"), false)
+	dappCmd := network_model.NewDappCmd(topic, []byte("test"), false)
 	var source peer.ID
 	rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
 

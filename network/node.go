@@ -188,7 +188,7 @@ func (n *Node) OnStreamStop(stream *Stream) {
 
 	logger.WithError(err).Warn("Node: Marshal peerInfo failed")
 
-	dappCmd := network_model.NewDapCmd(TopicOnStreamStop, bytes, false)
+	dappCmd := network_model.NewDappCmd(TopicOnStreamStop, bytes, false)
 	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.host.ID())
 
 	n.commandBroker.Dispatch(dappCmdCtx)
