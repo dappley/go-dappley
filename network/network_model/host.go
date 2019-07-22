@@ -1,4 +1,4 @@
-package network
+package network_model
 
 import (
 	"context"
@@ -17,7 +17,7 @@ const (
 
 type Host struct {
 	host.Host
-	info *PeerInfo
+	Info *PeerInfo
 }
 
 func NewHost(listenPort int, privKey crypto.PrivKey, handler network.StreamHandler) *Host {
@@ -41,6 +41,8 @@ func NewHost(listenPort int, privKey crypto.PrivKey, handler network.StreamHandl
 		info,
 	}
 }
+
+func (host *Host) GetPeerInfo() *PeerInfo { return host.Info }
 
 //create basic host. Returns host object, host address and error
 func createBasicHost(listenPort int, priv crypto.PrivKey) (host.Host, []ma.Multiaddr, error) {

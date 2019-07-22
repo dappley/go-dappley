@@ -1,4 +1,4 @@
-package network
+package network_model
 
 import (
 	"fmt"

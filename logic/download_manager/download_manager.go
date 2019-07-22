@@ -800,7 +800,7 @@ func (downloadManager *DownloadManager) GetBlocksResponseHandler(command *networ
 }
 
 func (downloadManager *DownloadManager) SendGetBlockchainInfoRequest() {
-	request := &networkpb.GetBlockchainInfo{Version: network.ProtocalName}
+	request := &networkpb.GetBlockchainInfo{Version: network_model.ProtocalName}
 
 	var destination peer.ID
 	command := network_model.NewDappSendCmdContext(BlockchainInfoRequest, request, destination, network.Broadcast, network_model.NormalPriorityCommand)
@@ -859,7 +859,7 @@ func (downloadManager *DownloadManager) OnStreamStopHandler(command *network_mod
 		return
 	}
 
-	var peerInfo network.PeerInfo
+	var peerInfo network_model.PeerInfo
 	if err := peerInfo.FromProto(peerInfopb); err != nil {
 		logger.WithFields(logger.Fields{
 			"name": "OnStreamStop",

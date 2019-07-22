@@ -9,7 +9,7 @@ import (
 )
 
 type Network struct {
-	host                  *Host
+	host                  *network_model.Host
 	peerManager           *PeerManager
 	streamMsgRcvCh        chan *network_model.DappPacketContext
 	streamMsgDispatcherCh chan *network_model.DappPacketContext
@@ -35,12 +35,12 @@ func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.Da
 	return net
 }
 
-func (net *Network) GetPeers() []*PeerInfo {
+func (net *Network) GetPeers() []*network_model.PeerInfo {
 	return net.peerManager.CloneStreamsToPeerInfoSlice()
 }
 
 func (net *Network) Start(listenPort int, privKey crypto.PrivKey, seeds []string) error {
-	net.host = NewHost(listenPort, privKey, net.peerManager.StreamHandler)
+	net.host = network_model.NewHost(listenPort, privKey, net.peerManager.StreamHandler)
 	net.peerManager.Start(net.host, seeds)
 	net.StartReceivedMsgHandler()
 	return nil
@@ -79,7 +79,7 @@ func (net *Network) RecordMessage(msg *network_model.DappPacket) {
 
 func (net *Network) Stop() {
 	net.peerManager.StopAllStreams(nil)
-	net.host.RemoveStreamHandler(ProtocalName)
+	net.host.RemoveStreamHandler(network_model.ProtocalName)
 	err := net.host.Close()
 	if err != nil {
 		logger.WithError(err).Warn("Node: host was not closed properly.")
@@ -104,17 +104,17 @@ func (net *Network) Broadcast(data []byte, priority network_model.DappCmdPriorit
 	net.peerManager.Broadcast(packet, priority)
 }
 
-func (net *Network) AddPeer(peerInfo *PeerInfo) error {
+func (net *Network) AddPeer(peerInfo *network_model.PeerInfo) error {
 	return net.peerManager.AddAndConnectPeer(peerInfo)
 }
 
-func (net *Network) AddSeed(peerInfo *PeerInfo) error {
+func (net *Network) AddSeed(peerInfo *network_model.PeerInfo) error {
 	return net.peerManager.AddSeedByPeerInfo(peerInfo)
 }
 
 func (net *Network) AddPeerByString(fullAddr string) error {
 
-	peerInfo, err := NewPeerInfoFromString(fullAddr)
+	peerInfo, err := network_model.NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,

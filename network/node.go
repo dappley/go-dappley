@@ -46,10 +46,10 @@ var (
 
 type Node struct {
 	network       *Network
+	commandBroker *CommandBroker
 	exitCh        chan bool
 	dispatcher    chan *network_model.DappPacketContext
 	commandSendCh chan *network_model.DappSendCmdContext
-	commandBroker *CommandBroker
 }
 
 //create new Node instance
@@ -78,7 +78,7 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 	return node
 }
 
-func (n *Node) GetInfo() *PeerInfo                                       { return n.network.host.info }
+func (n *Node) GetInfo() *network_model.PeerInfo                         { return n.network.host.GetPeerInfo() }
 func (n *Node) GetNetwork() *Network                                     { return n.network }
 func (n *Node) GetCommandSendCh() chan *network_model.DappSendCmdContext { return n.commandSendCh }
 func (n *Node) GetCommandBroker() *CommandBroker                         { return n.commandBroker }
@@ -191,7 +191,7 @@ func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {
 
 func (n *Node) OnStreamStop(stream *Stream) {
 
-	peerInfo := PeerInfo{PeerId: stream.peerID}
+	peerInfo := network_model.PeerInfo{PeerId: stream.peerID}
 	bytes, err := proto.Marshal(peerInfo.ToProto())
 
 	logger.WithError(err).Warn("Node: Marshal peerInfo failed")
