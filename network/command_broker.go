@@ -14,6 +14,7 @@ type CommandBroker struct {
 	subscribers    map[string][]Subscriber
 }
 
+//NewCommandBroker creates a commandBroker instance
 func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 
 	cb := &CommandBroker{
@@ -28,6 +29,7 @@ func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 	return cb
 }
 
+//Subscribe adds a subscriber to a topic
 func (cb *CommandBroker) Subscribe(subscriber Subscriber) error {
 	for _, cmd := range subscriber.GetSubscribedTopics() {
 		err := cb.subscribeCmd(cmd, subscriber)
@@ -38,6 +40,7 @@ func (cb *CommandBroker) Subscribe(subscriber Subscriber) error {
 	return nil
 }
 
+//subscribeCmd adds a subscriber to the topic "cmd"
 func (cb *CommandBroker) subscribeCmd(cmd string, subscriber Subscriber) error {
 	_, isReservedTopic := cb.reservedTopics[cmd]
 
@@ -49,6 +52,7 @@ func (cb *CommandBroker) subscribeCmd(cmd string, subscriber Subscriber) error {
 	return nil
 }
 
+//Dispatch publishes a topic and run the topic handler
 func (cb *CommandBroker) Dispatch(cmd *network_model.DappRcvdCmdContext) {
 	if _, ok := cb.subscribers[cmd.GetCommandName()]; !ok {
 		return

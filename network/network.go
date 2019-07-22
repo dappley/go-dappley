@@ -16,6 +16,7 @@ type Network struct {
 	recentlyRcvdDapMsgs   *lru.Cache
 }
 
+//NewNetwork creates a network instance
 func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, db Storage) *Network {
 
 	var err error
@@ -35,10 +36,12 @@ func NewNetwork(config *NodeConfig, streamMsgDispatcherCh chan *network_model.Da
 	return net
 }
 
+//GetPeers returns a list of peers in the network
 func (net *Network) GetPeers() []*network_model.PeerInfo {
 	return net.peerManager.CloneStreamsToPeerInfoSlice()
 }
 
+//Start starts the network
 func (net *Network) Start(listenPort int, privKey crypto.PrivKey, seeds []string) error {
 	net.host = network_model.NewHost(listenPort, privKey, net.peerManager.StreamHandler)
 	net.peerManager.Start(net.host, seeds)
@@ -46,6 +49,7 @@ func (net *Network) Start(listenPort int, privKey crypto.PrivKey, seeds []string
 	return nil
 }
 
+//StartReceivedMsgHandler starts a listening loop that listens to new message from all streams
 func (net *Network) StartReceivedMsgHandler() {
 	go func() {
 		for {
@@ -69,14 +73,17 @@ func (net *Network) StartReceivedMsgHandler() {
 	}()
 }
 
+//IsNetworkRadiation decides if a message is a network radiation (a message that it has received already)
 func (net *Network) IsNetworkRadiation(msg *network_model.DappPacket) bool {
 	return msg.IsBroadcast() && net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
 }
 
+//RecordMessage records a message that is already received or sent
 func (net *Network) RecordMessage(msg *network_model.DappPacket) {
 	net.recentlyRcvdDapMsgs.Add(string(msg.GetRawBytes()), true)
 }
 
+//Stop stops the network
 func (net *Network) Stop() {
 	net.peerManager.StopAllStreams(nil)
 	net.host.RemoveStreamHandler(network_model.ProtocalName)
@@ -86,10 +93,12 @@ func (net *Network) Stop() {
 	}
 }
 
+//OnStreamStop runs cb function upon any stream stops
 func (net *Network) OnStreamStop(cb onStreamStopFunc) {
 	net.peerManager.SubscribeOnStreamStop(cb)
 }
 
+//Unicast sends a message to a peer
 func (net *Network) Unicast(data []byte, pid peer.ID, priority network_model.DappCmdPriority) {
 	packet := network_model.ConstructDappPacketFromData(data, false)
 
@@ -97,6 +106,7 @@ func (net *Network) Unicast(data []byte, pid peer.ID, priority network_model.Dap
 	net.peerManager.Unicast(packet, pid, priority)
 }
 
+//Broadcast sends a message to all peers
 func (net *Network) Broadcast(data []byte, priority network_model.DappCmdPriority) {
 	packet := network_model.ConstructDappPacketFromData(data, true)
 
@@ -104,14 +114,17 @@ func (net *Network) Broadcast(data []byte, priority network_model.DappCmdPriorit
 	net.peerManager.Broadcast(packet, priority)
 }
 
+//AddPeer adds a peer to its network and starts the connection
 func (net *Network) AddPeer(peerInfo *network_model.PeerInfo) error {
 	return net.peerManager.AddAndConnectPeer(peerInfo)
 }
 
+//AddSeed Add a seed peer to its network
 func (net *Network) AddSeed(peerInfo *network_model.PeerInfo) error {
 	return net.peerManager.AddSeedByPeerInfo(peerInfo)
 }
 
+//AddPeerByString adds a peer by its full address string and starts the connection
 func (net *Network) AddPeerByString(fullAddr string) error {
 
 	peerInfo, err := network_model.NewPeerInfoFromString(fullAddr)

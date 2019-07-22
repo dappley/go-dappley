@@ -44,6 +44,7 @@ type Stream struct {
 	quitWrCh              chan bool
 }
 
+//NewStream creates a new Stream instance
 func NewStream(s network.Stream) *Stream {
 	return &Stream{
 		network_model.PeerInfo{s.Conn().RemotePeer(), []multiaddr.Multiaddr{s.Conn().RemoteMultiaddr()}},
@@ -57,15 +58,20 @@ func NewStream(s network.Stream) *Stream {
 	}
 }
 
-func (s *Stream) GetPeerId() peer.ID                 { return s.peerInfo.PeerId }
+//GetPeerId returns the remote peer ID
+func (s *Stream) GetPeerId() peer.ID { return s.peerInfo.PeerId }
+
+//GetRemoteAddr returns the remote multi address
 func (s *Stream) GetRemoteAddr() multiaddr.Multiaddr { return s.peerInfo.Addrs[0] }
 
+//Start starts a stream with a peer
 func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	logger.Warn("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, msgRcvCh)
 }
 
+//StopStream stops a stream
 func (s *Stream) StopStream(err error) {
 	logger.WithFields(logger.Fields{
 		"peer_address": s.GetRemoteAddr(),
@@ -77,6 +83,7 @@ func (s *Stream) StopStream(err error) {
 	s.stream.Close()
 }
 
+//Send sends a DappPacket to its peer
 func (s *Stream) Send(packet *network_model.DappPacket, priority network_model.DappCmdPriority) {
 	defer func() {
 		if p := recover(); p != nil {
@@ -124,11 +131,13 @@ func (s *Stream) Send(packet *network_model.DappPacket, priority network_model.D
 
 }
 
+//startLoop starts the read and write loop
 func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	go s.readLoop(rw, quitCh, msgRcvCh)
 	go s.writeLoop(rw)
 }
 
+//read reads raw bytes from its peer
 func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPacketContext) {
 	buffer := make([]byte, 1024)
 	var err error
@@ -167,6 +176,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPac
 
 }
 
+//readLoop keeps reading from its peer
 func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	for {
 		select {
@@ -180,6 +190,7 @@ func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh 
 	}
 }
 
+//writeLoop listens to all write channels and sends the message to its peer
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 
 	for {

@@ -88,6 +88,7 @@ type PeerManager struct {
 	mutex sync.RWMutex
 }
 
+//NewPeerManager create a new peer manager object
 func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, db Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
@@ -118,14 +119,17 @@ func NewPeerManager(config *NodeConfig, streamMessageReceiveCh chan *network_mod
 	}
 }
 
+//GetSubscribedTopics returns subscribed topics
 func (pm *PeerManager) GetSubscribedTopics() []string {
 	return subscribedTopics
 }
 
+//SetCommandSendCh sets the command send channel
 func (pm *PeerManager) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
 	pm.commandSendCh = commandSendCh
 }
 
+//GetCommandHandler returns the corresponding command handler
 func (pm *PeerManager) GetCommandHandler(cmd string) network_model.CommandHandlerFunc {
 	switch cmd {
 	case GetPeerListRequest:
@@ -136,6 +140,7 @@ func (pm *PeerManager) GetCommandHandler(cmd string) network_model.CommandHandle
 	return nil
 }
 
+//AddSeeds add seed peers
 func (pm *PeerManager) AddSeeds(seeds []string) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
@@ -145,6 +150,7 @@ func (pm *PeerManager) AddSeeds(seeds []string) {
 	}
 }
 
+//addSeedByString adds seed peer by multiaddr string
 func (pm *PeerManager) addSeedByString(fullAddr string) {
 
 	peerInfo, err := network_model.NewPeerInfoFromString(fullAddr)
@@ -157,11 +163,13 @@ func (pm *PeerManager) addSeedByString(fullAddr string) {
 	pm.seeds[peerInfo.PeerId] = peerInfo
 }
 
+//AddSeedByPeerInfo adds seed by peerInfo
 func (pm *PeerManager) AddSeedByPeerInfo(peerInfo *network_model.PeerInfo) error {
 	pm.seeds[peerInfo.PeerId] = peerInfo
 	return nil
 }
 
+//AddAndConnectPeer adds a peer and starts a connection right away
 func (pm *PeerManager) AddAndConnectPeer(peerInfo *network_model.PeerInfo) error {
 
 	logger.Info("PeerManager: AddAndConnectPeer")
@@ -175,6 +183,7 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *network_model.PeerInfo) error
 	return err
 }
 
+//Start starts peer manager thread
 func (pm *PeerManager) Start(host *network_model.Host, seeds []string) {
 	pm.host = host
 	pm.AddSeeds(seeds)
@@ -186,10 +195,12 @@ func (pm *PeerManager) Start(host *network_model.Host, seeds []string) {
 	pm.StartExitListener()
 }
 
+//SubscribeOnStreamStop allows another object to subscribe to stream stop event
 func (pm *PeerManager) SubscribeOnStreamStop(cb onStreamStopFunc) {
 	pm.eventNotifier.SubscribeAsync(topicStreamStop, cb, false)
 }
 
+//StartExitListener starts the exit listener loop
 func (pm *PeerManager) StartExitListener() {
 	go func() {
 		for {
@@ -201,6 +212,7 @@ func (pm *PeerManager) StartExitListener() {
 	}()
 }
 
+//startConnectSeeds connects to all seed peers
 func (pm *PeerManager) startConnectSeeds() {
 	unConnectedSeeds := pm.getUnConnectedSeeds()
 
@@ -210,6 +222,7 @@ func (pm *PeerManager) startConnectSeeds() {
 	wg.Wait()
 }
 
+//getUnConnectedSeeds returns all unconnected seed peers
 func (pm *PeerManager) getUnConnectedSeeds() []*network_model.PeerInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
@@ -225,6 +238,7 @@ func (pm *PeerManager) getUnConnectedSeeds() []*network_model.PeerInfo {
 	return unConnectedSeeds
 }
 
+//Broadcast sends a DappPacket to all peers
 func (pm *PeerManager) Broadcast(packet *network_model.DappPacket, priority network_model.DappCmdPriority) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
@@ -233,6 +247,7 @@ func (pm *PeerManager) Broadcast(packet *network_model.DappPacket, priority netw
 	}
 }
 
+//Unicast sends a DappPacket to a peer indicated by "pid"
 func (pm *PeerManager) Unicast(packet *network_model.DappPacket, pid peer.ID, priority network_model.DappCmdPriority) {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
@@ -248,6 +263,7 @@ func (pm *PeerManager) Unicast(packet *network_model.DappPacket, pid peer.ID, pr
 	streamInfo.stream.Send(packet, priority)
 }
 
+//ReceivePeers adds one of its peers' peerlist to its own peerlist
 func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*network_model.PeerInfo) {
 	pm.addSyncPeersResult(peerId, peers)
 
@@ -260,6 +276,7 @@ func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*network_model.PeerI
 	}
 }
 
+//StreamHandler starts a Stream object when a stream is established (when a peer initiates the connection to the local node)
 func (pm *PeerManager) StreamHandler(s network.Stream) {
 
 	stream := NewStream(s)
@@ -276,6 +293,7 @@ func (pm *PeerManager) StreamHandler(s network.Stream) {
 	}
 }
 
+//OnStreamStop removes the stream from its peer list
 func (pm *PeerManager) OnStreamStop(stream *Stream) {
 
 	logger.WithFields(logger.Fields{
@@ -312,13 +330,15 @@ func (pm *PeerManager) OnStreamStop(stream *Stream) {
 	}
 }
 
+//StopAllStreams stops all streams
 func (pm *PeerManager) StopAllStreams(err error) {
 	for _, streamInfo := range pm.streams {
 		streamInfo.stream.StopStream(err)
 	}
 }
 
-func (pm *PeerManager) RandomGetConnectedPeers(number int) []*network_model.PeerInfo {
+//GetRandomConnectedPeers get a number of random connected peers
+func (pm *PeerManager) GetRandomConnectedPeers(number int) []*network_model.PeerInfo {
 	streams := pm.CloneStreamsToSlice()
 	chooseStreams := randomChooseStreams(number, streams)
 	peers := make([]*network_model.PeerInfo, len(chooseStreams))
@@ -329,6 +349,7 @@ func (pm *PeerManager) RandomGetConnectedPeers(number int) []*network_model.Peer
 	return peers
 }
 
+//doConnectSeeds connects to all its seed peers
 func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*network_model.PeerInfo) {
 
 	logger.WithFields(logger.Fields{
@@ -344,6 +365,7 @@ func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*network_model
 	}
 }
 
+//startConnectSyncPeers connects to random peers
 func (pm *PeerManager) startConnectSyncPeers() {
 
 	logger.WithFields(logger.Fields{
@@ -383,6 +405,7 @@ func (pm *PeerManager) startConnectSyncPeers() {
 	wg.Wait()
 }
 
+//startSyncPeersSchedule starts synchronize peer list with its peers
 func (pm *PeerManager) startSyncPeersSchedule() {
 	// Start first sync peers task
 	go func() {
@@ -400,6 +423,7 @@ func (pm *PeerManager) startSyncPeersSchedule() {
 	}()
 }
 
+//checkSeedsConnectionSchedule trys to connect to seed peers periodically
 func (pm *PeerManager) checkSeedsConnectionSchedule() {
 	go func() {
 		ticker := time.NewTicker(checkSeedsConnectionTime)
@@ -412,6 +436,7 @@ func (pm *PeerManager) checkSeedsConnectionSchedule() {
 	}()
 }
 
+//startSyncPeers starts synchronize its peers' peerlists to its own
 func (pm *PeerManager) startSyncPeers() {
 	if pm.syncPeerContext != nil {
 		logger.Info("PeerManager: another sync is running.")
@@ -433,6 +458,7 @@ func (pm *PeerManager) startSyncPeers() {
 	}()
 }
 
+//createSyncContext creates a context for synchronizing peer info
 func (pm *PeerManager) createSyncContext() {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
@@ -447,6 +473,7 @@ func (pm *PeerManager) createSyncContext() {
 	}
 }
 
+//addSyncPeersResult add the received peer list to its own peer list
 func (pm *PeerManager) addSyncPeersResult(peerId peer.ID, peers []*network_model.PeerInfo) bool {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
@@ -483,6 +510,7 @@ func (pm *PeerManager) addSyncPeersResult(peerId peer.ID, peers []*network_model
 	return true
 }
 
+//isSyncPeerFinish checks if the peer synchronization process is finished
 func (pm *PeerManager) isSyncPeerFinish() bool {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
@@ -767,7 +795,7 @@ func (pm *PeerManager) SendSyncPeersRequest() {
 
 func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.ID) {
 
-	peers := pm.RandomGetConnectedPeers(maxNumOfPeers)
+	peers := pm.GetRandomConnectedPeers(maxNumOfPeers)
 	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range peers {
 		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))

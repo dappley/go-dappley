@@ -48,11 +48,12 @@ type Node struct {
 	commandSendCh chan *network_model.DappSendCmdContext
 }
 
-//create new Node instance
+//NewNode creates a new Node instance
 func NewNode(db Storage) *Node {
 	return NewNodeWithConfig(db, nil)
 }
 
+//NewNodeWithConfig creates a new Node instance with configurations
 func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 	var err error
 
@@ -74,16 +75,16 @@ func NewNodeWithConfig(db Storage, config *NodeConfig) *Node {
 	return node
 }
 
+//GetHostPeerInfo returns the host's peerInfo
 func (n *Node) GetHostPeerInfo() *network_model.PeerInfo { return n.network.host.GetPeerInfo() }
 
+//GetPeers returns all peers
 func (n *Node) GetPeers() []*network_model.PeerInfo { return n.network.GetPeers() }
 
+//GetNetwork returns its network object
 func (n *Node) GetNetwork() *Network { return n.network }
 
-func (n *Node) GetCommandSendCh() chan *network_model.DappSendCmdContext { return n.commandSendCh }
-
-func (n *Node) GetCommandBroker() *CommandBroker { return n.commandBroker }
-
+//Start starts the network, command listener and received message listener
 func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) error {
 
 	privKey := loadNetworkKeyFromFile(privKeyFilePath)
@@ -98,22 +99,26 @@ func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) err
 	return nil
 }
 
+//RegisterSubscriber registers a subscriber
 func (n *Node) RegisterSubscriber(subscriber Subscriber) {
 	subscriber.SetCommandSendCh(n.commandSendCh)
 	n.commandBroker.Subscribe(subscriber)
 }
 
+//RegisterMultipleSubscribers registers multiple subscribers
 func (n *Node) RegisterMultipleSubscribers(subscribers []Subscriber) {
 	for _, subscriber := range subscribers {
 		n.RegisterSubscriber(subscriber)
 	}
 }
 
+//Stop stops the node
 func (n *Node) Stop() {
 	n.exitCh <- true
 	n.network.Stop()
 }
 
+//StartRequestLoop starts a command sending request listener
 func (n *Node) StartRequestLoop() {
 
 	go func() {
@@ -139,6 +144,7 @@ func (n *Node) StartRequestLoop() {
 	}()
 }
 
+//StartListenLoop starts a received message listener
 func (n *Node) StartListenLoop() {
 	go func() {
 		for {
@@ -181,6 +187,7 @@ func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {
 	return privKey
 }
 
+//OnStreamStop runs when a stream is disconnected
 func (n *Node) OnStreamStop(stream *Stream) {
 
 	peerInfo := network_model.PeerInfo{PeerId: stream.GetPeerId()}

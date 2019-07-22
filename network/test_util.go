@@ -24,6 +24,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+//FakeNodeWithPeer fakes a node with peer id and multiaddress string
 func FakeNodeWithPeer(pid, addr string) *Node {
 
 	node := NewNode(nil)
@@ -34,6 +35,7 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 	return node
 }
 
+//FakeNodeWithPidAndAddr fakes a node with peer id, multiaddress string and a database instance
 func FakeNodeWithPidAndAddr(db Storage, pid, addr string) *Node {
 
 	node := NewNode(db)
