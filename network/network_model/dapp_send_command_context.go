@@ -74,14 +74,3 @@ func (dcc *DappSendCmdContext) GetDestination() peer.ID {
 func (dcc *DappSendCmdContext) IsBroadcast() bool {
 	return dcc.command.isBroadcast
 }
-
-//Send sends the DappSendCmdContext to the commandSendCh channel
-func (dcc *DappSendCmdContext) Send(commandSendCh chan *DappSendCmdContext) {
-	select {
-	case commandSendCh <- dcc:
-	default:
-		logger.WithFields(logger.Fields{
-			"lenOfDispatchChan": len(commandSendCh),
-		}).Warn("DappSendCmdContext: request channel full")
-	}
-}
