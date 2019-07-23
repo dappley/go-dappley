@@ -1,7 +1,6 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/mocks"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
@@ -45,15 +44,13 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			md := NewCommandBroker(reservedTopics)
-			subscriber := new(mocks.Subscriber)
-			subscriber.On("GetSubscribedTopics").Return([]string{tt.cmd1}).Once()
-			err := md.Subscribe(subscriber)
-			assert.Equal(t, tt.expectedErr1, err)
 
-			subscriber.On("GetSubscribedTopics").Return([]string{tt.cmd2}).Once()
-			err = md.Subscribe(subscriber)
+			var handler network_model.CommandHandlerFunc
+			err := md.Subscribe(tt.cmd1, handler)
+			assert.Equal(t, tt.expectedErr1, err)
+			err = md.Subscribe(tt.cmd2, handler)
 			assert.Equal(t, tt.expectedErr2, err)
-			assert.Equal(t, tt.expectedNumOfSubscribers, len(md.subscribers))
+			assert.Equal(t, tt.expectedNumOfSubscribers, len(md.handlers))
 		})
 	}
 }
@@ -63,39 +60,36 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 		name          string
 		subScribedCmd string
 		dispatchedCmd string
-		expectedCb    bool
+		expectedErr   error
 	}{
 		{
 			name:          "normal case",
 			subScribedCmd: "cmd",
 			dispatchedCmd: "cmd",
-			expectedCb:    true,
+			expectedErr:   nil,
 		},
 		{
 			name:          "unsubscribed cmd",
 			subScribedCmd: "cmd",
 			dispatchedCmd: "cmd1",
-			expectedCb:    false,
+			expectedErr:   ErrNoHandlersFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			md := NewCommandBroker(reservedTopics)
+
 			var handler network_model.CommandHandlerFunc
-			handler = func(command *network_model.DappRcvdCmdContext) {}
-
-			subscriber := new(mocks.Subscriber)
-			subscriber.On("GetSubscribedTopics").Return([]string{tt.subScribedCmd}).Once()
-			if tt.expectedCb {
-				subscriber.On("GetCommandHandler", tt.subScribedCmd).Return(handler).Once()
+			handler = func(command *network_model.DappRcvdCmdContext) {
 			}
+			md.Subscribe(tt.subScribedCmd, handler)
 
+			//fake received command and then dispatch
 			dappCmd := network_model.NewDappCmd(tt.dispatchedCmd, []byte("test"), false)
 			var source peer.ID
 			rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
-
-			md.Subscribe(subscriber)
-			md.Dispatch(rcvdCmd)
+			err := md.Dispatch(rcvdCmd)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
@@ -105,25 +99,14 @@ func TestCommandBroker_DispatchMultiple(t *testing.T) {
 	var handler network_model.CommandHandlerFunc
 	handler = func(command *network_model.DappRcvdCmdContext) {}
 
-	//Both subscribers subscribe to reserved topic
-	subscriber1 := new(mocks.Subscriber)
-	subscriber2 := new(mocks.Subscriber)
+	//Both handlers subscribe to reserved topic
 	topic := reservedTopics[0]
+	md.Subscribe(topic, handler)
 
 	dappCmd := network_model.NewDappCmd(topic, []byte("test"), false)
 	var source peer.ID
 	rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
 
-	//both subscribers' callback function should be invoked
-	subscriber1.On("GetSubscribedTopics").Return([]string{topic}).Once()
-	subscriber2.On("GetSubscribedTopics").Return([]string{topic}).Once()
-
-	subscriber1.On("GetCommandHandler", topic).Return(handler).Once()
-	subscriber2.On("GetCommandHandler", topic).Return(handler).Once()
-
-	md.Subscribe(subscriber1)
-	md.Subscribe(subscriber2)
-
-	md.Dispatch(rcvdCmd)
+	assert.Nil(t, md.Dispatch(rcvdCmd))
 
 }

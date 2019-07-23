@@ -6,12 +6,13 @@ import (
 )
 
 var (
-	ErrTopicOccupied = errors.New("Topic already occupied")
+	ErrTopicOccupied   = errors.New("Topic already occupied")
+	ErrNoHandlersFound = errors.New("No command handlers")
 )
 
 type CommandBroker struct {
 	reservedTopics map[string]bool
-	subscribers    map[string][]Subscriber
+	handlers       map[string][]network_model.CommandHandlerFunc
 }
 
 //NewCommandBroker creates a commandBroker instance
@@ -19,7 +20,7 @@ func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 
 	cb := &CommandBroker{
 		reservedTopics: make(map[string]bool),
-		subscribers:    make(map[string][]Subscriber, 0),
+		handlers:       make(map[string][]network_model.CommandHandlerFunc, 0),
 	}
 
 	for _, topic := range reservedTopcis {
@@ -29,39 +30,28 @@ func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 	return cb
 }
 
-//Subscribe adds a subscriber to a topic
-func (cb *CommandBroker) Subscribe(subscriber Subscriber) error {
-	for _, cmd := range subscriber.GetSubscribedTopics() {
-		err := cb.subscribeCmd(cmd, subscriber)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
+//subscribeCmd adds a handler to the topic "command"
+func (cb *CommandBroker) Subscribe(command string, handler network_model.CommandHandlerFunc) error {
+	_, isReservedTopic := cb.reservedTopics[command]
 
-//subscribeCmd adds a subscriber to the topic "cmd"
-func (cb *CommandBroker) subscribeCmd(cmd string, subscriber Subscriber) error {
-	_, isReservedTopic := cb.reservedTopics[cmd]
-
-	if _, isTopicOccupied := cb.subscribers[cmd]; isTopicOccupied && !isReservedTopic {
+	if _, isTopicOccupied := cb.handlers[command]; isTopicOccupied && !isReservedTopic {
 		return ErrTopicOccupied
 	}
 
-	cb.subscribers[cmd] = append(cb.subscribers[cmd], subscriber)
+	cb.handlers[command] = append(cb.handlers[command], handler)
 	return nil
 }
 
 //Dispatch publishes a topic and run the topic handler
-func (cb *CommandBroker) Dispatch(cmd *network_model.DappRcvdCmdContext) {
-	if _, ok := cb.subscribers[cmd.GetCommandName()]; !ok {
-		return
+func (cb *CommandBroker) Dispatch(cmd *network_model.DappRcvdCmdContext) error {
+	if _, ok := cb.handlers[cmd.GetCommandName()]; !ok {
+		return ErrNoHandlersFound
 	}
 
-	for _, subscriber := range cb.subscribers[cmd.GetCommandName()] {
-		handler := subscriber.GetCommandHandler(cmd.GetCommandName())
+	for _, handler := range cb.handlers[cmd.GetCommandName()] {
 		if handler != nil {
 			go handler(cmd)
 		}
 	}
+	return nil
 }
