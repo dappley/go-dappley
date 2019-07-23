@@ -17,13 +17,13 @@ type Network struct {
 }
 
 //NewNetwork creates a network instance
-func NewNetwork(config network_model.PeerConnectionConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, db Storage) *Network {
+func NewNetwork(netService NetService, config network_model.PeerConnectionConfig, streamMsgDispatcherCh chan *network_model.DappPacketContext, db Storage) *Network {
 
 	var err error
 	streamMsgRcvCh := make(chan *network_model.DappPacketContext, dispatchChLen)
 
 	net := &Network{
-		peerManager:           NewPeerManager(config, streamMsgRcvCh, db),
+		peerManager:           NewPeerManager(netService, config, streamMsgRcvCh, db),
 		streamMsgRcvCh:        streamMsgRcvCh,
 		streamMsgDispatcherCh: streamMsgDispatcherCh,
 	}

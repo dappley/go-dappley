@@ -65,9 +65,8 @@ func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig) *N
 		commandBroker: NewCommandBroker(reservedTopics),
 	}
 
-	node.network = NewNetwork(config, node.dispatcher, db)
+	node.network = NewNetwork(node, config, node.dispatcher, db)
 	node.network.OnStreamStop(node.OnStreamStop)
-	node.RegisterSubscriber(node.network.peerManager)
 
 	if err != nil {
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")

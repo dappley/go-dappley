@@ -80,7 +80,7 @@ type PeerManager struct {
 
 	streamStopNotificationCh chan *Stream
 	streamMsgReceiveCh       chan *network_model.DappPacketContext
-	commandSendCh            chan *network_model.DappSendCmdContext
+	netService               NetService
 	eventNotifier            EventBus.Bus
 	db                       Storage
 
@@ -88,7 +88,7 @@ type PeerManager struct {
 }
 
 //NewPeerManager create a new peer manager object
-func NewPeerManager(config network_model.PeerConnectionConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, db Storage) *PeerManager {
+func NewPeerManager(netService NetService, config network_model.PeerConnectionConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, db Storage) *PeerManager {
 
 	if config.GetMaxConnectionOutCount() == 0 {
 		config.SetMaxConnectionOutCount(defaultMaxConnectionOutCount)
@@ -98,28 +98,32 @@ func NewPeerManager(config network_model.PeerConnectionConfig, streamMessageRece
 		config.SetMaxConnectionInCount(defaultMaxConnectionInCount)
 	}
 
-	return &PeerManager{
+	pm := &PeerManager{
 		seeds:                    make(map[peer.ID]*network_model.PeerInfo),
 		syncPeers:                make(map[peer.ID]*network_model.PeerInfo),
 		streams:                  make(map[peer.ID]*StreamInfo),
 		mutex:                    sync.RWMutex{},
 		connectionConfig:         config,
 		streamMsgReceiveCh:       streamMessageReceiveCh,
-		commandSendCh:            nil,
 		streamStopNotificationCh: make(chan *Stream, 10),
+		netService:               netService,
 		eventNotifier:            EventBus.New(),
 		db:                       db,
 	}
+
+	pm.Subscribe()
+	return pm
 }
 
 //GetSubscribedTopics returns subscribed topics
-func (pm *PeerManager) GetSubscribedTopics() []string {
-	return subscribedTopics
-}
+func (pm *PeerManager) Subscribe() {
+	if pm.netService == nil {
+		return
+	}
 
-//SetCommandSendCh sets the command send channel
-func (pm *PeerManager) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
-	pm.commandSendCh = commandSendCh
+	for _, topic := range subscribedTopics {
+		pm.netService.Subscribe(topic, pm.GetCommandHandler(topic))
+	}
 }
 
 //GetCommandHandler returns the corresponding command handler
@@ -781,9 +785,8 @@ func (pm *PeerManager) SendSyncPeersRequest() {
 	}
 
 	var destination peer.ID
-	command := network_model.NewDappSendCmdContext(GetPeerListRequest, getPeerListPb, destination, network_model.Broadcast, network_model.HighPriorityCommand)
+	pm.netService.SendCommand(GetPeerListRequest, getPeerListPb, destination, network_model.Broadcast, network_model.HighPriorityCommand)
 
-	command.Send(pm.commandSendCh)
 }
 
 func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.ID) {
@@ -796,9 +799,8 @@ func (pm *PeerManager) SendPeerListMessage(maxNumOfPeers int, destination peer.I
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
 
-	command := network_model.NewDappSendCmdContext(GetPeerListResponse, peerList, destination, network_model.Unicast, network_model.HighPriorityCommand)
+	pm.netService.SendCommand(GetPeerListResponse, peerList, destination, network_model.Unicast, network_model.HighPriorityCommand)
 
-	command.Send(pm.commandSendCh)
 }
 
 func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvdCmdContext) {
