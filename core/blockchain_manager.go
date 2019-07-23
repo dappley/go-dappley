@@ -46,14 +46,16 @@ type BlockChainManager struct {
 	blockchain        *Blockchain
 	blockPool         *BlockPool
 	downloadRequestCh chan chan bool
-	commandSendCh     chan *network_model.DappSendCmdContext
+	netService        NetService
 }
 
 func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool) *BlockChainManager {
-	return &BlockChainManager{
+	bm := &BlockChainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
 	}
+	bm.Subscribe()
+	return bm
 }
 
 func (bm *BlockChainManager) SetDownloadRequestCh(requestCh chan chan bool) {
@@ -77,12 +79,14 @@ func (bm *BlockChainManager) RequestDownloadBlockchain() {
 	}()
 }
 
-func (bm *BlockChainManager) GetSubscribedTopics() []string {
-	return bmSubscribedTopics
-}
+func (bm *BlockChainManager) Subscribe() {
+	if bm.netService == nil {
+		return
+	}
 
-func (bm *BlockChainManager) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
-	bm.commandSendCh = commandSendCh
+	for _, command := range bmSubscribedTopics {
+		bm.netService.Subscribe(command, bm.GetCommandHandler(command))
+	}
 }
 
 func (bm *BlockChainManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
@@ -234,8 +238,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 func (bm *BlockChainManager) RequestBlock(hash Hash, pid peer.ID) {
 	request := &corepb.RequestBlock{Hash: hash}
 
-	command := network_model.NewDappSendCmdContext(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
-	command.Send(bm.commandSendCh)
+	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
 }
 
 //RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
@@ -272,8 +275,7 @@ func (bm *BlockChainManager) BroadcastBlock(block *Block) {
 //SendBlock sends a SendBlock command to its peer with pid by finding the block from its database
 func (bm *BlockChainManager) SendBlock(block *Block, pid peer.ID, isBroadcast bool) {
 
-	command := network_model.NewDappSendCmdContext(SendBlock, block.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
-	command.Send(bm.commandSendCh)
+	bm.netService.SendCommand(SendBlock, block.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
 }
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
@@ -293,11 +295,7 @@ func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := network_model.NewDappSendCmdContextFromDappCmd(
-			command.GetCommand(),
-			broadcastPid,
-			network_model.HighPriorityCommand)
-		commandSendCtx.Send(bm.commandSendCh)
+		bm.netService.Relay(command.GetCommand(), broadcastPid, network_model.HighPriorityCommand)
 	}
 }
 
