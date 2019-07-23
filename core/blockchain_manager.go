@@ -49,10 +49,11 @@ type BlockChainManager struct {
 	netService        NetService
 }
 
-func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool) *BlockChainManager {
+func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool, service NetService) *BlockChainManager {
 	bm := &BlockChainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
+		netService: service,
 	}
 	bm.Subscribe()
 	return bm

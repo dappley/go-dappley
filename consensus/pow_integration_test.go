@@ -81,8 +81,9 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
+	bm := core.NewBlockChainManager(bc, pool, n)
+
 	pow.Setup(n, wallet1.GetAddress().String(), bm)
 
 	pow.Start()
@@ -135,8 +136,10 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
+
+	bm := core.NewBlockChainManager(bc, pool, n)
+
 	pow.Setup(n, wallet.GetAddress().String(), bm)
 	pow.Start()
 
@@ -197,8 +200,11 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//start a producer
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
+
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
+
+	bm := core.NewBlockChainManager(bc, pool, n)
+
 	pow.Setup(n, wallet1.GetAddress().String(), bm)
 	pow.Start()
 
@@ -259,9 +265,11 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 	)
 	defer bc.GetDb().Close()
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 
 	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
+
+	bm := core.NewBlockChainManager(bc, pool, n)
+
 	pow.Setup(n, cbAddr.String(), bm)
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
@@ -333,8 +341,8 @@ func TestPreventDoubleSpend(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
+	bm := core.NewBlockChainManager(bc, pool, n)
 	pow.Setup(n, wallet1.GetAddress().Address, bm)
 
 	pow.Start()

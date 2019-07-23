@@ -97,7 +97,7 @@ func main() {
 	node, err := initNode(conf, db)
 	defer node.Stop()
 
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0))
+	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")

@@ -19,11 +19,11 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/network"
 	"math/big"
 	"testing"
 
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,8 +38,9 @@ func TestProofOfWork_Setup(t *testing.T) {
 	bc := core.GenerateMockBlockchain(5)
 	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
-	pow.Setup(network.NewNode(bc.GetDb()), cbAddr, bm)
+	node := network.NewNode(bc.GetDb())
+	bm := core.NewBlockChainManager(bc, pool, node)
+	pow.Setup(node, cbAddr, bm)
 	assert.Equal(t, bc, pow.bm.Getblockchain())
 }
 

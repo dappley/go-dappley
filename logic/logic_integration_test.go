@@ -74,9 +74,9 @@ func TestSend(t *testing.T) {
 			// i.e. sender's wallet would have mineReward amount after blockchain created
 			bc, pow := createBlockchain(senderWallet.GetAddress(), store)
 			pool := core.NewBlockPool(0)
-			bm := core.NewBlockChainManager(bc, pool)
+
 			node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
-			node.RegisterSubscriber(bm)
+			bm := core.NewBlockChainManager(bc, pool, node)
 
 			// Create a receiver wallet; Balance is 0 initially
 			receiverWallet, err := CreateWallet(GetTestWalletPath(), "test")
@@ -186,9 +186,8 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
-	node.RegisterSubscriber(bm)
+	bm := core.NewBlockChainManager(bc, pool, node)
 
 	//Send 5 coins from addr1 to an invalid address
 	_, _, err = Send(wallet1, core.NewAddress(InvalidAddress), transferAmount, tip, "", bc, node)
@@ -242,9 +241,8 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
-	node.RegisterSubscriber(bm)
+	bm := core.NewBlockChainManager(bc, pool, node)
 
 	//Send 5 coins from addr1 to addr2
 	_, _, err = Send(wallet1, addr2, transferAmount, tip, "", bc, node)
@@ -295,9 +293,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		node := network.NewNode(bc.GetDb())
 		node.Start(testport_msg_relay_port1+i, nil, "")
 		nodes = append(nodes, node)
-
-		bm := core.NewBlockChainManager(bc, pool)
-		node.RegisterSubscriber(bm)
+		bm := core.NewBlockChainManager(bc, pool, node)
 
 		dpos.Setup(node, producerAddrs[0], bm)
 		dpos.SetKey(producerKey[0])
@@ -370,8 +366,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		}
 		nodes = append(nodes, node)
 
-		bm := core.NewBlockChainManager(bc, pool)
-		node.RegisterSubscriber(bm)
+		bm := core.NewBlockChainManager(bc, pool, node)
 
 		dpos.Setup(node, producerAddrs[0], bm)
 		dpos.SetKey(producerKey[0])
@@ -438,9 +433,7 @@ func TestForkChoice(t *testing.T) {
 		pools = append(pools, pool)
 
 		node := network.NewNode(bc.GetDb())
-
-		bm := core.NewBlockChainManager(bc, pool)
-		node.RegisterSubscriber(bm)
+		bm := core.NewBlockChainManager(bc, pool, node)
 
 		pow.Setup(node, addr.String(), bm)
 		pow.SetTargetBit(10)
@@ -514,8 +507,7 @@ func TestForkSegmentHandling(t *testing.T) {
 		pool := core.NewBlockPool(0)
 		pools = append(pools, pool)
 		node := network.NewNode(db)
-		bm := core.NewBlockChainManager(bc, pool)
-		node.RegisterSubscriber(bm)
+		bm := core.NewBlockChainManager(bc, pool, node)
 
 		pow.Setup(node, addr.String(), bm)
 		pow.SetTargetBit(10)
@@ -614,9 +606,11 @@ func TestAddBalance(t *testing.T) {
 
 			// Start mining to approve the transaction
 			pool := core.NewBlockPool(0)
-			bm := core.NewBlockChainManager(bc, pool)
 
 			node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
+
+			bm := core.NewBlockChainManager(bc, pool, node)
+
 			SetMinerKeyPair(key)
 			pow.Setup(node, addr.String(), bm)
 			pow.SetTargetBit(0)
@@ -665,8 +659,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 
 			node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 
-			bm := core.NewBlockChainManager(bc, pool)
-			node.RegisterSubscriber(bm)
+			bm := core.NewBlockChainManager(bc, pool, node)
 
 			_, _, err = SendFromMiner(core.Address{tc.address}, common.NewAmount(8), bc, node)
 			assert.Equal(t, ErrInvalidRcverAddress, err)
@@ -701,9 +694,8 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	bc, pow := createBlockchain(senderWallet.GetAddress(), store)
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "test", "test")
-	node.RegisterSubscriber(bm)
+	bm := core.NewBlockChainManager(bc, pool, node)
 
 	//deploy smart contract
 	_, _, err = Send(senderWallet, core.Address{""}, common.NewAmount(1), common.NewAmount(0), contract, bc, node)
@@ -756,9 +748,10 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	pool := core.NewBlockPool(0)
-	bm := core.NewBlockChainManager(bc, pool)
 
 	node := network.NewNode(bc.GetDb())
+	bm := core.NewBlockChainManager(bc, pool, node)
+
 	pow.Setup(node, addr.String(), bm)
 	pow.SetTargetBit(12)
 	node.Start(port, nil, "")
@@ -805,9 +798,7 @@ func TestDoubleMint(t *testing.T) {
 
 		node := network.NewNode(bc.GetDb())
 		node.Start(testport_msg_relay_port3+i, nil, "")
-
-		bm := core.NewBlockChainManager(bc, pool)
-		node.RegisterSubscriber(bm)
+		bm := core.NewBlockChainManager(bc, pool, node)
 
 		dpos.Setup(node, validProducerAddr, bm)
 		dpos.SetKey(validProducerKey)
@@ -857,8 +848,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	seedNode := network.NewNode(bc.GetDb())
 
-	bm := core.NewBlockChainManager(bc, pool)
-	seedNode.RegisterSubscriber(bm)
+	bm := core.NewBlockChainManager(bc, pool, seedNode)
 
 	seedNode.Start(testport_fork_syncing, nil, "")
 	defer seedNode.Stop()
@@ -884,8 +874,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	node.Start(testport_fork_syncing+1, nil, "")
 	defer node.Stop()
 
-	bm1 := core.NewBlockChainManager(bc1, pool1)
-	node.RegisterSubscriber(bm1)
+	bm1 := core.NewBlockChainManager(bc1, pool1, node)
 
 	dpos.Setup(node, validProducerAddress, bm1)
 	dpos.SetKey(validProducerKey)
