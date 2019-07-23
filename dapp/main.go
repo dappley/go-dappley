@@ -105,6 +105,7 @@ func main() {
 	}
 
 	downloadManager := download_manager.NewDownloadManager(node, bm)
+	downloadManager.Start()
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()

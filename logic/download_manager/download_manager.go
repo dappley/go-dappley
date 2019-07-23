@@ -134,7 +134,7 @@ func NewDownloadManager(node NetService, bm *core.BlockChainManager) *DownloadMa
 		bm:                bm,
 		node:              node,
 		mutex:             sync.RWMutex{},
-		status:            DownloadStatusInit,
+		status:            DownloadStatusIdle,
 		msgId:             0,
 		commonHeight:      0,
 		downloadRequestCh: make(chan chan bool, 100),
