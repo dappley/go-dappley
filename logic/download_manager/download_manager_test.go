@@ -91,7 +91,6 @@ func TestMultiEqualNode(t *testing.T) {
 	downloadManager := NewDownloadManager(node, bm)
 	downloadManager.Start()
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
-	node.RegisterSubscriber(downloadManager)
 
 	//Connect all other nodes to the first node
 	for i := 1; i < len(nodes); i++ {
@@ -125,7 +124,6 @@ func TestMultiNotEqualNode(t *testing.T) {
 	node := nodes[0]
 	downloadManager := NewDownloadManager(node, bm)
 	downloadManager.Start()
-	node.RegisterSubscriber(downloadManager)
 
 	highestChain := bms[1]
 	highestChain.Getblockchain().GetConsensus().Start()
@@ -145,7 +143,6 @@ func TestMultiNotEqualNode(t *testing.T) {
 	highestChainNode := nodes[1]
 	highestChainDownloadManager := NewDownloadManager(highestChainNode, highestChain)
 	highestChainDownloadManager.Start()
-	highestChainNode.RegisterSubscriber(highestChainDownloadManager)
 
 	finishCh := make(chan bool, 1)
 	bm.Getblockchain().SetState(core.BlockchainDownloading)
@@ -165,7 +162,6 @@ func TestMultiSuccessNode(t *testing.T) {
 	node := nodes[0]
 	downloadManager := NewDownloadManager(node, bm)
 	downloadManager.Start()
-	node.RegisterSubscriber(downloadManager)
 
 	highestChain := bms[1]
 	highestChain.Getblockchain().GetConsensus().Start()
@@ -182,7 +178,6 @@ func TestMultiSuccessNode(t *testing.T) {
 	highestChainNode := nodes[1]
 	highestChainDownloadManager := NewDownloadManager(highestChainNode, highestChain)
 	highestChainDownloadManager.Start()
-	highestChainNode.RegisterSubscriber(highestChainDownloadManager)
 
 	finishCh := make(chan bool, 1)
 	bm.Getblockchain().SetState(core.BlockchainDownloading)
@@ -202,7 +197,6 @@ func TestDisconnectNode(t *testing.T) {
 	node := nodes[0]
 	downloadManager := NewDownloadManager(node, bm)
 	downloadManager.Start()
-	node.RegisterSubscriber(downloadManager)
 
 	highestChain := bms[1]
 	highestChain.Getblockchain().GetConsensus().Start()
@@ -213,7 +207,6 @@ func TestDisconnectNode(t *testing.T) {
 	highestChainNode := nodes[1]
 	highestChainDownloadManager := NewDownloadManager(highestChainNode, highestChain)
 	highestChainDownloadManager.Start()
-	highestChainNode.RegisterSubscriber(highestChainDownloadManager)
 
 	secondChain := bms[2]
 	secondChain.Getblockchain().GetConsensus().Start()
@@ -224,7 +217,6 @@ func TestDisconnectNode(t *testing.T) {
 	secondChainNode := nodes[2]
 	secondChainDownloadManager := NewDownloadManager(secondChainNode, secondChain)
 	secondChainDownloadManager.Start()
-	secondChainNode.RegisterSubscriber(secondChainDownloadManager)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
@@ -250,7 +242,6 @@ func TestValidateReturnBlocks(t *testing.T) {
 	node := nodes[0]
 	downloadManager := NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
-	node.RegisterSubscriber(downloadManager)
 
 	peerNode := nodes[1]
 
