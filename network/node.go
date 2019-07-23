@@ -23,6 +23,7 @@ import (
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 )
@@ -102,14 +103,28 @@ func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) err
 //RegisterSubscriber registers a subscriber
 func (n *Node) RegisterSubscriber(subscriber Subscriber) {
 	subscriber.SetCommandSendCh(n.commandSendCh)
-	n.commandBroker.Subscribe(subscriber)
 }
 
-//RegisterMultipleSubscribers registers multiple subscribers
+//RegisterMultipleSubscribers registers multiple handlers
 func (n *Node) RegisterMultipleSubscribers(subscribers []Subscriber) {
 	for _, subscriber := range subscribers {
 		n.RegisterSubscriber(subscriber)
 	}
+}
+
+func (n *Node) SendCommand(commandName string, message proto.Message, destination peer.ID, isBroadcast bool, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContext(commandName, message, destination, isBroadcast, priority)
+	select {
+	case n.commandSendCh <- command:
+	default:
+		logger.WithFields(logger.Fields{
+			"lenOfDispatchChan": len(n.commandSendCh),
+		}).Warn("DappSendCmdContext: request channel full")
+	}
+}
+
+func (n *Node) Subscribe(command string, handler network_model.CommandHandlerFunc) {
+	n.commandBroker.Subscribe(command, handler)
 }
 
 //Stop stops the node
