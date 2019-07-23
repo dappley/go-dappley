@@ -50,17 +50,17 @@ var (
 )
 
 type TransactionPool struct {
-	txs           map[string]*TransactionNode
-	pendingTxs    []*Transaction
-	tipOrder      []string
-	sizeLimit     uint32
-	currSize      uint32
-	EventBus      EventBus.Bus
-	mutex         sync.RWMutex
-	commandSendCh chan *network_model.DappSendCmdContext
+	txs        map[string]*TransactionNode
+	pendingTxs []*Transaction
+	tipOrder   []string
+	sizeLimit  uint32
+	currSize   uint32
+	EventBus   EventBus.Bus
+	mutex      sync.RWMutex
+	netService NetService
 }
 
-func NewTransactionPool(limit uint32) *TransactionPool {
+func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 	txPool := &TransactionPool{
 		txs:        make(map[string]*TransactionNode),
 		pendingTxs: make([]*Transaction, 0),
@@ -69,16 +69,20 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 		currSize:   0,
 		EventBus:   EventBus.New(),
 		mutex:      sync.RWMutex{},
+		netService: netService,
 	}
+	txPool.SubscribeNetService()
 	return txPool
 }
 
-func (txPool *TransactionPool) SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext) {
-	txPool.commandSendCh = commandSendCh
-}
+func (txPool *TransactionPool) SubscribeNetService() {
+	if txPool.netService == nil {
+		return
+	}
 
-func (txPool *TransactionPool) GetSubscribedTopics() []string {
-	return txPoolSubscribedTopics
+	for _, command := range txPoolSubscribedTopics {
+		txPool.netService.Subscribe(command, txPool.GetCommandHandler(command))
+	}
 }
 
 func (txPool *TransactionPool) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
@@ -453,7 +457,7 @@ func deserializeTxPool(d []byte) *TransactionPool {
 		println(err)
 		logger.WithError(err).Panic("TxPool: failed to deserialize TxPool transactions.")
 	}
-	txPool := NewTransactionPool(1)
+	txPool := NewTransactionPool(nil, 1) //TODO: inject netService
 	txPool.FromProto(txPoolProto)
 
 	return txPool
@@ -462,7 +466,7 @@ func deserializeTxPool(d []byte) *TransactionPool {
 func LoadTxPoolFromDatabase(db storage.Storage, txPoolSize uint32) *TransactionPool {
 	rawBytes, err := db.Get([]byte(TxPoolDbKey))
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return NewTransactionPool(txPoolSize)
+		return NewTransactionPool(nil, txPoolSize) //TODO: inject netService
 	}
 	txPool := deserializeTxPool(rawBytes)
 	txPool.sizeLimit = txPoolSize
@@ -553,8 +557,7 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 
 func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
 	var broadcastPid peer.ID
-	command := network_model.NewDappSendCmdContext(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
-	command.Send(txPool.commandSendCh)
+	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
 }
 
 func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
@@ -578,11 +581,7 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcv
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := network_model.NewDappSendCmdContextFromDappCmd(
-			command.GetCommand(),
-			broadcastPid,
-			network_model.NormalPriorityCommand)
-		commandSendCtx.Send(txPool.commandSendCh)
+		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
 	}
 }
 
@@ -595,8 +594,7 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 	transactions := NewTransactions(txs)
 
 	var broadcastPid peer.ID
-	command := network_model.NewDappSendCmdContext(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
-	command.Send(txPool.commandSendCh)
+	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
 }
 
 func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
@@ -624,11 +622,7 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.D
 	if command.IsBroadcast() {
 		//relay the original command
 		var broadcastPid peer.ID
-		commandSendCtx := network_model.NewDappSendCmdContextFromDappCmd(
-			command.GetCommand(),
-			broadcastPid,
-			network_model.NormalPriorityCommand)
-		commandSendCtx.Send(txPool.commandSendCh)
+		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
 	}
 
 }

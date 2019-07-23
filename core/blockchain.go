@@ -88,7 +88,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		db,
 		NewUTXOCache(db),
 		consensus,
-		NewTransactionPool(transactionPoolLimit),
+		NewTransactionPool(nil, transactionPoolLimit), //TODO: inject netservice
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
@@ -123,7 +123,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		db,
 		NewUTXOCache(db),
 		consensus,
-		NewTransactionPool(transactionPoolLimit),
+		NewTransactionPool(nil, transactionPoolLimit), //TODO: inject netservice
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
@@ -485,7 +485,7 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScStat
 
 	//keep rolling back blocks until the block with the input hash
 
-	newTxPool := NewTransactionPool(bc.txPool.GetSizeLimit())
+	newTxPool := NewTransactionPool(bc.txPool.netService, bc.txPool.GetSizeLimit())
 
 loop:
 	for {

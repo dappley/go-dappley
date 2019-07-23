@@ -68,7 +68,7 @@ var popInputOrder = []struct {
 
 func TestTransactionPool_Push(t *testing.T) {
 
-	txPool := NewTransactionPool(128000)
+	txPool := NewTransactionPool(nil, 128000)
 	txPool.Push(tx1)
 
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
@@ -78,7 +78,7 @@ func TestTransactionPool_Push(t *testing.T) {
 	txPool.Push(tx4)
 	assert.Equal(t, 4, len(txPool.GetTransactions()))
 
-	newTxPool := NewTransactionPool(128000)
+	newTxPool := NewTransactionPool(nil, 128000)
 	var txs = []Transaction{tx1, tx2, tx3, tx4}
 	for _, tx := range txs {
 		//txPointer := tx.DeepCopy()
@@ -94,7 +94,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 
 	txs := generateDependentTxs()
 
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(nil, 128)
 	//push the first transaction. It should be in stored in txs and tipOrder
 	txPool.addTransaction(NewTransactionNode(txs[0]))
 	assert.Equal(t, 1, len(txPool.txs))
@@ -148,7 +148,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 
 func TestTransactionPool_RemoveTransactionNodeAndChildren(t *testing.T) {
 	txs := generateDependentTxs()
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(nil, 128)
 	for _, tx := range txs {
 		txPool.addTransaction(NewTransactionNode(tx))
 	}
@@ -164,7 +164,7 @@ func TestTransactionPool_RemoveTransactionNodeAndChildren(t *testing.T) {
 
 func TestTransactionPool_removeMinTipTx(t *testing.T) {
 	txs := generateDependentTxs()
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(nil, 128)
 	for _, tx := range txs {
 		txPool.addTransaction(NewTransactionNode(tx))
 	}
@@ -178,7 +178,7 @@ func TestTransactionPool_removeMinTipTx(t *testing.T) {
 
 func TestTransactionPool_Update(t *testing.T) {
 	txs := generateDependentTxs()
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(nil, 128)
 	for _, tx := range txs {
 		txPool.addTransaction(NewTransactionNode(tx))
 	}
@@ -196,11 +196,11 @@ func TestTransactionPool_Update(t *testing.T) {
 }
 
 func TestTransactionPoolLimit(t *testing.T) {
-	txPool := NewTransactionPool(0)
+	txPool := NewTransactionPool(nil, 0)
 	txPool.Push(tx1)
 	assert.Equal(t, 0, len(txPool.GetTransactions()))
 
-	txPool = NewTransactionPool(1)
+	txPool = NewTransactionPool(nil, 1)
 	txPool.Push(tx1)
 	txPool.Push(tx2) // Note: t2 should be ignore
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
@@ -235,7 +235,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	}
 	executionTx.ID = executionTx.Hash()
 
-	txPool := NewTransactionPool(100000)
+	txPool := NewTransactionPool(nil, 100000)
 	txPool.Push(executionTx)
 	txPool.Push(deploymentTx)
 
@@ -247,7 +247,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 
 func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
 
-	txPool := NewTransactionPool(128000)
+	txPool := NewTransactionPool(nil, 128000)
 	txPool.Push(tx1)
 
 	assert.Equal(t, 1, len(txPool.GetTransactions()))
@@ -341,7 +341,7 @@ func generateDependentTxs() []*Transaction {
 }
 
 func TestTransactionPool_Proto(t *testing.T) {
-	txPool := NewTransactionPool(128)
+	txPool := NewTransactionPool(nil, 128)
 	txs := generateDependentTxs()
 	for _, tx := range txs {
 		txPool.addTransaction(NewTransactionNode(tx))
@@ -353,7 +353,7 @@ func TestTransactionPool_Proto(t *testing.T) {
 	err = proto.Unmarshal(rawBytes, txPoolProto)
 	assert.Nil(t, err)
 
-	txPool1 := NewTransactionPool(128)
+	txPool1 := NewTransactionPool(nil, 128)
 	txPool1.FromProto(txPoolProto)
 	assert.Equal(t, txPool.pendingTxs, txPool1.pendingTxs)
 	assert.Equal(t, txPool.tipOrder, txPool1.tipOrder)
