@@ -99,18 +99,7 @@ func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) err
 	return nil
 }
 
-//RegisterSubscriber registers a subscriber
-func (n *Node) RegisterSubscriber(subscriber Subscriber) {
-	subscriber.SetCommandSendCh(n.commandSendCh)
-}
-
-//RegisterMultipleSubscribers registers multiple handlers
-func (n *Node) RegisterMultipleSubscribers(subscribers []Subscriber) {
-	for _, subscriber := range subscribers {
-		n.RegisterSubscriber(subscriber)
-	}
-}
-
+//SendCommand sends a command to a peer or all peers
 func (n *Node) SendCommand(commandName string, message proto.Message, destination peer.ID, isBroadcast bool, priority network_model.DappCmdPriority) {
 	command := network_model.NewDappSendCmdContext(commandName, message, destination, isBroadcast, priority)
 	select {
@@ -122,6 +111,7 @@ func (n *Node) SendCommand(commandName string, message proto.Message, destinatio
 	}
 }
 
+//Relay relays a command to a peer or all peers
 func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priority network_model.DappCmdPriority) {
 	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination, priority)
 	select {
@@ -133,6 +123,7 @@ func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priori
 	}
 }
 
+//Subscribe registers a callback function for a topic
 func (n *Node) Subscribe(command string, handler network_model.CommandHandlerFunc) {
 	n.commandBroker.Subscribe(command, handler)
 }

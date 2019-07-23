@@ -11,12 +11,6 @@ type Storage interface {
 	Put(key []byte, val []byte) error
 }
 
-type Subscriber interface {
-	GetSubscribedTopics() []string
-	SetCommandSendCh(commandSendCh chan *network_model.DappSendCmdContext)
-	GetCommandHandler(commandName string) network_model.CommandHandlerFunc
-}
-
 type NetService interface {
 	SendCommand(
 		commandName string,

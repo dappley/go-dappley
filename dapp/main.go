@@ -107,14 +107,6 @@ func main() {
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
-	node.RegisterMultipleSubscribers(
-		[]network.Subscriber{
-			bm,
-			downloadManager,
-			bm.Getblockchain().GetTxPool(),
-		},
-	)
-
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
 	conss.Setup(node, minerAddr, bm)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
