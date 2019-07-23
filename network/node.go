@@ -122,6 +122,17 @@ func (n *Node) SendCommand(commandName string, message proto.Message, destinatio
 	}
 }
 
+func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination, priority)
+	select {
+	case n.commandSendCh <- command:
+	default:
+		logger.WithFields(logger.Fields{
+			"lenOfDispatchChan": len(n.commandSendCh),
+		}).Warn("DappSendCmdContext: request channel full")
+	}
+}
+
 func (n *Node) Subscribe(command string, handler network_model.CommandHandlerFunc) {
 	n.commandBroker.Subscribe(command, handler)
 }
