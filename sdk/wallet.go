@@ -45,7 +45,7 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 			return nil
 		}
 		logger.WithFields(logger.Fields{
-			"address": w.Addresses[0],
+			"address": w.GetKeyPair().GenerateAddress(),
 		}).Info("DappSdkAccount: Account is created")
 	}
 

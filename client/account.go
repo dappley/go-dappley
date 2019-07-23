@@ -23,32 +23,38 @@ import (
 )
 
 type Account struct {
-	Key       *KeyPair
-	Addresses []Address
+	key     *KeyPair
+	subKeys []*KeyPair
 }
 
 func NewAccount() *Account {
 	account := &Account{}
-	account.Key = NewKeyPair()
-	account.Addresses = append(account.Addresses, account.Key.GenerateAddress())
+	account.key = NewKeyPair()
+	account.subKeys = []*KeyPair{}
 	return account
 }
 
-func (a Account) GetAddress() Address {
-	return a.Addresses[0]
+func NewAccountByKey(key *KeyPair) *Account {
+	account := &Account{}
+	account.key = key
+	account.subKeys = []*KeyPair{}
+	return account
+}
+
+func (a Account) GetSubKeys() []*KeyPair {
+	return a.subKeys
 }
 
 func (a Account) GetKeyPair() *KeyPair {
-	return a.Key
+	return a.key
 }
 
-func (a Account) GetAddresses() []Address {
-	return a.Addresses
-}
-
-func (a Account) ContainAddress(address Address) bool {
-	for _, value := range a.Addresses {
-		if value == address {
+func (a Account) ContainAddress(addr Address) bool {
+	if a.key.GenerateAddress() == addr {
+		return true
+	}
+	for _, subkey := range a.subKeys {
+		if subkey.GenerateAddress() == addr {
 			return true
 		}
 	}
@@ -56,25 +62,25 @@ func (a Account) ContainAddress(address Address) bool {
 }
 
 func (a *Account) ToProto() proto.Message {
-	addrsProto := []*accountpb.Address{}
-	for _, addr := range a.Addresses {
-		addrsProto = append(addrsProto, addr.ToProto().(*accountpb.Address))
+	keysProto := []*accountpb.KeyPair{}
+	for _, key := range a.subKeys {
+		keysProto = append(keysProto, key.ToProto().(*accountpb.KeyPair))
 	}
 	return &accountpb.Account{
-		KeyPair:   a.Key.ToProto().(*accountpb.KeyPair),
-		Addresses: addrsProto,
+		KeyPair: a.key.ToProto().(*accountpb.KeyPair),
+		SubKeys: keysProto,
 	}
 }
 
 func (a *Account) FromProto(pb proto.Message) {
-	addrs := []Address{}
-	for _, addrPb := range pb.(*accountpb.Account).Addresses {
-		addr := Address{}
-		addr.FromProto(addrPb)
-		addrs = append(addrs, addr)
+	keys := []*KeyPair{}
+	for _, keyPb := range pb.(*accountpb.Account).SubKeys {
+		key := &KeyPair{}
+		key.FromProto(keyPb)
+		keys = append(keys, key)
 	}
 	keyPair := &KeyPair{}
 	keyPair.FromProto(pb.(*accountpb.Account).KeyPair)
-	a.Key = keyPair
-	a.Addresses = addrs
+	a.key = keyPair
+	a.subKeys = keys
 }

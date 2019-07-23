@@ -45,9 +45,9 @@ func TestMain(m *testing.M) {
 func TestCreateAccount(t *testing.T) {
 	account, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.Addresses[0].GetPubKeyHash()
+	pubKeyHash, ok := account.GetKeyPair().GenerateAddress().GetPubKeyHash()
 	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := client.NewUserPubKeyHash(account.Key.PublicKey)
+	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, []byte(accountPubKeyHash))
 }
@@ -55,9 +55,9 @@ func TestCreateAccount(t *testing.T) {
 func TestCreateAccountWithPassphrase(t *testing.T) {
 	account, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.Addresses[0].GetPubKeyHash()
+	pubKeyHash, ok := account.GetKeyPair().GenerateAddress().GetPubKeyHash()
 	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := client.NewUserPubKeyHash(account.Key.PublicKey)
+	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, []byte(accountPubKeyHash))
 }
@@ -95,8 +95,7 @@ func TestLoopCreateBlockchain(t *testing.T) {
 	for i := 0; i < 2000; i++ {
 		err = nil
 		account := client.NewAccount()
-		account.Key = client.NewKeyPair()
-		addr := account.Key.GenerateAddress()
+		addr := account.GetKeyPair().GenerateAddress()
 		if !addr.IsValid() {
 			fmt.Println(i, addr)
 			err = ErrInvalidAddress
@@ -166,7 +165,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create a account address
 	account, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account)
-	addr := account.GetAddress()
+	addr := account.GetKeyPair().GenerateAddress()
 
 	expectedRes = append(expectedRes, addr)
 
@@ -179,7 +178,7 @@ func TestGetAllAddresses(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		//create a account address
 		account, err = CreateAccount(GetTestAccountPath(), "test")
-		addr = account.GetAddress()
+		addr = account.GetKeyPair().GenerateAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
 		expectedRes = append(expectedRes, addr)
@@ -212,7 +211,7 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	//create accounts address
 	account1, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetAddress()
+	addr1 := account1.GetKeyPair().GenerateAddress()
 
 	addressList := []client.Address{addr1}
 

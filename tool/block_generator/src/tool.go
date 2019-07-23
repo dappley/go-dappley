@@ -172,7 +172,7 @@ func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *
 
 func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender client.Address, wm *client.AccountManager) *core.Transaction {
 	senderAccount := wm.GetAccountByAddress(sender)
-	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
+	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
 	}
 	pubKeyHash, _ := client.NewUserPubKeyHash(senderAccount.GetKeyPair().PublicKey)
@@ -234,7 +234,7 @@ func generateTransaction(addrs []client.Address, wm *client.AccountManager, utxo
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
 	senderAccount := wm.GetAccountByAddress(sender)
-	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
+	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
 	}
 	if contract != "" {

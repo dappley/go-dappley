@@ -114,7 +114,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 
 	senderAccount := am.GetAccountByAddress(sendFromAddress)
-	if senderAccount == nil || len(senderAccount.Addresses) == 0 {
+	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		return nil, status.Error(codes.NotFound, client.ErrAddressNotFound.Error())
 	}
 

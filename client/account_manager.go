@@ -162,7 +162,11 @@ func (am *AccountManager) GetAddresses() []Address {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 	for _, account := range am.Accounts {
-		addresses = append(addresses, account.GetAddresses()...)
+		addresses = append(addresses, account.GetKeyPair().GenerateAddress())
+		subkeys := account.GetSubKeys()
+		for _, subkey := range subkeys {
+			addresses = append(addresses, subkey.GenerateAddress())
+		}
 	}
 
 	return addresses
@@ -178,7 +182,7 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 		return nil, ErrPasswordIncorrect
 	}
 	for _, account := range am.Accounts {
-		address := account.GetAddresses()[0].String()
+		address := account.GetKeyPair().GenerateAddress().String()
 		addresses = append(addresses, address)
 	}
 	am.mutex.Unlock()
@@ -191,7 +195,7 @@ func (am *AccountManager) GetKeyPairByAddress(address Address) *KeyPair {
 	if account == nil {
 		return nil
 	}
-	return account.Key
+	return account.GetKeyPair()
 
 }
 

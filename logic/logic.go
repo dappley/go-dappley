@@ -227,7 +227,7 @@ func GetBalance(address client.Address, bc *core.Blockchain) (*common.Amount, er
 }
 
 func Send(senderAccount *client.Account, to client.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	sendTxParam := core.NewSendTxParam(senderAccount.GetAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
+	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc, node)
 }
 

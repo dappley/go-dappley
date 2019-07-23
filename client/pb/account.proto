@@ -1,12 +1,11 @@
 syntax = "proto3";
 package accountpb;
 import "github.com/dappley/go-dappley/client/pb/keypair.proto";
-import "github.com/dappley/go-dappley/client/pb/address.proto";
 
 
 message Account{
     KeyPair keyPair = 1;
-    repeated Address addresses = 2;
+    repeated KeyPair subKeys = 2;
 }
 
 

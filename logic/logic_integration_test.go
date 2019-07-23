@@ -75,7 +75,7 @@ func TestSend(t *testing.T) {
 
 			// Create a PoW blockchain with the sender account's address as the coinbase address
 			// i.e. sender's account would have mineReward amount after blockchain created
-			bc, pow := createBlockchain(senderAccount.GetAddress(), store)
+			bc, pow := createBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store)
 			pool := core.NewBlockPool(0)
 			node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
@@ -91,7 +91,7 @@ func TestSend(t *testing.T) {
 			if isContract {
 				rcvAddr = client.NewAddress("")
 			} else {
-				rcvAddr = receiverAccount.GetAddress()
+				rcvAddr = receiverAccount.GetKeyPair().GenerateAddress()
 			}
 
 			_, _, err = Send(senderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bc, node)
@@ -107,7 +107,7 @@ func TestSend(t *testing.T) {
 			time.Sleep(time.Millisecond * 500)
 
 			// Make sender the miner and mine for 1 block (which should include the transaction)
-			pow.Setup(node, minerAccount.GetAddress().String())
+			pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String())
 			pow.Start()
 			for bc.GetMaxHeight() < 1 {
 			}
@@ -116,7 +116,7 @@ func TestSend(t *testing.T) {
 				return !pow.IsProducingBlock()
 			}, 20)
 			// Verify balance of sender's account (genesis "mineReward" - transferred amount)
-			senderBalance, err := GetBalance(senderAccount.GetAddress(), bc)
+			senderBalance, err := GetBalance(senderAccount.GetKeyPair().GenerateAddress(), bc)
 			if err != nil {
 				panic(err)
 			}
@@ -125,7 +125,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the miner's account should be the amount tipped + mineReward
-			minerBalance, err := GetBalance(minerAccount.GetAddress(), bc)
+			minerBalance, err := GetBalance(minerAccount.GetKeyPair().GenerateAddress(), bc)
 			if err != nil {
 				panic(err)
 			}
@@ -153,7 +153,7 @@ func TestSend(t *testing.T) {
 			if isContract {
 				receiverBalance, err = GetBalance(contractAddr, bc)
 			} else {
-				receiverBalance, err = GetBalance(receiverAccount.GetAddress(), bc)
+				receiverBalance, err = GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), bc)
 			}
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
@@ -175,7 +175,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//create a account address
 	account1, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetAddress()
+	addr1 := account1.GetKeyPair().GenerateAddress()
 
 	//create a blockchain
 	bc, err := CreateBlockchain(addr1, store, nil, 128, nil, 1000000)
@@ -218,7 +218,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//create a account address
 	account1, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetAddress()
+	addr1 := account1.GetKeyPair().GenerateAddress()
 
 	//create a blockchain
 	bc, err := CreateBlockchain(addr1, store, nil, 128, nil, 1000000)
@@ -234,7 +234,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	account2, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account2)
 	assert.Nil(t, err)
-	addr2 := account2.GetAddress()
+	addr2 := account2.GetKeyPair().GenerateAddress()
 
 	//The balance should be 0
 	balance2, err := GetBalance(addr2, bc)
@@ -584,10 +584,9 @@ func TestAddBalance(t *testing.T) {
 			// Create a coinbase address
 			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
 			minerKeyPair := client.GetKeyPairByString(key)
-			minerAccount := &client.Account{}
-			minerAccount.Key = minerKeyPair
+			minerAccount := client.NewAccountByKey(minerKeyPair)
 
-			addr := minerAccount.Key.GenerateAddress()
+			addr := minerAccount.GetKeyPair().GenerateAddress()
 
 			bc, pow := createBlockchain(addr, store)
 
@@ -674,7 +673,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	senderAccount, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
 
-	bc, pow := createBlockchain(senderAccount.GetAddress(), store)
+	bc, pow := createBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store)
 	pool := core.NewBlockPool(0)
 	node := network.FakeNodeWithPidAndAddr(pool, bc, "test", "test")
 
@@ -695,7 +694,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Make sender the miner and mine for 1 block (which should include the transaction)
-	pow.Setup(node, minerAccount.GetAddress().String())
+	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String())
 	pow.Start()
 	for bc.GetMaxHeight() < 1 {
 	}

@@ -56,22 +56,22 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	accounts.AddAccount(account1)
 	accounts.AddAccount(account2)
 
-	keyPair := accounts.GetKeyPairByAddress(account1.GetAddress())
+	keyPair := accounts.GetKeyPairByAddress(account1.GetKeyPair().GenerateAddress())
 
 	//create a blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := account1.GetAddress().GetPubKeyHash()
+	pubKeyHash, _ := account1.GetKeyPair().GenerateAddress().GetPubKeyHash()
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
@@ -81,7 +81,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, account1.GetAddress().String())
+	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String())
 
 	pow.Start()
 
@@ -105,8 +105,8 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 		panic(err)
 	}
 	var expectedVal = map[client.Address]*common.Amount{
-		account1.GetAddress(): remaining,  //balance should be all mining rewards minus sendAmount
-		account2.GetAddress(): sendAmount, //balance should be the amount rcved from account1
+		account1.GetKeyPair().GenerateAddress(): remaining,  //balance should be all mining rewards minus sendAmount
+		account2.GetKeyPair().GenerateAddress(): sendAmount, //balance should be the amount rcved from account1
 	}
 
 	//check balance
@@ -128,13 +128,13 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, account.GetAddress().String())
+	pow.Setup(n, account.GetKeyPair().GenerateAddress().String())
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -152,7 +152,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//set expected mining rewarded
 	var expectedVal = map[client.Address]*common.Amount{
-		account.GetAddress(): mineReward.Times(uint64(count)),
+		account.GetKeyPair().GenerateAddress(): mineReward.Times(uint64(count)),
 	}
 
 	//check balance
@@ -170,22 +170,22 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	accounts.AddAccount(account1)
 	accounts.AddAccount(account2)
 
-	keyPair := accounts.GetKeyPairByAddress(account1.GetAddress())
+	keyPair := accounts.GetKeyPairByAddress(account1.GetKeyPair().GenerateAddress())
 
 	//create a blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := account1.GetAddress().GetPubKeyHash()
+	pubKeyHash, _ := account1.GetKeyPair().GenerateAddress().GetPubKeyHash()
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
@@ -195,7 +195,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	//start a producer
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, account1.GetAddress().String())
+	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String())
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -208,7 +208,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.Nil(t, err)
 
 	//add second transaction
-	sendTxParam2 := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam2 := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx2, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
 	assert.Nil(t, err)
 
@@ -233,8 +233,8 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	//set the expected account value for all accounts
 	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount.Add(sendAmount2))
 	var expectedVal = map[client.Address]*common.Amount{
-		account1.GetAddress(): remaining,                   //balance should be all mining rewards minus sendAmount
-		account2.GetAddress(): sendAmount.Add(sendAmount2), //balance should be the amount rcved from account1
+		account1.GetKeyPair().GenerateAddress(): remaining,                   //balance should be all mining rewards minus sendAmount
+		account2.GetKeyPair().GenerateAddress(): sendAmount.Add(sendAmount2), //balance should be the amount rcved from account1
 	}
 
 	//check balance
@@ -299,23 +299,23 @@ func TestPreventDoubleSpend(t *testing.T) {
 	accounts.AddAccount(account3)
 
 	sendAmount := common.NewAmount(10)
-	keyPair := accounts.GetKeyPairByAddress(account1.GetAddress())
+	keyPair := accounts.GetKeyPairByAddress(account1.GetKeyPair().GenerateAddress())
 
 	//create a blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := account1.GetAddress().GetPubKeyHash()
+	pubKeyHash, _ := account1.GetKeyPair().GenerateAddress().GetPubKeyHash()
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam1 := core.NewSendTxParam(account1.GetAddress(), keyPair, account2.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	sendTxParam2 := core.NewSendTxParam(account1.GetAddress(), keyPair, account3.GetAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam1 := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam2 := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account3.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	tx1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
 	tx2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
 
@@ -328,7 +328,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, account1.GetAddress().String())
+	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String())
 
 	pow.Start()
 

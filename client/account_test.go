@@ -31,7 +31,7 @@ func TestAccount_ContainAddress(t *testing.T) {
 		name     string
 		input    Address
 		expected bool
-	}{{"contains address", account.GetAddress(), true},
+	}{{"contains address", account.GetKeyPair().GenerateAddress(), true},
 		{"does not contain address", Address{}, false},
 	}
 
