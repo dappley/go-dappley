@@ -99,11 +99,12 @@ func TestRpcSend(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(core.Address{})
-	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 1280000, scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, core.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -111,7 +112,6 @@ func TestRpcSend(t *testing.T) {
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
 
-	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 	bm := core.NewBlockChainManager(bc, pool, node)
 	pow.Setup(node, minerWallet.GetAddress().String(), bm)
 	pow.SetTargetBit(0)
@@ -187,17 +187,19 @@ func TestRpcSendContract(t *testing.T) {
 		panic(err)
 	}
 
+	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(core.Address{})
-	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, 1280000, scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderWallet.GetAddress(), store, pow, core.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
-	node := network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
+
 	bm := core.NewBlockChainManager(bc, pool, node)
 	pow.Setup(node, minerWallet.GetAddress().String(), bm)
 	pow.SetTargetBit(0)
@@ -344,7 +346,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
+	logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.wallet.GetAddress().Address, rpcContext.bm)
 	rpcContext.consensus.Start()
@@ -833,7 +835,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
+	tx1ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step1)
@@ -841,12 +843,12 @@ func TestGetNewTransaction(t *testing.T) {
 	assert.Equal(t, true, conn2Step1)
 	conn2.Close()
 
-	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
+	tx2ID, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(6), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step2)
 	conn1.Close()
 
-	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bm.Getblockchain(), rpcContext.node)
+	_, _, err = logic.Send(rpcContext.wallet, receiverWallet.GetAddress(), common.NewAmount(4), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 	time.Sleep(time.Second)
 	assert.Equal(t, false, rpcContext.bm.Getblockchain().GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
 
@@ -1054,10 +1056,12 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	}
 	context.wallet = wallet
 
+	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
+
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	context.consensus = consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(core.Address{})
-	bc, err := logic.CreateBlockchain(wallet.GetAddress(), context.store, context.consensus, 1280000, scManager, 1000000)
+	bc, err := logic.CreateBlockchain(wallet.GetAddress(), context.store, context.consensus, core.NewTransactionPool(context.node, 128000), scManager, 1000000)
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1066,7 +1070,6 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool(0)
 
-	context.node = network.FakeNodeWithPidAndAddr(bc.GetDb(), "a", "b")
 	context.bm = core.NewBlockChainManager(bc, pool, context.node)
 
 	// Start a grpc server

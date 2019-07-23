@@ -86,7 +86,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
 
-	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain(), adminRpcService.node)
+	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain())
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
@@ -125,7 +125,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 
 	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, in.GetData(),
-		adminRpcService.bm.Getblockchain(), adminRpcService.node)
+		adminRpcService.bm.Getblockchain())
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {

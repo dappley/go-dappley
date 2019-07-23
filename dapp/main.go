@@ -78,6 +78,8 @@ func main() {
 	//setup
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
+	node, err := initNode(conf, db)
+	defer node.Stop()
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
@@ -85,17 +87,15 @@ func main() {
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager, int(blkSizeLimit))
+	txPool := core.NewTransactionPool(node, txPoolLimit)
+	bc, err := core.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, int(blkSizeLimit))
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
 	bc.SetState(core.BlockchainInit)
-
-	node, err := initNode(conf, db)
-	defer node.Stop()
 
 	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
 

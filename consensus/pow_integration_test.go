@@ -64,7 +64,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
@@ -131,7 +131,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(wallet.GetAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -183,7 +183,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()
@@ -259,7 +259,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 		pow,
-		128,
+		core.NewTransactionPool(nil, 128),
 		nil,
 		100000,
 	)
@@ -320,7 +320,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(wallet1.GetAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := wallet1.GetAddress().GetPubKeyHash()

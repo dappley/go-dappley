@@ -35,7 +35,7 @@ func TestDpos_Start(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := core.Address{"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"}
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil, 100000)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 	pool := core.NewBlockPool(0)
 
 	node := network.NewNode(bc.GetDb())
@@ -88,7 +88,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
 
 		node := network.NewNode(bc.GetDb())
@@ -160,7 +160,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
 
 		node := network.NewNode(bc.GetDb())

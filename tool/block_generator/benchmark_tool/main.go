@@ -174,15 +174,16 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 	conss := consensus.NewDPOS()
 	conss.SetDynasty(dynasty)
+	node := network.NewNode(db)
 	txPoolLimit := uint32(2000)
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}), 1000000)
+	txPool := core.NewTransactionPool(node, txPoolLimit)
+	bc, err := core.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(core.Address{}), 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}), 1000000)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(core.Address{}), 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
-	node := network.NewNode(db)
 	bc.SetState(core.BlockchainInit)
 	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
 	downloadManager := download_manager.NewDownloadManager(node, bm)

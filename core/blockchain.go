@@ -80,7 +80,7 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
@@ -88,14 +88,13 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 		db,
 		NewUTXOCache(db),
 		consensus,
-		NewTransactionPool(nil, transactionPoolLimit), //TODO: inject netservice
+		txPool,
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
-	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.transactions)
 	scState := NewScState()
@@ -106,7 +105,7 @@ func CreateBlockchain(address Address, db storage.Storage, consensus Consensus, 
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -123,14 +122,13 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		db,
 		NewUTXOCache(db),
 		consensus,
-		NewTransactionPool(nil, transactionPoolLimit), //TODO: inject netservice
+		txPool,
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
-	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
 }
 

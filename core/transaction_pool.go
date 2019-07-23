@@ -457,19 +457,20 @@ func deserializeTxPool(d []byte) *TransactionPool {
 		println(err)
 		logger.WithError(err).Panic("TxPool: failed to deserialize TxPool transactions.")
 	}
-	txPool := NewTransactionPool(nil, 1) //TODO: inject netService
+	txPool := NewTransactionPool(nil, 1)
 	txPool.FromProto(txPoolProto)
 
 	return txPool
 }
 
-func LoadTxPoolFromDatabase(db storage.Storage, txPoolSize uint32) *TransactionPool {
+func LoadTxPoolFromDatabase(db storage.Storage, netService NetService, txPoolSize uint32) *TransactionPool {
 	rawBytes, err := db.Get([]byte(TxPoolDbKey))
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return NewTransactionPool(nil, txPoolSize) //TODO: inject netService
+		return NewTransactionPool(netService, txPoolSize)
 	}
 	txPool := deserializeTxPool(rawBytes)
 	txPool.sizeLimit = txPoolSize
+	txPool.netService = netService
 	return txPool
 }
 

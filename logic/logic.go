@@ -26,7 +26,6 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -46,12 +45,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
+func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, scManager, blkSizeLimit)
+	bc := core.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
 }
@@ -226,9 +225,9 @@ func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, erro
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip *common.Amount, contract string, bc *core.Blockchain) ([]byte, string, error) {
 	sendTxParam := core.NewSendTxParam(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, contract)
-	return sendTo(sendTxParam, bc, node)
+	return sendTo(sendTxParam, bc)
 }
 
 func SetMinerKeyPair(key string) {
@@ -240,10 +239,10 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain) ([]byte, string, error) {
 	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
 	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, common.NewAmount(0), "")
-	return sendTo(sendTxParam, bc, node)
+	return sendTo(sendTxParam, bc)
 }
 
 func GetWalletManager(path string) (*client.WalletManager, error) {
@@ -256,7 +255,7 @@ func GetWalletManager(path string) (*client.WalletManager, error) {
 	return wm, nil
 }
 
-func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain) ([]byte, string, error) {
 	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
@@ -283,9 +282,8 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
-	if node != nil {
-		bc.GetTxPool().BroadcastTx(&tx)
-	}
+	bc.GetTxPool().BroadcastTx(&tx)
+
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
 		if sendTxParam.To.String() == contractAddr.String() {
