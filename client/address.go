@@ -44,16 +44,6 @@ func (a Address) String() string {
 	return a.address
 }
 
-//isContract checks if an address is a Contract address
-func (a Address) IsContract() (bool, error) {
-	pubKeyHash, ok := GeneratePubKeyHashByAddress(a)
-	if !ok {
-		return false, ErrInvalidAddress
-	}
-	pkh := PubKeyHash(pubKeyHash)
-	return pkh.IsContract()
-}
-
 //IsValid checks if an address is valid
 func (a Address) IsValid() bool {
 	_, ok := GeneratePubKeyHashByAddress(a)
