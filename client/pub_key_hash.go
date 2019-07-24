@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 
@@ -35,6 +36,24 @@ func NewContractPubKeyHash() PubKeyHash {
 	pubKeyHash, _ := generatePubKeyHash(NewKeyPair().PublicKey)
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash)
+}
+
+//GetPubKeyHash decodes the address to the original public key hash. If unsuccessful, return false
+func GeneratePubKeyHashByAddress(a Address) ([]byte, bool) {
+	pubKeyHash := base58.Decode(a.String())
+
+	if len(pubKeyHash) != GetAddressPayloadLength() {
+		return nil, false
+	}
+	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
+	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
+	targetChecksum := Checksum(pubKeyHash)
+
+	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
+		return pubKeyHash, true
+	}
+	return nil, false
+
 }
 
 //GenerateAddress generates an address  from a public key hash

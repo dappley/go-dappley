@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 func TestCreateAccount(t *testing.T) {
 	account, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, ok := client.GeneratePubKeyHashByAddress(account.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
 	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
@@ -55,7 +55,7 @@ func TestCreateAccount(t *testing.T) {
 func TestCreateAccountWithPassphrase(t *testing.T) {
 	account, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, ok := client.GeneratePubKeyHashByAddress(account.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
 	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 	assert.Nil(t, err)

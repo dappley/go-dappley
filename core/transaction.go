@@ -767,7 +767,7 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 }
 
 func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr client.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
-	contractPubKeyHash, ok := contractAddr.GetPubKeyHash()
+	contractPubKeyHash, ok := client.GeneratePubKeyHashByAddress(contractAddr)
 	if !ok {
 		return Transaction{}, client.ErrInvalidAddress
 	}

@@ -211,7 +211,7 @@ func GetUnlockDuration() time.Duration {
 
 //get balance
 func GetBalance(address client.Address, bc *core.Blockchain) (*common.Amount, error) {
-	pubKeyHash, valid := address.GetPubKeyHash()
+	pubKeyHash, valid := client.GeneratePubKeyHashByAddress(address)
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}

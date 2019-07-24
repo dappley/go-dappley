@@ -19,10 +19,8 @@
 package client
 
 import (
-	"bytes"
 	"errors"
 
-	"github.com/btcsuite/btcutil/base58"
 	accountpb "github.com/dappley/go-dappley/client/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -48,7 +46,7 @@ func (a Address) String() string {
 
 //isContract checks if an address is a Contract address
 func (a Address) IsContract() (bool, error) {
-	pubKeyHash, ok := a.GetPubKeyHash()
+	pubKeyHash, ok := GeneratePubKeyHashByAddress(a)
 	if !ok {
 		return false, ErrInvalidAddress
 	}
@@ -58,26 +56,8 @@ func (a Address) IsContract() (bool, error) {
 
 //IsValid checks if an address is valid
 func (a Address) IsValid() bool {
-	_, ok := a.GetPubKeyHash()
+	_, ok := GeneratePubKeyHashByAddress(a)
 	return ok
-}
-
-//GetPubKeyHash decodes the address to the original public key hash. If unsuccessful, return false
-func (a Address) GetPubKeyHash() ([]byte, bool) {
-	pubKeyHash := base58.Decode(a.String())
-
-	if len(pubKeyHash) != GetAddressPayloadLength() {
-		return nil, false
-	}
-	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
-	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
-	targetChecksum := Checksum(pubKeyHash)
-
-	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
-		return pubKeyHash, true
-	}
-	return nil, false
-
 }
 
 //ToProto converts Address object to protobuf message

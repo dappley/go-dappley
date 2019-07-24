@@ -66,7 +66,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := account1.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
@@ -180,7 +180,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := account1.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
@@ -309,7 +309,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := account1.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
@@ -375,7 +375,7 @@ func printBalances(bc *core.Blockchain, addrs []client.Address) {
 func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
-	pubKeyHash, _ := client.NewAddress(addr).GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(client.NewAddress(addr))
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	//_, utxo, nextUtxos := utxos.Iterator()

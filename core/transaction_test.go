@@ -428,7 +428,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			addr := client.NewAddress(tt.addr)
-			pkh, _ := addr.GetPubKeyHash()
+			pkh, _ := client.GeneratePubKeyHashByAddress(addr)
 			tx := Transaction{
 				nil,
 				nil,
@@ -480,8 +480,8 @@ func TestTransaction_Execute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sc := new(MockScEngine)
 			contract := "helloworld!"
-			toPKH, _ := client.NewAddress(tt.toAddr).GetPubKeyHash()
-			scPKH, _ := client.NewAddress(tt.scAddr).GetPubKeyHash()
+			toPKH, _ := client.GeneratePubKeyHashByAddress(client.NewAddress(tt.toAddr))
+			scPKH, _ := client.GeneratePubKeyHashByAddress(client.NewAddress(tt.scAddr))
 
 			scUtxo := UTXO{
 				TxIndex: 0,

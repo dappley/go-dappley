@@ -25,7 +25,7 @@ func TestTransferResult(t *testing.T) {
 	defer db.Close()
 
 	minerKey := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
-	minerPubKey, ok := client.NewAddress(minerKey).GetPubKeyHash()
+	minerPubKey, ok := client.GeneratePubKeyHashByAddress(client.NewAddress(minerKey))
 	if !ok {
 		t.Error("ResultTest: account address is error!")
 		return

@@ -42,7 +42,7 @@ func (out *TXOutput) GetAddress() client.Address {
 }
 
 func (out *TXOutput) Lock(address client.Address) {
-	hash, _ := address.GetPubKeyHash()
+	hash, _ := client.GeneratePubKeyHashByAddress(address)
 	out.PubKeyHash = client.PubKeyHash(hash)
 }
 

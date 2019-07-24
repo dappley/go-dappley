@@ -578,7 +578,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := rpcContext.account.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -670,7 +670,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := rpcContext.account.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
 	utxoIndex := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache())
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
@@ -696,7 +696,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"")
 	transaction2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction2})
-	pubKeyHash1, _ := receiverAccount1.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash1, _ := client.GeneratePubKeyHashByAddress(receiverAccount1.GetKeyPair().GenerateAddress())
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
 	sendTxParam3 := core.NewSendTxParam(receiverAccount1.GetKeyPair().GenerateAddress(),
 		receiverAccount1.GetKeyPair(),
@@ -893,7 +893,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 
 	// generate new transaction
-	pubKeyHash, _ := rpcContext.account.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -1187,7 +1187,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	time.Sleep(time.Second)
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
-	pubKeyHash, _ := senderAccount.GetKeyPair().GenerateAddress().GetPubKeyHash()
+	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(senderAccount.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(),
 		senderAccount.GetKeyPair(),

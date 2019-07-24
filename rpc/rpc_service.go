@@ -106,7 +106,8 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetAllTransactions())
 
-	publicKeyHash, ok := client.NewAddress(in.GetAddress()).GetPubKeyHash()
+	publicKeyHash, ok := client.GeneratePubKeyHashByAddress(client.NewAddress(in.GetAddress()))
+
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}

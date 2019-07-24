@@ -199,7 +199,7 @@ func GetUtxoHandle() {
 	flagSet.Parse(os.Args[2:])
 
 	addr := client.NewAddress(address)
-	pubKeyHash, ok := addr.GetPubKeyHash()
+	pubKeyHash, ok := client.GeneratePubKeyHashByAddress(addr)
 	if !ok {
 		panic("Decode address failed")
 	}
