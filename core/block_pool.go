@@ -19,7 +19,6 @@
 package core
 
 import (
-	"encoding/hex"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -145,7 +144,7 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	// try to link child
 	for _, key := range blkCache.Keys() {
 		if cachedBlk, ok := blkCache.Get(key); ok {
-			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == tree.GetValue().(*Block).GetHash().String() {
+			if cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash().String() == tree.GetValue().(*Block).GetHash().String() {
 				logger.WithFields(logger.Fields{
 					"tree_height":  tree.GetValue().(*Block).GetHeight(),
 					"child_height": cachedBlk.(*common.Tree).GetValue().(*Block).GetHeight(),
@@ -181,13 +180,13 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 
 	logger.WithFields(logger.Fields{
 		"height": tree.GetValue().(*Block).GetHeight(),
-		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetHash()),
+		"hash":   tree.GetValue().(*Block).GetHash().String(),
 	}).Debug("BlockPool: finished updating BlockPoolCache.")
 }
 
 func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
 	logger.WithFields(logger.Fields{
-		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
+		"hash":   tree.GetValue().(*Block).GetPrevHash().String(),
 		"height": tree.GetValue().(*Block).GetHeight() - 1,
 		"from":   sender,
 	}).Info("BlockPool: is requesting a block.")
@@ -205,7 +204,7 @@ func (pool BlockPool) isChildBlockInCache(hashString string) bool {
 	blkCache := pool.blkCache
 	for _, key := range blkCache.Keys() {
 		if cachedBlk, ok := blkCache.Get(key); ok {
-			if hex.EncodeToString(cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash()) == hashString {
+			if cachedBlk.(*common.Tree).GetValue().(*Block).GetPrevHash().String() == hashString {
 				return true
 			}
 		}

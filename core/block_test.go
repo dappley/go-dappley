@@ -273,9 +273,9 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
 
 	tx1Utxos := map[string][]*UTXO{
-		hex.EncodeToString(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
+		pkHash2.String(): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(client.GetKeyPairByString(prikey2).PrivateKey, tx1Utxos[hex.EncodeToString(pkHash2)])
+	dependentTx2.Sign(client.GetKeyPairByString(prikey2).PrivateKey, tx1Utxos[pkHash2.String()])
 	dependentTx3.Sign(client.GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
 	tests := []struct {
@@ -328,10 +328,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"reward tx",
 			[]*Transaction{&rewardTX},
 			map[string][]*UTXO{
-				hex.EncodeToString(contractPubKeyHash): {
+				contractPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
 				},
-				hex.EncodeToString(userPubKeyHash): {
+				userPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},
@@ -342,11 +342,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"generated tx",
 			[]*Transaction{generatedTX},
 			map[string][]*UTXO{
-				hex.EncodeToString(contractPubKeyHash): {
+				contractPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, UtxoNormal},
 				},
-				hex.EncodeToString(userPubKeyHash): {
+				userPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},

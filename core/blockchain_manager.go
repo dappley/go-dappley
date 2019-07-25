@@ -19,7 +19,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/hex"
 
 	peer "github.com/libp2p/go-libp2p-peer"
 	logger "github.com/sirupsen/logrus"
@@ -71,7 +70,7 @@ func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
 func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	logger.WithFields(logger.Fields{
 		"from":   pid.String(),
-		"hash":   hex.EncodeToString(block.GetHash()),
+		"hash":   block.GetHash().String(),
 		"height": block.GetHeight(),
 	}).Info("BlockChainManager: received a new block.")
 
@@ -138,7 +137,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"error": err,
-			"hash":  hex.EncodeToString(forkParentHash),
+			"hash":  forkParentHash.String(),
 		}).Error("BlockChainManager: get fork parent block failed.")
 	}
 
@@ -147,7 +146,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
-			"hash":   hex.EncodeToString(forkBlks[i].GetHash()),
+			"hash":   forkBlks[i].GetHash().String(),
 		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
 		if !forkBlks[i].VerifyTransactions(utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {

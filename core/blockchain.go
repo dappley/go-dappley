@@ -20,7 +20,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -238,7 +237,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	blockLogger := logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
-		"hash":   hex.EncodeToString(ctx.Block.GetHash()),
+		"hash":   ctx.Block.GetHash().String(),
 	})
 
 	bcTemp := bc.deepCopy()
@@ -480,7 +479,7 @@ loop:
 		block, err := bc.GetBlockByHash(parentblockHash)
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
-			"hash":   hex.EncodeToString(parentblockHash),
+			"hash":   parentblockHash.String(),
 		}).Info("Blockchain: is about to rollback the block...")
 		if err != nil {
 			return false

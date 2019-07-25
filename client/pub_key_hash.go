@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -108,4 +109,12 @@ func GetAddressPayloadLength() int {
 func GetAddressChecksumLen() int {
 	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
 	return 21 + addressChecksumLen
+}
+
+func (pkh PubKeyHash) String() string {
+	return hex.EncodeToString(pkh)
+}
+
+func (pkh PubKeyHash) Equals(npkh PubKeyHash) bool {
+	return bytes.Compare(pkh, npkh) == 0
 }

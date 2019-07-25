@@ -215,11 +215,11 @@ func GetUtxoHandle() {
 
 func block2PrettyPb(block *core.Block) proto.Message {
 	blockHeaderPb := &db_inspect_pb.BlockHeader{
-		Hash:         hex.EncodeToString(block.GetHash()),
-		PreviousHash: hex.EncodeToString(block.GetPrevHash()),
+		Hash:         block.GetHash().String(),
+		PreviousHash: block.GetPrevHash().String(),
 		Nonce:        block.GetNonce(),
 		Timestamp:    block.GetTimestamp(),
-		Signature:    hex.EncodeToString(block.GetSign()),
+		Signature:    block.GetSign().String(),
 		Height:       block.GetHeight(),
 	}
 
@@ -242,7 +242,7 @@ func block2PrettyPb(block *core.Block) proto.Message {
 			txVoutPbs = append(txVoutPbs,
 				&db_inspect_pb.TXOutput{
 					Value:         vout.Value.String(),
-					PublicKeyHash: hex.EncodeToString(vout.PubKeyHash),
+					PublicKeyHash: vout.PubKeyHash.String(),
 					Contract:      vout.Contract,
 				})
 		}
@@ -272,7 +272,7 @@ func dumpBlock(block *core.Block) {
 func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
 	return &db_inspect_pb.Utxo{
 		Amount:        utxo.Value.String(),
-		PublicKeyHash: hex.EncodeToString(utxo.PubKeyHash),
+		PublicKeyHash: utxo.PubKeyHash.String(),
 		Txid:          hex.EncodeToString(utxo.Txid),
 		TxIndex:       uint32(utxo.TxIndex),
 	}

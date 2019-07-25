@@ -71,8 +71,8 @@ func (utxos *UTXOIndex) Delete() error {
 }
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
-func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) *UTXOTx {
-	key := hex.EncodeToString(pubkeyHash)
+func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash client.PubKeyHash) *UTXOTx {
+	key := pubkeyHash.String()
 	utxos.mutex.RLock()
 	utxoTx, ok := utxos.index[key]
 	utxos.mutex.RUnlock()
@@ -90,7 +90,7 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash []byte) *UTXOTx {
 }
 
 //SplitContractUtxo
-func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash []byte) (*UTXO, []*UTXO) {
+func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash client.PubKeyHash) (*UTXO, []*UTXO) {
 	if ok, _ := client.PubKeyHash(pubkeyHash).IsContract(); !ok {
 		return nil, nil
 	}
@@ -111,7 +111,7 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash []byte) (*UTXO, []*UTXO) {
 }
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
-func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amount) ([]*UTXO, error) {
+func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash client.PubKeyHash, amount *common.Amount) ([]*UTXO, error) {
 	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	retUtxos, ok := allUtxos.PrepareUtxos(amount)
 	if !ok {
@@ -122,7 +122,7 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash []byte, amount *common.Amoun
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
-func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash []byte, txid []byte, vout int) *UTXO {
+func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash client.PubKeyHash, txid []byte, vout int) *UTXO {
 	utxosOfKey := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	return utxosOfKey.GetUtxo(txid, vout)
 }
@@ -230,7 +230,7 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 
 	utxos.mutex.Lock()
 	originalUtxos.PutUtxo(utxo)
-	utxos.index[hex.EncodeToString(txout.PubKeyHash)] = originalUtxos
+	utxos.index[txout.PubKeyHash.String()] = originalUtxos
 	utxos.mutex.Unlock()
 }
 
@@ -255,7 +255,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh client.PubKeyHash, txid []byte, vout int)
 
 	utxos.mutex.Lock()
 	originalUtxos.RemoveUtxo(txid, vout)
-	utxos.index[hex.EncodeToString(pkh)] = originalUtxos
+	utxos.index[pkh.String()] = originalUtxos
 	utxos.mutex.Unlock()
 
 	if utxo.UtxoType != UtxoCreateContract {

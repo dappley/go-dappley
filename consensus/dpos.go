@@ -20,7 +20,6 @@ package consensus
 
 import (
 	"bytes"
-	"encoding/hex"
 	"strings"
 	"time"
 
@@ -276,7 +275,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	logger.WithFields(logger.Fields{
 		"peer_id": dpos.node.GetPeerID(),
 		"height":  ctx.Block.GetHeight(),
-		"hash":    hex.EncodeToString(ctx.Block.GetHash()),
+		"hash":    ctx.Block.GetHash().String(),
 	}).Info("DPoS: produced a new block.")
 	if !ctx.Block.VerifyHash() {
 		logger.Warn("DPoS: hash of the new block is invalid.")

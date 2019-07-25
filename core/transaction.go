@@ -562,7 +562,7 @@ func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
 				"tx_id":      hex.EncodeToString(tx.ID),
 				"vin_tx_id":  hex.EncodeToString(vin.Txid),
 				"vin_index":  vin.Vout,
-				"pubKeyHash": hex.EncodeToString(pubKeyHash),
+				"pubKeyHash": pubKeyHash.String(),
 			}).Warn("Transaction: cannot find vin.")
 			return nil
 		}

@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -214,7 +213,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
-		hex.EncodeToString(pubKeyHash): &utxoTx,
+		pubKeyHash.String(): &utxoTx,
 	}
 
 	// Prepare a transaction to be verified
@@ -281,7 +280,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 
 	utxoTx.PutUtxo(&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal})
 	utxoIndex.index = map[string]*UTXOTx{
-		hex.EncodeToString(pkHash1): &utxoTx,
+		pkHash1.String(): &utxoTx,
 	}
 
 	var executionTx = Transaction{
@@ -810,8 +809,8 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
-		hex.EncodeToString(pkHash2): &utxoTx2,
-		hex.EncodeToString(pkHash1): &utxoTx1,
+		pkHash2.String(): &utxoTx2,
+		pkHash1.String(): &utxoTx1,
 	}
 
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
@@ -891,7 +890,7 @@ func TestTransaction_IsIdentical(t *testing.T) {
 	utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
 
 	utxoIndex.index = map[string]*UTXOTx{
-		hex.EncodeToString(pkHash1): &utxoTx1,
+		pkHash1.String(): &utxoTx1,
 	}
 
 	var tx = &Transaction{

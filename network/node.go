@@ -422,7 +422,7 @@ func (n *Node) prepareData(msgData proto.Message, cmd string, uniOrBroadcast int
 }
 
 func (n *Node) BroadcastBlock(block *core.Block) error {
-	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, hex.EncodeToString(block.GetHash()))
+	data, err := n.prepareData(block.ToProto(), SyncBlock, Broadcast, block.GetHash().String())
 	if err != nil {
 		return err
 	}
@@ -430,7 +430,7 @@ func (n *Node) BroadcastBlock(block *core.Block) error {
 	logger.WithFields(logger.Fields{
 		"peer_id":     n.GetPeerID(),
 		"height":      block.GetHeight(),
-		"hash":        hex.EncodeToString(block.GetHash()),
+		"hash":        block.GetHash().String(),
 		"num_streams": len(n.peerManager.streams),
 		"data_len":    len(data),
 	}).Info("Node: is broadcasting a block.")
@@ -497,7 +497,7 @@ func (n *Node) SyncPeersBroadcast() error {
 }
 
 func (n *Node) SendBlockUnicast(block *core.Block, pid peer.ID) error {
-	data, err := n.prepareData(block.ToProto(), SyncBlock, Unicast, hex.EncodeToString(block.GetHash()))
+	data, err := n.prepareData(block.ToProto(), SyncBlock, Unicast, block.GetHash().String())
 	if err != nil {
 		return err
 	}
@@ -522,7 +522,7 @@ func (n *Node) SendPeerListUnicast(peers []*PeerInfo, pid peer.ID) error {
 func (n *Node) RequestBlockUnicast(hash core.Hash, pid peer.ID) error {
 	//build a deppley message
 
-	dm := NewDapmsg(RequestBlock, hash, hex.EncodeToString(hash), Unicast, n.dapMsgBroadcastCounter)
+	dm := NewDapmsg(RequestBlock, hash, hash.String(), Unicast, n.dapMsgBroadcastCounter)
 	data, err := proto.Marshal(dm.ToProto())
 	if err != nil {
 		return err
@@ -678,7 +678,7 @@ func (n *Node) GetBlocksHandler(dm *DapMsg, pid peer.ID) {
 	block, err := n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
 	for i := int32(0); i < maxGetBlocksNum && err == nil; i++ {
 		if block.GetHeight() == 0 {
-			logger.Panicf("Error %v", hex.EncodeToString(block.GetHash()))
+			logger.Panicf("Error %v", block.GetHash().String())
 		}
 		blocks = append(blocks, block)
 		block, err = n.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
