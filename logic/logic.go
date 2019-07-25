@@ -25,6 +25,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
@@ -67,7 +68,7 @@ func CreateAccount(path string, password string) (*client.Account, error) {
 	}
 
 	fl := storage.NewFileLoader(path)
-	am := client.NewAccountManager(fl)
+	am := account_logic.NewAccountManager(fl)
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func CreateAccount(path string, password string) (*client.Account, error) {
 
 //get account
 func GetAccount() (*client.Account, error) {
-	am, err := GetAccountManager(client.GetAccountFilePath())
+	am, err := GetAccountManager(account_logic.GetAccountFilePath())
 	empty, err := am.IsFileEmpty()
 	if empty {
 		return nil, nil
@@ -100,7 +101,7 @@ func getAccountFilePath(argv []string) string {
 	if len(argv) == 1 {
 		return argv[0]
 	}
-	return client.GetAccountFilePath()
+	return account_logic.GetAccountFilePath()
 }
 
 //Get lock flag
@@ -113,7 +114,7 @@ func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
-	if client.Exists(accountFilePath) {
+	if account_logic.Exists(accountFilePath) {
 		am, _ := GetAccountManager(accountFilePath)
 		if len(am.Accounts) == 0 {
 			return true, nil
@@ -190,7 +191,7 @@ func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...str
 
 //create a account
 func AddAccount() (*client.Account, error) {
-	am, err := GetAccountManager(client.GetAccountFilePath())
+	am, err := GetAccountManager(account_logic.GetAccountFilePath())
 	if err != nil {
 		return nil, err
 	}
@@ -246,9 +247,9 @@ func SendFromMiner(address client.Address, amount *common.Amount, bc *core.Block
 	return sendTo(sendTxParam, bc, node)
 }
 
-func GetAccountManager(path string) (*client.AccountManager, error) {
+func GetAccountManager(path string) (*account_logic.AccountManager, error) {
 	fl := storage.NewFileLoader(path)
-	am := client.NewAccountManager(fl)
+	am := account_logic.NewAccountManager(fl)
 	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err

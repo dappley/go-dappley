@@ -28,6 +28,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
@@ -49,7 +50,7 @@ func TestMain(m *testing.M) {
 func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//create new account
-	accounts := &client.AccountManager{}
+	accounts := &account_logic.AccountManager{}
 
 	account1 := client.NewAccount()
 	account2 := client.NewAccount()
@@ -117,7 +118,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 
 	//create new account
-	accountManager := &client.AccountManager{}
+	accountManager := &account_logic.AccountManager{}
 
 	account := client.NewAccount()
 	accountManager.AddAccount(account)
@@ -163,7 +164,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//create new account
-	accounts := &client.AccountManager{}
+	accounts := &account_logic.AccountManager{}
 
 	account1 := client.NewAccount()
 	account2 := client.NewAccount()
@@ -288,7 +289,7 @@ loop:
 
 func TestPreventDoubleSpend(t *testing.T) {
 	//create new account
-	accounts := &client.AccountManager{}
+	accounts := &account_logic.AccountManager{}
 
 	account1 := client.NewAccount()
 	account2 := client.NewAccount()

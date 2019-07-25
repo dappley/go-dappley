@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -285,5 +286,5 @@ loop:
 }
 
 func cleanUpDatabase() {
-	client.RemoveAccountFile()
+	account_logic.RemoveAccountFile()
 }

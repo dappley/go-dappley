@@ -1,4 +1,4 @@
-package logic
+package account_logic
 
 import "github.com/dappley/go-dappley/client"
 

@@ -1,4 +1,4 @@
-package logic
+package account_logic
 
 func GenerateAddress() {
 

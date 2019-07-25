@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package client
+package account_logic
 
 import (
 	"errors"
@@ -24,7 +24,8 @@ import (
 	"testing"
 	"time"
 
-	accountpb "github.com/dappley/go-dappley/client/pb"
+	"github.com/dappley/go-dappley/client"
+	logicpb "github.com/dappley/go-dappley/logic/pb"
 	"github.com/dappley/go-dappley/storage"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"
 	"github.com/golang/mock/gomock"
@@ -79,7 +80,7 @@ func TestAccountManager_SaveAccountToFile_with_passphrase(t *testing.T) {
 	mockStorage := storage_mock.NewMockFileStorage(mockCtrl)
 	mockStorage.EXPECT().SaveToFile(gomock.Any())
 	am := NewAccountManager(mockStorage)
-	account := NewAccount()
+	account := client.NewAccount()
 	am.Accounts = append(am.Accounts, account)
 	am.SaveAccountToFile()
 
@@ -87,7 +88,7 @@ func TestAccountManager_SaveAccountToFile_with_passphrase(t *testing.T) {
 
 func TestAccountManager_AddAccount(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
+	account := client.NewAccount()
 	am.AddAccount(account)
 
 	assert.Equal(t, account, am.Accounts[0])
@@ -95,20 +96,20 @@ func TestAccountManager_AddAccount(t *testing.T) {
 
 func TestAccount_GetAddresses(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
-	addresses := []Address{account.GetKeyPair().GenerateAddress()}
+	account := client.NewAccount()
+	addresses := []client.Address{account.GetKeyPair().GenerateAddress()}
 	am.Accounts = append(am.Accounts, account)
 	assert.Equal(t, addresses, am.GetAddresses())
 }
 
 func TestAccount_GetAddressesNoAccount(t *testing.T) {
 	am := NewAccountManager(nil)
-	assert.Equal(t, []Address(nil), am.GetAddresses())
+	assert.Equal(t, []client.Address(nil), am.GetAddresses())
 }
 
 func TestAccountManager_GetAccountByAddress(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
+	account := client.NewAccount()
 	am.Accounts = append(am.Accounts, account)
 	assert.Equal(t, account, am.GetAccountByAddress(account.GetKeyPair().GenerateAddress()))
 }
@@ -119,7 +120,7 @@ func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
 	assert.Equal(t, nil, err)
 	am.PassPhrase = passPhrase
 	am.Locked = true
-	account := NewAccount()
+	account := client.NewAccount()
 	am.Accounts = append(am.Accounts, account)
 	account1, err := am.GetAccountByAddressWithPassphrase(account.GetKeyPair().GenerateAddress(), "password")
 	account2, err1 := am.GetAccountByAddressWithPassphrase(account.GetKeyPair().GenerateAddress(), "none")
@@ -131,31 +132,31 @@ func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
 
 func TestAccountManager_GetAccountByUnfoundAddress(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
+	account := client.NewAccount()
 	assert.Nil(t, am.GetAccountByAddress(account.GetKeyPair().GenerateAddress()))
 }
 
 func TestAccountManager_GetAccountByAddressNilInput(t *testing.T) {
 	am := NewAccountManager(nil)
-	assert.Nil(t, am.GetAccountByAddress(NewAddress("")))
+	assert.Nil(t, am.GetAccountByAddress(client.NewAddress("")))
 }
 
 func TestAccountManager_GetKeyPairByAddress(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
+	account := client.NewAccount()
 	am.Accounts = append(am.Accounts, account)
-	assert.Equal(t, account.key, am.GetKeyPairByAddress(account.GetKeyPair().GenerateAddress()))
+	assert.Equal(t, account.GetKeyPair(), am.GetKeyPairByAddress(account.GetKeyPair().GenerateAddress()))
 }
 
 func TestAccountManager_GetKeyPairByUnfoundAddress(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
+	account := client.NewAccount()
 	assert.Nil(t, am.GetKeyPairByAddress(account.GetKeyPair().GenerateAddress()))
 }
 
 func TestAccountManager_GetKeyPairByAddressNilInput(t *testing.T) {
 	am := NewAccountManager(nil)
-	assert.Nil(t, am.GetKeyPairByAddress(Address{}))
+	assert.Nil(t, am.GetKeyPairByAddress(client.Address{}))
 }
 
 func TestNewAccountManager_UnlockTimer(t *testing.T) {
@@ -169,7 +170,7 @@ func TestNewAccountManager_UnlockTimer(t *testing.T) {
 	if err != nil {
 		return
 	}
-	account := NewAccount()
+	account := client.NewAccount()
 	am.AddAccount(account)
 	am.PassPhrase = passBytes
 	am.Locked = true
@@ -190,14 +191,14 @@ func TestNewAccountManager_UnlockTimer(t *testing.T) {
 
 func TestAccountManager_Proto(t *testing.T) {
 	am := NewAccountManager(nil)
-	account := NewAccount()
+	account := client.NewAccount()
 	am.AddAccount(account)
-	account = NewAccount()
+	account = client.NewAccount()
 	am.AddAccount(account)
 
 	rawBytes, err := proto.Marshal(am.ToProto())
 	assert.Nil(t, err)
-	amProto := &accountpb.AccountManager{}
+	amProto := &logicpb.AccountManager{}
 	err = proto.Unmarshal(rawBytes, amProto)
 	assert.Nil(t, err)
 	am1 := &AccountManager{}

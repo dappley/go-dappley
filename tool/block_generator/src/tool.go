@@ -11,6 +11,7 @@ import (
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -69,7 +70,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 		}).Info("Producer:", i)
 	}
 
-	wm, err := logic.GetAccountManager(client.GetAccountFilePath())
+	wm, err := logic.GetAccountManager(account_logic.GetAccountFilePath())
 	if err != nil {
 		logger.Panic("Cannot get account manager.")
 	}
@@ -125,7 +126,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []client.Address, wm *client.AccountManager, scAddr client.Address) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []client.Address, wm *account_logic.AccountManager, scAddr client.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -163,14 +164,14 @@ func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr client.Address, wm *client.AccountManager) (*core.Block, client.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr client.Address, wm *account_logic.AccountManager) (*core.Block, client.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
 }
 
-func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender client.Address, wm *client.AccountManager) *core.Transaction {
+func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender client.Address, wm *account_logic.AccountManager) *core.Transaction {
 	senderAccount := wm.GetAccountByAddress(sender)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
@@ -202,7 +203,7 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr client.Addre
 	return tx
 }
 
-func generateTransactions(utxoIndex *core.UTXOIndex, addrs []client.Address, wm *client.AccountManager, scAddr client.Address) []*core.Transaction {
+func generateTransactions(utxoIndex *core.UTXOIndex, addrs []client.Address, wm *account_logic.AccountManager, scAddr client.Address) []*core.Transaction {
 	pkhmap := getPubKeyHashes(addrs, wm)
 	txs := []*core.Transaction{}
 	for i := 0; i < numOfTx; i++ {
@@ -220,7 +221,7 @@ func generateTransactions(utxoIndex *core.UTXOIndex, addrs []client.Address, wm 
 	return txs
 }
 
-func getPubKeyHashes(addrs []client.Address, wm *client.AccountManager) map[client.Address]client.PubKeyHash {
+func getPubKeyHashes(addrs []client.Address, wm *account_logic.AccountManager) map[client.Address]client.PubKeyHash {
 	res := make(map[client.Address]client.PubKeyHash)
 	for _, addr := range addrs {
 		account := wm.GetAccountByAddress(addr)
@@ -230,7 +231,7 @@ func getPubKeyHashes(addrs []client.Address, wm *client.AccountManager) map[clie
 	return res
 }
 
-func generateTransaction(addrs []client.Address, wm *client.AccountManager, utxoIndex *core.UTXOIndex, pkhmap map[client.Address]client.PubKeyHash, contract string, scAddr client.Address) *core.Transaction {
+func generateTransaction(addrs []client.Address, wm *account_logic.AccountManager, utxoIndex *core.UTXOIndex, pkhmap map[client.Address]client.PubKeyHash, contract string, scAddr client.Address) *core.Transaction {
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
 	senderAccount := wm.GetAccountByAddress(sender)
@@ -286,7 +287,7 @@ func CreateRandomTransactions([]client.Address) []*core.Transaction {
 	return nil
 }
 
-func CreateAccount(wm *client.AccountManager) []client.Address {
+func CreateAccount(wm *account_logic.AccountManager) []client.Address {
 
 	addresses := wm.GetAddresses()
 	numOfAccounts := len(addresses)

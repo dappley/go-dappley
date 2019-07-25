@@ -8,8 +8,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
@@ -32,7 +32,7 @@ func main() {
 		To:          "",
 		Amount:      common.NewAmount(1).Bytes(),
 		Tip:         common.NewAmount(0).Bytes(),
-		AccountPath: client.GetAccountFilePath(),
+		AccountPath: account_logic.GetAccountFilePath(),
 		Data:        string(raw),
 	})
 	if err != nil {
@@ -49,7 +49,7 @@ func main() {
 			To:          contractAddr,
 			Amount:      common.NewAmount(1).Bytes(),
 			Tip:         common.NewAmount(0).Bytes(),
-			AccountPath: client.GetAccountFilePath(),
+			AccountPath: account_logic.GetAccountFilePath(),
 			Data:        fmt.Sprintf("{\"function\":\"trigger\",\"args\":[\"topic%d\",\"data%d\"]}", count%3+1, count),
 		})
 		if err != nil {

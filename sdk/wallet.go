@@ -6,6 +6,7 @@ import (
 	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -13,7 +14,7 @@ import (
 type DappSdkAccount struct {
 	addrs     []client.Address
 	balances  map[client.Address]uint64
-	wm        *client.AccountManager
+	wm        *account_logic.AccountManager
 	sdk       *DappSdk
 	utxoIndex *core.UTXOIndex
 	mutex     *sync.RWMutex
@@ -29,7 +30,7 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 
 	var err error
 
-	dappSdkAccount.wm, err = logic.GetAccountManager(client.GetAccountFilePath())
+	dappSdkAccount.wm, err = logic.GetAccountManager(account_logic.GetAccountFilePath())
 	if err != nil {
 		logger.WithError(err).Error("DappSdkAccount: Cannot get account manager.")
 		return nil
@@ -64,7 +65,7 @@ func (sdkw *DappSdkAccount) GetBalance(address client.Address) uint64 {
 	return sdkw.balances[address]
 }
 
-func (sdkw *DappSdkAccount) GetAccountManager() *client.AccountManager { return sdkw.wm }
+func (sdkw *DappSdkAccount) GetAccountManager() *account_logic.AccountManager { return sdkw.wm }
 
 func (sdkw *DappSdkAccount) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
 
