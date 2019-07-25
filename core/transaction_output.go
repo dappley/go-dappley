@@ -43,7 +43,7 @@ func (out *TXOutput) GetAddress() client.Address {
 
 func (out *TXOutput) Lock(address client.Address) {
 	hash, _ := client.GeneratePubKeyHashByAddress(address)
-	out.PubKeyHash = client.PubKeyHash(hash)
+	out.PubKeyHash = hash
 }
 
 func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {

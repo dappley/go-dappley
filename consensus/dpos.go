@@ -265,7 +265,7 @@ func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
 		return false
 	}
 
-	return bytes.Compare(producerHash, []byte(cbtx.Vout[0].PubKeyHash)) == 0
+	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
 }
 
 func (dpos *DPOS) IsProducingBlock() bool {

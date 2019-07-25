@@ -39,7 +39,7 @@ func NewContractPubKeyHash() PubKeyHash {
 }
 
 //GetPubKeyHash decodes the address to the original public key hash. If unsuccessful, return false
-func GeneratePubKeyHashByAddress(a Address) ([]byte, bool) {
+func GeneratePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
 	pubKeyHash := base58.Decode(a.String())
 
 	if len(pubKeyHash) != GetAddressPayloadLength() {
@@ -101,6 +101,11 @@ func generatePubKeyHash(pubKey []byte) ([]byte, error) {
 
 // GetAddressPayloadLength get the payload length
 func GetAddressPayloadLength() int {
+	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
+	return 21 + addressChecksumLen
+}
+
+func GetAddressChecksumLen() int {
 	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
 	return 21 + addressChecksumLen
 }

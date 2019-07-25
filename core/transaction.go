@@ -771,7 +771,7 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr client.Address, a
 	if !ok {
 		return Transaction{}, client.ErrInvalidAddress
 	}
-	if isContract, err := (client.PubKeyHash(contractPubKeyHash)).IsContract(); !isContract {
+	if isContract, err := contractPubKeyHash.IsContract(); !isContract {
 		return Transaction{}, err
 	}
 

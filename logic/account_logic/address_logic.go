@@ -8,6 +8,5 @@ func IsContract(a client.Address) (bool, error) {
 	if !ok {
 		return false, client.ErrInvalidAddress
 	}
-	pkh := client.PubKeyHash(pubKeyHash)
-	return pkh.IsContract()
+	return pubKeyHash.IsContract()
 }

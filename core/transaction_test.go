@@ -434,7 +434,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 				nil,
 				[]TXOutput{
 					{nil,
-						client.PubKeyHash(pkh),
+						pkh,
 						"",
 					},
 				},
@@ -487,12 +487,12 @@ func TestTransaction_Execute(t *testing.T) {
 				TxIndex: 0,
 				Txid:    nil,
 				TXOutput: TXOutput{
-					PubKeyHash: client.PubKeyHash(scPKH),
+					PubKeyHash: scPKH,
 					Contract:   contract,
 				},
 			}
 			tx := ContractTx{Transaction{
-				Vout:     []TXOutput{{nil, client.PubKeyHash(toPKH), "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
+				Vout:     []TXOutput{{nil, toPKH, "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
 				GasLimit: common.NewAmount(0),
 				GasPrice: common.NewAmount(0),
 			}}

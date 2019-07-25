@@ -50,7 +50,7 @@ func TestCreateAccount(t *testing.T) {
 	assert.Equal(t, true, ok)
 	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, []byte(accountPubKeyHash))
+	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphrase(t *testing.T) {
@@ -60,7 +60,7 @@ func TestCreateAccountWithPassphrase(t *testing.T) {
 	assert.Equal(t, true, ok)
 	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, []byte(accountPubKeyHash))
+	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphraseMismatch(t *testing.T) {
