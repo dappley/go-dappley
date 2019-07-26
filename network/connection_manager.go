@@ -77,12 +77,17 @@ func (cm *ConnectionManager) IsConnectionFull(connectionType ConnectionType) boo
 }
 
 func (cm *ConnectionManager) RemoveConnection(connectionType ConnectionType) {
+
 	switch connectionType {
 	case ConnectionTypeIn:
-		cm.connectionInCount--
+		if cm.connectionInCount > 0 {
+			cm.connectionInCount--
+		}
 
 	case ConnectionTypeOut:
-		cm.connectionOutCount--
+		if cm.connectionOutCount > 0 {
+			cm.connectionOutCount--
+		}
 	}
 }
 
