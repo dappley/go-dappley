@@ -76,7 +76,7 @@ func (s *Stream) StopStream() {
 	logger.WithFields(logger.Fields{
 		"peer_address": s.GetRemoteAddr(),
 		"pid":          s.GetPeerId(),
-	}).Info("Stream: stream is terminated")
+	}).Info("Stream: A stream is terminated")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()

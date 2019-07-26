@@ -257,11 +257,6 @@ func (pm *PeerManager) GetRandomPeers(numOfPeers int) []network_model.PeerInfo {
 
 	peers := pm.GetAllPeers()
 
-	logger.WithFields(logger.Fields{
-		"numOfPeersRequested": numOfPeers,
-		"numOfAllPeers":       len(peers),
-	}).Info("PeerManager: GetRandomPeers")
-
 	if numOfPeers >= len(peers) {
 		return peers
 	}
@@ -340,10 +335,8 @@ func (pm *PeerManager) loadSyncPeers() error {
 		logger.WithFields(logger.Fields{
 			"peer_id": peerInfo.PeerId,
 			"addr":    peerInfo.Addrs[0].String(),
-		}).Info("loadSyncPeers")
+		}).Info("PeerManager: Loading syncPeers from database...")
 	}
-
-	logger.WithError(err).Warnf("PeerManager: load sync peers count %v.", len(pm.syncPeers))
 
 	return nil
 }
@@ -351,7 +344,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 //BroadcastGetPeerListRequest broadcasts a syncPeer request command to all its peers
 func (pm *PeerManager) BroadcastGetPeerListRequest() {
 
-	logger.Info("PeerManager: BroadcastGetPeerListRequest")
+	logger.Info("PeerManager: Requesting peer list from all peers...")
 	getPeerListPb := &networkpb.GetPeerList{
 		MaxNumber: int32(maxSyncPeersCount),
 	}
@@ -366,11 +359,7 @@ func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination pe
 
 	peers := pm.GetRandomPeers(maxNumOfPeers)
 	var peerPbs []*networkpb.PeerInfo
-	for i, peerInfo := range peers {
-		logger.WithFields(logger.Fields{
-			"index":  i,
-			"peerId": peerInfo.PeerId,
-		}).Info("PeerManager: SendGetPeerListResponse Peer information")
+	for _, peerInfo := range peers {
 		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
@@ -382,7 +371,6 @@ func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination pe
 
 //GetPeerListRequestHandler is the handler to GetPeerListRequest
 func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvdCmdContext) {
-	logger.Info("PeerManager: GetPeerListRequestHandler")
 
 	getPeerlistRequest := &networkpb.GetPeerList{}
 
@@ -418,6 +406,11 @@ func (pm *PeerManager) GetPeerListResponseHandler(command *network_model.DappRcv
 			newPeers = append(newPeers, peer)
 		}
 	}
+
+	logger.WithFields(logger.Fields{
+		"peerId":        command.GetSource(),
+		"numOfNewPeers": len(newPeers),
+	}).Info("PeerManager: Received peer list from a peer")
 
 	pm.AddPeers(newPeers)
 	go pm.onPeerListReceivedCb(newPeers)

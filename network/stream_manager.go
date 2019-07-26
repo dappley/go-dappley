@@ -104,7 +104,7 @@ func (sm *StreamManager) StreamHandler(s network.Stream) {
 	logger.WithFields(logger.Fields{
 		"peer_id": stream.GetPeerId(),
 		"addr":    stream.GetRemoteAddr(),
-	}).Info("StreamManager: New stream connection has been received!")
+	}).Info("StreamManager: Has received a new stream connection")
 
 	if sm.isStreamConnected(peerId) {
 		logger.Warn("StreamManager: Stream is already connected")
@@ -200,7 +200,7 @@ func (sm *StreamManager) connectPeer(peerInfo network_model.PeerInfo, connection
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"PeerId": peerInfo.PeerId,
-		}).Warn("PeerManager: Connect to peer failed")
+		}).Debug("StreamManager: Connect to peer failed")
 		return err
 	}
 
