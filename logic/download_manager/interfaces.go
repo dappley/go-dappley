@@ -15,5 +15,5 @@ type NetService interface {
 		destination peer.ID,
 		isBroadcast bool,
 		priority network_model.DappCmdPriority)
-	Subscribe(command string, handler network_model.CommandHandlerFunc)
+	Listen(command string, handler network_model.CommandHandlerFunc)
 }

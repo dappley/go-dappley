@@ -130,8 +130,8 @@ func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priori
 	}
 }
 
-//Subscribe registers a callback function for a topic
-func (n *Node) Subscribe(command string, handler network_model.CommandHandlerFunc) {
+//Listen registers a callback function for a topic
+func (n *Node) Listen(command string, handler network_model.CommandHandlerFunc) {
 	n.commandBroker.Subscribe(command, handler)
 }
 

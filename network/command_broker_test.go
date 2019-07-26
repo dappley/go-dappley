@@ -17,7 +17,7 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 		expectedNumOfSubscribers int
 	}{
 		{
-			name:                     "Subscribe different topics",
+			name:                     "Listen different topics",
 			cmd1:                     "cmd",
 			cmd2:                     "cmd2",
 			expectedErr1:             nil,
@@ -25,7 +25,7 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 			expectedNumOfSubscribers: 2,
 		},
 		{
-			name:                     "Subscribe same unreserved topics",
+			name:                     "Listen same unreserved topics",
 			cmd1:                     "cmd",
 			cmd2:                     "cmd",
 			expectedErr1:             nil,
@@ -33,7 +33,7 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 			expectedNumOfSubscribers: 1,
 		},
 		{
-			name:                     "Subscribe same reserved topics",
+			name:                     "Listen same reserved topics",
 			cmd1:                     reservedTopics[0],
 			cmd2:                     reservedTopics[0],
 			expectedErr1:             nil,

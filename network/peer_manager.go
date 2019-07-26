@@ -74,7 +74,7 @@ func NewPeerManager(netService NetService, db Storage, onPeerListReceivedCb onPe
 		db:                   db,
 		onPeerListReceivedCb: onPeerListReceivedCb,
 	}
-	pm.Subscribe()
+	pm.ListenToNetService()
 	pm.addSeeds(seeds)
 	if db != nil {
 		pm.loadSyncPeers()
@@ -107,13 +107,13 @@ func (pm *PeerManager) GetSyncPeers() []network_model.PeerInfo {
 }
 
 //GetSubscribedTopics returns subscribed topics
-func (pm *PeerManager) Subscribe() {
+func (pm *PeerManager) ListenToNetService() {
 	if pm.netService == nil {
 		return
 	}
 
 	for _, topic := range subscribedTopics {
-		pm.netService.Subscribe(topic, pm.GetCommandHandler(topic))
+		pm.netService.Listen(topic, pm.GetCommandHandler(topic))
 	}
 }
 

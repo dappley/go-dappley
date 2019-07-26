@@ -175,7 +175,7 @@ func (downloadManager *DownloadManager) Subscribe() {
 	}
 
 	for _, command := range dmSubscribedTopics {
-		downloadManager.node.Subscribe(command, downloadManager.GetCommandHandler(command))
+		downloadManager.node.Listen(command, downloadManager.GetCommandHandler(command))
 	}
 }
 

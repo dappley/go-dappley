@@ -71,17 +71,17 @@ func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 		mutex:      sync.RWMutex{},
 		netService: netService,
 	}
-	txPool.SubscribeNetService()
+	txPool.ListenToNetService()
 	return txPool
 }
 
-func (txPool *TransactionPool) SubscribeNetService() {
+func (txPool *TransactionPool) ListenToNetService() {
 	if txPool.netService == nil {
 		return
 	}
 
 	for _, command := range txPoolSubscribedTopics {
-		txPool.netService.Subscribe(command, txPool.GetCommandHandler(command))
+		txPool.netService.Listen(command, txPool.GetCommandHandler(command))
 	}
 }
 

@@ -55,7 +55,7 @@ func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool, service 
 		blockPool:  blockpool,
 		netService: service,
 	}
-	bm.Subscribe()
+	bm.ListenToNetService()
 	return bm
 }
 
@@ -80,13 +80,13 @@ func (bm *BlockChainManager) RequestDownloadBlockchain() {
 	}()
 }
 
-func (bm *BlockChainManager) Subscribe() {
+func (bm *BlockChainManager) ListenToNetService() {
 	if bm.netService == nil {
 		return
 	}
 
 	for _, command := range bmSubscribedTopics {
-		bm.netService.Subscribe(command, bm.GetCommandHandler(command))
+		bm.netService.Listen(command, bm.GetCommandHandler(command))
 	}
 }
 
