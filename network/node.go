@@ -50,12 +50,12 @@ type Node struct {
 }
 
 //NewNode creates a new Node instance
-func NewNode(db Storage) *Node {
-	return NewNodeWithConfig(db, network_model.PeerConnectionConfig{})
+func NewNode(db Storage, seeds []string) *Node {
+	return NewNodeWithConfig(db, network_model.PeerConnectionConfig{}, seeds)
 }
 
 //NewNodeWithConfig creates a new Node instance with configurations
-func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig) *Node {
+func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig, seeds []string) *Node {
 	var err error
 
 	node := &Node{
@@ -65,8 +65,15 @@ func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig) *N
 		commandBroker: NewCommandBroker(reservedTopics),
 	}
 
-	node.network = NewNetwork(node, config, node.dispatcher, db)
-	node.network.OnStreamStop(node.OnStreamStop)
+	node.network = NewNetwork(
+		&NetworkContext{
+			node,
+			config,
+			node.dispatcher,
+			db,
+			node.onStreamStop,
+			seeds,
+		})
 
 	if err != nil {
 		logger.WithError(err).Panic("Node: Can not initialize lru cache for recentlyRcvdDapMsgs!")
@@ -76,20 +83,20 @@ func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig) *N
 }
 
 //GetHostPeerInfo returns the host's peerInfo
-func (n *Node) GetHostPeerInfo() *network_model.PeerInfo { return n.network.host.GetPeerInfo() }
+func (n *Node) GetHostPeerInfo() network_model.PeerInfo { return n.network.GetHost().GetPeerInfo() }
 
-//GetPeers returns all peers
-func (n *Node) GetPeers() []*network_model.PeerInfo { return n.network.GetPeers() }
+//GetConnectedPeers returns all peers
+func (n *Node) GetPeers() []network_model.PeerInfo { return n.network.GetConnectedPeers() }
 
 //GetNetwork returns its network object
 func (n *Node) GetNetwork() *Network { return n.network }
 
 //Start starts the network, command listener and received message listener
-func (n *Node) Start(listenPort int, seeds []string, privKeyFilePath string) error {
+func (n *Node) Start(listenPort int, privKeyFilePath string) error {
 
 	privKey := loadNetworkKeyFromFile(privKeyFilePath)
 
-	err := n.network.Start(listenPort, privKey, seeds)
+	err := n.network.Start(listenPort, privKey)
 	if err != nil {
 		return err
 	}
@@ -203,16 +210,18 @@ func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {
 	return privKey
 }
 
-//OnStreamStop runs when a stream is disconnected
-func (n *Node) OnStreamStop(stream *Stream) {
+//onStreamStop runs when a stream is disconnected
+func (n *Node) onStreamStop(stream *Stream) {
 
 	peerInfo := network_model.PeerInfo{PeerId: stream.GetPeerId()}
 	bytes, err := proto.Marshal(peerInfo.ToProto())
 
-	logger.WithError(err).Warn("Node: Marshal peerInfo failed")
+	if err != nil {
+		logger.WithError(err).Warn("Node: Marshal peerInfo failed")
+	}
 
 	dappCmd := network_model.NewDappCmd(TopicOnStreamStop, bytes, false)
-	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.host.ID())
+	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.GetHost().ID())
 
 	n.commandBroker.Dispatch(dappCmdCtx)
 }

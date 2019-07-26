@@ -142,16 +142,14 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 }
 
 func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) {
-	//create node
-	node := network.NewNode(db)
 
 	nodeConfig := conf.GetNodeConfig()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
 
 	seeds := nodeConfig.GetSeed()
-
-	err := node.Start(int(port), seeds, keyPath)
+	node := network.NewNode(db, seeds)
+	err := node.Start(int(port), keyPath)
 	if err != nil {
 		logger.Error(err)
 		return nil, err

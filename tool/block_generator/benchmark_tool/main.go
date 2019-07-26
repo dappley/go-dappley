@@ -136,12 +136,12 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	dm2 := download_manager.NewDownloadManager(node2, bm2)
 	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
 
-	node1.Start(testport1, nil, "")
+	node1.Start(testport1, "")
 	defer node1.Stop()
-	node2.Start(testport2, nil, "")
+	node2.Start(testport2, "")
 	defer node2.Stop()
 
-	node1.GetNetwork().AddPeer(node2.GetHostPeerInfo())
+	node1.GetNetwork().ConnectToSeed(node2.GetHostPeerInfo())
 
 	blkHeight := bm1.Getblockchain().GetMaxHeight()
 	tailBlock, _ := bm1.Getblockchain().GetTailBlock()
@@ -174,7 +174,7 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 	conss := consensus.NewDPOS()
 	conss.SetDynasty(dynasty)
-	node := network.NewNode(db)
+	node := network.NewNode(db, nil)
 	txPoolLimit := uint32(2000)
 	txPool := core.NewTransactionPool(node, txPoolLimit)
 	bc, err := core.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(core.Address{}), 1000000)

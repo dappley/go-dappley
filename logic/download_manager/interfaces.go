@@ -7,8 +7,8 @@ import (
 )
 
 type NetService interface {
-	GetPeers() []*network_model.PeerInfo
-	GetHostPeerInfo() *network_model.PeerInfo
+	GetPeers() []network_model.PeerInfo
+	GetHostPeerInfo() network_model.PeerInfo
 	SendCommand(
 		commandName string,
 		message proto.Message,

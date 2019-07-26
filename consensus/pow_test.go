@@ -38,7 +38,7 @@ func TestProofOfWork_Setup(t *testing.T) {
 	bc := core.GenerateMockBlockchain(5)
 	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(bc.GetDb())
+	node := network.NewNode(bc.GetDb(), nil)
 	bm := core.NewBlockChainManager(bc, pool, node)
 	pow.Setup(node, cbAddr, bm)
 	assert.Equal(t, bc, pow.bm.Getblockchain())

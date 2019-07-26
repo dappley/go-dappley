@@ -49,7 +49,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
 		db := storage.NewRamStorage()
-		node := network.NewNode(db)
+		node := network.NewNode(db, nil)
 
 		bc := core.CreateBlockchain(core.NewAddress(genesisAddr), db, pow, core.NewTransactionPool(node, 128), nil, 100000)
 		bc.SetState(core.BlockchainReady)
@@ -60,7 +60,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 		nodes[i] = node
 		pow.Setup(node, address.Address, bm)
 		pow.SetTargetBit(10)
-		node.Start(portStart+i, nil, "")
+		node.Start(portStart+i, "")
 	}
 	return bms, nodes
 }
@@ -97,7 +97,7 @@ func TestMultiEqualNode(t *testing.T) {
 
 	//Connect all other nodes to the first node
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
 	}
 
 	oldHeight := bm.Getblockchain().GetMaxHeight()
@@ -139,7 +139,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
 	}
 
 	highestChain.Getblockchain().SetState(core.BlockchainInit)
@@ -174,7 +174,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
 	}
 
 	highestChain.Getblockchain().SetState(core.BlockchainInit)
@@ -222,7 +222,7 @@ func TestDisconnectNode(t *testing.T) {
 	secondChainDownloadManager.Start()
 
 	for i := 1; i < len(nodes); i++ {
-		node.GetNetwork().AddPeer(nodes[i].GetHostPeerInfo())
+		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
 	}
 
 	finishCh := make(chan bool, 1)
@@ -248,7 +248,7 @@ func TestValidateReturnBlocks(t *testing.T) {
 
 	peerNode := nodes[1]
 
-	node.GetNetwork().AddPeer(peerNode.GetHostPeerInfo())
+	node.GetNetwork().ConnectToSeed(peerNode.GetHostPeerInfo())
 	downloadManager.peersInfo = make(map[peer.ID]*PeerBlockInfo)
 
 	for _, p := range downloadManager.node.GetPeers() {

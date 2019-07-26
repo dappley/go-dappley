@@ -27,10 +27,10 @@ import (
 //FakeNodeWithPeer fakes a node with peer id and multiaddress string
 func FakeNodeWithPeer(pid, addr string) *Node {
 
-	node := NewNode(nil)
+	node := NewNode(nil, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
-	peerInfo := &network_model.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
+	peerInfo := network_model.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
 	node.GetNetwork().AddSeed(peerInfo)
 	return node
 }
@@ -38,11 +38,11 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 //FakeNodeWithPidAndAddr fakes a node with peer id, multiaddress string and a database instance
 func FakeNodeWithPidAndAddr(db Storage, pid, addr string) *Node {
 
-	node := NewNode(db)
+	node := NewNode(db, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
-	peerInfo := &network_model.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
-	node.network.host = &network_model.Host{nil, peerInfo}
+	peerInfo := network_model.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
+	node.network.streamManager.host = &network_model.Host{nil, peerInfo}
 
 	return node
 }

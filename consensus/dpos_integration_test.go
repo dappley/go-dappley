@@ -38,8 +38,8 @@ func TestDpos_Start(t *testing.T) {
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 	pool := core.NewBlockPool(0)
 
-	node := network.NewNode(bc.GetDb())
-	node.Start(22100, nil, "")
+	node := network.NewNode(bc.GetDb(), nil)
+	node.Start(22100, "")
 	defer node.Stop()
 
 	bm := core.NewBlockChainManager(bc, pool, node)
@@ -91,8 +91,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
 
-		node := network.NewNode(bc.GetDb())
-		node.Start(21200+i, nil, "")
+		node := network.NewNode(bc.GetDb(), nil)
+		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
 		bm := core.NewBlockChainManager(bc, pool, node)
@@ -105,7 +105,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i := range miners {
 		for j := range miners {
 			if i != j {
-				nodeArray[i].GetNetwork().AddPeer(nodeArray[j].GetHostPeerInfo())
+				nodeArray[i].GetNetwork().ConnectToSeed(nodeArray[j].GetHostPeerInfo())
 			}
 		}
 
@@ -163,8 +163,8 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		bc := core.CreateBlockchain(core.Address{miners[0]}, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
 
-		node := network.NewNode(bc.GetDb())
-		node.Start(22200+i, nil, "")
+		node := network.NewNode(bc.GetDb(), nil)
+		node.Start(22200+i, "")
 		nodeArray = append(nodeArray, node)
 
 		bm := core.NewBlockChainManager(bc, pool, node)
@@ -177,7 +177,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i := range miners {
 		for j := range miners {
 			if i != j {
-				nodeArray[i].GetNetwork().AddPeer(nodeArray[j].GetHostPeerInfo())
+				nodeArray[i].GetNetwork().ConnectToSeed(nodeArray[j].GetHostPeerInfo())
 			}
 		}
 

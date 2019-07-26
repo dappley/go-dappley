@@ -1,5 +1,3 @@
-// +build integration
-
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
@@ -290,8 +288,8 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 
 		db := storage.NewRamStorage()
-		node := network.NewNode(db)
-		node.Start(testport_msg_relay_port1+i, nil, "")
+		node := network.NewNode(db, nil)
+		node.Start(testport_msg_relay_port1+i, "")
 
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, db, dpos, core.NewTransactionPool(node, 128), nil, 100000)
 		bcs = append(bcs, bc)
@@ -359,8 +357,8 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 
 		db := storage.NewRamStorage()
-		node := network.NewNode(db)
-		node.Start(testport_msg_relay_port2+i, nil, "")
+		node := network.NewNode(db, nil)
+		node.Start(testport_msg_relay_port2+i, "")
 		bc := core.CreateBlockchain(core.Address{producerAddrs[0]}, storage.NewRamStorage(), dpos, core.NewTransactionPool(node, 128), nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
@@ -368,7 +366,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		if i == 0 {
 			firstNode = node
 		} else {
-			node.GetNetwork().AddPeer(firstNode.GetHostPeerInfo())
+			node.GetNetwork().ConnectToSeed(firstNode.GetHostPeerInfo())
 		}
 		nodes = append(nodes, node)
 
@@ -433,7 +431,7 @@ func TestForkChoice(t *testing.T) {
 		db := storage.NewRamStorage()
 		dbs = append(dbs, db)
 
-		node := network.NewNode(db)
+		node := network.NewNode(db, nil)
 		bc, pow := createBlockchain(addr, db, core.NewTransactionPool(node, 128))
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool(0)
@@ -443,7 +441,7 @@ func TestForkChoice(t *testing.T) {
 
 		pow.Setup(node, addr.String(), bm)
 		pow.SetTargetBit(10)
-		node.Start(testport_fork+i, nil, "")
+		node.Start(testport_fork+i, "")
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 		bms = append(bms, bm)
@@ -507,7 +505,7 @@ func TestForkSegmentHandling(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		db := storage.NewRamStorage()
 		dbs = append(dbs, db)
-		node := network.NewNode(db)
+		node := network.NewNode(db, nil)
 
 		bc, pow := createBlockchain(addr, db, core.NewTransactionPool(node, 128))
 		bcs = append(bcs, bc)
@@ -517,7 +515,7 @@ func TestForkSegmentHandling(t *testing.T) {
 
 		pow.Setup(node, addr.String(), bm)
 		pow.SetTargetBit(10)
-		node.Start(testport_fork_segment+i, nil, "")
+		node.Start(testport_fork_segment+i, "")
 		pows = append(pows, pow)
 		nodes = append(nodes, node)
 		bms = append(bms, bm)
@@ -743,18 +741,18 @@ func TestSmartContractLocalStorage(t *testing.T) {
 }
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
-	node1.GetNetwork().AddPeer(node2.GetHostPeerInfo())
+	node1.GetNetwork().ConnectToSeed(node2.GetHostPeerInfo())
 }
 
 func setupNode(addr core.Address, pow *consensus.ProofOfWork, bc *core.Blockchain, port int) *network.Node {
 	pool := core.NewBlockPool(0)
 
-	node := network.NewNode(bc.GetDb())
+	node := network.NewNode(bc.GetDb(), nil)
 	bm := core.NewBlockChainManager(bc, pool, node)
 
 	pow.Setup(node, addr.String(), bm)
 	pow.SetTargetBit(12)
-	node.Start(port, nil, "")
+	node.Start(port, "")
 	defer node.Stop()
 	return node
 }
@@ -795,8 +793,8 @@ func TestDoubleMint(t *testing.T) {
 		dpos.SetDynasty(dynasty)
 
 		db := storage.NewRamStorage()
-		node := network.NewNode(db)
-		node.Start(testport_msg_relay_port3+i, nil, "")
+		node := network.NewNode(db, nil)
+		node.Start(testport_msg_relay_port3+i, "")
 
 		bc := core.CreateBlockchain(core.Address{validProducerAddr}, db, dpos, core.NewTransactionPool(node, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
@@ -810,7 +808,7 @@ func TestDoubleMint(t *testing.T) {
 			sendBm = bm
 		} else {
 			recvNode = node
-			recvNode.GetNetwork().AddPeer(sendNode.GetHostPeerInfo())
+			recvNode.GetNetwork().ConnectToSeed(sendNode.GetHostPeerInfo())
 			recvNodeBc = bc
 		}
 		dposArray = append(dposArray, dpos)
@@ -846,8 +844,8 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	conss.SetDynasty(dynasty)
 
 	db := storage.NewRamStorage()
-	seedNode := network.NewNode(db)
-	seedNode.Start(testport_fork_syncing, nil, "")
+	seedNode := network.NewNode(db, nil)
+	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
 
 	bc := core.CreateBlockchain(core.NewAddress(genesisAddr), storage.NewRamStorage(), conss, core.NewTransactionPool(seedNode, 128), nil, 100000)
@@ -870,8 +868,8 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	dpos.SetDynasty(dynasty)
 
 	db1 := storage.NewRamStorage()
-	node := network.NewNode(db1)
-	node.Start(testport_fork_syncing+1, nil, "")
+	node := network.NewNode(db1, nil)
+	node.Start(testport_fork_syncing+1, "")
 	defer node.Stop()
 
 	bc1 := core.CreateBlockchain(core.NewAddress(genesisAddr), db1, dpos, core.NewTransactionPool(node, 128), nil, 100000)

@@ -14,7 +14,7 @@ type PeerInfo struct {
 	Addrs  []ma.Multiaddr
 }
 
-func NewPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
+func NewPeerInfoFromString(fullAddr string) (PeerInfo, error) {
 	addr, err := ma.NewMultiaddr(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
@@ -27,20 +27,20 @@ func NewPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
 }
 
 //NewPeerInfoFromMultiaddrs generates PeerInfo object from multiaddresses
-func NewPeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error) {
+func NewPeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (PeerInfo, error) {
 	peerIds := make([]peer.ID, len(targetFullAddrs))
 	addrs := make([]ma.Multiaddr, len(targetFullAddrs))
 	for index, targetFullAddr := range targetFullAddrs {
 		//get pid
 		pid, err := targetFullAddr.ValueForProtocol(ma.P_IPFS)
 		if err != nil {
-			return nil, err
+			return PeerInfo{}, err
 		}
 
 		//get peer id
 		peerId, err := peer.IDB58Decode(pid)
 		if err != nil {
-			return nil, err
+			return PeerInfo{}, err
 		}
 
 		peerIds[index] = peerId
@@ -59,7 +59,7 @@ func NewPeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error
 		}).Info("PeerManager: create peer information.")
 	}
 
-	peerInfo := &PeerInfo{
+	peerInfo := PeerInfo{
 		PeerId: peerIds[0],
 		Addrs:  addrs,
 	}

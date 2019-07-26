@@ -44,14 +44,14 @@ func TestNewNode(t *testing.T) {
 
 func TestNode_Stop(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
-	node := NewNode(storage.NewRamStorage())
-	err := node.Start(22100, nil, "")
+	node := NewNode(storage.NewRamStorage(), nil)
+	err := node.Start(22100, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(time.Second)
 	node.Stop()
-	_, ok := <-node.network.host.Network().Process().Closed()
+	_, ok := <-node.network.GetHost().Network().Process().Closed()
 	assert.False(t, ok)
 }

@@ -66,18 +66,17 @@ func (s *Stream) GetRemoteAddr() multiaddr.Multiaddr { return s.peerInfo.Addrs[0
 
 //Start starts a stream with a peer
 func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
-	logger.Warn("Stream: Start new stream")
+	logger.Debug("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, msgRcvCh)
 }
 
 //StopStream stops a stream
-func (s *Stream) StopStream(err error) {
+func (s *Stream) StopStream() {
 	logger.WithFields(logger.Fields{
 		"peer_address": s.GetRemoteAddr(),
 		"pid":          s.GetPeerId(),
-		"error":        err,
-	}).Info("Stream: is terminated!!")
+	}).Info("Stream: stream is terminated")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
@@ -147,7 +146,7 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPac
 		logger.WithError(err).WithFields(logger.Fields{
 			"num_of_byte_read": n,
 		}).Warn("Stream: Read failed")
-		s.StopStream(err)
+		s.StopStream()
 	}
 
 	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
@@ -159,7 +158,10 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPac
 			if err == network_model.ErrLengthTooShort {
 				return
 			} else {
-				s.StopStream(err)
+				logger.WithError(err).WithFields(logger.Fields{
+					"num_of_byte_read": n,
+				}).Warn("Stream: Parse packet failed")
+				s.StopStream()
 			}
 		}
 

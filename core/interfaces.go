@@ -47,7 +47,7 @@ type Consensus interface {
 }
 
 type NetService interface {
-	GetHostPeerInfo() *network_model.PeerInfo
+	GetHostPeerInfo() network_model.PeerInfo
 	SendCommand(
 		commandName string,
 		message proto.Message,

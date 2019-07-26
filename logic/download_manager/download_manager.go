@@ -842,7 +842,7 @@ func (downloadManager *DownloadManager) OnStreamStopHandler(command *network_mod
 	peerInfopb := &networkpb.PeerInfo{}
 	if err := proto.Unmarshal(command.GetData(), peerInfopb); err != nil {
 		logger.WithFields(logger.Fields{
-			"name": "OnStreamStop",
+			"name": "onStreamStop",
 		}).Info("DownloadManager: parse data failed.")
 		return
 	}
@@ -850,7 +850,7 @@ func (downloadManager *DownloadManager) OnStreamStopHandler(command *network_mod
 	var peerInfo network_model.PeerInfo
 	if err := peerInfo.FromProto(peerInfopb); err != nil {
 		logger.WithFields(logger.Fields{
-			"name": "OnStreamStop",
+			"name": "onStreamStop",
 		}).Info("DownloadManager: parse data from proto message failed.")
 		return
 	}
