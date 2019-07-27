@@ -205,8 +205,10 @@ func (am *AccountManager) GetAccountByAddress(address client.Address) *client.Ac
 	defer am.mutex.Unlock()
 
 	for _, account := range am.Accounts {
-		if account.ContainAddress(address) {
-			return account
+		for _, key := range account.GetAllKeys() {
+			if key.GenerateAddress() == address {
+				return account
+			}
 		}
 	}
 	return nil

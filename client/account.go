@@ -49,16 +49,9 @@ func (a Account) GetKeyPair() *KeyPair {
 	return a.key
 }
 
-func (a Account) ContainAddress(addr Address) bool {
-	if a.key.GenerateAddress() == addr {
-		return true
-	}
-	for _, subkey := range a.subKeys {
-		if subkey.GenerateAddress() == addr {
-			return true
-		}
-	}
-	return false
+func (a Account) GetAllKeys() []*KeyPair {
+	keys := append(a.subKeys, a.key)
+	return keys
 }
 
 func (a *Account) ToProto() proto.Message {

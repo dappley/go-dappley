@@ -25,23 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAccount_ContainAddress(t *testing.T) {
-	account := NewAccount()
-	tests := []struct {
-		name     string
-		input    Address
-		expected bool
-	}{{"contains address", account.GetKeyPair().GenerateAddress(), true},
-		{"does not contain address", Address{}, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, account.ContainAddress(tt.input))
-		})
-	}
-}
-
 func TestAccount_Proto(t *testing.T) {
 	account := NewAccount()
 	rawBytes, err := proto.Marshal(account.ToProto())
