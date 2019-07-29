@@ -44,12 +44,10 @@ type RcvedBlock struct {
 }
 
 type BlockPool struct {
-	blockRequestCh   chan BlockRequestPars
-	downloadBlocksCh chan bool
-	size             int
-	blkCache         *lru.Cache //cache of full blks
-	forkHeads        map[string]*common.Tree
-	forkHeadsMutex   *sync.RWMutex
+	size           int
+	blkCache       *lru.Cache //cache of full blks
+	forkHeads      map[string]*common.Tree
+	forkHeadsMutex *sync.RWMutex
 }
 
 func NewBlockPool(size int) *BlockPool {
@@ -57,22 +55,12 @@ func NewBlockPool(size int) *BlockPool {
 		size = BlockPoolMaxSize
 	}
 	pool := &BlockPool{
-		size:             size,
-		blockRequestCh:   make(chan BlockRequestPars, size),
-		downloadBlocksCh: make(chan bool, 1),
-		forkHeads:        make(map[string]*common.Tree),
-		forkHeadsMutex:   &sync.RWMutex{},
+		size:           size,
+		forkHeads:      make(map[string]*common.Tree),
+		forkHeadsMutex: &sync.RWMutex{},
 	}
 	pool.blkCache, _ = lru.New(BlockCacheLRUCacheLimit)
 	return pool
-}
-
-func (pool *BlockPool) BlockRequestCh() chan BlockRequestPars {
-	return pool.blockRequestCh
-}
-
-func (pool *BlockPool) DownloadBlocksCh() chan bool {
-	return pool.downloadBlocksCh
 }
 
 func (pool *BlockPool) Verify(block *Block) bool {
@@ -185,15 +173,6 @@ func (pool *BlockPool) updateBlkCache(tree *common.Tree) {
 	}).Debug("BlockPool: finished updating BlockPoolCache.")
 }
 
-func (pool *BlockPool) requestPrevBlock(tree *common.Tree, sender peer.ID) {
-	logger.WithFields(logger.Fields{
-		"hash":   hex.EncodeToString(tree.GetValue().(*Block).GetPrevHash()),
-		"height": tree.GetValue().(*Block).GetHeight() - 1,
-		"from":   sender,
-	}).Info("BlockPool: is requesting a block.")
-	pool.blockRequestCh <- BlockRequestPars{tree.GetValue().(*Block).GetPrevHash(), sender}
-}
-
 func (pool *BlockPool) getBlkFromBlkCache(hashString string) *Block {
 	if val, ok := pool.blkCache.Get(hashString); ok == true {
 		return val.(*Block)
@@ -220,4 +199,3 @@ func (pool *BlockPool) ForkHeadRange(fn func(blkHash string, tree *common.Tree))
 		fn(k, v)
 	}
 }
-

@@ -1,29 +1,21 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/network/network_model"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/storage"
-)
-
-var (
-	bc   = core.CreateBlockchain(core.NewAddress(""), storage.NewRamStorage(), consensus.NewDPOS(), 100, nil, 100)
-	bp   = core.NewBlockPool(100)
-	node = NewNode(bc, bp)
 )
 
 func TestPeerManager_StartNewPingService(t *testing.T) {
-	pm := NewPeerManager(node, nil)
+	pm := NewPeerManager(nil, nil, nil, nil)
+
 	// no host
 	require.False(t, pm.StartNewPingService(time.Second))
 
+	pm.SetHost(network_model.NewHost(0, nil, nil))
 	// success
-	require.Nil(t, node.Start(0))
 	require.True(t, pm.StartNewPingService(time.Second))
 
 	// already running
@@ -31,12 +23,13 @@ func TestPeerManager_StartNewPingService(t *testing.T) {
 }
 
 func TestPeerManager_StopPingService(t *testing.T) {
-	pm := NewPeerManager(node, nil)
+	pm := NewPeerManager(nil, nil, nil, nil)
+
 	// not running
 	require.False(t, pm.StopPingService())
 
+	pm.SetHost(network_model.NewHost(0, nil, nil))
 	// start
-	require.Nil(t, node.Start(0))
 	require.True(t, pm.StartNewPingService(time.Second))
 
 	// stop

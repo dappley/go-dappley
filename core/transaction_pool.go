@@ -22,9 +22,11 @@ import (
 	"encoding/hex"
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 	"sort"
 	"sync"
@@ -35,6 +37,16 @@ const (
 	EvictTransactionTopic = "EvictTransaction"
 	scheduleFuncName      = "dapp_schedule"
 	TxPoolDbKey           = "txpool"
+
+	BroadcastTx       = "BroadcastTx"
+	BroadcastBatchTxs = "BraodcastBatchTxs"
+)
+
+var (
+	txPoolSubscribedTopics = []string{
+		BroadcastTx,
+		BroadcastBatchTxs,
+	}
 )
 
 type TransactionPool struct {
@@ -45,10 +57,11 @@ type TransactionPool struct {
 	currSize   uint32
 	EventBus   EventBus.Bus
 	mutex      sync.RWMutex
+	netService NetService
 }
 
-func NewTransactionPool(limit uint32) *TransactionPool {
-	return &TransactionPool{
+func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
+	txPool := &TransactionPool{
 		txs:        make(map[string]*TransactionNode),
 		pendingTxs: make([]*Transaction, 0),
 		tipOrder:   make([]string, 0),
@@ -56,7 +69,31 @@ func NewTransactionPool(limit uint32) *TransactionPool {
 		currSize:   0,
 		EventBus:   EventBus.New(),
 		mutex:      sync.RWMutex{},
+		netService: netService,
 	}
+	txPool.ListenToNetService()
+	return txPool
+}
+
+func (txPool *TransactionPool) ListenToNetService() {
+	if txPool.netService == nil {
+		return
+	}
+
+	for _, command := range txPoolSubscribedTopics {
+		txPool.netService.Listen(command, txPool.GetCommandHandler(command))
+	}
+}
+
+func (txPool *TransactionPool) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+
+	switch commandName {
+	case BroadcastTx:
+		return txPool.BroadcastTxHandler
+	case BroadcastBatchTxs:
+		return txPool.BroadcastBatchTxsHandler
+	}
+	return nil
 }
 
 func (txPool *TransactionPool) DeepCopy() *TransactionPool {
@@ -426,19 +463,20 @@ func deserializeTxPool(d []byte) *TransactionPool {
 		println(err)
 		logger.WithError(err).Panic("TxPool: failed to deserialize TxPool transactions.")
 	}
-	txPool := NewTransactionPool(1)
+	txPool := NewTransactionPool(nil, 1)
 	txPool.FromProto(txPoolProto)
 
 	return txPool
 }
 
-func LoadTxPoolFromDatabase(db storage.Storage, txPoolSize uint32) *TransactionPool {
+func LoadTxPoolFromDatabase(db storage.Storage, netService NetService, txPoolSize uint32) *TransactionPool {
 	rawBytes, err := db.Get([]byte(TxPoolDbKey))
 	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return NewTransactionPool(txPoolSize)
+		return NewTransactionPool(netService, txPoolSize)
 	}
 	txPool := deserializeTxPool(rawBytes)
 	txPool.sizeLimit = txPoolSize
+	txPool.netService = netService
 	return txPool
 }
 
@@ -524,4 +562,76 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	txPool.currSize = pb.(*corepb.TransactionPool).CurrSize
 	MetricsTransactionPoolSize.Clear()
 	MetricsTransactionPoolSize.Inc(int64(len(txPool.txs)))
+}
+
+func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
+	var broadcastPid peer.ID
+	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
+}
+
+func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
+	//TODO: Check if the blockchain state is ready
+	txpb := &corepb.Transaction{}
+
+	if err := proto.Unmarshal(command.GetData(), txpb); err != nil {
+		logger.Warn(err)
+	}
+
+	tx := &Transaction{}
+	tx.FromProto(txpb)
+	//TODO: Check if the transaction is generated from running a smart contract
+	//utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+	//if tx.IsFromContract(utxoIndex) {
+	//	return
+	//}
+
+	txPool.Push(*tx)
+
+	if command.IsBroadcast() {
+		//relay the original command
+		var broadcastPid peer.ID
+		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
+	}
+}
+
+func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
+
+	if len(txs) == 0 {
+		return
+	}
+
+	transactions := NewTransactions(txs)
+
+	var broadcastPid peer.ID
+	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
+}
+
+func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
+	//TODO: Check if the blockchain state is ready
+	txspb := &corepb.Transactions{}
+
+	if err := proto.Unmarshal(command.GetData(), txspb); err != nil {
+		logger.Warn(err)
+	}
+
+	txs := &Transactions{}
+
+	//load the tx with proto
+	txs.FromProto(txspb)
+
+	for _, tx := range txs.GetTransactions() {
+		//TODO: Check if the transaction is generated from running a smart contract
+		//utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+		//if tx.IsFromContract(utxoIndex) {
+		//	return
+		//}
+		txPool.Push(tx)
+	}
+
+	if command.IsBroadcast() {
+		//relay the original command
+		var broadcastPid peer.ID
+		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
+	}
+
 }

@@ -26,7 +26,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -42,6 +42,7 @@ type DPOS struct {
 	producerKey string
 	newBlockCh  chan *core.Block
 	node        core.NetService
+	bm          *core.BlockChainManager
 	stopCh      chan bool
 	stopLibCh   chan bool
 	dynasty     *Dynasty
@@ -73,10 +74,11 @@ func (dpos *DPOS) AddBlockToSlot(block *core.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
-func (dpos *DPOS) Setup(node core.NetService, cbAddr string) {
+func (dpos *DPOS) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
 	dpos.node = node
-	dpos.bp.Setup(node.GetBlockchain(), cbAddr)
+	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
+	dpos.bm = bm
 }
 
 func (dpos *DPOS) SetKey(key string) {
@@ -127,7 +129,7 @@ func (dpos *DPOS) Validate(block *core.Block) bool {
 func (dpos *DPOS) Start() {
 	go func() {
 		logger.WithFields(logger.Fields{
-			"peer_id": dpos.node.GetPeerID(),
+			"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 		}).Info("DPoS starts...")
 		if len(dpos.stopCh) > 0 {
 			<-dpos.stopCh
@@ -141,10 +143,11 @@ func (dpos *DPOS) Start() {
 					deadlineInMs := now.UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 					index := dpos.dynasty.GetProducerIndex(dpos.bp.Beneficiary())
 					logger.WithFields(logger.Fields{
-						"peer_id": dpos.node.GetPeerID(),
-					}).Infof("DPoS: it is my turn to produce block. ***node is %v,time is %v***",index,now.Unix())
+						"peer_id": dpos.node.GetHostPeerInfo().PeerId,
+					}).Infof("DPoS: it is my turn to produce block. ***node is %v,time is %v***", index, now.Unix())
+
 					// Do not produce block if block pool is syncing
-					if dpos.node.GetBlockchain().GetState() != core.BlockchainReady {
+					if dpos.bm.Getblockchain().GetState() != core.BlockchainReady {
 						logger.Info("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}
@@ -167,7 +170,7 @@ func (dpos *DPOS) Start() {
 
 func (dpos *DPOS) Stop() {
 	logger.WithFields(logger.Fields{
-		"peer_id": dpos.node.GetPeerID(),
+		"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 	}).Info("DPoS stops...")
 	dpos.stopCh <- true
 }
@@ -274,7 +277,7 @@ func (dpos *DPOS) IsProducingBlock() bool {
 
 func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	logger.WithFields(logger.Fields{
-		"peer_id": dpos.node.GetPeerID(),
+		"peer_id": dpos.node.GetHostPeerInfo().PeerId,
 		"height":  ctx.Block.GetHeight(),
 		"hash":    hex.EncodeToString(ctx.Block.GetHash()),
 	}).Info("DPoS: produced a new block.")
@@ -287,18 +290,18 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	lib, ok := dpos.CheckLibPolicy(ctx.Block)
 	if !ok {
 		logger.Warn("DPoS: the number of producers is not enough.")
-		tailBlock, _ := dpos.node.GetBlockchain().GetTailBlock()
-		dpos.node.BroadcastBlock(tailBlock)
+		tailBlock, _ := dpos.bm.Getblockchain().GetTailBlock()
+		dpos.bm.BroadcastBlock(tailBlock)
 		return
 	}
 	ctx.Lib = lib
 
-	err := dpos.node.GetBlockchain().AddBlockContextToTail(ctx)
+	err := dpos.bm.Getblockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	dpos.node.BroadcastBlock(ctx.Block)
+	dpos.bm.BroadcastBlock(ctx.Block)
 }
 
 func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
@@ -312,7 +315,7 @@ func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
 		return nil, true
 	}
 
-	lib, err := dpos.node.GetBlockchain().GetLIB()
+	lib, err := dpos.bm.Getblockchain().GetLIB()
 	if err != nil {
 		logger.WithError(err).Warn("DPoS: get lib failed.")
 	}
@@ -336,7 +339,7 @@ func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
 			return checkingBlock, true
 		}
 
-		newBlock, err := dpos.node.GetBlockchain().GetBlockByHash(checkingBlock.GetPrevHash())
+		newBlock, err := dpos.bm.Getblockchain().GetBlockByHash(checkingBlock.GetPrevHash())
 		if err != nil {
 			logger.WithError(err).Warn("DPoS: get parent block failed.")
 		}

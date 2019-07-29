@@ -3,14 +3,11 @@ package networkpb;
 import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";
 
-message Dapmsg {
+message DappCmd {
     string cmd = 1;
-    bytes data = 2; 
-    int64 unix_time_received = 3;
-    string key = 4;
-    int64 uni_or_broadcast = 5;
-    uint64 counter = 6;
-    string uuid = 7;
+    bytes data = 2;
+    bool is_broadcast = 3;
+    uint32 magic_number = 4;
 }
 
 message GetBlockchainInfo{

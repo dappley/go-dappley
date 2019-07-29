@@ -20,115 +20,95 @@ package network
 
 import (
 	"bufio"
-	"errors"
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/golang/protobuf/proto"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-	"math/big"
-	"reflect"
+
 	"time"
 )
 
 const (
-	lengthByteLength       = 8
-	startByteLength        = 2
-	checkSumLength         = 1
-	headerLength           = lengthByteLength + startByteLength + checkSumLength
 	highPriorityChLength   = 1024 * 4
 	normalPriorityChLength = 1024 * 4
 	WriteChTotalLength     = highPriorityChLength + normalPriorityChLength
 )
 
-const (
-	HighPriorityCommand = iota
-	NormalPriorityCommand
-)
-
-var (
-	ErrInvalidMessageFormat = errors.New("invalid message format")
-	ErrLengthTooShort       = errors.New("message length is too short")
-	ErrFragmentedData       = errors.New("fragmented data")
-	ErrCheckSumIncorrect    = errors.New("incorrect checksum")
-)
-
-var (
-	startBytes = []byte{0x7E, 0x7E}
-)
-
 type Stream struct {
-	peerID                peer.ID
-	remoteAddr            multiaddr.Multiaddr
+	peerInfo              network_model.PeerInfo
 	stream                network.Stream
-	msglength             int
 	rawByteRead           []byte
-	msgReadCh             chan []byte
-	highPriorityWriteCh   chan []byte
-	normalPriorityWriteCh chan []byte
+	highPriorityWriteCh   chan *network_model.DappPacket
+	normalPriorityWriteCh chan *network_model.DappPacket
 	msgNotifyCh           chan bool
 	quitRdCh              chan bool
 	quitWrCh              chan bool
 }
 
+//NewStream creates a new Stream instance
 func NewStream(s network.Stream) *Stream {
 	return &Stream{
-		s.Conn().RemotePeer(),
-		s.Conn().RemoteMultiaddr(),
+		network_model.PeerInfo{s.Conn().RemotePeer(), []multiaddr.Multiaddr{s.Conn().RemoteMultiaddr()}, nil},
 		s,
-		0,
 		[]byte{},
-		make(chan []byte, 100),
-		make(chan []byte, highPriorityChLength),
-		make(chan []byte, normalPriorityChLength),
+		make(chan *network_model.DappPacket, highPriorityChLength),
+		make(chan *network_model.DappPacket, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),
 		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
-	logger.Info("Stream: Start new stream")
+//GetPeerId returns the remote peer ID
+func (s *Stream) GetPeerId() peer.ID { return s.peerInfo.PeerId }
+
+//GetRemoteAddr returns the remote multi address
+func (s *Stream) GetRemoteAddr() multiaddr.Multiaddr { return s.peerInfo.Addrs[0] }
+
+//Start starts a stream with a peer
+func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
+	logger.Debug("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw, quitCh, dispatch)
+	s.startLoop(rw, quitCh, msgRcvCh)
 }
 
-func (s *Stream) StopStream(err error) {
+//StopStream stops a stream
+func (s *Stream) StopStream() {
 	logger.WithFields(logger.Fields{
-		"peer_address": s.remoteAddr,
-		"pid":          s.peerID,
-		"error":        err,
-	}).Info("Stream: is terminated!!")
+		"peer_address": s.GetRemoteAddr(),
+		"pid":          s.GetPeerId(),
+	}).Info("Stream: A stream is terminated")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
 }
 
-func (s *Stream) Send(data []byte, priority int) {
+//Send sends a DappPacket to its peer
+func (s *Stream) Send(packet *network_model.DappPacket, priority network_model.DappCmdPriority) {
 	defer func() {
 		if p := recover(); p != nil {
 			logger.WithFields(logger.Fields{
-				"peer_address": s.remoteAddr,
-				"pid":          s.peerID,
+				"peer_address": s.GetRemoteAddr(),
+				"pid":          s.GetPeerId(),
 				"error":        p,
 			}).Info("Stream: data channel closed.")
 		}
 	}()
 
 	switch priority {
-	case HighPriorityCommand:
+	case network_model.HighPriorityCommand:
 		select {
-		case s.highPriorityWriteCh <- data:
+		case s.highPriorityWriteCh <- packet:
 		default:
 			logger.WithFields(logger.Fields{
 				"dataCh_len": len(s.highPriorityWriteCh),
 			}).Warn("Stream: High priority message channel full!")
 			return
 		}
-	case NormalPriorityCommand:
+	case network_model.NormalPriorityCommand:
 		select {
-		case s.normalPriorityWriteCh <- data:
+		case s.normalPriorityWriteCh <- packet:
 		default:
 			logger.WithFields(logger.Fields{
 				"dataCh_len": len(s.normalPriorityWriteCh),
@@ -152,12 +132,14 @@ func (s *Stream) Send(data []byte, priority int) {
 
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
-	go s.readLoop(rw, quitCh, dispatch)
+//startLoop starts the read and write loop
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
+	go s.readLoop(rw, quitCh, msgRcvCh)
 	go s.writeLoop(rw)
 }
 
-func (s *Stream) read(rw *bufio.ReadWriter) {
+//read reads raw bytes from its peer
+func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPacketContext) {
 	buffer := make([]byte, 1024)
 	var err error
 
@@ -166,133 +148,62 @@ func (s *Stream) read(rw *bufio.ReadWriter) {
 		logger.WithError(err).WithFields(logger.Fields{
 			"num_of_byte_read": n,
 		}).Warn("Stream: Read failed")
-		s.StopStream(err)
+		s.StopStream()
 	}
 
 	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
 
 	for {
-		if len(s.rawByteRead) < headerLength {
+		packet, err := network_model.DeserializeIntoDappPacket(s.rawByteRead)
+
+		if err != nil {
+			if err == network_model.ErrLengthTooShort {
+				return
+			} else {
+				logger.WithError(err).WithFields(logger.Fields{
+					"num_of_byte_read": n,
+				}).Warn("Stream: Parse packet failed")
+				s.StopStream()
+			}
+		}
+
+		select {
+		case msgRcvCh <- &network_model.DappPacketContext{packet, s.GetPeerId()}:
+		default:
+			logger.WithFields(logger.Fields{
+				"dispatchCh_len": len(msgRcvCh),
+			}).Warn("Stream: message receive channel full!")
 			return
 		}
-
-		if err = verifyHeader(s.rawByteRead[:headerLength]); err != nil {
-			s.StopStream(err)
-		}
-		s.msglength = getLength(s.rawByteRead[:headerLength])
-
-		if len(s.rawByteRead) < headerLength+s.msglength {
-			return
-		}
-
-		s.msgReadCh <- s.rawByteRead[:headerLength+s.msglength]
-		s.rawByteRead = s.rawByteRead[headerLength+s.msglength:]
+		s.rawByteRead = s.rawByteRead[packet.GetLength():]
 	}
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
+//readLoop keeps reading from its peer
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, msgRcvCh chan *network_model.DappPacketContext) {
 	for {
 		select {
 		case <-s.quitRdCh:
 			quitCh <- s
 			logger.Debug("Stream: read loop is terminated!")
 			return
-		case msg := <-s.msgReadCh:
-			dm := s.parseData(msg)
-
-			dispatch <- newMsg(dm, s.peerID)
 		default:
-			t1 := time.Now().UnixNano()/1e6
-			s.read(rw)
-			cost := time.Now().UnixNano()/1e6-t1
-			logger.Debugf("read cost time: %v, stream remote addr: %v, stream local addr: %v, peerId: %v",cost,s.stream.Conn().RemotePeer(), s.stream.Conn().LocalPeer(), s.peerID)
+			t1 := time.Now().UnixNano() / 1e6
+			s.read(rw, msgRcvCh)
+			cost := time.Now().UnixNano()/1e6 - t1
+			logger.Debugf("read cost time: %v, stream remote addr: %v, stream local addr: %v, peerId: %v", cost, s.stream.Conn().RemotePeer(), s.stream.Conn().LocalPeer(), s.GetPeerId())
 		}
 	}
 }
 
-func encodeMessage(data []byte) []byte {
-	header := constructHeader(data)
-	ret := append(header, data...)
-	return ret
-}
-
-func constructHeader(data []byte) []byte {
-	length := len(data)
-	msg := make([]byte, lengthByteLength)
-	lengthBytes := big.NewInt(int64(length)).Bytes()
-	lenDiff := len(msg) - len(lengthBytes)
-	for i, b := range lengthBytes {
-		msg[i+lenDiff] = b
-	}
-	ret := append(startBytes, msg...)
-	cs := checkSum(ret)
-	ret = append(ret, cs)
-	return ret
-}
-
-func checkSum(data []byte) byte {
-	sum := byte(0)
-	for _, d := range data {
-		sum += d
-	}
-	return sum
-}
-
-func decodeMessage(data []byte) ([]byte, error) {
-
-	if len(data) <= headerLength {
-		return nil, ErrLengthTooShort
-	}
-
-	header := data[:headerLength]
-	if err := verifyHeader(header); err != nil {
-		return nil, err
-	}
-
-	if len(data) != getLength(header)+headerLength {
-		return nil, ErrFragmentedData
-	}
-
-	return data[headerLength:], nil
-}
-
-func verifyHeader(header []byte) error {
-	if !containStartingBytes(header) {
-		return ErrInvalidMessageFormat
-	}
-
-	if len(header) != headerLength {
-		return ErrLengthTooShort
-	}
-
-	cs := checkSum(header[:headerLength-1])
-
-	if cs != header[headerLength-1] {
-		return ErrCheckSumIncorrect
-	}
-	return nil
-}
-
-func getLength(header []byte) int {
-	lengthByte := header[2 : 2+lengthByteLength]
-	l := *new(big.Int).SetBytes(lengthByte)
-	return int(l.Uint64())
-}
-
-func containStartingBytes(data []byte) bool {
-	if len(data) < len(startBytes) {
-		return false
-	}
-	return reflect.DeepEqual(data[0:len(startBytes)], startBytes)
-}
-
+//writeLoop listens to all write channels and sends the message to its peer
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 
 	for {
 		select {
 		case <-s.quitWrCh:
-			// Fix bug when send data to peer simultaneous with close stream,
+			// Fix bug when send packet to peer simultaneous with close stream,
 			// and send will hang because highPriorityWriteCh is full.
 			close(s.highPriorityWriteCh)
 			close(s.normalPriorityWriteCh)
@@ -301,30 +212,30 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 			return nil
 		case <-s.msgNotifyCh:
 			select {
-			case data := <-s.highPriorityWriteCh:
+			case packet := <-s.highPriorityWriteCh:
 				t1 := time.Now().UnixNano()
-				n, err := s.stream.Write(encodeMessage(data))
-				cost := (time.Now().UnixNano()-t1)/1e6
-				logger.Debugf("High priority write cost : %v, peerId: %v", cost, s.peerID)
+				n, err := s.stream.Write(packet.GetRawBytes())
+				cost := (time.Now().UnixNano() - t1) / 1e6
+				logger.Debugf("High priority write cost : %v, peerId: %v", cost, s.GetPeerId())
 				if err != nil {
 					logger.WithError(err).WithFields(logger.Fields{
 						"num_of_bytes_sent": n,
-						"orig_data_size":    len(encodeMessage(data)),
+						"orig_data_size":    packet.GetLength(),
 					}).Warn("Stream: Send message through high priority channel failed!")
 				}
 				continue
 			default:
 			}
 			select {
-			case data := <-s.normalPriorityWriteCh:
+			case packet := <-s.normalPriorityWriteCh:
 				t1 := time.Now().UnixNano()
-				n, err := s.stream.Write(encodeMessage(data))
-				cost := (time.Now().UnixNano()-t1)/1e6
-				logger.Debugf("Normal priority write cost : %v, peerId: %v", cost, s.peerID)
+				n, err := s.stream.Write(packet.GetRawBytes())
+				cost := (time.Now().UnixNano() - t1) / 1e6
+				logger.Debugf("Normal priority write cost : %v, peerId: %v", cost, s.GetPeerId())
 				if err != nil {
 					logger.WithError(err).WithFields(logger.Fields{
 						"num_of_bytes_sent": n,
-						"orig_data_size":    len(encodeMessage(data)),
+						"orig_data_size":    packet.GetLength(),
 					}).Warn("Stream: Send message through normal priority channel failed!")
 				}
 				continue
@@ -334,28 +245,4 @@ func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
 
 	}
 	return nil
-}
-
-//should parse and relay
-func (s *Stream) parseData(data []byte) *DapMsg {
-
-	dataDecoded, err := decodeMessage(data)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"data":   data,
-			"length": len(data),
-		}).Warn("Stream: cannot decode the message.")
-		return nil
-	}
-
-	dmpb := &networkpb.Dapmsg{}
-	//unmarshal byte to proto
-	if err := proto.Unmarshal(dataDecoded, dmpb); err != nil {
-		logger.Info(err)
-	}
-
-	dm := &DapMsg{}
-	dm.FromProto(dmpb)
-	return dm
-
 }

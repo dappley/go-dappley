@@ -34,11 +34,12 @@ import (
 )
 
 type AdminRpcService struct {
+	bm   *core.BlockChainManager
 	node *network.Node
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
-	err := adminRpcService.node.GetPeerManager().AddAndConnectPeerByString(in.GetFullAddress())
+	err := adminRpcService.node.GetNetwork().ConnectToSeedByString(in.GetFullAddress())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -49,7 +50,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	if len(in.GetAddress()) == 0 || !core.NewAddress(in.GetAddress()).IsValid() {
 		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAddress.Error())
 	}
-	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.GetAddress())
+	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(in.GetAddress())
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -57,6 +58,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
+
 	return &rpcpb.GetPeerInfoResponse{
 		PeerList: getPeerInfo(adminRpcService.node),
 	}, nil
@@ -78,7 +80,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
 
-	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.node.GetBlockchain(), adminRpcService.node)
+	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain())
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
@@ -119,7 +121,8 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 
 	txHash, scAddress, err := logic.Send(senderWallet, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),
-		adminRpcService.node.GetBlockchain(), adminRpcService.node)
+		adminRpcService.bm.Getblockchain())
+
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
 		switch err {
@@ -143,7 +146,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 func (adminRpcService *AdminRpcService) IsPrivate() bool { return true }
 
 func getPeerInfo(node *network.Node) []*networkpb.PeerInfo {
-	peers := node.GetPeerManager().CloneStreamsToPeerInfoSlice()
+	peers := node.GetNetwork().GetConnectedPeers()
 
 	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range peers {
