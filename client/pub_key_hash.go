@@ -101,7 +101,6 @@ func IsValidPubKey(pubKey []byte) (bool, error) {
 	if pubKey == nil || len(pubKey) < 32 {
 		return false, ErrIncorrectPublicKey
 	}
-
 	return true, nil
 }
 
@@ -112,8 +111,7 @@ func GetAddressPayloadLength() int {
 }
 
 func GetAddressChecksumLen() int {
-	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
-	return 21 + addressChecksumLen
+	return addressChecksumLen
 }
 
 func (pkh PubKeyHash) String() string {
