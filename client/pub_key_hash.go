@@ -24,17 +24,17 @@ var (
 
 //NewUserPubKeyHash hashes a public key and returns a user type public key hash
 func NewUserPubKeyHash(pubKey []byte) (PubKeyHash, error) {
-	pubKeyHash, err := generatePubKeyHash(pubKey)
-	if err != nil {
-		return PubKeyHash(pubKeyHash), err
+	if ok, err := IsValidPubKey(pubKey); !ok {
+		return nil, err
 	}
+	pubKeyHash := generatePubKeyHash(pubKey)
 	pubKeyHash = append([]byte{versionUser}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash), nil
 }
 
 //NewContractPubKeyHash generates a smart Contract public key hash
 func NewContractPubKeyHash() PubKeyHash {
-	pubKeyHash, _ := generatePubKeyHash(NewKeyPair().PublicKey)
+	pubKeyHash := generatePubKeyHash(NewKeyPair().PublicKey)
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash)
 }
@@ -91,13 +91,18 @@ func Checksum(payload []byte) []byte {
 }
 
 //generatePubKeyHash hashes a public key
-func generatePubKeyHash(pubKey []byte) ([]byte, error) {
-	if pubKey == nil || len(pubKey) < 32 {
-		return nil, ErrIncorrectPublicKey
-	}
+func generatePubKeyHash(pubKey []byte) []byte {
 	sha := hash.Sha3256(pubKey)
 	content := hash.Ripemd160(sha)
-	return content, nil
+	return content
+}
+
+func IsValidPubKey(pubKey []byte) (bool, error) {
+	if pubKey == nil || len(pubKey) < 32 {
+		return false, ErrIncorrectPublicKey
+	}
+
+	return true, nil
 }
 
 // GetAddressPayloadLength get the payload length
