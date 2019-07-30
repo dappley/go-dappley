@@ -33,7 +33,9 @@ func NewMetricsService(node *network.Node, bm *core.BlockChainManager, config *M
 }
 
 func (ms *MetricsService) init() *MetricsService {
-	ms.node.GetNetwork().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second)
+	if err := ms.node.GetNetwork().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second); err != nil {
+		logger.WithError(err).Error("MetricsService: Unable to start new ping service.")
+	}
 	if ms.PollingInterval > 0 && ms.TimeSeriesInterval > 0 {
 		ms.ds = metrics.NewDataStore(int(ms.TimeSeriesInterval/ms.PollingInterval), time.Duration(ms.PollingInterval)*time.Second)
 		_ = ms.ds.RegisterNewMetric("dapp.cpu.percent", getCPUPercent)
@@ -169,7 +171,6 @@ func getTransactionPoolSize() metricspb.StatValue {
 
 func (ms *MetricsService) getNumForksInBlockChain() metricspb.StatValue {
 	numForks, longestFork := ms.bm.NumForks()
-
 	return &metricspb.Stat_ForkStats{
 		ForkStats: &metricspb.ForkStats{
 			NumForks:    numForks,

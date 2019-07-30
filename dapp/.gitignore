@@ -5,3 +5,4 @@ cli/cli
 *.pid
 *.dll
 *.dll.a
+*.log*
