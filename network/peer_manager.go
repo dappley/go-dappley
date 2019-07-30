@@ -316,6 +316,8 @@ func (pm *PeerManager) isPeerExisted(peerId peer.ID) bool {
 }
 
 func (pm *PeerManager) isPeerNew(peerId peer.ID) bool {
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
 	return !pm.isPeerExisted(peerId) && peerId != pm.hostPeerId
 }
 
