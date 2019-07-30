@@ -315,9 +315,15 @@ func (pm *PeerManager) isPeerExisted(peerId peer.ID) bool {
 	return false
 }
 
-func (pm *PeerManager) isPeerNew(peerId peer.ID) bool {
+func (pm *PeerManager) IsPeerNew(peerId peer.ID) bool {
+
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
+
+	return pm.isPeerNew(peerId)
+}
+
+func (pm *PeerManager) isPeerNew(peerId peer.ID) bool {
 	return !pm.isPeerExisted(peerId) && peerId != pm.hostPeerId
 }
 
@@ -499,7 +505,7 @@ func (pm *PeerManager) GetPeerListResponseHandler(command *network_model.DappRcv
 
 	newPeers := []network_model.PeerInfo{}
 	for _, peer := range peers {
-		if pm.isPeerNew(peer.PeerId) {
+		if pm.IsPeerNew(peer.PeerId) {
 			newPeers = append(newPeers, peer)
 		}
 	}
