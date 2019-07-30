@@ -79,22 +79,23 @@ func (ps *PingService) Stop() error {
 func (ps *PingService) pingPeers(peers map[peer.ID]network_model.PeerInfo, callback func([]*PingResult)) {
 	logger.Debug("PingService: pinging peers...")
 	resultsCh := make(chan *PingResult)
-	for _, peer := range peers {
-		go func(peer *network_model.PeerInfo) {
-			result := <-ps.service.Ping(context.Background(), peer.PeerId)
+	for _, p := range peers {
+		go func(peerID peer.ID) {
+			result := <-ps.service.Ping(context.Background(), peerID)
 			if result.Error != nil {
-				logger.WithError(result.Error).Errorf("PingService: error pinging peer %v", peer.PeerId.Pretty())
-				resultsCh <- &PingResult{ID: peer.PeerId, Latency: nil}
+				logger.WithError(result.Error).Errorf("PingService: error pinging peer %v", peerID.Pretty())
+				resultsCh <- &PingResult{ID: peerID, Latency: nil}
 			} else {
 				rtt := float64(result.RTT) / 1e6
-				resultsCh <- &PingResult{ID: peer.PeerId, Latency: &rtt}
+				resultsCh <- &PingResult{ID: peerID, Latency: &rtt}
 			}
-		}(&peer)
+		}(p.PeerId)
 	}
 
 	pingResults := make([]*PingResult, len(peers))
 	for i := 0; i < len(peers); i++ {
 		pingResults[i] = <-resultsCh
+		logger.Debugf("PingService: received ping reply from peer: %v", pingResults[i].ID.Pretty())
 	}
 	callback(pingResults)
 	logger.Debug("PingService: done pinging peers...")
