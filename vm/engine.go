@@ -42,7 +42,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/hash"
 	lru "github.com/hashicorp/golang-lru"
@@ -70,7 +70,7 @@ type V8Engine struct {
 	state              *core.ScState
 	tx                 *core.Transaction
 	rewards            map[string]string
-	contractAddr       client.Address
+	contractAddr       account.Address
 	contractCreateUTXO *core.UTXO
 	contractUTXOs      []*core.UTXO
 	prevUtxos          []*core.UTXO
@@ -79,7 +79,7 @@ type V8Engine struct {
 	handler            uint64
 	blkHeight          uint64
 	seed               int64
-	nodeAddr           client.Address
+	nodeAddr           account.Address
 
 	modules                                 Modules
 	v8engine                                *C.V8Engine
@@ -137,7 +137,7 @@ func NewV8Engine() *V8Engine {
 		source:                             "",
 		state:                              nil,
 		tx:                                 nil,
-		contractAddr:                       client.NewAddress(""),
+		contractAddr:                       account.NewAddress(""),
 		handler:                            currHandler,
 		modules:                            NewModules(),
 		v8engine:                           C.CreateEngine(),
@@ -186,7 +186,7 @@ func (sc *V8Engine) ImportContractCreateUTXO(utxo *core.UTXO) {
 }
 
 // ImportContractAddr supplies the account address of the contract to the engine
-func (sc *V8Engine) ImportContractAddr(contractAddr client.Address) {
+func (sc *V8Engine) ImportContractAddr(contractAddr account.Address) {
 	sc.contractAddr = contractAddr
 }
 
@@ -226,7 +226,7 @@ func (sc *V8Engine) ImportSeed(seed int64) {
 }
 
 // ImportCurrBlockHeight imports the current block height
-func (sc *V8Engine) ImportNodeAddress(addr client.Address) {
+func (sc *V8Engine) ImportNodeAddress(addr account.Address) {
 	sc.nodeAddr = addr
 }
 

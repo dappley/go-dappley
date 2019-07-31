@@ -21,7 +21,7 @@ package consensus
 import (
 	"errors"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -161,7 +161,7 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 }
 
 func IsProducerAddressValid(producer string) bool {
-	addr := client.NewAddress(producer)
+	addr := account.NewAddress(producer)
 	return addr.IsValid()
 }
 

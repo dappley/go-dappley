@@ -224,7 +224,7 @@ class V8_EXPORT V8InspectorClient {
 
 // These stack trace ids are intended to be passed between debuggers and be
 // resolved later. This allows to track cross-debugger calls and step between
-// them if a single client connects to multiple debuggers.
+// them if a single account connects to multiple debuggers.
 struct V8_EXPORT V8StackTraceId {
   uintptr_t id;
   std::pair<int64_t, int64_t> debugger_id;

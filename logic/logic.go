@@ -22,7 +22,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic/account_logic"
@@ -47,7 +47,7 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address client.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
@@ -58,7 +58,7 @@ func CreateBlockchain(address client.Address, db storage.Storage, consensus core
 }
 
 //create a account from path
-func CreateAccount(path string, password string) (*client.Account, error) {
+func CreateAccount(path string, password string) (*account.Account, error) {
 	if len(path) == 0 {
 		return nil, ErrPathEmpty
 	}
@@ -76,7 +76,7 @@ func CreateAccount(path string, password string) (*client.Account, error) {
 	am.PassPhrase = passBytes
 	am.Locked = true
 	err = am.LoadFromFile()
-	account := client.NewAccount()
+	account := account.NewAccount()
 	am.AddAccount(account)
 	am.SaveAccountToFile()
 
@@ -84,7 +84,7 @@ func CreateAccount(path string, password string) (*client.Account, error) {
 }
 
 //get account
-func GetAccount() (*client.Account, error) {
+func GetAccount() (*account.Account, error) {
 	am, err := GetAccountManager(account_logic.GetAccountFilePath())
 	empty, err := am.IsFileEmpty()
 	if empty {
@@ -158,7 +158,7 @@ func SetUnLockAccount(optionalAccountFilePath ...string) error {
 }
 
 //create a account with passphrase
-func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...string) (*client.Account, error) {
+func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
 	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...str
 		if err != nil {
 			return nil, ErrPasswordNotMatch
 		}
-		account := client.NewAccount()
+		account := account.NewAccount()
 		am.AddAccount(account)
 		am.SaveAccountToFile()
 		return account, err
@@ -181,7 +181,7 @@ func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...str
 	}
 	am.PassPhrase = passBytes
 	logger.Info("Account password is set!")
-	account := client.NewAccount()
+	account := account.NewAccount()
 	am.AddAccount(account)
 	am.Locked = true
 	am.SaveAccountToFile()
@@ -190,13 +190,13 @@ func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...str
 }
 
 //create a account
-func AddAccount() (*client.Account, error) {
+func AddAccount() (*account.Account, error) {
 	am, err := GetAccountManager(account_logic.GetAccountFilePath())
 	if err != nil {
 		return nil, err
 	}
 
-	account := client.NewAccount()
+	account := account.NewAccount()
 	if len(am.Accounts) == 0 {
 		am.Locked = true
 	}
@@ -211,8 +211,8 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address client.Address, bc *core.Blockchain) (*common.Amount, error) {
-	pubKeyHash, valid := client.GeneratePubKeyHashByAddress(address)
+func GetBalance(address account.Address, bc *core.Blockchain) (*common.Amount, error) {
+	pubKeyHash, valid := account.GeneratePubKeyHashByAddress(address)
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
@@ -227,7 +227,7 @@ func GetBalance(address client.Address, bc *core.Blockchain) (*common.Amount, er
 	return balance, nil
 }
 
-func Send(senderAccount *client.Account, to client.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
 	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc, node)
 }
@@ -241,8 +241,8 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address client.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	minerKeyPair := client.GetKeyPairByString(minerPrivateKey)
+func SendFromMiner(address account.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+	minerKeyPair := account.GetKeyPairByString(minerPrivateKey)
 	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc, node)
 }
@@ -271,7 +271,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 		return nil, "", ErrInvalidAmount
 	}
 
-	pubKeyHash, _ := client.NewUserPubKeyHash(sendTxParam.SenderKeyPair.PublicKey)
+	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.PublicKey)
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())

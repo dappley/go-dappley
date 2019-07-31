@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/core/client"
-	accountpb "github.com/dappley/go-dappley/core/client/pb"
+	"github.com/dappley/go-dappley/core/account"
+	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	logicpb "github.com/dappley/go-dappley/logic/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -37,7 +37,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const accountConfigFilePath = "../core/client/account.conf"
+const accountConfigFilePath = "../core/account/account.conf"
 
 var (
 	ErrPasswordIncorrect = errors.New("password is incorrect")
@@ -45,7 +45,7 @@ var (
 )
 
 type AccountManager struct {
-	Accounts   []*client.Account
+	Accounts   []*account.Account
 	fileLoader storage.FileStorage
 	PassPhrase []byte
 	mutex      sync.Mutex
@@ -151,14 +151,14 @@ func RemoveAccountFile() {
 	os.Remove(strings.Replace(conf.GetFilePath(), "accounts", "accounts_test", -1))
 }
 
-func (am *AccountManager) AddAccount(account *client.Account) {
+func (am *AccountManager) AddAccount(account *account.Account) {
 	am.mutex.Lock()
 	am.Accounts = append(am.Accounts, account)
 	am.mutex.Unlock()
 }
 
-func (am *AccountManager) GetAddresses() []client.Address {
-	var addresses []client.Address
+func (am *AccountManager) GetAddresses() []account.Address {
+	var addresses []account.Address
 
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
@@ -190,7 +190,7 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 	return addresses, nil
 }
 
-func (am *AccountManager) GetKeyPairByAddress(address client.Address) *client.KeyPair {
+func (am *AccountManager) GetKeyPairByAddress(address account.Address) *account.KeyPair {
 
 	account := am.GetAccountByAddress(address)
 	if account == nil {
@@ -200,7 +200,7 @@ func (am *AccountManager) GetKeyPairByAddress(address client.Address) *client.Ke
 
 }
 
-func (am *AccountManager) GetAccountByAddress(address client.Address) *client.Account {
+func (am *AccountManager) GetAccountByAddress(address account.Address) *account.Account {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
@@ -214,7 +214,7 @@ func (am *AccountManager) GetAccountByAddress(address client.Address) *client.Ac
 	return nil
 }
 
-func (am *AccountManager) GetAccountByAddressWithPassphrase(address client.Address, password string) (*client.Account, error) {
+func (am *AccountManager) GetAccountByAddressWithPassphrase(address account.Address, password string) (*account.Account, error) {
 	err := bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 	if err == nil {
 		account := am.GetAccountByAddress(address)
@@ -260,9 +260,9 @@ func (am *AccountManager) ToProto() proto.Message {
 }
 
 func (am *AccountManager) FromProto(pb proto.Message) {
-	accounts := []*client.Account{}
+	accounts := []*account.Account{}
 	for _, accountPb := range pb.(*logicpb.AccountManager).Accounts {
-		account := &client.Account{}
+		account := &account.Account{}
 		account.FromProto(accountPb)
 		accounts = append(accounts, account)
 	}

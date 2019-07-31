@@ -30,11 +30,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
@@ -304,7 +304,7 @@ type commandHandlersWithType struct {
 	cmdHandler  commandHandler
 }
 
-type commandHandler func(ctx context.Context, client interface{}, flags cmdFlags)
+type commandHandler func(ctx context.Context, account interface{}, flags cmdFlags)
 
 type flagPars struct {
 	name         string
@@ -395,7 +395,7 @@ func printUsage() {
 	fmt.Println("Note: Use the command 'cli help' to get the command usage in details")
 }
 
-func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func getBlocksCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
 	maxCount := int32(*(flags[flagBlockMaxCount].(*int)))
 	if maxCount <= 0 {
 		fmt.Println("\n Example: cli getBlocks -startBlockHashes 10 -maxCount 5")
@@ -420,7 +420,7 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 		getBlocksRequest = &rpcpb.GetBlocksRequest{MaxCount: maxCount, StartBlockHashes: startBlockHashes}
 	}
 
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
+	response, err := account.(rpcpb.RpcServiceClient).RpcGetBlocks(ctx, getBlocksRequest)
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -486,8 +486,8 @@ func getBlocksCommandHandler(ctx context.Context, client interface{}, flags cmdF
 	fmt.Println(string(blocks))
 }
 
-func getBlockchainInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.RpcServiceClient).RpcGetBlockchainInfo(ctx, &rpcpb.GetBlockchainInfoRequest{})
+func getBlockchainInfoCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+	response, err := account.(rpcpb.RpcServiceClient).RpcGetBlockchainInfo(ctx, &rpcpb.GetBlockchainInfoRequest{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -521,7 +521,7 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 	}
 
 	address := *(flags[flagAddress].(*string))
-	if client.NewAddress(address).IsValid() == false {
+	if account.NewAddress(address).IsValid() == false {
 		fmt.Println("Error: address is not valid")
 		return
 	}
@@ -539,7 +539,7 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 	fmt.Printf("The balance is: %d\n", response.GetAmount())
 }
 
-func createAccountCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func createAccountCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
 	empty, err := logic.IsAccountEmpty()
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
@@ -572,16 +572,16 @@ func createAccountCommandHandler(ctx context.Context, client interface{}, flags 
 			fmt.Println("Error: password should not be empty!")
 			return
 		}
-		account, err := logic.CreateAccountWithpassphrase(passphrase)
+		acc, err := logic.CreateAccountWithpassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", account.GetKeyPair().GenerateAddress().String())
+			fmt.Printf("Account is created. The address is %s\n", acc.GetKeyPair().GenerateAddress().String())
 		}
 		//unlock the account
-		_, err = client.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
+		_, err = account.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
 
 		if err != nil {
 			switch status.Code(err) {
@@ -674,7 +674,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 		} else {
 			privateKeyList := []string{}
 			for _, addr := range addressList {
-				keyPair := am.GetKeyPairByAddress(client.NewAddress(addr))
+				keyPair := am.GetKeyPairByAddress(account.NewAddress(addr))
 				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
 				if err1 != nil {
 					err = err1
@@ -765,7 +765,7 @@ func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 		return
 	}
 
-	if client.NewAddress(*(flags[flagAddressBalance].(*string))).IsValid() == false {
+	if account.NewAddress(*(flags[flagAddressBalance].(*string))).IsValid() == false {
 		fmt.Println("Error: address is invalid!")
 		return
 	}
@@ -787,8 +787,8 @@ func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 	fmt.Println("Requested amount is sent. Pending approval from network.")
 }
 
-func getPeerInfoCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
-	response, err := client.(rpcpb.AdminServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
+func getPeerInfoCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+	response, err := account.(rpcpb.AdminServiceClient).RpcGetPeerInfo(ctx, &rpcpb.GetPeerInfoRequest{})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -810,7 +810,7 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 		return
 	}
 
-	if client.NewAddress(*(flags[flagProducerAddr].(*string))).IsValid() == false {
+	if account.NewAddress(*(flags[flagProducerAddr].(*string))).IsValid() == false {
 		fmt.Println("Error: address is invalid")
 		return
 	}
@@ -845,19 +845,19 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		data = string(script)
 	}
 
-	if client.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
+	if account.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if data == "" && client.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
+	if data == "" && account.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
 
 	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
-		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).String(),
+		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {
 		switch status.Code(err) {
@@ -874,7 +874,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		uu := core.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
-		uu.PubKeyHash = client.PubKeyHash(u.PublicKeyHash)
+		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
 		uu.TxIndex = int(u.TxIndex)
 		InputUtxos = append(InputUtxos, &uu)
 	}
@@ -901,14 +901,14 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	senderAccount := am.GetAccountByAddress(client.NewAddress(*(flags[flagFromAddress].(*string))))
+	senderAccount := am.GetAccountByAddress(account.NewAddress(*(flags[flagFromAddress].(*string))))
 
 	if senderAccount == nil {
 		fmt.Println("Error: invalid account address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(client.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
-		client.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+	sendTxParam := core.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
@@ -955,7 +955,7 @@ func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount, tip *com
 	return retUtxos, nil
 }
 
-func helpCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func helpCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
 	fmt.Println("-----------------------------------------------------------------")
 	fmt.Println("Command: cli ", "createAccount")
 	fmt.Println("Usage Example: cli createAccount")
@@ -1001,11 +1001,11 @@ func helpCommandHandler(ctx context.Context, client interface{}, flags cmdFlags)
 	}
 }
 
-func addPeerCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func addPeerCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
 	req := &rpcpb.AddPeerRequest{
 		FullAddress: *(flags[flagPeerFullAddr].(*string)),
 	}
-	response, err := client.(rpcpb.AdminServiceClient).RpcAddPeer(ctx, req)
+	response, err := account.(rpcpb.AdminServiceClient).RpcAddPeer(ctx, req)
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -1019,7 +1019,7 @@ func addPeerCommandHandler(ctx context.Context, client interface{}, flags cmdFla
 }
 
 func initRpcClient(port int) *grpc.ClientConn {
-	//prepare grpc client
+	//prepare grpc account
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(fmt.Sprint(":", port), grpc.WithInsecure())
 	if err != nil {
@@ -1042,19 +1042,19 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		data = string(script)
 	}
 
-	if client.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
+	if account.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if data == "" && client.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
+	if data == "" && account.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
 
 	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
-		Address: client.NewAddress(*(flags[flagFromAddress].(*string))).String(),
+		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {
 		switch status.Code(err) {
@@ -1071,7 +1071,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		uu := core.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
-		uu.PubKeyHash = client.PubKeyHash(u.PublicKeyHash)
+		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
 		uu.TxIndex = int(u.TxIndex)
 		InputUtxos = append(InputUtxos, &uu)
 	}
@@ -1089,14 +1089,14 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	senderAccount := am.GetAccountByAddress(client.NewAddress(*(flags[flagFromAddress].(*string))))
+	senderAccount := am.GetAccountByAddress(account.NewAddress(*(flags[flagFromAddress].(*string))))
 
 	if senderAccount == nil {
 		fmt.Println("Error: invalid account address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(client.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
-		client.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+	sendTxParam := core.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	gasResponse, err := c.(rpcpb.RpcServiceClient).RpcEstimateGas(ctx, estimateGasRequest)
@@ -1116,9 +1116,9 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	fmt.Println("Gas estimiated num: ", common.NewAmountFromBytes(gasCount).String())
 }
 
-func gasPriceCommandHandler(ctx context.Context, client interface{}, flags cmdFlags) {
+func gasPriceCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
 	gasPriceRequest := &rpcpb.GasPriceRequest{}
-	gasPriceResponse, err := client.(rpcpb.RpcServiceClient).RpcGasPrice(ctx, gasPriceRequest)
+	gasPriceResponse, err := account.(rpcpb.RpcServiceClient).RpcGasPrice(ctx, gasPriceRequest)
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:

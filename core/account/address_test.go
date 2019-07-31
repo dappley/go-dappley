@@ -1,9 +1,9 @@
-package client
+package account
 
 import (
 	"testing"
 
-	accountpb "github.com/dappley/go-dappley/core/client/pb"
+	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )

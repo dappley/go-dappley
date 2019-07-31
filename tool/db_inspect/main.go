@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"
@@ -198,8 +198,8 @@ func GetUtxoHandle() {
 	flagSet.StringVar(&address, "a", "", "search utxo address")
 	flagSet.Parse(os.Args[2:])
 
-	addr := client.NewAddress(address)
-	pubKeyHash, ok := client.GeneratePubKeyHashByAddress(addr)
+	addr := account.NewAddress(address)
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(addr)
 	if !ok {
 		panic("Decode address failed")
 	}

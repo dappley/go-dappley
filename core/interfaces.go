@@ -19,7 +19,7 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
@@ -64,7 +64,7 @@ type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
 	ImportLocalStorage(state *ScState)
-	ImportContractAddr(contractAddr client.Address)
+	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*UTXO)
 	ImportRewardStorage(rewards map[string]string)
@@ -73,7 +73,7 @@ type ScEngine interface {
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
-	ImportNodeAddress(addr client.Address)
+	ImportNodeAddress(addr account.Address)
 	GetGeneratedTXs() []*Transaction
 	Execute(function, args string) (string, error)
 	SetExecutionLimits(uint64, uint64) error

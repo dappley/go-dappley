@@ -2123,7 +2123,7 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// RpcServiceClient is the client API for RpcService service.
+// RpcServiceClient is the account API for RpcService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type RpcServiceClient interface {
@@ -2704,7 +2704,7 @@ var _RpcService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "github.com/dappley/go-dappley/rpc/pb/rpc.proto",
 }
 
-// AdminServiceClient is the client API for AdminService service.
+// AdminServiceClient is the account API for AdminService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AdminServiceClient interface {
@@ -2933,7 +2933,7 @@ var _AdminService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "github.com/dappley/go-dappley/rpc/pb/rpc.proto",
 }
 
-// MetricServiceClient is the client API for MetricService service.
+// MetricServiceClient is the account API for MetricService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type MetricServiceClient interface {

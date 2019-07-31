@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/sdk"
 	tool "github.com/dappley/go-dappley/tool/tool_util"
 	tx_automator_configpb "github.com/dappley/go-dappley/tool/transaction_automator/pb"
@@ -59,7 +59,7 @@ func initial_setup() (*sdk.DappSdk, *sdk.DappSdkAccount) {
 	return dappSdk, account
 }
 
-func getUnauthroizedAddr(account *sdk.DappSdkAccount) client.Address {
+func getUnauthroizedAddr(account *sdk.DappSdkAccount) account.Address {
 	return account.GetAddrs()[2]
 }
 

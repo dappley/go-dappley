@@ -4,7 +4,7 @@ const (
 	// OK success with no error
 	OK uint32 = 0
 
-	// ProtoVersionNotSupport client's proto version not support by server
+	// ProtoVersionNotSupport account's proto version not support by server
 	ProtoVersionNotSupport uint32 = 1
 
 	// InvalidAddress account address is invalid

@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 )
@@ -78,7 +78,7 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
-	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
 
 	for i := 0; i < size; i++ {
@@ -98,7 +98,7 @@ func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
 	return &ctx
 }
 
-func GenerateBlockWithCbtx(addr client.Address, lastblock *Block) *Block {
+func GenerateBlockWithCbtx(addr account.Address, lastblock *Block) *Block {
 	//create a new block chain
 	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
 	b := NewBlock([]*Transaction{&cbtx}, lastblock, "")
@@ -107,7 +107,7 @@ func GenerateBlockWithCbtx(addr client.Address, lastblock *Block) *Block {
 func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
-	addr := client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
 
 	for i := 0; i < size; i++ {
@@ -161,7 +161,7 @@ func MockUtxos(inputs []TXInput) []*UTXO {
 	utxos := make([]*UTXO, len(inputs))
 
 	for index, input := range inputs {
-		pubKeyHash, _ := client.NewUserPubKeyHash(input.PubKey)
+		pubKeyHash, _ := account.NewUserPubKeyHash(input.PubKey)
 		utxos[index] = &UTXO{
 			TXOutput: TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
 			Txid:     input.Txid,
@@ -174,8 +174,8 @@ func MockUtxos(inputs []TXInput) []*UTXO {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), client.PubKeyHash(util.GenerateRandomAoB(2)), ""},
-		{common.NewAmount(7), client.PubKeyHash(util.GenerateRandomAoB(2)), ""},
+		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
+		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 	}
 }
 

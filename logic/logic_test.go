@@ -24,9 +24,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
@@ -44,21 +44,21 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	account, err := CreateAccount(GetTestAccountPath(), "test")
+	acc, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := client.GeneratePubKeyHashByAddress(account.GetKeyPair().GenerateAddress())
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
+	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphrase(t *testing.T) {
-	account, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
+	acc, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := client.GeneratePubKeyHashByAddress(account.GetKeyPair().GenerateAddress())
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := client.NewUserPubKeyHash(account.GetKeyPair().PublicKey)
+	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().PublicKey)
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
@@ -77,7 +77,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer store.Close()
 
 	//create a account address
-	addr := client.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 
 	//create a blockchain
 	_, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
@@ -95,7 +95,7 @@ func TestLoopCreateBlockchain(t *testing.T) {
 	//create a blockchain loop
 	for i := 0; i < 2000; i++ {
 		err = nil
-		account := client.NewAccount()
+		account := account.NewAccount()
 		addr := account.GetKeyPair().GenerateAddress()
 		if !addr.IsValid() {
 			fmt.Println(i, addr)
@@ -112,7 +112,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a blockchain with an invalid address
-	bc, err := CreateBlockchain(client.NewAddress(InvalidAddress), store, nil, 128, nil, 1000000)
+	bc, err := CreateBlockchain(account.NewAddress(InvalidAddress), store, nil, 128, nil, 1000000)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Nil(t, bc)
 }
@@ -122,7 +122,7 @@ func TestGetBalance(t *testing.T) {
 	defer store.Close()
 
 	//create a account address
-	addr := client.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
@@ -140,18 +140,18 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a account address
-	addr := client.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
 	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//The balance should be 10000000 after creating a blockchain
-	balance1, err := GetBalance(client.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), bc)
+	balance1, err := GetBalance(account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance1)
 
-	balance2, err := GetBalance(client.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
+	balance2, err := GetBalance(account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
@@ -162,7 +162,7 @@ func TestGetAllAddresses(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	expectedRes := []client.Address{}
+	expectedRes := []account.Address{}
 	//create a account address
 	account, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account)
@@ -214,7 +214,7 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	assert.NotEmpty(t, account1)
 	addr1 := account1.GetKeyPair().GenerateAddress()
 
-	addressList := []client.Address{addr1}
+	addressList := []account.Address{addr1}
 
 	list, err := GetAllAddressesByPath(GetTestAccountPath())
 	assert.Nil(t, err)

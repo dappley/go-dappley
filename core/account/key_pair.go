@@ -16,12 +16,12 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package client
+package account
 
 import (
 	"crypto/ecdsa"
 
-	accountpb "github.com/dappley/go-dappley/core/client/pb"
+	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"

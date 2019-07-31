@@ -6,7 +6,7 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/util"
@@ -25,8 +25,8 @@ func GenerateFakeTxInputs() []core.TXInput {
 
 func GenerateFakeTxOutputs() []core.TXOutput {
 	return []core.TXOutput{
-		{common.NewAmount(1), client.PubKeyHash(getAoB(2)), ""},
-		{common.NewAmount(2), client.PubKeyHash(getAoB(2)), ""},
+		{common.NewAmount(1), account.PubKeyHash(getAoB(2)), ""},
+		{common.NewAmount(2), account.PubKeyHash(getAoB(2)), ""},
 	}
 }
 

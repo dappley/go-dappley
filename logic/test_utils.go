@@ -3,13 +3,13 @@ package logic
 import (
 	"strings"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
 )
 
 //get all addresses
-func GetAllAddressesByPath(path string) ([]client.Address, error) {
+func GetAllAddressesByPath(path string) ([]account.Address, error) {
 	fl := storage.NewFileLoader(path)
 	am := account_logic.NewAccountManager(fl)
 	err := am.LoadFromFile()

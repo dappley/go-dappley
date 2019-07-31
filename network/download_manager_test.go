@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	networkpb "github.com/dappley/go-dappley/network/pb"
@@ -46,11 +46,11 @@ func createTestBlockchains(size int, portStart int) ([]*core.Blockchain, []*Node
 	blockchains := make([]*core.Blockchain, size)
 	nodes := make([]*Node, size)
 	for i := 0; i < size; i++ {
-		keyPair := client.NewKeyPair()
+		keyPair := account.NewKeyPair()
 		address := keyPair.GenerateAddress()
 		pow := consensus.NewProofOfWork()
 		pow.SetTargetBit(0)
-		bc := core.CreateBlockchain(client.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
+		bc := core.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), pow, 128, nil, 100000)
 		bc.SetState(core.BlockchainReady)
 		blockchains[i] = bc
 		pool := core.NewBlockPool(100)

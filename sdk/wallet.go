@@ -3,7 +3,7 @@ package sdk
 import (
 	"sync"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
@@ -12,8 +12,8 @@ import (
 )
 
 type DappSdkAccount struct {
-	addrs     []client.Address
-	balances  map[client.Address]uint64
+	addrs     []account.Address
+	balances  map[account.Address]uint64
 	wm        *account_logic.AccountManager
 	sdk       *DappSdk
 	utxoIndex *core.UTXOIndex
@@ -56,9 +56,9 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 	return dappSdkAccount
 }
 
-func (sdkw *DappSdkAccount) GetAddrs() []client.Address { return sdkw.addrs }
+func (sdkw *DappSdkAccount) GetAddrs() []account.Address { return sdkw.addrs }
 
-func (sdkw *DappSdkAccount) GetBalance(address client.Address) uint64 {
+func (sdkw *DappSdkAccount) GetBalance(address account.Address) uint64 {
 	sdkw.mutex.RLock()
 	defer sdkw.mutex.RUnlock()
 
@@ -74,7 +74,7 @@ func (sdkw *DappSdkAccount) Initialize() {
 	defer sdkw.mutex.Unlock()
 
 	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
-	sdkw.balances = make(map[client.Address]uint64)
+	sdkw.balances = make(map[account.Address]uint64)
 }
 
 func (sdkw *DappSdkAccount) IsZeroBalance() bool {
@@ -111,7 +111,7 @@ func (sdkw *DappSdkAccount) Update() error {
 	for _, addr := range sdkw.addrs {
 
 		kp := sdkw.wm.GetKeyPairByAddress(addr)
-		_, err := client.NewUserPubKeyHash(kp.PublicKey)
+		_, err := account.NewUserPubKeyHash(kp.PublicKey)
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func (sdkw *DappSdkAccount) Update() error {
 }
 
 //AddToBalance adds the difference to the current balance
-func (sdkw *DappSdkAccount) UpdateBalance(addr client.Address, amount uint64) {
+func (sdkw *DappSdkAccount) UpdateBalance(addr account.Address, amount uint64) {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 	sdkw.balances[addr] = amount

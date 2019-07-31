@@ -23,7 +23,7 @@ import (
 
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -85,10 +85,10 @@ func main() {
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
-	scManager := vm.NewV8EngineManager(client.NewAddress(nodeAddr))
+	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
 	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager, int(blkSizeLimit))
 	if err != nil {
-		bc, err = logic.CreateBlockchain(client.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, int(blkSizeLimit))
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}

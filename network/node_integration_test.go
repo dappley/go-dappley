@@ -23,7 +23,7 @@ package network
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
@@ -48,7 +48,7 @@ const (
 )
 
 func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
-	addr := client.NewAddress(address)
+	addr := account.NewAddress(address)
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	n := NewNode(bc, pool)
@@ -61,7 +61,7 @@ func initNode(address string, port int, seedPeer *PeerInfo, db storage.Storage) 
 }
 
 func initNodeWithConfig(address string, port, connectionInCount, connectionOutCount int, seedPeer *PeerInfo, db storage.Storage) (*Node, error) {
-	addr := client.NewAddress(address)
+	addr := account.NewAddress(address)
 	bc := core.CreateBlockchain(addr, db, nil, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	config := &NodeConfig{MaxConnectionInCount: connectionInCount, MaxConnectionOutCount: connectionOutCount}

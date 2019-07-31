@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
@@ -52,8 +52,8 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	//create new account
 	accounts := &account_logic.AccountManager{}
 
-	account1 := client.NewAccount()
-	account2 := client.NewAccount()
+	account1 := account.NewAccount()
+	account2 := account.NewAccount()
 	accounts.AddAccount(account1)
 	accounts.AddAccount(account2)
 
@@ -67,7 +67,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
@@ -105,7 +105,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	var expectedVal = map[client.Address]*common.Amount{
+	var expectedVal = map[account.Address]*common.Amount{
 		account1.GetKeyPair().GenerateAddress(): remaining,  //balance should be all mining rewards minus sendAmount
 		account2.GetKeyPair().GenerateAddress(): sendAmount, //balance should be the amount rcved from account1
 	}
@@ -120,22 +120,22 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	//create new account
 	accountManager := &account_logic.AccountManager{}
 
-	account := client.NewAccount()
-	accountManager.AddAccount(account)
-	assert.NotNil(t, account)
+	acc := account.NewAccount()
+	accountManager.AddAccount(acc)
+	assert.NotNil(t, acc)
 
 	//Create Blockchain
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
 	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, account.GetKeyPair().GenerateAddress().String())
+	pow.Setup(n, acc.GetKeyPair().GenerateAddress().String())
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -152,8 +152,8 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	count = GetNumberOfBlocks(t, bc.Iterator())
 
 	//set expected mining rewarded
-	var expectedVal = map[client.Address]*common.Amount{
-		account.GetKeyPair().GenerateAddress(): mineReward.Times(uint64(count)),
+	var expectedVal = map[account.Address]*common.Amount{
+		acc.GetKeyPair().GenerateAddress(): mineReward.Times(uint64(count)),
 	}
 
 	//check balance
@@ -166,8 +166,8 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	//create new account
 	accounts := &account_logic.AccountManager{}
 
-	account1 := client.NewAccount()
-	account2 := client.NewAccount()
+	account1 := account.NewAccount()
+	account2 := account.NewAccount()
 	accounts.AddAccount(account1)
 	accounts.AddAccount(account2)
 
@@ -181,7 +181,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
@@ -233,7 +233,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	count = GetNumberOfBlocks(t, bc.Iterator())
 	//set the expected account value for all accounts
 	remaining, err := mineReward.Times(uint64(count)).Sub(sendAmount.Add(sendAmount2))
-	var expectedVal = map[client.Address]*common.Amount{
+	var expectedVal = map[account.Address]*common.Amount{
 		account1.GetKeyPair().GenerateAddress(): remaining,                   //balance should be all mining rewards minus sendAmount
 		account2.GetKeyPair().GenerateAddress(): sendAmount.Add(sendAmount2), //balance should be the amount rcved from account1
 	}
@@ -245,7 +245,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 func TestProofOfWork_StartAndStop(t *testing.T) {
 
 	pow := NewProofOfWork()
-	cbAddr := client.NewAddress("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD")
+	cbAddr := account.NewAddress("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD")
 	bc := core.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
@@ -291,9 +291,9 @@ func TestPreventDoubleSpend(t *testing.T) {
 	//create new account
 	accounts := &account_logic.AccountManager{}
 
-	account1 := client.NewAccount()
-	account2 := client.NewAccount()
-	account3 := client.NewAccount()
+	account1 := account.NewAccount()
+	account2 := account.NewAccount()
+	account3 := account.NewAccount()
 
 	accounts.AddAccount(account1)
 	accounts.AddAccount(account2)
@@ -310,7 +310,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
 	assert.NotNil(t, bc)
 
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
@@ -362,7 +362,7 @@ func TestBlockProducer_InvalidTransactions(t *testing.T) {
 
 }
 
-func printBalances(bc *core.Blockchain, addrs []client.Address) {
+func printBalances(bc *core.Blockchain, addrs []account.Address) {
 	for _, addr := range addrs {
 		b, _ := getBalance(bc, addr.String())
 		logger.WithFields(logger.Fields{
@@ -376,7 +376,7 @@ func printBalances(bc *core.Blockchain, addrs []client.Address) {
 func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(client.NewAddress(addr))
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(addr))
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	//_, utxo, nextUtxos := utxos.Iterator()
@@ -387,7 +387,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	return balance, nil
 }
 
-func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[client.Address]*common.Amount) {
+func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[account.Address]*common.Amount) {
 	for addr, bal := range addrBals {
 		bc, err := getBalance(bc, addr.String())
 		assert.Nil(t, err)

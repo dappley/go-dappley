@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	corepb "github.com/dappley/go-dappley/core/pb"
@@ -127,7 +127,7 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 
 	if sender.IsTheTurnToSendSmartContractTransaction() && sender.isScEnabled {
 		data = contractFunctionCall
-		toAddr = client.NewAddress(sender.scAddr)
+		toAddr = account.NewAddress(sender.scAddr)
 	}
 
 	senderKeyPair := sender.account.GetAccountManager().GetKeyPairByAddress(sender.account.GetAddrs()[fromIndex])
@@ -172,9 +172,9 @@ func getDifferentIndex(index int, maxIndex int) int {
 	return newIndex
 }
 
-func (sender *BatchTxSender) createTransaction(from, to client.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *client.KeyPair) *core.Transaction {
+func (sender *BatchTxSender) createTransaction(from, to account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *account.KeyPair) *core.Transaction {
 
-	pkh, err := client.NewUserPubKeyHash(senderKeyPair.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(senderKeyPair.PublicKey)
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}

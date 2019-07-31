@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
@@ -172,9 +172,9 @@ func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node) {
 	conss := consensus.NewDPOS()
 	conss.SetDynasty(dynasty)
 	txPoolLimit := uint32(2000)
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(client.Address{}), 1000000)
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(account.Address{}), 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(client.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(client.Address{}), 1000000)
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(account.Address{}), 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}

@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -33,16 +33,16 @@ import (
 
 type TXOutput struct {
 	Value      *common.Amount
-	PubKeyHash client.PubKeyHash
+	PubKeyHash account.PubKeyHash
 	Contract   string
 }
 
-func (out *TXOutput) GetAddress() client.Address {
+func (out *TXOutput) GetAddress() account.Address {
 	return out.PubKeyHash.GenerateAddress()
 }
 
-func (out *TXOutput) Lock(address client.Address) {
-	hash, _ := client.GeneratePubKeyHashByAddress(address)
+func (out *TXOutput) Lock(address account.Address) {
+	hash, _ := account.GeneratePubKeyHashByAddress(address)
 	out.PubKeyHash = hash
 }
 
@@ -50,16 +50,16 @@ func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare([]byte(out.PubKeyHash), pubKeyHash) == 0
 }
 
-func NewTXOutput(value *common.Amount, address client.Address) *TXOutput {
+func NewTXOutput(value *common.Amount, address account.Address) *TXOutput {
 	return NewTxOut(value, address, "")
 }
 
-func NewContractTXOutput(address client.Address, contract string) *TXOutput {
+func NewContractTXOutput(address account.Address, contract string) *TXOutput {
 	return NewTxOut(common.NewAmount(0), address, contract)
 }
 
-func NewTxOut(value *common.Amount, address client.Address, contract string) *TXOutput {
-	var pubKeyHash client.PubKeyHash
+func NewTxOut(value *common.Amount, address account.Address, contract string) *TXOutput {
+	var pubKeyHash account.PubKeyHash
 	txo := &TXOutput{value, pubKeyHash, contract}
 	txo.Lock(address)
 	return txo
@@ -93,7 +93,7 @@ func (out *TXOutput) ToProto() proto.Message {
 
 func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).GetValue())
-	out.PubKeyHash = client.PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
+	out.PubKeyHash = account.PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
 	out.Contract = pb.(*corepb.TXOutput).GetContract()
 }
 

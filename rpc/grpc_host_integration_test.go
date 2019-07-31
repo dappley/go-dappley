@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
@@ -47,7 +47,7 @@ import (
 
 type RpcTestContext struct {
 	store      storage.Storage
-	account    *client.Account
+	account    *account.Account
 	consensus  core.Consensus
 	bc         *core.Blockchain
 	node       *network.Node
@@ -66,7 +66,7 @@ func TestServer_StartRPC(t *testing.T) {
 	defer server.Stop()
 
 	time.Sleep(time.Millisecond * 100)
-	//prepare grpc client
+	//prepare grpc account
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort), grpc.WithInsecure())
 	assert.Nil(t, err)
@@ -102,7 +102,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(client.Address{})
+	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -121,7 +121,7 @@ func TestRpcSend(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+1), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -187,7 +187,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(client.Address{})
+	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -206,7 +206,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+10), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -238,7 +238,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	//check smart contract deployment
 	res := string("")
-	contractAddr := client.NewAddress("")
+	contractAddr := account.NewAddress("")
 loop:
 	for i := bc.GetMaxHeight(); i > 0; i-- {
 		blk, err := bc.GetBlockByHeight(i)
@@ -265,7 +265,7 @@ func TestRpcGetVersion(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -273,20 +273,20 @@ func TestRpcGetVersion(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	// Test GetVersion with support client version
+	// Test GetVersion with support account version
 	response, err := c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0"})
 	assert.Nil(t, err)
 	assert.NotNil(t, response)
 	assert.Equal(t, "1.0.0", response.ProtoVersion, "1.0.0")
 
-	// Test GetVersion with unsupport client version -- invalid version length
+	// Test GetVersion with unsupport account version -- invalid version length
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "1.0.0.0"})
 	assert.Nil(t, response)
 
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 	assert.Equal(t, "proto version not supported", status.Convert(err).Message())
 
-	// Test GetVersion with unsupport client version
+	// Test GetVersion with unsupport account version
 	response, err = c.RpcGetVersion(context.Background(), &rpcpb.GetVersionRequest{ProtoVersion: "2.0.0"})
 	assert.Nil(t, response)
 	assert.Equal(t, codes.Unimplemented, status.Code(err))
@@ -313,7 +313,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -358,7 +358,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -403,7 +403,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	time.Sleep(time.Second)
 
 	genesisBlock := core.NewGenesisBlock(rpcContext.account.GetKeyPair().GenerateAddress())
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -481,7 +481,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -526,7 +526,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -571,7 +571,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	for maxHeight < 2 {
 		maxHeight = rpcContext.bc.GetMaxHeight()
 	}
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -579,7 +579,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -663,7 +663,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		maxHeight = rpcContext.bc.GetMaxHeight()
 	}
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -671,7 +671,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
 	utxoIndex := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache())
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
@@ -697,7 +697,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"")
 	transaction2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxoState([]*core.Transaction{&transaction2})
-	pubKeyHash1, _ := client.GeneratePubKeyHashByAddress(receiverAccount1.GetKeyPair().GenerateAddress())
+	pubKeyHash1, _ := account.GeneratePubKeyHashByAddress(receiverAccount1.GetKeyPair().GenerateAddress())
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
 	sendTxParam3 := core.NewSendTxParam(receiverAccount1.GetKeyPair().GenerateAddress(),
 		receiverAccount1.GetKeyPair(),
@@ -796,7 +796,7 @@ func TestGetNewTransaction(t *testing.T) {
 	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String())
 	rpcContext.consensus.Start()
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -830,7 +830,7 @@ func TestGetNewTransaction(t *testing.T) {
 		assert.Equal(t, tx2ID, response2.GetTransaction().GetId())
 	}()
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn2, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -894,7 +894,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 
 	// generate new transaction
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(rpcContext.bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -931,7 +931,7 @@ func TestRpcService_RpcSubscribe(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -939,7 +939,7 @@ func TestRpcService_RpcSubscribe(t *testing.T) {
 	defer conn1.Close()
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn2, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -947,7 +947,7 @@ func TestRpcService_RpcSubscribe(t *testing.T) {
 	//defer conn2.Close()
 	c2 := rpcpb.NewRpcServiceClient(conn2)
 
-	// Test GetVersion with support client version
+	// Test GetVersion with support account version
 	count1 := 0
 	count2 := 0
 	go func() {
@@ -1040,7 +1040,7 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -1067,17 +1067,17 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	account_logic.RemoveAccountFile()
 
 	// Create accounts
-	account, err := logic.CreateAccount(strings.Replace(account_logic.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	acc, err := logic.CreateAccount(strings.Replace(account_logic.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
 	if err != nil {
 		context.destroyContext()
 		panic(err)
 	}
-	context.account = account
+	context.account = acc
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	context.consensus = consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(client.Address{})
-	bc, err := logic.CreateBlockchain(account.GetKeyPair().GenerateAddress(), context.store, context.consensus, 1280000, scManager, 1000000)
+	scManager := vm.NewV8EngineManager(account.Address{})
+	bc, err := logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), context.store, context.consensus, 1280000, scManager, 1000000)
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1133,7 +1133,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(client.Address{})
+	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -1152,7 +1152,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+15), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
@@ -1188,11 +1188,11 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	time.Sleep(time.Second)
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
-	pubKeyHash, _ := client.GeneratePubKeyHashByAddress(senderAccount.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(senderAccount.GetKeyPair().GenerateAddress())
 	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(),
 		senderAccount.GetKeyPair(),
-		client.NewAddress(contractAddr),
+		account.NewAddress(contractAddr),
 		common.NewAmount(1),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -1230,7 +1230,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
-	scManager := vm.NewV8EngineManager(client.Address{})
+	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, 1280000, scManager, 1000000)
 	if err != nil {
 		panic(err)
@@ -1249,7 +1249,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a grpc connection and a client
+	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+16), grpc.WithInsecure())
 	if err != nil {
 		panic(err)

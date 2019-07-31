@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/jinzhu/copier"
@@ -76,7 +76,7 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address client.Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),

@@ -1,13 +1,13 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
 
-func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *client.KeyPair) *core.Transaction {
+func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *core.Transaction {
 	tx := &core.Transaction{
 		nil,
 		prepareInputLists(prevUtxos, senderKeyPair.PublicKey, nil),
@@ -57,7 +57,7 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 	return change
 }
 
-func prepareOutputLists(prevUtxos []*core.UTXO, from, to client.Address, amount *common.Amount, tip *common.Amount) []core.TXOutput {
+func prepareOutputLists(prevUtxos []*core.UTXO, from, to account.Address, amount *common.Amount, tip *common.Amount) []core.TXOutput {
 
 	sum := calculateUtxoSum(prevUtxos)
 	change := calculateChange(sum, amount, tip)

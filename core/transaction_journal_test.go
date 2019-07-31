@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -32,7 +32,7 @@ func TestJournalPutAndGet(t *testing.T) {
 	db := storage.NewRamStorage()
 
 	// Create a blockchain for testing
-	addr := client.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block

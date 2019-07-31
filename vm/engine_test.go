@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
@@ -76,7 +76,7 @@ MathTest.prototype = {
 };
 module.exports = new MathTest();`
 
-	contractPubKeyHash := client.NewContractPubKeyHash()
+	contractPubKeyHash := account.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
 	contractUTXOs := []*core.UTXO{
 		{
@@ -119,7 +119,7 @@ module.exports = new MathTest();`
 			// change
 			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
 
-			assert.Equal(t, client.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
+			assert.Equal(t, account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
 			assert.Equal(t, contractPubKeyHash, sc.generatedTXs[0].Vout[1].PubKeyHash)
 		}
 	}
@@ -147,7 +147,7 @@ module.exports = new StorageTest();
 	ss.GetStorageByAddress(dummyAddr)["key"] = "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.ImportContractAddr(client.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportLocalStorage(ss)
 
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
@@ -184,7 +184,7 @@ module.exports = new StorageTest();
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.ImportContractAddr(client.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 
 	ret, _ := sc.Execute("set", "\"key\",6")
@@ -226,7 +226,7 @@ module.exports = new StorageTest();
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.ImportContractAddr(client.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("set", "\"key\",6")
 	assert.Equal(t, "0", ret)
@@ -313,23 +313,23 @@ func TestStepRecord(t *testing.T) {
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 	sc.ImportLocalStorage(ss)
-	sc.ImportContractAddr(client.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
 
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20")
 	assert.Equal(t, "0", ret)
-	assert.Equal(t, "20", ss.GetStorageByAddress(client.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "20", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	ret2, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15")
 	assert.Equal(t, "0", ret2)
-	assert.Equal(t, "35", ss.GetStorageByAddress(client.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	ret3, _ := sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10")
 	assert.Equal(t, "0", ret3)
-	assert.Equal(t, "10", ss.GetStorageByAddress(client.NewAddress(dummyAddr).String())["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "10", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "35", ss.GetStorageByAddress(client.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 }
 
@@ -339,7 +339,7 @@ func TestCrypto_VerifySignature(t *testing.T) {
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 
-	kp := client.NewKeyPair()
+	kp := account.NewKeyPair()
 	msg := "hello world dappley"
 	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
 	data := sha256.Sum256([]byte(msg))
@@ -366,9 +366,9 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 
-	kp := client.NewKeyPair()
+	kp := account.NewKeyPair()
 	fmt.Println(kp.PublicKey)
-	pkh, err := client.NewUserPubKeyHash(kp.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(kp.PublicKey)
 	assert.Nil(t, err)
 	addr := pkh.GenerateAddress()
 	fmt.Println(addr)
@@ -450,7 +450,7 @@ func TestGetNodeAddress(t *testing.T) {
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
-	sc.ImportNodeAddress(client.NewAddress("testAddr"))
+	sc.ImportNodeAddress(account.NewAddress("testAddr"))
 
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("getNodeAddress", "")
@@ -458,11 +458,11 @@ func TestGetNodeAddress(t *testing.T) {
 }
 
 func TestNewAddress(t *testing.T) {
-	kp := client.NewKeyPair()
+	kp := account.NewKeyPair()
 	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
 	pk := hex.EncodeToString(privData)
 	publicKey := hex.EncodeToString(kp.PublicKey)
-	pkh, _ := client.NewUserPubKeyHash(kp.PublicKey)
+	pkh, _ := account.NewUserPubKeyHash(kp.PublicKey)
 	addr := pkh.GenerateAddress()
 	fmt.Println("privatekey:", pk)
 	fmt.Println("publickey:", publicKey)
@@ -470,7 +470,7 @@ func TestNewAddress(t *testing.T) {
 }
 
 func TestAddGasCount(t *testing.T) {
-	vout := core.NewContractTXOutput(client.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	vout := core.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
 	tx := core.Transaction{
 		Vout: []core.TXOutput{*vout},
 	}
@@ -504,7 +504,7 @@ func TestAddGasCount(t *testing.T) {
 }
 
 func TestStepRecordGasCount(t *testing.T) {
-	vout := core.NewContractTXOutput(client.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
+	vout := core.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
 	tx := core.Transaction{
 		Vout: []core.TXOutput{*vout},

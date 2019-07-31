@@ -1,8 +1,8 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
@@ -10,23 +10,23 @@ import (
 
 type UnauthorizedUtxoTxSender struct {
 	TxSender
-	unauthorizedAddrPkh client.PubKeyHash
+	unauthorizedAddrPkh account.PubKeyHash
 }
 
-func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount, unauthorizedAddr client.Address) *UnauthorizedUtxoTxSender {
-	unauthorizedpkh, _ := client.NewUserPubKeyHash(account.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr).PublicKey)
+func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, acc *sdk.DappSdkAccount, unauthorizedAddr account.Address) *UnauthorizedUtxoTxSender {
+	unauthorizedpkh, _ := account.NewUserPubKeyHash(acc.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr).PublicKey)
 
 	return &UnauthorizedUtxoTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			account: account,
+			account: acc,
 		},
 		unauthorizedpkh,
 	}
 }
 
 func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
-	pkh, err := client.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to hash sender public key")

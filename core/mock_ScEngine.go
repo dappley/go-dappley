@@ -5,7 +5,7 @@ package core
 import (
 	"errors"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -50,7 +50,7 @@ func (_m *MockScEngine) GetGeneratedTXs() []*Transaction {
 }
 
 // ImportContractAddr provides a mock function with given fields: contractAddr
-func (_m *MockScEngine) ImportContractAddr(contractAddr client.Address) {
+func (_m *MockScEngine) ImportContractAddr(contractAddr account.Address) {
 	_m.Called(contractAddr)
 }
 
@@ -65,7 +65,7 @@ func (_m *MockScEngine) ImportLocalStorage(state *ScState) {
 }
 
 // ImportNodeAddress provides a mock function with given fields: addr
-func (_m *MockScEngine) ImportNodeAddress(addr client.Address) {
+func (_m *MockScEngine) ImportNodeAddress(addr account.Address) {
 	_m.Called(addr)
 }
 

@@ -3,40 +3,40 @@ package account_logic
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddress_IsContract(t *testing.T) {
 	tests := []struct {
 		name        string
-		address     client.Address
+		address     account.Address
 		expectedRes bool
 		expectedErr error
 	}{
 		{
 			name:        "ContractAddress",
-			address:     client.NewAddress("cfSr89kUCpKxxaH8qgqYcnp7BqbMyND9Po"),
+			address:     account.NewAddress("cfSr89kUCpKxxaH8qgqYcnp7BqbMyND9Po"),
 			expectedRes: true,
 			expectedErr: nil,
 		},
 		{
 			name:        "UserAddress",
-			address:     client.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"),
+			address:     account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"),
 			expectedRes: false,
 			expectedErr: nil,
 		},
 		{
 			name:        "InvalidAddress",
-			address:     client.NewAddress("1Xnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"),
+			address:     account.NewAddress("1Xnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"),
 			expectedRes: false,
-			expectedErr: client.ErrInvalidAddress,
+			expectedErr: account.ErrInvalidAddress,
 		},
 		{
 			name:        "EmptyAddress",
-			address:     client.NewAddress(""),
+			address:     account.NewAddress(""),
 			expectedRes: false,
-			expectedErr: client.ErrInvalidAddress,
+			expectedErr: account.ErrInvalidAddress,
 		},
 	}
 

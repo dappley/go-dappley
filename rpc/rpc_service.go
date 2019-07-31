@@ -21,7 +21,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 
 	"github.com/golang/protobuf/proto"
@@ -67,11 +67,11 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	if !client.NewAddress(address).IsValid() {
-		return nil, status.Error(codes.InvalidArgument, client.ErrInvalidAddress.Error())
+	if !account.NewAddress(address).IsValid() {
+		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
 
-	amount, err := logic.GetBalance(client.NewAddress(address), rpcService.node.GetBlockchain())
+	amount, err := logic.GetBalance(account.NewAddress(address), rpcService.node.GetBlockchain())
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidAddress:
@@ -106,7 +106,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxoIndex := core.NewUTXOIndex(rpcService.node.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.node.GetBlockchain().GetTxPool().GetAllTransactions())
 
-	publicKeyHash, ok := client.GeneratePubKeyHashByAddress(client.NewAddress(in.GetAddress()))
+	publicKeyHash, ok := account.GeneratePubKeyHashByAddress(account.NewAddress(in.GetAddress()))
 
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
@@ -206,7 +206,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	return &rpcpb.GetBlockByHeightResponse{Block: block.ToProto().(*corepb.Block)}, nil
 }
 
-// RpcSendTransaction Send transaction to blockchain created by account client
+// RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.FromProto(in.GetTransaction())
@@ -247,7 +247,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	return &rpcpb.SendTransactionResponse{}, nil
 }
 
-// RpcSendBatchTransaction sends a batch of transactions to blockchain created by account client
+// RpcSendBatchTransaction sends a batch of transactions to blockchain created by account account
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	statusCode := codes.OK
 	var details []proto.Message
@@ -332,7 +332,7 @@ func (rpcService *RpcService) RpcGetNewTransaction(in *rpcpb.GetNewTransactionRe
 		response := &rpcpb.GetNewTransactionResponse{Transaction: tx.ToProto().(*corepb.Transaction)}
 		err := stream.Send(response)
 		if err != nil {
-			logger.WithError(err).Info("RPCService: failed to send transaction to client.")
+			logger.WithError(err).Info("RPCService: failed to send transaction to account.")
 			rpcService.node.GetBlockchain().GetTxPool().EventBus.Unsubscribe(core.NewTransactionTopic, txHandler)
 			quitCh <- true
 		}

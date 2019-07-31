@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 )
 
@@ -71,7 +71,7 @@ func (utxos *UTXOIndex) Delete() error {
 }
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
-func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash client.PubKeyHash) *UTXOTx {
+func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *UTXOTx {
 	key := pubkeyHash.String()
 	utxos.mutex.RLock()
 	utxoTx, ok := utxos.index[key]
@@ -90,8 +90,8 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash client.PubKeyHash) *U
 }
 
 //SplitContractUtxo
-func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash client.PubKeyHash) (*UTXO, []*UTXO) {
-	if ok, _ := client.PubKeyHash(pubkeyHash).IsContract(); !ok {
+func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) (*UTXO, []*UTXO) {
+	if ok, _ := account.PubKeyHash(pubkeyHash).IsContract(); !ok {
 		return nil, nil
 	}
 
@@ -111,7 +111,7 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash client.PubKeyHash) (*UTXO, 
 }
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
-func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash client.PubKeyHash, amount *common.Amount) ([]*UTXO, error) {
+func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*UTXO, error) {
 	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	retUtxos, ok := allUtxos.PrepareUtxos(amount)
 	if !ok {
@@ -122,7 +122,7 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash client.PubKeyHash, amount *c
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
-func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash client.PubKeyHash, txid []byte, vout int) *UTXO {
+func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash account.PubKeyHash, txid []byte, vout int) *UTXO {
 	utxosOfKey := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	return utxosOfKey.GetUtxo(txid, vout)
 }
@@ -131,14 +131,14 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *Transaction) bool {
 	if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
 		for _, txin := range tx.Vin {
 			//TODO spent contract utxo
-			isContract, _ := client.PubKeyHash(txin.PubKey).IsContract()
-			pkh, err := client.NewUserPubKeyHash(txin.PubKey)
+			isContract, _ := account.PubKeyHash(txin.PubKey).IsContract()
+			pkh, err := account.NewUserPubKeyHash(txin.PubKey)
 			if !isContract {
 				if err != nil {
 					return false
 				}
 			} else {
-				pkh = client.PubKeyHash(txin.PubKey)
+				pkh = account.PubKeyHash(txin.PubKey)
 			}
 
 			err = utxos.removeUTXO(pkh, txin.Txid, txin.Vout)
@@ -245,7 +245,7 @@ func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
 }
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
-func (utxos *UTXOIndex) removeUTXO(pkh client.PubKeyHash, txid []byte, vout int) error {
+func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int) error {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(pkh)
 
 	utxo := originalUtxos.GetUtxo(txid, vout)

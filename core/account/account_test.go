@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package client
+package account
 
 import (
 	"testing"
 
-	accountpb "github.com/dappley/go-dappley/core/client/pb"
+	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )

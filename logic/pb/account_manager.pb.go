@@ -7,7 +7,7 @@ import (
 	fmt "fmt"
 	math "math"
 
-	pb "github.com/dappley/go-dappley/core/client/pb"
+	pb "github.com/dappley/go-dappley/core/account/pb"
 	proto "github.com/golang/protobuf/proto"
 )
 

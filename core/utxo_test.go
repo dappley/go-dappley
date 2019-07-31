@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
@@ -58,8 +58,8 @@ var bh2 = &BlockHeader{
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash, _ = client.NewUserPubKeyHash(address1Bytes)
-var address2Hash, _ = client.NewUserPubKeyHash(address2Bytes)
+var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
+var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
 
 func GenerateUtxoMockBlockWithoutInputs() *Block {
 
@@ -203,20 +203,20 @@ func TestUpdate(t *testing.T) {
 
 	// test updating UTXO index with dependent transactions
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = client.GetKeyPairByString(prikey1).PublicKey
-	var pkHash1, _ = client.NewUserPubKeyHash(pubkey1)
+	var pubkey1 = account.GetKeyPairByString(prikey1).PublicKey
+	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = client.GetKeyPairByString(prikey2).PublicKey
-	var pkHash2, _ = client.NewUserPubKeyHash(pubkey2)
+	var pubkey2 = account.GetKeyPairByString(prikey2).PublicKey
+	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
 	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
-	var pubkey3 = client.GetKeyPairByString(prikey3).PublicKey
-	var pkHash3, _ = client.NewUserPubKeyHash(pubkey3)
+	var pubkey3 = account.GetKeyPairByString(prikey3).PublicKey
+	var pkHash3, _ = account.NewUserPubKeyHash(pubkey3)
 	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
-	var pubkey4 = client.GetKeyPairByString(prikey4).PublicKey
-	var pkHash4, _ = client.NewUserPubKeyHash(pubkey4)
+	var pubkey4 = account.GetKeyPairByString(prikey4).PublicKey
+	var pkHash4, _ = account.NewUserPubKeyHash(pubkey4)
 	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
-	var pubkey5 = client.GetKeyPairByString(prikey5).PublicKey
-	var pkHash5, _ = client.NewUserPubKeyHash(pubkey5)
+	var pubkey5 = account.GetKeyPairByString(prikey5).PublicKey
+	var pkHash5, _ = account.NewUserPubKeyHash(pubkey5)
 
 	var dependentTx1 = Transaction{
 		ID: nil,
@@ -301,10 +301,10 @@ func TestUpdate(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
-	dependentTx2.Sign(client.GetKeyPairByString(prikey2).PrivateKey, utxoIndex2.index[pkHash2.String()].GetAllUtxos())
-	dependentTx3.Sign(client.GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
-	dependentTx4.Sign(client.GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
-	dependentTx5.Sign(client.GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
+	dependentTx2.Sign(account.GetKeyPairByString(prikey2).PrivateKey, utxoIndex2.index[pkHash2.String()].GetAllUtxos())
+	dependentTx3.Sign(account.GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx4.Sign(account.GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
+	dependentTx5.Sign(account.GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txsForUpdate := []*Transaction{&dependentTx2, &dependentTx3}
 	utxoIndex2.UpdateUtxoState(txsForUpdate)
@@ -342,7 +342,7 @@ func TestUpdate_Failed(t *testing.T) {
 }
 
 func TestGetUTXOIndexAtBlockHash(t *testing.T) {
-	genesisAddr := client.NewAddress("##@@")
+	genesisAddr := account.NewAddress("##@@")
 	genesisBlock := NewGenesisBlock(genesisAddr)
 
 	// prepareBlockchainWithBlocks returns a blockchain that contains the given blocks with correct utxoIndex in RAM
@@ -376,8 +376,8 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		return utxoIndex
 	}
 
-	keypair := client.NewKeyPair()
-	pbkh, _ := client.NewUserPubKeyHash(keypair.PublicKey)
+	keypair := account.NewKeyPair()
+	pbkh, _ := account.NewUserPubKeyHash(keypair.PublicKey)
 	addr := pbkh.GenerateAddress()
 
 	normalTX := NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
@@ -392,7 +392,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	abnormalTX := Transaction{
 		Hash("abnormal"),
 		[]TXInput{{normalTX.ID, 1, nil, nil}},
-		[]TXOutput{{common.NewAmount(5), client.PubKeyHash([]byte("pkh")), ""}},
+		[]TXOutput{{common.NewAmount(5), account.PubKeyHash([]byte("pkh")), ""}},
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -416,7 +416,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	bcs := []*Blockchain{
 		prepareBlockchainWithBlocks([]*Block{normalBlock}),
 		prepareBlockchainWithBlocks([]*Block{normalBlock, normalBlock2}),
-		CreateBlockchain(client.NewAddress(""), storage.NewRamStorage(), nil, 128, nil, 100000),
+		CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, 128, nil, 100000),
 		prepareBlockchainWithBlocks([]*Block{prevBlock, emptyBlock}),
 		prepareBlockchainWithBlocks([]*Block{normalBlock, normalBlock2}),
 		prepareBlockchainWithBlocks([]*Block{normalBlock, abnormalBlock}),
@@ -515,7 +515,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	coinbaseAddr := client.NewAddress("testaddress")
+	coinbaseAddr := account.NewAddress("testaddress")
 	bc := CreateBlockchain(coinbaseAddr, db, nil, 128, nil, 100000)
 
 	blk1 := GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
@@ -554,8 +554,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 func TestFindUTXO(t *testing.T) {
 	Txin := MockTxInputs()
 	Txin = append(Txin, MockTxInputs()...)
-	utxo1 := &UTXO{TXOutput{common.NewAmount(10), client.PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout, UtxoNormal}
-	utxo2 := &UTXO{TXOutput{common.NewAmount(9), client.PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout, UtxoNormal}
+	utxo1 := &UTXO{TXOutput{common.NewAmount(10), account.PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout, UtxoNormal}
+	utxo2 := &UTXO{TXOutput{common.NewAmount(9), account.PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout, UtxoNormal}
 	utxoTx1 := NewUTXOTxWithData(utxo1)
 	utxoTx2 := NewUTXOTxWithData(utxo2)
 
@@ -617,7 +617,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 
 func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 
-	contractPkh := client.NewContractPubKeyHash()
+	contractPkh := account.NewContractPubKeyHash()
 	//preapre 3 utxos in the utxo index
 	txoutputs := []TXOutput{
 		{common.NewAmount(3), address1Hash, ""},

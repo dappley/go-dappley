@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
@@ -47,8 +47,8 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.GetAddress()) == 0 || !client.NewAddress(in.GetAddress()).IsValid() {
-		return nil, status.Error(codes.InvalidArgument, client.ErrInvalidAddress.Error())
+	if len(in.GetAddress()) == 0 || !account.NewAddress(in.GetAddress()).IsValid() {
+		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
 	err := adminRpcService.node.GetBlockchain().GetConsensus().AddProducer(in.GetAddress())
 	if err != nil {
@@ -73,7 +73,7 @@ func (adminRpcService *AdminRpcService) RpcUnlockAccount(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
-	sendToAddress := client.NewAddress(in.GetTo())
+	sendToAddress := account.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
@@ -94,8 +94,8 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
-	sendFromAddress := client.NewAddress(in.GetFrom())
-	sendToAddress := client.NewAddress(in.GetTo())
+	sendFromAddress := account.NewAddress(in.GetFrom())
+	sendToAddress := account.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	tip := common.NewAmountFromBytes(in.GetTip())
 	gasLimit := common.NewAmountFromBytes(in.GetGasLimit())

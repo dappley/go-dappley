@@ -7,7 +7,7 @@ import (
 
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
@@ -68,7 +68,7 @@ func VerifyPublicKeyFunc(addr, pubkey *C.char) bool {
 		return false
 	}
 
-	pubKeyHash, err := client.NewUserPubKeyHash(pubKeyBytes)
+	pubKeyHash, err := account.NewUserPubKeyHash(pubKeyBytes)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"content":    goAddr,

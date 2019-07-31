@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/client"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/mocks"
 	networkpb "github.com/dappley/go-dappley/network/pb"
@@ -98,7 +98,7 @@ func TestNewNode(t *testing.T) {
 
 func TestNode_Stop(t *testing.T) {
 	logger.SetLevel(logger.DebugLevel)
-	cbAddr := client.NewAddress("dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8")
+	cbAddr := account.NewAddress("dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8")
 	mockConsensus := new(mocks.Consensus)
 	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), mockConsensus, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
