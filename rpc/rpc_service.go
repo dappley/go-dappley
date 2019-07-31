@@ -21,7 +21,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 
 	"github.com/golang/protobuf/proto"

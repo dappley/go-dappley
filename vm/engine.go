@@ -42,7 +42,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/hash"
 	lru "github.com/hashicorp/golang-lru"

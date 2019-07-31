@@ -1,6 +1,6 @@
 package account_logic
 
-import "github.com/dappley/go-dappley/client"
+import "github.com/dappley/go-dappley/core/client"
 
 //isContract checks if an address is a Contract address
 func IsContract(a client.Address) (bool, error) {

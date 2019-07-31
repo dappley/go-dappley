@@ -1,6 +1,6 @@
 syntax = "proto3";
 package logicpb;
-import "github.com/dappley/go-dappley/client/pb/account.proto";
+import "github.com/dappley/go-dappley/core/client/pb/account.proto";
 
 
 message AccountManager{

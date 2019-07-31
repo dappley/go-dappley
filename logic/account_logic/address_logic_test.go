@@ -3,7 +3,7 @@ package account_logic
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/stretchr/testify/assert"
 )
 

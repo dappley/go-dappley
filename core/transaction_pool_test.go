@@ -22,7 +22,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"

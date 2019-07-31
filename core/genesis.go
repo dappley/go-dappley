@@ -18,8 +18,8 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/client"
 )
 
 const genesisCoinbaseData = "Hello world"

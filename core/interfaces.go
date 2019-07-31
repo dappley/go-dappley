@@ -19,7 +19,7 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 

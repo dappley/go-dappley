@@ -27,9 +27,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/client"
-	accountpb "github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/config"
+	"github.com/dappley/go-dappley/core/client"
+	accountpb "github.com/dappley/go-dappley/core/client/pb"
 	logicpb "github.com/dappley/go-dappley/logic/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -37,7 +37,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const accountConfigFilePath = "../client/account.conf"
+const accountConfigFilePath = "../core/client/account.conf"
 
 var (
 	ErrPasswordIncorrect = errors.New("password is incorrect")

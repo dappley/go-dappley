@@ -1,6 +1,6 @@
 syntax = "proto3";
 package accountpb;
-import "github.com/dappley/go-dappley/client/pb/keypair.proto";
+import "github.com/dappley/go-dappley/core/client/pb/keypair.proto";
 
 
 message Account{

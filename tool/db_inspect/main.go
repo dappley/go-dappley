@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"

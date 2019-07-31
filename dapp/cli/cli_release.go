@@ -30,7 +30,7 @@ import (
 	"os"
 	"strings"
 
-	clientpkg "github.com/dappley/go-dappley/client"
+	clientpkg "github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"

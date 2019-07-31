@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	corepb "github.com/dappley/go-dappley/core/pb"

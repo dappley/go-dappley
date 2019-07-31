@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	lru "github.com/hashicorp/golang-lru"

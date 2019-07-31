@@ -3,7 +3,7 @@ package vm
 import (
 	"strings"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/core"
 )
 

@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"

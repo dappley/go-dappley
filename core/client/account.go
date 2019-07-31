@@ -18,7 +18,7 @@
 package client
 
 import (
-	accountpb "github.com/dappley/go-dappley/client/pb"
+	accountpb "github.com/dappley/go-dappley/core/client/pb"
 	"github.com/golang/protobuf/proto"
 )
 

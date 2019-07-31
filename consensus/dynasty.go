@@ -21,7 +21,7 @@ package consensus
 import (
 	"errors"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	logger "github.com/sirupsen/logrus"
 )
 

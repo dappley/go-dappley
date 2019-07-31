@@ -20,7 +20,7 @@ package client
 import (
 	"testing"
 
-	accountpb "github.com/dappley/go-dappley/client/pb"
+	accountpb "github.com/dappley/go-dappley/core/client/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )

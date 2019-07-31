@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/client"
+	"github.com/dappley/go-dappley/core/client"
 	logicpb "github.com/dappley/go-dappley/logic/pb"
 	"github.com/dappley/go-dappley/storage"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"

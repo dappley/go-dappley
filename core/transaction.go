@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/client"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
