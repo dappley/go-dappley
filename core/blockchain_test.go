@@ -104,14 +104,9 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.db.Close()
 
-	blk, err := bc.GetTailBlock()
+	//find the hash at height 3
+	blk, err := bc.GetBlockByHeight(3)
 	assert.Nil(t, err)
-
-	//find the hash at height 3 (5-2)
-	for i := 0; i < 2; i++ {
-		blk, err = bc.GetBlockByHash(blk.GetPrevHash())
-		assert.Nil(t, err)
-	}
 
 	//rollback to height 3
 	bc.Rollback(blk.GetHash(), NewUTXOIndex(bc.GetUtxoCache()), NewScState())

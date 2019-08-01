@@ -470,14 +470,8 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScStat
 	}
 
 	//keep rolling back blocks until the block with the input hash
+	for bytes.Compare(parentblockHash, targetHash) != 0 {
 
-	newTxPool := NewTransactionPool(bc.txPool.netService, bc.txPool.GetSizeLimit())
-
-loop:
-	for {
-		if bytes.Compare(parentblockHash, targetHash) == 0 {
-			break loop
-		}
 		block, err := bc.GetBlockByHash(parentblockHash)
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -487,7 +481,12 @@ loop:
 			return false
 		}
 		parentblockHash = block.GetPrevHash()
-		block.Rollback(newTxPool)
+
+		for _, tx := range block.GetTransactions() {
+			if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
+				bc.txPool.Rollback(*tx)
+			}
+		}
 	}
 
 	bc.db.EnableBatch()
@@ -499,16 +498,6 @@ loop:
 		return false
 	}
 
-	newUtxo := utxo.DeepCopy()
-	for _, tx := range bc.txPool.GetTransactions() {
-		if result, err := tx.Verify(newUtxo, 0); result {
-			newUtxo.UpdateUtxo(tx)
-			newTxPool.Push(*tx)
-		} else {
-			logger.Warn(err.Error())
-		}
-	}
-	bc.txPool = newTxPool
 	bc.txPool.SaveToDatabase(bc.db)
 
 	utxo.Save()

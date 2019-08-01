@@ -19,6 +19,7 @@
 package core
 
 import (
+	"bytes"
 	"encoding/hex"
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/core/pb"
@@ -191,6 +192,42 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) 
 	return txNode
 }
 
+//Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transaction. However, the input transaction should never be dependent on any transaction in the current pool
+func (txPool *TransactionPool) Rollback(tx Transaction) {
+	txPool.mutex.Lock()
+	defer txPool.mutex.Unlock()
+
+	rollbackTxNode := NewTransactionNode(&tx)
+	txPool.updateChildren(rollbackTxNode)
+	newTipOrder := []string{}
+
+	for _, txid := range txPool.tipOrder {
+		if _, exist := rollbackTxNode.Children[txid]; !exist {
+			newTipOrder = append(newTipOrder, txid)
+		}
+	}
+
+	txPool.tipOrder = newTipOrder
+
+	txPool.addTransaction(rollbackTxNode)
+	txPool.insertIntoTipOrder(rollbackTxNode)
+
+}
+
+//updateChildren traverses through all transactions in transaction pool and find the input node's children
+func (txPool *TransactionPool) updateChildren(node *TransactionNode) {
+	for txid, txNode := range txPool.txs {
+	loop:
+		for _, vin := range txNode.Value.Vin {
+			if bytes.Compare(vin.Txid, node.Value.ID) == 0 {
+				node.Children[txid] = txNode.Value
+				break loop
+			}
+		}
+	}
+}
+
+//Push pushes a new transaction into the pool
 func (txPool *TransactionPool) Push(tx Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
@@ -209,7 +246,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 		return
 	}
 
-	txPool.addTransaction(txNode)
+	txPool.addTransactionAndSort(txNode)
 
 }
 
@@ -384,7 +421,7 @@ func (txPool *TransactionPool) removeMinTipTx() {
 	txPool.tipOrder = txPool.tipOrder[:len(txPool.tipOrder)-1]
 }
 
-func (txPool *TransactionPool) addTransaction(txNode *TransactionNode) {
+func (txPool *TransactionPool) addTransactionAndSort(txNode *TransactionNode) {
 	isDependentOnParent := false
 	for _, vin := range txNode.Value.Vin {
 		parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]
@@ -394,9 +431,7 @@ func (txPool *TransactionPool) addTransaction(txNode *TransactionNode) {
 		}
 	}
 
-	txPool.txs[hex.EncodeToString(txNode.Value.ID)] = txNode
-	txPool.currSize += uint32(txNode.Size)
-	MetricsTransactionPoolSize.Inc(1)
+	txPool.addTransaction(txNode)
 
 	txPool.EventBus.Publish(NewTransactionTopic, txNode.Value)
 
@@ -405,14 +440,20 @@ func (txPool *TransactionPool) addTransaction(txNode *TransactionNode) {
 		return
 	}
 
-	txPool.insertIntoSortedWaitlist(txNode)
+	txPool.insertIntoTipOrder(txNode)
+}
+
+func (txPool *TransactionPool) addTransaction(txNode *TransactionNode) {
+	txPool.txs[hex.EncodeToString(txNode.Value.ID)] = txNode
+	txPool.currSize += uint32(txNode.Size)
+	MetricsTransactionPoolSize.Inc(1)
 }
 
 func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *TransactionNode) {
 	for _, child := range txNode.Children {
 		parentTxidsInTxPool := txPool.GetParentTxidsInTxPool(child)
 		if len(parentTxidsInTxPool) == 1 {
-			txPool.insertIntoSortedWaitlist(txPool.txs[hex.EncodeToString(child.ID)])
+			txPool.insertIntoTipOrder(txPool.txs[hex.EncodeToString(child.ID)])
 		}
 	}
 }
@@ -428,9 +469,9 @@ func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *Transaction) []string 
 	return txids
 }
 
-//insertIntoSortedWaitlist insert a transaction into txSort based on tip.
+//insertIntoTipOrder insert a transaction into txSort based on tip.
 //If the transaction is a child of another transaction, the transaction will NOT be inserted
-func (txPool *TransactionPool) insertIntoSortedWaitlist(txNode *TransactionNode) {
+func (txPool *TransactionPool) insertIntoTipOrder(txNode *TransactionNode) {
 	index := sort.Search(len(txPool.tipOrder), func(i int) bool {
 		if txPool.txs[txPool.tipOrder[i]] == nil {
 			logger.WithFields(logger.Fields{
