@@ -13,7 +13,6 @@ type PeerInfo struct {
 	PeerId  peer.ID
 	Addrs   []ma.Multiaddr
 	Latency *float64 // rtt of ping in milliseconds
-
 }
 
 func NewPeerInfoFromString(fullAddr string) (PeerInfo, error) {

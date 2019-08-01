@@ -3,20 +3,22 @@ package network
 import (
 	"context"
 	"errors"
-	"github.com/dappley/go-dappley/network/network_model"
+	"math/rand"
+	"sync"
+	"time"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-	"math/rand"
-	"sync"
-	"time"
+
+	"github.com/dappley/go-dappley/network/network_model"
 )
 
 var (
-	ErrConnectionsFull        = errors.New("Connection is full")
-	ErrStreamAlreadyConnected = errors.New("Stream is already connected")
+	ErrConnectionsFull        = errors.New("connection is full")
+	ErrStreamAlreadyConnected = errors.New("stream is already connected")
 )
 
 type OnStreamCbFunc func(stream *Stream)
@@ -29,6 +31,7 @@ type StreamManager struct {
 	streamMsgReceiveCh       chan *network_model.DappPacketContext
 	onStreamStopCb           OnStreamCbFunc
 	onStreamConnectedCb      OnStreamCbFunc
+	ping                     *PingService
 
 	mutex sync.RWMutex
 }
@@ -126,6 +129,37 @@ func (sm *StreamManager) StreamHandler(s network.Stream) {
 	sm.addStream(stream, ConnectionTypeIn)
 
 	sm.onStreamConnectedCb(stream)
+}
+
+//StartNewPingService starts pinging connected peers at the specified interval and recording the latency
+func (sm *StreamManager) StartNewPingService(interval time.Duration) error {
+	if sm.ping != nil {
+		//stop existing ping service
+		if err := sm.ping.Stop(); err != nil {
+			return err
+		}
+		sm.ping = nil
+	}
+
+	pingService, err := NewPingService(sm.host, interval)
+	if err != nil {
+		return err
+	}
+
+	if err := pingService.Start(sm.GetConnectedPeers, func(results []*PingResult) {
+		sm.mutex.Lock()
+		defer sm.mutex.Unlock()
+		for _, r := range results {
+			if v, ok := sm.streams[r.ID]; ok {
+				v.latency = r.Latency
+			}
+		}
+	}); err != nil {
+		return err
+	}
+
+	sm.ping = pingService
+	return nil
 }
 
 //addStream records a new stream information
@@ -261,7 +295,11 @@ func (sm *StreamManager) GetConnectedPeers() map[peer.ID]network_model.PeerInfo 
 	peers := make(map[peer.ID]network_model.PeerInfo)
 
 	for _, streamInfo := range sm.streams {
-		peer := network_model.PeerInfo{PeerId: streamInfo.stream.GetPeerId(), Addrs: []ma.Multiaddr{streamInfo.stream.GetRemoteAddr()}}
+		peer := network_model.PeerInfo{
+			PeerId:  streamInfo.stream.GetPeerId(),
+			Addrs:   []ma.Multiaddr{streamInfo.stream.GetRemoteAddr()},
+			Latency: streamInfo.latency,
+		}
 		peers[peer.PeerId] = peer
 	}
 

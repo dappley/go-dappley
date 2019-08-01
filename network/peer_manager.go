@@ -19,18 +19,17 @@
 package network
 
 import (
-	"context"
-	"github.com/dappley/go-dappley/network/network_model"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/dappley/go-dappley/network/network_model"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/network/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 )
 
@@ -65,8 +64,6 @@ type PeerManager struct {
 	db                   Storage
 	onPeerListReceivedCb onPeerListReceived
 	mutex                sync.RWMutex
-	ping                 *PingService
-	host                 *network_model.Host
 }
 
 //NewPeerManager create a new peer manager object
@@ -156,91 +153,6 @@ func (pm *PeerManager) addSeedByString(fullAddr string) {
 	pm.seeds[peerInfo.PeerId] = peerInfo
 }
 
-func (pm *PeerManager) StartNewPingService(interval time.Duration) bool {
-	if pm.ping != nil {
-		logger.Warn("PeerManager: Ping service already running.")
-		return false
-	}
-
-	if pm.host == nil {
-		logger.Warn("PeerManager: Unable to start ping service.")
-		return false
-	}
-
-	pm.ping = &PingService{ping.NewPingService(pm.host), make(chan bool)}
-	go func() {
-		logger.Debug("PeerManager: Starting ping service...")
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				pm.pingPeers()
-			case <-pm.ping.stop:
-				logger.Debug("PeerManager: Stopping ping service...")
-				pm.ping.stop <- true
-				return
-			}
-		}
-	}()
-	return true
-}
-
-func (pm *PeerManager) StopPingService() bool {
-	if pm.ping != nil {
-		/* send stop signal and wait for reply */
-		pm.ping.stop <- true
-		<-pm.ping.stop
-		pm.ping = nil
-		return true
-	} else {
-		logger.Warn("PeerManager: Can not stop a ping service that was never started.")
-		return false
-	}
-}
-
-func (pm *PeerManager) pingPeers() {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-	logger.Debug("PeerManager: pinging peers...")
-	var wg sync.WaitGroup
-	wg.Add(len(pm.GetAllPeers()))
-	for _, peer := range pm.GetAllPeers() {
-		go func() {
-			defer wg.Done()
-			pm.pingPeer(peer.PeerId)
-		}()
-	}
-	wg.Wait()
-	logger.Debug("PeerManager: done pinging peers...")
-}
-
-func (pm *PeerManager) pingPeer(peerId peer.ID) {
-	result := <-pm.ping.service.Ping(context.Background(), peerId)
-	if result.Error != nil {
-		logger.WithError(result.Error).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
-		pm.updatePeerLatency(peerId, nil)
-	} else {
-		rtt := float64(result.RTT) / 1e6
-		pm.updatePeerLatency(peerId, &rtt)
-	}
-}
-
-func (pm *PeerManager) updatePeerLatency(peerId peer.ID, latency *float64) {
-	if _, ok := pm.seeds[peerId]; ok {
-		peerInfo := pm.seeds[peerId]
-		peerInfo.Latency = latency
-		pm.seeds[peerId] = peerInfo
-		return
-	}
-
-	if _, ok := pm.syncPeers[peerId]; ok {
-		peerInfo := pm.syncPeers[peerId]
-		peerInfo.Latency = latency
-		pm.syncPeers[peerId] = peerInfo
-	}
-}
-
 //AddSeedByPeerInfo adds seed by peerInfo
 func (pm *PeerManager) AddSeedByPeerInfo(peerInfo network_model.PeerInfo) {
 	pm.mutex.Lock()
@@ -295,10 +207,6 @@ func (pm *PeerManager) Start() {
 
 func (pm *PeerManager) SetHostPeerId(hostPeerId peer.ID) {
 	pm.hostPeerId = hostPeerId
-}
-
-func (pm *PeerManager) SetHost(host *network_model.Host) {
-	pm.host = host
 }
 
 //isPeerExisted returns if a peer exists

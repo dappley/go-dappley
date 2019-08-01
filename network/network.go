@@ -1,12 +1,14 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/network_model"
-	"github.com/hashicorp/golang-lru"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
-	"time"
+
+	"github.com/dappley/go-dappley/network/network_model"
 )
 
 type Network struct {
@@ -72,8 +74,8 @@ func (net *Network) GetStreamManager() *StreamManager {
 	return net.streamManager
 }
 
-func (net *Network) StartNewPingService(interval time.Duration) {
-	net.peerManager.StartNewPingService(interval)
+func (net *Network) StartNewPingService(interval time.Duration) error {
+	return net.streamManager.StartNewPingService(interval)
 }
 
 //Start starts the network
