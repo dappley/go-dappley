@@ -260,10 +260,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GetKeyPairByString(prikey1).PublicKey
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).PublicKey
 	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = account.GetKeyPairByString(prikey2).PublicKey
+	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).PublicKey
 	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
 
 	dependentTx1 := NewTransactionByVin(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
@@ -275,8 +275,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*UTXO{
 		pkHash2.String(): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GetKeyPairByString(prikey2).PrivateKey, tx1Utxos[pkHash2.String()])
-	dependentTx3.Sign(account.GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).PrivateKey, tx1Utxos[pkHash2.String()])
+	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name   string

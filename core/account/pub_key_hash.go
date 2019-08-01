@@ -110,10 +110,6 @@ func GetAddressPayloadLength() int {
 	return 21 + addressChecksumLen
 }
 
-func GetAddressChecksumLen() int {
-	return addressChecksumLen
-}
-
 func (pkh PubKeyHash) String() string {
 	return hex.EncodeToString(pkh)
 }

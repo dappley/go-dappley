@@ -260,7 +260,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 
 func TestInvalidExecutionTx(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GetKeyPairByString(prikey1).PublicKey
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).PublicKey
 	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var deploymentTx = Transaction{
 		ID: nil,
@@ -294,7 +294,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(account.GetKeyPairByString(prikey1).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
+	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
 
 	_, err1 := executionTx.Verify(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), 0)
 	_, err2 := executionTx.Verify(utxoIndex, 0)
@@ -721,19 +721,19 @@ func TestTransaction_MatchRewards(t *testing.T) {
 
 func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GetKeyPairByString(prikey1).PublicKey
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).PublicKey
 	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = account.GetKeyPairByString(prikey2).PublicKey
+	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).PublicKey
 	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
 	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
-	var pubkey3 = account.GetKeyPairByString(prikey3).PublicKey
+	var pubkey3 = account.GenerateKeyPairByPrivateKey(prikey3).PublicKey
 	var pkHash3, _ = account.NewUserPubKeyHash(pubkey3)
 	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
-	var pubkey4 = account.GetKeyPairByString(prikey4).PublicKey
+	var pubkey4 = account.GenerateKeyPairByPrivateKey(prikey4).PublicKey
 	var pkHash4, _ = account.NewUserPubKeyHash(pubkey4)
 	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
-	var pubkey5 = account.GetKeyPairByString(prikey5).PublicKey
+	var pubkey5 = account.GenerateKeyPairByPrivateKey(prikey5).PublicKey
 	var pkHash5, _ = account.NewUserPubKeyHash(pubkey5)
 
 	var dependentTx1 = Transaction{
@@ -818,10 +818,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
-	dependentTx2.Sign(account.GetKeyPairByString(prikey2).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos())
-	dependentTx3.Sign(account.GetKeyPairByString(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
-	dependentTx4.Sign(account.GetKeyPairByString(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
-	dependentTx5.Sign(account.GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).PrivateKey, utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos())
+	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey3).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx4.Sign(account.GenerateKeyPairByPrivateKey(prikey4).PrivateKey, []*UTXO{&tx2Utxo2, &tx2Utxo3})
+	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).PrivateKey, []*UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txPool := NewTransactionPool(6000000)
 	// verify dependent txs 2,3,4,5 with relation:
@@ -870,7 +870,7 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 func TestTransaction_IsIdentical(t *testing.T) {
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GetKeyPairByString(prikey1).PublicKey
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).PublicKey
 	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 
 	var dependentTx1 = Transaction{

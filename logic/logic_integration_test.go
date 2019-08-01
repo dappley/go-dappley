@@ -583,7 +583,7 @@ func TestAddBalance(t *testing.T) {
 
 			// Create a coinbase address
 			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
-			minerKeyPair := account.GetKeyPairByString(key)
+			minerKeyPair := account.GenerateKeyPairByPrivateKey(key)
 			minerAccount := account.NewAccountByKey(minerKeyPair)
 
 			addr := minerAccount.GetKeyPair().GenerateAddress()

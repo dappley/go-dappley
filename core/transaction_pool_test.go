@@ -220,7 +220,7 @@ func TestTransactionPoolLimit(t *testing.T) {
 
 func TestTransactionPool_GetTransactions(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GetKeyPairByString(prikey1).PublicKey
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).PublicKey
 	var contractPubkeyHash = account.NewContractPubKeyHash()
 
 	var deploymentTx = Transaction{
