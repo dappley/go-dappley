@@ -20,30 +20,85 @@ package core
 import (
 	"bytes"
 
-	peer "github.com/libp2p/go-libp2p-peer"
-	logger "github.com/sirupsen/logrus"
-
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
+	logger "github.com/sirupsen/logrus"
 )
 
-const HeightDiffThreshold = 10
+const (
+	HeightDiffThreshold = 10
+	SendBlock           = "SendBlockByHash"
+	RequestBlock        = "requestBlock"
+)
+
+var (
+	bmSubscribedTopics = []string{
+		SendBlock,
+		RequestBlock,
+	}
+)
 
 type BlockChainManager struct {
-	blockchain *Blockchain
-	blockPool  *BlockPool
+	blockchain        *Blockchain
+	blockPool         *BlockPool
+	downloadRequestCh chan chan bool
+	netService        NetService
 }
 
-func NewBlockChainManager() *BlockChainManager {
-	return &BlockChainManager{}
+func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool, service NetService) *BlockChainManager {
+	bm := &BlockChainManager{
+		blockchain: blockchain,
+		blockPool:  blockpool,
+		netService: service,
+	}
+	bm.ListenToNetService()
+	return bm
 }
 
-func (bm *BlockChainManager) SetblockPool(blockPool *BlockPool) {
-	bm.blockPool = blockPool
+func (bm *BlockChainManager) SetDownloadRequestCh(requestCh chan chan bool) {
+	bm.downloadRequestCh = requestCh
 }
 
-func (bm *BlockChainManager) Setblockchain(blockchain *Blockchain) {
-	bm.blockchain = blockchain
+func (bm *BlockChainManager) RequestDownloadBlockchain() {
+	go func() {
+		finishChan := make(chan bool, 1)
+
+		bm.Getblockchain().SetState(BlockchainDownloading)
+
+		select {
+		case bm.downloadRequestCh <- finishChan:
+		default:
+			logger.Warn("BlockchainManager: Request download failed! download request channel is full!")
+		}
+
+		<-finishChan
+		bm.Getblockchain().SetState(BlockchainReady)
+	}()
+}
+
+func (bm *BlockChainManager) ListenToNetService() {
+	if bm.netService == nil {
+		return
+	}
+
+	for _, command := range bmSubscribedTopics {
+		bm.netService.Listen(command, bm.GetCommandHandler(command))
+	}
+}
+
+func (bm *BlockChainManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+
+	switch commandName {
+	case SendBlock:
+		return bm.SendBlockHandler
+	case RequestBlock:
+		return bm.RequestBlockHandler
+	}
+	return nil
 }
 
 func (bm *BlockChainManager) Getblockchain() *Blockchain {
@@ -88,7 +143,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == BlockchainReady {
 		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
-		bm.blockPool.DownloadBlocksCh() <- true
+		bm.RequestDownloadBlockchain()
 		return
 	}
 
@@ -102,8 +157,9 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 		logger.WithFields(logger.Fields{
 			"parent_hash":   forkHeadParentHash,
 			"parent_height": forkHead.GetValue().(*Block).GetHeight() - 1,
-		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain.")
-		bm.blockPool.requestPrevBlock(forkHead, pid)
+			"from":          pid,
+		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain. Requesting the parent...")
+		bm.RequestBlock(forkHead.GetValue().(*Block).GetPrevHash(), pid)
 		return
 	}
 	forkBlks := bm.blockPool.GenerateForkBlocks(forkHead, bm.blockchain.GetMaxHeight())
@@ -175,6 +231,71 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 	}
 
 	return nil
+}
+
+//RequestBlock sends a requestBlock command to its peer with pid through network module
+func (bm *BlockChainManager) RequestBlock(hash Hash, pid peer.ID) {
+	request := &corepb.RequestBlock{Hash: hash}
+
+	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
+}
+
+//RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
+func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvdCmdContext) {
+	request := &corepb.RequestBlock{}
+
+	if err := proto.Unmarshal(command.GetData(), request); err != nil {
+		logger.WithFields(logger.Fields{
+			"name": command.GetCommandName(),
+		}).Info("BlockChainManager: parse data failed.")
+	}
+
+	block, err := bm.Getblockchain().GetBlockByHash(request.Hash)
+	if err != nil {
+		logger.WithError(err).Warn("BlockChainManager: failed to get the requested block.")
+		return
+	}
+
+	bm.SendBlockToPeer(block, command.GetSource())
+}
+
+//SendBlockToPeer unicasts a block to the peer with peer id "pid"
+func (bm *BlockChainManager) SendBlockToPeer(block *Block, pid peer.ID) {
+
+	bm.SendBlock(block, pid, network_model.Unicast)
+}
+
+//BroadcastBlock broadcasts a block to all peers
+func (bm *BlockChainManager) BroadcastBlock(block *Block) {
+	var broadcastPid peer.ID
+	bm.SendBlock(block, broadcastPid, network_model.Broadcast)
+}
+
+//SendBlock sends a SendBlock command to its peer with pid by finding the block from its database
+func (bm *BlockChainManager) SendBlock(block *Block, pid peer.ID, isBroadcast bool) {
+
+	bm.netService.SendCommand(SendBlock, block.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
+}
+
+//SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
+func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmdContext) {
+	blockpb := &corepb.Block{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(command.GetData(), blockpb); err != nil {
+		logger.WithError(err).Warn("BlockChainManager: parse data failed.")
+		return
+	}
+
+	block := &Block{}
+	block.FromProto(blockpb)
+	bm.Push(block, command.GetSource())
+
+	if command.IsBroadcast() {
+		//relay the original command
+		var broadcastPid peer.ID
+		bm.netService.Relay(command.GetCommand(), broadcastPid, network_model.HighPriorityCommand)
+	}
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.

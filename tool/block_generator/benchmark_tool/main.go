@@ -8,12 +8,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/logic/download_manager"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
@@ -130,18 +131,22 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	db2 := storage.OpenDatabase(nodeDbPath)
 	defer db2.Close()
 
-	bc, node1 := prepareNode(db1)
-	bc2, node2 := prepareNode(db2)
+	bm1, node1 := prepareNode(db1)
+	bm2, node2 := prepareNode(db2)
+	dm1 := download_manager.NewDownloadManager(node1, bm1)
+	bm1.SetDownloadRequestCh(dm1.GetDownloadRequestCh())
+	dm2 := download_manager.NewDownloadManager(node2, bm2)
+	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
 
-	node1.Start(testport1)
+	node1.Start(testport1, "")
 	defer node1.Stop()
-	node2.Start(testport2)
+	node2.Start(testport2, "")
 	defer node2.Stop()
 
-	node1.GetPeerManager().AddAndConnectPeer(node2.GetInfo())
+	node1.GetNetwork().ConnectToSeed(node2.GetHostPeerInfo())
 
-	blkHeight := bc.GetMaxHeight()
-	tailBlock, _ := bc.GetTailBlock()
+	blkHeight := bm1.Getblockchain().GetMaxHeight()
+	tailBlock, _ := bm1.Getblockchain().GetTailBlock()
 	numOfTx := len(tailBlock.GetTransactions())
 
 	logger.WithFields(logger.Fields{
@@ -152,7 +157,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	time.Sleep(time.Second)
 
 	start := time.Now()
-	downloadBlocks(node2, bc2)
+	bm2.RequestDownloadBlockchain()
 	elapsed := time.Since(start)
 
 	logger.WithFields(logger.Fields{
@@ -164,32 +169,27 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	return elapsed, blkHeight, numOfTx
 }
 
-func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node) {
+func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
 	conss := consensus.NewDPOS()
 	conss.SetDynasty(dynasty)
+	node := network.NewNode(db, nil)
 	txPoolLimit := uint32(2000)
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(account.Address{}), 1000000)
+	txPool := core.NewTransactionPool(node, txPoolLimit)
+	bc, err := core.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(account.Address{}), 1000000)
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
-
 	bc.SetState(core.BlockchainInit)
-	node := network.NewNode(bc, core.NewBlockPool(0))
-	return bc, node
-}
+	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
+	downloadManager := download_manager.NewDownloadManager(node, bm)
+	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
-func downloadBlocks(node *network.Node, bc *core.Blockchain) {
-	downloadManager := node.GetDownloadManager()
-	finishChan := make(chan bool, 1)
-	bc.SetState(core.BlockchainDownloading)
-	downloadManager.StartDownloadBlockchain(finishChan)
-	<-finishChan
-	bc.SetState(core.BlockchainReady)
+	return bm, node
 }

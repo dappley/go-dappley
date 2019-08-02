@@ -32,3 +32,11 @@ func GenerateRandomAoB(length int64) []byte {
 func IsTimeOut(start, timeOut int64) bool {
 	return time.Now().UTC().Unix()-start > timeOut
 }
+
+type Done func() bool
+
+func WaitDoneOrTimeout(done Done, timeOut int) {
+	currentTime := time.Now().UTC().Unix()
+	for !done() && !IsTimeOut(currentTime, int64(timeOut)) {
+	}
+}

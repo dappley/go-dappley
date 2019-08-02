@@ -37,7 +37,8 @@ service AdminService{
 
 service MetricService {
   rpc RpcGetStats(MetricsServiceRequest) returns (GetStatsResponse) {}
-  rpc RpcGetNodeConfig(MetricsServiceRequest) returns (GetNodeConfig) {}
+  rpc RpcGetNodeConfig(MetricsServiceRequest) returns (GetNodeConfigResponse) {}
+  rpc RpcSetNodeConfig(SetNodeConfigRequest) returns (GetNodeConfigResponse) {}
 }
 
 // Requests
@@ -209,7 +210,7 @@ message GetStatsResponse {
   metricspb.Metrics stats = 1;
 }
 
-message GetNodeConfig {
+message GetNodeConfigResponse {
   uint32 tx_pool_limit = 1;
   uint32 blk_size_limit = 2;
   uint32 max_connection_out = 3;
@@ -219,6 +220,24 @@ message GetNodeConfig {
   uint32 max_producers = 7;
   repeated string ipfs_addresses = 9;
   uint32 rpc_port = 10;
+}
+
+message SetNodeConfigRequest {
+  enum ConfigType {
+    TX_POOL_LIMIT = 0;
+    BLK_SIZE_LIMIT = 1;
+    MAX_CONN_OUT = 2;
+    MAX_CONN_IN = 3;
+    MAX_PRODUCERS = 4;
+    PRODUCERS = 5;
+  }
+  repeated ConfigType updated_configs = 1;
+  uint32 tx_pool_limit = 2;
+  uint32 blk_size_limit = 3;
+  uint32 max_connection_out = 4;
+  uint32 max_connection_in = 5;
+  uint32 max_producers = 6;
+  repeated string producers = 7;
 }
 
 message EstimateGasResponse {

@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/util"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
@@ -64,7 +66,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -81,8 +83,10 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String())
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
+	bm := core.NewBlockChainManager(bc, pool, n)
+
+	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 
 	pow.Start()
 
@@ -92,7 +96,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 
@@ -129,13 +133,16 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, acc.GetKeyPair().GenerateAddress().String())
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
+
+	bm := core.NewBlockChainManager(bc, pool, n)
+
+	pow.Setup(n, acc.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -144,7 +151,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -178,7 +185,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -195,8 +202,12 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//start a producer
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String())
+
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
+
+	bm := core.NewBlockChainManager(bc, pool, n)
+
+	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -224,7 +235,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	//stop mining
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
@@ -250,14 +261,18 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 		pow,
-		128,
+		core.NewTransactionPool(nil, 128),
 		nil,
 		100000,
 	)
 	defer bc.GetDb().Close()
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "asd")
-	pow.Setup(n, cbAddr.String())
+
+	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
+
+	bm := core.NewBlockChainManager(bc, pool, n)
+
+	pow.Setup(n, cbAddr.String(), bm)
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -274,7 +289,7 @@ loop:
 
 	//stop pow process and wait
 	pow.Stop()
-	core.WaitDoneOrTimeout(func() bool {
+	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()
 	}, 20)
 	//there should be not block produced anymore
@@ -307,7 +322,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, 128, nil, 100000)
+	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -328,8 +343,9 @@ func TestPreventDoubleSpend(t *testing.T) {
 
 	//start a miner
 	pool := core.NewBlockPool(0)
-	n := network.FakeNodeWithPidAndAddr(pool, bc, "asd", "test")
-	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String())
+	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
+	bm := core.NewBlockChainManager(bc, pool, n)
+	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 
 	pow.Start()
 

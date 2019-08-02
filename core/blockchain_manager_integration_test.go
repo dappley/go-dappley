@@ -13,7 +13,7 @@ import (
 
 func TestBlockChainManager_NumForks(t *testing.T) {
 	// create BlockChain
-	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, 100, nil, 100)
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, NewTransactionPool(nil, 100), nil, 100)
 	blk, err := bc.GetTailBlock()
 	require.Nil(t, err)
 	b1 := &Block{header: &BlockHeader{height: 1, prevHash: blk.GetHash(), nonce: 1}}
@@ -48,10 +48,8 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 			BlockChain:  Genesis - b1 - b3 - b6
 	*/
 
-	bcm := NewBlockChainManager()
-	bcm.Setblockchain(bc)
 	bp := NewBlockPool(100)
-	bcm.SetblockPool(bp)
+	bcm := NewBlockChainManager(bc, bp, nil)
 
 	bp.CacheBlock(b2, 0)
 	require.Equal(t, 1, testGetNumForkHeads(bp))

@@ -20,14 +20,17 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/account"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 type Consensus interface {
 	Validate(block *Block) bool
 
-	Setup(NetService, string)
+	Setup(NetService, string, *BlockChainManager)
 	GetProducerAddress() string
+
 	SetKey(string)
 
 	// Start runs the consensus algorithm and begins to produce blocks
@@ -49,10 +52,15 @@ type Consensus interface {
 }
 
 type NetService interface {
-	BroadcastBlock(block *Block) error
-	GetPeerID() peer.ID
-	GetBlockchain() *Blockchain
-	GetBlockPool() *BlockPool
+	GetHostPeerInfo() network_model.PeerInfo
+	SendCommand(
+		commandName string,
+		message proto.Message,
+		destination peer.ID,
+		isBroadcast bool,
+		priority network_model.DappCmdPriority)
+	Listen(command string, handler network_model.CommandHandlerFunc)
+	Relay(dappCmd *network_model.DappCmd, destination peer.ID, priority network_model.DappCmdPriority)
 }
 
 type ScEngineManager interface {

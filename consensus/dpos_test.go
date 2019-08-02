@@ -23,9 +23,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 )
@@ -40,13 +40,16 @@ func TestNewDpos(t *testing.T) {
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(account.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
+	bc := core.CreateBlockchain(account.NewAddress(cbAddr), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(bc, pool)
 
-	dpos.Setup(node, cbAddr)
+	node := network.NewNode(bc.GetDb(), nil)
 
-	assert.Equal(t, bc, dpos.node.GetBlockchain())
+	bm := core.NewBlockChainManager(bc, pool, node)
+
+	dpos.Setup(node, cbAddr, bm)
+
+	assert.Equal(t, bc, dpos.bm.Getblockchain())
 	assert.Equal(t, node, dpos.node)
 }
 

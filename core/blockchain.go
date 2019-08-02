@@ -76,7 +76,7 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
 		genesis.GetHash(),
@@ -84,14 +84,13 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		db,
 		NewUTXOCache(db),
 		consensus,
-		NewTransactionPool(transactionPoolLimit),
+		txPool,
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
-	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.transactions)
 	scState := NewScState()
@@ -102,7 +101,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit uint32, scManager ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -119,14 +118,13 @@ func GetBlockchain(db storage.Storage, consensus Consensus, transactionPoolLimit
 		db,
 		NewUTXOCache(db),
 		consensus,
-		NewTransactionPool(transactionPoolLimit),
+		txPool,
 		scManager,
 		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
-	bc.txPool = LoadTxPoolFromDatabase(bc.db, transactionPoolLimit)
 	return bc, nil
 }
 
@@ -160,6 +158,10 @@ func (bc *Blockchain) GetTxPool() *TransactionPool {
 
 func (bc *Blockchain) GetEventManager() *EventManager {
 	return bc.eventManager
+}
+
+func (bc *Blockchain) SetBlockSizeLimit(limit int) {
+	bc.blkSizeLimit = limit
 }
 
 func (bc *Blockchain) GetBlockSizeLimit() int {
@@ -468,14 +470,8 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScStat
 	}
 
 	//keep rolling back blocks until the block with the input hash
+	for bytes.Compare(parentblockHash, targetHash) != 0 {
 
-	newTxPool := NewTransactionPool(bc.txPool.GetSizeLimit())
-
-loop:
-	for {
-		if bytes.Compare(parentblockHash, targetHash) == 0 {
-			break loop
-		}
 		block, err := bc.GetBlockByHash(parentblockHash)
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
@@ -485,7 +481,12 @@ loop:
 			return false
 		}
 		parentblockHash = block.GetPrevHash()
-		block.Rollback(newTxPool)
+
+		for _, tx := range block.GetTransactions() {
+			if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
+				bc.txPool.Rollback(*tx)
+			}
+		}
 	}
 
 	bc.db.EnableBatch()
@@ -497,16 +498,6 @@ loop:
 		return false
 	}
 
-	newUtxo := utxo.DeepCopy()
-	for _, tx := range bc.txPool.GetTransactions() {
-		if result, err := tx.Verify(newUtxo, 0); result {
-			newUtxo.UpdateUtxo(tx)
-			newTxPool.Push(*tx)
-		} else {
-			logger.Warn(err.Error())
-		}
-	}
-	bc.txPool = newTxPool
 	bc.txPool.SaveToDatabase(bc.db)
 
 	utxo.Save()

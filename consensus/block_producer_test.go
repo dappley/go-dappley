@@ -35,7 +35,7 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 		account.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,
-		128,
+		core.NewTransactionPool(nil, 128),
 		nil,
 		100000,
 	)

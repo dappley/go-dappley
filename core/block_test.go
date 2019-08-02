@@ -174,15 +174,6 @@ func TestBlock_VerifyHash(t *testing.T) {
 	assert.False(t, b1.VerifyHash())
 }
 
-func TestBlock_Rollback(t *testing.T) {
-	b := GenerateMockBlock()
-	tx := MockTransaction()
-	b.transactions = []*Transaction{tx}
-	txPool := NewTransactionPool(128)
-	b.Rollback(txPool)
-	assert.ElementsMatch(t, tx.ID, txPool.GetTransactions()[0].ID)
-}
-
 func TestBlock_FindTransaction(t *testing.T) {
 	b := GenerateMockBlock()
 	tx := MockTransaction()

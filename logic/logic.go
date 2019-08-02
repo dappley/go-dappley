@@ -26,7 +26,6 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
-	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
@@ -47,12 +46,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, scManager, blkSizeLimit)
+	bc := core.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
 }
@@ -227,9 +226,9 @@ func GetBalance(address account.Address, bc *core.Blockchain) (*common.Amount, e
 	return balance, nil
 }
 
-func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain) ([]byte, string, error) {
 	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
-	return sendTo(sendTxParam, bc, node)
+	return sendTo(sendTxParam, bc)
 }
 
 func SetMinerKeyPair(key string) {
@@ -241,10 +240,10 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address account.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func SendFromMiner(address account.Address, amount *common.Amount, bc *core.Blockchain) ([]byte, string, error) {
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivateKey)
 	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	return sendTo(sendTxParam, bc, node)
+	return sendTo(sendTxParam, bc)
 }
 
 func GetAccountManager(path string) (*account_logic.AccountManager, error) {
@@ -257,7 +256,7 @@ func GetAccountManager(path string) (*account_logic.AccountManager, error) {
 	return am, nil
 }
 
-func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
+func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain) ([]byte, string, error) {
 	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
@@ -284,9 +283,8 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
-	if node != nil {
-		node.TxBroadcast(&tx)
-	}
+	bc.GetTxPool().BroadcastTx(&tx)
+
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
 		if sendTxParam.To.String() == contractAddr.String() {

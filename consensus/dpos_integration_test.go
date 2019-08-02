@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -36,12 +36,16 @@ func TestDpos_Start(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := account.NewAddress("dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8")
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, 128, nil, 100000)
+	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(bc, pool)
-	node.Start(22100)
+
+	node := network.NewNode(bc.GetDb(), nil)
+	node.Start(22100, "")
 	defer node.Stop()
-	dpos.Setup(node, cbAddr.String())
+
+	bm := core.NewBlockChainManager(bc, pool, node)
+
+	dpos.Setup(node, cbAddr.String(), bm)
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.String()}
@@ -85,12 +89,16 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(bc, pool)
-		node.Start(21200 + i)
+
+		node := network.NewNode(bc.GetDb(), nil)
+		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
-		dpos.Setup(node, miner)
+
+		bm := core.NewBlockChainManager(bc, pool, node)
+
+		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
@@ -98,7 +106,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i := range miners {
 		for j := range miners {
 			if i != j {
-				nodeArray[i].GetPeerManager().AddAndConnectPeer(nodeArray[j].GetInfo())
+				nodeArray[i].GetNetwork().ConnectToSeed(nodeArray[j].GetHostPeerInfo())
 			}
 		}
 
@@ -115,13 +123,13 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	for i := range miners {
 		v := dposArray[i]
-		core.WaitDoneOrTimeout(func() bool {
+		util.WaitDoneOrTimeout(func() bool {
 			return !v.IsProducingBlock()
 		}, 20)
 	}
 
 	for i := range miners {
-		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].node.GetBlockchain().GetMaxHeight())
+		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bm.Getblockchain().GetMaxHeight())
 	}
 }
 
@@ -153,13 +161,16 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, 128, nil, 100000)
+		bc := core.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool(0)
-		node := network.NewNode(bc, pool)
-		node.Start(22200 + i)
+
+		node := network.NewNode(bc.GetDb(), nil)
+		node.Start(22200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		dpos.Setup(node, miner)
+		bm := core.NewBlockChainManager(bc, pool, node)
+
+		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
@@ -167,7 +178,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i := range miners {
 		for j := range miners {
 			if i != j {
-				nodeArray[i].GetPeerManager().AddAndConnectPeer(nodeArray[j].GetInfo())
+				nodeArray[i].GetNetwork().ConnectToSeed(nodeArray[j].GetHostPeerInfo())
 			}
 		}
 
@@ -185,16 +196,16 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	for i := range miners {
 		v := dposArray[i]
-		core.WaitDoneOrTimeout(func() bool {
+		util.WaitDoneOrTimeout(func() bool {
 			return !v.IsProducingBlock()
 		}, 20)
 	}
 
-	block0, _ := dposArray[0].node.GetBlockchain().GetLIB()
+	block0, _ := dposArray[0].bm.Getblockchain().GetLIB()
 	assert.NotEqual(t, 0, block0.GetHeight())
 
 	for i := range miners {
-		block, _ := dposArray[i].node.GetBlockchain().GetLIB()
+		block, _ := dposArray[i].bm.Getblockchain().GetLIB()
 		assert.Equal(t, block0.GetHash(), block.GetHash())
 	}
 }

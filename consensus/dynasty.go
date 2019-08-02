@@ -20,6 +20,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/dappley/go-dappley/core/account"
 	logger "github.com/sirupsen/logrus"
@@ -98,6 +99,18 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 }
 
 func (dynasty *Dynasty) AddProducer(producer string) error {
+	if err := dynasty.canAddProducer(producer); err != nil {
+		return err
+	}
+	dynasty.producers = append(dynasty.producers, producer)
+	logger.WithFields(logger.Fields{
+		"producer": producer,
+		"list":     dynasty.producers,
+	}).Debug("Dynasty: added a producer to list.")
+	return nil
+}
+
+func (dynasty *Dynasty) canAddProducer(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
 			return errors.New("already a producer")
@@ -105,13 +118,9 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 	}
 
 	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
-		dynasty.producers = append(dynasty.producers, producer)
-		logger.WithFields(logger.Fields{
-			"producer": producer,
-			"list":     dynasty.producers,
-		}).Debug("Dynasty: added a producer to list.")
 		return nil
 	}
+
 	if !IsProducerAddressValid(producer) {
 		return errors.New("invalid producer address")
 	}
@@ -167,4 +176,34 @@ func IsProducerAddressValid(producer string) bool {
 
 func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
+}
+
+func (dynasty *Dynasty) CanSetProducers(producers []string, maxProducers...int) error {
+
+	maxProd := dynasty.maxProducers
+	if len(maxProducers) > 0 {
+		maxProd = maxProducers[0]
+	}
+
+	if len(producers) > maxProd {
+		return errors.New("can not exceed maximum number of producers")
+	}
+
+	seen := make(map[string]bool)
+	for _, producer := range producers {
+		if seen[producer] {
+			return errors.New(fmt.Sprintf("can not add a duplicate producer: \"%v\"", producer))
+		}
+
+		if !IsProducerAddressValid(producer) {
+			return errors.New(fmt.Sprintf("\"%v\" is a invalid producer", producer))
+		}
+		seen[producer] = true
+	}
+
+	return nil
+}
+
+func (dynasty *Dynasty) SetProducers(producers []string) {
+	dynasty.producers = producers
 }

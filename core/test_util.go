@@ -78,8 +78,9 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
+
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
@@ -108,7 +109,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
@@ -176,13 +177,5 @@ func MockTxOutputs() []TXOutput {
 	return []TXOutput{
 		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
-	}
-}
-
-type Done func() bool
-
-func WaitDoneOrTimeout(done Done, timeOut int) {
-	currentTime := time.Now().UTC().Unix()
-	for !done() && !util.IsTimeOut(currentTime, int64(timeOut)) {
 	}
 }

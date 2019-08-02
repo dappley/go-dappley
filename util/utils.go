@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -97,4 +98,13 @@ func ReverseSlice(slice interface{}) interface{} {
 		swap(low, high)
 	}
 	return slice
+}
+
+func InProtoEnum(enumType string, x string) bool {
+	if vm := proto.EnumValueMap(enumType); vm != nil {
+		_, ok := vm[x]
+		return ok
+	}
+
+	return false
 }

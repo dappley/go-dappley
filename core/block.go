@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
@@ -448,16 +448,6 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool {
 
 func (b *Block) IsParentBlock(child *Block) bool {
 	return IsParentBlockHash(b, child) && IsParentBlockHeight(b, child)
-}
-
-func (b *Block) Rollback(txPool *TransactionPool) {
-	if b != nil {
-		for _, tx := range b.GetTransactions() {
-			if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
-				txPool.Push(*tx)
-			}
-		}
-	}
 }
 
 func (b *Block) FindTransactionById(txid []byte) *Transaction {

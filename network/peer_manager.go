@@ -19,17 +19,14 @@
 package network
 
 import (
-	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
+	"github.com/dappley/go-dappley/network/network_model"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
-	pstore "github.com/libp2p/go-libp2p-core/peerstore"
-	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
-	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 
 	networkpb "github.com/dappley/go-dappley/network/pb"
@@ -41,597 +38,267 @@ type ConnectionType int
 const (
 	syncPeersKey = "SyncPeers"
 
-	ConnectionTypeSeed ConnectionType = 0
-	ConnectionTypeIn   ConnectionType = 1
-	ConnectionTypeOut  ConnectionType = 2
+	maxSyncPeersCount = 32
 
-	defaultMaxConnectionOutCount = 16
-	defaultMaxConnectionInCount  = 128
-	syncPeersWaitTime            = 10 * time.Second
-	syncPeersScheduleTime        = 10 * time.Minute
-	checkSeedsConnectionTime     = 15 * time.Minute
+	syncPeersScheduleTime  = 10 * time.Minute
+	PeerConnectionInterval = 15 * time.Minute
+
+	GetPeerListRequest  = "GetPeerListRequest"
+	GetPeerListResponse = "GetPeerListResponse"
 )
 
-type PeerInfo struct {
-	PeerId  peer.ID
-	Addrs   []ma.Multiaddr
-	Latency *float64 // rtt of ping in milliseconds
-}
+var (
+	subscribedTopics = []string{
+		GetPeerListRequest,
+		GetPeerListResponse,
+	}
+)
 
-type StreamInfo struct {
-	stream         *Stream
-	connectionType ConnectionType
-	latency        *float64 // refer to PeerInfo.Latency
-}
-
-type SyncPeerContext struct {
-	checkingStreams map[peer.ID]*StreamInfo
-	newPeers        map[peer.ID]*PeerInfo
-}
-
-type PingService struct {
-	service *ping.PingService
-	stop    chan bool
-}
+type onPeerListReceived func(newPeers []network_model.PeerInfo)
 
 type PeerManager struct {
-	seeds     map[peer.ID]*PeerInfo
-	syncPeers map[peer.ID]*PeerInfo
-
-	streams               map[peer.ID]*StreamInfo
-	maxConnectionOutCount int
-	connectionOutCount    int //Connection that current node connect to other nodes, exclude seed nodes
-	maxConnectionInCount  int
-	connectionInCount     int //Connection that other node connection to current node.
-
-	syncPeerContext *SyncPeerContext
-
-	mutex sync.RWMutex
-	node  *Node
-	ping  *PingService
+	hostPeerId           peer.ID
+	seeds                map[peer.ID]network_model.PeerInfo
+	syncPeers            map[peer.ID]network_model.PeerInfo
+	netService           NetService
+	db                   Storage
+	onPeerListReceivedCb onPeerListReceived
+	mutex                sync.RWMutex
 }
 
-func (pm *PeerManager) GetMaxConnectionInCount() int {
-	return pm.maxConnectionInCount
-}
-
-func (pm *PeerManager) GetMaxConnectionOutCount() int {
-	return pm.maxConnectionOutCount
-}
-
-func (pm *PeerManager) SetMaxConnectionInCount(maxConnectionInCount int) {
-	pm.maxConnectionInCount = maxConnectionInCount
-}
-
-func (pm *PeerManager) SetMaxConnectionOutCount(maxConnectionOutCount int) {
-	pm.maxConnectionOutCount = maxConnectionOutCount
-}
-
-func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
-
-	maxConnectionOutCount := defaultMaxConnectionOutCount
-	maxConnectionInCount := defaultMaxConnectionInCount
-
-	if config != nil {
-		if config.MaxConnectionOutCount != 0 {
-			maxConnectionOutCount = config.MaxConnectionOutCount
-		}
-
-		if config.MaxConnectionInCount != 0 {
-			maxConnectionInCount = config.MaxConnectionInCount
-		}
+//NewPeerManager create a new peer manager object
+func NewPeerManager(netService NetService, db Storage, onPeerListReceivedCb onPeerListReceived, seeds []string) *PeerManager {
+	pm := &PeerManager{
+		seeds:                make(map[peer.ID]network_model.PeerInfo),
+		syncPeers:            make(map[peer.ID]network_model.PeerInfo),
+		mutex:                sync.RWMutex{},
+		netService:           netService,
+		db:                   db,
+		onPeerListReceivedCb: onPeerListReceivedCb,
 	}
-
-	return &PeerManager{
-		seeds:                 make(map[peer.ID]*PeerInfo),
-		syncPeers:             make(map[peer.ID]*PeerInfo),
-		streams:               make(map[peer.ID]*StreamInfo),
-		mutex:                 sync.RWMutex{},
-		maxConnectionOutCount: maxConnectionOutCount,
-		maxConnectionInCount:  maxConnectionInCount,
-		node:                  node,
+	pm.ListenToNetService()
+	pm.addSeeds(seeds)
+	if db != nil {
+		pm.loadSyncPeers()
 	}
+	return pm
 }
 
-func CreatePeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error) {
-	peerIds := make([]peer.ID, len(targetFullAddrs))
-	addrs := make([]ma.Multiaddr, len(targetFullAddrs))
-	for index, targetFullAddr := range targetFullAddrs {
-		//get pid
-		pid, err := targetFullAddr.ValueForProtocol(ma.P_IPFS)
-		if err != nil {
-			return nil, err
-		}
-
-		//get peer id
-		peerId, err := peer.IDB58Decode(pid)
-		if err != nil {
-			return nil, err
-		}
-
-		peerIds[index] = peerId
-
-		// Decapsulate the /ipfs/<peerID> part from the targetFullAddr
-		// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
-		targetPeerAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerId)))
-		targetAddr := targetFullAddr.Decapsulate(targetPeerAddr)
-		addrs[index] = targetAddr
-
-		logger.WithFields(logger.Fields{
-			"index":          index,
-			"peerID":         peerId,
-			"targetPeerAddr": targetPeerAddr,
-			"targetAddr":     targetAddr,
-		}).Info("PeerManager: create peer information.")
-	}
-
-	peerInfo := &PeerInfo{
-		PeerId: peerIds[0],
-		Addrs:  addrs,
-	}
-
-	return peerInfo, nil
-}
-
-func (pm *PeerManager) AddSeedByString(fullAddr string) error {
-	peerInfo, err := createPeerInfoFromString(fullAddr)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-		}).Warn("PeerManager: create PeerInfo failed.")
-	}
-
-	pm.seeds[peerInfo.PeerId] = peerInfo
-	return nil
-}
-
-func (pm *PeerManager) AddSeedByPeerInfo(peerInfo *PeerInfo) error {
-	pm.seeds[peerInfo.PeerId] = peerInfo
-	return nil
-}
-
-func (pm *PeerManager) AddAndConnectPeerByString(fullAddr string) error {
-
-	logger.Info("PeerManager: AddAndConnectPeerByString")
-
-	peerInfo, err := createPeerInfoFromString(fullAddr)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-		}).Warn("PeerManager: create PeerInfo failed.")
-	}
-
-	_, err = pm.connectPeer(peerInfo, ConnectionTypeOut)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-		}).Warn("PeerManager: connect PeerInfo failed.")
-	}
-	return err
-}
-
-func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
-
-	logger.Info("PeerManager: AddAndConnectPeer")
-
-	_, err := pm.connectPeer(peerInfo, ConnectionTypeOut)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"peerId": peerInfo.PeerId,
-		}).Warn("PeerManager: connect PeerInfo failed.")
-	}
-	return err
-}
-
-func (pm *PeerManager) Start() {
-	pm.loadSyncPeers()
-	pm.startConnectSeeds()
-	pm.startConnectSyncPeers()
-	pm.startSyncPeersSchedule()
-	pm.checkSeedsConnectionSchedule()
-}
-
-func (pm *PeerManager) startConnectSeeds() {
-	unConnectedSeeds := pm.getUnConnectedSeeds()
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(unConnectedSeeds))
-	pm.doConnectSeeds(&wg, unConnectedSeeds)
-	wg.Wait()
-}
-
-func (pm *PeerManager) getUnConnectedSeeds() []*PeerInfo {
+//GetSeeds return a slice of seed peers
+func (pm *PeerManager) GetSeeds() []network_model.PeerInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
-	var unConnectedSeeds []*PeerInfo
-
+	allSeeds := []network_model.PeerInfo{}
 	for _, seed := range pm.seeds {
-		if _, ok := pm.streams[seed.PeerId]; !ok {
-			unConnectedSeeds = append(unConnectedSeeds, seed)
-		}
+		allSeeds = append(allSeeds, seed)
 	}
-
-	return unConnectedSeeds
+	return allSeeds
 }
 
-func (pm *PeerManager) Broadcast(data []byte, priority int) {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-	for _, s := range pm.streams {
-		s.stream.Send(data, priority)
-	}
-}
-
-func (pm *PeerManager) Unicast(data []byte, pid peer.ID, priority int) {
+//GetSyncPeers return a slice of sync peers
+func (pm *PeerManager) GetSyncPeers() []network_model.PeerInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
-	streamInfo, ok := pm.streams[pid]
-	if !ok {
-		logger.WithFields(logger.Fields{
-			"pid": pid,
-		}).Warn("PeerManager: Unicast pid not found.")
+	allPeers := []network_model.PeerInfo{}
+	for _, peer := range pm.syncPeers {
+		allPeers = append(allPeers, peer)
+	}
+	return allPeers
+}
+
+//GetSubscribedTopics returns subscribed topics
+func (pm *PeerManager) ListenToNetService() {
+	if pm.netService == nil {
 		return
 	}
 
-	streamInfo.stream.Send(data, priority)
-}
-
-func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
-	pm.addSyncPeersResult(peerId, peers)
-
-	if pm.isSyncPeerFinish() {
-		pm.collectSyncPeersResult()
-		pm.saveSyncPeers()
-		go func() {
-			pm.startConnectSyncPeers()
-		}()
+	for _, topic := range subscribedTopics {
+		pm.netService.Listen(topic, pm.GetCommandHandler(topic))
 	}
 }
 
-func (pm *PeerManager) AddStream(stream *Stream) {
+//GetCommandHandler returns the corresponding command handler
+func (pm *PeerManager) GetCommandHandler(cmd string) network_model.CommandHandlerFunc {
+	switch cmd {
+	case GetPeerListRequest:
+		return pm.GetPeerListRequestHandler
+	case GetPeerListResponse:
+		return pm.GetPeerListResponseHandler
+	}
+	return nil
+}
 
-	logger.WithFields(logger.Fields{
-		"peer_id": stream.peerID,
-		"addr":    stream.remoteAddr.String(),
-	}).Info("PeerManager: Add Stream")
+//addSeeds add seed peers
+func (pm *PeerManager) addSeeds(seeds []string) {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
 
-	connectionType := pm.getStreamConnectionType(stream)
-	if !pm.checkAndAddStream(stream.peerID, connectionType, stream) {
-		stream.StopStream(nil)
+	for _, seed := range seeds {
+		pm.addSeedByString(seed)
 	}
 }
 
-func (pm *PeerManager) StopStream(stream *Stream) {
+//addSeedByString adds seed peer by multiaddr string
+func (pm *PeerManager) addSeedByString(fullAddr string) {
 
-	logger.WithFields(logger.Fields{
-		"peer_id": stream.peerID,
-		"addr":    stream.remoteAddr.String(),
-	}).Info("PeerManager: Stop Stream")
+	peerInfo, err := network_model.NewPeerInfoFromString(fullAddr)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"full_addr": fullAddr,
+		}).Warn("PeerManager: create PeerInfo failed.")
+	}
+
+	pm.seeds[peerInfo.PeerId] = peerInfo
+}
+
+//AddSeedByPeerInfo adds seed by peerInfo
+func (pm *PeerManager) AddSeedByPeerInfo(peerInfo network_model.PeerInfo) {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+
+	if peerInfo.PeerId.String() == "" {
+		return
+	}
+
+	pm.seeds[peerInfo.PeerId] = peerInfo
+
+}
+
+//UpdateSyncPeers synchronizes the sync peers with the connected peer list
+func (pm *PeerManager) UpdateSyncPeers(connectedPeerList map[peer.ID]network_model.PeerInfo) {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+
+	pm.syncPeers = connectedPeerList
+	for _, peer := range pm.syncPeers {
+		if _, isSeed := pm.seeds[peer.PeerId]; isSeed {
+			delete(pm.syncPeers, peer.PeerId)
+		}
+	}
+
+	pm.saveSyncPeers()
+}
+
+//AddSyncPeer adds a sync peer and saves it to database
+func (pm *PeerManager) AddSyncPeer(peer network_model.PeerInfo) {
 
 	pm.mutex.Lock()
-	streamInfo, ok := pm.streams[stream.peerID]
-	if !ok || streamInfo.stream != stream {
-		pm.mutex.Unlock()
-		return
-	}
+	defer pm.mutex.Unlock()
 
-	switch streamInfo.connectionType {
-	case ConnectionTypeIn:
-		pm.connectionInCount--
-
-	case ConnectionTypeOut:
-		pm.connectionOutCount--
-
-	default:
-		//pass
-	}
-	delete(pm.streams, stream.peerID)
-	pm.node.host.Peerstore().ClearAddrs(stream.peerID)
-	streamLen := len(pm.streams)
-	pm.mutex.Unlock()
-	if streamLen == 0 {
-		go func() {
-			pm.startConnectSeeds()
-			pm.startConnectSyncPeers()
-		}()
-	}
+	pm.addSyncPeer(peer)
+	pm.saveSyncPeers()
 }
 
-func (pm *PeerManager) StopAllStreams(err error) {
-	for _, streamInfo := range pm.streams {
-		streamInfo.stream.StopStream(err)
+//addSyncPeer adds a sync peer
+func (pm *PeerManager) addSyncPeer(peer network_model.PeerInfo) {
+
+	if pm.isPeerNew(peer.PeerId) {
+		pm.syncPeers[peer.PeerId] = peer
 	}
+
 }
 
-func (pm *PeerManager) RandomGetConnectedPeers(number int) []*PeerInfo {
-	streams := pm.CloneStreamsToSlice()
-	chooseStreams := randomChooseStreams(number, streams)
-	peers := make([]*PeerInfo, len(chooseStreams))
-
-	for i, streamInfo := range chooseStreams {
-		peers[i] = &PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
-	}
-	return peers
+//Start starts peer manager thread
+func (pm *PeerManager) Start() {
+	pm.startSyncPeersSchedule()
 }
 
-func (pm *PeerManager) StartNewPingService(interval time.Duration) bool {
-	if pm.ping != nil {
-		logger.Warn("PeerManager: Ping service already running.")
-		return false
-	}
-
-	if pm.node.host == nil {
-		logger.Warn("PeerManager: Unable to start ping service.")
-		return false
-	}
-
-	pm.ping = &PingService{ping.NewPingService(pm.node.host), make(chan bool)}
-	go func() {
-		logger.Debug("PeerManager: Starting ping service...")
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				pm.pingPeers()
-			case <-pm.ping.stop:
-				logger.Debug("PeerManager: Stopping ping service...")
-				pm.ping.stop <- true
-				return
-			}
-		}
-	}()
-	return true
+func (pm *PeerManager) SetHostPeerId(hostPeerId peer.ID) {
+	pm.hostPeerId = hostPeerId
 }
 
-func (pm *PeerManager) StopPingService() bool {
-	if pm.ping != nil {
-		/* send stop signal and wait for reply */
-		pm.ping.stop <- true
-		<-pm.ping.stop
-		pm.ping = nil
+//isPeerExisted returns if a peer exists
+func (pm *PeerManager) isPeerExisted(peerId peer.ID) bool {
+
+	if _, existed := pm.seeds[peerId]; existed {
 		return true
-	} else {
-		logger.Warn("PeerManager: Can not stop a ping service that was never started.")
-		return false
 	}
+
+	if _, existed := pm.syncPeers[peerId]; existed {
+		return true
+	}
+
+	return false
 }
 
-func (pm *PeerManager) pingPeers() {
+func (pm *PeerManager) IsPeerNew(peerId peer.ID) bool {
+
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	logger.Debug("PeerManager: pinging peers...")
-	var wg sync.WaitGroup
-	wg.Add(len(pm.streams))
-	for peerId, streamInfo := range pm.streams {
-		go func() {
-			defer wg.Done()
-			pm.updatePeerLatency(peerId, streamInfo)
-		}()
-	}
-	wg.Wait()
-	logger.Debug("PeerManager: done pinging peers...")
+
+	return pm.isPeerNew(peerId)
 }
 
-func (pm *PeerManager) updatePeerLatency(peerId peer.ID, streamInfo *StreamInfo) {
-	result := <-pm.ping.service.Ping(context.Background(), peerId)
-	if result.Error != nil {
-		logger.WithError(result.Error).Errorf("PeerManager: error pinging peer %v", peerId.Pretty())
-		streamInfo.latency = nil
-	} else {
-		rtt := float64(result.RTT) / 1e6
-		streamInfo.latency = &rtt
-	}
+func (pm *PeerManager) isPeerNew(peerId peer.ID) bool {
+	return !pm.isPeerExisted(peerId) && peerId != pm.hostPeerId
 }
 
-func (pm *PeerManager) doConnectSeeds(wg *sync.WaitGroup, peers []*PeerInfo) {
+//AddPeers adds one of its peers' peerlist to its own peerlist
+func (pm *PeerManager) AddPeers(peers []network_model.PeerInfo) {
 
-	logger.WithFields(logger.Fields{
-		"num_of_peers": len(peers),
-	}).Info("PeerManager: Connect seed peers")
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
 
-	for _, peerInfo := range peers {
-		currentPeer := peerInfo
-		go func() {
-			pm.connectPeer(currentPeer, ConnectionTypeSeed)
-			wg.Done()
-		}()
+	for _, peer := range peers {
+		pm.addSyncPeer(peer)
 	}
+	pm.saveSyncPeers()
+
 }
 
-func (pm *PeerManager) startConnectSyncPeers() {
+func (pm *PeerManager) GetAllPeers() []network_model.PeerInfo {
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
 
-	logger.WithFields(logger.Fields{
-		"num_of_peers": len(pm.syncPeers),
-	}).Info("PeerManager: Connect sync peers")
-
-	if len(pm.syncPeers) == 0 {
-		return
+	var allPeers []network_model.PeerInfo
+	for _, seed := range pm.seeds {
+		allPeers = append(allPeers, seed)
 	}
-
-	leftConnectionOut := pm.maxConnectionOutCount - pm.connectionOutCount
-	if leftConnectionOut < 0 {
-		return
+	for _, peer := range pm.syncPeers {
+		allPeers = append(allPeers, peer)
 	}
-
-	toCheckPeers := pm.cloneUnconnectedSyncPeersToSlice()
-	randomChoosePeers := randomChoosePeers(leftConnectionOut, toCheckPeers)
-	wg := &sync.WaitGroup{}
-	wg.Add(len(randomChoosePeers))
-
-	logger.WithFields(logger.Fields{
-		"maxConnectionOutCount":     pm.maxConnectionOutCount,
-		"connectionOutCount":        pm.connectionOutCount,
-		"num_of_reconnecting_peers": len(randomChoosePeers),
-	}).Info("PeerManager: Connect sync peers")
-
-	for _, peerInfo := range randomChoosePeers {
-		currentPeer := peerInfo
-		go func() {
-			stream, err := pm.connectPeer(currentPeer, ConnectionTypeOut)
-			if stream == nil && err == nil {
-				pm.removeStaleSyncPeer(peerInfo.PeerId)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
+	return allPeers
 }
 
+//GetRandomPeers get a number of random connected peers
+func (pm *PeerManager) GetRandomPeers(numOfPeers int) []network_model.PeerInfo {
+
+	peers := pm.GetAllPeers()
+
+	if numOfPeers >= len(peers) {
+		return peers
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
+
+	return peers[0:numOfPeers]
+}
+
+//startSyncPeersSchedule starts synchronize peer list with its peers
 func (pm *PeerManager) startSyncPeersSchedule() {
-	// Start first sync peers task
-	go func() {
-		pm.startSyncPeers()
-	}()
 
 	go func() {
+		pm.BroadcastGetPeerListRequest()
 		ticker := time.NewTicker(syncPeersScheduleTime)
 		for {
 			select {
 			case <-ticker.C:
-				pm.startSyncPeers()
+				pm.BroadcastGetPeerListRequest()
 			}
 		}
 	}()
 }
 
-func (pm *PeerManager) checkSeedsConnectionSchedule() {
-	go func() {
-		ticker := time.NewTicker(checkSeedsConnectionTime)
-		for {
-			select {
-			case <-ticker.C:
-				pm.startConnectSeeds()
-			}
-		}
-	}()
-}
-
-func (pm *PeerManager) startSyncPeers() {
-	if pm.syncPeerContext != nil {
-		logger.Info("PeerManager: another sync is running.")
-		return
-	}
-
-	pm.createSyncContext()
-	pm.node.SyncPeersBroadcast()
-
-	syncTimer := time.NewTimer(syncPeersWaitTime)
-	go func() {
-		<-syncTimer.C
-		syncTimer.Stop()
-		if pm.collectSyncPeersResult() {
-			pm.saveSyncPeers()
-			pm.startConnectSyncPeers()
-		}
-	}()
-}
-
-func (pm *PeerManager) createSyncContext() {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-
-	pm.syncPeerContext = &SyncPeerContext{
-		checkingStreams: make(map[peer.ID]*StreamInfo),
-		newPeers:        make(map[peer.ID]*PeerInfo),
-	}
-
-	for key, streamInfo := range pm.streams {
-		pm.syncPeerContext.checkingStreams[key] = streamInfo
-	}
-}
-
-func (pm *PeerManager) addSyncPeersResult(peerId peer.ID, peers []*PeerInfo) bool {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-
-	if pm.syncPeerContext == nil {
-		logger.Info("PeerManager: no sync peers task is running.")
-		return false
-	}
-
-	if _, ok := pm.syncPeerContext.checkingStreams[peerId]; !ok {
-		logger.WithFields(logger.Fields{
-			"pid": peerId,
-		}).Info("PeerManager: PeerId not in check list.")
-		return false
-	}
-
-	delete(pm.syncPeerContext.checkingStreams, peerId)
-
-	for _, peerInfo := range peers {
-		if peerInfo.PeerId == pm.node.GetPeerID() {
-			continue
-		}
-
-		if _, ok := pm.seeds[peerInfo.PeerId]; ok {
-			continue
-		}
-
-		if _, ok := pm.syncPeerContext.newPeers[peerInfo.PeerId]; ok {
-			continue
-		}
-
-		pm.syncPeerContext.newPeers[peerInfo.PeerId] = peerInfo
-	}
-	return true
-}
-
-func (pm *PeerManager) isSyncPeerFinish() bool {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-
-	if pm.syncPeerContext == nil {
-		return false
-	}
-
-	return len(pm.syncPeerContext.checkingStreams) == 0
-}
-
-func (pm *PeerManager) collectSyncPeersResult() bool {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-
-	if pm.syncPeerContext == nil {
-		logger.Info("PeerManager: no sync peers task is running.")
-		return false
-	}
-
-	pm.syncPeers = pm.syncPeerContext.newPeers
-	// Copy connected stream to syncPeers
-	for key, streamInfo := range pm.streams {
-		if _, ok := pm.syncPeers[key]; ok {
-			continue
-		}
-
-		if streamInfo.connectionType == ConnectionTypeSeed {
-			continue
-		}
-
-		pm.syncPeers[key] = &PeerInfo{PeerId: key, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}}
-
-		logger.WithFields(logger.Fields{
-			"peer_id": pm.syncPeers[key].PeerId,
-			"addr":    pm.syncPeers[key].Addrs[0].String(),
-		}).Infof("PeerManager: Collect sync peers")
-	}
-
-	logger.WithFields(logger.Fields{
-		"num_of_peers": len(pm.syncPeers),
-	}).Infof("PeerManager: Collect sync peers")
-
-	pm.syncPeerContext = nil
-	return true
-}
-
+//saveSyncPeers saves the syncPeers to database
 func (pm *PeerManager) saveSyncPeers() {
-	syncPeers := pm.cloneSyncPeers()
-	db := pm.node.GetBlockchain().GetDb()
 
 	var peerPbs []*networkpb.PeerInfo
-	for _, peerInfo := range syncPeers {
+	for _, peerInfo := range pm.syncPeers {
 		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
@@ -640,176 +307,18 @@ func (pm *PeerManager) saveSyncPeers() {
 		logger.WithError(err).Info("PeerManager: serialize sync peers failed.")
 	}
 
-	err = db.Put([]byte(syncPeersKey), bytes)
+	err = pm.db.Put([]byte(syncPeersKey), bytes)
 	if err != nil {
 		logger.WithError(err).Info("PeerManager: save sync peers failed.")
 	}
 }
 
-func (pm *PeerManager) removeStaleSyncPeer(peerId peer.ID) {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-	delete(pm.syncPeers, peerId)
-}
-
-func (pm *PeerManager) cloneSyncPeers() map[peer.ID]*PeerInfo {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-	peers := make(map[peer.ID]*PeerInfo)
-
-	for key, peerInfo := range pm.syncPeers {
-		peers[key] = peerInfo
-	}
-
-	return peers
-}
-
-func (pm *PeerManager) cloneUnconnectedSyncPeersToSlice() []*PeerInfo {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-	var peers []*PeerInfo
-
-	for key, peerInfo := range pm.syncPeers {
-		// Skip connected peers
-		if _, ok := pm.streams[key]; ok {
-			continue
-		}
-
-		peers = append(peers, peerInfo)
-	}
-
-	return peers
-}
-
-func (pm *PeerManager) CloneStreamsToSlice() []*StreamInfo {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-	var streams []*StreamInfo
-
-	for _, streamInfo := range pm.streams {
-		streams = append(streams, streamInfo)
-	}
-
-	return streams
-}
-
-func (pm *PeerManager) CloneStreamsToPeerInfoSlice() []*PeerInfo {
-	streams := pm.CloneStreamsToSlice()
-	peers := make([]*PeerInfo, len(streams))
-
-	for i, streamInfo := range streams {
-		peers[i] = &PeerInfo{PeerId: streamInfo.stream.peerID, Addrs: []ma.Multiaddr{streamInfo.stream.remoteAddr}, Latency: streamInfo.latency}
-	}
-
-	return peers
-}
-
-func randomChoosePeers(number int, peers []*PeerInfo) []*PeerInfo {
-	if number >= len(peers) {
-		return peers
-	}
-
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
-	return peers[0:number]
-}
-
-func randomChooseStreams(number int, streams []*StreamInfo) []*StreamInfo {
-	if number >= len(streams) {
-		return streams
-	}
-
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	r.Shuffle(len(streams), func(i, j int) {
-		streams[i], streams[j] = streams[j], streams[i]
-	})
-	return streams[0:number]
-}
-
-func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType ConnectionType) (*Stream, error) {
-	if pm.isStreamExist(peerInfo.PeerId) {
-		logger.WithFields(logger.Fields{
-			"PeerId": peerInfo.PeerId,
-		}).Info("PeerManager: Stream exist.")
-		return nil, nil
-	}
-
-	logger.WithFields(logger.Fields{
-		"PeerId": peerInfo.PeerId,
-		"Addr":   peerInfo.Addrs[0].String(),
-	}).Info("PeerManager: Connect peer information.")
-
-	pm.node.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, pstore.PermanentAddrTTL)
-	// make a new stream
-	stream, err := pm.node.host.NewStream(context.Background(), peerInfo.PeerId, protocalName)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"PeerId": peerInfo.PeerId,
-		}).Warn("PeerManager: Connect to peer failed")
-		return nil, err
-	}
-
-	peerStream := NewStream(stream)
-	logger.WithFields(logger.Fields{
-		"PeerId": peerStream.peerID,
-		"Addr":   peerStream.remoteAddr.String(),
-	}).Info("PeerManager: Connect peer actual stream")
-	if !pm.checkAndAddStream(peerInfo.PeerId, connectionType, peerStream) {
-		peerStream.StopStream(nil)
-		return nil, nil
-	}
-	pm.node.StartStream(peerStream)
-	return peerStream, nil
-}
-
-func (pm *PeerManager) getStreamConnectionType(stream *Stream) ConnectionType {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-
-	if _, ok := pm.seeds[stream.peerID]; ok {
-		return ConnectionTypeSeed
-	}
-	return ConnectionTypeIn
-}
-
-func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType ConnectionType, stream *Stream) bool {
-
-	logger.Info("PeerManager: checkAndAddStream")
-
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-	_, ok := pm.streams[peerId]
-	if ok {
-		return false
-	}
-
-	switch connectionType {
-	case ConnectionTypeIn:
-		if pm.connectionInCount >= pm.maxConnectionInCount {
-			logger.Info("PeerManager: connection in is full.")
-			return false
-		}
-		pm.connectionInCount++
-	case ConnectionTypeOut:
-		if pm.connectionOutCount >= pm.maxConnectionOutCount {
-			logger.Info("PeerManager: connection out is full.")
-			return false
-		}
-		pm.connectionOutCount++
-
-	default:
-		//Pass
-	}
-	pm.streams[peerId] = &StreamInfo{stream: stream, connectionType: connectionType}
-
-	return true
-}
-
+//loadSyncPeers loads the syncPeers from database
 func (pm *PeerManager) loadSyncPeers() error {
-	db := pm.node.GetBlockchain().GetDb()
-	peersBytes, err := db.Get([]byte(syncPeersKey))
+
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+	peersBytes, err := pm.db.Get([]byte(syncPeersKey))
 
 	if err != nil {
 		logger.WithError(err).Warn("PeerManager: load sync peers database failed.")
@@ -826,7 +335,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 	}
 
 	for _, peerPb := range peerListPb.GetPeerList() {
-		peerInfo := &PeerInfo{}
+		peerInfo := network_model.PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
 		}
@@ -835,7 +344,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 		logger.WithFields(logger.Fields{
 			"peer_id": peerInfo.PeerId,
 			"addr":    peerInfo.Addrs[0].String(),
-		}).Info("loadSyncPeers")
+		}).Info("PeerManager: Loading syncPeers from database...")
 	}
 
 	logger.Infof("PeerManager: load sync peers count %v.", len(pm.syncPeers))
@@ -843,60 +352,77 @@ func (pm *PeerManager) loadSyncPeers() error {
 	return nil
 }
 
-func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-	_, ok := pm.streams[peerId]
-	return ok
+//BroadcastGetPeerListRequest broadcasts a syncPeer request command to all its peers
+func (pm *PeerManager) BroadcastGetPeerListRequest() {
+
+	logger.Info("PeerManager: Requesting peer list from all peers...")
+	getPeerListPb := &networkpb.GetPeerList{
+		MaxNumber: int32(maxSyncPeersCount),
+	}
+
+	var destination peer.ID
+	pm.netService.SendCommand(GetPeerListRequest, getPeerListPb, destination, network_model.Broadcast, network_model.HighPriorityCommand)
+
 }
 
-func createPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
-	addr, err := ma.NewMultiaddr(fullAddr)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"full_addr": fullAddr,
-			"err":       err,
-		}).Warn("PeerManager: create multiaddr failed.")
+//SendGetPeerListResponse sends its peer list to destination peer
+func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination peer.ID) {
+
+	peers := pm.GetRandomPeers(maxNumOfPeers)
+	var peerPbs []*networkpb.PeerInfo
+	for _, peerInfo := range peers {
+		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
 
-	return CreatePeerInfoFromMultiaddrs([]ma.Multiaddr{addr})
+	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
+
+	pm.netService.SendCommand(GetPeerListResponse, peerList, destination, network_model.Unicast, network_model.HighPriorityCommand)
+
 }
 
-//convert to protobuf
-func (p *PeerInfo) ToProto() proto.Message {
-	var addresses []string
-	for _, addr := range p.Addrs {
-		addresses = append(addresses, addr.String())
+//GetPeerListRequestHandler is the handler to GetPeerListRequest
+func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvdCmdContext) {
+
+	getPeerlistRequest := &networkpb.GetPeerList{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(command.GetData(), getPeerlistRequest); err != nil {
+		logger.WithError(err).Warn("Node: parse GetPeerListRequest failed.")
 	}
 
-	pi := &networkpb.PeerInfo{Id: peer.IDB58Encode(p.PeerId), Address: addresses}
-	if p.Latency != nil {
-		pi.OptionalValue = &networkpb.PeerInfo_Latency{Latency: *p.Latency}
-	}
-	return pi
+	pm.SendGetPeerListResponse(int(getPeerlistRequest.GetMaxNumber()), command.GetSource())
 }
 
-//convert from protobuf
-func (p *PeerInfo) FromProto(pb proto.Message) error {
-	pid, err := peer.IDB58Decode(pb.(*networkpb.PeerInfo).GetId())
-	if err != nil {
-		return err
-	}
-	p.PeerId = pid
+//GetPeerListResponseHandler is the handler to SendGetPeerListResponse
+func (pm *PeerManager) GetPeerListResponseHandler(command *network_model.DappRcvdCmdContext) {
 
-	for _, addr := range pb.(*networkpb.PeerInfo).GetAddress() {
-		multiaddr, err := ma.NewMultiaddr(addr)
-		if err != nil {
-			return err
+	peerlistPb := &networkpb.ReturnPeerList{}
+
+	if err := proto.Unmarshal(command.GetData(), peerlistPb); err != nil {
+		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
+	}
+
+	var peers []network_model.PeerInfo
+	for _, peerPb := range peerlistPb.GetPeerList() {
+		peerInfo := network_model.PeerInfo{}
+		if err := peerInfo.FromProto(peerPb); err != nil {
+			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
 		}
-		p.Addrs = append(p.Addrs, multiaddr)
+		peers = append(peers, peerInfo)
 	}
 
-	hasOption := pb.(*networkpb.PeerInfo).GetOptionalValue()
-	if hasOption != nil {
-		latency := pb.(*networkpb.PeerInfo).GetLatency()
-		p.Latency = &latency
+	newPeers := []network_model.PeerInfo{}
+	for _, peer := range peers {
+		if pm.IsPeerNew(peer.PeerId) {
+			newPeers = append(newPeers, peer)
+		}
 	}
 
-	return nil
+	logger.WithFields(logger.Fields{
+		"peerId":        command.GetSource(),
+		"numOfNewPeers": len(newPeers),
+	}).Info("PeerManager: Received peer list from a peer")
+
+	pm.AddPeers(newPeers)
+	go pm.onPeerListReceivedCb(newPeers)
 }

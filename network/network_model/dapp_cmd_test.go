@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package network
+package network_model
 
 import (
 	"testing"
@@ -26,16 +26,17 @@ import (
 )
 
 func TestDapmsg_ToProto(t *testing.T) {
-	msg := DapMsg{"cmd", []byte{1, 2, 3, 4}, 11111111, "", Unicast, uint64(0)}
-	retMsg := &networkpb.Dapmsg{Cmd: "cmd", Data: []byte{1, 2, 3, 4}, UnixTimeReceived: 11111111, Key: "", UniOrBroadcast: Unicast, Counter: uint64(0)}
 
+	msg := DappCmd{"name", []byte{1, 2, 3, 4}, false, 0}
+	retMsg := &networkpb.DappCmd{Cmd: "name", Data: []byte{1, 2, 3, 4}, IsBroadcast: false}
 	assert.Equal(t, msg.ToProto(), retMsg)
 }
 
 func TestDapMsg_FromProto(t *testing.T) {
-	msg := DapMsg{"cmd", []byte{1, 2, 3, 4}, 11111111, "", Unicast, uint64(0)}
-	retMsg := &networkpb.Dapmsg{Cmd: "cmd", Data: []byte{1, 2, 3, 4}, UnixTimeReceived: 11111111, Key: "", UniOrBroadcast: Unicast, Counter: uint64(0)}
-	msg2 := DapMsg{}
+
+	msg := DappCmd{"name", []byte{1, 2, 3, 4}, false, 0}
+	retMsg := &networkpb.DappCmd{Cmd: "name", Data: []byte{1, 2, 3, 4}, IsBroadcast: false}
+	msg2 := DappCmd{}
 	msg2.FromProto(retMsg)
 
 	assert.Equal(t, msg, msg2)

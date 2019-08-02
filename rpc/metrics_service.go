@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/process"
-
 	logger "github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
@@ -21,17 +22,20 @@ import (
 
 type MetricsService struct {
 	node *network.Node
+	bm   *core.BlockChainManager
 	ds   *metrics.DataStore
 	*MetricsServiceConfig
 	RPCPort uint32
 }
 
-func NewMetricsService(node *network.Node, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
-	return (&MetricsService{node: node, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
+func NewMetricsService(node *network.Node, bm *core.BlockChainManager, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
+	return (&MetricsService{node: node, bm: bm, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
 }
 
 func (ms *MetricsService) init() *MetricsService {
-	ms.node.GetPeerManager().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second)
+	if err := ms.node.GetNetwork().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second); err != nil {
+		logger.WithError(err).Error("MetricsService: Unable to start new ping service.")
+	}
 	if ms.PollingInterval > 0 && ms.TimeSeriesInterval > 0 {
 		ms.ds = metrics.NewDataStore(int(ms.TimeSeriesInterval/ms.PollingInterval), time.Duration(ms.PollingInterval)*time.Second)
 		_ = ms.ds.RegisterNewMetric("dapp.cpu.percent", getCPUPercent)
@@ -53,22 +57,73 @@ func (ms *MetricsService) RpcGetStats(ctx context.Context, request *rpcpb.Metric
 	}, nil
 }
 
-func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetNodeConfig, error) {
-	return &rpcpb.GetNodeConfig{
-		TxPoolLimit:      ms.node.GetBlockchain().GetTxPool().GetSizeLimit(),
-		BlkSizeLimit:     uint32(ms.node.GetBlockchain().GetBlockSizeLimit()),
-		MaxConnectionOut: uint32(ms.node.GetPeerManager().GetMaxConnectionOutCount()),
-		MaxConnectionIn:  uint32(ms.node.GetPeerManager().GetMaxConnectionInCount()),
-		ProducerAddress:  ms.node.GetBlockchain().GetConsensus().GetProducerAddress(),
-		Producers:        ms.node.GetBlockchain().GetConsensus().GetProducers(),
+func (ms *MetricsService) RpcGetNodeConfig(ctx context.Context, request *rpcpb.MetricsServiceRequest) (*rpcpb.GetNodeConfigResponse, error) {
+	return ms.getNodeConfig(), nil
+}
+
+func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.SetNodeConfigRequest) (*rpcpb.GetNodeConfigResponse, error) {
+	for _, v := range request.GetUpdatedConfigs() {
+		if !util.InProtoEnum("rpcpb.SetNodeConfigRequest_ConfigType", v.String()) {
+			return nil, status.Error(codes.InvalidArgument, "unrecognized node configuration type")
+		}
+
+		if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS || v == rpcpb.SetNodeConfigRequest_PRODUCERS {
+			cons, ok := ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS)
+			if !ok {
+				return nil, status.Error(codes.InvalidArgument, "producer properties are only supported for DPOS Consensus")
+			}
+
+			if v == rpcpb.SetNodeConfigRequest_PRODUCERS {
+				maxProducers := cons.GetDynasty().GetMaxProducers()
+				for _, v := range request.GetUpdatedConfigs() {
+					if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS {
+						maxProducers = int(request.GetMaxProducers())
+					}
+				}
+				if err := cons.GetDynasty().CanSetProducers(request.GetProducers(), maxProducers); err != nil {
+					return nil, status.Error(codes.InvalidArgument, err.Error())
+				}
+			}
+		}
+	}
+
+	for _, v := range request.GetUpdatedConfigs() {
+		switch v {
+		case rpcpb.SetNodeConfigRequest_TX_POOL_LIMIT:
+			ms.bm.Getblockchain().GetTxPool().SetSizeLimit(request.GetTxPoolLimit())
+		case rpcpb.SetNodeConfigRequest_BLK_SIZE_LIMIT:
+			ms.bm.Getblockchain().SetBlockSizeLimit(int(request.GetBlkSizeLimit()))
+		case rpcpb.SetNodeConfigRequest_MAX_CONN_OUT:
+			ms.node.GetNetwork().GetStreamManager().GetConnectionManager().SetMaxConnectionOutCount(int(request.GetMaxConnectionOut()))
+		case rpcpb.SetNodeConfigRequest_MAX_CONN_IN:
+			ms.node.GetNetwork().GetStreamManager().GetConnectionManager().SetMaxConnectionInCount(int(request.GetMaxConnectionIn()))
+		case rpcpb.SetNodeConfigRequest_MAX_PRODUCERS:
+			ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS).
+				GetDynasty().SetMaxProducers(int(request.GetMaxProducers()))
+		case rpcpb.SetNodeConfigRequest_PRODUCERS:
+			ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS).
+				GetDynasty().SetProducers(request.GetProducers())
+		}
+	}
+	return ms.getNodeConfig(), nil
+}
+
+func (ms *MetricsService) getNodeConfig() *rpcpb.GetNodeConfigResponse {
+	return &rpcpb.GetNodeConfigResponse{
+		TxPoolLimit:      ms.bm.Getblockchain().GetTxPool().GetSizeLimit(),
+		BlkSizeLimit:     uint32(ms.bm.Getblockchain().GetBlockSizeLimit()),
+		MaxConnectionOut: uint32(ms.node.GetNetwork().GetStreamManager().GetConnectionManager().GetMaxConnectionOutCount()),
+		MaxConnectionIn:  uint32(ms.node.GetNetwork().GetStreamManager().GetConnectionManager().GetMaxConnectionInCount()),
+		ProducerAddress:  ms.bm.Getblockchain().GetConsensus().GetProducerAddress(),
+		Producers:        ms.bm.Getblockchain().GetConsensus().GetProducers(),
 		MaxProducers:     ms.getMaxProducers(),
 		IpfsAddresses:    ms.node.GetIPFSAddresses(),
 		RpcPort:          ms.RPCPort,
-	}, nil
+	}
 }
 
 func (ms *MetricsService) getMaxProducers() uint32 {
-	if dpos, ok := ms.node.GetBlockchain().GetConsensus().(*consensus.DPOS); ok {
+	if dpos, ok := ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS); ok {
 		return uint32(dpos.GetDynasty().GetMaxProducers())
 	}
 	return 0
@@ -115,8 +170,7 @@ func getTransactionPoolSize() metricspb.StatValue {
 }
 
 func (ms *MetricsService) getNumForksInBlockChain() metricspb.StatValue {
-	numForks, longestFork := ms.node.GetBlockChainManager().NumForks()
-
+	numForks, longestFork := ms.bm.NumForks()
 	return &metricspb.Stat_ForkStats{
 		ForkStats: &metricspb.ForkStats{
 			NumForks:    numForks,
@@ -127,8 +181,8 @@ func (ms *MetricsService) getNumForksInBlockChain() metricspb.StatValue {
 
 func (ms *MetricsService) getBlockStats() []*metricspb.BlockStats {
 	stats := make([]*metricspb.BlockStats, 0)
-	it := ms.node.GetBlockchain().Iterator()
-	cons := ms.node.GetBlockchain().GetConsensus()
+	it := ms.bm.Getblockchain().Iterator()
+	cons := ms.bm.Getblockchain().GetConsensus()
 	blk, err := it.Next()
 	for t := time.Now().Unix() - ms.TimeSeriesInterval; err == nil && blk.GetTimestamp() > t; {
 		bs := &metricspb.BlockStats{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
