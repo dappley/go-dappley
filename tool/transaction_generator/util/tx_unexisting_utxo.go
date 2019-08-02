@@ -23,7 +23,7 @@ func NewUnexistingUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 }
 
 func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")

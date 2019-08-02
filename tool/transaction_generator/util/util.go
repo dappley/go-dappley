@@ -1,23 +1,23 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	logger "github.com/sirupsen/logrus"
 )
 
 func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *core.Transaction {
 	tx := &core.Transaction{
 		nil,
-		prepareInputLists(prevUtxos, senderKeyPair.PublicKey, nil),
+		prepareInputLists(prevUtxos, senderKeyPair.GetPublicKey(), nil),
 		vouts,
 		tip,
 		common.NewAmount(0),
 		common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
-	err := tx.Sign(senderKeyPair.PrivateKey, prevUtxos)
+	err := tx.Sign(senderKeyPair.GetPrivateKey(), prevUtxos)
 	if err != nil {
 		logger.Panic("Sign transaction failed. Terminating...")
 	}

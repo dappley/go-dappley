@@ -675,7 +675,8 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 			privateKeyList := []string{}
 			for _, addr := range addressList {
 				keyPair := am.GetKeyPairByAddress(account.NewAddress(addr))
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
+				pvk := keyPair.GetPrivateKey()
+				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
 				if err1 != nil {
 					err = err1
 					return
@@ -724,7 +725,8 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 			privateKeyList := []string{}
 			for _, addr := range addressList {
 				keyPair := am.GetKeyPairByAddress(addr)
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&keyPair.PrivateKey)
+				pvk := keyPair.GetPrivateKey()
+				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
 				if err1 != nil {
 					err = err1
 					return

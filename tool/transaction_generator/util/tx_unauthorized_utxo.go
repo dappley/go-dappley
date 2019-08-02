@@ -14,7 +14,7 @@ type UnauthorizedUtxoTxSender struct {
 }
 
 func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, acc *sdk.DappSdkAccount, unauthorizedAddr account.Address) *UnauthorizedUtxoTxSender {
-	unauthorizedpkh, _ := account.NewUserPubKeyHash(acc.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr).PublicKey)
+	unauthorizedpkh, _ := account.NewUserPubKeyHash(acc.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr).GetPublicKey())
 
 	return &UnauthorizedUtxoTxSender{
 		TxSender{
@@ -26,7 +26,7 @@ func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, acc *sdk.DappSdkAccount, 
 }
 
 func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
 		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to hash sender public key")

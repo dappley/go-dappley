@@ -25,8 +25,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
@@ -190,7 +190,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	for i := 0; i < 10; i++ {
 		kp := account.NewKeyPair()
 		kps = append(kps, kp)
-		pkh, _ := account.NewUserPubKeyHash(kp.PublicKey)
+		pkh, _ := account.NewUserPubKeyHash(kp.GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 	}

@@ -22,9 +22,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
@@ -271,7 +271,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain, node *network.Nod
 		return nil, "", ErrInvalidAmount
 	}
 
-	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.PublicKey)
+	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())

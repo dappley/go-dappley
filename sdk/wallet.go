@@ -3,8 +3,8 @@ package sdk
 import (
 	"sync"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
@@ -111,7 +111,7 @@ func (sdkw *DappSdkAccount) Update() error {
 	for _, addr := range sdkw.addrs {
 
 		kp := sdkw.wm.GetKeyPairByAddress(addr)
-		_, err := account.NewUserPubKeyHash(kp.PublicKey)
+		_, err := account.NewUserPubKeyHash(kp.GetPublicKey())
 		if err != nil {
 			return err
 		}

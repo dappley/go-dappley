@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	storage2 "github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -234,7 +234,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	// Prepare test data
 	normalCoinbaseTX := NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
 	rewardTX := NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
-	userPubKey := account.NewKeyPair().PublicKey
+	userPubKey := account.NewKeyPair().GetPublicKey()
 	userPubKeyHash, _ := account.NewUserPubKeyHash(userPubKey)
 	userAddr := userPubKeyHash.GenerateAddress()
 	contractPubKeyHash := account.NewContractPubKeyHash()
@@ -260,10 +260,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).PublicKey
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
 	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).PublicKey
+	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
 	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
 
 	dependentTx1 := NewTransactionByVin(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
@@ -275,8 +275,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*UTXO{
 		pkHash2.String(): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).PrivateKey, tx1Utxos[pkHash2.String()])
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()])
+	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name   string

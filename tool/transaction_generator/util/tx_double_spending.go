@@ -1,8 +1,8 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
@@ -22,7 +22,7 @@ func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 }
 
 func (txSender *DoubleSpendingTxSender) Generate(params core.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to hash sender public key")

@@ -750,7 +750,7 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 	}
 	tx := Transaction{
 		nil,
-		prepareInputLists(utxos, sendTxParam.SenderKeyPair.PublicKey, nil),
+		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
 		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
 		sendTxParam.Tip,
 		sendTxParam.GasLimit,
@@ -758,7 +758,7 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 	}
 	tx.ID = tx.Hash()
 
-	err = tx.Sign(sendTxParam.SenderKeyPair.PrivateKey, utxos)
+	err = tx.Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
 	if err != nil {
 		return Transaction{}, err
 	}

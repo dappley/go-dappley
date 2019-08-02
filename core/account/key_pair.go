@@ -28,8 +28,8 @@ import (
 )
 
 type KeyPair struct {
-	PrivateKey ecdsa.PrivateKey
-	PublicKey  []byte
+	privateKey ecdsa.PrivateKey
+	publicKey  []byte
 }
 
 func NewKeyPair() *KeyPair {
@@ -38,7 +38,7 @@ func NewKeyPair() *KeyPair {
 }
 
 func (kp KeyPair) GenerateAddress() Address {
-	pubKeyHash, _ := NewUserPubKeyHash(kp.PublicKey)
+	pubKeyHash, _ := NewUserPubKeyHash(kp.publicKey)
 	return pubKeyHash.GenerateAddress()
 }
 
@@ -52,6 +52,15 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	//remove the uncompressed point at pubKey[0]
 	return *private, pubKey[1:]
 }
+
+func (kp *KeyPair) GetPrivateKey() ecdsa.PrivateKey {
+	return kp.privateKey
+}
+
+func (kp *KeyPair) GetPublicKey() []byte {
+	return kp.publicKey
+}
+
 func GenerateKeyPairByPrivateKey(privateKey string) *KeyPair {
 	private, err := secp256k1.HexToECDSAPrivateKey(privateKey)
 	if err != nil {
@@ -63,13 +72,13 @@ func GenerateKeyPairByPrivateKey(privateKey string) *KeyPair {
 }
 
 func (kp *KeyPair) ToProto() proto.Message {
-	rawBytes, err := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	rawBytes, err := secp256k1.FromECDSAPrivateKey(&kp.privateKey)
 	if err != nil {
 		logger.Error("Keypair: ToProto: Can not convert private key to bytes")
 	}
 	return &accountpb.KeyPair{
 		PrivateKey: rawBytes,
-		PublicKey:  kp.PublicKey,
+		PublicKey:  kp.publicKey,
 	}
 }
 
@@ -78,6 +87,6 @@ func (kp *KeyPair) FromProto(pb proto.Message) {
 	if err != nil {
 		logger.Error("Keypair: FromProto: Can not convert bytes to private key")
 	}
-	kp.PrivateKey = *privKey
-	kp.PublicKey = pb.(*accountpb.KeyPair).GetPublicKey()
+	kp.privateKey = *privKey
+	kp.publicKey = pb.(*accountpb.KeyPair).GetPublicKey()
 }

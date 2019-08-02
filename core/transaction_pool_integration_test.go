@@ -23,8 +23,8 @@ package core
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,7 +40,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		kps = append(kps, account.NewKeyPair())
-		pkh, _ := account.NewUserPubKeyHash(kps[i].PublicKey)
+		pkh, _ := account.NewUserPubKeyHash(kps[i].GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 		cbtx := NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
@@ -73,7 +73,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 
 	for i := 0; i < 5; i++ {
 		kps = append(kps, account.NewKeyPair())
-		pkh, _ := account.NewUserPubKeyHash(kps[i].PublicKey)
+		pkh, _ := account.NewUserPubKeyHash(kps[i].GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 		if i == 0 {

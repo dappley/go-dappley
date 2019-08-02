@@ -4,9 +4,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
@@ -174,7 +174,7 @@ func getDifferentIndex(index int, maxIndex int) int {
 
 func (sender *BatchTxSender) createTransaction(from, to account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *account.KeyPair) *core.Transaction {
 
-	pkh, err := account.NewUserPubKeyHash(senderKeyPair.PublicKey)
+	pkh, err := account.NewUserPubKeyHash(senderKeyPair.GetPublicKey())
 	if err != nil {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}

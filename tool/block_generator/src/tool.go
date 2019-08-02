@@ -176,7 +176,7 @@ func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sende
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
 	}
-	pubKeyHash, _ := account.NewUserPubKeyHash(senderAccount.GetKeyPair().PublicKey)
+	pubKeyHash, _ := account.NewUserPubKeyHash(senderAccount.GetKeyPair().GetPublicKey())
 
 	data, err := ioutil.ReadFile(contractFilePath)
 	if err != nil {
@@ -195,7 +195,7 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr account.Addr
 	initFund := uint64(1000000)
 	initFundAmount := common.NewAmount(initFund)
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivKey)
-	pkh, _ := account.NewUserPubKeyHash(minerKeyPair.PublicKey)
+	pkh, _ := account.NewUserPubKeyHash(minerKeyPair.GetPublicKey())
 
 	tx := newTransaction(minerKeyPair.GenerateAddress(), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
 	utxoIndex.UpdateUtxo(tx)
@@ -225,7 +225,7 @@ func getPubKeyHashes(addrs []account.Address, wm *account_logic.AccountManager) 
 	res := make(map[account.Address]account.PubKeyHash)
 	for _, addr := range addrs {
 		acc := wm.GetAccountByAddress(addr)
-		pubKeyHash, _ := account.NewUserPubKeyHash(acc.GetKeyPair().PublicKey)
+		pubKeyHash, _ := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
 		res[addr] = pubKeyHash
 	}
 	return res

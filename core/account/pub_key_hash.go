@@ -34,7 +34,7 @@ func NewUserPubKeyHash(pubKey []byte) (PubKeyHash, error) {
 
 //NewContractPubKeyHash generates a smart Contract public key hash
 func NewContractPubKeyHash() PubKeyHash {
-	pubKeyHash := generatePubKeyHash(NewKeyPair().PublicKey)
+	pubKeyHash := generatePubKeyHash(NewKeyPair().GetPublicKey())
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash)
 }

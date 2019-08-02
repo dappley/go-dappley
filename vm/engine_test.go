@@ -341,7 +341,8 @@ func TestCrypto_VerifySignature(t *testing.T) {
 
 	kp := account.NewKeyPair()
 	msg := "hello world dappley"
-	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	privateKey := kp.GetPrivateKey()
+	privData, _ := secp256k1.FromECDSAPrivateKey(&privateKey)
 	data := sha256.Sum256([]byte(msg))
 	signature, _ := secp256k1.Sign(data[:], privData)
 
@@ -349,7 +350,7 @@ func TestCrypto_VerifySignature(t *testing.T) {
 	ret, _ := sc.Execute("verifySig",
 		fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
 			msg,
-			hex.EncodeToString(kp.PublicKey),
+			hex.EncodeToString(kp.GetPublicKey()),
 			hex.EncodeToString(signature),
 		),
 	)
@@ -367,8 +368,8 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 
 	kp := account.NewKeyPair()
-	fmt.Println(kp.PublicKey)
-	pkh, err := account.NewUserPubKeyHash(kp.PublicKey)
+	fmt.Println(kp.GetPublicKey())
+	pkh, err := account.NewUserPubKeyHash(kp.GetPublicKey())
 	assert.Nil(t, err)
 	addr := pkh.GenerateAddress()
 	fmt.Println(addr)
@@ -377,7 +378,7 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	ret, _ := sc.Execute("verifyPk",
 		fmt.Sprintf("\"%s\", \"%s\"",
 			addr,
-			hex.EncodeToString(kp.PublicKey),
+			hex.EncodeToString(kp.GetPublicKey()),
 		),
 	)
 	assert.Equal(
@@ -388,7 +389,7 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	ret2, _ := sc.Execute("verifyPk",
 		fmt.Sprintf("\"%s\", \"%s\"",
 			"IncorrectAddress",
-			hex.EncodeToString(kp.PublicKey),
+			hex.EncodeToString(kp.GetPublicKey()),
 		),
 	)
 	assert.Equal(
@@ -459,10 +460,11 @@ func TestGetNodeAddress(t *testing.T) {
 
 func TestNewAddress(t *testing.T) {
 	kp := account.NewKeyPair()
-	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	privateKey := kp.GetPrivateKey()
+	privData, _ := secp256k1.FromECDSAPrivateKey(&privateKey)
 	pk := hex.EncodeToString(privData)
-	publicKey := hex.EncodeToString(kp.PublicKey)
-	pkh, _ := account.NewUserPubKeyHash(kp.PublicKey)
+	publicKey := hex.EncodeToString(kp.GetPublicKey())
+	pkh, _ := account.NewUserPubKeyHash(kp.GetPublicKey())
 	addr := pkh.GenerateAddress()
 	fmt.Println("privatekey:", pk)
 	fmt.Println("publickey:", publicKey)
