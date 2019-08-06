@@ -195,6 +195,14 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) er
 	return nil
 }
 
+func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
+	tx, err := bc.FindTXOutput(in)
+	if err != nil {
+		return TXOutput{}, 0, ErrTXInputInvalid
+	}
+	return tx, in.Vout, nil
+}
+
 // unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
 func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 	for _, vin := range tx.Vin {

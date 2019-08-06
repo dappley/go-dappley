@@ -20,7 +20,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -43,14 +43,6 @@ type UTXO struct {
 // newUTXO returns an UTXO instance constructed from a TXOutput.
 func newUTXO(txout TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
 	return &UTXO{txout, txid, vout, utxoType}
-}
-
-func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
-	tx, err := bc.FindTXOutput(in)
-	if err != nil {
-		return TXOutput{}, 0, ErrTXInputInvalid
-	}
-	return tx, in.Vout, nil
 }
 
 func (utxo *UTXO) ToProto() proto.Message {
