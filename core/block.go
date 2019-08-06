@@ -37,16 +37,6 @@ import (
 
 var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
 
-type BlockHeader struct {
-	hash      hash.Hash
-	prevHash  hash.Hash
-	nonce     int64
-	timestamp int64
-	sign      hash.Hash
-	height    uint64
-	producer  string
-}
-
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
@@ -81,10 +71,6 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64, p
 		},
 		transactions: txs,
 	}
-}
-
-func (b *Block) BeIrreversible() {
-
 }
 
 func (b *Block) HashTransactions() []byte {
@@ -196,31 +182,6 @@ func (b *Block) FromProto(pb proto.Message) {
 		txs = append(txs, tx)
 	}
 	b.transactions = txs
-}
-
-func (bh *BlockHeader) ToProto() proto.Message {
-	return &corepb.BlockHeader{
-		Hash:         bh.hash,
-		PreviousHash: bh.prevHash,
-		Nonce:        bh.nonce,
-		Timestamp:    bh.timestamp,
-		Signature:    bh.sign,
-		Height:       bh.height,
-		Producer:     bh.producer,
-	}
-}
-
-func (bh *BlockHeader) FromProto(pb proto.Message) {
-	if pb == nil {
-		return
-	}
-	bh.hash = pb.(*corepb.BlockHeader).GetHash()
-	bh.prevHash = pb.(*corepb.BlockHeader).GetPreviousHash()
-	bh.nonce = pb.(*corepb.BlockHeader).GetNonce()
-	bh.timestamp = pb.(*corepb.BlockHeader).GetTimestamp()
-	bh.sign = pb.(*corepb.BlockHeader).GetSignature()
-	bh.height = pb.(*corepb.BlockHeader).GetHeight()
-	bh.producer = pb.(*corepb.BlockHeader).GetProducer()
 }
 
 func (b *Block) CalculateHash() hash.Hash {

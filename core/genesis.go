@@ -20,11 +20,13 @@ package core
 import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block"
 )
 
 const genesisCoinbaseData = "Hello world"
 
-func NewGenesisBlock(address account.Address) *Block {
+func NewGenesisBlock(address account.Address) *block.Block {
 	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
 
 	txin := TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
@@ -34,18 +36,15 @@ func NewGenesisBlock(address account.Address) *Block {
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 
-	header := &BlockHeader{
-		hash:      []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		prevHash:  []byte{},
-		nonce:     0,
-		timestamp: 1532392928, //July 23,2018 17:42 PST
-		height:    0,
-	}
-	b := &Block{
-		header:       header,
-		transactions: txs,
-	}
+	header := block.NewBlockHeader(
+		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		[]byte{},
+		0,
+		1532392928, //July 23,2018 17:42 PST
+		0,
+	)
+	b := block.NewBlockFromHeader(header, txs)
 
-	b.SetHash(b.CalculateHash())
+	b.SetHash(lblock.CalculateHash(b))
 	return b
 }

@@ -20,10 +20,11 @@ package consensus
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/block"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/vm"
@@ -105,7 +106,7 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
-	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
+	ctx := core.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 

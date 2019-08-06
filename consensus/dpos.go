@@ -20,11 +20,12 @@ package consensus
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/logic/block"
 	"strings"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
@@ -183,9 +184,9 @@ func (dpos *DPOS) Produced(blk *core.Block) bool {
 }
 
 func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
-	hash := ctx.Block.CalculateHash()
+	hash := lblock.CalculateHash(ctx.Block)
 	ctx.Block.SetHash(hash)
-	ok := ctx.Block.SignBlock(dpos.producerKey, hash)
+	ok := lblock.SignBlock(ctx.Block, dpos.producerKey, hash)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}

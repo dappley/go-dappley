@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -56,8 +57,8 @@ const (
 )
 
 type BlockContext struct {
-	Block     *Block
-	Lib       *Block
+	Block     *block.Block
+	Lib       *block.Block
 	UtxoIndex *UTXOIndex
 	State     *ScState
 }
