@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/common/hash"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -136,11 +137,11 @@ func (bc *Blockchain) GetUtxoCache() *UTXOCache {
 	return bc.utxoCache
 }
 
-func (bc *Blockchain) GetTailBlockHash() Hash {
+func (bc *Blockchain) GetTailBlockHash() hash.Hash {
 	return bc.tailBlockHash
 }
 
-func (bc *Blockchain) GetLIBHash() Hash {
+func (bc *Blockchain) GetLIBHash() hash.Hash {
 	return bc.libHash
 }
 
@@ -194,7 +195,7 @@ func (bc *Blockchain) GetLIBHeight() uint64 {
 	return block.GetHeight()
 }
 
-func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
+func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
 		return nil, ErrBlockDoesNotExist
@@ -211,7 +212,7 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*Block, error) {
 	return bc.GetBlockByHash(hash)
 }
 
-func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
+func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
 	bc.tailBlockHash = tailBlockHash
 }
 
@@ -450,13 +451,13 @@ func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
 	return block.GetHeight() > bc.GetMaxHeight()
 }
 
-func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
+func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 	_, err := bc.GetBlockByHash(hash)
 	return err == nil
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScState) bool {
+func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *UTXOIndex, scState *ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -507,7 +508,7 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScStat
 	return true
 }
 
-func (bc *Blockchain) setTailBlockHash(hash Hash) error {
+func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	err := bc.db.Put(tipKey, hash)
 	if err != nil {
 		return err
@@ -522,7 +523,7 @@ func (bc *Blockchain) deepCopy() *Blockchain {
 	return newCopy
 }
 
-func (bc *Blockchain) SetLIBHash(hash Hash) error {
+func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
 	err := bc.db.Put(libKey, hash)
 	if err != nil {
 		return err

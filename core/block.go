@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/common/hash"
 	"reflect"
 	"time"
 
@@ -37,11 +38,11 @@ import (
 var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
 
 type BlockHeader struct {
-	hash      Hash
-	prevHash  Hash
+	hash      hash.Hash
+	prevHash  hash.Hash
 	nonce     int64
 	timestamp int64
-	sign      Hash
+	sign      hash.Hash
 	height    uint64
 	producer  string
 }
@@ -49,16 +50,6 @@ type BlockHeader struct {
 type Block struct {
 	header       *BlockHeader
 	transactions []*Transaction
-}
-
-type Hash []byte
-
-func (h Hash) String() string {
-	return hex.EncodeToString(h)
-}
-
-func (h Hash) Equals(nh Hash) bool {
-	return bytes.Compare(h, nh) == 0
 }
 
 func NewBlock(txs []*Transaction, parent *Block, producer string) *Block {
@@ -134,15 +125,15 @@ func (b *Block) GetHeader() *BlockHeader {
 	return b.header
 }
 
-func (b *Block) SetHash(hash Hash) {
+func (b *Block) SetHash(hash hash.Hash) {
 	b.header.hash = hash
 }
 
-func (b *Block) GetHash() Hash {
+func (b *Block) GetHash() hash.Hash {
 	return b.header.hash
 }
 
-func (b *Block) GetSign() Hash {
+func (b *Block) GetSign() hash.Hash {
 	return b.header.sign
 }
 
@@ -154,7 +145,7 @@ func (b *Block) GetHeight() uint64 {
 	return b.header.height
 }
 
-func (b *Block) GetPrevHash() Hash {
+func (b *Block) GetPrevHash() hash.Hash {
 	return b.header.prevHash
 }
 
@@ -232,11 +223,11 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.producer = pb.(*corepb.BlockHeader).GetProducer()
 }
 
-func (b *Block) CalculateHash() Hash {
+func (b *Block) CalculateHash() hash.Hash {
 	return b.CalculateHashWithNonce(b.GetNonce())
 }
 
-func (b *Block) CalculateHashWithoutNonce() Hash {
+func (b *Block) CalculateHashWithoutNonce() hash.Hash {
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -252,7 +243,7 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 	return hasher.Sum(nil)
 }
 
-func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
+func (b *Block) CalculateHashWithNonce(nonce int64) hash.Hash {
 	data := bytes.Join(
 		[][]byte{
 			b.GetPrevHash(),
@@ -282,7 +273,7 @@ func (b *Block) SignBlock(key string, data []byte) bool {
 	return true
 }
 
-func (b *Block) WasSignedWith(key string, data Hash) bool {
+func (b *Block) WasSignedWith(key string, data hash.Hash) bool {
 	signature, err := b.generateSignature(key, data)
 	if err != nil {
 		return false
@@ -291,7 +282,7 @@ func (b *Block) WasSignedWith(key string, data Hash) bool {
 	return IsHashEqual(signature, b.GetSign())
 }
 
-func (b *Block) generateSignature(key string, data Hash) (Hash, error) {
+func (b *Block) generateSignature(key string, data hash.Hash) (hash.Hash, error) {
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
@@ -434,7 +425,7 @@ func IsParentBlockHash(parentBlk, childBlk *Block) bool {
 	return reflect.DeepEqual(parentBlk.GetHash(), childBlk.GetPrevHash())
 }
 
-func IsHashEqual(h1 Hash, h2 Hash) bool {
+func IsHashEqual(h1 hash.Hash, h2 hash.Hash) bool {
 
 	return reflect.DeepEqual(h1, h2)
 }

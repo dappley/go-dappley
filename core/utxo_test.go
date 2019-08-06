@@ -20,6 +20,7 @@ package core
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/common/hash"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -382,7 +383,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 
 	normalTX := NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
 	normalTX2 := Transaction{
-		Hash("normal2"),
+		hash.Hash("normal2"),
 		[]TXInput{{normalTX.ID, 0, nil, keypair.GetPublicKey()}},
 		[]TXOutput{{common.NewAmount(5), pbkh, ""}},
 		common.NewAmount(0),
@@ -390,7 +391,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		common.NewAmount(0),
 	}
 	abnormalTX := Transaction{
-		Hash("abnormal"),
+		hash.Hash("abnormal"),
 		[]TXInput{{normalTX.ID, 1, nil, nil}},
 		[]TXOutput{{common.NewAmount(5), account.PubKeyHash([]byte("pkh")), ""}},
 		common.NewAmount(0),
@@ -425,7 +426,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	tests := []struct {
 		name     string
 		bc       *Blockchain
-		hash     Hash
+		hash     hash.Hash
 		expected *UTXOIndex
 		err      error
 	}{
@@ -446,7 +447,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		{
 			name:     "block not found",
 			bc:       bcs[2],
-			hash:     Hash("not there"),
+			hash:     hash.Hash("not there"),
 			expected: NewUTXOIndex(bcs[2].GetUtxoCache()),
 			err:      ErrBlockDoesNotExist,
 		},

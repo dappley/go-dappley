@@ -19,6 +19,7 @@ package core
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/common/hash"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -169,7 +170,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	bm.blockchain.SetState(BlockchainReady)
 }
 
-func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) error {
+func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash hash.Hash) error {
 
 	//find parent block
 	if len(forkBlks) == 0 {
@@ -234,7 +235,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 }
 
 //RequestBlock sends a requestBlock command to its peer with pid through network module
-func (bm *BlockChainManager) RequestBlock(hash Hash, pid peer.ID) {
+func (bm *BlockChainManager) RequestBlock(hash hash.Hash, pid peer.ID) {
 	request := &corepb.RequestBlock{Hash: hash}
 
 	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
@@ -299,7 +300,7 @@ func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash Hash) (*UTXOIndex, *ScState, error) {
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash hash.Hash) (*UTXOIndex, *ScState, error) {
 	index := NewUTXOIndex(bc.GetUtxoCache())
 	scState := LoadScStateFromDatabase(db)
 	bci := bc.Iterator()

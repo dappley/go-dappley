@@ -21,6 +21,7 @@ package core
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/common/hash"
 	"sync"
 	"testing"
 	"time"
@@ -74,20 +75,20 @@ func TestHashTransactions(t *testing.T) {
 
 func TestNewBlock(t *testing.T) {
 	var emptyTx = []*Transaction([]*Transaction{})
-	var emptyHash = Hash(Hash{})
-	var expectBlock3Hash = Hash{0x61}
+	var emptyHash = hash.Hash(hash.Hash{})
+	var expectBlock3Hash = hash.Hash{0x61}
 	block1 := NewBlock(nil, nil, "")
 	assert.Nil(t, block1.header.prevHash)
 	assert.Equal(t, emptyTx, block1.transactions)
 
 	block2 := NewBlock(nil, blk, "")
 	assert.Equal(t, emptyHash, block2.header.prevHash)
-	assert.Equal(t, Hash(Hash{}), block2.header.prevHash)
+	assert.Equal(t, hash.Hash(hash.Hash{}), block2.header.prevHash)
 	assert.Equal(t, emptyTx, block2.transactions)
 
 	block3 := NewBlock(nil, blk2, "")
 	assert.Equal(t, expectBlock3Hash, block3.header.prevHash)
-	assert.Equal(t, Hash(Hash{'a'}), block3.header.prevHash)
+	assert.Equal(t, hash.Hash(hash.Hash{'a'}), block3.header.prevHash)
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
 	assert.Equal(t, uint64(1), block3.header.height)
 	assert.Equal(t, emptyTx, block3.transactions)
@@ -95,7 +96,7 @@ func TestNewBlock(t *testing.T) {
 	block4 := NewBlock([]*Transaction{}, nil, "")
 	assert.Nil(t, block4.header.prevHash)
 	assert.Equal(t, emptyTx, block4.transactions)
-	assert.Equal(t, Hash(nil), block4.header.prevHash)
+	assert.Equal(t, hash.Hash(nil), block4.header.prevHash)
 
 	block5 := NewBlock([]*Transaction{{}}, nil, "")
 	assert.Nil(t, block5.header.prevHash)
@@ -215,10 +216,10 @@ func TestIsParentBlockHeight(t *testing.T) {
 func TestCalculateHashWithNonce(t *testing.T) {
 	block := NewBlock([]*Transaction{{}}, blk3, "")
 	block.header.timestamp = 0
-	expectHash1 := Hash{0x3f, 0x2f, 0xec, 0xb4, 0x33, 0xf0, 0xd1, 0x1a, 0xa6, 0xf4, 0xf, 0xb8, 0x7f, 0x8f, 0x99, 0x11, 0xae, 0xe7, 0x42, 0xf4, 0x69, 0x7d, 0xf1, 0xaa, 0xc8, 0xd0, 0xfc, 0x40, 0xa2, 0xd8, 0xb1, 0xa5}
-	assert.Equal(t, Hash(expectHash1), block.CalculateHashWithNonce(1))
-	expectHash2 := Hash{0xe7, 0x57, 0x13, 0xc6, 0x8a, 0x98, 0x58, 0xb3, 0x5, 0x70, 0x6e, 0x33, 0xf0, 0x95, 0xd8, 0x1a, 0xbc, 0x76, 0xef, 0x30, 0x14, 0x59, 0x88, 0x11, 0x3c, 0x11, 0x59, 0x92, 0x65, 0xd5, 0xd3, 0x4c}
-	assert.Equal(t, Hash(expectHash2), block.CalculateHashWithNonce(2))
+	expectHash1 := hash.Hash{0x3f, 0x2f, 0xec, 0xb4, 0x33, 0xf0, 0xd1, 0x1a, 0xa6, 0xf4, 0xf, 0xb8, 0x7f, 0x8f, 0x99, 0x11, 0xae, 0xe7, 0x42, 0xf4, 0x69, 0x7d, 0xf1, 0xaa, 0xc8, 0xd0, 0xfc, 0x40, 0xa2, 0xd8, 0xb1, 0xa5}
+	assert.Equal(t, hash.Hash(expectHash1), block.CalculateHashWithNonce(1))
+	expectHash2 := hash.Hash{0xe7, 0x57, 0x13, 0xc6, 0x8a, 0x98, 0x58, 0xb3, 0x5, 0x70, 0x6e, 0x33, 0xf0, 0x95, 0xd8, 0x1a, 0xbc, 0x76, 0xef, 0x30, 0x14, 0x59, 0x88, 0x11, 0x3c, 0x11, 0x59, 0x92, 0x65, 0xd5, 0xd3, 0x4c}
+	assert.Equal(t, hash.Hash(expectHash2), block.CalculateHashWithNonce(2))
 }
 
 func TestBlock_VerifyTransactions(t *testing.T) {

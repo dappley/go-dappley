@@ -19,10 +19,11 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common/hash"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
@@ -33,7 +34,7 @@ const BlockCacheLRUCacheLimit = 1024
 const ForkCacheLRUCacheLimit = 128
 
 type BlockRequestPars struct {
-	BlockHash Hash
+	BlockHash hash.Hash
 	Pid       peer.ID
 }
 

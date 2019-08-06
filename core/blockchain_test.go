@@ -21,6 +21,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/hash"
 	"os"
 	"sync"
 	"testing"
@@ -127,7 +128,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
+	bc := &Blockchain{hash.Hash{}, hash.Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -153,7 +154,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Expect no error when adding genesis block
 	assert.Nil(t, err)
 	// Expect that blockchain tail is genesis block
-	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
+	assert.Equal(t, genesis.GetHash(), hash.Hash(bc.tailBlockHash))
 
 	// Simulate a failure when flushing new block to storage
 	simulatedFailure := errors.New("simulated storage failure")
@@ -169,7 +170,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
-	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
+	assert.Equal(t, blk.GetHash(), hash.Hash(bc.tailBlockHash))
 }
 
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {

@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
@@ -87,17 +88,17 @@ type PeerBlockInfo struct {
 }
 
 type DownloadCommand struct {
-	startHashes []core.Hash
+	startHashes []hash.Hash
 }
 
 type DownloadingCommandInfo struct {
-	startHashes []core.Hash
+	startHashes []hash.Hash
 	retryCount  int
 	finished    bool
 }
 
 type SyncCommandBlocksHeader struct {
-	hash   core.Hash
+	hash   hash.Hash
 	height uint64
 }
 
@@ -282,9 +283,9 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 		return nil, ErrEmptyBlocks
 	}
 
-	hashes := make([]core.Hash, len(blocksPb.GetStartBlockHashes()))
-	for index, hash := range blocksPb.GetStartBlockHashes() {
-		hashes[index] = core.Hash(hash)
+	hashes := make([]hash.Hash, len(blocksPb.GetStartBlockHashes()))
+	for index, h := range blocksPb.GetStartBlockHashes() {
+		hashes[index] = hash.Hash(h)
 	}
 
 	if downloadManager.isDownloadCommandFinished(hashes) {
@@ -347,7 +348,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		return
 	}
 
-	var nextHashes []core.Hash
+	var nextHashes []hash.Hash
 	for _, block := range blocks {
 		nextHashes = append(nextHashes, block.GetHash())
 	}
@@ -461,7 +462,7 @@ func (downloadManager *DownloadManager) CheckGetCommonBlockCommand(msgId int32, 
 	}
 }
 
-func (downloadManager *DownloadManager) CheckDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
+func (downloadManager *DownloadManager) CheckDownloadCommand(hashes []hash.Hash, peerId peer.ID, retryCount int) {
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
@@ -567,7 +568,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 	}
 
 	startBlockHeight := downloadManager.commonHeight
-	var hashes []core.Hash
+	var hashes []hash.Hash
 	for i := 0; i < producerNum && startBlockHeight-uint64(i) > 0; i++ {
 		block, err := downloadManager.bm.Getblockchain().GetBlockByHeight(startBlockHeight - uint64(i))
 		if err != nil {
@@ -579,7 +580,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 	downloadManager.sendDownloadCommand(hashes, downloadManager.downloadingPeer.peerid, retryCount)
 }
 
-func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
+func (downloadManager *DownloadManager) sendDownloadCommand(hashes []hash.Hash, peerId peer.ID, retryCount int) {
 	downloadingCmd := &DownloadingCommandInfo{startHashes: hashes, finished: false}
 	downloadManager.currentCmd = &ExecuteCommand{command: downloadingCmd, retryCount: retryCount}
 	downloadManager.SendGetBlocksRequest(hashes, peerId)
@@ -592,7 +593,7 @@ func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, 
 	}()
 }
 
-func (downloadManager *DownloadManager) isDownloadCommandFinished(hashes []core.Hash) bool {
+func (downloadManager *DownloadManager) isDownloadCommandFinished(hashes []hash.Hash) bool {
 	if downloadManager.currentCmd == nil {
 		return true
 	}
@@ -719,7 +720,7 @@ func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(command *n
 	downloadManager.GetCommonBlockDataHandler(param, command.GetSource())
 }
 
-func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash, pid peer.ID) {
+func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []hash.Hash, pid peer.ID) {
 	blkHashes := make([][]byte, len(hashes))
 	for index, hash := range hashes {
 		blkHashes[index] = hash

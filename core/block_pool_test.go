@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common/hash"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,9 +48,9 @@ func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
 
 func TestBlockPool_ForkHeadRange(t *testing.T) {
 	bp := NewBlockPool(10)
-	parent := &Block{header: &BlockHeader{height: 1, prevHash: []byte{0}, hash: Hash("parent")}}
-	blk := &Block{header: &BlockHeader{height: 2, prevHash: parent.GetHash(), hash: Hash("blk")}}
-	child := &Block{header: &BlockHeader{height: 3, prevHash: blk.GetHash(), hash: Hash("child")}}
+	parent := &Block{header: &BlockHeader{height: 1, prevHash: []byte{0}, hash: hash.Hash("parent")}}
+	blk := &Block{header: &BlockHeader{height: 2, prevHash: parent.GetHash(), hash: hash.Hash("blk")}}
+	child := &Block{header: &BlockHeader{height: 3, prevHash: blk.GetHash(), hash: hash.Hash("child")}}
 
 	// cache a blk
 	bp.CacheBlock(blk, 0)
@@ -64,7 +65,7 @@ func TestBlockPool_ForkHeadRange(t *testing.T) {
 	require.ElementsMatch(t, []string{parent.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// cache extraneous block
-	unrelatedBlk := &Block{header: &BlockHeader{height: 1, prevHash: []byte{0}, hash: Hash("unrelated")}}
+	unrelatedBlk := &Block{header: &BlockHeader{height: 1, prevHash: []byte{0}, hash: hash.Hash("unrelated")}}
 	bp.CacheBlock(unrelatedBlk, 0)
 	require.ElementsMatch(t, []string{parent.GetHash().String(), unrelatedBlk.GetHash().String()}, testGetForkHeadHashes(bp))
 

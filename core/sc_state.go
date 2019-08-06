@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common/hash"
 	"sync"
 
 	corepb "github.com/dappley/go-dappley/core/pb"
@@ -104,7 +105,7 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string {
 	return ss.states[address]
 }
 
-func GetScStateKey(blkHash Hash) []byte {
+func GetScStateKey(blkHash hash.Hash) []byte {
 	return []byte(scStateMapKey + blkHash.String())
 }
 
@@ -154,7 +155,7 @@ func (cl *ChangeLog) FromProto(pb proto.Message) {
 	}
 }
 
-func (ss *ScState) Save(db storage.Storage, blkHash Hash) error {
+func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 	scStateOld := LoadScStateFromDatabase(db)
 	change := NewChangeLog()
 	change.log = scStateOld.findChangedValue(ss)
@@ -172,7 +173,7 @@ func (ss *ScState) Save(db storage.Storage, blkHash Hash) error {
 	return err
 }
 
-func (ss *ScState) RevertState(db storage.Storage, prevHash Hash) error {
+func (ss *ScState) RevertState(db storage.Storage, prevHash hash.Hash) error {
 	changelog := getChangeLog(db, prevHash)
 	if len(changelog) < 1 {
 		return nil
@@ -245,7 +246,7 @@ func (ss *ScState) revertState(changelog map[string]map[string]string) {
 	}
 }
 
-func getChangeLog(db storage.Storage, prevHash Hash) map[string]map[string]string {
+func getChangeLog(db storage.Storage, prevHash hash.Hash) map[string]map[string]string {
 	change := make(map[string]map[string]string)
 
 	rawBytes, err := db.Get([]byte(scStateLogKey + prevHash.String()))
@@ -258,7 +259,7 @@ func getChangeLog(db storage.Storage, prevHash Hash) map[string]map[string]strin
 	return change
 }
 
-func deleteLog(db storage.Storage, prevHash Hash) error {
+func deleteLog(db storage.Storage, prevHash hash.Hash) error {
 	err := db.Del([]byte(scStateLogKey + prevHash.String()))
 	return err
 }
