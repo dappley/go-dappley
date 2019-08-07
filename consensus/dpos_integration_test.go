@@ -21,6 +21,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"testing"
 	"time"
 
@@ -43,7 +44,7 @@ func TestDpos_Start(t *testing.T) {
 	node.Start(22100, "")
 	defer node.Stop()
 
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 	dpos.Setup(node, cbAddr.String(), bm)
 	dpos.SetKey(keystr)
@@ -96,7 +97,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := core.NewBlockChainManager(bc, pool, node)
+		bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
@@ -168,7 +169,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		node.Start(22200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := core.NewBlockChainManager(bc, pool, node)
+		bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])

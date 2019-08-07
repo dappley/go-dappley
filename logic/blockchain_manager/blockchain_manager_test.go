@@ -1,6 +1,8 @@
-package core
+package blockchain_manager
 
 import (
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"testing"
@@ -13,7 +15,7 @@ import (
 
 func TestBlockChainManager_NumForks(t *testing.T) {
 	// create BlockChain
-	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, NewTransactionPool(nil, 100), nil, 100)
+	bc := core.CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 100), nil, 100)
 	blk, err := bc.GetTailBlock()
 	require.Nil(t, err)
 
@@ -23,11 +25,11 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b6 := block.NewBlockWithRawInfo(nil, b3.GetHash(), 6, 0, 3, nil)
 	b6.SetHash(block_logic.CalculateHash(b6))
 
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b1, UtxoIndex: NewUTXOIndex(nil), State: NewScState()})
+	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b1, UtxoIndex: core.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b3, UtxoIndex: NewUTXOIndex(nil), State: NewScState()})
+	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b3, UtxoIndex: core.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b6, UtxoIndex: NewUTXOIndex(nil), State: NewScState()})
+	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b6, UtxoIndex: core.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
 
 	// create first fork of height 3
@@ -51,8 +53,8 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 			BlockChain:  Genesis - b1 - b3 - b6
 	*/
 
-	bp := NewBlockPool()
-	bcm := NewBlockChainManager(bc, bp, nil)
+	bp := core.NewBlockPool()
+	bcm := NewBlockchainManager(bc, bp, nil)
 
 	bp.CacheBlock(b2, 0)
 	require.Equal(t, 1, testGetNumForkHeads(bp))
@@ -85,4 +87,16 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	numForks, longestFork = bcm.NumForks()
 	require.EqualValues(t, 3, numForks)
 	require.EqualValues(t, 3, longestFork)
+}
+
+func testGetNumForkHeads(bp *core.BlockPool) int {
+	return len(testGetForkHeadHashes(bp))
+}
+
+func testGetForkHeadHashes(bp *core.BlockPool) []string {
+	var hashes []string
+	bp.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+		hashes = append(hashes, blkHash)
+	})
+	return hashes
 }

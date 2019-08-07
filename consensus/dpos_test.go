@@ -20,6 +20,7 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,7 +47,7 @@ func TestDpos_Setup(t *testing.T) {
 
 	node := network.NewNode(bc.GetDb(), nil)
 
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 	dpos.Setup(node, cbAddr, bm)
 

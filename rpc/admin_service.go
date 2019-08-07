@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,7 +36,7 @@ import (
 )
 
 type AdminRpcService struct {
-	bm   *core.BlockChainManager
+	bm   *blockchain_manager.BlockchainManager
 	node *network.Node
 }
 

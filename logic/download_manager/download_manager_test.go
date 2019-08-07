@@ -19,6 +19,7 @@
 package download_manager
 
 import (
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"testing"
 	"time"
 
@@ -42,8 +43,8 @@ const (
 	multiPortReturnBlocks    int = 10340
 )
 
-func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, []*network.Node) {
-	bms := make([]*core.BlockChainManager, size)
+func createTestBlockchains(size int, portStart int) ([]*blockchain_manager.BlockchainManager, []*network.Node) {
+	bms := make([]*blockchain_manager.BlockchainManager, size)
 	nodes := make([]*network.Node, size)
 	for i := 0; i < size; i++ {
 		keyPair := account.NewKeyPair()
@@ -56,7 +57,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 		bc := core.CreateBlockchain(account.NewAddress(genesisAddr), db, pow, core.NewTransactionPool(node, 128), nil, 100000)
 		bc.SetState(core.BlockchainReady)
 
-		bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
+		bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 		bms[i] = bm
 		nodes[i] = node
@@ -67,7 +68,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 	return bms, nodes
 }
 
-func fillBlockchains(bms []*core.BlockChainManager) {
+func fillBlockchains(bms []*blockchain_manager.BlockchainManager) {
 	generateChain := bms[0].Getblockchain()
 
 	generateChain.GetConsensus().Start()

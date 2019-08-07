@@ -20,7 +20,7 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"net"
 
 	logger "github.com/sirupsen/logrus"
@@ -31,7 +31,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/network"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 )
 
 const (
@@ -54,15 +54,15 @@ type Server struct {
 	srv           *grpc.Server
 	node          *network.Node
 	password      string
-	bm            *core.BlockChainManager
+	bm            *blockchain_manager.BlockchainManager
 	metricsConfig *MetricsServiceConfig
 }
 
-func NewGrpcServer(node *network.Node, bm *core.BlockChainManager, adminPassword string) *Server {
+func NewGrpcServer(node *network.Node, bm *blockchain_manager.BlockchainManager, adminPassword string) *Server {
 	return NewGrpcServerWithMetrics(node, bm, adminPassword, nil)
 }
 
-func NewGrpcServerWithMetrics(node *network.Node, bm *core.BlockChainManager, adminPassword string, config *MetricsServiceConfig) *Server {
+func NewGrpcServerWithMetrics(node *network.Node, bm *blockchain_manager.BlockchainManager, adminPassword string, config *MetricsServiceConfig) *Server {
 	return &Server{grpc.NewServer(), node, adminPassword, bm, config}
 }
 

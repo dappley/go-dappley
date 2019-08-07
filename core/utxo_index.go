@@ -19,9 +19,12 @@
 package core
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
+	logger "github.com/sirupsen/logrus"
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
@@ -291,4 +294,66 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 		utxocopy.index[pkh] = &newUtxoTx
 	}
 	return utxocopy
+}
+
+// RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash hash.Hash) (*UTXOIndex, *ScState, error) {
+	index := NewUTXOIndex(bc.GetUtxoCache())
+	scState := LoadScStateFromDatabase(db)
+	bci := bc.Iterator()
+
+	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
+	// in the block, until the block hash matches.
+	for {
+		block, err := bci.Next()
+
+		if bytes.Compare(block.GetHash(), hash) == 0 {
+			break
+		}
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(block.GetPrevHash()) == 0 {
+			return nil, nil, ErrBlockDoesNotExist
+		}
+		err = index.UndoTxsInBlock(block, bc, db)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"hash": block.GetHash(),
+			}).Warn("BlockChainManager: failed to calculate previous state of UTXO index for the block")
+			return nil, nil, err
+		}
+
+		err = scState.RevertState(db, block.GetHash())
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"hash": block.GetHash(),
+			}).Warn("BlockChainManager: failed to calculate previous state of scState for the block")
+			return nil, nil, err
+		}
+	}
+
+	return index, scState, nil
+}
+
+/* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
+func (bm *BlockChainManager) NumForks() (int64, int64) {
+	var numForks, maxHeight int64 = 0, 0
+
+	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+		rootBlk := tree.GetValue().(*block.Block)
+		_, err := bm.blockchain.GetBlockByHash(rootBlk.GetPrevHash())
+		if err == nil {
+			/* the cached block is rooted in the BlockChain */
+			numForks += tree.NumLeaves()
+			t := tree.Height()
+			if t > maxHeight {
+				maxHeight = t
+			}
+		}
+	})
+
+	return numForks, maxHeight
 }

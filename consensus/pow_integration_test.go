@@ -21,6 +21,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"os"
 	"testing"
 	"time"
@@ -84,7 +85,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 
@@ -140,7 +141,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, acc.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
@@ -205,7 +206,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
@@ -270,7 +271,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 
 	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
 
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, cbAddr.String(), bm)
 	pow.SetTargetBit(10)
@@ -344,7 +345,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 
 	pow.Start()

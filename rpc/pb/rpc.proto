@@ -163,19 +163,19 @@ message GetVersionResponse {
 
 message GetUTXOResponse {
   repeated corepb.Utxo utxos = 1;
-  repeated corepb.BlockHeader block_headers = 2; //The latest block headers
+  repeated blockpb.BlockHeader block_headers = 2; //The latest block headers
 }
 
 message GetBlocksResponse {
-  repeated corepb.Block blocks = 1;
+  repeated blockpb.Block blocks = 1;
 }
 
 message GetBlockByHashResponse {
-  corepb.Block block = 1;
+  blockpb.Block block = 1;
 }
 
 message GetBlockByHeightResponse {
-  corepb.Block block = 1;
+  blockpb.Block block = 1;
 }
 
 message SendTransactionResponse {}
@@ -203,7 +203,7 @@ message GetAllTransactionsResponse{
 }
 
 message GetLastIrreversibleBlockResponse {
-  corepb.Block block = 1;
+  blockpb.Block block = 1;
 }
 
 message GetStatsResponse {

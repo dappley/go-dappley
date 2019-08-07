@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/logic/download_manager"
@@ -103,7 +104,7 @@ func main() {
 	}
 	bc.SetState(core.BlockchainInit)
 
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
+	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")

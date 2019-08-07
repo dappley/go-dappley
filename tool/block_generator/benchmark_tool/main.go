@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"io/ioutil"
 	"os"
 	"time"
@@ -169,7 +170,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	return elapsed, blkHeight, numOfTx
 }
 
-func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
+func prepareNode(db storage.Storage) (*blockchain_manager.BlockchainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
@@ -187,7 +188,7 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 		}
 	}
 	bc.SetState(core.BlockchainInit)
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
+	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 

@@ -396,27 +396,6 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			if !assert.Equal(t, tt.err, err) {
 				return
 			}
-			//if len(tt.expected.index) != len(utxoIndex.index) {
-			//	// The utxoIndex maps may contain empty lists for certain pubkeyhashes, which are equivalent to
-			//	// nils on the other utxoIndex map we are comparing with.
-			//	for pkh, utxos := range tt.expected.index {
-			//		if len(utxos) == 0 && utxoIndex.index[pkh] == nil {
-			//			continue
-			//		}
-			//		assert.Equal(t, tt.expected.index[pkh], utxoIndex.index[pkh])
-			//	}
-			//	for pkh, utxos := range utxoIndex.index {
-			//		if len(utxos) == 0 && tt.expected.index[pkh] == nil {
-			//			continue
-			//		}
-			//		if pkh == "" {
-			//			continue
-			//		}
-			//		assert.Equal(t, tt.expected.index[pkh], utxoIndex.index[pkh])
-			//	}
-			//	return
-			//}
-			//assert.Equal(t, tt.expected, utxoIndex)
 		})
 	}
 }

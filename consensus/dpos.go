@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"strings"
 	"time"
 
@@ -44,7 +45,7 @@ type DPOS struct {
 	producerKey string
 	newBlockCh  chan *block.Block
 	node        core.NetService
-	bm          *core.BlockChainManager
+	bm          *blockchain_manager.BlockchainManager
 	stopCh      chan bool
 	stopLibCh   chan bool
 	dynasty     *Dynasty
@@ -76,7 +77,7 @@ func (dpos *DPOS) AddBlockToSlot(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
-func (dpos *DPOS) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
+func (dpos *DPOS) Setup(node core.NetService, cbAddr string, bm *blockchain_manager.BlockchainManager) {
 	dpos.node = node
 	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)

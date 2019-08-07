@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"strings"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -47,7 +48,7 @@ const (
 )
 
 type RpcService struct {
-	bm   *core.BlockChainManager
+	bm   *blockchain_manager.BlockchainManager
 	node *network.Node
 }
 
@@ -146,7 +147,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 			break
 		}
 
-		response.BlockHeaders = append(response.BlockHeaders, block.GetHeader().ToProto().(*corepb.BlockHeader))
+		response.BlockHeaders = append(response.BlockHeaders, block.GetHeader().ToProto().(*blockpb.BlockHeader))
 	}
 
 	return &response, nil

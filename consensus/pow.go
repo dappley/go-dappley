@@ -21,6 +21,7 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"math"
 	"math/big"
 
@@ -37,7 +38,7 @@ type ProofOfWork struct {
 	miner  *BlockProducer
 	target *big.Int
 	node   core.NetService
-	bm     *core.BlockChainManager
+	bm     *blockchain_manager.BlockchainManager
 	stopCh chan bool
 }
 
@@ -51,7 +52,7 @@ func NewProofOfWork() *ProofOfWork {
 	return p
 }
 
-func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
+func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string, bm *blockchain_manager.BlockchainManager) {
 	pow.node = node
 	pow.bm = bm
 

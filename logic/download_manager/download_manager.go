@@ -23,9 +23,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
@@ -118,7 +118,7 @@ type DownloadManager struct {
 	peersInfo         map[peer.ID]*PeerBlockInfo
 	downloadingPeer   *PeerBlockInfo
 	currentCmd        *ExecuteCommand
-	bm                *core.BlockChainManager
+	bm                *blockchain_manager.BlockchainManager
 	node              NetService
 	mutex             sync.RWMutex
 	status            int
@@ -128,7 +128,7 @@ type DownloadManager struct {
 	finishCh          chan bool
 }
 
-func NewDownloadManager(node NetService, bm *core.BlockChainManager) *DownloadManager {
+func NewDownloadManager(node NetService, bm *blockchain_manager.BlockchainManager) *DownloadManager {
 
 	downloadManager := &DownloadManager{
 		peersInfo:         make(map[peer.ID]*PeerBlockInfo),
@@ -419,7 +419,7 @@ func (downloadManager *DownloadManager) GetCommonBlockCheckPoint(startHeight uin
 	return blockHeaders
 }
 
-func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*corepb.BlockHeader) (int, *block.Block) {
+func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*blockpb.BlockHeader) (int, *block.Block) {
 	findIndex := -1
 	var commonBlock *block.Block
 
@@ -540,7 +540,7 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 	return true
 }
 
-func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*corepb.BlockHeader) {
+func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*blockpb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
@@ -663,10 +663,10 @@ func (downloadManager *DownloadManager) selectHighestPeer() *PeerBlockInfo {
 }
 
 func (downloadManager *DownloadManager) SendGetCommonBlockRequest(blockHeaders []*SyncCommandBlocksHeader, pid peer.ID, msgId int32) {
-	var blockHeaderPbs []*corepb.BlockHeader
+	var blockHeaderPbs []*blockpb.BlockHeader
 	for _, blockHeader := range blockHeaders {
 		blockHeaderPbs = append(blockHeaderPbs,
-			&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
+			&blockpb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
 	}
 
 	getCommonBlocksPb := &networkpb.GetCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
@@ -689,9 +689,9 @@ func (downloadManager *DownloadManager) GetCommonBlockRequestHandler(command *ne
 
 }
 
-func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders []*corepb.BlockHeader, msgId int32, destination peer.ID) {
+func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders []*blockpb.BlockHeader, msgId int32, destination peer.ID) {
 	index, _ := downloadManager.FindCommonBlock(blockHeaders)
-	var blockHeaderPbs []*corepb.BlockHeader
+	var blockHeaderPbs []*blockpb.BlockHeader
 	if index == 0 {
 		blockHeaderPbs = blockHeaders[:1]
 	} else {
@@ -701,7 +701,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 		)
 		for _, blockHeader := range blockHeaders {
 			blockHeaderPbs = append(blockHeaderPbs,
-				&corepb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
+				&blockpb.BlockHeader{Hash: blockHeader.hash, Height: blockHeader.height})
 		}
 	}
 
