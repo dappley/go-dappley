@@ -2,6 +2,7 @@ package vm
 
 import (
 	"encoding/hex"
+
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
@@ -18,7 +19,7 @@ func EstimateGas(bc *core.Blockchain, tx *core.Transaction) (uint64, error) {
 	if ctx == nil {
 		return 0, core.ErrTransactionVerifyFailed
 	}
-	prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+	prevUtxos, err := core.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(ctx.ID),

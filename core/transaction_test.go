@@ -517,7 +517,8 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
 			parentBlk := GenerateMockBlock()
-			preUTXO, err := tx.FindAllTxinsInUtxoPool(*index)
+			preUTXO, err := FindVinUtxosInUtxoPool(*index, tx.Transaction)
+
 			if err != nil {
 				println(err.Error())
 			}
@@ -865,55 +866,4 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	txPool.Push(tx1)
 	_, err6 := tx1.Verify(utxoIndex, 0)
 	assert.NotNil(t, err6)
-}
-
-func TestTransaction_IsIdentical(t *testing.T) {
-
-	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
-
-	var dependentTx1 = Transaction{
-		ID: nil,
-		Vin: []TXInput{
-			{tx1.ID, 1, nil, pubkey1},
-		},
-		Vout: []TXOutput{
-			{common.NewAmount(5), pkHash1, ""},
-		},
-		Tip: common.NewAmount(3),
-	}
-
-	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-
-	utxoTx1 := NewUTXOTx()
-	utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
-
-	utxoIndex.index = map[string]*UTXOTx{
-		pkHash1.String(): &utxoTx1,
-	}
-
-	var tx = &Transaction{
-		ID: nil,
-		Vin: []TXInput{
-			{dependentTx1.ID, 0, nil, pubkey1},
-		},
-		Vout: []TXOutput{
-			{common.NewAmount(2), pkHash1, ""},
-		},
-		Tip: common.NewAmount(1),
-	}
-	var tx2 = &Transaction{
-		ID: nil,
-		Vin: []TXInput{
-			{dependentTx1.ID, 0, nil, pubkey1},
-		},
-		Vout: []TXOutput{
-			{common.NewAmount(2), pkHash1, ""},
-		},
-		Tip: common.NewAmount(1),
-	}
-	assert.True(t, tx.IsIdentical(utxoIndex, tx2))
-	tx2.Vout[0].Value = common.NewAmount(3)
-	assert.False(t, tx.IsIdentical(utxoIndex, tx2))
 }

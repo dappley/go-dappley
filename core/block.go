@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
@@ -356,7 +356,7 @@ L:
 				return false
 			}
 
-			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			prevUtxos, err := FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
 					"txid": hex.EncodeToString(ctx.ID),

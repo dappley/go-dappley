@@ -22,8 +22,8 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/vm"
@@ -130,7 +130,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 		ctx := txNode.Value.ToContractTx()
 		minerAddr := account.NewAddress(bp.beneficiary)
 		if ctx != nil {
-			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			prevUtxos, err := core.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
 					"txid": hex.EncodeToString(ctx.ID),
@@ -207,7 +207,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			utxoIndex.UpdateUtxo(tx)
 			continue
 		}
-		prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+		prevUtxos, err := core.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"txid": hex.EncodeToString(ctx.ID),

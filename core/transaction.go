@@ -231,20 +231,11 @@ func (tx *Transaction) IsFromContract(utxoIndex *UTXOIndex) bool {
 			return false
 		}
 
-		if !tx.isPubkeyInUtxos(contractUtxos, pubKey) {
+		if !isPubkeyInUtxos(contractUtxos, pubKey) {
 			return false
 		}
 	}
 	return true
-}
-
-func (tx *Transaction) isPubkeyInUtxos(contractUtxos []*UTXO, pubKey account.PubKeyHash) bool {
-	for _, contractUtxo := range contractUtxos {
-		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
-			return true
-		}
-	}
-	return false
 }
 
 func (tx *Transaction) isVinCoinbase() bool {
@@ -923,63 +914,6 @@ func (ctx *ContractTx) Execute(prevUtxos []*UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
-//FindAllTxinsInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func (tx *Transaction) FindAllTxinsInUtxoPool(utxoPool UTXOIndex) ([]*UTXO, error) {
-	var res []*UTXO
-	for _, vin := range tx.Vin {
-		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
-			return nil, ErrNewUserPubKeyHash
-		}
-		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
-		if utxo == nil {
-			logger.WithFields(logger.Fields{
-				"txid":      hex.EncodeToString(tx.ID),
-				"vin_id":    hex.EncodeToString(vin.Txid),
-				"vin_index": vin.Vout,
-			}).Warn("Transaction: Can not find vin")
-			return nil, ErrTXInputNotFound
-		}
-		res = append(res, utxo)
-	}
-	return res, nil
-}
-
-func (tx *Transaction) IsIdentical(utxoIndex *UTXOIndex, tx2 *Transaction) bool {
-	if tx2 == nil {
-		return false
-	}
-
-	sender, recipient, amount, tip, err := tx.Describe(utxoIndex)
-	if err != nil {
-		return false
-	}
-
-	sender2, recipient2, amount2, tip2, err := tx2.Describe(utxoIndex)
-	if err != nil {
-		return false
-	}
-
-	if sender.String() != sender2.String() {
-		return false
-	}
-
-	if recipient.String() != recipient2.String() {
-		return false
-	}
-
-	if amount.Cmp(amount2) != 0 {
-		return false
-	}
-
-	if tip.Cmp(tip2) != 0 {
-		return false
-	}
-
-	return true
-
-}
-
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 
 	if tx == nil {
@@ -1185,4 +1119,13 @@ func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
 		return nil
 	}
 	return pubKeyHash
+}
+
+func isPubkeyInUtxos(contractUtxos []*UTXO, pubKey account.PubKeyHash) bool {
+	for _, contractUtxo := range contractUtxos {
+		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
+			return true
+		}
+	}
+	return false
 }
