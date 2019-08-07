@@ -18,8 +18,16 @@ func NewBlock(txs []*core.Transaction, parent *Block, producer string) *Block {
 	return NewBlockWithTimestamp(txs, parent, time.Now().Unix(), producer)
 }
 
-func NewBlockFromHeader(blkHeader *BlockHeader, txs []*core.Transaction) *Block {
-	return &Block{blkHeader, txs}
+func NewBlockWithRawInfo(hash hash.Hash, prevHash hash.Hash, nonce int64, timeStamp int64, height uint64, txs []*core.Transaction) *Block {
+	return &Block{
+		NewBlockHeader(
+			hash,
+			prevHash,
+			nonce,
+			timeStamp,
+			height),
+		txs,
+	}
 }
 
 func NewBlockWithTimestamp(txs []*core.Transaction, parent *Block, timeStamp int64, producer string) *Block {

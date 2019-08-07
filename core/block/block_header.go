@@ -21,7 +21,7 @@ func NewBlockHeader(hash hash.Hash, prevHash hash.Hash, nonce int64, timeStamp i
 		hash:      hash,
 		prevHash:  prevHash,
 		nonce:     nonce,
-		timestamp: timeStamp, //July 23,2018 17:42 PST
+		timestamp: timeStamp,
 		height:    height,
 	}
 }
