@@ -187,7 +187,7 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 		}
 	}
 	bc.SetState(core.BlockchainInit)
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
+	bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 

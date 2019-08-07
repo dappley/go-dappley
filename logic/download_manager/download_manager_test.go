@@ -56,7 +56,7 @@ func createTestBlockchains(size int, portStart int) ([]*core.BlockChainManager, 
 		bc := core.CreateBlockchain(account.NewAddress(genesisAddr), db, pow, core.NewTransactionPool(node, 128), nil, 100000)
 		bc.SetState(core.BlockchainReady)
 
-		bm := core.NewBlockChainManager(bc, core.NewBlockPool(100), node)
+		bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
 
 		bms[i] = bm
 		nodes[i] = node

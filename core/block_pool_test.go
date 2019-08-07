@@ -30,7 +30,7 @@ import (
 )
 
 func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
-	bp := NewBlockPool(5)
+	bp := NewBlockPool()
 	assert.Equal(t, 0, bp.blkCache.Len())
 	const addCount = 200
 	for i := 0; i < addCount; i++ {
@@ -48,7 +48,7 @@ func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
 }
 
 func TestBlockPool_ForkHeadRange(t *testing.T) {
-	bp := NewBlockPool(10)
+	bp := NewBlockPool()
 
 	parent := block.NewBlockWithRawInfo(hash.Hash("parent"), []byte{0}, 0, 0, 1, nil)
 	blk := block.NewBlockWithRawInfo(hash.Hash("blk"), parent.GetHash(), 0, 0, 2, nil)

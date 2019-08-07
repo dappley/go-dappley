@@ -112,7 +112,7 @@ func TestRpcSend(t *testing.T) {
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
 	bm := core.NewBlockChainManager(bc, pool, node)
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
@@ -200,7 +200,7 @@ func TestRpcSendContract(t *testing.T) {
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
 	bm := core.NewBlockChainManager(bc, pool, node)
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
@@ -1096,7 +1096,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
 	context.bm = core.NewBlockChainManager(bc, pool, context.node)
 
@@ -1152,7 +1152,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(100), node)
+	bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
 
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
@@ -1247,7 +1247,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 	bm := core.NewBlockChainManager(bc, pool, node)

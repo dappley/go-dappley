@@ -103,7 +103,7 @@ func main() {
 	}
 	bc.SetState(core.BlockchainInit)
 
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
+	bm := core.NewBlockChainManager(bc, core.NewBlockPool(), node)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")

@@ -19,45 +19,28 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
 )
 
-const BlockPoolMaxSize = 100
 const BlockCacheLRUCacheLimit = 1024
 const ForkCacheLRUCacheLimit = 128
 
-type BlockRequestPars struct {
-	BlockHash hash.Hash
-	Pid       peer.ID
-}
-
-type RcvedBlock struct {
-	Block *block.Block
-	Pid   peer.ID
-}
-
 type BlockPool struct {
-	size           int
 	blkCache       *lru.Cache //cache of full blks
 	forkHeads      map[string]*common.Tree
 	forkHeadsMutex *sync.RWMutex
 }
 
-func NewBlockPool(size int) *BlockPool {
-	if size <= 0 {
-		size = BlockPoolMaxSize
-	}
+func NewBlockPool() *BlockPool {
+
 	pool := &BlockPool{
-		size:           size,
 		forkHeads:      make(map[string]*common.Tree),
 		forkHeadsMutex: &sync.RWMutex{},
 	}
