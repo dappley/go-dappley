@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
+package blockchain_logic
 
 import (
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
@@ -26,13 +27,12 @@ import (
 
 const genesisCoinbaseData = "Hello world"
 
-func NewGenesisBlock(address account.Address) *block.Block {
-	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
+func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Block {
 
-	txin := TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
-	txout := NewTXOutput(subsidy, address)
-	txs := []*Transaction{}
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := core.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
+	txout := core.NewTXOutput(subsidy, address)
+	txs := []*core.Transaction{}
+	tx := core.Transaction{nil, []core.TXInput{txin}, []core.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 
