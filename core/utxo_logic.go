@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"encoding/hex"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -27,4 +28,13 @@ func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx Transaction) ([]*UTXO, error)
 		res = append(res, utxo)
 	}
 	return res, nil
+}
+
+func isPubkeyInUtxos(contractUtxos []*UTXO, pubKey account.PubKeyHash) bool {
+	for _, contractUtxo := range contractUtxos {
+		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
+			return true
+		}
+	}
+	return false
 }

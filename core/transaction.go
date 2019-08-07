@@ -911,12 +911,3 @@ func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
 	}
 	return pubKeyHash
 }
-
-func isPubkeyInUtxos(contractUtxos []*UTXO, pubKey account.PubKeyHash) bool {
-	for _, contractUtxo := range contractUtxos {
-		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
-			return true
-		}
-	}
-	return false
-}
