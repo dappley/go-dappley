@@ -32,92 +32,10 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
-	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-// Padding Address to 32 Byte
-var address1Bytes = []byte("address1000000000000000000000000")
-var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
-var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
-
-func GenerateUtxoMockBlockWithoutInputs() *block.Block {
-
-	t1 := MockUtxoTransactionWithoutInputs()
-	return block.NewBlockWithRawInfo(
-		[]byte("hash"),
-		nil,
-		1,
-		time.Now().Unix(),
-		0,
-		[]*Transaction{t1},
-	)
-}
-
-func GenerateUtxoMockBlockWithInputs() *block.Block {
-
-	t1 := MockUtxoTransactionWithInputs()
-	return block.NewBlockWithRawInfo(
-		[]byte("hash1"),
-		[]byte("hash"),
-		1,
-		time.Now().Unix(),
-		1,
-		[]*Transaction{t1},
-	)
-
-}
-
-func MockUtxoTransactionWithoutInputs() *Transaction {
-	return &Transaction{
-		ID:   []byte("tx1"),
-		Vin:  []TXInput{},
-		Vout: MockUtxoOutputsWithoutInputs(),
-		Tip:  common.NewAmount(5),
-	}
-}
-
-func MockUtxoTransactionWithInputs() *Transaction {
-	return &Transaction{
-		ID:   []byte("tx2"),
-		Vin:  MockUtxoInputs(),
-		Vout: MockUtxoOutputsWithInputs(),
-		Tip:  common.NewAmount(5),
-	}
-}
-
-func MockUtxoInputs() []TXInput {
-	return []TXInput{
-		{
-			[]byte("tx1"),
-			0,
-			util.GenerateRandomAoB(2),
-			address1Bytes},
-		{
-			[]byte("tx1"),
-			1,
-			util.GenerateRandomAoB(2),
-			address1Bytes},
-	}
-}
-
-func MockUtxoOutputsWithoutInputs() []TXOutput {
-	return []TXOutput{
-		{common.NewAmount(5), address1Hash, ""},
-		{common.NewAmount(7), address1Hash, ""},
-	}
-}
-
-func MockUtxoOutputsWithInputs() []TXOutput {
-	return []TXOutput{
-		{common.NewAmount(4), address1Hash, ""},
-		{common.NewAmount(5), address2Hash, ""},
-		{common.NewAmount(3), address2Hash, ""},
-	}
-}
 
 func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()

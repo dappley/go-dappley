@@ -109,6 +109,10 @@ func (b *Block) SetHeight(height uint64) {
 	b.header.height = height
 }
 
+func (b *Block) SetTimestamp(timestamp int64) {
+	b.header.timestamp = timestamp
+}
+
 func (b *Block) SetTransactions(txs []*core.Transaction) {
 	b.transactions = txs
 }
