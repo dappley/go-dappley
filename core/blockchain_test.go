@@ -156,7 +156,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Expect no error when adding genesis block
 	assert.Nil(t, err)
 	// Expect that blockchain tail is genesis block
-	assert.Equal(t, genesis.GetHash(), hash.Hash(bc.tailBlockHash))
+	assert.Equal(t, genesis.GetHash(), hash.Hash(bc.GetTailBlockHash()))
 
 	// Simulate a failure when flushing new block to storage
 	simulatedFailure := errors.New("simulated storage failure")
@@ -172,7 +172,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
-	assert.Equal(t, blk.GetHash(), hash.Hash(bc.tailBlockHash))
+	assert.Equal(t, blk.GetHash(), hash.Hash(bc.GetTailBlockHash()))
 }
 
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {

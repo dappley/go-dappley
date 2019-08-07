@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 
@@ -58,25 +59,23 @@ const (
 )
 
 type Blockchain struct {
-	tailBlockHash []byte
-	libHash       []byte
-	db            storage.Storage
-	utxoCache     *UTXOCache
-	consensus     Consensus
-	txPool        *TransactionPool
-	scManager     ScEngineManager
-	state         BlockchainState
-	eventManager  *EventManager
-	blkSizeLimit  int
-	mutex         *sync.Mutex
+	bc           *blockchain.Blockchain
+	db           storage.Storage
+	utxoCache    *UTXOCache
+	consensus    Consensus
+	txPool       *TransactionPool
+	scManager    ScEngineManager
+	state        BlockchainState
+	eventManager *EventManager
+	blkSizeLimit int
+	mutex        *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
 	bc := &Blockchain{
-		genesis.GetHash(),
-		genesis.GetHash(),
+		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
 		db,
 		NewUTXOCache(db),
 		consensus,
@@ -109,8 +108,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionP
 	}
 
 	bc := &Blockchain{
-		tip,
-		lib,
+		blockchain.NewBlockchain(tip, lib),
 		db,
 		NewUTXOCache(db),
 		consensus,
@@ -133,11 +131,11 @@ func (bc *Blockchain) GetUtxoCache() *UTXOCache {
 }
 
 func (bc *Blockchain) GetTailBlockHash() hash.Hash {
-	return bc.tailBlockHash
+	return bc.bc.GetTailBlockHash()
 }
 
 func (bc *Blockchain) GetLIBHash() hash.Hash {
-	return bc.libHash
+	return bc.bc.GetLIBHash()
 }
 
 func (bc *Blockchain) GetSCManager() ScEngineManager {
@@ -208,7 +206,7 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 }
 
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
-	bc.tailBlockHash = tailBlockHash
+	bc.SetTailBlockHash(tailBlockHash)
 }
 
 func (bc *Blockchain) SetConsensus(consensus Consensus) {
@@ -335,60 +333,33 @@ func (bc *Blockchain) FindTXOutput(in TXInput) (TXOutput, error) {
 	return vout, err
 }
 
-func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte) (Transaction, error) {
-	bci := bc.Iterator()
-
-	for {
-		block, err := bci.NextFromIndex(blockId)
-		if err != nil {
-			return Transaction{}, err
-		}
-
-		for _, tx := range block.GetTransactions() {
-			if bytes.Compare(tx.ID, txID) == 0 {
-				return *tx, nil
-			}
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			break
-		}
-	}
-
-	return Transaction{}, ErrTransactionNotFound
-}
-
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
+	return &Blockchain{
+		blockchain.NewBlockchain(bc.GetTailBlockHash(), bc.GetLIBHash()),
+		bc.db,
+		bc.utxoCache,
+		bc.consensus,
+		nil,
+		nil,
+		BlockchainInit,
+		nil,
+		bc.blkSizeLimit,
+		bc.mutex,
+	}
 }
 
 func (bc *Blockchain) Next() (*block.Block, error) {
 	var blk *block.Block
 
-	encodedBlock, err := bc.db.Get(bc.tailBlockHash)
+	encodedBlock, err := bc.db.Get(bc.GetTailBlockHash())
 	if err != nil {
 		return nil, err
 	}
 
 	blk = block.Deserialize(encodedBlock)
 
-	bc.tailBlockHash = blk.GetPrevHash()
+	bc.bc.SetTailBlockHash(blk.GetPrevHash())
 
-	return blk, nil
-}
-
-func (bc *Blockchain) NextFromIndex(indexHash []byte) (*block.Block, error) {
-	var blk *block.Block
-
-	encodedBlock, err := bc.db.Get(indexHash)
-	if err != nil {
-		return nil, err
-	}
-
-	blk = block.Deserialize(encodedBlock)
-
-	bc.tailBlockHash = blk.GetPrevHash()
-	println(bc.tailBlockHash)
 	return blk, nil
 }
 
@@ -508,7 +479,7 @@ func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	if err != nil {
 		return err
 	}
-	bc.tailBlockHash = hash
+	bc.bc.SetTailBlockHash(hash)
 	return nil
 }
 
@@ -523,7 +494,7 @@ func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
 	if err != nil {
 		return err
 	}
-	bc.libHash = hash
+	bc.bc.SetLIBHash(hash)
 	return nil
 }
 
