@@ -16,7 +16,7 @@ import (
 
 // VerifyInEstimate returns whether the current tx in estimate mode is valid.
 func VerifyInEstimate(utxoIndex *UTXOIndex, ctx *ContractTx) error {
-	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
+	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return errors.New("Transaction: contract state check failed")
 	}
 
@@ -29,7 +29,7 @@ func VerifyInEstimate(utxoIndex *UTXOIndex, ctx *ContractTx) error {
 
 // VerifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyContractTx(utxoIndex *UTXOIndex, ctx *ContractTx) (bool, error) {
-	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
+	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return false, errors.New("Transaction: contract state check failed")
 	}
 
@@ -100,7 +100,7 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
 		}).Warn("Transaction: tip is invalid.")
 		return nil, err
 	}
-	result, err = tx.verifySignatures(prevUtxos)
+	result, err = verifySignatures(prevUtxos, tx)
 	if !result {
 		return nil, err
 	}
@@ -404,4 +404,38 @@ func Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO, tx *Transaction) error {
 		tx.Vin[i].Signature = signature
 	}
 	return nil
+}
+
+func IsContractDeployed(utxoIndex *UTXOIndex, ctx *ContractTx) bool {
+	pubkeyhash := ctx.GetContractPubKeyHash()
+	if pubkeyhash == nil {
+		return false
+	}
+
+	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
+	return contractUtxoTx.Size() > 0
+}
+
+func verifySignatures(prevUtxos []*UTXO, tx *Transaction) (bool, error) {
+	txCopy := tx.TrimmedCopy(false)
+
+	for i, vin := range tx.Vin {
+		txCopy.Vin[i].Signature = nil
+		oldPubKey := txCopy.Vin[i].PubKey
+		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
+		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[i].PubKey = oldPubKey
+
+		originPub := make([]byte, 1+len(vin.PubKey))
+		originPub[0] = 4 // uncompressed point
+		copy(originPub[1:], vin.PubKey)
+
+		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+
+		if err != nil || verifyResult == false {
+			return false, errors.New("Transaction: Signatures is invalid")
+		}
+	}
+
+	return true, nil
 }

@@ -30,7 +30,6 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -304,16 +303,6 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
-func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
-	pubkeyhash := ctx.GetContractPubKeyHash()
-	if pubkeyhash == nil {
-		return false
-	}
-
-	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
-	return contractUtxoTx.Size() > 0
-}
-
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() (bool, error) {
 	txCopy := tx.TrimmedCopy(true)
@@ -376,30 +365,6 @@ func (tx *Transaction) calculateTotalVoutValue() (*common.Amount, bool) {
 		totalVout = totalVout.Add(vout.Value)
 	}
 	return totalVout, true
-}
-
-func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) (bool, error) {
-	txCopy := tx.TrimmedCopy(false)
-
-	for i, vin := range tx.Vin {
-		txCopy.Vin[i].Signature = nil
-		oldPubKey := txCopy.Vin[i].PubKey
-		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
-		txCopy.ID = txCopy.Hash()
-		txCopy.Vin[i].PubKey = oldPubKey
-
-		originPub := make([]byte, 1+len(vin.PubKey))
-		originPub[0] = 4 // uncompressed point
-		copy(originPub[1:], vin.PubKey)
-
-		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
-
-		if err != nil || verifyResult == false {
-			return false, errors.New("Transaction: Signatures is invalid")
-		}
-	}
-
-	return true, nil
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
