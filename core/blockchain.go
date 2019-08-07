@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -467,7 +468,7 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *UTXOIndex, scState *S
 	}
 	parentblockHash := bc.GetTailBlockHash()
 	//if is child of tail, skip rollback
-	if IsHashEqual(parentblockHash, targetHash) {
+	if block_logic.IsHashEqual(parentblockHash, targetHash) {
 		return true
 	}
 

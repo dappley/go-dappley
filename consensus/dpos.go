@@ -203,7 +203,7 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 		return false
 	}
 
-	return !core.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
+	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
 // verifyProducer verifies a given block is produced by the valid producer by verifying the signature of the block

@@ -22,6 +22,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"os"
 	"sync"
 	"testing"
@@ -161,10 +163,10 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := NewBlock([]*Transaction{}, genesis, "")
+	blk := block.NewBlock([]*Transaction{}, genesis, "")
 	blk.SetHash([]byte("hash1"))
 
-	blk.header.height = 1
+	blk.SetHeight(1)
 	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	// Expect the coinbase tx to go through
@@ -206,8 +208,8 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 			txs = append(txs, &tx)
 		}
 
-		b := NewBlock(txs, tailBlk, "")
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock(txs, tailBlk, "")
+		b.SetHash(block_logic.CalculateHash(b))
 		state := LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
