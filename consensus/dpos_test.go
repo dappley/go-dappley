@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/block"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,7 +65,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		block    *core.Block
+		block    *block.Block
 		expected bool
 	}{
 		{
