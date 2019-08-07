@@ -242,54 +242,6 @@ func (tx *Transaction) isVinCoinbase() bool {
 	return len(tx.Vin) == 1 && len(tx.Vin[0].Txid) == 0 && tx.Vin[0].Vout == -1
 }
 
-// Describe reverse-engineers the high-level description of a transaction
-func (tx *Transaction) Describe(utxoIndex *UTXOIndex) (sender, recipient *account.Address, amount, tip *common.Amount, error error) {
-	var receiverAddress account.Address
-	vinPubKey := tx.Vin[0].PubKey
-	pubKeyHash := account.PubKeyHash([]byte(""))
-	inputAmount := common.NewAmount(0)
-	outputAmount := common.NewAmount(0)
-	payoutAmount := common.NewAmount(0)
-	for _, vin := range tx.Vin {
-		if bytes.Compare(vin.PubKey, vinPubKey) == 0 {
-			switch {
-			case tx.IsRewardTx():
-				pubKeyHash = account.PubKeyHash(rewardTxData)
-				continue
-			case tx.IsFromContract(utxoIndex):
-				// vinPubKey is the pubKeyHash if it is a sc generated tx
-				pubKeyHash = account.PubKeyHash(vinPubKey)
-			default:
-				pkh, err := account.NewUserPubKeyHash(vin.PubKey)
-				if err != nil {
-					return nil, nil, nil, nil, err
-				}
-				pubKeyHash = pkh
-			}
-			usedUTXO := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
-			inputAmount = inputAmount.Add(usedUTXO.Value)
-		} else {
-			logger.Debug("Transaction: using UTXO from multiple accounts.")
-		}
-	}
-	for _, vout := range tx.Vout {
-		if bytes.Compare([]byte(vout.PubKeyHash), vinPubKey) == 0 {
-			outputAmount = outputAmount.Add(vout.Value)
-		} else {
-			receiverAddress = vout.PubKeyHash.GenerateAddress()
-			payoutAmount = payoutAmount.Add(vout.Value)
-		}
-	}
-	tip, err := inputAmount.Sub(outputAmount)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	senderAddress := pubKeyHash.GenerateAddress()
-
-	return &senderAddress, &receiverAddress, payoutAmount, tip, nil
-}
-
 //GetToHashBytes Get bytes for hash
 func (tx *Transaction) GetToHashBytes() []byte {
 	var tempBytes []byte

@@ -398,7 +398,7 @@ func verifyGeneratedTXs(utxoIndex *UTXOIndex, candidates []*Transaction, generat
 	// genTXBuckets stores description of txs grouped by concatenation of sender's and recipient's public key hashes
 	genTXBuckets := make(map[string][][]*common.Amount)
 	for _, genTX := range generatedTXs {
-		sender, recipient, amount, tip, err := genTX.Describe(utxoIndex)
+		sender, recipient, amount, tip, err := DescribeTransaction(utxoIndex, genTX)
 		if err != nil {
 			continue
 		}
@@ -407,7 +407,7 @@ func verifyGeneratedTXs(utxoIndex *UTXOIndex, candidates []*Transaction, generat
 	}
 L:
 	for _, tx := range candidates {
-		sender, recipient, amount, tip, err := tx.Describe(utxoIndex)
+		sender, recipient, amount, tip, err := DescribeTransaction(utxoIndex, tx)
 		if err != nil {
 			return false
 		}
