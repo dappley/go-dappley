@@ -433,46 +433,6 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 	return contractUtxoTx.Size() > 0
 }
 
-func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
-	prevUtxos := getPrevUTXOs(tx, utxoIndex)
-	if prevUtxos == nil {
-		return nil, errors.New("Transaction: prevUtxos not found")
-	}
-	result, err := tx.verifyID()
-	if !result {
-		return nil, err
-	}
-
-	result, err = tx.verifyPublicKeyHash(prevUtxos)
-	if !result {
-		return nil, err
-	}
-
-	totalPrev := calculateUtxoSum(prevUtxos)
-	totalVoutValue, ok := tx.calculateTotalVoutValue()
-	if !ok {
-		return nil, errors.New("Transaction: vout is invalid")
-	}
-	result, err = tx.verifyAmount(totalPrev, totalVoutValue)
-	if !result {
-		return nil, err
-	}
-	result, err = tx.verifyTip(totalPrev, totalVoutValue)
-	if !result {
-		logger.WithFields(logger.Fields{
-			"tx_id": hex.EncodeToString(tx.ID),
-		}).Warn("Transaction: tip is invalid.")
-		return nil, err
-	}
-	result, err = tx.verifySignatures(prevUtxos)
-	if !result {
-		return nil, err
-	}
-	totalBalance, _ := totalPrev.Sub(totalVoutValue)
-	totalBalance, _ = totalBalance.Sub(tx.Tip)
-	return totalBalance, nil
-}
-
 // Returns related previous UTXO for current transaction
 func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
 	var prevUtxos []*UTXO
