@@ -187,7 +187,7 @@ func (dpos *DPOS) Produced(blk *block.Block) bool {
 func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
 	hash := block_logic.CalculateHash(ctx.Block)
 	ctx.Block.SetHash(hash)
-	ok := block_logic.SignBlock(ctx.Block, dpos.producerKey, hash)
+	ok := block_logic.SignBlock(ctx.Block, dpos.producerKey)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}

@@ -65,13 +65,13 @@ func CalculateHashWithNonce(b *block.Block) hash.Hash {
 	return h[:]
 }
 
-func SignBlock(b *block.Block, key string, data []byte) bool {
+func SignBlock(b *block.Block, key string) bool {
 	if len(key) <= 0 {
 		logger.Warn("Block: the key is too short for signature!")
 		return false
 	}
 
-	signature, err := generateSignature(key, data)
+	signature, err := generateSignature(key, b.GetHash())
 	if err != nil {
 		return false
 	}
