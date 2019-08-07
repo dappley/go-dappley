@@ -57,13 +57,6 @@ const (
 	BlockchainReady
 )
 
-type BlockContext struct {
-	Block     *block.Block
-	Lib       *block.Block
-	UtxoIndex *UTXOIndex
-	State     *ScState
-}
-
 type Blockchain struct {
 	tailBlockHash []byte
 	libHash       []byte
