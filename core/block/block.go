@@ -109,6 +109,10 @@ func (b *Block) SetHeight(height uint64) {
 	b.header.height = height
 }
 
+func (b *Block) SetTransactions(txs []*core.Transaction) {
+	b.transactions = txs
+}
+
 func (b *Block) IsSigned() bool {
 	return b.header != nil && b.header.signature != nil
 }

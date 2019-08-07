@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/core/block"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
@@ -872,7 +873,7 @@ func (ctx *ContractTx) Execute(prevUtxos []*UTXO,
 	rewards map[string]string,
 	engine ScEngine,
 	currblkHeight uint64,
-	parentBlk *Block) (uint64, []*Transaction, error) {
+	parentBlk *block.Block) (uint64, []*Transaction, error) {
 
 	if engine == nil {
 		return 0, nil, nil

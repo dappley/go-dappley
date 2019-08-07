@@ -59,7 +59,7 @@ func TestJournalPutAndGet(t *testing.T) {
 	txs := genesis.GetTransactions()
 	txs = append(txs, &tx1)
 	txs = append(txs, &tx2)
-	genesis.transactions = txs
+	genesis.SetTransactions(txs)
 
 	err := bc.AddBlockContextToTail(PrepareBlockContext(bc, genesis))
 	// Expect no error when adding genesis block
