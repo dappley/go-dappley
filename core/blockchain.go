@@ -383,19 +383,19 @@ func (bc *Blockchain) Next() (*block.Block, error) {
 	return blk, nil
 }
 
-func (bc *Blockchain) NextFromIndex(indexHash []byte) (*Block, error) {
-	var block *Block
+func (bc *Blockchain) NextFromIndex(indexHash []byte) (*block.Block, error) {
+	var blk *block.Block
 
 	encodedBlock, err := bc.db.Get(indexHash)
 	if err != nil {
 		return nil, err
 	}
 
-	block = Deserialize(encodedBlock)
+	blk = block.Deserialize(encodedBlock)
 
-	bc.tailBlockHash = block.GetPrevHash()
+	bc.tailBlockHash = blk.GetPrevHash()
 	println(bc.tailBlockHash)
-	return block, nil
+	return blk, nil
 }
 
 func (bc *Blockchain) String() string {

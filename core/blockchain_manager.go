@@ -151,7 +151,7 @@ func (bm *BlockChainManager) Push(blk *block.Block, pid peer.ID) {
 	}
 
 	forkHead := bm.blockPool.CacheBlock(blk, bm.blockchain.GetMaxHeight())
-	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
+	forkHeadParentHash := forkHead.GetValue().(*block.Block).GetPrevHash()
 	if forkHeadParentHash == nil {
 		return
 	}
@@ -159,10 +159,10 @@ func (bm *BlockChainManager) Push(blk *block.Block, pid peer.ID) {
 	if parent == nil {
 		logger.WithFields(logger.Fields{
 			"parent_hash":   forkHeadParentHash,
-			"parent_height": forkHead.GetValue().(*Block).GetHeight() - 1,
+			"parent_height": forkHead.GetValue().(*block.Block).GetHeight() - 1,
 			"from":          pid,
 		}).Info("BlockChainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHead.GetValue().(*Block).GetPrevHash(), pid)
+		bm.RequestBlock(forkHead.GetValue().(*block.Block).GetPrevHash(), pid)
 		return
 	}
 	forkBlks := bm.blockPool.GenerateForkBlocks(forkHead, bm.blockchain.GetMaxHeight())
@@ -349,7 +349,7 @@ func (bm *BlockChainManager) NumForks() (int64, int64) {
 	var numForks, maxHeight int64 = 0, 0
 
 	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.Tree) {
-		rootBlk := tree.GetValue().(*Block)
+		rootBlk := tree.GetValue().(*block.Block)
 		_, err := bm.blockchain.GetBlockByHash(rootBlk.GetPrevHash())
 		if err == nil {
 			/* the cached block is rooted in the BlockChain */
