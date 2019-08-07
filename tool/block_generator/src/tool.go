@@ -3,6 +3,8 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"io/ioutil"
 	"os"
 
@@ -81,7 +83,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 
 	//max, index := GetMaxHeightOfDifferentStart(files)
 	//fund every miner
-	parentBlks := make([]*core.Block, len(files))
+	parentBlks := make([]*block.Block, len(files))
 	utxoIndexes := make([]*core.UTXOIndex, len(files))
 	for i := range files {
 		parentBlks[i], _ = bcs[i].GetTailBlock()
@@ -126,7 +128,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -138,17 +140,16 @@ func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *
 	bc.GetDb().Put([]byte("tailBlockHash"), tailBlk.GetHash())
 }
 
-func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *core.Block {
+func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *block.Block {
 	producer := account.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
 	cbtx := core.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
-	b := core.NewBlockWithTimestamp(txs, parentBlk, time, producer.String())
-	hash := b.CalculateHashWithNonce(0)
-	b.SetHash(hash)
+	b := block.NewBlockWithTimestamp(txs, parentBlk, time, producer.String())
+	b.SetHash(block_logic.CalculateHashWithNonce(b))
 	b.SetNonce(0)
-	b.SignBlock(key, hash)
+	block_logic.SignBlock(b, key)
 	time = time + defaultTimeBetweenBlk
 	logger.WithFields(logger.Fields{
 		"producer":  producer.String(),
@@ -158,13 +159,13 @@ func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Bl
 	return b
 }
 
-func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, minerPrivKey string) *core.Block {
+func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, minerPrivKey string) *block.Block {
 	logger.Info("generate funding Block")
 	tx := generateFundingTransaction(utxoIndex, fundAddr, minerPrivKey)
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *core.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *account_logic.AccountManager) (*core.Block, account.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *account_logic.AccountManager) (*block.Block, account.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
