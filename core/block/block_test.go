@@ -3,7 +3,7 @@ package block
 import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -81,7 +81,7 @@ func TestBlockHeader_Proto(t *testing.T) {
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
-	newpb := &corepb.BlockHeader{}
+	newpb := &blockpb.BlockHeader{}
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 
@@ -102,7 +102,7 @@ func TestBlock_Proto(t *testing.T) {
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
-	newpb := &corepb.Block{}
+	newpb := &blockpb.Block{}
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 

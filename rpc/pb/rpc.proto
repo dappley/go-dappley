@@ -1,6 +1,6 @@
 syntax = "proto3";
 package rpcpb;
-import "github.com/dappley/go-dappley/core/pb/block.proto";
+import "github.com/dappley/go-dappley/core/block/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 import "github.com/dappley/go-dappley/core/pb/utxo.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";

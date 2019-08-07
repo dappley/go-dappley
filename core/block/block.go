@@ -3,8 +3,8 @@ package block
 import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
+	"github.com/nebulasio/go-nebulas/core/pb"
 	logger "github.com/sirupsen/logrus"
 	"time"
 )

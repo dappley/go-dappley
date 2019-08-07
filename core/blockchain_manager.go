@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/logic/block_logic"
 
 	"github.com/dappley/go-dappley/common"
@@ -282,16 +283,16 @@ func (bm *BlockChainManager) SendBlock(blk *block.Block, pid peer.ID, isBroadcas
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
 func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmdContext) {
-	blockpb := &corepb.Block{}
+	pb := &blockpb.Block{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(command.GetData(), blockpb); err != nil {
+	if err := proto.Unmarshal(command.GetData(), pb); err != nil {
 		logger.WithError(err).Warn("BlockChainManager: parse data failed.")
 		return
 	}
 
 	blk := &block.Block{}
-	blk.FromProto(blockpb)
+	blk.FromProto(pb)
 	bm.Push(blk, command.GetSource())
 
 	if command.IsBroadcast() {

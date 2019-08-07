@@ -1,6 +1,6 @@
 syntax = "proto3";
 package networkpb;
-import "github.com/dappley/go-dappley/core/pb/block.proto";
+import "github.com/dappley/go-dappley/core/block/pb/block.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";
 
 message DappCmd {
@@ -27,18 +27,18 @@ message GetBlocks {
 }
   
 message ReturnBlocks {
-    repeated corepb.Block blocks = 1;
+    repeated blockpb.Block blocks = 1;
     repeated bytes start_block_hashes = 2;
 }
 
 message GetCommonBlocks {
     int32 msg_id  = 1;
-    repeated corepb.BlockHeader block_headers = 2;
+    repeated blockpb.BlockHeader block_headers = 2;
 }
 
 message ReturnCommonBlocks {
     int32 msg_id = 1;
-    repeated corepb.BlockHeader block_headers = 2;
+    repeated blockpb.BlockHeader block_headers = 2;
 }
 
 message GetPeerList {

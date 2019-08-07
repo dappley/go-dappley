@@ -25,6 +25,7 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
@@ -769,9 +770,9 @@ func (downloadManager *DownloadManager) SendGetBlocksResponse(startBlockHashes [
 		blk, err = downloadManager.bm.Getblockchain().GetBlockByHeight(blk.GetHeight() + 1)
 	}
 
-	var blockPbs []*corepb.Block
+	var blockPbs []*blockpb.Block
 	for i := len(blks) - 1; i >= 0; i-- {
-		blockPbs = append(blockPbs, blks[i].ToProto().(*corepb.Block))
+		blockPbs = append(blockPbs, blks[i].ToProto().(*blockpb.Block))
 	}
 
 	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: startBlockHashes}

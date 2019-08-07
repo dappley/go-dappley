@@ -1,11 +1,11 @@
 syntax = "proto3";
-package corepb;
+package blockpb;
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
 
 
 message Block{
     BlockHeader header = 1;
-    repeated Transaction transactions = 2;
+    repeated corepb.Transaction transactions = 2;
     bytes parent_hash = 3;
 }
 

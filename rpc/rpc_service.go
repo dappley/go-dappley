@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"strings"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -175,7 +176,7 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 	result := &rpcpb.GetBlocksResponse{}
 
 	for _, blk = range blocks {
-		result.Blocks = append(result.Blocks, blk.ToProto().(*corepb.Block))
+		result.Blocks = append(result.Blocks, blk.ToProto().(*blockpb.Block))
 	}
 
 	return result, nil
@@ -202,7 +203,7 @@ func (rpcService *RpcService) RpcGetBlockByHash(ctx context.Context, in *rpcpb.G
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetBlockByHashResponse{Block: blk.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlockByHashResponse{Block: blk.ToProto().(*blockpb.Block)}, nil
 }
 
 // RpcGetBlockByHeight Get single block in blockchain by height
@@ -213,7 +214,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetBlockByHeightResponse{Block: blk.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlockByHeightResponse{Block: blk.ToProto().(*blockpb.Block)}, nil
 }
 
 // RpcSendTransaction Send transaction to blockchain created by account account
@@ -394,7 +395,7 @@ func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, i
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetLastIrreversibleBlockResponse{Block: blk.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetLastIrreversibleBlockResponse{Block: blk.ToProto().(*blockpb.Block)}, nil
 }
 
 // RpcEstimateGas estimate gas value of contract deploy and execution.
