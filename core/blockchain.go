@@ -448,7 +448,7 @@ func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 	return nil
 }
 
-func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
+func (bc *Blockchain) IsHigherThanBlockchain(block *block.Block) bool {
 	return block.GetHeight() > bc.GetMaxHeight()
 }
 

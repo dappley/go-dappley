@@ -19,6 +19,8 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -27,27 +29,21 @@ import (
 	"github.com/dappley/go-dappley/util"
 )
 
-func GenerateMockBlock() *Block {
-	bh1 := &BlockHeader{
+func GenerateMockBlock() *block.Block {
+	t1 := MockTransaction()
+	t2 := MockTransaction()
+
+	return block.NewBlockWithRawInfo(
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,
 		time.Now().Unix(),
-		nil,
 		0,
-		"",
-	}
-
-	t1 := MockTransaction()
-	t2 := MockTransaction()
-
-	return &Block{
-		header:       bh1,
-		transactions: []*Transaction{t1, t2},
-	}
+		[]*Transaction{t1, t2},
+	)
 }
 
-func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Block {
+func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block) *block.Block {
 	var prevHash []byte
 	var height uint64
 	height = 0
@@ -59,20 +55,17 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 	if txs == nil {
 		txs = []*Transaction{}
 	}
-	block := &Block{
-		header: &BlockHeader{
-			hash:      []byte{},
-			prevHash:  prevHash,
-			nonce:     0,
-			timestamp: t,
-			sign:      nil,
-			height:    height,
-		},
-		transactions: txs,
-	}
-	hash := block.CalculateHashWithNonce(block.GetNonce())
-	block.SetHash(hash)
-	return block
+	blk := block.NewBlockWithRawInfo(
+		[]byte{},
+		prevHash,
+		0,
+		t,
+		height,
+		txs)
+
+	hash := lblock.CalculateHashWithNonce(blk)
+	blk.SetHash(hash)
+	return blk
 }
 
 func GenerateMockBlockchain(size int) *Blockchain {
@@ -84,14 +77,14 @@ func GenerateMockBlockchain(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b.SetHash(lblock.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
 }
 
-func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
+func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
 	state := LoadScStateFromDatabase(bc.GetDb())
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
@@ -99,10 +92,10 @@ func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
 	return &ctx
 }
 
-func GenerateBlockWithCbtx(addr account.Address, lastblock *Block) *Block {
+func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.Block {
 	//create a new block chain
 	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
-	b := NewBlock([]*Transaction{&cbtx}, lastblock, "")
+	b := block.NewBlock([]*Transaction{&cbtx}, lastblock, "")
 	return b
 }
 func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
@@ -114,8 +107,8 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
 		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b.SetHash(lblock.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc

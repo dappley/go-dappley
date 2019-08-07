@@ -105,6 +105,10 @@ func (b *Block) SetSignature(sig hash.Hash) {
 	b.header.signature = sig
 }
 
+func (b *Block) SetHeight(height uint64) {
+	b.header.height = height
+}
+
 func (b *Block) IsSigned() bool {
 	return b.header != nil && b.header.signature != nil
 }
