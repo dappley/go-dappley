@@ -114,10 +114,11 @@ func (bm *BlockChainManager) GetblockPool() *BlockPool {
 }
 
 func (bm *BlockChainManager) VerifyBlock(blk *block.Block) bool {
-	if !bm.blockPool.Verify(blk) {
+	if !block_logic.VerifyHash(blk) {
+		logger.Warn("BlockChainManager: Block hash verification failed!")
 		return false
 	}
-	logger.Debug("BlockChainManager: blk is verified.")
+	//TODO: Verify double spending transactions in the same blk
 	if !(bm.blockchain.GetConsensus().Validate(blk)) {
 		logger.Warn("BlockChainManager: blk is invalid according to consensus!")
 		return false

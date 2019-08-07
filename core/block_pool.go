@@ -20,7 +20,6 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 
 	"github.com/hashicorp/golang-lru"
@@ -48,31 +47,20 @@ func NewBlockPool() *BlockPool {
 	return pool
 }
 
-func (pool *BlockPool) Verify(blk *block.Block) bool {
-	logger.Info("BlockPool: Has received a new blk")
-	if !block_logic.VerifyHash(blk) {
-		logger.Warn("BlockPool: received blk cannot pass hash verification!")
-		return false
-	}
-	//TODO: Verify double spending transactions in the same blk
-
-	return true
-}
-
 // CacheBlock caches the provided block if it is not a duplicate and it's height is within the upper bound of maxHeight,
 // returning the head of it's fork
 func (pool *BlockPool) CacheBlock(blk *block.Block, maxHeight uint64) *common.Tree {
-	blkCache := pool.blkCache
+
 	tree, _ := common.NewTree(blk.GetHash().String(), blk)
 
-	if blkCache.Contains(blk.GetHash().String()) {
+	if pool.blkCache.Contains(blk.GetHash().String()) {
 		return tree.GetRoot()
 	}
 	if !pool.isChildBlockInCache(blk.GetHash().String()) && blk.GetHeight() <= maxHeight {
 		return tree.GetRoot()
 	}
 
-	blkCache.Add(blk.GetHash().String(), tree)
+	pool.blkCache.Add(blk.GetHash().String(), tree)
 	pool.updateBlkCache(tree)
 	return tree.GetRoot()
 }
