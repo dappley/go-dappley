@@ -77,7 +77,7 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
 		return nil, err
 	}
 
-	result, err = tx.verifyPublicKeyHash(prevUtxos)
+	result, err = verifyPublicKeyHash(prevUtxos, tx)
 	if !result {
 		return nil, err
 	}
@@ -153,4 +153,69 @@ func DescribeTransaction(utxoIndex *UTXOIndex, tx *Transaction) (sender, recipie
 	senderAddress := pubKeyHash.GenerateAddress()
 
 	return &senderAddress, &receiverAddress, payoutAmount, tip, nil
+}
+
+// Returns related previous UTXO for current transaction
+func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
+	var prevUtxos []*UTXO
+	tempUtxoTxMap := make(map[string]*UTXOTx)
+	for _, vin := range tx.Vin {
+		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"tx_id":          hex.EncodeToString(tx.ID),
+				"vin_tx_id":      hex.EncodeToString(vin.Txid),
+				"vin_public_key": hex.EncodeToString(vin.PubKey),
+			}).Warn("Transaction: failed to get PubKeyHash of vin.")
+			return nil
+		}
+		tempUtxoTx, ok := tempUtxoTxMap[string(pubKeyHash)]
+		if !ok {
+			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+			tempUtxoTxMap[string(pubKeyHash)] = tempUtxoTx
+		}
+		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
+		if utxo == nil {
+			logger.WithFields(logger.Fields{
+				"tx_id":      hex.EncodeToString(tx.ID),
+				"vin_tx_id":  hex.EncodeToString(vin.Txid),
+				"vin_index":  vin.Vout,
+				"pubKeyHash": pubKeyHash.String(),
+			}).Warn("Transaction: cannot find vin.")
+			return nil
+		}
+		prevUtxos = append(prevUtxos, utxo)
+	}
+	return prevUtxos
+}
+
+//verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
+//key hash in utxo
+func verifyPublicKeyHash(prevUtxos []*UTXO, tx *Transaction) (bool, error) {
+
+	for i, vin := range tx.Vin {
+		if prevUtxos[i].PubKeyHash == nil {
+			logger.Error("Transaction: previous transaction is not correct.")
+			return false, errors.New("Transaction: prevUtxos not found")
+		}
+
+		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
+		if err != nil {
+			return false, err
+		}
+		//if the utxo belongs to a Contract, the utxo is not verified through
+		//public key hash. It will be verified through consensus
+		if isContract {
+			continue
+		}
+
+		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
+		if err != nil {
+			return false, err
+		}
+		if !bytes.Equal([]byte(pubKeyHash), []byte(prevUtxos[i].PubKeyHash)) {
+			return false, errors.New("Transaction: ID is invalid")
+		}
+	}
+	return true, nil
 }

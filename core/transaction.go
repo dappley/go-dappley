@@ -23,7 +23,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -385,40 +384,6 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 	return contractUtxoTx.Size() > 0
 }
 
-// Returns related previous UTXO for current transaction
-func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
-	var prevUtxos []*UTXO
-	tempUtxoTxMap := make(map[string]*UTXOTx)
-	for _, vin := range tx.Vin {
-		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"tx_id":          hex.EncodeToString(tx.ID),
-				"vin_tx_id":      hex.EncodeToString(vin.Txid),
-				"vin_public_key": hex.EncodeToString(vin.PubKey),
-			}).Warn("Transaction: failed to get PubKeyHash of vin.")
-			return nil
-		}
-		tempUtxoTx, ok := tempUtxoTxMap[string(pubKeyHash)]
-		if !ok {
-			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-			tempUtxoTxMap[string(pubKeyHash)] = tempUtxoTx
-		}
-		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
-		if utxo == nil {
-			logger.WithFields(logger.Fields{
-				"tx_id":      hex.EncodeToString(tx.ID),
-				"vin_tx_id":  hex.EncodeToString(vin.Txid),
-				"vin_index":  vin.Vout,
-				"pubKeyHash": pubKeyHash.String(),
-			}).Warn("Transaction: cannot find vin.")
-			return nil
-		}
-		prevUtxos = append(prevUtxos, utxo)
-	}
-	return prevUtxos
-}
-
 // verifyID verifies if the transaction ID is the hash of the transaction
 func (tx *Transaction) verifyID() (bool, error) {
 	txCopy := tx.TrimmedCopy(true)
@@ -481,37 +446,6 @@ func (tx *Transaction) calculateTotalVoutValue() (*common.Amount, bool) {
 		totalVout = totalVout.Add(vout.Value)
 	}
 	return totalVout, true
-}
-
-//verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
-//key hash in utxo
-func (tx *Transaction) verifyPublicKeyHash(prevUtxos []*UTXO) (bool, error) {
-
-	for i, vin := range tx.Vin {
-		if prevUtxos[i].PubKeyHash == nil {
-			logger.Error("Transaction: previous transaction is not correct.")
-			return false, errors.New("Transaction: prevUtxos not found")
-		}
-
-		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
-		if err != nil {
-			return false, err
-		}
-		//if the utxo belongs to a Contract, the utxo is not verified through
-		//public key hash. It will be verified through consensus
-		if isContract {
-			continue
-		}
-
-		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
-			return false, err
-		}
-		if !bytes.Equal([]byte(pubKeyHash), []byte(prevUtxos[i].PubKeyHash)) {
-			return false, errors.New("Transaction: ID is invalid")
-		}
-	}
-	return true, nil
 }
 
 func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) (bool, error) {
