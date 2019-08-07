@@ -368,19 +368,19 @@ func (bc *Blockchain) Iterator() *Blockchain {
 	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
-func (bc *Blockchain) Next() (*Block, error) {
-	var block *Block
+func (bc *Blockchain) Next() (*block.Block, error) {
+	var blk *block.Block
 
 	encodedBlock, err := bc.db.Get(bc.tailBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	block = Deserialize(encodedBlock)
+	blk = block.Deserialize(encodedBlock)
 
-	bc.tailBlockHash = block.GetPrevHash()
+	bc.tailBlockHash = blk.GetPrevHash()
 
-	return block, nil
+	return blk, nil
 }
 
 func (bc *Blockchain) NextFromIndex(indexHash []byte) (*Block, error) {

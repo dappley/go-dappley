@@ -19,6 +19,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/core/block"
 	"strings"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -152,67 +153,67 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 
 // RpcGetBlocks Get blocks in blockchain from head to tail
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
-	block := rpcService.findBlockInRequestHash(in.GetStartBlockHashes())
+	blk := rpcService.findBlockInRequestHash(in.GetStartBlockHashes())
 
 	// Reach the blockchain's tail
-	if block.GetHeight() >= rpcService.GetBlockchain().GetMaxHeight() {
+	if blk.GetHeight() >= rpcService.GetBlockchain().GetMaxHeight() {
 		return &rpcpb.GetBlocksResponse{}, nil
 	}
 
-	var blocks []*core.Block
+	var blocks []*block.Block
 	maxBlockCount := in.GetMaxCount()
 	if maxBlockCount > MaxGetBlocksCount {
-		return nil, status.Error(codes.InvalidArgument, "block count overflow")
+		return nil, status.Error(codes.InvalidArgument, "blk count overflow")
 	}
 
-	block, err := rpcService.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
+	blk, err := rpcService.GetBlockchain().GetBlockByHeight(blk.GetHeight() + 1)
 	for i := int32(0); i < maxBlockCount && err == nil; i++ {
-		blocks = append(blocks, block)
-		block, err = rpcService.GetBlockchain().GetBlockByHeight(block.GetHeight() + 1)
+		blocks = append(blocks, blk)
+		blk, err = rpcService.GetBlockchain().GetBlockByHeight(blk.GetHeight() + 1)
 	}
 
 	result := &rpcpb.GetBlocksResponse{}
 
-	for _, block = range blocks {
-		result.Blocks = append(result.Blocks, block.ToProto().(*corepb.Block))
+	for _, blk = range blocks {
+		result.Blocks = append(result.Blocks, blk.ToProto().(*corepb.Block))
 	}
 
 	return result, nil
 }
 
-func (rpcService *RpcService) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
+func (rpcService *RpcService) findBlockInRequestHash(startBlockHashes [][]byte) *block.Block {
 	for _, hash := range startBlockHashes {
 		// hash in blockchain, return
-		if block, err := rpcService.GetBlockchain().GetBlockByHash(hash); err == nil {
-			return block
+		if blk, err := rpcService.GetBlockchain().GetBlockByHash(hash); err == nil {
+			return blk
 		}
 	}
 
 	// Return Genesis Block
-	block, _ := rpcService.GetBlockchain().GetBlockByHeight(0)
-	return block
+	blk, _ := rpcService.GetBlockchain().GetBlockByHeight(0)
+	return blk
 }
 
 // RpcGetBlockByHash Get single block in blockchain by hash
 func (rpcService *RpcService) RpcGetBlockByHash(ctx context.Context, in *rpcpb.GetBlockByHashRequest) (*rpcpb.GetBlockByHashResponse, error) {
-	block, err := rpcService.GetBlockchain().GetBlockByHash(in.GetHash())
+	blk, err := rpcService.GetBlockchain().GetBlockByHash(in.GetHash())
 
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetBlockByHashResponse{Block: block.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlockByHashResponse{Block: blk.ToProto().(*corepb.Block)}, nil
 }
 
 // RpcGetBlockByHeight Get single block in blockchain by height
 func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb.GetBlockByHeightRequest) (*rpcpb.GetBlockByHeightResponse, error) {
-	block, err := rpcService.GetBlockchain().GetBlockByHeight(in.GetHeight())
+	blk, err := rpcService.GetBlockchain().GetBlockByHeight(in.GetHeight())
 
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetBlockByHeightResponse{Block: block.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetBlockByHeightResponse{Block: blk.ToProto().(*corepb.Block)}, nil
 }
 
 // RpcSendTransaction Send transaction to blockchain created by account account
@@ -387,13 +388,13 @@ func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Contex
 
 // RpcGetLastIrreversibleBlock get last irreversible block
 func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, in *rpcpb.GetLastIrreversibleBlockRequest) (*rpcpb.GetLastIrreversibleBlockResponse, error) {
-	block, err := rpcService.GetBlockchain().GetLIB()
+	blk, err := rpcService.GetBlockchain().GetLIB()
 
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	return &rpcpb.GetLastIrreversibleBlockResponse{Block: block.ToProto().(*corepb.Block)}, nil
+	return &rpcpb.GetLastIrreversibleBlockResponse{Block: blk.ToProto().(*corepb.Block)}, nil
 }
 
 // RpcEstimateGas estimate gas value of contract deploy and execution.
