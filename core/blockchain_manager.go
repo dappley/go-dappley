@@ -20,6 +20,8 @@ package core
 import (
 	"bytes"
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -110,45 +112,45 @@ func (bm *BlockChainManager) GetblockPool() *BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockChainManager) VerifyBlock(block *Block) bool {
-	if !bm.blockPool.Verify(block) {
+func (bm *BlockChainManager) VerifyBlock(blk *block.Block) bool {
+	if !bm.blockPool.Verify(blk) {
 		return false
 	}
-	logger.Debug("BlockChainManager: block is verified.")
-	if !(bm.blockchain.GetConsensus().Validate(block)) {
-		logger.Warn("BlockChainManager: block is invalid according to consensus!")
+	logger.Debug("BlockChainManager: blk is verified.")
+	if !(bm.blockchain.GetConsensus().Validate(blk)) {
+		logger.Warn("BlockChainManager: blk is invalid according to consensus!")
 		return false
 	}
-	logger.Debug("BlockChainManager: block is valid according to consensus.")
+	logger.Debug("BlockChainManager: blk is valid according to consensus.")
 	return true
 }
 
-func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
+func (bm *BlockChainManager) Push(blk *block.Block, pid peer.ID) {
 	logger.WithFields(logger.Fields{
 		"from":   pid.String(),
-		"hash":   block.GetHash().String(),
-		"height": block.GetHeight(),
-	}).Info("BlockChainManager: received a new block.")
+		"hash":   blk.GetHash().String(),
+		"height": blk.GetHeight(),
+	}).Info("BlockChainManager: received a new blk.")
 
 	if bm.blockchain.GetState() != BlockchainReady {
-		logger.Info("BlockChainManager: Blockchain not ready, discard received block")
+		logger.Info("BlockChainManager: Blockchain not ready, discard received blk")
 		return
 	}
-	if !bm.VerifyBlock(block) {
+	if !bm.VerifyBlock(blk) {
 		return
 	}
 
-	receiveBlockHeight := block.GetHeight()
+	receiveBlockHeight := blk.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	if receiveBlockHeight >= ownBlockHeight &&
 		receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == BlockchainReady {
-		logger.Info("The height of the received block is higher than the height of its own block,to start download blockchain")
+		logger.Info("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
 		return
 	}
 
-	forkHead := bm.blockPool.CacheBlock(block, bm.blockchain.GetMaxHeight())
+	forkHead := bm.blockPool.CacheBlock(blk, bm.blockchain.GetMaxHeight())
 	forkHeadParentHash := forkHead.GetValue().(*Block).GetPrevHash()
 	if forkHeadParentHash == nil {
 		return
@@ -159,7 +161,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 			"parent_hash":   forkHeadParentHash,
 			"parent_height": forkHead.GetValue().(*Block).GetHeight() - 1,
 			"from":          pid,
-		}).Info("BlockChainManager: cannot find the parent of the received block from blockchain. Requesting the parent...")
+		}).Info("BlockChainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
 		bm.RequestBlock(forkHead.GetValue().(*Block).GetPrevHash(), pid)
 		return
 	}
@@ -170,7 +172,7 @@ func (bm *BlockChainManager) Push(block *Block, pid peer.ID) {
 	bm.blockchain.SetState(BlockchainReady)
 }
 
-func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash hash.Hash) error {
+func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
 
 	//find parent block
 	if len(forkBlks) == 0 {
@@ -206,7 +208,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash hash.Ha
 			"hash":   forkBlks[i].GetHash().String(),
 		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
-		if !forkBlks[i].VerifyTransactions(utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
+		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
 			return ErrTransactionVerifyFailed
 		}
 
@@ -261,21 +263,21 @@ func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvd
 }
 
 //SendBlockToPeer unicasts a block to the peer with peer id "pid"
-func (bm *BlockChainManager) SendBlockToPeer(block *Block, pid peer.ID) {
+func (bm *BlockChainManager) SendBlockToPeer(blk *block.Block, pid peer.ID) {
 
-	bm.SendBlock(block, pid, network_model.Unicast)
+	bm.SendBlock(blk, pid, network_model.Unicast)
 }
 
 //BroadcastBlock broadcasts a block to all peers
-func (bm *BlockChainManager) BroadcastBlock(block *Block) {
+func (bm *BlockChainManager) BroadcastBlock(blk *block.Block) {
 	var broadcastPid peer.ID
-	bm.SendBlock(block, broadcastPid, network_model.Broadcast)
+	bm.SendBlock(blk, broadcastPid, network_model.Broadcast)
 }
 
 //SendBlock sends a SendBlock command to its peer with pid by finding the block from its database
-func (bm *BlockChainManager) SendBlock(block *Block, pid peer.ID, isBroadcast bool) {
+func (bm *BlockChainManager) SendBlock(blk *block.Block, pid peer.ID, isBroadcast bool) {
 
-	bm.netService.SendCommand(SendBlock, block.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
+	bm.netService.SendCommand(SendBlock, blk.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
 }
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
@@ -288,9 +290,9 @@ func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 		return
 	}
 
-	block := &Block{}
-	block.FromProto(blockpb)
-	bm.Push(block, command.GetSource())
+	blk := &block.Block{}
+	blk.FromProto(blockpb)
+	bm.Push(blk, command.GetSource())
 
 	if command.IsBroadcast() {
 		//relay the original command

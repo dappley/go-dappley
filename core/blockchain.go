@@ -170,12 +170,12 @@ func (bc *Blockchain) GetBlockSizeLimit() int {
 	return bc.blkSizeLimit
 }
 
-func (bc *Blockchain) GetTailBlock() (*Block, error) {
+func (bc *Blockchain) GetTailBlock() (*block.Block, error) {
 	hash := bc.GetTailBlockHash()
 	return bc.GetBlockByHash(hash)
 }
 
-func (bc *Blockchain) GetLIB() (*Block, error) {
+func (bc *Blockchain) GetLIB() (*block.Block, error) {
 	hash := bc.GetLIBHash()
 	return bc.GetBlockByHash(hash)
 }
@@ -196,15 +196,15 @@ func (bc *Blockchain) GetLIBHeight() uint64 {
 	return block.GetHeight()
 }
 
-func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*Block, error) {
+func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*block.Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
 		return nil, ErrBlockDoesNotExist
 	}
-	return Deserialize(rawBytes), nil
+	return block.Deserialize(rawBytes), nil
 }
 
-func (bc *Blockchain) GetBlockByHeight(height uint64) (*Block, error) {
+func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 	hash, err := bc.db.Get(util.UintToHex(height))
 	if err != nil {
 		return nil, ErrBlockDoesNotExist
@@ -317,7 +317,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	return nil
 }
 
-func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *Block) error {
+func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Block) error {
 	if parentBlk == nil {
 		//if the current block is genesis block. do not run smart contract
 		return nil
@@ -533,20 +533,20 @@ func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
 	return nil
 }
 
-func (bc *Blockchain) IsLIB(block *Block) bool {
-	block, err := bc.GetBlockByHash(block.GetHash())
+func (bc *Blockchain) IsLIB(blk *block.Block) bool {
+	blkFromDb, err := bc.GetBlockByHash(blk.GetHash())
 	if err != nil {
 		logger.Error("Blockchain:get block by hash from blockchain error: ", err)
 		return false
 	}
-	if block == nil {
-		logger.Error("Blockchain:block is not exist in blockchain")
+	if blkFromDb == nil {
+		logger.Error("Blockchain:blk is not exist in blockchain")
 		return false
 	}
 
 	lib, _ := bc.GetLIB()
 
-	if lib.GetHeight() >= block.GetHeight() {
+	if lib.GetHeight() >= blkFromDb.GetHeight() {
 		return true
 	}
 	return false

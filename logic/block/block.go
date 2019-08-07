@@ -99,7 +99,7 @@ func VerifyHash(b *block.Block) bool {
 	return bytes.Compare(b.GetHash(), CalculateHash(b)) == 0
 }
 
-func VerifyTransactions(b *block.Block, utxoIndex *core.UTXOIndex, scState *core.ScState, manager core.ScEngineManager, parentBlk *core.Block) bool {
+func VerifyTransactions(b *block.Block, utxoIndex *core.UTXOIndex, scState *core.ScState, manager core.ScEngineManager, parentBlk *block.Block) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash": b.GetHash(),
