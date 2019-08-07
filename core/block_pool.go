@@ -21,7 +21,7 @@ package core
 import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -67,7 +67,7 @@ func NewBlockPool(size int) *BlockPool {
 
 func (pool *BlockPool) Verify(blk *block.Block) bool {
 	logger.Info("BlockPool: Has received a new blk")
-	if !lblock.VerifyHash(blk) {
+	if !block_logic.VerifyHash(blk) {
 		logger.Warn("BlockPool: received blk cannot pass hash verification!")
 		return false
 	}

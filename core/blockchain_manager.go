@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -208,7 +208,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			"hash":   forkBlks[i].GetHash().String(),
 		}).Debug("BlockChainManager: is verifying a block in the fork.")
 
-		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
+		if !block_logic.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
 			return ErrTransactionVerifyFailed
 		}
 

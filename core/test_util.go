@@ -20,7 +20,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -63,7 +63,7 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block)
 		height,
 		txs)
 
-	hash := lblock.CalculateHashWithNonce(blk)
+	hash := block_logic.CalculateHashWithNonce(blk)
 	blk.SetHash(hash)
 	return blk
 }
@@ -78,7 +78,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
 		b := block.NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(lblock.CalculateHash(b))
+		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
@@ -108,7 +108,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 		tailBlk, _ := bc.GetTailBlock()
 		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(lblock.CalculateHash(b))
+		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc

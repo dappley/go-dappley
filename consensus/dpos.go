@@ -20,7 +20,7 @@ package consensus
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"strings"
 	"time"
 
@@ -184,9 +184,9 @@ func (dpos *DPOS) Produced(blk *core.Block) bool {
 }
 
 func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
-	hash := lblock.CalculateHash(ctx.Block)
+	hash := block_logic.CalculateHash(ctx.Block)
 	ctx.Block.SetHash(hash)
-	ok := lblock.SignBlock(ctx.Block, dpos.producerKey, hash)
+	ok := block_logic.SignBlock(ctx.Block, dpos.producerKey, hash)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}

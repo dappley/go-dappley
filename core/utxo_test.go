@@ -22,7 +22,7 @@ import (
 	"errors"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -390,15 +390,15 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		common.NewAmount(0),
 	}
 	prevBlock := block.NewBlock([]*Transaction{}, genesisBlock, "")
-	prevBlock.SetHash(lblock.CalculateHash(prevBlock))
+	prevBlock.SetHash(block_logic.CalculateHash(prevBlock))
 	emptyBlock := block.NewBlock([]*Transaction{}, prevBlock, "")
-	emptyBlock.SetHash(lblock.CalculateHash(emptyBlock))
+	emptyBlock.SetHash(block_logic.CalculateHash(emptyBlock))
 	normalBlock := block.NewBlock([]*Transaction{&normalTX}, genesisBlock, "")
-	normalBlock.SetHash(lblock.CalculateHash(normalBlock))
+	normalBlock.SetHash(block_logic.CalculateHash(normalBlock))
 	normalBlock2 := block.NewBlock([]*Transaction{&normalTX2}, normalBlock, "")
-	normalBlock2.SetHash(lblock.CalculateHash(normalBlock2))
+	normalBlock2.SetHash(block_logic.CalculateHash(normalBlock2))
 	abnormalBlock := block.NewBlock([]*Transaction{&abnormalTX}, normalBlock, "")
-	abnormalBlock.SetHash(lblock.CalculateHash(abnormalBlock))
+	abnormalBlock.SetHash(block_logic.CalculateHash(abnormalBlock))
 	corruptedUTXOBlockchain := prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2})
 	err := utxoIndexFromTXs([]*Transaction{&normalTX}, corruptedUTXOBlockchain.GetUtxoCache()).Save()
 	if err != nil {

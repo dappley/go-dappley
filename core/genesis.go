@@ -21,7 +21,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 )
 
 const genesisCoinbaseData = "Hello world"
@@ -44,6 +44,6 @@ func NewGenesisBlock(address account.Address) *block.Block {
 		0,
 		txs)
 
-	blk.SetHash(lblock.CalculateHash(blk))
+	blk.SetHash(block_logic.CalculateHash(blk))
 	return blk
 }

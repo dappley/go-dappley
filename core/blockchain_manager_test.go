@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,9 +19,9 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 
 	b1 := block.NewBlockWithRawInfo(nil, blk.GetHash(), 1, 0, 1, nil)
 	b3 := block.NewBlockWithRawInfo(nil, b1.GetHash(), 3, 0, 2, nil)
-	b3.SetHash(lblock.CalculateHash(b3))
+	b3.SetHash(block_logic.CalculateHash(b3))
 	b6 := block.NewBlockWithRawInfo(nil, b3.GetHash(), 6, 0, 3, nil)
-	b6.SetHash(lblock.CalculateHash(b6))
+	b6.SetHash(block_logic.CalculateHash(b6))
 
 	err = bc.AddBlockContextToTail(&BlockContext{Block: b1, UtxoIndex: NewUTXOIndex(nil), State: NewScState()})
 	require.Nil(t, err)
@@ -32,16 +32,16 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 
 	// create first fork of height 3
 	b2 := block.NewBlockWithRawInfo(nil, b1.GetHash(), 2, 0, 2, nil)
-	b2.SetHash(lblock.CalculateHash(b2))
+	b2.SetHash(block_logic.CalculateHash(b2))
 
 	b4 := block.NewBlockWithRawInfo(nil, b2.GetHash(), 4, 0, 3, nil)
-	b4.SetHash(lblock.CalculateHash(b4))
+	b4.SetHash(block_logic.CalculateHash(b4))
 
 	b5 := block.NewBlockWithRawInfo(nil, b2.GetHash(), 5, 0, 3, nil)
-	b5.SetHash(lblock.CalculateHash(b5))
+	b5.SetHash(block_logic.CalculateHash(b5))
 
 	b7 := block.NewBlockWithRawInfo(nil, b4.GetHash(), 7, 0, 4, nil)
-	b7.SetHash(lblock.CalculateHash(b7))
+	b7.SetHash(block_logic.CalculateHash(b7))
 
 	/*
 		              b1
@@ -74,7 +74,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 
 	// create a new fork off b6
 	b9 := block.NewBlockWithRawInfo(nil, b6.GetHash(), 9, 0, 4, nil)
-	b9.SetHash(lblock.CalculateHash(b9))
+	b9.SetHash(block_logic.CalculateHash(b9))
 
 	bp.CacheBlock(b9, 0)
 	require.Equal(t, 3, testGetNumForkHeads(bp))
