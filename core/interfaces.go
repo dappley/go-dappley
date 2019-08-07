@@ -20,6 +20,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -65,7 +66,7 @@ type NetService interface {
 
 type ScEngineManager interface {
 	CreateEngine() ScEngine
-	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState, blkHeight uint64, seed int64)
+	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *ScState, blkHeight uint64, seed int64)
 }
 
 type ScEngine interface {
@@ -74,11 +75,11 @@ type ScEngine interface {
 	ImportLocalStorage(state *ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
-	ImportUTXOs(utxos []*UTXO)
+	ImportUTXOs(utxos []*utxo.UTXO)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *Transaction)
-	ImportContractCreateUTXO(utxo *UTXO)
-	ImportPrevUtxos(utxos []*UTXO)
+	ImportContractCreateUTXO(utxo *utxo.UTXO)
+	ImportPrevUtxos(utxos []*utxo.UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
 	ImportNodeAddress(addr account.Address)

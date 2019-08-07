@@ -16,11 +16,12 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package utxo
 
 import (
 	"github.com/dappley/go-dappley/common"
 	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -34,14 +35,14 @@ const (
 
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
-	TXOutput
+	transaction.TXOutput
 	Txid     []byte
 	TxIndex  int
 	UtxoType UtxoType
 }
 
-// newUTXO returns an UTXO instance constructed from a TXOutput.
-func newUTXO(txout TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
+// NewUTXO returns an UTXO instance constructed from a TXOutput.
+func NewUTXO(txout transaction.TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
 	return &UTXO{txout, txid, vout, utxoType}
 }
 

@@ -25,6 +25,8 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/jinzhu/copier"
@@ -65,7 +67,7 @@ type Blockchain struct {
 	tailBlockHash []byte
 	libHash       []byte
 	db            storage.Storage
-	utxoCache     *UTXOCache
+	utxoCache     *utxo.UTXOCache
 	consensus     Consensus
 	txPool        *TransactionPool
 	scManager     ScEngineManager
@@ -82,7 +84,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		genesis.GetHash(),
 		genesis.GetHash(),
 		db,
-		NewUTXOCache(db),
+		utxo.NewUTXOCache(db),
 		consensus,
 		txPool,
 		scManager,
@@ -116,7 +118,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionP
 		tip,
 		lib,
 		db,
-		NewUTXOCache(db),
+		utxo.NewUTXOCache(db),
 		consensus,
 		txPool,
 		scManager,
@@ -132,7 +134,7 @@ func (bc *Blockchain) GetDb() storage.Storage {
 	return bc.db
 }
 
-func (bc *Blockchain) GetUtxoCache() *UTXOCache {
+func (bc *Blockchain) GetUtxoCache() *utxo.UTXOCache {
 	return bc.utxoCache
 }
 
@@ -330,11 +332,11 @@ func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *Block) err
 	return nil
 }
 
-func (bc *Blockchain) FindTXOutput(in TXInput) (TXOutput, error) {
+func (bc *Blockchain) FindTXOutput(in transaction.TXInput) (transaction.TXOutput, error) {
 	db := bc.db
 	vout, err := GetTxOutput(in, db)
 	if err != nil {
-		return TXOutput{}, err
+		return transaction.TXOutput{}, err
 	}
 	return vout, err
 }

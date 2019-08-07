@@ -16,14 +16,12 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package transaction
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 
@@ -95,25 +93,4 @@ func (out *TXOutput) FromProto(pb proto.Message) {
 	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).GetValue())
 	out.PubKeyHash = account.PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
 	out.Contract = pb.(*corepb.TXOutput).GetContract()
-}
-
-func (out *TXOutput) CheckContractSyntax(sc ScEngine) error {
-	if out.Contract != "" {
-		function, args := util.DecodeScInput(out.Contract)
-		if function == "" {
-			return sc.CheckContactSyntax(out.Contract)
-		}
-		totalArgs := util.PrepareArgs(args)
-		functionCallScript := prepareFuncCallScript(function, totalArgs)
-		return sc.CheckContactSyntax(functionCallScript)
-	}
-	return nil
-}
-
-func prepareFuncCallScript(function, args string) string {
-	return fmt.Sprintf(
-		`var instance = new _native_require();instance["%s"].apply(instance, [%s]);`,
-		function,
-		args,
-	)
 }

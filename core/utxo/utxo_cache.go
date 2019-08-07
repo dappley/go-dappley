@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package utxo
 
 import (
 	"github.com/dappley/go-dappley/core/account"

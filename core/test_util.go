@@ -23,6 +23,8 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 )
@@ -132,8 +134,8 @@ func MockTransaction() *Transaction {
 	}
 }
 
-func MockTxInputs() []TXInput {
-	return []TXInput{
+func MockTxInputs() []transaction.TXInput {
+	return []transaction.TXInput{
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
@@ -145,8 +147,8 @@ func MockTxInputs() []TXInput {
 	}
 }
 
-func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
-	return []TXInput{
+func MockTxInputsWithPubkey(pubkey []byte) []transaction.TXInput {
+	return []transaction.TXInput{
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
@@ -158,13 +160,13 @@ func MockTxInputsWithPubkey(pubkey []byte) []TXInput {
 	}
 }
 
-func MockUtxos(inputs []TXInput) []*UTXO {
-	utxos := make([]*UTXO, len(inputs))
+func MockUtxos(inputs []transaction.TXInput) []*utxo.UTXO {
+	utxos := make([]*utxo.UTXO, len(inputs))
 
 	for index, input := range inputs {
 		pubKeyHash, _ := account.NewUserPubKeyHash(input.PubKey)
-		utxos[index] = &UTXO{
-			TXOutput: TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
+		utxos[index] = &utxo.UTXO{
+			TXOutput: transaction.TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
 			Txid:     input.Txid,
 			TxIndex:  0,
 		}
@@ -173,8 +175,8 @@ func MockUtxos(inputs []TXInput) []*UTXO {
 	return utxos
 }
 
-func MockTxOutputs() []TXOutput {
-	return []TXOutput{
+func MockTxOutputs() []transaction.TXOutput {
+	return []transaction.TXOutput{
 		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 	}

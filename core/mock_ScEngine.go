@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/utxo"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -70,7 +71,7 @@ func (_m *MockScEngine) ImportNodeAddress(addr account.Address) {
 }
 
 // ImportPrevUtxos provides a mock function with given fields: utxos
-func (_m *MockScEngine) ImportPrevUtxos(utxos []*UTXO) {
+func (_m *MockScEngine) ImportPrevUtxos(utxos []*utxo.UTXO) {
 	_m.Called(utxos)
 }
 
@@ -99,12 +100,12 @@ func (_m *MockScEngine) ImportTransaction(tx *Transaction) {
 	_m.Called(tx)
 }
 
-func (_m *MockScEngine) ImportContractCreateUTXO(utxo *UTXO) {
+func (_m *MockScEngine) ImportContractCreateUTXO(utxo *utxo.UTXO) {
 	_m.Called(utxo)
 }
 
 // ImportUTXOs provides a mock function with given fields: utxos
-func (_m *MockScEngine) ImportUTXOs(utxos []*UTXO) {
+func (_m *MockScEngine) ImportUTXOs(utxos []*utxo.UTXO) {
 	_m.Called(utxos)
 }
 

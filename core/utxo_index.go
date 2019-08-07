@@ -25,10 +25,18 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 )
 
 var contractUtxoKey = []byte("contractUtxoKey")
+
+const (
+	UtxoNormal = iota
+	UtxoCreateContract
+	UtxoInvokeContract
+)
 
 var (
 	ErrUTXONotFound   = errors.New("utxo not found when trying to remove from cache")
@@ -37,15 +45,15 @@ var (
 
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndex struct {
-	index map[string]*UTXOTx
-	cache *UTXOCache
+	index map[string]*utxo.UTXOTx
+	cache *utxo.UTXOCache
 	mutex *sync.RWMutex
 }
 
 // NewUTXOIndex initializes an UTXOIndex instance
-func NewUTXOIndex(cache *UTXOCache) *UTXOIndex {
+func NewUTXOIndex(cache *utxo.UTXOCache) *UTXOIndex {
 	return &UTXOIndex{
-		index: make(map[string]*UTXOTx),
+		index: make(map[string]*utxo.UTXOTx),
 		cache: cache,
 		mutex: &sync.RWMutex{},
 	}
@@ -71,7 +79,7 @@ func (utxos *UTXOIndex) Delete() error {
 }
 
 // GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
-func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *UTXOTx {
+func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXOTx {
 	key := pubkeyHash.String()
 	utxos.mutex.RLock()
 	utxoTx, ok := utxos.index[key]
@@ -90,15 +98,15 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 }
 
 //SplitContractUtxo
-func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) (*UTXO, []*UTXO) {
+func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) (*utxo.UTXO, []*utxo.UTXO) {
 	if ok, _ := account.PubKeyHash(pubkeyHash).IsContract(); !ok {
 		return nil, nil
 	}
 
 	utxoTx := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 
-	var invokeContractUtxos []*UTXO
-	var createContractUtxo *UTXO
+	var invokeContractUtxos []*utxo.UTXO
+	var createContractUtxo *utxo.UTXO
 
 	for _, utxo := range utxoTx.Indices {
 		if utxo.UtxoType == UtxoCreateContract {
@@ -111,7 +119,7 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) (*UTXO,
 }
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
-func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*UTXO, error) {
+func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
 	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	retUtxos, ok := allUtxos.PrepareUtxos(amount)
 	if !ok {
@@ -122,7 +130,7 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *
 }
 
 // FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
-func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash account.PubKeyHash, txid []byte, vout int) *UTXO {
+func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash account.PubKeyHash, txid []byte, vout int) *utxo.UTXO {
 	utxosOfKey := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	return utxosOfKey.GetUtxo(txid, vout)
 }
@@ -195,10 +203,10 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) er
 	return nil
 }
 
-func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
+func getTXOutputSpent(in transaction.TXInput, bc *Blockchain) (transaction.TXOutput, int, error) {
 	tx, err := bc.FindTXOutput(in)
 	if err != nil {
-		return TXOutput{}, 0, ErrTXInputInvalid
+		return transaction.TXOutput{}, 0, ErrTXInputInvalid
 	}
 	return tx, in.Vout, nil
 }
@@ -216,36 +224,36 @@ func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 }
 
 // AddUTXO adds an unspent TXOutput to index
-func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
+func (utxos *UTXOIndex) AddUTXO(txout transaction.TXOutput, txid []byte, vout int) {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(txout.PubKeyHash)
 
-	var utxo *UTXO
+	var u *utxo.UTXO
 	//if it is a smart contract deployment utxo add it to contract utxos
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
 		if originalUtxos.Size() == 0 {
-			utxo = newUTXO(txout, txid, vout, UtxoCreateContract)
+			u = utxo.NewUTXO(txout, txid, vout, UtxoCreateContract)
 			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 			utxos.mutex.Lock()
-			contractUtxos.PutUtxo(utxo)
+			contractUtxos.PutUtxo(u)
 			utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
 			utxos.mutex.Unlock()
 		} else {
-			utxo = newUTXO(txout, txid, vout, UtxoInvokeContract)
+			u = utxo.NewUTXO(txout, txid, vout, UtxoInvokeContract)
 		}
 	} else {
-		utxo = newUTXO(txout, txid, vout, UtxoNormal)
+		u = utxo.NewUTXO(txout, txid, vout, UtxoNormal)
 	}
 
 	utxos.mutex.Lock()
-	originalUtxos.PutUtxo(utxo)
+	originalUtxos.PutUtxo(u)
 	utxos.index[txout.PubKeyHash.String()] = originalUtxos
 	utxos.mutex.Unlock()
 }
 
-func (utxos *UTXOIndex) GetContractUtxos() []*UTXO {
+func (utxos *UTXOIndex) GetContractUtxos() []*utxo.UTXO {
 	utxoTx := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 
-	var contractUtxos []*UTXO
+	var contractUtxos []*utxo.UTXO
 	for _, utxo := range utxoTx.Indices {
 		contractUtxos = append(contractUtxos, utxo)
 	}

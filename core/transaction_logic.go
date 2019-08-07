@@ -10,7 +10,10 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -158,9 +161,9 @@ func DescribeTransaction(utxoIndex *UTXOIndex, tx *Transaction) (sender, recipie
 }
 
 // Returns related previous UTXO for current transaction
-func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
-	var prevUtxos []*UTXO
-	tempUtxoTxMap := make(map[string]*UTXOTx)
+func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*utxo.UTXO {
+	var prevUtxos []*utxo.UTXO
+	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
@@ -193,7 +196,7 @@ func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*UTXO {
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
 //key hash in utxo
-func verifyPublicKeyHash(prevUtxos []*UTXO, tx *Transaction) (bool, error) {
+func verifyPublicKeyHash(prevUtxos []*utxo.UTXO, tx *Transaction) (bool, error) {
 
 	for i, vin := range tx.Vin {
 		if prevUtxos[i].PubKeyHash == nil {
@@ -243,7 +246,7 @@ func IsFromContract(utxoIndex *UTXOIndex, tx *Transaction) bool {
 	return true
 }
 
-func NewSmartContractDestoryTX(utxos []*UTXO, contractAddr account.Address, sourceTXID []byte) Transaction {
+func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) Transaction {
 	sum := calculateUtxoSum(utxos)
 	tips := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
@@ -261,16 +264,16 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, []byte(data)}
-	txout := NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := transaction.TXInput{nil, -1, bh, []byte(data)}
+	txout := transaction.NewTXOutput(subsidy.Add(tip), to)
+	tx := Transaction{nil, []transaction.TXInput{txin}, []transaction.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, error) {
+func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
@@ -295,7 +298,7 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 	return tx, nil
 }
 
-func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
+func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
 	contractPubKeyHash, ok := account.GeneratePubKeyHashByAddress(contractAddr)
 	if !ok {
 		return Transaction{}, account.ErrInvalidAddress
@@ -325,12 +328,12 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr account.Address, 
 }
 
 //prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*UTXO, publicKey []byte, signature []byte) []TXInput {
-	var inputs []TXInput
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transaction.TXInput {
+	var inputs []transaction.TXInput
 
 	// Build a list of inputs
 	for _, utxo := range utxos {
-		input := TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
+		input := transaction.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
 		inputs = append(inputs, input)
 	}
 
@@ -338,9 +341,9 @@ func prepareInputLists(utxos []*UTXO, publicKey []byte, signature []byte) []TXIn
 }
 
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []TXOutput {
+func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []transaction.TXOutput {
 
-	var outputs []TXOutput
+	var outputs []transaction.TXOutput
 	toAddr := to
 
 	if toAddr.String() == "" {
@@ -348,18 +351,18 @@ func prepareOutputLists(from, to account.Address, amount *common.Amount, change 
 	}
 
 	if contract != "" {
-		outputs = append(outputs, *NewContractTXOutput(toAddr, contract))
+		outputs = append(outputs, *transaction.NewContractTXOutput(toAddr, contract))
 	}
 
-	outputs = append(outputs, *NewTXOutput(amount, toAddr))
+	outputs = append(outputs, *transaction.NewTXOutput(amount, toAddr))
 	if !change.IsZero() {
-		outputs = append(outputs, *NewTXOutput(change, from))
+		outputs = append(outputs, *transaction.NewTXOutput(change, from))
 	}
 	return outputs
 }
 
 // Sign signs each input of a Transaction
-func Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO, tx *Transaction) error {
+func Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO, tx *Transaction) error {
 	if tx.IsCoinbase() {
 		logger.Warn("Transaction: will not sign a coinbase transaction.")
 		return nil
@@ -416,7 +419,7 @@ func IsContractDeployed(utxoIndex *UTXOIndex, ctx *ContractTx) bool {
 	return contractUtxoTx.Size() > 0
 }
 
-func verifySignatures(prevUtxos []*UTXO, tx *Transaction) (bool, error) {
+func verifySignatures(prevUtxos []*utxo.UTXO, tx *Transaction) (bool, error) {
 	txCopy := tx.TrimmedCopy(false)
 
 	for i, vin := range tx.Vin {
@@ -438,4 +441,84 @@ func verifySignatures(prevUtxos []*UTXO, tx *Transaction) (bool, error) {
 	}
 
 	return true, nil
+}
+
+//Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
+func Execute(ctx *ContractTx, prevUtxos []*utxo.UTXO,
+	isSCUTXO bool,
+	index UTXOIndex,
+	scStorage *ScState,
+	rewards map[string]string,
+	engine ScEngine,
+	currblkHeight uint64,
+	parentBlk *Block) (uint64, []*Transaction, error) {
+
+	if engine == nil {
+		return 0, nil, nil
+	}
+
+	vout := ctx.Vout[ContractTxouputIndex]
+
+	if isSCUTXO {
+		return 0, nil, nil
+	}
+
+	function, args := util.DecodeScInput(vout.Contract)
+	if function == "" {
+		return 0, nil, ErrUnsupportedSourceType
+	}
+
+	totalArgs := util.PrepareArgs(args)
+	address := vout.PubKeyHash.GenerateAddress()
+	logger.WithFields(logger.Fields{
+		"contract_address": address.String(),
+		"invoked_function": function,
+		"arguments":        totalArgs,
+	}).Debug("Transaction: is executing the smart contract...")
+
+	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
+	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), DefaultLimitsOfTotalMemorySize); err != nil {
+		return 0, nil, ErrInvalidGasLimit
+	}
+	engine.ImportSourceCode(createContractUtxo.Contract)
+	engine.ImportLocalStorage(scStorage)
+	engine.ImportContractAddr(address)
+	engine.ImportUTXOs(invokeUtxos)
+	engine.ImportSourceTXID(ctx.ID)
+	engine.ImportRewardStorage(rewards)
+	engine.ImportTransaction(&ctx.Transaction)
+	engine.ImportContractCreateUTXO(createContractUtxo)
+	engine.ImportPrevUtxos(prevUtxos)
+	engine.ImportCurrBlockHeight(currblkHeight)
+	engine.ImportSeed(parentBlk.GetTimestamp())
+	_, err := engine.Execute(function, totalArgs)
+	gasCount := engine.ExecutionInstructions()
+	// record base gas
+	baseGas, _ := ctx.GasCountOfTxBase()
+	gasCount += baseGas.Uint64()
+	if err != nil {
+		return gasCount, nil, err
+	}
+	return gasCount, engine.GetGeneratedTXs(), err
+}
+
+func CheckContractSyntax(sc ScEngine, out transaction.TXOutput) error {
+	if out.Contract != "" {
+		function, args := util.DecodeScInput(out.Contract)
+		if function == "" {
+			return sc.CheckContactSyntax(out.Contract)
+		}
+		totalArgs := util.PrepareArgs(args)
+		functionCallScript := prepareFuncCallScript(function, totalArgs)
+		return sc.CheckContactSyntax(functionCallScript)
+	}
+	return nil
+}
+
+func prepareFuncCallScript(function, args string) string {
+	return fmt.Sprintf(
+		`var instance = new _native_require();instance["%s"].apply(instance, [%s]);`,
+		function,
+		args,
+	)
 }

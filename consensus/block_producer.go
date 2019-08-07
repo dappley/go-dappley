@@ -142,7 +142,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
 
-			gasCount, generatedTxs, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			gasCount, generatedTxs, err := core.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 
 			// record gas used
 			if err != nil {
@@ -215,7 +215,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			return nil, nil
 		}
 		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-		gasCount, newTxs, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+		gasCount, newTxs, err := core.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 		generatedTXs = append(generatedTXs, newTxs...)
 		// record gas used
 		if err != nil {

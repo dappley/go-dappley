@@ -19,7 +19,9 @@ package core
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/core/pb"
+
+	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -33,11 +35,11 @@ var (
 // It holds output array in each transaction.
 type TxJournal struct {
 	Txid []byte
-	Vout []TXOutput
+	Vout []transaction.TXOutput
 }
 
 // Constructor
-func NewTxJournal(txid []byte, vouts []TXOutput) *TxJournal {
+func NewTxJournal(txid []byte, vouts []transaction.TXOutput) *TxJournal {
 	txJournal := &TxJournal{txid, vouts}
 	return txJournal
 }
@@ -55,18 +57,18 @@ func PutTxJournal(tx Transaction, db storage.Storage) error {
 }
 
 // Returns transaction log data from database
-func GetTxOutput(vin TXInput, db storage.Storage) (TXOutput, error) {
+func GetTxOutput(vin transaction.TXInput, db storage.Storage) (transaction.TXOutput, error) {
 	key := getStorageKey(vin.Txid)
 	value, err := db.Get(key)
 	if err != nil {
-		return TXOutput{}, err
+		return transaction.TXOutput{}, err
 	}
 	txJournal, err := DeserializeJournal(value)
 	if err != nil {
-		return TXOutput{}, err
+		return transaction.TXOutput{}, err
 	}
 	if vin.Vout >= len(txJournal.Vout) {
-		return TXOutput{}, ErrVoutNotFound
+		return transaction.TXOutput{}, ErrVoutNotFound
 	}
 	return txJournal.Vout[vin.Vout], nil
 }
@@ -113,8 +115,8 @@ func (txJournal *TxJournal) toProto() proto.Message {
 }
 
 func (txJournal *TxJournal) fromProto(pb proto.Message) {
-	var voutArray []TXOutput
-	txout := TXOutput{}
+	var voutArray []transaction.TXOutput
+	txout := transaction.TXOutput{}
 	for _, txoutpb := range pb.(*corepb.TransactionJournal).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)

@@ -29,8 +29,8 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/crypto/byteutils"
-	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -61,8 +61,8 @@ var (
 
 type Transaction struct {
 	ID       []byte
-	Vin      []TXInput
-	Vout     []TXOutput
+	Vin      []transaction.TXInput
+	Vout     []transaction.TXOutput
 	Tip      *common.Amount
 	GasLimit *common.Amount
 	GasPrice *common.Amount
@@ -264,8 +264,8 @@ func (tx *Transaction) Hash() []byte {
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
 func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
-	var inputs []TXInput
-	var outputs []TXOutput
+	var inputs []transaction.TXInput
+	var outputs []transaction.TXOutput
 	var pubkey []byte
 
 	for _, vin := range tx.Vin {
@@ -274,11 +274,11 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 		} else {
 			pubkey = nil
 		}
-		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, pubkey})
+		inputs = append(inputs, transaction.TXInput{vin.Txid, vin.Vout, nil, pubkey})
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+		outputs = append(outputs, transaction.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
@@ -287,15 +287,15 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 }
 
 func (tx *Transaction) DeepCopy() Transaction {
-	var inputs []TXInput
-	var outputs []TXOutput
+	var inputs []transaction.TXInput
+	var outputs []transaction.TXOutput
 
 	for _, vin := range tx.Vin {
-		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
+		inputs = append(inputs, transaction.TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+		outputs = append(outputs, transaction.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
@@ -373,8 +373,8 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, rewardTxData}
-	txOutputs := []TXOutput{}
+	txin := transaction.TXInput{nil, -1, bh, rewardTxData}
+	txOutputs := []transaction.TXOutput{}
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
 		if err != nil {
@@ -383,9 +383,9 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 				"amount":  amount,
 			}).Warn("Transaction: failed to parse reward amount")
 		}
-		txOutputs = append(txOutputs, *NewTXOutput(amt, account.NewAddress(address)))
+		txOutputs = append(txOutputs, *transaction.NewTXOutput(amt, account.NewAddress(address)))
 	}
-	tx := Transaction{nil, []TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []transaction.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -394,10 +394,10 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) Transaction {
 	tx := Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction.TXInput{
 			{vinTxId, vinVout, nil, vinPubkey},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction.TXOutput{
 			{common.NewAmount(voutValue), voutPubKeyHash, ""},
 		},
 		Tip: common.NewAmount(tip),
@@ -412,9 +412,9 @@ func NewGasRewardTx(to account.Address, blockHeight uint64, actualGasCount *comm
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, gasRewardData}
-	txout := NewTXOutput(fee, to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := transaction.TXInput{nil, -1, bh, gasRewardData}
+	txout := transaction.NewTXOutput(fee, to)
+	tx := Transaction{nil, []transaction.TXInput{txin}, []transaction.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -433,9 +433,9 @@ func NewGasChangeTx(to account.Address, blockHeight uint64, actualGasCount *comm
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := TXInput{nil, -1, bh, gasChangeData}
-	txout := NewTXOutput(changeValue, to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := transaction.TXInput{nil, -1, bh, gasChangeData}
+	txout := transaction.NewTXOutput(changeValue, to)
+	tx := Transaction{nil, []transaction.TXInput{txin}, []transaction.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -458,65 +458,6 @@ func (ctx *ContractTx) GetContract() string {
 //GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
 func (ctx *ContractTx) GetContractPubKeyHash() account.PubKeyHash {
 	return ctx.Vout[ContractTxouputIndex].PubKeyHash
-}
-
-//Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func (ctx *ContractTx) Execute(prevUtxos []*UTXO,
-	isSCUTXO bool,
-	index UTXOIndex,
-	scStorage *ScState,
-	rewards map[string]string,
-	engine ScEngine,
-	currblkHeight uint64,
-	parentBlk *Block) (uint64, []*Transaction, error) {
-
-	if engine == nil {
-		return 0, nil, nil
-	}
-
-	vout := ctx.Vout[ContractTxouputIndex]
-
-	if isSCUTXO {
-		return 0, nil, nil
-	}
-
-	function, args := util.DecodeScInput(vout.Contract)
-	if function == "" {
-		return 0, nil, ErrUnsupportedSourceType
-	}
-
-	totalArgs := util.PrepareArgs(args)
-	address := vout.PubKeyHash.GenerateAddress()
-	logger.WithFields(logger.Fields{
-		"contract_address": address.String(),
-		"invoked_function": function,
-		"arguments":        totalArgs,
-	}).Debug("Transaction: is executing the smart contract...")
-
-	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
-	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), DefaultLimitsOfTotalMemorySize); err != nil {
-		return 0, nil, ErrInvalidGasLimit
-	}
-	engine.ImportSourceCode(createContractUtxo.Contract)
-	engine.ImportLocalStorage(scStorage)
-	engine.ImportContractAddr(address)
-	engine.ImportUTXOs(invokeUtxos)
-	engine.ImportSourceTXID(ctx.ID)
-	engine.ImportRewardStorage(rewards)
-	engine.ImportTransaction(&ctx.Transaction)
-	engine.ImportContractCreateUTXO(createContractUtxo)
-	engine.ImportPrevUtxos(prevUtxos)
-	engine.ImportCurrBlockHeight(currblkHeight)
-	engine.ImportSeed(parentBlk.GetTimestamp())
-	_, err := engine.Execute(function, totalArgs)
-	gasCount := engine.ExecutionInstructions()
-	// record base gas
-	baseGas, _ := ctx.GasCountOfTxBase()
-	gasCount += baseGas.Uint64()
-	if err != nil {
-		return gasCount, nil, err
-	}
-	return gasCount, engine.GetGeneratedTXs(), err
 }
 
 func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
@@ -614,16 +555,16 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*corepb.Transaction).GetId()
 	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetTip())
 
-	var vinArray []TXInput
-	txin := TXInput{}
+	var vinArray []transaction.TXInput
+	txin := transaction.TXInput{}
 	for _, txinpb := range pb.(*corepb.Transaction).GetVin() {
 		txin.FromProto(txinpb)
 		vinArray = append(vinArray, txin)
 	}
 	tx.Vin = vinArray
 
-	var voutArray []TXOutput
-	txout := TXOutput{}
+	var voutArray []transaction.TXOutput
+	txout := transaction.TXOutput{}
 	for _, txoutpb := range pb.(*corepb.Transaction).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)
@@ -646,7 +587,7 @@ func (tx *Transaction) GetSize() int {
 func (tx *Transaction) CheckContractSyntax(engine ScEngine) error {
 	TxOuts := tx.Vout
 	for _, v := range TxOuts {
-		err := v.CheckContractSyntax(engine)
+		err := CheckContractSyntax(engine, v)
 		if err != nil {
 			return err
 		}

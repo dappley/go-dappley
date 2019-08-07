@@ -27,6 +27,6 @@ func EstimateGas(bc *core.Blockchain, tx *core.Transaction) (uint64, error) {
 		return 0, err
 	}
 	isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-	gasCount, _, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, parentBlock.GetHeight()+1, parentBlock)
+	gasCount, _, err := core.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, parentBlock.GetHeight()+1, parentBlock)
 	return gasCount, err
 }

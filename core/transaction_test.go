@@ -523,7 +523,7 @@ func TestTransaction_Execute(t *testing.T) {
 				println(err.Error())
 			}
 			isSCUTXO := (*index).GetAllUTXOsByPubKeyHash([]byte(tx.Vout[0].PubKeyHash)).Size() == 0
-			tx.Execute(preUTXO, isSCUTXO, *index, NewScState(), nil, sc, 0, parentBlk)
+			Execute(tx, preUTXO, isSCUTXO, *index, NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}
