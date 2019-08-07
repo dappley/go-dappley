@@ -80,7 +80,7 @@ type TxIndex struct {
 	BlockIndex int
 }
 
-// Transaction parameters
+//SendTxParam Transaction parameters
 type SendTxParam struct {
 	From          account.Address
 	SenderKeyPair *account.KeyPair
@@ -92,7 +92,7 @@ type SendTxParam struct {
 	Contract      string
 }
 
-// Returns SendTxParam object
+// NewSendTxParam Returns SendTxParam object
 func NewSendTxParam(from account.Address, senderKeyPair *account.KeyPair, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) SendTxParam {
 	return SendTxParam{from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract}
 }
@@ -110,7 +110,7 @@ func (st SendTxParam) TotalCost() *common.Amount {
 	return totalAmount
 }
 
-// Returns structure of ContractTx
+//ToContractTx Returns structure of ContractTx
 func (tx *Transaction) ToContractTx() *ContractTx {
 	if !tx.IsContract() {
 		return nil
@@ -214,27 +214,6 @@ func (ctx *ContractTx) IsExecutionContract() bool {
 		return true
 	}
 	return false
-}
-
-// IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func (tx *Transaction) IsFromContract(utxoIndex *UTXOIndex) bool {
-	if len(tx.Vin) == 0 {
-		return false
-	}
-
-	contractUtxos := utxoIndex.GetContractUtxos()
-
-	for _, vin := range tx.Vin {
-		pubKey := account.PubKeyHash(vin.PubKey)
-		if isContract, _ := pubKey.IsContract(); !isContract {
-			return false
-		}
-
-		if !isPubkeyInUtxos(contractUtxos, pubKey) {
-			return false
-		}
-	}
-	return true
 }
 
 func (tx *Transaction) isVinCoinbase() bool {
@@ -472,32 +451,6 @@ func (tx *Transaction) verifySignatures(prevUtxos []*UTXO) (bool, error) {
 	return true, nil
 }
 
-func NewSmartContractDestoryTX(utxos []*UTXO, contractAddr account.Address, sourceTXID []byte) Transaction {
-	sum := calculateUtxoSum(utxos)
-	tips := common.NewAmount(0)
-	gasLimit := common.NewAmount(0)
-	gasPrice := common.NewAmount(0)
-
-	tx, _ := NewContractTransferTX(utxos, contractAddr, account.NewAddress(SCDestroyAddress), sum, tips, gasLimit, gasPrice, sourceTXID)
-	return tx
-}
-
-// NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
-	if data == "" {
-		data = fmt.Sprintf("Reward to '%s'", to)
-	}
-	bh := make([]byte, 8)
-	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
-
-	txin := TXInput{nil, -1, bh, []byte(data)}
-	txout := NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
-	tx.ID = tx.Hash()
-
-	return tx
-}
-
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
 func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 
@@ -520,61 +473,6 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	tx.ID = tx.Hash()
 
 	return tx
-}
-
-// NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, error) {
-
-	sum := calculateUtxoSum(utxos)
-	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
-	if err != nil {
-		return Transaction{}, err
-	}
-	tx := Transaction{
-		nil,
-		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
-		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
-		sendTxParam.Tip,
-		sendTxParam.GasLimit,
-		sendTxParam.GasPrice,
-	}
-	tx.ID = tx.Hash()
-
-	err = tx.Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
-	if err != nil {
-		return Transaction{}, err
-	}
-
-	return tx, nil
-}
-
-func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
-	contractPubKeyHash, ok := account.GeneratePubKeyHashByAddress(contractAddr)
-	if !ok {
-		return Transaction{}, account.ErrInvalidAddress
-	}
-	if isContract, err := contractPubKeyHash.IsContract(); !isContract {
-		return Transaction{}, err
-	}
-
-	sum := calculateUtxoSum(utxos)
-	change, err := calculateChange(sum, amount, tip, gasLimit, gasPrice)
-	if err != nil {
-		return Transaction{}, err
-	}
-
-	// Intentionally set PubKeyHash as PubKey (to recognize it is from contract) and sourceTXID as signature in Vin
-	tx := Transaction{
-		nil,
-		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
-		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
-		tip,
-		gasLimit,
-		gasPrice,
-	}
-	tx.ID = tx.Hash()
-
-	return tx, nil
 }
 
 func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) Transaction {
