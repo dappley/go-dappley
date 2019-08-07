@@ -437,7 +437,7 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) (bool, error) {
 	ctx := tx.ToContractTx()
 	if ctx != nil {
-		return ctx.Verify(utxoIndex)
+		return VerifyContractTx(utxoIndex, ctx)
 	}
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
@@ -460,19 +460,6 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) (bool, e
 		return false, err
 	}
 	return true, nil
-}
-
-// Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (ctx *ContractTx) Verify(utxoIndex *UTXOIndex) (bool, error) {
-	if ctx.IsExecutionContract() && !ctx.IsContractDeployed(utxoIndex) {
-		return false, errors.New("Transaction: contract state check failed")
-	}
-
-	totalBalance, err := verify(&ctx.Transaction, utxoIndex)
-	if err != nil {
-		return false, err
-	}
-	return ctx.verifyGas(totalBalance)
 }
 
 func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
