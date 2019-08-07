@@ -23,7 +23,7 @@ import (
 	"strconv"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/raviqqe/hamt"
 	logger "github.com/sirupsen/logrus"

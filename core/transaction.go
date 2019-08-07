@@ -20,7 +20,6 @@ package core
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
@@ -262,54 +261,6 @@ func (tx *Transaction) Hash() []byte {
 	hash = sha256.Sum256(tx.GetToHashBytes())
 
 	return hash[:]
-}
-
-// Sign signs each input of a Transaction
-func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO) error {
-	if tx.IsCoinbase() {
-		logger.Warn("Transaction: will not sign a coinbase transaction.")
-		return nil
-	}
-
-	if tx.IsRewardTx() {
-		logger.Warn("Transaction: will not sign a reward transaction.")
-		return nil
-	}
-
-	if tx.IsGasRewardTx() {
-		logger.Warn("Transaction: will not sign a gas reward transaction.")
-		return nil
-	}
-
-	if tx.IsGasChangeTx() {
-		logger.Warn("Transaction: will not sign a gas change transaction.")
-		return nil
-	}
-
-	txCopy := tx.TrimmedCopy(false)
-	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
-	if err != nil {
-		logger.WithError(err).Error("Transaction: failed to get private key.")
-		return err
-	}
-
-	for i, vin := range txCopy.Vin {
-		txCopy.Vin[i].Signature = nil
-		oldPubKey := vin.PubKey
-		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
-		txCopy.ID = txCopy.Hash()
-
-		txCopy.Vin[i].PubKey = oldPubKey
-
-		signature, err := secp256k1.Sign(txCopy.ID, privData)
-		if err != nil {
-			logger.WithError(err).Error("Transaction: failed to create a signature.")
-			return err
-		}
-
-		tx.Vin[i].Signature = signature
-	}
-	return nil
 }
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing

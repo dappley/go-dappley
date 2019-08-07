@@ -113,7 +113,7 @@ func TestSign(t *testing.T) {
 	tx := Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	// Sign the transaction
-	err := tx.Sign(*privKey, prevTXs)
+	err := Sign(*privKey, prevTXs, &tx)
 	if assert.Nil(t, err) {
 		// Assert that the signatures were created by the fake key pair
 		for i, vin := range tx.Vin {
@@ -294,7 +294,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
+	Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos(), &executionTx)
 
 	_, err1 := VerifyTransaction(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
 	_, err2 := VerifyTransaction(utxoIndex, &executionTx, 0)
@@ -819,10 +819,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos())
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*UTXO{&tx2Utxo1})
-	dependentTx4.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*UTXO{&tx2Utxo2, &tx2Utxo3})
-	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo4, &tx2Utxo5})
+	Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos(), &dependentTx2)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*UTXO{&tx2Utxo1}, &dependentTx3)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
 
 	txPool := NewTransactionPool(nil, 6000000)
 	// verify dependent txs 2,3,4,5 with relation:

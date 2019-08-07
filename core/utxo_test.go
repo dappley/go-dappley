@@ -301,10 +301,10 @@ func TestUpdate(t *testing.T) {
 	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
 	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
 	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.index[pkHash2.String()].GetAllUtxos())
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*UTXO{&tx2Utxo1})
-	dependentTx4.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*UTXO{&tx2Utxo2, &tx2Utxo3})
-	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo4, &tx2Utxo5})
+	Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.index[pkHash2.String()].GetAllUtxos(), &dependentTx2)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*UTXO{&tx2Utxo1}, &dependentTx3)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
 
 	txsForUpdate := []*Transaction{&dependentTx2, &dependentTx3}
 	utxoIndex2.UpdateUtxoState(txsForUpdate)

@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -285,7 +287,7 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 	}
 	tx.ID = tx.Hash()
 
-	err = tx.Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
+	err = Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos, &tx)
 	if err != nil {
 		return Transaction{}, err
 	}
@@ -354,4 +356,52 @@ func prepareOutputLists(from, to account.Address, amount *common.Amount, change 
 		outputs = append(outputs, *NewTXOutput(change, from))
 	}
 	return outputs
+}
+
+// Sign signs each input of a Transaction
+func Sign(privKey ecdsa.PrivateKey, prevUtxos []*UTXO, tx *Transaction) error {
+	if tx.IsCoinbase() {
+		logger.Warn("Transaction: will not sign a coinbase transaction.")
+		return nil
+	}
+
+	if tx.IsRewardTx() {
+		logger.Warn("Transaction: will not sign a reward transaction.")
+		return nil
+	}
+
+	if tx.IsGasRewardTx() {
+		logger.Warn("Transaction: will not sign a gas reward transaction.")
+		return nil
+	}
+
+	if tx.IsGasChangeTx() {
+		logger.Warn("Transaction: will not sign a gas change transaction.")
+		return nil
+	}
+
+	txCopy := tx.TrimmedCopy(false)
+	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
+	if err != nil {
+		logger.WithError(err).Error("Transaction: failed to get private key.")
+		return err
+	}
+
+	for i, vin := range txCopy.Vin {
+		txCopy.Vin[i].Signature = nil
+		oldPubKey := vin.PubKey
+		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
+		txCopy.ID = txCopy.Hash()
+
+		txCopy.Vin[i].PubKey = oldPubKey
+
+		signature, err := secp256k1.Sign(txCopy.ID, privData)
+		if err != nil {
+			logger.WithError(err).Error("Transaction: failed to create a signature.")
+			return err
+		}
+
+		tx.Vin[i].Signature = signature
+	}
+	return nil
 }

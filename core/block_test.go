@@ -266,8 +266,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*UTXO{
 		pkHash2.String(): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()])
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo1})
+	Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()], &dependentTx2)
+	Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo1}, &dependentTx3)
 
 	tests := []struct {
 		name   string

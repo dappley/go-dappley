@@ -17,7 +17,7 @@ func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.A
 		common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
-	err := tx.Sign(senderKeyPair.GetPrivateKey(), prevUtxos)
+	err := core.Sign(senderKeyPair.GetPrivateKey(), prevUtxos, tx)
 	if err != nil {
 		logger.Panic("Sign transaction failed. Terminating...")
 	}
