@@ -36,15 +36,14 @@ func NewGenesisBlock(address account.Address) *block.Block {
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 
-	header := block.NewBlockHeader(
-		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		[]byte{},
+	blk := block.NewBlockWithRawInfo(
+		nil,
+		nil,
 		0,
 		1532392928, //July 23,2018 17:42 PST
 		0,
-	)
-	b := block.NewBlockFromHeader(header, txs)
+		txs)
 
-	b.SetHash(lblock.CalculateHash(b))
-	return b
+	blk.SetHash(lblock.CalculateHash(blk))
+	return blk
 }
