@@ -151,3 +151,13 @@ func Deserialize(d []byte) *Block {
 	block.FromProto(pb)
 	return block
 }
+
+func (b *Block) GetCoinbaseTransaction() *core.Transaction {
+	//the coinbase transaction is usually placed at the end of all transactions
+	for i := len(b.transactions) - 1; i >= 0; i-- {
+		if b.transactions[i].IsCoinbase() {
+			return b.transactions[i]
+		}
+	}
+	return nil
+}

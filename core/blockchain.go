@@ -94,7 +94,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		&sync.Mutex{},
 	}
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxoState(genesis.transactions)
+	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
 	scState := NewScState()
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
@@ -424,24 +424,24 @@ func (bc *Blockchain) String() string {
 }
 
 //AddBlockToDb record the new block in the database
-func (bc *Blockchain) AddBlockToDb(block *Block) error {
+func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 
-	err := bc.db.Put(block.GetHash(), block.Serialize())
+	err := bc.db.Put(blk.GetHash(), blk.Serialize())
 	if err != nil {
-		logger.WithError(err).Warn("Blockchain: failed to add block to database!")
+		logger.WithError(err).Warn("Blockchain: failed to add blk to database!")
 		return err
 	}
 
-	err = bc.db.Put(util.UintToHex(block.GetHeight()), block.GetHash())
+	err = bc.db.Put(util.UintToHex(blk.GetHeight()), blk.GetHash())
 	if err != nil {
-		logger.WithError(err).Warn("Blockchain: failed to index the block by block height in database!")
+		logger.WithError(err).Warn("Blockchain: failed to index the blk by blk height in database!")
 		return err
 	}
 	// add transaction journals
-	for _, tx := range block.GetTransactions() {
+	for _, tx := range blk.GetTransactions() {
 		err = PutTxJournal(*tx, bc.db)
 		if err != nil {
-			logger.WithError(err).Warn("Blockchain: failed to add block transaction journals into database!")
+			logger.WithError(err).Warn("Blockchain: failed to add blk transaction journals into database!")
 			return err
 		}
 	}
