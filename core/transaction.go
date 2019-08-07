@@ -782,15 +782,6 @@ func prepareInputLists(utxos []*UTXO, publicKey []byte, signature []byte) []TXIn
 	return inputs
 }
 
-//calculateUtxoSum calculates the total amount of all input utxos
-func calculateUtxoSum(utxos []*UTXO) *common.Amount {
-	sum := common.NewAmount(0)
-	for _, utxo := range utxos {
-		sum = sum.Add(utxo.Value)
-	}
-	return sum
-}
-
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
 func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []TXOutput {
 
