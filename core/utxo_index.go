@@ -21,6 +21,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/core/block"
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
@@ -165,7 +166,7 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 
 // UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
 // Note that the operation does not save the index to db.
-func (utxos *UTXOIndex) UndoTxsInBlock(blk *Block, bc *Blockchain, db storage.Storage) error {
+func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, bc *Blockchain, db storage.Storage) error {
 
 	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
 		tx := blk.GetTransactions()[i]
