@@ -667,40 +667,6 @@ func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount,
 	return change, nil
 }
 
-//prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*UTXO, publicKey []byte, signature []byte) []TXInput {
-	var inputs []TXInput
-
-	// Build a list of inputs
-	for _, utxo := range utxos {
-		input := TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
-		inputs = append(inputs, input)
-	}
-
-	return inputs
-}
-
-//preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []TXOutput {
-
-	var outputs []TXOutput
-	toAddr := to
-
-	if toAddr.String() == "" {
-		toAddr = account.NewContractPubKeyHash().GenerateAddress()
-	}
-
-	if contract != "" {
-		outputs = append(outputs, *NewContractTXOutput(toAddr, contract))
-	}
-
-	outputs = append(outputs, *NewTXOutput(amount, toAddr))
-	if !change.IsZero() {
-		outputs = append(outputs, *NewTXOutput(change, from))
-	}
-	return outputs
-}
-
 func (tx *Transaction) ToProto() proto.Message {
 
 	var vinArray []*corepb.TXInput
