@@ -215,47 +215,7 @@ L:
 	return true
 }
 
-func IsParentBlockHash(parentBlk, childBlk *block.Block) bool {
-	if parentBlk == nil || childBlk == nil {
-		return false
-	}
-	return reflect.DeepEqual(parentBlk.GetHash(), childBlk.GetPrevHash())
-}
-
 func IsHashEqual(h1 hash.Hash, h2 hash.Hash) bool {
 
 	return reflect.DeepEqual(h1, h2)
-}
-
-func IsParentBlockHeight(parentBlk, childBlk *block.Block) bool {
-	if parentBlk == nil || childBlk == nil {
-		return false
-	}
-	return parentBlk.GetHeight() == childBlk.GetHeight()-1
-}
-
-func IsParentBlock(parentBlk, childBlk *block.Block) bool {
-	return IsParentBlockHash(parentBlk, childBlk) && IsParentBlockHeight(parentBlk, childBlk)
-}
-
-func FindTransactionById(b *block.Block, txid []byte) *core.Transaction {
-	for _, tx := range b.GetTransactions() {
-		if bytes.Compare(tx.ID, txid) == 0 {
-
-			return tx
-		}
-
-	}
-	return nil
-}
-
-func GetCoinbaseTransaction(b *block.Block) *core.Transaction {
-	//the coinbase transaction is usually placed at the end of all transactions
-	txs := b.GetTransactions()
-	for i := len(txs) - 1; i >= 0; i-- {
-		if txs[i].IsCoinbase() {
-			return txs[i]
-		}
-	}
-	return nil
 }
