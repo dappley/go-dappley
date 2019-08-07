@@ -433,35 +433,6 @@ func (ctx *ContractTx) IsContractDeployed(utxoIndex *UTXOIndex) bool {
 	return contractUtxoTx.Size() > 0
 }
 
-// Verify ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) (bool, error) {
-	ctx := tx.ToContractTx()
-	if ctx != nil {
-		return VerifyContractTx(utxoIndex, ctx)
-	}
-	if tx.IsCoinbase() {
-		//TODO coinbase vout check need add tip
-		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
-			return false, errors.New("Transaction: subsidy check failed")
-		}
-		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
-		if blockHeight != bh {
-			return false, fmt.Errorf("Transaction: block height check failed expected=%v actual=%v", blockHeight, bh)
-		}
-		return true, nil
-	}
-	if tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
-		//TODO: verify reward tx here
-		return true, nil
-	}
-
-	_, err := verify(tx, utxoIndex)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
 	prevUtxos := getPrevUTXOs(tx, utxoIndex)
 	if prevUtxos == nil {

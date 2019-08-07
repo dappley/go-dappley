@@ -196,6 +196,6 @@ func TestNode_ConnectionFull(t *testing.T) {
 	assert.Equal(t, 0, n3.GetNetwork().streamManager.connectionManager.connectionInCount)
 	assert.Equal(t, 2, n3.GetNetwork().streamManager.connectionManager.connectionOutCount)
 	assert.Equal(t, 0, n4.GetNetwork().streamManager.connectionManager.connectionInCount)
-	//assert.Equal(t, 0, n4.GetNetwork().streamManager.connectionManager.connectionOutCount)
+	assert.Equal(t, 0, n4.GetNetwork().streamManager.connectionManager.connectionOutCount)
 
 }

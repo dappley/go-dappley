@@ -373,7 +373,7 @@ L:
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if result, err := tx.Verify(utxoIndex, b.GetHeight()); !result {
+			if result, err := VerifyTransaction(utxoIndex, tx, b.GetHeight()); !result {
 				logger.Warn(err.Error())
 				return false
 			}

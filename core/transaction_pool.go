@@ -21,16 +21,17 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
+	"sort"
+	"sync"
+
 	"github.com/asaskevich/EventBus"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
-	"sort"
-	"sync"
 )
 
 const (
@@ -179,7 +180,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) 
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]
 
-	if result, err := txNode.Value.Verify(tempUtxoIndex, 0); result {
+	if result, err := VerifyTransaction(tempUtxoIndex, txNode.Value, 0); result {
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
 	} else {
