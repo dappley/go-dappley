@@ -39,7 +39,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var subsidy = common.NewAmount(10000000)
+var Subsidy = common.NewAmount(10000000)
 
 const (
 	ContractTxouputIndex = 0
@@ -451,8 +451,8 @@ func (tx *Transaction) Verify(utxoIndex *UTXOIndex, blockHeight uint64) (bool, e
 	}
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
-		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
-			return false, errors.New("Transaction: subsidy check failed")
+		if tx.Vout[0].Value.Cmp(Subsidy) < 0 {
+			return false, errors.New("Transaction: Subsidy check failed")
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
 		if blockHeight != bh {
@@ -710,7 +710,7 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
 	txin := TXInput{nil, -1, bh, []byte(data)}
-	txout := NewTXOutput(subsidy.Add(tip), to)
+	txout := NewTXOutput(Subsidy.Add(tip), to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 

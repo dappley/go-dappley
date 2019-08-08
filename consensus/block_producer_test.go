@@ -20,6 +20,7 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"testing"
 
 	"github.com/dappley/go-dappley/core"
@@ -32,7 +33,7 @@ import (
 func TestBlockProducer_ProduceBlock(t *testing.T) {
 	bp := NewBlockProducer()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
-	bc := core.CreateBlockchain(
+	bc := blockchain_logic.CreateBlockchain(
 		account.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,

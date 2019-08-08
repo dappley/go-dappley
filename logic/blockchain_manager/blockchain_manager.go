@@ -23,7 +23,9 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -48,13 +50,13 @@ var (
 )
 
 type BlockchainManager struct {
-	blockchain        *core.Blockchain
+	blockchain        *blockchain_logic.Blockchain
 	blockPool         *core.BlockPool
 	downloadRequestCh chan chan bool
 	netService        NetService
 }
 
-func NewBlockchainManager(blockchain *core.Blockchain, blockpool *core.BlockPool, service NetService) *BlockchainManager {
+func NewBlockchainManager(blockchain *blockchain_logic.Blockchain, blockpool *core.BlockPool, service NetService) *BlockchainManager {
 	bm := &BlockchainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
@@ -72,7 +74,7 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 	go func() {
 		finishChan := make(chan bool, 1)
 
-		bm.Getblockchain().SetState(core.BlockchainDownloading)
+		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 
 		select {
 		case bm.downloadRequestCh <- finishChan:
@@ -81,7 +83,7 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
-		bm.Getblockchain().SetState(core.BlockchainReady)
+		bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	}()
 }
 
@@ -106,7 +108,7 @@ func (bm *BlockchainManager) GetCommandHandler(commandName string) network_model
 	return nil
 }
 
-func (bm *BlockchainManager) Getblockchain() *core.Blockchain {
+func (bm *BlockchainManager) Getblockchain() *blockchain_logic.Blockchain {
 	return bm.blockchain
 }
 
@@ -135,7 +137,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 		"height": blk.GetHeight(),
 	}).Info("BlockchainManager: received a new blk.")
 
-	if bm.blockchain.GetState() != core.BlockchainReady {
+	if bm.blockchain.GetState() != blockchain.BlockchainReady {
 		logger.Info("BlockchainManager: Blockchain not ready, discard received blk")
 		return
 	}
@@ -147,7 +149,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	if receiveBlockHeight >= ownBlockHeight &&
 		receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
-		bm.blockchain.GetState() == core.BlockchainReady {
+		bm.blockchain.GetState() == blockchain.BlockchainReady {
 		logger.Info("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
 		return
@@ -174,10 +176,10 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 		return
 	}
 
-	bm.blockchain.SetState(core.BlockchainSync)
+	bm.blockchain.SetState(blockchain.BlockchainSync)
 	_ = bm.MergeFork(fork, forkHeadParentHash)
 	bm.blockPool.RemoveFork(fork)
-	bm.blockchain.SetState(core.BlockchainReady)
+	bm.blockchain.SetState(blockchain.BlockchainReady)
 }
 
 func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
@@ -217,12 +219,12 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		}).Debug("BlockchainManager: is verifying a block in the fork.")
 
 		if !block_logic.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
-			return core.ErrTransactionVerifyFailed
+			return blockchain_logic.ErrTransactionVerifyFailed
 		}
 
 		lib, ok := bm.Getblockchain().GetConsensus().CheckLibPolicy(forkBlks[i])
 		if !ok {
-			return core.ErrProducerNotEnough
+			return blockchain_logic.ErrProducerNotEnough
 		}
 
 		if firstCheck {
@@ -310,7 +312,7 @@ func (bm *BlockchainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *core.Blockchain, hash hash.Hash) (*core.UTXOIndex, *core.ScState, error) {
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *blockchain_logic.Blockchain, hash hash.Hash) (*core.UTXOIndex, *core.ScState, error) {
 	index := core.NewUTXOIndex(bc.GetUtxoCache())
 	scState := core.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
@@ -329,7 +331,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *core.Blockchain, ha
 		}
 
 		if len(block.GetPrevHash()) == 0 {
-			return nil, nil, core.ErrBlockDoesNotExist
+			return nil, nil, blockchain_logic.ErrBlockDoesNotExist
 		}
 
 		err = index.UndoTxsInBlock(block, bc, db)

@@ -57,12 +57,12 @@ type GeneralConfigs struct {
 }
 
 func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, config GeneralConfigs) {
-	bcs := make([]*core.Blockchain, len(files))
+	bcs := make([]*blockchain_logic.Blockchain, len(files))
 	addr := account.NewAddress(genesisAddr)
 	numOfTx = config.NumOfNormalTx
 	numOfScTx = config.NumOfScTx
 	for i := range files {
-		bc := core.CreateBlockchain(addr, files[i].Db, nil, core.NewTransactionPool(nil, 200), nil, 1000000)
+		bc := blockchain_logic.CreateBlockchain(addr, files[i].Db, nil, core.NewTransactionPool(nil, 200), nil, 1000000)
 		bcs[i] = bc
 	}
 
@@ -128,7 +128,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) {
+func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -140,7 +140,7 @@ func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc 
 	bc.GetDb().Put([]byte("tailBlockHash"), tailBlk.GetHash())
 }
 
-func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *block.Block {
+func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *block.Block {
 	producer := account.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
 	cbtx := core.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
@@ -159,13 +159,13 @@ func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.B
 	return b
 }
 
-func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, minerPrivKey string) *block.Block {
+func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, minerPrivKey string) *block.Block {
 	logger.Info("generate funding Block")
 	tx := generateFundingTransaction(utxoIndex, fundAddr, minerPrivKey)
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *core.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *account_logic.AccountManager) (*block.Block, account.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *account_logic.AccountManager) (*block.Block, account.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 

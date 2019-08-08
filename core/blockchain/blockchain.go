@@ -43,6 +43,10 @@ func (bc *Blockchain) SetLIBHash(libHash hash.Hash) {
 	bc.libHash = libHash
 }
 
+func (bc *Blockchain) SetState(state BlockchainState) {
+	bc.state = state
+}
+
 func (bc *Blockchain) SetStateToBlockchainReady() {
 	bc.state = BlockchainReady
 }

@@ -19,6 +19,8 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"sync"
 	"testing"
 
@@ -34,10 +36,10 @@ func TestJournalPutAndGet(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{hash.Hash{}, hash.Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
+	bc := &blockchain_logic.Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
-	genesis := NewGenesisBlock(addr)
+	genesis := blockchain_logic.NewGenesisBlock(addr, Subsidy)
 
 	var tx1 = Transaction{
 		ID:       util.GenerateRandomAoB(1),

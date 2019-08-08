@@ -76,6 +76,8 @@ func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 	return txPool
 }
 
+func (txPool *TransactionPool) GetTipOrder() []string { return txPool.tipOrder }
+
 func (txPool *TransactionPool) ListenToNetService() {
 	if txPool.netService == nil {
 		return

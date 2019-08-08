@@ -52,7 +52,7 @@ type RpcService struct {
 	node *network.Node
 }
 
-func (rpcSerivce *RpcService) GetBlockchain() *core.Blockchain {
+func (rpcSerivce *RpcService) GetBlockchain() *blockchain_logic.Blockchain {
 	if rpcSerivce.bm == nil {
 		return nil
 	}

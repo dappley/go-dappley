@@ -21,6 +21,7 @@ package consensus
 import (
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -35,7 +36,7 @@ import (
 type process func(ctx *core.BlockContext)
 
 type BlockProducer struct {
-	bc          *core.Blockchain
+	bc          *blockchain_logic.Blockchain
 	beneficiary string
 	process     process
 	idle        bool
@@ -51,7 +52,7 @@ func NewBlockProducer() *BlockProducer {
 }
 
 // Setup tells the producer to give rewards to beneficiaryAddr and return the new block through newBlockCh
-func (bp *BlockProducer) Setup(bc *core.Blockchain, beneficiaryAddr string) {
+func (bp *BlockProducer) Setup(bc *blockchain_logic.Blockchain, beneficiaryAddr string) {
 	bp.bc = bc
 	bp.beneficiary = beneficiaryAddr
 }

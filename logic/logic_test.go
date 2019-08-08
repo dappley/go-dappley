@@ -20,6 +20,7 @@ package logic
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"os"
 	"reflect"
 	"testing"
@@ -260,7 +261,7 @@ func TestSetUnLockAccount(t *testing.T) {
 	assert.False(t, status)
 }
 
-func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
+func isSameBlockChain(bc1, bc2 *blockchain_logic.Blockchain) bool {
 	if bc1 == nil || bc2 == nil {
 		return false
 	}

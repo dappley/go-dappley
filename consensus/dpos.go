@@ -21,6 +21,7 @@ package consensus
 import (
 	"bytes"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"strings"
@@ -150,7 +151,7 @@ func (dpos *DPOS) Start() {
 					}).Infof("DPoS: it is my turn to produce block. ***node is %v,time is %v***", index, now.Unix())
 
 					// Do not produce block if block pool is syncing
-					if dpos.bm.Getblockchain().GetState() != core.BlockchainReady {
+					if dpos.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
 						logger.Info("DPoS: block producer paused because block pool is syncing.")
 						continue
 					}

@@ -19,12 +19,10 @@
 package core
 
 import (
-	"bytes"
 	"encoding/hex"
 	"errors"
-	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
-	logger "github.com/sirupsen/logrus"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"sync"
 
 	"github.com/dappley/go-dappley/common"
@@ -53,6 +51,10 @@ func NewUTXOIndex(cache *UTXOCache) *UTXOIndex {
 		cache: cache,
 		mutex: &sync.RWMutex{},
 	}
+}
+
+func (utxos *UTXOIndex) SetIndex(index map[string]*UTXOTx) {
+	utxos.index = index
 }
 
 func (utxos *UTXOIndex) Save() error {
@@ -169,7 +171,7 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 
 // UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
 // Note that the operation does not save the index to db.
-func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, bc *Blockchain, db storage.Storage) error {
+func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, bc *blockchain_logic.Blockchain, db storage.Storage) error {
 
 	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
 		tx := blk.GetTransactions()[i]
@@ -200,7 +202,7 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) er
 }
 
 // unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
-func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
+func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *blockchain_logic.Blockchain) error {
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, bc)
 		if err != nil {
@@ -219,17 +221,17 @@ func (utxos *UTXOIndex) AddUTXO(txout TXOutput, txid []byte, vout int) {
 	//if it is a smart contract deployment utxo add it to contract utxos
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
 		if originalUtxos.Size() == 0 {
-			utxo = newUTXO(txout, txid, vout, UtxoCreateContract)
+			utxo = NewUTXO(txout, txid, vout, UtxoCreateContract)
 			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 			utxos.mutex.Lock()
 			contractUtxos.PutUtxo(utxo)
 			utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
 			utxos.mutex.Unlock()
 		} else {
-			utxo = newUTXO(txout, txid, vout, UtxoInvokeContract)
+			utxo = NewUTXO(txout, txid, vout, UtxoInvokeContract)
 		}
 	} else {
-		utxo = newUTXO(txout, txid, vout, UtxoNormal)
+		utxo = NewUTXO(txout, txid, vout, UtxoNormal)
 	}
 
 	utxos.mutex.Lock()
@@ -294,66 +296,4 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 		utxocopy.index[pkh] = &newUtxoTx
 	}
 	return utxocopy
-}
-
-// RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash hash.Hash) (*UTXOIndex, *ScState, error) {
-	index := NewUTXOIndex(bc.GetUtxoCache())
-	scState := LoadScStateFromDatabase(db)
-	bci := bc.Iterator()
-
-	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
-	// in the block, until the block hash matches.
-	for {
-		block, err := bci.Next()
-
-		if bytes.Compare(block.GetHash(), hash) == 0 {
-			break
-		}
-
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			return nil, nil, ErrBlockDoesNotExist
-		}
-		err = index.UndoTxsInBlock(block, bc, db)
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
-			}).Warn("BlockChainManager: failed to calculate previous state of UTXO index for the block")
-			return nil, nil, err
-		}
-
-		err = scState.RevertState(db, block.GetHash())
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
-			}).Warn("BlockChainManager: failed to calculate previous state of scState for the block")
-			return nil, nil, err
-		}
-	}
-
-	return index, scState, nil
-}
-
-/* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
-func (bm *BlockChainManager) NumForks() (int64, int64) {
-	var numForks, maxHeight int64 = 0, 0
-
-	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.Tree) {
-		rootBlk := tree.GetValue().(*block.Block)
-		_, err := bm.blockchain.GetBlockByHash(rootBlk.GetPrevHash())
-		if err == nil {
-			/* the cached block is rooted in the BlockChain */
-			numForks += tree.NumLeaves()
-			t := tree.Height()
-			if t > maxHeight {
-				maxHeight = t
-			}
-		}
-	})
-
-	return numForks, maxHeight
 }

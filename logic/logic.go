@@ -20,6 +20,7 @@ package logic
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -46,12 +47,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*blockchain_logic.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
+	bc := blockchain_logic.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
 }
@@ -210,7 +211,7 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address account.Address, bc *core.Blockchain) (*common.Amount, error) {
+func GetBalance(address account.Address, bc *blockchain_logic.Blockchain) (*common.Amount, error) {
 	pubKeyHash, valid := account.GeneratePubKeyHashByAddress(address)
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
@@ -226,7 +227,7 @@ func GetBalance(address account.Address, bc *core.Blockchain) (*common.Amount, e
 	return balance, nil
 }
 
-func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain) ([]byte, string, error) {
+func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
 	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc)
 }
@@ -240,7 +241,7 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address account.Address, amount *common.Amount, bc *core.Blockchain) ([]byte, string, error) {
+func SendFromMiner(address account.Address, amount *common.Amount, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivateKey)
 	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc)
@@ -256,7 +257,7 @@ func GetAccountManager(path string) (*account_logic.AccountManager, error) {
 	return am, nil
 }
 
-func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain) ([]byte, string, error) {
+func sendTo(sendTxParam core.SendTxParam, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
 	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}

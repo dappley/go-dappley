@@ -33,7 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/pb"
 	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"

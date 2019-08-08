@@ -21,6 +21,7 @@ package core
 import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -40,12 +41,12 @@ type UTXO struct {
 	UtxoType UtxoType
 }
 
-// newUTXO returns an UTXO instance constructed from a TXOutput.
-func newUTXO(txout TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
+// NewUTXO returns an UTXO instance constructed from a TXOutput.
+func NewUTXO(txout TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
 	return &UTXO{txout, txid, vout, utxoType}
 }
 
-func getTXOutputSpent(in TXInput, bc *Blockchain) (TXOutput, int, error) {
+func getTXOutputSpent(in TXInput, bc *blockchain_logic.Blockchain) (TXOutput, int, error) {
 	tx, err := bc.FindTXOutput(in)
 	if err != nil {
 		return TXOutput{}, 0, ErrTXInputInvalid
