@@ -32,12 +32,6 @@ import (
 
 var contractUtxoKey = []byte("contractUtxoKey")
 
-const (
-	UtxoNormal = iota
-	UtxoCreateContract
-	UtxoInvokeContract
-)
-
 var (
 	ErrUTXONotFound   = errors.New("utxo not found when trying to remove from cache")
 	ErrTXInputInvalid = errors.New("txInput refers to non-existing transaction")
@@ -108,11 +102,11 @@ func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) (*utxo.
 	var invokeContractUtxos []*utxo.UTXO
 	var createContractUtxo *utxo.UTXO
 
-	for _, utxo := range utxoTx.Indices {
-		if utxo.UtxoType == UtxoCreateContract {
-			createContractUtxo = utxo
+	for _, u := range utxoTx.Indices {
+		if u.UtxoType == utxo.UtxoCreateContract {
+			createContractUtxo = u
 		} else {
-			invokeContractUtxos = append(invokeContractUtxos, utxo)
+			invokeContractUtxos = append(invokeContractUtxos, u)
 		}
 	}
 	return createContractUtxo, invokeContractUtxos
@@ -231,17 +225,17 @@ func (utxos *UTXOIndex) AddUTXO(txout transaction_base.TXOutput, txid []byte, vo
 	//if it is a smart contract deployment utxo add it to contract utxos
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
 		if originalUtxos.Size() == 0 {
-			u = utxo.NewUTXO(txout, txid, vout, UtxoCreateContract)
+			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoCreateContract)
 			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 			utxos.mutex.Lock()
 			contractUtxos.PutUtxo(u)
 			utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
 			utxos.mutex.Unlock()
 		} else {
-			u = utxo.NewUTXO(txout, txid, vout, UtxoInvokeContract)
+			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoInvokeContract)
 		}
 	} else {
-		u = utxo.NewUTXO(txout, txid, vout, UtxoNormal)
+		u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoNormal)
 	}
 
 	utxos.mutex.Lock()
@@ -264,8 +258,8 @@ func (utxos *UTXOIndex) GetContractUtxos() []*utxo.UTXO {
 func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int) error {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(pkh)
 
-	utxo := originalUtxos.GetUtxo(txid, vout)
-	if utxo == nil {
+	u := originalUtxos.GetUtxo(txid, vout)
+	if u == nil {
 		return ErrUTXONotFound
 	}
 
@@ -274,7 +268,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	utxos.index[pkh.String()] = originalUtxos
 	utxos.mutex.Unlock()
 
-	if utxo.UtxoType != UtxoCreateContract {
+	if u.UtxoType != utxo.UtxoCreateContract {
 		return nil
 	}
 	// remove contract utxos
