@@ -1,4 +1,4 @@
-package core
+package transaction_logic
 
 import (
 	"bytes"
@@ -9,16 +9,18 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
 
 // VerifyInEstimate returns whether the current tx in estimate mode is valid.
-func VerifyInEstimate(utxoIndex *UTXOIndex, ctx *ContractTx) error {
+func VerifyInEstimate(utxoIndex *utxo_logic.UTXOIndex, ctx *ContractTx) error {
 	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return errors.New("Transaction: contract state check failed")
 	}
@@ -31,7 +33,7 @@ func VerifyInEstimate(utxoIndex *UTXOIndex, ctx *ContractTx) error {
 }
 
 // VerifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func VerifyContractTx(utxoIndex *UTXOIndex, ctx *ContractTx) (bool, error) {
+func VerifyContractTx(utxoIndex *utxo_logic.UTXOIndex, ctx *ContractTx) (bool, error) {
 	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return false, errors.New("Transaction: contract state check failed")
 	}
@@ -44,7 +46,7 @@ func VerifyContractTx(utxoIndex *UTXOIndex, ctx *ContractTx) (bool, error) {
 }
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func VerifyTransaction(utxoIndex *UTXOIndex, tx *Transaction, blockHeight uint64) (bool, error) {
+func VerifyTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction, blockHeight uint64) (bool, error) {
 	ctx := tx.ToContractTx()
 	if ctx != nil {
 		return VerifyContractTx(utxoIndex, ctx)
@@ -72,7 +74,7 @@ func VerifyTransaction(utxoIndex *UTXOIndex, tx *Transaction, blockHeight uint64
 	return true, nil
 }
 
-func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
+func verify(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) (*common.Amount, error) {
 	prevUtxos := getPrevUTXOs(tx, utxoIndex)
 	if prevUtxos == nil {
 		return nil, errors.New("Transaction: prevUtxos not found")
@@ -113,7 +115,7 @@ func verify(tx *Transaction, utxoIndex *UTXOIndex) (*common.Amount, error) {
 }
 
 // DescribeTransaction reverse-engineers the high-level description of a transaction
-func DescribeTransaction(utxoIndex *UTXOIndex, tx *Transaction) (sender, recipient *account.Address, amount, tip *common.Amount, error error) {
+func DescribeTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) (sender, recipient *account.Address, amount, tip *common.Amount, error error) {
 	var receiverAddress account.Address
 	vinPubKey := tx.Vin[0].PubKey
 	pubKeyHash := account.PubKeyHash([]byte(""))
@@ -161,7 +163,7 @@ func DescribeTransaction(utxoIndex *UTXOIndex, tx *Transaction) (sender, recipie
 }
 
 // Returns related previous UTXO for current transaction
-func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*utxo.UTXO {
+func getPrevUTXOs(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) []*utxo.UTXO {
 	var prevUtxos []*utxo.UTXO
 	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
 	for _, vin := range tx.Vin {
@@ -196,7 +198,7 @@ func getPrevUTXOs(tx *Transaction, utxoIndex *UTXOIndex) []*utxo.UTXO {
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
 //key hash in utxo
-func verifyPublicKeyHash(prevUtxos []*utxo.UTXO, tx *Transaction) (bool, error) {
+func verifyPublicKeyHash(prevUtxos []*utxo_logic.utxo.UTXO, tx *core.Transaction) (bool, error) {
 
 	for i, vin := range tx.Vin {
 		if prevUtxos[i].PubKeyHash == nil {
@@ -226,7 +228,7 @@ func verifyPublicKeyHash(prevUtxos []*utxo.UTXO, tx *Transaction) (bool, error) 
 }
 
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func IsFromContract(utxoIndex *UTXOIndex, tx *Transaction) bool {
+func IsFromContract(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) bool {
 	if len(tx.Vin) == 0 {
 		return false
 	}
@@ -521,4 +523,22 @@ func prepareFuncCallScript(function, args string) string {
 		function,
 		args,
 	)
+}
+
+func isPubkeyInUtxos(contractUtxos []*utxo.UTXO, pubKey account.PubKeyHash) bool {
+	for _, contractUtxo := range contractUtxos {
+		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+//calculateUtxoSum calculates the total amount of all input utxos
+func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
+	sum := common.NewAmount(0)
+	for _, utxo := range utxos {
+		sum = sum.Add(utxo.Value)
+	}
+	return sum
 }

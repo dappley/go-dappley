@@ -1,17 +1,16 @@
-package core
+package utxo_logic
 
 import (
-	"bytes"
 	"encoding/hex"
 
-	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/utxo"
 	logger "github.com/sirupsen/logrus"
 )
 
 //FindVinUtxosInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx Transaction) ([]*utxo.UTXO, error) {
+func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx core.Transaction) ([]*utxo.UTXO, error) {
 	var res []*utxo.UTXO
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
@@ -30,22 +29,4 @@ func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx Transaction) ([]*utxo.UTXO, e
 		res = append(res, utxo)
 	}
 	return res, nil
-}
-
-func isPubkeyInUtxos(contractUtxos []*utxo.UTXO, pubKey account.PubKeyHash) bool {
-	for _, contractUtxo := range contractUtxos {
-		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
-			return true
-		}
-	}
-	return false
-}
-
-//calculateUtxoSum calculates the total amount of all input utxos
-func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
-	sum := common.NewAmount(0)
-	for _, utxo := range utxos {
-		sum = sum.Add(utxo.Value)
-	}
-	return sum
 }
