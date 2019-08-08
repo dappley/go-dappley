@@ -19,6 +19,8 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
@@ -64,8 +66,8 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
 
-	cbtx := core.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
-	cbtxInvalidProducer := core.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtxInvalidProducer := transaction_logic.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
 
 	tests := []struct {
 		name     string
@@ -76,7 +78,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 			name: "BeneficiaryIsProducer",
 			block: FakeNewBlockWithTimestamp(
 				46,
-				[]*core.Transaction{
+				[]*transaction.Transaction{
 					core.MockTransaction(),
 					&cbtx,
 				},
@@ -88,7 +90,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 			name: "ProducerNotAtItsTurn",
 			block: FakeNewBlockWithTimestamp(
 				44,
-				[]*core.Transaction{
+				[]*transaction.Transaction{
 					core.MockTransaction(),
 					&cbtx,
 				},
@@ -100,7 +102,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 			name: "NotAProducer",
 			block: FakeNewBlockWithTimestamp(
 				44,
-				[]*core.Transaction{
+				[]*transaction.Transaction{
 					core.MockTransaction(),
 					&cbtxInvalidProducer,
 				},
@@ -133,14 +135,14 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 	// Both timestamps fall in the same DPoS time slot
 	assert.Equal(t, int(blk1Time/defaultTimeBetweenBlk), int(blk2Time/defaultTimeBetweenBlk))
 
-	blk1 := FakeNewBlockWithTimestamp(blk1Time, []*core.Transaction{}, nil)
+	blk1 := FakeNewBlockWithTimestamp(blk1Time, []*transaction.Transaction{}, nil)
 	dpos.AddBlockToSlot(blk1)
-	blk2 := FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
+	blk2 := FakeNewBlockWithTimestamp(blk2Time, []*transaction.Transaction{}, nil)
 
 	assert.True(t, dpos.isDoubleMint(blk2))
 }
 
-func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block) *block.Block {
+func FakeNewBlockWithTimestamp(t int64, txs []*transaction.Transaction, parent *block.Block) *block.Block {
 	var prevHash []byte
 	var height uint64
 	height = 0
@@ -150,7 +152,7 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block)
 	}
 
 	if txs == nil {
-		txs = []*Transaction{}
+		txs = []*transaction.Transaction{}
 	}
 	blk := block.NewBlockWithRawInfo(
 		[]byte{},

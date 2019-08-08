@@ -2,11 +2,12 @@ package vm
 
 import "C"
 import (
+	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -55,7 +56,7 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 		return 1
 	}
 
-	transferTX := core.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
+	transferTX := transaction_logic.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

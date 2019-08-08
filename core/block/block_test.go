@@ -1,6 +1,7 @@
 package block
 
 import (
+	"github.com/dappley/go-dappley/core/transaction"
 	"testing"
 	"time"
 
@@ -32,7 +33,7 @@ var blk2 = &Block{
 }
 
 func TestNewBlock(t *testing.T) {
-	var emptyTx = []*core.Transaction([]*core.Transaction{})
+	var emptyTx = []*transaction.Transaction([]*transaction.Transaction{})
 	var emptyHash = hash.Hash(hash.Hash{})
 	var expectBlock3Hash = hash.Hash{0x61}
 
@@ -52,15 +53,15 @@ func TestNewBlock(t *testing.T) {
 	assert.Equal(t, uint64(1), block3.header.height)
 	assert.Equal(t, emptyTx, block3.transactions)
 
-	block4 := NewBlock([]*core.Transaction{}, nil, "")
+	block4 := NewBlock([]*transaction.Transaction{}, nil, "")
 	assert.Nil(t, block4.header.prevHash)
 	assert.Equal(t, emptyTx, block4.transactions)
 	assert.Equal(t, hash.Hash(nil), block4.header.prevHash)
 
-	block5 := NewBlock([]*core.Transaction{{}}, nil, "")
+	block5 := NewBlock([]*transaction.Transaction{{}}, nil, "")
 	assert.Nil(t, block5.header.prevHash)
-	assert.Equal(t, []*core.Transaction{{}}, block5.transactions)
-	assert.Equal(t, &core.Transaction{}, block5.transactions[0])
+	assert.Equal(t, []*transaction.Transaction{{}}, block5.transactions)
+	assert.Equal(t, &transaction.Transaction{}, block5.transactions[0])
 	assert.NotNil(t, block5.transactions)
 }
 

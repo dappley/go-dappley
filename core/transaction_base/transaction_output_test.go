@@ -19,11 +19,11 @@
 package transaction_base
 
 import (
+	"github.com/dappley/go-dappley/core/transaction_base/pb"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +42,7 @@ func TestTXOutput_Proto(t *testing.T) {
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
-	newpb := &corepb.TXOutput{}
+	newpb := &transactionbasepb.TXOutput{}
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 

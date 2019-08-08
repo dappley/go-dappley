@@ -19,9 +19,9 @@
 package transaction_base
 
 import (
+	"github.com/dappley/go-dappley/core/transaction_base/pb"
 	"testing"
 
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +41,7 @@ func TestTXInput_Proto(t *testing.T) {
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
-	newpb := &corepb.TXInput{}
+	newpb := &transactionbasepb.TXInput{}
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 

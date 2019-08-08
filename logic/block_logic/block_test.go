@@ -3,6 +3,11 @@ package block_logic
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sync"
 	"testing"
 	"time"
@@ -30,7 +35,7 @@ func TestHashTransactions(t *testing.T) {
 
 	var expectHash = []uint8([]byte{0x5d, 0xf6, 0xe0, 0xe2, 0x76, 0x13, 0x59, 0xd3, 0xa, 0x82, 0x75, 0x5, 0x8e, 0x29, 0x9f, 0xcc, 0x3, 0x81, 0x53, 0x45, 0x45, 0xf5, 0x5c, 0xf4, 0x3e, 0x41, 0x98, 0x3f, 0x5d, 0x4c, 0x94, 0x56})
 
-	blk := block.NewBlock([]*core.Transaction{{}}, parentBlk, "")
+	blk := block.NewBlock([]*transaction.Transaction{{}}, parentBlk, "")
 	hash := HashTransactions(blk)
 	assert.Equal(t, expectHash, hash)
 }
@@ -67,7 +72,7 @@ func TestCalculateHashWithNonce(t *testing.T) {
 		nil,
 	)
 
-	blk := block.NewBlock([]*core.Transaction{{}}, parentBlk, "")
+	blk := block.NewBlock([]*transaction.Transaction{{}}, parentBlk, "")
 	blk.SetTimestamp(0)
 	expectHash1 := hash.Hash{0x3f, 0x2f, 0xec, 0xb4, 0x33, 0xf0, 0xd1, 0x1a, 0xa6, 0xf4, 0xf, 0xb8, 0x7f, 0x8f, 0x99, 0x11, 0xae, 0xe7, 0x42, 0xf4, 0x69, 0x7d, 0xf1, 0xaa, 0xc8, 0xd0, 0xfc, 0x40, 0xa2, 0xd8, 0xb1, 0xa5}
 	blk.SetNonce(1)
@@ -83,8 +88,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
 
-	normalCoinbaseTX := core.NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
-	rewardTX := core.NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
+	normalCoinbaseTX := transaction_logic.NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
+	rewardTX := transaction.NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
 	userPubKeyHash, _ := account.NewUserPubKeyHash(userPubKey)
 	userAddr := userPubKeyHash.GenerateAddress()
@@ -95,15 +100,15 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	generatedTxId, err := hex.DecodeString(txIdStr)
 	assert.Nil(t, err)
 	fmt.Println(hex.EncodeToString(generatedTxId))
-	generatedTX := &core.Transaction{
+	generatedTX := &transaction.Transaction{
 		generatedTxId,
-		[]core.TXInput{
+		[]transaction_base.TXInput{
 			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
 			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
 		},
-		[]core.TXOutput{
-			*core.NewTxOut(common.NewAmount(23), userAddr, ""),
-			*core.NewTxOut(common.NewAmount(10), contractAddr, ""),
+		[]transaction_base.TXOutput{
+			*transaction_base.NewTxOut(common.NewAmount(23), userAddr, ""),
+			*transaction_base.NewTxOut(common.NewAmount(10), contractAddr, ""),
 		},
 		common.NewAmount(7),
 		common.NewAmount(0),
@@ -117,41 +122,41 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
 	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
 
-	dependentTx1 := core.NewTransactionByVin(util.GenerateRandomAoB(1), 1, pubkey1, 10, pkHash2, 3)
-	dependentTx2 := core.NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
-	dependentTx3 := core.NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
+	dependentTx1 := transaction.NewTransactionByVin(util.GenerateRandomAoB(1), 1, pubkey1, 10, pkHash2, 3)
+	dependentTx2 := transaction.NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
+	dependentTx3 := transaction.NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
 
-	tx2Utxo1 := core.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, core.UtxoNormal}
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
 
-	tx1Utxos := map[string][]*core.UTXO{
-		pkHash2.String(): {&core.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, core.UtxoNormal}},
+	tx1Utxos := map[string][]*utxo.UTXO{
+		pkHash2.String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()])
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*core.UTXO{&tx2Utxo1})
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()], &dependentTx2)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1}, &dependentTx3)
 
 	tests := []struct {
 		name  string
-		txs   []*core.Transaction
-		utxos map[string][]*core.UTXO
+		txs   []*transaction.Transaction
+		utxos map[string][]*utxo.UTXO
 		ok    bool
 	}{
 		{
 			"normal txs",
-			[]*core.Transaction{&normalCoinbaseTX},
-			map[string][]*core.UTXO{},
+			[]*transaction.Transaction{&normalCoinbaseTX},
+			map[string][]*utxo.UTXO{},
 			true,
 		},
 		{
 			"no txs",
-			[]*core.Transaction{},
-			make(map[string][]*core.UTXO),
+			[]*transaction.Transaction{},
+			make(map[string][]*utxo.UTXO),
 			true,
 		},
 		{
 			"invalid normal txs",
-			[]*core.Transaction{{
+			[]*transaction.Transaction{{
 				ID: []byte("txid"),
-				Vin: []core.TXInput{{
+				Vin: []transaction_base.TXInput{{
 					[]byte("tx1"),
 					0,
 					util.GenerateRandomAoB(2),
@@ -160,44 +165,44 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				Vout: core.MockUtxoOutputsWithInputs(),
 				Tip:  common.NewAmount(5),
 			}},
-			map[string][]*core.UTXO{},
+			map[string][]*utxo.UTXO{},
 			false,
 		},
 		{
 			"normal dependent txs",
-			[]*core.Transaction{&dependentTx2, &dependentTx3},
+			[]*transaction.Transaction{&dependentTx2, &dependentTx3},
 			tx1Utxos,
 			true,
 		},
 		{
 			"invalid dependent txs",
-			[]*core.Transaction{&dependentTx3, &dependentTx2},
+			[]*transaction.Transaction{&dependentTx3, &dependentTx2},
 			tx1Utxos,
 			false,
 		},
 		{
 			"reward tx",
-			[]*core.Transaction{&rewardTX},
-			map[string][]*core.UTXO{
+			[]*transaction.Transaction{&rewardTX},
+			map[string][]*utxo.UTXO{
 				contractPubKeyHash.String(): {
-					{*core.NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, core.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, utxo.UtxoNormal},
 				},
 				userPubKeyHash.String(): {
-					{*core.NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, core.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,
 		},
 		{
 			"generated tx",
-			[]*core.Transaction{generatedTX},
-			map[string][]*core.UTXO{
+			[]*transaction.Transaction{generatedTX},
+			map[string][]*utxo.UTXO{
 				contractPubKeyHash.String(): {
-					{*core.NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, core.UtxoNormal},
-					{*core.NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, core.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, utxo.UtxoNormal},
 				},
 				userPubKeyHash.String(): {
-					{*core.NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, core.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,
@@ -206,17 +211,17 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := storage.NewRamStorage()
-			index := make(map[string]*core.UTXOTx)
+			index := make(map[string]*utxo.UTXOTx)
 
 			for key, addrUtxos := range tt.utxos {
-				utxoTx := core.NewUTXOTx()
+				utxoTx := utxo.NewUTXOTx()
 				for _, addrUtxo := range addrUtxos {
 					utxoTx.PutUtxo(addrUtxo)
 				}
 				index[key] = &utxoTx
 			}
 
-			utxoIndex := core.UTXOIndex{index, core.NewUTXOCache(db), &sync.RWMutex{}}
+			utxoIndex := utxo_logic.UTXOIndex{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
 			scState := core.NewScState()
 			var parentBlk = block.NewBlockWithRawInfo(
 				[]byte{'a'},

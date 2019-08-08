@@ -21,6 +21,10 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -31,19 +35,19 @@ import (
 
 func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	txPool := NewTransactionPool(nil, 1280000)
-	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	var kps []*account.KeyPair
 	var pkhs []account.PubKeyHash
 	var addrs []account.Address
-	var prevUTXOs []*UTXOTx
-	var txs []*Transaction
+	var prevUTXOs []*utxo.UTXOTx
+	var txs []*transaction.Transaction
 
 	for i := 0; i < 5; i++ {
 		kps = append(kps, account.NewKeyPair())
 		pkh, _ := account.NewUserPubKeyHash(kps[i].GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
-		cbtx := NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
+		cbtx := transaction_logic.NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
 		utxoIndex.UpdateUtxo(&cbtx)
 		prevUTXO := utxoIndex.GetAllUTXOsByPubKeyHash(pkhs[i])
 		prevUTXOs = append(prevUTXOs, prevUTXO)
@@ -51,8 +55,8 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
-		sendTxParam := NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(1), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
-		tx, err := NewUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
+		sendTxParam := transaction.NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(1), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
+		tx, err := transaction_logic.NewUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		txPool.Push(tx)
 		txs = append(txs, &tx)
@@ -65,11 +69,11 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 
 func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T) {
 	txPool := NewTransactionPool(nil, 1280000)
-	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	var kps []*account.KeyPair
 	var pkhs []account.PubKeyHash
 	var addrs []account.Address
-	var txs []*Transaction
+	var txs []*transaction.Transaction
 
 	for i := 0; i < 5; i++ {
 		kps = append(kps, account.NewKeyPair())
@@ -77,7 +81,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 		if i == 0 {
-			cbtx := NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
+			cbtx := transaction_logic.NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
 			utxoIndex.UpdateUtxo(&cbtx)
 		}
 	}
@@ -85,8 +89,8 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
 		prevUTXO := tempUtxoIndex.GetAllUTXOsByPubKeyHash(pkhs[i])
-		sendTxParam := NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
-		tx, err := NewUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
+		sendTxParam := transaction.NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
+		tx, err := transaction_logic.NewUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		tempUtxoIndex.UpdateUtxo(&tx)
 		txPool.Push(tx)

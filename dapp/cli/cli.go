@@ -909,9 +909,9 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		fmt.Println("Error: invalid account address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
@@ -1097,9 +1097,9 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		fmt.Println("Error: invalid account address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	gasResponse, err := c.(rpcpb.RpcServiceClient).RpcEstimateGas(ctx, estimateGasRequest)
 

@@ -21,6 +21,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/logic/block_logic"
 )
@@ -31,8 +32,8 @@ func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Blo
 
 	txin := transaction_base.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
 	txout := transaction_base.NewTXOutput(subsidy, address)
-	txs := []*Transaction{}
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txs := []*transaction.Transaction{}
+	tx := transaction.Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 

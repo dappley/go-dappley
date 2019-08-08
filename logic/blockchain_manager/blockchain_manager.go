@@ -26,6 +26,7 @@ import (
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -312,8 +313,8 @@ func (bm *BlockchainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *blockchain_logic.Blockchain, hash hash.Hash) (*core.UTXOIndex, *core.ScState, error) {
-	index := core.NewUTXOIndex(bc.GetUtxoCache())
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *blockchain_logic.Blockchain, hash hash.Hash) (*utxo_logic.UTXOIndex, *core.ScState, error) {
+	index := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	scState := core.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
 

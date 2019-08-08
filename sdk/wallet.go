@@ -1,6 +1,8 @@
 package sdk
 
 import (
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sync"
 
 	"github.com/dappley/go-dappley/core"
@@ -16,7 +18,7 @@ type DappSdkAccount struct {
 	balances  map[account.Address]uint64
 	wm        *account_logic.AccountManager
 	sdk       *DappSdk
-	utxoIndex *core.UTXOIndex
+	utxoIndex *utxo_logic.UTXOIndex
 	mutex     *sync.RWMutex
 }
 
@@ -67,13 +69,13 @@ func (sdkw *DappSdkAccount) GetBalance(address account.Address) uint64 {
 
 func (sdkw *DappSdkAccount) GetAccountManager() *account_logic.AccountManager { return sdkw.wm }
 
-func (sdkw *DappSdkAccount) GetUtxoIndex() *core.UTXOIndex { return sdkw.utxoIndex }
+func (sdkw *DappSdkAccount) GetUtxoIndex() *utxo_logic.UTXOIndex { return sdkw.utxoIndex }
 
 func (sdkw *DappSdkAccount) Initialize() {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 
-	sdkw.utxoIndex = core.NewUTXOIndex(core.NewUTXOCache(storage.NewRamStorage()))
+	sdkw.utxoIndex = utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	sdkw.balances = make(map[account.Address]uint64)
 }
 
@@ -122,7 +124,7 @@ func (sdkw *DappSdkAccount) Update() error {
 		}
 
 		for _, utxoPb := range utxos {
-			utxo := core.UTXO{}
+			utxo := utxo.UTXO{}
 			utxo.FromProto(utxoPb)
 			sdkw.utxoIndex.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
 			sdkw.UpdateBalance(addr, sdkw.GetBalance(addr)+utxo.TXOutput.Value.Uint64())

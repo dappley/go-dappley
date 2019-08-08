@@ -21,7 +21,10 @@ package consensus
 import (
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -95,7 +98,7 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 	}
 
 	// Retrieve all valid transactions from tx pool
-	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bp.bc.GetUtxoCache())
 
 	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadlineInMs)
 
@@ -111,8 +114,8 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 	return &ctx
 }
 
-func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*core.Transaction, *core.ScState) {
-	var validTxs []*core.Transaction
+func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *core.ScState) {
+	var validTxs []*transaction.Transaction
 	totalSize := 0
 
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
@@ -132,7 +135,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 		ctx := txNode.Value.ToContractTx()
 		minerAddr := account.NewAddress(bp.beneficiary)
 		if ctx != nil {
-			prevUtxos, err := core.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+			prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
 					"txid": hex.EncodeToString(ctx.ID),
@@ -144,7 +147,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
 
-			gasCount, generatedTxs, err := core.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			gasCount, generatedTxs, err := transaction_logic.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 
 			// record gas used
 			if err != nil {
@@ -152,12 +155,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 				logger.WithError(err).Error("executeSmartContract error.")
 			}
 			if gasCount > 0 {
-				grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+				grtx, err := transaction.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
 				if err == nil {
 					generatedTxs = append(generatedTxs, &grtx)
 				}
 			}
-			gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
 			if err == nil {
 				generatedTxs = append(generatedTxs, &gctx)
 			}
@@ -171,7 +174,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 
 	// append reward transaction
 	if len(rewards) > 0 {
-		rtx := core.NewRewardTx(currBlkHeight, rewards)
+		rtx := transaction.NewRewardTx(currBlkHeight, rewards)
 		validTxs = append(validTxs, &rtx)
 		utxoIndex.UpdateUtxo(&rtx)
 	}
@@ -179,25 +182,25 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBl
 	return validTxs, scStorage
 }
 
-func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {
+func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := core.NewCoinbaseTX(account.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	return &cbtx
 }
 
 //executeSmartContract executes all smart contracts
-func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
-	txs []*core.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*core.Transaction, *core.ScState) {
+func (bp *BlockProducer) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
+	txs []*transaction.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*transaction.Transaction, *core.ScState) {
 	//start a new smart contract engine
 
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
-	var generatedTXs []*core.Transaction
+	var generatedTXs []*transaction.Transaction
 	rewards := make(map[string]string)
 
 	minerAddr := account.NewAddress(bp.beneficiary)
@@ -209,7 +212,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			utxoIndex.UpdateUtxo(tx)
 			continue
 		}
-		prevUtxos, err := core.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+		prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"txid": hex.EncodeToString(ctx.ID),
@@ -217,7 +220,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			return nil, nil
 		}
 		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-		gasCount, newTxs, err := core.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+		gasCount, newTxs, err := transaction_logic.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 		generatedTXs = append(generatedTXs, newTxs...)
 		// record gas used
 		if err != nil {
@@ -227,12 +230,12 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 			}).Error("executeSmartContract error.")
 		}
 		if gasCount > 0 {
-			grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+			grtx, err := transaction.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
 			if err == nil {
 				generatedTXs = append(generatedTXs, &grtx)
 			}
 		}
-		gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+		gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
 		if err == nil {
 
 			generatedTXs = append(generatedTXs, &gctx)
@@ -243,7 +246,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
 	}
 	// append reward transaction
 	if len(rewards) > 0 {
-		rtx := core.NewRewardTx(currBlkHeight, rewards)
+		rtx := transaction.NewRewardTx(currBlkHeight, rewards)
 		generatedTXs = append(generatedTXs, &rtx)
 	}
 	return generatedTXs, scStorage

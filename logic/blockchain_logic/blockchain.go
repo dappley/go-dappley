@@ -22,6 +22,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sync"
 
 	"github.com/dappley/go-dappley/common/hash"
@@ -67,7 +69,7 @@ type Blockchain struct {
 
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
-	genesis := NewGenesisBlock(address, core.Subsidy)
+	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
 		db,
@@ -79,7 +81,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus cor
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
-	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
 	scState := core.NewScState()
 	err := bc.AddBlockContextToTail(&core.BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
@@ -414,7 +416,7 @@ func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *core.UTXOIndex, scState *core.ScState) bool {
+func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *utxo_logic.UTXOIndex, scState *core.ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -511,4 +513,12 @@ func (bc *Blockchain) IsLIB(blk *block.Block) bool {
 // GasPrice returns gas price in current blockchain
 func (bc *Blockchain) GasPrice() uint64 {
 	return DefaultGasPrice
+}
+
+func GetBlockByHash(hash hash.Hash, db Storage) (*block.Block, error) {
+	rawBytes, err := db.Get(hash)
+	if err != nil {
+		return nil, ErrBlockDoesNotExist
+	}
+	return block.Deserialize(rawBytes), nil
 }

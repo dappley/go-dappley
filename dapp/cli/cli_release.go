@@ -30,11 +30,11 @@ import (
 	"os"
 	"strings"
 
-	clientpkg "github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
+	clientpkg "github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
@@ -760,9 +760,9 @@ func sendCommandHandler(ctx context.Context, account interface{}, flags cmdFlags
 		fmt.Println("Error: invalid wallet address.")
 		return
 	}
-	sendTxParam := core.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
+	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := core.NewUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
 
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = account.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)

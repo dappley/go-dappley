@@ -6,9 +6,9 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/util"
 )
 
@@ -31,7 +31,7 @@ func GenerateFakeTxOutputs() []core.TXOutput {
 }
 
 func main() {
-	tx1 := core.Transaction{
+	tx1 := transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
@@ -47,7 +47,7 @@ func main() {
 		select {
 		case <-ticker.C:
 			for i := 0; i < 1000000; i++ {
-				tx := &core.Transaction{}
+				tx := &transaction.Transaction{}
 				tx.FromProto(txpb)
 			}
 		}

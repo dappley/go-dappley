@@ -22,9 +22,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
-	"github.com/dappley/go-dappley/network"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dappley/go-dappley/core"
@@ -34,17 +31,6 @@ func TestProofOfWork_NewPoW(t *testing.T) {
 	pow := NewProofOfWork()
 	assert.Nil(t, pow.node)
 	assert.Equal(t, big.NewInt(1).Lsh(big.NewInt(1), uint(256)), pow.target)
-}
-
-func TestProofOfWork_Setup(t *testing.T) {
-	pow := NewProofOfWork()
-	bc := blockchain_logic.GenerateMockBlockchain(5)
-	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	pool := core.NewBlockPool()
-	node := network.NewNode(bc.GetDb(), nil)
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
-	pow.Setup(node, cbAddr, bm)
-	assert.Equal(t, bc, pow.bm.Getblockchain())
 }
 
 func TestProofOfWork_SetTargetBit(t *testing.T) {

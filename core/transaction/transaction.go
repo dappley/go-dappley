@@ -36,15 +36,14 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var subsidy = common.NewAmount(10000000)
+var Subsidy = common.NewAmount(10000000)
 
 const (
 	ContractTxouputIndex = 0
-	SCDestroyAddress     = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
 	scheduleFuncName     = "dapp_schedule"
 )
 
-var rewardTxData = []byte("Distribute X Rewards")
+var RewardTxData = []byte("Distribute X Rewards")
 var gasRewardData = []byte("Miner Gas Rewards")
 var gasChangeData = []byte("Unspent Gas Change")
 
@@ -133,7 +132,7 @@ func (tx *Transaction) IsCoinbase() bool {
 		return false
 	}
 
-	if bytes.Equal(tx.Vin[0].PubKey, rewardTxData) {
+	if bytes.Equal(tx.Vin[0].PubKey, RewardTxData) {
 		return false
 	}
 
@@ -155,7 +154,7 @@ func (tx *Transaction) IsRewardTx() bool {
 		return false
 	}
 
-	if !bytes.Equal(tx.Vin[0].PubKey, rewardTxData) {
+	if !bytes.Equal(tx.Vin[0].PubKey, RewardTxData) {
 		return false
 	}
 
@@ -306,8 +305,8 @@ func (tx *Transaction) DeepCopy() Transaction {
 	return txCopy
 }
 
-// verifyID verifies if the transaction ID is the hash of the transaction
-func (tx *Transaction) verifyID() (bool, error) {
+// VerifyID verifies if the transaction ID is the hash of the transaction
+func (tx *Transaction) VerifyID() (bool, error) {
 	txCopy := tx.TrimmedCopy(true)
 	if bytes.Equal(tx.ID, (&txCopy).Hash()) {
 		return true, nil
@@ -316,8 +315,8 @@ func (tx *Transaction) verifyID() (bool, error) {
 	}
 }
 
-// verifyAmount verifies if the transaction has the correct vout value
-func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
+// VerifyAmount verifies if the transaction has the correct vout value
+func (tx *Transaction) VerifyAmount(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
 	//TotalVin amount must equal or greater than total vout
 	if totalPrev.Cmp(totalVoutValue) >= 0 {
 		return true, nil
@@ -325,8 +324,8 @@ func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *co
 	return false, errors.New("Transaction: amount is invalid")
 }
 
-//verifyTip verifies if the transaction has the correct tip
-func (tx *Transaction) verifyTip(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
+//VerifyTip verifies if the transaction has the correct tip
+func (tx *Transaction) VerifyTip(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
 	sub, err := totalPrev.Sub(totalVoutValue)
 	if err != nil {
 		return false, err
@@ -337,8 +336,8 @@ func (tx *Transaction) verifyTip(totalPrev *common.Amount, totalVoutValue *commo
 	return true, nil
 }
 
-// verifyGas verifies if the transaction has the correct GasLimit and GasPrice
-func (ctx *ContractTx) verifyGas(totalBalance *common.Amount) (bool, error) {
+// VerifyGas verifies if the transaction has the correct GasLimit and GasPrice
+func (ctx *ContractTx) VerifyGas(totalBalance *common.Amount) (bool, error) {
 	baseGas, err := ctx.GasCountOfTxBase()
 	if err == nil {
 		if ctx.GasLimit.Cmp(baseGas) < 0 {
@@ -358,8 +357,8 @@ func (ctx *ContractTx) verifyGas(totalBalance *common.Amount) (bool, error) {
 	return true, nil
 }
 
-//calculateTotalVoutValue returns total amout of transaction's vout
-func (tx *Transaction) calculateTotalVoutValue() (*common.Amount, bool) {
+//CalculateTotalVoutValue returns total amout of transaction's vout
+func (tx *Transaction) CalculateTotalVoutValue() (*common.Amount, bool) {
 	totalVout := &common.Amount{}
 	for _, vout := range tx.Vout {
 		if vout.Value == nil || vout.Value.Validate() != nil {
@@ -376,7 +375,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction_base.TXInput{nil, -1, bh, rewardTxData}
+	txin := transaction_base.TXInput{nil, -1, bh, RewardTxData}
 	txOutputs := []transaction_base.TXOutput{}
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
@@ -507,24 +506,6 @@ func (tx *Transaction) String() string {
 	lines = append(lines, "\n")
 
 	return strings.Join(lines, "\n")
-}
-
-//calculateChange calculates the change
-func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
-	change, err := input.Sub(amount)
-	if err != nil {
-		return nil, ErrInsufficientFund
-	}
-
-	change, err = change.Sub(tip)
-	if err != nil {
-		return nil, ErrInsufficientFund
-	}
-	change, err = change.Sub(gasLimit.Mul(gasPrice))
-	if err != nil {
-		return nil, ErrInsufficientFund
-	}
-	return change, nil
 }
 
 func (tx *Transaction) ToProto() proto.Message {

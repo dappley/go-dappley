@@ -7,8 +7,8 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *core.Transaction {
-	tx := &core.Transaction{
+func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *transaction.Transaction {
+	tx := &transaction.Transaction{
 		nil,
 		prepareInputLists(prevUtxos, senderKeyPair.GetPublicKey(), nil),
 		vouts,

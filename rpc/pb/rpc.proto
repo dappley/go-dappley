@@ -1,8 +1,8 @@
 syntax = "proto3";
 package rpcpb;
 import "github.com/dappley/go-dappley/core/block/pb/block.proto";
-import "github.com/dappley/go-dappley/core/pb/transaction.proto";
-import "github.com/dappley/go-dappley/core/pb/utxo.proto";
+import "github.com/dappley/go-dappley/core/transaction/pb/transaction.proto";
+import "github.com/dappley/go-dappley/core/utxo/pb/utxo.proto";
 import "github.com/dappley/go-dappley/network/pb/peer.proto";
 import "github.com/dappley/go-dappley/metrics/pb/datastore.proto";
 
@@ -103,11 +103,11 @@ message GetBlockByHeightRequest {
 }
 
 message SendTransactionRequest {
-  corepb.Transaction transaction = 1;
+  transactionpb.Transaction transaction = 1;
 }
 
 message SendBatchTransactionRequest {
-  repeated corepb.Transaction transactions = 1;
+  repeated transactionpb.Transaction transactions = 1;
 }
 
 message GetNewTransactionRequest {}
@@ -121,7 +121,7 @@ message MetricsServiceRequest {}
 message GetLastIrreversibleBlockRequest {}
 
 message EstimateGasRequest {
-  corepb.Transaction transaction = 1;
+  transactionpb.Transaction transaction = 1;
 }
 
 message GasPriceRequest {
@@ -162,7 +162,7 @@ message GetVersionResponse {
 }
 
 message GetUTXOResponse {
-  repeated corepb.Utxo utxos = 1;
+  repeated utxopb.Utxo utxos = 1;
   repeated blockpb.BlockHeader block_headers = 2; //The latest block headers
 }
 
@@ -189,7 +189,7 @@ message SendTransactionStatus {
 }
 
 message GetNewTransactionResponse {
-  corepb.Transaction transaction = 1;
+  transactionpb.Transaction transaction = 1;
 }
 
 message SubscribeResponse {
@@ -199,7 +199,7 @@ message SubscribeResponse {
 message GetAllTransactionsRequest{}
 
 message GetAllTransactionsResponse{
-  repeated corepb.Transaction transactions = 1;
+  repeated transactionpb.Transaction transactions = 1;
 }
 
 message GetLastIrreversibleBlockResponse {

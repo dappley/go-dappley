@@ -21,6 +21,10 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sort"
 	"sync"
 
@@ -53,7 +57,7 @@ var (
 
 type TransactionPool struct {
 	txs        map[string]*TransactionNode
-	pendingTxs []*Transaction
+	pendingTxs []*transaction.Transaction
 	tipOrder   []string
 	sizeLimit  uint32
 	currSize   uint32
@@ -65,7 +69,7 @@ type TransactionPool struct {
 func NewTransactionPool(netService NetService, limit uint32) *TransactionPool {
 	txPool := &TransactionPool{
 		txs:        make(map[string]*TransactionNode),
-		pendingTxs: make([]*Transaction, 0),
+		pendingTxs: make([]*transaction.Transaction, 0),
 		tipOrder:   make([]string, 0),
 		sizeLimit:  limit,
 		currSize:   0,
@@ -133,7 +137,7 @@ func (txPool *TransactionPool) GetSizeLimit() uint32 {
 	return txPool.sizeLimit
 }
 
-func (txPool *TransactionPool) GetTransactions() []*Transaction {
+func (txPool *TransactionPool) GetTransactions() []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 	return txPool.getSortedTransactions()
@@ -150,14 +154,14 @@ func (txPool *TransactionPool) ResetPendingTransactions() {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
-	txPool.pendingTxs = make([]*Transaction, 0)
+	txPool.pendingTxs = make([]*transaction.Transaction, 0)
 }
 
-func (txPool *TransactionPool) GetAllTransactions() []*Transaction {
+func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 
-	txs := []*Transaction{}
+	txs := []*transaction.Transaction{}
 	for _, tx := range txPool.pendingTxs {
 		txs = append(txs, tx)
 	}
@@ -170,7 +174,7 @@ func (txPool *TransactionPool) GetAllTransactions() []*Transaction {
 }
 
 //PopTransactionWithMostTips pops the transactions with the most tips
-func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) *TransactionNode {
+func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *utxo_logic.UTXOIndex) *TransactionNode {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
@@ -182,7 +186,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) 
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]
 
-	if result, err := VerifyTransaction(tempUtxoIndex, txNode.Value, 0); result {
+	if result, err := transaction_logic.VerifyTransaction(tempUtxoIndex, txNode.Value, 0); result {
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
 	} else {
@@ -196,7 +200,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) 
 }
 
 //Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transaction_base. However, the input transaction should never be dependent on any transaction in the current pool
-func (txPool *TransactionPool) Rollback(tx Transaction) {
+func (txPool *TransactionPool) Rollback(tx transaction.Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
@@ -231,7 +235,7 @@ func (txPool *TransactionPool) updateChildren(node *TransactionNode) {
 }
 
 //Push pushes a new transaction into the pool
-func (txPool *TransactionPool) Push(tx Transaction) {
+func (txPool *TransactionPool) Push(tx transaction.Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 	if txPool.sizeLimit == 0 {
@@ -255,7 +259,7 @@ func (txPool *TransactionPool) Push(tx Transaction) {
 
 //CleanUpMinedTxs updates the transaction pool when a new block is added to the blockchain.
 //It removes the packed transactions from the txpool while keeping their children
-func (txPool *TransactionPool) CleanUpMinedTxs(minedTxs []*Transaction) {
+func (txPool *TransactionPool) CleanUpMinedTxs(minedTxs []*transaction.Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()
 
@@ -293,7 +297,7 @@ func (txPool *TransactionPool) cleanUpTxSort() {
 	txPool.tipOrder = newTxOrder
 }
 
-func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
+func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
 
 	nodes := make(map[string]*TransactionNode)
 	scDeploymentTxExists := make(map[string]bool)
@@ -306,7 +310,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 		}
 	}
 
-	var sortedTxs []*Transaction
+	var sortedTxs []*transaction.Transaction
 	for len(nodes) > 0 {
 		for key, node := range nodes {
 			if !checkDependTxInMap(node.Value, nodes) {
@@ -334,7 +338,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*Transaction {
 	return sortedTxs
 }
 
-func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) bool {
+func checkDependTxInMap(tx *transaction.Transaction, existTxs map[string]*TransactionNode) bool {
 	for _, vin := range tx.Vin {
 		if _, exist := existTxs[hex.EncodeToString(vin.Txid)]; exist {
 			return true
@@ -343,7 +347,7 @@ func checkDependTxInMap(tx *Transaction, existTxs map[string]*TransactionNode) b
 	return false
 }
 
-func (txPool *TransactionPool) GetTransactionById(txid []byte) *Transaction {
+func (txPool *TransactionPool) GetTransactionById(txid []byte) *transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 	txNode, ok := txPool.txs[hex.EncodeToString(txid)]
@@ -379,7 +383,7 @@ func (txPool *TransactionPool) removeSelectedTransactions(toRemoveTxs map[string
 
 //removeTransactionNodeAndChildren removes the txNode from tx pool and all its children.
 //Note: this function does not remove the node from tipOrder!
-func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *Transaction) {
+func (txPool *TransactionPool) removeTransactionNodeAndChildren(tx *transaction.Transaction) {
 
 	txStack := stack.New()
 	txStack.Push(hex.EncodeToString(tx.ID))
@@ -407,7 +411,7 @@ func (txPool *TransactionPool) removeTransaction(txNode *TransactionNode) {
 }
 
 //disconnectFromParent removes itself from its parent's node's children field
-func (txPool *TransactionPool) disconnectFromParent(tx *Transaction) {
+func (txPool *TransactionPool) disconnectFromParent(tx *transaction.Transaction) {
 	for _, vin := range tx.Vin {
 		if parentTx, exist := txPool.txs[hex.EncodeToString(vin.Txid)]; exist {
 			delete(parentTx.Children, hex.EncodeToString(tx.ID))
@@ -461,7 +465,7 @@ func (txPool *TransactionPool) insertChildrenIntoSortedWaitlist(txNode *Transact
 	}
 }
 
-func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *Transaction) []string {
+func (txPool *TransactionPool) GetParentTxidsInTxPool(tx *transaction.Transaction) []string {
 	txids := []string{}
 	for _, vin := range tx.Vin {
 		txidStr := hex.EncodeToString(vin.Txid)
@@ -608,23 +612,23 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 	MetricsTransactionPoolSize.Inc(int64(len(txPool.txs)))
 }
 
-func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
+func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
 	var broadcastPid peer.ID
 	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
 }
 
 func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
 	//TODO: Check if the blockchain state is ready
-	txpb := &corepb.Transaction{}
+	txpb := &transactionpb.Transaction{}
 
 	if err := proto.Unmarshal(command.GetData(), txpb); err != nil {
 		logger.Warn(err)
 	}
 
-	tx := &Transaction{}
+	tx := &transaction.Transaction{}
 	tx.FromProto(txpb)
 	//TODO: Check if the transaction is generated from running a smart contract
-	//utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+	//utxoIndex := utxo_logic.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
 	//if tx.IsFromContract(utxoIndex) {
 	//	return
 	//}
@@ -638,13 +642,13 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcv
 	}
 }
 
-func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
+func (txPool *TransactionPool) BroadcastBatchTxs(txs []transaction.Transaction) {
 
 	if len(txs) == 0 {
 		return
 	}
 
-	transactions := NewTransactions(txs)
+	transactions := transaction.NewTransactions(txs)
 
 	var broadcastPid peer.ID
 	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
@@ -652,20 +656,20 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 
 func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
 	//TODO: Check if the blockchain state is ready
-	txspb := &corepb.Transactions{}
+	txspb := &transactionpb.Transactions{}
 
 	if err := proto.Unmarshal(command.GetData(), txspb); err != nil {
 		logger.Warn(err)
 	}
 
-	txs := &Transactions{}
+	txs := &transaction.Transactions{}
 
 	//load the tx with proto
 	txs.FromProto(txspb)
 
 	for _, tx := range txs.GetTransactions() {
 		//TODO: Check if the transaction is generated from running a smart contract
-		//utxoIndex := core.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
+		//utxoIndex := utxo_logic.NewUTXOIndex(n.GetBlockchain().GetUtxoCache())
 		//if tx.IsFromContract(utxoIndex) {
 		//	return
 		//}

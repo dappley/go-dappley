@@ -1,10 +1,10 @@
-package core
+package transaction
 
 import (
+	"github.com/dappley/go-dappley/core/transaction/pb"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +40,7 @@ func TestTransactions_FromProto(t *testing.T) {
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
-	newpb := &corepb.Transactions{}
+	newpb := &transactionpb.Transactions{}
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 

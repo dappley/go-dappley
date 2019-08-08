@@ -791,10 +791,10 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(validProducerAddr))
-	tx := &core.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := &transaction.Transaction{nil, []core.TXInput{{[]byte{}, -1, nil, nil}}, []core.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
-		blk := createValidBlock([]*core.Transaction{tx}, validProducerKey, validProducerAddr, parent)
+		blk := createValidBlock([]*transaction.Transaction{tx}, validProducerKey, validProducerAddr, parent)
 		blks = append(blks, blk)
 		parent = blk
 	}
@@ -841,7 +841,7 @@ func TestDoubleMint(t *testing.T) {
 	assert.False(t, dposArray[1].Validate(blks[1]))
 }
 
-func createValidBlock(tx []*core.Transaction, validProducerKey, validProducerAddr string, parent *block.Block) *block.Block {
+func createValidBlock(tx []*transaction.Transaction, validProducerKey, validProducerAddr string, parent *block.Block) *block.Block {
 	blk := block.NewBlock(tx, parent, validProducerAddr)
 	blk.SetHash(block_logic.CalculateHashWithNonce(blk))
 	block_logic.SignBlock(blk, validProducerKey)

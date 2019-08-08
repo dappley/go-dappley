@@ -7,6 +7,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/vm"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
@@ -19,8 +22,19 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
+const SCDestroyAddress = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
+
+var (
+	ErrInvalidGasPrice = errors.New("invalid gas price, should be in (0, 10^12]")
+	ErrInvalidGasLimit = errors.New("invalid gas limit, should be in (0, 5*10^10]")
+
+	// vm error
+	ErrExecutionFailed       = errors.New("execution failed")
+	ErrUnsupportedSourceType = errors.New("unsupported source type")
+)
+
 // VerifyInEstimate returns whether the current tx in estimate mode is valid.
-func VerifyInEstimate(utxoIndex *utxo_logic.UTXOIndex, ctx *ContractTx) error {
+func VerifyInEstimate(utxoIndex *utxo_logic.UTXOIndex, ctx *transaction.ContractTx) error {
 	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return errors.New("Transaction: contract state check failed")
 	}
@@ -33,7 +47,7 @@ func VerifyInEstimate(utxoIndex *utxo_logic.UTXOIndex, ctx *ContractTx) error {
 }
 
 // VerifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func VerifyContractTx(utxoIndex *utxo_logic.UTXOIndex, ctx *ContractTx) (bool, error) {
+func VerifyContractTx(utxoIndex *utxo_logic.UTXOIndex, ctx *transaction.ContractTx) (bool, error) {
 	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return false, errors.New("Transaction: contract state check failed")
 	}
@@ -42,18 +56,18 @@ func VerifyContractTx(utxoIndex *utxo_logic.UTXOIndex, ctx *ContractTx) (bool, e
 	if err != nil {
 		return false, err
 	}
-	return ctx.verifyGas(totalBalance)
+	return ctx.VerifyGas(totalBalance)
 }
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func VerifyTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction, blockHeight uint64) (bool, error) {
+func VerifyTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) (bool, error) {
 	ctx := tx.ToContractTx()
 	if ctx != nil {
 		return VerifyContractTx(utxoIndex, ctx)
 	}
 	if tx.IsCoinbase() {
 		//TODO coinbase vout check need add tip
-		if tx.Vout[0].Value.Cmp(subsidy) < 0 {
+		if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
 			return false, errors.New("Transaction: subsidy check failed")
 		}
 		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
@@ -74,12 +88,12 @@ func VerifyTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction, bl
 	return true, nil
 }
 
-func verify(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) (*common.Amount, error) {
+func verify(tx *transaction.Transaction, utxoIndex *utxo_logic.UTXOIndex) (*common.Amount, error) {
 	prevUtxos := getPrevUTXOs(tx, utxoIndex)
 	if prevUtxos == nil {
 		return nil, errors.New("Transaction: prevUtxos not found")
 	}
-	result, err := tx.verifyID()
+	result, err := tx.VerifyID()
 	if !result {
 		return nil, err
 	}
@@ -90,15 +104,15 @@ func verify(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) (*common.Amou
 	}
 
 	totalPrev := calculateUtxoSum(prevUtxos)
-	totalVoutValue, ok := tx.calculateTotalVoutValue()
+	totalVoutValue, ok := tx.CalculateTotalVoutValue()
 	if !ok {
 		return nil, errors.New("Transaction: vout is invalid")
 	}
-	result, err = tx.verifyAmount(totalPrev, totalVoutValue)
+	result, err = tx.VerifyAmount(totalPrev, totalVoutValue)
 	if !result {
 		return nil, err
 	}
-	result, err = tx.verifyTip(totalPrev, totalVoutValue)
+	result, err = tx.VerifyTip(totalPrev, totalVoutValue)
 	if !result {
 		logger.WithFields(logger.Fields{
 			"tx_id": hex.EncodeToString(tx.ID),
@@ -115,7 +129,7 @@ func verify(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) (*common.Amou
 }
 
 // DescribeTransaction reverse-engineers the high-level description of a transaction
-func DescribeTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) (sender, recipient *account.Address, amount, tip *common.Amount, error error) {
+func DescribeTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *transaction.Transaction) (sender, recipient *account.Address, amount, tip *common.Amount, error error) {
 	var receiverAddress account.Address
 	vinPubKey := tx.Vin[0].PubKey
 	pubKeyHash := account.PubKeyHash([]byte(""))
@@ -126,7 +140,7 @@ func DescribeTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) 
 		if bytes.Compare(vin.PubKey, vinPubKey) == 0 {
 			switch {
 			case tx.IsRewardTx():
-				pubKeyHash = account.PubKeyHash(rewardTxData)
+				pubKeyHash = account.PubKeyHash(transaction.RewardTxData)
 				continue
 			case IsFromContract(utxoIndex, tx):
 				// vinPubKey is the pubKeyHash if it is a sc generated tx
@@ -163,7 +177,7 @@ func DescribeTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) 
 }
 
 // Returns related previous UTXO for current transaction
-func getPrevUTXOs(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) []*utxo.UTXO {
+func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *utxo_logic.UTXOIndex) []*utxo.UTXO {
 	var prevUtxos []*utxo.UTXO
 	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
 	for _, vin := range tx.Vin {
@@ -198,7 +212,7 @@ func getPrevUTXOs(tx *core.Transaction, utxoIndex *utxo_logic.UTXOIndex) []*utxo
 
 //verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
 //key hash in utxo
-func verifyPublicKeyHash(prevUtxos []*utxo_logic.utxo.UTXO, tx *core.Transaction) (bool, error) {
+func verifyPublicKeyHash(prevUtxos []*utxo.UTXO, tx *transaction.Transaction) (bool, error) {
 
 	for i, vin := range tx.Vin {
 		if prevUtxos[i].PubKeyHash == nil {
@@ -228,7 +242,7 @@ func verifyPublicKeyHash(prevUtxos []*utxo_logic.utxo.UTXO, tx *core.Transaction
 }
 
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func IsFromContract(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) bool {
+func IsFromContract(utxoIndex *utxo_logic.UTXOIndex, tx *transaction.Transaction) bool {
 	if len(tx.Vin) == 0 {
 		return false
 	}
@@ -248,7 +262,7 @@ func IsFromContract(utxoIndex *utxo_logic.UTXOIndex, tx *core.Transaction) bool 
 	return true
 }
 
-func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) Transaction {
+func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) transaction.Transaction {
 	sum := calculateUtxoSum(utxos)
 	tips := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
@@ -259,7 +273,7 @@ func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address,
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
+func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *common.Amount) transaction.Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -267,22 +281,22 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
 	txin := transaction_base.TXInput{nil, -1, bh, []byte(data)}
-	txout := transaction_base.NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txout := transaction_base.NewTXOutput(transaction.Subsidy.Add(tip), to)
+	tx := transaction.Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transaction, error) {
+func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
-	tx := Transaction{
+	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
 		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
@@ -294,29 +308,29 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transactio
 
 	err = Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos, &tx)
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 
 	return tx, nil
 }
 
-func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
+func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (transaction.Transaction, error) {
 	contractPubKeyHash, ok := account.GeneratePubKeyHashByAddress(contractAddr)
 	if !ok {
-		return Transaction{}, account.ErrInvalidAddress
+		return transaction.Transaction{}, account.ErrInvalidAddress
 	}
 	if isContract, err := contractPubKeyHash.IsContract(); !isContract {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, amount, tip, gasLimit, gasPrice)
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 
 	// Intentionally set PubKeyHash as PubKey (to recognize it is from contract) and sourceTXID as signature in Vin
-	tx := Transaction{
+	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
 		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
@@ -364,7 +378,7 @@ func prepareOutputLists(from, to account.Address, amount *common.Amount, change 
 }
 
 // Sign signs each input of a Transaction
-func Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO, tx *Transaction) error {
+func Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO, tx *transaction.Transaction) error {
 	if tx.IsCoinbase() {
 		logger.Warn("Transaction: will not sign a coinbase transaction_base.")
 		return nil
@@ -411,7 +425,7 @@ func Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO, tx *Transaction) err
 	return nil
 }
 
-func IsContractDeployed(utxoIndex *UTXOIndex, ctx *ContractTx) bool {
+func IsContractDeployed(utxoIndex *utxo_logic.UTXOIndex, ctx *transaction.ContractTx) bool {
 	pubkeyhash := ctx.GetContractPubKeyHash()
 	if pubkeyhash == nil {
 		return false
@@ -421,7 +435,7 @@ func IsContractDeployed(utxoIndex *UTXOIndex, ctx *ContractTx) bool {
 	return contractUtxoTx.Size() > 0
 }
 
-func verifySignatures(prevUtxos []*utxo.UTXO, tx *Transaction) (bool, error) {
+func verifySignatures(prevUtxos []*utxo.UTXO, tx *transaction.Transaction) (bool, error) {
 	txCopy := tx.TrimmedCopy(false)
 
 	for i, vin := range tx.Vin {
@@ -446,20 +460,20 @@ func verifySignatures(prevUtxos []*utxo.UTXO, tx *Transaction) (bool, error) {
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
-func Execute(ctx *ContractTx, prevUtxos []*utxo.UTXO,
+func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	isSCUTXO bool,
-	index UTXOIndex,
-	scStorage *ScState,
+	index utxo_logic.UTXOIndex,
+	scStorage *core.ScState,
 	rewards map[string]string,
-	engine ScEngine,
+	engine core.ScEngine,
 	currblkHeight uint64,
-	parentBlk *Block) (uint64, []*Transaction, error) {
+	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
 
 	if engine == nil {
 		return 0, nil, nil
 	}
 
-	vout := ctx.Vout[ContractTxouputIndex]
+	vout := ctx.Vout[transaction.ContractTxouputIndex]
 
 	if isSCUTXO {
 		return 0, nil, nil
@@ -479,7 +493,7 @@ func Execute(ctx *ContractTx, prevUtxos []*utxo.UTXO,
 	}).Debug("Transaction: is executing the smart contract...")
 
 	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
-	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), DefaultLimitsOfTotalMemorySize); err != nil {
+	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), vm.DefaultLimitsOfTotalMemorySize); err != nil {
 		return 0, nil, ErrInvalidGasLimit
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
@@ -504,7 +518,7 @@ func Execute(ctx *ContractTx, prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
-func CheckContractSyntax(engine ScEngine,tx *Transaction) error {
+func CheckContractSyntaxTransaction(engine core.ScEngine, tx *transaction.Transaction) error {
 	TxOuts := tx.Vout
 	for _, v := range TxOuts {
 		err := CheckContractSyntax(engine, v)
@@ -515,8 +529,7 @@ func CheckContractSyntax(engine ScEngine,tx *Transaction) error {
 	return nil
 }
 
-
-func CheckContractSyntax(sc ScEngine, out transaction_base.TXOutput) error {
+func CheckContractSyntax(sc core.ScEngine, out transaction_base.TXOutput) error {
 	if out.Contract != "" {
 		function, args := util.DecodeScInput(out.Contract)
 		if function == "" {
@@ -553,4 +566,22 @@ func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 		sum = sum.Add(utxo.Value)
 	}
 	return sum
+}
+
+//calculateChange calculates the change
+func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
+	change, err := input.Sub(amount)
+	if err != nil {
+		return nil, transaction.ErrInsufficientFund
+	}
+
+	change, err = change.Sub(tip)
+	if err != nil {
+		return nil, transaction.ErrInsufficientFund
+	}
+	change, err = change.Sub(gasLimit.Mul(gasPrice))
+	if err != nil {
+		return nil, transaction.ErrInsufficientFund
+	}
+	return change, nil
 }

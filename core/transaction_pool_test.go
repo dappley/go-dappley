@@ -20,6 +20,8 @@ package core
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -32,7 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var tx1 = Transaction{
+var tx1 = transaction.Transaction{
 	ID:       util.GenerateRandomAoB(1),
 	Vin:      GenerateFakeTxInputs(),
 	Vout:     GenerateFakeTxOutputs(),
@@ -40,7 +42,7 @@ var tx1 = Transaction{
 	GasLimit: common.NewAmount(0),
 	GasPrice: common.NewAmount(0),
 }
-var tx2 = Transaction{
+var tx2 = transaction.Transaction{
 	ID:       util.GenerateRandomAoB(1),
 	Vin:      GenerateFakeTxInputs(),
 	Vout:     GenerateFakeTxOutputs(),
@@ -48,7 +50,7 @@ var tx2 = Transaction{
 	GasLimit: common.NewAmount(0),
 	GasPrice: common.NewAmount(0),
 }
-var tx3 = Transaction{
+var tx3 = transaction.Transaction{
 	ID:       util.GenerateRandomAoB(1),
 	Vin:      GenerateFakeTxInputs(),
 	Vout:     GenerateFakeTxOutputs(),
@@ -56,7 +58,7 @@ var tx3 = Transaction{
 	GasLimit: common.NewAmount(0),
 	GasPrice: common.NewAmount(0),
 }
-var tx4 = Transaction{
+var tx4 = transaction.Transaction{
 	ID:       util.GenerateRandomAoB(1),
 	Vin:      GenerateFakeTxInputs(),
 	Vout:     GenerateFakeTxOutputs(),
@@ -68,12 +70,12 @@ var tx4 = Transaction{
 var expectPopOrder = []*common.Amount{common.NewAmount(20), common.NewAmount(10), common.NewAmount(5), common.NewAmount(2)}
 
 var popInputOrder = []struct {
-	order []*Transaction
+	order []*transaction.Transaction
 }{
-	{[]*Transaction{&tx4, &tx3, &tx2, &tx1}},
-	{[]*Transaction{&tx1, &tx2, &tx3, &tx4}},
-	{[]*Transaction{&tx2, &tx1, &tx4, &tx3}},
-	{[]*Transaction{&tx4, &tx1, &tx3, &tx2}},
+	{[]*transaction.Transaction{&tx4, &tx3, &tx2, &tx1}},
+	{[]*transaction.Transaction{&tx1, &tx2, &tx3, &tx4}},
+	{[]*transaction.Transaction{&tx2, &tx1, &tx4, &tx3}},
+	{[]*transaction.Transaction{&tx4, &tx1, &tx3, &tx2}},
 }
 
 func TestTransactionPool_Push(t *testing.T) {
@@ -89,7 +91,7 @@ func TestTransactionPool_Push(t *testing.T) {
 	assert.Equal(t, 4, len(txPool.GetTransactions()))
 
 	newTxPool := NewTransactionPool(nil, 128000)
-	var txs = []Transaction{tx1, tx2, tx3, tx4}
+	var txs = []transaction.Transaction{tx1, tx2, tx3, tx4}
 	for _, tx := range txs {
 		//txPointer := tx.DeepCopy()
 		newTxPool.Push(tx) // &txPointer)
@@ -194,7 +196,7 @@ func TestTransactionPool_Update(t *testing.T) {
 	}
 
 	//Since tx0 is the root, its children will be bumped up into the sorted list
-	packedTxs := []*Transaction{txs[0]}
+	packedTxs := []*transaction.Transaction{txs[0]}
 	txPool.CleanUpMinedTxs(packedTxs)
 	assert.Equal(t, 7, len(txPool.txs))
 	assert.Equal(t, 5, len(txPool.tipOrder))
@@ -223,12 +225,12 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
 	var contractPubkeyHash = account.NewContractPubKeyHash()
 
-	var deploymentTx = Transaction{
+	var deploymentTx = transaction.Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{tx1.ID, 1, nil, pubkey1},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(5), contractPubkeyHash, "dapp_schedule"},
 		},
 		Tip:      common.NewAmount(1),
@@ -237,10 +239,10 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	}
 	deploymentTx.ID = deploymentTx.Hash()
 
-	var executionTx = Transaction{
+	var executionTx = transaction.Transaction{
 		ID:  nil,
 		Vin: GenerateFakeTxInputs(),
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(5), contractPubkeyHash, "execution"},
 		},
 		Tip:      common.NewAmount(2),
@@ -310,7 +312,7 @@ func TestTransactionPool_Rollback(t *testing.T) {
 	assert.Equal(t, 2, len(txPool.txs[tx0Id].Children))
 }
 
-func generateDependentTxs() []*Transaction {
+func generateDependentTxs() []*transaction.Transaction {
 
 	//generate 7 txs that has dependency relationships like the graph below
 	/*
@@ -322,7 +324,7 @@ func generateDependentTxs() []*Transaction {
 	*/
 
 	//size 60
-	ttx0 := &Transaction{
+	ttx0 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
@@ -330,31 +332,31 @@ func generateDependentTxs() []*Transaction {
 	}
 
 	//size 37
-	ttx1 := &Transaction{
+	ttx1 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []TXInput{{Txid: ttx0.ID}},
+		Vin:  []transaction_base.TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2000),
 	}
 
 	//size 37
-	ttx2 := &Transaction{
+	ttx2 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []TXInput{{Txid: ttx0.ID}},
+		Vin:  []transaction_base.TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(1000),
 	}
 
 	//size 37
-	ttx3 := &Transaction{
+	ttx3 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []TXInput{{Txid: ttx1.ID}},
+		Vin:  []transaction_base.TXInput{{Txid: ttx1.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2000),
 	}
 
 	//size 61
-	ttx4 := &Transaction{
+	ttx4 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(6),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
@@ -362,15 +364,15 @@ func generateDependentTxs() []*Transaction {
 	}
 
 	//size 38
-	ttx5 := &Transaction{
+	ttx5 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []TXInput{{Txid: ttx4.ID}},
+		Vin:  []transaction_base.TXInput{{Txid: ttx4.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(5000),
 	}
 
 	//size 62
-	ttx6 := &Transaction{
+	ttx6 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(7),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
@@ -378,13 +380,13 @@ func generateDependentTxs() []*Transaction {
 	}
 
 	//size 135
-	ttx7 := &Transaction{
+	ttx7 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(80),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(7000),
 	}
-	return []*Transaction{ttx0, ttx1, ttx2, ttx3, ttx4, ttx5, ttx6, ttx7}
+	return []*transaction.Transaction{ttx0, ttx1, ttx2, ttx3, ttx4, ttx5, ttx6, ttx7}
 }
 
 func TestTransactionPool_Proto(t *testing.T) {
@@ -410,7 +412,7 @@ func TestTransactionPool_Proto(t *testing.T) {
 }
 
 func TestNewTransactionNode(t *testing.T) {
-	ttx1 := &Transaction{
+	ttx1 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
 		Vin:  GenerateFakeTxInputs(),
 		Vout: GenerateFakeTxOutputs(),

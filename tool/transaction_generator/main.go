@@ -3,11 +3,11 @@ package main
 import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/sdk"
-	tool "github.com/dappley/go-dappley/tool/tool_util"
-	tx_automator_configpb "github.com/dappley/go-dappley/tool/transaction_automator/pb"
+	"github.com/dappley/go-dappley/tool/tool_util"
+	"github.com/dappley/go-dappley/tool/transaction_automator/pb"
 	"github.com/dappley/go-dappley/tool/transaction_generator/util"
 	logger "github.com/sirupsen/logrus"
 )
@@ -73,11 +73,11 @@ func prepareTestTransactions(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) 
 	}
 }
 
-func prepareSendParameters(account *sdk.DappSdkAccount) core.SendTxParam {
+func prepareSendParameters(account *sdk.DappSdkAccount) transaction.SendTxParam {
 
 	fromAddr := account.GetAddrs()[0]
 	toAddr := account.GetAddrs()[1]
-	return core.SendTxParam{
+	return transaction.SendTxParam{
 		fromAddr,
 		account.GetAccountManager().GetKeyPairByAddress(fromAddr),
 		toAddr,

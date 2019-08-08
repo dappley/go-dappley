@@ -473,7 +473,7 @@ func TestNewAddress(t *testing.T) {
 
 func TestAddGasCount(t *testing.T) {
 	vout := core.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
-	tx := core.Transaction{
+	tx := transaction.Transaction{
 		Vout: []core.TXOutput{*vout},
 	}
 	ctx := tx.ToContractTx()
@@ -508,7 +508,7 @@ func TestAddGasCount(t *testing.T) {
 func TestStepRecordGasCount(t *testing.T) {
 	vout := core.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
-	tx := core.Transaction{
+	tx := transaction.Transaction{
 		Vout: []core.TXOutput{*vout},
 	}
 	ctx := tx.ToContractTx()

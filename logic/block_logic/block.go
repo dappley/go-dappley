@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"reflect"
 
 	"github.com/dappley/go-dappley/common"
@@ -17,14 +20,6 @@ import (
 )
 
 var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
-
-func GetBlockByHash(hash hash.Hash, db Storage) (*block.Block, error) {
-	rawBytes, err := db.Get(hash)
-	if err != nil {
-		return nil, core.ErrBlockDoesNotExist
-	}
-	return block.Deserialize(rawBytes), nil
-}
 
 func HashTransactions(b *block.Block) []byte {
 	var txHashes [][]byte
@@ -108,7 +103,7 @@ func VerifyHash(b *block.Block) bool {
 	return bytes.Compare(b.GetHash(), CalculateHash(b)) == 0
 }
 
-func VerifyTransactions(b *block.Block, utxoIndex *core.UTXOIndex, scState *core.ScState, manager core.ScEngineManager, parentBlk *block.Block) bool {
+func VerifyTransactions(b *block.Block, utxoIndex *utxo_logic.UTXOIndex, scState *core.ScState, manager core.ScEngineManager, parentBlk *block.Block) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash": b.GetHash(),
@@ -116,10 +111,10 @@ func VerifyTransactions(b *block.Block, utxoIndex *core.UTXOIndex, scState *core
 		return true
 	}
 
-	var rewardTX *core.Transaction
-	var contractGeneratedTXs []*core.Transaction
+	var rewardTX *transaction.Transaction
+	var contractGeneratedTXs []*transaction.Transaction
 	rewards := make(map[string]string)
-	var allContractGeneratedTXs []*core.Transaction
+	var allContractGeneratedTXs []*transaction.Transaction
 	var scEngine core.ScEngine
 
 	if manager != nil {
@@ -139,7 +134,7 @@ L:
 			utxoIndex.UpdateUtxo(tx)
 			continue L
 		}
-		if tx.IsFromContract(utxoIndex) {
+		if transaction_logic.IsFromContract(utxoIndex, tx) {
 			contractGeneratedTXs = append(contractGeneratedTXs, tx)
 			continue L
 		}
@@ -153,7 +148,7 @@ L:
 				return false
 			}
 
-			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
 					"txid": hex.EncodeToString(ctx.ID),
@@ -166,11 +161,11 @@ L:
 			if err := scEngine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
 				return false
 			}
-			ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			transaction_logic.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if result, err := tx.Verify(utxoIndex, b.GetHeight()); !result {
+			if result, err := transaction_logic.VerifyTransaction(utxoIndex, tx, b.GetHeight()); !result {
 				logger.Warn(err.Error())
 				return false
 			}
@@ -191,11 +186,11 @@ L:
 }
 
 // verifyGeneratedTXs verify that all transactions in candidates can be found in generatedTXs
-func verifyGeneratedTXs(utxoIndex *core.UTXOIndex, candidates []*core.Transaction, generatedTXs []*core.Transaction) bool {
+func verifyGeneratedTXs(utxoIndex *utxo_logic.UTXOIndex, candidates []*transaction.Transaction, generatedTXs []*transaction.Transaction) bool {
 	// genTXBuckets stores description of txs grouped by concatenation of sender's and recipient's public key hashes
 	genTXBuckets := make(map[string][][]*common.Amount)
 	for _, genTX := range generatedTXs {
-		sender, recipient, amount, tip, err := genTX.Describe(utxoIndex)
+		sender, recipient, amount, tip, err := transaction_logic.DescribeTransaction(utxoIndex, genTX)
 		if err != nil {
 			continue
 		}
@@ -204,7 +199,7 @@ func verifyGeneratedTXs(utxoIndex *core.UTXOIndex, candidates []*core.Transactio
 	}
 L:
 	for _, tx := range candidates {
-		sender, recipient, amount, tip, err := tx.Describe(utxoIndex)
+		sender, recipient, amount, tip, err := transaction_logic.DescribeTransaction(utxoIndex, tx)
 		if err != nil {
 			return false
 		}

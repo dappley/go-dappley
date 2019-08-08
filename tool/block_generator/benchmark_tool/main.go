@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"io/ioutil"
 	"os"
@@ -187,7 +189,7 @@ func prepareNode(db storage.Storage) (*blockchain_manager.BlockchainManager, *ne
 			logger.Panic(err)
 		}
 	}
-	bc.SetState(core.BlockchainInit)
+	bc.SetState(blockchain.BlockchainInit)
 	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())

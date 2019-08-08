@@ -21,7 +21,10 @@ package blockchain_logic
 import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -42,8 +45,8 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := core.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := block.NewBlock([]*core.Transaction{&cbtx}, tailBlk, coinbaseAddr.String())
+		cbtx := transaction_logic.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
+		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, coinbaseAddr.String())
 		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
 	}
@@ -53,7 +56,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 		tx0 - tx1 -tx2 - tx3 -tx4 -
 	*/
 
-	utxoIndex := core.NewUTXOIndex(bc.utxoCache)
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.utxoCache)
 	txs := fakeDependentTxs(utxoIndex, coinbaseKeyPair, 5)
 
 	//tx0 is in blk 4 and tx1 is in blk5. all other transactions are still in transaction pool
@@ -70,14 +73,14 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 	//add block 4 with tx0
 	tailBlk, _ := bc.GetTailBlock()
-	cbtx := core.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
-	b := block.NewBlock([]*core.Transaction{&cbtx, &txs[0]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	cbtx := transaction_logic.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
+	b := block.NewBlock([]*transaction.Transaction{&cbtx, &txs[0]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	b.SetHash(block_logic.CalculateHash(b))
 	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
 
 	//add block 5 with tx1
 	tailBlk, _ = bc.GetTailBlock()
-	b = block.NewBlock([]*core.Transaction{&cbtx, &txs[1]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	b = block.NewBlock([]*transaction.Transaction{&cbtx, &txs[1]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	b.SetHash(block_logic.CalculateHash(b))
 	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
 
@@ -86,7 +89,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), core.NewUTXOIndex(bc.GetUtxoCache()), core.NewScState())
+	bc.Rollback(blk.GetHash(), utxo_logic.NewUTXOIndex(bc.GetUtxoCache()), core.NewScState())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -102,8 +105,8 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 }
 
-func fakeDependentTxs(utxoIndex *core.UTXOIndex, fundKeyPair *account.KeyPair, numOfTx int) []core.Transaction {
-	var txs []core.Transaction
+func fakeDependentTxs(utxoIndex *utxo_logic.UTXOIndex, fundKeyPair *account.KeyPair, numOfTx int) []transaction.Transaction {
+	var txs []transaction.Transaction
 
 	fundAddr := fundKeyPair.GenerateAddress()
 
@@ -114,7 +117,7 @@ func fakeDependentTxs(utxoIndex *core.UTXOIndex, fundKeyPair *account.KeyPair, n
 	addr2 := keyPair2.GenerateAddress()
 
 	//first transaction's vin is from fund addr
-	params := core.SendTxParam{
+	params := transaction.SendTxParam{
 		fundAddr,
 		fundKeyPair,
 		addr1,
@@ -128,7 +131,7 @@ func fakeDependentTxs(utxoIndex *core.UTXOIndex, fundKeyPair *account.KeyPair, n
 	txs = append(txs, createTransaction(utxoIndex, params))
 
 	for i := 0; i < numOfTx-1; i++ {
-		params := core.SendTxParam{
+		params := transaction.SendTxParam{
 			addr1,
 			keyPair1,
 			addr2,
@@ -149,10 +152,10 @@ func fakeDependentTxs(utxoIndex *core.UTXOIndex, fundKeyPair *account.KeyPair, n
 	return txs
 }
 
-func createTransaction(utxoIndex *core.UTXOIndex, params core.SendTxParam) core.Transaction {
+func createTransaction(utxoIndex *utxo_logic.UTXOIndex, params transaction.SendTxParam) transaction.Transaction {
 	pkh, _ := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 	utxos, _ := utxoIndex.GetUTXOsByAmount(pkh, params.TotalCost())
-	tx, err := core.NewUTXOTransaction(utxos, params)
+	tx, err := transaction_logic.NewUTXOTransaction(utxos, params)
 	if err != nil {
 		logger.WithError(err).Error("CreateTransaction failed")
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 type TxSender struct {
-	tx      *core.Transaction
+	tx      *transaction.Transaction
 	dappSdk *sdk.DappSdk
 	account *sdk.DappSdkAccount
 }

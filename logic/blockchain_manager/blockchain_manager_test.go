@@ -5,8 +5,13 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -29,11 +34,11 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b6 := block.NewBlockWithRawInfo(nil, b3.GetHash(), 6, 0, 3, nil)
 	b6.SetHash(block_logic.CalculateHash(b6))
 
-	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b1, UtxoIndex: core.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b1, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b3, UtxoIndex: core.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b3, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b6, UtxoIndex: core.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b6, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
 
 	// create first fork of height 3
@@ -107,7 +112,7 @@ func testGetForkHeadHashes(bp *core.BlockPool) []string {
 
 func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	genesisAddr := account.NewAddress("##@@")
-	genesisBlock := blockchain_logic.NewGenesisBlock(genesisAddr, core.Subsidy)
+	genesisBlock := blockchain_logic.NewGenesisBlock(genesisAddr, transaction.Subsidy)
 
 	// prepareBlockchainWithBlocks returns a blockchain that contains the given blocks with correct utxoIndex in RAM
 	prepareBlockchainWithBlocks := func(blks []*block.Block) *blockchain_logic.Blockchain {
@@ -122,17 +127,17 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	}
 
 	// utxoIndexFromTXs creates a utxoIndex containing all vout of transactions in txs
-	utxoIndexFromTXs := func(txs []*core.Transaction, cache *core.UTXOCache) *core.UTXOIndex {
-		utxoIndex := core.NewUTXOIndex(cache)
-		utxosMap := make(map[string]*core.UTXOTx)
+	utxoIndexFromTXs := func(txs []*transaction.Transaction, cache *utxo.UTXOCache) *utxo_logic.UTXOIndex {
+		utxoIndex := utxo_logic.NewUTXOIndex(cache)
+		utxosMap := make(map[string]*utxo.UTXOTx)
 		for _, tx := range txs {
 			for i, vout := range tx.Vout {
 				utxos, ok := utxosMap[vout.PubKeyHash.String()]
 				if !ok {
-					newUtxos := core.NewUTXOTx()
+					newUtxos := utxo.NewUTXOTx()
 					utxos = &newUtxos
 				}
-				utxos.PutUtxo(core.NewUTXO(vout, tx.ID, i, core.UtxoNormal))
+				utxos.PutUtxo(utxo.NewUTXO(vout, tx.ID, i, utxo.UtxoNormal))
 				utxosMap[vout.PubKeyHash.String()] = utxos
 			}
 		}
@@ -144,35 +149,35 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	pbkh, _ := account.NewUserPubKeyHash(keypair.GetPublicKey())
 	addr := pbkh.GenerateAddress()
 
-	normalTX := core.NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
-	normalTX2 := core.Transaction{
+	normalTX := transaction_logic.NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
+	normalTX2 := transaction.Transaction{
 		hash.Hash("normal2"),
-		[]core.TXInput{{normalTX.ID, 0, nil, keypair.GetPublicKey()}},
-		[]core.TXOutput{{common.NewAmount(5), pbkh, ""}},
+		[]transaction_base.TXInput{{normalTX.ID, 0, nil, keypair.GetPublicKey()}},
+		[]transaction_base.TXOutput{{common.NewAmount(5), pbkh, ""}},
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
 	}
-	abnormalTX := core.Transaction{
+	abnormalTX := transaction.Transaction{
 		hash.Hash("abnormal"),
-		[]core.TXInput{{normalTX.ID, 1, nil, nil}},
-		[]core.TXOutput{{common.NewAmount(5), account.PubKeyHash([]byte("pkh")), ""}},
+		[]transaction_base.TXInput{{normalTX.ID, 1, nil, nil}},
+		[]transaction_base.TXOutput{{common.NewAmount(5), account.PubKeyHash([]byte("pkh")), ""}},
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
 	}
-	prevBlock := block.NewBlock([]*core.Transaction{}, genesisBlock, "")
+	prevBlock := block.NewBlock([]*transaction.Transaction{}, genesisBlock, "")
 	prevBlock.SetHash(block_logic.CalculateHash(prevBlock))
-	emptyBlock := block.NewBlock([]*core.Transaction{}, prevBlock, "")
+	emptyBlock := block.NewBlock([]*transaction.Transaction{}, prevBlock, "")
 	emptyBlock.SetHash(block_logic.CalculateHash(emptyBlock))
-	normalBlock := block.NewBlock([]*core.Transaction{&normalTX}, genesisBlock, "")
+	normalBlock := block.NewBlock([]*transaction.Transaction{&normalTX}, genesisBlock, "")
 	normalBlock.SetHash(block_logic.CalculateHash(normalBlock))
-	normalBlock2 := block.NewBlock([]*core.Transaction{&normalTX2}, normalBlock, "")
+	normalBlock2 := block.NewBlock([]*transaction.Transaction{&normalTX2}, normalBlock, "")
 	normalBlock2.SetHash(block_logic.CalculateHash(normalBlock2))
-	abnormalBlock := block.NewBlock([]*core.Transaction{&abnormalTX}, normalBlock, "")
+	abnormalBlock := block.NewBlock([]*transaction.Transaction{&abnormalTX}, normalBlock, "")
 	abnormalBlock.SetHash(block_logic.CalculateHash(abnormalBlock))
 	corruptedUTXOBlockchain := prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2})
-	err := utxoIndexFromTXs([]*core.Transaction{&normalTX}, corruptedUTXOBlockchain.GetUtxoCache()).Save()
+	err := utxoIndexFromTXs([]*transaction.Transaction{&normalTX}, corruptedUTXOBlockchain.GetUtxoCache()).Save()
 	if err != nil {
 		logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot corrupt the utxoIndex in database.")
 	}
@@ -190,28 +195,28 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		name     string
 		bc       *blockchain_logic.Blockchain
 		hash     hash.Hash
-		expected *core.UTXOIndex
+		expected *utxo_logic.UTXOIndex
 		err      error
 	}{
 		{
 			name:     "current block",
 			bc:       bcs[0],
 			hash:     normalBlock.GetHash(),
-			expected: utxoIndexFromTXs([]*core.Transaction{&normalTX}, bcs[0].GetUtxoCache()),
+			expected: utxoIndexFromTXs([]*transaction.Transaction{&normalTX}, bcs[0].GetUtxoCache()),
 			err:      nil,
 		},
 		{
 			name:     "previous block",
 			bc:       bcs[1],
 			hash:     normalBlock.GetHash(),
-			expected: utxoIndexFromTXs([]*core.Transaction{&normalTX}, bcs[1].GetUtxoCache()), // should not have utxo from normalTX2
+			expected: utxoIndexFromTXs([]*transaction.Transaction{&normalTX}, bcs[1].GetUtxoCache()), // should not have utxo from normalTX2
 			err:      nil,
 		},
 		{
 			name:     "block not found",
 			bc:       bcs[2],
 			hash:     hash.Hash("not there"),
-			expected: core.NewUTXOIndex(bcs[2].GetUtxoCache()),
+			expected: utxo_logic.NewUTXOIndex(bcs[2].GetUtxoCache()),
 			err:      blockchain_logic.ErrBlockDoesNotExist,
 		},
 		{
@@ -232,15 +237,15 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			name:     "utxo not found",
 			bc:       bcs[5],
 			hash:     normalBlock.GetHash(),
-			expected: core.NewUTXOIndex(bcs[5].GetUtxoCache()),
-			err:      core.ErrUTXONotFound,
+			expected: utxo_logic.NewUTXOIndex(bcs[5].GetUtxoCache()),
+			err:      utxo_logic.ErrUTXONotFound,
 		},
 		{
 			name:     "corrupted utxoIndex",
 			bc:       bcs[6],
 			hash:     normalBlock.GetHash(),
-			expected: core.NewUTXOIndex(bcs[6].GetUtxoCache()),
-			err:      core.ErrUTXONotFound,
+			expected: utxo_logic.NewUTXOIndex(bcs[6].GetUtxoCache()),
+			err:      utxo_logic.ErrUTXONotFound,
 		},
 	}
 
@@ -267,7 +272,7 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk1))
 	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk2))
 
-	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address2Bytes = []byte("address2000000000000000000000000")

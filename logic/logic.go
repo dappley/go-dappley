@@ -20,7 +20,10 @@ package logic
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -218,7 +221,7 @@ func GetBalance(address account.Address, bc *blockchain_logic.Blockchain) (*comm
 	}
 
 	balance := common.NewAmount(0)
-	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	for _, utxo := range utxos.Indices {
 		balance = balance.Add(utxo.Value)
@@ -228,7 +231,7 @@ func GetBalance(address account.Address, bc *blockchain_logic.Blockchain) (*comm
 }
 
 func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
-	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
+	sendTxParam := transaction.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc)
 }
 
@@ -243,7 +246,7 @@ func GetMinerAddress() string {
 //add balance
 func SendFromMiner(address account.Address, amount *common.Amount, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivateKey)
-	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam := transaction.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc)
 }
 
@@ -257,7 +260,7 @@ func GetAccountManager(path string) (*account_logic.AccountManager, error) {
 	return am, nil
 }
 
-func sendTo(sendTxParam core.SendTxParam, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
+func sendTo(sendTxParam transaction.SendTxParam, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
 	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
@@ -272,7 +275,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *blockchain_logic.Blockchain) ([]by
 	}
 
 	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
-	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 
@@ -281,7 +284,7 @@ func sendTo(sendTxParam core.SendTxParam, bc *blockchain_logic.Blockchain) ([]by
 		return nil, "", err
 	}
 
-	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)

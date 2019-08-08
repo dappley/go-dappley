@@ -39,6 +39,8 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	"sync"
 	"unsafe"
 
@@ -68,14 +70,14 @@ const (
 type V8Engine struct {
 	source             string
 	state              *core.ScState
-	tx                 *core.Transaction
+	tx                 *transaction.Transaction
 	rewards            map[string]string
 	contractAddr       account.Address
-	contractCreateUTXO *core.UTXO
-	contractUTXOs      []*core.UTXO
-	prevUtxos          []*core.UTXO
+	contractCreateUTXO *utxo.UTXO
+	contractUTXOs      []*utxo.UTXO
+	prevUtxos          []*utxo.UTXO
 	sourceTXID         []byte
-	generatedTXs       []*core.Transaction
+	generatedTXs       []*transaction.Transaction
 	handler            uint64
 	blkHeight          uint64
 	seed               int64
@@ -177,11 +179,11 @@ func (sc *V8Engine) ImportLocalStorage(state *core.ScState) {
 	sc.state = state
 }
 
-func (sc *V8Engine) ImportTransaction(tx *core.Transaction) {
+func (sc *V8Engine) ImportTransaction(tx *transaction.Transaction) {
 	sc.tx = tx
 }
 
-func (sc *V8Engine) ImportContractCreateUTXO(utxo *core.UTXO) {
+func (sc *V8Engine) ImportContractCreateUTXO(utxo *utxo.UTXO) {
 	sc.contractCreateUTXO = utxo
 }
 
@@ -191,8 +193,8 @@ func (sc *V8Engine) ImportContractAddr(contractAddr account.Address) {
 }
 
 // ImportUTXOs supplies the list of contract's UTXOs to the engine
-func (sc *V8Engine) ImportUTXOs(utxos []*core.UTXO) {
-	sc.contractUTXOs = make([]*core.UTXO, len(utxos))
+func (sc *V8Engine) ImportUTXOs(utxos []*utxo.UTXO) {
+	sc.contractUTXOs = make([]*utxo.UTXO, len(utxos))
 	copy(sc.contractUTXOs, utxos)
 }
 
@@ -202,7 +204,7 @@ func (sc *V8Engine) ImportSourceTXID(txid []byte) {
 }
 
 // GetGeneratedTXs returns the transactions generated as a result of executing the contract
-func (sc *V8Engine) GetGeneratedTXs() []*core.Transaction {
+func (sc *V8Engine) GetGeneratedTXs() []*transaction.Transaction {
 	return sc.generatedTXs
 }
 
@@ -211,7 +213,7 @@ func (sc *V8Engine) ImportRewardStorage(rewards map[string]string) {
 }
 
 // ImportPrevUtxos supplies the utxos of vin in current transaction
-func (sc *V8Engine) ImportPrevUtxos(utxos []*core.UTXO) {
+func (sc *V8Engine) ImportPrevUtxos(utxos []*utxo.UTXO) {
 	sc.prevUtxos = utxos
 }
 
@@ -288,7 +290,7 @@ func (sc *V8Engine) Execute(function, args string) (string, error) {
 		return "", err
 	}
 	sc.CollectTracingStats()
-	mem := sc.actualTotalMemorySize + core.DefaultLimitsOfTotalMemorySize
+	mem := sc.actualTotalMemorySize + DefaultLimitsOfTotalMemorySize
 	if err := sc.SetExecutionLimits(sc.limitsOfExecutionInstructions, mem); err != nil {
 		logger.Error(err)
 		return "", err

@@ -19,13 +19,15 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"time"
-
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/blockchain"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/util"
@@ -41,13 +43,13 @@ func GenerateMockBlock() *block.Block {
 		1,
 		time.Now().Unix(),
 		0,
-		[]*Transaction{t1, t2},
+		[]*transaction.Transaction{t1, t2},
 	)
 }
 
-func PrepareBlockContext(bc *blockchain.Blockchain, blk *block.Block) *BlockContext {
+func PrepareBlockContext(bc *blockchain_logic.Blockchain, blk *block.Block) *BlockContext {
 	state := LoadScStateFromDatabase(bc.GetDb())
-	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
 	ctx := BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
 	return &ctx
@@ -55,13 +57,13 @@ func PrepareBlockContext(bc *blockchain.Blockchain, blk *block.Block) *BlockCont
 
 func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.Block {
 	//create a new block chain
-	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
-	b := block.NewBlock([]*Transaction{&cbtx}, lastblock, "")
+	cbtx := transaction_logic.NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
+	b := block.NewBlock([]*transaction.Transaction{&cbtx}, lastblock, "")
 	return b
 }
 
-func MockTransaction() *Transaction {
-	return &Transaction{
+func MockTransaction() *transaction.Transaction {
+	return &transaction.Transaction{
 		ID:       util.GenerateRandomAoB(1),
 		Vin:      MockTxInputs(),
 		Vout:     MockTxOutputs(),
@@ -128,7 +130,7 @@ func GenerateUtxoMockBlockWithoutInputs() *block.Block {
 		1,
 		time.Now().Unix(),
 		0,
-		[]*Transaction{t1},
+		[]*transaction.Transaction{t1},
 	)
 }
 
@@ -141,22 +143,22 @@ func GenerateUtxoMockBlockWithInputs() *block.Block {
 		1,
 		time.Now().Unix(),
 		1,
-		[]*Transaction{t1},
+		[]*transaction.Transaction{t1},
 	)
 
 }
 
-func MockUtxoTransactionWithoutInputs() *Transaction {
-	return &Transaction{
+func MockUtxoTransactionWithoutInputs() *transaction.Transaction {
+	return &transaction.Transaction{
 		ID:   []byte("tx1"),
-		Vin:  []TXInput{},
+		Vin:  []transaction_base.TXInput{},
 		Vout: MockUtxoOutputsWithoutInputs(),
 		Tip:  common.NewAmount(5),
 	}
 }
 
-func MockUtxoTransactionWithInputs() *Transaction {
-	return &Transaction{
+func MockUtxoTransactionWithInputs() *transaction.Transaction {
+	return &transaction.Transaction{
 		ID:   []byte("tx2"),
 		Vin:  MockUtxoInputs(),
 		Vout: MockUtxoOutputsWithInputs(),
@@ -170,8 +172,8 @@ var address2Bytes = []byte("address2000000000000000000000000")
 var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
 var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
 
-func MockUtxoInputs() []TXInput {
-	return []TXInput{
+func MockUtxoInputs() []transaction_base.TXInput {
+	return []transaction_base.TXInput{
 		{
 			[]byte("tx1"),
 			0,
@@ -185,15 +187,15 @@ func MockUtxoInputs() []TXInput {
 	}
 }
 
-func MockUtxoOutputsWithoutInputs() []TXOutput {
-	return []TXOutput{
+func MockUtxoOutputsWithoutInputs() []transaction_base.TXOutput {
+	return []transaction_base.TXOutput{
 		{common.NewAmount(5), address1Hash, ""},
 		{common.NewAmount(7), address1Hash, ""},
 	}
 }
 
-func MockUtxoOutputsWithInputs() []TXOutput {
-	return []TXOutput{
+func MockUtxoOutputsWithInputs() []transaction_base.TXOutput {
+	return []transaction_base.TXOutput{
 		{common.NewAmount(4), address1Hash, ""},
 		{common.NewAmount(5), address2Hash, ""},
 		{common.NewAmount(3), address2Hash, ""},

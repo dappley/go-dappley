@@ -20,19 +20,19 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_manager"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
-	networkpb "github.com/dappley/go-dappley/network/pb"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 )
 
 type AdminRpcService struct {
@@ -87,7 +87,7 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case core.ErrInsufficientFund:
+		case transaction.ErrInsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())
@@ -105,7 +105,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	gasPrice := common.NewAmountFromBytes(in.GetGasPrice())
 
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
-		return nil, status.Error(codes.InvalidArgument, core.ErrInvalidAmount.Error())
+		return nil, status.Error(codes.InvalidArgument, transaction.ErrInvalidAmount.Error())
 	}
 	path := in.GetAccountPath()
 	if len(path) == 0 {
@@ -130,7 +130,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case core.ErrInsufficientFund:
+		case transaction.ErrInsufficientFund:
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		default:
 			return nil, status.Error(codes.Unknown, err.Error())

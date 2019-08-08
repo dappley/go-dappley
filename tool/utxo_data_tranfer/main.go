@@ -129,8 +129,8 @@ func (utxos *UTXOIndexOld) serializeUTXOIndexOld() []byte {
 }
 
 // Convert old utxoIndex data to new utxoIndex data
-func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *core.UTXOIndex {
-	utxoIndexNew := core.NewUTXOIndex(core.NewUTXOCache(db))
+func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *utxo_logic.UTXOIndex {
+	utxoIndexNew := utxo_logic.NewUTXOIndex(core.NewUTXOCache(db))
 	for address, utxoArray := range utxoIndexOld.index {
 		if address == contractUtxoKeyOld {
 			continue
@@ -141,7 +141,7 @@ func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *core.UTXOIndex
 }
 
 // Add each utxo in utxoArray into new utxoIndex
-func addUtxoArrayToIndex(utxoArray []*core.UTXO, utxoIndexNew *core.UTXOIndex) {
+func addUtxoArrayToIndex(utxoArray []*core.UTXO, utxoIndexNew *utxo_logic.UTXOIndex) {
 	if utxoArray == nil {
 		return
 	}
@@ -156,7 +156,7 @@ func addUtxoArrayToIndex(utxoArray []*core.UTXO, utxoIndexNew *core.UTXOIndex) {
 }
 
 // Save all new data to storage
-func saveNewData(utxoIndexNew *core.UTXOIndex) {
+func saveNewData(utxoIndexNew *utxo_logic.UTXOIndex) {
 	utxoIndexNew.Save()
 	logger.Info("Utxo_data_transfer: new data has been saved into storage...")
 }

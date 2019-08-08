@@ -19,6 +19,8 @@ package core
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base/pb"
 
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
@@ -51,7 +53,7 @@ func getStorageKey(txid []byte) []byte {
 }
 
 // Add new log
-func PutTxJournal(tx Transaction, db storage.Storage) error {
+func PutTxJournal(tx transaction.Transaction, db storage.Storage) error {
 	txJournal := NewTxJournal(tx.ID, tx.Vout)
 	return txJournal.Save(db)
 }
@@ -105,9 +107,9 @@ func DeserializeJournal(b []byte) (*TxJournal, error) {
 }
 
 func (txJournal *TxJournal) toProto() proto.Message {
-	var voutArray []*corepb.TXOutput
+	var voutArray []*transactionbasepb.TXOutput
 	for _, txout := range txJournal.Vout {
-		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
+		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
 	}
 	return &corepb.TransactionJournal{
 		Vout: voutArray,

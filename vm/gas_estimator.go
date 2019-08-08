@@ -8,9 +8,9 @@ import (
 )
 
 // EstimateGas returns estimated gas value of contract deploy and execution.
-func EstimateGas(bc *blockchain_logic.Blockchain, tx *core.Transaction) (uint64, error) {
+func EstimateGas(bc *blockchain_logic.Blockchain, tx *transaction.Transaction) (uint64, error) {
 	parentBlock, _ := bc.GetTailBlock()
-	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	scStorage := core.LoadScStateFromDatabase(bc.GetDb())
 	engine := NewV8Engine()
 	defer engine.DestroyEngine()
@@ -19,7 +19,7 @@ func EstimateGas(bc *blockchain_logic.Blockchain, tx *core.Transaction) (uint64,
 	if ctx == nil {
 		return 0, core.ErrTransactionVerifyFailed
 	}
-	prevUtxos, err := core.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+	prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(ctx.ID),
@@ -27,6 +27,6 @@ func EstimateGas(bc *blockchain_logic.Blockchain, tx *core.Transaction) (uint64,
 		return 0, err
 	}
 	isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-	gasCount, _, err := core.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, parentBlock.GetHeight()+1, parentBlock)
+	gasCount, _, err := transaction_logic.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, parentBlock.GetHeight()+1, parentBlock)
 	return gasCount, err
 }

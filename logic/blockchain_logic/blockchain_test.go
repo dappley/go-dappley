@@ -21,6 +21,10 @@ package blockchain_logic
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"os"
 	"sync"
 	"testing"
@@ -116,7 +120,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), core.NewUTXOIndex(bc.GetUtxoCache()), core.NewScState())
+	bc.Rollback(blk.GetHash(), utxo_logic.NewUTXOIndex(bc.GetUtxoCache()), core.NewScState())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -125,18 +129,18 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 
 }
 
-func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *blockchain_logic.Blockchain {
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := blockchain_logic.CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		cbtx := transaction_logic.NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
+		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
+		bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
 	}
 	return bc
 }
@@ -149,7 +153,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, core.NewUTXOCache(db), nil, core.NewTransactionPool(nil, 128), nil, nil, 1000000, &sync.Mutex{}}
+	bc := &Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, utxo.NewUTXOCache(db), nil, core.NewTransactionPool(nil, 128), nil, nil, 1000000, &sync.Mutex{}}
 	bc.SetState(blockchain.BlockchainInit)
 
 	// Add genesis block
@@ -183,7 +187,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := block.NewBlock([]*core.Transaction{}, genesis, "")
+	blk := block.NewBlock([]*transaction.Transaction{}, genesis, "")
 	blk.SetHash([]byte("hash1"))
 
 	blk.SetHeight(1)
@@ -216,14 +220,14 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 
 		tailBlk, _ := bc.GetTailBlock()
-		txs := []*core.Transaction{}
-		utxo := core.NewUTXOIndex(bc.GetUtxoCache())
-		cbtx := core.NewCoinbaseTX(addrs[0], "", uint64(i+1), common.NewAmount(0))
+		txs := []*transaction.Transaction{}
+		utxo := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
+		cbtx := transaction_logic.NewCoinbaseTX(addrs[0], "", uint64(i+1), common.NewAmount(0))
 		utxo.UpdateUtxo(&cbtx)
 		txs = append(txs, &cbtx)
 		for j := 0; j < 10; j++ {
-			sendTxParam := core.NewSendTxParam(addrs[0], kps[0], addrs[i%10], common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-			tx, _ := core.NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), sendTxParam)
+			sendTxParam := transaction.NewSendTxParam(addrs[0], kps[0], addrs[i%10], common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+			tx, _ := transaction_logic.NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), sendTxParam)
 			utxo.UpdateUtxo(&tx)
 			txs = append(txs, &tx)
 		}
@@ -235,18 +239,18 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	}
 }
 
-func GenerateMockBlockchain(size int) *blockchain_logic.Blockchain {
+func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := blockchain_logic.CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		b := block.NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b := block.NewBlock([]*transaction.Transaction{core.MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
+		bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
 	}
 	return bc
 }

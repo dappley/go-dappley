@@ -2,12 +2,13 @@ package sdk
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/utxo/pb"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -56,7 +57,7 @@ func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.Se
 }
 
 //SendTransaction send a transaction to the network
-func (sdk *DappSdk) SendTransaction(tx *corepb.Transaction) (*rpcpb.SendTransactionResponse, error) {
+func (sdk *DappSdk) SendTransaction(tx *transactionpb.Transaction) (*rpcpb.SendTransactionResponse, error) {
 	return sdk.conn.rpcClient.RpcSendTransaction(
 		context.Background(),
 		&rpcpb.SendTransactionRequest{
@@ -66,7 +67,7 @@ func (sdk *DappSdk) SendTransaction(tx *corepb.Transaction) (*rpcpb.SendTransact
 }
 
 //SendBatchTransactions sends a batch of transactions to the network
-func (sdk *DappSdk) SendBatchTransactions(txs []*corepb.Transaction) error {
+func (sdk *DappSdk) SendBatchTransactions(txs []*transactionpb.Transaction) error {
 	_, err := sdk.conn.rpcClient.RpcSendBatchTransaction(
 		context.Background(),
 		&rpcpb.SendBatchTransactionRequest{
@@ -92,7 +93,7 @@ func (sdk *DappSdk) RequestFund(fundAddr string, amount *common.Amount) {
 }
 
 //GetUtxoByAddr gets all utxos related to an address from the server
-func (sdk *DappSdk) GetUtxoByAddr(addr account.Address) ([]*corepb.Utxo, error) {
+func (sdk *DappSdk) GetUtxoByAddr(addr account.Address) ([]*utxopb.Utxo, error) {
 
 	resp, err := sdk.conn.rpcClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
 		Address: addr.String(),

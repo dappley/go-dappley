@@ -172,7 +172,7 @@ func getDifferentIndex(index int, maxIndex int) int {
 	return newIndex
 }
 
-func (sender *BatchTxSender) createTransaction(from, to account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *account.KeyPair) *core.Transaction {
+func (sender *BatchTxSender) createTransaction(from, to account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *account.KeyPair) *transaction.Transaction {
 
 	pkh, err := account.NewUserPubKeyHash(senderKeyPair.GetPublicKey())
 	if err != nil {
@@ -183,8 +183,8 @@ func (sender *BatchTxSender) createTransaction(from, to account.Address, amount,
 	if err != nil {
 		return nil
 	}
-	sendTxParam := core.NewSendTxParam(from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract)
-	tx, err := core.NewUTXOTransaction(prevUtxos, sendTxParam)
+	sendTxParam := transaction.NewSendTxParam(from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract)
+	tx, err := transaction_logic.NewUTXOTransaction(prevUtxos, sendTxParam)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{

@@ -84,12 +84,12 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 	//max, index := GetMaxHeightOfDifferentStart(files)
 	//fund every miner
 	parentBlks := make([]*block.Block, len(files))
-	utxoIndexes := make([]*core.UTXOIndex, len(files))
+	utxoIndexes := make([]*utxo_logic.UTXOIndex, len(files))
 	for i := range files {
 		parentBlks[i], _ = bcs[i].GetTailBlock()
-		utxoIndexes[i] = core.NewUTXOIndex(bcs[i].GetUtxoCache())
+		utxoIndexes[i] = utxo_logic.NewUTXOIndex(bcs[i].GetUtxoCache())
 		for j := 0; j < len(d.GetProducers()); j++ {
-			b := generateBlock(utxoIndexes[i], parentBlks[i], bcs[i], d, keys, []*core.Transaction{})
+			b := generateBlock(utxoIndexes[i], parentBlks[i], bcs[i], d, keys, []*transaction.Transaction{})
 			bcs[i].AddBlockToDb(b)
 			parentBlks[i] = b
 		}
@@ -128,7 +128,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) {
+func makeBlockChainToSize(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -140,10 +140,10 @@ func makeBlockChainToSize(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc 
 	bc.GetDb().Put([]byte("tailBlockHash"), tailBlk.GetHash())
 }
 
-func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, txs []*core.Transaction) *block.Block {
+func generateBlock(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, txs []*transaction.Transaction) *block.Block {
 	producer := account.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
-	cbtx := core.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
+	cbtx := transaction_logic.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
 	b := block.NewBlockWithTimestamp(txs, parentBlk, time, producer.String())
@@ -159,20 +159,20 @@ func generateBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockc
 	return b
 }
 
-func generateFundingBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, minerPrivKey string) *block.Block {
+func generateFundingBlock(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, minerPrivKey string) *block.Block {
 	logger.Info("generate funding Block")
 	tx := generateFundingTransaction(utxoIndex, fundAddr, minerPrivKey)
-	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx})
+	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*transaction.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *core.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *account_logic.AccountManager) (*block.Block, account.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *account_logic.AccountManager) (*block.Block, account.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
-	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*core.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
+	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*transaction.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
 }
 
-func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sender account.Address, wm *account_logic.AccountManager) *core.Transaction {
+func generateSmartContractDeploymentTransaction(utxoIndex *utxo_logic.UTXOIndex, sender account.Address, wm *account_logic.AccountManager) *transaction.Transaction {
 	senderAccount := wm.GetAccountByAddress(sender)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
@@ -192,7 +192,7 @@ func generateSmartContractDeploymentTransaction(utxoIndex *core.UTXOIndex, sende
 	return tx
 }
 
-func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr account.Address, minerPrivKey string) *core.Transaction {
+func generateFundingTransaction(utxoIndex *utxo_logic.UTXOIndex, fundAddr account.Address, minerPrivKey string) *transaction.Transaction {
 	initFund := uint64(1000000)
 	initFundAmount := common.NewAmount(initFund)
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivKey)
@@ -204,9 +204,9 @@ func generateFundingTransaction(utxoIndex *core.UTXOIndex, fundAddr account.Addr
 	return tx
 }
 
-func generateTransactions(utxoIndex *core.UTXOIndex, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) []*core.Transaction {
+func generateTransactions(utxoIndex *utxo_logic.UTXOIndex, addrs []account.Address, wm *account_logic.AccountManager, scAddr account.Address) []*transaction.Transaction {
 	pkhmap := getPubKeyHashes(addrs, wm)
-	txs := []*core.Transaction{}
+	txs := []*transaction.Transaction{}
 	for i := 0; i < numOfTx; i++ {
 		contract := ""
 		tx := generateTransaction(addrs, wm, utxoIndex, pkhmap, contract, scAddr)
@@ -232,7 +232,7 @@ func getPubKeyHashes(addrs []account.Address, wm *account_logic.AccountManager) 
 	return res
 }
 
-func generateTransaction(addrs []account.Address, wm *account_logic.AccountManager, utxoIndex *core.UTXOIndex, pkhmap map[account.Address]account.PubKeyHash, contract string, scAddr account.Address) *core.Transaction {
+func generateTransaction(addrs []account.Address, wm *account_logic.AccountManager, utxoIndex *utxo_logic.UTXOIndex, pkhmap map[account.Address]account.PubKeyHash, contract string, scAddr account.Address) *transaction.Transaction {
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
 	senderAccount := wm.GetAccountByAddress(sender)
@@ -249,11 +249,11 @@ func generateTransaction(addrs []account.Address, wm *account_logic.AccountManag
 	return tx
 }
 
-func newTransaction(sender, receiver account.Address, senderKeyPair *account.KeyPair, utxoIndex *core.UTXOIndex, senderPkh account.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *core.Transaction {
+func newTransaction(sender, receiver account.Address, senderKeyPair *account.KeyPair, utxoIndex *utxo_logic.UTXOIndex, senderPkh account.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *transaction.Transaction {
 	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
 
-	sendTxParam := core.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
-	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
+	sendTxParam := transaction.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
+	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
 
 	if err != nil {
 		logger.WithError(err).Panic("Create transaction failed!")
@@ -284,7 +284,7 @@ func getSenderAndReceiver(addrs []account.Address) (sender, receiver account.Add
 	return
 }
 
-func CreateRandomTransactions([]account.Address) []*core.Transaction {
+func CreateRandomTransactions([]account.Address) []*transaction.Transaction {
 	return nil
 }
 

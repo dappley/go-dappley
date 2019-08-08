@@ -21,8 +21,11 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_manager"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"os"
 	"testing"
 	"time"
@@ -72,12 +75,12 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
-	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := utxo_logic.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
+	sendTxParam := transaction.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -191,12 +194,12 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
-	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := utxo_logic.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
+	sendTxParam := transaction.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
 	assert.Nil(t, err)
 
 	//push the transaction to transaction pool
@@ -218,12 +221,12 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 		count = GetNumberOfBlocks(t, bc.Iterator())
 	}
 
-	utxos2, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos2, err := utxo_logic.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//add second transaction
-	sendTxParam2 := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	tx2, err := core.NewUTXOTransaction(utxos2, sendTxParam2)
+	sendTxParam2 := transaction.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	tx2, err := transaction_logic.NewUTXOTransaction(utxos2, sendTxParam2)
 	assert.Nil(t, err)
 
 	bc.GetTxPool().Push(tx2)
@@ -328,14 +331,14 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
-	utxos, err := core.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
+	utxos, err := utxo_logic.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, sendAmount)
 	assert.Nil(t, err)
 
 	//create a transaction
-	sendTxParam1 := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	sendTxParam2 := core.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account3.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-	tx1, err := core.NewUTXOTransaction(utxos, sendTxParam1)
-	tx2, err := core.NewUTXOTransaction(utxos, sendTxParam2)
+	sendTxParam1 := transaction.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account2.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	sendTxParam2 := transaction.NewSendTxParam(account1.GetKeyPair().GenerateAddress(), keyPair, account3.GetKeyPair().GenerateAddress(), sendAmount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	tx1, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam1)
+	tx2, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam2)
 
 	assert.Nil(t, err)
 
@@ -395,7 +398,7 @@ func getBalance(bc *blockchain_logic.Blockchain, addr string) (*common.Amount, e
 
 	balance := common.NewAmount(0)
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(addr))
-	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	//_, utxo, nextUtxos := utxos.Iterator()
 	for _, utxo := range utxos.Indices {

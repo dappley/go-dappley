@@ -16,18 +16,23 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package transaction
 
 import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -40,18 +45,27 @@ func getAoB(length int64) []byte {
 	return util.GenerateRandomAoB(length)
 }
 
-func GenerateFakeTxInputs() []TXInput {
-	return []TXInput{
+func GenerateFakeTxInputs() []transaction_base.TXInput {
+	return []transaction_base.TXInput{
 		{getAoB(2), 10, getAoB(2), getAoB(2)},
 		{getAoB(2), 5, getAoB(2), getAoB(2)},
 	}
 }
 
-func GenerateFakeTxOutputs() []TXOutput {
-	return []TXOutput{
+func GenerateFakeTxOutputs() []transaction_base.TXOutput {
+	return []transaction_base.TXOutput{
 		{common.NewAmount(1), account.PubKeyHash(getAoB(2)), ""},
 		{common.NewAmount(2), account.PubKeyHash(getAoB(2)), ""},
 	}
+}
+
+var tx1 = Transaction{
+	ID:       util.GenerateRandomAoB(1),
+	Vin:      GenerateFakeTxInputs(),
+	Vout:     GenerateFakeTxOutputs(),
+	Tip:      common.NewAmount(5),
+	GasLimit: common.NewAmount(0),
+	GasPrice: common.NewAmount(0),
 }
 
 func TestTrimmedCopy(t *testing.T) {
@@ -64,7 +78,7 @@ func TestTrimmedCopy(t *testing.T) {
 
 	t2 := tx1.TrimmedCopy(false)
 
-	t3 := NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
+	t3 := transaction_logic.NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
 	t4 := t3.TrimmedCopy(false)
 	assert.Equal(t, tx1.ID, t2.ID)
 	assert.Equal(t, tx1.Tip, t2.Tip)
@@ -95,25 +109,25 @@ func TestSign(t *testing.T) {
 	pubKeyHash, _ := account.NewUserPubKeyHash(pubKey)
 
 	// Previous transactions containing UTXO of the Address
-	prevTXs := []*UTXO{
-		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("01"), 0, UtxoNormal},
-		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("02"), 0, UtxoNormal},
-		{TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("03"), 0, UtxoNormal},
+	prevTXs := []*utxo.UTXO{
+		{transaction_base.TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("01"), 0, utxo.UtxoNormal},
+		{transaction_base.TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("02"), 0, utxo.UtxoNormal},
+		{transaction_base.TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("03"), 0, utxo.UtxoNormal},
 	}
 
 	// New transaction to be signed (paid from the fake account)
-	txin := []TXInput{
+	txin := []transaction_base.TXInput{
 		{[]byte{1}, 0, nil, pubKey},
 		{[]byte{3}, 0, nil, pubKey},
 		{[]byte{3}, 2, nil, pubKey},
 	}
-	txout := []TXOutput{
+	txout := []transaction_base.TXOutput{
 		{common.NewAmount(19), pubKeyHash, ""},
 	}
 	tx := Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
-	// Sign the transaction
-	err := Sign(*privKey, prevTXs, &tx)
+	// transaction_logic.Sign the transaction
+	err := transaction_logic.Sign(*privKey, prevTXs, &tx)
 	if assert.Nil(t, err) {
 		// Assert that the signatures were created by the fake key pair
 		for i, vin := range tx.Vin {
@@ -164,30 +178,30 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	prevTXs[string(tx3.ID)] = tx4
 
 	// test verifying coinbase transactions
-	var t5 = NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
+	var t5 = transaction_logic.NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
-	txin1 := TXInput{nil, -1, bh1, []byte("Reward to test")}
-	txout1 := NewTXOutput(common.NewAmount(10000000), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
-	var t6 = Transaction{nil, []TXInput{txin1}, []TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin1 := transaction_base.TXInput{nil, -1, bh1, []byte("Reward to test")}
+	txout1 := transaction_base.NewTXOutput(common.NewAmount(10000000), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
+	var t6 = Transaction{nil, []transaction_base.TXInput{txin1}, []transaction_base.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	// test valid coinbase transaction
-	_, err5 := VerifyTransaction(&UTXOIndex{}, &t5, 5)
+	_, err5 := transaction_logic.VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 5)
 	assert.Nil(t, err5)
-	_, err6 := VerifyTransaction(&UTXOIndex{}, &t6, 5)
+	_, err6 := transaction_logic.VerifyTransaction(&utxo_logic.UTXOIndex{}, &t6, 5)
 	assert.Nil(t, err6)
 
 	// test coinbase transaction with incorrect blockHeight
-	_, err5 = VerifyTransaction(&UTXOIndex{}, &t5, 10)
+	_, err5 = transaction_logic.VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 10)
 	assert.NotNil(t, err5)
 
 	// test coinbase transaction with incorrect Subsidy
 	bh2 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh2, 5)
-	txin2 := TXInput{nil, -1, bh2, []byte(nil)}
-	txout2 := NewTXOutput(common.NewAmount(9), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
-	var t7 = Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
-	_, err7 := VerifyTransaction(&UTXOIndex{}, &t7, 5)
+	txin2 := transaction_base.TXInput{nil, -1, bh2, []byte(nil)}
+	txout2 := transaction_base.NewTXOutput(common.NewAmount(9), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
+	var t7 = Transaction{nil, []transaction_base.TXInput{txin2}, []transaction_base.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	_, err7 := transaction_logic.VerifyTransaction(&utxo_logic.UTXOIndex{}, &t7, 5)
 	assert.NotNil(t, err7)
 
 }
@@ -206,25 +220,25 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
 	//wrongPubKeyHash, _ := NewUserPubKeyHash(wrongPubKey)
 	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
-	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-	utxoTx := NewUTXOTx()
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	utxoTx := utxo.NewUTXOTx()
 
-	utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, UtxoNormal})
-	utxoTx.PutUtxo(&UTXO{TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, UtxoNormal})
+	utxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, utxo.UtxoNormal})
+	utxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, utxo.UtxoNormal})
 
-	utxoIndex.index = map[string]*UTXOTx{
+	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
 		pubKeyHash.String(): &utxoTx,
-	}
+	})
 
 	// Prepare a transaction to be verified
-	txin := []TXInput{{[]byte{1}, 0, nil, pubKey}}
-	txin1 := append(txin, TXInput{[]byte{2}, 1, nil, pubKey})      // Normal test
-	txin2 := append(txin, TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
-	txin3 := append(txin, TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
-	txin4 := append(txin, TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
+	txin := []transaction_base.TXInput{{[]byte{1}, 0, nil, pubKey}}
+	txin1 := append(txin, transaction_base.TXInput{[]byte{2}, 1, nil, pubKey})      // Normal test
+	txin2 := append(txin, transaction_base.TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
+	txin3 := append(txin, transaction_base.TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
+	txin4 := append(txin, transaction_base.TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
 	pbh, _ := account.NewUserPubKeyHash(pubKey)
-	txout := []TXOutput{{common.NewAmount(7), pbh, ""}}
-	txout2 := []TXOutput{{common.NewAmount(8), pbh, ""}} //Vout amount > Vin amount
+	txout := []transaction_base.TXOutput{{common.NewAmount(7), pbh, ""}}
+	txout2 := []transaction_base.TXOutput{{common.NewAmount(8), pbh, ""}} //Vout amount > Vin amount
 
 	tests := []struct {
 		name     string
@@ -237,7 +251,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		{"previous tx not found with wrong Txid", Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
 		{"previous tx not found with wrong TxIndex", Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
 		{"Amount invalid", Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: ID is invalid")},
-		{"Sign invalid", Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
+		{"transaction_logic.Sign invalid", Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -252,7 +266,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			}
 
 			// Verify the signatures
-			_, err := VerifyTransaction(utxoIndex, &tt.tx, 0)
+			_, err := transaction_logic.VerifyTransaction(utxoIndex, &tt.tx, 0)
 			assert.Equal(t, tt.ok, err)
 		})
 	}
@@ -264,10 +278,10 @@ func TestInvalidExecutionTx(t *testing.T) {
 	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var deploymentTx = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{tx1.ID, 1, nil, pubkey1},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(5), pkHash1, "dapp_schedule"},
 		},
 		Tip: common.NewAmount(1),
@@ -275,49 +289,49 @@ func TestInvalidExecutionTx(t *testing.T) {
 	deploymentTx.ID = deploymentTx.Hash()
 	contractPubkeyHash := deploymentTx.Vout[0].PubKeyHash
 
-	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
-	utxoTx := NewUTXOTx()
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	utxoTx := utxo.NewUTXOTx()
 
-	utxoTx.PutUtxo(&UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, UtxoNormal})
-	utxoIndex.index = map[string]*UTXOTx{
+	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal})
+	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
 		pkHash1.String(): &utxoTx,
-	}
+	})
 
 	var executionTx = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{deploymentTx.ID, 0, nil, pubkey1},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(3), contractPubkeyHash, "execution"},
 		},
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos(), &executionTx)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos(), &executionTx)
 
-	_, err1 := VerifyTransaction(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
-	_, err2 := VerifyTransaction(utxoIndex, &executionTx, 0)
+	_, err1 := transaction_logic.VerifyTransaction(utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
+	_, err2 := transaction_logic.VerifyTransaction(utxoIndex, &executionTx, 0)
 	assert.NotNil(t, err1)
 	assert.Nil(t, err2)
 }
 
 func TestNewCoinbaseTX(t *testing.T) {
-	t1 := NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
-	expectVin := TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := TXOutput{common.NewAmount(10000000), account.PubKeyHash([]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}), ""}
+	t1 := transaction_logic.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
+	expectVin := transaction_base.TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
+	expectVout := transaction_base.TXOutput{common.NewAmount(10000000), account.PubKeyHash([]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}), ""}
 	assert.Equal(t, 1, len(t1.Vin))
 	assert.Equal(t, expectVin, t1.Vin[0])
 	assert.Equal(t, 1, len(t1.Vout))
 	assert.Equal(t, expectVout, t1.Vout[0])
 	assert.Equal(t, common.NewAmount(0), t1.Tip)
 
-	t2 := NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
+	t2 := transaction_logic.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
 
-	// Assert that NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
+	// Assert that transaction_logic.NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
 	assert.Equal(t, t1, t2)
 
-	t3 := NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 1, common.NewAmount(0))
+	t3 := transaction_logic.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 1, common.NewAmount(0))
 
 	assert.NotEqual(t, t1, t3)
 	assert.NotEqual(t, t1.ID, t3.ID)
@@ -334,7 +348,7 @@ func TestIsCoinBase(t *testing.T) {
 
 	assert.False(t, tx1.IsCoinbase())
 
-	t2 := NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
+	t2 := transaction_logic.NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
 
 	assert.True(t, t2.IsCoinbase())
 
@@ -360,8 +374,8 @@ func TestTransaction_IsRewardTx(t *testing.T) {
 	}{
 		{"normal", NewRewardTx(1, map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "9"}), true},
 		{"no rewards", NewRewardTx(1, nil), true},
-		{"coinbase", NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 5, common.NewAmount(0)), false},
-		{"normal tx", *MockTransaction(), false},
+		{"coinbase", transaction_logic.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 5, common.NewAmount(0)), false},
+		{"normal tx", *core.MockTransaction(), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -385,7 +399,7 @@ func TestTransaction_Proto(t *testing.T) {
 	mpb, err := proto.Marshal(pb)
 	assert.Nil(t, err)
 
-	newpb := &corepb.Transaction{}
+	newpb := &transactionpb.Transaction{}
 	err = proto.Unmarshal(mpb, newpb)
 	assert.Nil(t, err)
 
@@ -431,7 +445,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 			tx := Transaction{
 				nil,
 				nil,
-				[]TXOutput{
+				[]transaction_base.TXOutput{
 					{nil,
 						pkh,
 						"",
@@ -477,26 +491,26 @@ func TestTransaction_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := new(MockScEngine)
+			sc := new(core.MockScEngine)
 			contract := "helloworld!"
 			toPKH, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(tt.toAddr))
 			scPKH, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(tt.scAddr))
 
-			scUtxo := UTXO{
+			scUtxo := utxo.UTXO{
 				TxIndex: 0,
 				Txid:    nil,
-				TXOutput: TXOutput{
+				TXOutput: transaction_base.TXOutput{
 					PubKeyHash: scPKH,
 					Contract:   contract,
 				},
 			}
 			tx := ContractTx{Transaction{
-				Vout:     []TXOutput{{nil, toPKH, "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
+				Vout:     []transaction_base.TXOutput{{nil, toPKH, "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
 				GasLimit: common.NewAmount(0),
 				GasPrice: common.NewAmount(0),
 			}}
 
-			index := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+			index := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {
 				index.AddUTXO(scUtxo.TXOutput, nil, 0)
 			}
@@ -516,14 +530,14 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("ImportSeed", mock.Anything)
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
-			parentBlk := GenerateMockBlock()
-			preUTXO, err := FindVinUtxosInUtxoPool(*index, tx.Transaction)
+			parentBlk := core.GenerateMockBlock()
+			preUTXO, err := utxo_logic.FindVinUtxosInUtxoPool(*index, tx.Transaction)
 
 			if err != nil {
 				println(err.Error())
 			}
 			isSCUTXO := (*index).GetAllUTXOsByPubKeyHash([]byte(tx.Vout[0].PubKeyHash)).Size() == 0
-			Execute(tx, preUTXO, isSCUTXO, *index, NewScState(), nil, sc, 0, parentBlk)
+			transaction_logic.Execute(&tx, preUTXO, isSCUTXO, *index, core.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}
@@ -540,8 +554,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"normal",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -559,8 +573,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"emptyVout",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{},
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{},
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
@@ -571,8 +585,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"emptyRewardMap",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -590,8 +604,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"Wrong address",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -609,8 +623,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"Wrong amount",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(3),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -628,8 +642,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"twoAddresses",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -657,8 +671,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"MoreRewards",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -687,8 +701,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"MoreVout",
 			&Transaction{
 				nil,
-				[]TXInput{{nil, -1, nil, rewardTxData}},
-				[]TXOutput{{
+				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transaction_base.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -739,10 +753,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx1 = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{tx1.ID, 1, nil, pubkey1},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(5), pkHash1, ""},
 			{common.NewAmount(10), pkHash2, ""},
 		},
@@ -752,10 +766,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx2 = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{dependentTx1.ID, 1, nil, pubkey2},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(5), pkHash3, ""},
 			{common.NewAmount(3), pkHash4, ""},
 		},
@@ -765,10 +779,10 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx3 = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{dependentTx2.ID, 0, nil, pubkey3},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(1), pkHash4, ""},
 		},
 		Tip: common.NewAmount(4),
@@ -777,11 +791,11 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx4 = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{dependentTx2.ID, 1, nil, pubkey4},
 			{dependentTx3.ID, 0, nil, pubkey4},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(3), pkHash1, ""},
 		},
 		Tip: common.NewAmount(1),
@@ -790,41 +804,41 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx5 = Transaction{
 		ID: nil,
-		Vin: []TXInput{
+		Vin: []transaction_base.TXInput{
 			{dependentTx1.ID, 0, nil, pubkey1},
 			{dependentTx4.ID, 0, nil, pubkey1},
 		},
-		Vout: []TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(4), pkHash5, ""},
 		},
 		Tip: common.NewAmount(4),
 	}
 	dependentTx5.ID = dependentTx5.Hash()
 
-	utxoIndex := NewUTXOIndex(NewUTXOCache(storage.NewRamStorage()))
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
-	utxoTx2 := NewUTXOTx()
-	utxoTx2.PutUtxo(&UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, UtxoNormal})
+	utxoTx2 := utxo.NewUTXOTx()
+	utxoTx2.PutUtxo(&utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal})
 
-	utxoTx1 := NewUTXOTx()
-	utxoTx1.PutUtxo(&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal})
+	utxoTx1 := utxo.NewUTXOTx()
+	utxoTx1.PutUtxo(&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal})
 
-	utxoIndex.index = map[string]*UTXOTx{
+	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
 		pkHash2.String(): &utxoTx2,
 		pkHash1.String(): &utxoTx1,
-	}
+	})
 
-	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
-	tx2Utxo2 := UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, UtxoNormal}
-	tx2Utxo3 := UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, UtxoNormal}
-	tx2Utxo4 := UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}
-	tx2Utxo5 := UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, UtxoNormal}
-	Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos(), &dependentTx2)
-	Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*UTXO{&tx2Utxo1}, &dependentTx3)
-	Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
-	Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
+	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal}
+	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
+	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
+	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos(), &dependentTx2)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1}, &dependentTx3)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
 
-	txPool := NewTransactionPool(nil, 6000000)
+	txPool := core.NewTransactionPool(nil, 6000000)
 	// verify dependent txs 2,3,4,5 with relation:
 	//tx1 (UtxoIndex)
 	//|     \
@@ -833,37 +847,37 @@ func TestTransaction_VerifyDependentTransactions(t *testing.T) {
 	//tx3-tx4-tx5
 
 	// test a transaction whose Vin is from UtxoIndex
-	_, err1 := VerifyTransaction(utxoIndex, &dependentTx2, 0)
+	_, err1 := transaction_logic.VerifyTransaction(utxoIndex, &dependentTx2, 0)
 	assert.Nil(t, err1)
 	txPool.Push(dependentTx2)
 
 	// test a transaction whose Vin is from another transaction in transaction pool
 	utxoIndex2 := *utxoIndex.DeepCopy()
 	utxoIndex2.UpdateUtxoState(txPool.GetTransactions())
-	_, err2 := VerifyTransaction(&utxoIndex2, &dependentTx3, 0)
+	_, err2 := transaction_logic.VerifyTransaction(&utxoIndex2, &dependentTx3, 0)
 	assert.Nil(t, err2)
 	txPool.Push(dependentTx3)
 
 	// test a transaction whose Vin is from another two transactions in transaction pool
 	utxoIndex3 := *utxoIndex.DeepCopy()
 	utxoIndex3.UpdateUtxoState(txPool.GetTransactions())
-	_, err3 := VerifyTransaction(&utxoIndex3, &dependentTx4, 0)
+	_, err3 := transaction_logic.VerifyTransaction(&utxoIndex3, &dependentTx4, 0)
 	assert.Nil(t, err3)
 	txPool.Push(dependentTx4)
 
 	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	utxoIndex4 := *utxoIndex.DeepCopy()
 	utxoIndex4.UpdateUtxoState(txPool.GetTransactions())
-	_, err4 := VerifyTransaction(&utxoIndex4, &dependentTx5, 0)
+	_, err4 := transaction_logic.VerifyTransaction(&utxoIndex4, &dependentTx5, 0)
 	assert.Nil(t, err4)
 	txPool.Push(dependentTx5)
 
 	// test UTXOs not found for parent transactions
-	_, err5 := VerifyTransaction(NewUTXOIndex(NewUTXOCache(storage.NewRamStorage())), &dependentTx3, 0)
+	_, err5 := transaction_logic.VerifyTransaction(utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &dependentTx3, 0)
 	assert.NotNil(t, err5)
 
 	// test a standalone transaction
 	txPool.Push(tx1)
-	_, err6 := VerifyTransaction(utxoIndex, &tx1, 0)
+	_, err6 := transaction_logic.VerifyTransaction(utxoIndex, &tx1, 0)
 	assert.NotNil(t, err6)
 }
