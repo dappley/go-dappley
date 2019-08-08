@@ -56,7 +56,7 @@ var (
 type Blockchain struct {
 	bc           *blockchain.Blockchain
 	db           storage.Storage
-	utxoCache    *core.UTXOCache
+	utxoCache    *utxo.UTXOCache
 	consensus    core.Consensus
 	txPool       *core.TransactionPool
 	scManager    core.ScEngineManager

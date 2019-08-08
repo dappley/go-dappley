@@ -19,16 +19,15 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"time"
+
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 )
 
@@ -46,48 +45,7 @@ func GenerateMockBlock() *block.Block {
 	)
 }
 
-func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block) *block.Block {
-	var prevHash []byte
-	var height uint64
-	height = 0
-	if parent != nil {
-		prevHash = parent.GetHash()
-		height = parent.GetHeight() + 1
-	}
-
-	if txs == nil {
-		txs = []*Transaction{}
-	}
-	blk := block.NewBlockWithRawInfo(
-		[]byte{},
-		prevHash,
-		0,
-		t,
-		height,
-		txs)
-
-	hash := block_logic.CalculateHashWithNonce(blk)
-	blk.SetHash(hash)
-	return blk
-}
-
-func GenerateMockBlockchain(size int) *blockchain_logic.Blockchain {
-	//create a new block chain
-	s := storage.NewRamStorage()
-
-	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := blockchain_logic.CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
-
-	for i := 0; i < size; i++ {
-		tailBlk, _ := bc.GetTailBlock()
-		b := block.NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
-	}
-	return bc
-}
-
-func PrepareBlockContext(bc *blockchain_logic.Blockchain, blk *block.Block) *BlockContext {
+func PrepareBlockContext(bc *blockchain.Blockchain, blk *block.Block) *BlockContext {
 	state := LoadScStateFromDatabase(bc.GetDb())
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
@@ -100,21 +58,6 @@ func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.
 	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
 	b := block.NewBlock([]*Transaction{&cbtx}, lastblock, "")
 	return b
-}
-func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *blockchain_logic.Blockchain {
-	//create a new block chain
-	s := storage.NewRamStorage()
-	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := blockchain_logic.CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
-
-	for i := 0; i < size; i++ {
-		tailBlk, _ := bc.GetTailBlock()
-		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
-	}
-	return bc
 }
 
 func MockTransaction() *Transaction {

@@ -19,10 +19,12 @@
 package consensus
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_manager"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 
@@ -72,7 +74,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 	}{
 		{
 			name: "BeneficiaryIsProducer",
-			block: core.FakeNewBlockWithTimestamp(
+			block: FakeNewBlockWithTimestamp(
 				46,
 				[]*core.Transaction{
 					core.MockTransaction(),
@@ -84,7 +86,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		},
 		{
 			name: "ProducerNotAtItsTurn",
-			block: core.FakeNewBlockWithTimestamp(
+			block: FakeNewBlockWithTimestamp(
 				44,
 				[]*core.Transaction{
 					core.MockTransaction(),
@@ -96,7 +98,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		},
 		{
 			name: "NotAProducer",
-			block: core.FakeNewBlockWithTimestamp(
+			block: FakeNewBlockWithTimestamp(
 				44,
 				[]*core.Transaction{
 					core.MockTransaction(),
@@ -131,9 +133,34 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 	// Both timestamps fall in the same DPoS time slot
 	assert.Equal(t, int(blk1Time/defaultTimeBetweenBlk), int(blk2Time/defaultTimeBetweenBlk))
 
-	blk1 := core.FakeNewBlockWithTimestamp(blk1Time, []*core.Transaction{}, nil)
+	blk1 := FakeNewBlockWithTimestamp(blk1Time, []*core.Transaction{}, nil)
 	dpos.AddBlockToSlot(blk1)
-	blk2 := core.FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
+	blk2 := FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
 
 	assert.True(t, dpos.isDoubleMint(blk2))
+}
+
+func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block) *block.Block {
+	var prevHash []byte
+	var height uint64
+	height = 0
+	if parent != nil {
+		prevHash = parent.GetHash()
+		height = parent.GetHeight() + 1
+	}
+
+	if txs == nil {
+		txs = []*Transaction{}
+	}
+	blk := block.NewBlockWithRawInfo(
+		[]byte{},
+		prevHash,
+		0,
+		t,
+		height,
+		txs)
+
+	hash := block_logic.CalculateHashWithNonce(blk)
+	blk.SetHash(hash)
+	return blk
 }

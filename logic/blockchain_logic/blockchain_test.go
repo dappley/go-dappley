@@ -21,14 +21,15 @@ package blockchain_logic
 import (
 	"encoding/hex"
 	"errors"
+	"os"
+	"sync"
+	"testing"
+
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"os"
-	"sync"
-	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -107,7 +108,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 
 func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//create a mock blockchain with max height of 5
-	bc := core.GenerateMockBlockchainWithCoinbaseTxOnly(5)
+	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.db.Close()
 
 	//find the hash at height 3
@@ -122,6 +123,22 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, blk.GetHash(), newTailBlk.GetHash())
 
+}
+
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *blockchain_logic.Blockchain {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := blockchain_logic.CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
+
+	for i := 0; i < size; i++ {
+		tailBlk, _ := bc.GetTailBlock()
+		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
+		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b.SetHash(block_logic.CalculateHash(b))
+		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
+	}
+	return bc
 }
 
 func TestBlockchain_AddBlockToTail(t *testing.T) {
@@ -216,4 +233,20 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 		state := core.LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&core.BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
+}
+
+func GenerateMockBlockchain(size int) *blockchain_logic.Blockchain {
+	//create a new block chain
+	s := storage.NewRamStorage()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := blockchain_logic.CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
+
+	for i := 0; i < size; i++ {
+		tailBlk, _ := bc.GetTailBlock()
+		b := block.NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b.SetHash(block_logic.CalculateHash(b))
+		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
+	}
+	return bc
 }
