@@ -20,6 +20,9 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/logic/download_manager"
@@ -94,16 +97,16 @@ func main() {
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
 	txPool := core.NewTransactionPool(node, txPoolLimit)
-	bc, err := core.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
+	bc, err := blockchain_logic.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
-	bc.SetState(core.BlockchainInit)
+	bc.SetState(blockchain.BlockchainInit)
 
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
+	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
@@ -121,7 +124,7 @@ func main() {
 		"miner_address": minerAddr,
 	}).Info("Consensus is configured.")
 
-	bm.Getblockchain().SetState(core.BlockchainReady)
+	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 
 	//start rpc server
 	nodeConf := conf.GetNodeConfig()

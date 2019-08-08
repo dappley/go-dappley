@@ -22,6 +22,8 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
+
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -30,7 +32,7 @@ import (
 type Consensus interface {
 	Validate(*block.Block) bool
 
-	Setup(NetService, string, *BlockChainManager)
+	Setup(NetService, string, *blockchain_manager.BlockchainManager)
 	GetProducerAddress() string
 
 	SetKey(string)

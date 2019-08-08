@@ -4,9 +4,10 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common/hash"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/golang/protobuf/proto"
-	corepb "github.com/nebulasio/go-nebulas/core/pb"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -124,13 +125,13 @@ func (b *Block) IsSigned() bool {
 
 func (b *Block) ToProto() proto.Message {
 
-	var txArray []*corepb.Transaction
+	var txArray []*transactionpb.Transaction
 	for _, tx := range b.transactions {
-		txArray = append(txArray, tx.ToProto().(*corepb.Transaction))
+		txArray = append(txArray, tx.ToProto().(*transactionpb.Transaction))
 	}
 
-	return &corepb.Block{
-		Header:       b.header.ToProto().(*corepb.BlockHeader),
+	return &blockpb.Block{
+		Header:       b.header.ToProto().(*blockpb.BlockHeader),
 		Transactions: txArray,
 	}
 }
@@ -138,12 +139,12 @@ func (b *Block) ToProto() proto.Message {
 func (b *Block) FromProto(pb proto.Message) {
 
 	bh := BlockHeader{}
-	bh.FromProto(pb.(*corepb.Block).GetHeader())
+	bh.FromProto(pb.(*blockpb.Block).GetHeader())
 	b.header = &bh
 
 	var txs []*transaction.Transaction
 
-	for _, txpb := range pb.(*corepb.Block).GetTransactions() {
+	for _, txpb := range pb.(*blockpb.Block).GetTransactions() {
 		tx := &transaction.Transaction{}
 		tx.FromProto(txpb)
 		txs = append(txs, tx)
@@ -163,7 +164,7 @@ func (b *Block) Serialize() []byte {
 }
 
 func Deserialize(d []byte) *Block {
-	pb := &corepb.Block{}
+	pb := &blockpb.Block{}
 	err := proto.Unmarshal(d, pb)
 	if err != nil {
 		logger.WithError(err).Panic("Block: Cannot deserialize block!")

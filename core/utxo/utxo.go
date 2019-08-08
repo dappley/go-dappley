@@ -20,8 +20,8 @@ package utxo
 
 import (
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -47,7 +47,7 @@ func NewUTXO(txout transaction_base.TXOutput, txid []byte, vout int, utxoType Ut
 }
 
 func (utxo *UTXO) ToProto() proto.Message {
-	return &corepb.Utxo{
+	return &utxopb.Utxo{
 		Amount:        utxo.Value.Bytes(),
 		PublicKeyHash: []byte(utxo.PubKeyHash),
 		Txid:          utxo.Txid,
@@ -58,7 +58,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 }
 
 func (utxo *UTXO) FromProto(pb proto.Message) {
-	utxopb := pb.(*corepb.Utxo)
+	utxopb := pb.(*utxopb.Utxo)
 	utxo.Value = common.NewAmountFromBytes(utxopb.Amount)
 	utxo.PubKeyHash = utxopb.PublicKeyHash
 	utxo.Txid = utxopb.Txid

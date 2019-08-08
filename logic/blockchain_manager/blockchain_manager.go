@@ -15,14 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
+package blockchain_manager
 
 import (
 	"bytes"
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -46,15 +49,15 @@ var (
 	}
 )
 
-type BlockChainManager struct {
-	blockchain        *Blockchain
-	blockPool         *BlockPool
+type BlockchainManager struct {
+	blockchain        *blockchain_logic.Blockchain
+	blockPool         *core.BlockPool
 	downloadRequestCh chan chan bool
 	netService        NetService
 }
 
-func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool, service NetService) *BlockChainManager {
-	bm := &BlockChainManager{
+func NewBlockchainManager(blockchain *blockchain_logic.Blockchain, blockpool *core.BlockPool, service NetService) *BlockchainManager {
+	bm := &BlockchainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
 		netService: service,
@@ -63,15 +66,15 @@ func NewBlockChainManager(blockchain *Blockchain, blockpool *BlockPool, service 
 	return bm
 }
 
-func (bm *BlockChainManager) SetDownloadRequestCh(requestCh chan chan bool) {
+func (bm *BlockchainManager) SetDownloadRequestCh(requestCh chan chan bool) {
 	bm.downloadRequestCh = requestCh
 }
 
-func (bm *BlockChainManager) RequestDownloadBlockchain() {
+func (bm *BlockchainManager) RequestDownloadBlockchain() {
 	go func() {
 		finishChan := make(chan bool, 1)
 
-		bm.Getblockchain().SetState(BlockchainDownloading)
+		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 
 		select {
 		case bm.downloadRequestCh <- finishChan:
@@ -80,11 +83,11 @@ func (bm *BlockChainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
-		bm.Getblockchain().SetState(BlockchainReady)
+		bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	}()
 }
 
-func (bm *BlockChainManager) ListenToNetService() {
+func (bm *BlockchainManager) ListenToNetService() {
 	if bm.netService == nil {
 		return
 	}
@@ -94,7 +97,7 @@ func (bm *BlockChainManager) ListenToNetService() {
 	}
 }
 
-func (bm *BlockChainManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+func (bm *BlockchainManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
 
 	switch commandName {
 	case SendBlock:
@@ -105,36 +108,37 @@ func (bm *BlockChainManager) GetCommandHandler(commandName string) network_model
 	return nil
 }
 
-func (bm *BlockChainManager) Getblockchain() *Blockchain {
+func (bm *BlockchainManager) Getblockchain() *blockchain_logic.Blockchain {
 	return bm.blockchain
 }
 
-func (bm *BlockChainManager) GetblockPool() *BlockPool {
+func (bm *BlockchainManager) GetblockPool() *core.BlockPool {
 	return bm.blockPool
 }
 
-func (bm *BlockChainManager) VerifyBlock(blk *block.Block) bool {
-	if !bm.blockPool.Verify(blk) {
+func (bm *BlockchainManager) VerifyBlock(blk *block.Block) bool {
+	if !block_logic.VerifyHash(blk) {
+		logger.Warn("BlockchainManager: Block hash verification failed!")
 		return false
 	}
-	logger.Debug("BlockChainManager: blk is verified.")
+	//TODO: Verify double spending transactions in the same blk
 	if !(bm.blockchain.GetConsensus().Validate(blk)) {
-		logger.Warn("BlockChainManager: blk is invalid according to consensus!")
+		logger.Warn("BlockchainManager: blk is invalid according to consensus!")
 		return false
 	}
-	logger.Debug("BlockChainManager: blk is valid according to consensus.")
+	logger.Debug("BlockchainManager: blk is valid according to consensus.")
 	return true
 }
 
-func (bm *BlockChainManager) Push(blk *block.Block, pid peer.ID) {
+func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 	logger.WithFields(logger.Fields{
 		"from":   pid.String(),
 		"hash":   blk.GetHash().String(),
 		"height": blk.GetHeight(),
-	}).Info("BlockChainManager: received a new blk.")
+	}).Info("BlockchainManager: received a new blk.")
 
-	if bm.blockchain.GetState() != BlockchainReady {
-		logger.Info("BlockChainManager: Blockchain not ready, discard received blk")
+	if bm.blockchain.GetState() != blockchain.BlockchainReady {
+		logger.Info("BlockchainManager: Blockchain not ready, discard received blk")
 		return
 	}
 	if !bm.VerifyBlock(blk) {
@@ -145,14 +149,19 @@ func (bm *BlockChainManager) Push(blk *block.Block, pid peer.ID) {
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	if receiveBlockHeight >= ownBlockHeight &&
 		receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
-		bm.blockchain.GetState() == BlockchainReady {
+		bm.blockchain.GetState() == blockchain.BlockchainReady {
 		logger.Info("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
 		return
 	}
 
-	forkHead := bm.blockPool.CacheBlock(blk, bm.blockchain.GetMaxHeight())
-	forkHeadParentHash := forkHead.GetValue().(*block.Block).GetPrevHash()
+	bm.blockPool.Add(blk)
+	fork := bm.blockPool.GetFork(blk)
+	if fork == nil {
+		return
+	}
+	forkHead := fork[len(fork)-1]
+	forkHeadParentHash := forkHead.GetPrevHash()
 	if forkHeadParentHash == nil {
 		return
 	}
@@ -160,20 +169,20 @@ func (bm *BlockChainManager) Push(blk *block.Block, pid peer.ID) {
 	if parent == nil {
 		logger.WithFields(logger.Fields{
 			"parent_hash":   forkHeadParentHash,
-			"parent_height": forkHead.GetValue().(*block.Block).GetHeight() - 1,
+			"parent_height": forkHead.GetHeight() - 1,
 			"from":          pid,
-		}).Info("BlockChainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHead.GetValue().(*block.Block).GetPrevHash(), pid)
+		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
+		bm.RequestBlock(forkHead.GetPrevHash(), pid)
 		return
 	}
-	forkBlks := bm.blockPool.GenerateForkBlocks(forkHead, bm.blockchain.GetMaxHeight())
-	bm.blockchain.SetState(BlockchainSync)
-	_ = bm.MergeFork(forkBlks, forkHeadParentHash)
-	bm.blockPool.CleanCache(forkHead)
-	bm.blockchain.SetState(BlockchainReady)
+
+	bm.blockchain.SetState(blockchain.BlockchainSync)
+	_ = bm.MergeFork(fork, forkHeadParentHash)
+	bm.blockPool.RemoveFork(fork)
+	bm.blockchain.SetState(blockchain.BlockchainReady)
 }
 
-func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
+func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
 
 	//find parent block
 	if len(forkBlks) == 0 {
@@ -185,9 +194,9 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	}
 
 	//verify transactions in the fork
-	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.db, bm.blockchain, forkParentHash)
+	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
 	if err != nil {
-		logger.Error("BlockChainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
+		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
 	rollBackUtxo := utxo.DeepCopy()
@@ -198,7 +207,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.WithFields(logger.Fields{
 			"error": err,
 			"hash":  forkParentHash.String(),
-		}).Error("BlockChainManager: get fork parent block failed.")
+		}).Error("BlockchainManager: get fork parent block failed.")
 	}
 
 	firstCheck := true
@@ -207,15 +216,15 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   forkBlks[i].GetHash().String(),
-		}).Debug("BlockChainManager: is verifying a block in the fork.")
+		}).Debug("BlockchainManager: is verifying a block in the fork.")
 
 		if !block_logic.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
-			return ErrTransactionVerifyFailed
+			return blockchain_logic.ErrTransactionVerifyFailed
 		}
 
 		lib, ok := bm.Getblockchain().GetConsensus().CheckLibPolicy(forkBlks[i])
 		if !ok {
-			return ErrProducerNotEnough
+			return blockchain_logic.ErrProducerNotEnough
 		}
 
 		if firstCheck {
@@ -223,13 +232,13 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			bm.blockchain.Rollback(forkParentHash, rollBackUtxo, rollScState)
 		}
 
-		ctx := BlockContext{Block: forkBlks[i], Lib: lib, UtxoIndex: utxo, State: scState}
+		ctx := core.BlockContext{Block: forkBlks[i], Lib: lib, UtxoIndex: utxo, State: scState}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":  err,
 				"height": forkBlks[i].GetHeight(),
-			}).Error("BlockChainManager: add fork to tail failed.")
+			}).Error("BlockchainManager: add fork to tail failed.")
 		}
 		parentBlk = forkBlks[i]
 	}
@@ -238,25 +247,25 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 }
 
 //RequestBlock sends a requestBlock command to its peer with pid through network module
-func (bm *BlockChainManager) RequestBlock(hash hash.Hash, pid peer.ID) {
+func (bm *BlockchainManager) RequestBlock(hash hash.Hash, pid peer.ID) {
 	request := &corepb.RequestBlock{Hash: hash}
 
 	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
 }
 
 //RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
-func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvdCmdContext) {
+func (bm *BlockchainManager) RequestBlockHandler(command *network_model.DappRcvdCmdContext) {
 	request := &corepb.RequestBlock{}
 
 	if err := proto.Unmarshal(command.GetData(), request); err != nil {
 		logger.WithFields(logger.Fields{
 			"name": command.GetCommandName(),
-		}).Info("BlockChainManager: parse data failed.")
+		}).Info("BlockchainManager: parse data failed.")
 	}
 
 	block, err := bm.Getblockchain().GetBlockByHash(request.Hash)
 	if err != nil {
-		logger.WithError(err).Warn("BlockChainManager: failed to get the requested block.")
+		logger.WithError(err).Warn("BlockchainManager: failed to get the requested block.")
 		return
 	}
 
@@ -264,30 +273,30 @@ func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvd
 }
 
 //SendBlockToPeer unicasts a block to the peer with peer id "pid"
-func (bm *BlockChainManager) SendBlockToPeer(blk *block.Block, pid peer.ID) {
+func (bm *BlockchainManager) SendBlockToPeer(blk *block.Block, pid peer.ID) {
 
 	bm.SendBlock(blk, pid, network_model.Unicast)
 }
 
 //BroadcastBlock broadcasts a block to all peers
-func (bm *BlockChainManager) BroadcastBlock(blk *block.Block) {
+func (bm *BlockchainManager) BroadcastBlock(blk *block.Block) {
 	var broadcastPid peer.ID
 	bm.SendBlock(blk, broadcastPid, network_model.Broadcast)
 }
 
 //SendBlock sends a SendBlock command to its peer with pid by finding the block from its database
-func (bm *BlockChainManager) SendBlock(blk *block.Block, pid peer.ID, isBroadcast bool) {
+func (bm *BlockchainManager) SendBlock(blk *block.Block, pid peer.ID, isBroadcast bool) {
 
 	bm.netService.SendCommand(SendBlock, blk.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
 }
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
-func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmdContext) {
+func (bm *BlockchainManager) SendBlockHandler(command *network_model.DappRcvdCmdContext) {
 	pb := &blockpb.Block{}
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(command.GetData(), pb); err != nil {
-		logger.WithError(err).Warn("BlockChainManager: parse data failed.")
+		logger.WithError(err).Warn("BlockchainManager: parse data failed.")
 		return
 	}
 
@@ -303,9 +312,9 @@ func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash hash.Hash) (*UTXOIndex, *ScState, error) {
-	index := NewUTXOIndex(bc.GetUtxoCache())
-	scState := LoadScStateFromDatabase(db)
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *blockchain_logic.Blockchain, hash hash.Hash) (*core.UTXOIndex, *core.ScState, error) {
+	index := core.NewUTXOIndex(bc.GetUtxoCache())
+	scState := core.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
 
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
@@ -322,14 +331,14 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 		}
 
 		if len(block.GetPrevHash()) == 0 {
-			return nil, nil, ErrBlockDoesNotExist
+			return nil, nil, blockchain_logic.ErrBlockDoesNotExist
 		}
 
 		err = index.UndoTxsInBlock(block, bc, db)
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
-			}).Warn("BlockChainManager: failed to calculate previous state of UTXO index for the block")
+			}).Warn("BlockchainManager: failed to calculate previous state of UTXO index for the block")
 			return nil, nil, err
 		}
 
@@ -337,7 +346,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
-			}).Warn("BlockChainManager: failed to calculate previous state of scState for the block")
+			}).Warn("BlockchainManager: failed to calculate previous state of scState for the block")
 			return nil, nil, err
 		}
 	}
@@ -346,7 +355,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 }
 
 /* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
-func (bm *BlockChainManager) NumForks() (int64, int64) {
+func (bm *BlockchainManager) NumForks() (int64, int64) {
 	var numForks, maxHeight int64 = 0, 0
 
 	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.Tree) {

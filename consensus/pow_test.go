@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"github.com/dappley/go-dappley/network"
 	"math/big"
 	"testing"
@@ -38,9 +39,9 @@ func TestProofOfWork_Setup(t *testing.T) {
 	pow := NewProofOfWork()
 	bc := core.GenerateMockBlockchain(5)
 	cbAddr := "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 	node := network.NewNode(bc.GetDb(), nil)
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 	pow.Setup(node, cbAddr, bm)
 	assert.Equal(t, bc, pow.bm.Getblockchain())
 }

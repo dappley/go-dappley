@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"os"
 	"runtime"
 	"time"
@@ -22,13 +23,13 @@ import (
 
 type MetricsService struct {
 	node *network.Node
-	bm   *core.BlockChainManager
+	bm   *blockchain_manager.BlockchainManager
 	ds   *metrics.DataStore
 	*MetricsServiceConfig
 	RPCPort uint32
 }
 
-func NewMetricsService(node *network.Node, bm *core.BlockChainManager, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
+func NewMetricsService(node *network.Node, bm *blockchain_manager.BlockchainManager, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
 	return (&MetricsService{node: node, bm: bm, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
 }
 

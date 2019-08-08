@@ -8,7 +8,7 @@ import (
 )
 
 // EstimateGas returns estimated gas value of contract deploy and execution.
-func EstimateGas(bc *core.Blockchain, tx *core.Transaction) (uint64, error) {
+func EstimateGas(bc *blockchain_logic.Blockchain, tx *core.Transaction) (uint64, error) {
 	parentBlock, _ := bc.GetTailBlock()
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	scStorage := core.LoadScStateFromDatabase(bc.GetDb())

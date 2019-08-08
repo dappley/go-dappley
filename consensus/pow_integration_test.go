@@ -21,6 +21,8 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"os"
 	"testing"
 	"time"
@@ -66,7 +68,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -82,9 +84,9 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	bc.GetTxPool().Push(tx)
 
 	//start a miner
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 
@@ -133,14 +135,14 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, acc.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
@@ -185,7 +187,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -201,11 +203,11 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	bc.GetTxPool().Push(tx)
 
 	//start a producer
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
@@ -257,7 +259,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 
 	pow := NewProofOfWork()
 	cbAddr := account.NewAddress("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD")
-	bc := core.CreateBlockchain(
+	bc := blockchain_logic.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
 		pow,
@@ -266,11 +268,11 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		100000,
 	)
 	defer bc.GetDb().Close()
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
 	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
 
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 
 	pow.Setup(n, cbAddr.String(), bm)
 	pow.SetTargetBit(10)
@@ -322,7 +324,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := core.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -342,9 +344,9 @@ func TestPreventDoubleSpend(t *testing.T) {
 	bc.GetTxPool().Push(tx2)
 
 	//start a miner
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := core.NewBlockChainManager(bc, pool, n)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
 	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
 
 	pow.Start()
@@ -361,7 +363,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	assert.Equal(t, 2, len(block.GetTransactions()))
 }
 
-func GetNumberOfBlocks(t *testing.T, i *core.Blockchain) int {
+func GetNumberOfBlocks(t *testing.T, i *blockchain_logic.Blockchain) int {
 	//find how many blocks have been mined
 	numOfBlocksMined := 0
 	blk, err := i.Next()
@@ -378,7 +380,7 @@ func TestBlockProducer_InvalidTransactions(t *testing.T) {
 
 }
 
-func printBalances(bc *core.Blockchain, addrs []account.Address) {
+func printBalances(bc *blockchain_logic.Blockchain, addrs []account.Address) {
 	for _, addr := range addrs {
 		b, _ := getBalance(bc, addr.String())
 		logger.WithFields(logger.Fields{
@@ -389,7 +391,7 @@ func printBalances(bc *core.Blockchain, addrs []account.Address) {
 }
 
 //balance
-func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
+func getBalance(bc *blockchain_logic.Blockchain, addr string) (*common.Amount, error) {
 
 	balance := common.NewAmount(0)
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(addr))
@@ -403,7 +405,7 @@ func getBalance(bc *core.Blockchain, addr string) (*common.Amount, error) {
 	return balance, nil
 }
 
-func checkBalance(t *testing.T, bc *core.Blockchain, addrBals map[account.Address]*common.Amount) {
+func checkBalance(t *testing.T, bc *blockchain_logic.Blockchain, addrBals map[account.Address]*common.Amount) {
 	for addr, bal := range addrBals {
 		bc, err := getBalance(bc, addr.String())
 		assert.Nil(t, err)

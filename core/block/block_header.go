@@ -2,7 +2,7 @@ package block
 
 import (
 	"github.com/dappley/go-dappley/common/hash"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -27,7 +27,7 @@ func NewBlockHeader(hash hash.Hash, prevHash hash.Hash, nonce int64, timeStamp i
 }
 
 func (bh *BlockHeader) ToProto() proto.Message {
-	return &corepb.BlockHeader{
+	return &blockpb.BlockHeader{
 		Hash:         bh.hash,
 		PreviousHash: bh.prevHash,
 		Nonce:        bh.nonce,
@@ -42,11 +42,11 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	if pb == nil {
 		return
 	}
-	bh.hash = pb.(*corepb.BlockHeader).GetHash()
-	bh.prevHash = pb.(*corepb.BlockHeader).GetPreviousHash()
-	bh.nonce = pb.(*corepb.BlockHeader).GetNonce()
-	bh.timestamp = pb.(*corepb.BlockHeader).GetTimestamp()
-	bh.signature = pb.(*corepb.BlockHeader).GetSignature()
-	bh.height = pb.(*corepb.BlockHeader).GetHeight()
-	bh.producer = pb.(*corepb.BlockHeader).GetProducer()
+	bh.hash = pb.(*blockpb.BlockHeader).GetHash()
+	bh.prevHash = pb.(*blockpb.BlockHeader).GetPreviousHash()
+	bh.nonce = pb.(*blockpb.BlockHeader).GetNonce()
+	bh.timestamp = pb.(*blockpb.BlockHeader).GetTimestamp()
+	bh.signature = pb.(*blockpb.BlockHeader).GetSignature()
+	bh.height = pb.(*blockpb.BlockHeader).GetHeight()
+	bh.producer = pb.(*blockpb.BlockHeader).GetProducer()
 }

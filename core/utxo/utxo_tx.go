@@ -23,7 +23,7 @@ import (
 	"strconv"
 
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/raviqqe/hamt"
 	logger "github.com/sirupsen/logrus"
@@ -66,7 +66,7 @@ func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
 func DeserializeUTXOTx(d []byte) UTXOTx {
 	utxoTx := NewUTXOTx()
 
-	utxoList := &corepb.UtxoList{}
+	utxoList := &utxopb.UtxoList{}
 	err := proto.Unmarshal(d, utxoList)
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: parse UtxoTx failed.")
@@ -83,10 +83,10 @@ func DeserializeUTXOTx(d []byte) UTXOTx {
 }
 
 func (utxoTx UTXOTx) Serialize() []byte {
-	utxoList := &corepb.UtxoList{}
+	utxoList := &utxopb.UtxoList{}
 
 	for _, utxo := range utxoTx.Indices {
-		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*corepb.Utxo))
+		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*utxopb.Utxo))
 	}
 
 	bytes, err := proto.Marshal(utxoList)

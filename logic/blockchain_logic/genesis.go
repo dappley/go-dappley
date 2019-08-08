@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
+package blockchain_logic
 
 import (
 	"github.com/dappley/go-dappley/common"
@@ -27,8 +27,7 @@ import (
 
 const genesisCoinbaseData = "Hello world"
 
-func NewGenesisBlock(address account.Address) *block.Block {
-	//return consensus.ProduceBlock(Address, genesisCoinbaseData,[]byte{})
+func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Block {
 
 	txin := transaction_base.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
 	txout := transaction_base.NewTXOutput(subsidy, address)

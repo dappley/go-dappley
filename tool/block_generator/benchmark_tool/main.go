@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"io/ioutil"
 	"os"
 	"time"
@@ -169,7 +170,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	return elapsed, blkHeight, numOfTx
 }
 
-func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
+func prepareNode(db storage.Storage) (*blockchain_manager.BlockchainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
@@ -179,7 +180,7 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 	node := network.NewNode(db, nil)
 	txPoolLimit := uint32(2000)
 	txPool := core.NewTransactionPool(node, txPoolLimit)
-	bc, err := core.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
+	bc, err := blockchain_logic.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 		if err != nil {
@@ -187,7 +188,7 @@ func prepareNode(db storage.Storage) (*core.BlockChainManager, *network.Node) {
 		}
 	}
 	bc.SetState(core.BlockchainInit)
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(0), node)
+	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 

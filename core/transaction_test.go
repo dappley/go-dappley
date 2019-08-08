@@ -181,7 +181,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	_, err5 = VerifyTransaction(&UTXOIndex{}, &t5, 10)
 	assert.NotNil(t, err5)
 
-	// test coinbase transaction with incorrect subsidy
+	// test coinbase transaction with incorrect Subsidy
 	bh2 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh2, 5)
 	txin2 := TXInput{nil, -1, bh2, []byte(nil)}

@@ -16,16 +16,19 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package blockchain_logic
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
+
+	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/block_logic"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction_base"
@@ -50,63 +53,43 @@ var (
 	DefaultGasPrice uint64 = 1
 )
 
-type BlockchainState int
-
-const (
-	BlockchainInit BlockchainState = iota
-	BlockchainDownloading
-	BlockchainSync
-	BlockchainReady
-)
-
-type BlockContext struct {
-	Block     *block.Block
-	Lib       *block.Block
-	UtxoIndex *UTXOIndex
-	State     *ScState
-}
-
 type Blockchain struct {
-	tailBlockHash []byte
-	libHash       []byte
-	db            storage.Storage
-	utxoCache     *utxo.UTXOCache
-	consensus     Consensus
-	txPool        *TransactionPool
-	scManager     ScEngineManager
-	state         BlockchainState
-	eventManager  *EventManager
-	blkSizeLimit  int
-	mutex         *sync.Mutex
+	bc           *blockchain.Blockchain
+	db           storage.Storage
+	utxoCache    *core.UTXOCache
+	consensus    core.Consensus
+	txPool       *core.TransactionPool
+	scManager    core.ScEngineManager
+	eventManager *core.EventManager
+	blkSizeLimit int
+	mutex        *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
-	genesis := NewGenesisBlock(address)
+func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
+	genesis := NewGenesisBlock(address, core.Subsidy)
 	bc := &Blockchain{
-		genesis.GetHash(),
-		genesis.GetHash(),
+		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
 		db,
 		utxo.NewUTXOCache(db),
 		consensus,
 		txPool,
 		scManager,
-		BlockchainReady,
-		NewEventManager(),
+		core.NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
-	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
-	scState := NewScState()
-	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
+	scState := core.NewScState()
+	err := bc.AddBlockContextToTail(&core.BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
 	}
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -118,15 +101,13 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionP
 	}
 
 	bc := &Blockchain{
-		tip,
-		lib,
+		blockchain.NewBlockchain(tip, lib),
 		db,
 		utxo.NewUTXOCache(db),
 		consensus,
 		txPool,
 		scManager,
-		BlockchainReady,
-		NewEventManager(),
+		core.NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
@@ -142,26 +123,26 @@ func (bc *Blockchain) GetUtxoCache() *utxo.UTXOCache {
 }
 
 func (bc *Blockchain) GetTailBlockHash() hash.Hash {
-	return bc.tailBlockHash
+	return bc.bc.GetTailBlockHash()
 }
 
 func (bc *Blockchain) GetLIBHash() hash.Hash {
-	return bc.libHash
+	return bc.bc.GetLIBHash()
 }
 
-func (bc *Blockchain) GetSCManager() ScEngineManager {
+func (bc *Blockchain) GetSCManager() core.ScEngineManager {
 	return bc.scManager
 }
 
-func (bc *Blockchain) GetConsensus() Consensus {
+func (bc *Blockchain) GetConsensus() core.Consensus {
 	return bc.consensus
 }
 
-func (bc *Blockchain) GetTxPool() *TransactionPool {
+func (bc *Blockchain) GetTxPool() *core.TransactionPool {
 	return bc.txPool
 }
 
-func (bc *Blockchain) GetEventManager() *EventManager {
+func (bc *Blockchain) GetEventManager() *core.EventManager {
 	return bc.eventManager
 }
 
@@ -217,22 +198,22 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 }
 
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
-	bc.tailBlockHash = tailBlockHash
+	bc.SetTailBlockHash(tailBlockHash)
 }
 
-func (bc *Blockchain) SetConsensus(consensus Consensus) {
+func (bc *Blockchain) SetConsensus(consensus core.Consensus) {
 	bc.consensus = consensus
 }
 
-func (bc *Blockchain) SetState(state BlockchainState) {
-	bc.state = state
+func (bc *Blockchain) SetState(state blockchain.BlockchainState) {
+	bc.bc.SetState(state)
 }
 
-func (bc *Blockchain) GetState() BlockchainState {
-	return bc.state
+func (bc *Blockchain) GetState() blockchain.BlockchainState {
+	return bc.bc.GetState()
 }
 
-func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
+func (bc *Blockchain) AddBlockContextToTail(ctx *core.BlockContext) error {
 	// Atomically set tail block hash and update UTXO index in db
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
@@ -320,7 +301,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	return nil
 }
 
-func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Block) error {
+func (bc *Blockchain) runScheduleEvents(ctx *core.BlockContext, parentBlk *block.Block) error {
 	if parentBlk == nil {
 		//if the current block is genesis block. do not run smart contract
 		return nil
@@ -337,67 +318,39 @@ func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Bloc
 
 func (bc *Blockchain) FindTXOutput(in transaction_base.TXInput) (transaction_base.TXOutput, error) {
 	db := bc.db
-	vout, err := GetTxOutput(in, db)
+	vout, err := core.GetTxOutput(in, db)
 	if err != nil {
 		return transaction_base.TXOutput{}, err
 	}
 	return vout, err
 }
 
-func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte) (Transaction, error) {
-	bci := bc.Iterator()
-
-	for {
-		block, err := bci.NextFromIndex(blockId)
-		if err != nil {
-			return Transaction{}, err
-		}
-
-		for _, tx := range block.GetTransactions() {
-			if bytes.Compare(tx.ID, txID) == 0 {
-				return *tx, nil
-			}
-		}
-
-		if len(block.GetPrevHash()) == 0 {
-			break
-		}
-	}
-
-	return Transaction{}, ErrTransactionNotFound
-}
-
 func (bc *Blockchain) Iterator() *Blockchain {
-	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
+	return &Blockchain{
+		blockchain.NewBlockchain(bc.GetTailBlockHash(), bc.GetLIBHash()),
+		bc.db,
+		bc.utxoCache,
+		bc.consensus,
+		nil,
+		nil,
+		nil,
+		bc.blkSizeLimit,
+		bc.mutex,
+	}
 }
 
 func (bc *Blockchain) Next() (*block.Block, error) {
 	var blk *block.Block
 
-	encodedBlock, err := bc.db.Get(bc.tailBlockHash)
+	encodedBlock, err := bc.db.Get(bc.GetTailBlockHash())
 	if err != nil {
 		return nil, err
 	}
 
 	blk = block.Deserialize(encodedBlock)
 
-	bc.tailBlockHash = blk.GetPrevHash()
+	bc.bc.SetTailBlockHash(blk.GetPrevHash())
 
-	return blk, nil
-}
-
-func (bc *Blockchain) NextFromIndex(indexHash []byte) (*block.Block, error) {
-	var blk *block.Block
-
-	encodedBlock, err := bc.db.Get(indexHash)
-	if err != nil {
-		return nil, err
-	}
-
-	blk = block.Deserialize(encodedBlock)
-
-	bc.tailBlockHash = blk.GetPrevHash()
-	println(bc.tailBlockHash)
 	return blk, nil
 }
 
@@ -442,7 +395,7 @@ func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 	}
 	// add transaction journals
 	for _, tx := range blk.GetTransactions() {
-		err = PutTxJournal(*tx, bc.db)
+		err = core.PutTxJournal(*tx, bc.db)
 		if err != nil {
 			logger.WithError(err).Warn("Blockchain: failed to add blk transaction journals into database!")
 			return err
@@ -461,7 +414,7 @@ func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *UTXOIndex, scState *ScState) bool {
+func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *core.UTXOIndex, scState *core.ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -517,7 +470,7 @@ func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	if err != nil {
 		return err
 	}
-	bc.tailBlockHash = hash
+	bc.bc.SetTailBlockHash(hash)
 	return nil
 }
 
@@ -532,7 +485,7 @@ func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
 	if err != nil {
 		return err
 	}
-	bc.libHash = hash
+	bc.bc.SetLIBHash(hash)
 	return nil
 }
 

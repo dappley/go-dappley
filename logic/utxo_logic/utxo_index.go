@@ -24,6 +24,9 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+
+	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -53,6 +56,10 @@ func NewUTXOIndex(cache *utxo.UTXOCache) *UTXOIndex {
 		cache: cache,
 		mutex: &sync.RWMutex{},
 	}
+}
+
+func (utxos *UTXOIndex) SetIndex(index map[string]*UTXOTx) {
+	utxos.index = index
 }
 
 func (utxos *UTXOIndex) Save() error {
@@ -169,7 +176,7 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*Transaction) {
 
 // UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
 // Note that the operation does not save the index to db.
-func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, bc *Blockchain, db storage.Storage) error {
+func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, bc *blockchain_logic.Blockchain, db storage.Storage) error {
 
 	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
 		tx := blk.GetTransactions()[i]
@@ -207,8 +214,8 @@ func getTXOutputSpent(in transaction_base.TXInput, bc *Blockchain) (transaction_
 	return tx, in.Vout, nil
 }
 
-// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction_base.
-func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
+// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
+func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *blockchain_logic.Blockchain) error {
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, bc)
 		if err != nil {

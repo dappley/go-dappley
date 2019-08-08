@@ -21,6 +21,8 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"testing"
 	"time"
 
@@ -36,14 +38,14 @@ func TestDpos_Start(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := account.NewAddress("dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8")
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := core.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
-	pool := core.NewBlockPool(0)
+	bc := blockchain_logic.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
+	pool := core.NewBlockPool()
 
 	node := network.NewNode(bc.GetDb(), nil)
 	node.Start(22100, "")
 	defer node.Stop()
 
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 	dpos.Setup(node, cbAddr.String(), bm)
 	dpos.SetKey(keystr)
@@ -89,14 +91,14 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
-		pool := core.NewBlockPool(0)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
+		pool := core.NewBlockPool()
 
 		node := network.NewNode(bc.GetDb(), nil)
 		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := core.NewBlockChainManager(bc, pool, node)
+		bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])
@@ -161,14 +163,14 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	for i, miner := range miners {
 		dpos := NewDPOS()
 		dpos.SetDynasty(dynasty)
-		bc := core.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
-		pool := core.NewBlockPool(0)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
+		pool := core.NewBlockPool()
 
 		node := network.NewNode(bc.GetDb(), nil)
 		node.Start(22200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := core.NewBlockChainManager(bc, pool, node)
+		bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 		dpos.Setup(node, miner, bm)
 		dpos.SetKey(keystrs[i])

@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"strings"
 	"testing"
 	"time"
@@ -51,7 +52,7 @@ type RpcTestContext struct {
 	store      storage.Storage
 	account    *account.Account
 	consensus  core.Consensus
-	bm         *core.BlockChainManager
+	bm         *blockchain_manager.BlockchainManager
 	node       *network.Node
 	rpcServer  *Server
 	serverPort uint32
@@ -112,9 +113,9 @@ func TestRpcSend(t *testing.T) {
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
@@ -200,9 +201,9 @@ func TestRpcSendContract(t *testing.T) {
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
@@ -1096,9 +1097,9 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	}
 
 	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 
-	context.bm = core.NewBlockChainManager(bc, pool, context.node)
+	context.bm = blockchain_manager.NewBlockchainManager(bc, pool, context.node)
 
 	// Start a grpc server
 	context.rpcServer = NewGrpcServer(context.node, context.bm, "temp")
@@ -1152,7 +1153,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	bm := core.NewBlockChainManager(bc, core.NewBlockPool(100), node)
+	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
@@ -1247,10 +1248,10 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	pool := core.NewBlockPool(0)
+	pool := core.NewBlockPool()
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
-	bm := core.NewBlockChainManager(bc, pool, node)
+	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
 
 	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
