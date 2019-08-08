@@ -17,6 +17,14 @@ import (
 
 var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
 
+func GetBlockByHash(hash hash.Hash, db Storage) (*block.Block, error) {
+	rawBytes, err := db.Get(hash)
+	if err != nil {
+		return nil, core.ErrBlockDoesNotExist
+	}
+	return block.Deserialize(rawBytes), nil
+}
+
 func HashTransactions(b *block.Block) []byte {
 	var txHashes [][]byte
 	var txHash [32]byte
