@@ -142,12 +142,12 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	}
 
 	for i := uint64(0); i < getHeaderCount; i++ {
-		block, err := rpcService.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
+		blk, err := rpcService.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
 		if err != nil {
 			break
 		}
 
-		response.BlockHeaders = append(response.BlockHeaders, block.GetHeader().ToProto().(*blockpb.BlockHeader))
+		response.BlockHeaders = append(response.BlockHeaders, blk.GetHeader().ToProto().(*blockpb.BlockHeader))
 	}
 
 	return &response, nil
@@ -419,8 +419,8 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
-	gasCount, error := vm.EstimateGas(rpcService.GetBlockchain(), &tx)
-	return &rpcpb.EstimateGasResponse{GasCount: byteutils.FromUint64(gasCount)}, error
+	gasCount, err := vm.EstimateGas(rpcService.GetBlockchain(), &tx)
+	return &rpcpb.EstimateGasResponse{GasCount: byteutils.FromUint64(gasCount)}, err
 }
 
 // RpcGasPrice returns current gas price.
