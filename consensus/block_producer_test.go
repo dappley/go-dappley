@@ -19,10 +19,11 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/block"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,6 +54,6 @@ func TestBlockProducer_Produced(t *testing.T) {
 	bp := NewBlockProducer()
 	bp.Setup(nil, "key")
 	require.False(t, bp.Produced(nil))
-	require.False(t, bp.Produced(core.NewBlock(nil, nil, "")))
-	require.True(t, bp.Produced(core.NewBlock(nil, nil, "key")))
+	require.False(t, bp.Produced(block.NewBlock(nil, nil, "")))
+	require.True(t, bp.Produced(block.NewBlock(nil, nil, "key")))
 }

@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/dappley/go-dappley/core/block"
 	"os"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"
 	"github.com/dappley/go-dappley/util"
@@ -37,7 +38,7 @@ func GetBlockHandle() {
 
 	flagSet := flag.NewFlagSet("getBlock", flag.ExitOnError)
 	flagSet.StringVar(&dbPath, "d", "", "database path")
-	flagSet.StringVar(&blockHash, "hash", "", "block hash")
+	flagSet.StringVar(&blockHash, "hash", "", "blk hash")
 	flagSet.Parse(os.Args[2:])
 
 	fmt.Printf("path: %v\n", dbPath)
@@ -47,7 +48,7 @@ func GetBlockHandle() {
 
 	blockHashBytes, err := hex.DecodeString(blockHash)
 	if err != nil {
-		panic("Decode block hash failed " + blockHash)
+		panic("Decode blk hash failed " + blockHash)
 	}
 
 	rawBytes, err := db.Get(blockHashBytes)
@@ -55,12 +56,12 @@ func GetBlockHandle() {
 		panic("Block hash not found in database " + blockHash)
 	}
 
-	block := core.Deserialize(rawBytes)
-	if block == nil {
+	blk := block.Deserialize(rawBytes)
+	if blk == nil {
 		panic("Block deserialize failed with hash " + blockHash)
 	}
 
-	dumpBlock(block)
+	dumpBlock(blk)
 }
 
 func GetBlockByHeightHandle() {
@@ -69,7 +70,7 @@ func GetBlockByHeightHandle() {
 
 	flagSet := flag.NewFlagSet("getBlockByHeight", flag.ExitOnError)
 	flagSet.StringVar(&dbPath, "d", "", "database path")
-	flagSet.Uint64Var(&blockHeight, "height", 0, "block height")
+	flagSet.Uint64Var(&blockHeight, "height", 0, "blk height")
 	flagSet.Parse(os.Args[2:])
 
 	fmt.Printf("path: %v\n", dbPath)
@@ -87,12 +88,12 @@ func GetBlockByHeightHandle() {
 		panic("Block hash not found in database " + hex.EncodeToString(hash))
 	}
 
-	block := core.Deserialize(rawBytes)
-	if block == nil {
+	blk := block.Deserialize(rawBytes)
+	if blk == nil {
 		panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 	}
 
-	dumpBlock(block)
+	dumpBlock(blk)
 }
 
 func GetTransactionHandle() {
@@ -124,14 +125,14 @@ func GetTransactionHandle() {
 			panic(fmt.Sprintf("Block hash %v not found in database ", hex.EncodeToString(hash)))
 		}
 
-		block := core.Deserialize(rawBytes)
-		if block == nil {
+		blk := block.Deserialize(rawBytes)
+		if blk == nil {
 			panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 		}
 
-		for _, tx := range block.GetTransactions() {
+		for _, tx := range blk.GetTransactions() {
 			if bytes.Compare(txIdBytes, tx.ID) == 0 {
-				dumpBlock(block)
+				dumpBlock(blk)
 				return
 			}
 		}
@@ -171,15 +172,15 @@ func GetCostTransactionHandle() {
 			panic(fmt.Sprintf("Block hash %v not found in database ", hex.EncodeToString(hash)))
 		}
 
-		block := core.Deserialize(rawBytes)
-		if block == nil {
+		blk := block.Deserialize(rawBytes)
+		if blk == nil {
 			panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 		}
 
-		for _, tx := range block.GetTransactions() {
+		for _, tx := range blk.GetTransactions() {
 			for _, vin := range tx.Vin {
 				if bytes.Compare(txIdBytes, vin.Txid) == 0 && vOutIndex == vin.Vout {
-					dumpBlock(block)
+					dumpBlock(blk)
 					return
 				}
 			}
@@ -213,7 +214,7 @@ func GetUtxoHandle() {
 	dumpUtxos(utxoTx)
 }
 
-func block2PrettyPb(block *core.Block) proto.Message {
+func block2PrettyPb(block *block.Block) proto.Message {
 	blockHeaderPb := &db_inspect_pb.BlockHeader{
 		Hash:         block.GetHash().String(),
 		PreviousHash: block.GetPrevHash().String(),
@@ -265,7 +266,7 @@ func block2PrettyPb(block *core.Block) proto.Message {
 	}
 }
 
-func dumpBlock(block *core.Block) {
+func dumpBlock(block *block.Block) {
 	fmt.Print(proto.MarshalTextString(block2PrettyPb(block)))
 }
 

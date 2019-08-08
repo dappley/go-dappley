@@ -1,12 +1,13 @@
 package core
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestTransactions_FromProto(t *testing.T) {

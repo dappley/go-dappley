@@ -19,6 +19,8 @@
 package logic
 
 import (
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"testing"
 	"time"
 
@@ -531,8 +533,8 @@ func TestForkSegmentHandling(t *testing.T) {
 	defer nodes[0].Stop()
 	defer nodes[1].Stop()
 
-	blk1 := &core.Block{}
-	blk2 := &core.Block{}
+	blk1 := &block.Block{}
+	blk2 := &block.Block{}
 
 	// Ensure node[1] mined some blocks
 	pows[1].Start()
@@ -776,8 +778,8 @@ func TestDoubleMint(t *testing.T) {
 	var sendNode *network.Node
 	var recvNode *network.Node
 	var recvNodeBc *core.Blockchain
-	var blks []*core.Block
-	var parent *core.Block
+	var blks []*block.Block
+	var parent *block.Block
 	var dposArray []*consensus.DPOS
 	var sendBm *core.BlockChainManager
 
@@ -836,10 +838,10 @@ func TestDoubleMint(t *testing.T) {
 	assert.False(t, dposArray[1].Validate(blks[1]))
 }
 
-func createValidBlock(tx []*core.Transaction, validProducerKey, validProducerAddr string, parent *core.Block) *core.Block {
-	blk := core.NewBlock(tx, parent, validProducerAddr)
-	blk.SetHash(blk.CalculateHashWithNonce(0))
-	blk.SignBlock(validProducerKey, blk.CalculateHashWithNonce(0))
+func createValidBlock(tx []*core.Transaction, validProducerKey, validProducerAddr string, parent *block.Block) *block.Block {
+	blk := block.NewBlock(tx, parent, validProducerAddr)
+	blk.SetHash(block_logic.CalculateHashWithNonce(blk))
+	block_logic.SignBlock(blk, validProducerKey)
 	return blk
 }
 

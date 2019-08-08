@@ -19,6 +19,8 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -40,8 +42,8 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		tailBlk, _ := bc.GetTailBlock()
 		cbtx := NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := NewBlock([]*Transaction{&cbtx}, tailBlk, coinbaseAddr.String())
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, coinbaseAddr.String())
+		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 
@@ -68,14 +70,14 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	//add block 4 with tx0
 	tailBlk, _ := bc.GetTailBlock()
 	cbtx := NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
-	b := NewBlock([]*Transaction{&cbtx, &txs[0]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	b.SetHash(b.CalculateHash())
+	b := block.NewBlock([]*Transaction{&cbtx, &txs[0]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	b.SetHash(block_logic.CalculateHash(b))
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 
 	//add block 5 with tx1
 	tailBlk, _ = bc.GetTailBlock()
-	b = NewBlock([]*Transaction{&cbtx, &txs[1]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	b.SetHash(b.CalculateHash())
+	b = block.NewBlock([]*Transaction{&cbtx, &txs[1]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	b.SetHash(block_logic.CalculateHash(b))
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 
 	//find the hash at height 3

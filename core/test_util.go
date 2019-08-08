@@ -19,6 +19,8 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -29,27 +31,21 @@ import (
 	"github.com/dappley/go-dappley/util"
 )
 
-func GenerateMockBlock() *Block {
-	bh1 := &BlockHeader{
+func GenerateMockBlock() *block.Block {
+	t1 := MockTransaction()
+	t2 := MockTransaction()
+
+	return block.NewBlockWithRawInfo(
 		[]byte("hash"),
 		[]byte("prevhash"),
 		1,
 		time.Now().Unix(),
-		nil,
 		0,
-		"",
-	}
-
-	t1 := MockTransaction()
-	t2 := MockTransaction()
-
-	return &Block{
-		header:       bh1,
-		transactions: []*Transaction{t1, t2},
-	}
+		[]*Transaction{t1, t2},
+	)
 }
 
-func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Block {
+func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *block.Block) *block.Block {
 	var prevHash []byte
 	var height uint64
 	height = 0
@@ -61,20 +57,17 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 	if txs == nil {
 		txs = []*Transaction{}
 	}
-	block := &Block{
-		header: &BlockHeader{
-			hash:      []byte{},
-			prevHash:  prevHash,
-			nonce:     0,
-			timestamp: t,
-			sign:      nil,
-			height:    height,
-		},
-		transactions: txs,
-	}
-	hash := block.CalculateHashWithNonce(block.GetNonce())
-	block.SetHash(hash)
-	return block
+	blk := block.NewBlockWithRawInfo(
+		[]byte{},
+		prevHash,
+		0,
+		t,
+		height,
+		txs)
+
+	hash := block_logic.CalculateHashWithNonce(blk)
+	blk.SetHash(hash)
+	return blk
 }
 
 func GenerateMockBlockchain(size int) *Blockchain {
@@ -86,14 +79,14 @@ func GenerateMockBlockchain(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
 }
 
-func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
+func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
 	state := LoadScStateFromDatabase(bc.GetDb())
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
@@ -101,10 +94,10 @@ func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
 	return &ctx
 }
 
-func GenerateBlockWithCbtx(addr account.Address, lastblock *Block) *Block {
+func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.Block {
 	//create a new block chain
 	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
-	b := NewBlock([]*Transaction{&cbtx}, lastblock, "")
+	b := block.NewBlock([]*Transaction{&cbtx}, lastblock, "")
 	return b
 }
 func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
@@ -116,8 +109,8 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
 		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
@@ -179,5 +172,86 @@ func MockTxOutputs() []transaction_base.TXOutput {
 	return []transaction_base.TXOutput{
 		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
+	}
+}
+
+func GenerateUtxoMockBlockWithoutInputs() *block.Block {
+
+	t1 := MockUtxoTransactionWithoutInputs()
+	return block.NewBlockWithRawInfo(
+		[]byte("hash"),
+		nil,
+		1,
+		time.Now().Unix(),
+		0,
+		[]*Transaction{t1},
+	)
+}
+
+func GenerateUtxoMockBlockWithInputs() *block.Block {
+
+	t1 := MockUtxoTransactionWithInputs()
+	return block.NewBlockWithRawInfo(
+		[]byte("hash1"),
+		[]byte("hash"),
+		1,
+		time.Now().Unix(),
+		1,
+		[]*Transaction{t1},
+	)
+
+}
+
+func MockUtxoTransactionWithoutInputs() *Transaction {
+	return &Transaction{
+		ID:   []byte("tx1"),
+		Vin:  []TXInput{},
+		Vout: MockUtxoOutputsWithoutInputs(),
+		Tip:  common.NewAmount(5),
+	}
+}
+
+func MockUtxoTransactionWithInputs() *Transaction {
+	return &Transaction{
+		ID:   []byte("tx2"),
+		Vin:  MockUtxoInputs(),
+		Vout: MockUtxoOutputsWithInputs(),
+		Tip:  common.NewAmount(5),
+	}
+}
+
+// Padding Address to 32 Byte
+var address1Bytes = []byte("address1000000000000000000000000")
+var address2Bytes = []byte("address2000000000000000000000000")
+var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
+var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
+
+func MockUtxoInputs() []TXInput {
+	return []TXInput{
+		{
+			[]byte("tx1"),
+			0,
+			util.GenerateRandomAoB(2),
+			address1Bytes},
+		{
+			[]byte("tx1"),
+			1,
+			util.GenerateRandomAoB(2),
+			address1Bytes},
+	}
+}
+
+func MockUtxoOutputsWithoutInputs() []TXOutput {
+	return []TXOutput{
+		{common.NewAmount(5), address1Hash, ""},
+		{common.NewAmount(7), address1Hash, ""},
+	}
+}
+
+func MockUtxoOutputsWithInputs() []TXOutput {
+	return []TXOutput{
+		{common.NewAmount(4), address1Hash, ""},
+		{common.NewAmount(5), address2Hash, ""},
+		{common.NewAmount(3), address2Hash, ""},
 	}
 }

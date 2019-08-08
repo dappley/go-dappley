@@ -20,6 +20,7 @@ package consensus
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/block"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -105,11 +106,11 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
-	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
+	ctx := core.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 
-func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBlk *core.Block, deadlineInMs int64) ([]*core.Transaction, *core.ScState) {
+func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*core.Transaction, *core.ScState) {
 	var validTxs []*core.Transaction
 	totalSize := 0
 
@@ -189,7 +190,7 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 
 //executeSmartContract executes all smart contracts
 func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
-	txs []*core.Transaction, currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
+	txs []*core.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*core.Transaction, *core.ScState) {
 	//start a new smart contract engine
 
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
@@ -251,7 +252,7 @@ func isExceedingDeadline(deadlineInMs int64) bool {
 	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
 
-func (bp *BlockProducer) Produced(blk *core.Block) bool {
+func (bp *BlockProducer) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return bp.beneficiary == blk.GetProducer()
 	}

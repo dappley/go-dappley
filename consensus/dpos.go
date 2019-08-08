@@ -20,11 +20,13 @@ package consensus
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"strings"
 	"time"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
@@ -40,7 +42,7 @@ const NanoSecsInMilliSec = 1000000
 type DPOS struct {
 	bp          *BlockProducer
 	producerKey string
-	newBlockCh  chan *core.Block
+	newBlockCh  chan *block.Block
 	node        core.NetService
 	bm          *core.BlockChainManager
 	stopCh      chan bool
@@ -52,7 +54,7 @@ type DPOS struct {
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
 		bp:         NewBlockProducer(),
-		newBlockCh: make(chan *core.Block, 1),
+		newBlockCh: make(chan *block.Block, 1),
 		node:       nil,
 		stopCh:     make(chan bool, 1),
 		stopLibCh:  make(chan bool, 1),
@@ -70,7 +72,7 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 	return dpos.slot
 }
 
-func (dpos *DPOS) AddBlockToSlot(block *core.Block) {
+func (dpos *DPOS) AddBlockToSlot(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
@@ -107,7 +109,7 @@ func (dpos *DPOS) GetProducerAddress() string {
 }
 
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
-func (dpos *DPOS) Validate(block *core.Block) bool {
+func (dpos *DPOS) Validate(block *block.Block) bool {
 	producerIsValid := dpos.verifyProducer(block)
 	if !producerIsValid {
 		return false
@@ -175,7 +177,7 @@ func (dpos *DPOS) Stop() {
 	dpos.stopCh <- true
 }
 
-func (dpos *DPOS) Produced(blk *core.Block) bool {
+func (dpos *DPOS) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return dpos.bp.Produced(blk)
 	}
@@ -183,9 +185,9 @@ func (dpos *DPOS) Produced(blk *core.Block) bool {
 }
 
 func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
-	hash := ctx.Block.CalculateHash()
+	hash := block_logic.CalculateHash(ctx.Block)
 	ctx.Block.SetHash(hash)
-	ok := ctx.Block.SignBlock(dpos.producerKey, hash)
+	ok := block_logic.SignBlock(ctx.Block, dpos.producerKey)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}
@@ -195,17 +197,17 @@ func (dpos *DPOS) isForking() bool {
 	return false
 }
 
-func (dpos *DPOS) isDoubleMint(block *core.Block) bool {
-	existBlock, exist := dpos.slot.Get(int(block.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
+func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
+	existBlock, exist := dpos.slot.Get(int(blk.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
 	if !exist {
 		return false
 	}
 
-	return !core.IsHashEqual(existBlock.(*core.Block).GetHash(), block.GetHash())
+	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
 // verifyProducer verifies a given block is produced by the valid producer by verifying the signature of the block
-func (dpos *DPOS) verifyProducer(block *core.Block) bool {
+func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 	if block == nil {
 		logger.Warn("DPoS: block is empty!")
 		return false
@@ -248,7 +250,7 @@ func (dpos *DPOS) verifyProducer(block *core.Block) bool {
 }
 
 // beneficiaryIsProducer is a requirement that ensures the reward is paid to the producer at the time slot
-func (dpos *DPOS) beneficiaryIsProducer(block *core.Block) bool {
+func (dpos *DPOS) beneficiaryIsProducer(block *block.Block) bool {
 	if block == nil {
 		logger.Debug("DPoS: block is empty.")
 		return false
@@ -281,7 +283,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 		"height":  ctx.Block.GetHeight(),
 		"hash":    ctx.Block.GetHash().String(),
 	}).Info("DPoS: produced a new block.")
-	if !ctx.Block.VerifyHash() {
+	if !block_logic.VerifyHash(ctx.Block) {
 		logger.Warn("DPoS: hash of the new block is invalid.")
 		return
 	}
@@ -304,7 +306,7 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 	dpos.bm.BroadcastBlock(ctx.Block)
 }
 
-func (dpos *DPOS) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+func (dpos *DPOS) CheckLibPolicy(b *block.Block) (*block.Block, bool) {
 	//Do not check genesis block
 	if b.GetHeight() == 0 {
 		return b, true

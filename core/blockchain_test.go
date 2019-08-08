@@ -21,6 +21,9 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"os"
 	"sync"
 	"testing"
@@ -62,7 +65,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128), nil, 1000000)
 	blk := GenerateMockBlock()
-	blk.header.height = 1
+	blk.SetHeight(1)
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
 }
 
@@ -75,7 +78,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128), nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
-	blk.header.height = 1
+	blk.SetHeight(1)
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	assert.False(t, bc.IsHigherThanBlockchain(blk))
@@ -127,7 +130,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
+	bc := &Blockchain{hash.Hash{}, hash.Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -153,23 +156,23 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Expect no error when adding genesis block
 	assert.Nil(t, err)
 	// Expect that blockchain tail is genesis block
-	assert.Equal(t, genesis.GetHash(), Hash(bc.tailBlockHash))
+	assert.Equal(t, genesis.GetHash(), hash.Hash(bc.tailBlockHash))
 
 	// Simulate a failure when flushing new block to storage
 	simulatedFailure := errors.New("simulated storage failure")
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := NewBlock([]*Transaction{}, genesis, "")
+	blk := block.NewBlock([]*Transaction{}, genesis, "")
 	blk.SetHash([]byte("hash1"))
 
-	blk.header.height = 1
+	blk.SetHeight(1)
 	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil, err)
 	// Expect that the block added is the blockchain tail
-	assert.Equal(t, blk.GetHash(), Hash(bc.tailBlockHash))
+	assert.Equal(t, blk.GetHash(), hash.Hash(bc.tailBlockHash))
 }
 
 func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
@@ -205,8 +208,8 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 			txs = append(txs, &tx)
 		}
 
-		b := NewBlock(txs, tailBlk, "")
-		b.SetHash(b.CalculateHash())
+		b := block.NewBlock(txs, tailBlk, "")
+		b.SetHash(block_logic.CalculateHash(b))
 		state := LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}

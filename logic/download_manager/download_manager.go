@@ -22,7 +22,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
@@ -87,17 +90,17 @@ type PeerBlockInfo struct {
 }
 
 type DownloadCommand struct {
-	startHashes []core.Hash
+	startHashes []hash.Hash
 }
 
 type DownloadingCommandInfo struct {
-	startHashes []core.Hash
+	startHashes []hash.Hash
 	retryCount  int
 	finished    bool
 }
 
 type SyncCommandBlocksHeader struct {
-	hash   core.Hash
+	hash   hash.Hash
 	height uint64
 }
 
@@ -282,9 +285,9 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 		return nil, ErrEmptyBlocks
 	}
 
-	hashes := make([]core.Hash, len(blocksPb.GetStartBlockHashes()))
-	for index, hash := range blocksPb.GetStartBlockHashes() {
-		hashes[index] = core.Hash(hash)
+	hashes := make([]hash.Hash, len(blocksPb.GetStartBlockHashes()))
+	for index, h := range blocksPb.GetStartBlockHashes() {
+		hashes[index] = hash.Hash(h)
 	}
 
 	if downloadManager.isDownloadCommandFinished(hashes) {
@@ -315,9 +318,9 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 
 	downloadManager.mutex.Unlock()
 
-	var blocks []*core.Block
+	var blocks []*block.Block
 	for _, pbBlock := range blocksPb.GetBlocks() {
-		block := &core.Block{}
+		block := &block.Block{}
 		block.FromProto(pbBlock)
 
 		if !downloadManager.bm.VerifyBlock(block) {
@@ -347,7 +350,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		return
 	}
 
-	var nextHashes []core.Hash
+	var nextHashes []hash.Hash
 	for _, block := range blocks {
 		nextHashes = append(nextHashes, block.GetHash())
 	}
@@ -416,9 +419,9 @@ func (downloadManager *DownloadManager) GetCommonBlockCheckPoint(startHeight uin
 	return blockHeaders
 }
 
-func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*corepb.BlockHeader) (int, *core.Block) {
+func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*corepb.BlockHeader) (int, *block.Block) {
 	findIndex := -1
-	var commonBlock *core.Block
+	var commonBlock *block.Block
 
 	for index, blockHeader := range blockHeaders {
 		block, err := downloadManager.bm.Getblockchain().GetBlockByHeight(blockHeader.GetHeight())
@@ -461,7 +464,7 @@ func (downloadManager *DownloadManager) CheckGetCommonBlockCommand(msgId int32, 
 	}
 }
 
-func (downloadManager *DownloadManager) CheckDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
+func (downloadManager *DownloadManager) CheckDownloadCommand(hashes []hash.Hash, peerId peer.ID, retryCount int) {
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
@@ -567,7 +570,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 	}
 
 	startBlockHeight := downloadManager.commonHeight
-	var hashes []core.Hash
+	var hashes []hash.Hash
 	for i := 0; i < producerNum && startBlockHeight-uint64(i) > 0; i++ {
 		block, err := downloadManager.bm.Getblockchain().GetBlockByHeight(startBlockHeight - uint64(i))
 		if err != nil {
@@ -579,7 +582,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 	downloadManager.sendDownloadCommand(hashes, downloadManager.downloadingPeer.peerid, retryCount)
 }
 
-func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
+func (downloadManager *DownloadManager) sendDownloadCommand(hashes []hash.Hash, peerId peer.ID, retryCount int) {
 	downloadingCmd := &DownloadingCommandInfo{startHashes: hashes, finished: false}
 	downloadManager.currentCmd = &ExecuteCommand{command: downloadingCmd, retryCount: retryCount}
 	downloadManager.SendGetBlocksRequest(hashes, peerId)
@@ -592,7 +595,7 @@ func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, 
 	}()
 }
 
-func (downloadManager *DownloadManager) isDownloadCommandFinished(hashes []core.Hash) bool {
+func (downloadManager *DownloadManager) isDownloadCommandFinished(hashes []hash.Hash) bool {
 	if downloadManager.currentCmd == nil {
 		return true
 	}
@@ -719,7 +722,7 @@ func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(command *n
 	downloadManager.GetCommonBlockDataHandler(param, command.GetSource())
 }
 
-func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash, pid peer.ID) {
+func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []hash.Hash, pid peer.ID) {
 	blkHashes := make([][]byte, len(hashes))
 	for index, hash := range hashes {
 		blkHashes[index] = hash
@@ -746,30 +749,30 @@ func (downloadManager *DownloadManager) GetBlocksRequestHandler(command *network
 
 func (downloadManager *DownloadManager) SendGetBlocksResponse(startBlockHashes [][]byte, destination peer.ID) {
 
-	block := downloadManager.findBlockInRequestHash(startBlockHashes)
+	blk := downloadManager.findBlockInRequestHash(startBlockHashes)
 
 	// Reach the blockchain's tail
-	if block.GetHeight() >= downloadManager.bm.Getblockchain().GetMaxHeight() {
+	if blk.GetHeight() >= downloadManager.bm.Getblockchain().GetMaxHeight() {
 		logger.WithFields(logger.Fields{
 			"name": "GetBlocksRequest",
 		}).Info("DownloadManager: reach blockchain tail.")
 		return
 	}
 
-	var blocks []*core.Block
+	var blks []*block.Block
 
-	block, err := downloadManager.bm.Getblockchain().GetBlockByHeight(block.GetHeight() + 1)
+	blk, err := downloadManager.bm.Getblockchain().GetBlockByHeight(blk.GetHeight() + 1)
 	for i := int32(0); i < maxGetBlocksNum && err == nil; i++ {
-		if block.GetHeight() == 0 {
-			logger.Panicf("Error %v", hex.EncodeToString(block.GetHash()))
+		if blk.GetHeight() == 0 {
+			logger.Panicf("Error %v", hex.EncodeToString(blk.GetHash()))
 		}
-		blocks = append(blocks, block)
-		block, err = downloadManager.bm.Getblockchain().GetBlockByHeight(block.GetHeight() + 1)
+		blks = append(blks, blk)
+		blk, err = downloadManager.bm.Getblockchain().GetBlockByHeight(blk.GetHeight() + 1)
 	}
 
-	var blockPbs []*corepb.Block
-	for i := len(blocks) - 1; i >= 0; i-- {
-		blockPbs = append(blockPbs, blocks[i].ToProto().(*corepb.Block))
+	var blockPbs []*blockpb.Block
+	for i := len(blks) - 1; i >= 0; i-- {
+		blockPbs = append(blockPbs, blks[i].ToProto().(*blockpb.Block))
 	}
 
 	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: startBlockHashes}
@@ -859,7 +862,7 @@ func (downloadManager *DownloadManager) OnStreamStopHandler(command *network_mod
 
 }
 
-func (downloadManager *DownloadManager) findBlockInRequestHash(startBlockHashes [][]byte) *core.Block {
+func (downloadManager *DownloadManager) findBlockInRequestHash(startBlockHashes [][]byte) *block.Block {
 	for _, hash := range startBlockHashes {
 		// hash in blockchain, return
 		if block, err := downloadManager.bm.Getblockchain().GetBlockByHash(hash); err == nil {

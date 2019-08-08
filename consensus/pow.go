@@ -19,6 +19,8 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"math"
 	"math/big"
 
@@ -131,7 +133,7 @@ func (pow *ProofOfWork) calculateValidHash(ctx *core.BlockContext) {
 			pow.stopCh <- true
 			return
 		default:
-			hash := ctx.Block.CalculateHashWithNonce(ctx.Block.GetNonce())
+			hash := block_logic.CalculateHashWithNonce(ctx.Block)
 			ctx.Block.SetHash(hash)
 			if !pow.isHashBelowTarget(ctx.Block) {
 				pow.tryDifferentNonce(ctx.Block)
@@ -147,7 +149,7 @@ func (pow *ProofOfWork) IsProducingBlock() bool {
 	return !pow.miner.IsIdle()
 }
 
-func (pow *ProofOfWork) isHashBelowTarget(block *core.Block) bool {
+func (pow *ProofOfWork) isHashBelowTarget(block *block.Block) bool {
 	var hashInt big.Int
 
 	hash := block.GetHash()
@@ -156,11 +158,11 @@ func (pow *ProofOfWork) isHashBelowTarget(block *core.Block) bool {
 	return hashInt.Cmp(pow.target) == -1
 }
 
-func (pow *ProofOfWork) Validate(block *core.Block) bool {
+func (pow *ProofOfWork) Validate(block *block.Block) bool {
 	return pow.isHashBelowTarget(block)
 }
 
-func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
+func (pow *ProofOfWork) tryDifferentNonce(block *block.Block) {
 	nonce := block.GetNonce()
 	if nonce >= maxNonce {
 		logger.Warn("PoW: tried all possible nonce.")
@@ -170,7 +172,7 @@ func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
 
 func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
 	logger.WithFields(logger.Fields{"height": ctx.Block.GetHeight()}).Info("PoW: minted a new block.")
-	if !ctx.Block.VerifyHash() {
+	if !block_logic.VerifyHash(ctx.Block) {
 		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
 		return
 	}
@@ -191,13 +193,13 @@ func (pow *ProofOfWork) GetProducers() []string {
 	return nil
 }
 
-func (pow *ProofOfWork) Produced(blk *core.Block) bool {
+func (pow *ProofOfWork) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return pow.miner.Produced(blk)
 	}
 	return false
 }
 
-func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+func (pow *ProofOfWork) CheckLibPolicy(b *block.Block) (*block.Block, bool) {
 	return nil, true
 }

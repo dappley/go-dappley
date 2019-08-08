@@ -22,6 +22,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -57,8 +60,8 @@ const (
 )
 
 type BlockContext struct {
-	Block     *Block
-	Lib       *Block
+	Block     *block.Block
+	Lib       *block.Block
 	UtxoIndex *UTXOIndex
 	State     *ScState
 }
@@ -94,7 +97,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		&sync.Mutex{},
 	}
 	utxoIndex := NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxoState(genesis.transactions)
+	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
 	scState := NewScState()
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
@@ -138,11 +141,11 @@ func (bc *Blockchain) GetUtxoCache() *utxo.UTXOCache {
 	return bc.utxoCache
 }
 
-func (bc *Blockchain) GetTailBlockHash() Hash {
+func (bc *Blockchain) GetTailBlockHash() hash.Hash {
 	return bc.tailBlockHash
 }
 
-func (bc *Blockchain) GetLIBHash() Hash {
+func (bc *Blockchain) GetLIBHash() hash.Hash {
 	return bc.libHash
 }
 
@@ -170,12 +173,12 @@ func (bc *Blockchain) GetBlockSizeLimit() int {
 	return bc.blkSizeLimit
 }
 
-func (bc *Blockchain) GetTailBlock() (*Block, error) {
+func (bc *Blockchain) GetTailBlock() (*block.Block, error) {
 	hash := bc.GetTailBlockHash()
 	return bc.GetBlockByHash(hash)
 }
 
-func (bc *Blockchain) GetLIB() (*Block, error) {
+func (bc *Blockchain) GetLIB() (*block.Block, error) {
 	hash := bc.GetLIBHash()
 	return bc.GetBlockByHash(hash)
 }
@@ -196,15 +199,15 @@ func (bc *Blockchain) GetLIBHeight() uint64 {
 	return block.GetHeight()
 }
 
-func (bc *Blockchain) GetBlockByHash(hash Hash) (*Block, error) {
+func (bc *Blockchain) GetBlockByHash(hash hash.Hash) (*block.Block, error) {
 	rawBytes, err := bc.db.Get(hash)
 	if err != nil {
 		return nil, ErrBlockDoesNotExist
 	}
-	return Deserialize(rawBytes), nil
+	return block.Deserialize(rawBytes), nil
 }
 
-func (bc *Blockchain) GetBlockByHeight(height uint64) (*Block, error) {
+func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 	hash, err := bc.db.Get(util.UintToHex(height))
 	if err != nil {
 		return nil, ErrBlockDoesNotExist
@@ -213,7 +216,7 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*Block, error) {
 	return bc.GetBlockByHash(hash)
 }
 
-func (bc *Blockchain) SetTailBlockHash(tailBlockHash Hash) {
+func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
 	bc.tailBlockHash = tailBlockHash
 }
 
@@ -317,7 +320,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	return nil
 }
 
-func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *Block) error {
+func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Block) error {
 	if parentBlk == nil {
 		//if the current block is genesis block. do not run smart contract
 		return nil
@@ -368,34 +371,34 @@ func (bc *Blockchain) Iterator() *Blockchain {
 	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
-func (bc *Blockchain) Next() (*Block, error) {
-	var block *Block
+func (bc *Blockchain) Next() (*block.Block, error) {
+	var blk *block.Block
 
 	encodedBlock, err := bc.db.Get(bc.tailBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	block = Deserialize(encodedBlock)
+	blk = block.Deserialize(encodedBlock)
 
-	bc.tailBlockHash = block.GetPrevHash()
+	bc.tailBlockHash = blk.GetPrevHash()
 
-	return block, nil
+	return blk, nil
 }
 
-func (bc *Blockchain) NextFromIndex(indexHash []byte) (*Block, error) {
-	var block *Block
+func (bc *Blockchain) NextFromIndex(indexHash []byte) (*block.Block, error) {
+	var blk *block.Block
 
 	encodedBlock, err := bc.db.Get(indexHash)
 	if err != nil {
 		return nil, err
 	}
 
-	block = Deserialize(encodedBlock)
+	blk = block.Deserialize(encodedBlock)
 
-	bc.tailBlockHash = block.GetPrevHash()
+	bc.tailBlockHash = blk.GetPrevHash()
 	println(bc.tailBlockHash)
-	return block, nil
+	return blk, nil
 }
 
 func (bc *Blockchain) String() string {
@@ -424,41 +427,41 @@ func (bc *Blockchain) String() string {
 }
 
 //AddBlockToDb record the new block in the database
-func (bc *Blockchain) AddBlockToDb(block *Block) error {
+func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 
-	err := bc.db.Put(block.GetHash(), block.Serialize())
+	err := bc.db.Put(blk.GetHash(), blk.Serialize())
 	if err != nil {
-		logger.WithError(err).Warn("Blockchain: failed to add block to database!")
+		logger.WithError(err).Warn("Blockchain: failed to add blk to database!")
 		return err
 	}
 
-	err = bc.db.Put(util.UintToHex(block.GetHeight()), block.GetHash())
+	err = bc.db.Put(util.UintToHex(blk.GetHeight()), blk.GetHash())
 	if err != nil {
-		logger.WithError(err).Warn("Blockchain: failed to index the block by block height in database!")
+		logger.WithError(err).Warn("Blockchain: failed to index the blk by blk height in database!")
 		return err
 	}
 	// add transaction journals
-	for _, tx := range block.GetTransactions() {
+	for _, tx := range blk.GetTransactions() {
 		err = PutTxJournal(*tx, bc.db)
 		if err != nil {
-			logger.WithError(err).Warn("Blockchain: failed to add block transaction journals into database!")
+			logger.WithError(err).Warn("Blockchain: failed to add blk transaction journals into database!")
 			return err
 		}
 	}
 	return nil
 }
 
-func (bc *Blockchain) IsHigherThanBlockchain(block *Block) bool {
+func (bc *Blockchain) IsHigherThanBlockchain(block *block.Block) bool {
 	return block.GetHeight() > bc.GetMaxHeight()
 }
 
-func (bc *Blockchain) IsInBlockchain(hash Hash) bool {
+func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 	_, err := bc.GetBlockByHash(hash)
 	return err == nil
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScState) bool {
+func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *UTXOIndex, scState *ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -467,7 +470,7 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScStat
 	}
 	parentblockHash := bc.GetTailBlockHash()
 	//if is child of tail, skip rollback
-	if IsHashEqual(parentblockHash, targetHash) {
+	if block_logic.IsHashEqual(parentblockHash, targetHash) {
 		return true
 	}
 
@@ -509,7 +512,7 @@ func (bc *Blockchain) Rollback(targetHash Hash, utxo *UTXOIndex, scState *ScStat
 	return true
 }
 
-func (bc *Blockchain) setTailBlockHash(hash Hash) error {
+func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	err := bc.db.Put(tipKey, hash)
 	if err != nil {
 		return err
@@ -524,7 +527,7 @@ func (bc *Blockchain) deepCopy() *Blockchain {
 	return newCopy
 }
 
-func (bc *Blockchain) SetLIBHash(hash Hash) error {
+func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
 	err := bc.db.Put(libKey, hash)
 	if err != nil {
 		return err
@@ -533,20 +536,20 @@ func (bc *Blockchain) SetLIBHash(hash Hash) error {
 	return nil
 }
 
-func (bc *Blockchain) IsLIB(block *Block) bool {
-	block, err := bc.GetBlockByHash(block.GetHash())
+func (bc *Blockchain) IsLIB(blk *block.Block) bool {
+	blkFromDb, err := bc.GetBlockByHash(blk.GetHash())
 	if err != nil {
 		logger.Error("Blockchain:get block by hash from blockchain error: ", err)
 		return false
 	}
-	if block == nil {
-		logger.Error("Blockchain:block is not exist in blockchain")
+	if blkFromDb == nil {
+		logger.Error("Blockchain:blk is not exist in blockchain")
 		return false
 	}
 
 	lib, _ := bc.GetLIB()
 
-	if lib.GetHeight() >= block.GetHeight() {
+	if lib.GetHeight() >= blkFromDb.GetHeight() {
 		return true
 	}
 	return false
