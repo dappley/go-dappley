@@ -59,7 +59,7 @@ type Blockchain struct {
 	bc           *blockchain.Blockchain
 	db           storage.Storage
 	utxoCache    *utxo.UTXOCache
-	consensus    core.Consensus
+	consensus    Consensus
 	txPool       *core.TransactionPool
 	scManager    core.ScEngineManager
 	eventManager *core.EventManager
@@ -68,7 +68,7 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
@@ -91,7 +91,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus cor
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -136,7 +136,7 @@ func (bc *Blockchain) GetSCManager() core.ScEngineManager {
 	return bc.scManager
 }
 
-func (bc *Blockchain) GetConsensus() core.Consensus {
+func (bc *Blockchain) GetConsensus() Consensus {
 	return bc.consensus
 }
 
@@ -203,7 +203,7 @@ func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
 	bc.SetTailBlockHash(tailBlockHash)
 }
 
-func (bc *Blockchain) SetConsensus(consensus core.Consensus) {
+func (bc *Blockchain) SetConsensus(consensus Consensus) {
 	bc.consensus = consensus
 }
 

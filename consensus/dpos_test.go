@@ -26,7 +26,6 @@ import (
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
 
 	"github.com/stretchr/testify/assert"
 
@@ -41,7 +40,6 @@ func TestNewDpos(t *testing.T) {
 	dpos := NewDPOS()
 	assert.Equal(t, 1, cap(dpos.newBlockCh))
 	assert.Equal(t, 1, cap(dpos.stopCh))
-	assert.Nil(t, dpos.node)
 }
 
 func TestDpos_Setup(t *testing.T) {
@@ -52,12 +50,11 @@ func TestDpos_Setup(t *testing.T) {
 
 	node := network.NewNode(bc.GetDb(), nil)
 
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 
-	dpos.Setup(node, cbAddr, bm)
+	dpos.Setup(cbAddr, bm)
 
 	assert.Equal(t, bc, dpos.bm.Getblockchain())
-	assert.Equal(t, node, dpos.node)
 }
 
 func TestDpos_beneficiaryIsProducer(t *testing.T) {

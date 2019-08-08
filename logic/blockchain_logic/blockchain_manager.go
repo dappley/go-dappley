@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package blockchain_manager
+package blockchain_logic
 
 import (
 	"bytes"
@@ -25,7 +25,6 @@ import (
 	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/dappley/go-dappley/common"
@@ -51,13 +50,13 @@ var (
 )
 
 type BlockchainManager struct {
-	blockchain        *blockchain_logic.Blockchain
+	blockchain        *Blockchain
 	blockPool         *core.BlockPool
 	downloadRequestCh chan chan bool
 	netService        NetService
 }
 
-func NewBlockchainManager(blockchain *blockchain_logic.Blockchain, blockpool *core.BlockPool, service NetService) *BlockchainManager {
+func NewBlockchainManager(blockchain *Blockchain, blockpool *core.BlockPool, service NetService) *BlockchainManager {
 	bm := &BlockchainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
@@ -109,7 +108,7 @@ func (bm *BlockchainManager) GetCommandHandler(commandName string) network_model
 	return nil
 }
 
-func (bm *BlockchainManager) Getblockchain() *blockchain_logic.Blockchain {
+func (bm *BlockchainManager) Getblockchain() *Blockchain {
 	return bm.blockchain
 }
 
@@ -220,12 +219,12 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		}).Debug("BlockchainManager: is verifying a block in the fork.")
 
 		if !block_logic.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
-			return blockchain_logic.ErrTransactionVerifyFailed
+			return ErrTransactionVerifyFailed
 		}
 
 		lib, ok := bm.Getblockchain().GetConsensus().CheckLibPolicy(forkBlks[i])
 		if !ok {
-			return blockchain_logic.ErrProducerNotEnough
+			return ErrProducerNotEnough
 		}
 
 		if firstCheck {
@@ -313,7 +312,7 @@ func (bm *BlockchainManager) SendBlockHandler(command *network_model.DappRcvdCmd
 }
 
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
-func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *blockchain_logic.Blockchain, hash hash.Hash) (*utxo_logic.UTXOIndex, *core.ScState, error) {
+func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash hash.Hash) (*utxo_logic.UTXOIndex, *core.ScState, error) {
 	index := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	scState := core.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
@@ -332,7 +331,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *blockchain_logic.Bl
 		}
 
 		if len(block.GetPrevHash()) == 0 {
-			return nil, nil, blockchain_logic.ErrBlockDoesNotExist
+			return nil, nil, ErrBlockDoesNotExist
 		}
 
 		err = index.UndoTxsInBlock(block, bc, db)

@@ -25,7 +25,7 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/block/pb"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
@@ -117,7 +117,7 @@ type DownloadManager struct {
 	peersInfo         map[peer.ID]*PeerBlockInfo
 	downloadingPeer   *PeerBlockInfo
 	currentCmd        *ExecuteCommand
-	bm                *blockchain_manager.BlockchainManager
+	bm                *blockchain_logic.BlockchainManager
 	node              NetService
 	mutex             sync.RWMutex
 	status            int
@@ -127,7 +127,7 @@ type DownloadManager struct {
 	finishCh          chan bool
 }
 
-func NewDownloadManager(node NetService, bm *blockchain_manager.BlockchainManager) *DownloadManager {
+func NewDownloadManager(node NetService, bm *blockchain_logic.BlockchainManager) *DownloadManager {
 
 	downloadManager := &DownloadManager{
 		peersInfo:         make(map[peer.ID]*PeerBlockInfo),

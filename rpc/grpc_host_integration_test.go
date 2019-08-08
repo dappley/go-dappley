@@ -24,7 +24,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"strings"
@@ -56,7 +55,7 @@ type RpcTestContext struct {
 	store      storage.Storage
 	account    *account.Account
 	consensus  core.Consensus
-	bm         *blockchain_manager.BlockchainManager
+	bm         *blockchain_logic.BlockchainManager
 	node       *network.Node
 	rpcServer  *Server
 	serverPort uint32
@@ -119,8 +118,8 @@ func TestRpcSend(t *testing.T) {
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool()
 
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
-	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -207,8 +206,8 @@ func TestRpcSendContract(t *testing.T) {
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool()
 
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
-	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -1103,7 +1102,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	// Prepare a PoW node that put mining reward to the sender's address
 	pool := core.NewBlockPool()
 
-	context.bm = blockchain_manager.NewBlockchainManager(bc, pool, context.node)
+	context.bm = blockchain_logic.NewBlockchainManager(bc, pool, context.node)
 
 	// Start a grpc server
 	context.rpcServer = NewGrpcServer(context.node, context.bm, "temp")
@@ -1157,9 +1156,9 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
-	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -1255,9 +1254,9 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	pool := core.NewBlockPool()
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, node)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 
-	pow.Setup(node, minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server

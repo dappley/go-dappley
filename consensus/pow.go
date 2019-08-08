@@ -23,7 +23,6 @@ import (
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"math"
 	"math/big"
 
@@ -39,23 +38,20 @@ var maxNonce int64 = math.MaxInt64
 type ProofOfWork struct {
 	miner  *BlockProducer
 	target *big.Int
-	node   core.NetService
-	bm     *blockchain_manager.BlockchainManager
+	bm     *blockchain_logic.BlockchainManager
 	stopCh chan bool
 }
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
 		miner:  NewBlockProducer(),
-		node:   nil,
 		stopCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)
 	return p
 }
 
-func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string, bm *blockchain_manager.BlockchainManager) {
-	pow.node = node
+func (pow *ProofOfWork) Setup(cbAddr string, bm *blockchain_logic.BlockchainManager) {
 	pow.bm = bm
 
 	var bc *blockchain_logic.Blockchain

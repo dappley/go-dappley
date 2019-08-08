@@ -29,7 +29,6 @@ import (
 
 func TestProofOfWork_NewPoW(t *testing.T) {
 	pow := NewProofOfWork()
-	assert.Nil(t, pow.node)
 	assert.Equal(t, big.NewInt(1).Lsh(big.NewInt(1), uint(256)), pow.target)
 }
 

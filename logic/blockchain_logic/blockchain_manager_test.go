@@ -1,4 +1,4 @@
-package blockchain_manager
+package blockchain_logic
 
 import (
 	"github.com/dappley/go-dappley/common"

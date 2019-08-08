@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"io/ioutil"
 	"os"
 	"time"
@@ -172,7 +171,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	return elapsed, blkHeight, numOfTx
 }
 
-func prepareNode(db storage.Storage) (*blockchain_manager.BlockchainManager, *network.Node) {
+func prepareNode(db storage.Storage) (*blockchain_logic.BlockchainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
@@ -190,7 +189,7 @@ func prepareNode(db storage.Storage) (*blockchain_manager.BlockchainManager, *ne
 		}
 	}
 	bc.SetState(blockchain.BlockchainInit)
-	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 	downloadManager := download_manager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 

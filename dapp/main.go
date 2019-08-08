@@ -22,7 +22,6 @@ import (
 	"flag"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
 
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/logic/download_manager"
@@ -106,7 +105,7 @@ func main() {
 	}
 	bc.SetState(blockchain.BlockchainInit)
 
-	bm := blockchain_manager.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
@@ -118,7 +117,7 @@ func main() {
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
-	conss.Setup(node, minerAddr, bm)
+	conss.Setup(minerAddr, bm)
 	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": minerAddr,
@@ -145,7 +144,7 @@ func main() {
 	select {}
 }
 
-func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dynasty) {
+func initConsensus(conf *configpb.DynastyConfig) (*consensus.DPOS, *consensus.Dynasty) {
 	//set up consensus
 	conss := consensus.NewDPOS()
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))

@@ -23,7 +23,6 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_manager"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"os"
@@ -89,9 +88,9 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(account1.GetKeyPair().GenerateAddress().String(), bm)
 
 	pow.Start()
 
@@ -145,9 +144,9 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(n, acc.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(acc.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -210,9 +209,9 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(account1.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -275,9 +274,9 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 
 	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
 
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(n, cbAddr.String(), bm)
+	pow.Setup(cbAddr.String(), bm)
 	pow.SetTargetBit(10)
 	//start the pow process and wait for at least 1 block produced
 	pow.Start()
@@ -349,8 +348,8 @@ func TestPreventDoubleSpend(t *testing.T) {
 	//start a miner
 	pool := core.NewBlockPool()
 	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := blockchain_manager.NewBlockchainManager(bc, pool, n)
-	pow.Setup(n, account1.GetKeyPair().GenerateAddress().String(), bm)
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
+	pow.Setup(account1.GetKeyPair().GenerateAddress().String(), bm)
 
 	pow.Start()
 
