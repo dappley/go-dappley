@@ -55,29 +55,29 @@ func TestBlockPool_ForkHeadRange(t *testing.T) {
 	child := block.NewBlockWithRawInfo(hash.Hash("child"), blk.GetHash(), 0, 0, 3, nil)
 
 	// cache a blk
-	bp.CacheBlock(blk, 0)
+	bp.Add(blk)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// attach child to blk
-	bp.CacheBlock(child, 0)
+	bp.Add(child)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// attach parent to blk
-	bp.CacheBlock(parent, 0)
+	bp.Add(parent)
 	require.ElementsMatch(t, []string{parent.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// cache extraneous block
 	unrelatedBlk := block.NewBlockWithRawInfo(hash.Hash("unrelated"), []byte{0}, 0, 0, 1, nil)
 
-	bp.CacheBlock(unrelatedBlk, 0)
+	bp.Add(unrelatedBlk)
 	require.ElementsMatch(t, []string{parent.GetHash().String(), unrelatedBlk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// remove parent
-	bp.CleanCache(testGetForkHead(bp, parent))
+	bp.RemoveFork([]*block.Block{parent})
 	require.ElementsMatch(t, []string{unrelatedBlk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// remove unrelated
-	bp.CleanCache(testGetForkHead(bp, unrelatedBlk))
+	bp.RemoveFork([]*block.Block{unrelatedBlk})
 	require.Nil(t, testGetForkHeadHashes(bp))
 }
 
@@ -87,18 +87,4 @@ func testGetForkHeadHashes(bp *BlockPool) []string {
 		hashes = append(hashes, blkHash)
 	})
 	return hashes
-}
-
-func testGetForkHead(bp *BlockPool, blk *block.Block) *common.Tree {
-	var t *common.Tree
-	bp.ForkHeadRange(func(blkHash string, tree *common.Tree) {
-		if blk.GetHash().String() == blkHash {
-			t = tree
-		}
-	})
-	return t
-}
-
-func testGetNumForkHeads(bp *BlockPool) int {
-	return len(testGetForkHeadHashes(bp))
 }
