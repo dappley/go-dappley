@@ -29,7 +29,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -61,8 +61,8 @@ var (
 
 type Transaction struct {
 	ID       []byte
-	Vin      []transaction.TXInput
-	Vout     []transaction.TXOutput
+	Vin      []transaction_base.TXInput
+	Vout     []transaction_base.TXOutput
 	Tip      *common.Amount
 	GasLimit *common.Amount
 	GasPrice *common.Amount
@@ -264,8 +264,8 @@ func (tx *Transaction) Hash() []byte {
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
 func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
-	var inputs []transaction.TXInput
-	var outputs []transaction.TXOutput
+	var inputs []transaction_base.TXInput
+	var outputs []transaction_base.TXOutput
 	var pubkey []byte
 
 	for _, vin := range tx.Vin {
@@ -274,11 +274,11 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 		} else {
 			pubkey = nil
 		}
-		inputs = append(inputs, transaction.TXInput{vin.Txid, vin.Vout, nil, pubkey})
+		inputs = append(inputs, transaction_base.TXInput{vin.Txid, vin.Vout, nil, pubkey})
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, transaction.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+		outputs = append(outputs, transaction_base.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
@@ -287,15 +287,15 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 }
 
 func (tx *Transaction) DeepCopy() Transaction {
-	var inputs []transaction.TXInput
-	var outputs []transaction.TXOutput
+	var inputs []transaction_base.TXInput
+	var outputs []transaction_base.TXOutput
 
 	for _, vin := range tx.Vin {
-		inputs = append(inputs, transaction.TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
+		inputs = append(inputs, transaction_base.TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, transaction.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+		outputs = append(outputs, transaction_base.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
@@ -373,8 +373,8 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction.TXInput{nil, -1, bh, rewardTxData}
-	txOutputs := []transaction.TXOutput{}
+	txin := transaction_base.TXInput{nil, -1, bh, rewardTxData}
+	txOutputs := []transaction_base.TXOutput{}
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
 		if err != nil {
@@ -383,9 +383,9 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 				"amount":  amount,
 			}).Warn("Transaction: failed to parse reward amount")
 		}
-		txOutputs = append(txOutputs, *transaction.NewTXOutput(amt, account.NewAddress(address)))
+		txOutputs = append(txOutputs, *transaction_base.NewTXOutput(amt, account.NewAddress(address)))
 	}
-	tx := Transaction{nil, []transaction.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -394,10 +394,10 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) Transaction {
 	tx := Transaction{
 		ID: nil,
-		Vin: []transaction.TXInput{
+		Vin: []transaction_base.TXInput{
 			{vinTxId, vinVout, nil, vinPubkey},
 		},
-		Vout: []transaction.TXOutput{
+		Vout: []transaction_base.TXOutput{
 			{common.NewAmount(voutValue), voutPubKeyHash, ""},
 		},
 		Tip: common.NewAmount(tip),
@@ -412,9 +412,9 @@ func NewGasRewardTx(to account.Address, blockHeight uint64, actualGasCount *comm
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction.TXInput{nil, -1, bh, gasRewardData}
-	txout := transaction.NewTXOutput(fee, to)
-	tx := Transaction{nil, []transaction.TXInput{txin}, []transaction.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := transaction_base.TXInput{nil, -1, bh, gasRewardData}
+	txout := transaction_base.NewTXOutput(fee, to)
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -433,9 +433,9 @@ func NewGasChangeTx(to account.Address, blockHeight uint64, actualGasCount *comm
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction.TXInput{nil, -1, bh, gasChangeData}
-	txout := transaction.NewTXOutput(changeValue, to)
-	tx := Transaction{nil, []transaction.TXInput{txin}, []transaction.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := transaction_base.TXInput{nil, -1, bh, gasChangeData}
+	txout := transaction_base.NewTXOutput(changeValue, to)
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -555,16 +555,16 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*corepb.Transaction).GetId()
 	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetTip())
 
-	var vinArray []transaction.TXInput
-	txin := transaction.TXInput{}
+	var vinArray []transaction_base.TXInput
+	txin := transaction_base.TXInput{}
 	for _, txinpb := range pb.(*corepb.Transaction).GetVin() {
 		txin.FromProto(txinpb)
 		vinArray = append(vinArray, txin)
 	}
 	tx.Vin = vinArray
 
-	var voutArray []transaction.TXOutput
-	txout := transaction.TXOutput{}
+	var voutArray []transaction_base.TXOutput
+	txout := transaction_base.TXOutput{}
 	for _, txoutpb := range pb.(*corepb.Transaction).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)

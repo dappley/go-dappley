@@ -16,37 +16,33 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package transaction
+package transaction_base
 
 import (
-	"testing"
-
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
+
+	"github.com/dappley/go-dappley/core/pb"
 )
 
-func TestTXInput_Proto(t *testing.T) {
-	vin := TXInput{
-		[]byte("txid"),
-		1,
-		[]byte("signature"),
-		[]byte("PubKey"),
+type TXInput struct {
+	Txid      []byte
+	Vout      int
+	Signature []byte
+	PubKey    []byte
+}
+
+func (in *TXInput) ToProto() proto.Message {
+	return &corepb.TXInput{
+		Txid:      in.Txid,
+		Vout:      int32(in.Vout),
+		Signature: in.Signature,
+		PublicKey: in.PubKey,
 	}
+}
 
-	pb := vin.ToProto()
-	var i interface{} = pb
-	_, correct := i.(proto.Message)
-	assert.Equal(t, true, correct)
-	mpb, err := proto.Marshal(pb)
-	assert.Nil(t, err)
-
-	newpb := &corepb.TXInput{}
-	err = proto.Unmarshal(mpb, newpb)
-	assert.Nil(t, err)
-
-	vin2 := TXInput{}
-	vin2.FromProto(newpb)
-
-	assert.Equal(t, vin, vin2)
+func (in *TXInput) FromProto(pb proto.Message) {
+	in.Txid = pb.(*corepb.TXInput).GetTxid()
+	in.Vout = int(pb.(*corepb.TXInput).GetVout())
+	in.Signature = pb.(*corepb.TXInput).GetSignature()
+	in.PubKey = pb.(*corepb.TXInput).GetPublicKey()
 }

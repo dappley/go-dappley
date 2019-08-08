@@ -105,7 +105,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	txs := generateDependentTxs()
 
 	txPool := NewTransactionPool(nil, 128)
-	//push the first transaction. It should be in stored in txs and tipOrder
+	//push the first transaction_base. It should be in stored in txs and tipOrder
 	txPool.addTransactionAndSort(NewTransactionNode(txs[0]))
 	assert.Equal(t, 1, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))

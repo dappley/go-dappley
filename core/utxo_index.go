@@ -25,7 +25,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 )
@@ -203,15 +203,15 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *Transaction, db storage.Storage) er
 	return nil
 }
 
-func getTXOutputSpent(in transaction.TXInput, bc *Blockchain) (transaction.TXOutput, int, error) {
+func getTXOutputSpent(in transaction_base.TXInput, bc *Blockchain) (transaction_base.TXOutput, int, error) {
 	tx, err := bc.FindTXOutput(in)
 	if err != nil {
-		return transaction.TXOutput{}, 0, ErrTXInputInvalid
+		return transaction_base.TXOutput{}, 0, ErrTXInputInvalid
 	}
 	return tx, in.Vout, nil
 }
 
-// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
+// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction_base.
 func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, bc)
@@ -224,7 +224,7 @@ func (utxos *UTXOIndex) unspendVinsInTx(tx *Transaction, bc *Blockchain) error {
 }
 
 // AddUTXO adds an unspent TXOutput to index
-func (utxos *UTXOIndex) AddUTXO(txout transaction.TXOutput, txid []byte, vout int) {
+func (utxos *UTXOIndex) AddUTXO(txout transaction_base.TXOutput, txid []byte, vout int) {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(txout.PubKeyHash)
 
 	var u *utxo.UTXO

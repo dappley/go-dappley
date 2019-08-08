@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -332,11 +332,11 @@ func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *Block) err
 	return nil
 }
 
-func (bc *Blockchain) FindTXOutput(in transaction.TXInput) (transaction.TXOutput, error) {
+func (bc *Blockchain) FindTXOutput(in transaction_base.TXInput) (transaction_base.TXOutput, error) {
 	db := bc.db
 	vout, err := GetTxOutput(in, db)
 	if err != nil {
-		return transaction.TXOutput{}, err
+		return transaction_base.TXOutput{}, err
 	}
 	return vout, err
 }

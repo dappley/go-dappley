@@ -193,7 +193,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *UTXOIndex) 
 	return txNode
 }
 
-//Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transaction. However, the input transaction should never be dependent on any transaction in the current pool
+//Rollback adds a popped transaction back to the transaction pool. The existing transactions in txpool may be dependent on the input transaction_base. However, the input transaction should never be dependent on any transaction in the current pool
 func (txPool *TransactionPool) Rollback(tx Transaction) {
 	txPool.mutex.Lock()
 	defer txPool.mutex.Unlock()

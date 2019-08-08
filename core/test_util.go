@@ -23,7 +23,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -134,8 +134,8 @@ func MockTransaction() *Transaction {
 	}
 }
 
-func MockTxInputs() []transaction.TXInput {
-	return []transaction.TXInput{
+func MockTxInputs() []transaction_base.TXInput {
+	return []transaction_base.TXInput{
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
@@ -147,8 +147,8 @@ func MockTxInputs() []transaction.TXInput {
 	}
 }
 
-func MockTxInputsWithPubkey(pubkey []byte) []transaction.TXInput {
-	return []transaction.TXInput{
+func MockTxInputsWithPubkey(pubkey []byte) []transaction_base.TXInput {
+	return []transaction_base.TXInput{
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
@@ -160,13 +160,13 @@ func MockTxInputsWithPubkey(pubkey []byte) []transaction.TXInput {
 	}
 }
 
-func MockUtxos(inputs []transaction.TXInput) []*utxo.UTXO {
+func MockUtxos(inputs []transaction_base.TXInput) []*utxo.UTXO {
 	utxos := make([]*utxo.UTXO, len(inputs))
 
 	for index, input := range inputs {
 		pubKeyHash, _ := account.NewUserPubKeyHash(input.PubKey)
 		utxos[index] = &utxo.UTXO{
-			TXOutput: transaction.TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
+			TXOutput: transaction_base.TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
 			Txid:     input.Txid,
 			TxIndex:  0,
 		}
@@ -175,8 +175,8 @@ func MockUtxos(inputs []transaction.TXInput) []*utxo.UTXO {
 	return utxos
 }
 
-func MockTxOutputs() []transaction.TXOutput {
-	return []transaction.TXOutput{
+func MockTxOutputs() []transaction_base.TXOutput {
+	return []transaction_base.TXOutput{
 		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 	}

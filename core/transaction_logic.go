@@ -10,7 +10,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/util"
@@ -264,9 +264,9 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction.TXInput{nil, -1, bh, []byte(data)}
-	txout := transaction.NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []transaction.TXInput{txin}, []transaction.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	txin := transaction_base.TXInput{nil, -1, bh, []byte(data)}
+	txout := transaction_base.NewTXOutput(subsidy.Add(tip), to)
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -328,12 +328,12 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 }
 
 //prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transaction.TXInput {
-	var inputs []transaction.TXInput
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transaction_base.TXInput {
+	var inputs []transaction_base.TXInput
 
 	// Build a list of inputs
 	for _, utxo := range utxos {
-		input := transaction.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
+		input := transaction_base.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
 		inputs = append(inputs, input)
 	}
 
@@ -341,9 +341,9 @@ func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) [
 }
 
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []transaction.TXOutput {
+func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []transaction_base.TXOutput {
 
-	var outputs []transaction.TXOutput
+	var outputs []transaction_base.TXOutput
 	toAddr := to
 
 	if toAddr.String() == "" {
@@ -351,12 +351,12 @@ func prepareOutputLists(from, to account.Address, amount *common.Amount, change 
 	}
 
 	if contract != "" {
-		outputs = append(outputs, *transaction.NewContractTXOutput(toAddr, contract))
+		outputs = append(outputs, *transaction_base.NewContractTXOutput(toAddr, contract))
 	}
 
-	outputs = append(outputs, *transaction.NewTXOutput(amount, toAddr))
+	outputs = append(outputs, *transaction_base.NewTXOutput(amount, toAddr))
 	if !change.IsZero() {
-		outputs = append(outputs, *transaction.NewTXOutput(change, from))
+		outputs = append(outputs, *transaction_base.NewTXOutput(change, from))
 	}
 	return outputs
 }
@@ -364,22 +364,22 @@ func prepareOutputLists(from, to account.Address, amount *common.Amount, change 
 // Sign signs each input of a Transaction
 func Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO, tx *Transaction) error {
 	if tx.IsCoinbase() {
-		logger.Warn("Transaction: will not sign a coinbase transaction.")
+		logger.Warn("Transaction: will not sign a coinbase transaction_base.")
 		return nil
 	}
 
 	if tx.IsRewardTx() {
-		logger.Warn("Transaction: will not sign a reward transaction.")
+		logger.Warn("Transaction: will not sign a reward transaction_base.")
 		return nil
 	}
 
 	if tx.IsGasRewardTx() {
-		logger.Warn("Transaction: will not sign a gas reward transaction.")
+		logger.Warn("Transaction: will not sign a gas reward transaction_base.")
 		return nil
 	}
 
 	if tx.IsGasChangeTx() {
-		logger.Warn("Transaction: will not sign a gas change transaction.")
+		logger.Warn("Transaction: will not sign a gas change transaction_base.")
 		return nil
 	}
 
@@ -502,7 +502,7 @@ func Execute(ctx *ContractTx, prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
-func CheckContractSyntax(sc ScEngine, out transaction.TXOutput) error {
+func CheckContractSyntax(sc ScEngine, out transaction_base.TXOutput) error {
 	if out.Contract != "" {
 		function, args := util.DecodeScInput(out.Contract)
 		if function == "" {
