@@ -504,6 +504,18 @@ func Execute(ctx *ContractTx, prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
+func CheckContractSyntax(engine ScEngine,tx *Transaction) error {
+	TxOuts := tx.Vout
+	for _, v := range TxOuts {
+		err := CheckContractSyntax(engine, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
 func CheckContractSyntax(sc ScEngine, out transaction_base.TXOutput) error {
 	if out.Contract != "" {
 		function, args := util.DecodeScInput(out.Contract)

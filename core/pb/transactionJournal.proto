@@ -1,8 +1,9 @@
 syntax = "proto3";
 package corepb;
-import "github.com/dappley/go-dappley/core/pb/transaction.proto";
+import "github.com/dappley/go-dappley/core/transaction_base/pb/transactionBase.proto";
+
 
 message TransactionJournal {
-    repeated corepb.TXOutput vout = 1;
+    repeated transactionbasepb.TXOutput vout = 1;
 }
 

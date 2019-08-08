@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package transaction
 
 import (
 	"bytes"
@@ -28,8 +28,9 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
+	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -40,6 +41,7 @@ var subsidy = common.NewAmount(10000000)
 const (
 	ContractTxouputIndex = 0
 	SCDestroyAddress     = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
+	scheduleFuncName     = "dapp_schedule"
 )
 
 var rewardTxData = []byte("Distribute X Rewards")
@@ -50,13 +52,14 @@ var (
 	// MinGasCountPerTransaction default gas for normal transaction
 	MinGasCountPerTransaction = common.NewAmount(20000)
 	// GasCountPerByte per byte of data attached to a transaction gas cost
-	GasCountPerByte = common.NewAmount(1)
-
-	ErrInsufficientFund  = errors.New("transaction: insufficient balance")
-	ErrInvalidAmount     = errors.New("transaction: invalid amount (must be > 0)")
-	ErrTXInputNotFound   = errors.New("transaction: transaction input not found")
-	ErrNewUserPubKeyHash = errors.New("transaction: create pubkeyhash error")
-	ErrNoGasChange       = errors.New("transaction: all of Gas have been consumed")
+	GasCountPerByte        = common.NewAmount(1)
+	ErrOutOfGasLimit       = errors.New("out of gas limit")
+	ErrInsufficientFund    = errors.New("transaction: insufficient balance")
+	ErrInvalidAmount       = errors.New("transaction: invalid amount (must be > 0)")
+	ErrTXInputNotFound     = errors.New("transaction: transaction input not found")
+	ErrNewUserPubKeyHash   = errors.New("transaction: create pubkeyhash error")
+	ErrNoGasChange         = errors.New("transaction: all of Gas have been consumed")
+	ErrInsufficientBalance = errors.New("Transaction: insufficient balance, cannot pay for GasLimit")
 )
 
 type Transaction struct {
@@ -526,14 +529,14 @@ func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount,
 
 func (tx *Transaction) ToProto() proto.Message {
 
-	var vinArray []*corepb.TXInput
+	var vinArray []*transactionbasepb.TXInput
 	for _, txin := range tx.Vin {
-		vinArray = append(vinArray, txin.ToProto().(*corepb.TXInput))
+		vinArray = append(vinArray, txin.ToProto().(*transactionbasepb.TXInput))
 	}
 
-	var voutArray []*corepb.TXOutput
+	var voutArray []*transactionbasepb.TXOutput
 	for _, txout := range tx.Vout {
-		voutArray = append(voutArray, txout.ToProto().(*corepb.TXOutput))
+		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
 	}
 	if tx.GasLimit == nil {
 		tx.GasLimit = common.NewAmount(0)
@@ -541,7 +544,7 @@ func (tx *Transaction) ToProto() proto.Message {
 	if tx.GasPrice == nil {
 		tx.GasPrice = common.NewAmount(0)
 	}
-	return &corepb.Transaction{
+	return &transactionpb.Transaction{
 		Id:       tx.ID,
 		Vin:      vinArray,
 		Vout:     voutArray,
@@ -552,12 +555,12 @@ func (tx *Transaction) ToProto() proto.Message {
 }
 
 func (tx *Transaction) FromProto(pb proto.Message) {
-	tx.ID = pb.(*corepb.Transaction).GetId()
-	tx.Tip = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetTip())
+	tx.ID = pb.(*transactionpb.Transaction).GetId()
+	tx.Tip = common.NewAmountFromBytes(pb.(*transactionpb.Transaction).GetTip())
 
 	var vinArray []transaction_base.TXInput
 	txin := transaction_base.TXInput{}
-	for _, txinpb := range pb.(*corepb.Transaction).GetVin() {
+	for _, txinpb := range pb.(*transactionpb.Transaction).GetVin() {
 		txin.FromProto(txinpb)
 		vinArray = append(vinArray, txin)
 	}
@@ -565,14 +568,14 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 
 	var voutArray []transaction_base.TXOutput
 	txout := transaction_base.TXOutput{}
-	for _, txoutpb := range pb.(*corepb.Transaction).GetVout() {
+	for _, txoutpb := range pb.(*transactionpb.Transaction).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)
 	}
 	tx.Vout = voutArray
 
-	tx.GasLimit = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetGasLimit())
-	tx.GasPrice = common.NewAmountFromBytes(pb.(*corepb.Transaction).GetGasPrice())
+	tx.GasLimit = common.NewAmountFromBytes(pb.(*transactionpb.Transaction).GetGasLimit())
+	tx.GasPrice = common.NewAmountFromBytes(pb.(*transactionpb.Transaction).GetGasPrice())
 }
 
 func (tx *Transaction) GetSize() int {
@@ -582,17 +585,6 @@ func (tx *Transaction) GetSize() int {
 		return 0
 	}
 	return len(rawBytes)
-}
-
-func (tx *Transaction) CheckContractSyntax(engine ScEngine) error {
-	TxOuts := tx.Vout
-	for _, v := range TxOuts {
-		err := CheckContractSyntax(engine, v)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // GasCountOfTxBase calculate the actual amount for a tx with data

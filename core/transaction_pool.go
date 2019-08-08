@@ -37,8 +37,8 @@ import (
 const (
 	NewTransactionTopic   = "NewTransaction"
 	EvictTransactionTopic = "EvictTransaction"
-	scheduleFuncName      = "dapp_schedule"
-	TxPoolDbKey           = "txpool"
+
+	TxPoolDbKey = "txpool"
 
 	BroadcastTx       = "BroadcastTx"
 	BroadcastBatchTxs = "BraodcastBatchTxs"

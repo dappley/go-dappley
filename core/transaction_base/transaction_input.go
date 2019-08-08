@@ -19,9 +19,8 @@
 package transaction_base
 
 import (
+	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
 	"github.com/golang/protobuf/proto"
-
-	"github.com/dappley/go-dappley/core/pb"
 )
 
 type TXInput struct {
@@ -32,7 +31,7 @@ type TXInput struct {
 }
 
 func (in *TXInput) ToProto() proto.Message {
-	return &corepb.TXInput{
+	return &transactionbasepb.TXInput{
 		Txid:      in.Txid,
 		Vout:      int32(in.Vout),
 		Signature: in.Signature,
@@ -41,8 +40,8 @@ func (in *TXInput) ToProto() proto.Message {
 }
 
 func (in *TXInput) FromProto(pb proto.Message) {
-	in.Txid = pb.(*corepb.TXInput).GetTxid()
-	in.Vout = int(pb.(*corepb.TXInput).GetVout())
-	in.Signature = pb.(*corepb.TXInput).GetSignature()
-	in.PubKey = pb.(*corepb.TXInput).GetPublicKey()
+	in.Txid = pb.(*transactionbasepb.TXInput).GetTxid()
+	in.Vout = int(pb.(*transactionbasepb.TXInput).GetVout())
+	in.Signature = pb.(*transactionbasepb.TXInput).GetSignature()
+	in.PubKey = pb.(*transactionbasepb.TXInput).GetPublicKey()
 }

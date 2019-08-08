@@ -1,11 +1,11 @@
 syntax = "proto3";
 package corepb;
-import "github.com/dappley/go-dappley/core/pb/transaction.proto";
+import "github.com/dappley/go-dappley/core/transaction/pb/transaction.proto";
 
 
 message TransactionNode{
-    map<string, Transaction> children = 1;
-    Transaction value = 2;
+    map<string, transactionpb.Transaction> children = 1;
+    transactionpb.Transaction value = 2;
     int64   size = 3;
 }
 

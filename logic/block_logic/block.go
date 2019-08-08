@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"reflect"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
@@ -12,7 +14,6 @@ import (
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-	"reflect"
 )
 
 var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000

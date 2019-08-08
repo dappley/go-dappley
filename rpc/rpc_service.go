@@ -19,9 +19,10 @@ package rpc
 
 import (
 	"context"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block/pb"
 	"strings"
+
+	"github.com/dappley/go-dappley/core/block"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/byteutils"
@@ -236,7 +237,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
-	err := tx.CheckContractSyntax(engine)
+	err := CheckContractSyntax(engine, tx)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{

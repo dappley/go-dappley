@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/golang/protobuf/proto"
 	corepb "github.com/nebulasio/go-nebulas/core/pb"
 	logger "github.com/sirupsen/logrus"
@@ -12,14 +12,14 @@ import (
 
 type Block struct {
 	header       *BlockHeader
-	transactions []*core.Transaction
+	transactions []*transaction.Transaction
 }
 
-func NewBlock(txs []*core.Transaction, parent *Block, producer string) *Block {
+func NewBlock(txs []*transaction.Transaction, parent *Block, producer string) *Block {
 	return NewBlockWithTimestamp(txs, parent, time.Now().Unix(), producer)
 }
 
-func NewBlockWithRawInfo(hash hash.Hash, prevHash hash.Hash, nonce int64, timeStamp int64, height uint64, txs []*core.Transaction) *Block {
+func NewBlockWithRawInfo(hash hash.Hash, prevHash hash.Hash, nonce int64, timeStamp int64, height uint64, txs []*transaction.Transaction) *Block {
 	return &Block{
 		NewBlockHeader(
 			hash,
@@ -31,7 +31,7 @@ func NewBlockWithRawInfo(hash hash.Hash, prevHash hash.Hash, nonce int64, timeSt
 	}
 }
 
-func NewBlockWithTimestamp(txs []*core.Transaction, parent *Block, timeStamp int64, producer string) *Block {
+func NewBlockWithTimestamp(txs []*transaction.Transaction, parent *Block, timeStamp int64, producer string) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -42,7 +42,7 @@ func NewBlockWithTimestamp(txs []*core.Transaction, parent *Block, timeStamp int
 	}
 
 	if txs == nil {
-		txs = []*core.Transaction{}
+		txs = []*transaction.Transaction{}
 	}
 	return &Block{
 		header: &BlockHeader{
@@ -90,7 +90,7 @@ func (b *Block) GetProducer() string {
 	return b.header.producer
 }
 
-func (b *Block) GetTransactions() []*core.Transaction {
+func (b *Block) GetTransactions() []*transaction.Transaction {
 	return b.transactions
 }
 
@@ -114,7 +114,7 @@ func (b *Block) SetTimestamp(timestamp int64) {
 	b.header.timestamp = timestamp
 }
 
-func (b *Block) SetTransactions(txs []*core.Transaction) {
+func (b *Block) SetTransactions(txs []*transaction.Transaction) {
 	b.transactions = txs
 }
 
@@ -141,10 +141,10 @@ func (b *Block) FromProto(pb proto.Message) {
 	bh.FromProto(pb.(*corepb.Block).GetHeader())
 	b.header = &bh
 
-	var txs []*core.Transaction
+	var txs []*transaction.Transaction
 
 	for _, txpb := range pb.(*corepb.Block).GetTransactions() {
-		tx := &core.Transaction{}
+		tx := &transaction.Transaction{}
 		tx.FromProto(txpb)
 		txs = append(txs, tx)
 	}
@@ -173,7 +173,7 @@ func Deserialize(d []byte) *Block {
 	return block
 }
 
-func (b *Block) GetCoinbaseTransaction() *core.Transaction {
+func (b *Block) GetCoinbaseTransaction() *transaction.Transaction {
 	//the coinbase transaction is usually placed at the end of all transactions
 	for i := len(b.transactions) - 1; i >= 0; i-- {
 		if b.transactions[i].IsCoinbase() {

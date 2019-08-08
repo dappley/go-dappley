@@ -1,5 +1,5 @@
 syntax = "proto3";
-package corepb;
+package utxopb;
 
 message Utxo {
     bytes   amount = 1;

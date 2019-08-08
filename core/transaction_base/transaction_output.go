@@ -21,12 +21,11 @@ package transaction_base
 import (
 	"bytes"
 
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
 )
 
 type TXOutput struct {
@@ -82,7 +81,7 @@ func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) boo
 }
 
 func (out *TXOutput) ToProto() proto.Message {
-	return &corepb.TXOutput{
+	return &transactionbasepb.TXOutput{
 		Value:         out.Value.Bytes(),
 		PublicKeyHash: []byte(out.PubKeyHash),
 		Contract:      out.Contract,
@@ -90,7 +89,7 @@ func (out *TXOutput) ToProto() proto.Message {
 }
 
 func (out *TXOutput) FromProto(pb proto.Message) {
-	out.Value = common.NewAmountFromBytes(pb.(*corepb.TXOutput).GetValue())
-	out.PubKeyHash = account.PubKeyHash(pb.(*corepb.TXOutput).GetPublicKeyHash())
-	out.Contract = pb.(*corepb.TXOutput).GetContract()
+	out.Value = common.NewAmountFromBytes(pb.(*transactionbasepb.TXOutput).GetValue())
+	out.PubKeyHash = account.PubKeyHash(pb.(*transactionbasepb.TXOutput).GetPublicKeyHash())
+	out.Contract = pb.(*transactionbasepb.TXOutput).GetContract()
 }

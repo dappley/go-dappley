@@ -1,0 +1,19 @@
+syntax = "proto3";
+package transactionpb;
+import "github.com/dappley/go-dappley/core/transaction_base/pb/transactionBase.proto";
+
+
+message Transactions{
+    repeated Transaction transactions = 1;
+}
+
+message Transaction{
+    bytes id = 1;
+    repeated transactionbasepb.TXInput vin = 2;
+    repeated transactionbasepb.TXOutput vout = 3;
+    bytes tip = 4;
+    bytes gas_limit = 5;
+    bytes gas_price = 6;
+}
+
+
