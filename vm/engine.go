@@ -426,19 +426,24 @@ func (sc *V8Engine) CollectTracingStats() {
 // SetExecutionLimits set execution limits of V8 Engine, prevent Halting Problem.
 func (e *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
 
+	totalMemorySize := DefaultLimitsOfTotalMemorySize
+	if limitsOfTotalMemorySize > 0 {
+		totalMemorySize = limitsOfTotalMemorySize
+	}
+
 	e.v8engine.limits_of_executed_instructions = C.size_t(limitsOfExecutionInstructions)
-	e.v8engine.limits_of_total_memory_size = C.size_t(limitsOfTotalMemorySize)
+	e.v8engine.limits_of_total_memory_size = C.size_t(totalMemorySize)
 
 	e.limitsOfExecutionInstructions = limitsOfExecutionInstructions
-	e.limitsOfTotalMemorySize = limitsOfTotalMemorySize
+	e.limitsOfTotalMemorySize = totalMemorySize
 
-	if limitsOfExecutionInstructions == 0 || limitsOfTotalMemorySize == 0 {
-		logger.Errorf("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, limitsOfTotalMemorySize)
+	if limitsOfExecutionInstructions == 0 || totalMemorySize == 0 {
+		logger.Errorf("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, totalMemorySize)
 		return ErrLimitHasEmpty
 	}
 	// V8 needs at least 6M heap memory.
-	if limitsOfTotalMemorySize > 0 && limitsOfTotalMemorySize < 6000000 {
-		logger.Errorf("V8 needs at least 6M (6000000) heap memory, your limitsOfTotalMemorySize (%d) is too low.", limitsOfTotalMemorySize)
+	if totalMemorySize > 0 && totalMemorySize < 6000000 {
+		logger.Errorf("V8 needs at least 6M (6000000) heap memory, your limitsOfTotalMemorySize (%d) is too low.", totalMemorySize)
 		return ErrSetMemorySmall
 	}
 	return nil

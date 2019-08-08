@@ -7,13 +7,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/vm"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -493,7 +491,7 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	}).Debug("Transaction: is executing the smart contract...")
 
 	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
-	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), vm.DefaultLimitsOfTotalMemorySize); err != nil {
+	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), 0); err != nil {
 		return 0, nil, ErrInvalidGasLimit
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)

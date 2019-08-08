@@ -19,8 +19,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
-
 func HashTransactions(b *block.Block) []byte {
 	var txHashes [][]byte
 	var txHash [32]byte
@@ -158,7 +156,7 @@ L:
 
 			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
 			// TODO GAS LIMIT
-			if err := scEngine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
+			if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 				return false
 			}
 			transaction_logic.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
