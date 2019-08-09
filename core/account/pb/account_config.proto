@@ -1,6 +1,0 @@
-syntax = "proto3";
-package accountpb;
-
-message AccountConfig{
-    string file_path = 1;
-}
