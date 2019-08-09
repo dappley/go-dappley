@@ -55,7 +55,7 @@ func TestBlock_VerifyHash(t *testing.T) {
 	b1.SetNonce(b1.GetNonce() + 1)
 	hash = CalculateHashWithNonce(b1)
 	b1.SetHash(hash)
-	assert.False(t, VerifyHash(b1))
+	assert.True(t, VerifyHash(b1))
 
 	hash = CalculateHashWithoutNonce(b1)
 	b1.SetHash(hash)

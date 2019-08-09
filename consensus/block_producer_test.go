@@ -19,10 +19,11 @@
 package consensus
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
-	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"

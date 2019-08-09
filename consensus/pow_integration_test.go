@@ -21,14 +21,15 @@
 package consensus
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"os"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/util"
 
