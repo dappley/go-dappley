@@ -1,9 +1,0 @@
-syntax = "proto3";
-package corepb;
-import "github.com/dappley/go-dappley/core/transaction_base/pb/transactionBase.proto";
-
-
-message TransactionJournal {
-    repeated transactionbasepb.TXOutput vout = 1;
-}
-

@@ -22,3 +22,7 @@ message TransactionNode{
     int64   size = 3;
 }
 
+message TransactionJournal {
+    repeated transactionbasepb.TXOutput vout = 1;
+}
+

@@ -20,10 +20,9 @@ package transaction
 import (
 	"errors"
 
-	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
-
-	corepb "github.com/dappley/go-dappley/core/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
+	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -95,7 +94,7 @@ func (txJournal *TxJournal) SerializeJournal() ([]byte, error) {
 }
 
 func DeserializeJournal(b []byte) (*TxJournal, error) {
-	pb := &corepb.TransactionJournal{}
+	pb := &transactionpb.TransactionJournal{}
 	err := proto.Unmarshal(b, pb)
 	if err != nil {
 		logger.WithError(err).Panic("TransactionJournal: Cannot deserialize transactionJournal!")
@@ -111,7 +110,7 @@ func (txJournal *TxJournal) toProto() proto.Message {
 	for _, txout := range txJournal.Vout {
 		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
 	}
-	return &corepb.TransactionJournal{
+	return &transactionpb.TransactionJournal{
 		Vout: voutArray,
 	}
 }
@@ -119,7 +118,7 @@ func (txJournal *TxJournal) toProto() proto.Message {
 func (txJournal *TxJournal) fromProto(pb proto.Message) {
 	var voutArray []transaction_base.TXOutput
 	txout := transaction_base.TXOutput{}
-	for _, txoutpb := range pb.(*corepb.TransactionJournal).GetVout() {
+	for _, txoutpb := range pb.(*transactionpb.TransactionJournal).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)
 	}
