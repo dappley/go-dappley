@@ -914,6 +914,9 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	var address1Bytes = []byte("address1000000000000000000000000")
+	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
+
 	db := storage.NewRamStorage()
 	defer db.Close()
 
@@ -1030,15 +1033,17 @@ func TestUpdate(t *testing.T) {
 
 	utxoIndex2 := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
-	utxoIndex2.index[pkHash2.String()] = &utxoTxPk2
-	utxoIndex2.index[pkHash1.String()] = &utxoTxPk1
+	utxoIndex2.SetIndex(map[string]*utxo.UTXOTx{
+		pkHash2.String(): &utxoTxPk2,
+		pkHash1.String(): &utxoTxPk1,
+	})
 
 	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
 	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal}
 	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
 	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
 	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.index[pkHash2.String()].GetAllUtxos(), &dependentTx2)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos(), &dependentTx2)
 	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1}, &dependentTx3)
 	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
 	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
