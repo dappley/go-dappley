@@ -19,14 +19,18 @@
 package logic
 
 import (
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"testing"
-	"time"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -906,4 +910,154 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	time.Sleep(time.Second * 5)
 	conss.Stop()
 	assert.True(t, bc.GetMaxHeight()-bc1.GetMaxHeight() <= 1)
+}
+
+func TestUpdate(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+
+	blk := core.GenerateUtxoMockBlockWithoutInputs()
+	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndex.UpdateUtxoState(blk.GetTransactions())
+	utxoIndex.Save()
+	utxoIndexInDB := NewUTXOIndex(utxo.NewUTXOCache(db))
+
+	// test updating UTXO index with non-dependent transactions
+	// Assert that both the original instance and the database copy are updated correctly
+	for _, index := range []UTXOIndex{*utxoIndex, *utxoIndexInDB} {
+		utxoTx := index.GetAllUTXOsByPubKeyHash(address1Hash)
+		assert.Equal(t, 2, utxoTx.Size())
+		utxo0 := utxoTx.GetUtxo(blk.GetTransactions()[0].ID, 0)
+		utx1 := utxoTx.GetUtxo(blk.GetTransactions()[0].ID, 1)
+		assert.Equal(t, blk.GetTransactions()[0].ID, utxo0.Txid)
+		assert.Equal(t, 0, utxo0.TxIndex)
+		assert.Equal(t, blk.GetTransactions()[0].Vout[0].Value, utxo0.Value)
+		assert.Equal(t, blk.GetTransactions()[0].ID, utx1.Txid)
+		assert.Equal(t, 1, utx1.TxIndex)
+		assert.Equal(t, blk.GetTransactions()[0].Vout[1].Value, utx1.Value)
+	}
+
+	// test updating UTXO index with dependent transactions
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
+	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
+	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
+	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
+	var pubkey3 = account.GenerateKeyPairByPrivateKey(prikey3).GetPublicKey()
+	var pkHash3, _ = account.NewUserPubKeyHash(pubkey3)
+	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
+	var pubkey4 = account.GenerateKeyPairByPrivateKey(prikey4).GetPublicKey()
+	var pkHash4, _ = account.NewUserPubKeyHash(pubkey4)
+	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
+	var pubkey5 = account.GenerateKeyPairByPrivateKey(prikey5).GetPublicKey()
+	var pkHash5, _ = account.NewUserPubKeyHash(pubkey5)
+
+	var dependentTx1 = transaction.Transaction{
+		ID: nil,
+		Vin: []transaction_base.TXInput{
+			{util.GenerateRandomAoB(1), 1, nil, pubkey1},
+		},
+		Vout: []transaction_base.TXOutput{
+			{common.NewAmount(5), pkHash1, ""},
+			{common.NewAmount(10), pkHash2, ""},
+		},
+		Tip: common.NewAmount(3),
+	}
+	dependentTx1.ID = dependentTx1.Hash()
+
+	var dependentTx2 = transaction.Transaction{
+		ID: nil,
+		Vin: []transaction_base.TXInput{
+			{dependentTx1.ID, 1, nil, pubkey2},
+		},
+		Vout: []transaction_base.TXOutput{
+			{common.NewAmount(5), pkHash3, ""},
+			{common.NewAmount(3), pkHash4, ""},
+		},
+		Tip: common.NewAmount(2),
+	}
+	dependentTx2.ID = dependentTx2.Hash()
+
+	var dependentTx3 = transaction.Transaction{
+		ID: nil,
+		Vin: []transaction_base.TXInput{
+			{dependentTx2.ID, 0, nil, pubkey3},
+		},
+		Vout: []transaction_base.TXOutput{
+			{common.NewAmount(1), pkHash4, ""},
+		},
+		Tip: common.NewAmount(4),
+	}
+	dependentTx3.ID = dependentTx3.Hash()
+
+	var dependentTx4 = transaction.Transaction{
+		ID: nil,
+		Vin: []transaction_base.TXInput{
+			{dependentTx2.ID, 1, nil, pubkey4},
+			{dependentTx3.ID, 0, nil, pubkey4},
+		},
+		Vout: []transaction_base.TXOutput{
+			{common.NewAmount(3), pkHash1, ""},
+		},
+		Tip: common.NewAmount(1),
+	}
+	dependentTx4.ID = dependentTx4.Hash()
+
+	var dependentTx5 = transaction.Transaction{
+		ID: nil,
+		Vin: []transaction_base.TXInput{
+			{dependentTx1.ID, 0, nil, pubkey1},
+			{dependentTx4.ID, 0, nil, pubkey1},
+		},
+		Vout: []transaction_base.TXOutput{
+			{common.NewAmount(4), pkHash5, ""},
+		},
+		Tip: common.NewAmount(4),
+	}
+	dependentTx5.ID = dependentTx5.Hash()
+
+	utxoPk2 := &utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal}
+	utxoPk1 := &utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
+
+	utxoTxPk2 := utxo.NewUTXOTx()
+	utxoTxPk2.PutUtxo(utxoPk2)
+
+	utxoTxPk1 := utxo.NewUTXOTx()
+	utxoTxPk1.PutUtxo(utxoPk1)
+
+	utxoIndex2 := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+
+	utxoIndex2.index[pkHash2.String()] = &utxoTxPk2
+	utxoIndex2.index[pkHash1.String()] = &utxoTxPk1
+
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
+	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal}
+	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
+	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
+	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.index[pkHash2.String()].GetAllUtxos(), &dependentTx2)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1}, &dependentTx3)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
+	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
+
+	txsForUpdate := []*transaction.Transaction{&dependentTx2, &dependentTx3}
+	utxoIndex2.UpdateUtxoState(txsForUpdate)
+	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash1).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
+	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash4).Size())
+	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4}
+	utxoIndex2.UpdateUtxoState(txsForUpdate)
+	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash1).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
+	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5}
+	utxoIndex2.UpdateUtxoState(txsForUpdate)
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash1).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash4).Size())
+	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash5).Size())
 }

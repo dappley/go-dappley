@@ -20,11 +20,12 @@ package logic
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
