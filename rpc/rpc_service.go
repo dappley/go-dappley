@@ -172,7 +172,7 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 	var blocks []*block.Block
 	maxBlockCount := in.GetMaxCount()
 	if maxBlockCount > MaxGetBlocksCount {
-		return nil, status.Error(codes.InvalidArgument, "blk count overflow")
+		return nil, status.Error(codes.InvalidArgument, "block count overflow")
 	}
 
 	blk, err := rpcService.GetBlockchain().GetBlockByHeight(blk.GetHeight() + 1)
