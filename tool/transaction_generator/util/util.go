@@ -4,10 +4,12 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	logger "github.com/sirupsen/logrus"
 )
 
-func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *transaction.Transaction {
+func NewTransaction(prevUtxos []*utxo.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *transaction.Transaction {
 	tx := &transaction.Transaction{
 		nil,
 		prepareInputLists(prevUtxos, senderKeyPair.GetPublicKey(), nil),
@@ -24,7 +26,7 @@ func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.A
 	return tx
 }
 
-func prepareInputLists(utxos []*core.UTXO, publicKey []byte, signature []byte) []core.TXInput {
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []core.TXInput {
 	var inputs []core.TXInput
 
 	// Build a list of inputs
@@ -36,7 +38,7 @@ func prepareInputLists(utxos []*core.UTXO, publicKey []byte, signature []byte) [
 	return inputs
 }
 
-func calculateUtxoSum(utxos []*core.UTXO) *common.Amount {
+func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 	sum := common.NewAmount(0)
 	for _, utxo := range utxos {
 		sum = sum.Add(utxo.Value)
@@ -57,7 +59,7 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 	return change
 }
 
-func prepareOutputLists(prevUtxos []*core.UTXO, from, to account.Address, amount *common.Amount, tip *common.Amount) []core.TXOutput {
+func prepareOutputLists(prevUtxos []*utxo.UTXO, from, to account.Address, amount *common.Amount, tip *common.Amount) []core.TXOutput {
 
 	sum := calculateUtxoSum(prevUtxos)
 	change := calculateChange(sum, amount, tip)

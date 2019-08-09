@@ -5,6 +5,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -35,11 +37,11 @@ func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to get UTXOs to match the amount")
 	}
 
-	unexistingUtxo := &core.UTXO{
-		TXOutput: *core.NewTXOutput(common.NewAmount(10), params.From),
+	unexistingUtxo := &utxo.UTXO{
+		TXOutput: *transaction_base.NewTXOutput(common.NewAmount(10), params.From),
 		Txid:     []byte("FakeTxId"),
 		TxIndex:  0,
-		UtxoType: core.UtxoNormal,
+		UtxoType: utxo.UtxoNormal,
 	}
 	prevUtxos = append(prevUtxos, unexistingUtxo)
 

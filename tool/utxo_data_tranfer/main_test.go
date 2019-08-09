@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -33,9 +35,9 @@ func TestTransferResult(t *testing.T) {
 	// put old data
 	txid1, _ := hex.DecodeString("948c984f0cdcefc4f977efcd93ae37360cc5165dfc3657f07e72306cd0e6a354")
 	txid2, _ := hex.DecodeString("4fef1c385b0cbda4092cfe245329bb18e580480e07a880ebcefe1fa7e24a089f")
-	utxo1 := &core.UTXO{core.TXOutput{common.NewAmount(10000000), minerPubKey, ""}, txid1, 0, core.UtxoNormal}
-	utxo2 := &core.UTXO{core.TXOutput{common.NewAmount(10000000), minerPubKey, ""}, txid2, 0, core.UtxoNormal}
-	utxos := []*core.UTXO{utxo1, utxo2}
+	utxo1 := &utxo.UTXO{transaction_base.TXOutput{common.NewAmount(10000000), minerPubKey, ""}, txid1, 0, utxo.UtxoNormal}
+	utxo2 := &utxo.UTXO{transaction_base.TXOutput{common.NewAmount(10000000), minerPubKey, ""}, txid2, 0, utxo.UtxoNormal}
+	utxos := []*utxo.UTXO{utxo1, utxo2}
 	utxoIndexOld := NewUTXOIndexOld()
 	utxoIndexOld.index[minerKey] = utxos
 
@@ -47,7 +49,7 @@ func TestTransferResult(t *testing.T) {
 	convert(db)
 
 	// read new data
-	utxoIndex := utxo_logic.NewUTXOIndex(core.NewUTXOCache(db))
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
 	utxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(minerPubKey)
 	newDataSize := utxoTx.Size()
 	t.Logf("ResultTest: newDataSize %d", newDataSize)

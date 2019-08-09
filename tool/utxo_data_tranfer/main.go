@@ -25,7 +25,8 @@ import (
 	"flag"
 	"sync"
 
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -36,7 +37,7 @@ const dbFilePath = "../../bin/node1.db"
 
 // UTXOIndexOld holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndexOld struct {
-	index map[string][]*core.UTXO
+	index map[string][]*utxo.UTXO
 	mutex *sync.RWMutex
 }
 
@@ -101,7 +102,7 @@ func LoadUTXOIndexOld(db storage.Storage) *UTXOIndexOld {
 
 // NewUTXOIndexOld initializes an UTXOIndex instance
 func NewUTXOIndexOld() *UTXOIndexOld {
-	return &UTXOIndexOld{make(map[string][]*core.UTXO), &sync.RWMutex{}}
+	return &UTXOIndexOld{make(map[string][]*utxo.UTXO), &sync.RWMutex{}}
 }
 
 func deserializeUTXOIndexOld(d []byte) *UTXOIndexOld {
@@ -130,7 +131,7 @@ func (utxos *UTXOIndexOld) serializeUTXOIndexOld() []byte {
 
 // Convert old utxoIndex data to new utxoIndex data
 func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *utxo_logic.UTXOIndex {
-	utxoIndexNew := utxo_logic.NewUTXOIndex(core.NewUTXOCache(db))
+	utxoIndexNew := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
 	for address, utxoArray := range utxoIndexOld.index {
 		if address == contractUtxoKeyOld {
 			continue
@@ -141,7 +142,7 @@ func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *utxo_logic.UTX
 }
 
 // Add each utxo in utxoArray into new utxoIndex
-func addUtxoArrayToIndex(utxoArray []*core.UTXO, utxoIndexNew *utxo_logic.UTXOIndex) {
+func addUtxoArrayToIndex(utxoArray []*utxo.UTXO, utxoIndexNew *utxo_logic.UTXOIndex) {
 	if utxoArray == nil {
 		return
 	}
