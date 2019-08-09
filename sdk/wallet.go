@@ -1,11 +1,11 @@
 package sdk
 
 import (
-	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sync"
 
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
+
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"

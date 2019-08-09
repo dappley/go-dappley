@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	logger "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"time"
+
+	logger "github.com/sirupsen/logrus"
 )
 
 const dbpath = "../../bin/node1.db"
@@ -17,10 +18,10 @@ func main() {
 	s := int64(0)
 	var arr []string
 	prev := s
-	for{
+	for {
 		time.Sleep(time.Second)
 		arr, s, _ = DirSize(dbpath)
-		if s==prev {
+		if s == prev {
 			continue
 		}
 		logger.WithFields(logger.Fields{
@@ -53,7 +54,7 @@ func DirSize(path string) ([]string, int64, error) {
 		}
 		if !info.IsDir() {
 			size += info.Size()
-			s = append(s, fmt.Sprintf("%s:%v",info.Name(),info.Size()))
+			s = append(s, fmt.Sprintf("%s:%v", info.Name(), info.Size()))
 		}
 		return err
 	})

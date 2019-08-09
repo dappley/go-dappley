@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/dappley/go-dappley/core/block"
 	"os"
 
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/utxo"
+
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"
@@ -208,7 +209,7 @@ func GetUtxoHandle() {
 	db := storage.OpenDatabase(dbPath)
 	defer db.Close()
 
-	utxoCache := core.NewUTXOCache(db)
+	utxoCache := utxo.NewUTXOCache(db)
 	utxoTx := utxoCache.Get(pubKeyHash)
 
 	dumpUtxos(utxoTx)
@@ -270,7 +271,7 @@ func dumpBlock(block *block.Block) {
 	fmt.Print(proto.MarshalTextString(block2PrettyPb(block)))
 }
 
-func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
+func utxo2PrettyPb(utxo *utxo.UTXO) proto.Message {
 	return &db_inspect_pb.Utxo{
 		Amount:        utxo.Value.String(),
 		PublicKeyHash: utxo.PubKeyHash.String(),
@@ -279,7 +280,7 @@ func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
 	}
 }
 
-func dumpUtxos(utxos *core.UTXOTx) {
+func dumpUtxos(utxos *utxo.UTXOTx) {
 	for _, utxo := range utxos.Indices {
 		fmt.Print(proto.MarshalTextString(utxo2PrettyPb(utxo)))
 	}

@@ -1,9 +1,9 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -21,7 +21,7 @@ func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 	}
 }
 
-func (txSender *DoubleSpendingTxSender) Generate(params core.SendTxParam) {
+func (txSender *DoubleSpendingTxSender) Generate(params transaction.SendTxParam) {
 	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
@@ -40,7 +40,7 @@ func (txSender *DoubleSpendingTxSender) Generate(params core.SendTxParam) {
 
 func (txSender *DoubleSpendingTxSender) Send() {
 
-	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err == nil {
 		logger.WithError(err).Info("DoubleSpendingTx: Sending transaction 1 succeeded")
@@ -48,7 +48,7 @@ func (txSender *DoubleSpendingTxSender) Send() {
 		logger.WithError(err).Panic("DoubleSpendingTx: Sending transaction 1 failed!")
 	}
 
-	_, err = txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err = txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err == nil {
 		logger.WithError(err).Info("DoubleSpendingTx: Sending transaction 2 succeeded")

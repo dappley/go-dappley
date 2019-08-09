@@ -1,9 +1,10 @@
 package tool
 
 import (
+	"time"
+
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
-	"time"
 )
 
 type NextBlockTicker struct {

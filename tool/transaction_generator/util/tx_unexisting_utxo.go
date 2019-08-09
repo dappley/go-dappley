@@ -2,9 +2,9 @@ package util
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/sdk"
@@ -24,7 +24,7 @@ func NewUnexistingUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 	}
 }
 
-func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
+func (txSender *UnexistingUtxoTxSender) Generate(params transaction.SendTxParam) {
 	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
@@ -51,7 +51,7 @@ func (txSender *UnexistingUtxoTxSender) Generate(params core.SendTxParam) {
 
 func (txSender *UnexistingUtxoTxSender) Send() {
 
-	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err != nil {
 		logger.WithError(err).Error("UnexisitingUtxoTx: Sending transaction failed!")

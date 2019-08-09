@@ -1,9 +1,9 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -25,7 +25,7 @@ func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, acc *sdk.DappSdkAccount, 
 	}
 }
 
-func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
+func (txSender *UnauthorizedUtxoTxSender) Generate(params transaction.SendTxParam) {
 	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
@@ -47,7 +47,7 @@ func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
 
 func (txSender *UnauthorizedUtxoTxSender) Send() {
 
-	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err != nil {
 		logger.WithError(err).Error("UnauthorizedUtxoTx: Sending transaction failed!")

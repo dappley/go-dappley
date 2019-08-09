@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -23,7 +24,7 @@ type BatchTxSender struct {
 	account     *sdk.DappSdkAccount
 	dappSdk     *sdk.DappSdk
 	isRunning   bool
-	pendingTxs  []*corepb.Transaction
+	pendingTxs  []*transactionpb.Transaction
 	isScEnabled bool
 	scAddr      string
 	scSendFreq  uint32
@@ -61,10 +62,10 @@ func (sender *BatchTxSender) IsRunning() bool {
 }
 
 func (sender *BatchTxSender) ClearPendingTx() {
-	sender.pendingTxs = []*corepb.Transaction{}
+	sender.pendingTxs = []*transactionpb.Transaction{}
 }
 
-func (sender *BatchTxSender) AddTxToPendingTxs(tx *corepb.Transaction) {
+func (sender *BatchTxSender) AddTxToPendingTxs(tx *transactionpb.Transaction) {
 	sender.pendingTxs = append(sender.pendingTxs, tx)
 }
 
@@ -113,7 +114,7 @@ func (sender *BatchTxSender) Run() {
 	}()
 }
 
-func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
+func (sender *BatchTxSender) createRandomTransaction() *transactionpb.Transaction {
 
 	data := ""
 
@@ -146,7 +147,7 @@ func (sender *BatchTxSender) createRandomTransaction() *corepb.Transaction {
 	sender.account.UpdateBalance(toAddr, sender.account.GetBalance(toAddr)+sendAmount)
 	sender.account.UpdateBalance(fromAddr, sender.account.GetBalance(fromAddr)-sendAmount)
 
-	return tx.ToProto().(*corepb.Transaction)
+	return tx.ToProto().(*transactionpb.Transaction)
 }
 
 func (sender *BatchTxSender) getAddrWithNoneZeroBalance() int {

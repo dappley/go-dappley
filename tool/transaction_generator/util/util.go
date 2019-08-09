@@ -2,14 +2,15 @@ package util
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
 	logger "github.com/sirupsen/logrus"
 )
 
-func NewTransaction(prevUtxos []*utxo.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *transaction.Transaction {
+func NewTransaction(prevUtxos []*utxo.UTXO, vouts []transaction_base.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *transaction.Transaction {
 	tx := &transaction.Transaction{
 		nil,
 		prepareInputLists(prevUtxos, senderKeyPair.GetPublicKey(), nil),
@@ -19,19 +20,19 @@ func NewTransaction(prevUtxos []*utxo.UTXO, vouts []core.TXOutput, tip *common.A
 		common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
-	err := core.Sign(senderKeyPair.GetPrivateKey(), prevUtxos, tx)
+	err := transaction_logic.Sign(senderKeyPair.GetPrivateKey(), prevUtxos, tx)
 	if err != nil {
 		logger.Panic("Sign transaction failed. Terminating...")
 	}
 	return tx
 }
 
-func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []core.TXInput {
-	var inputs []core.TXInput
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transaction_base.TXInput {
+	var inputs []transaction_base.TXInput
 
 	// Build a list of inputs
 	for _, utxo := range utxos {
-		input := core.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
+		input := transaction_base.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
 		inputs = append(inputs, input)
 	}
 
@@ -59,16 +60,16 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 	return change
 }
 
-func prepareOutputLists(prevUtxos []*utxo.UTXO, from, to account.Address, amount *common.Amount, tip *common.Amount) []core.TXOutput {
+func prepareOutputLists(prevUtxos []*utxo.UTXO, from, to account.Address, amount *common.Amount, tip *common.Amount) []transaction_base.TXOutput {
 
 	sum := calculateUtxoSum(prevUtxos)
 	change := calculateChange(sum, amount, tip)
 
-	var outputs []core.TXOutput
+	var outputs []transaction_base.TXOutput
 
-	outputs = append(outputs, *core.NewTXOutput(amount, to))
+	outputs = append(outputs, *transaction_base.NewTXOutput(amount, to))
 	if !change.IsZero() {
-		outputs = append(outputs, *core.NewTXOutput(change, from))
+		outputs = append(outputs, *transaction_base.NewTXOutput(change, from))
 	}
 	return outputs
 }

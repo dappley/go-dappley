@@ -2,9 +2,9 @@ package util
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -22,7 +22,7 @@ func NewInsufficientBalanceTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAc
 	}
 }
 
-func (txSender *InsufficientBalanceTxSender) Generate(params core.SendTxParam) {
+func (txSender *InsufficientBalanceTxSender) Generate(params transaction.SendTxParam) {
 	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	if err != nil {
@@ -43,7 +43,7 @@ func (txSender *InsufficientBalanceTxSender) Generate(params core.SendTxParam) {
 
 func (txSender *InsufficientBalanceTxSender) Send() {
 
-	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err != nil {
 		logger.WithError(err).Error("InsufficientBalanceTx: Sending transaction failed!")

@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
-	"github.com/dappley/go-dappley/core/blockchain"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"

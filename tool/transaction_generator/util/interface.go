@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/sdk"
 )
 
@@ -12,7 +12,7 @@ type TxSender struct {
 }
 
 type TestTransaction interface {
-	Generate(params core.SendTxParam)
+	Generate(params transaction.SendTxParam)
 	Send()
 	Print()
 }

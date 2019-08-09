@@ -3,14 +3,19 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
 	"io/ioutil"
 	"os"
 
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
