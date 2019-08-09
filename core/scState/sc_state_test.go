@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	corepb "github.com/dappley/go-dappley/core/pb"
+	scstatepb "github.com/dappley/go-dappley/core/scState/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -65,7 +65,7 @@ func TestScState_ToProto(t *testing.T) {
 func TestScState_FromProto(t *testing.T) {
 	serializedBytes, err := hex.DecodeString("0a180a056164647231120f0a0d0a046b657931120556616c7565")
 	assert.Nil(t, err)
-	scStateProto := &corepb.ScState{}
+	scStateProto := &scstatepb.ScState{}
 	err = proto.Unmarshal(serializedBytes, scStateProto)
 	assert.Nil(t, err)
 	ss := NewScState()

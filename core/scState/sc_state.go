@@ -5,7 +5,7 @@ import (
 
 	"github.com/dappley/go-dappley/common/hash"
 
-	corepb "github.com/dappley/go-dappley/core/pb"
+	scstatepb "github.com/dappley/go-dappley/core/scState/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -41,7 +41,7 @@ func (ss *ScState) RecordEvent(event *Event) {
 }
 
 func deserializeScState(d []byte) *ScState {
-	scStateProto := &corepb.ScState{}
+	scStateProto := &scstatepb.ScState{}
 	err := proto.Unmarshal(d, scStateProto)
 	if err != nil {
 		logger.WithError(err).Panic("ScState: failed to deserialize UTXO states.")
@@ -127,31 +127,31 @@ func (ss *ScState) SaveToDatabase(db storage.Storage) error {
 }
 
 func (ss *ScState) ToProto() proto.Message {
-	scState := make(map[string]*corepb.State)
+	scState := make(map[string]*scstatepb.State)
 
 	for key, val := range ss.states {
-		scState[key] = &corepb.State{State: val}
+		scState[key] = &scstatepb.State{State: val}
 	}
-	return &corepb.ScState{States: scState}
+	return &scstatepb.ScState{States: scState}
 }
 
 func (ss *ScState) FromProto(pb proto.Message) {
-	for key, val := range pb.(*corepb.ScState).States {
+	for key, val := range pb.(*scstatepb.ScState).States {
 		ss.states[key] = val.State
 	}
 }
 
 func (cl *ChangeLog) ToProto() proto.Message {
-	changelog := make(map[string]*corepb.Log)
+	changelog := make(map[string]*scstatepb.Log)
 
 	for key, val := range cl.log {
-		changelog[key] = &corepb.Log{Log: val}
+		changelog[key] = &scstatepb.Log{Log: val}
 	}
-	return &corepb.ChangeLog{Log: changelog}
+	return &scstatepb.ChangeLog{Log: changelog}
 }
 
 func (cl *ChangeLog) FromProto(pb proto.Message) {
-	for key, val := range pb.(*corepb.ChangeLog).Log {
+	for key, val := range pb.(*scstatepb.ChangeLog).Log {
 		cl.log[key] = val.Log
 	}
 }
@@ -266,7 +266,7 @@ func deleteLog(db storage.Storage, prevHash hash.Hash) error {
 }
 
 func deserializeChangeLog(d []byte) *ChangeLog {
-	scStateProto := &corepb.ChangeLog{}
+	scStateProto := &scstatepb.ChangeLog{}
 	err := proto.Unmarshal(d, scStateProto)
 	if err != nil {
 		logger.WithError(err).Panic("ScState: failed to deserialize chaneglog.")

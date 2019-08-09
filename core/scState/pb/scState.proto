@@ -1,5 +1,5 @@
 syntax = "proto3";
-package corepb;
+package scstatepb;
 
 message State {
     map<string, string> state = 1;
@@ -7,4 +7,12 @@ message State {
 
 message ScState {
     map<string, State> states = 1;
+}
+
+message Log {
+    map<string, string> log = 1;
+}
+
+message ChangeLog {
+    map<string, Log> log = 1;
 }
