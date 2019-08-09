@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
@@ -78,21 +81,21 @@ module.exports = new MathTest();`
 
 	contractPubKeyHash := account.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
-	contractUTXOs := []*core.UTXO{
+	contractUTXOs := []*utxo.UTXO{
 		{
 			Txid:     []byte("1"),
 			TxIndex:  0,
-			TXOutput: *core.NewTxOut(common.NewAmount(0), contractAddr, "somecontract"),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(0), contractAddr, "somecontract"),
 		},
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
-			TXOutput: *core.NewTxOut(common.NewAmount(15), contractAddr, ""),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(15), contractAddr, ""),
 		},
 		{
 			Txid:     []byte("2"),
 			TxIndex:  0,
-			TXOutput: *core.NewTxOut(common.NewAmount(3), contractAddr, ""),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(3), contractAddr, ""),
 		},
 	}
 
@@ -472,9 +475,9 @@ func TestNewAddress(t *testing.T) {
 }
 
 func TestAddGasCount(t *testing.T) {
-	vout := core.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	vout := transaction_base.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
 	tx := transaction.Transaction{
-		Vout: []core.TXOutput{*vout},
+		Vout: []transaction_base.TXOutput{*vout},
 	}
 	ctx := tx.ToContractTx()
 	script, _ := ioutil.ReadFile("test/test_add.js")
@@ -497,7 +500,7 @@ func TestAddGasCount(t *testing.T) {
 	gasCount += baseGas.Uint64()
 
 	// min gas of each tx
-	minGasTx := core.MinGasCountPerTransaction.Uint64()
+	minGasTx := transaction.MinGasCountPerTransaction.Uint64()
 	// dataLen
 	dataGas := uint64(35)
 	// instruction gas
@@ -506,10 +509,10 @@ func TestAddGasCount(t *testing.T) {
 }
 
 func TestStepRecordGasCount(t *testing.T) {
-	vout := core.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
+	vout := transaction_base.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
 	tx := transaction.Transaction{
-		Vout: []core.TXOutput{*vout},
+		Vout: []transaction_base.TXOutput{*vout},
 	}
 	ctx := tx.ToContractTx()
 	script, _ := ioutil.ReadFile("test/test_step_recorder.js")
@@ -534,7 +537,7 @@ func TestStepRecordGasCount(t *testing.T) {
 	gasCount += baseGas.Uint64()
 
 	// min gas of each tx
-	minGasTx := core.MinGasCountPerTransaction.Uint64()
+	minGasTx := transaction.MinGasCountPerTransaction.Uint64()
 	// dataLen
 	dataGas := uint64(74)
 	// instruction gas
