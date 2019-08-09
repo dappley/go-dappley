@@ -24,6 +24,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/core/utxo"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
@@ -41,6 +42,7 @@ var Subsidy = common.NewAmount(10000000)
 const (
 	ContractTxouputIndex = 0
 	scheduleFuncName     = "dapp_schedule"
+	SCDestroyAddress     = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
 )
 
 var RewardTxData = []byte("Distribute X Rewards")
@@ -595,4 +597,31 @@ func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
 		return nil
 	}
 	return pubKeyHash
+}
+
+//calculateUtxoSum calculates the total amount of all input utxos
+func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
+	sum := common.NewAmount(0)
+	for _, utxo := range utxos {
+		sum = sum.Add(utxo.Value)
+	}
+	return sum
+}
+
+//calculateChange calculates the change
+func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
+	change, err := input.Sub(amount)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+
+	change, err = change.Sub(tip)
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+	change, err = change.Sub(gasLimit.Mul(gasPrice))
+	if err != nil {
+		return nil, ErrInsufficientFund
+	}
+	return change, nil
 }
