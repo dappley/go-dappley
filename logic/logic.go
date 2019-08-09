@@ -23,11 +23,11 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
@@ -50,7 +50,7 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*blockchain_logic.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus blockchain_logic.Consensus, txPool *transaction_pool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*blockchain_logic.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}

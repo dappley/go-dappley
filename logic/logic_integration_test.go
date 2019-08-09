@@ -81,7 +81,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 			// Create a PoW blockchain with the sender wallet's address as the coinbase address
 			// i.e. sender's wallet would have mineReward amount after blockchain created
-			bc, pow := createBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, core.NewTransactionPool(node, 128))
+			bc, pow := createBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128))
 			pool := core.NewBlockPool()
 
 			bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
@@ -187,7 +187,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr1, store, nil, core.NewTransactionPool(node, 128), nil, 1000000)
+	bc, err := CreateBlockchain(addr1, store, nil, transaction_pool.NewTransactionPool(node, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -234,7 +234,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr1, store, nil, core.NewTransactionPool(node, 128), nil, 1000000)
+	bc, err := CreateBlockchain(addr1, store, nil, transaction_pool.NewTransactionPool(node, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -305,7 +305,7 @@ func TestBlockMsgRelaySingleMiner(t *testing.T) {
 		node := network.NewNode(db, nil)
 		node.Start(testport_msg_relay_port1+i, "")
 
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(producerAddrs[0]), db, dpos, core.NewTransactionPool(node, 128), nil, 100000)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(producerAddrs[0]), db, dpos, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool()
 
@@ -373,7 +373,7 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)
 		node.Start(testport_msg_relay_port2+i, "")
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(producerAddrs[0]), storage.NewRamStorage(), dpos, core.NewTransactionPool(node, 128), nil, 100000)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(producerAddrs[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool()
 
@@ -446,7 +446,7 @@ func TestForkChoice(t *testing.T) {
 		dbs = append(dbs, db)
 
 		node := network.NewNode(db, nil)
-		bc, pow := createBlockchain(addr, db, core.NewTransactionPool(node, 128))
+		bc, pow := createBlockchain(addr, db, transaction_pool.NewTransactionPool(node, 128))
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool()
 		pools = append(pools, pool)
@@ -521,7 +521,7 @@ func TestForkSegmentHandling(t *testing.T) {
 		dbs = append(dbs, db)
 		node := network.NewNode(db, nil)
 
-		bc, pow := createBlockchain(addr, db, core.NewTransactionPool(node, 128))
+		bc, pow := createBlockchain(addr, db, transaction_pool.NewTransactionPool(node, 128))
 		bcs = append(bcs, bc)
 		pool := core.NewBlockPool()
 		pools = append(pools, pool)
@@ -617,7 +617,7 @@ func TestAddBalance(t *testing.T) {
 			addr := minerAccount.GetKeyPair().GenerateAddress()
 			node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
-			bc, pow := createBlockchain(addr, store, core.NewTransactionPool(node, 128))
+			bc, pow := createBlockchain(addr, store, transaction_pool.NewTransactionPool(node, 128))
 
 			// Create a new account address for testing
 			testAddr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
@@ -670,7 +670,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			addr := account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs")
 			node := network.FakeNodeWithPidAndAddr(db, "a", "b")
 			// Create a blockchain
-			bc, err := CreateBlockchain(addr, db, nil, core.NewTransactionPool(node, 128), nil, 1000000)
+			bc, err := CreateBlockchain(addr, db, nil, transaction_pool.NewTransactionPool(node, 128), nil, 1000000)
 			assert.Nil(t, err)
 
 			_, _, err = SendFromMiner(account.NewAddress(tc.address), common.NewAmount(8), bc)
@@ -704,7 +704,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	senderAccount, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
-	bc, pow := createBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, core.NewTransactionPool(node, 128))
+	bc, pow := createBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128))
 	pool := core.NewBlockPool()
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 
@@ -773,7 +773,7 @@ func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *blockchain_
 	return node
 }
 
-func createBlockchain(addr account.Address, db *storage.RamStorage, txPool *core.TransactionPool) (*blockchain_logic.Blockchain, *consensus.ProofOfWork) {
+func createBlockchain(addr account.Address, db *storage.RamStorage, txPool *transaction_pool.TransactionPool) (*blockchain_logic.Blockchain, *consensus.ProofOfWork) {
 	pow := consensus.NewProofOfWork()
 	return blockchain_logic.CreateBlockchain(addr, db, pow, txPool, nil, 100000), pow
 }
@@ -812,7 +812,7 @@ func TestDoubleMint(t *testing.T) {
 		node := network.NewNode(db, nil)
 		node.Start(testport_msg_relay_port3+i, "")
 
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(validProducerAddr), db, dpos, core.NewTransactionPool(node, 128), nil, 100000)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(validProducerAddr), db, dpos, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
 		pool := core.NewBlockPool()
 
 		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
@@ -864,7 +864,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
 
-	bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), conss, core.NewTransactionPool(seedNode, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), conss, transaction_pool.NewTransactionPool(seedNode, 128), nil, 100000)
 
 	//create and start seed node
 	pool := core.NewBlockPool()
@@ -888,7 +888,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	node.Start(testport_fork_syncing+1, "")
 	defer node.Stop()
 
-	bc1 := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db1, dpos, core.NewTransactionPool(node, 128), nil, 100000)
+	bc1 := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db1, dpos, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
 
 	pool1 := core.NewBlockPool()
 

@@ -16,16 +16,16 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package core
+package transaction_pool
 
 import (
 	"encoding/hex"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/logic/transaction_pool/pb"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 
@@ -126,31 +126,31 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 
 	txPool := NewTransactionPool(nil, 128)
 	//push the first transaction_base. It should be in stored in txs and tipOrder
-	txPool.addTransactionAndSort(NewTransactionNode(txs[0]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[0]))
 	assert.Equal(t, 1, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx1. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
-	txPool.addTransactionAndSort(NewTransactionNode(txs[1]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[1]))
 	assert.Equal(t, 2, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx2. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx0
-	txPool.addTransactionAndSort(NewTransactionNode(txs[2]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[2]))
 	assert.Equal(t, 3, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx3. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx1
-	txPool.addTransactionAndSort(NewTransactionNode(txs[3]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[3]))
 	assert.Equal(t, 4, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
 	assert.Equal(t, hex.EncodeToString(txs[0].ID), txPool.tipOrder[0])
 
 	//push ttx4. It should be stored in txs and tipOrder
-	txPool.addTransactionAndSort(NewTransactionNode(txs[4]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[4]))
 	assert.Equal(t, 5, len(txPool.txs))
 	assert.Equal(t, 2, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
@@ -158,7 +158,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	assert.Equal(t, hex.EncodeToString(txs[0].ID), txPool.tipOrder[1])
 
 	//push ttx5. It should be stored in txs. But it should not be in tipOrder since it is a child of ttx4
-	txPool.addTransactionAndSort(NewTransactionNode(txs[5]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[5]))
 	assert.Equal(t, 6, len(txPool.txs))
 	assert.Equal(t, 2, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
@@ -166,7 +166,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	assert.Equal(t, hex.EncodeToString(txs[0].ID), txPool.tipOrder[1])
 
 	//push ttx6.  It should be stored in txs and tipOrder
-	txPool.addTransactionAndSort(NewTransactionNode(txs[6]))
+	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[6]))
 	assert.Equal(t, 7, len(txPool.txs))
 	assert.Equal(t, 3, len(txPool.tipOrder))
 	//since ttx4 has a higher tip than ttx0, it should rank position 0 in tipOrder
@@ -180,7 +180,7 @@ func TestTransactionPool_RemoveTransactionNodeAndChildren(t *testing.T) {
 	txs := generateDependentTxs()
 	txPool := NewTransactionPool(nil, 128)
 	for _, tx := range txs {
-		txPool.addTransactionAndSort(NewTransactionNode(tx))
+		txPool.addTransactionAndSort(transaction.NewTransactionNode(tx))
 	}
 	//Since tx2 has no children, only tx2 will be removed
 	txPool.removeTransactionNodeAndChildren(txs[2])
@@ -196,7 +196,7 @@ func TestTransactionPool_removeMinTipTx(t *testing.T) {
 	txs := generateDependentTxs()
 	txPool := NewTransactionPool(nil, 128)
 	for _, tx := range txs {
-		txPool.addTransactionAndSort(NewTransactionNode(tx))
+		txPool.addTransactionAndSort(transaction.NewTransactionNode(tx))
 	}
 	//Since tx0 is the minimum tip, all children will be removed
 	txPool.removeMinTipTx()
@@ -210,7 +210,7 @@ func TestTransactionPool_Update(t *testing.T) {
 	txs := generateDependentTxs()
 	txPool := NewTransactionPool(nil, 128)
 	for _, tx := range txs {
-		txPool.addTransactionAndSort(NewTransactionNode(tx))
+		txPool.addTransactionAndSort(transaction.NewTransactionNode(tx))
 	}
 
 	//Since tx0 is the root, its children will be bumped up into the sorted list
@@ -411,12 +411,12 @@ func TestTransactionPool_Proto(t *testing.T) {
 	txPool := NewTransactionPool(nil, 128)
 	txs := generateDependentTxs()
 	for _, tx := range txs {
-		txPool.addTransactionAndSort(NewTransactionNode(tx))
+		txPool.addTransactionAndSort(transaction.NewTransactionNode(tx))
 	}
 	rawBytes, err := proto.Marshal(txPool.ToProto())
 	assert.Nil(t, err)
 
-	txPoolProto := &corepb.TransactionPool{}
+	txPoolProto := &transactionPoolpb.TransactionPool{}
 	err = proto.Unmarshal(rawBytes, txPoolProto)
 	assert.Nil(t, err)
 
@@ -440,7 +440,7 @@ func TestNewTransactionNode(t *testing.T) {
 	rawBytes, err := proto.Marshal(ttx1.ToProto())
 	assert.Nil(t, err)
 
-	txNode := NewTransactionNode(ttx1)
+	txNode := transaction.NewTransactionNode(ttx1)
 	assert.Equal(t, ttx1, txNode.Value)
 	assert.Equal(t, 0, len(txNode.Children))
 	assert.Equal(t, len(rawBytes), txNode.Size)

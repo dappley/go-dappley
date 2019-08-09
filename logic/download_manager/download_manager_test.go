@@ -55,7 +55,7 @@ func createTestBlockchains(size int, portStart int) ([]*blockchain_logic.Blockch
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)
 
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db, pow, core.NewTransactionPool(node, 128), nil, 100000)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db, pow, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
 		bc.SetState(blockchain.BlockchainReady)
 
 		bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)

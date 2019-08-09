@@ -1,4 +1,4 @@
-package core
+package transaction_pool
 
 import (
 	"github.com/dappley/go-dappley/metrics"

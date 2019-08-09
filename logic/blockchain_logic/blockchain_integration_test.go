@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	defer s.Close()
 	coinbaseKeyPair := account.NewKeyPair()
 	coinbaseAddr := coinbaseKeyPair.GenerateAddress()
-	bc := CreateBlockchain(coinbaseAddr, s, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(coinbaseAddr, s, nil, transaction_pool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < 3; i++ {
 		tailBlk, _ := bc.GetTailBlock()

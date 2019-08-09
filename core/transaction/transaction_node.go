@@ -1,21 +1,19 @@
-package core
+package transaction
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/golang/protobuf/proto"
 )
 
 type TransactionNode struct {
-	Children map[string]*transaction.Transaction
-	Value    *transaction.Transaction
+	Children map[string]*Transaction
+	Value    *Transaction
 	Size     int
 }
 
-func NewTransactionNode(tx *transaction.Transaction) *TransactionNode {
-	txNode := &TransactionNode{Children: make(map[string]*transaction.Transaction)}
+func NewTransactionNode(tx *Transaction) *TransactionNode {
+	txNode := &TransactionNode{Children: make(map[string]*Transaction)}
 
 	if tx == nil {
 		return txNode
@@ -41,7 +39,7 @@ func (txNode *TransactionNode) ToProto() proto.Message {
 	for key, val := range txNode.Children {
 		childrenProto[key] = val.ToProto().(*transactionpb.Transaction)
 	}
-	return &corepb.TransactionNode{
+	return &transactionpb.TransactionNode{
 		Children: childrenProto,
 		Value:    txNode.Value.ToProto().(*transactionpb.Transaction),
 		Size:     int64(txNode.Size),
@@ -49,13 +47,13 @@ func (txNode *TransactionNode) ToProto() proto.Message {
 }
 
 func (txNode *TransactionNode) FromProto(pb proto.Message) {
-	for key, val := range pb.(*corepb.TransactionNode).Children {
-		tx := &transaction.Transaction{}
+	for key, val := range pb.(*transactionpb.TransactionNode).Children {
+		tx := &Transaction{}
 		tx.FromProto(val)
 		txNode.Children[key] = tx
 	}
-	tx := &transaction.Transaction{}
-	tx.FromProto(pb.(*corepb.TransactionNode).Value)
+	tx := &Transaction{}
+	tx.FromProto(pb.(*transactionpb.TransactionNode).Value)
 	txNode.Value = tx
-	txNode.Size = int(pb.(*corepb.TransactionNode).Size)
+	txNode.Size = int(pb.(*transactionpb.TransactionNode).Size)
 }

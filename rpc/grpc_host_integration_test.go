@@ -27,6 +27,7 @@ import (
 	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"strings"
 	"testing"
@@ -112,7 +113,7 @@ func TestRpcSend(t *testing.T) {
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, core.NewTransactionPool(node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -200,7 +201,7 @@ func TestRpcSendContract(t *testing.T) {
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, core.NewTransactionPool(node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -882,7 +883,7 @@ func TestGetNewTransaction(t *testing.T) {
 	_, _, err = logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(4), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
 	time.Sleep(time.Second)
-	assert.Equal(t, false, rpcContext.bm.Getblockchain().GetTxPool().EventBus.HasCallback(core.NewTransactionTopic))
+	assert.Equal(t, false, rpcContext.bm.Getblockchain().GetTxPool().EventBus.HasCallback(transaction_pool.NewTransactionTopic))
 
 	rpcContext.consensus.Stop()
 	util.WaitDoneOrTimeout(func() bool {
@@ -1095,7 +1096,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
 	context.consensus = consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), context.store, context.consensus, core.NewTransactionPool(context.node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), context.store, context.consensus, transaction_pool.NewTransactionPool(context.node, 128000), scManager, 1000000)
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1154,7 +1155,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	scManager := vm.NewV8EngineManager(account.Address{})
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, core.NewTransactionPool(node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -1249,7 +1250,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	pow := consensus.NewProofOfWork()
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, core.NewTransactionPool(nil, 100), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(nil, 100), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}

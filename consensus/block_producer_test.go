@@ -21,6 +21,7 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"testing"
 
 	"github.com/dappley/go-dappley/core"
@@ -37,7 +38,7 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 		account.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,
-		core.NewTransactionPool(nil, 128),
+		transaction_pool.NewTransactionPool(nil, 128),
 		nil,
 		100000,
 	)

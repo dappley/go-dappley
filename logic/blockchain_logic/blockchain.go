@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sync"
 
@@ -60,7 +61,7 @@ type Blockchain struct {
 	db           storage.Storage
 	utxoCache    *utxo.UTXOCache
 	consensus    Consensus
-	txPool       *core.TransactionPool
+	txPool       *transaction_pool.TransactionPool
 	scManager    core.ScEngineManager
 	eventManager *core.EventManager
 	blkSizeLimit int
@@ -68,7 +69,7 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *transaction_pool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
@@ -91,7 +92,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, txPool *core.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, consensus Consensus, txPool *transaction_pool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -140,7 +141,7 @@ func (bc *Blockchain) GetConsensus() Consensus {
 	return bc.consensus
 }
 
-func (bc *Blockchain) GetTxPool() *core.TransactionPool {
+func (bc *Blockchain) GetTxPool() *transaction_pool.TransactionPool {
 	return bc.txPool
 }
 

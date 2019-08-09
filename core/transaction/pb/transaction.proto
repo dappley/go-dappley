@@ -16,4 +16,9 @@ message Transaction{
     bytes gas_price = 6;
 }
 
+message TransactionNode{
+    map<string, Transaction> children = 1;
+    transactionpb.Transaction value = 2;
+    int64   size = 3;
+}
 

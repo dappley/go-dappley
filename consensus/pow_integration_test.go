@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"os"
 	"testing"
@@ -70,7 +71,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -137,7 +138,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := blockchain_logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
@@ -189,7 +190,7 @@ func TestBlockProducer_MultipleValidTx(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())
@@ -265,7 +266,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		cbAddr,
 		storage.NewRamStorage(),
 		pow,
-		core.NewTransactionPool(nil, 128),
+		transaction_pool.NewTransactionPool(nil, 128),
 		nil,
 		100000,
 	)
@@ -326,7 +327,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	defer db.Close()
 
 	pow := NewProofOfWork()
-	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(account1.GetKeyPair().GenerateAddress())

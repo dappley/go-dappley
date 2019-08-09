@@ -62,7 +62,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 	numOfTx = config.NumOfNormalTx
 	numOfScTx = config.NumOfScTx
 	for i := range files {
-		bc := blockchain_logic.CreateBlockchain(addr, files[i].Db, nil, core.NewTransactionPool(nil, 200), nil, 1000000)
+		bc := blockchain_logic.CreateBlockchain(addr, files[i].Db, nil, transaction_pool.NewTransactionPool(nil, 200), nil, 1000000)
 		bcs[i] = bc
 	}
 

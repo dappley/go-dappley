@@ -24,6 +24,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"os"
 	"sync"
@@ -56,7 +57,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -70,7 +71,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
 	blk := core.GenerateMockBlock()
 	blk.SetHeight(1)
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -82,7 +83,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := core.GenerateBlockWithCbtx(addr, tailblk)
 	blk.SetHeight(1)
@@ -98,7 +99,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
@@ -133,7 +134,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
@@ -153,7 +154,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, utxo.NewUTXOCache(db), nil, core.NewTransactionPool(nil, 128), nil, nil, 1000000, &sync.Mutex{}}
+	bc := &Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, utxo.NewUTXOCache(db), nil, transaction_pool.NewTransactionPool(nil, 128), nil, nil, 1000000, &sync.Mutex{}}
 	bc.SetState(blockchain.BlockchainInit)
 
 	// Add genesis block
@@ -205,7 +206,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 1280000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 1280000), nil, 100000)
 	var addrs []account.Address
 	var kps []*account.KeyPair
 	var pkhs []account.PubKeyHash
@@ -244,7 +245,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	s := storage.NewRamStorage()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()

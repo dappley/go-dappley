@@ -180,7 +180,7 @@ func prepareNode(db storage.Storage) (*blockchain_logic.BlockchainManager, *netw
 	conss.SetDynasty(dynasty)
 	node := network.NewNode(db, nil)
 	txPoolLimit := uint32(2000)
-	txPool := core.NewTransactionPool(node, txPoolLimit)
+	txPool := transaction_pool.NewTransactionPool(node, txPoolLimit)
 	bc, err := blockchain_logic.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)

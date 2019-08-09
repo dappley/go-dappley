@@ -22,6 +22,7 @@ import (
 	"flag"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/logic/download_manager"
@@ -95,7 +96,7 @@ func main() {
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
-	txPool := core.NewTransactionPool(node, txPoolLimit)
+	txPool := transaction_pool.NewTransactionPool(node, txPoolLimit)
 	bc, err := blockchain_logic.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))

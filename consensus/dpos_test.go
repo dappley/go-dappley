@@ -21,6 +21,7 @@ package consensus
 import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
@@ -45,7 +46,7 @@ func TestNewDpos(t *testing.T) {
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := "abcdefg"
-	bc := blockchain_logic.CreateBlockchain(account.NewAddress(cbAddr), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
+	bc := blockchain_logic.CreateBlockchain(account.NewAddress(cbAddr), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	pool := core.NewBlockPool()
 
 	node := network.NewNode(bc.GetDb(), nil)
