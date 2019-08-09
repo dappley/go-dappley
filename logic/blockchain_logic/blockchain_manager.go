@@ -156,24 +156,22 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 		return
 	}
 
-	bm.blockPool.Add(blk)
-	fork := bm.blockPool.GetFork(blk)
-	if fork == nil {
-		return
-	}
-	forkHead := fork[len(fork)-1]
-	forkHeadParentHash := forkHead.GetPrevHash()
+	forkHeadParentHash := bm.blockPool.Add(blk)
 	if forkHeadParentHash == nil {
 		return
 	}
-	parent, _ := bm.blockchain.GetBlockByHash(forkHeadParentHash)
-	if parent == nil {
+
+	if !bm.blockchain.IsInBlockchain(forkHeadParentHash) {
 		logger.WithFields(logger.Fields{
-			"parent_hash":   forkHeadParentHash,
-			"parent_height": forkHead.GetHeight() - 1,
-			"from":          pid,
+			"parent_hash": forkHeadParentHash,
+			"from":        pid,
 		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHead.GetPrevHash(), pid)
+		bm.RequestBlock(forkHeadParentHash, pid)
+		return
+	}
+
+	fork := bm.blockPool.GetFork(forkHeadParentHash)
+	if fork == nil {
 		return
 	}
 
