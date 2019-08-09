@@ -24,7 +24,6 @@ import (
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"testing"
 
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"

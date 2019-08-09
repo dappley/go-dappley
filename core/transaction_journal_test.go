@@ -18,12 +18,24 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/util"
 	"testing"
 
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 )
+
+var tx1 = transaction.Transaction{
+	ID:       util.GenerateRandomAoB(1),
+	Vin:      transaction_base.GenerateFakeTxInputs(),
+	Vout:     transaction_base.GenerateFakeTxOutputs(),
+	Tip:      common.NewAmount(5),
+	GasLimit: common.NewAmount(0),
+	GasPrice: common.NewAmount(0),
+}
 
 func TestJournalPutAndGet(t *testing.T) {
 	db := storage.NewRamStorage()

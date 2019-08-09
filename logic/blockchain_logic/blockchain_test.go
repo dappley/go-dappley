@@ -73,7 +73,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
-	blk := core.GenerateMockBlock()
+	blk := block.GenerateMockBlock()
 	blk.SetHeight(1)
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
 }

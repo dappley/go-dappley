@@ -1,40 +1,22 @@
 package main
 
 import (
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction_base"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/util"
 )
-
-func getAoB(length int64) []byte {
-	return util.GenerateRandomAoB(length)
-}
-
-func GenerateFakeTxInputs() []core.TXInput {
-	return []core.TXInput{
-		{getAoB(2), 10, getAoB(2), getAoB(2)},
-		{getAoB(2), 5, getAoB(2), getAoB(2)},
-	}
-}
-
-func GenerateFakeTxOutputs() []core.TXOutput {
-	return []core.TXOutput{
-		{common.NewAmount(1), account.PubKeyHash(getAoB(2)), ""},
-		{common.NewAmount(2), account.PubKeyHash(getAoB(2)), ""},
-	}
-}
 
 func main() {
 	tx1 := transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
+		Vin:  transaction_base.GenerateFakeTxInputs(),
+		Vout: transaction_base.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2),
 	}
 	txpb := tx1.ToProto()

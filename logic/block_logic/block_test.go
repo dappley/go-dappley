@@ -41,7 +41,7 @@ func TestHashTransactions(t *testing.T) {
 }
 
 func TestBlock_VerifyHash(t *testing.T) {
-	b1 := core.GenerateMockBlock()
+	b1 := block.GenerateMockBlock()
 
 	//The mocked block does not have correct hash Value
 	assert.False(t, VerifyHash(b1))

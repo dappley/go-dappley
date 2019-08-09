@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core"
-	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -95,7 +94,7 @@ func TestBlockHeader_Proto(t *testing.T) {
 
 func TestBlock_Proto(t *testing.T) {
 
-	b1 := core.GenerateMockBlock()
+	b1 := GenerateMockBlock()
 
 	pb := b1.ToProto()
 	var i interface{} = pb

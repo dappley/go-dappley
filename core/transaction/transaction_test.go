@@ -48,15 +48,6 @@ func GenerateFakeTxOutputs() []transaction_base.TXOutput {
 	}
 }
 
-var tx1 = Transaction{
-	ID:       util.GenerateRandomAoB(1),
-	Vin:      GenerateFakeTxInputs(),
-	Vout:     GenerateFakeTxOutputs(),
-	Tip:      common.NewAmount(5),
-	GasLimit: common.NewAmount(0),
-	GasPrice: common.NewAmount(0),
-}
-
 func TestTrimmedCopy(t *testing.T) {
 	var tx1 = Transaction{
 		ID:   util.GenerateRandomAoB(1),

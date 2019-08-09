@@ -14,6 +14,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -21,28 +22,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func getAoB(length int64) []byte {
-	return util.GenerateRandomAoB(length)
-}
-
-func GenerateFakeTxInputs() []transaction_base.TXInput {
-	return []transaction_base.TXInput{
-		{getAoB(2), 10, getAoB(2), getAoB(2)},
-		{getAoB(2), 5, getAoB(2), getAoB(2)},
-	}
-}
-
-func GenerateFakeTxOutputs() []transaction_base.TXOutput {
-	return []transaction_base.TXOutput{
-		{common.NewAmount(1), account.PubKeyHash(getAoB(2)), ""},
-		{common.NewAmount(2), account.PubKeyHash(getAoB(2)), ""},
-	}
-}
-
 var tx1 = transaction.Transaction{
 	ID:       util.GenerateRandomAoB(1),
-	Vin:      GenerateFakeTxInputs(),
-	Vout:     GenerateFakeTxOutputs(),
+	Vin:      transaction_base.GenerateFakeTxInputs(),
+	Vout:     transaction_base.GenerateFakeTxOutputs(),
 	Tip:      common.NewAmount(5),
 	GasLimit: common.NewAmount(0),
 	GasPrice: common.NewAmount(0),
@@ -97,27 +80,27 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 
 	var tx1 = transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
+		Vin:  transaction_base.GenerateFakeTxInputs(),
+		Vout: transaction_base.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2),
 	}
 
 	var tx2 = transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
+		Vin:  transaction_base.GenerateFakeTxInputs(),
+		Vout: transaction_base.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(5),
 	}
 	var tx3 = transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
+		Vin:  transaction_base.GenerateFakeTxInputs(),
+		Vout: transaction_base.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(10),
 	}
 	var tx4 = transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
+		Vin:  transaction_base.GenerateFakeTxInputs(),
+		Vout: transaction_base.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(20),
 	}
 	prevTXs[string(tx1.ID)] = tx2
@@ -370,8 +353,8 @@ func TestTransaction_Execute(t *testing.T) {
 func TestIsCoinBase(t *testing.T) {
 	var tx1 = transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
+		Vin:  transaction_base.GenerateFakeTxInputs(),
+		Vout: transaction_base.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2),
 	}
 

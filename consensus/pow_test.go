@@ -19,12 +19,11 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/block"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/dappley/go-dappley/core"
 )
 
 func TestProofOfWork_NewPoW(t *testing.T) {
@@ -62,7 +61,7 @@ func TestProofOfWork_isHashBelowTarget(t *testing.T) {
 	pow.SetTargetBit(defaultTargetBits)
 
 	//create a block that has a hash value larger than the target
-	blk := core.GenerateMockBlock()
+	blk := block.GenerateMockBlock()
 	hash := big.NewInt(1)
 	hash.Lsh(hash, uint(256-defaultTargetBits+1))
 
