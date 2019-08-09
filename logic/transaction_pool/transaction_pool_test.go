@@ -20,10 +20,11 @@ package transaction_pool
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
-	"github.com/dappley/go-dappley/logic/transaction_pool/pb"
-	"testing"
+	transactionPoolpb "github.com/dappley/go-dappley/logic/transaction_pool/pb"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"

@@ -21,13 +21,14 @@ package transaction_pool
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool/pb"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"sort"
 	"sync"
+
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	transactionPoolpb "github.com/dappley/go-dappley/logic/transaction_pool/pb"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/network/network_model"

@@ -20,16 +20,17 @@ package utxo_logic
 
 import (
 	"errors"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/util"
-	"sync"
-	"sync/atomic"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
