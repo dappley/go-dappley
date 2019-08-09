@@ -43,22 +43,21 @@ func TestHashTransactions(t *testing.T) {
 func TestBlock_VerifyHash(t *testing.T) {
 	b1 := block.GenerateMockBlock()
 
-	//The mocked block does not have correct hash Value
+	//The mocked block does not have correct h Value
 	assert.False(t, VerifyHash(b1))
 
-	//calculate correct hash Value
-	hash := CalculateHash(b1)
-	b1.SetHash(hash)
+	//calculate correct h Value
+	h := CalculateHash(b1)
+	b1.SetHash(h)
 	assert.True(t, VerifyHash(b1))
 
-	//calculate a hash Value with a different nonce
+	//calculate a h Value with a different nonce
 	b1.SetNonce(b1.GetNonce() + 1)
-	hash = CalculateHashWithNonce(b1)
-	b1.SetHash(hash)
-	assert.True(t, VerifyHash(b1))
+	h = CalculateHashWithNonce(b1)
+	assert.False(t, VerifyHash(b1))
 
-	hash = CalculateHashWithoutNonce(b1)
-	b1.SetHash(hash)
+	h = CalculateHashWithoutNonce(b1)
+	b1.SetHash(h)
 	assert.False(t, VerifyHash(b1))
 }
 
