@@ -31,6 +31,7 @@ import (
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -917,14 +918,14 @@ func TestUpdate(t *testing.T) {
 	defer db.Close()
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
-	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
 	utxoIndex.Save()
-	utxoIndexInDB := NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndexInDB := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
 
 	// test updating UTXO index with non-dependent transactions
 	// Assert that both the original instance and the database copy are updated correctly
-	for _, index := range []UTXOIndex{*utxoIndex, *utxoIndexInDB} {
+	for _, index := range []utxo_logic.UTXOIndex{*utxoIndex, *utxoIndexInDB} {
 		utxoTx := index.GetAllUTXOsByPubKeyHash(address1Hash)
 		assert.Equal(t, 2, utxoTx.Size())
 		utxo0 := utxoTx.GetUtxo(blk.GetTransactions()[0].ID, 0)
@@ -1027,7 +1028,7 @@ func TestUpdate(t *testing.T) {
 	utxoTxPk1 := utxo.NewUTXOTx()
 	utxoTxPk1.PutUtxo(utxoPk1)
 
-	utxoIndex2 := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	utxoIndex2 := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	utxoIndex2.index[pkHash2.String()] = &utxoTxPk2
 	utxoIndex2.index[pkHash1.String()] = &utxoTxPk1
