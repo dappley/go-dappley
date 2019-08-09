@@ -26,20 +26,22 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	configpb "github.com/dappley/go-dappley/config/pb"
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core/account"
-	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
@@ -871,9 +873,9 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 	utxos := response.GetUtxos()
-	var InputUtxos []*core.UTXO
+	var InputUtxos []*utxo.UTXO
 	for _, u := range utxos {
-		uu := core.UTXO{}
+		uu := utxo.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
 		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
@@ -912,7 +914,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
 
 	if err != nil {
@@ -932,7 +934,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	fmt.Println("Transaction is sent! Pending approval from network.")
 }
 
-func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*core.UTXO, error) {
+func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
 	if tip != nil {
 		amount = amount.Add(tip)
 	}
@@ -940,7 +942,7 @@ func GetUTXOsfromAmount(inputUTXOs []*core.UTXO, amount *common.Amount, tip *com
 		limitedFee := gasLimit.Mul(gasPrice)
 		amount = amount.Add(limitedFee)
 	}
-	var retUtxos []*core.UTXO
+	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
 	for _, u := range inputUTXOs {
 		sum = sum.Add(u.Value)
@@ -1068,9 +1070,9 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		return
 	}
 	utxos := response.GetUtxos()
-	var InputUtxos []*core.UTXO
+	var InputUtxos []*utxo.UTXO
 	for _, u := range utxos {
-		uu := core.UTXO{}
+		uu := utxo.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
 		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
@@ -1100,7 +1102,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
 	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
-	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
+	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	gasResponse, err := c.(rpcpb.RpcServiceClient).RpcEstimateGas(ctx, estimateGasRequest)
 
 	if err != nil {

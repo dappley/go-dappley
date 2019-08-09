@@ -34,11 +34,11 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b6 := block.NewBlockWithRawInfo(nil, b3.GetHash(), 6, 0, 3, nil)
 	b6.SetHash(block_logic.CalculateHash(b6))
 
-	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b1, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&blockchain_logic.BlockContext{Block: b1, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b3, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&blockchain_logic.BlockContext{Block: b3, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&core.BlockContext{Block: b6, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&blockchain_logic.BlockContext{Block: b6, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
 	require.Nil(t, err)
 
 	// create first fork of height 3

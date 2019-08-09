@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/hashicorp/golang-lru"
@@ -177,7 +176,7 @@ func (dpos *DPOS) Produced(blk *block.Block) bool {
 	return false
 }
 
-func (dpos *DPOS) hashAndSign(ctx *core.BlockContext) {
+func (dpos *DPOS) hashAndSign(ctx *blockchain_logic.BlockContext) {
 	hash := block_logic.CalculateHash(ctx.Block)
 	ctx.Block.SetHash(hash)
 	ok := block_logic.SignBlock(ctx.Block, dpos.producerKey)
@@ -270,7 +269,7 @@ func (dpos *DPOS) IsProducingBlock() bool {
 	return !dpos.bp.IsIdle()
 }
 
-func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
+func (dpos *DPOS) updateNewBlock(ctx *blockchain_logic.BlockContext) {
 	logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
 		"hash":   ctx.Block.GetHash().String(),

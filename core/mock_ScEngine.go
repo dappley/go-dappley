@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -35,15 +36,15 @@ func (_m *MockScEngine) Execute(function string, args string) (string, error) {
 }
 
 // GetGeneratedTXs provides a mock function with given fields:
-func (_m *MockScEngine) GetGeneratedTXs() []*Transaction {
+func (_m *MockScEngine) GetGeneratedTXs() []*transaction.Transaction {
 	ret := _m.Called()
 
-	var r0 []*Transaction
-	if rf, ok := ret.Get(0).(func() []*Transaction); ok {
+	var r0 []*transaction.Transaction
+	if rf, ok := ret.Get(0).(func() []*transaction.Transaction); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Transaction)
+			r0 = ret.Get(0).([]*transaction.Transaction)
 		}
 	}
 
@@ -96,7 +97,7 @@ func (_m *MockScEngine) ImportSourceTXID(txid []byte) {
 }
 
 // ImportTransaction provides a mock function with given fields: tx
-func (_m *MockScEngine) ImportTransaction(tx *Transaction) {
+func (_m *MockScEngine) ImportTransaction(tx *transaction.Transaction) {
 	_m.Called(tx)
 }
 

@@ -36,7 +36,7 @@ import (
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
-type process func(ctx *core.BlockContext)
+type process func(ctx *blockchain_logic.BlockContext)
 
 type BlockProducer struct {
 	bc          *blockchain_logic.Blockchain
@@ -72,7 +72,7 @@ func (bp *BlockProducer) SetProcess(process process) {
 
 // ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it.
 // deadlineInMs = 0 means no deadline
-func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *core.BlockContext {
+func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	logger.Info("BlockProducer: started producing new block...")
 	bp.idle = false
 	ctx := bp.prepareBlock(deadlineInMs)
@@ -90,7 +90,7 @@ func (bp *BlockProducer) IsIdle() bool {
 	return bp.idle
 }
 
-func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
+func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
 		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
@@ -110,7 +110,7 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
-	ctx := core.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
+	ctx := blockchain_logic.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 

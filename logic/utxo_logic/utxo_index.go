@@ -21,9 +21,13 @@ package utxo_logic
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/storage"
+
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/transaction"
 	"sync"
 
-	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -168,6 +172,60 @@ func (utxos *UTXOIndex) UpdateUtxoState(txs []*transaction.Transaction) {
 	for _, tx := range txs {
 		utxos.UpdateUtxo(tx)
 	}
+}
+
+// UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
+// Note that the operation does not save the index to db.
+func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) error {
+
+	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
+		tx := blk.GetTransactions()[i]
+		err := utxos.excludeVoutsInTx(tx, db)
+		if err != nil {
+			return err
+		}
+		if tx.IsCoinbase() || tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
+			continue
+		}
+		err = utxos.unspendVinsInTx(tx, db)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// excludeVoutsInTx removes the UTXOs generated in a transaction from the UTXOIndex.
+func (utxos *UTXOIndex) excludeVoutsInTx(tx *transaction.Transaction, db storage.Storage) error {
+	for i, vout := range tx.Vout {
+		err := utxos.removeUTXO(vout.PubKeyHash, tx.ID, i)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getTXOutputSpent(in transaction_base.TXInput, db storage.Storage) (transaction_base.TXOutput, int, error) {
+
+	vout, err := core.GetTxOutput(in, db)
+
+	if err != nil {
+		return transaction_base.TXOutput{}, 0, ErrTXInputInvalid
+	}
+	return vout, in.Vout, nil
+}
+
+// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
+func (utxos *UTXOIndex) unspendVinsInTx(tx *transaction.Transaction, db storage.Storage) error {
+	for _, vin := range tx.Vin {
+		vout, voutIndex, err := getTXOutputSpent(vin, db)
+		if err != nil {
+			return err
+		}
+		utxos.AddUTXO(vout, vin.Txid, voutIndex)
+	}
+	return nil
 }
 
 // AddUTXO adds an unspent TXOutput to index

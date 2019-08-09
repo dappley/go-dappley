@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"os"
 	"runtime"
 	"time"
@@ -13,11 +14,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/metrics"
-	metricspb "github.com/dappley/go-dappley/metrics/pb"
+	"github.com/dappley/go-dappley/metrics/pb"
 	"github.com/dappley/go-dappley/network"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/util"
 )
 
@@ -166,7 +166,7 @@ func getCPUPercent() metricspb.StatValue {
 
 func getTransactionPoolSize() metricspb.StatValue {
 	return &metricspb.Stat_TransactionPoolSize{
-		TransactionPoolSize: core.MetricsTransactionPoolSize.Count(),
+		TransactionPoolSize: transaction_pool.MetricsTransactionPoolSize.Count(),
 	}
 }
 

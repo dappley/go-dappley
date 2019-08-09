@@ -27,8 +27,6 @@ import (
 	"math/big"
 
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/core"
 )
 
 const defaultTargetBits = 0
@@ -125,7 +123,7 @@ L:
 	}
 }
 
-func (pow *ProofOfWork) calculateValidHash(ctx *core.BlockContext) {
+func (pow *ProofOfWork) calculateValidHash(ctx *blockchain_logic.BlockContext) {
 	for {
 		select {
 		case <-pow.stopCh:
@@ -169,7 +167,7 @@ func (pow *ProofOfWork) tryDifferentNonce(block *block.Block) {
 	block.SetNonce(nonce + 1)
 }
 
-func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
+func (pow *ProofOfWork) updateNewBlock(ctx *blockchain_logic.BlockContext) {
 	logger.WithFields(logger.Fields{"height": ctx.Block.GetHeight()}).Info("PoW: minted a new block.")
 	if !block_logic.VerifyHash(ctx.Block) {
 		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")

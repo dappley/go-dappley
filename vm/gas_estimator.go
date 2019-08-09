@@ -2,6 +2,10 @@ package vm
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
@@ -17,7 +21,7 @@ func EstimateGas(bc *blockchain_logic.Blockchain, tx *transaction.Transaction) (
 	rewards := make(map[string]string)
 	ctx := tx.ToContractTx()
 	if ctx == nil {
-		return 0, core.ErrTransactionVerifyFailed
+		return 0, blockchain_logic.ErrTransactionVerifyFailed
 	}
 	prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 	if err != nil {

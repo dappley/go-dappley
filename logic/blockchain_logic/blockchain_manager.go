@@ -25,8 +25,6 @@ import (
 	"github.com/dappley/go-dappley/core/block"
 	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/core/blockchain"
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
@@ -235,7 +233,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			bm.blockchain.Rollback(forkParentHash, rollBackUtxo, rollScState)
 		}
 
-		ctx := core.BlockContext{Block: forkBlks[i], Lib: lib, UtxoIndex: utxo, State: scState}
+		ctx := BlockContext{Block: forkBlks[i], Lib: lib, UtxoIndex: utxo, State: scState}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -337,7 +335,8 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, ErrBlockDoesNotExist
 		}
 
-		err = UndoTxsInBlock(block, bc, db, index)
+		err = index.UndoTxsInBlock(block, db)
+
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
@@ -375,56 +374,4 @@ func (bm *BlockchainManager) NumForks() (int64, int64) {
 	})
 
 	return numForks, maxHeight
-}
-
-// UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
-// Note that the operation does not save the index to db.
-func UndoTxsInBlock(blk *block.Block, bc *blockchain_logic.Blockchain, db storage.Storage, utxos *UTXOIndex) error {
-
-	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
-		tx := blk.GetTransactions()[i]
-		err := excludeVoutsInTx(tx, db, utxos)
-		if err != nil {
-			return err
-		}
-		if tx.IsCoinbase() || tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
-			continue
-		}
-		err = unspendVinsInTx(tx, bc, utxos)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// excludeVoutsInTx removes the UTXOs generated in a transaction from the UTXOIndex.
-func excludeVoutsInTx(tx *transaction.Transaction, db storage.Storage, utxos *UTXOIndex) error {
-	for i, vout := range tx.Vout {
-		err := utxos.removeUTXO(vout.PubKeyHash, tx.ID, i)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func getTXOutputSpent(in transaction_base.TXInput, bc *blockchain_logic.Blockchain) (transaction_base.TXOutput, int, error) {
-	tx, err := bc.FindTXOutput(in)
-	if err != nil {
-		return transaction_base.TXOutput{}, 0, ErrTXInputInvalid
-	}
-	return tx, in.Vout, nil
-}
-
-// unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
-func unspendVinsInTx(tx *transaction.Transaction, bc *blockchain_logic.Blockchain, utxos *UTXOIndex) error {
-	for _, vin := range tx.Vin {
-		vout, voutIndex, err := getTXOutputSpent(vin, bc)
-		if err != nil {
-			return err
-		}
-		utxos.AddUTXO(vout, vin.Txid, voutIndex)
-	}
-	return nil
 }

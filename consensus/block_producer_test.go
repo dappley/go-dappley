@@ -44,7 +44,7 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	)
 	bp.Setup(bc, cbAddr)
 	processRuns := false
-	bp.SetProcess(func(ctx *core.BlockContext) {
+	bp.SetProcess(func(ctx *blockchain_logic.BlockContext) {
 		processRuns = true
 	})
 	block := bp.ProduceBlock(0)

@@ -1,10 +1,11 @@
 package vm
 
 import (
+	"github.com/dappley/go-dappley/core/utxo"
 	"strings"
 
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 )
 
 const scheduleFuncName = "dapp_schedule"
@@ -23,7 +24,7 @@ func (em *V8EngineManager) CreateEngine() core.ScEngine {
 	return engine
 }
 
-func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
+func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*utxo.UTXO,
 	scStorage *core.ScState,
 	blkHeight uint64,
 	seed int64) {

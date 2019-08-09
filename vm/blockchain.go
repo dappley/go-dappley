@@ -2,11 +2,11 @@ package vm
 
 import "C"
 import (
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"unsafe"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	logger "github.com/sirupsen/logrus"
 )
@@ -20,7 +20,7 @@ func VerifyAddressFunc(address *C.char, gasCnt *C.size_t) bool {
 	return addr.IsValid()
 }
 
-func prepareUTXOs(utxos []*core.UTXO, amount *common.Amount) ([]*core.UTXO, bool) {
+func prepareUTXOs(utxos []*utxo.UTXO, amount *common.Amount) ([]*utxo.UTXO, bool) {
 	sum := common.NewAmount(0)
 
 	if len(utxos) < 1 {
@@ -104,7 +104,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 		return 1
 	}
 
-	transferTX, err := core.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
+	transferTX, err := transaction_logic.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

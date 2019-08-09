@@ -34,7 +34,6 @@ import (
 	"github.com/dappley/go-dappley/logic/block_logic"
 
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -85,7 +84,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
 	scState := core.NewScState()
-	err := bc.AddBlockContextToTail(&core.BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
+	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
 	}
@@ -216,7 +215,7 @@ func (bc *Blockchain) GetState() blockchain.BlockchainState {
 	return bc.bc.GetState()
 }
 
-func (bc *Blockchain) AddBlockContextToTail(ctx *core.BlockContext) error {
+func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	// Atomically set tail block hash and update UTXO index in db
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
@@ -304,7 +303,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *core.BlockContext) error {
 	return nil
 }
 
-func (bc *Blockchain) runScheduleEvents(ctx *core.BlockContext, parentBlk *block.Block) error {
+func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Block) error {
 	if parentBlk == nil {
 		//if the current block is genesis block. do not run smart contract
 		return nil
@@ -317,15 +316,6 @@ func (bc *Blockchain) runScheduleEvents(ctx *core.BlockContext, parentBlk *block
 	bc.scManager.RunScheduledEvents(ctx.UtxoIndex.GetContractUtxos(), ctx.State, ctx.Block.GetHeight(), parentBlk.GetTimestamp())
 	bc.eventManager.Trigger(ctx.State.GetEvents())
 	return nil
-}
-
-func (bc *Blockchain) FindTXOutput(in transaction_base.TXInput) (transaction_base.TXOutput, error) {
-	db := bc.db
-	vout, err := core.GetTxOutput(in, db)
-	if err != nil {
-		return transaction_base.TXOutput{}, err
-	}
-	return vout, err
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {

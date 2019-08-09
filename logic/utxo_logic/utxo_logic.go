@@ -16,7 +16,7 @@ func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*
 	for _, vin := range tx.Vin {
 		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
 		if err != nil {
-			return nil, ErrNewUserPubKeyHash
+			return nil, transaction.ErrNewUserPubKeyHash
 		}
 		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
@@ -25,7 +25,7 @@ func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*
 				"vin_id":    hex.EncodeToString(vin.Txid),
 				"vin_index": vin.Vout,
 			}).Warn("Transaction: Can not find vin")
-			return nil, ErrTXInputNotFound
+			return nil, transaction.ErrTXInputNotFound
 		}
 		res = append(res, utxo)
 	}
