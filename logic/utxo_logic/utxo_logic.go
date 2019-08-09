@@ -2,6 +2,7 @@ package utxo_logic
 
 import (
 	"encoding/hex"
+
 	"github.com/dappley/go-dappley/core/transaction"
 
 	"github.com/dappley/go-dappley/core/account"

@@ -1,6 +1,8 @@
 package blockchain_logic
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
@@ -13,7 +15,6 @@ import (
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 
