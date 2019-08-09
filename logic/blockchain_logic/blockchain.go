@@ -22,10 +22,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"sync"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"

@@ -19,16 +19,17 @@ package rpc
 
 import (
 	"context"
+	"strings"
+
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"strings"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block/pb"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -43,7 +44,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/vm"
 )
 

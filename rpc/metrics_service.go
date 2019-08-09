@@ -2,11 +2,12 @@ package rpc
 
 import (
 	"context"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
@@ -15,9 +16,9 @@ import (
 
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/metrics"
-	"github.com/dappley/go-dappley/metrics/pb"
+	metricspb "github.com/dappley/go-dappley/metrics/pb"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/util"
 )
 

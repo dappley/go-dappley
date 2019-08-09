@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
@@ -12,12 +14,12 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 func getAoB(length int64) []byte {

@@ -21,14 +21,15 @@ package blockchain_logic
 import (
 	"encoding/hex"
 	"errors"
+	"os"
+	"sync"
+	"testing"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"os"
-	"sync"
-	"testing"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
@@ -236,7 +237,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 		b := block.NewBlock(txs, tailBlk, "")
 		b.SetHash(block_logic.CalculateHash(b))
 		state := core.LoadScStateFromDatabase(bc.GetDb())
-		bc.AddBlockContextToTail(&blockchain_logic.BlockContext{Block: b, UtxoIndex: utxo, State: state})
+		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }
 

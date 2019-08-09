@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
@@ -31,8 +32,8 @@ import (
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/dappley/go-dappley/rpc/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
 type AdminRpcService struct {

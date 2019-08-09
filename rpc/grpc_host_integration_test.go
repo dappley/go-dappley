@@ -22,16 +22,17 @@ package rpc
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/util"
 

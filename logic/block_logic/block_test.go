@@ -3,14 +3,14 @@ package block_logic
 import (
 	"encoding/hex"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"sync"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
@@ -221,7 +221,9 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				index[key] = &utxoTx
 			}
 
-			utxoIndex := utxo_logic.UTXOIndex{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
+			utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
+			utxoIndex.SetIndex(index)
+			//{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
 			scState := core.NewScState()
 			var parentBlk = block.NewBlockWithRawInfo(
 				[]byte{'a'},
@@ -232,7 +234,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				nil,
 			)
 			blk := block.NewBlock(tt.txs, parentBlk, "")
-			assert.Equal(t, tt.ok, VerifyTransactions(blk, &utxoIndex, scState, nil, parentBlk))
+			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, nil, parentBlk))
 		})
 	}
 }

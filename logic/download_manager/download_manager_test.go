@@ -19,10 +19,12 @@
 package download_manager
 
 import (
-	"github.com/dappley/go-dappley/core/blockchain"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"testing"
 	"time"
+
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
