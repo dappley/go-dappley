@@ -25,6 +25,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
@@ -122,7 +123,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), utxo_logic.NewUTXOIndex(bc.GetUtxoCache()), core.NewScState())
+	bc.Rollback(blk.GetHash(), utxo_logic.NewUTXOIndex(bc.GetUtxoCache()), scState.NewScState())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -164,8 +165,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Storage will allow blockchain creation to succeed
 	db.On("Put", mock.Anything, mock.Anything).Return(nil)
 	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
-	db.On("Get", core.GetScStateKey([]byte{})).Return([]byte{}, nil)
-	db.On("Get", core.GetScStateKey(genesis.GetHash())).Return([]byte{}, nil)
+	db.On("Get", scState.GetScStateKey([]byte{})).Return([]byte{}, nil)
+	db.On("Get", scState.GetScStateKey(genesis.GetHash())).Return([]byte{}, nil)
 	db.On("Get", mock.Anything).Return(serializedBlk, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()
@@ -236,7 +237,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 		b := block.NewBlock(txs, tailBlk, "")
 		b.SetHash(block_logic.CalculateHash(b))
-		state := core.LoadScStateFromDatabase(bc.GetDb())
+		state := scState.LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }

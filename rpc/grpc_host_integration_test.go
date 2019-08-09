@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -1010,28 +1011,28 @@ func TestRpcService_RpcSubscribe(t *testing.T) {
 	time.Sleep(time.Second)
 
 	//publish topic 1. Both nodes will get the message
-	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic1", "data1")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*scState.Event{scState.NewEvent("topic1", "data1")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 1, count1)
 	assert.Equal(t, 1, count2)
 
 	//publish topic2. Only node 1 will get the message
-	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic2", "data2")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*scState.Event{scState.NewEvent("topic2", "data2")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 2, count1)
 	assert.Equal(t, 1, count2)
 
 	//publish topic3. Only node 2 will get the message
-	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic3", "data3")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*scState.Event{scState.NewEvent("topic3", "data3")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 2, count1)
 	assert.Equal(t, 2, count2)
 
 	//publish topic4. No nodes will get the message
-	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*core.Event{core.NewEvent("topic4", "data4")})
+	rpcContext.bm.Getblockchain().GetEventManager().Trigger([]*scState.Event{scState.NewEvent("topic4", "data4")})
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
 	assert.Equal(t, 2, count1)

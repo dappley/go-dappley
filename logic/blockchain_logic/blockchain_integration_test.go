@@ -21,8 +21,8 @@ package blockchain_logic
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
@@ -91,7 +91,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), utxo_logic.NewUTXOIndex(bc.GetUtxoCache()), core.NewScState())
+	bc.Rollback(blk.GetHash(), utxo_logic.NewUTXOIndex(bc.GetUtxoCache()), scState.NewScState())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()

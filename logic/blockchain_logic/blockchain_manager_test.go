@@ -7,6 +7,7 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -35,11 +36,11 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b6 := block.NewBlockWithRawInfo(nil, b3.GetHash(), 6, 0, 3, nil)
 	b6.SetHash(block_logic.CalculateHash(b6))
 
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b1, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&BlockContext{Block: b1, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: scState.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b3, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&BlockContext{Block: b3, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: scState.NewScState()})
 	require.Nil(t, err)
-	err = bc.AddBlockContextToTail(&BlockContext{Block: b6, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: core.NewScState()})
+	err = bc.AddBlockContextToTail(&BlockContext{Block: b6, UtxoIndex: utxo_logic.NewUTXOIndex(nil), State: scState.NewScState()})
 	require.Nil(t, err)
 
 	// create first fork of height 3

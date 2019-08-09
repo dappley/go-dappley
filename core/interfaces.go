@@ -20,6 +20,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 
@@ -42,13 +43,13 @@ type NetService interface {
 
 type ScEngineManager interface {
 	CreateEngine() ScEngine
-	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *ScState, blkHeight uint64, seed int64)
+	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *scState.ScState, blkHeight uint64, seed int64)
 }
 
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
-	ImportLocalStorage(state *ScState)
+	ImportLocalStorage(state *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*utxo.UTXO)

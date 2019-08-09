@@ -1,10 +1,10 @@
-package core
+package scState
 
 import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"

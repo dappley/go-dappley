@@ -21,6 +21,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -41,7 +42,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
@@ -366,7 +366,7 @@ func (rpcService *RpcService) RpcGetNewTransaction(in *rpcpb.GetNewTransactionRe
 func (rpcService *RpcService) RpcSubscribe(in *rpcpb.SubscribeRequest, stream rpcpb.RpcService_RpcSubscribeServer) error {
 	quitCh := make(chan bool, 1)
 	var cb interface{}
-	cb = func(event *core.Event) {
+	cb = func(event *scState.Event) {
 		response := &rpcpb.SubscribeResponse{Data: event.GetData()}
 		err := stream.Send(response)
 		if err != nil {

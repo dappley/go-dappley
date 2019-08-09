@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	mock "github.com/stretchr/testify/mock"
@@ -62,7 +63,7 @@ func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
 }
 
 // ImportLocalStorage provides a mock function with given fields: state
-func (_m *MockScEngine) ImportLocalStorage(state *ScState) {
+func (_m *MockScEngine) ImportLocalStorage(state *scState.ScState) {
 	_m.Called(state)
 }
 

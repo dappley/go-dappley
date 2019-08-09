@@ -1,4 +1,4 @@
-package core
+package scState
 
 import (
 	"github.com/asaskevich/EventBus"

@@ -1,4 +1,4 @@
-package core
+package scState
 
 type Event struct {
 	topic string

@@ -2,12 +2,13 @@ package vm
 
 import (
 	"encoding/hex"
+
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -15,7 +16,7 @@ import (
 func EstimateGas(bc *blockchain_logic.Blockchain, tx *transaction.Transaction) (uint64, error) {
 	parentBlock, _ := bc.GetTailBlock()
 	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
-	scStorage := core.LoadScStateFromDatabase(bc.GetDb())
+	scStorage := scState.LoadScStateFromDatabase(bc.GetDb())
 	engine := NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)

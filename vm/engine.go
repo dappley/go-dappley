@@ -39,17 +39,18 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/utxo"
 	"sync"
 	"unsafe"
+
+	"github.com/dappley/go-dappley/core/scState"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/hash"
 	lru "github.com/hashicorp/golang-lru"
 
-	"github.com/dappley/go-dappley/core"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -69,7 +70,7 @@ const (
 
 type V8Engine struct {
 	source             string
-	state              *core.ScState
+	state              *scState.ScState
 	tx                 *transaction.Transaction
 	rewards            map[string]string
 	contractAddr       account.Address
@@ -175,7 +176,7 @@ func (sc *V8Engine) ImportSourceCode(source string) {
 	sc.source = source
 }
 
-func (sc *V8Engine) ImportLocalStorage(state *core.ScState) {
+func (sc *V8Engine) ImportLocalStorage(state *scState.ScState) {
 	sc.state = state
 }
 

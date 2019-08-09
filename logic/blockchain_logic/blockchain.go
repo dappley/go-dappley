@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
@@ -63,7 +64,7 @@ type Blockchain struct {
 	consensus    Consensus
 	txPool       *transaction_pool.TransactionPool
 	scManager    core.ScEngineManager
-	eventManager *core.EventManager
+	eventManager *scState.EventManager
 	blkSizeLimit int
 	mutex        *sync.Mutex
 }
@@ -78,13 +79,13 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		consensus,
 		txPool,
 		scManager,
-		core.NewEventManager(),
+		scState.NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
 	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
-	scState := core.NewScState()
+	scState := scState.NewScState()
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
@@ -110,7 +111,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *transaction_
 		consensus,
 		txPool,
 		scManager,
-		core.NewEventManager(),
+		scState.NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
@@ -145,7 +146,7 @@ func (bc *Blockchain) GetTxPool() *transaction_pool.TransactionPool {
 	return bc.txPool
 }
 
-func (bc *Blockchain) GetEventManager() *core.EventManager {
+func (bc *Blockchain) GetEventManager() *scState.EventManager {
 	return bc.eventManager
 }
 
@@ -407,7 +408,7 @@ func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *utxo_logic.UTXOIndex, scState *core.ScState) bool {
+func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *utxo_logic.UTXOIndex, scState *scState.ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 

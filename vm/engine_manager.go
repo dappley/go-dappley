@@ -1,8 +1,10 @@
 package vm
 
 import (
-	"github.com/dappley/go-dappley/core/utxo"
 	"strings"
+
+	"github.com/dappley/go-dappley/core/scState"
+	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
@@ -25,7 +27,7 @@ func (em *V8EngineManager) CreateEngine() core.ScEngine {
 }
 
 func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*utxo.UTXO,
-	scStorage *core.ScState,
+	scStorage *scState.ScState,
 	blkHeight uint64,
 	seed int64) {
 

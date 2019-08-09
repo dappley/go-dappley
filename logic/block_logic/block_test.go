@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -223,7 +224,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
 			utxoIndex.SetIndex(index)
 			//{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
-			scState := core.NewScState()
+			scState := scState.NewScState()
 			var parentBlk = block.NewBlockWithRawInfo(
 				[]byte{'a'},
 				[]byte{'e', 'c'},

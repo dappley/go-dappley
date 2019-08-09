@@ -20,17 +20,18 @@ package consensus
 
 import (
 	"encoding/hex"
+	"time"
+
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 )
@@ -114,11 +115,11 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.Bloc
 	return &ctx
 }
 
-func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *core.ScState) {
+func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
 	var validTxs []*transaction.Transaction
 	totalSize := 0
 
-	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
+	scStorage := scState.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
@@ -194,10 +195,10 @@ func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transact
 
 //executeSmartContract executes all smart contracts
 func (bp *BlockProducer) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
-	txs []*transaction.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*transaction.Transaction, *core.ScState) {
+	txs []*transaction.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*transaction.Transaction, *scState.ScState) {
 	//start a new smart contract engine
 
-	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
+	scStorage := scState.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*transaction.Transaction

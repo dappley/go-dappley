@@ -10,6 +10,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -342,7 +343,7 @@ func TestTransaction_Execute(t *testing.T) {
 				println(err.Error())
 			}
 			isSCUTXO := (*index).GetAllUTXOsByPubKeyHash([]byte(tx.Vout[0].PubKeyHash)).Size() == 0
-			Execute(&tx, preUTXO, isSCUTXO, *index, core.NewScState(), nil, sc, 0, parentBlk)
+			Execute(&tx, preUTXO, isSCUTXO, *index, scState.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}

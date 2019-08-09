@@ -1,9 +1,10 @@
-package core
+package scState
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewEventManager(t *testing.T) {

@@ -3,6 +3,7 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/utxo"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -29,6 +30,6 @@ func (_m *MockScEngineManager) CreateEngine() ScEngine {
 }
 
 // RunScheduledEvents provides a mock function with given fields: contractUtxo, scStorage
-func (_m *MockScEngineManager) RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *ScState, blkHeight uint64, seed int64) {
+func (_m *MockScEngineManager) RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *scState.ScState, blkHeight uint64, seed int64) {
 	_m.Called(contractUtxo, scStorage, blkHeight, seed)
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -462,7 +463,7 @@ func verifySignatures(prevUtxos []*utxo.UTXO, tx *transaction.Transaction) (bool
 func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	isSCUTXO bool,
 	index utxo_logic.UTXOIndex,
-	scStorage *core.ScState,
+	scStorage *scState.ScState,
 	rewards map[string]string,
 	engine core.ScEngine,
 	currblkHeight uint64,

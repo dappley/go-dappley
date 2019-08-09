@@ -1,8 +1,9 @@
-package core
+package scState
 
 import (
-	"github.com/dappley/go-dappley/common/hash"
 	"sync"
+
+	"github.com/dappley/go-dappley/common/hash"
 
 	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/storage"

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -146,7 +147,7 @@ StorageTest.prototype = {
 module.exports = new StorageTest();
 `
 
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	ss.GetStorageByAddress(dummyAddr)["key"] = "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
@@ -183,7 +184,7 @@ StorageTest.prototype = {
 };
 module.exports = new StorageTest();
 `
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -225,7 +226,7 @@ StorageTest.prototype = {
 };
 module.exports = new StorageTest();
 `
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -297,7 +298,7 @@ TransactionTest.prototype = {
 };
 module.exports = new TransactionTest();
 `
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -312,7 +313,7 @@ func TestStepRecord(t *testing.T) {
 	script, _ := ioutil.ReadFile("jslib/step_recorder.js")
 
 	reward := make(map[string]string)
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 	sc.ImportLocalStorage(ss)
@@ -429,7 +430,7 @@ func TestBlkHeight(t *testing.T) {
 func TestRecordEvent(t *testing.T) {
 	script, _ := ioutil.ReadFile("test/test_event.js")
 
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
@@ -517,7 +518,7 @@ func TestStepRecordGasCount(t *testing.T) {
 	ctx := tx.ToContractTx()
 	script, _ := ioutil.ReadFile("test/test_step_recorder.js")
 
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
