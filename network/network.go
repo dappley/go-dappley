@@ -213,11 +213,6 @@ func (net *Network) recordMessage(msg *network_model.DappPacket) {
 //onStreamStop runs cb function upon any stream stops
 func (net *Network) onStreamStop(stream *Stream) {
 	net.onStreamStopCb(stream)
-
-	if len(net.streamManager.GetStreams()) == 0 {
-		logger.Info("Network: The network has no streams. Attempt to connect to all peers again...")
-		net.connectToAllPeers()
-	}
 }
 
 //onPeerListReceived connects to new peers when a peer list is received

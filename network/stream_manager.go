@@ -192,6 +192,7 @@ func (sm *StreamManager) ConnectPeers(peers []network_model.PeerInfo) {
 
 	logger.WithFields(logger.Fields{
 		"numOfPeers": numOfPeersToBeConnected,
+		"host_id":    sm.host.ID(),
 	}).Debug("StreamManager: ConnectPeers")
 
 	numOfPeersAllowed := sm.connectionManager.GetNumOfConnectionsAllowed(ConnectionTypeOut)
@@ -236,7 +237,8 @@ func (sm *StreamManager) connectPeer(peerInfo network_model.PeerInfo, connection
 	s, err := sm.host.NewStream(context.Background(), peerInfo.PeerId, network_model.ProtocalName)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"PeerId": peerInfo.PeerId,
+			"PeerId":  peerInfo.PeerId,
+			"host_id": sm.host.ID(),
 		}).Debug("StreamManager: Connect to peer failed")
 		return err
 	}
@@ -244,8 +246,9 @@ func (sm *StreamManager) connectPeer(peerInfo network_model.PeerInfo, connection
 	stream := NewStream(s)
 
 	logger.WithFields(logger.Fields{
-		"PeerId": peerInfo.PeerId,
-		"Addr":   peerInfo.Addrs[0].String(),
+		"PeerId":  peerInfo.PeerId,
+		"Addr":    peerInfo.Addrs[0].String(),
+		"host_id": sm.host.ID(),
 	}).Info("StreamManager: Connect to a peer")
 
 	stream.Start(sm.streamStopNotificationCh, sm.streamMsgReceiveCh)
@@ -260,6 +263,7 @@ func (sm *StreamManager) OnStreamStop(stream *Stream) {
 	logger.WithFields(logger.Fields{
 		"peer_id": stream.GetPeerId(),
 		"addr":    stream.GetRemoteAddr().String(),
+		"host_id": sm.host.ID(),
 	}).Debug("StreamManager: Stream is stopped")
 
 	sm.mutex.Lock()
