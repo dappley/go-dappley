@@ -11,9 +11,10 @@ import (
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
+	"github.com/dappley/go-dappley/vm"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
@@ -103,7 +104,7 @@ func VerifyHash(b *block.Block) bool {
 	return bytes.Compare(b.GetHash(), CalculateHash(b)) == 0
 }
 
-func VerifyTransactions(b *block.Block, utxoIndex *utxo_logic.UTXOIndex, scState *scState.ScState, manager core.ScEngineManager, parentBlk *block.Block) bool {
+func VerifyTransactions(b *block.Block, utxoIndex *utxo_logic.UTXOIndex, scState *scState.ScState, parentBlk *block.Block) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash": b.GetHash(),
@@ -115,12 +116,9 @@ func VerifyTransactions(b *block.Block, utxoIndex *utxo_logic.UTXOIndex, scState
 	var contractGeneratedTXs []*transaction.Transaction
 	rewards := make(map[string]string)
 	var allContractGeneratedTXs []*transaction.Transaction
-	var scEngine core.ScEngine
 
-	if manager != nil {
-		scEngine = manager.CreateEngine()
-		defer scEngine.DestroyEngine()
-	}
+	scEngine := vm.NewV8Engine()
+	defer scEngine.DestroyEngine()
 
 L:
 	for _, tx := range b.GetTransactions() {
