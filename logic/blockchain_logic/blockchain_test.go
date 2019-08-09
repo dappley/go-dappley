@@ -85,7 +85,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
-	blk := core.GenerateBlockWithCbtx(addr, tailblk)
+	blk := transaction_logic.GenerateBlockWithCbtx(addr, tailblk)
 	blk.SetHeight(1)
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 

@@ -20,7 +20,6 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -43,13 +42,6 @@ func GenerateMockBlock() *block.Block {
 		0,
 		[]*transaction.Transaction{t1, t2},
 	)
-}
-
-func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.Block {
-	//create a new block chain
-	cbtx := transaction_logic.NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
-	b := block.NewBlock([]*transaction.Transaction{&cbtx}, lastblock, "")
-	return b
 }
 
 func MockTransaction() *transaction.Transaction {
