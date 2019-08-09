@@ -19,8 +19,8 @@ type Blockchain struct {
 	state         BlockchainState
 }
 
-func NewBlockchain(tailBlockHash hash.Hash, libBlockHash hash.Hash) *Blockchain {
-	return &Blockchain{
+func NewBlockchain(tailBlockHash hash.Hash, libBlockHash hash.Hash) Blockchain {
+	return Blockchain{
 		tailBlockHash,
 		libBlockHash,
 		BlockchainReady,

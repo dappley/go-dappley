@@ -57,7 +57,7 @@ var (
 )
 
 type Blockchain struct {
-	bc           *blockchain.Blockchain
+	bc           blockchain.Blockchain
 	db           storage.Storage
 	utxoCache    *utxo.UTXOCache
 	consensus    Consensus
@@ -335,7 +335,6 @@ func (bc *Blockchain) Iterator() *Blockchain {
 
 func (bc *Blockchain) Next() (*block.Block, error) {
 	var blk *block.Block
-
 	encodedBlock, err := bc.db.Get(bc.GetTailBlockHash())
 	if err != nil {
 		return nil, err
@@ -505,12 +504,4 @@ func (bc *Blockchain) IsLIB(blk *block.Block) bool {
 // GasPrice returns gas price in current blockchain
 func (bc *Blockchain) GasPrice() uint64 {
 	return DefaultGasPrice
-}
-
-func GetBlockByHash(hash hash.Hash, db Storage) (*block.Block, error) {
-	rawBytes, err := db.Get(hash)
-	if err != nil {
-		return nil, ErrBlockDoesNotExist
-	}
-	return block.Deserialize(rawBytes), nil
 }
