@@ -40,6 +40,8 @@ var tx1 = transaction.Transaction{
 func TestJournalPutAndGet(t *testing.T) {
 	db := storage.NewRamStorage()
 	vin := transaction_base.TXInput{tx1.ID, 1, nil, nil}
+	err := PutTxJournal(tx1, db)
+	assert.Nil(t, err)
 	vout, err := GetTxOutput(vin, db)
 	// Expect transaction logs have been successfully saved
 	assert.Nil(t, err)
