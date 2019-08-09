@@ -9,7 +9,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	logger "github.com/sirupsen/logrus"
@@ -24,7 +23,7 @@ import (
 
 func TestBlockChainManager_NumForks(t *testing.T) {
 	// create BlockChain
-	bc := blockchain_logic.CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 100), nil, 100)
+	bc := CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 100), nil, 100)
 	blk, err := bc.GetTailBlock()
 	require.Nil(t, err)
 
@@ -112,13 +111,13 @@ func testGetForkHeadHashes(bp *core.BlockPool) []string {
 
 func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	genesisAddr := account.NewAddress("##@@")
-	genesisBlock := blockchain_logic.NewGenesisBlock(genesisAddr, transaction.Subsidy)
+	genesisBlock := NewGenesisBlock(genesisAddr, transaction.Subsidy)
 
 	// prepareBlockchainWithBlocks returns a blockchain that contains the given blocks with correct utxoIndex in RAM
-	prepareBlockchainWithBlocks := func(blks []*block.Block) *blockchain_logic.Blockchain {
-		bc := blockchain_logic.CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 128000), nil, 100000)
+	prepareBlockchainWithBlocks := func(blks []*block.Block) *Blockchain {
+		bc := CreateBlockchain(genesisAddr, storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 128000), nil, 100000)
 		for _, blk := range blks {
-			err := bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk))
+			err := bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 			if err != nil {
 				logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot add the blocks to blockchain.")
 			}
@@ -182,10 +181,10 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot corrupt the utxoIndex in database.")
 	}
 
-	bcs := []*blockchain_logic.Blockchain{
+	bcs := []*Blockchain{
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2}),
-		blockchain_logic.CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 128000), nil, 100000),
+		CreateBlockchain(account.NewAddress(""), storage.NewRamStorage(), nil, core.NewTransactionPool(nil, 128000), nil, 100000),
 		prepareBlockchainWithBlocks([]*block.Block{prevBlock, emptyBlock}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, abnormalBlock}),
@@ -193,7 +192,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	}
 	tests := []struct {
 		name     string
-		bc       *blockchain_logic.Blockchain
+		bc       *Blockchain
 		hash     hash.Hash
 		expected *utxo_logic.UTXOIndex
 		err      error
@@ -217,7 +216,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			bc:       bcs[2],
 			hash:     hash.Hash("not there"),
 			expected: utxo_logic.NewUTXOIndex(bcs[2].GetUtxoCache()),
-			err:      blockchain_logic.ErrBlockDoesNotExist,
+			err:      ErrBlockDoesNotExist,
 		},
 		{
 			name:     "no txs in blocks",
@@ -264,13 +263,13 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 	defer db.Close()
 
 	coinbaseAddr := account.NewAddress("testaddress")
-	bc := blockchain_logic.CreateBlockchain(coinbaseAddr, db, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(coinbaseAddr, db, nil, core.NewTransactionPool(nil, 128000), nil, 100000)
 
 	blk1 := core.GenerateUtxoMockBlockWithoutInputs() // contains 2 UTXOs for address1
 	blk2 := core.GenerateUtxoMockBlockWithInputs()    // contains tx that transfers address1's UTXOs to address2 with a change
 
-	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk1))
-	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk2))
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk1))
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk2))
 
 	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 

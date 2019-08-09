@@ -22,7 +22,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base/pb"
 
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"

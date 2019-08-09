@@ -62,7 +62,7 @@ func createTestBlockchains(size int, portStart int) ([]*blockchain_logic.Blockch
 
 		bms[i] = bm
 		nodes[i] = node
-		dpos.Setup(address.String(), bm)
+		pow.Setup(address.String(), bm)
 		pow.SetTargetBit(10)
 		node.Start(portStart+i, "")
 	}
@@ -82,7 +82,7 @@ func fillBlockchains(bms []*blockchain_logic.BlockchainManager) {
 		block, _ := generateChain.GetBlockByHeight(uint64(i))
 		for j := 1; j < len(bms); j++ {
 			current := bms[j].Getblockchain()
-			current.AddBlockContextToTail(core.PrepareBlockContext(current, block))
+			current.AddBlockContextToTail(blockchain_logic.PrepareBlockContext(current, block))
 		}
 	}
 }

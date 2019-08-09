@@ -1,3 +1,5 @@
+// +build integration
+
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
@@ -54,7 +56,7 @@ import (
 type RpcTestContext struct {
 	store      storage.Storage
 	account    *account.Account
-	consensus  core.Consensus
+	consensus  blockchain_logic.Consensus
 	bm         *blockchain_logic.BlockchainManager
 	node       *network.Node
 	rpcServer  *Server
@@ -119,7 +121,7 @@ func TestRpcSend(t *testing.T) {
 	pool := core.NewBlockPool()
 
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -207,7 +209,7 @@ func TestRpcSendContract(t *testing.T) {
 	pool := core.NewBlockPool()
 
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -311,7 +313,7 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 5 {
@@ -356,7 +358,7 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < MinUtxoBlockHeaderCount {
@@ -401,7 +403,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 500 {
@@ -480,7 +482,7 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
@@ -525,7 +527,7 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
@@ -575,7 +577,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
@@ -666,7 +668,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
@@ -804,7 +806,7 @@ func TestGetNewTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	// Create a grpc connection and a account
@@ -1041,7 +1043,7 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.node, rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
+	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
 	rpcContext.consensus.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
@@ -1158,7 +1160,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
-	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -1256,7 +1258,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 
-	dpos.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
+	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server

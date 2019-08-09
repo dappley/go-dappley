@@ -86,7 +86,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	tailblk, _ := bc.GetTailBlock()
 	blk := core.GenerateBlockWithCbtx(addr, tailblk)
 	blk.SetHeight(1)
-	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk))
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	assert.False(t, bc.IsHigherThanBlockchain(blk))
 
@@ -101,7 +101,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	bc := CreateBlockchain(addr, s, nil, core.NewTransactionPool(nil, 128), nil, 100000)
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
-	bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk))
+	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	isFound := bc.IsInBlockchain([]byte("hash"))
 	assert.True(t, isFound)
@@ -140,7 +140,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 		cbtx := transaction_logic.NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
+		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
 }
@@ -170,7 +170,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Flush invoked in AddBlockToTail twice
 	db.On("Flush").Return(nil).Twice()
 
-	err := bc.AddBlockContextToTail(core.PrepareBlockContext(bc, genesis))
+	err := bc.AddBlockContextToTail(PrepareBlockContext(bc, genesis))
 
 	// Expect batch write was used
 	db.AssertCalled(t, "EnableBatch")
@@ -191,7 +191,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	blk.SetHash([]byte("hash1"))
 
 	blk.SetHeight(1)
-	err = bc.AddBlockContextToTail(core.PrepareBlockContext(bc, blk))
+	err = bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
 	// Expect the coinbase tx to go through
 	assert.Equal(t, nil, err)
@@ -250,7 +250,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 		tailBlk, _ := bc.GetTailBlock()
 		b := block.NewBlock([]*transaction.Transaction{core.MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(core.PrepareBlockContext(bc, b))
+		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
 	return bc
 }

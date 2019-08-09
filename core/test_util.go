@@ -20,9 +20,7 @@ package core
 
 import (
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -45,14 +43,6 @@ func GenerateMockBlock() *block.Block {
 		0,
 		[]*transaction.Transaction{t1, t2},
 	)
-}
-
-func PrepareBlockContext(bc *blockchain_logic.Blockchain, blk *block.Block) *BlockContext {
-	state := LoadScStateFromDatabase(bc.GetDb())
-	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxoState(blk.GetTransactions())
-	ctx := BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
-	return &ctx
 }
 
 func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.Block {
