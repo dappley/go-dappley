@@ -77,6 +77,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 
 	// adding block that is not connected to BlockChain should be ignored
 	b8 := block.NewBlockWithRawInfo(nil, []byte{9}, 8, 0, 4, nil)
+	b8.SetHash(block_logic.CalculateHash(b8))
 	bp.Add(b8)
 	require.Equal(t, 2, testGetNumForkHeads(bp))
 

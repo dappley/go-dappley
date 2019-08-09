@@ -53,13 +53,14 @@ func (pool *BlockPool) Add(blk *block.Block) hash.Hash {
 
 	if pool.blkCache.Contains(blk.GetHash().String()) {
 		treeNode, _ := pool.blkCache.Get(blk.GetHash().String())
-		return treeNode.(*common.Tree).GetValue().(*block.Block).GetHash()
+		return treeNode.(*common.Tree).GetRoot().GetValue().(*block.Block).GetHash()
 	}
 
 	//TODO: inject consensus to check if the block should be disgarded
 	forkhead, _ := common.NewTree(blk.GetHash().String(), blk)
-	root := pool.updateForkHead(forkhead)
-	return root.GetValue().(*block.Block).GetPrevHash()
+	pool.blkCache.Add(blk.GetHash().String(), forkhead)
+	pool.updateForkHead(forkhead)
+	return forkhead.GetRoot().GetValue().(*block.Block).GetPrevHash()
 }
 
 func (pool *BlockPool) GetFork(parentHash hash.Hash) []*block.Block {
@@ -110,9 +111,9 @@ func getBlocksFromTrees(trees []*common.Tree) []*block.Block {
 }
 
 // updateForkHead updates parent and Children of the tree
-func (pool *BlockPool) updateForkHead(forkHead *common.Tree) *common.Tree {
+func (pool *BlockPool) updateForkHead(forkHead *common.Tree) {
 	pool.linkChildren(forkHead)
-	return pool.linkParent(forkHead)
+	pool.linkParent(forkHead)
 }
 
 func (pool *BlockPool) linkChildren(forkHead *common.Tree) {
@@ -127,36 +128,29 @@ func (pool *BlockPool) linkChildren(forkHead *common.Tree) {
 				}).Debug("BlockPool: added a child block to the forkHead.")
 				forkHead.AddChild(cachedBlk.(*common.Tree))
 				delete(pool.forkHeads, blkHash.(string))
-				pool.blkCache.Remove(blkHash)
 			}
 		}
 	}
 }
 
-func (pool *BlockPool) linkParent(forkHead *common.Tree) *common.Tree {
+func (pool *BlockPool) linkParent(forkHead *common.Tree) {
 
 	pool.forkHeadsMutex.Lock()
 	defer pool.forkHeadsMutex.Unlock()
-
-	root := forkHead
 
 	parentBlkKey := forkHead.GetValue().(*block.Block).GetPrevHash().String()
 	forkHeadKey := forkHead.GetValue().(*block.Block).GetHash().String()
 
 	if parent, ok := pool.blkCache.Get(parentBlkKey); ok {
-		parent.(*common.Tree).AddChild(forkHead)
-		pool.blkCache.Add(parentBlkKey, parent)
-		root = parent.(*common.Tree)
+		forkHead.AddParent(parent.(*common.Tree))
 		logger.WithFields(logger.Fields{
 			"tree_height":   forkHead.GetValue().(*block.Block).GetHeight(),
 			"parent_height": parent.(*common.Tree).GetValue().(*block.Block).GetHeight(),
 		}).Debug("BlockPool: added a parent block to the forkHead.")
 
 	} else {
-		pool.blkCache.Add(forkHeadKey, forkHead)
 		pool.forkHeads[forkHeadKey] = forkHead
 	}
-	return root
 }
 
 func (pool *BlockPool) ForkHeadRange(fn func(blkHash string, tree *common.Tree)) {
