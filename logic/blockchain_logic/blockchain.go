@@ -389,7 +389,7 @@ func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 	}
 	// add transaction journals
 	for _, tx := range blk.GetTransactions() {
-		err = core.PutTxJournal(*tx, bc.db)
+		err = transaction.PutTxJournal(*tx, bc.db)
 		if err != nil {
 			logger.WithError(err).Warn("Blockchain: failed to add blk transaction journals into database!")
 			return err

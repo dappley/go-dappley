@@ -15,20 +15,20 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
+package transaction
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/util"
-	"testing"
 
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
 )
 
-var tx1 = transaction.Transaction{
+var tx1 = Transaction{
 	ID:       util.GenerateRandomAoB(1),
 	Vin:      transaction_base.GenerateFakeTxInputs(),
 	Vout:     transaction_base.GenerateFakeTxOutputs(),

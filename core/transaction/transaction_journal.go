@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package core
+package transaction
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base/pb"
 
-	"github.com/dappley/go-dappley/core/pb"
+	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
+
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -53,7 +53,7 @@ func getStorageKey(txid []byte) []byte {
 }
 
 // Add new log
-func PutTxJournal(tx transaction.Transaction, db storage.Storage) error {
+func PutTxJournal(tx Transaction, db storage.Storage) error {
 	txJournal := NewTxJournal(tx.ID, tx.Vout)
 	return txJournal.Save(db)
 }

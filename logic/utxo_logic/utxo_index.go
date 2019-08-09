@@ -21,11 +21,12 @@ package utxo_logic
 import (
 	"encoding/hex"
 	"errors"
+
 	"github.com/dappley/go-dappley/storage"
 
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/transaction"
 	"sync"
+
+	"github.com/dappley/go-dappley/core/transaction"
 
 	"github.com/dappley/go-dappley/core/block"
 
@@ -208,7 +209,7 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *transaction.Transaction, db storage
 
 func getTXOutputSpent(in transaction_base.TXInput, db storage.Storage) (transaction_base.TXOutput, int, error) {
 
-	vout, err := core.GetTxOutput(in, db)
+	vout, err := transaction.GetTxOutput(in, db)
 
 	if err != nil {
 		return transaction_base.TXOutput{}, 0, ErrTXInputInvalid
