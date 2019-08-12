@@ -82,13 +82,13 @@ func (miner *Miner) Start() {
 
 				// Do not produce block if block pool is syncing
 				if miner.bc.GetState() != blockchain.BlockchainReady {
-					logger.Info("DPoS: block producer paused because block pool is syncing.")
+					logger.Info("Miner: block producer paused because block pool is syncing.")
 					continue
 				}
 				ctx := miner.producer.ProduceBlock(deadlineInMs)
 				if ctx == nil || !miner.con.Validate(ctx.Block) {
 					miner.producer.BlockProduceFinish()
-					logger.Error("DPoS: produced an invalid block!")
+					logger.Error("Miner: produced an invalid block!")
 					continue
 				}
 				miner.updateNewBlock(ctx)
@@ -102,16 +102,16 @@ func (miner *Miner) updateNewBlock(ctx *blockchain_logic.BlockContext) {
 	logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
 		"hash":   ctx.Block.GetHash().String(),
-	}).Info("DPoS: produced a new block.")
+	}).Info("Miner: produced a new block.")
 	if !block_logic.VerifyHash(ctx.Block) {
-		logger.Warn("DPoS: hash of the new block is invalid.")
+		logger.Warn("Miner: hash of the new block is invalid.")
 		return
 	}
 
 	// TODO Refactoring lib calculate position, check lib when create BlockContext instance
 	lib, ok := miner.con.CheckLibPolicy(ctx.Block)
 	if !ok {
-		logger.Warn("DPoS: the number of producers is not enough.")
+		logger.Warn("Miner: the number of producers is not enough.")
 		tailBlock, _ := miner.bc.GetTailBlock()
 		miner.BroadcastBlock(tailBlock)
 		return
@@ -140,12 +140,12 @@ func (miner *Miner) RequestBlockHandler(command *network_model.DappRcvdCmdContex
 	if err := proto.Unmarshal(command.GetData(), request); err != nil {
 		logger.WithFields(logger.Fields{
 			"name": command.GetCommandName(),
-		}).Info("BlockchainManager: parse data failed.")
+		}).Info("Miner: parse data failed.")
 	}
 
 	block, err := miner.bc.GetBlockByHash(request.Hash)
 	if err != nil {
-		logger.WithError(err).Warn("BlockchainManager: failed to get the requested block.")
+		logger.WithError(err).Warn("Miner: failed to get the requested block.")
 		return
 	}
 
@@ -176,7 +176,7 @@ func (miner *Miner) SendBlockHandler(command *network_model.DappRcvdCmdContext) 
 
 	//unmarshal byte to proto
 	if err := proto.Unmarshal(command.GetData(), pb); err != nil {
-		logger.WithError(err).Warn("BlockchainManager: parse data failed.")
+		logger.WithError(err).Warn("Miner: parse data failed.")
 		return
 	}
 
