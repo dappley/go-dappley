@@ -36,6 +36,7 @@ type Miner struct {
 	producer   *consensus.BlockProducer
 	bc         *blockchain_logic.Blockchain
 	netService NetService
+	stopCh     chan bool
 }
 
 func NewMiner(bc *blockchain_logic.Blockchain, con Consensus, netService NetService) *Miner {
@@ -44,7 +45,9 @@ func NewMiner(bc *blockchain_logic.Blockchain, con Consensus, netService NetServ
 		producer:   consensus.NewBlockProducer(),
 		bc:         bc,
 		netService: netService,
+		stopCh:     make(chan bool, 1),
 	}
+	miner.producer.SetProcess(con.GetProcess())
 	miner.ListenToNetService()
 	return miner
 }
@@ -75,6 +78,8 @@ func (miner *Miner) Start() {
 		logger.Info("Miner Starts...")
 		for {
 			select {
+			case <-miner.stopCh:
+				return
 			case <-miner.con.GetBlockProduceNotifier():
 				deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 
@@ -96,6 +101,11 @@ func (miner *Miner) Start() {
 			}
 		}
 	}()
+}
+
+func (miner *Miner) Stop() {
+	logger.Info("Miner stops...")
+	miner.stopCh <- true
 }
 
 func (miner *Miner) updateNewBlock(ctx *blockchain_logic.BlockContext) {

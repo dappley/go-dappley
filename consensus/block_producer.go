@@ -36,13 +36,13 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-// process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
-type process func(ctx *block.Block)
+// Process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
+type Process func(ctx *block.Block)
 
 type BlockProducer struct {
 	bc          *blockchain_logic.Blockchain
 	beneficiary string
-	process     process
+	process     Process
 	idle        bool
 }
 
@@ -66,12 +66,12 @@ func (bp *BlockProducer) Beneficiary() string {
 	return bp.beneficiary
 }
 
-// SetProcess tells the producer to follow the given process to produce a valid block
-func (bp *BlockProducer) SetProcess(process process) {
+// SetProcess tells the producer to follow the given Process to produce a valid block
+func (bp *BlockProducer) SetProcess(process Process) {
 	bp.process = process
 }
 
-// ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it.
+// ProduceBlock produces a block by preparing its raw contents and applying the predefined Process to it.
 // deadlineInMs = 0 means no deadline
 func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	logger.Info("BlockProducer: started producing new block...")

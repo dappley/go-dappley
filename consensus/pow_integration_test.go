@@ -280,7 +280,7 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 
 	pow.Setup(cbAddr.String(), bm)
 	pow.SetTargetBit(10)
-	//start the pow process and wait for at least 1 block produced
+	//start the pow Process and wait for at least 1 block produced
 	pow.Start()
 	blkHeight := uint64(0)
 loop:
@@ -293,7 +293,7 @@ loop:
 		}
 	}
 
-	//stop pow process and wait
+	//stop pow Process and wait
 	pow.Stop()
 	util.WaitDoneOrTimeout(func() bool {
 		return !pow.IsProducingBlock()

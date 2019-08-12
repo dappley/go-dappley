@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
@@ -12,6 +13,7 @@ type Consensus interface {
 	Validate(*block.Block) bool
 	//Return the lib block and new block whether pass lib policy
 	CheckLibPolicy(*block.Block) (*block.Block, bool)
+	GetProcess() consensus.Process
 }
 
 type NetService interface {
