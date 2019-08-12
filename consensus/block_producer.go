@@ -36,9 +36,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-// process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
-type process func(ctx *blockchain_logic.BlockContext)
-
 type BlockProducerInfo struct {
 	bc          *blockchain_logic.Blockchain
 	beneficiary string
