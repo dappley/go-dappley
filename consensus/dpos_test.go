@@ -134,7 +134,7 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 	assert.Equal(t, int(blk1Time/defaultTimeBetweenBlk), int(blk2Time/defaultTimeBetweenBlk))
 
 	blk1 := FakeNewBlockWithTimestamp(blk1Time, []*transaction.Transaction{}, nil)
-	dpos.AddBlockToSlot(blk1)
+	dpos.cacheBlock(blk1)
 	blk2 := FakeNewBlockWithTimestamp(blk2Time, []*transaction.Transaction{}, nil)
 
 	assert.True(t, dpos.isDoubleMint(blk2))

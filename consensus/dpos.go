@@ -60,10 +60,6 @@ func NewDPOS() *DPOS {
 	return dpos
 }
 
-func (dpos *DPOS) GetSlot() *lru.Cache {
-	return dpos.slot
-}
-
 func (dpos *DPOS) Setup(cbAddr string, bm *blockchain_logic.BlockchainManager) {
 	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
@@ -152,10 +148,6 @@ func (dpos *DPOS) hashAndSign(blk *block.Block) {
 	}
 }
 
-func (dpos *DPOS) isForking() bool {
-	return false
-}
-
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
 func (dpos *DPOS) Validate(block *block.Block) bool {
 	producerIsValid := dpos.verifyProducer(block)
@@ -172,7 +164,7 @@ func (dpos *DPOS) Validate(block *block.Block) bool {
 		return false
 	}
 
-	dpos.AddBlockToSlot(block)
+	dpos.cacheBlock(block)
 	return true
 }
 
@@ -252,7 +244,7 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
-func (dpos *DPOS) AddBlockToSlot(block *block.Block) {
+func (dpos *DPOS) cacheBlock(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
