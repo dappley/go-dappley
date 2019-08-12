@@ -1,0 +1,10 @@
+package miner
+
+import "github.com/dappley/go-dappley/core/block"
+
+type Consensus interface {
+	GetBlockProduceNotifier() chan bool
+	Validate(*block.Block) bool
+	//Return the lib block and new block whether pass lib policy
+	CheckLibPolicy(*block.Block) (*block.Block, bool)
+}
