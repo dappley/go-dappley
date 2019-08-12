@@ -86,7 +86,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
 	scState := scState.NewScState()
-	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, Lib: genesis, UtxoIndex: utxoIndex, State: scState})
+	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
 	}
@@ -238,14 +238,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp.db.EnableBatch()
 	defer bcTemp.db.DisableBatch()
 
-	if ctx.Lib != nil {
-		err := bcTemp.SetLIBHash(ctx.Lib.GetHash())
-		if err != nil {
-			blockLogger.Error("Blockchain: failed to set lib hash!")
-			return err
-		}
-	}
-
 	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
@@ -281,6 +273,8 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		blockLogger.Warn("Blockchain: failed to add block to database.")
 		return err
 	}
+
+	bcTemp.updateLIB()
 
 	// Flush batch changes to storage
 	err = bcTemp.db.Flush()
@@ -505,4 +499,66 @@ func (bc *Blockchain) IsLIB(blk *block.Block) bool {
 // GasPrice returns gas price in current blockchain
 func (bc *Blockchain) GasPrice() uint64 {
 	return DefaultGasPrice
+}
+
+func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
+	//Do not check genesis block
+	if blk.GetHeight() == 0 {
+		return true
+	}
+
+	if bc.consensus.IsBypassingLibCheck() {
+		return true
+	}
+
+	if !bc.consensus.IsNonRepeatingBlockProducerRequired() {
+		return true
+	}
+
+	return !bc.checkRepeatingProducer(blk)
+}
+
+//checkRepeatingProducer returns true if it found a repeating block between the input block and last irreversible block
+func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
+	lib := bc.GetLIBHash()
+
+	libProduerNum := bc.consensus.GetLibProducerNum()
+	existProducers := make(map[string]bool)
+	currBlk := blk
+
+	for i := 0; i < libProduerNum; i++ {
+		if _, ok := existProducers[blk.GetProducer()]; ok {
+			return true
+		}
+
+		if lib.Equals(currBlk.GetHash()) {
+			return false
+		}
+
+		existProducers[currBlk.GetProducer()] = true
+
+		newBlock, err := bc.GetBlockByHash(currBlk.GetPrevHash())
+		if err != nil {
+			logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking repeating producer")
+			return true
+		}
+
+		currBlk = newBlock
+	}
+
+	return false
+}
+
+func (bc *Blockchain) updateLIB() {
+	minConfirmationNum := bc.consensus.GetLibProducerNum()
+	currHeight := bc.GetMaxHeight()
+	LIBHeight := currHeight - uint64(minConfirmationNum)
+
+	LIBBlk, err := bc.GetBlockByHeight(LIBHeight)
+	if err != nil {
+		logger.WithError(err).Warn("Blockchain: Can not find LIB block in database")
+		return
+	}
+
+	bc.SetLIBHash(LIBBlk.GetHash())
 }

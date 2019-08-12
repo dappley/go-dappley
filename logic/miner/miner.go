@@ -119,14 +119,12 @@ func (miner *Miner) updateNewBlock(ctx *blockchain_logic.BlockContext) {
 	}
 
 	// TODO Refactoring lib calculate position, check lib when create BlockContext instance
-	lib, ok := miner.con.CheckLibPolicy(ctx.Block)
-	if !ok {
+	if !miner.bc.CheckLibPolicy(ctx.Block) {
 		logger.Warn("Miner: the number of producers is not enough.")
 		tailBlock, _ := miner.bc.GetTailBlock()
 		miner.BroadcastBlock(tailBlock)
 		return
 	}
-	ctx.Lib = lib
 
 	err := miner.bc.AddBlockContextToTail(ctx)
 	if err != nil {

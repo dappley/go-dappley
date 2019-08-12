@@ -39,10 +39,7 @@ const (
 type DPOS struct {
 	bp          *BlockProducer
 	producerKey string
-	newBlockCh  chan *block.Block
-	bm          *blockchain_logic.BlockchainManager
 	stopCh      chan bool
-	stopLibCh   chan bool
 	dynasty     *Dynasty
 	slot        *lru.Cache
 	notifierCh  chan bool
@@ -51,9 +48,7 @@ type DPOS struct {
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
 		bp:         NewBlockProducer(),
-		newBlockCh: make(chan *block.Block, 1),
 		stopCh:     make(chan bool, 1),
-		stopLibCh:  make(chan bool, 1),
 		notifierCh: make(chan bool, 1),
 	}
 
@@ -72,7 +67,6 @@ func (dpos *DPOS) GetSlot() *lru.Cache {
 func (dpos *DPOS) Setup(cbAddr string, bm *blockchain_logic.BlockchainManager) {
 	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
-	dpos.bm = bm
 }
 
 func (dpos *DPOS) SetKey(key string) {
@@ -266,53 +260,14 @@ func (dpos *DPOS) IsProducingBlock() bool {
 	return !dpos.bp.IsIdle()
 }
 
-func (dpos *DPOS) CheckLibPolicy(b *block.Block) (*block.Block, bool) {
-	//Do not check genesis block
-	if b.GetHeight() == 0 {
-		return b, true
-	}
-
-	// If producers number is less than MinConsensusSize, pass all blocks
-	if len(dpos.dynasty.GetProducers()) < MinConsensusSize {
-		return nil, true
-	}
-
-	lib, err := dpos.bm.Getblockchain().GetLIB()
-	if err != nil {
-		logger.WithError(err).Warn("DPoS: get lib failed.")
-	}
-
-	libProduerNum := dpos.getLibProducerNum()
-	existProducers := make(map[string]int)
-
-	checkingBlock := b
-
-	for lib.GetHash().Equals(checkingBlock.GetHash()) == false {
-		_, ok := existProducers[checkingBlock.GetProducer()]
-		if ok {
-			logger.WithFields(logger.Fields{
-				"producer": checkingBlock.GetProducer(),
-			}).Info("DPoS: duplicate producer when check lib.")
-			return nil, false
-		}
-
-		existProducers[checkingBlock.GetProducer()] = 1
-		if len(existProducers) >= libProduerNum {
-			return checkingBlock, true
-		}
-
-		newBlock, err := dpos.bm.Getblockchain().GetBlockByHash(checkingBlock.GetPrevHash())
-		if err != nil {
-			logger.WithError(err).Warn("DPoS: get parent block failed.")
-		}
-
-		checkingBlock = newBlock
-	}
-
-	// No enough checking blocks
-	return nil, true
+func (dpos *DPOS) GetLibProducerNum() int {
+	return len(dpos.dynasty.GetProducers())*2/3 + 1
 }
 
-func (dpos *DPOS) getLibProducerNum() int {
-	return len(dpos.dynasty.GetProducers())*2/3 + 1
+func (dpos *DPOS) IsBypassingLibCheck() bool {
+	return len(dpos.dynasty.GetProducers()) < MinConsensusSize
+}
+
+func (dpos *DPOS) IsNonRepeatingBlockProducerRequired() bool {
+	return true
 }

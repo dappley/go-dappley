@@ -222,8 +222,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			return ErrTransactionVerifyFailed
 		}
 
-		lib, ok := bm.Getblockchain().GetConsensus().CheckLibPolicy(forkBlks[i])
-		if !ok {
+		if !bm.Getblockchain().CheckLibPolicy(forkBlks[i]) {
 			return ErrProducerNotEnough
 		}
 
@@ -232,7 +231,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			bm.blockchain.Rollback(forkParentHash, rollBackUtxo, rollScState)
 		}
 
-		ctx := BlockContext{Block: forkBlks[i], Lib: lib, UtxoIndex: utxo, State: scState}
+		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{

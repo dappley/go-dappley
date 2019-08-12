@@ -34,8 +34,10 @@ type Consensus interface {
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
 	GetProducers() []string
-	//Return the lib block and new block whether pass lib policy
-	CheckLibPolicy(*block.Block) (*block.Block, bool)
+
+	GetLibProducerNum() int
+	IsBypassingLibCheck() bool
+	IsNonRepeatingBlockProducerRequired() bool
 }
 
 type NetService interface {

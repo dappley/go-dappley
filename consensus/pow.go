@@ -197,6 +197,14 @@ func (pow *ProofOfWork) Produced(blk *block.Block) bool {
 	return false
 }
 
-func (pow *ProofOfWork) CheckLibPolicy(b *block.Block) (*block.Block, bool) {
-	return nil, true
+func (pow *ProofOfWork) GetLibProducerNum() int {
+	return 6
+}
+
+func (pow *ProofOfWork) IsBypassingLibCheck() bool {
+	return true
+}
+
+func (pow *ProofOfWork) IsNonRepeatingBlockProducerRequired() bool {
+	return false
 }
