@@ -31,8 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlockProducer_ProduceBlock(t *testing.T) {
-	bp := NewBlockProducer()
+func TestBlockProducerInfo_ProduceBlock(t *testing.T) {
+	bp := NewBlockProducerInfo()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	bc := blockchain_logic.CreateBlockchain(
 		account.NewAddress(cbAddr),
@@ -52,8 +52,8 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	assert.NotNil(t, block)
 }
 
-func TestBlockProducer_Produced(t *testing.T) {
-	bp := NewBlockProducer()
+func TestBlockProducerInfo_Produced(t *testing.T) {
+	bp := NewBlockProducerInfo()
 	bp.Setup(nil, "key")
 	require.False(t, bp.Produced(nil))
 	require.False(t, bp.Produced(block.NewBlock(nil, nil, "")))

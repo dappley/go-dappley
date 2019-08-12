@@ -34,7 +34,7 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner  *BlockProducer
+	miner  *BlockProducerInfo
 	target *big.Int
 	bm     *blockchain_logic.BlockchainManager
 	stopCh chan bool
@@ -42,7 +42,7 @@ type ProofOfWork struct {
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:  NewBlockProducer(),
+		miner:  NewBlockProducerInfo(),
 		stopCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)
@@ -97,7 +97,7 @@ func (pow *ProofOfWork) mineBlocks() {
 			return
 		default:
 			if pow.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
-				logger.Debug("BlockProducer: Paused while block pool is syncing")
+				logger.Debug("BlockProducerInfo: Paused while block pool is syncing")
 				continue
 			}
 			newBlock := pow.miner.ProduceBlock(0)

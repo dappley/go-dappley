@@ -39,15 +39,15 @@ import (
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
 type process func(ctx *blockchain_logic.BlockContext)
 
-type BlockProducer struct {
+type BlockProducerInfo struct {
 	bc          *blockchain_logic.Blockchain
 	beneficiary string
 	process     process
 	idle        bool
 }
 
-func NewBlockProducer() *BlockProducer {
-	return &BlockProducer{
+func NewBlockProducerInfo() *BlockProducerInfo {
+	return &BlockProducerInfo{
 		bc:          nil,
 		beneficiary: "",
 		process:     nil,
@@ -56,25 +56,25 @@ func NewBlockProducer() *BlockProducer {
 }
 
 // Setup tells the producer to give rewards to beneficiaryAddr and return the new block through newBlockCh
-func (bp *BlockProducer) Setup(bc *blockchain_logic.Blockchain, beneficiaryAddr string) {
+func (bp *BlockProducerInfo) Setup(bc *blockchain_logic.Blockchain, beneficiaryAddr string) {
 	bp.bc = bc
 	bp.beneficiary = beneficiaryAddr
 }
 
 // Beneficiary returns the address which receives rewards
-func (bp *BlockProducer) Beneficiary() string {
+func (bp *BlockProducerInfo) Beneficiary() string {
 	return bp.beneficiary
 }
 
 // SetProcess tells the producer to follow the given process to produce a valid block
-func (bp *BlockProducer) SetProcess(process process) {
+func (bp *BlockProducerInfo) SetProcess(process process) {
 	bp.process = process
 }
 
 // ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it.
 // deadlineInMs = 0 means no deadline
-func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
-	logger.Info("BlockProducer: started producing new block...")
+func (bp *BlockProducerInfo) ProduceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
+	logger.Info("BlockProducerInfo: started producing new block...")
 	bp.idle = false
 	ctx := bp.prepareBlock(deadlineInMs)
 	if ctx != nil && bp.process != nil {
@@ -83,18 +83,18 @@ func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *blockchain_logic.Bloc
 	return ctx
 }
 
-func (bp *BlockProducer) BlockProduceFinish() {
+func (bp *BlockProducerInfo) BlockProduceFinish() {
 	bp.idle = true
 }
 
-func (bp *BlockProducer) IsIdle() bool {
+func (bp *BlockProducerInfo) IsIdle() bool {
 	return bp.idle
 }
 
-func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
+func (bp *BlockProducerInfo) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
-		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
+		logger.WithError(err).Error("BlockProducerInfo: cannot get the current tail block!")
 		return nil
 	}
 
@@ -109,13 +109,13 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.Bloc
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
-	}).Info("BlockProducer: prepared a block.")
+	}).Info("BlockProducerInfo: prepared a block.")
 
 	ctx := blockchain_logic.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 
-func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
+func (bp *BlockProducerInfo) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
 	var validTxs []*transaction.Transaction
 	totalSize := 0
 
@@ -183,7 +183,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, pa
 	return validTxs, scStorage
 }
 
-func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
+func (bp *BlockProducerInfo) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range txs {
@@ -194,7 +194,7 @@ func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transact
 }
 
 //executeSmartContract executes all smart contracts
-func (bp *BlockProducer) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
+func (bp *BlockProducerInfo) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
 	txs []*transaction.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*transaction.Transaction, *scState.ScState) {
 	//start a new smart contract engine
 
@@ -257,7 +257,7 @@ func isExceedingDeadline(deadlineInMs int64) bool {
 	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
 
-func (bp *BlockProducer) Produced(blk *block.Block) bool {
+func (bp *BlockProducerInfo) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return bp.beneficiary == blk.GetProducer()
 	}

@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 }
 
 //mine multiple transactions
-func TestBlockProducer_SingleValidTx(t *testing.T) {
+func TestBlockProducerInfo_SingleValidTx(t *testing.T) {
 
 	//create new account
 	accounts := &account_logic.AccountManager{}
@@ -125,7 +125,7 @@ func TestBlockProducer_SingleValidTx(t *testing.T) {
 }
 
 //mine empty blocks
-func TestBlockProducer_MineEmptyBlock(t *testing.T) {
+func TestBlockProducerInfo_MineEmptyBlock(t *testing.T) {
 
 	//create new account
 	accountManager := &account_logic.AccountManager{}
@@ -174,7 +174,7 @@ func TestBlockProducer_MineEmptyBlock(t *testing.T) {
 }
 
 //mine multiple transactions
-func TestBlockProducer_MultipleValidTx(t *testing.T) {
+func TestBlockProducerInfo_MultipleValidTx(t *testing.T) {
 
 	//create new account
 	accounts := &account_logic.AccountManager{}
@@ -380,7 +380,7 @@ func GetNumberOfBlocks(t *testing.T, i *blockchain_logic.Blockchain) int {
 }
 
 //TODO: test mining with invalid transactions
-func TestBlockProducer_InvalidTransactions(t *testing.T) {
+func TestBlockProducerInfo_InvalidTransactions(t *testing.T) {
 
 }
 

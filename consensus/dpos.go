@@ -41,7 +41,7 @@ const maxMintingTimeInMs = 2000
 const NanoSecsInMilliSec = 1000000
 
 type DPOS struct {
-	bp          *BlockProducer
+	bp          *BlockProducerInfo
 	producerKey string
 	newBlockCh  chan *block.Block
 	bm          *blockchain_logic.BlockchainManager
@@ -53,7 +53,7 @@ type DPOS struct {
 
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
-		bp:         NewBlockProducer(),
+		bp:         NewBlockProducerInfo(),
 		newBlockCh: make(chan *block.Block, 1),
 		stopCh:     make(chan bool, 1),
 		stopLibCh:  make(chan bool, 1),
