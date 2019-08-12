@@ -123,17 +123,17 @@ L:
 	}
 }
 
-func (pow *ProofOfWork) calculateValidHash(ctx *blockchain_logic.BlockContext) {
+func (pow *ProofOfWork) calculateValidHash(blk *block.Block) {
 	for {
 		select {
 		case <-pow.stopCh:
 			pow.stopCh <- true
 			return
 		default:
-			hash := block_logic.CalculateHashWithNonce(ctx.Block)
-			ctx.Block.SetHash(hash)
-			if !pow.isHashBelowTarget(ctx.Block) {
-				pow.tryDifferentNonce(ctx.Block)
+			hash := block_logic.CalculateHashWithNonce(blk)
+			blk.SetHash(hash)
+			if !pow.isHashBelowTarget(blk) {
+				pow.tryDifferentNonce(blk)
 				continue
 			}
 			return

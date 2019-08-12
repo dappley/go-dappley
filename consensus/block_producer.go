@@ -37,7 +37,7 @@ import (
 )
 
 // process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
-type process func(ctx *blockchain_logic.BlockContext)
+type process func(ctx *block.Block)
 
 type BlockProducer struct {
 	bc          *blockchain_logic.Blockchain
@@ -78,7 +78,7 @@ func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *blockchain_logic.Bloc
 	bp.idle = false
 	ctx := bp.prepareBlock(deadlineInMs)
 	if ctx != nil && bp.process != nil {
-		bp.process(ctx)
+		bp.process(ctx.Block)
 	}
 	return ctx
 }
