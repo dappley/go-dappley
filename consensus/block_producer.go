@@ -50,6 +50,10 @@ func (bp *BlockProducerInfo) BlockProduceFinish() {
 	bp.idle = true
 }
 
+func (bp *BlockProducerInfo) BlockProduceStart() {
+	bp.idle = false
+}
+
 func (bp *BlockProducerInfo) IsIdle() bool {
 	return bp.idle
 }

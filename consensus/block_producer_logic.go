@@ -46,7 +46,7 @@ func (bp *BlockProducerLogic) SetProcess(process process) {
 // deadlineInMs = 0 means no deadline
 func (bp *BlockProducerLogic) ProduceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	logger.Info("BlockProducerInfo: started producing new block...")
-	bp.producer.idle = false
+	bp.producer.BlockProduceStart()
 	ctx := bp.prepareBlock(deadlineInMs)
 	if ctx != nil && bp.process != nil {
 		bp.process(ctx)
@@ -222,7 +222,7 @@ func (bp *BlockProducerLogic) Beneficiary() string {
 }
 
 func (bp *BlockProducerLogic) BlockProduceFinish() {
-	bp.producer.idle = true
+	bp.producer.BlockProduceFinish()
 }
 
 func (bp *BlockProducerLogic) IsIdle() bool {
