@@ -20,16 +20,17 @@ package consensus
 
 import (
 	"bytes"
+	"strings"
+	"time"
+
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"strings"
-	"time"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -41,7 +42,7 @@ const maxMintingTimeInMs = 2000
 const NanoSecsInMilliSec = 1000000
 
 type DPOS struct {
-	bp          *BlockProducerInfo
+	bp          *BlockProducerLogic
 	producerKey string
 	newBlockCh  chan *block.Block
 	bm          *blockchain_logic.BlockchainManager
@@ -53,7 +54,7 @@ type DPOS struct {
 
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
-		bp:         NewBlockProducerInfo(),
+		bp:         NewBlockProducerLogic(),
 		newBlockCh: make(chan *block.Block, 1),
 		stopCh:     make(chan bool, 1),
 		stopLibCh:  make(chan bool, 1),

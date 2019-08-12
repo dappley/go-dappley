@@ -19,12 +19,13 @@
 package consensus
 
 import (
+	"math"
+	"math/big"
+
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"math"
-	"math/big"
 
 	logger "github.com/sirupsen/logrus"
 )
@@ -34,7 +35,7 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner  *BlockProducerInfo
+	miner  *BlockProducerLogic
 	target *big.Int
 	bm     *blockchain_logic.BlockchainManager
 	stopCh chan bool
@@ -42,7 +43,7 @@ type ProofOfWork struct {
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:  NewBlockProducerInfo(),
+		miner:  NewBlockProducerLogic(),
 		stopCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)

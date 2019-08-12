@@ -22,39 +22,13 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
 
-	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlockProducerInfo_ProduceBlock(t *testing.T) {
-	bp := NewBlockProducerInfo()
-	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
-	bc := blockchain_logic.CreateBlockchain(
-		account.NewAddress(cbAddr),
-		storage.NewRamStorage(),
-		nil,
-		transaction_pool.NewTransactionPool(nil, 128),
-		nil,
-		100000,
-	)
-	bp.Setup(bc, cbAddr)
-	processRuns := false
-	bp.SetProcess(func(ctx *blockchain_logic.BlockContext) {
-		processRuns = true
-	})
-	block := bp.ProduceBlock(0)
-	assert.True(t, processRuns)
-	assert.NotNil(t, block)
-}
-
 func TestBlockProducerInfo_Produced(t *testing.T) {
 	bp := NewBlockProducerInfo()
-	bp.Setup(nil, "key")
+	bp.Setup("key")
 	require.False(t, bp.Produced(nil))
 	require.False(t, bp.Produced(block.NewBlock(nil, nil, "")))
 	require.True(t, bp.Produced(block.NewBlock(nil, nil, "key")))
