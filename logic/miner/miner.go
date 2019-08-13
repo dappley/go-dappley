@@ -34,16 +34,16 @@ var (
 type Miner struct {
 	con        Consensus
 	producer   *consensus.BlockProducer
-	bc         *blockchain_logic.Blockchain
+	bm         *blockchain_logic.BlockchainManager
 	netService NetService
 	stopCh     chan bool
 }
 
-func NewMiner(bc *blockchain_logic.Blockchain, con Consensus, netService NetService) *Miner {
+func NewMiner(bm *blockchain_logic.BlockchainManager, con Consensus, netService NetService) *Miner {
 	miner := &Miner{
 		con:        con,
 		producer:   consensus.NewBlockProducer(),
-		bc:         bc,
+		bm:         bm,
 		netService: netService,
 		stopCh:     make(chan bool, 1),
 	}
@@ -86,7 +86,7 @@ func (miner *Miner) Start() {
 				logger.Infof("Miner: producing block... ***time is %v***", time.Now().Unix())
 
 				// Do not produce block if block pool is syncing
-				if miner.bc.GetState() != blockchain.BlockchainReady {
+				if miner.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
 					logger.Info("Miner: block producer paused because block pool is syncing.")
 					continue
 				}
@@ -119,14 +119,14 @@ func (miner *Miner) updateNewBlock(ctx *blockchain_logic.BlockContext) {
 	}
 
 	// TODO Refactoring lib calculate position, check lib when create BlockContext instance
-	if !miner.bc.CheckLibPolicy(ctx.Block) {
+	if !miner.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
 		logger.Warn("Miner: the number of producers is not enough.")
-		tailBlock, _ := miner.bc.GetTailBlock()
+		tailBlock, _ := miner.bm.Getblockchain().GetTailBlock()
 		miner.BroadcastBlock(tailBlock)
 		return
 	}
 
-	err := miner.bc.AddBlockContextToTail(ctx)
+	err := miner.bm.Getblockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return
@@ -151,7 +151,7 @@ func (miner *Miner) RequestBlockHandler(command *network_model.DappRcvdCmdContex
 		}).Info("Miner: parse data failed.")
 	}
 
-	block, err := miner.bc.GetBlockByHash(request.Hash)
+	block, err := miner.bm.Getblockchain().GetBlockByHash(request.Hash)
 	if err != nil {
 		logger.WithError(err).Warn("Miner: failed to get the requested block.")
 		return
@@ -190,7 +190,7 @@ func (miner *Miner) SendBlockHandler(command *network_model.DappRcvdCmdContext) 
 
 	blk := &block.Block{}
 	blk.FromProto(pb)
-	miner.Push(blk, command.GetSource())
+	miner.bm.Push(blk, command.GetSource())
 
 	if command.IsBroadcast() {
 		//relay the original command
