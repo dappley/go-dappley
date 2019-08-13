@@ -94,10 +94,7 @@ func (pow *ProofOfWork) mineBlocks() {
 }
 
 func (pow *ProofOfWork) sendNotification() {
-	select {
-	case pow.GetBlockProduceNotifier() <- true:
-	default:
-	}
+	pow.GetBlockProduceNotifier() <- true
 }
 
 func (pow *ProofOfWork) resetStopCh() {
