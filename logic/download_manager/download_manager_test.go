@@ -19,6 +19,8 @@
 package download_manager
 
 import (
+	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/logic/block_producer"
 	"testing"
 	"time"
 
@@ -52,8 +54,10 @@ func createTestBlockchains(size int, portStart int) ([]*blockchain_logic.Blockch
 	for i := 0; i < size; i++ {
 		keyPair := account.NewKeyPair()
 		address := keyPair.GenerateAddress()
-		pow := consensus.NewProofOfWork()
+		producerInfo := block_producer_info.NewBlockProducerInfo(address.String())
+		pow := consensus.NewProofOfWork(producerInfo)
 		pow.SetTargetBit(0)
+
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)
 
@@ -62,10 +66,10 @@ func createTestBlockchains(size int, portStart int) ([]*blockchain_logic.Blockch
 
 		bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
+		bp := block_producer.NewBlockProducer(bm, pow, producerInfo)
+
 		bms[i] = bm
 		nodes[i] = node
-		pow.Setup(address.String(), bm)
-		pow.SetTargetBit(10)
 		node.Start(portStart+i, "")
 	}
 	return bms, nodes

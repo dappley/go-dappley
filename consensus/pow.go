@@ -164,10 +164,6 @@ func (pow *ProofOfWork) GetProducers() []string {
 	return nil
 }
 
-func (pow *ProofOfWork) GetProducer() *block_producer_info.BlockProducerInfo {
-	return pow.miner
-}
-
 func (pow *ProofOfWork) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return pow.miner.Produced(blk)
@@ -185,4 +181,8 @@ func (pow *ProofOfWork) IsBypassingLibCheck() bool {
 
 func (pow *ProofOfWork) IsNonRepeatingBlockProducerRequired() bool {
 	return false
+}
+
+func (pow *ProofOfWork) GetProcess() Process {
+	return pow.calculateValidHash
 }
