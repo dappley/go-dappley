@@ -1,8 +1,8 @@
 package transaction_logic
 
 import (
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 )
@@ -10,7 +10,7 @@ import (
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
-	ImportLocalStorage(state *core.ScState)
+	ImportLocalStorage(state *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*utxo.UTXO)

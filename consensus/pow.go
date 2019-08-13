@@ -20,7 +20,6 @@ package consensus
 
 import (
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"math"
@@ -34,16 +33,18 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner  *BlockProducer
-	target *big.Int
-	bm     *blockchain_logic.BlockchainManager
-	stopCh chan bool
+	miner      *BlockProducer
+	target     *big.Int
+	bm         *blockchain_logic.BlockchainManager
+	stopCh     chan bool
+	notifierCh chan bool
 }
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:  NewBlockProducer(),
-		stopCh: make(chan bool, 1),
+		miner:      NewBlockProducer(),
+		stopCh:     make(chan bool, 1),
+		notifierCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)
 	return p
@@ -59,6 +60,10 @@ func (pow *ProofOfWork) Setup(cbAddr string, bm *blockchain_logic.BlockchainMana
 
 	pow.miner.Setup(bc, cbAddr)
 	pow.miner.SetProcess(pow.calculateValidHash)
+}
+
+func (pow *ProofOfWork) GetBlockProduceNotifier() chan bool {
+	return pow.notifierCh
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int) {
@@ -96,19 +101,16 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("PoW: mining stopped.")
 			return
 		default:
-			if pow.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
-				logger.Debug("BlockProducer: Paused while block pool is syncing")
-				continue
-			}
-			newBlock := pow.miner.ProduceBlock(0)
-			if newBlock == nil || !pow.Validate(newBlock.Block) {
-				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
-				pow.miner.BlockProduceFinish()
-				return
-			}
-			pow.updateNewBlock(newBlock)
-			pow.miner.BlockProduceFinish()
+			pow.sendNotification()
 		}
+	}
+}
+
+func (pow *ProofOfWork) sendNotification() {
+	select {
+	case pow.GetBlockProduceNotifier() <- true:
+	default:
+		logger.Info("pow: notifier channel is full")
 	}
 }
 
@@ -165,21 +167,6 @@ func (pow *ProofOfWork) tryDifferentNonce(block *block.Block) {
 		logger.Warn("PoW: tried all possible nonce.")
 	}
 	block.SetNonce(nonce + 1)
-}
-
-func (pow *ProofOfWork) updateNewBlock(ctx *blockchain_logic.BlockContext) {
-	logger.WithFields(logger.Fields{"height": ctx.Block.GetHeight()}).Info("PoW: minted a new block.")
-	if !block_logic.VerifyHash(ctx.Block) {
-		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
-		return
-	}
-	err := pow.bm.Getblockchain().AddBlockContextToTail(ctx)
-	if err != nil {
-		logger.Warn(err)
-		return
-	}
-
-	pow.bm.BroadcastBlock(ctx.Block)
 }
 
 func (pow *ProofOfWork) AddProducer(producer string) error {
