@@ -19,24 +19,15 @@
 package download_manager
 
 import (
-	"github.com/dappley/go-dappley/core/block_producer_info"
-	"github.com/dappley/go-dappley/logic/block_producer"
-	"testing"
-	"time"
-
+	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
-
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/network"
-
-	"github.com/dappley/go-dappley/consensus"
-	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 const (
@@ -51,51 +42,20 @@ const (
 func createTestBlockchains(size int, portStart int) ([]*blockchain_logic.BlockchainManager, []*network.Node) {
 	bms := make([]*blockchain_logic.BlockchainManager, size)
 	nodes := make([]*network.Node, size)
+	bc := blockchain_logic.GenerateMockBlockchainWithCoinbaseTxOnly(size)
 	for i := 0; i < size; i++ {
-		keyPair := account.NewKeyPair()
-		address := keyPair.GenerateAddress()
-		producerInfo := block_producer_info.NewBlockProducerInfo(address.String())
-		pow := consensus.NewProofOfWork(producerInfo)
-		pow.SetTargetBit(0)
-
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)
-
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db, pow, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
-		bc.SetState(blockchain.BlockchainReady)
-
-		bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
-
-		bp := block_producer.NewBlockProducer(bm, pow, producerInfo)
-
+		node.Start(portStart+i, "")
+		bm := blockchain_logic.NewBlockchainManager(bc.DeepCopy(), core.NewBlockPool(), node)
 		bms[i] = bm
 		nodes[i] = node
-		node.Start(portStart+i, "")
 	}
 	return bms, nodes
 }
 
-func fillBlockchains(bms []*blockchain_logic.BlockchainManager) {
-	generateChain := bms[0].Getblockchain()
-
-	generateChain.GetConsensus().Start()
-	for generateChain.GetMaxHeight() < 100 {
-	}
-	generateChain.GetConsensus().Stop()
-	time.Sleep(2 * time.Second)
-
-	for i := 1; uint64(i) <= generateChain.GetMaxHeight(); i++ {
-		block, _ := generateChain.GetBlockByHeight(uint64(i))
-		for j := 1; j < len(bms); j++ {
-			current := bms[j].Getblockchain()
-			current.AddBlockContextToTail(blockchain_logic.PrepareBlockContext(current, block))
-		}
-	}
-}
-
 func TestMultiEqualNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
-	fillBlockchains(bms)
 
 	//setup download manager for the first node
 	bm := bms[0]
@@ -121,16 +81,6 @@ func TestMultiEqualNode(t *testing.T) {
 
 func TestMultiNotEqualNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortNotEqualStart)
-	fillBlockchains(bms)
-
-	for _, bm := range bms {
-		bm.Getblockchain().GetConsensus().Start()
-	}
-	time.Sleep(3 * time.Second)
-	for _, blockchain := range bms {
-		blockchain.Getblockchain().GetConsensus().Stop()
-	}
-	time.Sleep(2 * time.Second)
 
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
@@ -139,14 +89,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 	downloadManager.Start()
 
 	highestChain := bms[1]
-	highestChain.Getblockchain().GetConsensus().Start()
-	nextHeight := highestChain.Getblockchain().GetMaxHeight() + 100
-
-	for highestChain.Getblockchain().GetMaxHeight() < nextHeight {
-	}
-	highestChain.Getblockchain().GetConsensus().Stop()
-
-	time.Sleep(2 * time.Second)
+	blockchain_logic.AddBlockToGeneratedBlockchain(highestChain.Getblockchain(), 100)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
@@ -168,7 +111,6 @@ func TestMultiNotEqualNode(t *testing.T) {
 
 func TestMultiSuccessNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortSuccessStart)
-	fillBlockchains(bms)
 
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
@@ -177,11 +119,7 @@ func TestMultiSuccessNode(t *testing.T) {
 	downloadManager.Start()
 
 	highestChain := bms[1]
-	highestChain.Getblockchain().GetConsensus().Start()
-	for highestChain.Getblockchain().GetMaxHeight() < 200 {
-	}
-	highestChain.Getblockchain().GetConsensus().Stop()
-	time.Sleep(2 * time.Second)
+	blockchain_logic.AddBlockToGeneratedBlockchain(highestChain.Getblockchain(), 200)
 
 	for i := 1; i < len(nodes); i++ {
 		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
@@ -203,7 +141,6 @@ func TestMultiSuccessNode(t *testing.T) {
 
 func TestDisconnectNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortDisconnectStart)
-	fillBlockchains(bms)
 
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
@@ -212,21 +149,13 @@ func TestDisconnectNode(t *testing.T) {
 	downloadManager.Start()
 
 	highestChain := bms[1]
-	highestChain.Getblockchain().GetConsensus().Start()
-	for highestChain.Getblockchain().GetMaxHeight() < 400 {
-	}
-	highestChain.Getblockchain().GetConsensus().Stop()
-	time.Sleep(2 * time.Second)
+	blockchain_logic.AddBlockToGeneratedBlockchain(highestChain.Getblockchain(), 400)
 	highestChainNode := nodes[1]
 	highestChainDownloadManager := NewDownloadManager(highestChainNode, highestChain)
 	highestChainDownloadManager.Start()
 
 	secondChain := bms[2]
-	secondChain.Getblockchain().GetConsensus().Start()
-	for secondChain.Getblockchain().GetMaxHeight() < 300 {
-	}
-	secondChain.Getblockchain().GetConsensus().Stop()
-	time.Sleep(2 * time.Second)
+	blockchain_logic.AddBlockToGeneratedBlockchain(highestChain.Getblockchain(), 300)
 	secondChainNode := nodes[2]
 	secondChainDownloadManager := NewDownloadManager(secondChainNode, secondChain)
 	secondChainDownloadManager.Start()
@@ -248,7 +177,6 @@ func TestDisconnectNode(t *testing.T) {
 func TestValidateReturnBlocks(t *testing.T) {
 	// Test empty blocks in GetBlocksResponse message
 	bms, nodes := createTestBlockchains(2, multiPortReturnBlocks)
-	fillBlockchains(bms)
 
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)

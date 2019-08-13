@@ -67,6 +67,22 @@ func TestCreateBlockchain(t *testing.T) {
 	assert.Empty(t, blk.GetPrevHash())
 }
 
+func TestBlockchain_SetTailBlockHash(t *testing.T) {
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
+
+	tailHash := hash.Hash("TestHash")
+	bc.SetTailBlockHash(tailHash)
+	assert.Equal(t, tailHash, bc.GetTailBlockHash())
+
+	newTailHash := hash.Hash("NewTestHash")
+	bc.SetTailBlockHash(newTailHash)
+	assert.NotEqual(t, tailHash, bc.GetTailBlockHash())
+}
+
 func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
@@ -130,22 +146,6 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, blk.GetHash(), newTailBlk.GetHash())
 
-}
-
-func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
-	//create a new block chain
-	s := storage.NewRamStorage()
-	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transaction_pool.NewTransactionPool(nil, 128000), nil, 100000)
-
-	for i := 0; i < size; i++ {
-		tailBlk, _ := bc.GetTailBlock()
-		cbtx := transaction_logic.NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-		b.SetHash(block_logic.CalculateHash(b))
-		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
-	}
-	return bc
 }
 
 func TestBlockchain_AddBlockToTail(t *testing.T) {

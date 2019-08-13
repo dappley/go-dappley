@@ -202,7 +202,7 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 }
 
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
-	bc.SetTailBlockHash(tailBlockHash)
+	bc.bc.SetTailBlockHash(tailBlockHash)
 }
 
 func (bc *Blockchain) SetConsensus(consensus Consensus) {
@@ -232,7 +232,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		"hash":   ctx.Block.GetHash().String(),
 	})
 
-	bcTemp := bc.deepCopy()
+	bcTemp := bc.DeepCopy()
 	tailBlk, _ := bc.GetTailBlock()
 
 	bcTemp.db.EnableBatch()
@@ -462,7 +462,7 @@ func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	return nil
 }
 
-func (bc *Blockchain) deepCopy() *Blockchain {
+func (bc *Blockchain) DeepCopy() *Blockchain {
 	newCopy := &Blockchain{}
 	copier.Copy(newCopy, bc)
 	return newCopy
