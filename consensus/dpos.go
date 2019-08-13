@@ -20,7 +20,7 @@ package consensus
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/core/block_producer"
+	"github.com/dappley/go-dappley/core/block_producer_info"
 	"strings"
 	"time"
 
@@ -38,7 +38,7 @@ const (
 )
 
 type DPOS struct {
-	bp          *block_producer.BlockProducerInfo
+	producer    *block_producer_info.BlockProducerInfo
 	producerKey string
 	stopCh      chan bool
 	dynasty     *Dynasty
@@ -46,9 +46,9 @@ type DPOS struct {
 	notifierCh  chan bool
 }
 
-func NewDPOS(cbAddr string) *DPOS {
+func NewDPOS(producer *block_producer_info.BlockProducerInfo) *DPOS {
 	dpos := &DPOS{
-		bp:         block_producer.NewBlockProducerInfo(cbAddr),
+		producer:   producer,
 		stopCh:     make(chan bool, 1),
 		notifierCh: make(chan bool, 1),
 	}
@@ -83,7 +83,7 @@ func (dpos *DPOS) GetProducers() []string {
 }
 
 func (dpos *DPOS) GetProducerAddress() string {
-	return dpos.bp.Beneficiary()
+	return dpos.producer.Beneficiary()
 }
 
 func (dpos *DPOS) Start() {
@@ -97,7 +97,7 @@ func (dpos *DPOS) Start() {
 		for {
 			select {
 			case now := <-ticker:
-				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
+				if dpos.dynasty.IsMyTurn(dpos.producer.Beneficiary(), now.Unix()) {
 					dpos.sendNotification()
 				}
 			case <-dpos.stopCh:
@@ -130,7 +130,7 @@ func (dpos *DPOS) GetProcess() Process {
 
 func (dpos *DPOS) Produced(blk *block.Block) bool {
 	if blk != nil {
-		return dpos.bp.Produced(blk)
+		return dpos.producer.Produced(blk)
 	}
 	return false
 }
@@ -245,7 +245,7 @@ func (dpos *DPOS) cacheBlock(block *block.Block) {
 }
 
 func (dpos *DPOS) IsProducingBlock() bool {
-	return !dpos.bp.IsIdle()
+	return !dpos.producer.IsIdle()
 }
 
 func (dpos *DPOS) GetLibProducerNum() int {

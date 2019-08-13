@@ -1,5 +1,3 @@
-// +build integration
-
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
@@ -21,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/block_producer_info"
 	"testing"
 	"time"
 
@@ -36,33 +35,23 @@ import (
 )
 
 func TestDpos_Start(t *testing.T) {
-	dpos := NewDPOS()
 	cbAddr := account.NewAddress("dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8")
 	keystr := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	bc := blockchain_logic.CreateBlockchain(cbAddr, storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
-	pool := core.NewBlockPool()
 
-	node := network.NewNode(bc.GetDb(), nil)
-	node.Start(22100, "")
-	defer node.Stop()
-
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-
-	dpos.Setup(cbAddr.String(), bm)
+	producer := block_producer_info.NewBlockProducerInfo(cbAddr.String())
+	dpos := NewDPOS(producer)
 	dpos.SetKey(keystr)
 
 	miners := []string{cbAddr.String()}
 	dynasty := NewDynasty(miners, 2, 2)
 	dpos.SetDynasty(dynasty)
-	//wait for the block gets mined
-	currentTime := time.Now().UTC().Unix()
+
 	dpos.Start()
-	//wait for the block gets mined
-	for bc.GetMaxHeight() <= 0 && !util.IsTimeOut(currentTime, int64(50)) {
-	}
+	//wait for all producer gets a chance to produce
+	time.Sleep(time.Second * 2 * 2)
 	dpos.Stop()
 
-	assert.True(t, bc.GetMaxHeight() >= 1)
+	assert.Equal(t, len(dpos.notifierCh), 1)
 }
 
 func TestDpos_MultipleMiners(t *testing.T) {
@@ -90,7 +79,8 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
-		dpos := NewDPOS()
+		dpos := NewDPOS(miner)
+		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
 		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool()

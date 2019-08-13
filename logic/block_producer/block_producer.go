@@ -9,7 +9,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block_producer"
+	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
@@ -27,15 +27,15 @@ const (
 type BlockProducer struct {
 	bm       *blockchain_logic.BlockchainManager
 	con      Consensus
-	producer *block_producer.BlockProducerInfo
+	producer *block_producer_info.BlockProducerInfo
 	stopCh   chan bool
 }
 
-func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, beneficiaryAddr string) *BlockProducer {
+func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, producer *block_producer_info.BlockProducerInfo) *BlockProducer {
 	return &BlockProducer{
 		bm:       bm,
 		con:      con,
-		producer: block_producer.NewBlockProducerInfo(beneficiaryAddr),
+		producer: producer,
 		stopCh:   make(chan bool, 1),
 	}
 }
@@ -48,23 +48,7 @@ func (bp *BlockProducer) Start() {
 			case <-bp.stopCh:
 				return
 			case <-bp.con.GetBlockProduceNotifier():
-				deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
-
-				logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
-
-				// Do not produce block if block pool is syncing
-				if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
-					logger.Info("BlockProducer: block producer paused because block pool is syncing.")
-					continue
-				}
-				ctx := bp.produceBlock(deadlineInMs)
-				if ctx == nil || !bp.con.Validate(ctx.Block) {
-					bp.producer.BlockProduceFinish()
-					logger.Error("BlockProducer: produced an invalid block!")
-					continue
-				}
-				bp.addBlockToBlockchain(ctx)
-				bp.producer.BlockProduceFinish()
+				bp.produceBlock()
 			}
 		}
 	}()
@@ -75,34 +59,33 @@ func (bp *BlockProducer) Stop() {
 	bp.stopCh <- true
 }
 
-func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext) {
-	logger.WithFields(logger.Fields{
-		"height": ctx.Block.GetHeight(),
-		"hash":   ctx.Block.GetHash().String(),
-	}).Info("Miner: produced a new block.")
-	if !block_logic.VerifyHash(ctx.Block) {
-		logger.Warn("Miner: hash of the new block is invalid.")
+func (bp *BlockProducer) produceBlock() {
+
+	deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
+
+	logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
+
+	// Do not produce block if block pool is syncing
+	if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
+		logger.Info("BlockProducer: block producer paused because block pool is syncing.")
 		return
 	}
 
-	if !bp.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
-		logger.Warn("Miner: the number of producers is not enough.")
-		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
-		bp.bm.BroadcastBlock(tailBlock)
+	bp.producer.BlockProduceStart()
+	defer bp.producer.BlockProduceFinish()
+
+	ctx := bp.generateBlock(deadlineInMs)
+	if ctx == nil || !bp.con.Validate(ctx.Block) {
+		logger.Error("BlockProducer: produced an invalid block!")
 		return
 	}
 
-	err := bp.bm.Getblockchain().AddBlockContextToTail(ctx)
-	if err != nil {
-		logger.Warn(err)
-		return
-	}
-	bp.bm.BroadcastBlock(ctx.Block)
+	bp.addBlockToBlockchain(ctx)
 }
 
-// produceBlock produces a block by preparing its raw contents and applying the predefined Process to it.
+// generateBlock produces a block by preparing its raw contents and applying the predefined Process to it.
 // deadlineInMs = 0 means no deadline
-func (bp *BlockProducer) produceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
+func (bp *BlockProducer) generateBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	logger.Info("BlockProducerInfo: started producing new block...")
 	bp.producer.BlockProduceStart()
 	ctx := bp.prepareBlock(deadlineInMs)
@@ -273,6 +256,31 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
 		generatedTXs = append(generatedTXs, &rtx)
 	}
 	return generatedTXs, scStorage
+}
+
+func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext) {
+	logger.WithFields(logger.Fields{
+		"height": ctx.Block.GetHeight(),
+		"hash":   ctx.Block.GetHash().String(),
+	}).Info("Miner: produced a new block.")
+	if !block_logic.VerifyHash(ctx.Block) {
+		logger.Warn("Miner: hash of the new block is invalid.")
+		return
+	}
+
+	if !bp.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
+		logger.Warn("Miner: the number of producers is not enough.")
+		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
+		bp.bm.BroadcastBlock(tailBlock)
+		return
+	}
+
+	err := bp.bm.Getblockchain().AddBlockContextToTail(ctx)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+	bp.bm.BroadcastBlock(ctx.Block)
 }
 
 func isExceedingDeadline(deadlineInMs int64) bool {

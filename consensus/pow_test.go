@@ -27,7 +27,7 @@ import (
 )
 
 func TestProofOfWork_NewPoW(t *testing.T) {
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(nil)
 	assert.Equal(t, big.NewInt(1).Lsh(big.NewInt(1), uint(256)), pow.target)
 }
 
@@ -44,7 +44,7 @@ func TestProofOfWork_SetTargetBit(t *testing.T) {
 		{"equalTo256", 256, 256},
 	}
 
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(nil)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pow.SetTargetBit(tt.bit)
@@ -57,7 +57,7 @@ func TestProofOfWork_SetTargetBit(t *testing.T) {
 
 func TestProofOfWork_isHashBelowTarget(t *testing.T) {
 
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(nil)
 	pow.SetTargetBit(defaultTargetBits)
 
 	//create a block that has a hash value larger than the target

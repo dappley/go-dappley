@@ -19,10 +19,9 @@
 package consensus
 
 import (
-	"testing"
-
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
+	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
@@ -35,7 +34,7 @@ import (
 )
 
 func TestNewDpos(t *testing.T) {
-	dpos := NewDPOS()
+	dpos := NewDPOS(nil)
 	assert.Equal(t, 1, cap(dpos.stopCh))
 }
 
@@ -98,7 +97,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dpos := NewDPOS()
+			dpos := NewDPOS(nil)
 			dpos.SetDynasty(NewDynasty(producers, len(producers), defaultTimeBetweenBlk))
 			assert.Equal(t, tt.expected, dpos.beneficiaryIsProducer(tt.block))
 		})
@@ -106,7 +105,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 }
 
 func TestDPOS_isDoubleMint(t *testing.T) {
-	dpos := NewDPOS()
+	dpos := NewDPOS(nil)
 	dpos.SetDynasty(NewDynasty(nil, defaultMaxProducers, defaultTimeBetweenBlk))
 	blk1Time := int64(1548979365)
 	blk2Time := int64(1548979366)

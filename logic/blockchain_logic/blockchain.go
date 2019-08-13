@@ -550,6 +550,10 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 }
 
 func (bc *Blockchain) updateLIB() {
+	if bc.consensus == nil {
+		return
+	}
+
 	minConfirmationNum := bc.consensus.GetLibProducerNum()
 	currHeight := bc.GetMaxHeight()
 	LIBHeight := currHeight - uint64(minConfirmationNum)
