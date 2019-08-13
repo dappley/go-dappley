@@ -21,6 +21,7 @@ package download_manager
 import (
 	"testing"
 
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 
 	"github.com/dappley/go-dappley/core/blockchain"
@@ -44,7 +45,7 @@ const (
 func createTestBlockchains(size int, portStart int) ([]*blockchain_logic.BlockchainManager, []*network.Node) {
 	bms := make([]*blockchain_logic.BlockchainManager, size)
 	nodes := make([]*network.Node, size)
-	bc := blockchain_logic.GenerateMockBlockchainWithCoinbaseTxOnly(size)
+	bc := blockchain_logic.GenerateMockBlockchainWithCoinbaseTxOnly(size, consensus.NewProofOfWork(nil))
 	for i := 0; i < size; i++ {
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)

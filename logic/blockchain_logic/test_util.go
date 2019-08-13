@@ -2,7 +2,6 @@ package blockchain_logic
 
 import (
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/scState"
@@ -22,11 +21,11 @@ func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
 	return &ctx
 }
 
-func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int, consensus Consensus) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, consensus.NewProofOfWork(nil), transaction_pool.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, consensus, transaction_pool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
