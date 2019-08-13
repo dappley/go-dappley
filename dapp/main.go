@@ -91,7 +91,7 @@ func main() {
 	defer node.Stop()
 
 	//create blockchain
-	conss, _ := initConsensus(genesisConf)
+	conss, _ := initConsensus(genesisConf, conf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
@@ -117,13 +117,6 @@ func main() {
 	downloadManager.Start()
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
-	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
-	conss.Setup(minerAddr, bm)
-	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
-	logger.WithFields(logger.Fields{
-		"miner_address": minerAddr,
-	}).Info("Consensus is configured.")
-
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 
 	//start rpc server
@@ -145,11 +138,15 @@ func main() {
 	select {}
 }
 
-func initConsensus(conf *configpb.DynastyConfig) (*consensus.DPOS, *consensus.Dynasty) {
+func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (*consensus.DPOS, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewDPOS()
+	conss := consensus.NewDPOS(generalConf.GetConsensusConfig().GetMinerAddress())
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
 	conss.SetDynasty(dynasty)
+	conss.SetKey(generalConf.GetConsensusConfig().GetPrivateKey())
+	logger.WithFields(logger.Fields{
+		"miner_address": generalConf.GetConsensusConfig().GetMinerAddress(),
+	}).Info("Consensus is configured.")
 	return conss, dynasty
 }
 
