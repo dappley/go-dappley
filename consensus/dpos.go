@@ -25,6 +25,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
@@ -42,7 +43,7 @@ const maxMintingTimeInMs = 2000
 const NanoSecsInMilliSec = 1000000
 
 type DPOS struct {
-	bp          *BlockProducerLogic
+	bp          *logic.BlockProducerLogic
 	producerKey string
 	newBlockCh  chan *block.Block
 	bm          *blockchain_logic.BlockchainManager
@@ -54,7 +55,7 @@ type DPOS struct {
 
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
-		bp:         NewBlockProducerLogic(),
+		bp:         logic.NewBlockProducerLogic(),
 		newBlockCh: make(chan *block.Block, 1),
 		stopCh:     make(chan bool, 1),
 		stopLibCh:  make(chan bool, 1),

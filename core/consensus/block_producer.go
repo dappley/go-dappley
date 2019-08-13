@@ -19,8 +19,6 @@
 package consensus
 
 import (
-	"time"
-
 	"github.com/dappley/go-dappley/core/block"
 )
 
@@ -56,10 +54,6 @@ func (bp *BlockProducerInfo) BlockProduceStart() {
 
 func (bp *BlockProducerInfo) IsIdle() bool {
 	return bp.idle
-}
-
-func isExceedingDeadline(deadlineInMs int64) bool {
-	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
 
 func (bp *BlockProducerInfo) Produced(blk *block.Block) bool {

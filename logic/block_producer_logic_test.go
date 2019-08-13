@@ -1,4 +1,4 @@
-package consensus
+package logic
 
 import (
 	"testing"

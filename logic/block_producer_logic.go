@@ -1,11 +1,13 @@
-package consensus
+package logic
 
 import (
 	"encoding/hex"
+	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/consensus"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
@@ -21,14 +23,14 @@ type process func(ctx *blockchain_logic.BlockContext)
 type BlockProducerLogic struct {
 	bc       *blockchain_logic.Blockchain
 	process  process
-	producer *BlockProducerInfo
+	producer *consensus.BlockProducerInfo
 }
 
 func NewBlockProducerLogic() *BlockProducerLogic {
 	return &BlockProducerLogic{
 		bc:       nil,
 		process:  nil,
-		producer: NewBlockProducerInfo(),
+		producer: consensus.NewBlockProducerInfo(),
 	}
 }
 
@@ -74,7 +76,7 @@ func (bp *BlockProducerLogic) prepareBlock(deadlineInMs int64) *blockchain_logic
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducerInfo: prepared a block.")
 
-	ctx := blockchain_logic.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.producer.beneficiary), UtxoIndex: utxoIndex, State: state}
+	ctx := blockchain_logic.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.producer.Beneficiary()), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 
@@ -97,7 +99,7 @@ func (bp *BlockProducerLogic) collectTransactions(utxoIndex *utxo_logic.UTXOInde
 		totalSize += txNode.Size
 
 		ctx := txNode.Value.ToContractTx()
-		minerAddr := account.NewAddress(bp.producer.beneficiary)
+		minerAddr := account.NewAddress(bp.producer.Beneficiary())
 		if ctx != nil {
 			prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 			if err != nil {
@@ -152,7 +154,7 @@ func (bp *BlockProducerLogic) calculateTips(txs []*transaction.Transaction) *tra
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(bp.producer.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bc.GetMaxHeight()+1, totalTips)
 	return &cbtx
 }
 
@@ -167,7 +169,7 @@ func (bp *BlockProducerLogic) executeSmartContract(utxoIndex *utxo_logic.UTXOInd
 	var generatedTXs []*transaction.Transaction
 	rewards := make(map[string]string)
 
-	minerAddr := account.NewAddress(bp.producer.beneficiary)
+	minerAddr := account.NewAddress(bp.producer.Beneficiary())
 
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()
@@ -231,4 +233,8 @@ func (bp *BlockProducerLogic) IsIdle() bool {
 
 func (bp *BlockProducerLogic) Produced(blk *block.Block) bool {
 	return bp.producer.Produced(blk)
+}
+
+func isExceedingDeadline(deadlineInMs int64) bool {
+	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }

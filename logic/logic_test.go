@@ -21,10 +21,8 @@ package logic
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 
 	"github.com/dappley/go-dappley/common"
@@ -260,31 +258,6 @@ func TestSetUnLockAccount(t *testing.T) {
 	status, err := IsAccountLocked(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.False(t, status)
-}
-
-func isSameBlockChain(bc1, bc2 *blockchain_logic.Blockchain) bool {
-	if bc1 == nil || bc2 == nil {
-		return false
-	}
-
-	bci1 := bc1.Iterator()
-	bci2 := bc2.Iterator()
-	if bc1.GetMaxHeight() != bc2.GetMaxHeight() {
-		return false
-	}
-
-loop:
-	for {
-		blk1, _ := bci1.Next()
-		blk2, _ := bci2.Next()
-		if blk1 == nil || blk2 == nil {
-			break loop
-		}
-		if !reflect.DeepEqual(blk1.GetHash(), blk2.GetHash()) {
-			return false
-		}
-	}
-	return true
 }
 
 func cleanUpDatabase() {

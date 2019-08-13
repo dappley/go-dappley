@@ -24,6 +24,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
@@ -35,7 +36,7 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner  *BlockProducerLogic
+	miner  *logic.BlockProducerLogic
 	target *big.Int
 	bm     *blockchain_logic.BlockchainManager
 	stopCh chan bool
@@ -43,7 +44,7 @@ type ProofOfWork struct {
 
 func NewProofOfWork() *ProofOfWork {
 	p := &ProofOfWork{
-		miner:  NewBlockProducerLogic(),
+		miner:  logic.NewBlockProducerLogic(),
 		stopCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)
