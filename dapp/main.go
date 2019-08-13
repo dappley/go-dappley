@@ -20,6 +20,8 @@ package main
 
 import (
 	"flag"
+
+	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
@@ -140,7 +142,7 @@ func main() {
 
 func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (*consensus.DPOS, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewDPOS(generalConf.GetConsensusConfig().GetMinerAddress())
+	conss := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(generalConf.GetConsensusConfig().GetMinerAddress()))
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
 	conss.SetDynasty(dynasty)
 	conss.SetKey(generalConf.GetConsensusConfig().GetPrivateKey())

@@ -19,15 +19,19 @@
 package download_manager
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/core"
+
+	"testing"
+
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/network/pb"
+	networkpb "github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
