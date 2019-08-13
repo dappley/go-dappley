@@ -16,44 +16,20 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package consensus
+package block_producer
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/core/block"
+
+	"github.com/stretchr/testify/require"
 )
 
-type BlockProducerInfo struct {
-	beneficiary string
-	idle        bool
-}
-
-func NewBlockProducerInfo(beneficiaryAddr string) *BlockProducerInfo {
-	return &BlockProducerInfo{
-		beneficiary: beneficiaryAddr,
-		idle:        true,
-	}
-}
-
-// Beneficiary returns the address which receives rewards
-func (bp *BlockProducerInfo) Beneficiary() string {
-	return bp.beneficiary
-}
-
-func (bp *BlockProducerInfo) BlockProduceFinish() {
-	bp.idle = true
-}
-
-func (bp *BlockProducerInfo) BlockProduceStart() {
-	bp.idle = false
-}
-
-func (bp *BlockProducerInfo) IsIdle() bool {
-	return bp.idle
-}
-
-func (bp *BlockProducerInfo) Produced(blk *block.Block) bool {
-	if blk != nil {
-		return bp.beneficiary == blk.GetProducer()
-	}
-	return false
+func TestBlockProducerInfo_Produced(t *testing.T) {
+	bp := NewBlockProducerInfo()
+	bp.Setup("key")
+	require.False(t, bp.Produced(nil))
+	require.False(t, bp.Produced(block.NewBlock(nil, nil, "")))
+	require.True(t, bp.Produced(block.NewBlock(nil, nil, "key")))
 }

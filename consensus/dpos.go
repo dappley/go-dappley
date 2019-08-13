@@ -20,7 +20,7 @@ package consensus
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/core/consensus"
+	"github.com/dappley/go-dappley/core/block_producer"
 	"strings"
 	"time"
 
@@ -38,7 +38,7 @@ const (
 )
 
 type DPOS struct {
-	bp          *consensus.BlockProducerInfo
+	bp          *block_producer.BlockProducerInfo
 	producerKey string
 	stopCh      chan bool
 	dynasty     *Dynasty
@@ -48,7 +48,7 @@ type DPOS struct {
 
 func NewDPOS(cbAddr string) *DPOS {
 	dpos := &DPOS{
-		bp:         consensus.NewBlockProducerInfo(cbAddr),
+		bp:         block_producer.NewBlockProducerInfo(cbAddr),
 		stopCh:     make(chan bool, 1),
 		notifierCh: make(chan bool, 1),
 	}

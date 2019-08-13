@@ -9,7 +9,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/consensus"
+	"github.com/dappley/go-dappley/core/block_producer"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
@@ -27,7 +27,7 @@ const (
 type BlockProducer struct {
 	bm       *blockchain_logic.BlockchainManager
 	con      Consensus
-	producer *consensus.BlockProducerInfo
+	producer *block_producer.BlockProducerInfo
 	stopCh   chan bool
 }
 
@@ -35,7 +35,7 @@ func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, ben
 	return &BlockProducer{
 		bm:       bm,
 		con:      con,
-		producer: consensus.NewBlockProducerInfo(beneficiaryAddr),
+		producer: block_producer.NewBlockProducerInfo(beneficiaryAddr),
 		stopCh:   make(chan bool, 1),
 	}
 }
