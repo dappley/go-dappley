@@ -1,7 +1,9 @@
-package logic
+package block_producer
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/block_logic"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -17,54 +19,109 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-// Process defines the procedure to produce a valid block modified from a raw (unhashed/unsigned) block
-type Process func(ctx *block.Block)
+const (
+	maxMintingTimeInMs = 2000
+	NanoSecsInMilliSec = 1000000
+)
 
-type BlockProducerLogic struct {
-	bc       *blockchain_logic.Blockchain
-	process  Process
+type BlockProducer struct {
+	bm       *blockchain_logic.BlockchainManager
+	con      Consensus
 	producer *consensus.BlockProducerInfo
+	stopCh   chan bool
 }
 
-func NewBlockProducerLogic() *BlockProducerLogic {
-	return &BlockProducerLogic{
-		bc:       nil,
-		process:  nil,
-		producer: consensus.NewBlockProducerInfo(),
+func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, beneficiaryAddr string) *BlockProducer {
+	return &BlockProducer{
+		bm:       bm,
+		con:      con,
+		producer: consensus.NewBlockProducerInfo(beneficiaryAddr),
+		stopCh:   make(chan bool, 1),
 	}
 }
 
-func (bp *BlockProducerLogic) Setup(bc *blockchain_logic.Blockchain, beneficiaryAddr string) {
-	bp.bc = bc
-	bp.producer.Setup(beneficiaryAddr)
+func (bp *BlockProducer) Start() {
+	go func() {
+		logger.Info("BlockProducer Starts...")
+		for {
+			select {
+			case <-bp.stopCh:
+				return
+			case <-bp.con.GetBlockProduceNotifier():
+				deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
+
+				logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
+
+				// Do not produce block if block pool is syncing
+				if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
+					logger.Info("BlockProducer: block producer paused because block pool is syncing.")
+					continue
+				}
+				ctx := bp.produceBlock(deadlineInMs)
+				if ctx == nil || !bp.con.Validate(ctx.Block) {
+					bp.producer.BlockProduceFinish()
+					logger.Error("BlockProducer: produced an invalid block!")
+					continue
+				}
+				bp.addBlockToBlockchain(ctx)
+				bp.producer.BlockProduceFinish()
+			}
+		}
+	}()
 }
 
-// SetProcess tells the producer to follow the given process to produce a valid block
-func (bp *BlockProducerLogic) SetProcess(process Process) {
-	bp.process = process
+func (bp *BlockProducer) Stop() {
+	logger.Info("Miner stops...")
+	bp.stopCh <- true
 }
 
-// ProduceBlock produces a block by preparing its raw contents and applying the predefined Process to it.
+func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext) {
+	logger.WithFields(logger.Fields{
+		"height": ctx.Block.GetHeight(),
+		"hash":   ctx.Block.GetHash().String(),
+	}).Info("Miner: produced a new block.")
+	if !block_logic.VerifyHash(ctx.Block) {
+		logger.Warn("Miner: hash of the new block is invalid.")
+		return
+	}
+
+	if !bp.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
+		logger.Warn("Miner: the number of producers is not enough.")
+		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
+		bp.bm.BroadcastBlock(tailBlock)
+		return
+	}
+
+	err := bp.bm.Getblockchain().AddBlockContextToTail(ctx)
+	if err != nil {
+		logger.Warn(err)
+		return
+	}
+	bp.bm.BroadcastBlock(ctx.Block)
+}
+
+// produceBlock produces a block by preparing its raw contents and applying the predefined Process to it.
 // deadlineInMs = 0 means no deadline
-func (bp *BlockProducerLogic) ProduceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
+func (bp *BlockProducer) produceBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	logger.Info("BlockProducerInfo: started producing new block...")
 	bp.producer.BlockProduceStart()
 	ctx := bp.prepareBlock(deadlineInMs)
-	if ctx != nil && bp.process != nil {
-		bp.process(ctx.Block)
+	processBlkFunc := bp.con.GetProcess()
+	if ctx != nil && processBlkFunc != nil {
+		processBlkFunc(ctx.Block)
 	}
 	return ctx
 }
 
-func (bp *BlockProducerLogic) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
-	parentBlock, err := bp.bc.GetTailBlock()
+func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
+	parentBlock, err := bp.bm.Getblockchain().GetTailBlock()
 	if err != nil {
 		logger.WithError(err).Error("BlockProducerInfo: cannot get the current tail block!")
 		return nil
 	}
 
 	// Retrieve all valid transactions from tx pool
-	utxoIndex := utxo_logic.NewUTXOIndex(bp.bc.GetUtxoCache())
+	utxoIndex := utxo_logic.NewUTXOIndex(bp.bm.Getblockchain().GetUtxoCache())
 
 	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadlineInMs)
 
@@ -74,25 +131,25 @@ func (bp *BlockProducerLogic) prepareBlock(deadlineInMs int64) *blockchain_logic
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
-	}).Info("BlockProducerInfo: prepared a block.")
+	}).Info("BlockProducer: prepared a block.")
 
 	ctx := blockchain_logic.BlockContext{Block: block.NewBlock(validTxs, parentBlock, bp.producer.Beneficiary()), UtxoIndex: utxoIndex, State: state}
 	return &ctx
 }
 
-func (bp *BlockProducerLogic) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
+func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
 	var validTxs []*transaction.Transaction
 	totalSize := 0
 
-	scStorage := scState.LoadScStateFromDatabase(bp.bc.GetDb())
+	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
 
-	for totalSize < bp.bc.GetBlockSizeLimit() && bp.bc.GetTxPool().GetNumOfTxInPool() > 0 && !isExceedingDeadline(deadlineInMs) {
+	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !isExceedingDeadline(deadlineInMs) {
 
-		txNode := bp.bc.GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		txNode := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
 		if txNode == nil {
 			break
 		}
@@ -105,7 +162,7 @@ func (bp *BlockProducerLogic) collectTransactions(utxoIndex *utxo_logic.UTXOInde
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
 					"txid": hex.EncodeToString(ctx.ID),
-				}).Warn("Transaction: cannot find vin while executing smart contract")
+				}).Warn("BlockProducer: cannot find vin while executing smart contract")
 				return nil, nil
 			}
 			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
@@ -148,22 +205,22 @@ func (bp *BlockProducerLogic) collectTransactions(utxoIndex *utxo_logic.UTXOInde
 	return validTxs, scStorage
 }
 
-func (bp *BlockProducerLogic) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
+func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	return &cbtx
 }
 
 //executeSmartContract executes all smart contracts
-func (bp *BlockProducerLogic) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
+func (bp *BlockProducer) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
 	txs []*transaction.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*transaction.Transaction, *scState.ScState) {
 	//start a new smart contract engine
 
-	scStorage := scState.LoadScStateFromDatabase(bp.bc.GetDb())
+	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*transaction.Transaction
@@ -182,7 +239,7 @@ func (bp *BlockProducerLogic) executeSmartContract(utxoIndex *utxo_logic.UTXOInd
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"txid": hex.EncodeToString(ctx.ID),
-			}).Warn("Transaction: cannot find vin while executing smart contract")
+			}).Warn("BlockProducer: cannot find vin while executing smart contract")
 			return nil, nil
 		}
 		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
@@ -216,23 +273,6 @@ func (bp *BlockProducerLogic) executeSmartContract(utxoIndex *utxo_logic.UTXOInd
 		generatedTXs = append(generatedTXs, &rtx)
 	}
 	return generatedTXs, scStorage
-}
-
-// Beneficiary returns the address which receives rewards
-func (bp *BlockProducerLogic) Beneficiary() string {
-	return bp.producer.Beneficiary()
-}
-
-func (bp *BlockProducerLogic) BlockProduceFinish() {
-	bp.producer.BlockProduceFinish()
-}
-
-func (bp *BlockProducerLogic) IsIdle() bool {
-	return bp.producer.IsIdle()
-}
-
-func (bp *BlockProducerLogic) Produced(blk *block.Block) bool {
-	return bp.producer.Produced(blk)
 }
 
 func isExceedingDeadline(deadlineInMs int64) bool {

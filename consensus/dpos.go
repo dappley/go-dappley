@@ -20,13 +20,12 @@ package consensus
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/core/consensus"
 	"strings"
 	"time"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -39,7 +38,7 @@ const (
 )
 
 type DPOS struct {
-	bp          *logic.BlockProducerLogic
+	bp          *consensus.BlockProducerInfo
 	producerKey string
 	stopCh      chan bool
 	dynasty     *Dynasty
@@ -47,9 +46,9 @@ type DPOS struct {
 	notifierCh  chan bool
 }
 
-func NewDPOS() *DPOS {
+func NewDPOS(cbAddr string) *DPOS {
 	dpos := &DPOS{
-		bp:         logic.NewBlockProducerLogic(),
+		bp:         consensus.NewBlockProducerInfo(cbAddr),
 		stopCh:     make(chan bool, 1),
 		notifierCh: make(chan bool, 1),
 	}
@@ -60,11 +59,6 @@ func NewDPOS() *DPOS {
 	}
 	dpos.slot = slot
 	return dpos
-}
-
-func (dpos *DPOS) Setup(cbAddr string, bm *blockchain_logic.BlockchainManager) {
-	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
-	dpos.bp.SetProcess(dpos.hashAndSign)
 }
 
 func (dpos *DPOS) SetKey(key string) {
@@ -130,7 +124,7 @@ func (dpos *DPOS) sendNotification() {
 	}
 }
 
-func (dpos *DPOS) GetProcess() logic.Process {
+func (dpos *DPOS) GetProcess() Process {
 	return dpos.hashAndSign
 }
 

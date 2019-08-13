@@ -19,14 +19,12 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/core/consensus"
 	"math"
 	"math/big"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -35,33 +33,20 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner      *logic.BlockProducerLogic
+	miner      *consensus.BlockProducerInfo
 	target     *big.Int
-	bm         *blockchain_logic.BlockchainManager
 	stopCh     chan bool
 	notifierCh chan bool
 }
 
-func NewProofOfWork() *ProofOfWork {
+func NewProofOfWork(cbAddr string) *ProofOfWork {
 	p := &ProofOfWork{
-		miner:      logic.NewBlockProducerLogic(),
+		miner:      consensus.NewBlockProducerInfo(cbAddr),
 		stopCh:     make(chan bool, 1),
 		notifierCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)
 	return p
-}
-
-func (pow *ProofOfWork) Setup(cbAddr string, bm *blockchain_logic.BlockchainManager) {
-	pow.bm = bm
-
-	var bc *blockchain_logic.Blockchain
-	if pow.bm != nil {
-		bc = bm.Getblockchain()
-	}
-
-	pow.miner.Setup(bc, cbAddr)
-	pow.miner.SetProcess(pow.calculateValidHash)
 }
 
 func (pow *ProofOfWork) GetBlockProduceNotifier() chan bool {

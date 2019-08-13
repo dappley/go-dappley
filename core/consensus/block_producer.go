@@ -27,16 +27,11 @@ type BlockProducerInfo struct {
 	idle        bool
 }
 
-func NewBlockProducerInfo() *BlockProducerInfo {
+func NewBlockProducerInfo(beneficiaryAddr string) *BlockProducerInfo {
 	return &BlockProducerInfo{
-		beneficiary: "",
+		beneficiary: beneficiaryAddr,
 		idle:        true,
 	}
-}
-
-// Setup tells the producer to give rewards to beneficiaryAddr and return the new block through newBlockCh
-func (bp *BlockProducerInfo) Setup(beneficiaryAddr string) {
-	bp.beneficiary = beneficiaryAddr
 }
 
 // Beneficiary returns the address which receives rewards

@@ -1,4 +1,4 @@
-package logic
+package block_producer
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestBlockProducerInfo_ProduceBlock(t *testing.T) {
-	bp := NewBlockProducerLogic()
+	bp := NewBlockProducer()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	bc := blockchain_logic.CreateBlockchain(
 		account.NewAddress(cbAddr),
@@ -26,7 +26,7 @@ func TestBlockProducerInfo_ProduceBlock(t *testing.T) {
 	bp.SetProcess(func(ctx *blockchain_logic.BlockContext) {
 		processRuns = true
 	})
-	block := bp.ProduceBlock(0)
+	block := bp.produceBlock(0)
 	assert.True(t, processRuns)
 	assert.NotNil(t, block)
 }

@@ -1,4 +1,4 @@
-package miner
+package block_producer
 
 import (
 	"github.com/dappley/go-dappley/consensus"
