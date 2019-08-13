@@ -43,9 +43,11 @@ func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, pro
 func (bp *BlockProducer) Start() {
 	go func() {
 		logger.Info("BlockProducer Starts...")
+		bp.con.Start()
 		for {
 			select {
 			case <-bp.stopCh:
+				bp.con.Stop()
 				return
 			case <-bp.con.GetBlockProduceNotifier():
 				bp.produceBlock()

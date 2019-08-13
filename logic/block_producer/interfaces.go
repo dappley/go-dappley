@@ -9,4 +9,6 @@ type Consensus interface {
 	GetBlockProduceNotifier() chan bool
 	Validate(*block.Block) bool
 	GetProcess() consensus.Process
+	Start()
+	Stop()
 }

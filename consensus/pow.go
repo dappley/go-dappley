@@ -97,7 +97,6 @@ func (pow *ProofOfWork) sendNotification() {
 	select {
 	case pow.GetBlockProduceNotifier() <- true:
 	default:
-		logger.Info("pow: notifier channel is full")
 	}
 }
 
