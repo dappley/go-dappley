@@ -19,6 +19,7 @@ package blockchain_logic
 
 import (
 	"bytes"
+	"github.com/pkg/errors"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
@@ -49,6 +50,10 @@ var (
 		SendBlock,
 		RequestBlock,
 	}
+)
+
+var (
+	ErrParentBlockNotFound = errors.New("Not able to find parent block in blockchain")
 )
 
 type BlockchainManager struct {
@@ -167,7 +172,6 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 			"parent_hash": forkHeadParentHash,
 			"from":        pid,
 		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHeadParentHash, pid)
 		return
 	}
 
@@ -180,6 +184,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 	_ = bm.MergeFork(fork, forkHeadParentHash)
 	bm.blockPool.RemoveFork(fork)
 	bm.blockchain.SetState(blockchain.BlockchainReady)
+	return
 }
 
 func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
