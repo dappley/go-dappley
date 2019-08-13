@@ -23,8 +23,6 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 
-	"testing"
-
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/network"

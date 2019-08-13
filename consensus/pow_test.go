@@ -19,9 +19,10 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core/block"
 	"math/big"
 	"testing"
+
+	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/stretchr/testify/assert"
 )

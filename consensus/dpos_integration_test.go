@@ -21,9 +21,10 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core/block_producer_info"
 	"testing"
 	"time"
+
+	"github.com/dappley/go-dappley/core/block_producer_info"
 
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
