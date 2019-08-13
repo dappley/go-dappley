@@ -426,7 +426,13 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
-	gasCount, err := vm.EstimateGas(rpcService.GetBlockchain(), &tx)
+	tailBlk, _ := rpcService.GetBlockchain().GetTailBlock()
+	gasCount, err := vm.EstimateGas(
+		&tx,
+		tailBlk,
+		rpcService.GetBlockchain().GetUtxoCache(),
+		rpcService.GetBlockchain().GetDb(),
+	)
 	return &rpcpb.EstimateGasResponse{GasCount: byteutils.FromUint64(gasCount)}, err
 }
 

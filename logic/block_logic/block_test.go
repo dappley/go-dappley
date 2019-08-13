@@ -234,7 +234,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				nil,
 			)
 			blk := block.NewBlock(tt.txs, parentBlk, "")
-			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, nil, parentBlk))
+			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk))
 		})
 	}
 }

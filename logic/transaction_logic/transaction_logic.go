@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/scState"
@@ -465,7 +464,7 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	index utxo_logic.UTXOIndex,
 	scStorage *scState.ScState,
 	rewards map[string]string,
-	engine core.ScEngine,
+	engine ScEngine,
 	currblkHeight uint64,
 	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
 
@@ -518,7 +517,7 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
-func CheckContractSyntaxTransaction(engine core.ScEngine, tx *transaction.Transaction) error {
+func CheckContractSyntaxTransaction(engine ScEngine, tx *transaction.Transaction) error {
 	TxOuts := tx.Vout
 	for _, v := range TxOuts {
 		err := CheckContractSyntax(engine, v)
@@ -529,7 +528,7 @@ func CheckContractSyntaxTransaction(engine core.ScEngine, tx *transaction.Transa
 	return nil
 }
 
-func CheckContractSyntax(sc core.ScEngine, out transaction_base.TXOutput) error {
+func CheckContractSyntax(sc ScEngine, out transaction_base.TXOutput) error {
 	if out.Contract != "" {
 		function, args := util.DecodeScInput(out.Contract)
 		if function == "" {

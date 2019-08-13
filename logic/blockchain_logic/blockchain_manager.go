@@ -19,6 +19,7 @@ package blockchain_logic
 
 import (
 	"bytes"
+	"github.com/pkg/errors"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
@@ -49,6 +50,10 @@ var (
 		SendBlock,
 		RequestBlock,
 	}
+)
+
+var (
+	ErrParentBlockNotFound = errors.New("Not able to find parent block in blockchain")
 )
 
 type BlockchainManager struct {
@@ -167,7 +172,6 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 			"parent_hash": forkHeadParentHash,
 			"from":        pid,
 		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHeadParentHash, pid)
 		return
 	}
 
@@ -180,6 +184,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 	_ = bm.MergeFork(fork, forkHeadParentHash)
 	bm.blockPool.RemoveFork(fork)
 	bm.blockchain.SetState(blockchain.BlockchainReady)
+	return
 }
 
 func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
@@ -218,12 +223,11 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			"hash":   forkBlks[i].GetHash().String(),
 		}).Debug("BlockchainManager: is verifying a block in the fork.")
 
-		if !block_logic.VerifyTransactions(forkBlks[i], utxo, scState, bm.blockchain.GetSCManager(), parentBlk) {
+		if !block_logic.VerifyTransactions(forkBlks[i], utxo, scState, parentBlk) {
 			return ErrTransactionVerifyFailed
 		}
 
-		lib, ok := bm.Getblockchain().GetConsensus().CheckLibPolicy(forkBlks[i])
-		if !ok {
+		if !bm.Getblockchain().CheckLibPolicy(forkBlks[i]) {
 			return ErrProducerNotEnough
 		}
 
@@ -232,7 +236,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			bm.blockchain.Rollback(forkParentHash, rollBackUtxo, rollScState)
 		}
 
-		ctx := BlockContext{Block: forkBlks[i], Lib: lib, UtxoIndex: utxo, State: scState}
+		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{

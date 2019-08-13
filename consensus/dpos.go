@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
@@ -39,26 +38,20 @@ const (
 	MinConsensusSize = 4
 )
 
-const maxMintingTimeInMs = 2000
-const NanoSecsInMilliSec = 1000000
-
 type DPOS struct {
 	bp          *logic.BlockProducerLogic
 	producerKey string
-	newBlockCh  chan *block.Block
-	bm          *blockchain_logic.BlockchainManager
 	stopCh      chan bool
-	stopLibCh   chan bool
 	dynasty     *Dynasty
 	slot        *lru.Cache
+	notifierCh  chan bool
 }
 
 func NewDPOS() *DPOS {
 	dpos := &DPOS{
 		bp:         logic.NewBlockProducerLogic(),
-		newBlockCh: make(chan *block.Block, 1),
 		stopCh:     make(chan bool, 1),
-		stopLibCh:  make(chan bool, 1),
+		notifierCh: make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -69,18 +62,9 @@ func NewDPOS() *DPOS {
 	return dpos
 }
 
-func (dpos *DPOS) GetSlot() *lru.Cache {
-	return dpos.slot
-}
-
-func (dpos *DPOS) AddBlockToSlot(block *block.Block) {
-	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
-}
-
 func (dpos *DPOS) Setup(cbAddr string, bm *blockchain_logic.BlockchainManager) {
 	dpos.bp.Setup(bm.Getblockchain(), cbAddr)
 	dpos.bp.SetProcess(dpos.hashAndSign)
-	dpos.bm = bm
 }
 
 func (dpos *DPOS) SetKey(key string) {
@@ -108,6 +92,64 @@ func (dpos *DPOS) GetProducerAddress() string {
 	return dpos.bp.Beneficiary()
 }
 
+func (dpos *DPOS) Start() {
+	go func() {
+		logger.Info("DPoS starts...")
+		if len(dpos.stopCh) > 0 {
+			<-dpos.stopCh
+		}
+		ticker := time.NewTicker(time.Second).C
+
+		for {
+			select {
+			case now := <-ticker:
+				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
+					dpos.sendNotification()
+				}
+			case <-dpos.stopCh:
+				return
+			}
+		}
+	}()
+}
+
+func (dpos *DPOS) Stop() {
+	logger.Info("DPoS stops...")
+	dpos.stopCh <- true
+}
+
+func (dpos *DPOS) GetBlockProduceNotifier() chan bool {
+	return dpos.notifierCh
+}
+
+func (dpos *DPOS) sendNotification() {
+	select {
+	case dpos.GetBlockProduceNotifier() <- true:
+	default:
+		logger.Info("DPOS: notifier channel is full")
+	}
+}
+
+func (dpos *DPOS) GetProcess() logic.Process {
+	return dpos.hashAndSign
+}
+
+func (dpos *DPOS) Produced(blk *block.Block) bool {
+	if blk != nil {
+		return dpos.bp.Produced(blk)
+	}
+	return false
+}
+
+func (dpos *DPOS) hashAndSign(blk *block.Block) {
+	hash := block_logic.CalculateHash(blk)
+	blk.SetHash(hash)
+	ok := block_logic.SignBlock(blk, dpos.producerKey)
+	if !ok {
+		logger.Warn("DPoS: failed to sign the new block.")
+	}
+}
+
 // Validate checks that the block fulfills the dpos requirement and accepts the block in the time slot
 func (dpos *DPOS) Validate(block *block.Block) bool {
 	producerIsValid := dpos.verifyProducer(block)
@@ -124,80 +166,8 @@ func (dpos *DPOS) Validate(block *block.Block) bool {
 		return false
 	}
 
-	dpos.AddBlockToSlot(block)
+	dpos.cacheBlock(block)
 	return true
-}
-
-func (dpos *DPOS) Start() {
-	go func() {
-		logger.Info("DPoS starts...")
-		if len(dpos.stopCh) > 0 {
-			<-dpos.stopCh
-		}
-		ticker := time.NewTicker(time.Second).C
-
-		for {
-			select {
-			case now := <-ticker:
-				if dpos.dynasty.IsMyTurn(dpos.bp.Beneficiary(), now.Unix()) {
-					deadlineInMs := now.UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
-					index := dpos.dynasty.GetProducerIndex(dpos.bp.Beneficiary())
-					logger.Infof("DPoS: it is my turn to produce block. ***node is %v,time is %v***", index, now.Unix())
-
-					// Do not produce block if block pool is syncing
-					if dpos.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
-						logger.Info("DPoS: block producer paused because block pool is syncing.")
-						continue
-					}
-					ctx := dpos.bp.ProduceBlock(deadlineInMs)
-					if ctx == nil || !dpos.Validate(ctx.Block) {
-						dpos.bp.BlockProduceFinish()
-						logger.Error("DPoS: produced an invalid block!")
-						continue
-					}
-					dpos.updateNewBlock(ctx)
-					dpos.bp.BlockProduceFinish()
-				}
-			case <-dpos.stopCh:
-				return
-
-			}
-		}
-	}()
-}
-
-func (dpos *DPOS) Stop() {
-	logger.Info("DPoS stops...")
-	dpos.stopCh <- true
-}
-
-func (dpos *DPOS) Produced(blk *block.Block) bool {
-	if blk != nil {
-		return dpos.bp.Produced(blk)
-	}
-	return false
-}
-
-func (dpos *DPOS) hashAndSign(ctx *blockchain_logic.BlockContext) {
-	hash := block_logic.CalculateHash(ctx.Block)
-	ctx.Block.SetHash(hash)
-	ok := block_logic.SignBlock(ctx.Block, dpos.producerKey)
-	if !ok {
-		logger.Warn("DPoS: failed to sign the new block.")
-	}
-}
-
-func (dpos *DPOS) isForking() bool {
-	return false
-}
-
-func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
-	existBlock, exist := dpos.slot.Get(int(blk.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
-	if !exist {
-		return false
-	}
-
-	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
 // verifyProducer verifies a given block is produced by the valid producer by verifying the signature of the block
@@ -267,85 +237,31 @@ func (dpos *DPOS) beneficiaryIsProducer(block *block.Block) bool {
 	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
 }
 
+func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
+	existBlock, exist := dpos.slot.Get(int(blk.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
+	if !exist {
+		return false
+	}
+
+	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
+}
+
+func (dpos *DPOS) cacheBlock(block *block.Block) {
+	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
+}
+
 func (dpos *DPOS) IsProducingBlock() bool {
 	return !dpos.bp.IsIdle()
 }
 
-func (dpos *DPOS) updateNewBlock(ctx *blockchain_logic.BlockContext) {
-	logger.WithFields(logger.Fields{
-		"height": ctx.Block.GetHeight(),
-		"hash":   ctx.Block.GetHash().String(),
-	}).Info("DPoS: produced a new block.")
-	if !block_logic.VerifyHash(ctx.Block) {
-		logger.Warn("DPoS: hash of the new block is invalid.")
-		return
-	}
-
-	// TODO Refactoring lib calculate position, check lib when create BlockContext instance
-	lib, ok := dpos.CheckLibPolicy(ctx.Block)
-	if !ok {
-		logger.Warn("DPoS: the number of producers is not enough.")
-		tailBlock, _ := dpos.bm.Getblockchain().GetTailBlock()
-		dpos.bm.BroadcastBlock(tailBlock)
-		return
-	}
-	ctx.Lib = lib
-
-	err := dpos.bm.Getblockchain().AddBlockContextToTail(ctx)
-	if err != nil {
-		logger.Warn(err)
-		return
-	}
-	dpos.bm.BroadcastBlock(ctx.Block)
-}
-
-func (dpos *DPOS) CheckLibPolicy(b *block.Block) (*block.Block, bool) {
-	//Do not check genesis block
-	if b.GetHeight() == 0 {
-		return b, true
-	}
-
-	// If producers number is less than MinConsensusSize, pass all blocks
-	if len(dpos.dynasty.GetProducers()) < MinConsensusSize {
-		return nil, true
-	}
-
-	lib, err := dpos.bm.Getblockchain().GetLIB()
-	if err != nil {
-		logger.WithError(err).Warn("DPoS: get lib failed.")
-	}
-
-	libProduerNum := dpos.getLibProducerNum()
-	existProducers := make(map[string]int)
-
-	checkingBlock := b
-
-	for lib.GetHash().Equals(checkingBlock.GetHash()) == false {
-		_, ok := existProducers[checkingBlock.GetProducer()]
-		if ok {
-			logger.WithFields(logger.Fields{
-				"producer": checkingBlock.GetProducer(),
-			}).Info("DPoS: duplicate producer when check lib.")
-			return nil, false
-		}
-
-		existProducers[checkingBlock.GetProducer()] = 1
-		if len(existProducers) >= libProduerNum {
-			return checkingBlock, true
-		}
-
-		newBlock, err := dpos.bm.Getblockchain().GetBlockByHash(checkingBlock.GetPrevHash())
-		if err != nil {
-			logger.WithError(err).Warn("DPoS: get parent block failed.")
-		}
-
-		checkingBlock = newBlock
-	}
-
-	// No enough checking blocks
-	return nil, true
-}
-
-func (dpos *DPOS) getLibProducerNum() int {
+func (dpos *DPOS) GetLibProducerNum() int {
 	return len(dpos.dynasty.GetProducers())*2/3 + 1
+}
+
+func (dpos *DPOS) IsBypassingLibCheck() bool {
+	return len(dpos.dynasty.GetProducers()) < MinConsensusSize
+}
+
+func (dpos *DPOS) IsNonRepeatingBlockProducerRequired() bool {
+	return true
 }

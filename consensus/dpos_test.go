@@ -19,43 +19,24 @@
 package consensus
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
-	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/storage"
 )
 
 func TestNewDpos(t *testing.T) {
 	dpos := NewDPOS()
-	assert.Equal(t, 1, cap(dpos.newBlockCh))
 	assert.Equal(t, 1, cap(dpos.stopCh))
-}
-
-func TestDpos_Setup(t *testing.T) {
-	dpos := NewDPOS()
-	cbAddr := "abcdefg"
-	bc := blockchain_logic.CreateBlockchain(account.NewAddress(cbAddr), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
-	pool := core.NewBlockPool()
-
-	node := network.NewNode(bc.GetDb(), nil)
-
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-
-	dpos.Setup(cbAddr, bm)
-
-	assert.Equal(t, bc, dpos.bm.Getblockchain())
 }
 
 func TestDpos_beneficiaryIsProducer(t *testing.T) {
@@ -134,7 +115,7 @@ func TestDPOS_isDoubleMint(t *testing.T) {
 	assert.Equal(t, int(blk1Time/defaultTimeBetweenBlk), int(blk2Time/defaultTimeBetweenBlk))
 
 	blk1 := FakeNewBlockWithTimestamp(blk1Time, []*transaction.Transaction{}, nil)
-	dpos.AddBlockToSlot(blk1)
+	dpos.cacheBlock(blk1)
 	blk2 := FakeNewBlockWithTimestamp(blk2Time, []*transaction.Transaction{}, nil)
 
 	assert.True(t, dpos.isDoubleMint(blk2))

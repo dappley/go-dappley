@@ -8,7 +8,6 @@ import (
 
 type BlockContext struct {
 	Block     *block.Block
-	Lib       *block.Block
 	UtxoIndex *utxo_logic.UTXOIndex
 	State     *scState.ScState
 }
