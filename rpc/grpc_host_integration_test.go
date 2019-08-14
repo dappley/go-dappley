@@ -1,5 +1,3 @@
-// +build integration
-
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
@@ -26,10 +24,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	"github.com/dappley/go-dappley/logic/block_producer"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
@@ -59,7 +59,7 @@ import (
 type RpcTestContext struct {
 	store      storage.Storage
 	account    *account.Account
-	consensus  blockchain_logic.Consensus
+	bp         *block_producer.BlockProducer
 	bm         *blockchain_logic.BlockchainManager
 	node       *network.Node
 	rpcServer  *Server
@@ -113,7 +113,7 @@ func TestRpcSend(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork()
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
@@ -124,7 +124,6 @@ func TestRpcSend(t *testing.T) {
 	pool := core.NewBlockPool()
 
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -201,7 +200,7 @@ func TestRpcSendContract(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork()
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
@@ -212,7 +211,6 @@ func TestRpcSendContract(t *testing.T) {
 	pool := core.NewBlockPool()
 
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -316,16 +314,15 @@ func TestRpcGetBlockchainInfo(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 5 {
 
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -361,16 +358,15 @@ func TestRpcGetUTXO(t *testing.T) {
 
 	logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < MinUtxoBlockHeaderCount {
 
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -406,15 +402,14 @@ func TestRpcGetBlocks(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 500 {
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -485,15 +480,14 @@ func TestRpcGetBlockByHash(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -530,15 +524,14 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -580,8 +573,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
 	for maxHeight < 2 {
@@ -636,9 +628,9 @@ func TestRpcSendTransaction(t *testing.T) {
 	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -671,8 +663,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
 	for maxHeight < 2 {
@@ -726,18 +717,18 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	transaction3, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam3)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction3})
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	time.Sleep(time.Second)
 
 	successResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*transactionpb.Transaction{transaction1.ToProto().(*transactionpb.Transaction), transaction2.ToProto().(*transactionpb.Transaction), transaction3.ToProto().(*transactionpb.Transaction)}})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
 
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
 	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	time.Sleep(time.Second)
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
@@ -772,16 +763,16 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	assert.Equal(t, uint32(codes.FailedPrecondition), detail0.Code)
 	assert.Equal(t, uint32(codes.OK), detail1.Code)
 
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 	maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
 	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	time.Sleep(time.Second)
 
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 
 	minedReward := common.NewAmount(10000000)
@@ -809,8 +800,7 @@ func TestGetNewTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	// Create a grpc connection and a account
 	conn1, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
@@ -887,9 +877,9 @@ func TestGetNewTransaction(t *testing.T) {
 	time.Sleep(time.Second)
 	assert.Equal(t, false, rpcContext.bm.Getblockchain().GetTxPool().EventBus.HasCallback(transaction_pool.NewTransactionTopic))
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 }
@@ -1046,16 +1036,15 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	rpcContext.consensus.Setup(rpcContext.account.GetKeyPair().GenerateAddress().String(), rpcContext.bm)
-	rpcContext.consensus.Start()
+	rpcContext.bp.Start()
 
 	for rpcContext.bm.Getblockchain().GetMaxHeight() < 50 {
 	}
 
-	rpcContext.consensus.Stop()
+	rpcContext.bp.Stop()
 	t.Log(rpcContext.bm.Getblockchain().GetMaxHeight())
 	util.WaitDoneOrTimeout(func() bool {
-		return !rpcContext.consensus.IsProducingBlock()
+		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
 
@@ -1096,9 +1085,9 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	context.consensus = consensus.NewProofOfWork()
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), context.store, context.consensus, transaction_pool.NewTransactionPool(context.node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), context.store, pow, transaction_pool.NewTransactionPool(context.node, 128000), scManager, 1000000)
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1113,6 +1102,8 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.rpcServer = NewGrpcServer(context.node, context.bm, "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
+
+	bp := block_producer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
 	return &context, nil
 }
 
@@ -1153,7 +1144,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork()
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
@@ -1163,7 +1154,6 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
-	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
@@ -1250,7 +1240,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork()
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(nil, 100), scManager, 1000000)
 	if err != nil {
@@ -1261,7 +1251,6 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 
-	pow.Setup(minerAccount.GetKeyPair().GenerateAddress().String(), bm)
 	pow.SetTargetBit(0)
 
 	// Start a grpc server
