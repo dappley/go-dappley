@@ -9,7 +9,7 @@ import (
 
 func GenerateBlockWithCbtx(addr account.Address, lastblock *block.Block) *block.Block {
 	//create a new block chain
-	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
+	cbtx := transaction.NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
 	b := block.NewBlock([]*transaction.Transaction{&cbtx}, lastblock, "")
 	return b
 }

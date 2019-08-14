@@ -20,12 +20,14 @@ package transaction
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/core/utxo"
 	"strings"
+
+	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -33,6 +35,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -110,6 +113,169 @@ func (st SendTxParam) TotalCost() *common.Amount {
 		totalAmount = totalAmount.Add(limitedFee)
 	}
 	return totalAmount
+}
+
+// NewCoinbaseTX creates a new coinbase transaction
+func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
+	if data == "" {
+		data = fmt.Sprintf("Reward to '%s'", to)
+	}
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
+
+	txin := transaction_base.TXInput{nil, -1, bh, []byte(data)}
+	txout := transaction_base.NewTXOutput(Subsidy.Add(tip), to)
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx.ID = tx.Hash()
+
+	return tx
+}
+
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transaction, error) {
+
+	sum := calculateUtxoSum(utxos)
+	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
+	if err != nil {
+		return Transaction{}, err
+	}
+	tx := Transaction{
+		nil,
+		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
+		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
+		sendTxParam.Tip,
+		sendTxParam.GasLimit,
+		sendTxParam.GasPrice,
+	}
+	tx.ID = tx.Hash()
+
+	err = tx.Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	return tx, nil
+}
+
+// Sign signs each input of a Transaction
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
+	if tx.IsCoinbase() {
+		logger.Warn("Transaction: will not sign a coinbase transaction_base.")
+		return nil
+	}
+
+	if tx.IsRewardTx() {
+		logger.Warn("Transaction: will not sign a reward transaction_base.")
+		return nil
+	}
+
+	if tx.IsGasRewardTx() {
+		logger.Warn("Transaction: will not sign a gas reward transaction_base.")
+		return nil
+	}
+
+	if tx.IsGasChangeTx() {
+		logger.Warn("Transaction: will not sign a gas change transaction_base.")
+		return nil
+	}
+
+	txCopy := tx.TrimmedCopy(false)
+	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
+	if err != nil {
+		logger.WithError(err).Error("Transaction: failed to get private key.")
+		return err
+	}
+
+	for i, vin := range txCopy.Vin {
+		txCopy.Vin[i].Signature = nil
+		oldPubKey := vin.PubKey
+		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
+		txCopy.ID = txCopy.Hash()
+
+		txCopy.Vin[i].PubKey = oldPubKey
+
+		signature, err := secp256k1.Sign(txCopy.ID, privData)
+		if err != nil {
+			logger.WithError(err).Error("Transaction: failed to create a signature.")
+			return err
+		}
+
+		tx.Vin[i].Signature = signature
+	}
+	return nil
+}
+
+func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) Transaction {
+	sum := calculateUtxoSum(utxos)
+	tips := common.NewAmount(0)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+
+	tx, _ := NewContractTransferTX(utxos, contractAddr, account.NewAddress(SCDestroyAddress), sum, tips, gasLimit, gasPrice, sourceTXID)
+	return tx
+}
+
+func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
+	contractPubKeyHash, ok := account.GeneratePubKeyHashByAddress(contractAddr)
+	if !ok {
+		return Transaction{}, account.ErrInvalidAddress
+	}
+	if isContract, err := contractPubKeyHash.IsContract(); !isContract {
+		return Transaction{}, err
+	}
+
+	sum := calculateUtxoSum(utxos)
+	change, err := calculateChange(sum, amount, tip, gasLimit, gasPrice)
+	if err != nil {
+		return Transaction{}, err
+	}
+
+	// Intentionally set PubKeyHash as PubKey (to recognize it is from contract) and sourceTXID as signature in Vin
+	tx := Transaction{
+		nil,
+		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
+		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
+		tip,
+		gasLimit,
+		gasPrice,
+	}
+	tx.ID = tx.Hash()
+
+	return tx, nil
+}
+
+//prepareInputLists prepares a list of txinputs for a new transaction
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transaction_base.TXInput {
+	var inputs []transaction_base.TXInput
+
+	// Build a list of inputs
+	for _, utxo := range utxos {
+		input := transaction_base.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
+		inputs = append(inputs, input)
+	}
+
+	return inputs
+}
+
+//preapreOutPutLists prepares a list of txoutputs for a new transaction
+func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []transaction_base.TXOutput {
+
+	var outputs []transaction_base.TXOutput
+	toAddr := to
+
+	if toAddr.String() == "" {
+		toAddr = account.NewContractPubKeyHash().GenerateAddress()
+	}
+
+	if contract != "" {
+		outputs = append(outputs, *transaction_base.NewContractTXOutput(toAddr, contract))
+	}
+
+	outputs = append(outputs, *transaction_base.NewTXOutput(amount, toAddr))
+	if !change.IsZero() {
+		outputs = append(outputs, *transaction_base.NewTXOutput(change, from))
+	}
+	return outputs
 }
 
 //ToContractTx Returns structure of ContractTx
