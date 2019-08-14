@@ -534,7 +534,11 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 			return false
 		}
 
-		if _, ok := existProducers[blk.GetProducer()]; ok {
+		if _, ok := existProducers[currBlk.GetProducer()]; ok {
+			logger.WithFields(logger.Fields{
+				"currBlkHeight": currBlk.GetHeight(),
+				"producer":      currBlk.GetProducer(),
+			}).Error("Blockchain: repeating producer")
 			return true
 		}
 

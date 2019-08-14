@@ -44,15 +44,18 @@ func (bp *BlockProducer) Start() {
 	go func() {
 		logger.Info("BlockProducer Starts...")
 		bp.con.Start()
+
+	loop:
 		for {
 			select {
 			case <-bp.stopCh:
 				bp.con.Stop()
-				return
+				break loop
 			case <-bp.con.GetBlockProduceNotifier():
 				bp.produceBlock()
 			}
 		}
+		logger.Info("BlockProducer: Start Terminated!")
 	}()
 }
 
