@@ -113,7 +113,8 @@ func TestRpcSend(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
@@ -125,6 +126,8 @@ func TestRpcSend(t *testing.T) {
 
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 	pow.SetTargetBit(0)
+
+	bp := block_producer.NewBlockProducer(bm, pow, producer)
 
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, "temp")
@@ -153,10 +156,10 @@ func TestRpcSend(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Start mining to approve the transaction
-	pow.Start()
+	bp.Start()
 	for bc.GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bp.Stop()
 
 	time.Sleep(100 * time.Millisecond)
 
