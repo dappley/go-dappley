@@ -80,9 +80,10 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	dynasty := NewDynasty(miners, len(miners), timeBetweenBlock)
 	var dposArray []*DPOS
 	var nodeArray []*network.Node
+	var bmArray []*blockchain_logic.BlockchainManager
 
 	for i, miner := range miners {
-		dpos := NewDPOS(miner)
+		dpos := NewDPOS(block_producer_info.NewBlockProducerInfo(miner))
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
 		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
@@ -93,8 +94,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		nodeArray = append(nodeArray, node)
 
 		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-
-		dpos.Setup(miner, bm)
+		bmArray = append(bmArray, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
@@ -125,7 +125,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 	}
 
 	for i := range miners {
-		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), dposArray[i].bm.Getblockchain().GetMaxHeight())
+		assert.Equal(t, uint64(dynasty.dynastyTime*dposRounds/timeBetweenBlock), bmArray[i].Getblockchain().GetMaxHeight())
 	}
 }
 
@@ -153,9 +153,10 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 
 	var dposArray []*DPOS
 	var nodeArray []*network.Node
+	var bmArray []*blockchain_logic.BlockchainManager
 
 	for i, miner := range miners {
-		dpos := NewDPOS()
+		dpos := NewDPOS(block_producer_info.NewBlockProducerInfo(miner))
 		dpos.SetDynasty(dynasty)
 		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool()
@@ -165,8 +166,8 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		nodeArray = append(nodeArray, node)
 
 		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+		bmArray = append(bmArray, bm)
 
-		dpos.Setup(miner, bm)
 		dpos.SetKey(keystrs[i])
 		dposArray = append(dposArray, dpos)
 	}
@@ -197,11 +198,11 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		}, 20)
 	}
 
-	block0, _ := dposArray[0].bm.Getblockchain().GetLIB()
+	block0, _ := bmArray[0].Getblockchain().GetLIB()
 	assert.NotEqual(t, 0, block0.GetHeight())
 
 	for i := range miners {
-		block, _ := dposArray[i].bm.Getblockchain().GetLIB()
+		block, _ := bmArray[i].Getblockchain().GetLIB()
 		assert.Equal(t, block0.GetHash(), block.GetHash())
 	}
 }

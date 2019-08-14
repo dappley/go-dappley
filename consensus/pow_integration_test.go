@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
@@ -34,10 +35,8 @@ import (
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic/account_logic"
-	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -71,7 +70,7 @@ func TestBlockProducerInfo_SingleValidTx(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(block_producer_info.NewBlockProducerInfo(account1.GetKeyPair().GenerateAddress().String()))
 	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
@@ -88,11 +87,9 @@ func TestBlockProducerInfo_SingleValidTx(t *testing.T) {
 	bc.GetTxPool().Push(tx)
 
 	//start a miner
-	pool := core.NewBlockPool()
-	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
-
-	pow.Setup(account1.GetKeyPair().GenerateAddress().String(), bm)
+	// pool := core.NewBlockPool()
+	// n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
+	// bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
 	pow.Start()
 
@@ -138,17 +135,16 @@ func TestBlockProducerInfo_MineEmptyBlock(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
 	bc := blockchain_logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
 	//start a miner
-	pool := core.NewBlockPool()
-	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
+	// pool := core.NewBlockPool()
+	// n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
+	// bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(acc.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
 
 	//Make sure at least 5 blocks mined
@@ -190,7 +186,7 @@ func TestBlockProducerInfo_MultipleValidTx(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(block_producer_info.NewBlockProducerInfo(account1.GetKeyPair().GenerateAddress().String()))
 	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
@@ -207,13 +203,12 @@ func TestBlockProducerInfo_MultipleValidTx(t *testing.T) {
 	bc.GetTxPool().Push(tx)
 
 	//start a producer
-	pool := core.NewBlockPool()
+	// pool := core.NewBlockPool()
 
-	n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
+	// n := network.FakeNodeWithPidAndAddr(db, "asd", "asd")
 
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
+	// bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(account1.GetKeyPair().GenerateAddress().String(), bm)
 	pow.Start()
 
 	//Make sure there are blocks have been mined
@@ -260,9 +255,8 @@ func TestBlockProducerInfo_MultipleValidTx(t *testing.T) {
 }
 
 func TestProofOfWork_StartAndStop(t *testing.T) {
-
-	pow := NewProofOfWork()
 	cbAddr := account.NewAddress("121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD")
+	pow := NewProofOfWork(block_producer_info.NewBlockProducerInfo(cbAddr.String()))
 	bc := blockchain_logic.CreateBlockchain(
 		cbAddr,
 		storage.NewRamStorage(),
@@ -272,13 +266,12 @@ func TestProofOfWork_StartAndStop(t *testing.T) {
 		100000,
 	)
 	defer bc.GetDb().Close()
-	pool := core.NewBlockPool()
+	// pool := core.NewBlockPool()
 
-	n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
+	// n := network.FakeNodeWithPidAndAddr(bc.GetDb(), "asd", "asd")
 
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
+	// bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
-	pow.Setup(cbAddr.String(), bm)
 	pow.SetTargetBit(10)
 	//start the pow Process and wait for at least 1 block produced
 	pow.Start()
@@ -327,7 +320,7 @@ func TestPreventDoubleSpend(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	pow := NewProofOfWork()
+	pow := NewProofOfWork(block_producer_info.NewBlockProducerInfo(account1.GetKeyPair().GenerateAddress().String()))
 	bc := blockchain_logic.CreateBlockchain(account1.GetKeyPair().GenerateAddress(), db, pow, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
 	assert.NotNil(t, bc)
 
@@ -348,10 +341,9 @@ func TestPreventDoubleSpend(t *testing.T) {
 	bc.GetTxPool().Push(tx2)
 
 	//start a miner
-	pool := core.NewBlockPool()
-	n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
-	pow.Setup(account1.GetKeyPair().GenerateAddress().String(), bm)
+	// pool := core.NewBlockPool()
+	// n := network.FakeNodeWithPidAndAddr(db, "asd", "test")
+	// bm := blockchain_logic.NewBlockchainManager(bc, pool, n)
 
 	pow.Start()
 
@@ -377,11 +369,6 @@ func GetNumberOfBlocks(t *testing.T, i *blockchain_logic.Blockchain) int {
 		blk, err = i.Next()
 	}
 	return numOfBlocksMined
-}
-
-//TODO: test mining with invalid transactions
-func TestBlockProducerInfo_InvalidTransactions(t *testing.T) {
-
 }
 
 func printBalances(bc *blockchain_logic.Blockchain, addrs []account.Address) {

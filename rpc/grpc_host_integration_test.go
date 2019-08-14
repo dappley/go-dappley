@@ -1103,7 +1103,8 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 
-	bp := block_producer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
+	context.bp = block_producer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
+
 	return &context, nil
 }
 
@@ -1246,10 +1247,9 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	pool := core.NewBlockPool()
+
 	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 
 	pow.SetTargetBit(0)
 
