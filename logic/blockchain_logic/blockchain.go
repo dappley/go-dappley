@@ -274,7 +274,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	bcTemp.updateLIB()
+	bcTemp.updateLIB(ctx.Block.GetHeight())
 
 	// Flush batch changes to storage
 	err = bcTemp.db.Flush()
@@ -559,14 +559,16 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 	return false
 }
 
-func (bc *Blockchain) updateLIB() {
+func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	if bc.consensus == nil {
 		return
 	}
 
 	minConfirmationNum := bc.consensus.GetLibProducerNum()
-	currHeight := bc.GetMaxHeight()
-	LIBHeight := currHeight - uint64(minConfirmationNum)
+	LIBHeight := uint64(0)
+	if currBlkHeight > uint64(minConfirmationNum) {
+		LIBHeight = currBlkHeight - uint64(minConfirmationNum)
+	}
 
 	LIBBlk, err := bc.GetBlockByHeight(LIBHeight)
 	if err != nil {

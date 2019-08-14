@@ -1043,7 +1043,7 @@ func TestUpdate(t *testing.T) {
 func Test_MultipleMinersWithDPOS(t *testing.T) {
 	const (
 		timeBetweenBlock = 2
-		dposRounds       = 1
+		dposRounds       = 2
 	)
 
 	miners := []string{

@@ -94,7 +94,6 @@ func (dpos *DPOS) Start() {
 		}
 		ticker := time.NewTicker(time.Second).C
 
-	loops:
 		for {
 			select {
 			case now := <-ticker:
@@ -102,17 +101,14 @@ func (dpos *DPOS) Start() {
 					dpos.sendNotification()
 				}
 			case <-dpos.stopCh:
-				break loops
+				return
 			}
 		}
-		logger.WithFields(logger.Fields{
-			"producer": dpos.producer.Beneficiary(),
-		}).Info("DPoS Terminated...")
 	}()
 }
 
 func (dpos *DPOS) Stop() {
-
+	logger.Info("DPoS stops...")
 	dpos.stopCh <- true
 }
 
@@ -121,12 +117,8 @@ func (dpos *DPOS) GetBlockProduceNotifier() chan bool {
 }
 
 func (dpos *DPOS) sendNotification() {
-	logger.WithFields(logger.Fields{
-		"producer": dpos.producer.Beneficiary(),
-	}).Info("sendNotification1")
 	select {
 	case dpos.GetBlockProduceNotifier() <- true:
-		logger.Info("sendNotification2")
 	default:
 		logger.Info("DPOS: notifier channel is full")
 	}
