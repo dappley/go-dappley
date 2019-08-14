@@ -203,7 +203,8 @@ func TestRpcSendContract(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
@@ -215,7 +216,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
 	pow.SetTargetBit(0)
-
+	bp := block_producer.NewBlockProducer(bm, pow, producer)
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, "temp")
 	server.Start(defaultRpcPort + 10) // use a different port as other integration tests
@@ -246,10 +247,10 @@ func TestRpcSendContract(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Start mining to approve the transaction
-	pow.Start()
+	bp.Start()
 	for bc.GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bp.Stop()
 
 	time.Sleep(time.Second)
 
@@ -1148,7 +1149,8 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
@@ -1159,7 +1161,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 	pow.SetTargetBit(0)
-
+	bp := block_producer.NewBlockProducer(bm, pow, producer)
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, "temp")
 	server.Start(defaultRpcPort + 15) // use a different port as other integration tests
@@ -1195,10 +1197,10 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	contractAddr := sendResp.ContractAddress
 
 	// Start mining to approve the transaction
-	pow.Start()
+	bp.Start()
 	for bc.GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bp.Stop()
 
 	time.Sleep(time.Second)
 	// estimate contract
@@ -1244,7 +1246,8 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String()))
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transaction_pool.NewTransactionPool(nil, 100), scManager, 1000000)
 	if err != nil {
@@ -1255,7 +1258,9 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	pow.SetTargetBit(0)
-
+	pool := core.NewBlockPool()
+	bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+	bp := block_producer.NewBlockProducer(bm, pow, producer)
 	// Start a grpc server
 	server := NewGrpcServer(node, nil, "temp")
 	server.Start(defaultRpcPort + 16) // use a different port as other integration tests
@@ -1272,10 +1277,10 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
 	// Start mining to approve the transaction
-	pow.Start()
+	bp.Start()
 	for bc.GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bp.Stop()
 
 	time.Sleep(time.Second)
 
