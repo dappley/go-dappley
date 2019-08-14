@@ -523,10 +523,17 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 	lib := bc.GetLIBHash()
 
 	libProduerNum := bc.consensus.GetLibProducerNum()
+	logger.Warn("Producer num:", libProduerNum)
+	logger.Warn("Block Height:", blk.GetHeight())
+
 	existProducers := make(map[string]bool)
 	currBlk := blk
 
 	for i := 0; i < libProduerNum; i++ {
+		if currBlk.GetHeight() == 0 {
+			return false
+		}
+
 		if _, ok := existProducers[blk.GetProducer()]; ok {
 			return true
 		}
@@ -545,7 +552,6 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 
 		currBlk = newBlock
 	}
-
 	return false
 }
 

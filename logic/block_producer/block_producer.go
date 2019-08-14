@@ -61,6 +61,17 @@ func (bp *BlockProducer) Stop() {
 	bp.stopCh <- true
 }
 
+func (bp *BlockProducer) IsProducingBlock() bool {
+	return !bp.producer.IsIdle()
+}
+
+func (bp *BlockProducer) Getblockchain() *blockchain_logic.Blockchain {
+	if bp.bm == nil {
+		return nil
+	}
+	return bp.bm.Getblockchain()
+}
+
 func (bp *BlockProducer) produceBlock() {
 
 	deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
@@ -264,14 +275,14 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext
 	logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
 		"hash":   ctx.Block.GetHash().String(),
-	}).Info("Miner: produced a new block.")
+	}).Info("BlockProducer: produced a new block.")
 	if !block_logic.VerifyHash(ctx.Block) {
-		logger.Warn("Miner: hash of the new block is invalid.")
+		logger.Warn("BlockProducer: hash of the new block is invalid.")
 		return
 	}
 
 	if !bp.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
-		logger.Warn("Miner: the number of producers is not enough.")
+		logger.Warn("BlockProducer: the number of producers is not enough.")
 		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
 		bp.bm.BroadcastBlock(tailBlock)
 		return

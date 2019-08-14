@@ -17,6 +17,7 @@
 package intergationTest
 
 import (
+	"github.com/dappley/go-dappley/logic/block_producer"
 	"reflect"
 	"testing"
 	"time"
@@ -1037,6 +1038,78 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash4).Size())
 	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash5).Size())
+}
+
+func Test_MultipleMinersWithDPOS(t *testing.T) {
+	const (
+		timeBetweenBlock = 2
+		dposRounds       = 3
+	)
+
+	miners := []string{
+		"dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8",
+		"dQEooMsqp23RkPsvZXj3XbsRh9BUyGz2S9",
+		"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa",
+		"dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12",
+		"dPGD4t6ibpmyKZnXH1TNbbPw98EDaaZq8C",
+	}
+	keystrs := []string{
+		"5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55",
+		"bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e",
+		"300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a",
+		"da9282440fae188c371165e01615a2e1b14af68b3eaae51e6608c0bd86d4e6a6",
+		"7c918ed7660d55759b7fc42b25f26bdab3caf8fc07586b2659a26470fb8dfc69",
+	}
+	dynasty := consensus.NewDynasty(miners, len(miners), timeBetweenBlock)
+	var bps []*block_producer.BlockProducer
+	var nodeArray []*network.Node
+
+	for i, miner := range miners {
+		producer := block_producer_info.NewBlockProducerInfo(miner)
+		dpos := consensus.NewDPOS(producer)
+		dpos.SetKey(keystrs[i])
+		dpos.SetDynasty(dynasty)
+		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
+		pool := core.NewBlockPool()
+
+		node := network.NewNode(bc.GetDb(), nil)
+		node.Start(21200+i, "")
+		nodeArray = append(nodeArray, node)
+
+		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+		bp := block_producer.NewBlockProducer(bm, dpos, producer)
+		bp.Start()
+		bps = append(bps, bp)
+	}
+
+	for i := range miners {
+		for j := range miners {
+			if i != j {
+				nodeArray[i].GetNetwork().ConnectToSeed(nodeArray[j].GetHostPeerInfo())
+			}
+		}
+		bps[i].Start()
+	}
+
+	time.Sleep(time.Second*time.Duration(dynasty.GetDynastyTime()*dposRounds) + time.Second/2)
+
+	for i := range miners {
+		bps[i].Stop()
+		nodeArray[i].Stop()
+	}
+
+	//Waiting block sync to other nodes
+	time.Sleep(time.Second * 2)
+	for i := range miners {
+		v := bps[i]
+		util.WaitDoneOrTimeout(func() bool {
+			return !v.IsProducingBlock()
+		}, 20)
+	}
+
+	for i := range miners {
+		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bps[i].Getblockchain().GetMaxHeight())
+	}
 }
 
 func cleanUpDatabase() {

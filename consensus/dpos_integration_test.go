@@ -109,7 +109,7 @@ func TestDpos_MultipleMiners(t *testing.T) {
 		dposArray[i].Start()
 	}
 
-	time.Sleep(time.Second*time.Duration(dynasty.dynastyTime*dposRounds) + time.Second/2)
+	time.Sleep(time.Second*time.Duration(dynasty.GetDynastyTime()*dposRounds) + time.Second/2)
 
 	for i := range miners {
 		dposArray[i].Stop()
