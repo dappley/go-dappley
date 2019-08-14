@@ -1,3 +1,5 @@
+// +build integration
+//
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
@@ -17,6 +19,7 @@
 package intergationTest
 
 import (
+	"fmt"
 	"github.com/dappley/go-dappley/logic/block_producer"
 	"reflect"
 	"testing"
@@ -96,7 +99,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 			// Create a PoW blockchain with the logic.Sender wallet's address as the coinbase address
 			// i.e. logic.Sender's wallet would have mineReward amount after blockchain created
-			bc, pow := CreateBlockchain(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128))
+			bm, bp := CreateProducer(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128), node)
 
 			// Create a receiver account; Balance is 0 initially
 			receiverAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
@@ -113,7 +116,7 @@ func TestSend(t *testing.T) {
 				rcvAddr = receiverAccount.GetKeyPair().GenerateAddress()
 			}
 
-			_, _, err = logic.Send(SenderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bc)
+			_, _, err = logic.Send(SenderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bm.Getblockchain())
 
 			assert.Equal(t, tc.expectedErr, err)
 
@@ -121,15 +124,15 @@ func TestSend(t *testing.T) {
 			time.Sleep(time.Millisecond * 500)
 
 			// Make logic.Sender the miner and mine for 1 block (which should include the transaction)
-			pow.Start()
-			for bc.GetMaxHeight() < 1 {
+			bp.Start()
+			for bm.Getblockchain().GetMaxHeight() < 1 {
 			}
-			pow.Stop()
+			bp.Stop()
 			util.WaitDoneOrTimeout(func() bool {
-				return !pow.IsProducingBlock()
+				return !bp.IsProducingBlock()
 			}, 20)
 			// Verify balance of logic.Sender's account (genesis "mineReward" - transferred amount)
-			SenderBalance, err := logic.GetBalance(SenderAccount.GetKeyPair().GenerateAddress(), bc)
+			SenderBalance, err := logic.GetBalance(SenderAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
 			if err != nil {
 				panic(err)
 			}
@@ -138,18 +141,18 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, expectedBalance, SenderBalance)
 
 			// Balance of the miner's account should be the amount tipped + mineReward
-			minerBalance, err := logic.GetBalance(minerAccount.GetKeyPair().GenerateAddress(), bc)
+			minerBalance, err := logic.GetBalance(minerAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
 			if err != nil {
 				panic(err)
 			}
-			assert.Equal(t, mineReward.Times(bc.GetMaxHeight()).Add(tc.expectedTip), minerBalance)
+			assert.Equal(t, mineReward.Times(bm.Getblockchain().GetMaxHeight()).Add(tc.expectedTip), minerBalance)
 
 			//check smart contract deployment
 			res := string("")
 			contractAddr := account.NewAddress("")
 		loop:
-			for i := bc.GetMaxHeight(); i > 0; i-- {
-				blk, err := bc.GetBlockByHeight(i)
+			for i := bm.Getblockchain().GetMaxHeight(); i > 0; i-- {
+				blk, err := bm.Getblockchain().GetBlockByHeight(i)
 				assert.Nil(t, err)
 				for _, tx := range blk.GetTransactions() {
 					contractAddr = tx.GetContractAddress()
@@ -164,9 +167,9 @@ func TestSend(t *testing.T) {
 			// Balance of the receiver's account should be the amount transferred
 			var receiverBalance *common.Amount
 			if isContract {
-				receiverBalance, err = logic.GetBalance(contractAddr, bc)
+				receiverBalance, err = logic.GetBalance(contractAddr, bm.Getblockchain())
 			} else {
-				receiverBalance, err = logic.GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), bc)
+				receiverBalance, err = logic.GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
 			}
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
@@ -421,11 +424,9 @@ func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
 }
 
 func TestForkChoice(t *testing.T) {
-	var pows []*consensus.ProofOfWork
-	var bcs []*blockchain_logic.Blockchain
+	var bps []*block_producer.BlockProducer
 	var bms []*blockchain_logic.BlockchainManager
 	var dbs []storage.Storage
-	var pools []*core.BlockPool
 	// Remember to close all opened databases after test
 	defer func() {
 		for _, db := range dbs {
@@ -444,89 +445,78 @@ func TestForkChoice(t *testing.T) {
 		dbs = append(dbs, db)
 
 		node := network.NewNode(db, nil)
-		bc, pow := CreateBlockchain(addr, addr, db, transaction_pool.NewTransactionPool(node, 128))
-		bcs = append(bcs, bc)
-		pool := core.NewBlockPool()
-		pools = append(pools, pool)
+		bm, bp := CreateProducer(addr, addr, db, transaction_pool.NewTransactionPool(node, 128), node)
 
-		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-
-		pow.SetTargetBit(10)
 		node.Start(testport_fork+i, "")
-		pows = append(pows, pow)
 		nodes = append(nodes, node)
 		bms = append(bms, bm)
+		bps = append(bps, bp)
 	}
 	defer nodes[0].Stop()
 	defer nodes[1].Stop()
 
 	// Mine more blocks on node[0] than on node[1]
-	pows[1].Start()
+	bps[1].Start()
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetMaxHeight() > 4
+		return bms[1].Getblockchain().GetMaxHeight() > 4
 	}, 10)
-	pows[1].Stop()
+	bps[1].Stop()
+
 	desiredHeight := uint64(10)
-	if bcs[1].GetMaxHeight() > 10 {
-		desiredHeight = bcs[1].GetMaxHeight() + 1
+	if bms[1].Getblockchain().GetMaxHeight() > 10 {
+		desiredHeight = bms[1].Getblockchain().GetMaxHeight() + 1
 	}
-	pows[0].Start()
+	bps[0].Start()
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > desiredHeight
+		return bms[0].Getblockchain().GetMaxHeight() > desiredHeight
 	}, 20)
-	pows[0].Stop()
+	bps[0].Stop()
 
 	util.WaitDoneOrTimeout(func() bool {
-		return !pows[0].IsProducingBlock()
+		return !bps[0].IsProducingBlock()
 	}, 5)
 
 	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
-	tailBlk, _ := bcs[0].GetTailBlock()
+	tailBlk, _ := bms[0].Getblockchain().GetTailBlock()
 	connectNodes(nodes[0], nodes[1])
 	bms[0].BroadcastBlock(tailBlk)
 	// Make sure syncing starts on node[1]
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetState() == blockchain.BlockchainSync
+		return bms[0].Getblockchain().GetState() == blockchain.BlockchainSync
 	}, 10)
 	// Make sure syncing ends on node[1]
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetState() != blockchain.BlockchainSync
+		return bms[0].Getblockchain().GetState() != blockchain.BlockchainSync
 	}, 20)
 
-	assert.Equal(t, bcs[0].GetMaxHeight(), bcs[1].GetMaxHeight())
-	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
+	assert.Equal(t, bms[0].Getblockchain().GetMaxHeight(), bms[1].Getblockchain().GetMaxHeight())
+	assert.True(t, isSameBlockChain(bms[0].Getblockchain(), bms[1].Getblockchain()))
 }
 
 func TestForkSegmentHandling(t *testing.T) {
-	var pows []*consensus.ProofOfWork
-	var bcs []*blockchain_logic.Blockchain
-	var dbs []storage.Storage
-	var pools []*core.BlockPool
 	var bms []*blockchain_logic.BlockchainManager
+	var dbs []storage.Storage
 	// Remember to close all opened databases after test
 	defer func() {
 		for _, db := range dbs {
 			db.Close()
 		}
 	}()
-	addr := account.NewAddress("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz")
 
+	addr := account.NewAddress("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz")
+	//wait for mining for at least "targetHeight" blocks
+	//targetHeight := uint64(4)
+	//num of nodes to be created in the test
 	numOfNodes := 2
 	var nodes []*network.Node
 	for i := 0; i < numOfNodes; i++ {
 		db := storage.NewRamStorage()
 		dbs = append(dbs, db)
+
 		node := network.NewNode(db, nil)
+		bm, _ := CreateProducer(addr, addr, db, transaction_pool.NewTransactionPool(node, 128), node)
 
-		bc, pow := CreateBlockchain(addr, addr, db, transaction_pool.NewTransactionPool(node, 128))
-		bcs = append(bcs, bc)
-		pool := core.NewBlockPool()
-		pools = append(pools, pool)
-		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-
-		pow.SetTargetBit(10)
-		node.Start(testport_fork_segment+i, "")
-		pows = append(pows, pow)
+		node.Start(testport_fork+i, "")
 		nodes = append(nodes, node)
 		bms = append(bms, bm)
 	}
@@ -536,56 +526,39 @@ func TestForkSegmentHandling(t *testing.T) {
 	blk1 := &block.Block{}
 	blk2 := &block.Block{}
 
-	// Ensure node[1] mined some blocks
-	pows[1].Start()
-	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetMaxHeight() > 3
-	}, 10)
-	pows[1].Stop()
+	blockchain_logic.AddBlockToGeneratedBlockchain(bms[0].Getblockchain(), 12)
 
-	// Ensure node[0] mines more blocks than node[1]
-	pows[0].Start()
-	util.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() > 12
-	}, 30)
-	pows[0].Stop()
-
-	util.WaitDoneOrTimeout(func() bool {
-		return !pows[0].IsProducingBlock()
-	}, 5)
+	blockchain_logic.AddBlockToGeneratedBlockchain(bms[1].Getblockchain(), 3)
 
 	// Pick 2 blocks from blockchain[0] which can trigger syncing on node[1]
-	mid := uint64(7)
-	if bcs[0].GetMaxHeight() < 7 {
-		mid = bcs[0].GetMaxHeight() - 1
-	}
-	blk1, _ = bcs[0].GetBlockByHeight(mid)
-	blk2, _ = bcs[0].GetTailBlock()
+	blk1, _ = bms[0].Getblockchain().GetBlockByHeight(7)
+	blk2, _ = bms[0].Getblockchain().GetTailBlock()
 
 	connectNodes(nodes[0], nodes[1])
+	fmt.Println(bms[0].Getblockchain().GetMaxHeight())
+	fmt.Println(bms[1].Getblockchain().GetMaxHeight())
 	bms[0].BroadcastBlock(blk1)
 	// Wait for node[1] to start syncing
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetState() == blockchain.BlockchainSync
+		return bms[1].Getblockchain().GetState() == blockchain.BlockchainSync
 	}, 10)
-
+	// Make sure previous syncing ends
+	util.WaitDoneOrTimeout(func() bool {
+		return bms[1].Getblockchain().GetState() != blockchain.BlockchainSync
+	}, 10)
 	// node[0] broadcast higher block on the same fork and should trigger another sync on node[1]
 	bms[0].BroadcastBlock(blk2)
 
-	// Make sure previous syncing ends
-	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetState() != blockchain.BlockchainSync
-	}, 10)
 	// Make sure node[1] is syncing again
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetState() == blockchain.BlockchainSync
+		return bms[1].Getblockchain().GetState() == blockchain.BlockchainSync
 	}, 10)
 	// Make sure syncing ends
 	util.WaitDoneOrTimeout(func() bool {
-		return bcs[1].GetState() != blockchain.BlockchainSync
+		return bms[1].Getblockchain().GetState() != blockchain.BlockchainSync
 	}, 10)
 
-	assert.True(t, isSameBlockChain(bcs[0], bcs[1]))
+	assert.True(t, isSameBlockChain(bms[0].Getblockchain(), bms[1].Getblockchain()))
 }
 
 // Integration test for adding balance
@@ -613,29 +586,28 @@ func TestAddBalance(t *testing.T) {
 			addr := minerAccount.GetKeyPair().GenerateAddress()
 			node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
-			bc, pow := CreateBlockchain(addr, addr, store, transaction_pool.NewTransactionPool(node, 128))
+			bm, bp := CreateProducer(addr, addr, store, transaction_pool.NewTransactionPool(node, 128), node)
 
 			// Create a new account address for testing
 			testAddr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 
 			logic.SetMinerKeyPair(key)
-			pow.SetTargetBit(0)
-			pow.Start()
+			bp.Start()
 
-			for bc.GetMaxHeight() <= 1 {
+			for bm.Getblockchain().GetMaxHeight() <= 1 {
 			}
 
 			// Add `addAmount` to the balance of the new account
-			_, _, err := logic.SendFromMiner(testAddr, tc.addAmount, bc)
-			height := bc.GetMaxHeight()
+			_, _, err := logic.SendFromMiner(testAddr, tc.addAmount, bm.Getblockchain())
+			height := bm.Getblockchain().GetMaxHeight()
 			assert.Equal(t, err, tc.expectedErr)
-			for bc.GetMaxHeight()-height <= 1 {
+			for bm.Getblockchain().GetMaxHeight()-height <= 1 {
 			}
 
-			pow.Stop()
+			bp.Stop()
 
 			// The account balance should be the expected difference
-			balance, err := logic.GetBalance(testAddr, bc)
+			balance, err := logic.GetBalance(testAddr, bm.Getblockchain())
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expectedDiff, balance)
 		})
@@ -695,14 +667,14 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	minerAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.Nil(t, err)
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
-	bc, pow := CreateBlockchain(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128))
+	bm, bps := CreateProducer(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128), node)
 
 	//deploy smart contract
-	_, _, err = logic.Send(SenderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bc)
+	_, _, err = logic.Send(SenderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
 
-	txp := bc.GetTxPool().GetTransactions()[0]
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
 	contractAddr := txp.GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
@@ -715,33 +687,33 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Make logic.Sender the miner and mine for 1 block (which should include the transaction)
-	pow.Start()
-	for bc.GetMaxHeight() < 1 {
+	bps.Start()
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bps.Stop()
 
 	//a short delay before mining starts
 	time.Sleep(time.Millisecond * 500)
 
 	//store data
 	functionCall := `{"function":"set","args":["testKey","222"]}`
-	_, _, err = logic.Send(SenderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc)
+	_, _, err = logic.Send(SenderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	pow.Start()
-	for bc.GetMaxHeight() < 1 {
+	bps.Start()
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bps.Stop()
 
 	//get data
 	functionCall = `{"function":"get","args":["testKey"]}`
-	_, _, err = logic.Send(SenderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bc)
+	_, _, err = logic.Send(SenderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	pow.Start()
-	for bc.GetMaxHeight() < 1 {
+	bps.Start()
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
-	pow.Stop()
+	bps.Stop()
 }
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
@@ -757,9 +729,13 @@ func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *blockchain_
 	return node
 }
 
-func CreateBlockchain(producer, addr account.Address, db *storage.RamStorage, txPool *transaction_pool.TransactionPool) (*blockchain_logic.Blockchain, *consensus.ProofOfWork) {
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(producer.String()))
-	return blockchain_logic.CreateBlockchain(addr, db, pow, txPool, nil, 100000), pow
+func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transaction_pool.TransactionPool, node *network.Node) (*blockchain_logic.BlockchainManager, *block_producer.BlockProducer) {
+	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(producerAddr.String()))
+	bc := blockchain_logic.CreateBlockchain(addr, db, pow, txPool, nil, 100000)
+	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	block_producer := block_producer.NewBlockProducer(bm, pow, producer)
+	return bm, block_producer
 }
 
 func TestDoubleMint(t *testing.T) {
@@ -1160,7 +1136,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second*time.Duration(dynasty.GetDynastyTime()*dposRounds) + time.Second/2)
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+1))
 
 	for i := range miners {
 		bps[i].Stop()

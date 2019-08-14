@@ -172,11 +172,16 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 			"parent_hash": forkHeadParentHash,
 			"from":        pid,
 		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
+		bm.RequestBlock(forkHeadParentHash, pid)
 		return
 	}
 
 	fork := bm.blockPool.GetFork(forkHeadParentHash)
 	if fork == nil {
+		return
+	}
+
+	if fork[0].GetHeight() <= bm.Getblockchain().GetMaxHeight() {
 		return
 	}
 
