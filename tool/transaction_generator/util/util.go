@@ -6,7 +6,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +19,7 @@ func NewTransaction(prevUtxos []*utxo.UTXO, vouts []transaction_base.TXOutput, t
 		common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
-	err := transaction_logic.Sign(senderKeyPair.GetPrivateKey(), prevUtxos, tx)
+	err := tx.Sign(senderKeyPair.GetPrivateKey(), prevUtxos)
 	if err != nil {
 		logger.Panic("Sign transaction failed. Terminating...")
 	}

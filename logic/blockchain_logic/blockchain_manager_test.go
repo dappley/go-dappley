@@ -12,7 +12,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	logger "github.com/sirupsen/logrus"
@@ -152,7 +151,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	pbkh, _ := account.NewUserPubKeyHash(keypair.GetPublicKey())
 	addr := pbkh.GenerateAddress()
 
-	normalTX := transaction_logic.NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
+	normalTX := transaction.NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
 	normalTX2 := transaction.Transaction{
 		hash.Hash("normal2"),
 		[]transaction_base.TXInput{{normalTX.ID, 0, nil, keypair.GetPublicKey()}},

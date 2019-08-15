@@ -20,12 +20,12 @@ package logic
 
 import (
 	"errors"
+	"time"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -284,7 +284,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *blockchain_logic.Blockchain
 		return nil, "", err
 	}
 
-	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)

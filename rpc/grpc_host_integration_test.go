@@ -33,7 +33,6 @@ import (
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/block_producer"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
@@ -605,7 +604,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
 	successResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)})
 	assert.Nil(t, err)
 	assert.NotNil(t, successResponse)
@@ -623,7 +622,7 @@ func TestRpcSendTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	errTransaction, err := transaction_logic.NewUTXOTransaction(utxos2, sendTxParam2)
+	errTransaction, err := transaction.NewUTXOTransaction(utxos2, sendTxParam2)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: errTransaction.ToProto().(*transactionpb.Transaction)})
 	assert.Nil(t, failedResponse)
@@ -697,7 +696,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction1, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam1)
+	transaction1, err := transaction.NewUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction1})
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
 	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
@@ -708,7 +707,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction2, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam2)
+	transaction2, err := transaction.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction2})
 	pubKeyHash1, _ := account.GeneratePubKeyHashByAddress(receiverAccount1.GetKeyPair().GenerateAddress())
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
@@ -720,7 +719,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction3, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam3)
+	transaction3, err := transaction.NewUTXOTransaction(utxos, sendTxParam3)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction3})
 
 	rpcContext.bp.Stop()
@@ -746,7 +745,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	errTransaction, err := transaction_logic.NewUTXOTransaction(utxos2, sendTxParamErr)
+	errTransaction, err := transaction.NewUTXOTransaction(utxos2, sendTxParamErr)
 
 	sendTxParam4 := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
 		rpcContext.account.GetKeyPair(),
@@ -756,7 +755,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction4, err := transaction_logic.NewUTXOTransaction(utxos2, sendTxParam4)
+	transaction4, err := transaction.NewUTXOTransaction(utxos2, sendTxParam4)
 	errTransaction.Vin[0].Signature = []byte("invalid")
 	failedResponse, err := c.RpcSendBatchTransaction(context.Background(), &rpcpb.SendBatchTransactionRequest{Transactions: []*transactionpb.Transaction{errTransaction.ToProto().(*transactionpb.Transaction), transaction4.ToProto().(*transactionpb.Transaction)}})
 	assert.Nil(t, failedResponse)
@@ -921,7 +920,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		"")
-	transaction, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
+	transaction, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
 	// put a tx into txpool
 	c1.RpcSendTransaction(context.Background(), &rpcpb.SendTransactionRequest{Transaction: transaction.ToProto().(*transactionpb.Transaction)})
 
@@ -1217,7 +1216,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		contract)
-	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	gasResp, err := rpcClient.RpcEstimateGas(context.Background(), estimateGasRequest)
 	assert.Nil(t, err)

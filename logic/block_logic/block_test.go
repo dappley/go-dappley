@@ -10,7 +10,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/dappley/go-dappley/common"
@@ -88,7 +87,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
 
-	normalCoinbaseTX := transaction_logic.NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
+	normalCoinbaseTX := transaction.NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
 	rewardTX := transaction.NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
 	userPubKeyHash, _ := account.NewUserPubKeyHash(userPubKey)
@@ -131,8 +130,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*utxo.UTXO{
 		pkHash2.String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
 	}
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()], &dependentTx2)
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1}, &dependentTx3)
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()])
+	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name  string

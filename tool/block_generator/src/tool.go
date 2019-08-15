@@ -10,7 +10,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/block_logic"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
@@ -148,7 +147,7 @@ func makeBlockChainToSize(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Bloc
 func generateBlock(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, bc *blockchain_logic.Blockchain, d *consensus.Dynasty, keys Keys, txs []*transaction.Transaction) *block.Block {
 	producer := account.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
-	cbtx := transaction_logic.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
+	cbtx := transaction.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
 	b := block.NewBlockWithTimestamp(txs, parentBlk, time, producer.String())
@@ -258,7 +257,7 @@ func newTransaction(sender, receiver account.Address, senderKeyPair *account.Key
 	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
 
 	sendTxParam := transaction.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
-	tx, err := transaction_logic.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
 
 	if err != nil {
 		logger.WithError(err).Panic("Create transaction failed!")

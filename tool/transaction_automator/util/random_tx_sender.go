@@ -8,7 +8,6 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -185,7 +184,7 @@ func (sender *BatchTxSender) createTransaction(from, to account.Address, amount,
 		return nil
 	}
 	sendTxParam := transaction.NewSendTxParam(from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract)
-	tx, err := transaction_logic.NewUTXOTransaction(prevUtxos, sendTxParam)
+	tx, err := transaction.NewUTXOTransaction(prevUtxos, sendTxParam)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{

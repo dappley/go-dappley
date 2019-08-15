@@ -134,10 +134,10 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
 	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
 	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos(), &dependentTx2)
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1}, &dependentTx3)
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3}, &dependentTx4)
-	transaction_logic.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5}, &dependentTx5)
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos())
+	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
+	dependentTx4.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
+	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txPool := NewTransactionPool(nil, 6000000)
 	// verify dependent txs 2,3,4,5 with relation:
@@ -197,7 +197,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 		pkh, _ := account.NewUserPubKeyHash(kps[i].GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
-		cbtx := transaction_logic.NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
+		cbtx := transaction.NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
 		utxoIndex.UpdateUtxo(&cbtx)
 		prevUTXO := utxoIndex.GetAllUTXOsByPubKeyHash(pkhs[i])
 		prevUTXOs = append(prevUTXOs, prevUTXO)
@@ -206,7 +206,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsNoDependency(t *testing.T) {
 	//Create 4 transactions that can pass the transaction verification
 	for i := 0; i < 4; i++ {
 		sendTxParam := transaction.NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(1), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
-		tx, err := transaction_logic.NewUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
+		tx, err := transaction.NewUTXOTransaction(prevUTXOs[i].GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		txPool.Push(tx)
 		txs = append(txs, &tx)
@@ -231,7 +231,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 		if i == 0 {
-			cbtx := transaction_logic.NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
+			cbtx := transaction.NewCoinbaseTX(addrs[i], "", 1, common.NewAmount(0))
 			utxoIndex.UpdateUtxo(&cbtx)
 		}
 	}
@@ -240,7 +240,7 @@ func TestTransactionPool_PopTransactionsWithMostTipsWithDependency(t *testing.T)
 	for i := 0; i < 4; i++ {
 		prevUTXO := tempUtxoIndex.GetAllUTXOsByPubKeyHash(pkhs[i])
 		sendTxParam := transaction.NewSendTxParam(addrs[i], kps[i], addrs[i+1], common.NewAmount(uint64(100-i*4)), common.NewAmount(uint64(i)), common.NewAmount(0), common.NewAmount(0), "")
-		tx, err := transaction_logic.NewUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
+		tx, err := transaction.NewUTXOTransaction(prevUTXO.GetAllUtxos(), sendTxParam)
 		assert.Nil(t, err)
 		tempUtxoIndex.UpdateUtxo(&tx)
 		txPool.Push(tx)

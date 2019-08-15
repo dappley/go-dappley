@@ -25,7 +25,6 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
@@ -47,7 +46,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := transaction_logic.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
+		cbtx := transaction.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, coinbaseAddr.String())
 		b.SetHash(block_logic.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
@@ -75,7 +74,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 	//add block 4 with tx0
 	tailBlk, _ := bc.GetTailBlock()
-	cbtx := transaction_logic.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
+	cbtx := transaction.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
 	b := block.NewBlock([]*transaction.Transaction{&cbtx, &txs[0]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	b.SetHash(block_logic.CalculateHash(b))
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
@@ -157,7 +156,7 @@ func fakeDependentTxs(utxoIndex *utxo_logic.UTXOIndex, fundKeyPair *account.KeyP
 func createTransaction(utxoIndex *utxo_logic.UTXOIndex, params transaction.SendTxParam) transaction.Transaction {
 	pkh, _ := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 	utxos, _ := utxoIndex.GetUTXOsByAmount(pkh, params.TotalCost())
-	tx, err := transaction_logic.NewUTXOTransaction(utxos, params)
+	tx, err := transaction.NewUTXOTransaction(utxos, params)
 	if err != nil {
 		logger.WithError(err).Error("CreateTransaction failed")
 	}

@@ -2,9 +2,10 @@ package block_producer
 
 import (
 	"encoding/hex"
+	"time"
+
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/block_logic"
-	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -208,7 +209,7 @@ func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transact
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := transaction_logic.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
+	cbtx := transaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	return &cbtx
 }
 
