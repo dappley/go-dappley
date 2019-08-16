@@ -74,7 +74,7 @@ func VerifyTransaction(utxoIndex *utxo_logic.UTXOIndex, tx *transaction.Transact
 		//TODO: verify reward tx here
 		return nil
 	}
-	utxos := getPrevUTXOs(&ctx.Transaction, utxoIndex)
+	utxos := getPrevUTXOs(tx, utxoIndex)
 	err := tx.Verify(utxos)
 
 	return err
