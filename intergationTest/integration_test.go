@@ -1064,7 +1064,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second*time.Duration(dynasty.GetDynastyTime()*dposRounds) + time.Second/2)
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
 
 	for i := range miners {
 		bps[i].Stop()
@@ -1134,7 +1134,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+1))
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
 
 	for i := range miners {
 		bps[i].Stop()
