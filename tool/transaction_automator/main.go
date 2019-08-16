@@ -105,25 +105,22 @@ func deploySmartContract(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) (boo
 
 	from := getFundAddr(account)
 	smartContractAddr := getSmartContractAddr()
-	// if smartContractAddr != "" {
-	// 	logger.WithFields(logger.Fields{
-	// 		"contractAddr": smartContractAddr,
-	// 	}).Info("Smart contract has already been deployed. If you are sure it is not deployed, empty the file:", contractAddrFilePath)
-	// 	return true, smartContractAddr
-	// }
+	if smartContractAddr != "" {
+		logger.WithFields(logger.Fields{
+			"contractAddr": smartContractAddr,
+		}).Info("Smart contract has already been deployed. If you are sure it is not deployed, empty the file:", contractAddrFilePath)
+		return true, smartContractAddr
+	}
 
-	// data, err := ioutil.ReadFile(contractFilePath)
-	// if err != nil {
-	// 	logger.WithError(err).WithFields(logger.Fields{
-	// 		"file_path": contractFilePath,
-	// 	}).Panic("Unable to read smart contract file!")
-	// }
+	data, err := ioutil.ReadFile(contractFilePath)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"file_path": contractFilePath,
+		}).Panic("Unable to read smart contract file!")
+	}
 
-	// contract := string(data)
-	// resp, err := dappSdk.Send(from, "", 1, contract)
-
-	contract := "{\"function\":\"destory\",\"args\":[]}"
-	resp, err := dappSdk.Send(from, smartContractAddr, 1, contract)
+	contract := string(data)
+	resp, err := dappSdk.Send(from, "", 1, contract)
 
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
