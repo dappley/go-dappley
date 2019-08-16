@@ -1134,7 +1134,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
+	time.Sleep(time.Second*time.Duration(dynasty.GetDynastyTime()*dposRounds) - time.Second/2)
 
 	for i := range miners {
 		bps[i].Stop()
