@@ -53,7 +53,7 @@ func (pool *BlockPool) Add(blk *block.Block) hash.Hash {
 
 	if pool.blkCache.Contains(blk.GetHash().String()) {
 		treeNode, _ := pool.blkCache.Get(blk.GetHash().String())
-		return treeNode.(*common.Tree).GetRoot().GetValue().(*block.Block).GetHash()
+		return treeNode.(*common.Tree).GetRoot().GetValue().(*block.Block).GetPrevHash()
 	}
 
 	//TODO: inject consensus to check if the block should be disgarded
@@ -66,6 +66,10 @@ func (pool *BlockPool) Add(blk *block.Block) hash.Hash {
 func (pool *BlockPool) GetFork(parentHash hash.Hash) []*block.Block {
 
 	root := pool.findLongestChain(parentHash)
+
+	//if root == nil {
+	//	return nil
+	//}
 
 	_, forkTailTree := root.FindHeightestChild(&common.Tree{}, 0, 0)
 	forkTrees := forkTailTree.GetParentTreesRange(root)

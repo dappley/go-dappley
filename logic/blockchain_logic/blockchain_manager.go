@@ -154,8 +154,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 
 	receiveBlockHeight := blk.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
-	if receiveBlockHeight >= ownBlockHeight &&
-		receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
+	if receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == blockchain.BlockchainReady {
 		logger.Info("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
@@ -175,6 +174,10 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 		bm.RequestBlock(forkHeadParentHash, pid)
 		return
 	}
+
+	logger.WithFields(logger.Fields{
+		"forkHeadParentHash": forkHeadParentHash,
+	}).Info("BlockchainManager: ForkHeadParentHash")
 
 	fork := bm.blockPool.GetFork(forkHeadParentHash)
 	if fork == nil {
