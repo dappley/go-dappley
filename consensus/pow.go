@@ -97,6 +97,14 @@ func (pow *ProofOfWork) sendNotification() {
 	pow.GetBlockProduceNotifier() <- true
 }
 
+func (pow *ProofOfWork) ShouldProduceBlock(producerAddr string, currTime int64) bool {
+	return true
+}
+
+func (pow *ProofOfWork) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))) {
+	ProduceBlockFunc(pow.calculateValidHash)
+}
+
 func (pow *ProofOfWork) resetStopCh() {
 L:
 	for {

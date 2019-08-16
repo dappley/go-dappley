@@ -6,9 +6,11 @@ import (
 )
 
 type Consensus interface {
+	ShouldProduceBlock(producerAddr string, currTime int64) bool
 	GetBlockProduceNotifier() chan bool
-	Validate(*block.Block) bool
+	Validate(blk *block.Block) bool
 	GetProcess() consensus.Process
 	Start()
 	Stop()
+	ProduceBlock(ProduceBlockFunc func(process func(*block.Block)))
 }

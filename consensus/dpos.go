@@ -29,7 +29,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -38,12 +38,13 @@ const (
 )
 
 type DPOS struct {
-	producer    *block_producer_info.BlockProducerInfo
-	producerKey string
-	stopCh      chan bool
-	dynasty     *Dynasty
-	slot        *lru.Cache
-	notifierCh  chan bool
+	producer        *block_producer_info.BlockProducerInfo
+	producerKey     string
+	stopCh          chan bool
+	dynasty         *Dynasty
+	slot            *lru.Cache
+	notifierCh      chan bool
+	lastProduceTime int64
 }
 
 func NewDPOS(producer *block_producer_info.BlockProducerInfo) *DPOS {
@@ -110,6 +111,34 @@ func (dpos *DPOS) Start() {
 func (dpos *DPOS) Stop() {
 	logger.Info("DPoS stops...")
 	dpos.stopCh <- true
+}
+
+func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))) {
+	ticker := time.NewTicker(time.Second).C
+	for {
+		select {
+		case now := <-ticker:
+			if dpos.dynasty.IsMyTurn(dpos.producer.Beneficiary(), now.Unix()) {
+				ProduceBlockFunc(dpos.hashAndSign)
+				return
+			}
+		}
+	}
+}
+
+func (dpos *DPOS) ShouldProduceBlock(producerAddr string, currTime int64) bool {
+
+	if currTime-dpos.lastProduceTime < time.Second.Nanoseconds() {
+		return false
+	}
+
+	isMyTurn := dpos.dynasty.IsMyTurn(producerAddr, currTime)
+
+	if isMyTurn {
+		dpos.lastProduceTime = currTime
+	}
+
+	return isMyTurn
 }
 
 func (dpos *DPOS) GetBlockProduceNotifier() chan bool {
@@ -242,10 +271,6 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 
 func (dpos *DPOS) cacheBlock(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
-}
-
-func (dpos *DPOS) IsProducingBlock() bool {
-	return !dpos.producer.IsIdle()
 }
 
 func (dpos *DPOS) GetLibProducerNum() int {

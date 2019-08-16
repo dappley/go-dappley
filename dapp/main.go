@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/logic/block_producer"
 
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/blockchain"
@@ -132,8 +133,11 @@ func main() {
 	//start mining
 	logic.SetLockAccount() //lock the account
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
-	conss.Start()
-	defer conss.Stop()
+
+	producer := block_producer_info.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
+	blockProducer := block_producer.NewBlockProducer(bm, conss, producer)
+	blockProducer.Start()
+	defer blockProducer.Stop()
 
 	bm.RequestDownloadBlockchain()
 

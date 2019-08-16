@@ -44,15 +44,12 @@ func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, pro
 func (bp *BlockProducer) Start() {
 	go func() {
 		logger.Info("BlockProducer Starts...")
-		bp.con.Start()
-
 		for {
 			select {
 			case <-bp.stopCh:
-				bp.con.Stop()
 				return
-			case <-bp.con.GetBlockProduceNotifier():
-				bp.produceBlock()
+			default:
+				bp.con.ProduceBlock(bp.produceBlock)
 			}
 		}
 	}()
@@ -74,7 +71,7 @@ func (bp *BlockProducer) Getblockchain() *blockchain_logic.Blockchain {
 	return bp.bm.Getblockchain()
 }
 
-func (bp *BlockProducer) produceBlock() {
+func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 
 	deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 
@@ -89,26 +86,18 @@ func (bp *BlockProducer) produceBlock() {
 	bp.producer.BlockProduceStart()
 	defer bp.producer.BlockProduceFinish()
 
-	ctx := bp.generateBlock(deadlineInMs)
+	ctx := bp.prepareBlock(deadlineInMs)
+
+	if ctx != nil && processFunc != nil {
+		processFunc(ctx.Block)
+	}
+
 	if ctx == nil || !bp.con.Validate(ctx.Block) {
 		logger.Error("BlockProducer: produced an invalid block!")
 		return
 	}
 
 	bp.addBlockToBlockchain(ctx)
-}
-
-// generateBlock produces a block by preparing its raw contents and applying the predefined Process to it.
-// deadlineInMs = 0 means no deadline
-func (bp *BlockProducer) generateBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
-	logger.Info("BlockProducerInfo: started producing new block...")
-	bp.producer.BlockProduceStart()
-	ctx := bp.prepareBlock(deadlineInMs)
-	processBlkFunc := bp.con.GetProcess()
-	if ctx != nil && processBlkFunc != nil {
-		processBlkFunc(ctx.Block)
-	}
-	return ctx
 }
 
 func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
