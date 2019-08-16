@@ -175,10 +175,6 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
 		return
 	}
 
-	logger.WithFields(logger.Fields{
-		"forkHeadParentHash": forkHeadParentHash,
-	}).Info("BlockchainManager: ForkHeadParentHash")
-
 	fork := bm.blockPool.GetFork(forkHeadParentHash)
 	if fork == nil {
 		return
