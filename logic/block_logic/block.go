@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"reflect"
+
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/transaction_logic"
 	"github.com/dappley/go-dappley/logic/utxo_logic"
-	"reflect"
 
 	"github.com/dappley/go-dappley/vm"
 
@@ -162,7 +163,7 @@ L:
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if result, err := transaction_logic.VerifyTransaction(utxoIndex, tx, b.GetHeight()); !result {
+			if err := transaction_logic.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
 				logger.Warn(err.Error())
 				return false
 			}

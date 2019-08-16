@@ -23,6 +23,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -505,7 +506,7 @@ func (tx *Transaction) VerifyTip(totalPrev *common.Amount, totalVoutValue *commo
 }
 
 // VerifyGas verifies if the transaction has the correct GasLimit and GasPrice
-func (ctx *ContractTx) VerifyGas(totalBalance *common.Amount) (bool, error) {
+func (ctx *ContractTx) VerifyGas(totalBalance *common.Amount) error {
 	baseGas, err := ctx.GasCountOfTxBase()
 	if err == nil {
 		if ctx.GasLimit.Cmp(baseGas) < 0 {
@@ -514,15 +515,15 @@ func (ctx *ContractTx) VerifyGas(totalBalance *common.Amount) (bool, error) {
 				"acceptedGas": baseGas,
 			}).Warn("Failed to check GasLimit >= txBaseGas.")
 			// GasLimit is smaller than based tx gas, won't giveback the tx
-			return false, ErrOutOfGasLimit
+			return ErrOutOfGasLimit
 		}
 	}
 
 	limitedFee := ctx.GasLimit.Mul(ctx.GasPrice)
 	if totalBalance.Cmp(limitedFee) < 0 {
-		return false, ErrInsufficientBalance
+		return ErrInsufficientBalance
 	}
-	return true, nil
+	return nil
 }
 
 //CalculateTotalVoutValue returns total amout of transaction's vout
@@ -790,4 +791,105 @@ func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount,
 		return nil, ErrInsufficientFund
 	}
 	return change, nil
+}
+
+func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
+	txCopy := tx.TrimmedCopy(false)
+
+	for i, vin := range tx.Vin {
+		txCopy.Vin[i].Signature = nil
+		oldPubKey := txCopy.Vin[i].PubKey
+		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
+		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[i].PubKey = oldPubKey
+
+		originPub := make([]byte, 1+len(vin.PubKey))
+		originPub[0] = 4 // uncompressed point
+		copy(originPub[1:], vin.PubKey)
+
+		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+
+		if err != nil || verifyResult == false {
+			return false, errors.New("Transaction: Signatures is invalid")
+		}
+	}
+
+	return true, nil
+}
+
+//verifyPublicKeyHash verifies if the public key in Vin is the original key for the public
+//key hash in utxo
+func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error) {
+
+	for i, vin := range tx.Vin {
+		if prevUtxos[i].PubKeyHash == nil {
+			logger.Error("Transaction: previous transaction is not correct.")
+			return false, errors.New("Transaction: prevUtxos not found")
+		}
+
+		isContract, err := prevUtxos[i].PubKeyHash.IsContract()
+		if err != nil {
+			return false, err
+		}
+		//if the utxo belongs to a Contract, the utxo is not verified through
+		//public key hash. It will be verified through consensus
+		if isContract {
+			continue
+		}
+
+		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
+		if err != nil {
+			return false, err
+		}
+		if !bytes.Equal([]byte(pubKeyHash), []byte(prevUtxos[i].PubKeyHash)) {
+			return false, errors.New("Transaction: ID is invalid")
+		}
+	}
+	return true, nil
+}
+
+func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
+	if prevUtxos == nil {
+		return errors.New("Transaction: prevUtxos not found")
+	}
+	result, err := tx.VerifyID()
+	if !result {
+		return err
+	}
+
+	result, err = tx.VerifyPublicKeyHash(prevUtxos)
+	if !result {
+		return err
+	}
+
+	totalPrev := calculateUtxoSum(prevUtxos)
+	totalVoutValue, ok := tx.CalculateTotalVoutValue()
+	if !ok {
+		return errors.New("Transaction: vout is invalid")
+	}
+	result, err = tx.VerifyAmount(totalPrev, totalVoutValue)
+	if !result {
+		return err
+	}
+	result, err = tx.VerifyTip(totalPrev, totalVoutValue)
+	if !result {
+		logger.WithFields(logger.Fields{
+			"tx_id": hex.EncodeToString(tx.ID),
+		}).Warn("Transaction: tip is invalid.")
+		return err
+	}
+	result, err = tx.VerifySignatures(prevUtxos)
+	if !result {
+		return err
+	}
+
+	return nil
+}
+
+func (tx *Transaction) GetTotalBalance(prevUtxos []*utxo.UTXO) *common.Amount {
+	totalPrev := calculateUtxoSum(prevUtxos)
+	totalVoutValue, _ := tx.CalculateTotalVoutValue()
+	totalBalance, _ := totalPrev.Sub(totalVoutValue)
+	totalBalance, _ = totalBalance.Sub(tx.Tip)
+	return totalBalance
 }

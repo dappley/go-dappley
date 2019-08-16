@@ -187,7 +187,7 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *utxo_logic.
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]
 
-	if result, err := transaction_logic.VerifyTransaction(tempUtxoIndex, txNode.Value, 0); result {
+	if err := transaction_logic.VerifyTransaction(tempUtxoIndex, txNode.Value, 0); err == nil {
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
 	} else {

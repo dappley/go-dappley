@@ -1,5 +1,3 @@
-// +build integration
-
 // Copyright (C) 2018 go-dappley authors
 //
 // This file is part of the go-dappley library.
@@ -148,38 +146,38 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 	//tx3-tx4-tx5
 
 	// test a transaction whose Vin is from UtxoIndex
-	_, err1 := transaction_logic.VerifyTransaction(utxoIndex, &dependentTx2, 0)
+	err1 := transaction_logic.VerifyTransaction(utxoIndex, &dependentTx2, 0)
 	assert.Nil(t, err1)
 	txPool.Push(dependentTx2)
 
 	// test a transaction whose Vin is from another transaction in transaction pool
 	utxoIndex2 := *utxoIndex.DeepCopy()
 	utxoIndex2.UpdateUtxoState(txPool.GetTransactions())
-	_, err2 := transaction_logic.VerifyTransaction(&utxoIndex2, &dependentTx3, 0)
+	err2 := transaction_logic.VerifyTransaction(&utxoIndex2, &dependentTx3, 0)
 	assert.Nil(t, err2)
 	txPool.Push(dependentTx3)
 
 	// test a transaction whose Vin is from another two transactions in transaction pool
 	utxoIndex3 := *utxoIndex.DeepCopy()
 	utxoIndex3.UpdateUtxoState(txPool.GetTransactions())
-	_, err3 := transaction_logic.VerifyTransaction(&utxoIndex3, &dependentTx4, 0)
+	err3 := transaction_logic.VerifyTransaction(&utxoIndex3, &dependentTx4, 0)
 	assert.Nil(t, err3)
 	txPool.Push(dependentTx4)
 
 	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	utxoIndex4 := *utxoIndex.DeepCopy()
 	utxoIndex4.UpdateUtxoState(txPool.GetTransactions())
-	_, err4 := transaction_logic.VerifyTransaction(&utxoIndex4, &dependentTx5, 0)
+	err4 := transaction_logic.VerifyTransaction(&utxoIndex4, &dependentTx5, 0)
 	assert.Nil(t, err4)
 	txPool.Push(dependentTx5)
 
 	// test UTXOs not found for parent transactions
-	_, err5 := transaction_logic.VerifyTransaction(utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &dependentTx3, 0)
+	err5 := transaction_logic.VerifyTransaction(utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &dependentTx3, 0)
 	assert.NotNil(t, err5)
 
 	// test a standalone transaction
 	txPool.Push(tx1)
-	_, err6 := transaction_logic.VerifyTransaction(utxoIndex, &tx1, 0)
+	err6 := transaction_logic.VerifyTransaction(utxoIndex, &tx1, 0)
 	assert.NotNil(t, err6)
 }
 

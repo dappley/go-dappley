@@ -116,13 +116,13 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	var t6 = transaction.Transaction{nil, []transaction_base.TXInput{txin1}, []transaction_base.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	// test valid coinbase transaction
-	_, err5 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 5)
+	err5 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 5)
 	assert.Nil(t, err5)
-	_, err6 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t6, 5)
+	err6 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t6, 5)
 	assert.Nil(t, err6)
 
 	// test coinbase transaction with incorrect blockHeight
-	_, err5 = VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 10)
+	err5 = VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 10)
 	assert.NotNil(t, err5)
 
 	// test coinbase transaction with incorrect Subsidy
@@ -131,7 +131,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	txin2 := transaction_base.TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := transaction_base.NewTXOutput(common.NewAmount(9), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
 	var t7 = transaction.Transaction{nil, []transaction_base.TXInput{txin2}, []transaction_base.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
-	_, err7 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t7, 5)
+	err7 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t7, 5)
 	assert.NotNil(t, err7)
 
 }
@@ -196,7 +196,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			}
 
 			// Verify the signatures
-			_, err := VerifyTransaction(utxoIndex, &tt.tx, 0)
+			err := VerifyTransaction(utxoIndex, &tt.tx, 0)
 			assert.Equal(t, tt.ok, err)
 		})
 	}
@@ -240,8 +240,8 @@ func TestInvalidExecutionTx(t *testing.T) {
 	executionTx.ID = executionTx.Hash()
 	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
 
-	_, err1 := VerifyTransaction(utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
-	_, err2 := VerifyTransaction(utxoIndex, &executionTx, 0)
+	err1 := VerifyTransaction(utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
+	err2 := VerifyTransaction(utxoIndex, &executionTx, 0)
 	assert.NotNil(t, err1)
 	assert.Nil(t, err2)
 }

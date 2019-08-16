@@ -237,7 +237,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	utxoIndex := utxo_logic.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
 
-	if result, err := transaction_logic.VerifyTransaction(utxoIndex, tx, 0); !result {
+	if err := transaction_logic.VerifyTransaction(utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
 		return nil, status.Error(codes.FailedPrecondition, blockchain_logic.ErrTransactionVerifyFailed.Error())
 	}
@@ -306,7 +306,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				continue
 			}
 
-			if result, _ := transaction_logic.VerifyTransaction(utxoIndex, &tx, 0); !result {
+			if err := transaction_logic.VerifyTransaction(utxoIndex, &tx, 0); err != nil {
 				continue
 			}
 
