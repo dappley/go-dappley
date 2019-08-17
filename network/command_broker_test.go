@@ -2,7 +2,6 @@ package network
 
 import (
 	"github.com/dappley/go-dappley/network/network_model"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -86,8 +85,7 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 
 			//fake received command and then dispatch
 			dappCmd := network_model.NewDappCmd(tt.dispatchedCmd, []byte("test"), false)
-			var source peer.ID
-			rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
+			rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, network_model.PeerInfo{})
 			err := md.Dispatch(rcvdCmd)
 			assert.Equal(t, tt.expectedErr, err)
 		})
@@ -104,8 +102,7 @@ func TestCommandBroker_DispatchMultiple(t *testing.T) {
 	md.Subscribe(topic, handler)
 
 	dappCmd := network_model.NewDappCmd(topic, []byte("test"), false)
-	var source peer.ID
-	rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, source)
+	rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, network_model.PeerInfo{})
 
 	assert.Nil(t, md.Dispatch(rcvdCmd))
 

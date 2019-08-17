@@ -28,7 +28,6 @@ import (
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 )
@@ -132,8 +131,8 @@ func buildHostMultiAddress(host host.Host) (ma.Multiaddr, error) {
 }
 
 //SendCommand sends a command to a peer or all peers
-func (n *Node) SendCommand(commandName string, message proto.Message, destination peer.ID, isBroadcast bool, priority network_model.DappCmdPriority) {
-	command := network_model.NewDappSendCmdContext(commandName, message, destination, isBroadcast, priority)
+func (n *Node) SendCommand(commandName string, message proto.Message, destination network_model.PeerInfo, isBroadcast bool, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContext(commandName, message, destination.PeerId, isBroadcast, priority)
 	select {
 	case n.commandSendCh <- command:
 	default:
@@ -144,8 +143,8 @@ func (n *Node) SendCommand(commandName string, message proto.Message, destinatio
 }
 
 //Relay relays a command to a peer or all peers
-func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priority network_model.DappCmdPriority) {
-	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination, priority)
+func (n *Node) Relay(dappCmd *network_model.DappCmd, destination network_model.PeerInfo, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination.PeerId, priority)
 	select {
 	case n.commandSendCh <- command:
 	default:
@@ -246,7 +245,7 @@ func (n *Node) onStreamStop(stream *Stream) {
 	}
 
 	dappCmd := network_model.NewDappCmd(TopicOnStreamStop, bytes, false)
-	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.GetHost().ID())
+	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.GetHost().GetPeerInfo())
 
 	n.commandBroker.Dispatch(dappCmdCtx)
 }

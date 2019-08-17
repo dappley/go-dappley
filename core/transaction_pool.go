@@ -27,7 +27,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 	"sort"
 	"sync"
@@ -606,8 +605,7 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 }
 
 func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
-	var broadcastPid peer.ID
-	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
+	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), network_model.PeerInfo{}, network_model.Broadcast, network_model.NormalPriorityCommand)
 }
 
 func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
@@ -630,8 +628,7 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcv
 
 	if command.IsBroadcast() {
 		//relay the original command
-		var broadcastPid peer.ID
-		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
+		txPool.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.NormalPriorityCommand)
 	}
 }
 
@@ -643,8 +640,7 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 
 	transactions := NewTransactions(txs)
 
-	var broadcastPid peer.ID
-	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
+	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), network_model.PeerInfo{}, network_model.Broadcast, network_model.NormalPriorityCommand)
 }
 
 func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
@@ -671,8 +667,7 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.D
 
 	if command.IsBroadcast() {
 		//relay the original command
-		var broadcastPid peer.ID
-		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
+		txPool.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.NormalPriorityCommand)
 	}
 
 }

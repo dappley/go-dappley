@@ -295,13 +295,13 @@ func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb
 	return downloadManager.downloadingPeer, nil
 }
 
-func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) {
+func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb.ReturnBlocks, peerInfo network_model.PeerInfo) {
 	returnBlocksLogger := logger.WithFields(logger.Fields{
 		"name": "GetBlocksResponse",
 	})
 
 	downloadManager.mutex.Lock()
-	checkingPeer, err := downloadManager.validateReturnBlocks(blocksPb, peerId)
+	checkingPeer, err := downloadManager.validateReturnBlocks(blocksPb, peerInfo.PeerId)
 	if err != nil {
 		returnBlocksLogger.WithFields(logger.Fields{"error": err}).Error("DownloadManager:")
 		downloadManager.mutex.Unlock()
@@ -352,14 +352,14 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		nextHashes = append(nextHashes, block.GetHash())
 	}
 
-	downloadManager.sendDownloadCommand(nextHashes, peerId, 0)
+	downloadManager.sendDownloadCommand(nextHashes, peerInfo.PeerId, 0)
 }
 
-func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *networkpb.ReturnCommonBlocks, peerId peer.ID) {
+func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *networkpb.ReturnCommonBlocks, peerInfo network_model.PeerInfo) {
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
-	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
+	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerInfo.PeerId {
 		logger.WithFields(logger.Fields{
 			"name": "GetCommonBlocksResponse",
 		}).Info("DownloadManager: PeerId not in checklist.")
@@ -438,7 +438,7 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*corepb.B
 	return findIndex, commonBlock
 }
 
-func (downloadManager *DownloadManager) CheckGetCommonBlockCommand(msgId int32, peerId peer.ID, retryCount int) {
+func (downloadManager *DownloadManager) CheckGetCommonBlockCommand(msgId int32, peerInfo network_model.PeerInfo, retryCount int) {
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
@@ -447,7 +447,7 @@ func (downloadManager *DownloadManager) CheckGetCommonBlockCommand(msgId int32, 
 	}
 
 	if retryCount >= MaxRetryCount {
-		peerInfo, ok := downloadManager.peersInfo[peerId]
+		peerInfo, ok := downloadManager.peersInfo[peerInfo.PeerId]
 		if ok {
 			peerInfo.status = PeerStatusFailed
 		}
@@ -457,7 +457,7 @@ func (downloadManager *DownloadManager) CheckGetCommonBlockCommand(msgId int32, 
 		downloadManager.startGetCommonBlocks(0)
 	} else {
 		syncCommand, _ := downloadManager.currentCmd.command.(*SyncCommonBlocksCommand)
-		downloadManager.sendGetCommonBlockCommand(syncCommand.blockHeaders, peerId, retryCount+1)
+		downloadManager.sendGetCommonBlockCommand(syncCommand.blockHeaders, peerInfo, retryCount+1)
 	}
 }
 
@@ -501,10 +501,10 @@ func (downloadManager *DownloadManager) startGetCommonBlocks(retryCount int) {
 	downloadManager.downloadingPeer = highestPeer
 	maxHeight := downloadManager.bm.Getblockchain().GetMaxHeight()
 	blockHeaders := downloadManager.GetCommonBlockCheckPoint(0, maxHeight)
-	downloadManager.sendGetCommonBlockCommand(blockHeaders, highestPeer.peerid, 0)
+	downloadManager.sendGetCommonBlockCommand(blockHeaders, network_model.PeerInfo{PeerId: highestPeer.peerid}, 0)
 }
 
-func (downloadManager *DownloadManager) sendGetCommonBlockCommand(blockHeaders []*SyncCommandBlocksHeader, peerId peer.ID, retryCount int) {
+func (downloadManager *DownloadManager) sendGetCommonBlockCommand(blockHeaders []*SyncCommandBlocksHeader, peerId network_model.PeerInfo, retryCount int) {
 	downloadManager.msgId++
 	msgId := downloadManager.msgId
 	syncCommand := &SyncCommonBlocksCommand{msgId: msgId, blockHeaders: blockHeaders}
@@ -550,7 +550,7 @@ func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders 
 			blockHeaders[findIndex].GetHeight(),
 			blockHeaders[findIndex-1].GetHeight(),
 		)
-		downloadManager.sendGetCommonBlockCommand(blockHeaders, downloadManager.downloadingPeer.peerid, 0)
+		downloadManager.sendGetCommonBlockCommand(blockHeaders, network_model.PeerInfo{PeerId: downloadManager.downloadingPeer.peerid}, 0)
 	}
 }
 
@@ -582,7 +582,7 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 func (downloadManager *DownloadManager) sendDownloadCommand(hashes []core.Hash, peerId peer.ID, retryCount int) {
 	downloadingCmd := &DownloadingCommandInfo{startHashes: hashes, finished: false}
 	downloadManager.currentCmd = &ExecuteCommand{command: downloadingCmd, retryCount: retryCount}
-	downloadManager.SendGetBlocksRequest(hashes, peerId)
+	downloadManager.SendGetBlocksRequest(hashes, network_model.PeerInfo{PeerId: peerId})
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
@@ -659,7 +659,7 @@ func (downloadManager *DownloadManager) selectHighestPeer() *PeerBlockInfo {
 	return peerWithHighestBlockHeight
 }
 
-func (downloadManager *DownloadManager) SendGetCommonBlockRequest(blockHeaders []*SyncCommandBlocksHeader, pid peer.ID, msgId int32) {
+func (downloadManager *DownloadManager) SendGetCommonBlockRequest(blockHeaders []*SyncCommandBlocksHeader, pid network_model.PeerInfo, msgId int32) {
 	var blockHeaderPbs []*corepb.BlockHeader
 	for _, blockHeader := range blockHeaders {
 		blockHeaderPbs = append(blockHeaderPbs,
@@ -686,7 +686,7 @@ func (downloadManager *DownloadManager) GetCommonBlockRequestHandler(command *ne
 
 }
 
-func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders []*corepb.BlockHeader, msgId int32, destination peer.ID) {
+func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders []*corepb.BlockHeader, msgId int32, destination network_model.PeerInfo) {
 	index, _ := downloadManager.FindCommonBlock(blockHeaders)
 	var blockHeaderPbs []*corepb.BlockHeader
 	if index == 0 {
@@ -719,7 +719,7 @@ func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(command *n
 	downloadManager.GetCommonBlockDataHandler(param, command.GetSource())
 }
 
-func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash, pid peer.ID) {
+func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash, peerInfo network_model.PeerInfo) {
 	blkHashes := make([][]byte, len(hashes))
 	for index, hash := range hashes {
 		blkHashes[index] = hash
@@ -727,7 +727,7 @@ func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash,
 
 	getBlockPb := &networkpb.GetBlocks{StartBlockHashes: blkHashes}
 
-	downloadManager.node.SendCommand(GetBlocksRequest, getBlockPb, pid, network_model.Unicast, network_model.HighPriorityCommand)
+	downloadManager.node.SendCommand(GetBlocksRequest, getBlockPb, peerInfo, network_model.Unicast, network_model.HighPriorityCommand)
 }
 
 func (downloadManager *DownloadManager) GetBlocksRequestHandler(command *network_model.DappRcvdCmdContext) {
@@ -744,7 +744,7 @@ func (downloadManager *DownloadManager) GetBlocksRequestHandler(command *network
 
 }
 
-func (downloadManager *DownloadManager) SendGetBlocksResponse(startBlockHashes [][]byte, destination peer.ID) {
+func (downloadManager *DownloadManager) SendGetBlocksResponse(startBlockHashes [][]byte, destination network_model.PeerInfo) {
 
 	block := downloadManager.findBlockInRequestHash(startBlockHashes)
 
@@ -793,8 +793,7 @@ func (downloadManager *DownloadManager) GetBlocksResponseHandler(command *networ
 func (downloadManager *DownloadManager) SendGetBlockchainInfoRequest() {
 	request := &networkpb.GetBlockchainInfo{Version: network_model.ProtocalName}
 
-	var destination peer.ID
-	downloadManager.node.SendCommand(BlockchainInfoRequest, request, destination, network_model.Broadcast, network_model.NormalPriorityCommand)
+	downloadManager.node.SendCommand(BlockchainInfoRequest, request, network_model.PeerInfo{}, network_model.Broadcast, network_model.NormalPriorityCommand)
 
 }
 
@@ -804,7 +803,7 @@ func (downloadManager *DownloadManager) GetBlockchainInfoRequestHandler(command 
 
 }
 
-func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destination peer.ID) {
+func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destination network_model.PeerInfo) {
 
 	tailBlock, err := downloadManager.bm.Getblockchain().GetTailBlock()
 	if err != nil {
@@ -835,7 +834,7 @@ func (downloadManager *DownloadManager) GetBlockchainInfoResponseHandler(command
 		return
 	}
 
-	downloadManager.AddPeerBlockChainInfo(command.GetSource(), blockchainInfo.GetBlockHeight(), blockchainInfo.GetLibHeight())
+	downloadManager.AddPeerBlockChainInfo(command.GetSource().PeerId, blockchainInfo.GetBlockHeight(), blockchainInfo.GetLibHeight())
 }
 func (downloadManager *DownloadManager) OnStreamStopHandler(command *network_model.DappRcvdCmdContext) {
 

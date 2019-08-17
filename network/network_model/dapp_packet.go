@@ -2,7 +2,6 @@ package network_model
 
 import (
 	"errors"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"math/big"
 	"reflect"
 )
@@ -41,7 +40,7 @@ type DappPacket struct {
 
 type DappPacketContext struct {
 	Packet *DappPacket
-	Source peer.ID
+	Source PeerInfo
 }
 
 //ConstructDappPacketFromData creates a header for the input content and returns a DappPacket

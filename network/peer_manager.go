@@ -360,13 +360,12 @@ func (pm *PeerManager) BroadcastGetPeerListRequest() {
 		MaxNumber: int32(maxSyncPeersCount),
 	}
 
-	var destination peer.ID
-	pm.netService.SendCommand(GetPeerListRequest, getPeerListPb, destination, network_model.Broadcast, network_model.HighPriorityCommand)
+	pm.netService.SendCommand(GetPeerListRequest, getPeerListPb, network_model.PeerInfo{}, network_model.Broadcast, network_model.HighPriorityCommand)
 
 }
 
 //SendGetPeerListResponse sends its peer list to destination peer
-func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination peer.ID) {
+func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination network_model.PeerInfo) {
 
 	peers := pm.GetRandomPeers(maxNumOfPeers)
 	var peerPbs []*networkpb.PeerInfo
