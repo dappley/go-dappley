@@ -8,11 +8,9 @@ import (
 type NetService interface {
 	GetPeers() []network_model.PeerInfo
 	GetHostPeerInfo() network_model.PeerInfo
-	SendCommand(
-		commandName string,
-		message proto.Message,
-		destination network_model.PeerInfo,
-		isBroadcast bool,
-		priority network_model.DappCmdPriority)
+	UnicastNormalPriorityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	BroadcastNormalPriorityCommand(commandName string, message proto.Message)
+	BroadcastHighProrityCommand(commandName string, message proto.Message)
 	Listen(command string, handler network_model.CommandHandlerFunc)
 }

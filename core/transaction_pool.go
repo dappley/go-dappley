@@ -605,7 +605,7 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 }
 
 func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
-	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), network_model.PeerInfo{}, network_model.Broadcast, network_model.NormalPriorityCommand)
+	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, tx.ToProto())
 }
 
 func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
@@ -640,7 +640,7 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 
 	transactions := NewTransactions(txs)
 
-	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), network_model.PeerInfo{}, network_model.Broadcast, network_model.NormalPriorityCommand)
+	txPool.netService.BroadcastNormalPriorityCommand(BroadcastBatchTxs, transactions.ToProto())
 }
 
 func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {

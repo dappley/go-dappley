@@ -52,12 +52,10 @@ type Consensus interface {
 
 type NetService interface {
 	GetHostPeerInfo() network_model.PeerInfo
-	SendCommand(
-		commandName string,
-		message proto.Message,
-		destination network_model.PeerInfo,
-		isBroadcast bool,
-		priority network_model.DappCmdPriority)
+	UnicastNormalPriorityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	BroadcastNormalPriorityCommand(commandName string, message proto.Message)
+	BroadcastHighProrityCommand(commandName string, message proto.Message)
 	Listen(command string, handler network_model.CommandHandlerFunc)
 	Relay(dappCmd *network_model.DappCmd, destination network_model.PeerInfo, priority network_model.DappCmdPriority)
 }

@@ -236,7 +236,7 @@ func (bm *BlockChainManager) MergeFork(forkBlks []*Block, forkParentHash Hash) e
 func (bm *BlockChainManager) RequestBlock(hash Hash, pid network_model.PeerInfo) {
 	request := &corepb.RequestBlock{Hash: hash}
 
-	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
+	bm.netService.UnicastHighProrityCommand(RequestBlock, request, pid)
 }
 
 //RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
@@ -261,18 +261,12 @@ func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvd
 //SendBlockToPeer unicasts a block to the peer with peer id "pid"
 func (bm *BlockChainManager) SendBlockToPeer(block *Block, pid network_model.PeerInfo) {
 
-	bm.SendBlock(block, pid, network_model.Unicast)
+	bm.netService.UnicastNormalPriorityCommand(SendBlock, block.ToProto(), pid)
 }
 
 //BroadcastBlock broadcasts a block to all peers
 func (bm *BlockChainManager) BroadcastBlock(block *Block) {
-	bm.SendBlock(block, network_model.PeerInfo{}, network_model.Broadcast)
-}
-
-//SendBlock sends a SendBlock command to its peer with pid by finding the block from its database
-func (bm *BlockChainManager) SendBlock(block *Block, pid network_model.PeerInfo, isBroadcast bool) {
-
-	bm.netService.SendCommand(SendBlock, block.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
+	bm.netService.BroadcastHighProrityCommand(SendBlock, block.ToProto())
 }
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers

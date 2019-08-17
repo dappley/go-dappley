@@ -130,9 +130,39 @@ func buildHostMultiAddress(host host.Host) (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", host.ID().Pretty()))
 }
 
-//SendCommand sends a command to a peer or all peers
-func (n *Node) SendCommand(commandName string, message proto.Message, destination network_model.PeerInfo, isBroadcast bool, priority network_model.DappCmdPriority) {
-	command := network_model.NewDappSendCmdContext(commandName, message, destination.PeerId, isBroadcast, priority)
+//UnicastNormalPriorityCommand sends a normal priority command to a peer
+func (n *Node) UnicastNormalPriorityCommand(commandName string, message proto.Message, destination network_model.PeerInfo) {
+	n.unicast(commandName, message, destination, network_model.NormalPriorityCommand)
+}
+
+//UnicastHighProrityCommand sends a high priority command to a peer
+func (n *Node) UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo) {
+	n.unicast(commandName, message, destination, network_model.HighPriorityCommand)
+}
+
+//BroadcastNormalPriorityCommand sends a normal priority command to all peers
+func (n *Node) BroadcastNormalPriorityCommand(commandName string, message proto.Message) {
+	n.broadcast(commandName, message, network_model.NormalPriorityCommand)
+}
+
+//BroadcastHighProrityCommand sends a high priority command to all peers
+func (n *Node) BroadcastHighProrityCommand(commandName string, message proto.Message) {
+	n.broadcast(commandName, message, network_model.HighPriorityCommand)
+}
+
+//Unicast sends a command to a peer
+func (n *Node) unicast(commandName string, message proto.Message, destination network_model.PeerInfo, priority network_model.DappCmdPriority) {
+	n.sendCommand(commandName, message, destination, network_model.Unicast, priority)
+}
+
+//Broadcast sends a command to all peers
+func (n *Node) broadcast(commandName string, message proto.Message, priority network_model.DappCmdPriority) {
+	n.sendCommand(commandName, message, network_model.PeerInfo{}, network_model.Broadcast, priority)
+}
+
+//Relay relays a command to a peer or all peers
+func (n *Node) Relay(dappCmd *network_model.DappCmd, destination network_model.PeerInfo, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination.PeerId, priority)
 	select {
 	case n.commandSendCh <- command:
 	default:
@@ -142,9 +172,9 @@ func (n *Node) SendCommand(commandName string, message proto.Message, destinatio
 	}
 }
 
-//Relay relays a command to a peer or all peers
-func (n *Node) Relay(dappCmd *network_model.DappCmd, destination network_model.PeerInfo, priority network_model.DappCmdPriority) {
-	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination.PeerId, priority)
+//sendCommand sens a command to a peer or all peers
+func (n *Node) sendCommand(commandName string, message proto.Message, destination network_model.PeerInfo, isBroadcast bool, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContext(commandName, message, destination.PeerId, isBroadcast, priority)
 	select {
 	case n.commandSendCh <- command:
 	default:

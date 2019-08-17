@@ -668,7 +668,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockRequest(blockHeaders [
 
 	getCommonBlocksPb := &networkpb.GetCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
 
-	downloadManager.node.SendCommand(GetCommonBlocksRequest, getCommonBlocksPb, pid, network_model.Unicast, network_model.HighPriorityCommand)
+	downloadManager.node.UnicastHighProrityCommand(GetCommonBlocksRequest, getCommonBlocksPb, pid)
 
 }
 
@@ -704,7 +704,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 
 	result := &networkpb.ReturnCommonBlocks{MsgId: msgId, BlockHeaders: blockHeaderPbs}
 
-	downloadManager.node.SendCommand(GetCommonBlocksResponse, result, destination, network_model.Unicast, network_model.HighPriorityCommand)
+	downloadManager.node.UnicastHighProrityCommand(GetCommonBlocksResponse, result, destination)
 }
 
 func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(command *network_model.DappRcvdCmdContext) {
@@ -727,7 +727,7 @@ func (downloadManager *DownloadManager) SendGetBlocksRequest(hashes []core.Hash,
 
 	getBlockPb := &networkpb.GetBlocks{StartBlockHashes: blkHashes}
 
-	downloadManager.node.SendCommand(GetBlocksRequest, getBlockPb, peerInfo, network_model.Unicast, network_model.HighPriorityCommand)
+	downloadManager.node.UnicastHighProrityCommand(GetBlocksRequest, getBlockPb, peerInfo)
 }
 
 func (downloadManager *DownloadManager) GetBlocksRequestHandler(command *network_model.DappRcvdCmdContext) {
@@ -774,7 +774,7 @@ func (downloadManager *DownloadManager) SendGetBlocksResponse(startBlockHashes [
 
 	result := &networkpb.ReturnBlocks{Blocks: blockPbs, StartBlockHashes: startBlockHashes}
 
-	downloadManager.node.SendCommand(GetBlocksResponse, result, destination, network_model.Unicast, network_model.HighPriorityCommand)
+	downloadManager.node.UnicastHighProrityCommand(GetBlocksResponse, result, destination)
 
 }
 
@@ -793,7 +793,7 @@ func (downloadManager *DownloadManager) GetBlocksResponseHandler(command *networ
 func (downloadManager *DownloadManager) SendGetBlockchainInfoRequest() {
 	request := &networkpb.GetBlockchainInfo{Version: network_model.ProtocalName}
 
-	downloadManager.node.SendCommand(BlockchainInfoRequest, request, network_model.PeerInfo{}, network_model.Broadcast, network_model.NormalPriorityCommand)
+	downloadManager.node.BroadcastNormalPriorityCommand(BlockchainInfoRequest, request)
 
 }
 
@@ -821,7 +821,7 @@ func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destinatio
 		LibHeight:     downloadManager.bm.Getblockchain().GetLIBHeight(),
 	}
 
-	downloadManager.node.SendCommand(BlockchainInfoResponse, result, destination, network_model.Unicast, network_model.NormalPriorityCommand)
+	downloadManager.node.UnicastNormalPriorityCommand(BlockchainInfoResponse, result, destination)
 
 }
 

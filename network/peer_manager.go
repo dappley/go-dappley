@@ -360,7 +360,7 @@ func (pm *PeerManager) BroadcastGetPeerListRequest() {
 		MaxNumber: int32(maxSyncPeersCount),
 	}
 
-	pm.netService.SendCommand(GetPeerListRequest, getPeerListPb, network_model.PeerInfo{}, network_model.Broadcast, network_model.HighPriorityCommand)
+	pm.netService.BroadcastHighProrityCommand(GetPeerListRequest, getPeerListPb)
 
 }
 
@@ -375,7 +375,7 @@ func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination ne
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
 
-	pm.netService.SendCommand(GetPeerListResponse, peerList, destination, network_model.Unicast, network_model.HighPriorityCommand)
+	pm.netService.UnicastHighProrityCommand(GetPeerListResponse, peerList, destination)
 
 }
 
