@@ -1072,7 +1072,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 	}
 
 	//Waiting block sync to other nodes
-	time.Sleep(time.Second * 2)
+	//time.Sleep(time.Second * 2)
 	for i := range miners {
 		util.WaitDoneOrTimeout(func() bool {
 			return !bps[i].IsProducingBlock()
@@ -1134,7 +1134,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		}
 	}
 
-	time.Sleep(time.Second*time.Duration(dynasty.GetDynastyTime()*dposRounds) - time.Second/2)
+	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
 
 	for i := range miners {
 		bps[i].Stop()
@@ -1142,7 +1142,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	}
 
 	//Waiting block sync to other nodes
-	time.Sleep(time.Second * 2)
+
 	for i := range miners {
 		util.WaitDoneOrTimeout(func() bool {
 			return !bps[i].IsProducingBlock()

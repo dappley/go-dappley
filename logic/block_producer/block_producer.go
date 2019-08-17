@@ -73,6 +73,9 @@ func (bp *BlockProducer) Getblockchain() *blockchain_logic.Blockchain {
 
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 
+	bp.producer.BlockProduceStart()
+	defer bp.producer.BlockProduceFinish()
+
 	deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 
 	logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
@@ -82,9 +85,6 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 		logger.Info("BlockProducer: block producer paused because block pool is syncing.")
 		return
 	}
-
-	bp.producer.BlockProduceStart()
-	defer bp.producer.BlockProduceFinish()
 
 	ctx := bp.prepareBlock(deadlineInMs)
 
