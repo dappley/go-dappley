@@ -186,6 +186,7 @@ func TestNewAccountManager_UnlockTimer(t *testing.T) {
 	fl2 := storage.NewFileLoader(strings.Replace(GetAccountFilePath(), "accounts", "accounts_test", -1))
 	am2 := NewAccountManager(fl2)
 	am2.LoadFromFile()
+	time.Sleep(9 * time.Second)
 	assert.Equal(t, true, am2.Locked)
 }
 
