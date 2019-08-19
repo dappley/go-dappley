@@ -1,5 +1,5 @@
 syntax = "proto3";
-package logicpb;
+package laccountpb;
 import "github.com/dappley/go-dappley/core/account/pb/account.proto";
 
 

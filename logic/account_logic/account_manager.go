@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core/account"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
-	logicpb "github.com/dappley/go-dappley/logic/pb"
+	laccountpb "github.com/dappley/go-dappley/logic/account_logic/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -107,7 +107,7 @@ func (am *AccountManager) LoadFromFile() error {
 		fileContent, err = am.fileLoader.ReadFromFile()
 		am.mutex.Lock()
 	}
-	amProto := &logicpb.AccountManager{}
+	amProto := &laccountpb.AccountManager{}
 	err = proto.Unmarshal(fileContent, amProto)
 
 	if err != nil {
@@ -252,7 +252,7 @@ func (am *AccountManager) ToProto() proto.Message {
 		pbAccounts = append(pbAccounts, account.ToProto().(*accountpb.Account))
 	}
 
-	return &logicpb.AccountManager{
+	return &laccountpb.AccountManager{
 		Accounts:   pbAccounts,
 		PassPhrase: am.PassPhrase,
 		Locked:     am.Locked,
@@ -261,13 +261,13 @@ func (am *AccountManager) ToProto() proto.Message {
 
 func (am *AccountManager) FromProto(pb proto.Message) {
 	accounts := []*account.Account{}
-	for _, accountPb := range pb.(*logicpb.AccountManager).Accounts {
+	for _, accountPb := range pb.(*laccountpb.AccountManager).Accounts {
 		account := &account.Account{}
 		account.FromProto(accountPb)
 		accounts = append(accounts, account)
 	}
 
 	am.Accounts = accounts
-	am.PassPhrase = pb.(*logicpb.AccountManager).PassPhrase
-	am.Locked = pb.(*logicpb.AccountManager).Locked
+	am.PassPhrase = pb.(*laccountpb.AccountManager).PassPhrase
+	am.Locked = pb.(*laccountpb.AccountManager).Locked
 }

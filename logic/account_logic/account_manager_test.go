@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/core/account"
-	logicpb "github.com/dappley/go-dappley/logic/pb"
+	laccountpb "github.com/dappley/go-dappley/logic/account_logic/pb"
 	"github.com/dappley/go-dappley/storage"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"
 	"github.com/golang/mock/gomock"
@@ -196,7 +196,7 @@ func TestAccountManager_Proto(t *testing.T) {
 
 	rawBytes, err := proto.Marshal(am.ToProto())
 	assert.Nil(t, err)
-	amProto := &logicpb.AccountManager{}
+	amProto := &laccountpb.AccountManager{}
 	err = proto.Unmarshal(rawBytes, amProto)
 	assert.Nil(t, err)
 	am1 := &AccountManager{}
