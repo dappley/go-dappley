@@ -183,11 +183,8 @@ func TestNewAccountManager_UnlockTimer(t *testing.T) {
 	assert.Equal(t, false, am.Locked)
 	am.mutex.Unlock()
 	time.Sleep(9 * time.Second)
-	fl2 := storage.NewFileLoader(strings.Replace(GetAccountFilePath(), "accounts", "accounts_test", -1))
-	am2 := NewAccountManager(fl2)
-	am2.LoadFromFile()
-	time.Sleep(9 * time.Second)
-	assert.Equal(t, true, am2.Locked)
+
+	assert.Equal(t, true, am.Locked)
 }
 
 func TestAccountManager_Proto(t *testing.T) {
