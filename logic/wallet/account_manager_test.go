@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
-package laccount
+package wallet
 
 import (
 	"errors"
@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/core/account"
-	laccountpb "github.com/dappley/go-dappley/logic/laccount/pb"
+	laccountpb "github.com/dappley/go-dappley/logic/wallet/pb"
 	"github.com/dappley/go-dappley/storage"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"
 	"github.com/golang/mock/gomock"

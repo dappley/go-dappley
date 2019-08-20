@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package laccount
+package wallet
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core/account"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
-	laccountpb "github.com/dappley/go-dappley/logic/laccount/pb"
+	laccountpb "github.com/dappley/go-dappley/logic/wallet/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"

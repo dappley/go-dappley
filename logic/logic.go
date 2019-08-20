@@ -29,7 +29,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/logic/laccount"
+	"github.com/dappley/go-dappley/logic/wallet"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
@@ -71,7 +71,7 @@ func CreateAccount(path string, password string) (*account.Account, error) {
 	}
 
 	fl := storage.NewFileLoader(path)
-	am := laccount.NewAccountManager(fl)
+	am := wallet.NewAccountManager(fl)
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func CreateAccount(path string, password string) (*account.Account, error) {
 
 //get account
 func GetAccount() (*account.Account, error) {
-	am, err := GetAccountManager(laccount.GetAccountFilePath())
+	am, err := GetAccountManager(wallet.GetAccountFilePath())
 	empty, err := am.IsFileEmpty()
 	if empty {
 		return nil, nil
@@ -104,7 +104,7 @@ func getAccountFilePath(argv []string) string {
 	if len(argv) == 1 {
 		return argv[0]
 	}
-	return laccount.GetAccountFilePath()
+	return wallet.GetAccountFilePath()
 }
 
 //Get lock flag
@@ -117,7 +117,7 @@ func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
-	if laccount.Exists(accountFilePath) {
+	if wallet.Exists(accountFilePath) {
 		am, _ := GetAccountManager(accountFilePath)
 		if len(am.Accounts) == 0 {
 			return true, nil
@@ -194,7 +194,7 @@ func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...str
 
 //create a account
 func AddAccount() (*account.Account, error) {
-	am, err := GetAccountManager(laccount.GetAccountFilePath())
+	am, err := GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
 		return nil, err
 	}
@@ -250,9 +250,9 @@ func SendFromMiner(address account.Address, amount *common.Amount, bc *lblockcha
 	return sendTo(sendTxParam, bc)
 }
 
-func GetAccountManager(path string) (*laccount.AccountManager, error) {
+func GetAccountManager(path string) (*wallet.AccountManager, error) {
 	fl := storage.NewFileLoader(path)
-	am := laccount.NewAccountManager(fl)
+	am := wallet.NewAccountManager(fl)
 	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err

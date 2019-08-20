@@ -19,6 +19,7 @@ package lblockchain
 
 import (
 	"bytes"
+
 	"github.com/pkg/errors"
 
 	"github.com/dappley/go-dappley/common/hash"
@@ -31,7 +32,7 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	lblockchainpb "github.com/dappley/go-dappley/logic/lblockchain/pb"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -256,14 +257,14 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 
 //RequestBlock sends a requestBlock command to its peer with pid through network module
 func (bm *BlockchainManager) RequestBlock(hash hash.Hash, pid peer.ID) {
-	request := &corepb.RequestBlock{Hash: hash}
+	request := &lblockchainpb.RequestBlock{Hash: hash}
 
 	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
 }
 
 //RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
 func (bm *BlockchainManager) RequestBlockHandler(command *network_model.DappRcvdCmdContext) {
-	request := &corepb.RequestBlock{}
+	request := &lblockchainpb.RequestBlock{}
 
 	if err := proto.Unmarshal(command.GetData(), request); err != nil {
 		logger.WithFields(logger.Fields{

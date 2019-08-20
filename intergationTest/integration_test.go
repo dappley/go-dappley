@@ -31,7 +31,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/laccount"
+	"github.com/dappley/go-dappley/logic/wallet"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -1159,7 +1159,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 }
 
 func cleanUpDatabase() {
-	laccount.RemoveAccountFile()
+	wallet.RemoveAccountFile()
 }
 
 func isSameBlockChain(bc1, bc2 *lblockchain.Blockchain) bool {

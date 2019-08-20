@@ -17,7 +17,7 @@ import (
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/laccount"
+	"github.com/dappley/go-dappley/logic/wallet"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -76,7 +76,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 		}).Info("Producer:", i)
 	}
 
-	wm, err := logic.GetAccountManager(laccount.GetAccountFilePath())
+	wm, err := logic.GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
 		logger.Panic("Cannot get account manager.")
 	}
@@ -132,7 +132,7 @@ func GetMaxHeightOfDifferentStart(files []FileInfo) (int, int) {
 	return max, index
 }
 
-func makeBlockChainToSize(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc *lblockchain.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *laccount.AccountManager, scAddr account.Address) {
+func makeBlockChainToSize(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc *lblockchain.Blockchain, size int, d *consensus.Dynasty, keys Keys, addrs []account.Address, wm *wallet.AccountManager, scAddr account.Address) {
 
 	tailBlk := parentBlk
 	for tailBlk.GetHeight() < uint64(size) {
@@ -169,14 +169,14 @@ func generateFundingBlock(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*transaction.Transaction{tx})
 }
 
-func generateSmartContractDeploymentBlock(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc *lblockchain.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *laccount.AccountManager) (*block.Block, account.Address) {
+func generateSmartContractDeploymentBlock(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc *lblockchain.Blockchain, d *consensus.Dynasty, keys Keys, fundAddr account.Address, wm *wallet.AccountManager) (*block.Block, account.Address) {
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
 	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*transaction.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
 }
 
-func generateSmartContractDeploymentTransaction(utxoIndex *lutxo.UTXOIndex, sender account.Address, wm *laccount.AccountManager) *transaction.Transaction {
+func generateSmartContractDeploymentTransaction(utxoIndex *lutxo.UTXOIndex, sender account.Address, wm *wallet.AccountManager) *transaction.Transaction {
 	senderAccount := wm.GetAccountByAddress(sender)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
@@ -208,7 +208,7 @@ func generateFundingTransaction(utxoIndex *lutxo.UTXOIndex, fundAddr account.Add
 	return tx
 }
 
-func generateTransactions(utxoIndex *lutxo.UTXOIndex, addrs []account.Address, wm *laccount.AccountManager, scAddr account.Address) []*transaction.Transaction {
+func generateTransactions(utxoIndex *lutxo.UTXOIndex, addrs []account.Address, wm *wallet.AccountManager, scAddr account.Address) []*transaction.Transaction {
 	pkhmap := getPubKeyHashes(addrs, wm)
 	txs := []*transaction.Transaction{}
 	for i := 0; i < numOfTx; i++ {
@@ -226,7 +226,7 @@ func generateTransactions(utxoIndex *lutxo.UTXOIndex, addrs []account.Address, w
 	return txs
 }
 
-func getPubKeyHashes(addrs []account.Address, wm *laccount.AccountManager) map[account.Address]account.PubKeyHash {
+func getPubKeyHashes(addrs []account.Address, wm *wallet.AccountManager) map[account.Address]account.PubKeyHash {
 	res := make(map[account.Address]account.PubKeyHash)
 	for _, addr := range addrs {
 		acc := wm.GetAccountByAddress(addr)
@@ -236,7 +236,7 @@ func getPubKeyHashes(addrs []account.Address, wm *laccount.AccountManager) map[a
 	return res
 }
 
-func generateTransaction(addrs []account.Address, wm *laccount.AccountManager, utxoIndex *lutxo.UTXOIndex, pkhmap map[account.Address]account.PubKeyHash, contract string, scAddr account.Address) *transaction.Transaction {
+func generateTransaction(addrs []account.Address, wm *wallet.AccountManager, utxoIndex *lutxo.UTXOIndex, pkhmap map[account.Address]account.PubKeyHash, contract string, scAddr account.Address) *transaction.Transaction {
 	sender, receiver := getSenderAndReceiver(addrs)
 	amount := common.NewAmount(1)
 	senderAccount := wm.GetAccountByAddress(sender)
@@ -292,7 +292,7 @@ func CreateRandomTransactions([]account.Address) []*transaction.Transaction {
 	return nil
 }
 
-func CreateAccount(wm *laccount.AccountManager) []account.Address {
+func CreateAccount(wm *wallet.AccountManager) []account.Address {
 
 	addresses := wm.GetAddresses()
 	numOfAccounts := len(addresses)

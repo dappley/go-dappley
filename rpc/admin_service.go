@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/laccount"
+	"github.com/dappley/go-dappley/logic/wallet"
 	"github.com/dappley/go-dappley/network"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
@@ -110,7 +110,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 	path := in.GetAccountPath()
 	if len(path) == 0 {
-		path = laccount.GetAccountFilePath()
+		path = wallet.GetAccountFilePath()
 	}
 
 	am, err := logic.GetAccountManager(path)
@@ -120,7 +120,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	senderAccount := am.GetAccountByAddress(sendFromAddress)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
-		return nil, status.Error(codes.NotFound, laccount.ErrAddressNotFound.Error())
+		return nil, status.Error(codes.NotFound, wallet.ErrAddressNotFound.Error())
 	}
 
 	txHash, scAddress, err := logic.Send(senderAccount, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),

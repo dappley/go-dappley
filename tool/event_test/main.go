@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/logic/laccount"
+	"github.com/dappley/go-dappley/logic/wallet"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
@@ -32,7 +32,7 @@ func main() {
 		To:          "",
 		Amount:      common.NewAmount(1).Bytes(),
 		Tip:         common.NewAmount(0).Bytes(),
-		AccountPath: laccount.GetAccountFilePath(),
+		AccountPath: wallet.GetAccountFilePath(),
 		Data:        string(raw),
 	})
 	if err != nil {
@@ -49,7 +49,7 @@ func main() {
 			To:          contractAddr,
 			Amount:      common.NewAmount(1).Bytes(),
 			Tip:         common.NewAmount(0).Bytes(),
-			AccountPath: laccount.GetAccountFilePath(),
+			AccountPath: wallet.GetAccountFilePath(),
 			Data:        fmt.Sprintf("{\"function\":\"trigger\",\"args\":[\"topic%d\",\"data%d\"]}", count%3+1, count),
 		})
 		if err != nil {
