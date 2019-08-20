@@ -31,6 +31,8 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
+
+	"github.com/dappley/go-dappley/metrics/logMetrics"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
@@ -85,7 +87,11 @@ func main() {
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
 	node, err := initNode(conf, db)
-	defer node.Stop()
+	if err != nil {
+		return
+	}else {
+		defer node.Stop()
+	}
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
@@ -139,6 +145,9 @@ func main() {
 
 	bm.RequestDownloadBlockchain()
 
+	if viper.GetBool("metrics.open"){
+		logMetrics.LogMetricsInfo(bm.Getblockchain())
+	}
 	select {}
 }
 

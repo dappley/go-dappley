@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -69,6 +70,7 @@ type Transaction struct {
 	Tip      *common.Amount
 	GasLimit *common.Amount
 	GasPrice *common.Amount
+	CreateTime int64
 }
 
 // ContractTx contains contract value
@@ -410,7 +412,7 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
-	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice,tx.CreateTime}
 
 	return txCopy
 }
@@ -427,7 +429,7 @@ func (tx *Transaction) DeepCopy() Transaction {
 		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
-	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice,tx.CreateTime}
 
 	return txCopy
 }
@@ -710,7 +712,7 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 
 	txin := TXInput{nil, -1, bh, []byte(data)}
 	txout := NewTXOutput(subsidy.Add(tip), to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -734,7 +736,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 		}
 		txOutputs = append(txOutputs, *NewTXOutput(amt, account.NewAddress(address)))
 	}
-	tx := Transaction{nil, []TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -755,6 +757,7 @@ func NewUTXOTransaction(utxos []*UTXO, sendTxParam SendTxParam) (Transaction, er
 		sendTxParam.Tip,
 		sendTxParam.GasLimit,
 		sendTxParam.GasPrice,
+		time.Now().UnixNano()/1e6,
 	}
 	tx.ID = tx.Hash()
 
@@ -789,6 +792,7 @@ func NewContractTransferTX(utxos []*UTXO, contractAddr, toAddr account.Address, 
 		tip,
 		gasLimit,
 		gasPrice,
+		time.Now().UnixNano()/1e6,
 	}
 	tx.ID = tx.Hash()
 
@@ -818,7 +822,7 @@ func NewGasRewardTx(to account.Address, blockHeight uint64, actualGasCount *comm
 
 	txin := TXInput{nil, -1, bh, gasRewardData}
 	txout := NewTXOutput(fee, to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -839,7 +843,7 @@ func NewGasChangeTx(to account.Address, blockHeight uint64, actualGasCount *comm
 
 	txin := TXInput{nil, -1, bh, gasChangeData}
 	txout := NewTXOutput(changeValue, to)
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.ID = tx.Hash()
 	return tx, nil
 }

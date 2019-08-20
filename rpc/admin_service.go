@@ -21,6 +21,8 @@ import (
 	"context"
 	"encoding/hex"
 
+	"time"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -75,6 +77,17 @@ func (adminRpcService *AdminRpcService) RpcUnlockAccount(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {
+	start := time.Now().UnixNano()/1e6
+	txRequestFromMinerStats.concurrentCounter.Inc(1)
+	defer func() {
+		if txRequestFromMinerStats.responseTime.Count()/100 ==  0{
+			txRequestFromMinerStats.responseTime.Clear()
+		}
+		txRequestFromMinerStats.responseTime.Update(time.Now().UnixNano()/1e6 - start)
+	}()
+	defer txRequestFromMinerStats.requestPerSec.Mark(1)
+	defer txRequestFromMinerStats.concurrentCounter.Dec(1)
+
 	sendToAddress := account.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())
 	if sendAmount.Validate() != nil || sendAmount.IsZero() {
@@ -96,6 +109,17 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 }
 
 func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.SendRequest) (*rpcpb.SendResponse, error) {
+	start := time.Now().UnixNano()/1e6
+	txRequestStats.concurrentCounter.Inc(1)
+	defer func() {
+		if txRequestStats.responseTime.Count()/100 ==  0{
+			txRequestStats.responseTime.Clear()
+		}
+		txRequestStats.responseTime.Update(time.Now().UnixNano()/1e6 - start)
+	}()
+	defer txRequestStats.requestPerSec.Mark(1)
+	defer txRequestStats.concurrentCounter.Dec(1)
+
 	sendFromAddress := account.NewAddress(in.GetFrom())
 	sendToAddress := account.NewAddress(in.GetTo())
 	sendAmount := common.NewAmountFromBytes(in.GetAmount())

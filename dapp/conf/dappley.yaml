@@ -4,4 +4,6 @@ log:
   count:  7
   rotateTime:  86400
   stdout:  true
-
+metrics:
+  open: true
+  interval: 5000

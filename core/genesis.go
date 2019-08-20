@@ -20,6 +20,7 @@ package core
 import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"time"
 )
 
 const genesisCoinbaseData = "Hello world"
@@ -30,7 +31,7 @@ func NewGenesisBlock(address account.Address) *Block {
 	txin := TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
 	txout := NewTXOutput(subsidy, address)
 	txs := []*Transaction{}
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 

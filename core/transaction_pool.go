@@ -624,6 +624,7 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcv
 	//	return
 	//}
 
+	tx.CreateTime = -1
 	txPool.Push(*tx)
 
 	if command.IsBroadcast() {
@@ -662,6 +663,7 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.D
 		//if tx.IsFromContract(utxoIndex) {
 		//	return
 		//}
+		tx.CreateTime = -1
 		txPool.Push(tx)
 	}
 

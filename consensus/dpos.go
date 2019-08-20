@@ -301,6 +301,12 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn(err)
 		return
 	}
+
+	for _,tx :=range ctx.Block.GetTransactions() {
+		if tx.CreateTime > 0 {
+			TxAddToBlockCost.Update((time.Now().UnixNano()/1e6-tx.CreateTime)/1e3)
+		}
+	}
 	dpos.bm.BroadcastBlock(ctx.Block)
 }
 

@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/byteutils"
@@ -217,7 +218,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 
 // RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
-	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.FromProto(in.GetTransaction())
 
 	if tx.IsCoinbase() {
@@ -267,7 +268,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	txMap := make(map[int]core.Transaction, len(in.Transactions))
 	txs := []core.Transaction{}
 	for key, txInReq := range in.Transactions {
-		tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+		tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 		tx.FromProto(txInReq)
 		txs = append(txs, tx)
 		txMap[key] = tx
@@ -398,7 +399,7 @@ func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, i
 
 // RpcEstimateGas estimate gas value of contract deploy and execution.
 func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.EstimateGasRequest) (*rpcpb.EstimateGasResponse, error) {
-	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := core.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0),time.Now().UnixNano()/1e6}
 	tx.FromProto(in.GetTransaction())
 
 	if tx.IsCoinbase() {
