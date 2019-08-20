@@ -241,7 +241,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		blocks = append(blocks, block)
 	}
 
-	logger.Warnf("DownloadManager: receive blocks from %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+	logger.Warnf("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
 
 	if err := downloadManager.node.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		returnBlocksLogger.Info("DownloadManager: merge fork failed.")

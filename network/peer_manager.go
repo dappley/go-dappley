@@ -20,7 +20,8 @@ package network
 
 import (
 	"context"
-	"fmt"
+	"github.com/asaskevich/EventBus"
+	"github.com/libp2p/go-libp2p-core/network"
 	"math/rand"
 	"sync"
 	"time"
@@ -50,24 +51,11 @@ const (
 	syncPeersWaitTime            = 10 * time.Second
 	syncPeersScheduleTime        = 10 * time.Minute
 	checkSeedsConnectionTime     = 15 * time.Minute
+
+	topicStreamStop = "StreamStop"
 )
 
-type PeerInfo struct {
-	PeerId  peer.ID
-	Addrs   []ma.Multiaddr
-	Latency *float64 // rtt of ping in milliseconds
-}
-
-type StreamInfo struct {
-	stream         *Stream
-	connectionType ConnectionType
-	latency        *float64 // refer to PeerInfo.Latency
-}
-
-type SyncPeerContext struct {
-	checkingStreams map[peer.ID]*StreamInfo
-	newPeers        map[peer.ID]*PeerInfo
-}
+type onStreamStopFunc func(stream *Stream)
 
 type PingService struct {
 	service *ping.PingService
@@ -75,6 +63,7 @@ type PingService struct {
 }
 
 type PeerManager struct {
+	host      *Host
 	seeds     map[peer.ID]*PeerInfo
 	syncPeers map[peer.ID]*PeerInfo
 
@@ -86,12 +75,20 @@ type PeerManager struct {
 
 	syncPeerContext *SyncPeerContext
 
+	streamStopCh chan *Stream
+	msgRcvCh     chan *StreamMsg
+	eventBus     EventBus.Bus
+	db           storage.Storage
+
 	mutex sync.RWMutex
+<<<<<<< HEAD
 	node  *Node
 	ping  *PingService
+=======
+>>>>>>> release/v0.1.4
 }
 
-func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
+func NewPeerManager(config *NodeConfig, msgRcvCh chan *StreamMsg, db storage.Storage) *PeerManager {
 
 	maxConnectionOutCount := defaultMaxConnectionOutCount
 	maxConnectionInCount := defaultMaxConnectionInCount
@@ -113,52 +110,15 @@ func NewPeerManager(node *Node, config *NodeConfig) *PeerManager {
 		mutex:                 sync.RWMutex{},
 		maxConnectionOutCount: maxConnectionOutCount,
 		maxConnectionInCount:  maxConnectionInCount,
-		node:                  node,
+		msgRcvCh:              msgRcvCh,
+		streamStopCh:          make(chan *Stream, 10),
+		eventBus:              EventBus.New(),
+		db:                    db,
 	}
-}
-
-func CreatePeerInfoFromMultiaddrs(targetFullAddrs []ma.Multiaddr) (*PeerInfo, error) {
-	peerIds := make([]peer.ID, len(targetFullAddrs))
-	addrs := make([]ma.Multiaddr, len(targetFullAddrs))
-	for index, targetFullAddr := range targetFullAddrs {
-		//get pid
-		pid, err := targetFullAddr.ValueForProtocol(ma.P_IPFS)
-		if err != nil {
-			return nil, err
-		}
-
-		//get peer id
-		peerId, err := peer.IDB58Decode(pid)
-		if err != nil {
-			return nil, err
-		}
-
-		peerIds[index] = peerId
-
-		// Decapsulate the /ipfs/<peerID> part from the targetFullAddr
-		// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
-		targetPeerAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerId)))
-		targetAddr := targetFullAddr.Decapsulate(targetPeerAddr)
-		addrs[index] = targetAddr
-
-		logger.WithFields(logger.Fields{
-			"index":          index,
-			"peerID":         peerId,
-			"targetPeerAddr": targetPeerAddr,
-			"targetAddr":     targetAddr,
-		}).Info("PeerManager: create peer information.")
-	}
-
-	peerInfo := &PeerInfo{
-		PeerId: peerIds[0],
-		Addrs:  addrs,
-	}
-
-	return peerInfo, nil
 }
 
 func (pm *PeerManager) AddSeedByString(fullAddr string) error {
-	peerInfo, err := createPeerInfoFromString(fullAddr)
+	peerInfo, err := NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,
@@ -178,7 +138,7 @@ func (pm *PeerManager) AddAndConnectPeerByString(fullAddr string) error {
 
 	logger.Info("PeerManager: AddAndConnectPeerByString")
 
-	peerInfo, err := createPeerInfoFromString(fullAddr)
+	peerInfo, err := NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,
@@ -207,12 +167,29 @@ func (pm *PeerManager) AddAndConnectPeer(peerInfo *PeerInfo) error {
 	return err
 }
 
-func (pm *PeerManager) Start() {
+func (pm *PeerManager) Start(host *Host) {
+	pm.host = host
 	pm.loadSyncPeers()
 	pm.startConnectSeeds()
 	pm.startConnectSyncPeers()
 	pm.startSyncPeersSchedule()
 	pm.checkSeedsConnectionSchedule()
+	pm.StartExitListener()
+}
+
+func (pm *PeerManager) SubscribeOnStreamStop(cb onStreamStopFunc) {
+	pm.eventBus.SubscribeAsync(topicStreamStop, cb, false)
+}
+
+func (pm *PeerManager) StartExitListener() {
+	go func() {
+		for {
+			if s, ok := <-pm.streamStopCh; ok {
+				pm.StopStream(s)
+				pm.eventBus.Publish(topicStreamStop, s)
+			}
+		}
+	}()
 }
 
 func (pm *PeerManager) startConnectSeeds() {
@@ -274,7 +251,10 @@ func (pm *PeerManager) ReceivePeers(peerId peer.ID, peers []*PeerInfo) {
 	}
 }
 
-func (pm *PeerManager) AddStream(stream *Stream) {
+func (pm *PeerManager) StreamHandler(s network.Stream) {
+
+	stream := NewStream(s)
+	stream.Start(pm.streamStopCh, pm.msgRcvCh)
 
 	logger.WithFields(logger.Fields{
 		"peer_id": stream.peerID,
@@ -312,7 +292,7 @@ func (pm *PeerManager) StopStream(stream *Stream) {
 		//pass
 	}
 	delete(pm.streams, stream.peerID)
-	pm.node.host.Peerstore().ClearAddrs(stream.peerID)
+	pm.host.Peerstore().ClearAddrs(stream.peerID)
 	streamLen := len(pm.streams)
 	pm.mutex.Unlock()
 	if streamLen == 0 {
@@ -500,7 +480,8 @@ func (pm *PeerManager) startSyncPeers() {
 	}
 
 	pm.createSyncContext()
-	pm.node.SyncPeersBroadcast()
+	//TODO
+	//pm.node.SyncPeersBroadcast()
 
 	syncTimer := time.NewTimer(syncPeersWaitTime)
 	go func() {
@@ -546,7 +527,7 @@ func (pm *PeerManager) addSyncPeersResult(peerId peer.ID, peers []*PeerInfo) boo
 	delete(pm.syncPeerContext.checkingStreams, peerId)
 
 	for _, peerInfo := range peers {
-		if peerInfo.PeerId == pm.node.GetPeerID() {
+		if peerInfo.PeerId == pm.host.info.PeerId {
 			continue
 		}
 
@@ -612,7 +593,6 @@ func (pm *PeerManager) collectSyncPeersResult() bool {
 
 func (pm *PeerManager) saveSyncPeers() {
 	syncPeers := pm.cloneSyncPeers()
-	db := pm.node.GetBlockchain().GetDb()
 
 	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range syncPeers {
@@ -624,7 +604,7 @@ func (pm *PeerManager) saveSyncPeers() {
 		logger.WithError(err).Info("PeerManager: serialize sync peers failed.")
 	}
 
-	err = db.Put([]byte(syncPeersKey), bytes)
+	err = pm.db.Put([]byte(syncPeersKey), bytes)
 	if err != nil {
 		logger.WithError(err).Info("PeerManager: save sync peers failed.")
 	}
@@ -725,9 +705,9 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 		"Addr":   peerInfo.Addrs[0].String(),
 	}).Info("PeerManager: Connect peer information.")
 
-	pm.node.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, pstore.PermanentAddrTTL)
+	pm.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, pstore.PermanentAddrTTL)
 	// make a new stream
-	stream, err := pm.node.host.NewStream(context.Background(), peerInfo.PeerId, protocalName)
+	stream, err := pm.host.NewStream(context.Background(), peerInfo.PeerId, protocalName)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"PeerId": peerInfo.PeerId,
@@ -744,7 +724,8 @@ func (pm *PeerManager) connectPeer(peerInfo *PeerInfo, connectionType Connection
 		peerStream.StopStream(nil)
 		return nil, nil
 	}
-	pm.node.StartStream(peerStream)
+
+	peerStream.Start(pm.streamStopCh, pm.msgRcvCh)
 	return peerStream, nil
 }
 
@@ -792,8 +773,8 @@ func (pm *PeerManager) checkAndAddStream(peerId peer.ID, connectionType Connecti
 }
 
 func (pm *PeerManager) loadSyncPeers() error {
-	db := pm.node.GetBlockchain().GetDb()
-	peersBytes, err := db.Get([]byte(syncPeersKey))
+
+	peersBytes, err := pm.db.Get([]byte(syncPeersKey))
 
 	if err != nil {
 		logger.WithError(err).Warn("PeerManager: load sync peers database failed.")
@@ -833,6 +814,7 @@ func (pm *PeerManager) isStreamExist(peerId peer.ID) bool {
 	_, ok := pm.streams[peerId]
 	return ok
 }
+<<<<<<< HEAD
 
 func createPeerInfoFromString(fullAddr string) (*PeerInfo, error) {
 	addr, err := ma.NewMultiaddr(fullAddr)
@@ -884,3 +866,5 @@ func (p *PeerInfo) FromProto(pb proto.Message) error {
 
 	return nil
 }
+=======
+>>>>>>> release/v0.1.4

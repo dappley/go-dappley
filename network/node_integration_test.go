@@ -85,7 +85,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	assert.Nil(t, err)
 
 	//currently it should only have itself as its node
-	assert.Len(t, n1.host.Network().Peerstore().Peers(), 1)
+	assert.Len(t, n1.network.host.Network().Peerstore().Peers(), 1)
 
 	//create node2
 	n2, err := initNode("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz", test_port2, nil, db)
@@ -95,7 +95,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	//set node2 as the peer of node1
 	err = n1.GetPeerManager().AddAndConnectPeer(n2.GetInfo())
 	assert.Nil(t, err)
-	assert.Len(t, n1.host.Network().Peerstore().Peers(), 2)
+	assert.Len(t, n1.network.host.Network().Peerstore().Peers(), 2)
 }
 
 func TestNetwork_BroadcastBlock(t *testing.T) {

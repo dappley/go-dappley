@@ -19,6 +19,7 @@
 package network
 
 import (
+	logger "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -32,15 +33,10 @@ type DapMsg struct {
 	unixTimeRecvd  int64
 	key            string
 	uniOrBroadcast int ``
-	counter        uint64
 }
 
-func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int, counter *uint64) *DapMsg {
-	if *counter > uint64(MaxMsgCountBeforeReset) {
-		*counter = 0
-	}
-	*counter++
-	return &DapMsg{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast, *counter}
+func NewDapmsg(cmd string, data []byte, msgKey string, uniOrBroadcast int) *DapMsg {
+	return &DapMsg{cmd, data, time.Now().Unix(), msgKey, uniOrBroadcast}
 }
 
 func (dm *DapMsg) GetCmd() string {
@@ -62,6 +58,23 @@ func (dm *DapMsg) GetFrom() string {
 //used to lookup dapmsg cache (key:unix time of command + command in string, value: 1 if received recently, 0 if not).
 func (dm *DapMsg) GetKey() string {
 	return dm.key
+}
+
+func ParseDappMsgFromDappPacket(packet *DappPacket) *DapMsg {
+	return ParseDappMsgFromRawBytes(packet.GetData())
+}
+
+func ParseDappMsgFromRawBytes(bytes []byte) *DapMsg {
+	dmpb := &networkpb.Dapmsg{}
+
+	//unmarshal byte to proto
+	if err := proto.Unmarshal(bytes, dmpb); err != nil {
+		logger.WithError(err).Warn("Stream: Unable to")
+	}
+
+	dm := &DapMsg{}
+	dm.FromProto(dmpb)
+	return dm
 }
 
 func (dm *DapMsg) ToProto() proto.Message {
