@@ -9,7 +9,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +49,7 @@ func TestTransferResult(t *testing.T) {
 	convert(db)
 
 	// read new data
-	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	utxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(minerPubKey)
 	newDataSize := utxoTx.Size()
 	t.Logf("ResultTest: newDataSize %d", newDataSize)

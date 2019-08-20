@@ -23,13 +23,13 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
+	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/logic/account_logic"
+	"github.com/dappley/go-dappley/logic/laccount"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
@@ -50,12 +50,12 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, consensus blockchain_logic.Consensus, txPool *transaction_pool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*blockchain_logic.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus lblockchain.Consensus, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := blockchain_logic.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
+	bc := lblockchain.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
 }
@@ -71,7 +71,7 @@ func CreateAccount(path string, password string) (*account.Account, error) {
 	}
 
 	fl := storage.NewFileLoader(path)
-	am := account_logic.NewAccountManager(fl)
+	am := laccount.NewAccountManager(fl)
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func CreateAccount(path string, password string) (*account.Account, error) {
 
 //get account
 func GetAccount() (*account.Account, error) {
-	am, err := GetAccountManager(account_logic.GetAccountFilePath())
+	am, err := GetAccountManager(laccount.GetAccountFilePath())
 	empty, err := am.IsFileEmpty()
 	if empty {
 		return nil, nil
@@ -104,7 +104,7 @@ func getAccountFilePath(argv []string) string {
 	if len(argv) == 1 {
 		return argv[0]
 	}
-	return account_logic.GetAccountFilePath()
+	return laccount.GetAccountFilePath()
 }
 
 //Get lock flag
@@ -117,7 +117,7 @@ func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
-	if account_logic.Exists(accountFilePath) {
+	if laccount.Exists(accountFilePath) {
 		am, _ := GetAccountManager(accountFilePath)
 		if len(am.Accounts) == 0 {
 			return true, nil
@@ -194,7 +194,7 @@ func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...str
 
 //create a account
 func AddAccount() (*account.Account, error) {
-	am, err := GetAccountManager(account_logic.GetAccountFilePath())
+	am, err := GetAccountManager(laccount.GetAccountFilePath())
 	if err != nil {
 		return nil, err
 	}
@@ -214,14 +214,14 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address account.Address, bc *blockchain_logic.Blockchain) (*common.Amount, error) {
+func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
 	pubKeyHash, valid := account.GeneratePubKeyHashByAddress(address)
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
 
 	balance := common.NewAmount(0)
-	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
 	for _, utxo := range utxos.Indices {
 		balance = balance.Add(utxo.Value)
@@ -230,7 +230,7 @@ func GetBalance(address account.Address, bc *blockchain_logic.Blockchain) (*comm
 	return balance, nil
 }
 
-func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
+func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *lblockchain.Blockchain) ([]byte, string, error) {
 	sendTxParam := transaction.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
 	return sendTo(sendTxParam, bc)
 }
@@ -244,15 +244,15 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address account.Address, amount *common.Amount, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
+func SendFromMiner(address account.Address, amount *common.Amount, bc *lblockchain.Blockchain) ([]byte, string, error) {
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivateKey)
 	sendTxParam := transaction.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc)
 }
 
-func GetAccountManager(path string) (*account_logic.AccountManager, error) {
+func GetAccountManager(path string) (*laccount.AccountManager, error) {
 	fl := storage.NewFileLoader(path)
-	am := account_logic.NewAccountManager(fl)
+	am := laccount.NewAccountManager(fl)
 	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err
@@ -260,7 +260,7 @@ func GetAccountManager(path string) (*account_logic.AccountManager, error) {
 	return am, nil
 }
 
-func sendTo(sendTxParam transaction.SendTxParam, bc *blockchain_logic.Blockchain) ([]byte, string, error) {
+func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, string, error) {
 	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
@@ -275,7 +275,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *blockchain_logic.Blockchain
 	}
 
 	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
-	utxoIndex := utxo_logic.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 

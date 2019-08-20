@@ -22,7 +22,7 @@ import (
 	"encoding/hex"
 
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/lblockchain"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,14 +30,14 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/account_logic"
+	"github.com/dappley/go-dappley/logic/laccount"
 	"github.com/dappley/go-dappley/network"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
 type AdminRpcService struct {
-	bm   *blockchain_logic.BlockchainManager
+	bm   *lblockchain.BlockchainManager
 	node *network.Node
 }
 
@@ -110,7 +110,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 	path := in.GetAccountPath()
 	if len(path) == 0 {
-		path = account_logic.GetAccountFilePath()
+		path = laccount.GetAccountFilePath()
 	}
 
 	am, err := logic.GetAccountManager(path)
@@ -120,7 +120,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	senderAccount := am.GetAccountByAddress(sendFromAddress)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
-		return nil, status.Error(codes.NotFound, account_logic.ErrAddressNotFound.Error())
+		return nil, status.Error(codes.NotFound, laccount.ErrAddressNotFound.Error())
 	}
 
 	txHash, scAddress, err := logic.Send(senderAccount, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),

@@ -8,7 +8,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/logic/account_logic"
+	"github.com/dappley/go-dappley/logic/laccount"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 )
@@ -52,7 +52,7 @@ func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.Se
 		To:          to,
 		Amount:      common.NewAmount(amount).Bytes(),
 		Tip:         common.NewAmount(0).Bytes(),
-		AccountPath: account_logic.GetAccountFilePath(),
+		AccountPath: laccount.GetAccountFilePath(),
 		Data:        data,
 	})
 }

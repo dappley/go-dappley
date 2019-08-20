@@ -40,7 +40,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/account_logic"
+	"github.com/dappley/go-dappley/logic/laccount"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -642,8 +642,8 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 			fmt.Println("Password should not be empty!")
 			return
 		}
-		fl := storage.NewFileLoader(account_logic.GetAccountFilePath())
-		am := account_logic.NewAccountManager(fl)
+		fl := storage.NewFileLoader(laccount.GetAccountFilePath())
+		am := laccount.NewAccountManager(fl)
 		err := am.LoadFromFile()
 		addressList, err := am.GetAddressesWithPassphrase(passphrase)
 		if err != nil {
@@ -702,8 +702,8 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 
 		}
 	} else {
-		fl := storage.NewFileLoader(account_logic.GetAccountFilePath())
-		am := account_logic.NewAccountManager(fl)
+		fl := storage.NewFileLoader(laccount.GetAccountFilePath())
+		am := laccount.NewAccountManager(fl)
 		err := am.LoadFromFile()
 		if err != nil {
 			fmt.Println("Error:", err.Error())
@@ -900,7 +900,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	am, err := logic.GetAccountManager(account_logic.GetAccountFilePath())
+	am, err := logic.GetAccountManager(laccount.GetAccountFilePath())
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
@@ -1088,7 +1088,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		return
 	}
 
-	am, err := logic.GetAccountManager(account_logic.GetAccountFilePath())
+	am, err := logic.GetAccountManager(laccount.GetAccountFilePath())
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return

@@ -20,15 +20,15 @@ package main
 
 import (
 	"flag"
-	"github.com/dappley/go-dappley/logic/block_producer"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/blockchain"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common/log"
-	"github.com/dappley/go-dappley/logic/download_manager"
+	"github.com/dappley/go-dappley/logic/downloadmanager"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/config"
@@ -99,8 +99,8 @@ func main() {
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
-	txPool := transaction_pool.NewTransactionPool(node, txPoolLimit)
-	bc, err := blockchain_logic.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
+	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
 		if err != nil {
@@ -109,14 +109,14 @@ func main() {
 	}
 	bc.SetState(blockchain.BlockchainInit)
 
-	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
 
-	downloadManager := download_manager.NewDownloadManager(node, bm)
+	downloadManager := downloadmanager.NewDownloadManager(node, bm)
 	downloadManager.Start()
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
@@ -135,7 +135,7 @@ func main() {
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
 	producer := block_producer_info.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
-	blockProducer := block_producer.NewBlockProducer(bm, conss, producer)
+	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
 	blockProducer.Start()
 	defer blockProducer.Stop()
 

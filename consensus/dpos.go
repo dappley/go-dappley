@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/lblock"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -165,9 +165,9 @@ func (dpos *DPOS) Produced(blk *block.Block) bool {
 }
 
 func (dpos *DPOS) hashAndSign(blk *block.Block) {
-	hash := block_logic.CalculateHash(blk)
+	hash := lblock.CalculateHash(blk)
 	blk.SetHash(hash)
-	ok := block_logic.SignBlock(blk, dpos.producerKey)
+	ok := lblock.SignBlock(blk, dpos.producerKey)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}
@@ -266,7 +266,7 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 		return false
 	}
 
-	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
+	return !lblock.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
 func (dpos *DPOS) cacheBlock(block *block.Block) {

@@ -762,7 +762,7 @@ func sendCommandHandler(ctx context.Context, account interface{}, flags cmdFlags
 	}
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
 
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = account.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)

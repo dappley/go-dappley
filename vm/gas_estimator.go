@@ -9,8 +9,8 @@ import (
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/transaction_logic"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
+	"github.com/dappley/go-dappley/logic/ltransaction"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
 
 	logger "github.com/sirupsen/logrus"
@@ -22,7 +22,7 @@ var (
 
 // EstimateGas returns estimated gas value of contract deploy and execution.
 func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *utxo.UTXOCache, db storage.Storage) (uint64, error) {
-	utxoIndex := utxo_logic.NewUTXOIndex(utxoCache)
+	utxoIndex := lutxo.NewUTXOIndex(utxoCache)
 	scStorage := scState.LoadScStateFromDatabase(db)
 	engine := NewV8Engine()
 	defer engine.DestroyEngine()
@@ -31,7 +31,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 	if ctx == nil {
 		return 0, ErrTransactionVerifyFailed
 	}
-	prevUtxos, err := utxo_logic.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(ctx.ID),
@@ -39,6 +39,6 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 		return 0, err
 	}
 	isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-	gasCount, _, err := transaction_logic.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
+	gasCount, _, err := ltransaction.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
 	return gasCount, err
 }

@@ -24,7 +24,7 @@ import (
 	"math/big"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/lblock"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -123,7 +123,7 @@ func (pow *ProofOfWork) calculateValidHash(blk *block.Block) {
 			pow.stopCh <- true
 			return
 		default:
-			hash := block_logic.CalculateHashWithNonce(blk)
+			hash := lblock.CalculateHashWithNonce(blk)
 			blk.SetHash(hash)
 			if !pow.isHashBelowTarget(blk) {
 				pow.tryDifferentNonce(blk)

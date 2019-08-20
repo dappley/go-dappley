@@ -24,7 +24,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/lblock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -140,7 +140,7 @@ func FakeNewBlockWithTimestamp(t int64, txs []*transaction.Transaction, parent *
 		height,
 		txs)
 
-	hash := block_logic.CalculateHashWithNonce(blk)
+	hash := lblock.CalculateHashWithNonce(blk)
 	blk.SetHash(hash)
 	return blk
 }
