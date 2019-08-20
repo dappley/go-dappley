@@ -29,7 +29,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/logic/wallet"
+	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"

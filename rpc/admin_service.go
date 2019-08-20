@@ -30,7 +30,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/wallet"
+	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/network"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"

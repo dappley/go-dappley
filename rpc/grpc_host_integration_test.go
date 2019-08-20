@@ -44,7 +44,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/wallet"
+	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"

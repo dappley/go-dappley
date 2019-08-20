@@ -31,11 +31,11 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/wallet"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lblockchain"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
+	"github.com/dappley/go-dappley/wallet"
 
 	"github.com/dappley/go-dappley/util"
 

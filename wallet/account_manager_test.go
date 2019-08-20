@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/core/account"
-	laccountpb "github.com/dappley/go-dappley/logic/wallet/pb"
 	"github.com/dappley/go-dappley/storage"
 	storage_mock "github.com/dappley/go-dappley/storage/mock"
+	laccountpb "github.com/dappley/go-dappley/wallet/pb"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"

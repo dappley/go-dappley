@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/logic/wallet"
+	"github.com/dappley/go-dappley/wallet"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 

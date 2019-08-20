@@ -8,7 +8,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/logic/wallet"
+	"github.com/dappley/go-dappley/wallet"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 )
