@@ -19,9 +19,11 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/gogo/protobuf/proto"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+
+	"github.com/dappley/go-dappley/network/pb"
 )
 
 type DapMsg struct {
@@ -64,17 +66,17 @@ func (dm *DapMsg) GetKey() string {
 
 func (dm *DapMsg) ToProto() proto.Message {
 	return &networkpb.Dapmsg{
-		Cmd:           dm.cmd,
-		Data:          dm.data,
-		UnixTimeRecvd: dm.unixTimeRecvd,
-		Key:           dm.key,
+		Cmd:              dm.cmd,
+		Data:             dm.data,
+		UnixTimeReceived: dm.unixTimeRecvd,
+		Key:              dm.key,
 	}
 }
 
 func (dm *DapMsg) FromProto(pb proto.Message) {
-	dm.cmd = pb.(*networkpb.Dapmsg).Cmd
-	dm.data = pb.(*networkpb.Dapmsg).Data
-	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).UnixTimeRecvd
-	dm.key = pb.(*networkpb.Dapmsg).Key
+	dm.cmd = pb.(*networkpb.Dapmsg).GetCmd()
+	dm.data = pb.(*networkpb.Dapmsg).GetData()
+	dm.unixTimeRecvd = pb.(*networkpb.Dapmsg).GetUnixTimeReceived()
+	dm.key = pb.(*networkpb.Dapmsg).GetKey()
 
 }

@@ -85,13 +85,14 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("PoW: mining stopped.")
 			return
 		default:
-			if pow.node.GetBlockPool().GetSyncState() {
-				logger.Debug("PoW: block producer paused because block pool is syncing.")
+			if pow.node.GetBlockchain().GetState() != core.BlockchainReady {
+				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
-			newBlock := pow.miner.ProduceBlock()
-			if !pow.Validate(newBlock) {
+			newBlock := pow.miner.ProduceBlock(0)
+			if newBlock == nil || !pow.Validate(newBlock.Block) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
+				pow.miner.BlockProduceFinish()
 				return
 			}
 			pow.updateNewBlock(newBlock)
@@ -111,17 +112,17 @@ L:
 	}
 }
 
-func (pow *ProofOfWork) calculateValidHash(block *core.Block) {
+func (pow *ProofOfWork) calculateValidHash(ctx *core.BlockContext) {
 	for {
 		select {
 		case <-pow.stopCh:
 			pow.stopCh <- true
 			return
 		default:
-			hash := block.CalculateHashWithNonce(block.GetNonce())
-			block.SetHash(hash)
-			if !pow.isHashBelowTarget(block) {
-				pow.tryDifferentNonce(block)
+			hash := ctx.Block.CalculateHashWithNonce(ctx.Block.GetNonce())
+			ctx.Block.SetHash(hash)
+			if !pow.isHashBelowTarget(ctx.Block) {
+				pow.tryDifferentNonce(ctx.Block)
 				continue
 			}
 			return
@@ -155,18 +156,18 @@ func (pow *ProofOfWork) tryDifferentNonce(block *core.Block) {
 	block.SetNonce(nonce + 1)
 }
 
-func (pow *ProofOfWork) updateNewBlock(newBlock *core.Block) {
-	logger.WithFields(logger.Fields{"height": newBlock.GetHeight()}).Info("PoW: minted a new block.")
-	if !newBlock.VerifyHash() {
+func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
+	logger.WithFields(logger.Fields{"height": ctx.Block.GetHeight()}).Info("PoW: minted a new block.")
+	if !ctx.Block.VerifyHash() {
 		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
 		return
 	}
-	err := pow.node.GetBlockchain().AddBlockToTail(newBlock)
+	err := pow.node.GetBlockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	pow.node.BroadcastBlock(newBlock)
+	pow.node.BroadcastBlock(ctx.Block)
 }
 
 func (pow *ProofOfWork) AddProducer(producer string) error {
@@ -175,4 +176,15 @@ func (pow *ProofOfWork) AddProducer(producer string) error {
 
 func (pow *ProofOfWork) GetProducers() []string {
 	return nil
+}
+
+func (pow *ProofOfWork) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return pow.miner.Produced(blk)
+	}
+	return false
+}
+
+func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }

@@ -1,0 +1,12 @@
+version: '3'
+services:
+  dappley:
+    container_name: dappley
+    hostname: dappley
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dappley/go-dappley
+    network_mode: bridge
+    ports:
+      - "50050:50050"

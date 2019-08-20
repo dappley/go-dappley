@@ -1,8 +1,10 @@
 syntax = "proto3";
 package rpcpb;
-import "github.com/dappley/go-dappley/network/pb/peerlist.proto";
 import "github.com/dappley/go-dappley/core/pb/block.proto";
 import "github.com/dappley/go-dappley/core/pb/transaction.proto";
+import "github.com/dappley/go-dappley/core/pb/utxo.proto";
+import "github.com/dappley/go-dappley/network/pb/peer.proto";
+import "github.com/dappley/go-dappley/metrics/pb/datastore.proto";
 
 option objc_class_prefix = "HLW";
 
@@ -16,7 +18,10 @@ service RpcService {
   rpc RpcGetBlockByHeight(GetBlockByHeightRequest) returns (GetBlockByHeightResponse) {}
   rpc RpcSendTransaction(SendTransactionRequest) returns (SendTransactionResponse) {}
   rpc RpcSendBatchTransaction(SendBatchTransactionRequest) returns (SendBatchTransactionResponse) {}
-  rpc RpcGetNewTransactions(GetNewTransactionsRequest) returns (stream GetNewTransactionsResponse) {}
+  rpc RpcGetNewTransaction(GetNewTransactionRequest) returns (stream GetNewTransactionResponse) {}
+  rpc RpcSubscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
+  rpc RpcGetAllTransactionsFromTxPool(GetAllTransactionsRequest) returns (GetAllTransactionsResponse) {}
+  rpc RpcGetLastIrreversibleBlock(GetLastIrreversibleBlockRequest) returns (GetLastIrreversibleBlockResponse) {}
 }
 
 service AdminService{
@@ -28,29 +33,24 @@ service AdminService{
   rpc RpcUnlockWallet (UnlockWalletRequest) returns (UnlockWalletResponse) {}
 }
 
-// The request message 
+service MetricService {
+  rpc RpcGetStats(MetricsServiceRequest) returns (GetStatsResponse) {}
+}
+
+// Requests
+
 message CreateWalletRequest {
-  string name = 1;
-  string passphrase = 2;
+  string passphrase = 1;
 }
 
-message UnlockWalletRequest {
-  string name = 1;
-}
-
-message UnlockWalletResponse {
-  string message = 1;
-}
+message UnlockWalletRequest {}
 
 message AddProducerRequest {
-  string name = 1;
-  string address = 2;
+  string address = 1;
 }
 
 message GetBalanceRequest {
-  string name = 1;
-  string passphrase = 2;
-  string address = 3;
+  string address = 1;
 }
 
 message SendFromMinerRequest {
@@ -62,14 +62,9 @@ message SendRequest {
   string from = 1;
   string to = 2;
   bytes amount = 3;
-  string Walletpath = 4;
-  uint64 tip = 5;
-  string contract = 6;
-}
-
-message GetWalletAddressRequest {
-  string name = 1;
-  string passphrase = 2;
+  string wallet_path = 4;
+  bytes tip = 5;
+  string data = 6;
 }
 
 message GetPeerInfoRequest {}
@@ -77,117 +72,128 @@ message GetPeerInfoRequest {}
 message GetBlockchainInfoRequest {}
 
 message AddPeerRequest {
-  string fullAddress = 1;
-}
-
-// The response message
-
-message AddProducerResponse {
-  string message = 1;
-}
-
-message GetBalanceResponse {
-  string message = 1;
-  int64 amount = 2;
-}
-
-message SendFromMinerResponse {
-  string message = 1;
-}
-
-message SendResponse {
-  string message = 1;
-}
-
-message GetPeerInfoResponse {
-  networkpb.Peerlist peerList = 1;
-}
-
-message GetBlockchainInfoResponse {
-  bytes   tailBlockHash = 1;
-  uint64  blockHeight = 2;
-  repeated string producers = 3; // all producers' addresses
-  int64   timestamp = 4;
-}
-
-message AddPeerResponse {
-  string status = 1;
+  string full_address = 1;
 }
 
 message GetVersionRequest {
-  string protoVersion = 1;
-}
-
-message GetVersionResponse {
-  uint32 errorCode = 1;
-  string protoVersion = 2;
-  string serverVersion = 3;
+  string proto_version = 1;
 }
 
 message GetUTXORequest {
   string address = 1;  //wallet address
 }
 
-message GetUTXOResponse {
-  uint32 errorCode = 1;
-  repeated UTXO utxos = 2;
-  repeated corepb.BlockHeader blockHeaders = 3; //The latest block headers
-}
-
-message UTXO {
-  bytes   amount = 1;   
-  bytes   publicKeyHash = 2;
-  bytes   txid = 3;     
-  uint32  txIndex = 4;
-}
-
 message GetBlocksRequest {
-  repeated bytes startBlockHashes = 1;  // Query start block hashes, sorted descending by height.
-  int32 maxCount = 2;   // Max query block count
-}
-
-message GetBlocksResponse {
-  uint32 errorCode = 1;
-  repeated corepb.Block blocks = 2;
+  repeated bytes start_block_hashes = 1;  // Query start block hashes, sorted descending by height.
+  int32 max_count = 2;   // Max query block count
 }
 
 message GetBlockByHashRequest {
   bytes  hash = 1;
 }
 
-message GetBlockByHashResponse {
-  uint32 errorCode = 1;
-  corepb.Block block = 2;
-}
-
 message GetBlockByHeightRequest {
   uint64 height = 1;
-}
-
-message GetBlockByHeightResponse {
-  uint32 errorCode = 1;
-  corepb.Block block = 2;
 }
 
 message SendTransactionRequest {
   corepb.Transaction transaction = 1;
 }
 
-message SendTransactionResponse {
-  uint32 errorCode = 1;
-}
-
 message SendBatchTransactionRequest {
-  repeated corepb.Transaction transaction = 1;
+  repeated corepb.Transaction transactions = 1;
 }
 
-message SendBatchTransactionResponse {
-  repeated uint32 errorCode = 1;
+message GetNewTransactionRequest {}
+
+message SubscribeRequest{
+  repeated string topics = 1;
 }
 
-message GetNewTransactionsRequest {
+message MetricsServiceRequest {}
+
+message GetLastIrreversibleBlockRequest {}
+
+// Responses
+
+message AddProducerResponse {}
+
+message UnlockWalletResponse {}
+
+message GetBalanceResponse {
+  int64 amount = 1;
 }
 
-message GetNewTransactionsResponse {
+message SendFromMinerResponse {}
+
+message SendResponse {
+  string contract_address = 1;
+  string txid = 2;
+}
+
+message GetPeerInfoResponse {
+  repeated networkpb.PeerInfo peer_list = 1;
+}
+
+message GetBlockchainInfoResponse {
+  bytes   tail_block_hash = 1;
+  uint64  block_height = 2;
+  repeated string producers = 3; // all producers' addresses
+  int64   timestamp = 4;
+}
+
+message AddPeerResponse {}
+
+message GetVersionResponse {
+  string proto_version = 1;
+  string server_version = 2;
+}
+
+message GetUTXOResponse {
+  repeated corepb.Utxo utxos = 1;
+  repeated corepb.BlockHeader block_headers = 2; //The latest block headers
+}
+
+message GetBlocksResponse {
+  repeated corepb.Block blocks = 1;
+}
+
+message GetBlockByHashResponse {
+  corepb.Block block = 1;
+}
+
+message GetBlockByHeightResponse {
+  corepb.Block block = 1;
+}
+
+message SendTransactionResponse {}
+
+message SendBatchTransactionResponse {}
+
+message SendTransactionStatus {
+  bytes txid = 1; // Transactions that are sent
+  uint32 code = 2; // grpc status code
+  string message = 3;
+}
+
+message GetNewTransactionResponse {
   corepb.Transaction transaction = 1;
+}
+
+message SubscribeResponse {
+  string data = 1;
+}
+
+message GetAllTransactionsRequest{}
+
+message GetAllTransactionsResponse{
+  repeated corepb.Transaction transactions = 1;
+}
+
+message GetStatsResponse {
+  metricspb.Metrics stats = 1;
+}
+
+message GetLastIrreversibleBlockResponse {
+  corepb.Block block = 1;
 }

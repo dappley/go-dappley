@@ -1,0 +1,7 @@
+syntax = "proto3";
+package corepb;
+
+message KeyPair{
+    bytes privateKey = 1;
+    bytes publicKey = 2;
+}

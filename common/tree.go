@@ -75,6 +75,16 @@ func (t *Tree) Delete() {
 	t.Parent = nil
 }
 
+func (t *Tree) GetRoot() *Tree {
+	root := t
+	parent := t.Parent
+	for parent != nil {
+		root = parent
+		parent = parent.Parent
+	}
+	return root
+}
+
 func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 	var parentTrees []*Tree
 	parentTrees = append(parentTrees, t)
@@ -128,4 +138,40 @@ func (t *Tree) GetValue() interface{} {
 
 func (t *Tree) GetKey() interface{} {
 	return t.entry.key
+}
+
+// NumLeaves returns the number of leaves in the tree t
+func (t *Tree) NumLeaves() int64 {
+	if !t.hasChildren() {
+		return 1
+	}
+	var numLeaves int64 = 0
+	for _, child := range t.Children {
+		numLeaves += child.NumLeaves()
+	}
+
+	return numLeaves
+}
+
+// Size returns the number of nodes in the tree
+func (t *Tree) Size() int64 {
+	var size int64 = 1
+	for _, child := range t.Children {
+		size += child.Size()
+	}
+
+	return size
+}
+
+// Height returns the length of the deepest path counting nodes not edges
+func (t *Tree) Height() int64 {
+	var length int64 = 0
+	for _, child := range t.Children {
+		t := child.Height()
+		if t > length {
+			length = t
+		}
+	}
+
+	return length + 1
 }

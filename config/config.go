@@ -21,7 +21,7 @@ package config
 import (
 	"io/ioutil"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 

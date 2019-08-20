@@ -1,4 +1,4 @@
-all: dep build run test check-running
+all: dep build deploy-v8 run test check-running
 
 testall:
 	go clean -testcache
@@ -20,6 +20,7 @@ test:
 	done
 
 build:
+	make deploy-v8
 	cd dapp; go build
 	cd dapp/cli; go build
 run:
@@ -34,5 +35,4 @@ release:
 	cd dapp/cli; go build -tags=release
 
 deploy-v8:
-	sudo install scEngine/lib/libdappleyv8.so /usr/local/lib/
-	sudo /sbin/ldconfig
+	cd vm/v8; make build; make install

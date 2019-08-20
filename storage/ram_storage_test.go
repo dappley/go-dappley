@@ -27,7 +27,7 @@ import (
 
 func TestNewRamStorage(t *testing.T) {
 	r := NewRamStorage()
-	assert.Equal(t, r.data, new(sync.Map))
+	assert.Equal(t, new(sync.Map), r.data)
 }
 
 //test get and put methods
@@ -51,7 +51,7 @@ func TestRamStorage_GetandPut(t *testing.T) {
 			r.Put(kv.key, kv.value)
 			v, err := r.Get(kv.key)
 			assert.Nil(t, err)
-			assert.Equal(t, v, kv.value)
+			assert.Equal(t, kv.value, v)
 		})
 	}
 
@@ -59,7 +59,7 @@ func TestRamStorage_GetandPut(t *testing.T) {
 	_, err := r.Get([]byte("d"))
 
 	//there should be an error returned
-	assert.Equal(t, err, ErrKeyInvalid)
+	assert.Equal(t, ErrKeyInvalid, err)
 }
 
 //test close method
@@ -76,7 +76,7 @@ func TestRamStorage_Close(t *testing.T) {
 	v, err := r.Get([]byte("1"))
 
 	//there should be an error returned
-	assert.Equal(t, err, ErrKeyInvalid)
+	assert.Equal(t, ErrKeyInvalid, err)
 	//there should be not value returned
 	assert.Nil(t, v)
 }

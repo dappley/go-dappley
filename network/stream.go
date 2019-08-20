@@ -21,140 +21,258 @@ package network
 import (
 	"bufio"
 	"errors"
-	"reflect"
-	"sync"
-
-	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-net"
-	"github.com/libp2p/go-libp2p-peer"
+	"github.com/dappley/go-dappley/network/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
-
-	"github.com/dappley/go-dappley/network/pb"
+	"math/big"
+	"reflect"
 )
 
 const (
-	SyncBlock    = "SyncBlock"
-	SyncPeerList = "SyncPeerList"
-	RequestBlock = "requestBlock"
-	BroadcastTx  = "BroadcastTx"
-	Unicast      = 0
-	Broadcast    = 1
+	lengthByteLength       = 8
+	startByteLength        = 2
+	checkSumLength         = 1
+	headerLength           = lengthByteLength + startByteLength + checkSumLength
+	highPriorityChLength   = 1024 * 4
+	normalPriorityChLength = 1024 * 4
+	WriteChTotalLength     = highPriorityChLength + normalPriorityChLength
+)
+
+const (
+	HighPriorityCommand = iota
+	NormalPriorityCommand
 )
 
 var (
 	ErrInvalidMessageFormat = errors.New("invalid message format")
+	ErrLengthTooShort       = errors.New("message length is too short")
+	ErrFragmentedData       = errors.New("fragmented data")
+	ErrCheckSumIncorrect    = errors.New("incorrect checksum")
 )
 
 var (
 	startBytes = []byte{0x7E, 0x7E}
-	endBytes   = []byte{0x7F, 0x7F, 0}
 )
 
-type dapHandler func(*DapMsg, *Stream)
-
 type Stream struct {
-	peerID     peer.ID
-	remoteAddr multiaddr.Multiaddr
-	stream     net.Stream
-	dataCh     chan []byte
-	quitRdCh   chan bool
-	quitWrCh   chan bool
+	peerID                peer.ID
+	remoteAddr            multiaddr.Multiaddr
+	stream                network.Stream
+	msglength             int
+	rawByteRead           []byte
+	msgReadCh             chan []byte
+	highPriorityWriteCh   chan []byte
+	normalPriorityWriteCh chan []byte
+	msgNotifyCh           chan bool
+	quitRdCh              chan bool
+	quitWrCh              chan bool
 }
 
-func NewStream(s net.Stream) *Stream {
+func NewStream(s network.Stream) *Stream {
 	return &Stream{
 		s.Conn().RemotePeer(),
 		s.Conn().RemoteMultiaddr(),
 		s,
-		make(chan []byte, 5), //TODO: Redefine the size of the channel
-		make(chan bool, 1),   //two channels to stop
+		0,
+		[]byte{},
+		make(chan []byte, 100),
+		make(chan []byte, highPriorityChLength),
+		make(chan []byte, normalPriorityChLength),
+		make(chan bool, WriteChTotalLength),
+		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
 	}
 }
 
-func (s *Stream) Start(quitCh chan<- *Stream, dh dapHandler) {
+func (s *Stream) Start(quitCh chan<- *Stream, dispatch chan *streamMsg) {
+	logger.Info("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
-	s.startLoop(rw, quitCh, dh)
+	s.startLoop(rw, quitCh, dispatch)
 }
 
-func (s *Stream) StopStream() {
+func (s *Stream) StopStream(err error) {
 	logger.WithFields(logger.Fields{
 		"peer_address": s.remoteAddr,
-	}).Debug("Stream: is terminated!")
+		"pid":          s.peerID,
+		"error":        err,
+	}).Info("Stream: is terminated!!")
 	s.quitRdCh <- true
 	s.quitWrCh <- true
 	s.stream.Close()
 }
 
-func (s *Stream) Send(data []byte) {
-	s.dataCh <- data
+func (s *Stream) Send(data []byte, priority int) {
+	defer func() {
+		if p := recover(); p != nil {
+			logger.WithFields(logger.Fields{
+				"peer_address": s.remoteAddr,
+				"pid":          s.peerID,
+				"error":        p,
+			}).Info("Stream: data channel closed.")
+		}
+	}()
+
+	switch priority {
+	case HighPriorityCommand:
+		select {
+		case s.highPriorityWriteCh <- data:
+		default:
+			logger.WithFields(logger.Fields{
+				"dataCh_len": len(s.highPriorityWriteCh),
+			}).Warn("Stream: High priority message channel full!")
+			return
+		}
+	case NormalPriorityCommand:
+		select {
+		case s.normalPriorityWriteCh <- data:
+		default:
+			logger.WithFields(logger.Fields{
+				"dataCh_len": len(s.normalPriorityWriteCh),
+			}).Warn("Stream: normal priority message channel full!")
+			return
+		}
+	default:
+		logger.WithFields(logger.Fields{
+			"priority": priority,
+		}).Warn("Stream: priority is invalid!")
+		return
+	}
+
+	select {
+	case s.msgNotifyCh <- true:
+	default:
+		logger.WithFields(logger.Fields{
+			"dataCh_len": len(s.msgNotifyCh),
+		}).Warn("Stream: message notification channel full!")
+	}
+
 }
 
-func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
-	go s.readLoop(rw, quitCh, dh)
+func (s *Stream) startLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
+	go s.readLoop(rw, quitCh, dispatch)
 	go s.writeLoop(rw)
 }
 
-func readMsg(rw *bufio.ReadWriter) ([]byte, error) {
-	var bytes []byte
-	for {
-		b, err := rw.ReadByte()
+func (s *Stream) read(rw *bufio.ReadWriter) {
+	buffer := make([]byte, 1024)
+	var err error
 
-		if err != nil {
-			return bytes, err
-		}
-		bytes = append(bytes, b)
-		if containEndingBytes(bytes) {
-			return bytes, nil
-		}
-	}
-}
-
-func (s *Stream) read(rw *bufio.ReadWriter, dh dapHandler) {
-	//read stream with delimiter
-	bytes, err := readMsg(rw)
-
+	n, err := rw.Read(buffer)
 	if err != nil {
-		logger.Warn(err)
+		logger.WithError(err).WithFields(logger.Fields{
+			"num_of_byte_read": n,
+		}).Warn("Stream: Read failed")
+		s.StopStream(err)
 	}
 
-	//TODO: How to verify the integrity of the received message
-	if len(bytes) > 1 {
-		dm := s.parseData(bytes)
-		dh(dm, s)
-	} else {
-		logger.Debug("Stream: reads less than 1 byte. Stop Reading...")
-		//stop the stream
-		s.StopStream()
+	s.rawByteRead = append(s.rawByteRead, buffer[:n]...)
+
+	for {
+		if len(s.rawByteRead) < headerLength {
+			return
+		}
+
+		if err = verifyHeader(s.rawByteRead[:headerLength]); err != nil {
+			s.StopStream(err)
+		}
+		s.msglength = getLength(s.rawByteRead[:headerLength])
+
+		if len(s.rawByteRead) < headerLength+s.msglength {
+			return
+		}
+
+		s.msgReadCh <- s.rawByteRead[:headerLength+s.msglength]
+		s.rawByteRead = s.rawByteRead[headerLength+s.msglength:]
 	}
 
 }
 
-func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dh dapHandler) {
+func (s *Stream) readLoop(rw *bufio.ReadWriter, quitCh chan<- *Stream, dispatch chan *streamMsg) {
 	for {
 		select {
 		case <-s.quitRdCh:
 			quitCh <- s
 			logger.Debug("Stream: read loop is terminated!")
 			return
+		case msg := <-s.msgReadCh:
+			dm := s.parseData(msg)
+			dispatch <- newMsg(dm, s.peerID)
 		default:
-			s.read(rw, dh)
+			s.read(rw)
 		}
 	}
 }
 
 func encodeMessage(data []byte) []byte {
-	ret := append(startBytes, data...)
-	ret = append(ret, endBytes...)
+	header := constructHeader(data)
+	ret := append(header, data...)
 	return ret
 }
 
-func decodeMessage(data []byte) ([]byte, error) {
-	if !(containStartingBytes(data) && containEndingBytes(data)) {
-		return nil, ErrInvalidMessageFormat
+func constructHeader(data []byte) []byte {
+	length := len(data)
+	msg := make([]byte, lengthByteLength)
+	lengthBytes := big.NewInt(int64(length)).Bytes()
+	lenDiff := len(msg) - len(lengthBytes)
+	for i, b := range lengthBytes {
+		msg[i+lenDiff] = b
 	}
-	return data[2 : len(data)-3], nil
+	ret := append(startBytes, msg...)
+	cs := checkSum(ret)
+	ret = append(ret, cs)
+	return ret
+}
+
+func checkSum(data []byte) byte {
+	sum := byte(0)
+	for _, d := range data {
+		sum += d
+	}
+	return sum
+}
+
+func decodeMessage(data []byte) ([]byte, error) {
+
+	if len(data) <= headerLength {
+		return nil, ErrLengthTooShort
+	}
+
+	header := data[:headerLength]
+	if err := verifyHeader(header); err != nil {
+		return nil, err
+	}
+
+	if len(data) != getLength(header)+headerLength {
+		return nil, ErrFragmentedData
+	}
+
+	return data[headerLength:], nil
+}
+
+func verifyHeader(header []byte) error {
+	if !containStartingBytes(header) {
+		return ErrInvalidMessageFormat
+	}
+
+	if len(header) != headerLength {
+		return ErrLengthTooShort
+	}
+
+	cs := checkSum(header[:headerLength-1])
+
+	if cs != header[headerLength-1] {
+		return ErrCheckSumIncorrect
+	}
+	return nil
+}
+
+func getLength(header []byte) int {
+	lengthByte := header[2 : 2+lengthByteLength]
+	l := *new(big.Int).SetBytes(lengthByte)
+	return int(l.Uint64())
 }
 
 func containStartingBytes(data []byte) bool {
@@ -164,27 +282,45 @@ func containStartingBytes(data []byte) bool {
 	return reflect.DeepEqual(data[0:len(startBytes)], startBytes)
 }
 
-func containEndingBytes(data []byte) bool {
-	if len(data) < len(endBytes) {
-		return false
-	}
-	return reflect.DeepEqual(data[(len(data)-len(endBytes)):], endBytes)
-}
-
 func (s *Stream) writeLoop(rw *bufio.ReadWriter) error {
-	var mutex = &sync.Mutex{}
+
 	for {
 		select {
-		case data := <-s.dataCh:
-			mutex.Lock()
-			//attach a delimiter byte of 0x00 to the end of the message
-			rw.WriteString(string(encodeMessage(data)))
-			rw.Flush()
-			mutex.Unlock()
 		case <-s.quitWrCh:
+			// Fix bug when send data to peer simultaneous with close stream,
+			// and send will hang because highPriorityWriteCh is full.
+			close(s.highPriorityWriteCh)
+			close(s.normalPriorityWriteCh)
+			close(s.msgNotifyCh)
 			logger.Debug("Stream: write loop is terminated!")
 			return nil
+		case <-s.msgNotifyCh:
+			select {
+			case data := <-s.highPriorityWriteCh:
+				n, err := s.stream.Write(encodeMessage(data))
+				if err != nil {
+					logger.WithError(err).WithFields(logger.Fields{
+						"num_of_bytes_sent": n,
+						"orig_data_size":    len(encodeMessage(data)),
+					}).Warn("Stream: Send message through high priority channel failed!")
+				}
+				continue
+			default:
+			}
+			select {
+			case data := <-s.normalPriorityWriteCh:
+				n, err := s.stream.Write(encodeMessage(data))
+				if err != nil {
+					logger.WithError(err).WithFields(logger.Fields{
+						"num_of_bytes_sent": n,
+						"orig_data_size":    len(encodeMessage(data)),
+					}).Warn("Stream: Send message through normal priority channel failed!")
+				}
+				continue
+			default:
+			}
 		}
+
 	}
 	return nil
 }
@@ -194,7 +330,10 @@ func (s *Stream) parseData(data []byte) *DapMsg {
 
 	dataDecoded, err := decodeMessage(data)
 	if err != nil {
-		logger.Warn(err)
+		logger.WithError(err).WithFields(logger.Fields{
+			"data":   data,
+			"length": len(data),
+		}).Warn("Stream: cannot decode the message.")
 		return nil
 	}
 

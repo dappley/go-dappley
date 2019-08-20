@@ -24,20 +24,6 @@ func (_m *Consensus) AddProducer(_a0 string) error {
 	return r0
 }
 
-// FinishedMining provides a mock function with given fields:
-func (_m *Consensus) FinishedMining() bool {
-	ret := _m.Called()
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
 // GetProducers provides a mock function with given fields:
 func (_m *Consensus) GetProducers() []string {
 	ret := _m.Called()
@@ -54,13 +40,36 @@ func (_m *Consensus) GetProducers() []string {
 	return r0
 }
 
-// SetKey provides a mock function with given fields: _a0
-func (_m *Consensus) SetKey(_a0 string) {
-	_m.Called(_a0)
+// IsProducingBlock provides a mock function with given fields:
+func (_m *Consensus) IsProducingBlock() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
 }
 
-// SetTargetBit provides a mock function with given fields: _a0
-func (_m *Consensus) SetTargetBit(_a0 int) {
+// Produced provides a mock function with given fields: block
+func (_m *Consensus) Produced(block *core.Block) bool {
+	ret := _m.Called(block)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(*core.Block) bool); ok {
+		r0 = rf(block)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// SetKey provides a mock function with given fields: _a0
+func (_m *Consensus) SetKey(_a0 string) {
 	_m.Called(_a0)
 }
 
@@ -71,11 +80,6 @@ func (_m *Consensus) Setup(_a0 core.NetService, _a1 string) {
 
 // Start provides a mock function with given fields:
 func (_m *Consensus) Start() {
-	_m.Called()
-}
-
-// StartNewBlockMinting provides a mock function with given fields:
-func (_m *Consensus) StartNewBlockMinting() {
 	_m.Called()
 }
 
@@ -98,16 +102,6 @@ func (_m *Consensus) Validate(block *core.Block) bool {
 	return r0
 }
 
-// VerifyBlock provides a mock function with given fields: block
-func (_m *Consensus) VerifyBlock(block *core.Block) bool {
-	ret := _m.Called(block)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(*core.Block) bool); ok {
-		r0 = rf(block)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
+func (_m *Consensus) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }

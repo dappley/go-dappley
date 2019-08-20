@@ -28,7 +28,6 @@ import (
 
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/crypto/utils"
-
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/scrypt"
 )
@@ -106,11 +105,7 @@ func (s *Scrypt) EncryptKey(address string, data []byte, passphrase []byte) ([]b
 		return nil, err
 	}
 
-	idstring := ""
-
-	if id, err := uuid.NewV4(); err == nil {
-		idstring = id.String()
-	}
+	idstring := uuid.NewV4().String()
 
 	encryptedKeyJSON := encryptedKeyJSON{
 		string(address),

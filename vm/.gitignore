@@ -1,0 +1,5 @@
+v8/*.o
+v8/lib/*.o
+lib/libdappleyv8.dylib
+lib/libdappleyv8.so
+./*.dll

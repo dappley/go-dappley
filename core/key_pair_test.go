@@ -20,6 +20,8 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,8 +44,8 @@ func TestGenerateAddress(t *testing.T) {
 	assert.NotNil(t, address2)
 	assert.NotNil(t, address3)
 
-	assert.Equal(t, address1, addressExpectForKey1)
-	assert.Equal(t, address2, addressExpectForKey2)
+	assert.Equal(t, addressExpectForKey1, address1)
+	assert.Equal(t, addressExpectForKey2, address2)
 	assert.Equal(t, address1, address3)
 }
 
@@ -57,4 +59,17 @@ func TestNewKeyPair(t *testing.T) {
 	assert.Equal(t, 64, len(key1.PublicKey))
 	assert.Equal(t, 32, len(key1.PrivateKey.D.Bytes()))
 
+}
+
+func TestKeyPair_Proto(t *testing.T) {
+	kp := NewKeyPair()
+	rawBytes, err := proto.Marshal(kp.ToProto())
+	assert.Nil(t, err)
+	kpProto := &corepb.KeyPair{}
+	err = proto.Unmarshal(rawBytes, kpProto)
+	assert.Nil(t, err)
+	kp1 := &KeyPair{}
+	kp1.FromProto(kpProto)
+	assert.Equal(t, kp.PublicKey, kp1.PublicKey)
+	assert.Equal(t, kp.PrivateKey, kp1.PrivateKey)
 }

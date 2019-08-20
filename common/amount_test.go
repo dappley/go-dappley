@@ -102,7 +102,11 @@ func TestAmountOperation(t *testing.T) {
 	productResult = a.Times(4)
 	assert.Equal(t, productExpect.Bytes(), productResult.Bytes())
 
-	assert.Equal(t, a.Cmp(b), 1)
-	assert.Equal(t, b.Cmp(a), -1)
-	assert.Equal(t, a.Cmp(a), 0)
+	quotientExpect := NewAmount(3)
+	quotientResult := b.Div(3)
+	assert.Equal(t, quotientExpect.Bytes(), quotientResult.Bytes())
+
+	assert.Equal(t, 1, a.Cmp(b))
+	assert.Equal(t, -1, b.Cmp(a))
+	assert.Equal(t, 0, a.Cmp(a))
 }

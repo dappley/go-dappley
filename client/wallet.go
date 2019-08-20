@@ -18,7 +18,10 @@
 package client
 
 import (
+	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 type Wallet struct {
@@ -52,4 +55,28 @@ func (w Wallet) ContainAddress(address core.Address) bool {
 		}
 	}
 	return false
+}
+
+func (w *Wallet) ToProto() proto.Message {
+	addrsProto := []*corepb.Address{}
+	for _, addr := range w.Addresses {
+		addrsProto = append(addrsProto, addr.ToProto().(*corepb.Address))
+	}
+	return &walletpb.Wallet{
+		KeyPair:   w.Key.ToProto().(*corepb.KeyPair),
+		Addresses: addrsProto,
+	}
+}
+
+func (w *Wallet) FromProto(pb proto.Message) {
+	addrs := []core.Address{}
+	for _, addrPb := range pb.(*walletpb.Wallet).Addresses {
+		addr := core.Address{}
+		addr.FromProto(addrPb)
+		addrs = append(addrs, addr)
+	}
+	keyPair := &core.KeyPair{}
+	keyPair.FromProto(pb.(*walletpb.Wallet).KeyPair)
+	w.Key = keyPair
+	w.Addresses = addrs
 }

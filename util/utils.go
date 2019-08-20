@@ -21,8 +21,13 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
+	"reflect"
+
 	logger "github.com/sirupsen/logrus"
 )
+
+const quotationMark = "\""
 
 // IntToHex converts an int64 to a byte array
 func IntToHex(num int64) []byte {
@@ -45,4 +50,51 @@ func UintToHex(num uint64) []byte {
 	}
 
 	return buff.Bytes()
+}
+
+type ArgStruct struct {
+	Function string   `json:"function"`
+	Args     []string `json:"args"`
+}
+
+func DecodeScInput(s string) (function string, args []string) {
+	var input ArgStruct
+	err := json.Unmarshal([]byte(s), &input)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"input":             s,
+			"decoded_function":  input.Function,
+			"decoded_arguments": input.Args,
+		}).Warn("DecodeScInput: cannot decode the input of the smart contract!")
+	}
+	return input.Function, input.Args
+}
+
+func PrepareArgs(args []string) string {
+	totalArgs := ""
+	for i, arg := range args {
+		if i == 0 {
+			totalArgs += quoteArg(arg)
+		} else {
+			totalArgs += "," + quoteArg(arg)
+		}
+	}
+	return totalArgs
+}
+
+func quoteArg(arg string) string {
+	//if the input is an array or a json object, do not quote them.
+	if arg[0] != '[' && arg[0] != '{' {
+		return quotationMark + arg + quotationMark
+	}
+	return arg
+}
+
+// ReverseSlice returns an in-place reversal of the slice's elements
+func ReverseSlice(slice interface{}) interface{} {
+	swap := reflect.Swapper(slice)
+	for low, high := 0, reflect.ValueOf(slice).Len()-1; low < high; low, high = low+1, high-1 {
+		swap(low, high)
+	}
+	return slice
 }

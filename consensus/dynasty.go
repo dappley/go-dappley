@@ -34,17 +34,11 @@ type Dynasty struct {
 }
 
 const (
-	defaultMaxProducers   = 5
-	defaultTimeBetweenBlk = 15
+	defaultMaxProducers   = 21
+	defaultTimeBetweenBlk = 5
 )
 
 func (dynasty *Dynasty) trimProducers() {
-	//if producer conf file does not have all producers
-	if len(dynasty.producers) < defaultMaxProducers {
-		for len(dynasty.producers) < defaultMaxProducers {
-			dynasty.producers = append(dynasty.producers, "")
-		}
-	}
 	//if producer conf file has too many producers
 	if len(dynasty.producers) > defaultMaxProducers {
 		dynasty.producers = dynasty.producers[:defaultMaxProducers]
@@ -165,7 +159,7 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 
 func IsProducerAddressValid(producer string) bool {
 	addr := core.NewAddress(producer)
-	return addr.ValidateAddress()
+	return addr.IsValid()
 }
 
 func (dynasty *Dynasty) GetDynastyTime() int {

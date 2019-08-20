@@ -12,13 +12,11 @@ const versionUser = byte(0x5A)
 const versionContract = byte(0x58)
 const addressChecksumLen = 4
 
-type PubKeyHash struct {
-	PubKeyHash []byte
-}
+type PubKeyHash []byte
 
 var (
-	ErrIncorrectPublicKey = errors.New("public key not correct")
-	ErrEmptyPublicKeyHash = errors.New("empty public key hash")
+	ErrIncorrectPublicKey       = errors.New("public key not correct")
+	ErrEmptyPublicKeyHash       = errors.New("empty public key hash")
 	ErrInvalidPubKeyHashVersion = errors.New("invalid public key hash version")
 )
 
@@ -26,43 +24,38 @@ var (
 func NewUserPubKeyHash(pubKey []byte) (PubKeyHash, error) {
 	pubKeyHash, err := generatePubKeyHash(pubKey)
 	if err != nil {
-		return PubKeyHash{pubKeyHash}, err
+		return PubKeyHash(pubKeyHash), err
 	}
 	pubKeyHash = append([]byte{versionUser}, pubKeyHash...)
-	return PubKeyHash{pubKeyHash}, nil
+	return PubKeyHash(pubKeyHash), nil
 }
 
 //NewContractPubKeyHash generates a smart Contract public key hash
 func NewContractPubKeyHash() PubKeyHash {
 	pubKeyHash, _ := generatePubKeyHash(NewKeyPair().PublicKey)
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
-	return PubKeyHash{pubKeyHash}
-}
-
-//GetPubKeyHash gets the public key hash
-func (pkh PubKeyHash) GetPubKeyHash() []byte {
-	return pkh.PubKeyHash
+	return PubKeyHash(pubKeyHash)
 }
 
 //GenerateAddress generates an address  from a public key hash
 func (pkh PubKeyHash) GenerateAddress() Address {
-	checksum := Checksum(pkh.GetPubKeyHash())
-	fullPayload := append(pkh.GetPubKeyHash(), checksum...)
+	checksum := Checksum(pkh)
+	fullPayload := append(pkh, checksum...)
 	return NewAddress(base58.Encode(fullPayload))
 }
 
 //GenerateAddress generates an address  from a public key hash
 func (pkh PubKeyHash) IsContract() (bool, error) {
 
-	if len(pkh.PubKeyHash) == 0 {
+	if len(pkh) == 0 {
 		return false, ErrEmptyPublicKeyHash
 	}
 
-	if pkh.PubKeyHash[0] == versionUser {
+	if pkh[0] == versionUser {
 		return false, nil
 	}
 
-	if pkh.PubKeyHash[0] == versionContract {
+	if pkh[0] == versionContract {
 		return true, nil
 	}
 

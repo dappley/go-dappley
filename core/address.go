@@ -23,6 +23,8 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/dappley/go-dappley/core/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 var (
@@ -50,12 +52,12 @@ func (a Address) IsContract() (bool, error) {
 	if !ok {
 		return false, ErrInvalidAddress
 	}
-	pkh := PubKeyHash{pubKeyHash}
+	pkh := PubKeyHash(pubKeyHash)
 	return pkh.IsContract()
 }
 
-//ValidateAddress checks if an address is valid
-func (a Address) ValidateAddress() bool {
+//IsValid checks if an address is valid
+func (a Address) IsValid() bool {
 	_, ok := a.GetPubKeyHash()
 	return ok
 }
@@ -76,4 +78,16 @@ func (a Address) GetPubKeyHash() ([]byte, bool) {
 	}
 	return nil, false
 
+}
+
+//ToProto converts Address object to protobuf message
+func (a *Address) ToProto() proto.Message {
+	return &corepb.Address{
+		Address: a.Address,
+	}
+}
+
+//FromProto converts protobuf message to Address object
+func (a *Address) FromProto(pb proto.Message) {
+	a.Address = pb.(*corepb.Address).Address
 }

@@ -36,10 +36,14 @@ type Consensus interface {
 
 	// IsProducingBlock returns true if this node itself is currently producing a block
 	IsProducingBlock() bool
+	// Produced returns true iff the underlying block producer of the consensus algorithm produced the specified block
+	Produced(block *Block) bool
 
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
 	GetProducers() []string
+	//Return the lib block and new block whether pass lib policy
+	CheckLibPolicy(b *Block) (*Block, bool)
 }
 
 type NetService interface {
@@ -49,10 +53,26 @@ type NetService interface {
 	GetBlockPool() *BlockPool
 }
 
-type BlockPoolInterface interface {
-	BlockRequestCh() chan BlockRequestPars
-	GetSyncState() bool
-	SetSyncState(bool)
-	VerifyTransactions(utxo UTXOIndex, forkBlks []*Block) bool
-	Push(block *Block, pid peer.ID, blockchain *Blockchain)
+type ScEngineManager interface {
+	CreateEngine() ScEngine
+	RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState, blkHeight uint64, seed int64)
+}
+
+type ScEngine interface {
+	DestroyEngine()
+	ImportSourceCode(source string)
+	ImportLocalStorage(state *ScState)
+	ImportContractAddr(contractAddr Address)
+	ImportSourceTXID(txid []byte)
+	ImportUTXOs(utxos []*UTXO)
+	ImportRewardStorage(rewards map[string]string)
+	ImportTransaction(tx *Transaction)
+	ImportContractCreateUTXO(utxo *UTXO)
+	ImportPrevUtxos(utxos []*UTXO)
+	ImportCurrBlockHeight(currBlkHeight uint64)
+	ImportSeed(seed int64)
+	ImportNodeAddress(addr Address)
+	GetGeneratedTXs() []*Transaction
+	Execute(function, args string) string
+	CheckContactSyntax(source string) error
 }

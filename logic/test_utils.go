@@ -25,16 +25,3 @@ func GetAllAddressesByPath(path string) ([]core.Address, error) {
 func GetTestWalletPath() string {
 	return strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1)
 }
-
-func IsTestWalletEmpty() (bool, error) {
-	if client.Exists(GetTestWalletPath()) {
-		wm, _ := GetWalletManager(GetTestWalletPath())
-		if len(wm.Wallets) == 0 {
-			return true, nil
-		}
-		return wm.IsFileEmpty()
-
-	}
-	return true, nil
-
-}

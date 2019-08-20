@@ -21,11 +21,12 @@ package consensus
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDpos(t *testing.T) {
@@ -38,7 +39,7 @@ func TestNewDpos(t *testing.T) {
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128)
+	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
 	pool := core.NewBlockPool(0)
 	node := network.NewNode(bc, pool)
 
@@ -112,4 +113,20 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 			assert.Equal(t, tt.expected, dpos.beneficiaryIsProducer(tt.block))
 		})
 	}
+}
+
+func TestDPOS_isDoubleMint(t *testing.T) {
+	dpos := NewDPOS()
+	dpos.SetDynasty(NewDynasty(nil, defaultMaxProducers, defaultTimeBetweenBlk))
+	blk1Time := int64(1548979365)
+	blk2Time := int64(1548979366)
+
+	// Both timestamps fall in the same DPoS time slot
+	assert.Equal(t, int(blk1Time/defaultTimeBetweenBlk), int(blk2Time/defaultTimeBetweenBlk))
+
+	blk1 := core.FakeNewBlockWithTimestamp(blk1Time, []*core.Transaction{}, nil)
+	dpos.AddBlockToSlot(blk1)
+	blk2 := core.FakeNewBlockWithTimestamp(blk2Time, []*core.Transaction{}, nil)
+
+	assert.True(t, dpos.isDoubleMint(blk2))
 }

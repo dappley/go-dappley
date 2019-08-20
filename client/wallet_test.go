@@ -18,7 +18,9 @@
 package client
 
 import (
+	"github.com/dappley/go-dappley/client/pb"
 	"github.com/dappley/go-dappley/core"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -38,4 +40,16 @@ func TestWallet_ContainAddress(t *testing.T) {
 			assert.Equal(t, tt.expected, wallet.ContainAddress(tt.input))
 		})
 	}
+}
+
+func TestWallet_Proto(t *testing.T) {
+	wallet := NewWallet()
+	rawBytes, err := proto.Marshal(wallet.ToProto())
+	assert.Nil(t, err)
+	walletProto := &walletpb.Wallet{}
+	err = proto.Unmarshal(rawBytes, walletProto)
+	assert.Nil(t, err)
+	wallet1 := &Wallet{}
+	wallet1.FromProto(walletProto)
+	assert.Equal(t, wallet, wallet1)
 }

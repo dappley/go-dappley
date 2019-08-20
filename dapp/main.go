@@ -24,8 +24,9 @@ import (
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
@@ -38,19 +39,28 @@ const (
 	configFilePath  = "conf/default.conf"
 	genesisFilePath = "conf/genesis.conf"
 	defaultPassword = "password"
+	size1kB         = 1024
 )
 
 func main() {
 
+	logger.SetFormatter(&logger.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	logger.SetLevel(logger.InfoLevel)
+
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
+
+	var genesisPath string
+	flag.StringVar(&genesisPath, "g", genesisFilePath, "Genesis Configuration File Path. Default to conf/genesis.conf")
 	flag.Parse()
 
-	logger.SetLevel(logger.DebugLevel)
-
+	logger.Infof("Genesis conf file is %v,node conf file is %v", genesisPath, filePath)
 	//load genesis file information
 	genesisConf := &configpb.DynastyConfig{}
-	config.LoadConfig(genesisFilePath, genesisConf)
+	config.LoadConfig(genesisPath, genesisConf)
 
 	if genesisConf == nil {
 		logger.Error("Cannot load genesis configurations from file! Exiting...")
@@ -71,36 +81,46 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf)
-	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit()
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit)
+	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
+	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
+	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
+	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))
+	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager, int(blkSizeLimit))
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit)
+		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
+	bc.SetState(core.BlockchainInit)
 
 	node, err := initNode(conf, bc)
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
+	defer node.Stop()
 
-	//start rpc server
-	server := rpc.NewGrpcServer(node, defaultPassword)
-	server.Start(conf.GetNodeConfig().GetRpcPort())
-	defer server.Stop()
-
-	//start mining
-	minerAddr := conf.GetConsensusConfig().GetMinerAddr()
+	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
 	conss.Setup(node, minerAddr)
-	conss.SetKey(conf.GetConsensusConfig().GetPrivKey())
+	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
 	logger.WithFields(logger.Fields{
 		"miner_address": minerAddr,
 	}).Info("Consensus is configured.")
 
+	bc.SetState(core.BlockchainReady)
+	node.DownloadBlocks(bc)
+
+	//start rpc server
+	nodeConf := conf.GetNodeConfig()
+	server := rpc.NewGrpcServerWithMetrics(node, defaultPassword, &rpc.MetricsServiceConfig{
+		PollingInterval: nodeConf.GetMetricsPollingInterval(), TimeSeriesInterval: nodeConf.GetMetricsInterval()})
+	server.Start(conf.GetNodeConfig().GetRpcPort())
+	defer server.Stop()
+
+	//start mining
 	logic.SetLockWallet() //lock the wallet
-	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivKey())
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 	conss.Start()
 	defer conss.Stop()
 
@@ -117,8 +137,8 @@ func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dyn
 
 func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
 	//create node
-	node := network.NewNode(bc, core.NewBlockPool(0))
 	nodeConfig := conf.GetNodeConfig()
+	node := network.NewNode(bc, core.NewBlockPool(0))
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
 	if keyPath != "" {
@@ -127,14 +147,16 @@ func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error)
 			logger.Error(err)
 		}
 	}
+
+	seeds := nodeConfig.GetSeed()
+	for _, seed := range seeds {
+		node.GetPeerManager().AddSeedByString(seed)
+	}
+
 	err := node.Start(int(port))
 	if err != nil {
 		logger.Error(err)
 		return nil, err
-	}
-	seed := nodeConfig.GetSeed()
-	if seed != "" {
-		node.AddStreamByString(seed)
 	}
 	return node, nil
 }
