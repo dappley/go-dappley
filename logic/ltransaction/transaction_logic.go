@@ -98,10 +98,13 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 				// vinPubKey is the pubKeyHash if it is a sc generated tx
 				pubKeyHash = account.PubKeyHash(vinPubKey)
 			default:
-				pkh, err := account.NewUserPubKeyHash(vin.PubKey)
-				if err != nil {
+				if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
+					logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 					return nil, nil, nil, nil, err
 				}
+
+				pkh := account.NewUserPubKeyHash(vin.PubKey)
+
 				pubKeyHash = pkh
 			}
 			usedUTXO := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
@@ -133,8 +136,7 @@ func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *lutxo.UTXOIndex) []*ut
 	var prevUtxos []*utxo.UTXO
 	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
 	for _, vin := range tx.Vin {
-		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
+		if ok, _ := account.IsValidPubKey(vin.PubKey); !ok {
 			logger.WithFields(logger.Fields{
 				"tx_id":          hex.EncodeToString(tx.ID),
 				"vin_tx_id":      hex.EncodeToString(vin.Txid),
@@ -142,6 +144,8 @@ func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *lutxo.UTXOIndex) []*ut
 			}).Warn("Transaction: failed to get PubKeyHash of vin.")
 			return nil
 		}
+
+		pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
 		tempUtxoTx, ok := tempUtxoTxMap[string(pubKeyHash)]
 		if !ok {
 			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)

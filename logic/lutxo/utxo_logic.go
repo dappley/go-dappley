@@ -14,10 +14,11 @@ import (
 func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*utxo.UTXO, error) {
 	var res []*utxo.UTXO
 	for _, vin := range tx.Vin {
-		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
+		if ok, _ := account.IsValidPubKey(vin.PubKey); !ok {
 			return nil, transaction.ErrNewUserPubKeyHash
 		}
+		pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
+
 		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{

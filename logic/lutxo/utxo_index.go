@@ -144,7 +144,8 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 		for _, txin := range tx.Vin {
 			//TODO spent contract utxo
 			isContract, _ := account.PubKeyHash(txin.PubKey).IsContract()
-			pkh, err := account.NewUserPubKeyHash(txin.PubKey)
+			_, err := account.IsValidPubKey(txin.PubKey)
+			pkh := account.NewUserPubKeyHash(txin.PubKey)
 			if !isContract {
 				if err != nil {
 					return false

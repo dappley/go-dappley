@@ -41,8 +41,8 @@ import (
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
-var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
+var address1Hash= account.NewUserPubKeyHash(address1Bytes)
+var address2Hash= account.NewUserPubKeyHash(address2Bytes)
 
 func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()

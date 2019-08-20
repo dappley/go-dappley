@@ -148,7 +148,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	}
 
 	keypair := account.NewKeyPair()
-	pbkh, _ := account.NewUserPubKeyHash(keypair.GetPublicKey())
+	pbkh:= account.NewUserPubKeyHash(keypair.GetPublicKey())
 	addr := pbkh.GenerateAddress()
 
 	normalTX := transaction.NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
@@ -278,8 +278,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address2Bytes = []byte("address2000000000000000000000000")
-	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
-	var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
+	var address1Hash= account.NewUserPubKeyHash(address1Bytes)
+	var address2Hash= account.NewUserPubKeyHash(address2Bytes)
 
 	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address1Hash))
 	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address2Hash))

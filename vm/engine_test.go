@@ -373,7 +373,8 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 
 	kp := account.NewKeyPair()
 	fmt.Println(kp.GetPublicKey())
-	pkh, err := account.NewUserPubKeyHash(kp.GetPublicKey())
+	_, err := account.IsValidPubKey(kp.GetPublicKey())
+	pkh := account.NewUserPubKeyHash(kp.GetPublicKey())
 	assert.Nil(t, err)
 	addr := pkh.GenerateAddress()
 	fmt.Println(addr)
@@ -468,7 +469,7 @@ func TestNewAddress(t *testing.T) {
 	privData, _ := secp256k1.FromECDSAPrivateKey(&privateKey)
 	pk := hex.EncodeToString(privData)
 	publicKey := hex.EncodeToString(kp.GetPublicKey())
-	pkh, _ := account.NewUserPubKeyHash(kp.GetPublicKey())
+	pkh := account.NewUserPubKeyHash(kp.GetPublicKey())
 	addr := pkh.GenerateAddress()
 	fmt.Println("privatekey:", pk)
 	fmt.Println("publickey:", publicKey)

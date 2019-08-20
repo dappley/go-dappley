@@ -20,16 +20,17 @@ package consensus
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/core/block_producer_info"
 	"strings"
 	"time"
+
+	"github.com/dappley/go-dappley/core/block_producer_info"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/lblock"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -220,11 +221,12 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 		return false
 	}
 
-	pubKeyHash, err := account.NewUserPubKeyHash(pubkey[1:])
-	if err != nil {
+	if ok, err := account.IsValidPubKey(pubkey[1:]); !ok {
 		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 		return false
 	}
+
+	pubKeyHash := account.NewUserPubKeyHash(pubkey[1:])
 
 	address := pubKeyHash.GenerateAddress()
 

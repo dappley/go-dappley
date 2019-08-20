@@ -861,7 +861,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
-	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
+	var address1Hash= account.NewUserPubKeyHash(address1Bytes)
 
 	db := storage.NewRamStorage()
 	defer db.Close()
@@ -890,19 +890,19 @@ func TestUpdate(t *testing.T) {
 	// test updating UTXO index with dependent transactions
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
+	var pkHash1 = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
 	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
-	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
+	var pkHash2 = account.NewUserPubKeyHash(pubkey2)
 	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
 	var pubkey3 = account.GenerateKeyPairByPrivateKey(prikey3).GetPublicKey()
-	var pkHash3, _ = account.NewUserPubKeyHash(pubkey3)
+	var pkHash3 = account.NewUserPubKeyHash(pubkey3)
 	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
 	var pubkey4 = account.GenerateKeyPairByPrivateKey(prikey4).GetPublicKey()
-	var pkHash4, _ = account.NewUserPubKeyHash(pubkey4)
+	var pkHash4 = account.NewUserPubKeyHash(pubkey4)
 	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
 	var pubkey5 = account.GenerateKeyPairByPrivateKey(prikey5).GetPublicKey()
-	var pkHash5, _ = account.NewUserPubKeyHash(pubkey5)
+	var pkHash5 = account.NewUserPubKeyHash(pubkey5)
 
 	var dependentTx1 = transaction.Transaction{
 		ID: nil,

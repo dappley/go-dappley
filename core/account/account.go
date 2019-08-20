@@ -23,57 +23,56 @@ import (
 )
 
 type Account struct {
-	key     *KeyPair
-	subKeys []*KeyPair
+	key        *KeyPair
+	address    Address
+	pubKeyHash PubKeyHash
 }
 
 func NewAccount() *Account {
 	account := &Account{}
 	account.key = NewKeyPair()
-	account.subKeys = []*KeyPair{}
+	account.address = account.key.GenerateAddress()
+	account.pubKeyHash = NewUserPubKeyHash(account.key.GetPublicKey())
 	return account
 }
 
 func NewAccountByKey(key *KeyPair) *Account {
 	account := &Account{}
 	account.key = key
-	account.subKeys = []*KeyPair{}
+	account.address = account.key.GenerateAddress()
+	account.pubKeyHash = NewUserPubKeyHash(account.key.GetPublicKey())
 	return account
-}
-
-func (a Account) GetSubKeys() []*KeyPair {
-	return a.subKeys
 }
 
 func (a Account) GetKeyPair() *KeyPair {
 	return a.key
 }
 
-func (a Account) GetAllKeys() []*KeyPair {
-	keys := append(a.subKeys, a.key)
-	return keys
+func (a Account) GetAddress() Address {
+	return a.address
+}
+
+func (a Account) GetPubKeyHash() PubKeyHash {
+	return a.pubKeyHash
 }
 
 func (a *Account) ToProto() proto.Message {
-	keysProto := []*accountpb.KeyPair{}
-	for _, key := range a.subKeys {
-		keysProto = append(keysProto, key.ToProto().(*accountpb.KeyPair))
+	addr := &accountpb.Address{
+		Address: a.address.address,
 	}
 	return &accountpb.Account{
-		KeyPair: a.key.ToProto().(*accountpb.KeyPair),
-		SubKeys: keysProto,
+		KeyPair:    a.key.ToProto().(*accountpb.KeyPair),
+		Address:    addr,
+		PubKeyHash: a.pubKeyHash,
 	}
 }
 
 func (a *Account) FromProto(pb proto.Message) {
-	keys := []*KeyPair{}
-	for _, keyPb := range pb.(*accountpb.Account).SubKeys {
-		key := &KeyPair{}
-		key.FromProto(keyPb)
-		keys = append(keys, key)
-	}
 	keyPair := &KeyPair{}
 	keyPair.FromProto(pb.(*accountpb.Account).KeyPair)
 	a.key = keyPair
-	a.subKeys = keys
+	address := Address{}
+	address.FromProto(pb.(*accountpb.Account).Address)
+	a.address = address
+	a.pubKeyHash = pb.(*accountpb.Account).PubKeyHash
 }

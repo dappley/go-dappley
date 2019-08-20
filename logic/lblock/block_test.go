@@ -85,12 +85,12 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	// Prepare test data
 	// Padding Address to 32 Byte
 	var address1Bytes = []byte("address1000000000000000000000000")
-	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
+	var address1Hash = account.NewUserPubKeyHash(address1Bytes)
 
 	normalCoinbaseTX := transaction.NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
 	rewardTX := transaction.NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
-	userPubKeyHash, _ := account.NewUserPubKeyHash(userPubKey)
+	userPubKeyHash := account.NewUserPubKeyHash(userPubKey)
 	userAddr := userPubKeyHash.GenerateAddress()
 	contractPubKeyHash := account.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
@@ -116,10 +116,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
+	var pkHash1 = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
 	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
-	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
+	var pkHash2 = account.NewUserPubKeyHash(pubkey2)
 
 	dependentTx1 := transaction.NewTransactionByVin(util.GenerateRandomAoB(1), 1, pubkey1, 10, pkHash2, 3)
 	dependentTx2 := transaction.NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)

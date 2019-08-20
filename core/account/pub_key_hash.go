@@ -23,13 +23,10 @@ var (
 )
 
 //NewUserPubKeyHash hashes a public key and returns a user type public key hash
-func NewUserPubKeyHash(pubKey []byte) (PubKeyHash, error) {
-	if ok, err := IsValidPubKey(pubKey); !ok {
-		return nil, err
-	}
+func NewUserPubKeyHash(pubKey []byte) PubKeyHash {
 	pubKeyHash := generatePubKeyHash(pubKey)
 	pubKeyHash = append([]byte{versionUser}, pubKeyHash...)
-	return PubKeyHash(pubKeyHash), nil
+	return PubKeyHash(pubKeyHash)
 }
 
 //NewContractPubKeyHash generates a smart Contract public key hash

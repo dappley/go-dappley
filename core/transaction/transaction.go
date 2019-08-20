@@ -759,10 +759,13 @@ func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
 		return nil
 	}
 	vin := tx.Vin[0]
-	pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-	if err != nil {
+	if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
+		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 		return nil
 	}
+
+	pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
+
 	return pubKeyHash
 }
 
@@ -836,11 +839,13 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 		if isContract {
 			continue
 		}
-
-		pubKeyHash, err := account.NewUserPubKeyHash(vin.PubKey)
-		if err != nil {
+		if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
+			logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 			return false, err
 		}
+
+		pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
+
 		if !bytes.Equal([]byte(pubKeyHash), []byte(prevUtxos[i].PubKeyHash)) {
 			return false, errors.New("Transaction: ID is invalid")
 		}

@@ -67,15 +67,17 @@ func VerifyPublicKeyFunc(addr, pubkey *C.char) bool {
 		}).Debug("SmartContract: failed to decode public key.")
 		return false
 	}
+	if ok, err := account.IsValidPubKey(pubKeyBytes); !ok {
 
-	pubKeyHash, err := account.NewUserPubKeyHash(pubKeyBytes)
-	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"content":    goAddr,
 			"public_key": pubKeyBytes,
 		}).Debug("SmartContract: failed to hash public key.")
 		return false
+
 	}
+
+	pubKeyHash := account.NewUserPubKeyHash(pubKeyBytes)
 
 	return pubKeyHash.GenerateAddress().String() == goAddr
 }

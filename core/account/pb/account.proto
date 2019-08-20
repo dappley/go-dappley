@@ -3,7 +3,8 @@ package accountpb;
 
 message Account{
     KeyPair keyPair = 1;
-    repeated KeyPair subKeys = 2;
+    Address address = 2;
+    bytes   pubKeyHash=3;
 }
 
 message KeyPair{

@@ -274,7 +274,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 		return nil, "", ErrInvalidAmount
 	}
 
-	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
+	pubKeyHash:= account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())

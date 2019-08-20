@@ -27,8 +27,8 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +48,9 @@ func TestCreateAccount(t *testing.T) {
 	assert.Nil(t, err)
 	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
+	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
+
+	accountPubKeyHash := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
@@ -58,7 +60,8 @@ func TestCreateAccountWithPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
+	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
+	accountPubKeyHash := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
 	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }

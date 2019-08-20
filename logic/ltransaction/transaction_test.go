@@ -36,7 +36,7 @@ func TestSign(t *testing.T) {
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash, _ := account.NewUserPubKeyHash(pubKey)
+	pubKeyHash:= account.NewUserPubKeyHash(pubKey)
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*utxo.UTXO{
@@ -141,7 +141,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash, _ := account.NewUserPubKeyHash(pubKey)
+	pubKeyHash:= account.NewUserPubKeyHash(pubKey)
 	//Address := KeyPair{*privKey, pubKey}.GenerateAddress()
 
 	// Fake a wrong key pair
@@ -166,7 +166,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	txin2 := append(txin, transaction_base.TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
 	txin3 := append(txin, transaction_base.TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
 	txin4 := append(txin, transaction_base.TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
-	pbh, _ := account.NewUserPubKeyHash(pubKey)
+	pbh:= account.NewUserPubKeyHash(pubKey)
 	txout := []transaction_base.TXOutput{{common.NewAmount(7), pbh, ""}}
 	txout2 := []transaction_base.TXOutput{{common.NewAmount(8), pbh, ""}} //Vout amount > Vin amount
 
@@ -205,7 +205,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestInvalidExecutionTx(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
+	var pkHash1= account.NewUserPubKeyHash(pubkey1)
 	var deploymentTx = transaction.Transaction{
 		ID: nil,
 		Vin: []transaction_base.TXInput{

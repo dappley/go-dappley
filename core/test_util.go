@@ -19,8 +19,9 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/core/transaction"
 	"time"
+
+	"github.com/dappley/go-dappley/core/transaction"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -85,7 +86,7 @@ func MockUtxos(inputs []transaction_base.TXInput) []*utxo.UTXO {
 	utxos := make([]*utxo.UTXO, len(inputs))
 
 	for index, input := range inputs {
-		pubKeyHash, _ := account.NewUserPubKeyHash(input.PubKey)
+		pubKeyHash := account.NewUserPubKeyHash(input.PubKey)
 		utxos[index] = &utxo.UTXO{
 			TXOutput: transaction_base.TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
 			Txid:     input.Txid,
@@ -151,8 +152,8 @@ func MockUtxoTransactionWithInputs() *transaction.Transaction {
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
-var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
+var address1Hash = account.NewUserPubKeyHash(address1Bytes)
+var address2Hash = account.NewUserPubKeyHash(address2Bytes)
 
 func MockUtxoInputs() []transaction_base.TXInput {
 	return []transaction_base.TXInput{

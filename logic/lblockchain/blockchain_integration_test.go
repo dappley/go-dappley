@@ -154,7 +154,7 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundKeyPair *account.KeyPair, 
 }
 
 func createTransaction(utxoIndex *lutxo.UTXOIndex, params transaction.SendTxParam) transaction.Transaction {
-	pkh, _ := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
+	pkh:= account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 	utxos, _ := utxoIndex.GetUTXOsByAmount(pkh, params.TotalCost())
 	tx, err := transaction.NewUTXOTransaction(utxos, params)
 	if err != nil {

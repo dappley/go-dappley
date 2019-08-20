@@ -8,8 +8,8 @@ import (
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -113,7 +113,7 @@ func (sdkw *DappSdkAccount) Update() error {
 	for _, addr := range sdkw.addrs {
 
 		kp := sdkw.wm.GetKeyPairByAddress(addr)
-		_, err := account.NewUserPubKeyHash(kp.GetPublicKey())
+		_, err := account.IsValidPubKey(kp.GetPublicKey())
 		if err != nil {
 			return err
 		}

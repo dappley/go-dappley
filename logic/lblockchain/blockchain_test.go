@@ -215,7 +215,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	for i := 0; i < 10; i++ {
 		kp := account.NewKeyPair()
 		kps = append(kps, kp)
-		pkh, _ := account.NewUserPubKeyHash(kp.GetPublicKey())
+		pkh:= account.NewUserPubKeyHash(kp.GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 	}

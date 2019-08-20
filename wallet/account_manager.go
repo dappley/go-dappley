@@ -163,11 +163,8 @@ func (am *AccountManager) GetAddresses() []account.Address {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 	for _, account := range am.Accounts {
-		addresses = append(addresses, account.GetKeyPair().GenerateAddress())
-		subkeys := account.GetSubKeys()
-		for _, subkey := range subkeys {
-			addresses = append(addresses, subkey.GenerateAddress())
-		}
+		addresses = append(addresses, account.GetAddress())
+
 	}
 
 	return addresses
@@ -205,11 +202,10 @@ func (am *AccountManager) GetAccountByAddress(address account.Address) *account.
 	defer am.mutex.Unlock()
 
 	for _, account := range am.Accounts {
-		for _, key := range account.GetAllKeys() {
-			if key.GenerateAddress() == address {
-				return account
-			}
+		if account.GetAddress() == address {
+			return account
 		}
+
 	}
 	return nil
 }

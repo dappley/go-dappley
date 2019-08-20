@@ -23,11 +23,10 @@ func NewInsufficientBalanceTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAc
 }
 
 func (txSender *InsufficientBalanceTxSender) Generate(params transaction.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
-
-	if err != nil {
-		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to hash sender public key")
+	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
+		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")
 	}
+	pkh := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
 
 	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
 
