@@ -5,6 +5,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	logger "github.com/sirupsen/logrus"
+	"time"
 )
 
 func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.Amount, senderKeyPair *account.KeyPair) *core.Transaction {
@@ -14,7 +15,8 @@ func NewTransaction(prevUtxos []*core.UTXO, vouts []core.TXOutput, tip *common.A
 		vouts,
 		tip,
 		common.NewAmount(0),
-		common.NewAmount(0)}
+		common.NewAmount(0),
+		time.Now().UnixNano()/1e6,}
 	tx.ID = tx.Hash()
 
 	err := tx.Sign(senderKeyPair.GetPrivateKey(), prevUtxos)
