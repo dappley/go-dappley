@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 )
@@ -34,6 +35,7 @@ func GenerateMockBlock() *Block {
 		time.Now().Unix(),
 		nil,
 		0,
+		"",
 	}
 
 	t1 := MockTransaction()
@@ -76,12 +78,13 @@ func FakeNewBlockWithTimestamp(t int64, txs []*Transaction, parent *Block) *Bloc
 func GenerateMockBlockchain(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk)
+		b := NewBlock([]*Transaction{MockTransaction()}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
@@ -96,22 +99,22 @@ func PrepareBlockContext(bc *Blockchain, blk *Block) *BlockContext {
 	return &ctx
 }
 
-func GenerateBlockWithCbtx(addr Address, lastblock *Block) *Block {
+func GenerateBlockWithCbtx(addr account.Address, lastblock *Block) *Block {
 	//create a new block chain
 	cbtx := NewCoinbaseTX(addr, "", lastblock.GetHeight(), common.NewAmount(0))
-	b := NewBlock([]*Transaction{&cbtx}, lastblock)
+	b := NewBlock([]*Transaction{&cbtx}, lastblock, "")
 	return b
 }
 func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 1280000, nil, 100000)
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
 		cbtx := NewCoinbaseTX(addr, "", bc.GetMaxHeight(), common.NewAmount(0))
-		b := NewBlock([]*Transaction{&cbtx}, tailBlk)
+		b := NewBlock([]*Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(b.CalculateHash())
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
 	}
@@ -120,10 +123,12 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 
 func MockTransaction() *Transaction {
 	return &Transaction{
-		ID:   util.GenerateRandomAoB(1),
-		Vin:  MockTxInputs(),
-		Vout: MockTxOutputs(),
-		Tip:  common.NewAmount(5),
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      MockTxInputs(),
+		Vout:     MockTxOutputs(),
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 }
 
@@ -157,7 +162,7 @@ func MockUtxos(inputs []TXInput) []*UTXO {
 	utxos := make([]*UTXO, len(inputs))
 
 	for index, input := range inputs {
-		pubKeyHash, _ := NewUserPubKeyHash(input.PubKey)
+		pubKeyHash, _ := account.NewUserPubKeyHash(input.PubKey)
 		utxos[index] = &UTXO{
 			TXOutput: TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
 			Txid:     input.Txid,
@@ -170,15 +175,7 @@ func MockUtxos(inputs []TXInput) []*UTXO {
 
 func MockTxOutputs() []TXOutput {
 	return []TXOutput{
-		{common.NewAmount(5), PubKeyHash(util.GenerateRandomAoB(2)), ""},
-		{common.NewAmount(7), PubKeyHash(util.GenerateRandomAoB(2)), ""},
-	}
-}
-
-type Done func() bool
-
-func WaitDoneOrTimeout(done Done, timeOut int) {
-	currentTime := time.Now().UTC().Unix()
-	for !done() && !util.IsTimeOut(currentTime, int64(timeOut)) {
+		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
+		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
 	}
 }

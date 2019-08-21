@@ -22,12 +22,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/contract"
 	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -46,18 +46,18 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address core.Address, db storage.Storage, consensus core.Consensus, transactionPoolLimit uint32, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
-	if !address.ValidateAddress() {
+func CreateBlockchain(address account.Address, db storage.Storage, consensus core.Consensus, txPool *core.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*core.Blockchain, error) {
+	if !address.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := core.CreateBlockchain(address, db, consensus, transactionPoolLimit, scManager, blkSizeLimit)
+	bc := core.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
 }
 
-//create a wallet from path
-func CreateWallet(path string, password string) (*client.Wallet, error) {
+//create a account from path
+func CreateAccount(path string, password string) (*account.Account, error) {
 	if len(path) == 0 {
 		return nil, ErrPathEmpty
 	}
@@ -67,130 +67,141 @@ func CreateWallet(path string, password string) (*client.Wallet, error) {
 	}
 
 	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
+	am := account_logic.NewAccountManager(fl)
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
-	wm.PassPhrase = passBytes
-	wm.Locked = true
-	err = wm.LoadFromFile()
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
+	am.PassPhrase = passBytes
+	am.Locked = true
+	err = am.LoadFromFile()
+	account := account.NewAccount()
+	am.AddAccount(account)
+	am.SaveAccountToFile()
 
-	return wallet, err
+	return account, err
 }
 
-//get wallet
-func GetWallet() (*client.Wallet, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
-	empty, err := wm.IsFileEmpty()
+//get account
+func GetAccount() (*account.Account, error) {
+	am, err := GetAccountManager(account_logic.GetAccountFilePath())
+	empty, err := am.IsFileEmpty()
 	if empty {
 		return nil, nil
 	}
-	if len(wm.Wallets) > 0 {
-		return wm.Wallets[0], err
+	if len(am.Accounts) > 0 {
+		return am.Accounts[0], err
 	}
 	return nil, err
 }
 
+// Returns default account file path or first argument of argument vector
+func getAccountFilePath(argv []string) string {
+	if len(argv) == 1 {
+		return argv[0]
+	}
+	return account_logic.GetAccountFilePath()
+}
+
 //Get lock flag
-func IsWalletLocked() (bool, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
-	return wm.Locked, err
+func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
+	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
+	return am.Locked, err
 }
 
 //Tell if the file empty or not exist
-func IsWalletEmpty() (bool, error) {
-	if client.Exists(client.GetWalletFilePath()) {
-		wm, _ := GetWalletManager(client.GetWalletFilePath())
-		if len(wm.Wallets) == 0 {
+func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
+	accountFilePath := getAccountFilePath(optionalAccountFilePath)
+
+	if account_logic.Exists(accountFilePath) {
+		am, _ := GetAccountManager(accountFilePath)
+		if len(am.Accounts) == 0 {
 			return true, nil
 		}
-		return wm.IsFileEmpty()
+		return am.IsFileEmpty()
 	}
 	return true, nil
-
 }
 
 //Set lock flag
-func SetLockWallet() error {
-	wm, err1 := GetWalletManager(client.GetWalletFilePath())
-	empty, err2 := wm.IsFileEmpty()
-	if empty {
-		return nil
-	}
+func SetLockAccount(optionalAccountFilePath ...string) error {
+	am, err1 := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
+
 	if err1 != nil {
 		return err1
 	}
 
+	empty, err2 := am.IsFileEmpty()
+
 	if err2 != nil {
 		return err2
 	}
-	wm.Locked = true
-	wm.SaveWalletToFile()
-	return nil
 
+	if empty {
+		return nil
+	}
+
+	am.Locked = true
+	am.SaveAccountToFile()
+	return nil
 }
 
 //Set unlock and timer
-func SetUnLockWallet() error {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+func SetUnLockAccount(optionalAccountFilePath ...string) error {
+	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
 		return err
 	}
-	wm.SetUnlockTimer(unlockduration)
+	am.SetUnlockTimer(unlockduration)
 	return nil
-
 }
 
-//create a wallet with passphrase
-func CreateWalletWithpassphrase(password string) (*client.Wallet, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+//create a account with passphrase
+func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
+	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
 		return nil, err
 	}
 
-	if len(wm.Wallets) > 0 && wm.PassPhrase != nil {
-		err = bcrypt.CompareHashAndPassword(wm.PassPhrase, []byte(password))
+	if len(am.Accounts) > 0 && am.PassPhrase != nil {
+		err = bcrypt.CompareHashAndPassword(am.PassPhrase, []byte(password))
 		if err != nil {
 			return nil, ErrPasswordNotMatch
 		}
-		wallet := client.NewWallet()
-		wm.AddWallet(wallet)
-		wm.SaveWalletToFile()
-		return wallet, err
+		account := account.NewAccount()
+		am.AddAccount(account)
+		am.SaveAccountToFile()
+		return account, err
 
 	}
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
-	wm.PassPhrase = passBytes
-	logger.Info("Wallet password is set!")
-	wallet := client.NewWallet()
-	wm.AddWallet(wallet)
-	wm.Locked = true
-	wm.SaveWalletToFile()
-	return wallet, err
+	am.PassPhrase = passBytes
+	logger.Info("Account password is set!")
+	account := account.NewAccount()
+	am.AddAccount(account)
+	am.Locked = true
+	am.SaveAccountToFile()
+	return account, err
 
 }
 
-//create a wallet
-func AddWallet() (*client.Wallet, error) {
-	wm, err := GetWalletManager(client.GetWalletFilePath())
+//create a account
+func AddAccount() (*account.Account, error) {
+	am, err := GetAccountManager(account_logic.GetAccountFilePath())
 	if err != nil {
 		return nil, err
 	}
 
-	wallet := client.NewWallet()
-	if len(wm.Wallets) == 0 {
-		wm.Locked = true
+	account := account.NewAccount()
+	if len(am.Accounts) == 0 {
+		am.Locked = true
 	}
-	wm.AddWallet(wallet)
-	wm.SaveWalletToFile()
-	return wallet, err
+	am.AddAccount(account)
+	am.SaveAccountToFile()
+	return account, err
 }
 
 //Get duration
@@ -199,8 +210,8 @@ func GetUnlockDuration() time.Duration {
 }
 
 //get balance
-func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, error) {
-	pubKeyHash, valid := address.GetPubKeyHash()
+func GetBalance(address account.Address, bc *core.Blockchain) (*common.Amount, error) {
+	pubKeyHash, valid := account.GeneratePubKeyHashByAddress(address)
 	if valid == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
@@ -215,8 +226,9 @@ func GetBalance(address core.Address, bc *core.Blockchain) (*common.Amount, erro
 	return balance, nil
 }
 
-func Send(senderWallet *client.Wallet, to core.Address, amount *common.Amount, tip *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	return sendTo(senderWallet.GetAddress(), senderWallet.GetKeyPair(), to, amount, tip, contract, bc, node)
+func Send(senderAccount *account.Account, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, bc *core.Blockchain) ([]byte, string, error) {
+	sendTxParam := core.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(), senderAccount.GetKeyPair(), to, amount, tip, gasLimit, gasPrice, contract)
+	return sendTo(sendTxParam, bc)
 }
 
 func SetMinerKeyPair(key string) {
@@ -228,63 +240,62 @@ func GetMinerAddress() string {
 }
 
 //add balance
-func SendFromMiner(address core.Address, amount *common.Amount, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	minerKeyPair := core.GetKeyPairByString(minerPrivateKey)
-	return sendTo(minerKeyPair.GenerateAddress(false), minerKeyPair, address, amount, common.NewAmount(0), "", bc, node)
+func SendFromMiner(address account.Address, amount *common.Amount, bc *core.Blockchain) ([]byte, string, error) {
+	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivateKey)
+	sendTxParam := core.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	return sendTo(sendTxParam, bc)
 }
 
-func GetWalletManager(path string) (*client.WalletManager, error) {
+func GetAccountManager(path string) (*account_logic.AccountManager, error) {
 	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	am := account_logic.NewAccountManager(fl)
+	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err
 	}
-	return wm, nil
+	return am, nil
 }
 
-func sendTo(from core.Address, senderKeyPair *core.KeyPair, to core.Address, amount *common.Amount, tip *common.Amount, contract string, bc *core.Blockchain, node *network.Node) ([]byte, string, error) {
-	if !from.ValidateAddress() {
+func sendTo(sendTxParam core.SendTxParam, bc *core.Blockchain) ([]byte, string, error) {
+	if !sendTxParam.From.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if !to.ValidateAddress() && contract == "" {
+	if !sendTxParam.To.IsValid() && sendTxParam.Contract == "" {
 		return nil, "", ErrInvalidRcverAddress
 	}
 
-	if amount.Validate() != nil || amount.IsZero() {
+	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
 		return nil, "", ErrInvalidAmount
 	}
 
-	pubKeyHash, _ := core.NewUserPubKeyHash(senderKeyPair.PublicKey)
+	pubKeyHash, _ := account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
 	utxoIndex := core.NewUTXOIndex(bc.GetUtxoCache())
 
-	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetPendingTransactions())
-	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetTransactions())
+	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 
-	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), amount)
+	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), sendTxParam.TotalCost())
 	if err != nil {
 		return nil, "", err
 	}
 
-	tx, err := core.NewUTXOTransaction(utxos, from, to, amount, senderKeyPair, tip, contract)
+	tx, err := core.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
-	if node != nil {
-		node.TxBroadcast(&tx)
-	}
+	bc.GetTxPool().BroadcastTx(&tx)
+
 	contractAddr := tx.GetContractAddress()
 	if contractAddr.String() != "" {
-		if to.String() == contractAddr.String() {
+		if sendTxParam.To.String() == contractAddr.String() {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),
-				"data":             contract,
+				"data":             sendTxParam.Contract,
 			}).Info("Smart contract invocation transaction is sent.")
 		} else {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),
-				"contract":         contract,
+				"contract":         sendTxParam.Contract,
 			}).Info("Smart contract deployment transaction is sent.")
 		}
 	}

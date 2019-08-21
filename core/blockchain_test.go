@@ -22,9 +22,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/storage/mocks"
 	logger "github.com/sirupsen/logrus"
@@ -43,8 +45,8 @@ func TestCreateBlockchain(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128), nil, 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -57,8 +59,8 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128), nil, 1000000)
 	blk := GenerateMockBlock()
 	blk.header.height = 1
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -69,8 +71,8 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil, 1000000)
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128), nil, 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := GenerateBlockWithCbtx(addr, tailblk)
 	blk.header.height = 1
@@ -85,8 +87,8 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	s := storage.NewRamStorage()
 	defer s.Close()
 
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, 128, nil, 100000)
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 128), nil, 100000)
 
 	blk := GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
@@ -103,14 +105,9 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.db.Close()
 
-	blk, err := bc.GetTailBlock()
+	//find the hash at height 3
+	blk, err := bc.GetBlockByHeight(3)
 	assert.Nil(t, err)
-
-	//find the hash at height 3 (5-2)
-	for i := 0; i < 2; i++ {
-		blk, err = bc.GetBlockByHash(blk.GetPrevHash())
-		assert.Nil(t, err)
-	}
 
 	//rollback to height 3
 	bc.Rollback(blk.GetHash(), NewUTXOIndex(bc.GetUtxoCache()), NewScState())
@@ -129,8 +126,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db := new(mocks.Storage)
 
 	// Create a blockchain for testing
-	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
@@ -163,7 +160,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	db.On("Flush").Return(simulatedFailure)
 
 	// Add new block
-	blk := NewBlock([]*Transaction{}, genesis)
+	blk := NewBlock([]*Transaction{}, genesis, "")
 	blk.SetHash([]byte("hash1"))
 
 	blk.header.height = 1
@@ -179,16 +176,16 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	//create a new block chain
 
 	s := storage.NewRamStorage()
-	addr := NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
-	bc := CreateBlockchain(addr, s, nil, 128000000, nil, 100000)
-	var addrs []Address
-	var kps []*KeyPair
-	var pkhs []PubKeyHash
+	bc := CreateBlockchain(addr, s, nil, NewTransactionPool(nil, 1280000), nil, 100000)
+	var addrs []account.Address
+	var kps []*account.KeyPair
+	var pkhs []account.PubKeyHash
 	for i := 0; i < 10; i++ {
-		kp := NewKeyPair()
+		kp := account.NewKeyPair()
 		kps = append(kps, kp)
-		pkh, _ := NewUserPubKeyHash(kp.PublicKey)
+		pkh, _ := account.NewUserPubKeyHash(kp.GetPublicKey())
 		pkhs = append(pkhs, pkh)
 		addrs = append(addrs, pkh.GenerateAddress())
 	}
@@ -202,12 +199,13 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 		utxo.UpdateUtxo(&cbtx)
 		txs = append(txs, &cbtx)
 		for j := 0; j < 10; j++ {
-			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), addrs[0], addrs[i%10], common.NewAmount(1), kps[0], common.NewAmount(0), "")
+			sendTxParam := NewSendTxParam(addrs[0], kps[0], addrs[i%10], common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+			tx, _ := NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), sendTxParam)
 			utxo.UpdateUtxo(&tx)
 			txs = append(txs, &tx)
 		}
 
-		b := NewBlock(txs, tailBlk)
+		b := NewBlock(txs, tailBlk, "")
 		b.SetHash(b.CalculateHash())
 		state := LoadScStateFromDatabase(bc.GetDb())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})

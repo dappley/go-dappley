@@ -21,8 +21,9 @@ package core
 import (
 	"testing"
 
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/pb"
+	corepb "github.com/dappley/go-dappley/core/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +31,7 @@ import (
 func TestTXOutput_Proto(t *testing.T) {
 	vout := TXOutput{
 		common.NewAmount(1),
-		PubKeyHash([]byte("PubKeyHash")),
+		account.PubKeyHash([]byte("PubKeyHash")),
 		"contract",
 	}
 
@@ -62,7 +63,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 		{"normal",
 			TXOutput{
 				common.NewAmount(1),
-				PubKeyHash([]byte{
+				account.PubKeyHash([]byte{
 					0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 					0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
@@ -74,7 +75,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 		{"NotInStorage",
 			TXOutput{
 				common.NewAmount(1),
-				PubKeyHash([]byte{
+				account.PubKeyHash([]byte{
 					0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 					0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
@@ -86,7 +87,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 		{"InvalidAmount",
 			TXOutput{
 				common.NewAmount(1),
-				PubKeyHash([]byte{
+				account.PubKeyHash([]byte{
 					0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 					0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
@@ -98,7 +99,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 		{"NilInput",
 			TXOutput{
 				common.NewAmount(1),
-				PubKeyHash([]byte{
+				account.PubKeyHash([]byte{
 					0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 					0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),
@@ -110,7 +111,7 @@ func TestTXOutput_IsFoundInRewardStorage(t *testing.T) {
 		{"WrongValue",
 			TXOutput{
 				common.NewAmount(1),
-				PubKeyHash([]byte{
+				account.PubKeyHash([]byte{
 					0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
 					0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49,
 					0xe5, 0x27, 0xf0, 0x42, 0x5d}),

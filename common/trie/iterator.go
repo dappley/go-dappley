@@ -20,6 +20,7 @@ package trie
 
 import (
 	"errors"
+
 	"github.com/dappley/go-dappley/crypto/hash"
 )
 

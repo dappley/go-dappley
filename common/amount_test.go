@@ -95,7 +95,7 @@ func TestAmountOperation(t *testing.T) {
 	assert.Nil(t, result)
 
 	productExpect := NewAmount(90)
-	productResult := a.mul(b)
+	productResult := a.Mul(b)
 	assert.Equal(t, productExpect.Bytes(), productResult.Bytes())
 
 	productExpect = NewAmount(40)

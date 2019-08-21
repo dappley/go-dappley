@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/tool/db_inspect/pb"
+	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 )
@@ -197,8 +198,8 @@ func GetUtxoHandle() {
 	flagSet.StringVar(&address, "a", "", "search utxo address")
 	flagSet.Parse(os.Args[2:])
 
-	addr := core.NewAddress(address)
-	pubKeyHash, ok := addr.GetPubKeyHash()
+	addr := account.NewAddress(address)
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(addr)
 	if !ok {
 		panic("Decode address failed")
 	}
@@ -214,11 +215,11 @@ func GetUtxoHandle() {
 
 func block2PrettyPb(block *core.Block) proto.Message {
 	blockHeaderPb := &db_inspect_pb.BlockHeader{
-		Hash:         hex.EncodeToString(block.GetHash()),
-		PreviousHash: hex.EncodeToString(block.GetPrevHash()),
+		Hash:         block.GetHash().String(),
+		PreviousHash: block.GetPrevHash().String(),
 		Nonce:        block.GetNonce(),
 		Timestamp:    block.GetTimestamp(),
-		Signature:    hex.EncodeToString(block.GetSign()),
+		Signature:    block.GetSign().String(),
 		Height:       block.GetHeight(),
 	}
 
@@ -241,7 +242,7 @@ func block2PrettyPb(block *core.Block) proto.Message {
 			txVoutPbs = append(txVoutPbs,
 				&db_inspect_pb.TXOutput{
 					Value:         vout.Value.String(),
-					PublicKeyHash: hex.EncodeToString(vout.PubKeyHash),
+					PublicKeyHash: vout.PubKeyHash.String(),
 					Contract:      vout.Contract,
 				})
 		}
@@ -249,10 +250,12 @@ func block2PrettyPb(block *core.Block) proto.Message {
 		txArray = append(
 			txArray,
 			&db_inspect_pb.Transaction{
-				Id:   hex.EncodeToString(tx.ID),
-				Vin:  txVinPbs,
-				Vout: txVoutPbs,
-				Tip:  tx.Tip.String(),
+				Id:       hex.EncodeToString(tx.ID),
+				Vin:      txVinPbs,
+				Vout:     txVoutPbs,
+				Tip:      tx.Tip.String(),
+				GasLimit: tx.GasLimit.String(),
+				GasPrice: tx.GasPrice.String(),
 			})
 	}
 
@@ -269,7 +272,7 @@ func dumpBlock(block *core.Block) {
 func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
 	return &db_inspect_pb.Utxo{
 		Amount:        utxo.Value.String(),
-		PublicKeyHash: hex.EncodeToString(utxo.PubKeyHash),
+		PublicKeyHash: utxo.PubKeyHash.String(),
 		Txid:          hex.EncodeToString(utxo.Txid),
 		TxIndex:       uint32(utxo.TxIndex),
 	}

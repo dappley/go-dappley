@@ -3,15 +3,15 @@
 
 package rpcpb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import pb "github.com/dappley/go-dappley/core/pb"
-import pb1 "github.com/dappley/go-dappley/network/pb"
-
 import (
+	fmt "fmt"
+	pb "github.com/dappley/go-dappley/core/pb"
+	pb2 "github.com/dappley/go-dappley/metrics/pb"
+	pb1 "github.com/dappley/go-dappley/network/pb"
+	proto "github.com/golang/protobuf/proto"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -25,73 +25,112 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type CreateWalletRequest struct {
+type SetNodeConfigRequest_ConfigType int32
+
+const (
+	SetNodeConfigRequest_TX_POOL_LIMIT  SetNodeConfigRequest_ConfigType = 0
+	SetNodeConfigRequest_BLK_SIZE_LIMIT SetNodeConfigRequest_ConfigType = 1
+	SetNodeConfigRequest_MAX_CONN_OUT   SetNodeConfigRequest_ConfigType = 2
+	SetNodeConfigRequest_MAX_CONN_IN    SetNodeConfigRequest_ConfigType = 3
+	SetNodeConfigRequest_MAX_PRODUCERS  SetNodeConfigRequest_ConfigType = 4
+	SetNodeConfigRequest_PRODUCERS      SetNodeConfigRequest_ConfigType = 5
+)
+
+var SetNodeConfigRequest_ConfigType_name = map[int32]string{
+	0: "TX_POOL_LIMIT",
+	1: "BLK_SIZE_LIMIT",
+	2: "MAX_CONN_OUT",
+	3: "MAX_CONN_IN",
+	4: "MAX_PRODUCERS",
+	5: "PRODUCERS",
+}
+
+var SetNodeConfigRequest_ConfigType_value = map[string]int32{
+	"TX_POOL_LIMIT":  0,
+	"BLK_SIZE_LIMIT": 1,
+	"MAX_CONN_OUT":   2,
+	"MAX_CONN_IN":    3,
+	"MAX_PRODUCERS":  4,
+	"PRODUCERS":      5,
+}
+
+func (x SetNodeConfigRequest_ConfigType) String() string {
+	return proto.EnumName(SetNodeConfigRequest_ConfigType_name, int32(x))
+}
+
+func (SetNodeConfigRequest_ConfigType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{45, 0}
+}
+
+type CreateAccountRequest struct {
 	Passphrase           string   `protobuf:"bytes,1,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CreateWalletRequest) Reset()         { *m = CreateWalletRequest{} }
-func (m *CreateWalletRequest) String() string { return proto.CompactTextString(m) }
-func (*CreateWalletRequest) ProtoMessage()    {}
-func (*CreateWalletRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{0}
-}
-func (m *CreateWalletRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_CreateWalletRequest.Unmarshal(m, b)
-}
-func (m *CreateWalletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_CreateWalletRequest.Marshal(b, m, deterministic)
-}
-func (dst *CreateWalletRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CreateWalletRequest.Merge(dst, src)
-}
-func (m *CreateWalletRequest) XXX_Size() int {
-	return xxx_messageInfo_CreateWalletRequest.Size(m)
-}
-func (m *CreateWalletRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_CreateWalletRequest.DiscardUnknown(m)
+func (m *CreateAccountRequest) Reset()         { *m = CreateAccountRequest{} }
+func (m *CreateAccountRequest) String() string { return proto.CompactTextString(m) }
+func (*CreateAccountRequest) ProtoMessage()    {}
+func (*CreateAccountRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{0}
 }
 
-var xxx_messageInfo_CreateWalletRequest proto.InternalMessageInfo
+func (m *CreateAccountRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateAccountRequest.Unmarshal(m, b)
+}
+func (m *CreateAccountRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateAccountRequest.Marshal(b, m, deterministic)
+}
+func (m *CreateAccountRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateAccountRequest.Merge(m, src)
+}
+func (m *CreateAccountRequest) XXX_Size() int {
+	return xxx_messageInfo_CreateAccountRequest.Size(m)
+}
+func (m *CreateAccountRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateAccountRequest.DiscardUnknown(m)
+}
 
-func (m *CreateWalletRequest) GetPassphrase() string {
+var xxx_messageInfo_CreateAccountRequest proto.InternalMessageInfo
+
+func (m *CreateAccountRequest) GetPassphrase() string {
 	if m != nil {
 		return m.Passphrase
 	}
 	return ""
 }
 
-type UnlockWalletRequest struct {
+type UnlockAccountRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *UnlockWalletRequest) Reset()         { *m = UnlockWalletRequest{} }
-func (m *UnlockWalletRequest) String() string { return proto.CompactTextString(m) }
-func (*UnlockWalletRequest) ProtoMessage()    {}
-func (*UnlockWalletRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{1}
-}
-func (m *UnlockWalletRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_UnlockWalletRequest.Unmarshal(m, b)
-}
-func (m *UnlockWalletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_UnlockWalletRequest.Marshal(b, m, deterministic)
-}
-func (dst *UnlockWalletRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UnlockWalletRequest.Merge(dst, src)
-}
-func (m *UnlockWalletRequest) XXX_Size() int {
-	return xxx_messageInfo_UnlockWalletRequest.Size(m)
-}
-func (m *UnlockWalletRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_UnlockWalletRequest.DiscardUnknown(m)
+func (m *UnlockAccountRequest) Reset()         { *m = UnlockAccountRequest{} }
+func (m *UnlockAccountRequest) String() string { return proto.CompactTextString(m) }
+func (*UnlockAccountRequest) ProtoMessage()    {}
+func (*UnlockAccountRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{1}
 }
 
-var xxx_messageInfo_UnlockWalletRequest proto.InternalMessageInfo
+func (m *UnlockAccountRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_UnlockAccountRequest.Unmarshal(m, b)
+}
+func (m *UnlockAccountRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_UnlockAccountRequest.Marshal(b, m, deterministic)
+}
+func (m *UnlockAccountRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UnlockAccountRequest.Merge(m, src)
+}
+func (m *UnlockAccountRequest) XXX_Size() int {
+	return xxx_messageInfo_UnlockAccountRequest.Size(m)
+}
+func (m *UnlockAccountRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_UnlockAccountRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UnlockAccountRequest proto.InternalMessageInfo
 
 type AddProducerRequest struct {
 	Address              string   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
@@ -104,16 +143,17 @@ func (m *AddProducerRequest) Reset()         { *m = AddProducerRequest{} }
 func (m *AddProducerRequest) String() string { return proto.CompactTextString(m) }
 func (*AddProducerRequest) ProtoMessage()    {}
 func (*AddProducerRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{2}
+	return fileDescriptor_c6f7014334e4682f, []int{2}
 }
+
 func (m *AddProducerRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddProducerRequest.Unmarshal(m, b)
 }
 func (m *AddProducerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AddProducerRequest.Marshal(b, m, deterministic)
 }
-func (dst *AddProducerRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddProducerRequest.Merge(dst, src)
+func (m *AddProducerRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddProducerRequest.Merge(m, src)
 }
 func (m *AddProducerRequest) XXX_Size() int {
 	return xxx_messageInfo_AddProducerRequest.Size(m)
@@ -142,16 +182,17 @@ func (m *GetBalanceRequest) Reset()         { *m = GetBalanceRequest{} }
 func (m *GetBalanceRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBalanceRequest) ProtoMessage()    {}
 func (*GetBalanceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{3}
+	return fileDescriptor_c6f7014334e4682f, []int{3}
 }
+
 func (m *GetBalanceRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBalanceRequest.Unmarshal(m, b)
 }
 func (m *GetBalanceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBalanceRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetBalanceRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBalanceRequest.Merge(dst, src)
+func (m *GetBalanceRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBalanceRequest.Merge(m, src)
 }
 func (m *GetBalanceRequest) XXX_Size() int {
 	return xxx_messageInfo_GetBalanceRequest.Size(m)
@@ -181,16 +222,17 @@ func (m *SendFromMinerRequest) Reset()         { *m = SendFromMinerRequest{} }
 func (m *SendFromMinerRequest) String() string { return proto.CompactTextString(m) }
 func (*SendFromMinerRequest) ProtoMessage()    {}
 func (*SendFromMinerRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{4}
+	return fileDescriptor_c6f7014334e4682f, []int{4}
 }
+
 func (m *SendFromMinerRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendFromMinerRequest.Unmarshal(m, b)
 }
 func (m *SendFromMinerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendFromMinerRequest.Marshal(b, m, deterministic)
 }
-func (dst *SendFromMinerRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendFromMinerRequest.Merge(dst, src)
+func (m *SendFromMinerRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendFromMinerRequest.Merge(m, src)
 }
 func (m *SendFromMinerRequest) XXX_Size() int {
 	return xxx_messageInfo_SendFromMinerRequest.Size(m)
@@ -219,9 +261,11 @@ type SendRequest struct {
 	From                 string   `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
 	To                   string   `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
 	Amount               []byte   `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
-	WalletPath           string   `protobuf:"bytes,4,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
+	AccountPath          string   `protobuf:"bytes,4,opt,name=account_path,json=accountPath,proto3" json:"account_path,omitempty"`
 	Tip                  []byte   `protobuf:"bytes,5,opt,name=tip,proto3" json:"tip,omitempty"`
 	Data                 string   `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
+	GasLimit             []byte   `protobuf:"bytes,7,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
+	GasPrice             []byte   `protobuf:"bytes,8,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -231,16 +275,17 @@ func (m *SendRequest) Reset()         { *m = SendRequest{} }
 func (m *SendRequest) String() string { return proto.CompactTextString(m) }
 func (*SendRequest) ProtoMessage()    {}
 func (*SendRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{5}
+	return fileDescriptor_c6f7014334e4682f, []int{5}
 }
+
 func (m *SendRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendRequest.Unmarshal(m, b)
 }
 func (m *SendRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendRequest.Marshal(b, m, deterministic)
 }
-func (dst *SendRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendRequest.Merge(dst, src)
+func (m *SendRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendRequest.Merge(m, src)
 }
 func (m *SendRequest) XXX_Size() int {
 	return xxx_messageInfo_SendRequest.Size(m)
@@ -272,9 +317,9 @@ func (m *SendRequest) GetAmount() []byte {
 	return nil
 }
 
-func (m *SendRequest) GetWalletPath() string {
+func (m *SendRequest) GetAccountPath() string {
 	if m != nil {
-		return m.WalletPath
+		return m.AccountPath
 	}
 	return ""
 }
@@ -293,6 +338,20 @@ func (m *SendRequest) GetData() string {
 	return ""
 }
 
+func (m *SendRequest) GetGasLimit() []byte {
+	if m != nil {
+		return m.GasLimit
+	}
+	return nil
+}
+
+func (m *SendRequest) GetGasPrice() []byte {
+	if m != nil {
+		return m.GasPrice
+	}
+	return nil
+}
+
 type GetPeerInfoRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -303,16 +362,17 @@ func (m *GetPeerInfoRequest) Reset()         { *m = GetPeerInfoRequest{} }
 func (m *GetPeerInfoRequest) String() string { return proto.CompactTextString(m) }
 func (*GetPeerInfoRequest) ProtoMessage()    {}
 func (*GetPeerInfoRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{6}
+	return fileDescriptor_c6f7014334e4682f, []int{6}
 }
+
 func (m *GetPeerInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetPeerInfoRequest.Unmarshal(m, b)
 }
 func (m *GetPeerInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetPeerInfoRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetPeerInfoRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetPeerInfoRequest.Merge(dst, src)
+func (m *GetPeerInfoRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetPeerInfoRequest.Merge(m, src)
 }
 func (m *GetPeerInfoRequest) XXX_Size() int {
 	return xxx_messageInfo_GetPeerInfoRequest.Size(m)
@@ -333,16 +393,17 @@ func (m *GetBlockchainInfoRequest) Reset()         { *m = GetBlockchainInfoReque
 func (m *GetBlockchainInfoRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBlockchainInfoRequest) ProtoMessage()    {}
 func (*GetBlockchainInfoRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{7}
+	return fileDescriptor_c6f7014334e4682f, []int{7}
 }
+
 func (m *GetBlockchainInfoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockchainInfoRequest.Unmarshal(m, b)
 }
 func (m *GetBlockchainInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockchainInfoRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetBlockchainInfoRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockchainInfoRequest.Merge(dst, src)
+func (m *GetBlockchainInfoRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockchainInfoRequest.Merge(m, src)
 }
 func (m *GetBlockchainInfoRequest) XXX_Size() int {
 	return xxx_messageInfo_GetBlockchainInfoRequest.Size(m)
@@ -364,16 +425,17 @@ func (m *AddPeerRequest) Reset()         { *m = AddPeerRequest{} }
 func (m *AddPeerRequest) String() string { return proto.CompactTextString(m) }
 func (*AddPeerRequest) ProtoMessage()    {}
 func (*AddPeerRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{8}
+	return fileDescriptor_c6f7014334e4682f, []int{8}
 }
+
 func (m *AddPeerRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddPeerRequest.Unmarshal(m, b)
 }
 func (m *AddPeerRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AddPeerRequest.Marshal(b, m, deterministic)
 }
-func (dst *AddPeerRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddPeerRequest.Merge(dst, src)
+func (m *AddPeerRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddPeerRequest.Merge(m, src)
 }
 func (m *AddPeerRequest) XXX_Size() int {
 	return xxx_messageInfo_AddPeerRequest.Size(m)
@@ -402,16 +464,17 @@ func (m *GetVersionRequest) Reset()         { *m = GetVersionRequest{} }
 func (m *GetVersionRequest) String() string { return proto.CompactTextString(m) }
 func (*GetVersionRequest) ProtoMessage()    {}
 func (*GetVersionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{9}
+	return fileDescriptor_c6f7014334e4682f, []int{9}
 }
+
 func (m *GetVersionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetVersionRequest.Unmarshal(m, b)
 }
 func (m *GetVersionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetVersionRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetVersionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetVersionRequest.Merge(dst, src)
+func (m *GetVersionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetVersionRequest.Merge(m, src)
 }
 func (m *GetVersionRequest) XXX_Size() int {
 	return xxx_messageInfo_GetVersionRequest.Size(m)
@@ -440,16 +503,17 @@ func (m *GetUTXORequest) Reset()         { *m = GetUTXORequest{} }
 func (m *GetUTXORequest) String() string { return proto.CompactTextString(m) }
 func (*GetUTXORequest) ProtoMessage()    {}
 func (*GetUTXORequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{10}
+	return fileDescriptor_c6f7014334e4682f, []int{10}
 }
+
 func (m *GetUTXORequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetUTXORequest.Unmarshal(m, b)
 }
 func (m *GetUTXORequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetUTXORequest.Marshal(b, m, deterministic)
 }
-func (dst *GetUTXORequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetUTXORequest.Merge(dst, src)
+func (m *GetUTXORequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetUTXORequest.Merge(m, src)
 }
 func (m *GetUTXORequest) XXX_Size() int {
 	return xxx_messageInfo_GetUTXORequest.Size(m)
@@ -479,16 +543,17 @@ func (m *GetBlocksRequest) Reset()         { *m = GetBlocksRequest{} }
 func (m *GetBlocksRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBlocksRequest) ProtoMessage()    {}
 func (*GetBlocksRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{11}
+	return fileDescriptor_c6f7014334e4682f, []int{11}
 }
+
 func (m *GetBlocksRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlocksRequest.Unmarshal(m, b)
 }
 func (m *GetBlocksRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlocksRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetBlocksRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlocksRequest.Merge(dst, src)
+func (m *GetBlocksRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlocksRequest.Merge(m, src)
 }
 func (m *GetBlocksRequest) XXX_Size() int {
 	return xxx_messageInfo_GetBlocksRequest.Size(m)
@@ -524,16 +589,17 @@ func (m *GetBlockByHashRequest) Reset()         { *m = GetBlockByHashRequest{} }
 func (m *GetBlockByHashRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBlockByHashRequest) ProtoMessage()    {}
 func (*GetBlockByHashRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{12}
+	return fileDescriptor_c6f7014334e4682f, []int{12}
 }
+
 func (m *GetBlockByHashRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockByHashRequest.Unmarshal(m, b)
 }
 func (m *GetBlockByHashRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockByHashRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetBlockByHashRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockByHashRequest.Merge(dst, src)
+func (m *GetBlockByHashRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockByHashRequest.Merge(m, src)
 }
 func (m *GetBlockByHashRequest) XXX_Size() int {
 	return xxx_messageInfo_GetBlockByHashRequest.Size(m)
@@ -562,16 +628,17 @@ func (m *GetBlockByHeightRequest) Reset()         { *m = GetBlockByHeightRequest
 func (m *GetBlockByHeightRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBlockByHeightRequest) ProtoMessage()    {}
 func (*GetBlockByHeightRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{13}
+	return fileDescriptor_c6f7014334e4682f, []int{13}
 }
+
 func (m *GetBlockByHeightRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockByHeightRequest.Unmarshal(m, b)
 }
 func (m *GetBlockByHeightRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockByHeightRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetBlockByHeightRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockByHeightRequest.Merge(dst, src)
+func (m *GetBlockByHeightRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockByHeightRequest.Merge(m, src)
 }
 func (m *GetBlockByHeightRequest) XXX_Size() int {
 	return xxx_messageInfo_GetBlockByHeightRequest.Size(m)
@@ -600,16 +667,17 @@ func (m *SendTransactionRequest) Reset()         { *m = SendTransactionRequest{}
 func (m *SendTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*SendTransactionRequest) ProtoMessage()    {}
 func (*SendTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{14}
+	return fileDescriptor_c6f7014334e4682f, []int{14}
 }
+
 func (m *SendTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendTransactionRequest.Unmarshal(m, b)
 }
 func (m *SendTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendTransactionRequest.Marshal(b, m, deterministic)
 }
-func (dst *SendTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendTransactionRequest.Merge(dst, src)
+func (m *SendTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendTransactionRequest.Merge(m, src)
 }
 func (m *SendTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_SendTransactionRequest.Size(m)
@@ -638,16 +706,17 @@ func (m *SendBatchTransactionRequest) Reset()         { *m = SendBatchTransactio
 func (m *SendBatchTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*SendBatchTransactionRequest) ProtoMessage()    {}
 func (*SendBatchTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{15}
+	return fileDescriptor_c6f7014334e4682f, []int{15}
 }
+
 func (m *SendBatchTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendBatchTransactionRequest.Unmarshal(m, b)
 }
 func (m *SendBatchTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendBatchTransactionRequest.Marshal(b, m, deterministic)
 }
-func (dst *SendBatchTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendBatchTransactionRequest.Merge(dst, src)
+func (m *SendBatchTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendBatchTransactionRequest.Merge(m, src)
 }
 func (m *SendBatchTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_SendBatchTransactionRequest.Size(m)
@@ -675,16 +744,17 @@ func (m *GetNewTransactionRequest) Reset()         { *m = GetNewTransactionReque
 func (m *GetNewTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*GetNewTransactionRequest) ProtoMessage()    {}
 func (*GetNewTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{16}
+	return fileDescriptor_c6f7014334e4682f, []int{16}
 }
+
 func (m *GetNewTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetNewTransactionRequest.Unmarshal(m, b)
 }
 func (m *GetNewTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetNewTransactionRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetNewTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetNewTransactionRequest.Merge(dst, src)
+func (m *GetNewTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetNewTransactionRequest.Merge(m, src)
 }
 func (m *GetNewTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_GetNewTransactionRequest.Size(m)
@@ -706,16 +776,17 @@ func (m *SubscribeRequest) Reset()         { *m = SubscribeRequest{} }
 func (m *SubscribeRequest) String() string { return proto.CompactTextString(m) }
 func (*SubscribeRequest) ProtoMessage()    {}
 func (*SubscribeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{17}
+	return fileDescriptor_c6f7014334e4682f, []int{17}
 }
+
 func (m *SubscribeRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SubscribeRequest.Unmarshal(m, b)
 }
 func (m *SubscribeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SubscribeRequest.Marshal(b, m, deterministic)
 }
-func (dst *SubscribeRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SubscribeRequest.Merge(dst, src)
+func (m *SubscribeRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubscribeRequest.Merge(m, src)
 }
 func (m *SubscribeRequest) XXX_Size() int {
 	return xxx_messageInfo_SubscribeRequest.Size(m)
@@ -733,6 +804,138 @@ func (m *SubscribeRequest) GetTopics() []string {
 	return nil
 }
 
+type MetricsServiceRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MetricsServiceRequest) Reset()         { *m = MetricsServiceRequest{} }
+func (m *MetricsServiceRequest) String() string { return proto.CompactTextString(m) }
+func (*MetricsServiceRequest) ProtoMessage()    {}
+func (*MetricsServiceRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{18}
+}
+
+func (m *MetricsServiceRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MetricsServiceRequest.Unmarshal(m, b)
+}
+func (m *MetricsServiceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MetricsServiceRequest.Marshal(b, m, deterministic)
+}
+func (m *MetricsServiceRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MetricsServiceRequest.Merge(m, src)
+}
+func (m *MetricsServiceRequest) XXX_Size() int {
+	return xxx_messageInfo_MetricsServiceRequest.Size(m)
+}
+func (m *MetricsServiceRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_MetricsServiceRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MetricsServiceRequest proto.InternalMessageInfo
+
+type GetLastIrreversibleBlockRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetLastIrreversibleBlockRequest) Reset()         { *m = GetLastIrreversibleBlockRequest{} }
+func (m *GetLastIrreversibleBlockRequest) String() string { return proto.CompactTextString(m) }
+func (*GetLastIrreversibleBlockRequest) ProtoMessage()    {}
+func (*GetLastIrreversibleBlockRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{19}
+}
+
+func (m *GetLastIrreversibleBlockRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetLastIrreversibleBlockRequest.Unmarshal(m, b)
+}
+func (m *GetLastIrreversibleBlockRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetLastIrreversibleBlockRequest.Marshal(b, m, deterministic)
+}
+func (m *GetLastIrreversibleBlockRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetLastIrreversibleBlockRequest.Merge(m, src)
+}
+func (m *GetLastIrreversibleBlockRequest) XXX_Size() int {
+	return xxx_messageInfo_GetLastIrreversibleBlockRequest.Size(m)
+}
+func (m *GetLastIrreversibleBlockRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetLastIrreversibleBlockRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetLastIrreversibleBlockRequest proto.InternalMessageInfo
+
+type EstimateGasRequest struct {
+	Transaction          *pb.Transaction `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *EstimateGasRequest) Reset()         { *m = EstimateGasRequest{} }
+func (m *EstimateGasRequest) String() string { return proto.CompactTextString(m) }
+func (*EstimateGasRequest) ProtoMessage()    {}
+func (*EstimateGasRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{20}
+}
+
+func (m *EstimateGasRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EstimateGasRequest.Unmarshal(m, b)
+}
+func (m *EstimateGasRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EstimateGasRequest.Marshal(b, m, deterministic)
+}
+func (m *EstimateGasRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EstimateGasRequest.Merge(m, src)
+}
+func (m *EstimateGasRequest) XXX_Size() int {
+	return xxx_messageInfo_EstimateGasRequest.Size(m)
+}
+func (m *EstimateGasRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EstimateGasRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EstimateGasRequest proto.InternalMessageInfo
+
+func (m *EstimateGasRequest) GetTransaction() *pb.Transaction {
+	if m != nil {
+		return m.Transaction
+	}
+	return nil
+}
+
+type GasPriceRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GasPriceRequest) Reset()         { *m = GasPriceRequest{} }
+func (m *GasPriceRequest) String() string { return proto.CompactTextString(m) }
+func (*GasPriceRequest) ProtoMessage()    {}
+func (*GasPriceRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{21}
+}
+
+func (m *GasPriceRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GasPriceRequest.Unmarshal(m, b)
+}
+func (m *GasPriceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GasPriceRequest.Marshal(b, m, deterministic)
+}
+func (m *GasPriceRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GasPriceRequest.Merge(m, src)
+}
+func (m *GasPriceRequest) XXX_Size() int {
+	return xxx_messageInfo_GasPriceRequest.Size(m)
+}
+func (m *GasPriceRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GasPriceRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GasPriceRequest proto.InternalMessageInfo
+
 type AddProducerResponse struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -743,16 +946,17 @@ func (m *AddProducerResponse) Reset()         { *m = AddProducerResponse{} }
 func (m *AddProducerResponse) String() string { return proto.CompactTextString(m) }
 func (*AddProducerResponse) ProtoMessage()    {}
 func (*AddProducerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{18}
+	return fileDescriptor_c6f7014334e4682f, []int{22}
 }
+
 func (m *AddProducerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddProducerResponse.Unmarshal(m, b)
 }
 func (m *AddProducerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AddProducerResponse.Marshal(b, m, deterministic)
 }
-func (dst *AddProducerResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddProducerResponse.Merge(dst, src)
+func (m *AddProducerResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddProducerResponse.Merge(m, src)
 }
 func (m *AddProducerResponse) XXX_Size() int {
 	return xxx_messageInfo_AddProducerResponse.Size(m)
@@ -763,35 +967,36 @@ func (m *AddProducerResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AddProducerResponse proto.InternalMessageInfo
 
-type UnlockWalletResponse struct {
+type UnlockAccountResponse struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *UnlockWalletResponse) Reset()         { *m = UnlockWalletResponse{} }
-func (m *UnlockWalletResponse) String() string { return proto.CompactTextString(m) }
-func (*UnlockWalletResponse) ProtoMessage()    {}
-func (*UnlockWalletResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{19}
-}
-func (m *UnlockWalletResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_UnlockWalletResponse.Unmarshal(m, b)
-}
-func (m *UnlockWalletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_UnlockWalletResponse.Marshal(b, m, deterministic)
-}
-func (dst *UnlockWalletResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UnlockWalletResponse.Merge(dst, src)
-}
-func (m *UnlockWalletResponse) XXX_Size() int {
-	return xxx_messageInfo_UnlockWalletResponse.Size(m)
-}
-func (m *UnlockWalletResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_UnlockWalletResponse.DiscardUnknown(m)
+func (m *UnlockAccountResponse) Reset()         { *m = UnlockAccountResponse{} }
+func (m *UnlockAccountResponse) String() string { return proto.CompactTextString(m) }
+func (*UnlockAccountResponse) ProtoMessage()    {}
+func (*UnlockAccountResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{23}
 }
 
-var xxx_messageInfo_UnlockWalletResponse proto.InternalMessageInfo
+func (m *UnlockAccountResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_UnlockAccountResponse.Unmarshal(m, b)
+}
+func (m *UnlockAccountResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_UnlockAccountResponse.Marshal(b, m, deterministic)
+}
+func (m *UnlockAccountResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UnlockAccountResponse.Merge(m, src)
+}
+func (m *UnlockAccountResponse) XXX_Size() int {
+	return xxx_messageInfo_UnlockAccountResponse.Size(m)
+}
+func (m *UnlockAccountResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_UnlockAccountResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UnlockAccountResponse proto.InternalMessageInfo
 
 type GetBalanceResponse struct {
 	Amount               int64    `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
@@ -804,16 +1009,17 @@ func (m *GetBalanceResponse) Reset()         { *m = GetBalanceResponse{} }
 func (m *GetBalanceResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBalanceResponse) ProtoMessage()    {}
 func (*GetBalanceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{20}
+	return fileDescriptor_c6f7014334e4682f, []int{24}
 }
+
 func (m *GetBalanceResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBalanceResponse.Unmarshal(m, b)
 }
 func (m *GetBalanceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBalanceResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetBalanceResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBalanceResponse.Merge(dst, src)
+func (m *GetBalanceResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBalanceResponse.Merge(m, src)
 }
 func (m *GetBalanceResponse) XXX_Size() int {
 	return xxx_messageInfo_GetBalanceResponse.Size(m)
@@ -841,16 +1047,17 @@ func (m *SendFromMinerResponse) Reset()         { *m = SendFromMinerResponse{} }
 func (m *SendFromMinerResponse) String() string { return proto.CompactTextString(m) }
 func (*SendFromMinerResponse) ProtoMessage()    {}
 func (*SendFromMinerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{21}
+	return fileDescriptor_c6f7014334e4682f, []int{25}
 }
+
 func (m *SendFromMinerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendFromMinerResponse.Unmarshal(m, b)
 }
 func (m *SendFromMinerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendFromMinerResponse.Marshal(b, m, deterministic)
 }
-func (dst *SendFromMinerResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendFromMinerResponse.Merge(dst, src)
+func (m *SendFromMinerResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendFromMinerResponse.Merge(m, src)
 }
 func (m *SendFromMinerResponse) XXX_Size() int {
 	return xxx_messageInfo_SendFromMinerResponse.Size(m)
@@ -873,16 +1080,17 @@ func (m *SendResponse) Reset()         { *m = SendResponse{} }
 func (m *SendResponse) String() string { return proto.CompactTextString(m) }
 func (*SendResponse) ProtoMessage()    {}
 func (*SendResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{22}
+	return fileDescriptor_c6f7014334e4682f, []int{26}
 }
+
 func (m *SendResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendResponse.Unmarshal(m, b)
 }
 func (m *SendResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendResponse.Marshal(b, m, deterministic)
 }
-func (dst *SendResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendResponse.Merge(dst, src)
+func (m *SendResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendResponse.Merge(m, src)
 }
 func (m *SendResponse) XXX_Size() int {
 	return xxx_messageInfo_SendResponse.Size(m)
@@ -918,16 +1126,17 @@ func (m *GetPeerInfoResponse) Reset()         { *m = GetPeerInfoResponse{} }
 func (m *GetPeerInfoResponse) String() string { return proto.CompactTextString(m) }
 func (*GetPeerInfoResponse) ProtoMessage()    {}
 func (*GetPeerInfoResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{23}
+	return fileDescriptor_c6f7014334e4682f, []int{27}
 }
+
 func (m *GetPeerInfoResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetPeerInfoResponse.Unmarshal(m, b)
 }
 func (m *GetPeerInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetPeerInfoResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetPeerInfoResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetPeerInfoResponse.Merge(dst, src)
+func (m *GetPeerInfoResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetPeerInfoResponse.Merge(m, src)
 }
 func (m *GetPeerInfoResponse) XXX_Size() int {
 	return xxx_messageInfo_GetPeerInfoResponse.Size(m)
@@ -959,16 +1168,17 @@ func (m *GetBlockchainInfoResponse) Reset()         { *m = GetBlockchainInfoResp
 func (m *GetBlockchainInfoResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBlockchainInfoResponse) ProtoMessage()    {}
 func (*GetBlockchainInfoResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{24}
+	return fileDescriptor_c6f7014334e4682f, []int{28}
 }
+
 func (m *GetBlockchainInfoResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockchainInfoResponse.Unmarshal(m, b)
 }
 func (m *GetBlockchainInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockchainInfoResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetBlockchainInfoResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockchainInfoResponse.Merge(dst, src)
+func (m *GetBlockchainInfoResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockchainInfoResponse.Merge(m, src)
 }
 func (m *GetBlockchainInfoResponse) XXX_Size() int {
 	return xxx_messageInfo_GetBlockchainInfoResponse.Size(m)
@@ -1017,16 +1227,17 @@ func (m *AddPeerResponse) Reset()         { *m = AddPeerResponse{} }
 func (m *AddPeerResponse) String() string { return proto.CompactTextString(m) }
 func (*AddPeerResponse) ProtoMessage()    {}
 func (*AddPeerResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{25}
+	return fileDescriptor_c6f7014334e4682f, []int{29}
 }
+
 func (m *AddPeerResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddPeerResponse.Unmarshal(m, b)
 }
 func (m *AddPeerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AddPeerResponse.Marshal(b, m, deterministic)
 }
-func (dst *AddPeerResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddPeerResponse.Merge(dst, src)
+func (m *AddPeerResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddPeerResponse.Merge(m, src)
 }
 func (m *AddPeerResponse) XXX_Size() int {
 	return xxx_messageInfo_AddPeerResponse.Size(m)
@@ -1049,16 +1260,17 @@ func (m *GetVersionResponse) Reset()         { *m = GetVersionResponse{} }
 func (m *GetVersionResponse) String() string { return proto.CompactTextString(m) }
 func (*GetVersionResponse) ProtoMessage()    {}
 func (*GetVersionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{26}
+	return fileDescriptor_c6f7014334e4682f, []int{30}
 }
+
 func (m *GetVersionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetVersionResponse.Unmarshal(m, b)
 }
 func (m *GetVersionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetVersionResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetVersionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetVersionResponse.Merge(dst, src)
+func (m *GetVersionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetVersionResponse.Merge(m, src)
 }
 func (m *GetVersionResponse) XXX_Size() int {
 	return xxx_messageInfo_GetVersionResponse.Size(m)
@@ -1095,16 +1307,17 @@ func (m *GetUTXOResponse) Reset()         { *m = GetUTXOResponse{} }
 func (m *GetUTXOResponse) String() string { return proto.CompactTextString(m) }
 func (*GetUTXOResponse) ProtoMessage()    {}
 func (*GetUTXOResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{27}
+	return fileDescriptor_c6f7014334e4682f, []int{31}
 }
+
 func (m *GetUTXOResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetUTXOResponse.Unmarshal(m, b)
 }
 func (m *GetUTXOResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetUTXOResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetUTXOResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetUTXOResponse.Merge(dst, src)
+func (m *GetUTXOResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetUTXOResponse.Merge(m, src)
 }
 func (m *GetUTXOResponse) XXX_Size() int {
 	return xxx_messageInfo_GetUTXOResponse.Size(m)
@@ -1140,16 +1353,17 @@ func (m *GetBlocksResponse) Reset()         { *m = GetBlocksResponse{} }
 func (m *GetBlocksResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBlocksResponse) ProtoMessage()    {}
 func (*GetBlocksResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{28}
+	return fileDescriptor_c6f7014334e4682f, []int{32}
 }
+
 func (m *GetBlocksResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlocksResponse.Unmarshal(m, b)
 }
 func (m *GetBlocksResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlocksResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetBlocksResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlocksResponse.Merge(dst, src)
+func (m *GetBlocksResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlocksResponse.Merge(m, src)
 }
 func (m *GetBlocksResponse) XXX_Size() int {
 	return xxx_messageInfo_GetBlocksResponse.Size(m)
@@ -1178,16 +1392,17 @@ func (m *GetBlockByHashResponse) Reset()         { *m = GetBlockByHashResponse{}
 func (m *GetBlockByHashResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBlockByHashResponse) ProtoMessage()    {}
 func (*GetBlockByHashResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{29}
+	return fileDescriptor_c6f7014334e4682f, []int{33}
 }
+
 func (m *GetBlockByHashResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockByHashResponse.Unmarshal(m, b)
 }
 func (m *GetBlockByHashResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockByHashResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetBlockByHashResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockByHashResponse.Merge(dst, src)
+func (m *GetBlockByHashResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockByHashResponse.Merge(m, src)
 }
 func (m *GetBlockByHashResponse) XXX_Size() int {
 	return xxx_messageInfo_GetBlockByHashResponse.Size(m)
@@ -1216,16 +1431,17 @@ func (m *GetBlockByHeightResponse) Reset()         { *m = GetBlockByHeightRespon
 func (m *GetBlockByHeightResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBlockByHeightResponse) ProtoMessage()    {}
 func (*GetBlockByHeightResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{30}
+	return fileDescriptor_c6f7014334e4682f, []int{34}
 }
+
 func (m *GetBlockByHeightResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetBlockByHeightResponse.Unmarshal(m, b)
 }
 func (m *GetBlockByHeightResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetBlockByHeightResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetBlockByHeightResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetBlockByHeightResponse.Merge(dst, src)
+func (m *GetBlockByHeightResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetBlockByHeightResponse.Merge(m, src)
 }
 func (m *GetBlockByHeightResponse) XXX_Size() int {
 	return xxx_messageInfo_GetBlockByHeightResponse.Size(m)
@@ -1253,16 +1469,17 @@ func (m *SendTransactionResponse) Reset()         { *m = SendTransactionResponse
 func (m *SendTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*SendTransactionResponse) ProtoMessage()    {}
 func (*SendTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{31}
+	return fileDescriptor_c6f7014334e4682f, []int{35}
 }
+
 func (m *SendTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendTransactionResponse.Unmarshal(m, b)
 }
 func (m *SendTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendTransactionResponse.Marshal(b, m, deterministic)
 }
-func (dst *SendTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendTransactionResponse.Merge(dst, src)
+func (m *SendTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendTransactionResponse.Merge(m, src)
 }
 func (m *SendTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_SendTransactionResponse.Size(m)
@@ -1283,16 +1500,17 @@ func (m *SendBatchTransactionResponse) Reset()         { *m = SendBatchTransacti
 func (m *SendBatchTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*SendBatchTransactionResponse) ProtoMessage()    {}
 func (*SendBatchTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{32}
+	return fileDescriptor_c6f7014334e4682f, []int{36}
 }
+
 func (m *SendBatchTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendBatchTransactionResponse.Unmarshal(m, b)
 }
 func (m *SendBatchTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendBatchTransactionResponse.Marshal(b, m, deterministic)
 }
-func (dst *SendBatchTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendBatchTransactionResponse.Merge(dst, src)
+func (m *SendBatchTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendBatchTransactionResponse.Merge(m, src)
 }
 func (m *SendBatchTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_SendBatchTransactionResponse.Size(m)
@@ -1316,16 +1534,17 @@ func (m *SendTransactionStatus) Reset()         { *m = SendTransactionStatus{} }
 func (m *SendTransactionStatus) String() string { return proto.CompactTextString(m) }
 func (*SendTransactionStatus) ProtoMessage()    {}
 func (*SendTransactionStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{33}
+	return fileDescriptor_c6f7014334e4682f, []int{37}
 }
+
 func (m *SendTransactionStatus) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SendTransactionStatus.Unmarshal(m, b)
 }
 func (m *SendTransactionStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SendTransactionStatus.Marshal(b, m, deterministic)
 }
-func (dst *SendTransactionStatus) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SendTransactionStatus.Merge(dst, src)
+func (m *SendTransactionStatus) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SendTransactionStatus.Merge(m, src)
 }
 func (m *SendTransactionStatus) XXX_Size() int {
 	return xxx_messageInfo_SendTransactionStatus.Size(m)
@@ -1368,16 +1587,17 @@ func (m *GetNewTransactionResponse) Reset()         { *m = GetNewTransactionResp
 func (m *GetNewTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*GetNewTransactionResponse) ProtoMessage()    {}
 func (*GetNewTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{34}
+	return fileDescriptor_c6f7014334e4682f, []int{38}
 }
+
 func (m *GetNewTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetNewTransactionResponse.Unmarshal(m, b)
 }
 func (m *GetNewTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetNewTransactionResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetNewTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetNewTransactionResponse.Merge(dst, src)
+func (m *GetNewTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetNewTransactionResponse.Merge(m, src)
 }
 func (m *GetNewTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_GetNewTransactionResponse.Size(m)
@@ -1406,16 +1626,17 @@ func (m *SubscribeResponse) Reset()         { *m = SubscribeResponse{} }
 func (m *SubscribeResponse) String() string { return proto.CompactTextString(m) }
 func (*SubscribeResponse) ProtoMessage()    {}
 func (*SubscribeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{35}
+	return fileDescriptor_c6f7014334e4682f, []int{39}
 }
+
 func (m *SubscribeResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SubscribeResponse.Unmarshal(m, b)
 }
 func (m *SubscribeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SubscribeResponse.Marshal(b, m, deterministic)
 }
-func (dst *SubscribeResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SubscribeResponse.Merge(dst, src)
+func (m *SubscribeResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubscribeResponse.Merge(m, src)
 }
 func (m *SubscribeResponse) XXX_Size() int {
 	return xxx_messageInfo_SubscribeResponse.Size(m)
@@ -1443,16 +1664,17 @@ func (m *GetAllTransactionsRequest) Reset()         { *m = GetAllTransactionsReq
 func (m *GetAllTransactionsRequest) String() string { return proto.CompactTextString(m) }
 func (*GetAllTransactionsRequest) ProtoMessage()    {}
 func (*GetAllTransactionsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{36}
+	return fileDescriptor_c6f7014334e4682f, []int{40}
 }
+
 func (m *GetAllTransactionsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetAllTransactionsRequest.Unmarshal(m, b)
 }
 func (m *GetAllTransactionsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetAllTransactionsRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetAllTransactionsRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetAllTransactionsRequest.Merge(dst, src)
+func (m *GetAllTransactionsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetAllTransactionsRequest.Merge(m, src)
 }
 func (m *GetAllTransactionsRequest) XXX_Size() int {
 	return xxx_messageInfo_GetAllTransactionsRequest.Size(m)
@@ -1474,16 +1696,17 @@ func (m *GetAllTransactionsResponse) Reset()         { *m = GetAllTransactionsRe
 func (m *GetAllTransactionsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetAllTransactionsResponse) ProtoMessage()    {}
 func (*GetAllTransactionsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_5b17f1b809ed7255, []int{37}
+	return fileDescriptor_c6f7014334e4682f, []int{41}
 }
+
 func (m *GetAllTransactionsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetAllTransactionsResponse.Unmarshal(m, b)
 }
 func (m *GetAllTransactionsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetAllTransactionsResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetAllTransactionsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetAllTransactionsResponse.Merge(dst, src)
+func (m *GetAllTransactionsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetAllTransactionsResponse.Merge(m, src)
 }
 func (m *GetAllTransactionsResponse) XXX_Size() int {
 	return xxx_messageInfo_GetAllTransactionsResponse.Size(m)
@@ -1501,9 +1724,356 @@ func (m *GetAllTransactionsResponse) GetTransactions() []*pb.Transaction {
 	return nil
 }
 
+type GetLastIrreversibleBlockResponse struct {
+	Block                *pb.Block `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *GetLastIrreversibleBlockResponse) Reset()         { *m = GetLastIrreversibleBlockResponse{} }
+func (m *GetLastIrreversibleBlockResponse) String() string { return proto.CompactTextString(m) }
+func (*GetLastIrreversibleBlockResponse) ProtoMessage()    {}
+func (*GetLastIrreversibleBlockResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{42}
+}
+
+func (m *GetLastIrreversibleBlockResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetLastIrreversibleBlockResponse.Unmarshal(m, b)
+}
+func (m *GetLastIrreversibleBlockResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetLastIrreversibleBlockResponse.Marshal(b, m, deterministic)
+}
+func (m *GetLastIrreversibleBlockResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetLastIrreversibleBlockResponse.Merge(m, src)
+}
+func (m *GetLastIrreversibleBlockResponse) XXX_Size() int {
+	return xxx_messageInfo_GetLastIrreversibleBlockResponse.Size(m)
+}
+func (m *GetLastIrreversibleBlockResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetLastIrreversibleBlockResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetLastIrreversibleBlockResponse proto.InternalMessageInfo
+
+func (m *GetLastIrreversibleBlockResponse) GetBlock() *pb.Block {
+	if m != nil {
+		return m.Block
+	}
+	return nil
+}
+
+type GetStatsResponse struct {
+	Stats                *pb2.Metrics `protobuf:"bytes,1,opt,name=stats,proto3" json:"stats,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *GetStatsResponse) Reset()         { *m = GetStatsResponse{} }
+func (m *GetStatsResponse) String() string { return proto.CompactTextString(m) }
+func (*GetStatsResponse) ProtoMessage()    {}
+func (*GetStatsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{43}
+}
+
+func (m *GetStatsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetStatsResponse.Unmarshal(m, b)
+}
+func (m *GetStatsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetStatsResponse.Marshal(b, m, deterministic)
+}
+func (m *GetStatsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetStatsResponse.Merge(m, src)
+}
+func (m *GetStatsResponse) XXX_Size() int {
+	return xxx_messageInfo_GetStatsResponse.Size(m)
+}
+func (m *GetStatsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetStatsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetStatsResponse proto.InternalMessageInfo
+
+func (m *GetStatsResponse) GetStats() *pb2.Metrics {
+	if m != nil {
+		return m.Stats
+	}
+	return nil
+}
+
+type GetNodeConfigResponse struct {
+	TxPoolLimit          uint32   `protobuf:"varint,1,opt,name=tx_pool_limit,json=txPoolLimit,proto3" json:"tx_pool_limit,omitempty"`
+	BlkSizeLimit         uint32   `protobuf:"varint,2,opt,name=blk_size_limit,json=blkSizeLimit,proto3" json:"blk_size_limit,omitempty"`
+	MaxConnectionOut     uint32   `protobuf:"varint,3,opt,name=max_connection_out,json=maxConnectionOut,proto3" json:"max_connection_out,omitempty"`
+	MaxConnectionIn      uint32   `protobuf:"varint,4,opt,name=max_connection_in,json=maxConnectionIn,proto3" json:"max_connection_in,omitempty"`
+	ProducerAddress      string   `protobuf:"bytes,5,opt,name=producer_address,json=producerAddress,proto3" json:"producer_address,omitempty"`
+	Producers            []string `protobuf:"bytes,6,rep,name=producers,proto3" json:"producers,omitempty"`
+	MaxProducers         uint32   `protobuf:"varint,7,opt,name=max_producers,json=maxProducers,proto3" json:"max_producers,omitempty"`
+	IpfsAddresses        []string `protobuf:"bytes,9,rep,name=ipfs_addresses,json=ipfsAddresses,proto3" json:"ipfs_addresses,omitempty"`
+	RpcPort              uint32   `protobuf:"varint,10,opt,name=rpc_port,json=rpcPort,proto3" json:"rpc_port,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetNodeConfigResponse) Reset()         { *m = GetNodeConfigResponse{} }
+func (m *GetNodeConfigResponse) String() string { return proto.CompactTextString(m) }
+func (*GetNodeConfigResponse) ProtoMessage()    {}
+func (*GetNodeConfigResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{44}
+}
+
+func (m *GetNodeConfigResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetNodeConfigResponse.Unmarshal(m, b)
+}
+func (m *GetNodeConfigResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetNodeConfigResponse.Marshal(b, m, deterministic)
+}
+func (m *GetNodeConfigResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetNodeConfigResponse.Merge(m, src)
+}
+func (m *GetNodeConfigResponse) XXX_Size() int {
+	return xxx_messageInfo_GetNodeConfigResponse.Size(m)
+}
+func (m *GetNodeConfigResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetNodeConfigResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetNodeConfigResponse proto.InternalMessageInfo
+
+func (m *GetNodeConfigResponse) GetTxPoolLimit() uint32 {
+	if m != nil {
+		return m.TxPoolLimit
+	}
+	return 0
+}
+
+func (m *GetNodeConfigResponse) GetBlkSizeLimit() uint32 {
+	if m != nil {
+		return m.BlkSizeLimit
+	}
+	return 0
+}
+
+func (m *GetNodeConfigResponse) GetMaxConnectionOut() uint32 {
+	if m != nil {
+		return m.MaxConnectionOut
+	}
+	return 0
+}
+
+func (m *GetNodeConfigResponse) GetMaxConnectionIn() uint32 {
+	if m != nil {
+		return m.MaxConnectionIn
+	}
+	return 0
+}
+
+func (m *GetNodeConfigResponse) GetProducerAddress() string {
+	if m != nil {
+		return m.ProducerAddress
+	}
+	return ""
+}
+
+func (m *GetNodeConfigResponse) GetProducers() []string {
+	if m != nil {
+		return m.Producers
+	}
+	return nil
+}
+
+func (m *GetNodeConfigResponse) GetMaxProducers() uint32 {
+	if m != nil {
+		return m.MaxProducers
+	}
+	return 0
+}
+
+func (m *GetNodeConfigResponse) GetIpfsAddresses() []string {
+	if m != nil {
+		return m.IpfsAddresses
+	}
+	return nil
+}
+
+func (m *GetNodeConfigResponse) GetRpcPort() uint32 {
+	if m != nil {
+		return m.RpcPort
+	}
+	return 0
+}
+
+type SetNodeConfigRequest struct {
+	UpdatedConfigs       []SetNodeConfigRequest_ConfigType `protobuf:"varint,1,rep,packed,name=updated_configs,json=updatedConfigs,proto3,enum=rpcpb.SetNodeConfigRequest_ConfigType" json:"updated_configs,omitempty"`
+	TxPoolLimit          uint32                            `protobuf:"varint,2,opt,name=tx_pool_limit,json=txPoolLimit,proto3" json:"tx_pool_limit,omitempty"`
+	BlkSizeLimit         uint32                            `protobuf:"varint,3,opt,name=blk_size_limit,json=blkSizeLimit,proto3" json:"blk_size_limit,omitempty"`
+	MaxConnectionOut     uint32                            `protobuf:"varint,4,opt,name=max_connection_out,json=maxConnectionOut,proto3" json:"max_connection_out,omitempty"`
+	MaxConnectionIn      uint32                            `protobuf:"varint,5,opt,name=max_connection_in,json=maxConnectionIn,proto3" json:"max_connection_in,omitempty"`
+	MaxProducers         uint32                            `protobuf:"varint,6,opt,name=max_producers,json=maxProducers,proto3" json:"max_producers,omitempty"`
+	Producers            []string                          `protobuf:"bytes,7,rep,name=producers,proto3" json:"producers,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                          `json:"-"`
+	XXX_unrecognized     []byte                            `json:"-"`
+	XXX_sizecache        int32                             `json:"-"`
+}
+
+func (m *SetNodeConfigRequest) Reset()         { *m = SetNodeConfigRequest{} }
+func (m *SetNodeConfigRequest) String() string { return proto.CompactTextString(m) }
+func (*SetNodeConfigRequest) ProtoMessage()    {}
+func (*SetNodeConfigRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{45}
+}
+
+func (m *SetNodeConfigRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SetNodeConfigRequest.Unmarshal(m, b)
+}
+func (m *SetNodeConfigRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SetNodeConfigRequest.Marshal(b, m, deterministic)
+}
+func (m *SetNodeConfigRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetNodeConfigRequest.Merge(m, src)
+}
+func (m *SetNodeConfigRequest) XXX_Size() int {
+	return xxx_messageInfo_SetNodeConfigRequest.Size(m)
+}
+func (m *SetNodeConfigRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SetNodeConfigRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SetNodeConfigRequest proto.InternalMessageInfo
+
+func (m *SetNodeConfigRequest) GetUpdatedConfigs() []SetNodeConfigRequest_ConfigType {
+	if m != nil {
+		return m.UpdatedConfigs
+	}
+	return nil
+}
+
+func (m *SetNodeConfigRequest) GetTxPoolLimit() uint32 {
+	if m != nil {
+		return m.TxPoolLimit
+	}
+	return 0
+}
+
+func (m *SetNodeConfigRequest) GetBlkSizeLimit() uint32 {
+	if m != nil {
+		return m.BlkSizeLimit
+	}
+	return 0
+}
+
+func (m *SetNodeConfigRequest) GetMaxConnectionOut() uint32 {
+	if m != nil {
+		return m.MaxConnectionOut
+	}
+	return 0
+}
+
+func (m *SetNodeConfigRequest) GetMaxConnectionIn() uint32 {
+	if m != nil {
+		return m.MaxConnectionIn
+	}
+	return 0
+}
+
+func (m *SetNodeConfigRequest) GetMaxProducers() uint32 {
+	if m != nil {
+		return m.MaxProducers
+	}
+	return 0
+}
+
+func (m *SetNodeConfigRequest) GetProducers() []string {
+	if m != nil {
+		return m.Producers
+	}
+	return nil
+}
+
+type EstimateGasResponse struct {
+	GasCount             []byte   `protobuf:"bytes,1,opt,name=gas_count,json=gasCount,proto3" json:"gas_count,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *EstimateGasResponse) Reset()         { *m = EstimateGasResponse{} }
+func (m *EstimateGasResponse) String() string { return proto.CompactTextString(m) }
+func (*EstimateGasResponse) ProtoMessage()    {}
+func (*EstimateGasResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{46}
+}
+
+func (m *EstimateGasResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EstimateGasResponse.Unmarshal(m, b)
+}
+func (m *EstimateGasResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EstimateGasResponse.Marshal(b, m, deterministic)
+}
+func (m *EstimateGasResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EstimateGasResponse.Merge(m, src)
+}
+func (m *EstimateGasResponse) XXX_Size() int {
+	return xxx_messageInfo_EstimateGasResponse.Size(m)
+}
+func (m *EstimateGasResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EstimateGasResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EstimateGasResponse proto.InternalMessageInfo
+
+func (m *EstimateGasResponse) GetGasCount() []byte {
+	if m != nil {
+		return m.GasCount
+	}
+	return nil
+}
+
+type GasPriceResponse struct {
+	GasPrice             []byte   `protobuf:"bytes,1,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GasPriceResponse) Reset()         { *m = GasPriceResponse{} }
+func (m *GasPriceResponse) String() string { return proto.CompactTextString(m) }
+func (*GasPriceResponse) ProtoMessage()    {}
+func (*GasPriceResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c6f7014334e4682f, []int{47}
+}
+
+func (m *GasPriceResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GasPriceResponse.Unmarshal(m, b)
+}
+func (m *GasPriceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GasPriceResponse.Marshal(b, m, deterministic)
+}
+func (m *GasPriceResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GasPriceResponse.Merge(m, src)
+}
+func (m *GasPriceResponse) XXX_Size() int {
+	return xxx_messageInfo_GasPriceResponse.Size(m)
+}
+func (m *GasPriceResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GasPriceResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GasPriceResponse proto.InternalMessageInfo
+
+func (m *GasPriceResponse) GetGasPrice() []byte {
+	if m != nil {
+		return m.GasPrice
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterType((*CreateWalletRequest)(nil), "rpcpb.CreateWalletRequest")
-	proto.RegisterType((*UnlockWalletRequest)(nil), "rpcpb.UnlockWalletRequest")
+	proto.RegisterEnum("rpcpb.SetNodeConfigRequest_ConfigType", SetNodeConfigRequest_ConfigType_name, SetNodeConfigRequest_ConfigType_value)
+	proto.RegisterType((*CreateAccountRequest)(nil), "rpcpb.CreateAccountRequest")
+	proto.RegisterType((*UnlockAccountRequest)(nil), "rpcpb.UnlockAccountRequest")
 	proto.RegisterType((*AddProducerRequest)(nil), "rpcpb.AddProducerRequest")
 	proto.RegisterType((*GetBalanceRequest)(nil), "rpcpb.GetBalanceRequest")
 	proto.RegisterType((*SendFromMinerRequest)(nil), "rpcpb.SendFromMinerRequest")
@@ -1520,8 +2090,12 @@ func init() {
 	proto.RegisterType((*SendBatchTransactionRequest)(nil), "rpcpb.SendBatchTransactionRequest")
 	proto.RegisterType((*GetNewTransactionRequest)(nil), "rpcpb.GetNewTransactionRequest")
 	proto.RegisterType((*SubscribeRequest)(nil), "rpcpb.SubscribeRequest")
+	proto.RegisterType((*MetricsServiceRequest)(nil), "rpcpb.MetricsServiceRequest")
+	proto.RegisterType((*GetLastIrreversibleBlockRequest)(nil), "rpcpb.GetLastIrreversibleBlockRequest")
+	proto.RegisterType((*EstimateGasRequest)(nil), "rpcpb.EstimateGasRequest")
+	proto.RegisterType((*GasPriceRequest)(nil), "rpcpb.GasPriceRequest")
 	proto.RegisterType((*AddProducerResponse)(nil), "rpcpb.AddProducerResponse")
-	proto.RegisterType((*UnlockWalletResponse)(nil), "rpcpb.UnlockWalletResponse")
+	proto.RegisterType((*UnlockAccountResponse)(nil), "rpcpb.UnlockAccountResponse")
 	proto.RegisterType((*GetBalanceResponse)(nil), "rpcpb.GetBalanceResponse")
 	proto.RegisterType((*SendFromMinerResponse)(nil), "rpcpb.SendFromMinerResponse")
 	proto.RegisterType((*SendResponse)(nil), "rpcpb.SendResponse")
@@ -1540,6 +2114,142 @@ func init() {
 	proto.RegisterType((*SubscribeResponse)(nil), "rpcpb.SubscribeResponse")
 	proto.RegisterType((*GetAllTransactionsRequest)(nil), "rpcpb.GetAllTransactionsRequest")
 	proto.RegisterType((*GetAllTransactionsResponse)(nil), "rpcpb.GetAllTransactionsResponse")
+	proto.RegisterType((*GetLastIrreversibleBlockResponse)(nil), "rpcpb.GetLastIrreversibleBlockResponse")
+	proto.RegisterType((*GetStatsResponse)(nil), "rpcpb.GetStatsResponse")
+	proto.RegisterType((*GetNodeConfigResponse)(nil), "rpcpb.GetNodeConfigResponse")
+	proto.RegisterType((*SetNodeConfigRequest)(nil), "rpcpb.SetNodeConfigRequest")
+	proto.RegisterType((*EstimateGasResponse)(nil), "rpcpb.EstimateGasResponse")
+	proto.RegisterType((*GasPriceResponse)(nil), "rpcpb.GasPriceResponse")
+}
+
+func init() {
+	proto.RegisterFile("github.com/dappley/go-dappley/rpc/pb/rpc.proto", fileDescriptor_c6f7014334e4682f)
+}
+
+var fileDescriptor_c6f7014334e4682f = []byte{
+	// 1945 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x58, 0xeb, 0x72, 0xdb, 0xc6,
+	0x15, 0x16, 0x49, 0xdd, 0x78, 0x78, 0x11, 0xb5, 0xba, 0xd1, 0x90, 0xe3, 0x0b, 0x5c, 0x3b, 0xae,
+	0xeb, 0xd0, 0x8e, 0xdc, 0x36, 0x9e, 0x4e, 0xd3, 0x56, 0x52, 0x1d, 0x45, 0x13, 0x49, 0xe4, 0x40,
+	0x52, 0xea, 0xb6, 0x93, 0x41, 0x41, 0x70, 0x25, 0x62, 0x4c, 0x02, 0x28, 0x76, 0xe9, 0xd0, 0x79,
+	0x9c, 0xbc, 0x46, 0x5f, 0xa0, 0x3f, 0xfa, 0x26, 0x7d, 0x80, 0xce, 0xf4, 0x57, 0x67, 0xaf, 0x58,
+	0x80, 0xd0, 0xc5, 0xe9, 0x2f, 0x02, 0x67, 0xcf, 0xf9, 0x76, 0x71, 0x2e, 0xdf, 0x9e, 0x43, 0xe8,
+	0x5c, 0x06, 0x74, 0x38, 0xe9, 0x77, 0xfc, 0x68, 0xfc, 0x62, 0xe0, 0xc5, 0xf1, 0x08, 0x7f, 0x78,
+	0x71, 0x19, 0x7d, 0xa6, 0x1e, 0x93, 0xd8, 0x7f, 0x11, 0xf7, 0xd9, 0x4f, 0x27, 0x4e, 0x22, 0x1a,
+	0xa1, 0x85, 0x24, 0xf6, 0xe3, 0xbe, 0xf5, 0xf9, 0xf5, 0x66, 0x7e, 0x94, 0x60, 0x66, 0xd7, 0x1f,
+	0x45, 0xfe, 0x3b, 0x61, 0x69, 0x7d, 0x71, 0x3b, 0x13, 0x9a, 0x78, 0x21, 0xf1, 0x7c, 0x1a, 0x44,
+	0xa1, 0x34, 0x7c, 0x79, 0x3b, 0xc3, 0x09, 0x9d, 0x46, 0xd2, 0xe2, 0xd5, 0xf5, 0x16, 0x21, 0xa6,
+	0xdf, 0x47, 0xc9, 0x3b, 0x66, 0x14, 0x63, 0x9c, 0x48, 0xa3, 0xd7, 0xd7, 0x1b, 0x8d, 0x31, 0x4d,
+	0x02, 0x9f, 0x30, 0xa3, 0x81, 0x47, 0x3d, 0x42, 0xa3, 0x04, 0x0b, 0x4b, 0xfb, 0xd7, 0xb0, 0xbe,
+	0x9f, 0x60, 0x8f, 0xe2, 0x5d, 0xdf, 0x8f, 0x26, 0x21, 0x75, 0xf0, 0xdf, 0x27, 0x98, 0x50, 0x74,
+	0x0f, 0x20, 0xf6, 0x08, 0x89, 0x87, 0x89, 0x47, 0x70, 0xbb, 0xf4, 0xa0, 0xf4, 0xb4, 0xea, 0x18,
+	0x12, 0x7b, 0x13, 0xd6, 0xcf, 0x43, 0xe6, 0xa1, 0xac, 0x9d, 0xdd, 0x01, 0xb4, 0x3b, 0x18, 0xf4,
+	0x92, 0x68, 0x30, 0xf1, 0x71, 0xa2, 0xd0, 0xda, 0xb0, 0xe4, 0x0d, 0x06, 0x09, 0x26, 0x44, 0x42,
+	0xa9, 0x57, 0xfb, 0x33, 0x58, 0x3d, 0xc0, 0x74, 0xcf, 0x1b, 0x79, 0xa1, 0x8f, 0x6f, 0x56, 0xff,
+	0x1d, 0xac, 0x9f, 0xe2, 0x70, 0xf0, 0x55, 0x12, 0x8d, 0x8f, 0x83, 0x30, 0xdd, 0xa0, 0x09, 0x65,
+	0x1a, 0x49, 0xe5, 0x32, 0x8d, 0xd0, 0x26, 0x2c, 0x7a, 0x63, 0x76, 0xae, 0x76, 0xf9, 0x41, 0xe9,
+	0x69, 0xdd, 0x91, 0x6f, 0xf6, 0xbf, 0x4a, 0x50, 0x63, 0x00, 0xca, 0x0e, 0xc1, 0xfc, 0x45, 0x12,
+	0x8d, 0xa5, 0x25, 0x7f, 0x96, 0x58, 0xe5, 0x02, 0xac, 0x8a, 0x89, 0x85, 0x1e, 0x42, 0xdd, 0x13,
+	0x1f, 0xef, 0xc6, 0x1e, 0x1d, 0xb6, 0xe7, 0xb9, 0x45, 0x4d, 0xca, 0x7a, 0x1e, 0x1d, 0xa2, 0x16,
+	0x54, 0x68, 0x10, 0xb7, 0x17, 0xb8, 0x1d, 0x7b, 0x64, 0x1b, 0xb2, 0x10, 0xb4, 0x17, 0xc5, 0x86,
+	0xec, 0x19, 0x6d, 0x43, 0xf5, 0xd2, 0x23, 0xee, 0x28, 0x18, 0x07, 0xb4, 0xbd, 0xc4, 0x75, 0x97,
+	0x2f, 0x3d, 0x72, 0xc4, 0xde, 0xd5, 0x62, 0x9c, 0x04, 0x3e, 0x6e, 0x2f, 0xeb, 0xc5, 0x1e, 0x7b,
+	0xb7, 0xd7, 0x01, 0x1d, 0x60, 0xda, 0xc3, 0x38, 0x39, 0x0c, 0x2f, 0x22, 0x15, 0x03, 0x0b, 0xda,
+	0xcc, 0xa7, 0x2c, 0x3a, 0xfe, 0xd0, 0x0b, 0x42, 0x73, 0xed, 0x15, 0x34, 0x59, 0x7c, 0x70, 0xea,
+	0xba, 0x87, 0x50, 0xbf, 0x98, 0x8c, 0x46, 0x6e, 0xd6, 0xe3, 0x35, 0x26, 0xdb, 0x95, 0x5e, 0x7f,
+	0xcd, 0x83, 0xf4, 0x2d, 0x4e, 0x48, 0x10, 0x85, 0xca, 0xee, 0x11, 0x34, 0x78, 0x0a, 0xb9, 0xef,
+	0x85, 0x5c, 0x1a, 0xd6, 0xb9, 0x50, 0xea, 0xda, 0xcf, 0xa0, 0x79, 0x80, 0xe9, 0xf9, 0xd9, 0xdb,
+	0xee, 0xcd, 0xb1, 0xfd, 0x0e, 0x5a, 0xea, 0xd8, 0x44, 0x69, 0x3f, 0x07, 0x44, 0xa8, 0x97, 0x50,
+	0x97, 0x57, 0xa3, 0x3b, 0xf4, 0xc8, 0x10, 0x33, 0xc3, 0xca, 0xd3, 0xba, 0xd3, 0xe2, 0x2b, 0x5c,
+	0xff, 0x6b, 0x2e, 0x67, 0xbe, 0x1a, 0x7b, 0x53, 0xd7, 0xd7, 0x81, 0x5f, 0x70, 0x96, 0xc7, 0xde,
+	0x74, 0x9f, 0x87, 0xfe, 0x17, 0xb0, 0xa1, 0xe0, 0xf7, 0x3e, 0x30, 0x03, 0x23, 0x07, 0x18, 0x2e,
+	0x3f, 0x4e, 0xdd, 0xe1, 0xcf, 0xf6, 0xe7, 0xb0, 0x65, 0x28, 0xe3, 0xe0, 0x72, 0xa8, 0x2b, 0x63,
+	0x13, 0x16, 0x87, 0x5c, 0xc0, 0x0d, 0xe6, 0x1d, 0xf9, 0x66, 0x77, 0x61, 0x93, 0x65, 0xd6, 0x59,
+	0xca, 0x01, 0xca, 0xe2, 0x57, 0x50, 0x33, 0x98, 0x81, 0x9b, 0xd5, 0x76, 0xd6, 0x3a, 0xac, 0xf8,
+	0xe3, 0x7e, 0xc7, 0x34, 0x30, 0xf5, 0xec, 0x6f, 0x61, 0x9b, 0x01, 0xee, 0x79, 0xd4, 0x1f, 0x16,
+	0xa0, 0x7e, 0x01, 0x75, 0x43, 0x5b, 0x38, 0xe5, 0x0a, 0xd8, 0x8c, 0xa2, 0x4c, 0x8f, 0x13, 0xfc,
+	0xfd, 0x2c, 0xa8, 0xfd, 0x0c, 0x5a, 0xa7, 0x93, 0x3e, 0xf1, 0x93, 0xa0, 0x8f, 0x8d, 0x0f, 0xa6,
+	0x51, 0x1c, 0xf8, 0x62, 0x8b, 0xaa, 0x23, 0xdf, 0xec, 0x2d, 0xd8, 0x38, 0x16, 0xc4, 0x72, 0x8a,
+	0x93, 0xf7, 0x81, 0x2e, 0x5f, 0xfb, 0x21, 0xdc, 0x3f, 0xc0, 0xf4, 0xc8, 0x23, 0xf4, 0x30, 0x49,
+	0x30, 0x4f, 0x8f, 0xfe, 0x08, 0x73, 0x67, 0x2a, 0x95, 0x6f, 0x00, 0xbd, 0x21, 0x34, 0x18, 0x7b,
+	0x14, 0x1f, 0x78, 0xe4, 0xff, 0x74, 0xd4, 0x2a, 0xac, 0x1c, 0xc8, 0x8a, 0x50, 0xf8, 0x1b, 0xb0,
+	0x96, 0xa1, 0x21, 0x12, 0x47, 0x21, 0xc1, 0xec, 0xc8, 0x39, 0xd6, 0x92, 0x0b, 0xcf, 0x79, 0x21,
+	0x69, 0x1a, 0x12, 0x52, 0xa3, 0xf2, 0xd9, 0x51, 0x2a, 0x9a, 0x45, 0xb6, 0x60, 0x23, 0xc7, 0x42,
+	0x12, 0xe6, 0x18, 0xea, 0x82, 0x5d, 0x24, 0xc0, 0xcf, 0xa1, 0xe5, 0x47, 0x21, 0x4d, 0x3c, 0x9f,
+	0xe6, 0xea, 0x6b, 0x45, 0xc9, 0x65, 0x8d, 0xb1, 0x2c, 0xa4, 0xd3, 0x60, 0x20, 0x79, 0x87, 0x3f,
+	0xdb, 0x07, 0xb0, 0x96, 0x29, 0x6f, 0x89, 0xfa, 0x12, 0xaa, 0x8c, 0xfb, 0xdd, 0x51, 0x40, 0xa8,
+	0x0e, 0xbb, 0xbc, 0x18, 0xe2, 0x7e, 0x47, 0xeb, 0x2f, 0x33, 0xad, 0xa3, 0x80, 0x50, 0xfb, 0xc7,
+	0x12, 0xdc, 0x29, 0xa0, 0x04, 0x89, 0xf7, 0x04, 0x56, 0xa8, 0x17, 0x8c, 0x8c, 0x1a, 0x93, 0xb5,
+	0xd0, 0x60, 0x62, 0x5d, 0x60, 0x8c, 0x29, 0xa4, 0x8a, 0xc8, 0xff, 0x32, 0xcf, 0xff, 0x1a, 0x97,
+	0x89, 0x1a, 0x41, 0x77, 0xa1, 0x1a, 0x4b, 0xa7, 0x93, 0x76, 0x85, 0xa7, 0x4b, 0x2a, 0x60, 0xab,
+	0x34, 0x18, 0x63, 0x42, 0xbd, 0x71, 0xcc, 0xe9, 0xb2, 0xe2, 0xa4, 0x02, 0x16, 0x46, 0x4d, 0x4d,
+	0xd2, 0x9f, 0x7f, 0xe3, 0x61, 0xd1, 0xc4, 0x23, 0xcf, 0x7b, 0x1b, 0xe6, 0x41, 0x8f, 0xa1, 0x49,
+	0x70, 0xf2, 0x1e, 0x27, 0x5a, 0x4b, 0x78, 0xb6, 0x21, 0xa4, 0x8a, 0xa0, 0x22, 0x58, 0xd1, 0x04,
+	0x25, 0xe1, 0x6d, 0x58, 0x60, 0xf7, 0xb1, 0xaa, 0xa8, 0xba, 0xca, 0xbf, 0x73, 0x3a, 0x8d, 0x1c,
+	0xb1, 0x84, 0x5e, 0x43, 0x43, 0xb9, 0xc2, 0x1b, 0xb0, 0x6f, 0x2d, 0x67, 0xab, 0x4f, 0x38, 0x8d,
+	0xaf, 0x39, 0xf5, 0x7e, 0xfa, 0x42, 0xec, 0xdf, 0x88, 0x0b, 0x4f, 0xb2, 0x9c, 0xdc, 0xf2, 0x31,
+	0x2c, 0x72, 0x25, 0xb5, 0x67, 0x23, 0x83, 0xe3, 0xc8, 0x45, 0xfb, 0x4b, 0xd8, 0xcc, 0x53, 0x98,
+	0x76, 0xc9, 0x02, 0xd7, 0x91, 0x35, 0x93, 0xb3, 0x17, 0x6b, 0xf6, 0xef, 0xd3, 0x7b, 0x21, 0x25,
+	0xb5, 0x8f, 0x01, 0xb8, 0x03, 0x5b, 0x33, 0x14, 0x27, 0x23, 0x75, 0x0f, 0xee, 0x16, 0x93, 0x95,
+	0x5c, 0xff, 0xb3, 0x28, 0x19, 0x63, 0xe9, 0x94, 0x7a, 0x74, 0x92, 0xe6, 0xbd, 0x64, 0x5f, 0xf6,
+	0xcc, 0x64, 0x7e, 0x34, 0xc0, 0x3c, 0x62, 0x0d, 0x87, 0x3f, 0xb3, 0x7b, 0x63, 0x8c, 0x09, 0xf1,
+	0x2e, 0x31, 0xbf, 0x86, 0xab, 0x8e, 0x7a, 0xb5, 0x1d, 0x9e, 0xdb, 0x79, 0x3e, 0x93, 0xdf, 0xf5,
+	0x13, 0x29, 0xe5, 0x53, 0x58, 0x35, 0x78, 0x50, 0x62, 0xa9, 0xbb, 0xbb, 0x94, 0xde, 0xdd, 0xf6,
+	0x36, 0xdf, 0x7c, 0x77, 0x34, 0x32, 0xa0, 0x14, 0x9f, 0xd9, 0xe7, 0x60, 0x15, 0x2d, 0x4a, 0xb8,
+	0x9f, 0x4c, 0xe0, 0x07, 0xf0, 0xe0, 0x6a, 0x7e, 0xfd, 0x98, 0x78, 0xfe, 0x96, 0xdf, 0xb8, 0x2c,
+	0x10, 0xe9, 0xa9, 0x9e, 0xc2, 0x02, 0x61, 0x02, 0x69, 0x88, 0x3a, 0xb2, 0x79, 0x8c, 0xfb, 0x1d,
+	0xc9, 0xf6, 0x8e, 0x50, 0xb0, 0xff, 0x5d, 0xe6, 0x37, 0xea, 0x49, 0x34, 0xc0, 0xfb, 0x51, 0x78,
+	0x11, 0x5c, 0x1a, 0x15, 0xd4, 0xa0, 0x53, 0x37, 0x8e, 0xa2, 0x91, 0x6c, 0x6a, 0x4a, 0x3c, 0x90,
+	0x35, 0x3a, 0xed, 0x45, 0xd1, 0x48, 0xf4, 0x35, 0x3f, 0x83, 0x66, 0x7f, 0xf4, 0xce, 0x25, 0xc1,
+	0x0f, 0x58, 0x2a, 0x89, 0x68, 0xd7, 0xfb, 0xa3, 0x77, 0xa7, 0xc1, 0x0f, 0x58, 0x68, 0x3d, 0x07,
+	0x24, 0x6e, 0xf4, 0x30, 0xc4, 0xfc, 0xeb, 0xdd, 0x68, 0x22, 0xfa, 0xb0, 0x86, 0xd3, 0xe2, 0x57,
+	0xbb, 0x5a, 0xe8, 0x4e, 0x28, 0x7a, 0x06, 0xab, 0x39, 0xed, 0x20, 0xe4, 0x3c, 0xd3, 0x70, 0x56,
+	0x32, 0xca, 0x87, 0x21, 0xa3, 0x66, 0x45, 0x4c, 0x9a, 0x9a, 0x17, 0x04, 0x35, 0x2b, 0xb9, 0xa2,
+	0xe6, 0x0c, 0xa9, 0x2d, 0xe6, 0x49, 0xed, 0x11, 0x34, 0xd8, 0xa6, 0xa9, 0xc6, 0x92, 0xf8, 0x8e,
+	0xb1, 0x37, 0xed, 0x69, 0xa5, 0xc7, 0xd0, 0x0c, 0xe2, 0x0b, 0xa2, 0x76, 0xc2, 0xa4, 0x5d, 0xe5,
+	0x38, 0x0d, 0x26, 0xdd, 0x55, 0x42, 0x74, 0x07, 0x96, 0x93, 0xd8, 0x77, 0xe3, 0x28, 0xa1, 0x6d,
+	0xe0, 0x30, 0x4b, 0x49, 0xec, 0xf7, 0xa2, 0x84, 0xda, 0xff, 0xac, 0xb0, 0xd6, 0x37, 0xe3, 0x6d,
+	0x71, 0x69, 0x76, 0x61, 0x65, 0x12, 0x0f, 0x3c, 0x8a, 0x07, 0xec, 0xc3, 0x2f, 0x82, 0x4b, 0x91,
+	0x49, 0xcd, 0x9d, 0x27, 0x1d, 0x3e, 0xef, 0x74, 0x8a, 0xac, 0x3a, 0xe2, 0xed, 0xec, 0x43, 0x8c,
+	0x9d, 0xa6, 0x34, 0x17, 0x22, 0x32, 0x1b, 0xbd, 0xf2, 0x6d, 0xa2, 0x57, 0xb9, 0x75, 0xf4, 0xe6,
+	0x3f, 0x26, 0x7a, 0x0b, 0xc5, 0xd1, 0x9b, 0x71, 0xfa, 0x62, 0x81, 0xd3, 0x33, 0x71, 0x5b, 0xca,
+	0xc5, 0xcd, 0x9e, 0x02, 0xa4, 0x4e, 0x40, 0xab, 0xd0, 0x38, 0x7b, 0xeb, 0xf6, 0xba, 0xdd, 0x23,
+	0xf7, 0xe8, 0xf0, 0xf8, 0xf0, 0xac, 0x35, 0x87, 0x10, 0x34, 0xf7, 0x8e, 0xbe, 0x71, 0x4f, 0x0f,
+	0xff, 0xf2, 0x46, 0xca, 0x4a, 0xa8, 0x05, 0xf5, 0xe3, 0xdd, 0xb7, 0xee, 0x7e, 0xf7, 0xe4, 0xc4,
+	0xed, 0x9e, 0x9f, 0xb5, 0xca, 0x68, 0x05, 0x6a, 0x5a, 0x72, 0x78, 0xd2, 0xaa, 0x30, 0x24, 0x26,
+	0xe8, 0x39, 0xdd, 0x3f, 0x9e, 0xef, 0xbf, 0x71, 0x4e, 0x5b, 0xf3, 0xa8, 0x01, 0xd5, 0xf4, 0x75,
+	0xc1, 0xde, 0x81, 0xb5, 0x4c, 0xf3, 0x23, 0xab, 0x46, 0x76, 0xfa, 0xbe, 0x6e, 0x38, 0x44, 0xa7,
+	0x2f, 0xba, 0xd7, 0x17, 0xd0, 0x4a, 0x7b, 0x9c, 0xac, 0x81, 0x18, 0x0d, 0x4a, 0xd9, 0xd1, 0x60,
+	0xe7, 0x3f, 0x55, 0x00, 0x27, 0xf6, 0x65, 0x6b, 0x86, 0xbe, 0x82, 0x86, 0x13, 0xfb, 0xe9, 0x65,
+	0x8a, 0xda, 0x32, 0x3b, 0x66, 0x1a, 0x7b, 0xeb, 0x4e, 0xc1, 0x8a, 0x64, 0xf1, 0xb9, 0x14, 0x47,
+	0xf6, 0x4a, 0x26, 0x4e, 0x76, 0x8a, 0x33, 0x71, 0x72, 0x8d, 0x95, 0x3d, 0x87, 0xfe, 0x0a, 0xeb,
+	0x12, 0x27, 0xd3, 0x93, 0xa0, 0xfb, 0x86, 0x51, 0xd1, 0x00, 0x63, 0x3d, 0xb8, 0x5a, 0x41, 0x83,
+	0x7f, 0xc9, 0x3f, 0x5d, 0xde, 0xeb, 0x68, 0x23, 0xb5, 0x30, 0x06, 0x11, 0x6b, 0x33, 0x2f, 0xd6,
+	0xe6, 0xfb, 0x50, 0x37, 0xce, 0x46, 0xd0, 0x56, 0x6e, 0x4b, 0xc5, 0xef, 0x56, 0x7b, 0x76, 0x41,
+	0x83, 0x38, 0xb0, 0x6a, 0x80, 0x88, 0xeb, 0x1a, 0xdd, 0xcd, 0x19, 0x64, 0x06, 0x11, 0xeb, 0x93,
+	0x2b, 0x56, 0x35, 0xe6, 0x5b, 0x58, 0xcb, 0x62, 0x8a, 0xa6, 0xeb, 0xde, 0xac, 0x9d, 0x39, 0xb1,
+	0x58, 0xf7, 0xaf, 0x5c, 0xd7, 0xc8, 0xe7, 0x80, 0x78, 0xb2, 0x64, 0x6e, 0x68, 0xf4, 0x89, 0x66,
+	0x90, 0xa2, 0xb9, 0xc6, 0xba, 0x77, 0xd5, 0xb2, 0x86, 0x1d, 0xc0, 0x96, 0x84, 0xcd, 0x37, 0x06,
+	0xc8, 0x36, 0x8c, 0xaf, 0x18, 0x71, 0xac, 0x47, 0xd7, 0xea, 0xe8, 0x5d, 0xbe, 0x53, 0xb9, 0x94,
+	0xed, 0x01, 0xcc, 0x5c, 0x2a, 0x9c, 0x76, 0xcc, 0x5c, 0x2a, 0x6e, 0x1f, 0xec, 0xb9, 0x97, 0x25,
+	0xf4, 0x86, 0xa7, 0x83, 0x6e, 0x07, 0x74, 0x3a, 0xe4, 0x07, 0x25, 0x9d, 0x0e, 0x33, 0x9d, 0x03,
+	0x87, 0x19, 0xc2, 0x7d, 0x71, 0xca, 0x5c, 0x3f, 0xc0, 0xa6, 0x88, 0x33, 0x4e, 0xad, 0xc8, 0x38,
+	0x4f, 0x71, 0x47, 0x61, 0x3d, 0xbc, 0x46, 0x43, 0xfb, 0x23, 0x86, 0x6d, 0xb1, 0x53, 0x61, 0x8b,
+	0x80, 0x9e, 0xa4, 0x18, 0xd7, 0xcd, 0x68, 0xd6, 0xa7, 0x37, 0xea, 0xe9, 0x1d, 0x0f, 0xa1, 0xe9,
+	0xc4, 0xbe, 0x41, 0x6a, 0x48, 0x15, 0xff, 0xec, 0x94, 0x67, 0x59, 0x45, 0x4b, 0x1a, 0xea, 0x0f,
+	0x50, 0x63, 0x87, 0x97, 0x34, 0x86, 0x74, 0x95, 0x66, 0x07, 0x3c, 0x6b, 0x6b, 0x46, 0xae, 0x10,
+	0x76, 0xfe, 0x51, 0x81, 0xfa, 0xee, 0x60, 0x1c, 0x84, 0x8a, 0xfb, 0x04, 0x1d, 0xc8, 0xd9, 0x42,
+	0xd3, 0x41, 0xf6, 0x6f, 0x10, 0x4d, 0x07, 0xf9, 0x11, 0x64, 0x0e, 0xfd, 0x12, 0x96, 0x64, 0x12,
+	0x23, 0x64, 0x24, 0xa4, 0x32, 0x5c, 0xcb, 0xc8, 0x72, 0x2e, 0x31, 0xc6, 0x37, 0x64, 0xf0, 0x61,
+	0xee, 0x1f, 0x1b, 0xed, 0x92, 0x82, 0x69, 0xcf, 0x9e, 0x43, 0x5d, 0x68, 0xc9, 0x03, 0xe8, 0x89,
+	0x13, 0x6d, 0x1b, 0xbb, 0xe6, 0xff, 0x0d, 0xb3, 0xee, 0x16, 0x2f, 0xe6, 0xce, 0x66, 0x0c, 0xc8,
+	0xfa, 0x6c, 0xb3, 0xff, 0xdd, 0xe9, 0xb3, 0x15, 0xcd, 0xd3, 0xea, 0x6c, 0x99, 0xa1, 0x5a, 0x9f,
+	0xad, 0xe8, 0x0f, 0x42, 0x7d, 0xb6, 0xe2, 0x39, 0x7c, 0x6e, 0xe7, 0xbf, 0x25, 0x68, 0x88, 0x46,
+	0x33, 0xbd, 0xba, 0x6a, 0xc2, 0x93, 0xbc, 0x51, 0xd5, 0x1c, 0x5a, 0xf8, 0xdf, 0x83, 0x65, 0x70,
+	0x75, 0xa6, 0xaf, 0xb5, 0xe7, 0x50, 0x8f, 0x1f, 0x35, 0xd3, 0xb1, 0xde, 0x00, 0x66, 0xd0, 0xf5,
+	0x6c, 0x97, 0x6b, 0x04, 0xc6, 0x44, 0xdc, 0xbe, 0xa6, 0xeb, 0xba, 0x09, 0x70, 0x6f, 0xf1, 0xc7,
+	0x72, 0xe5, 0xeb, 0xa3, 0x3f, 0xf5, 0x17, 0xf9, 0x28, 0xfb, 0xea, 0x7f, 0x01, 0x00, 0x00, 0xff,
+	0xff, 0x4a, 0x2b, 0x4b, 0x02, 0xe2, 0x16, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1566,6 +2276,9 @@ type RpcServiceClient interface {
 	RpcGetNewTransaction(ctx context.Context, in *GetNewTransactionRequest, opts ...grpc.CallOption) (RpcService_RpcGetNewTransactionClient, error)
 	RpcSubscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (RpcService_RpcSubscribeClient, error)
 	RpcGetAllTransactionsFromTxPool(ctx context.Context, in *GetAllTransactionsRequest, opts ...grpc.CallOption) (*GetAllTransactionsResponse, error)
+	RpcGetLastIrreversibleBlock(ctx context.Context, in *GetLastIrreversibleBlockRequest, opts ...grpc.CallOption) (*GetLastIrreversibleBlockResponse, error)
+	RpcEstimateGas(ctx context.Context, in *EstimateGasRequest, opts ...grpc.CallOption) (*EstimateGasResponse, error)
+	RpcGasPrice(ctx context.Context, in *GasPriceRequest, opts ...grpc.CallOption) (*GasPriceResponse, error)
 }
 
 type rpcServiceClient struct {
@@ -1730,6 +2443,33 @@ func (c *rpcServiceClient) RpcGetAllTransactionsFromTxPool(ctx context.Context, 
 	return out, nil
 }
 
+func (c *rpcServiceClient) RpcGetLastIrreversibleBlock(ctx context.Context, in *GetLastIrreversibleBlockRequest, opts ...grpc.CallOption) (*GetLastIrreversibleBlockResponse, error) {
+	out := new(GetLastIrreversibleBlockResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.RpcService/RpcGetLastIrreversibleBlock", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rpcServiceClient) RpcEstimateGas(ctx context.Context, in *EstimateGasRequest, opts ...grpc.CallOption) (*EstimateGasResponse, error) {
+	out := new(EstimateGasResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.RpcService/RpcEstimateGas", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rpcServiceClient) RpcGasPrice(ctx context.Context, in *GasPriceRequest, opts ...grpc.CallOption) (*GasPriceResponse, error) {
+	out := new(GasPriceResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.RpcService/RpcGasPrice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RpcServiceServer is the server API for RpcService service.
 type RpcServiceServer interface {
 	RpcGetVersion(context.Context, *GetVersionRequest) (*GetVersionResponse, error)
@@ -1744,6 +2484,9 @@ type RpcServiceServer interface {
 	RpcGetNewTransaction(*GetNewTransactionRequest, RpcService_RpcGetNewTransactionServer) error
 	RpcSubscribe(*SubscribeRequest, RpcService_RpcSubscribeServer) error
 	RpcGetAllTransactionsFromTxPool(context.Context, *GetAllTransactionsRequest) (*GetAllTransactionsResponse, error)
+	RpcGetLastIrreversibleBlock(context.Context, *GetLastIrreversibleBlockRequest) (*GetLastIrreversibleBlockResponse, error)
+	RpcEstimateGas(context.Context, *EstimateGasRequest) (*EstimateGasResponse, error)
+	RpcGasPrice(context.Context, *GasPriceRequest) (*GasPriceResponse, error)
 }
 
 func RegisterRpcServiceServer(s *grpc.Server, srv RpcServiceServer) {
@@ -1972,6 +2715,60 @@ func _RpcService_RpcGetAllTransactionsFromTxPool_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RpcService_RpcGetLastIrreversibleBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLastIrreversibleBlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServiceServer).RpcGetLastIrreversibleBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.RpcService/RpcGetLastIrreversibleBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServiceServer).RpcGetLastIrreversibleBlock(ctx, req.(*GetLastIrreversibleBlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RpcService_RpcEstimateGas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EstimateGasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServiceServer).RpcEstimateGas(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.RpcService/RpcEstimateGas",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServiceServer).RpcEstimateGas(ctx, req.(*EstimateGasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RpcService_RpcGasPrice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GasPriceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServiceServer).RpcGasPrice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.RpcService/RpcGasPrice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServiceServer).RpcGasPrice(ctx, req.(*GasPriceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _RpcService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcpb.RpcService",
 	HandlerType: (*RpcServiceServer)(nil),
@@ -2016,6 +2813,18 @@ var _RpcService_serviceDesc = grpc.ServiceDesc{
 			MethodName: "RpcGetAllTransactionsFromTxPool",
 			Handler:    _RpcService_RpcGetAllTransactionsFromTxPool_Handler,
 		},
+		{
+			MethodName: "RpcGetLastIrreversibleBlock",
+			Handler:    _RpcService_RpcGetLastIrreversibleBlock_Handler,
+		},
+		{
+			MethodName: "RpcEstimateGas",
+			Handler:    _RpcService_RpcEstimateGas_Handler,
+		},
+		{
+			MethodName: "RpcGasPrice",
+			Handler:    _RpcService_RpcGasPrice_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -2041,7 +2850,7 @@ type AdminServiceClient interface {
 	RpcGetPeerInfo(ctx context.Context, in *GetPeerInfoRequest, opts ...grpc.CallOption) (*GetPeerInfoResponse, error)
 	RpcSendFromMiner(ctx context.Context, in *SendFromMinerRequest, opts ...grpc.CallOption) (*SendFromMinerResponse, error)
 	RpcAddProducer(ctx context.Context, in *AddProducerRequest, opts ...grpc.CallOption) (*AddProducerResponse, error)
-	RpcUnlockWallet(ctx context.Context, in *UnlockWalletRequest, opts ...grpc.CallOption) (*UnlockWalletResponse, error)
+	RpcUnlockAccount(ctx context.Context, in *UnlockAccountRequest, opts ...grpc.CallOption) (*UnlockAccountResponse, error)
 }
 
 type adminServiceClient struct {
@@ -2097,9 +2906,9 @@ func (c *adminServiceClient) RpcAddProducer(ctx context.Context, in *AddProducer
 	return out, nil
 }
 
-func (c *adminServiceClient) RpcUnlockWallet(ctx context.Context, in *UnlockWalletRequest, opts ...grpc.CallOption) (*UnlockWalletResponse, error) {
-	out := new(UnlockWalletResponse)
-	err := c.cc.Invoke(ctx, "/rpcpb.AdminService/RpcUnlockWallet", in, out, opts...)
+func (c *adminServiceClient) RpcUnlockAccount(ctx context.Context, in *UnlockAccountRequest, opts ...grpc.CallOption) (*UnlockAccountResponse, error) {
+	out := new(UnlockAccountResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.AdminService/RpcUnlockAccount", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2113,7 +2922,7 @@ type AdminServiceServer interface {
 	RpcGetPeerInfo(context.Context, *GetPeerInfoRequest) (*GetPeerInfoResponse, error)
 	RpcSendFromMiner(context.Context, *SendFromMinerRequest) (*SendFromMinerResponse, error)
 	RpcAddProducer(context.Context, *AddProducerRequest) (*AddProducerResponse, error)
-	RpcUnlockWallet(context.Context, *UnlockWalletRequest) (*UnlockWalletResponse, error)
+	RpcUnlockAccount(context.Context, *UnlockAccountRequest) (*UnlockAccountResponse, error)
 }
 
 func RegisterAdminServiceServer(s *grpc.Server, srv AdminServiceServer) {
@@ -2210,20 +3019,20 @@ func _AdminService_RpcAddProducer_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AdminService_RpcUnlockWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnlockWalletRequest)
+func _AdminService_RpcUnlockAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlockAccountRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AdminServiceServer).RpcUnlockWallet(ctx, in)
+		return srv.(AdminServiceServer).RpcUnlockAccount(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.AdminService/RpcUnlockWallet",
+		FullMethod: "/rpcpb.AdminService/RpcUnlockAccount",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminServiceServer).RpcUnlockWallet(ctx, req.(*UnlockWalletRequest))
+		return srv.(AdminServiceServer).RpcUnlockAccount(ctx, req.(*UnlockAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2253,102 +3062,140 @@ var _AdminService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _AdminService_RpcAddProducer_Handler,
 		},
 		{
-			MethodName: "RpcUnlockWallet",
-			Handler:    _AdminService_RpcUnlockWallet_Handler,
+			MethodName: "RpcUnlockAccount",
+			Handler:    _AdminService_RpcUnlockAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "github.com/dappley/go-dappley/rpc/pb/rpc.proto",
 }
 
-func init() {
-	proto.RegisterFile("github.com/dappley/go-dappley/rpc/pb/rpc.proto", fileDescriptor_rpc_5b17f1b809ed7255)
+// MetricServiceClient is the client API for MetricService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type MetricServiceClient interface {
+	RpcGetStats(ctx context.Context, in *MetricsServiceRequest, opts ...grpc.CallOption) (*GetStatsResponse, error)
+	RpcGetNodeConfig(ctx context.Context, in *MetricsServiceRequest, opts ...grpc.CallOption) (*GetNodeConfigResponse, error)
+	RpcSetNodeConfig(ctx context.Context, in *SetNodeConfigRequest, opts ...grpc.CallOption) (*GetNodeConfigResponse, error)
 }
 
-var fileDescriptor_rpc_5b17f1b809ed7255 = []byte{
-	// 1339 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x9c, 0x57, 0xfb, 0x72, 0xd3, 0xc6,
-	0x17, 0x4e, 0x62, 0x12, 0xc8, 0x89, 0x9d, 0x38, 0xeb, 0x5c, 0x8c, 0x92, 0x5f, 0x02, 0x62, 0xf8,
-	0xf5, 0x06, 0xe6, 0x56, 0x06, 0xa6, 0x33, 0xb4, 0x93, 0x30, 0xe5, 0x32, 0x03, 0x25, 0xa3, 0x10,
-	0xa0, 0xd3, 0x61, 0xdc, 0xb5, 0xb4, 0xc4, 0x1a, 0x64, 0x49, 0x95, 0xd6, 0x25, 0xbc, 0x45, 0x9f,
-	0x81, 0xa7, 0xe8, 0xa3, 0xf5, 0xcf, 0xee, 0x5d, 0x2b, 0x59, 0x0e, 0x29, 0x7f, 0x79, 0x75, 0xce,
-	0xf9, 0xbe, 0xdd, 0x3d, 0x7b, 0xbe, 0xb3, 0x6b, 0xe8, 0x1d, 0x87, 0x74, 0x38, 0x1e, 0xf4, 0xfc,
-	0x64, 0x74, 0x23, 0xc0, 0x69, 0x1a, 0x91, 0x8f, 0x37, 0x8e, 0x93, 0xeb, 0x7a, 0x98, 0xa5, 0xfe,
-	0x8d, 0x74, 0xc0, 0x7f, 0x7a, 0x69, 0x96, 0xd0, 0x04, 0xcd, 0xb3, 0x61, 0x3a, 0x70, 0x6e, 0x9d,
-	0x0e, 0xf3, 0x93, 0x8c, 0x70, 0xdc, 0x20, 0x4a, 0xfc, 0xf7, 0x12, 0xe9, 0xdc, 0x3b, 0x1b, 0x84,
-	0x66, 0x38, 0xce, 0xb1, 0x4f, 0xc3, 0x24, 0x56, 0xc0, 0x9b, 0x67, 0x03, 0x8e, 0xe9, 0x49, 0xa2,
-	0x10, 0x77, 0x4e, 0x47, 0xc4, 0x84, 0x7e, 0x48, 0xb2, 0xf7, 0x1c, 0x94, 0x12, 0x92, 0x49, 0x90,
-	0x7b, 0x17, 0x3a, 0x0f, 0x33, 0x82, 0x29, 0x79, 0x8d, 0xa3, 0x88, 0x50, 0x8f, 0xfc, 0x31, 0x26,
-	0x39, 0x45, 0x3b, 0x00, 0x29, 0xce, 0xf3, 0x74, 0x98, 0xe1, 0x9c, 0x74, 0x67, 0x2f, 0xcd, 0x7e,
-	0xbd, 0xe8, 0x59, 0x16, 0x77, 0x1d, 0x3a, 0x47, 0x31, 0xdf, 0x66, 0x09, 0xe6, 0xf6, 0x00, 0xed,
-	0x05, 0xc1, 0x41, 0x96, 0x04, 0x63, 0x9f, 0x64, 0x9a, 0xac, 0x0b, 0xe7, 0x71, 0x10, 0x64, 0x24,
-	0xcf, 0x15, 0x93, 0xfe, 0x74, 0xaf, 0xc3, 0xea, 0x63, 0x42, 0xf7, 0x71, 0x84, 0x63, 0x9f, 0x7c,
-	0x3e, 0xfc, 0x47, 0x58, 0x3b, 0x24, 0x71, 0xf0, 0x28, 0x4b, 0x46, 0xcf, 0xc3, 0xb8, 0x98, 0x60,
-	0x19, 0xe6, 0x68, 0xa2, 0x82, 0xd9, 0x08, 0x6d, 0xc0, 0x02, 0x1e, 0x25, 0xe3, 0x98, 0x76, 0xe7,
-	0x98, 0xad, 0xe9, 0xa9, 0x2f, 0xf7, 0xaf, 0x59, 0x58, 0xe2, 0x04, 0x1a, 0x87, 0xe0, 0xdc, 0x3b,
-	0xc6, 0xa5, 0x90, 0x62, 0xac, 0xb8, 0xe6, 0x6a, 0xb8, 0x1a, 0x36, 0x17, 0xda, 0x85, 0xa5, 0x0f,
-	0x62, 0xef, 0xfd, 0x14, 0xd3, 0x61, 0xf7, 0x9c, 0x4c, 0x91, 0x34, 0x1d, 0x30, 0x0b, 0x6a, 0x43,
-	0x83, 0x86, 0x69, 0x77, 0x5e, 0xa0, 0xf8, 0x90, 0x4f, 0x17, 0x60, 0x8a, 0xbb, 0x0b, 0x72, 0x3a,
-	0x3e, 0x76, 0xd7, 0x00, 0xb1, 0x0c, 0x1c, 0xb0, 0x03, 0x79, 0x1a, 0xbf, 0x4b, 0x74, 0x1e, 0x1d,
-	0xe8, 0xf2, 0xbc, 0xf0, 0x04, 0xfb, 0x43, 0x1c, 0xc6, 0xb6, 0xef, 0x0e, 0x2c, 0xf3, 0x1c, 0x93,
-	0x62, 0xfb, 0x97, 0xa1, 0xf9, 0x6e, 0x1c, 0x45, 0xfd, 0x72, 0xd6, 0x96, 0xb8, 0x6d, 0x4f, 0x65,
-	0xee, 0xbe, 0x48, 0xf4, 0x2b, 0x92, 0xe5, 0xac, 0xc2, 0x34, 0xee, 0x0a, 0xb4, 0x44, 0x11, 0xf4,
-	0xff, 0x94, 0x76, 0x05, 0x6c, 0x0a, 0xa3, 0x8a, 0x75, 0xbf, 0x85, 0x65, 0x86, 0x3c, 0x7a, 0xf9,
-	0xe6, 0xc5, 0xe7, 0xcf, 0xe7, 0x2d, 0xb4, 0xf5, 0xb2, 0x73, 0x1d, 0x7d, 0x0d, 0x50, 0x4e, 0x71,
-	0x46, 0xfb, 0x42, 0x15, 0xfd, 0x21, 0xce, 0x87, 0x84, 0x03, 0x1b, 0x2c, 0x2b, 0x6d, 0xe1, 0x11,
-	0xf1, 0x4f, 0x84, 0x1d, 0x6d, 0xc1, 0xe2, 0x08, 0x9f, 0xf4, 0x7d, 0x73, 0x78, 0xf3, 0xde, 0x05,
-	0x66, 0x78, 0x28, 0x8e, 0xef, 0x3b, 0x58, 0xd7, 0xf4, 0xfb, 0x1f, 0x39, 0xc0, 0x3a, 0x47, 0xce,
-	0x2b, 0x96, 0xd3, 0xf4, 0xc4, 0xd8, 0xbd, 0x05, 0x9b, 0x56, 0x30, 0x09, 0x8f, 0x87, 0xa6, 0xb8,
-	0xd9, 0x91, 0x0e, 0x85, 0x41, 0x00, 0xce, 0x79, 0xea, 0xcb, 0x7d, 0x01, 0x1b, 0xbc, 0x3a, 0x5e,
-	0x16, 0x5a, 0xd4, 0x88, 0xbb, 0xb0, 0x64, 0x29, 0x54, 0xc0, 0x96, 0x6e, 0x77, 0x7a, 0x5c, 0x84,
-	0xe9, 0xa0, 0x67, 0x03, 0xec, 0x38, 0xf7, 0x15, 0x6c, 0x71, 0xc2, 0x7d, 0x4c, 0xfd, 0x61, 0x0d,
-	0xeb, 0x3d, 0x68, 0x5a, 0xd1, 0x32, 0x29, 0x53, 0x68, 0x4b, 0x81, 0xaa, 0x3c, 0x7e, 0x21, 0x1f,
-	0x26, 0x49, 0xd9, 0x79, 0xb5, 0x0f, 0xc7, 0x83, 0xdc, 0xcf, 0xc2, 0x01, 0xb1, 0x36, 0x4c, 0x93,
-	0x34, 0xf4, 0xe5, 0x14, 0x8b, 0x9e, 0xfa, 0xe2, 0x2a, 0x2e, 0xc9, 0x35, 0x4f, 0x19, 0x3b, 0x71,
-	0x37, 0x60, 0xad, 0x2c, 0x6e, 0x65, 0xbf, 0x26, 0x6a, 0xd5, 0xa8, 0x55, 0x5a, 0x2d, 0x81, 0xf0,
-	0xb4, 0x34, 0x8c, 0xd8, 0x36, 0x61, 0xbd, 0x22, 0x56, 0x45, 0xf3, 0x1c, 0x9a, 0x52, 0x84, 0x8a,
-	0xe0, 0x1b, 0x68, 0xfb, 0x49, 0xcc, 0x36, 0xe8, 0xd3, 0x4a, 0x09, 0xaf, 0x68, 0xbb, 0x2a, 0x63,
-	0x7e, 0xd0, 0xf4, 0x24, 0x0c, 0x94, 0x3c, 0xc5, 0xd8, 0x7d, 0x0c, 0x9d, 0x92, 0x82, 0x14, 0xeb,
-	0x4d, 0x58, 0xe4, 0x6d, 0xae, 0x1f, 0x85, 0x39, 0x35, 0x99, 0x55, 0x3d, 0x90, 0x25, 0xd7, 0xc4,
-	0x5f, 0xe0, 0x51, 0xcf, 0x58, 0x90, 0xfb, 0x69, 0x16, 0x2e, 0xd6, 0xa8, 0x4e, 0xf1, 0xfd, 0x1f,
-	0x56, 0x28, 0x0e, 0x23, 0xab, 0x8c, 0x55, 0xb9, 0xb5, 0xb8, 0xd9, 0xd4, 0x30, 0x17, 0xa3, 0x0a,
-	0x91, 0x25, 0x36, 0x27, 0x4a, 0x6c, 0x49, 0xd8, 0x64, 0x19, 0xa2, 0x6d, 0xb6, 0x34, 0x95, 0xf3,
-	0x9c, 0x75, 0x15, 0x7e, 0x22, 0x85, 0x81, 0x7b, 0x69, 0x38, 0x62, 0xc7, 0x86, 0x47, 0xa9, 0x68,
-	0x2b, 0x0d, 0xaf, 0x30, 0xb8, 0xab, 0xb0, 0x62, 0xd4, 0xaf, 0xf2, 0xf9, 0xbb, 0x38, 0x16, 0xa3,
-	0x6d, 0xb5, 0xde, 0xb3, 0x88, 0x1b, 0x5d, 0x85, 0xe5, 0x9c, 0x64, 0x2c, 0xc2, 0x44, 0xc9, 0xcc,
-	0xb6, 0xa4, 0x55, 0xf7, 0x80, 0x04, 0x56, 0x4c, 0x0f, 0x50, 0xf4, 0x2e, 0xcc, 0xf3, 0xab, 0x47,
-	0x17, 0x6d, 0x53, 0x17, 0xed, 0x11, 0x33, 0x7a, 0xd2, 0x85, 0xee, 0x43, 0x4b, 0xa7, 0x02, 0x07,
-	0x7c, 0xaf, 0x73, 0xe5, 0x02, 0x97, 0x49, 0x13, 0x3e, 0xaf, 0x39, 0x28, 0x3e, 0x72, 0xf7, 0x07,
-	0x79, 0x2f, 0xa8, 0x46, 0xa2, 0xa6, 0xbc, 0x0a, 0x0b, 0x22, 0x48, 0xcf, 0xd9, 0x2a, 0xf1, 0x78,
-	0xca, 0xe9, 0x3e, 0x80, 0x8d, 0x6a, 0x97, 0x30, 0x29, 0x99, 0x17, 0x31, 0x4a, 0xbf, 0x15, 0xbc,
-	0xf4, 0xb9, 0x3f, 0x15, 0xad, 0xb7, 0xe8, 0x1b, 0xff, 0x85, 0xe0, 0x22, 0x6c, 0x4e, 0x74, 0x11,
-	0x75, 0x52, 0x3b, 0xb0, 0x5d, 0xdf, 0x0f, 0x94, 0xff, 0x57, 0x29, 0x19, 0xcb, 0x75, 0x48, 0x31,
-	0x1d, 0x17, 0x75, 0xaf, 0x1a, 0x1c, 0x1f, 0x73, 0x9b, 0x9f, 0x04, 0x44, 0x9c, 0x58, 0xcb, 0x13,
-	0x63, 0xde, 0x9a, 0x59, 0xa1, 0xe4, 0xf8, 0x98, 0x88, 0xdb, 0x8a, 0xb5, 0x66, 0xf5, 0xe9, 0x7a,
-	0xa2, 0xb6, 0xab, 0x2d, 0x43, 0xed, 0xeb, 0x0b, 0xdb, 0xdb, 0x57, 0xb0, 0x6a, 0xb5, 0x1a, 0xc5,
-	0xa5, 0x2f, 0xb9, 0x59, 0xeb, 0x92, 0xdb, 0x12, 0x93, 0xef, 0x45, 0x91, 0x45, 0xa5, 0x2f, 0x08,
-	0xf7, 0x08, 0x9c, 0x3a, 0xa7, 0xa2, 0xfb, 0xd2, 0x1e, 0x79, 0xfb, 0x9f, 0xf3, 0x00, 0x5e, 0xea,
-	0x1f, 0xb2, 0x42, 0x0e, 0x7d, 0x82, 0x1e, 0x41, 0x8b, 0x7d, 0x15, 0x3a, 0x41, 0xdd, 0x9e, 0x78,
-	0xd3, 0xf5, 0x26, 0xae, 0x45, 0xe7, 0x62, 0x8d, 0x47, 0x1d, 0xd0, 0x4c, 0xc1, 0xa3, 0xda, 0xa0,
-	0xcd, 0x53, 0x7e, 0xc7, 0xd8, 0x3c, 0x95, 0x9e, 0xc9, 0x78, 0x7e, 0x83, 0x35, 0xc5, 0x53, 0x6a,
-	0x37, 0x68, 0xd7, 0x02, 0xd5, 0x5d, 0xff, 0xce, 0xa5, 0xe9, 0x01, 0x86, 0xfc, 0x81, 0xd8, 0xba,
-	0x92, 0x2c, 0x5a, 0x2f, 0x10, 0xd6, 0x35, 0xee, 0x6c, 0x54, 0xcd, 0x06, 0xfe, 0x10, 0x9a, 0xd6,
-	0xda, 0x72, 0xb4, 0x59, 0x99, 0x52, 0x1f, 0x9d, 0xd3, 0x9d, 0x74, 0x18, 0x12, 0x0f, 0x56, 0x2d,
-	0x12, 0xa9, 0x44, 0xb4, 0x5d, 0x01, 0x94, 0xae, 0x71, 0xe7, 0x7f, 0x53, 0xbc, 0x86, 0xf3, 0x0d,
-	0x74, 0xca, 0x9c, 0xb2, 0x9f, 0xee, 0x4c, 0xe2, 0xec, 0xfb, 0xde, 0xd9, 0x9d, 0xea, 0x37, 0xcc,
-	0x47, 0x80, 0x44, 0xb1, 0x94, 0xc4, 0x87, 0xf4, 0x82, 0xea, 0x5f, 0x05, 0xce, 0xce, 0x34, 0xb7,
-	0xa1, 0x0d, 0x60, 0x53, 0xd1, 0x56, 0x35, 0x8f, 0x5c, 0x0b, 0x3c, 0xe5, 0x81, 0xe0, 0x5c, 0x39,
-	0x35, 0xc6, 0xcc, 0xf2, 0x56, 0xd7, 0x52, 0x59, 0xde, 0x76, 0x2d, 0xd5, 0xbe, 0x15, 0xec, 0x5a,
-	0xaa, 0xef, 0x0c, 0xee, 0xcc, 0xcd, 0x59, 0xf4, 0xb3, 0x28, 0x07, 0xa3, 0x74, 0x53, 0x0e, 0xd5,
-	0x67, 0x86, 0x29, 0x87, 0x89, 0xa6, 0x20, 0x68, 0x86, 0xb0, 0x2b, 0x57, 0x59, 0x91, 0x3a, 0x7f,
-	0x20, 0xbc, 0x3c, 0x39, 0x48, 0x92, 0x08, 0x59, 0xeb, 0xa9, 0x6f, 0x16, 0xce, 0xe5, 0x53, 0x22,
-	0xf4, 0x5c, 0xb7, 0xff, 0x6e, 0x40, 0x73, 0x2f, 0x18, 0x85, 0xb1, 0x16, 0xbf, 0xd4, 0x83, 0xba,
-	0x37, 0x8d, 0x1e, 0xca, 0xaf, 0x68, 0xa3, 0x87, 0xea, 0xf5, 0x3a, 0x83, 0xbe, 0x87, 0xf3, 0xea,
-	0x14, 0x11, 0xb2, 0x4e, 0x44, 0x03, 0x3b, 0x25, 0x9b, 0x41, 0x3d, 0x85, 0x65, 0xb9, 0x5f, 0xfd,
-	0xd4, 0x40, 0x56, 0x43, 0xa8, 0x3c, 0xf8, 0x1d, 0xa7, 0xce, 0x65, 0xa8, 0x5e, 0x40, 0x5b, 0x2d,
-	0xc0, 0xbc, 0xa6, 0xd0, 0x96, 0x35, 0x6b, 0xf5, 0x0f, 0x91, 0xb3, 0x5d, 0xef, 0xac, 0xac, 0xcd,
-	0x7a, 0xfb, 0x99, 0xb5, 0x4d, 0xfe, 0x7d, 0x33, 0x6b, 0xab, 0x7b, 0x2a, 0xce, 0xa0, 0x67, 0xb0,
-	0xc2, 0xa8, 0xec, 0xf7, 0x22, 0xd2, 0x80, 0x9a, 0x7f, 0x88, 0xce, 0x56, 0xad, 0x4f, 0xb3, 0xed,
-	0x2f, 0x7c, 0x9a, 0x6b, 0x3c, 0x79, 0xf6, 0x7a, 0xb0, 0x20, 0x9e, 0x29, 0x77, 0xfe, 0x0d, 0x00,
-	0x00, 0xff, 0xff, 0x70, 0x83, 0x12, 0x20, 0xa9, 0x0f, 0x00, 0x00,
+type metricServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewMetricServiceClient(cc *grpc.ClientConn) MetricServiceClient {
+	return &metricServiceClient{cc}
+}
+
+func (c *metricServiceClient) RpcGetStats(ctx context.Context, in *MetricsServiceRequest, opts ...grpc.CallOption) (*GetStatsResponse, error) {
+	out := new(GetStatsResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.MetricService/RpcGetStats", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *metricServiceClient) RpcGetNodeConfig(ctx context.Context, in *MetricsServiceRequest, opts ...grpc.CallOption) (*GetNodeConfigResponse, error) {
+	out := new(GetNodeConfigResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.MetricService/RpcGetNodeConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *metricServiceClient) RpcSetNodeConfig(ctx context.Context, in *SetNodeConfigRequest, opts ...grpc.CallOption) (*GetNodeConfigResponse, error) {
+	out := new(GetNodeConfigResponse)
+	err := c.cc.Invoke(ctx, "/rpcpb.MetricService/RpcSetNodeConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MetricServiceServer is the server API for MetricService service.
+type MetricServiceServer interface {
+	RpcGetStats(context.Context, *MetricsServiceRequest) (*GetStatsResponse, error)
+	RpcGetNodeConfig(context.Context, *MetricsServiceRequest) (*GetNodeConfigResponse, error)
+	RpcSetNodeConfig(context.Context, *SetNodeConfigRequest) (*GetNodeConfigResponse, error)
+}
+
+func RegisterMetricServiceServer(s *grpc.Server, srv MetricServiceServer) {
+	s.RegisterService(&_MetricService_serviceDesc, srv)
+}
+
+func _MetricService_RpcGetStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricsServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricServiceServer).RpcGetStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.MetricService/RpcGetStats",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricServiceServer).RpcGetStats(ctx, req.(*MetricsServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MetricService_RpcGetNodeConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MetricsServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricServiceServer).RpcGetNodeConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.MetricService/RpcGetNodeConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricServiceServer).RpcGetNodeConfig(ctx, req.(*MetricsServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MetricService_RpcSetNodeConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetNodeConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricServiceServer).RpcSetNodeConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.MetricService/RpcSetNodeConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricServiceServer).RpcSetNodeConfig(ctx, req.(*SetNodeConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _MetricService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "rpcpb.MetricService",
+	HandlerType: (*MetricServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RpcGetStats",
+			Handler:    _MetricService_RpcGetStats_Handler,
+		},
+		{
+			MethodName: "RpcGetNodeConfig",
+			Handler:    _MetricService_RpcGetNodeConfig_Handler,
+		},
+		{
+			MethodName: "RpcSetNodeConfig",
+			Handler:    _MetricService_RpcSetNodeConfig_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "github.com/dappley/go-dappley/rpc/pb/rpc.proto",
 }

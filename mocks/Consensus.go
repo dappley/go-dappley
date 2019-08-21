@@ -24,6 +24,43 @@ func (_m *Consensus) AddProducer(_a0 string) error {
 	return r0
 }
 
+// CheckLibPolicy provides a mock function with given fields: b
+func (_m *Consensus) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	ret := _m.Called(b)
+
+	var r0 *core.Block
+	if rf, ok := ret.Get(0).(func(*core.Block) *core.Block); ok {
+		r0 = rf(b)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*core.Block)
+		}
+	}
+
+	var r1 bool
+	if rf, ok := ret.Get(1).(func(*core.Block) bool); ok {
+		r1 = rf(b)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+
+	return r0, r1
+}
+
+// GetProducerAddress provides a mock function with given fields:
+func (_m *Consensus) GetProducerAddress() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // GetProducers provides a mock function with given fields:
 func (_m *Consensus) GetProducers() []string {
 	ret := _m.Called()
@@ -47,6 +84,20 @@ func (_m *Consensus) IsProducingBlock() bool {
 	var r0 bool
 	if rf, ok := ret.Get(0).(func() bool); ok {
 		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// Produced provides a mock function with given fields: block
+func (_m *Consensus) Produced(block *core.Block) bool {
+	ret := _m.Called(block)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(*core.Block) bool); ok {
+		r0 = rf(block)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}

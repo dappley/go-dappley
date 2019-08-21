@@ -19,9 +19,14 @@
 package consensus
 
 import (
+	"encoding/hex"
+	"time"
+
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/common"
-	vm "github.com/dappley/go-dappley/contract"
+
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -60,11 +65,12 @@ func (bp *BlockProducer) SetProcess(process process) {
 	bp.process = process
 }
 
-// ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it
-func (bp *BlockProducer) ProduceBlock() *core.BlockContext {
+// ProduceBlock produces a block by preparing its raw contents and applying the predefined process to it.
+// deadlineInMs = 0 means no deadline
+func (bp *BlockProducer) ProduceBlock(deadlineInMs int64) *core.BlockContext {
 	logger.Info("BlockProducer: started producing new block...")
 	bp.idle = false
-	ctx := bp.prepareBlock()
+	ctx := bp.prepareBlock(deadlineInMs)
 	if ctx != nil && bp.process != nil {
 		bp.process(ctx)
 	}
@@ -79,7 +85,7 @@ func (bp *BlockProducer) IsIdle() bool {
 	return bp.idle
 }
 
-func (bp *BlockProducer) prepareBlock() *core.BlockContext {
+func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *core.BlockContext {
 	parentBlock, err := bp.bc.GetTailBlock()
 	if err != nil {
 		logger.WithError(err).Error("BlockProducer: cannot get the current tail block!")
@@ -88,27 +94,87 @@ func (bp *BlockProducer) prepareBlock() *core.BlockContext {
 
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := core.NewUTXOIndex(bp.bc.GetUtxoCache())
-	validTxs := bp.bc.GetTxPool().PopTransactionsWithMostTips(utxoIndex, bp.bc.GetBlockSizeLimit())
+
+	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadlineInMs)
 
 	cbtx := bp.calculateTips(validTxs)
-	rewards := make(map[string]string)
-
-	scGeneratedTXs, state := bp.executeSmartContract(utxoIndex, validTxs, rewards, parentBlock.GetHeight()+1, parentBlock)
-	validTxs = append(validTxs, scGeneratedTXs...)
-	utxoIndex.UpdateUtxo(cbtx)
 	validTxs = append(validTxs, cbtx)
-	if len(rewards) > 0 {
-		rtx := core.NewRewardTx(parentBlock.GetHeight()+1, rewards)
-		utxoIndex.UpdateUtxo(&rtx)
-		validTxs = append(validTxs, &rtx)
-	}
+	utxoIndex.UpdateUtxo(cbtx)
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
 	}).Info("BlockProducer: prepared a block.")
 
-	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock), UtxoIndex: utxoIndex, State: state}
+	ctx := core.BlockContext{Block: core.NewBlock(validTxs, parentBlock, bp.beneficiary), UtxoIndex: utxoIndex, State: state}
 	return &ctx
+}
+
+func (bp *BlockProducer) collectTransactions(utxoIndex *core.UTXOIndex, parentBlk *core.Block, deadlineInMs int64) ([]*core.Transaction, *core.ScState) {
+	var validTxs []*core.Transaction
+	totalSize := 0
+
+	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
+	engine := vm.NewV8Engine()
+	defer engine.DestroyEngine()
+	rewards := make(map[string]string)
+	currBlkHeight := parentBlk.GetHeight() + 1
+
+	for totalSize < bp.bc.GetBlockSizeLimit() && bp.bc.GetTxPool().GetNumOfTxInPool() > 0 && !isExceedingDeadline(deadlineInMs) {
+
+		txNode := bp.bc.GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		if txNode == nil {
+			break
+		}
+		totalSize += txNode.Size
+
+		ctx := txNode.Value.ToContractTx()
+		minerAddr := account.NewAddress(bp.beneficiary)
+		if ctx != nil {
+			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			if err != nil {
+				logger.WithError(err).WithFields(logger.Fields{
+					"txid": hex.EncodeToString(ctx.ID),
+				}).Warn("Transaction: cannot find vin while executing smart contract")
+				return nil, nil
+			}
+			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
+
+			validTxs = append(validTxs, txNode.Value)
+			utxoIndex.UpdateUtxo(txNode.Value)
+
+			gasCount, generatedTxs, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+
+			// record gas used
+			if err != nil {
+				// add utxo from txs into utxoIndex
+				logger.WithError(err).Error("executeSmartContract error.")
+			}
+			if gasCount > 0 {
+				grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+				if err == nil {
+					generatedTxs = append(generatedTxs, &grtx)
+				}
+			}
+			gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+			if err == nil {
+				generatedTxs = append(generatedTxs, &gctx)
+			}
+			validTxs = append(validTxs, generatedTxs...)
+			utxoIndex.UpdateUtxoState(generatedTxs)
+		} else {
+			validTxs = append(validTxs, txNode.Value)
+			utxoIndex.UpdateUtxo(txNode.Value)
+		}
+	}
+
+	// append reward transaction
+	if len(rewards) > 0 {
+		rtx := core.NewRewardTx(currBlkHeight, rewards)
+		validTxs = append(validTxs, &rtx)
+		utxoIndex.UpdateUtxo(&rtx)
+	}
+
+	return validTxs, scStorage
 }
 
 func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transaction {
@@ -117,25 +183,77 @@ func (bp *BlockProducer) calculateTips(txs []*core.Transaction) *core.Transactio
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := core.NewCoinbaseTX(core.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
+	cbtx := core.NewCoinbaseTX(account.NewAddress(bp.beneficiary), "", bp.bc.GetMaxHeight()+1, totalTips)
 	return &cbtx
 }
 
 //executeSmartContract executes all smart contracts
 func (bp *BlockProducer) executeSmartContract(utxoIndex *core.UTXOIndex,
-	txs []*core.Transaction, rewards map[string]string,
-	currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
+	txs []*core.Transaction, currBlkHeight uint64, parentBlk *core.Block) ([]*core.Transaction, *core.ScState) {
 	//start a new smart contract engine
 
 	scStorage := core.LoadScStateFromDatabase(bp.bc.GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	var generatedTXs []*core.Transaction
+	rewards := make(map[string]string)
+
+	minerAddr := account.NewAddress(bp.beneficiary)
 
 	for _, tx := range txs {
-		generatedTXs = append(generatedTXs, tx.Execute(*utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)...)
+		ctx := tx.ToContractTx()
+		if ctx == nil {
+			// add utxo from txs into utxoIndex
+			utxoIndex.UpdateUtxo(tx)
+			continue
+		}
+		prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"txid": hex.EncodeToString(ctx.ID),
+			}).Warn("Transaction: cannot find vin while executing smart contract")
+			return nil, nil
+		}
+		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
+		gasCount, newTxs, err := ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+		generatedTXs = append(generatedTXs, newTxs...)
+		// record gas used
+		if err != nil {
+			// add utxo from txs into utxoIndex
+			logger.WithFields(logger.Fields{
+				"err": err,
+			}).Error("executeSmartContract error.")
+		}
+		if gasCount > 0 {
+			grtx, err := core.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+			if err == nil {
+				generatedTXs = append(generatedTXs, &grtx)
+			}
+		}
+		gctx, err := core.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+		if err == nil {
+
+			generatedTXs = append(generatedTXs, &gctx)
+		}
+
+		// add utxo from txs into utxoIndex
 		utxoIndex.UpdateUtxo(tx)
 	}
-
+	// append reward transaction
+	if len(rewards) > 0 {
+		rtx := core.NewRewardTx(currBlkHeight, rewards)
+		generatedTXs = append(generatedTXs, &rtx)
+	}
 	return generatedTXs, scStorage
+}
+
+func isExceedingDeadline(deadlineInMs int64) bool {
+	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
+}
+
+func (bp *BlockProducer) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return bp.beneficiary == blk.GetProducer()
+	}
+	return false
 }

@@ -41,7 +41,7 @@ func (_m *NetService) GetBlockchain() *core.Blockchain {
 	return r0
 }
 
-// GetPeerID provides a mock function with given fields:
+// GetHostPeerID provides a mock function with given fields:
 func (_m *NetService) GetPeerID() peer.ID {
 	ret := _m.Called()
 

@@ -21,7 +21,9 @@ package consensus
 import (
 	"testing"
 
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const DefaultMaxProducersIfNoProducersGiven = 5
@@ -327,4 +329,34 @@ func TestDynasty_ProducerAtATime(t *testing.T) {
 			assert.Equal(t, tt.expected, producer)
 		})
 	}
+}
+
+func TestDynasty_CanSetProducers(t *testing.T) {
+
+	producers := []string{
+		account.NewKeyPair().GenerateAddress().String(),
+		account.NewKeyPair().GenerateAddress().String(),
+		account.NewKeyPair().GenerateAddress().String(),
+	}
+	dynasty := NewDynasty([]string{}, len(producers)-1, 15)
+
+	// <= max producers
+	for i := 0; i < len(producers); i++ {
+		require.Nil(t, dynasty.CanSetProducers(producers[:i]))
+	}
+
+	// > max producers
+	require.Error(t, dynasty.CanSetProducers(producers))
+
+	// add producers
+	dynasty.SetProducers(producers[:2])
+	// can remove producer1
+	require.Nil(t, dynasty.CanSetProducers(producers[:1]))
+	dynasty.SetProducers(producers[:1])
+
+	// invalid producer
+	require.Error(t, dynasty.CanSetProducers([]string{"invalid-producer"}))
+
+	// duplicate producer
+	require.Error(t, dynasty.CanSetProducers([]string{producers[0], producers[0]}))
 }

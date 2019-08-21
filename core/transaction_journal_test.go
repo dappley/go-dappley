@@ -18,35 +18,42 @@
 package core
 
 import (
+	"sync"
+	"testing"
+
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestJournalPutAndGet(t *testing.T) {
 	db := storage.NewRamStorage()
 
 	// Create a blockchain for testing
-	addr := NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(128), nil, BlockchainInit, nil, 1000000}
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	bc := &Blockchain{Hash{}, Hash{}, db, NewUTXOCache(db), nil, NewTransactionPool(nil, 128), nil, BlockchainInit, nil, 1000000, &sync.Mutex{}}
 
 	// Add genesis block
 	genesis := NewGenesisBlock(addr)
 
 	var tx1 = Transaction{
-		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(2),
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),
+		Vout:     GenerateFakeTxOutputs(),
+		Tip:      common.NewAmount(2),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 
 	var tx2 = Transaction{
-		ID:   util.GenerateRandomAoB(1),
-		Vin:  GenerateFakeTxInputs(),
-		Vout: GenerateFakeTxOutputs(),
-		Tip:  common.NewAmount(5),
+		ID:       util.GenerateRandomAoB(1),
+		Vin:      GenerateFakeTxInputs(),
+		Vout:     GenerateFakeTxOutputs(),
+		Tip:      common.NewAmount(5),
+		GasLimit: common.NewAmount(0),
+		GasPrice: common.NewAmount(0),
 	}
 	txs := genesis.GetTransactions()
 	txs = append(txs, &tx1)

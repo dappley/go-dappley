@@ -21,11 +21,13 @@ package consensus
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDpos(t *testing.T) {
@@ -38,13 +40,16 @@ func TestNewDpos(t *testing.T) {
 func TestDpos_Setup(t *testing.T) {
 	dpos := NewDPOS()
 	cbAddr := "abcdefg"
-	bc := core.CreateBlockchain(core.NewAddress(cbAddr), storage.NewRamStorage(), dpos, 128, nil, 100000)
+	bc := core.CreateBlockchain(account.NewAddress(cbAddr), storage.NewRamStorage(), dpos, core.NewTransactionPool(nil, 128), nil, 100000)
 	pool := core.NewBlockPool(0)
-	node := network.NewNode(bc, pool)
 
-	dpos.Setup(node, cbAddr)
+	node := network.NewNode(bc.GetDb(), nil)
 
-	assert.Equal(t, bc, dpos.node.GetBlockchain())
+	bm := core.NewBlockChainManager(bc, pool, node)
+
+	dpos.Setup(node, cbAddr, bm)
+
+	assert.Equal(t, bc, dpos.bm.Getblockchain())
 	assert.Equal(t, node, dpos.node)
 }
 
@@ -54,8 +59,8 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
 
-	cbtx := core.NewCoinbaseTX(core.NewAddress(producers[0]), "", 0, common.NewAmount(0))
-	cbtxInvalidProducer := core.NewCoinbaseTX(core.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtx := core.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtxInvalidProducer := core.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
 
 	tests := []struct {
 		name     string

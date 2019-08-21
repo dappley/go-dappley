@@ -24,9 +24,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -42,24 +43,32 @@ func TestMain(m *testing.M) {
 	os.Exit(retCode)
 }
 
-func TestCreateWallet(t *testing.T) {
-	wallet, err := CreateWallet(GetTestWalletPath(), "test")
+func TestCreateAccount(t *testing.T) {
+	acc, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
-	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
+	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, []byte(walletPubKeyHash))
+	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
-func TestCreateWalletWithPassphrase(t *testing.T) {
-	wallet, err := CreateWallet(GetTestWalletPath(), "test")
+func TestCreateAccountWithPassphrase(t *testing.T) {
+	acc, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := wallet.Addresses[0].GetPubKeyHash()
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
 	assert.Equal(t, true, ok)
-	walletPubKeyHash, err := core.NewUserPubKeyHash(wallet.Key.PublicKey)
+	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, []byte(walletPubKeyHash))
+	assert.Equal(t, pubKeyHash, accountPubKeyHash)
+}
+
+func TestCreateAccountWithPassphraseMismatch(t *testing.T) {
+	_, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
+	assert.Nil(t, err)
+
+	_, err = CreateAccountWithpassphrase("wrong_password", GetTestAccountPath())
+	assert.Error(t, err)
 }
 
 func TestCreateBlockchain(t *testing.T) {
@@ -67,11 +76,11 @@ func TestCreateBlockchain(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	//create a wallet address
-	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	//create a account address
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 
 	//create a blockchain
-	_, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
+	_, err := CreateBlockchain(addr, store, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 }
 
@@ -80,16 +89,15 @@ func TestLoopCreateBlockchain(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	//create a wallet address
+	//create a account address
 
 	err := ErrInvalidAddress
 	//create a blockchain loop
 	for i := 0; i < 2000; i++ {
 		err = nil
-		wallet := client.NewWallet()
-		wallet.Key = core.NewKeyPair()
-		addr := wallet.Key.GenerateAddress(false)
-		if !addr.ValidateAddress() {
+		account := account.NewAccount()
+		addr := account.GetKeyPair().GenerateAddress()
+		if !addr.IsValid() {
 			fmt.Println(i, addr)
 			err = ErrInvalidAddress
 			break
@@ -104,7 +112,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a blockchain with an invalid address
-	bc, err := CreateBlockchain(core.NewAddress(InvalidAddress), store, nil, 128, nil, 1000000)
+	bc, err := CreateBlockchain(account.NewAddress(InvalidAddress), store, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Nil(t, bc)
 }
@@ -113,10 +121,10 @@ func TestGetBalance(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	//create a wallet address
-	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	//create a account address
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
+	bc, err := CreateBlockchain(addr, store, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -131,19 +139,19 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	//create a wallet address
-	addr := core.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
+	//create a account address
+	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
+	bc, err := CreateBlockchain(addr, store, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//The balance should be 10000000 after creating a blockchain
-	balance1, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), bc)
+	balance1, err := GetBalance(account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs"), bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance1)
 
-	balance2, err := GetBalance(core.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
+	balance2, err := GetBalance(account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAtfSs"), bc)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 }
@@ -154,31 +162,31 @@ func TestGetAllAddresses(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 
-	expectedRes := []core.Address{}
-	//create a wallet address
-	wallet, err := CreateWallet(GetTestWalletPath(), "test")
-	assert.NotEmpty(t, wallet)
-	addr := wallet.GetAddress()
+	expectedRes := []account.Address{}
+	//create a account address
+	account, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.NotEmpty(t, account)
+	addr := account.GetKeyPair().GenerateAddress()
 
 	expectedRes = append(expectedRes, addr)
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, 128, nil, 1000000)
+	bc, err := CreateBlockchain(addr, store, nil, core.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
 	//create 10 more addresses
 	for i := 0; i < 2; i++ {
-		//create a wallet address
-		wallet, err = CreateWallet(GetTestWalletPath(), "test")
-		addr = wallet.GetAddress()
+		//create a account address
+		account, err = CreateAccount(GetTestAccountPath(), "test")
+		addr = account.GetKeyPair().GenerateAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
 		expectedRes = append(expectedRes, addr)
 	}
 
 	//get all addresses
-	addrs, err := GetAllAddressesByPath(GetTestWalletPath())
+	addrs, err := GetAllAddressesByPath(GetTestAccountPath())
 	assert.Nil(t, err)
 
 	//the length should be equal
@@ -187,39 +195,69 @@ func TestGetAllAddresses(t *testing.T) {
 	cleanUpDatabase()
 }
 
-func TestIsWalletEmptyWallet(t *testing.T) {
-	cleanUpDatabase()
-	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
-	assert.NotEmpty(t, wallet1)
+func TestIsAccountEmptyAccount(t *testing.T) {
+	account1, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.NotEmpty(t, account1)
 	assert.Nil(t, err)
-	empty, err := IsTestWalletEmpty()
+	empty, err := IsAccountEmpty(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.Equal(t, false, empty)
 	cleanUpDatabase()
-	empty, err = IsTestWalletEmpty()
+	empty, err = IsAccountEmpty(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.Equal(t, true, empty)
-
-	//teardown :clean up database amd files
-	cleanUpDatabase()
 }
 
-func TestDeleteInvalidWallet(t *testing.T) {
-	//setup: clean up database and files
-	cleanUpDatabase()
-	//create wallets address
-	wallet1, err := CreateWallet(GetTestWalletPath(), "test")
-	assert.NotEmpty(t, wallet1)
-	addr1 := wallet1.GetAddress()
+func TestDeleteInvalidAccount(t *testing.T) {
+	//create accounts address
+	account1, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.NotEmpty(t, account1)
+	addr1 := account1.GetKeyPair().GenerateAddress()
 
-	addressList := []core.Address{addr1}
+	addressList := []account.Address{addr1}
 
-	list, err := GetAllAddressesByPath(GetTestWalletPath())
+	list, err := GetAllAddressesByPath(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
+}
 
-	//teardown :clean up database amd files
+func TestIsAccountLocked(t *testing.T) {
+	_, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.Nil(t, err)
+
+	status, err := IsAccountLocked(GetTestAccountPath())
+	assert.Nil(t, err)
+	assert.True(t, status)
+}
+
+func TestNilSetLockAccount(t *testing.T) {
+	assert.Nil(t, SetLockAccount(GetTestAccountPath()))
+}
+
+func TestSetLockAccount(t *testing.T) {
+	_, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.Nil(t, err)
+
+	assert.Nil(t, SetLockAccount(GetTestAccountPath()))
+	status, err := IsAccountLocked(GetTestAccountPath())
+	assert.Nil(t, err)
+	assert.True(t, status)
+
 	cleanUpDatabase()
+
+	status, err = IsAccountLocked(GetTestAccountPath())
+	assert.Nil(t, err)
+	assert.False(t, status)
+}
+
+func TestSetUnLockAccount(t *testing.T) {
+	_, err := CreateAccount(GetTestAccountPath(), "test")
+	assert.Nil(t, err)
+
+	assert.Nil(t, SetUnLockAccount(GetTestAccountPath()))
+	status, err := IsAccountLocked(GetTestAccountPath())
+	assert.Nil(t, err)
+	assert.False(t, status)
 }
 
 func isSameBlockChain(bc1, bc2 *core.Blockchain) bool {
@@ -248,5 +286,5 @@ loop:
 }
 
 func cleanUpDatabase() {
-	client.RemoveWalletFile()
+	account_logic.RemoveAccountFile()
 }

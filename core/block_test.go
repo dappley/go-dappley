@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
 	corepb "github.com/dappley/go-dappley/core/pb"
 	storage2 "github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -66,7 +67,7 @@ var blk3 = &Block{
 }
 
 func TestHashTransactions(t *testing.T) {
-	block := NewBlock([]*Transaction{{}}, blk2)
+	block := NewBlock([]*Transaction{{}}, blk2, "")
 	hash := block.HashTransactions()
 	assert.Equal(t, expectHash, hash)
 }
@@ -75,28 +76,28 @@ func TestNewBlock(t *testing.T) {
 	var emptyTx = []*Transaction([]*Transaction{})
 	var emptyHash = Hash(Hash{})
 	var expectBlock3Hash = Hash{0x61}
-	block1 := NewBlock(nil, nil)
+	block1 := NewBlock(nil, nil, "")
 	assert.Nil(t, block1.header.prevHash)
 	assert.Equal(t, emptyTx, block1.transactions)
 
-	block2 := NewBlock(nil, blk)
+	block2 := NewBlock(nil, blk, "")
 	assert.Equal(t, emptyHash, block2.header.prevHash)
 	assert.Equal(t, Hash(Hash{}), block2.header.prevHash)
 	assert.Equal(t, emptyTx, block2.transactions)
 
-	block3 := NewBlock(nil, blk2)
+	block3 := NewBlock(nil, blk2, "")
 	assert.Equal(t, expectBlock3Hash, block3.header.prevHash)
 	assert.Equal(t, Hash(Hash{'a'}), block3.header.prevHash)
 	assert.Equal(t, []byte{'a'}[0], block3.header.prevHash[0])
 	assert.Equal(t, uint64(1), block3.header.height)
 	assert.Equal(t, emptyTx, block3.transactions)
 
-	block4 := NewBlock([]*Transaction{}, nil)
+	block4 := NewBlock([]*Transaction{}, nil, "")
 	assert.Nil(t, block4.header.prevHash)
 	assert.Equal(t, emptyTx, block4.transactions)
 	assert.Equal(t, Hash(nil), block4.header.prevHash)
 
-	block5 := NewBlock([]*Transaction{{}}, nil)
+	block5 := NewBlock([]*Transaction{{}}, nil, "")
 	assert.Nil(t, block5.header.prevHash)
 	assert.Equal(t, []*Transaction{{}}, block5.transactions)
 	assert.Equal(t, &Transaction{}, block5.transactions[0])
@@ -111,6 +112,7 @@ func TestBlockHeader_Proto(t *testing.T) {
 		2,
 		nil,
 		0,
+		"",
 	}
 
 	pb := bh1.ToProto()
@@ -172,15 +174,6 @@ func TestBlock_VerifyHash(t *testing.T) {
 	assert.False(t, b1.VerifyHash())
 }
 
-func TestBlock_Rollback(t *testing.T) {
-	b := GenerateMockBlock()
-	tx := MockTransaction()
-	b.transactions = []*Transaction{tx}
-	txPool := NewTransactionPool(128)
-	b.Rollback(txPool)
-	assert.ElementsMatch(t, tx.ID, txPool.GetTransactions()[0].ID)
-}
-
 func TestBlock_FindTransaction(t *testing.T) {
 	b := GenerateMockBlock()
 	tx := MockTransaction()
@@ -201,8 +194,8 @@ func TestBlock_FindTransactionEmptyBlock(t *testing.T) {
 }
 
 func TestIsParentBlockHash(t *testing.T) {
-	parentBlock := NewBlock([]*Transaction{{}}, blk2)
-	childBlock := NewBlock([]*Transaction{{}}, parentBlock)
+	parentBlock := NewBlock([]*Transaction{{}}, blk2, "")
+	childBlock := NewBlock([]*Transaction{{}}, parentBlock, "")
 
 	assert.True(t, IsParentBlockHash(parentBlock, childBlock))
 	assert.False(t, IsParentBlockHash(parentBlock, nil))
@@ -211,8 +204,8 @@ func TestIsParentBlockHash(t *testing.T) {
 }
 
 func TestIsParentBlockHeight(t *testing.T) {
-	parentBlock := NewBlock([]*Transaction{{}}, blk2)
-	childBlock := NewBlock([]*Transaction{{}}, parentBlock)
+	parentBlock := NewBlock([]*Transaction{{}}, blk2, "")
+	childBlock := NewBlock([]*Transaction{{}}, parentBlock, "")
 
 	assert.True(t, IsParentBlockHeight(parentBlock, childBlock))
 	assert.False(t, IsParentBlockHeight(parentBlock, nil))
@@ -220,7 +213,7 @@ func TestIsParentBlockHeight(t *testing.T) {
 	assert.False(t, IsParentBlockHeight(childBlock, parentBlock))
 }
 func TestCalculateHashWithNonce(t *testing.T) {
-	block := NewBlock([]*Transaction{{}}, blk3)
+	block := NewBlock([]*Transaction{{}}, blk3, "")
 	block.header.timestamp = 0
 	expectHash1 := Hash{0x3f, 0x2f, 0xec, 0xb4, 0x33, 0xf0, 0xd1, 0x1a, 0xa6, 0xf4, 0xf, 0xb8, 0x7f, 0x8f, 0x99, 0x11, 0xae, 0xe7, 0x42, 0xf4, 0x69, 0x7d, 0xf1, 0xaa, 0xc8, 0xd0, 0xfc, 0x40, 0xa2, 0xd8, 0xb1, 0xa5}
 	assert.Equal(t, Hash(expectHash1), block.CalculateHashWithNonce(1))
@@ -232,10 +225,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	// Prepare test data
 	normalCoinbaseTX := NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
 	rewardTX := NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
-	userPubKey := NewKeyPair().PublicKey
-	userPubKeyHash, _ := NewUserPubKeyHash(userPubKey)
+	userPubKey := account.NewKeyPair().GetPublicKey()
+	userPubKeyHash, _ := account.NewUserPubKeyHash(userPubKey)
 	userAddr := userPubKeyHash.GenerateAddress()
-	contractPubKeyHash := NewContractPubKeyHash()
+	contractPubKeyHash := account.NewContractPubKeyHash()
 	contractAddr := contractPubKeyHash.GenerateAddress()
 
 	txIdStr := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
@@ -253,14 +246,17 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			*NewTxOut(common.NewAmount(10), contractAddr, ""),
 		},
 		common.NewAmount(7),
+		common.NewAmount(0),
+		common.NewAmount(0),
+		time.Now().UnixNano()/1e6,
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = GetKeyPairByString(prikey1).PublicKey
-	var pkHash1, _ = NewUserPubKeyHash(pubkey1)
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
+	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = GetKeyPairByString(prikey2).PublicKey
-	var pkHash2, _ = NewUserPubKeyHash(pubkey2)
+	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
+	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
 
 	dependentTx1 := NewTransactionByVin(tx1.ID, 1, pubkey1, 10, pkHash2, 3)
 	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
@@ -269,10 +265,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx2Utxo1 := UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, UtxoNormal}
 
 	tx1Utxos := map[string][]*UTXO{
-		hex.EncodeToString(pkHash2): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
+		pkHash2.String(): {&UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, UtxoNormal}},
 	}
-	dependentTx2.Sign(GetKeyPairByString(prikey2).PrivateKey, tx1Utxos[hex.EncodeToString(pkHash2)])
-	dependentTx3.Sign(GetKeyPairByString(prikey1).PrivateKey, []*UTXO{&tx2Utxo1})
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()])
+	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name   string
@@ -324,10 +320,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"reward tx",
 			[]*Transaction{&rewardTX},
 			map[string][]*UTXO{
-				hex.EncodeToString(contractPubKeyHash): {
+				contractPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
 				},
-				hex.EncodeToString(userPubKeyHash): {
+				userPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},
@@ -338,11 +334,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"generated tx",
 			[]*Transaction{generatedTX},
 			map[string][]*UTXO{
-				hex.EncodeToString(contractPubKeyHash): {
+				contractPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, UtxoNormal},
 					{*NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, UtxoNormal},
 				},
-				hex.EncodeToString(userPubKeyHash): {
+				userPubKeyHash.String(): {
 					{*NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, UtxoNormal},
 				},
 			},
@@ -358,14 +354,14 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			for key, addrUtxos := range tt.utxos {
 				utxoTx := NewUTXOTx()
 				for _, addrUtxo := range addrUtxos {
-					utxoTx = utxoTx.PutUtxo(addrUtxo)
+					utxoTx.PutUtxo(addrUtxo)
 				}
 				index[key] = &utxoTx
 			}
 
 			utxoIndex := UTXOIndex{index, NewUTXOCache(db), &sync.RWMutex{}}
 			scState := NewScState()
-			block := NewBlock(tt.txs, blk)
+			block := NewBlock(tt.txs, blk, "")
 			assert.Equal(t, tt.ok, block.VerifyTransactions(&utxoIndex, scState, nil, block))
 		})
 	}

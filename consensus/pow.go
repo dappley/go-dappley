@@ -35,6 +35,7 @@ type ProofOfWork struct {
 	miner  *BlockProducer
 	target *big.Int
 	node   core.NetService
+	bm     *core.BlockChainManager
 	stopCh chan bool
 }
 
@@ -48,9 +49,16 @@ func NewProofOfWork() *ProofOfWork {
 	return p
 }
 
-func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string) {
+func (pow *ProofOfWork) Setup(node core.NetService, cbAddr string, bm *core.BlockChainManager) {
 	pow.node = node
-	pow.miner.Setup(node.GetBlockchain(), cbAddr)
+	pow.bm = bm
+
+	var bc *core.Blockchain
+	if pow.bm != nil {
+		bc = bm.Getblockchain()
+	}
+
+	pow.miner.Setup(bc, cbAddr)
 	pow.miner.SetProcess(pow.calculateValidHash)
 }
 
@@ -64,6 +72,10 @@ func (pow *ProofOfWork) SetTargetBit(bit int) {
 
 func (pow *ProofOfWork) SetKey(key string) {
 	// pow does not require block signing
+}
+
+func (pow *ProofOfWork) GetProducerAddress() string {
+	return pow.miner.Beneficiary()
 }
 
 func (pow *ProofOfWork) Start() {
@@ -85,13 +97,14 @@ func (pow *ProofOfWork) mineBlocks() {
 			logger.Info("PoW: mining stopped.")
 			return
 		default:
-			if pow.node.GetBlockchain().GetState() != core.BlockchainReady {
+			if pow.bm.Getblockchain().GetState() != core.BlockchainReady {
 				logger.Debug("BlockProducer: Paused while block pool is syncing")
 				continue
 			}
-			newBlock := pow.miner.ProduceBlock()
+			newBlock := pow.miner.ProduceBlock(0)
 			if newBlock == nil || !pow.Validate(newBlock.Block) {
 				logger.WithFields(logger.Fields{"block": newBlock}).Debug("PoW: the block mined is invalid.")
+				pow.miner.BlockProduceFinish()
 				return
 			}
 			pow.updateNewBlock(newBlock)
@@ -161,12 +174,13 @@ func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn("PoW: the new block contains invalid hash (mining might have been interrupted).")
 		return
 	}
-	err := pow.node.GetBlockchain().AddBlockContextToTail(ctx)
+	err := pow.bm.Getblockchain().AddBlockContextToTail(ctx)
 	if err != nil {
 		logger.Warn(err)
 		return
 	}
-	pow.node.BroadcastBlock(ctx.Block)
+
+	pow.bm.BroadcastBlock(ctx.Block)
 }
 
 func (pow *ProofOfWork) AddProducer(producer string) error {
@@ -175,4 +189,15 @@ func (pow *ProofOfWork) AddProducer(producer string) error {
 
 func (pow *ProofOfWork) GetProducers() []string {
 	return nil
+}
+
+func (pow *ProofOfWork) Produced(blk *core.Block) bool {
+	if blk != nil {
+		return pow.miner.Produced(blk)
+	}
+	return false
+}
+
+func (pow *ProofOfWork) CheckLibPolicy(b *core.Block) (*core.Block, bool) {
+	return nil, true
 }

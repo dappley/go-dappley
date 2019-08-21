@@ -26,13 +26,15 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common"
-	corepb "github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
+
+var DefaultLimitsOfTotalMemorySize uint64 = 40 * 1000 * 1000
 
 type BlockHeader struct {
 	hash      Hash
@@ -41,6 +43,7 @@ type BlockHeader struct {
 	timestamp int64
 	sign      Hash
 	height    uint64
+	producer  string
 }
 
 type Block struct {
@@ -54,11 +57,15 @@ func (h Hash) String() string {
 	return hex.EncodeToString(h)
 }
 
-func NewBlock(txs []*Transaction, parent *Block) *Block {
-	return NewBlockWithTimestamp(txs, parent, time.Now().Unix())
+func (h Hash) Equals(nh Hash) bool {
+	return bytes.Compare(h, nh) == 0
 }
 
-func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *Block {
+func NewBlock(txs []*Transaction, parent *Block, producer string) *Block {
+	return NewBlockWithTimestamp(txs, parent, time.Now().Unix(), producer)
+}
+
+func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64, producer string) *Block {
 
 	var prevHash []byte
 	var height uint64
@@ -79,6 +86,7 @@ func NewBlockWithTimestamp(txs []*Transaction, parent *Block, timeStamp int64) *
 			timestamp: timeStamp,
 			sign:      nil,
 			height:    height,
+			producer:  producer,
 		},
 		transactions: txs,
 	}
@@ -138,6 +146,10 @@ func (b *Block) GetSign() Hash {
 	return b.header.sign
 }
 
+func (b *Block) IsSigned() bool {
+	return b.header != nil && b.header.sign != nil
+}
+
 func (b *Block) GetHeight() uint64 {
 	return b.header.height
 }
@@ -156,6 +168,10 @@ func (b *Block) GetNonce() int64 {
 
 func (b *Block) GetTimestamp() int64 {
 	return b.header.timestamp
+}
+
+func (b *Block) GetProducer() string {
+	return b.header.producer
 }
 
 func (b *Block) GetTransactions() []*Transaction {
@@ -199,6 +215,7 @@ func (bh *BlockHeader) ToProto() proto.Message {
 		Timestamp:    bh.timestamp,
 		Signature:    bh.sign,
 		Height:       bh.height,
+		Producer:     bh.producer,
 	}
 }
 
@@ -212,6 +229,7 @@ func (bh *BlockHeader) FromProto(pb proto.Message) {
 	bh.timestamp = pb.(*corepb.BlockHeader).GetTimestamp()
 	bh.sign = pb.(*corepb.BlockHeader).GetSignature()
 	bh.height = pb.(*corepb.BlockHeader).GetHeight()
+	bh.producer = pb.(*corepb.BlockHeader).GetProducer()
 }
 
 func (b *Block) CalculateHash() Hash {
@@ -224,6 +242,7 @@ func (b *Block) CalculateHashWithoutNonce() Hash {
 			b.GetPrevHash(),
 			b.HashTransactions(),
 			util.IntToHex(b.GetTimestamp()),
+			[]byte(b.GetProducer()),
 		},
 		[]byte{},
 	)
@@ -241,6 +260,7 @@ func (b *Block) CalculateHashWithNonce(nonce int64) Hash {
 			util.IntToHex(b.GetTimestamp()),
 			//util.IntToHex(targetBits),
 			util.IntToHex(nonce),
+			[]byte(b.GetProducer()),
 		},
 		[]byte{},
 	)
@@ -253,20 +273,38 @@ func (b *Block) SignBlock(key string, data []byte) bool {
 		logger.Warn("Block: the key is too short for signature!")
 		return false
 	}
+
+	signature, err := b.generateSignature(key, data)
+	if err != nil {
+		return false
+	}
+	b.header.sign = signature
+	return true
+}
+
+func (b *Block) WasSignedWith(key string, data Hash) bool {
+	signature, err := b.generateSignature(key, data)
+	if err != nil {
+		return false
+	}
+
+	return IsHashEqual(signature, b.GetSign())
+}
+
+func (b *Block) generateSignature(key string, data Hash) (Hash, error) {
 	privData, err := hex.DecodeString(key)
 
 	if err != nil {
 		logger.Warn("Block: cannot decode private key for signature!")
-		return false
+		return []byte{}, err
 	}
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
 		logger.WithError(err).Warn("Block: failed to calculate signature!")
-		return false
+		return []byte{}, err
 	}
 
-	b.header.sign = signature
-	return true
+	return signature, nil
 }
 
 func (b *Block) VerifyHash() bool {
@@ -309,7 +347,8 @@ L:
 			continue L
 		}
 
-		if tx.IsContract() {
+		ctx := tx.ToContractTx()
+		if ctx != nil {
 			// Run the contract and collect generated transactions
 			if scEngine == nil {
 				logger.Warn("Block: smart contract cannot be verified.")
@@ -317,12 +356,26 @@ L:
 				return false
 			}
 
-			tx.Execute(*utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			prevUtxos, err := ctx.FindAllTxinsInUtxoPool(*utxoIndex)
+			if err != nil {
+				logger.WithError(err).WithFields(logger.Fields{
+					"txid": hex.EncodeToString(ctx.ID),
+				}).Warn("Transaction: cannot find vin while executing smart contract")
+				return false
+			}
+
+			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
+			// TODO GAS LIMIT
+			if err := scEngine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
+				return false
+			}
 			utxoIndex.UpdateUtxo(tx)
+			ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
-			if !tx.Verify(utxoIndex, b.GetHeight()) {
+			if result, err := tx.Verify(utxoIndex, b.GetHeight()); !result {
+				logger.Warn(err.Error())
 				return false
 			}
 			utxoIndex.UpdateUtxo(tx)
@@ -396,16 +449,6 @@ func IsParentBlockHeight(parentBlk, childBlk *Block) bool {
 
 func (b *Block) IsParentBlock(child *Block) bool {
 	return IsParentBlockHash(b, child) && IsParentBlockHeight(b, child)
-}
-
-func (b *Block) Rollback(txPool *TransactionPool) {
-	if b != nil {
-		for _, tx := range b.GetTransactions() {
-			if !tx.IsCoinbase() && !tx.IsRewardTx() {
-				txPool.Push(*tx)
-			}
-		}
-	}
 }
 
 func (b *Block) FindTransactionById(txid []byte) *Transaction {

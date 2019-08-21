@@ -1,0 +1,12 @@
+syntax = "proto3";
+package logicpb;
+import "github.com/dappley/go-dappley/core/account/pb/account.proto";
+
+
+message AccountManager{
+    repeated accountpb.Account accounts = 1;
+    bytes passPhrase = 2;
+    bool locked = 3;
+}
+
+

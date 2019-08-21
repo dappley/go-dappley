@@ -23,10 +23,11 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"flag"
+	"sync"
+
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"sync"
 )
 
 const utxoMapKeyOld = "utxo"

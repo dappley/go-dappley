@@ -21,19 +21,21 @@ package consensus
 import (
 	"testing"
 
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBlockProducer_ProduceBlock(t *testing.T) {
 	bp := NewBlockProducer()
 	cbAddr := "1FoupuhmPN4q1wiUrM5QaYZjYKKLLXzPPg"
 	bc := core.CreateBlockchain(
-		core.NewAddress(cbAddr),
+		account.NewAddress(cbAddr),
 		storage.NewRamStorage(),
 		nil,
-		128,
+		core.NewTransactionPool(nil, 128),
 		nil,
 		100000,
 	)
@@ -42,8 +44,15 @@ func TestBlockProducer_ProduceBlock(t *testing.T) {
 	bp.SetProcess(func(ctx *core.BlockContext) {
 		processRuns = true
 	})
-	block := bp.ProduceBlock()
+	block := bp.ProduceBlock(0)
 	assert.True(t, processRuns)
 	assert.NotNil(t, block)
+}
 
+func TestBlockProducer_Produced(t *testing.T) {
+	bp := NewBlockProducer()
+	bp.Setup(nil, "key")
+	require.False(t, bp.Produced(nil))
+	require.False(t, bp.Produced(core.NewBlock(nil, nil, "")))
+	require.True(t, bp.Produced(core.NewBlock(nil, nil, "key")))
 }

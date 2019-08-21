@@ -26,6 +26,6 @@ func (_m *MockScEngineManager) CreateEngine() ScEngine {
 }
 
 // RunScheduledEvents provides a mock function with given fields: contractUtxo, scStorage
-func (_m *MockScEngineManager) RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState,blkHeight uint64, seed int64) {
-	_m.Called(contractUtxo, scStorage,blkHeight,seed)
+func (_m *MockScEngineManager) RunScheduledEvents(contractUtxo []*UTXO, scStorage *ScState, blkHeight uint64, seed int64) {
+	_m.Called(contractUtxo, scStorage, blkHeight, seed)
 }

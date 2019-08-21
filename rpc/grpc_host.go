@@ -20,8 +20,8 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/core"
 	"net"
-	"strings"
 
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -31,22 +31,39 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
 const (
 	defaultRpcPort = 50051
-	passwordToken  = "password"
 )
 
-type Server struct {
-	srv      *grpc.Server
-	node     *network.Node
-	password string
+var (
+	authorizedIPs = map[string]bool{
+		"127.0.0.1": true,
+		"::1":       true,
+	}
+)
+
+type MetricsServiceConfig struct {
+	PollingInterval    int64
+	TimeSeriesInterval int64
 }
 
-func NewGrpcServer(node *network.Node, adminPassword string) *Server {
-	return &Server{grpc.NewServer(), node, adminPassword}
+type Server struct {
+	srv           *grpc.Server
+	node          *network.Node
+	password      string
+	bm            *core.BlockChainManager
+	metricsConfig *MetricsServiceConfig
+}
+
+func NewGrpcServer(node *network.Node, bm *core.BlockChainManager, adminPassword string) *Server {
+	return NewGrpcServerWithMetrics(node, bm, adminPassword, nil)
+}
+
+func NewGrpcServerWithMetrics(node *network.Node, bm *core.BlockChainManager, adminPassword string, config *MetricsServiceConfig) *Server {
+	return &Server{grpc.NewServer(), node, adminPassword, bm, config}
 }
 
 func (s *Server) Start(port uint32) {
@@ -62,8 +79,12 @@ func (s *Server) Start(port uint32) {
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
-		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
-		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
+		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node})
+		if s.metricsConfig != nil {
+			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.bm, s.metricsConfig, port))
+		}
+
 		if err := srv.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Server: encounters an error while serving.")
 		}
@@ -76,8 +97,8 @@ func (s *Server) AuthInterceptor(ctx context.Context, req interface{}, info *grp
 		if !ok || len(peer.Addr.String()) == 0 {
 			return nil, status.Errorf(codes.Unauthenticated, "unknown ip")
 		}
-		ip := strings.Split(peer.Addr.String(), ":")
-		if ip[0] != "127.0.0.1" {
+		ip, _, _ := net.SplitHostPort(peer.Addr.String())
+		if _, ok := authorizedIPs[ip]; !ok {
 			return nil, status.Errorf(codes.Unauthenticated, "unauthorized access")
 		}
 

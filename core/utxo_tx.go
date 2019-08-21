@@ -76,7 +76,7 @@ func DeserializeUTXOTx(d []byte) UTXOTx {
 	for _, utxoPb := range utxoList.Utxos {
 		var utxo = &UTXO{}
 		utxo.FromProto(utxoPb)
-		utxoTx = utxoTx.PutUtxo(utxo)
+		utxoTx.PutUtxo(utxo)
 	}
 
 	return utxoTx
@@ -109,17 +109,15 @@ func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 }
 
 // Add new utxo to map
-func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) UTXOTx {
+func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) {
 	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 	utxoTx.Indices[key] = utxo
-	return utxoTx
 }
 
 // Delete invalid element in map
-func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) UTXOTx {
+func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) {
 	key := string(txid) + "_" + strconv.Itoa(vout)
 	delete(utxoTx.Indices, key)
-	return utxoTx
 }
 
 func (utxoTx UTXOTx) Size() int {

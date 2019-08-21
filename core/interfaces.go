@@ -19,13 +19,17 @@
 package core
 
 import (
-	"github.com/libp2p/go-libp2p-peer"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/golang/protobuf/proto"
 )
 
 type Consensus interface {
 	Validate(block *Block) bool
 
-	Setup(NetService, string)
+	Setup(NetService, string, *BlockChainManager)
+	GetProducerAddress() string
+
 	SetKey(string)
 
 	// Start runs the consensus algorithm and begins to produce blocks
@@ -36,17 +40,24 @@ type Consensus interface {
 
 	// IsProducingBlock returns true if this node itself is currently producing a block
 	IsProducingBlock() bool
+	// Produced returns true iff the underlying block producer of the consensus algorithm produced the specified block
+	Produced(block *Block) bool
 
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
 	GetProducers() []string
+	//Return the lib block and new block whether pass lib policy
+	CheckLibPolicy(b *Block) (*Block, bool)
 }
 
 type NetService interface {
-	BroadcastBlock(block *Block) error
-	GetPeerID() peer.ID
-	GetBlockchain() *Blockchain
-	GetBlockPool() *BlockPool
+	GetHostPeerInfo() network_model.PeerInfo
+	UnicastNormalPriorityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	BroadcastNormalPriorityCommand(commandName string, message proto.Message)
+	BroadcastHighProrityCommand(commandName string, message proto.Message)
+	Listen(command string, handler network_model.CommandHandlerFunc)
+	Relay(dappCmd *network_model.DappCmd, destination network_model.PeerInfo, priority network_model.DappCmdPriority)
 }
 
 type ScEngineManager interface {
@@ -58,15 +69,19 @@ type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
 	ImportLocalStorage(state *ScState)
-	ImportContractAddr(contractAddr Address)
+	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUTXOs(utxos []*UTXO)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *Transaction)
+	ImportContractCreateUTXO(utxo *UTXO)
 	ImportPrevUtxos(utxos []*UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
-	ImportNodeAddress(addr Address)
+	ImportNodeAddress(addr account.Address)
 	GetGeneratedTXs() []*Transaction
-	Execute(function, args string) string
+	Execute(function, args string) (string, error)
+	SetExecutionLimits(uint64, uint64) error
+	ExecutionInstructions() uint64
+	CheckContactSyntax(source string) error
 }
