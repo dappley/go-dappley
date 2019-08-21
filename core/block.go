@@ -369,6 +369,7 @@ L:
 			if err := scEngine.SetExecutionLimits(1000, DefaultLimitsOfTotalMemorySize); err != nil {
 				return false
 			}
+			utxoIndex.UpdateUtxo(tx)
 			ctx.Execute(prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
