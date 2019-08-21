@@ -97,7 +97,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 			// Create a PoW blockchain with the logic.Sender wallet's address as the coinbase address
 			// i.e. logic.Sender's wallet would have mineReward amount after blockchain created
-			bm, bp := CreateProducer(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
+			bm, bp := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 			// Create a receiver account; Balance is 0 initially
 			receiverAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
@@ -111,7 +111,7 @@ func TestSend(t *testing.T) {
 			if isContract {
 				rcvAddr = account.NewAddress("")
 			} else {
-				rcvAddr = receiverAccount.GetKeyPair().GenerateAddress()
+				rcvAddr = receiverAccount.GetAddress()
 			}
 
 			_, _, err = logic.Send(SenderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bm.Getblockchain())
@@ -130,7 +130,7 @@ func TestSend(t *testing.T) {
 				return !bp.IsProducingBlock()
 			}, 20)
 			// Verify balance of logic.Sender's account (genesis "mineReward" - transferred amount)
-			SenderBalance, err := logic.GetBalance(SenderAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
+			SenderBalance, err := logic.GetBalance(SenderAccount.GetAddress(), bm.Getblockchain())
 			if err != nil {
 				panic(err)
 			}
@@ -139,7 +139,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, expectedBalance, SenderBalance)
 
 			// Balance of the miner's account should be the amount tipped + mineReward
-			minerBalance, err := logic.GetBalance(minerAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
+			minerBalance, err := logic.GetBalance(minerAccount.GetAddress(), bm.Getblockchain())
 			if err != nil {
 				panic(err)
 			}
@@ -167,7 +167,7 @@ func TestSend(t *testing.T) {
 			if isContract {
 				receiverBalance, err = logic.GetBalance(contractAddr, bm.Getblockchain())
 			} else {
-				receiverBalance, err = logic.GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
+				receiverBalance, err = logic.GetBalance(receiverAccount.GetAddress(), bm.Getblockchain())
 			}
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
@@ -189,7 +189,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//create a account address
 	account1, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetKeyPair().GenerateAddress()
+	addr1 := account1.GetAddress()
 
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 	//create a blockchain
@@ -235,7 +235,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//create a account address
 	account1, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetKeyPair().GenerateAddress()
+	addr1 := account1.GetAddress()
 
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 
@@ -253,7 +253,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	account2, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account2)
 	assert.Nil(t, err)
-	addr2 := account2.GetKeyPair().GenerateAddress()
+	addr2 := account2.GetAddress()
 
 	//The balance should be 0
 	balance2, err := logic.GetBalance(addr2, bc)
@@ -581,7 +581,7 @@ func TestAddBalance(t *testing.T) {
 			minerKeyPair := account.GenerateKeyPairByPrivateKey(key)
 			minerAccount := account.NewAccountByKey(minerKeyPair)
 
-			addr := minerAccount.GetKeyPair().GenerateAddress()
+			addr := minerAccount.GetAddress()
 			node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 			bm, bp := CreateProducer(addr, addr, store, transactionpool.NewTransactionPool(node, 128), node)
@@ -665,7 +665,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	minerAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.Nil(t, err)
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
-	bm, bps := CreateProducer(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
+	bm, bps := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 	//deploy smart contract
 	_, _, err = logic.Send(SenderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())

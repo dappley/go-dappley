@@ -46,7 +46,7 @@ func TestMain(m *testing.M) {
 func TestCreateAccount(t *testing.T) {
 	acc, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetAddress())
 	assert.Equal(t, true, ok)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 
@@ -58,7 +58,7 @@ func TestCreateAccount(t *testing.T) {
 func TestCreateAccountWithPassphrase(t *testing.T) {
 	acc, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
+	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetAddress())
 	assert.Equal(t, true, ok)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	accountPubKeyHash := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
@@ -99,7 +99,7 @@ func TestLoopCreateBlockchain(t *testing.T) {
 	for i := 0; i < 2000; i++ {
 		err = nil
 		account := account.NewAccount()
-		addr := account.GetKeyPair().GenerateAddress()
+		addr := account.GetAddress()
 		if !addr.IsValid() {
 			fmt.Println(i, addr)
 			err = ErrInvalidAddress
@@ -169,7 +169,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create a account address
 	account, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account)
-	addr := account.GetKeyPair().GenerateAddress()
+	addr := account.GetAddress()
 
 	expectedRes = append(expectedRes, addr)
 
@@ -182,7 +182,7 @@ func TestGetAllAddresses(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		//create a account address
 		account, err = CreateAccount(GetTestAccountPath(), "test")
-		addr = account.GetKeyPair().GenerateAddress()
+		addr = account.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
 		expectedRes = append(expectedRes, addr)
@@ -215,7 +215,7 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	//create accounts address
 	account1, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetKeyPair().GenerateAddress()
+	addr1 := account1.GetAddress()
 
 	addressList := []account.Address{addr1}
 

@@ -97,7 +97,7 @@ func TestAccountManager_AddAccount(t *testing.T) {
 func TestAccount_GetAddresses(t *testing.T) {
 	am := NewAccountManager(nil)
 	acc := account.NewAccount()
-	addresses := []account.Address{acc.GetKeyPair().GenerateAddress()}
+	addresses := []account.Address{acc.GetAddress()}
 	am.Accounts = append(am.Accounts, acc)
 	assert.Equal(t, addresses, am.GetAddresses())
 }
@@ -111,7 +111,7 @@ func TestAccountManager_GetAccountByAddress(t *testing.T) {
 	am := NewAccountManager(nil)
 	account := account.NewAccount()
 	am.Accounts = append(am.Accounts, account)
-	assert.Equal(t, account, am.GetAccountByAddress(account.GetKeyPair().GenerateAddress()))
+	assert.Equal(t, account, am.GetAccountByAddress(account.GetAddress()))
 }
 
 func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
@@ -122,8 +122,8 @@ func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
 	am.Locked = true
 	account := account.NewAccount()
 	am.Accounts = append(am.Accounts, account)
-	account1, err := am.GetAccountByAddressWithPassphrase(account.GetKeyPair().GenerateAddress(), "password")
-	account2, err1 := am.GetAccountByAddressWithPassphrase(account.GetKeyPair().GenerateAddress(), "none")
+	account1, err := am.GetAccountByAddressWithPassphrase(account.GetAddress(), "password")
+	account2, err1 := am.GetAccountByAddressWithPassphrase(account.GetAddress(), "none")
 	assert.NotEqual(t, account, account2)
 	assert.NotEqual(t, nil, err1)
 	assert.Equal(t, nil, err)
@@ -133,7 +133,7 @@ func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
 func TestAccountManager_GetAccountByUnfoundAddress(t *testing.T) {
 	am := NewAccountManager(nil)
 	account := account.NewAccount()
-	assert.Nil(t, am.GetAccountByAddress(account.GetKeyPair().GenerateAddress()))
+	assert.Nil(t, am.GetAccountByAddress(account.GetAddress()))
 }
 
 func TestAccountManager_GetAccountByAddressNilInput(t *testing.T) {
@@ -145,13 +145,13 @@ func TestAccountManager_GetKeyPairByAddress(t *testing.T) {
 	am := NewAccountManager(nil)
 	account := account.NewAccount()
 	am.Accounts = append(am.Accounts, account)
-	assert.Equal(t, account.GetKeyPair(), am.GetKeyPairByAddress(account.GetKeyPair().GenerateAddress()))
+	assert.Equal(t, account.GetKeyPair(), am.GetKeyPairByAddress(account.GetAddress()))
 }
 
 func TestAccountManager_GetKeyPairByUnfoundAddress(t *testing.T) {
 	am := NewAccountManager(nil)
 	account := account.NewAccount()
-	assert.Nil(t, am.GetKeyPairByAddress(account.GetKeyPair().GenerateAddress()))
+	assert.Nil(t, am.GetKeyPairByAddress(account.GetAddress()))
 }
 
 func TestAccountManager_GetKeyPairByAddressNilInput(t *testing.T) {

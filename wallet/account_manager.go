@@ -180,7 +180,7 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 		return nil, ErrPasswordIncorrect
 	}
 	for _, account := range am.Accounts {
-		address := account.GetKeyPair().GenerateAddress().String()
+		address := account.GetAddress().String()
 		addresses = append(addresses, address)
 	}
 	am.mutex.Unlock()

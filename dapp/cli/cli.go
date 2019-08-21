@@ -557,7 +557,7 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s \n", account.GetKeyPair().GenerateAddress().String())
+			fmt.Printf("Account is created. The address is %s \n", account.GetAddress().String())
 			return
 		}
 	}
@@ -580,7 +580,7 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", acc.GetKeyPair().GenerateAddress().String())
+			fmt.Printf("Account is created. The address is %s\n", acc.GetAddress().String())
 		}
 		//unlock the account
 		_, err = account.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
@@ -601,7 +601,7 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			return
 		}
 		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", account.GetKeyPair().GenerateAddress().String())
+			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().String())
 		}
 	}
 

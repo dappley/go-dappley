@@ -114,10 +114,10 @@ func TestRpcSend(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -147,8 +147,8 @@ func TestRpcSend(t *testing.T) {
 
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:        senderAccount.GetKeyPair().GenerateAddress().String(),
-		To:          receiverAccount.GetKeyPair().GenerateAddress().String(),
+		From:        senderAccount.GetAddress().String(),
+		To:          receiverAccount.GetAddress().String(),
 		Amount:      common.NewAmount(7).Bytes(),
 		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
 		Tip:         common.NewAmount(2).Bytes(),
@@ -166,11 +166,11 @@ func TestRpcSend(t *testing.T) {
 
 	// Check balance
 	minedReward := common.NewAmount(10000000)
-	senderBalance, err := logic.GetBalance(senderAccount.GetKeyPair().GenerateAddress(), bc)
+	senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bc)
 	assert.Nil(t, err)
-	receiverBalance, err := logic.GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), bc)
+	receiverBalance, err := logic.GetBalance(receiverAccount.GetAddress(), bc)
 	assert.Nil(t, err)
-	minerBalance, err := logic.GetBalance(minerAccount.GetKeyPair().GenerateAddress(), bc)
+	minerBalance, err := logic.GetBalance(minerAccount.GetAddress(), bc)
 	assert.Nil(t, err)
 
 	leftBalance, _ := minedReward.Sub(common.NewAmount(7))
@@ -204,10 +204,10 @@ func TestRpcSendContract(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -236,7 +236,7 @@ func TestRpcSendContract(t *testing.T) {
 	contract := "dapp_schedule"
 	// Initiate a RPC send request
 	_, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:        senderAccount.GetKeyPair().GenerateAddress().String(),
+		From:        senderAccount.GetAddress().String(),
 		To:          "",
 		Amount:      common.NewAmount(7).Bytes(),
 		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
@@ -361,7 +361,7 @@ func TestRpcGetUTXO(t *testing.T) {
 		panic(err)
 	}
 
-	logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
+	logic.Send(rpcContext.account, receiverAccount.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
 	rpcContext.bp.Start()
 
@@ -383,7 +383,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetKeyPair().GenerateAddress().String()})
+	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 	minedReward := common.NewAmount(10000000)
@@ -394,7 +394,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
 	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
-	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetKeyPair().GenerateAddress().String()})
+	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
@@ -418,7 +418,7 @@ func TestRpcGetBlocks(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	genesisBlock := lblockchain.NewGenesisBlock(rpcContext.account.GetKeyPair().GenerateAddress(), transaction.Subsidy)
+	genesisBlock := lblockchain.NewGenesisBlock(rpcContext.account.GetAddress(), transaction.Subsidy)
 	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -592,13 +592,13 @@ func TestRpcSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetAddress())
 	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
-	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount.GetKeyPair().GenerateAddress(),
+		receiverAccount.GetAddress(),
 		common.NewAmount(6),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -614,9 +614,9 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 
 	utxos2, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
-	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount.GetKeyPair().GenerateAddress(),
+		receiverAccount.GetAddress(),
 		common.NewAmount(6),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -641,9 +641,9 @@ func TestRpcSendTransaction(t *testing.T) {
 
 	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(6))
-	realAmount, err := logic.GetBalance(rpcContext.account.GetKeyPair().GenerateAddress(), rpcContext.bm.Getblockchain())
+	realAmount, err := logic.GetBalance(rpcContext.account.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, leftAmount, realAmount)
-	recvAmount, err := logic.GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), rpcContext.bm.Getblockchain())
+	recvAmount, err := logic.GetBalance(receiverAccount.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, common.NewAmount(6), recvAmount)
 }
 
@@ -683,14 +683,14 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetAddress())
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
 
-	sendTxParam1 := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParam1 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount1.GetKeyPair().GenerateAddress(),
+		receiverAccount1.GetAddress(),
 		common.NewAmount(3),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -699,9 +699,9 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	transaction1, err := transaction.NewUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction1})
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
-	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount2.GetKeyPair().GenerateAddress(),
+		receiverAccount2.GetAddress(),
 		common.NewAmount(2),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -709,11 +709,11 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"")
 	transaction2, err := transaction.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction2})
-	pubKeyHash1, _ := account.GeneratePubKeyHashByAddress(receiverAccount1.GetKeyPair().GenerateAddress())
+	pubKeyHash1, _ := account.GeneratePubKeyHashByAddress(receiverAccount1.GetAddress())
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
-	sendTxParam3 := transaction.NewSendTxParam(receiverAccount1.GetKeyPair().GenerateAddress(),
+	sendTxParam3 := transaction.NewSendTxParam(receiverAccount1.GetAddress(),
 		receiverAccount1.GetKeyPair(),
-		receiverAccount2.GetKeyPair().GenerateAddress(),
+		receiverAccount2.GetAddress(),
 		common.NewAmount(1),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -737,9 +737,9 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	time.Sleep(time.Second)
 
 	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
-	sendTxParamErr := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParamErr := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount4.GetKeyPair().GenerateAddress(),
+		receiverAccount4.GetAddress(),
 		common.NewAmount(3),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -747,9 +747,9 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"")
 	errTransaction, err := transaction.NewUTXOTransaction(utxos2, sendTxParamErr)
 
-	sendTxParam4 := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParam4 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount4.GetKeyPair().GenerateAddress(),
+		receiverAccount4.GetAddress(),
 		common.NewAmount(3),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -782,11 +782,11 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 
 	minedReward := common.NewAmount(10000000)
 	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(8))
-	realAmount, err := logic.GetBalance(rpcContext.account.GetKeyPair().GenerateAddress(), rpcContext.bm.Getblockchain())
+	realAmount, err := logic.GetBalance(rpcContext.account.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, leftAmount, realAmount)
-	recvAmount1, err := logic.GetBalance(receiverAccount1.GetKeyPair().GenerateAddress(), rpcContext.bm.Getblockchain())
-	recvAmount2, err := logic.GetBalance(receiverAccount2.GetKeyPair().GenerateAddress(), rpcContext.bm.Getblockchain())
-	recvAmount4, err := logic.GetBalance(receiverAccount4.GetKeyPair().GenerateAddress(), rpcContext.bm.Getblockchain())
+	recvAmount1, err := logic.GetBalance(receiverAccount1.GetAddress(), rpcContext.bm.Getblockchain())
+	recvAmount2, err := logic.GetBalance(receiverAccount2.GetAddress(), rpcContext.bm.Getblockchain())
+	recvAmount4, err := logic.GetBalance(receiverAccount4.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, common.NewAmount(2), recvAmount1)
 	assert.Equal(t, common.NewAmount(3), recvAmount2)
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
@@ -862,7 +862,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	tx1ID, _, err = logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
+	tx1ID, _, err = logic.Send(rpcContext.account, receiverAccount.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
 	assert.Nil(t, err)
 	time.Sleep(time.Second)
@@ -871,13 +871,13 @@ func TestGetNewTransaction(t *testing.T) {
 	assert.Equal(t, true, conn2Step1)
 	conn2.Close()
 
-	tx2ID, _, err = logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
+	tx2ID, _, err = logic.Send(rpcContext.account, receiverAccount.GetAddress(), common.NewAmount(6), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
 	time.Sleep(time.Second)
 	assert.Equal(t, true, conn1Step2)
 	conn1.Close()
 
-	_, _, err = logic.Send(rpcContext.account, receiverAccount.GetKeyPair().GenerateAddress(), common.NewAmount(4), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
+	_, _, err = logic.Send(rpcContext.account, receiverAccount.GetAddress(), common.NewAmount(4), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "", rpcContext.bm.Getblockchain())
 
 	time.Sleep(time.Second)
 	assert.Equal(t, false, rpcContext.bm.Getblockchain().GetTxPool().EventBus.HasCallback(transactionpool.NewTransactionTopic))
@@ -908,13 +908,13 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 
 	// generate new transaction
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetAddress())
 	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
-	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetKeyPair().GenerateAddress(),
+	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
-		receiverAccount.GetKeyPair().GenerateAddress(),
+		receiverAccount.GetAddress(),
 		common.NewAmount(6),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -1090,9 +1090,9 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
+	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(acc.GetAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(acc.GetKeyPair().GenerateAddress(), context.store, pow, transactionpool.NewTransactionPool(context.node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(acc.GetAddress(), context.store, pow, transactionpool.NewTransactionPool(context.node, 128000), scManager, 1000000)
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1108,7 +1108,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 
-	context.bp = blockproducer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetKeyPair().GenerateAddress().String()))
+	context.bp = blockproducer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetAddress().String()))
 
 	return &context, nil
 }
@@ -1150,12 +1150,12 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
@@ -1184,7 +1184,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 		"LocalStorage.set(addr,originalSteps+steps);return _native_reward.record(addr,steps);},dapp_schedule:function(){}};module.exports = new StepRecorder();"
 	// Initiate a RPC send request
 	sendResp, err := c.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:        senderAccount.GetKeyPair().GenerateAddress().String(),
+		From:        senderAccount.GetAddress().String(),
 		To:          "",
 		Amount:      common.NewAmount(1).Bytes(),
 		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
@@ -1206,9 +1206,9 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	time.Sleep(time.Second)
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(senderAccount.GetKeyPair().GenerateAddress())
+	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(senderAccount.GetAddress())
 	utxos, err := lutxo.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
-	sendTxParam := transaction.NewSendTxParam(senderAccount.GetKeyPair().GenerateAddress(),
+	sendTxParam := transaction.NewSendTxParam(senderAccount.GetAddress(),
 		senderAccount.GetKeyPair(),
 		account.NewAddress(contractAddr),
 		common.NewAmount(1),
@@ -1247,10 +1247,10 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetKeyPair().GenerateAddress().String())
+	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetKeyPair().GenerateAddress(), store, pow, transactionpool.NewTransactionPool(nil, 100), scManager, 1000000)
+	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(nil, 100), scManager, 1000000)
 	if err != nil {
 		panic(err)
 	}
