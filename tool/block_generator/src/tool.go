@@ -10,15 +10,15 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lblockchain"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -181,7 +181,7 @@ func generateSmartContractDeploymentTransaction(utxoIndex *lutxo.UTXOIndex, send
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
 		logger.Panic("Can not find sender account")
 	}
-	pubKeyHash:= account.NewUserPubKeyHash(senderAccount.GetKeyPair().GetPublicKey())
+	pubKeyHash := senderAccount.GetPubKeyHash()
 
 	data, err := ioutil.ReadFile(contractFilePath)
 	if err != nil {
@@ -200,7 +200,7 @@ func generateFundingTransaction(utxoIndex *lutxo.UTXOIndex, fundAddr account.Add
 	initFund := uint64(1000000)
 	initFundAmount := common.NewAmount(initFund)
 	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivKey)
-	pkh:= account.NewUserPubKeyHash(minerKeyPair.GetPublicKey())
+	pkh := account.NewUserPubKeyHash(minerKeyPair.GetPublicKey())
 
 	tx := newTransaction(minerKeyPair.GenerateAddress(), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
 	utxoIndex.UpdateUtxo(tx)
@@ -230,7 +230,7 @@ func getPubKeyHashes(addrs []account.Address, wm *wallet.AccountManager) map[acc
 	res := make(map[account.Address]account.PubKeyHash)
 	for _, addr := range addrs {
 		acc := wm.GetAccountByAddress(addr)
-		pubKeyHash:= account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
+		pubKeyHash := acc.GetPubKeyHash()
 		res[addr] = pubKeyHash
 	}
 	return res
