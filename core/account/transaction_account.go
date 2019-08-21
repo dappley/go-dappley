@@ -22,53 +22,53 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-type ContractAccount struct {
+type TransactionAccount struct {
 	address    Address
 	pubKeyHash PubKeyHash
 }
 
-func NewContractAccount() *ContractAccount {
-	account := &ContractAccount{}
+func NewContractAccount() *TransactionAccount {
+	account := &TransactionAccount{}
 	account.pubKeyHash = NewContractPubKeyHash()
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }
 
-func NewContractAccountByPubKeyHash(pubKeyHash PubKeyHash) *ContractAccount {
-	account := &ContractAccount{}
+func NewContractAccountByPubKeyHash(pubKeyHash PubKeyHash) *TransactionAccount {
+	account := &TransactionAccount{}
 	account.pubKeyHash = pubKeyHash
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }
 
-func NewContractAccountByAddress(address Address) *ContractAccount {
-	account := &ContractAccount{}
+func NewContractAccountByAddress(address Address) *TransactionAccount {
+	account := &TransactionAccount{}
 	account.address = address
 	account.pubKeyHash, _ = GeneratePubKeyHashByAddress(address)
 	return account
 }
 
-func (ca ContractAccount) GetAddress() Address {
+func (ca TransactionAccount) GetAddress() Address {
 	return ca.address
 }
 
-func (ca ContractAccount) GetPubKeyHash() PubKeyHash {
+func (ca TransactionAccount) GetPubKeyHash() PubKeyHash {
 	return ca.pubKeyHash
 }
 
-func (ca *ContractAccount) ToProto() proto.Message {
+func (ca *TransactionAccount) ToProto() proto.Message {
 	addr := &accountpb.Address{
 		Address: ca.address.address,
 	}
-	return &accountpb.ContractAccount{
+	return &accountpb.TransactionAccount{
 		Address:    addr,
 		PubKeyHash: ca.pubKeyHash,
 	}
 }
 
-func (ca *ContractAccount) FromProto(pb proto.Message) {
+func (ca *TransactionAccount) FromProto(pb proto.Message) {
 	address := Address{}
-	address.FromProto(pb.(*accountpb.ContractAccount).Address)
+	address.FromProto(pb.(*accountpb.TransactionAccount).Address)
 	ca.address = address
-	ca.pubKeyHash = pb.(*accountpb.ContractAccount).PubKeyHash
+	ca.pubKeyHash = pb.(*accountpb.TransactionAccount).PubKeyHash
 }

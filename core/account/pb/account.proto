@@ -6,7 +6,7 @@ message Account{
     Address address = 2;
     bytes   pubKeyHash=3;
 }
-message ContractAccount{
+message TransactionAccount{
     Address address = 1;
     bytes   pubKeyHash=2;
 }
