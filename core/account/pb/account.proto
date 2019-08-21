@@ -6,6 +6,11 @@ message Account{
     Address address = 2;
     bytes   pubKeyHash=3;
 }
+message ContractAccount{
+    Address address = 1;
+    bytes   pubKeyHash=2;
+}
+
 
 message KeyPair{
     bytes privateKey = 1;
