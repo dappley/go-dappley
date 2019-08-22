@@ -248,8 +248,8 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	
 	
        // bcTemp.db.EnableBatch()
-	defer bcTemp.db.DisableBatch()
-       
+	// defer bcTemp.db.DisableBatch()
+       bcTemp.db.DisableBatch()
 
 	if ctx.Lib != nil {
 		err := bcTemp.SetLIBHash(ctx.Lib.GetHash())
