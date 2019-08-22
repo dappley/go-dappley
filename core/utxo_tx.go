@@ -35,7 +35,7 @@ import (
 //type UTXOTx hamt.Map
 
 type UTXOTx struct {
-	rw sync.RWMutex
+	rw *sync.RWMutex
 	Indices map[string]*UTXO
 }
 
@@ -57,18 +57,18 @@ func (key *StringEntry) Equal(other hamt.Entry) bool {
 }
 
 func NewUTXOTx() UTXOTx {
-	return UTXOTx{Indices: map[string]*UTXO{}}
+	return UTXOTx{Indices: map[string]*UTXO{},rw:new(sync.RWMutex)}
 }
 
 // Construct with UTXO data
 func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
 	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	return UTXOTx{Indices: map[string]*UTXO{key: utxo}}
+	return UTXOTx{Indices: map[string]*UTXO{key: utxo},rw:new(sync.RWMutex)}
 }
 
 // Construct with map size
 func NewUTXOTxWithSize(size int) UTXOTx {
-	return UTXOTx{Indices: make(map[string]*UTXO, size)}
+	return UTXOTx{Indices: make(map[string]*UTXO, size),rw:new(sync.RWMutex)}
 }
 
 func DeserializeUTXOTx(d []byte) UTXOTx {
@@ -110,11 +110,10 @@ func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 	utxoTx.rw.RLock()
 	key := string(txid) + "_" + strconv.Itoa(vout)
 	utxo, ok := utxoTx.Indices[key]
+	utxoTx.rw.RUnlock()
 	if !ok {
-		utxoTx.rw.RUnlock()
 		return nil
 	}
-	utxoTx.rw.RUnlock()
 	return utxo
 }
 
@@ -179,7 +178,8 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 func (utxoTx *UTXOTx) DeepCopy() *UTXOTx {
 	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 	ref := &newUtxoTx
-	copier.Copy(ref, utxoTx)
-	ref.rw = sync.RWMutex{}
+	utxoTx.rw.RLock()
+	copier.Copy(ref.Indices, utxoTx.Indices)
+	utxoTx.rw.RUnlock()
 	return ref
 }
