@@ -27,9 +27,16 @@ type TransactionAccount struct {
 	pubKeyHash PubKeyHash
 }
 
-func NewContractAccount() *TransactionAccount {
+func NewContractTransactionAccount() *TransactionAccount {
 	account := &TransactionAccount{}
 	account.pubKeyHash = NewContractPubKeyHash()
+	account.address = account.pubKeyHash.GenerateAddress()
+	return account
+}
+
+func NewTransactionAccountByPubKey(pubkey []byte) *TransactionAccount {
+	account := &TransactionAccount{}
+	account.pubKeyHash = NewUserPubKeyHash(pubkey)
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }

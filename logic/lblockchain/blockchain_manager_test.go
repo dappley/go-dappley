@@ -12,8 +12,8 @@ import (
 	"github.com/dappley/go-dappley/core/transaction_base"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lblock"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
@@ -146,16 +146,13 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		utxoIndex.SetIndex(utxosMap)
 		return utxoIndex
 	}
+	acc := account.NewAccount()
 
-	keypair := account.NewKeyPair()
-	pbkh:= account.NewUserPubKeyHash(keypair.GetPublicKey())
-	addr := pbkh.GenerateAddress()
-
-	normalTX := transaction.NewCoinbaseTX(addr, "", 1, common.NewAmount(5))
+	normalTX := transaction.NewCoinbaseTX(acc.GetAddress(), "", 1, common.NewAmount(5))
 	normalTX2 := transaction.Transaction{
 		hash.Hash("normal2"),
-		[]transaction_base.TXInput{{normalTX.ID, 0, nil, keypair.GetPublicKey()}},
-		[]transaction_base.TXOutput{{common.NewAmount(5), pbkh, ""}},
+		[]transaction_base.TXInput{{normalTX.ID, 0, nil, acc.GetKeyPair().GetPublicKey()}},
+		[]transaction_base.TXOutput{{common.NewAmount(5), acc.GetPubKeyHash(), ""}},
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -278,8 +275,8 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address2Bytes = []byte("address2000000000000000000000000")
-	var address1Hash= account.NewUserPubKeyHash(address1Bytes)
-	var address2Hash= account.NewUserPubKeyHash(address2Bytes)
+	var address1Hash = account.NewUserPubKeyHash(address1Bytes)
+	var address2Hash = account.NewUserPubKeyHash(address2Bytes)
 
 	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address1Hash))
 	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address2Hash))

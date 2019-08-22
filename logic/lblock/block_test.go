@@ -85,15 +85,13 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	// Prepare test data
 	// Padding Address to 32 Byte
 	var address1Bytes = []byte("address1000000000000000000000000")
-	var address1Hash = account.NewUserPubKeyHash(address1Bytes)
+	var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
 
-	normalCoinbaseTX := transaction.NewCoinbaseTX(address1Hash.GenerateAddress(), "", 1, common.NewAmount(0))
-	rewardTX := transaction.NewRewardTx(1, map[string]string{address1Hash.GenerateAddress().String(): "10"})
+	normalCoinbaseTX := transaction.NewCoinbaseTX(ta1.GetAddress(), "", 1, common.NewAmount(0))
+	rewardTX := transaction.NewRewardTx(1, map[string]string{ta1.GetAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
-	userPubKeyHash := account.NewUserPubKeyHash(userPubKey)
-	userAddr := userPubKeyHash.GenerateAddress()
-	contractPubKeyHash := account.NewContractPubKeyHash()
-	contractAddr := contractPubKeyHash.GenerateAddress()
+	userTA := account.NewTransactionAccountByPubKey(userPubKey)
+	contractTA := account.NewContractTransactionAccount()
 
 	txIdStr := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	generatedTxId, err := hex.DecodeString(txIdStr)
@@ -102,12 +100,12 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	generatedTX := &transaction.Transaction{
 		generatedTxId,
 		[]transaction_base.TXInput{
-			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractPubKeyHash)},
-			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractPubKeyHash)},
+			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractTA.GetPubKeyHash())},
+			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractTA.GetPubKeyHash())},
 		},
 		[]transaction_base.TXOutput{
-			*transaction_base.NewTxOut(common.NewAmount(23), userAddr, ""),
-			*transaction_base.NewTxOut(common.NewAmount(10), contractAddr, ""),
+			*transaction_base.NewTxOut(common.NewAmount(23), userTA.GetAddress(), ""),
+			*transaction_base.NewTxOut(common.NewAmount(10), contractTA.GetAddress(), ""),
 		},
 		common.NewAmount(7),
 		common.NewAmount(0),
@@ -183,11 +181,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"reward tx",
 			[]*transaction.Transaction{&rewardTX},
 			map[string][]*utxo.UTXO{
-				contractPubKeyHash.String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(0), contractAddr), []byte("prevtxid"), 0, utxo.UtxoNormal},
+				contractTA.GetPubKeyHash().String(): {
+					{*transaction_base.NewTXOutput(common.NewAmount(0), contractTA.GetAddress()), []byte("prevtxid"), 0, utxo.UtxoNormal},
 				},
-				userPubKeyHash.String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, utxo.UtxoNormal},
+				userTA.GetPubKeyHash().String(): {
+					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA.GetAddress()), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,
@@ -196,12 +194,12 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"generated tx",
 			[]*transaction.Transaction{generatedTX},
 			map[string][]*utxo.UTXO{
-				contractPubKeyHash.String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 0, utxo.UtxoNormal},
-					{*transaction_base.NewTXOutput(common.NewAmount(20), contractAddr), []byte("prevtxid"), 1, utxo.UtxoNormal},
+				contractTA.GetPubKeyHash().String(): {
+					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA.GetAddress()), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA.GetAddress()), []byte("prevtxid"), 1, utxo.UtxoNormal},
 				},
-				userPubKeyHash.String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(1), userAddr), []byte("txinid"), 0, utxo.UtxoNormal},
+				userTA.GetPubKeyHash().String(): {
+					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA.GetAddress()), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,

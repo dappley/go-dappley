@@ -29,8 +29,8 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/ltransaction"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core"
@@ -209,15 +209,10 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
 	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 1280000), nil, 100000)
-	var addrs []account.Address
-	var kps []*account.KeyPair
-	var pkhs []account.PubKeyHash
+	var accounts []*account.Account
 	for i := 0; i < 10; i++ {
-		kp := account.NewKeyPair()
-		kps = append(kps, kp)
-		pkh:= account.NewUserPubKeyHash(kp.GetPublicKey())
-		pkhs = append(pkhs, pkh)
-		addrs = append(addrs, pkh.GenerateAddress())
+		acc := account.NewAccount()
+		accounts = append(accounts, acc)
 	}
 
 	for i := 0; i < b.N; i++ {
@@ -225,12 +220,12 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 		tailBlk, _ := bc.GetTailBlock()
 		txs := []*transaction.Transaction{}
 		utxo := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-		cbtx := transaction.NewCoinbaseTX(addrs[0], "", uint64(i+1), common.NewAmount(0))
+		cbtx := transaction.NewCoinbaseTX(accounts[0].GetAddress(), "", uint64(i+1), common.NewAmount(0))
 		utxo.UpdateUtxo(&cbtx)
 		txs = append(txs, &cbtx)
 		for j := 0; j < 10; j++ {
-			sendTxParam := transaction.NewSendTxParam(addrs[0], kps[0], addrs[i%10], common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-			tx, _ := transaction.NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(pkhs[0]).GetAllUtxos(), sendTxParam)
+			sendTxParam := transaction.NewSendTxParam(accounts[0].GetAddress(), accounts[0].GetKeyPair(), accounts[i%10].GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+			tx, _ := transaction.NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(accounts[0].GetPubKeyHash()).GetAllUtxos(), sendTxParam)
 			utxo.UpdateUtxo(&tx)
 			txs = append(txs, &tx)
 		}

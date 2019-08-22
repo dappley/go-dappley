@@ -84,7 +84,7 @@ func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, 
 func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) (sender, recipient *account.Address, amount, tip *common.Amount, error error) {
 	var receiverAddress account.Address
 	vinPubKey := tx.Vin[0].PubKey
-	pubKeyHash := account.PubKeyHash([]byte(""))
+	ta := account.NewContractTransactionAccount()
 	inputAmount := common.NewAmount(0)
 	outputAmount := common.NewAmount(0)
 	payoutAmount := common.NewAmount(0)
@@ -92,22 +92,21 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 		if bytes.Compare(vin.PubKey, vinPubKey) == 0 {
 			switch {
 			case tx.IsRewardTx():
-				pubKeyHash = account.PubKeyHash(transaction.RewardTxData)
+				ta = account.NewTransactionAccountByPubKey(transaction.RewardTxData)
 				continue
 			case IsFromContract(utxoIndex, tx):
-				// vinPubKey is the pubKeyHash if it is a sc generated tx
-				pubKeyHash = account.PubKeyHash(vinPubKey)
+				// vinPubKey is the ta if it is a sc generated tx
+				ta = account.NewTransactionAccountByPubKey(vinPubKey)
 			default:
 				if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
 					logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 					return nil, nil, nil, nil, err
 				}
 
-				pkh := account.NewUserPubKeyHash(vin.PubKey)
+				ta = account.NewTransactionAccountByPubKey(vin.PubKey)
 
-				pubKeyHash = pkh
 			}
-			usedUTXO := utxoIndex.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
+			usedUTXO := utxoIndex.FindUTXOByVin([]byte(ta.GetPubKeyHash()), vin.Txid, vin.Vout)
 			inputAmount = inputAmount.Add(usedUTXO.Value)
 		} else {
 			logger.Debug("Transaction: using UTXO from multiple accounts.")
@@ -126,7 +125,7 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 		return nil, nil, nil, nil, err
 	}
 
-	senderAddress := pubKeyHash.GenerateAddress()
+	senderAddress := ta.GetAddress()
 
 	return &senderAddress, &receiverAddress, payoutAmount, tip, nil
 }
@@ -223,7 +222,7 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	}
 
 	totalArgs := util.PrepareArgs(args)
-	address := vout.PubKeyHash.GenerateAddress()
+	address := vout.GetAddress()
 	logger.WithFields(logger.Fields{
 		"contract_address": address.String(),
 		"invoked_function": function,

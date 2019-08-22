@@ -265,7 +265,7 @@ func prepareOutputLists(from, to account.Address, amount *common.Amount, change 
 	toAddr := to
 
 	if toAddr.String() == "" {
-		toAddr = account.NewContractPubKeyHash().GenerateAddress()
+		toAddr = account.NewContractTransactionAccount().GetAddress()
 	}
 
 	if contract != "" {

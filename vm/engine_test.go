@@ -80,29 +80,28 @@ MathTest.prototype = {
 };
 module.exports = new MathTest();`
 
-	contractPubKeyHash := account.NewContractPubKeyHash()
-	contractAddr := contractPubKeyHash.GenerateAddress()
+	contractTA := account.NewContractTransactionAccount()
 	contractUTXOs := []*utxo.UTXO{
 		{
 			Txid:     []byte("1"),
 			TxIndex:  0,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(0), contractAddr, "somecontract"),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(0), contractTA.GetAddress(), "somecontract"),
 		},
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(15), contractAddr, ""),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(15), contractTA.GetAddress(), ""),
 		},
 		{
 			Txid:     []byte("2"),
 			TxIndex:  0,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(3), contractAddr, ""),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(3), contractTA.GetAddress(), ""),
 		},
 	}
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.ImportContractAddr(contractAddr)
+	sc.ImportContractAddr(contractTA.GetAddress())
 	sc.ImportSourceTXID([]byte("thatTX"))
 	sc.ImportUTXOs(contractUTXOs)
 
@@ -115,7 +114,7 @@ module.exports = new MathTest();`
 			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[1].Txid)
 			assert.Equal(t, 1, sc.generatedTXs[0].Vin[1].Vout)
 			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[1].Signature)
-			assert.Equal(t, []byte(contractPubKeyHash), sc.generatedTXs[0].Vin[1].PubKey)
+			assert.Equal(t, []byte(contractTA.GetPubKeyHash()), sc.generatedTXs[0].Vin[1].PubKey)
 		}
 		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vout)) {
 			// payout
@@ -124,7 +123,7 @@ module.exports = new MathTest();`
 			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
 
 			assert.Equal(t, account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
-			assert.Equal(t, contractPubKeyHash, sc.generatedTXs[0].Vout[1].PubKeyHash)
+			assert.Equal(t, contractTA.GetPubKeyHash(), sc.generatedTXs[0].Vout[1].PubKeyHash)
 		}
 	}
 }
@@ -370,20 +369,16 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
+	acc := account.NewAccount()
 
-	kp := account.NewKeyPair()
-	fmt.Println(kp.GetPublicKey())
-	_, err := account.IsValidPubKey(kp.GetPublicKey())
-	pkh := account.NewUserPubKeyHash(kp.GetPublicKey())
+	_, err := account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
-	addr := pkh.GenerateAddress()
-	fmt.Println(addr)
 
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("verifyPk",
 		fmt.Sprintf("\"%s\", \"%s\"",
-			addr,
-			hex.EncodeToString(kp.GetPublicKey()),
+			acc.GetAddress(),
+			hex.EncodeToString(acc.GetKeyPair().GetPublicKey()),
 		),
 	)
 	assert.Equal(
@@ -394,7 +389,7 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 	ret2, _ := sc.Execute("verifyPk",
 		fmt.Sprintf("\"%s\", \"%s\"",
 			"IncorrectAddress",
-			hex.EncodeToString(kp.GetPublicKey()),
+			hex.EncodeToString(acc.GetKeyPair().GetPublicKey()),
 		),
 	)
 	assert.Equal(
@@ -461,19 +456,6 @@ func TestGetNodeAddress(t *testing.T) {
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("getNodeAddress", "")
 	assert.Equal(t, "testAddr", ret)
-}
-
-func TestNewAddress(t *testing.T) {
-	kp := account.NewKeyPair()
-	privateKey := kp.GetPrivateKey()
-	privData, _ := secp256k1.FromECDSAPrivateKey(&privateKey)
-	pk := hex.EncodeToString(privData)
-	publicKey := hex.EncodeToString(kp.GetPublicKey())
-	pkh := account.NewUserPubKeyHash(kp.GetPublicKey())
-	addr := pkh.GenerateAddress()
-	fmt.Println("privatekey:", pk)
-	fmt.Println("publickey:", publicKey)
-	fmt.Println("addr:", addr)
 }
 
 func TestAddGasCount(t *testing.T) {

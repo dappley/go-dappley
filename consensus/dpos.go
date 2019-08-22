@@ -226,11 +226,9 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 		return false
 	}
 
-	pubKeyHash := account.NewUserPubKeyHash(pubkey[1:])
+	ta := account.NewTransactionAccountByPubKey(pubkey[1:])
 
-	address := pubKeyHash.GenerateAddress()
-
-	if strings.Compare(address.String(), producer) != 0 {
+	if strings.Compare(ta.GetAddress().String(), producer) != 0 {
 		logger.Warn("DPoS: the signer is not the producer in this time slot.")
 		return false
 	}
