@@ -84,9 +84,9 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 	utxoTx = utxos.cache.Get(pubkeyHash)
 	newUtxoTx := utxoTx.DeepCopy()
 	utxos.mutex.Lock()
-	utxos.index[key] = &newUtxoTx
+	utxos.index[key] = newUtxoTx
 	utxos.mutex.Unlock()
-	return &newUtxoTx
+	return newUtxoTx
 }
 
 //SplitContractUtxo
@@ -287,7 +287,7 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	utxocopy := NewUTXOIndex(utxos.cache)
 	for pkh, utxoTx := range utxos.index {
 		newUtxoTx := utxoTx.DeepCopy()
-		utxocopy.index[pkh] = &newUtxoTx
+		utxocopy.index[pkh] = newUtxoTx
 	}
 	return utxocopy
 }
