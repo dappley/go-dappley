@@ -35,7 +35,7 @@ import (
 //type UTXOTx hamt.Map
 
 type UTXOTx struct {
-	sync.RWMutex
+	rw sync.RWMutex
 	Indices map[string]*UTXO
 }
 
@@ -92,11 +92,11 @@ func DeserializeUTXOTx(d []byte) UTXOTx {
 
 func (utxoTx UTXOTx) Serialize() []byte {
 	utxoList := &corepb.UtxoList{}
-	utxoTx.RLock()
+	utxoTx.rw.RLock()
 	for _, utxo := range utxoTx.Indices {
 		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*corepb.Utxo))
 	}
-	utxoTx.RUnlock()
+	utxoTx.rw.RUnlock()
 	bytes, err := proto.Marshal(utxoList)
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: serialize UtxoTx failed.")
@@ -107,47 +107,47 @@ func (utxoTx UTXOTx) Serialize() []byte {
 
 // Returns utxo info by transaction id and vout index
 func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
-	utxoTx.RLock()
+	utxoTx.rw.RLock()
 	key := string(txid) + "_" + strconv.Itoa(vout)
 	utxo, ok := utxoTx.Indices[key]
 	if !ok {
-		utxoTx.RUnlock()
+		utxoTx.rw.RUnlock()
 		return nil
 	}
-	utxoTx.RUnlock()
+	utxoTx.rw.RUnlock()
 	return utxo
 }
 
 // Add new utxo to map
 func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) {
 	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	utxoTx.Lock()
+	utxoTx.rw.Lock()
 	utxoTx.Indices[key] = utxo
-	utxoTx.Unlock()
+	utxoTx.rw.Unlock()
 }
 
 // Delete invalid element in map
 func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) {
 	key := string(txid) + "_" + strconv.Itoa(vout)
-	utxoTx.Lock()
+	utxoTx.rw.Lock()
 	delete(utxoTx.Indices, key)
-	utxoTx.Unlock()
+	utxoTx.rw.Unlock()
 }
 
 func (utxoTx UTXOTx) Size() int {
-	utxoTx.RLock()
+	utxoTx.rw.RLock()
 	l := len(utxoTx.Indices)
-	utxoTx.RUnlock()
+	utxoTx.rw.RUnlock()
 	return l
 }
 
 func (utxoTx UTXOTx) GetAllUtxos() []*UTXO {
 	var utxos []*UTXO
-	utxoTx.RLock()
+	utxoTx.rw.RLock()
 	for _, utxo := range utxoTx.Indices {
 		utxos = append(utxos, utxo)
 	}
-	utxoTx.RUnlock()
+	utxoTx.rw.RUnlock()
 	return utxos
 }
 
@@ -159,7 +159,7 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 	}
 
 	var utxos []*UTXO
-	utxoTx.RLock()
+	utxoTx.rw.RLock()
 	for _, utxo := range utxoTx.Indices {
 		if utxo.UtxoType == UtxoCreateContract {
 			continue
@@ -168,11 +168,11 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 		sum = sum.Add(utxo.Value)
 		utxos = append(utxos, utxo)
 		if sum.Cmp(amount) >= 0 {
-			utxoTx.RUnlock()
+			utxoTx.rw.RUnlock()
 			return utxos, true
 		}
 	}
-	utxoTx.RUnlock()
+	utxoTx.rw.RUnlock()
 	return nil, false
 }
 
@@ -180,8 +180,8 @@ func (utxoTx *UTXOTx) DeepCopy() *UTXOTx {
 
 	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 	ref := &newUtxoTx
-	utxoTx.RLock()
+	utxoTx.rw.RLock()
 	copier.Copy(ref, utxoTx)
-	utxoTx.RUnlock()
+	utxoTx.rw.RUnlock()
 	return ref
 }
