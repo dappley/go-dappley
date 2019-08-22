@@ -173,7 +173,7 @@ func generateSmartContractDeploymentBlock(utxoIndex *lutxo.UTXOIndex, parentBlk 
 	logger.Info("generate smart contract deployment block")
 	tx := generateSmartContractDeploymentTransaction(utxoIndex, fundAddr, wm)
 
-	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*transaction.Transaction{tx}), tx.Vout[0].PubKeyHash.GenerateAddress()
+	return generateBlock(utxoIndex, parentBlk, bc, d, keys, []*transaction.Transaction{tx}), tx.Vout[0].GetAddress()
 }
 
 func generateSmartContractDeploymentTransaction(utxoIndex *lutxo.UTXOIndex, sender account.Address, wm *wallet.AccountManager) *transaction.Transaction {

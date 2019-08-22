@@ -928,7 +928,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	}
 
 	if *(flags[flagToAddress].(*string)) == "" {
-		fmt.Println("Contract address:", tx.Vout[0].PubKeyHash.GenerateAddress().String())
+		fmt.Println("Contract address:", tx.Vout[0].GetAddress().String())
 	}
 
 	fmt.Println("Transaction is sent! Pending approval from network.")

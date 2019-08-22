@@ -149,7 +149,7 @@ func addUtxoArrayToIndex(utxoArray []*utxo.UTXO, utxoIndexNew *lutxo.UTXOIndex) 
 	for _, utxo := range utxoArray {
 		utxoIndexNew.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
 		logger.WithFields(logger.Fields{
-			"address": utxo.PubKeyHash.GenerateAddress(),
+			"address": utxo.GetAddress(),
 			"Txid":    hex.EncodeToString(utxo.Txid),
 			"TxIndex": utxo.TxIndex,
 		}).Info("Utxo_data_transfer: add utxo")

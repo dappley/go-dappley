@@ -117,7 +117,7 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 		if bytes.Compare([]byte(vout.PubKeyHash), vinPubKey) == 0 {
 			outputAmount = outputAmount.Add(vout.Value)
 		} else {
-			receiverAddress = vout.PubKeyHash.GenerateAddress()
+			receiverAddress = vout.GetAddress()
 			payoutAmount = payoutAmount.Add(vout.Value)
 		}
 	}

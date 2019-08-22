@@ -64,7 +64,7 @@ func NewTxOut(value *common.Amount, address account.Address, contract string) *T
 
 func (out *TXOutput) IsFoundInRewardStorage(rewardStorage map[string]string) bool {
 
-	val, isFound := rewardStorage[out.PubKeyHash.GenerateAddress().String()]
+	val, isFound := rewardStorage[out.GetAddress().String()]
 	if !isFound {
 		return false
 	}
