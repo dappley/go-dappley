@@ -177,11 +177,9 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 }
 
 func (utxoTx *UTXOTx) DeepCopy() *UTXOTx {
-
 	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 	ref := &newUtxoTx
-	utxoTx.rw.RLock()
 	copier.Copy(ref, utxoTx)
-	utxoTx.rw.RUnlock()
+	ref.rw = sync.RWMutex{}
 	return ref
 }
