@@ -96,7 +96,7 @@ func (utxoTx UTXOTx) Serialize() []byte {
 	for _, utxo := range utxoTx.Indices {
 		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*corepb.Utxo))
 	}
-	utxoTx.Unlock()
+	utxoTx.RUnlock()
 	bytes, err := proto.Marshal(utxoList)
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: serialize UtxoTx failed.")
@@ -111,10 +111,10 @@ func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 	key := string(txid) + "_" + strconv.Itoa(vout)
 	utxo, ok := utxoTx.Indices[key]
 	if !ok {
-		utxoTx.Unlock()
+		utxoTx.RUnlock()
 		return nil
 	}
-	utxoTx.Unlock()
+	utxoTx.RUnlock()
 	return utxo
 }
 
@@ -137,7 +137,7 @@ func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) {
 func (utxoTx UTXOTx) Size() int {
 	utxoTx.RLock()
 	l := len(utxoTx.Indices)
-	utxoTx.Unlock()
+	utxoTx.RUnlock()
 	return l
 }
 
@@ -147,7 +147,7 @@ func (utxoTx UTXOTx) GetAllUtxos() []*UTXO {
 	for _, utxo := range utxoTx.Indices {
 		utxos = append(utxos, utxo)
 	}
-	utxoTx.Unlock()
+	utxoTx.RUnlock()
 	return utxos
 }
 
@@ -168,11 +168,11 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 		sum = sum.Add(utxo.Value)
 		utxos = append(utxos, utxo)
 		if sum.Cmp(amount) >= 0 {
-			utxoTx.Unlock()
+			utxoTx.RUnlock()
 			return utxos, true
 		}
 	}
-	utxoTx.Unlock()
+	utxoTx.RUnlock()
 	return nil, false
 }
 
@@ -182,6 +182,6 @@ func (utxoTx *UTXOTx) DeepCopy() *UTXOTx {
 	ref := &newUtxoTx
 	utxoTx.RLock()
 	copier.Copy(ref, utxoTx)
-	utxoTx.Unlock()
+	utxoTx.RUnlock()
 	return ref
 }
