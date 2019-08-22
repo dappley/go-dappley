@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/jinzhu/copier"
 	"hash/fnv"
 	"strconv"
 
@@ -61,6 +62,11 @@ func NewUTXOTx() UTXOTx {
 func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
 	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 	return UTXOTx{Indices: map[string]*UTXO{key: utxo}}
+}
+
+// Construct with map size
+func NewUTXOTxWithSize(size int) UTXOTx {
+	return UTXOTx{Indices: make(map[string]*UTXO, size)}
 }
 
 func DeserializeUTXOTx(d []byte) UTXOTx {
@@ -158,10 +164,8 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 
 func (utxoTx UTXOTx) DeepCopy() UTXOTx {
 
-	newUtxoTx := NewUTXOTx()
+	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 
-	for key, utxo := range utxoTx.Indices {
-		newUtxoTx.Indices[key] = utxo
-	}
+	copier.Copy(&newUtxoTx, &utxoTx)
 	return newUtxoTx
 }
