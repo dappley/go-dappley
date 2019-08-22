@@ -179,7 +179,7 @@ func (utxoTx *UTXOTx) DeepCopy() *UTXOTx {
 	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 	ref := &newUtxoTx
 	utxoTx.rw.RLock()
-	copier.Copy(ref.Indices, utxoTx.Indices)
+	copier.Copy(&ref.Indices, &utxoTx.Indices)
 	utxoTx.rw.RUnlock()
 	return ref
 }
