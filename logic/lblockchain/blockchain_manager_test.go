@@ -275,11 +275,11 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address2Bytes = []byte("address2000000000000000000000000")
-	var address1Hash = account.NewUserPubKeyHash(address1Bytes)
-	var address2Hash = account.NewUserPubKeyHash(address2Bytes)
+	var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
+	var ta2 = account.NewTransactionAccountByPubKey(address2Bytes)
 
-	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address1Hash))
-	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(address2Hash))
+	addr1UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(ta1.GetPubKeyHash()))
+	addr2UTXOs := utxoIndex.GetAllUTXOsByPubKeyHash([]byte(ta2.GetPubKeyHash()))
 	// Expect address1 to have 1 utxo of $4
 	assert.Equal(t, 1, addr1UTXOs.Size())
 	utxo1 := addr1UTXOs.GetAllUtxos()[0]
@@ -294,12 +294,12 @@ func TestCopyAndRevertUtxos(t *testing.T) {
 		panic(err)
 	}
 
-	addr1UtxoTx := indexSnapshot.GetAllUTXOsByPubKeyHash(address1Hash)
+	addr1UtxoTx := indexSnapshot.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash())
 	assert.Equal(t, 2, addr1UtxoTx.Size())
 
 	tx1 := core.MockUtxoTransactionWithoutInputs()
 
 	assert.Equal(t, common.NewAmount(5), addr1UtxoTx.GetUtxo(tx1.ID, 0).Value)
 	assert.Equal(t, common.NewAmount(7), addr1UtxoTx.GetUtxo(tx1.ID, 1).Value)
-	assert.Equal(t, 0, indexSnapshot.GetAllUTXOsByPubKeyHash(address2Hash).Size())
+	assert.Equal(t, 0, indexSnapshot.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 }

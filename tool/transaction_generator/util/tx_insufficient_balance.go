@@ -26,9 +26,9 @@ func (txSender *InsufficientBalanceTxSender) Generate(params transaction.SendTxP
 	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")
 	}
-	pkh := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
+	ta := account.NewAccountByKey(params.SenderKeyPair)
 
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to get UTXOs to match the amount")

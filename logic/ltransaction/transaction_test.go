@@ -36,13 +36,13 @@ func TestSign(t *testing.T) {
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	ecdsaPubKey, _ := secp256k1.FromECDSAPublicKey(&privKey.PublicKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash:= account.NewUserPubKeyHash(pubKey)
+	ta := account.NewTransactionAccountByPubKey(pubKey)
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*utxo.UTXO{
-		{transaction_base.TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("01"), 0, utxo.UtxoNormal},
-		{transaction_base.TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("02"), 0, utxo.UtxoNormal},
-		{transaction_base.TXOutput{common.NewAmount(13), pubKeyHash, ""}, []byte("03"), 0, utxo.UtxoNormal},
+		{transaction_base.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("01"), 0, utxo.UtxoNormal},
+		{transaction_base.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("02"), 0, utxo.UtxoNormal},
+		{transaction_base.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("03"), 0, utxo.UtxoNormal},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -52,7 +52,7 @@ func TestSign(t *testing.T) {
 		{[]byte{3}, 2, nil, pubKey},
 	}
 	txout := []transaction_base.TXOutput{
-		{common.NewAmount(19), pubKeyHash, ""},
+		{common.NewAmount(19), ta.GetPubKeyHash(), ""},
 	}
 	tx := transaction.Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
@@ -65,7 +65,7 @@ func TestSign(t *testing.T) {
 			if assert.NotNil(t, vin.Signature) {
 				txCopy := tx.TrimmedCopy(false)
 				txCopy.Vin[i].Signature = nil
-				txCopy.Vin[i].PubKey = []byte(pubKeyHash)
+				txCopy.Vin[i].PubKey = []byte(ta.GetPubKeyHash())
 
 				verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
 				assert.Nil(t, err)
@@ -141,8 +141,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	privKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("fakefakefakefakefakefakefakefakefakefake")))
 	privKeyByte, _ := secp256k1.FromECDSAPrivateKey(privKey)
 	pubKey := append(privKey.PublicKey.X.Bytes(), privKey.PublicKey.Y.Bytes()...)
-	pubKeyHash:= account.NewUserPubKeyHash(pubKey)
-	//Address := KeyPair{*privKey, pubKey}.GenerateAddress()
+	ta := account.NewTransactionAccountByPubKey(pubKey)
 
 	// Fake a wrong key pair
 	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))
@@ -153,11 +152,11 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := utxo.NewUTXOTx()
 
-	utxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(4), pubKeyHash, ""}, []byte{1}, 0, utxo.UtxoNormal})
-	utxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(3), pubKeyHash, ""}, []byte{2}, 1, utxo.UtxoNormal})
+	utxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(4), ta.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal})
+	utxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(3), ta.GetPubKeyHash(), ""}, []byte{2}, 1, utxo.UtxoNormal})
 
 	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
-		pubKeyHash.String(): &utxoTx,
+		ta.GetPubKeyHash().String(): &utxoTx,
 	})
 
 	// Prepare a transaction to be verified
@@ -166,9 +165,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	txin2 := append(txin, transaction_base.TXInput{[]byte{2}, 1, nil, wrongPubKey}) // previous not found with wrong pubkey
 	txin3 := append(txin, transaction_base.TXInput{[]byte{3}, 1, nil, pubKey})      // previous not found with wrong Txid
 	txin4 := append(txin, transaction_base.TXInput{[]byte{2}, 2, nil, pubKey})      // previous not found with wrong TxIndex
-	pbh:= account.NewUserPubKeyHash(pubKey)
-	txout := []transaction_base.TXOutput{{common.NewAmount(7), pbh, ""}}
-	txout2 := []transaction_base.TXOutput{{common.NewAmount(8), pbh, ""}} //Vout amount > Vin amount
+	txout := []transaction_base.TXOutput{{common.NewAmount(7), ta.GetPubKeyHash(), ""}}
+	txout2 := []transaction_base.TXOutput{{common.NewAmount(8), ta.GetPubKeyHash(), ""}} //Vout amount > Vin amount
 
 	tests := []struct {
 		name     string
@@ -190,7 +188,7 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 			for i := range tt.tx.Vin {
 				txCopy := tt.tx.TrimmedCopy(false)
 				txCopy.Vin[i].Signature = nil
-				txCopy.Vin[i].PubKey = []byte(pubKeyHash)
+				txCopy.Vin[i].PubKey = []byte(ta.GetPubKeyHash())
 				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
 				tt.tx.Vin[i].Signature = signature
 			}
@@ -205,14 +203,14 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 func TestInvalidExecutionTx(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1= account.NewUserPubKeyHash(pubkey1)
+	var ta1 = account.NewTransactionAccountByPubKey(pubkey1)
 	var deploymentTx = transaction.Transaction{
 		ID: nil,
 		Vin: []transaction_base.TXInput{
 			{tx1.ID, 1, nil, pubkey1},
 		},
 		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(5), pkHash1, "dapp_schedule"},
+			{common.NewAmount(5), ta1.GetPubKeyHash(), "dapp_schedule"},
 		},
 		Tip: common.NewAmount(1),
 	}
@@ -224,7 +222,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 
 	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal})
 	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
-		pkHash1.String(): &utxoTx,
+		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
 
 	var executionTx = transaction.Transaction{
@@ -238,7 +236,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Tip: common.NewAmount(2),
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(pkHash1).GetAllUtxos())
+	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
 
 	err1 := VerifyTransaction(lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
 	err2 := VerifyTransaction(utxoIndex, &executionTx, 0)

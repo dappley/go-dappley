@@ -764,9 +764,9 @@ func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
 		return nil
 	}
 
-	pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
+	ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
-	return pubKeyHash
+	return ta.GetPubKeyHash()
 }
 
 //calculateUtxoSum calculates the total amount of all input utxos
@@ -844,9 +844,9 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 			return false, err
 		}
 
-		pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
+		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
-		if !bytes.Equal([]byte(pubKeyHash), []byte(prevUtxos[i].PubKeyHash)) {
+		if !bytes.Equal([]byte(ta.GetPubKeyHash()), []byte(prevUtxos[i].PubKeyHash)) {
 			return false, errors.New("Transaction: ID is invalid")
 		}
 	}

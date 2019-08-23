@@ -145,16 +145,16 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 			//TODO spent contract utxo
 			isContract, _ := account.PubKeyHash(txin.PubKey).IsContract()
 			_, err := account.IsValidPubKey(txin.PubKey)
-			pkh := account.NewUserPubKeyHash(txin.PubKey)
+			ta := account.NewTransactionAccountByPubKey(txin.PubKey)
 			if !isContract {
 				if err != nil {
 					return false
 				}
 			} else {
-				pkh = account.PubKeyHash(txin.PubKey)
+				ta = account.NewTransactionAccountByPubKey(txin.PubKey)
 			}
 
-			err = utxos.removeUTXO(pkh, txin.Txid, txin.Vout)
+			err = utxos.removeUTXO(ta.GetPubKeyHash(), txin.Txid, txin.Vout)
 			if err != nil {
 				println(err.Error)
 				return false

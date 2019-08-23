@@ -41,19 +41,19 @@ import (
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash= account.NewUserPubKeyHash(address1Bytes)
-var address2Hash= account.NewUserPubKeyHash(address2Bytes)
+var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
+var ta2 = account.NewTransactionAccountByPubKey(address2Bytes)
 
 func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	txout := transaction_base.TXOutput{common.NewAmount(5), address1Hash, ""}
+	txout := transaction_base.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	utxoIndex.AddUTXO(txout, []byte{1}, 0)
 
-	addr1UTXOs := utxoIndex.index[address1Hash.String()]
+	addr1UTXOs := utxoIndex.index[ta1.GetPubKeyHash().String()]
 	assert.Equal(t, 1, addr1UTXOs.Size())
 	assert.Equal(t, txout.Value, addr1UTXOs.GetAllUtxos()[0].Value)
 	assert.Equal(t, []byte{1}, addr1UTXOs.GetAllUtxos()[0].Txid)
@@ -70,27 +70,27 @@ func TestRemoveUTXO(t *testing.T) {
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	addr1UtxoTx := utxo.NewUTXOTx()
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(5), address1Hash, ""}, []byte{1}, 0, utxo.UtxoNormal})
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{1}, 1, utxo.UtxoNormal})
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(2), address1Hash, ""}, []byte{2}, 0, utxo.UtxoNormal})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{1}, 1, utxo.UtxoNormal})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{2}, 0, utxo.UtxoNormal})
 
 	addr2UtxoTx := utxo.NewUTXOTx()
-	addr2UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(4), address2Hash, ""}, []byte{1}, 2, utxo.UtxoNormal})
+	addr2UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(4), ta2.GetPubKeyHash(), ""}, []byte{1}, 2, utxo.UtxoNormal})
 
-	utxoIndex.index[address1Hash.String()] = &addr1UtxoTx
-	utxoIndex.index[address2Hash.String()] = &addr2UtxoTx
+	utxoIndex.index[ta1.GetPubKeyHash().String()] = &addr1UtxoTx
+	utxoIndex.index[ta2.GetPubKeyHash().String()] = &addr2UtxoTx
 
-	err := utxoIndex.removeUTXO(address1Hash, []byte{1}, 0)
+	err := utxoIndex.removeUTXO(ta1.GetPubKeyHash(), []byte{1}, 0)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, utxoIndex.index[address1Hash.String()].Size())
-	assert.Equal(t, 1, utxoIndex.index[address2Hash.String()].Size())
+	assert.Equal(t, 2, utxoIndex.index[ta1.GetPubKeyHash().String()].Size())
+	assert.Equal(t, 1, utxoIndex.index[ta2.GetPubKeyHash().String()].Size())
 
-	err = utxoIndex.removeUTXO(address2Hash, []byte{2}, 1) // Does not exists
+	err = utxoIndex.removeUTXO(ta2.GetPubKeyHash(), []byte{2}, 1) // Does not exists
 
 	assert.NotNil(t, err)
-	assert.Equal(t, 2, utxoIndex.index[address1Hash.String()].Size())
-	assert.Equal(t, 1, utxoIndex.index[address2Hash.String()].Size())
+	assert.Equal(t, 2, utxoIndex.index[ta1.GetPubKeyHash().String()].Size())
+	assert.Equal(t, 1, utxoIndex.index[ta2.GetPubKeyHash().String()].Size())
 }
 
 func TestUpdate_Failed(t *testing.T) {
@@ -105,7 +105,7 @@ func TestUpdate_Failed(t *testing.T) {
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
 	err := utxoIndex.Save()
 	assert.Equal(t, simulatedFailure, err)
-	assert.Equal(t, 2, utxoIndex.GetAllUTXOsByPubKeyHash(address1Hash).Size())
+	assert.Equal(t, 2, utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 }
 
 func TestFindUTXO(t *testing.T) {
@@ -177,9 +177,9 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	contractPkh := account.NewContractPubKeyHash()
 	//preapre 3 utxos in the utxo index
 	TXOutputs := []transaction_base.TXOutput{
-		{common.NewAmount(3), address1Hash, ""},
-		{common.NewAmount(4), address2Hash, ""},
-		{common.NewAmount(5), address2Hash, ""},
+		{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
+		{common.NewAmount(4), ta2.GetPubKeyHash(), ""},
+		{common.NewAmount(5), ta2.GetPubKeyHash(), ""},
 		{common.NewAmount(2), contractPkh, "helloworld!"},
 		{common.NewAmount(4), contractPkh, ""},
 	}
@@ -198,21 +198,21 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	}{
 		{"enoughUtxo",
 			common.NewAmount(3),
-			[]byte(address2Hash),
+			[]byte(ta2.GetPubKeyHash()),
 			nil},
 
 		{"notEnoughUtxo",
 			common.NewAmount(4),
-			[]byte(address1Hash),
+			[]byte(ta1.GetPubKeyHash()),
 			transaction.ErrInsufficientFund},
 
 		{"justEnoughUtxo",
 			common.NewAmount(9),
-			[]byte(address2Hash),
+			[]byte(ta2.GetPubKeyHash()),
 			nil},
 		{"notEnoughUtxo2",
 			common.NewAmount(10),
-			[]byte(address2Hash),
+			[]byte(ta2.GetPubKeyHash()),
 			transaction.ErrInsufficientFund},
 		{"smartContractUtxo",
 			common.NewAmount(3),
@@ -247,16 +247,16 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 0, len(utxoCopy.index))
 
 	addr1UtxoTx := utxo.NewUTXOTx()
-	utxoIndex.index[string(address1Hash)] = &addr1UtxoTx
+	utxoIndex.index[string(ta1.GetPubKeyHash())] = &addr1UtxoTx
 	assert.Equal(t, 1, len(utxoIndex.index))
 	assert.Equal(t, 0, len(utxoCopy.index))
 
 	copyUtxoTx := utxo.NewUTXOTxWithData(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal})
-	utxoCopy.index[string(address1Hash)] = &copyUtxoTx
+	utxoCopy.index[string(ta1.GetPubKeyHash())] = &copyUtxoTx
 	assert.Equal(t, 1, len(utxoIndex.index))
 	assert.Equal(t, 1, len(utxoCopy.index))
-	assert.Equal(t, 0, utxoIndex.index[string(address1Hash)].Size())
-	assert.Equal(t, 1, utxoCopy.index[string(address1Hash)].Size())
+	assert.Equal(t, 0, utxoIndex.index[string(ta1.GetPubKeyHash())].Size())
+	assert.Equal(t, 1, utxoCopy.index[string(ta1.GetPubKeyHash())].Size())
 
 	copyUtxoTx1 := utxo.NewUTXOTx()
 	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal})
@@ -273,5 +273,5 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, utxoCopy2.index["1"].Size())
 	assert.Equal(t, 1, len(utxoIndex.index))
 
-	assert.EqualValues(t, utxoCopy.index[address1Hash.String()], utxoCopy2.index[address1Hash.String()])
+	assert.EqualValues(t, utxoCopy.index[ta1.GetPubKeyHash().String()], utxoCopy2.index[ta1.GetPubKeyHash().String()])
 }

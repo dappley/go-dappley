@@ -176,9 +176,9 @@ func (sender *BatchTxSender) createTransaction(from, to account.Address, amount,
 	if ok, err := account.IsValidPubKey(senderKeyPair.GetPublicKey()); !ok {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	pkh := account.NewUserPubKeyHash(senderKeyPair.GetPublicKey())
+	ta := account.NewAccountByKey(senderKeyPair)
 
-	prevUtxos, err := sender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
+	prevUtxos, err := sender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), amount)
 
 	if err != nil {
 		return nil

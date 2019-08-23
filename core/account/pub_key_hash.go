@@ -23,7 +23,7 @@ var (
 )
 
 //NewUserPubKeyHash hashes a public key and returns a user type public key hash
-func NewUserPubKeyHash(pubKey []byte) PubKeyHash {
+func newUserPubKeyHash(pubKey []byte) PubKeyHash {
 	pubKeyHash := generatePubKeyHash(pubKey)
 	pubKeyHash = append([]byte{versionUser}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash)

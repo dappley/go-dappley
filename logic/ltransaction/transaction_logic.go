@@ -144,11 +144,11 @@ func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *lutxo.UTXOIndex) []*ut
 			return nil
 		}
 
-		pubKeyHash := account.NewUserPubKeyHash(vin.PubKey)
-		tempUtxoTx, ok := tempUtxoTxMap[string(pubKeyHash)]
+		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
+		tempUtxoTx, ok := tempUtxoTxMap[string(ta.GetPubKeyHash())]
 		if !ok {
-			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
-			tempUtxoTxMap[string(pubKeyHash)] = tempUtxoTx
+			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(ta.GetPubKeyHash())
+			tempUtxoTxMap[string(ta.GetPubKeyHash())] = tempUtxoTx
 		}
 		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
 		if utxo == nil {
@@ -156,7 +156,7 @@ func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *lutxo.UTXOIndex) []*ut
 				"tx_id":      hex.EncodeToString(tx.ID),
 				"vin_tx_id":  hex.EncodeToString(vin.Txid),
 				"vin_index":  vin.Vout,
-				"pubKeyHash": pubKeyHash.String(),
+				"pubKeyHash": ta.GetPubKeyHash().String(),
 			}).Warn("Transaction: cannot find vin.")
 			return nil
 		}

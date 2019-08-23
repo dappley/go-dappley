@@ -25,8 +25,8 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblock"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -154,8 +154,8 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundKeyPair *account.KeyPair, 
 }
 
 func createTransaction(utxoIndex *lutxo.UTXOIndex, params transaction.SendTxParam) transaction.Transaction {
-	pkh:= account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
-	utxos, _ := utxoIndex.GetUTXOsByAmount(pkh, params.TotalCost())
+	ta := account.NewAccountByKey(params.SenderKeyPair)
+	utxos, _ := utxoIndex.GetUTXOsByAmount(ta.GetPubKeyHash(), params.TotalCost())
 	tx, err := transaction.NewUTXOTransaction(utxos, params)
 	if err != nil {
 		logger.WithError(err).Error("CreateTransaction failed")

@@ -199,10 +199,8 @@ func generateSmartContractDeploymentTransaction(utxoIndex *lutxo.UTXOIndex, send
 func generateFundingTransaction(utxoIndex *lutxo.UTXOIndex, fundAddr account.Address, minerPrivKey string) *transaction.Transaction {
 	initFund := uint64(1000000)
 	initFundAmount := common.NewAmount(initFund)
-	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivKey)
-	pkh := account.NewUserPubKeyHash(minerKeyPair.GetPublicKey())
-
-	tx := newTransaction(minerKeyPair.GenerateAddress(), fundAddr, minerKeyPair, utxoIndex, pkh, initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
+	minerTA := account.NewAccountByPrivateKey(minerPrivKey)
+	tx := newTransaction(minerTA.GetAddress(), fundAddr, minerTA.GetKeyPair(), utxoIndex, minerTA.GetPubKeyHash(), initFundAmount, common.NewAmount(10000), common.NewAmount(1), "")
 	utxoIndex.UpdateUtxo(tx)
 	currBalance[fundAddr.String()] = initFund
 	return tx

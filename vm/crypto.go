@@ -77,7 +77,7 @@ func VerifyPublicKeyFunc(addr, pubkey *C.char) bool {
 
 	}
 
-	pubKeyHash := account.NewUserPubKeyHash(pubKeyBytes)
+	ta := account.NewTransactionAccountByPubKey(pubKeyBytes)
 
-	return pubKeyHash.GenerateAddress().String() == goAddr
+	return ta.GetAddress().String() == goAddr
 }

@@ -24,14 +24,14 @@ import (
 
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -274,12 +274,12 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 		return nil, "", ErrInvalidAmount
 	}
 
-	pubKeyHash:= account.NewUserPubKeyHash(sendTxParam.SenderKeyPair.GetPublicKey())
+	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 
 	utxoIndex.UpdateUtxoState(bc.GetTxPool().GetAllTransactions())
 
-	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(pubKeyHash), sendTxParam.TotalCost())
+	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
 	if err != nil {
 		return nil, "", err
 	}

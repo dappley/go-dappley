@@ -32,7 +32,7 @@ func NewAccount() *Account {
 	account := &Account{}
 	account.key = NewKeyPair()
 	account.address = account.key.GenerateAddress()
-	account.pubKeyHash = NewUserPubKeyHash(account.key.GetPublicKey())
+	account.pubKeyHash = newUserPubKeyHash(account.key.GetPublicKey())
 	return account
 }
 
@@ -40,8 +40,13 @@ func NewAccountByKey(key *KeyPair) *Account {
 	account := &Account{}
 	account.key = key
 	account.address = account.key.GenerateAddress()
-	account.pubKeyHash = NewUserPubKeyHash(account.key.GetPublicKey())
+	account.pubKeyHash = newUserPubKeyHash(account.key.GetPublicKey())
 	return account
+}
+
+func NewAccountByPrivateKey(privKey string) *Account {
+	kp := GenerateKeyPairByPrivateKey(privKey)
+	return NewAccountByKey(kp)
 }
 
 func (a Account) GetKeyPair() *KeyPair {

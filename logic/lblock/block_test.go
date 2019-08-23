@@ -85,10 +85,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	// Prepare test data
 	// Padding Address to 32 Byte
 	var address1Bytes = []byte("address1000000000000000000000000")
-	var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
+	var address1TA = account.NewTransactionAccountByPubKey(address1Bytes)
 
-	normalCoinbaseTX := transaction.NewCoinbaseTX(ta1.GetAddress(), "", 1, common.NewAmount(0))
-	rewardTX := transaction.NewRewardTx(1, map[string]string{ta1.GetAddress().String(): "10"})
+	normalCoinbaseTX := transaction.NewCoinbaseTX(address1TA.GetAddress(), "", 1, common.NewAmount(0))
+	rewardTX := transaction.NewRewardTx(1, map[string]string{address1TA.GetAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
 	userTA := account.NewTransactionAccountByPubKey(userPubKey)
 	contractTA := account.NewContractTransactionAccount()
@@ -113,22 +113,21 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1 = account.NewUserPubKeyHash(pubkey1)
-	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
-	var pkHash2 = account.NewUserPubKeyHash(pubkey2)
+	var ta1 = account.NewAccountByPrivateKey(prikey1)
 
-	dependentTx1 := transaction.NewTransactionByVin(util.GenerateRandomAoB(1), 1, pubkey1, 10, pkHash2, 3)
-	dependentTx2 := transaction.NewTransactionByVin(dependentTx1.ID, 0, pubkey2, 5, pkHash1, 5)
-	dependentTx3 := transaction.NewTransactionByVin(dependentTx2.ID, 0, pubkey1, 1, pkHash2, 4)
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var ta2 = account.NewAccountByPrivateKey(prikey2)
+
+	dependentTx1 := transaction.NewTransactionByVin(util.GenerateRandomAoB(1), 1, ta1.GetKeyPair().GetPublicKey(), 10, ta2.GetPubKeyHash(), 3)
+	dependentTx2 := transaction.NewTransactionByVin(dependentTx1.ID, 0, ta2.GetKeyPair().GetPublicKey(), 5, ta1.GetPubKeyHash(), 5)
+	dependentTx3 := transaction.NewTransactionByVin(dependentTx2.ID, 0, ta1.GetKeyPair().GetPublicKey(), 1, ta2.GetPubKeyHash(), 4)
 
 	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
 
 	tx1Utxos := map[string][]*utxo.UTXO{
-		pkHash2.String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
+		ta2.GetPubKeyHash().String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[pkHash2.String()])
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
 	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 
 	tests := []struct {

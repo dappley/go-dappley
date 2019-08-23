@@ -86,9 +86,9 @@ func MockUtxos(inputs []transaction_base.TXInput) []*utxo.UTXO {
 	utxos := make([]*utxo.UTXO, len(inputs))
 
 	for index, input := range inputs {
-		pubKeyHash := account.NewUserPubKeyHash(input.PubKey)
+		ta := account.NewTransactionAccountByPubKey(input.PubKey)
 		utxos[index] = &utxo.UTXO{
-			TXOutput: transaction_base.TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
+			TXOutput: transaction_base.TXOutput{Value: common.NewAmount(10), PubKeyHash: ta.GetPubKeyHash(), Contract: ""},
 			Txid:     input.Txid,
 			TxIndex:  0,
 		}
@@ -98,9 +98,10 @@ func MockUtxos(inputs []transaction_base.TXInput) []*utxo.UTXO {
 }
 
 func MockTxOutputs() []transaction_base.TXOutput {
+	ta := account.NewTransactionAccountByPubKey(util.GenerateRandomAoB(2))
 	return []transaction_base.TXOutput{
-		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
-		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
+		{common.NewAmount(5), ta.GetPubKeyHash(), ""},
+		{common.NewAmount(7), ta.GetPubKeyHash(), ""},
 	}
 }
 
@@ -152,8 +153,8 @@ func MockUtxoTransactionWithInputs() *transaction.Transaction {
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash = account.NewUserPubKeyHash(address1Bytes)
-var address2Hash = account.NewUserPubKeyHash(address2Bytes)
+var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
+var ta2 = account.NewTransactionAccountByPubKey(address2Bytes)
 
 func MockUtxoInputs() []transaction_base.TXInput {
 	return []transaction_base.TXInput{
@@ -172,15 +173,15 @@ func MockUtxoInputs() []transaction_base.TXInput {
 
 func MockUtxoOutputsWithoutInputs() []transaction_base.TXOutput {
 	return []transaction_base.TXOutput{
-		{common.NewAmount(5), address1Hash, ""},
-		{common.NewAmount(7), address1Hash, ""},
+		{common.NewAmount(5), ta1.GetPubKeyHash(), ""},
+		{common.NewAmount(7), ta1.GetPubKeyHash(), ""},
 	}
 }
 
 func MockUtxoOutputsWithInputs() []transaction_base.TXOutput {
 	return []transaction_base.TXOutput{
-		{common.NewAmount(4), address1Hash, ""},
-		{common.NewAmount(5), address2Hash, ""},
-		{common.NewAmount(3), address2Hash, ""},
+		{common.NewAmount(4), ta1.GetPubKeyHash(), ""},
+		{common.NewAmount(5), ta2.GetPubKeyHash(), ""},
+		{common.NewAmount(3), ta2.GetPubKeyHash(), ""},
 	}
 }

@@ -36,7 +36,7 @@ func NewContractTransactionAccount() *TransactionAccount {
 
 func NewTransactionAccountByPubKey(pubkey []byte) *TransactionAccount {
 	account := &TransactionAccount{}
-	account.pubKeyHash = NewUserPubKeyHash(pubkey)
+	account.pubKeyHash = newUserPubKeyHash(pubkey)
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }
