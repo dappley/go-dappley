@@ -68,7 +68,7 @@ func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) er
 	}
 
 	savedUtxoTx := value.DeepCopy()
-	utxoCache.cache.Add(string(pubKeyHash), savedUtxoTx)
+	utxoCache.cache.Add(string(pubKeyHash), &savedUtxoTx)
 	return utxoCache.db.Put(pubKeyHash, value.Serialize())
 }
 
