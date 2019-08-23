@@ -99,9 +99,8 @@ func TestLoopCreateBlockchain(t *testing.T) {
 	for i := 0; i < 2000; i++ {
 		err = nil
 		account := account.NewAccount()
-		addr := account.GetAddress()
-		if !addr.IsValid() {
-			fmt.Println(i, addr)
+		if !account.IsValid() {
+			fmt.Println(i, account.GetAddress())
 			err = ErrInvalidAddress
 			break
 		}

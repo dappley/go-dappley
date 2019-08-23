@@ -18,6 +18,8 @@
 package account
 
 import (
+	"bytes"
+
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -70,6 +72,17 @@ func (a *Account) ToProto() proto.Message {
 		Address:    addr,
 		PubKeyHash: a.pubKeyHash,
 	}
+}
+func (a *Account) IsValid() bool {
+	actualChecksum := a.address.getAddressCheckSum()
+	if actualChecksum == nil {
+		return false
+	}
+	targetChecksum := Checksum(a.pubKeyHash)
+	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
+		return true
+	}
+	return false
 }
 
 func (a *Account) FromProto(pb proto.Message) {

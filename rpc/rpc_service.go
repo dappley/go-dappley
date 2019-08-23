@@ -26,8 +26,8 @@ import (
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/core/block"
 	blockpb "github.com/dappley/go-dappley/core/block/pb"
@@ -86,11 +86,12 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	if !account.NewAddress(address).IsValid() {
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	if !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
 
-	amount, err := logic.GetBalance(account.NewAddress(address), rpcService.GetBlockchain())
+	amount, err := logic.GetBalance(addressAccount.GetAddress(), rpcService.GetBlockchain())
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidAddress:

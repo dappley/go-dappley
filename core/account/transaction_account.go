@@ -18,6 +18,10 @@
 package account
 
 import (
+	"bytes"
+	"crypto/sha256"
+
+	"github.com/btcsuite/btcutil/base58"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -53,6 +57,56 @@ func NewContractAccountByAddress(address Address) *TransactionAccount {
 	account.address = address
 	account.pubKeyHash, _ = GeneratePubKeyHashByAddress(address)
 	return account
+}
+
+//GeneratePubKeyHashByAddress decodes the address to the original public key hash. If unsuccessful, return false
+func GeneratePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
+	pubKeyHash := base58.Decode(a.String())
+
+	if len(pubKeyHash) != GetAddressPayloadLength() {
+		return nil, false
+	}
+	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
+	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
+	targetChecksum := Checksum(pubKeyHash)
+
+	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
+		return pubKeyHash, true
+	}
+	return nil, false
+
+}
+
+func turnAddressToPubKeyHash(a Address) PubKeyHash {
+	pubKeyHash := base58.Decode(a.String())
+	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
+	return pubKeyHash
+}
+
+func (ca *TransactionAccount) IsValid() bool {
+	actualChecksum := ca.address.getAddressCheckSum()
+	if actualChecksum == nil {
+		return false
+	}
+	targetChecksum := Checksum(ca.pubKeyHash)
+	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
+		return true
+	}
+	return false
+}
+
+//Checksum finds the checksum of a public key hash
+func Checksum(payload []byte) []byte {
+	firstSHA := sha256.Sum256(payload)
+	secondSHA := sha256.Sum256(firstSHA[:])
+
+	return secondSHA[:addressChecksumLen]
+}
+
+// GetAddressPayloadLength get the payload length
+func GetAddressPayloadLength() int {
+	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
+	return 21 + addressChecksumLen
 }
 
 func (ca TransactionAccount) GetAddress() Address {

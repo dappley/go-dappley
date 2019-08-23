@@ -21,6 +21,7 @@ package account
 import (
 	"errors"
 
+	"github.com/btcsuite/btcutil/base58"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/golang/protobuf/proto"
 )
@@ -38,16 +39,26 @@ func NewAddress(addressString string) Address {
 	address.address = addressString
 	return address
 }
+func (a Address) decode() []byte {
+	pubKeyHash := base58.Decode(a.String())
+	if len(pubKeyHash) != GetAddressPayloadLength() {
+		return nil
+	}
+	return pubKeyHash
+}
+
+func (a Address) getAddressCheckSum() []byte {
+	addresshash := a.decode()
+	if addresshash == nil {
+		return nil
+	}
+	actualChecksum := addresshash[len(addresshash)-addressChecksumLen:]
+	return actualChecksum
+}
 
 //String returns the address in string type
 func (a Address) String() string {
 	return a.address
-}
-
-//IsValid checks if an address is valid
-func (a Address) IsValid() bool {
-	_, ok := GeneratePubKeyHashByAddress(a)
-	return ok
 }
 
 //ToProto converts Address object to protobuf message

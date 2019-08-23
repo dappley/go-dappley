@@ -523,7 +523,8 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 	}
 
 	address := *(flags[flagAddress].(*string))
-	if account.NewAddress(address).IsValid() == false {
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	if !addressAccount.IsValid() {
 		fmt.Println("Error: address is not valid")
 		return
 	}
@@ -757,7 +758,8 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 }
 
 func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
-	if len(*(flags[flagAddressBalance].(*string))) == 0 {
+	toAddr := *(flags[flagAddressBalance].(*string))
+	if len(toAddr) == 0 {
 		printUsage()
 		fmt.Println("\n Example: cli sendFromMiner -to 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -amount 15")
 		fmt.Println()
@@ -769,12 +771,12 @@ func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 		return
 	}
 
-	if account.NewAddress(*(flags[flagAddressBalance].(*string))).IsValid() == false {
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(toAddr))
+	if !addressAccount.IsValid() {
 		fmt.Println("Error: address is invalid!")
 		return
 	}
 
-	toAddr := *(flags[flagAddressBalance].(*string))
 	amountBytes := common.NewAmount(uint64(*(flags[flagAmountBalance].(*int)))).Bytes()
 	sendFromMinerRequest := rpcpb.SendFromMinerRequest{To: toAddr, Amount: amountBytes}
 
@@ -806,21 +808,22 @@ func getPeerInfoCommandHandler(ctx context.Context, account interface{}, flags c
 }
 
 func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
-
-	if len(*(flags[flagProducerAddr].(*string))) == 0 {
+	producerAddress := *(flags[flagProducerAddr].(*string))
+	if len(producerAddress) == 0 {
 		printUsage()
 		fmt.Println("\n Example: cli addProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
 		fmt.Println()
 		return
 	}
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(producerAddress))
 
-	if account.NewAddress(*(flags[flagProducerAddr].(*string))).IsValid() == false {
+	if !addressAccount.IsValid() {
 		fmt.Println("Error: address is invalid")
 		return
 	}
 
 	_, err := c.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
-		Address: *(flags[flagProducerAddr].(*string)),
+		Address: producerAddress,
 	})
 
 	if err != nil {
@@ -837,6 +840,8 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
+	fromAddress := *(flags[flagFromAddress].(*string))
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(fromAddress))
 	path := *(flags[flagFilePath].(*string))
 	if path == "" {
 		data = *(flags[flagData].(*string))
@@ -849,13 +854,13 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		data = string(script)
 	}
 
-	if account.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
+	if !addressAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if data == "" && account.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
+	if data == "" && !addressAccount.IsValid() {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
@@ -1035,6 +1040,10 @@ func initRpcClient(port int) *grpc.ClientConn {
 func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
 	path := *(flags[flagFilePath].(*string))
+	fromAddress := *(flags[flagFromAddress].(*string))
+	fromAccount := account.NewContractAccountByAddress(account.NewAddress(fromAddress))
+	toAddress := *(flags[flagToAddress].(*string))
+	toAccount := account.NewContractAccountByAddress(account.NewAddress(toAddress))
 	if path == "" {
 		data = *(flags[flagData].(*string))
 	} else {
@@ -1046,13 +1055,13 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		data = string(script)
 	}
 
-	if account.NewAddress(*(flags[flagFromAddress].(*string))).IsValid() == false {
+	if !fromAccount.IsValid() {
 		fmt.Println("Error: 'from' address is not valid!")
 		return
 	}
 
 	//Contract deployment transaction does not need to validate to address
-	if data == "" && account.NewAddress(*(flags[flagToAddress].(*string))).IsValid() == false {
+	if data == "" && !toAccount.IsValid() {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}

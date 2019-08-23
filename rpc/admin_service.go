@@ -30,10 +30,10 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/network"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/wallet"
 )
 
 type AdminRpcService struct {
@@ -50,10 +50,12 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.GetAddress()) == 0 || !account.NewAddress(in.GetAddress()).IsValid() {
+	address := in.GetAddress()
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	if len(address) == 0 || !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
-	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(in.GetAddress())
+	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(address)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

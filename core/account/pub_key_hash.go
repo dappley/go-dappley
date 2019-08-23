@@ -1,8 +1,6 @@
 package account
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 
@@ -35,23 +33,11 @@ func NewContractPubKeyHash() PubKeyHash {
 	pubKeyHash = append([]byte{versionContract}, pubKeyHash...)
 	return PubKeyHash(pubKeyHash)
 }
-
-//GeneratePubKeyHashByAddress decodes the address to the original public key hash. If unsuccessful, return false
-func GeneratePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
-	pubKeyHash := base58.Decode(a.String())
-
-	if len(pubKeyHash) != GetAddressPayloadLength() {
-		return nil, false
+func (pkh PubKeyHash) IsValid() bool {
+	if len(pkh) != 21 {
+		return false
 	}
-	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
-	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
-	targetChecksum := Checksum(pubKeyHash)
-
-	if bytes.Compare(actualChecksum, targetChecksum) == 0 {
-		return pubKeyHash, true
-	}
-	return nil, false
-
+	return true
 }
 
 //GenerateAddress generates an address  from a public key hash
@@ -79,14 +65,6 @@ func (pkh PubKeyHash) IsContract() (bool, error) {
 	return false, ErrInvalidPubKeyHashVersion
 }
 
-//Checksum finds the checksum of a public key hash
-func Checksum(payload []byte) []byte {
-	firstSHA := sha256.Sum256(payload)
-	secondSHA := sha256.Sum256(firstSHA[:])
-
-	return secondSHA[:addressChecksumLen]
-}
-
 //generatePubKeyHash hashes a public key
 func generatePubKeyHash(pubKey []byte) []byte {
 	sha := hash.Sha3256(pubKey)
@@ -100,12 +78,6 @@ func IsValidPubKey(pubKey []byte) (bool, error) {
 		return false, ErrIncorrectPublicKey
 	}
 	return true, nil
-}
-
-// GetAddressPayloadLength get the payload length
-func GetAddressPayloadLength() int {
-	// 1byte(version byte) + 20byte(public key hash bytes) + addressChecksumLen
-	return 21 + addressChecksumLen
 }
 
 func (pkh PubKeyHash) String() string {
