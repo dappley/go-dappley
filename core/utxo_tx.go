@@ -19,7 +19,6 @@
 package core
 
 import (
-	"github.com/jinzhu/copier"
 	"hash/fnv"
 	"strconv"
 
@@ -166,6 +165,9 @@ func (utxoTx UTXOTx) DeepCopy() UTXOTx {
 
 	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 
-	copier.Copy(&newUtxoTx, &utxoTx)
+	for key, utxo := range utxoTx.Indices {
+		newUtxoTx.Indices[key] = utxo
+	}
+
 	return newUtxoTx
 }
