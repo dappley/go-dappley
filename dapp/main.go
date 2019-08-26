@@ -38,6 +38,8 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	"github.com/spf13/viper"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 const (
@@ -89,7 +91,7 @@ func main() {
 	node, err := initNode(conf, db)
 	if err != nil {
 		return
-	}else {
+	} else {
 		defer node.Stop()
 	}
 
@@ -145,8 +147,13 @@ func main() {
 
 	bm.RequestDownloadBlockchain()
 
-	if viper.GetBool("metrics.open"){
+	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())
+	}
+	if viper.GetBool("pprof.open") {
+		go func() {
+			http.ListenAndServe(":60001", nil)
+		}()
 	}
 	select {}
 }
