@@ -242,7 +242,7 @@ func TestTransactionPoolLimit(t *testing.T) {
 func TestTransactionPool_GetTransactions(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var contractPubkeyHash = account.NewContractPubKeyHash()
+	var contractAccount = account.NewContractTransactionAccount()
 
 	var deploymentTx = transaction.Transaction{
 		ID: nil,
@@ -250,7 +250,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 			{tx1.ID, 1, nil, pubkey1},
 		},
 		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(5), contractPubkeyHash, "dapp_schedule"},
+			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "dapp_schedule"},
 		},
 		Tip:      common.NewAmount(1),
 		GasLimit: common.NewAmount(0),
@@ -262,7 +262,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		ID:  nil,
 		Vin: GenerateFakeTxInputs(),
 		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(5), contractPubkeyHash, "execution"},
+			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "execution"},
 		},
 		Tip:      common.NewAmount(2),
 		GasLimit: common.NewAmount(0),

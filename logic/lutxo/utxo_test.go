@@ -173,8 +173,8 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 }
 
 func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
-
-	contractPkh := account.NewContractPubKeyHash()
+	contractAccount := account.NewContractTransactionAccount()
+	contractPkh := contractAccount.GetPubKeyHash()
 	//preapre 3 utxos in the utxo index
 	TXOutputs := []transaction_base.TXOutput{
 		{common.NewAmount(3), ta1.GetPubKeyHash(), ""},

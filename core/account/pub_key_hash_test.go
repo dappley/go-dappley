@@ -15,7 +15,7 @@ func TestNewUserPubKeyHash(t *testing.T) {
 }
 
 func TestNewContractPubKeyHash(t *testing.T) {
-	pkh := NewContractPubKeyHash()
+	pkh := newContractPubKeyHash()
 	assert.Equal(t, versionContract, pkh[0])
 }
 

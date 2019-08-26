@@ -33,7 +33,7 @@ type TransactionAccount struct {
 
 func NewContractTransactionAccount() *TransactionAccount {
 	account := &TransactionAccount{}
-	account.pubKeyHash = NewContractPubKeyHash()
+	account.pubKeyHash = newContractPubKeyHash()
 	account.address = account.pubKeyHash.GenerateAddress()
 	return account
 }
@@ -84,6 +84,9 @@ func turnAddressToPubKeyHash(a Address) PubKeyHash {
 }
 
 func (ca *TransactionAccount) IsValid() bool {
+	if !ca.GetPubKeyHash().IsValid() {
+		return false
+	}
 	actualChecksum := ca.address.getAddressCheckSum()
 	if actualChecksum == nil {
 		return false
