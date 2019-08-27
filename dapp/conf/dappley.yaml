@@ -7,3 +7,5 @@ log:
 metrics:
   open: true
   interval: 5000
+pprof:
+  open: false
