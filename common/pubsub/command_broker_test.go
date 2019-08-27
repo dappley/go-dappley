@@ -1,12 +1,17 @@
-package network
+package pubsub
 
 import (
-	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestCommandBroker_Subscribe(t *testing.T) {
+	var (
+		reservedTopics = []string{
+			"FakeReservedTopicName",
+		}
+	)
+
 	tests := []struct {
 		name                     string
 		cmd1                     string
@@ -44,7 +49,7 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			md := NewCommandBroker(reservedTopics)
 
-			var handler network_model.CommandHandlerFunc
+			var handler commandHandler
 			err := md.Subscribe(tt.cmd1, handler)
 			assert.Equal(t, tt.expectedErr1, err)
 			err = md.Subscribe(tt.cmd2, handler)
@@ -55,6 +60,13 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 }
 
 func TestCommandBroker_Dispatch(t *testing.T) {
+
+	var (
+		reservedTopics = []string{
+			"FakeReservedTopicName",
+		}
+	)
+
 	tests := []struct {
 		name          string
 		subScribedCmd string
@@ -78,32 +90,37 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			md := NewCommandBroker(reservedTopics)
 
-			var handler network_model.CommandHandlerFunc
-			handler = func(command *network_model.DappRcvdCmdContext) {
+			var handler commandHandler
+			handler = func(input interface{}) {
 			}
 			md.Subscribe(tt.subScribedCmd, handler)
 
 			//fake received command and then dispatch
-			dappCmd := network_model.NewDappCmd(tt.dispatchedCmd, []byte("test"), false)
-			rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, network_model.PeerInfo{})
-			err := md.Dispatch(rcvdCmd)
+			var input interface{}
+			err := md.Dispatch(tt.dispatchedCmd, input)
 			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
 
 func TestCommandBroker_DispatchMultiple(t *testing.T) {
+
+	var (
+		reservedTopics = []string{
+			"FakeReservedTopicName",
+		}
+	)
+
 	md := NewCommandBroker(reservedTopics)
-	var handler network_model.CommandHandlerFunc
-	handler = func(command *network_model.DappRcvdCmdContext) {}
+	var handler commandHandler
+	handler = func(input interface{}) {}
 
 	//Both handlers subscribe to reserved topic
 	topic := reservedTopics[0]
 	md.Subscribe(topic, handler)
 
-	dappCmd := network_model.NewDappCmd(topic, []byte("test"), false)
-	rcvdCmd := network_model.NewDappRcvdCmdContext(dappCmd, network_model.PeerInfo{})
+	var input interface{}
 
-	assert.Nil(t, md.Dispatch(rcvdCmd))
+	assert.Nil(t, md.Dispatch(topic, input))
 
 }

@@ -1,8 +1,7 @@
-package network
+package pubsub
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/network/network_model"
 )
 
 var (
@@ -10,9 +9,11 @@ var (
 	ErrNoHandlersFound = errors.New("No command handlers")
 )
 
+type commandHandler func(input interface{})
+
 type CommandBroker struct {
 	reservedTopics map[string]bool
-	handlers       map[string][]network_model.CommandHandlerFunc
+	handlers       map[string][]commandHandler
 }
 
 //NewCommandBroker creates a commandBroker instance
@@ -20,7 +21,7 @@ func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 
 	cb := &CommandBroker{
 		reservedTopics: make(map[string]bool),
-		handlers:       make(map[string][]network_model.CommandHandlerFunc, 0),
+		handlers:       make(map[string][]commandHandler, 0),
 	}
 
 	for _, topic := range reservedTopcis {
@@ -31,7 +32,7 @@ func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 }
 
 //subscribeCmd adds a handler to the topic "command"
-func (cb *CommandBroker) Subscribe(command string, handler network_model.CommandHandlerFunc) error {
+func (cb *CommandBroker) Subscribe(command string, handler commandHandler) error {
 	_, isReservedTopic := cb.reservedTopics[command]
 
 	if _, isTopicOccupied := cb.handlers[command]; isTopicOccupied && !isReservedTopic {
@@ -43,14 +44,14 @@ func (cb *CommandBroker) Subscribe(command string, handler network_model.Command
 }
 
 //Dispatch publishes a topic and run the topic handler
-func (cb *CommandBroker) Dispatch(cmd *network_model.DappRcvdCmdContext) error {
-	if _, ok := cb.handlers[cmd.GetCommandName()]; !ok {
+func (cb *CommandBroker) Dispatch(command string, content interface{}) error {
+	if _, ok := cb.handlers[command]; !ok {
 		return ErrNoHandlersFound
 	}
 
-	for _, handler := range cb.handlers[cmd.GetCommandName()] {
+	for _, handler := range cb.handlers[command] {
 		if handler != nil {
-			go handler(cmd)
+			go handler(content)
 		}
 	}
 	return nil

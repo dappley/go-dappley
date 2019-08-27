@@ -21,6 +21,7 @@ package network
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/dappley/go-dappley/common/pubsub"
 	"io/ioutil"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -47,7 +48,7 @@ var (
 
 type Node struct {
 	network       *Network
-	commandBroker *CommandBroker
+	commandBroker *pubsub.CommandBroker
 	exitCh        chan bool
 	dispatcher    chan *network_model.DappPacketContext
 	commandSendCh chan *network_model.DappSendCmdContext
@@ -66,7 +67,7 @@ func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig, se
 		exitCh:        make(chan bool, 1),
 		dispatcher:    make(chan *network_model.DappPacketContext, dispatchChLen),
 		commandSendCh: make(chan *network_model.DappSendCmdContext, requestChLen),
-		commandBroker: NewCommandBroker(reservedTopics),
+		commandBroker: pubsub.NewCommandBroker(reservedTopics),
 	}
 
 	node.network = NewNetwork(
@@ -229,7 +230,7 @@ func (n *Node) StartListenLoop() {
 
 				cmdMsg := network_model.ParseDappMsgFromDappPacket(streamMsg.Packet)
 				dappRcvdCmd := network_model.NewDappRcvdCmdContext(cmdMsg, streamMsg.Source)
-				n.commandBroker.Dispatch(dappRcvdCmd)
+				n.commandBroker.Dispatch(cmdMsg.GetName(), dappRcvdCmd)
 
 			}
 		}
@@ -277,5 +278,5 @@ func (n *Node) onStreamStop(stream *Stream) {
 	dappCmd := network_model.NewDappCmd(TopicOnStreamStop, bytes, false)
 	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.GetHost().GetPeerInfo())
 
-	n.commandBroker.Dispatch(dappCmdCtx)
+	n.commandBroker.Dispatch(TopicOnStreamStop, dappCmdCtx)
 }
