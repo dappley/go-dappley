@@ -186,8 +186,8 @@ func (n *Node) sendCommand(commandName string, message proto.Message, destinatio
 }
 
 //Listen registers a callback function for a topic
-func (n *Node) Listen(command string, handler network_model.CommandHandlerFunc) {
-	n.commandBroker.Subscribe(command, handler)
+func (n *Node) Listen(subscriber pubsub.Subscriber) {
+	n.commandBroker.AddSubscriber(subscriber)
 }
 
 //Stop stops the node

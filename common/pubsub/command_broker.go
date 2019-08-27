@@ -5,26 +5,26 @@ import (
 )
 
 var (
-	ErrTopicOccupied   = errors.New("Topic already occupied")
-	ErrNoHandlersFound = errors.New("No command handlers")
+	ErrTopicOccupied      = errors.New("Topic already occupied")
+	ErrNoSubscribersFound = errors.New("No command handlers")
 )
 
-type commandHandler func(input interface{})
+type CommandHandler func(input interface{})
 
 type CommandBroker struct {
 	reservedTopics map[string]bool
-	handlers       map[string][]commandHandler
+	subscribers    map[string][]Subscriber
 }
 
 //NewCommandBroker creates a commandBroker instance
-func NewCommandBroker(reservedTopcis []string) *CommandBroker {
+func NewCommandBroker(reservedTopic []string) *CommandBroker {
 
 	cb := &CommandBroker{
 		reservedTopics: make(map[string]bool),
-		handlers:       make(map[string][]commandHandler, 0),
+		subscribers:    make(map[string][]Subscriber, 0),
 	}
 
-	for _, topic := range reservedTopcis {
+	for _, topic := range reservedTopic {
 		cb.reservedTopics[topic] = true
 	}
 
@@ -32,26 +32,38 @@ func NewCommandBroker(reservedTopcis []string) *CommandBroker {
 }
 
 //subscribeCmd adds a handler to the topic "command"
-func (cb *CommandBroker) Subscribe(command string, handler commandHandler) error {
-	_, isReservedTopic := cb.reservedTopics[command]
-
-	if _, isTopicOccupied := cb.handlers[command]; isTopicOccupied && !isReservedTopic {
-		return ErrTopicOccupied
+func (cb *CommandBroker) AddSubscriber(subscriber Subscriber) error {
+	for _, topic := range subscriber.GetSubscribedTopics() {
+		if cb.isTopicSubscribed(topic) && !cb.isReservedTopic(topic) {
+			return ErrTopicOccupied
+		}
+		cb.subscribers[topic] = append(cb.subscribers[topic], subscriber)
 	}
-
-	cb.handlers[command] = append(cb.handlers[command], handler)
 	return nil
 }
 
+func (cb *CommandBroker) isReservedTopic(topic string) bool {
+	_, isReservedTopic := cb.reservedTopics[topic]
+	return isReservedTopic
+}
+
+func (cb *CommandBroker) isTopicSubscribed(topic string) bool {
+	_, isTopicSubscribed := cb.subscribers[topic]
+	return isTopicSubscribed
+}
+
 //Dispatch publishes a topic and run the topic handler
-func (cb *CommandBroker) Dispatch(command string, content interface{}) error {
-	if _, ok := cb.handlers[command]; !ok {
-		return ErrNoHandlersFound
+func (cb *CommandBroker) Dispatch(topic string, content interface{}) error {
+	if _, ok := cb.subscribers[topic]; !ok {
+		return ErrNoSubscribersFound
 	}
 
-	for _, handler := range cb.handlers[command] {
-		if handler != nil {
-			go handler(content)
+	for _, subscriber := range cb.subscribers[topic] {
+		if subscriber != nil {
+			handler := subscriber.GetCommandHandler(topic)
+			if handler != nil {
+				go handler(content)
+			}
 		}
 	}
 	return nil

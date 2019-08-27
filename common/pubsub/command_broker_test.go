@@ -1,6 +1,8 @@
-package pubsub
+package pubsub_test
 
 import (
+	"github.com/dappley/go-dappley/common/pubsub"
+	"github.com/dappley/go-dappley/common/pubsub/mocks"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -13,48 +15,40 @@ func TestCommandBroker_Subscribe(t *testing.T) {
 	)
 
 	tests := []struct {
-		name                     string
-		cmd1                     string
-		cmd2                     string
-		expectedErr1             error
-		expectedErr2             error
-		expectedNumOfSubscribers int
+		name        string
+		cmd1        string
+		cmd2        string
+		expectedErr error
 	}{
 		{
-			name:                     "Listen different topics",
-			cmd1:                     "cmd",
-			cmd2:                     "cmd2",
-			expectedErr1:             nil,
-			expectedErr2:             nil,
-			expectedNumOfSubscribers: 2,
+			name:        "Listen different topics",
+			cmd1:        "cmd",
+			cmd2:        "cmd2",
+			expectedErr: nil,
 		},
 		{
-			name:                     "Listen same unreserved topics",
-			cmd1:                     "cmd",
-			cmd2:                     "cmd",
-			expectedErr1:             nil,
-			expectedErr2:             ErrTopicOccupied,
-			expectedNumOfSubscribers: 1,
+			name:        "Listen same unreserved topics",
+			cmd1:        "cmd",
+			cmd2:        "cmd",
+			expectedErr: pubsub.ErrTopicOccupied,
 		},
 		{
-			name:                     "Listen same reserved topics",
-			cmd1:                     reservedTopics[0],
-			cmd2:                     reservedTopics[0],
-			expectedErr1:             nil,
-			expectedErr2:             nil,
-			expectedNumOfSubscribers: 1,
+			name:        "Listen same reserved topics",
+			cmd1:        reservedTopics[0],
+			cmd2:        reservedTopics[0],
+			expectedErr: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			md := NewCommandBroker(reservedTopics)
+			md := pubsub.NewCommandBroker(reservedTopics)
 
-			var handler commandHandler
-			err := md.Subscribe(tt.cmd1, handler)
-			assert.Equal(t, tt.expectedErr1, err)
-			err = md.Subscribe(tt.cmd2, handler)
-			assert.Equal(t, tt.expectedErr2, err)
-			assert.Equal(t, tt.expectedNumOfSubscribers, len(md.handlers))
+			subscriber := &mocks.Subscriber{}
+			subscriber.On("GetSubscribedTopics").Return([]string{tt.cmd1, tt.cmd2})
+
+			err := md.AddSubscriber(subscriber)
+			assert.Equal(t, tt.expectedErr, err)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
@@ -83,17 +77,20 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 			name:          "unsubscribed cmd",
 			subScribedCmd: "cmd",
 			dispatchedCmd: "cmd1",
-			expectedErr:   ErrNoHandlersFound,
+			expectedErr:   pubsub.ErrNoSubscribersFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			md := NewCommandBroker(reservedTopics)
+			md := pubsub.NewCommandBroker(reservedTopics)
 
-			var handler commandHandler
+			var handler pubsub.CommandHandler
 			handler = func(input interface{}) {
 			}
-			md.Subscribe(tt.subScribedCmd, handler)
+			subscriber := &mocks.Subscriber{}
+			subscriber.On("GetSubscribedTopics").Return([]string{tt.subScribedCmd})
+			subscriber.On("GetCommandHandler", tt.dispatchedCmd).Return(handler)
+			md.AddSubscriber(subscriber)
 
 			//fake received command and then dispatch
 			var input interface{}
@@ -111,13 +108,16 @@ func TestCommandBroker_DispatchMultiple(t *testing.T) {
 		}
 	)
 
-	md := NewCommandBroker(reservedTopics)
-	var handler commandHandler
+	md := pubsub.NewCommandBroker(reservedTopics)
+	var handler pubsub.CommandHandler
 	handler = func(input interface{}) {}
 
 	//Both handlers subscribe to reserved topic
 	topic := reservedTopics[0]
-	md.Subscribe(topic, handler)
+	subscriber := &mocks.Subscriber{}
+	subscriber.On("GetSubscribedTopics").Return([]string{topic})
+	subscriber.On("GetCommandHandler", topic).Return(handler)
+	md.AddSubscriber(subscriber)
 
 	var input interface{}
 
