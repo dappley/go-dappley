@@ -67,13 +67,13 @@ func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) er
 		return account.ErrEmptyPublicKeyHash
 	}
 	savedUtxoTx := value.DeepCopy()
-	mapData, ok := utxoCache.cache.Get(string(pubKeyHash))
-	var utxotxTemp *UTXOTx
-	if ok {
-		utxotxTemp = mapData.(*UTXOTx)
-		utxotxTemp.Indices = nil
-		utxotxTemp = nil
-	}
+	//mapData, ok := utxoCache.cache.Get(string(pubKeyHash))
+	//var utxotxTemp *UTXOTx
+	//if ok {
+	//	utxotxTemp = mapData.(*UTXOTx)
+	//	utxotxTemp.Indices = nil
+	//	utxotxTemp = nil
+	//}
 	utxoCache.cache.Add(string(pubKeyHash), &savedUtxoTx)
 	return utxoCache.db.Put(pubKeyHash, value.Serialize())
 }
