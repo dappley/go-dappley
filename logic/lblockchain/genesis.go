@@ -29,9 +29,9 @@ import (
 const genesisCoinbaseData = "Hello world"
 
 func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Block {
-
+	acc := account.NewContractAccountByAddress(address)
 	txin := transaction_base.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
-	txout := transaction_base.NewTXOutput(subsidy, address)
+	txout := transaction_base.NewTXOutput(subsidy, acc)
 	txs := []*transaction.Transaction{}
 	tx := transaction.Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()

@@ -59,8 +59,7 @@ func calculateChange(input, amount, tip *common.Amount) *common.Amount {
 	return change
 }
 
-func prepareOutputLists(prevUtxos []*utxo.UTXO, from, to account.Address, amount *common.Amount, tip *common.Amount) []transaction_base.TXOutput {
-
+func prepareOutputLists(prevUtxos []*utxo.UTXO, from, to *account.TransactionAccount, amount *common.Amount, tip *common.Amount) []transaction_base.TXOutput {
 	sum := calculateUtxoSum(prevUtxos)
 	change := calculateChange(sum, amount, tip)
 

@@ -19,8 +19,6 @@
 package transaction_base
 
 import (
-	"bytes"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
@@ -38,27 +36,16 @@ func (out *TXOutput) GetAddress() account.Address {
 	return out.PubKeyHash.GenerateAddress()
 }
 
-func (out *TXOutput) Lock(address account.Address) {
-	hash, _ := account.GeneratePubKeyHashByAddress(address)
-	out.PubKeyHash = hash
+func NewTXOutput(value *common.Amount, account *account.TransactionAccount) *TXOutput {
+	return NewTxOut(value, account, "")
 }
 
-func (out *TXOutput) IsLockedWithKey(pubKeyHash []byte) bool {
-	return bytes.Compare([]byte(out.PubKeyHash), pubKeyHash) == 0
+func NewContractTXOutput(account *account.TransactionAccount, contract string) *TXOutput {
+	return NewTxOut(common.NewAmount(0), account, contract)
 }
 
-func NewTXOutput(value *common.Amount, address account.Address) *TXOutput {
-	return NewTxOut(value, address, "")
-}
-
-func NewContractTXOutput(address account.Address, contract string) *TXOutput {
-	return NewTxOut(common.NewAmount(0), address, contract)
-}
-
-func NewTxOut(value *common.Amount, address account.Address, contract string) *TXOutput {
-	var pubKeyHash account.PubKeyHash
-	txo := &TXOutput{value, pubKeyHash, contract}
-	txo.Lock(address)
+func NewTxOut(value *common.Amount, account *account.TransactionAccount, contract string) *TXOutput {
+	txo := &TXOutput{value, account.GetPubKeyHash(), contract}
 	return txo
 }
 

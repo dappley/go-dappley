@@ -55,12 +55,12 @@ func NewContractAccountByPubKeyHash(pubKeyHash PubKeyHash) *TransactionAccount {
 func NewContractAccountByAddress(address Address) *TransactionAccount {
 	account := &TransactionAccount{}
 	account.address = address
-	account.pubKeyHash, _ = GeneratePubKeyHashByAddress(address)
+	account.pubKeyHash, _ = generatePubKeyHashByAddress(address)
 	return account
 }
 
 //GeneratePubKeyHashByAddress decodes the address to the original public key hash. If unsuccessful, return false
-func GeneratePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
+func generatePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
 	pubKeyHash := base58.Decode(a.String())
 
 	if len(pubKeyHash) != GetAddressPayloadLength() {

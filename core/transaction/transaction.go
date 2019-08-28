@@ -123,9 +123,9 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	}
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
-
+	toAccount := account.NewContractAccountByAddress(to)
 	txin := transaction_base.TXInput{nil, -1, bh, []byte(data)}
-	txout := transaction_base.NewTXOutput(Subsidy.Add(tip), to)
+	txout := transaction_base.NewTXOutput(Subsidy.Add(tip), toAccount)
 	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
 
@@ -134,7 +134,8 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transaction, error) {
-
+	fromAccount := account.NewContractAccountByAddress(sendTxParam.From)
+	toAccount := account.NewContractAccountByAddress(sendTxParam.To)
 	sum := calculateUtxoSum(utxos)
 	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
 	if err != nil {
@@ -143,7 +144,7 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transactio
 	tx := Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
-		prepareOutputLists(sendTxParam.From, sendTxParam.To, sendTxParam.Amount, change, sendTxParam.Contract),
+		prepareOutputLists(fromAccount, toAccount, sendTxParam.Amount, change, sendTxParam.Contract),
 		sendTxParam.Tip,
 		sendTxParam.GasLimit,
 		sendTxParam.GasPrice,
@@ -217,11 +218,12 @@ func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address,
 }
 
 func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
-	contractPubKeyHash, ok := account.GeneratePubKeyHashByAddress(contractAddr)
-	if !ok {
+	contractAccount := account.NewContractAccountByAddress(contractAddr)
+	toAccount := account.NewContractAccountByAddress(toAddr)
+	if !contractAccount.IsValid() {
 		return Transaction{}, account.ErrInvalidAddress
 	}
-	if isContract, err := contractPubKeyHash.IsContract(); !isContract {
+	if isContract, err := contractAccount.GetPubKeyHash().IsContract(); !isContract {
 		return Transaction{}, err
 	}
 
@@ -234,8 +236,8 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 	// Intentionally set PubKeyHash as PubKey (to recognize it is from contract) and sourceTXID as signature in Vin
 	tx := Transaction{
 		nil,
-		prepareInputLists(utxos, contractPubKeyHash, sourceTXID),
-		prepareOutputLists(contractAddr, toAddr, amount, change, ""),
+		prepareInputLists(utxos, contractAccount.GetPubKeyHash(), sourceTXID),
+		prepareOutputLists(contractAccount, toAccount, amount, change, ""),
 		tip,
 		gasLimit,
 		gasPrice,
@@ -259,13 +261,13 @@ func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) [
 }
 
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to account.Address, amount *common.Amount, change *common.Amount, contract string) []transaction_base.TXOutput {
+func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transaction_base.TXOutput {
 
 	var outputs []transaction_base.TXOutput
 	toAddr := to
 
-	if toAddr.String() == "" {
-		toAddr = account.NewContractTransactionAccount().GetAddress()
+	if toAddr.GetAddress().String() == "" {
+		toAddr = account.NewContractTransactionAccount()
 	}
 
 	if contract != "" {
@@ -554,7 +556,8 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 				"amount":  amount,
 			}).Warn("Transaction: failed to parse reward amount")
 		}
-		txOutputs = append(txOutputs, *transaction_base.NewTXOutput(amt, account.NewAddress(address)))
+		acc := account.NewContractAccountByAddress(account.NewAddress(address))
+		txOutputs = append(txOutputs, *transaction_base.NewTXOutput(amt, acc))
 	}
 	tx := Transaction{nil, []transaction_base.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	tx.ID = tx.Hash()
@@ -578,7 +581,7 @@ func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValu
 }
 
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
-func NewGasRewardTx(to account.Address, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount) (Transaction, error) {
+func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount) (Transaction, error) {
 	fee := actualGasCount.Mul(gasPrice)
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
@@ -591,7 +594,7 @@ func NewGasRewardTx(to account.Address, blockHeight uint64, actualGasCount *comm
 }
 
 // NewGasChangeTx returns a change to contract invoker, pay for the change of unused gas
-func NewGasChangeTx(to account.Address, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (Transaction, error) {
+func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (Transaction, error) {
 	if gasLimit.Cmp(actualGasCount) <= 0 {
 		return Transaction{}, ErrNoGasChange
 	}
@@ -754,19 +757,19 @@ func (ctx *ContractTx) DataLen() int {
 }
 
 // GetDefaultFromPubKeyHash returns the first from address public key hash
-func (tx *Transaction) GetDefaultFromPubKeyHash() account.PubKeyHash {
+func (tx *Transaction) GetDefaultFromTransactionAccount() *account.TransactionAccount {
 	if tx.Vin == nil || len(tx.Vin) <= 0 {
-		return nil
+		return account.NewContractTransactionAccount()
 	}
 	vin := tx.Vin[0]
 	if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
 		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
-		return nil
+		return account.NewContractTransactionAccount()
 	}
 
 	ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
-	return ta.GetPubKeyHash()
+	return account.NewTransactionAccountByPubKey(ta.GetPubKeyHash())
 }
 
 //calculateUtxoSum calculates the total amount of all input utxos

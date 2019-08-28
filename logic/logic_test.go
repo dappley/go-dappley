@@ -46,24 +46,15 @@ func TestMain(m *testing.M) {
 func TestCreateAccount(t *testing.T) {
 	acc, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetAddress())
-	assert.Equal(t, true, ok)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
-
-	accountPubKeyHash := acc.GetPubKeyHash()
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphrase(t *testing.T) {
 	acc, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetAddress())
-	assert.Equal(t, true, ok)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
-	accountPubKeyHash := acc.GetPubKeyHash()
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphraseMismatch(t *testing.T) {

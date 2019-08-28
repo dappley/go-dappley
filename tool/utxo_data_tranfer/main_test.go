@@ -27,11 +27,13 @@ func TestTransferResult(t *testing.T) {
 	defer db.Close()
 
 	minerKey := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
-	minerPubKey, ok := account.GeneratePubKeyHashByAddress(account.NewAddress(minerKey))
-	if !ok {
+	minerAccount := account.NewContractAccountByAddress(account.NewAddress(minerKey))
+
+	if !minerAccount.IsValid() {
 		t.Error("ResultTest: account address is error!")
 		return
 	}
+	minerPubKey := minerAccount.GetPubKeyHash()
 	// put old data
 	txid1, _ := hex.DecodeString("948c984f0cdcefc4f977efcd93ae37360cc5165dfc3657f07e72306cd0e6a354")
 	txid2, _ := hex.DecodeString("4fef1c385b0cbda4092cfe245329bb18e580480e07a880ebcefe1fa7e24a089f")

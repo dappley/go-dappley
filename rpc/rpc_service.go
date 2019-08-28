@@ -126,13 +126,13 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxoState(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
 
-	publicKeyHash, ok := account.GeneratePubKeyHashByAddress(account.NewAddress(in.GetAddress()))
+	acc := account.NewContractAccountByAddress(account.NewAddress(in.GetAddress()))
 
-	if !ok {
+	if !acc.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}
 
-	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(publicKeyHash)
+	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
 	response := rpcpb.GetUTXOResponse{}
 	for _, utxo := range utxos.Indices {
 		response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))

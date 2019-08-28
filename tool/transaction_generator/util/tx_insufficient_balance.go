@@ -33,8 +33,9 @@ func (txSender *InsufficientBalanceTxSender) Generate(params transaction.SendTxP
 	if err != nil {
 		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to get UTXOs to match the amount")
 	}
-
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	vouts[0].Value = vouts[0].Value.Add(common.NewAmount(1))
 
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)

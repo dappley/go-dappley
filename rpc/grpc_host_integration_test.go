@@ -33,8 +33,8 @@ import (
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
-	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -44,11 +44,11 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -592,7 +592,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetAddress())
+	pubKeyHash := rpcContext.account.GetPubKeyHash()
 	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -683,7 +683,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetAddress())
+	pubKeyHash := rpcContext.account.GetPubKeyHash()
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
 	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
@@ -709,7 +709,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"")
 	transaction2, err := transaction.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction2})
-	pubKeyHash1, _ := account.GeneratePubKeyHashByAddress(receiverAccount1.GetAddress())
+	pubKeyHash1 := receiverAccount1.GetPubKeyHash()
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
 	sendTxParam3 := transaction.NewSendTxParam(receiverAccount1.GetAddress(),
 		receiverAccount1.GetKeyPair(),
@@ -908,7 +908,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	c1 := rpcpb.NewRpcServiceClient(conn1)
 
 	// generate new transaction
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(rpcContext.account.GetAddress())
+	pubKeyHash := rpcContext.account.GetPubKeyHash()
 	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
@@ -1206,7 +1206,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	time.Sleep(time.Second)
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
-	pubKeyHash, _ := account.GeneratePubKeyHashByAddress(senderAccount.GetAddress())
+	pubKeyHash := senderAccount.GetPubKeyHash()
 	utxos, err := lutxo.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := transaction.NewSendTxParam(senderAccount.GetAddress(),
 		senderAccount.GetKeyPair(),

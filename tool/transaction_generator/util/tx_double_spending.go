@@ -31,8 +31,10 @@ func (txSender *DoubleSpendingTxSender) Generate(params transaction.SendTxParam)
 	if err != nil {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to get UTXOs to match the amount")
 	}
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
 
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }
 

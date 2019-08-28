@@ -244,8 +244,8 @@ func (dpos *DPOS) beneficiaryIsProducer(block *block.Block) bool {
 	}
 
 	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(producer))
-
+	producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
+	producerHash := producerAccount.GetPubKeyHash()
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {
 		logger.Debug("DPoS: coinbase tx is empty.")

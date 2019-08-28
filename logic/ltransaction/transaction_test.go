@@ -112,7 +112,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := transaction_base.TXInput{nil, -1, bh1, []byte("Reward to test")}
-	txout1 := transaction_base.NewTXOutput(common.NewAmount(10000000), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
+	txout1 := transaction_base.NewTXOutput(common.NewAmount(10000000), account.NewContractAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
 	var t6 = transaction.Transaction{nil, []transaction_base.TXInput{txin1}, []transaction_base.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	// test valid coinbase transaction
@@ -129,7 +129,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	bh2 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh2, 5)
 	txin2 := transaction_base.TXInput{nil, -1, bh2, []byte(nil)}
-	txout2 := transaction_base.NewTXOutput(common.NewAmount(9), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
+	txout2 := transaction_base.NewTXOutput(common.NewAmount(9), account.NewContractAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
 	var t7 = transaction.Transaction{nil, []transaction_base.TXInput{txin2}, []transaction_base.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 	err7 := VerifyTransaction(&lutxo.UTXOIndex{}, &t7, 5)
 	assert.NotNil(t, err7)
@@ -147,8 +147,6 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	wrongPrivKey, _ := ecdsa.GenerateKey(secp256k1.S256(), bytes.NewReader([]byte("FAKEfakefakefakefakefakefakefakefakefake")))
 	wrongPrivKeyByte, _ := secp256k1.FromECDSAPrivateKey(wrongPrivKey)
 	wrongPubKey := append(wrongPrivKey.PublicKey.X.Bytes(), wrongPrivKey.PublicKey.Y.Bytes()...)
-	//wrongPubKeyHash, _ := NewUserPubKeyHash(wrongPubKey)
-	//wrongAddress := KeyPair{*wrongPrivKey, wrongPubKey}.GenerateAddress()
 	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := utxo.NewUTXOTx()
 
@@ -297,8 +295,11 @@ func TestTransaction_Execute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sc := new(core.MockScEngine)
 			contract := "helloworld!"
-			toPKH, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(tt.toAddr))
-			scPKH, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(tt.scAddr))
+			toAccount := account.NewContractAccountByAddress(account.NewAddress(tt.toAddr))
+			scAccount := account.NewContractAccountByAddress(account.NewAddress(tt.scAddr))
+
+			toPKH := toAccount.GetPubKeyHash()
+			scPKH := scAccount.GetPubKeyHash()
 
 			scUtxo := utxo.UTXO{
 				TxIndex: 0,

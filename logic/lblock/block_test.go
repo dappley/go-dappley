@@ -104,8 +104,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractTA.GetPubKeyHash())},
 		},
 		[]transaction_base.TXOutput{
-			*transaction_base.NewTxOut(common.NewAmount(23), userTA.GetAddress(), ""),
-			*transaction_base.NewTxOut(common.NewAmount(10), contractTA.GetAddress(), ""),
+			*transaction_base.NewTxOut(common.NewAmount(23), userTA, ""),
+			*transaction_base.NewTxOut(common.NewAmount(10), contractTA, ""),
 		},
 		common.NewAmount(7),
 		common.NewAmount(0),
@@ -181,10 +181,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*transaction.Transaction{&rewardTX},
 			map[string][]*utxo.UTXO{
 				contractTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(0), contractTA.GetAddress()), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(0), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
 				},
 				userTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA.GetAddress()), []byte("txinid"), 0, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,
@@ -194,11 +194,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*transaction.Transaction{generatedTX},
 			map[string][]*utxo.UTXO{
 				contractTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA.GetAddress()), []byte("prevtxid"), 0, utxo.UtxoNormal},
-					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA.GetAddress()), []byte("prevtxid"), 1, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 1, utxo.UtxoNormal},
 				},
 				userTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA.GetAddress()), []byte("txinid"), 0, utxo.UtxoNormal},
+					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,

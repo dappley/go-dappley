@@ -144,6 +144,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 		ctx := txNode.Value.ToContractTx()
 		minerAddr := account.NewAddress(bp.producer.Beneficiary())
+		minerTA := account.NewContractAccountByAddress(minerAddr)
 		if ctx != nil {
 			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
 			if err != nil {
@@ -165,12 +166,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				logger.WithError(err).Error("executeSmartContract error.")
 			}
 			if gasCount > 0 {
-				grtx, err := transaction.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+				grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
 				if err == nil {
 					generatedTxs = append(generatedTxs, &grtx)
 				}
 			}
-			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
 			if err == nil {
 				generatedTxs = append(generatedTxs, &gctx)
 			}
@@ -214,7 +215,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *lutxo.UTXOIndex,
 	rewards := make(map[string]string)
 
 	minerAddr := account.NewAddress(bp.producer.Beneficiary())
-
+	minerTA := account.NewContractAccountByAddress(minerAddr)
 	for _, tx := range txs {
 		ctx := tx.ToContractTx()
 		if ctx == nil {
@@ -240,12 +241,12 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *lutxo.UTXOIndex,
 			}).Error("executeSmartContract error.")
 		}
 		if gasCount > 0 {
-			grtx, err := transaction.NewGasRewardTx(minerAddr, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+			grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
 			if err == nil {
 				generatedTXs = append(generatedTXs, &grtx)
 			}
 		}
-		gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromPubKeyHash().GenerateAddress(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+		gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
 		if err == nil {
 
 			generatedTXs = append(generatedTXs, &gctx)

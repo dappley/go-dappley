@@ -19,9 +19,10 @@
 package transaction
 
 import (
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transaction_base"
 	"testing"
+
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/transaction_base"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -137,14 +138,13 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			addr := account.NewAddress(tt.addr)
-			pkh, _ := account.GeneratePubKeyHashByAddress(addr)
+			acc := account.NewContractAccountByAddress(account.NewAddress(tt.addr))
 			tx := Transaction{
 				nil,
 				nil,
 				[]transaction_base.TXOutput{
 					{nil,
-						pkh,
+						acc.GetPubKeyHash(),
 						"",
 					},
 				},

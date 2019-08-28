@@ -85,17 +85,17 @@ module.exports = new MathTest();`
 		{
 			Txid:     []byte("1"),
 			TxIndex:  0,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(0), contractTA.GetAddress(), "somecontract"),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
 		},
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(15), contractTA.GetAddress(), ""),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(15), contractTA, ""),
 		},
 		{
 			Txid:     []byte("2"),
 			TxIndex:  0,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(3), contractTA.GetAddress(), ""),
+			TXOutput: *transaction_base.NewTxOut(common.NewAmount(3), contractTA, ""),
 		},
 	}
 
@@ -122,7 +122,7 @@ module.exports = new MathTest();`
 			// change
 			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
 
-			assert.Equal(t, account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
+			assert.Equal(t, account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].GetAddress())
 			assert.Equal(t, contractTA.GetPubKeyHash(), sc.generatedTXs[0].Vout[1].PubKeyHash)
 		}
 	}
@@ -459,7 +459,7 @@ func TestGetNodeAddress(t *testing.T) {
 }
 
 func TestAddGasCount(t *testing.T) {
-	vout := transaction_base.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	vout := transaction_base.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
 	tx := transaction.Transaction{
 		Vout: []transaction_base.TXOutput{*vout},
 	}
@@ -493,7 +493,7 @@ func TestAddGasCount(t *testing.T) {
 }
 
 func TestStepRecordGasCount(t *testing.T) {
-	vout := transaction_base.NewContractTXOutput(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD"),
+	vout := transaction_base.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
 	tx := transaction.Transaction{
 		Vout: []transaction_base.TXOutput{*vout},

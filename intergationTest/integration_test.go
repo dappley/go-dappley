@@ -746,10 +746,11 @@ func TestDoubleMint(t *testing.T) {
 	var SendBm *lblockchain.BlockchainManager
 
 	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
+	validProducerAccount := account.NewContractAccountByAddress(account.NewAddress(validProducerAddr))
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
-	producerHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(validProducerAddr))
+	producerHash := validProducerAccount.GetPubKeyHash()
 	tx := &transaction.Transaction{nil, []transaction_base.TXInput{{[]byte{}, -1, nil, nil}}, []transaction_base.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
 
 	for i := 0; i < 3; i++ {
@@ -770,7 +771,7 @@ func TestDoubleMint(t *testing.T) {
 		node := network.NewNode(db, nil)
 		node.Start(testport_msg_relay_port3+i, "")
 
-		bc := lblockchain.CreateBlockchain(account.NewAddress(validProducerAddr), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(validProducerAccount.GetAddress(), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
 		pool := core.NewBlockPool()
 
 		bm := lblockchain.NewBlockchainManager(bc, pool, node)

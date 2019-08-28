@@ -216,14 +216,14 @@ func GetUnlockDuration() time.Duration {
 
 //get balance
 func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
-	pubKeyHash, valid := account.GeneratePubKeyHashByAddress(address)
-	if valid == false {
+	acc := account.NewContractAccountByAddress(address)
+	if acc.IsValid() == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
 
 	balance := common.NewAmount(0)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+	utxos := utxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
 	for _, utxo := range utxos.Indices {
 		balance = balance.Add(utxo.Value)
 	}
@@ -246,8 +246,8 @@ func GetMinerAddress() string {
 
 //add balance
 func SendFromMiner(address account.Address, amount *common.Amount, bc *lblockchain.Blockchain) ([]byte, string, error) {
-	minerKeyPair := account.GenerateKeyPairByPrivateKey(minerPrivateKey)
-	sendTxParam := transaction.NewSendTxParam(minerKeyPair.GenerateAddress(), minerKeyPair, address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
+	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
+	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), address, amount, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
 	return sendTo(sendTxParam, bc)
 }
 

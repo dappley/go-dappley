@@ -40,8 +40,8 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	defer s.Close()
-	coinbaseKeyPair := account.NewKeyPair()
-	coinbaseAddr := coinbaseKeyPair.GenerateAddress()
+	coinbaseAccount := account.NewAccount()
+	coinbaseAddr := coinbaseAccount.GetAddress()
 	bc := CreateBlockchain(coinbaseAddr, s, nil, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < 3; i++ {
@@ -58,7 +58,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	*/
 
 	utxoIndex := lutxo.NewUTXOIndex(bc.utxoCache)
-	txs := fakeDependentTxs(utxoIndex, coinbaseKeyPair, 5)
+	txs := fakeDependentTxs(utxoIndex, coinbaseAccount, 5)
 
 	//tx0 is in blk 4 and tx1 is in blk5. all other transactions are still in transaction pool
 	//The current transactions in transaction pool should look like
@@ -106,16 +106,19 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 }
 
-func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundKeyPair *account.KeyPair, numOfTx int) []transaction.Transaction {
+func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, numOfTx int) []transaction.Transaction {
 	var txs []transaction.Transaction
 
-	fundAddr := fundKeyPair.GenerateAddress()
+	fundAddr := fundAccount.GetAddress()
+	fundKeyPair := fundAccount.GetKeyPair()
 
-	keyPair1 := account.NewKeyPair()
-	addr1 := keyPair1.GenerateAddress()
+	account1 := account.NewAccount()
+	keyPair1 := account1.GetKeyPair()
+	addr1 := account1.GetAddress()
 
-	keyPair2 := account.NewKeyPair()
-	addr2 := keyPair2.GenerateAddress()
+	account2 := account.NewAccount()
+	keyPair2 := account2.GetKeyPair()
+	addr2 := account2.GetAddress()
 
 	//first transaction's vin is from fund addr
 	params := transaction.SendTxParam{
