@@ -19,6 +19,7 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/common/pubsub"
 	"math/rand"
 	"sync"
 	"time"
@@ -113,14 +114,16 @@ func (pm *PeerManager) ListenToNetService() {
 	if pm.netService == nil {
 		return
 	}
+	pm.netService.Listen(pm)
+}
 
-	for _, topic := range subscribedTopics {
-		pm.netService.Listen(topic, pm.GetCommandHandler(topic))
-	}
+//GetSubscribedTopics returns the topics that peer manager subscribes
+func (pm *PeerManager) GetSubscribedTopics() []string {
+	return subscribedTopics
 }
 
 //GetCommandHandler returns the corresponding command handler
-func (pm *PeerManager) GetCommandHandler(cmd string) network_model.CommandHandlerFunc {
+func (pm *PeerManager) GetCommandHandler(cmd string) pubsub.CommandHandler {
 	switch cmd {
 	case GetPeerListRequest:
 		return pm.GetPeerListRequestHandler
@@ -380,7 +383,10 @@ func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination ne
 }
 
 //GetPeerListRequestHandler is the handler to GetPeerListRequest
-func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvdCmdContext) {
+func (pm *PeerManager) GetPeerListRequestHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
 
 	getPeerlistRequest := &networkpb.GetPeerList{}
 
@@ -393,7 +399,10 @@ func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvd
 }
 
 //GetPeerListResponseHandler is the handler to SendGetPeerListResponse
-func (pm *PeerManager) GetPeerListResponseHandler(command *network_model.DappRcvdCmdContext) {
+func (pm *PeerManager) GetPeerListResponseHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
 
 	peerlistPb := &networkpb.ReturnPeerList{}
 

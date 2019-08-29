@@ -277,6 +277,9 @@ func (sm *StreamManager) OnStreamStop(stream *Stream) {
 //Stop stops all streams
 func (sm *StreamManager) Stop() {
 
+	sm.mutex.RLock()
+	defer sm.mutex.RUnlock()
+
 	for _, streamInfo := range sm.streams {
 		streamInfo.stream.StopStream()
 	}
