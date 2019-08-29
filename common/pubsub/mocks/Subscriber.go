@@ -10,22 +10,6 @@ type Subscriber struct {
 	mock.Mock
 }
 
-// GetTopicHandler provides a mock function with given fields: commandName
-func (_m *Subscriber) GetCommandHandler(commandName string) pubsub.TopicHandler {
-	ret := _m.Called(commandName)
-
-	var r0 pubsub.TopicHandler
-	if rf, ok := ret.Get(0).(func(string) pubsub.TopicHandler); ok {
-		r0 = rf(commandName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(pubsub.TopicHandler)
-		}
-	}
-
-	return r0
-}
-
 // GetSubscribedTopics provides a mock function with given fields:
 func (_m *Subscriber) GetSubscribedTopics() []string {
 	ret := _m.Called()
@@ -36,6 +20,22 @@ func (_m *Subscriber) GetSubscribedTopics() []string {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
+// GetTopicHandler provides a mock function with given fields: topic
+func (_m *Subscriber) GetTopicHandler(topic string) pubsub.TopicHandler {
+	ret := _m.Called(topic)
+
+	var r0 pubsub.TopicHandler
+	if rf, ok := ret.Get(0).(func(string) pubsub.TopicHandler); ok {
+		r0 = rf(topic)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(pubsub.TopicHandler)
 		}
 	}
 

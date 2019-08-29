@@ -92,9 +92,9 @@ func (bm *BlockChainManager) GetSubscribedTopics() []string {
 	return bmSubscribedTopics
 }
 
-func (bm *BlockChainManager) GetTopicHandler(commandName string) pubsub.TopicHandler {
+func (bm *BlockChainManager) GetTopicHandler(topic string) pubsub.TopicHandler {
 
-	switch commandName {
+	switch topic {
 	case SendBlock:
 		return bm.SendBlockHandler
 	case RequestBlock:
