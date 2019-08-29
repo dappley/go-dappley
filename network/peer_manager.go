@@ -122,9 +122,9 @@ func (pm *PeerManager) GetSubscribedTopics() []string {
 	return subscribedTopics
 }
 
-//GetCommandHandler returns the corresponding command handler
-func (pm *PeerManager) GetCommandHandler(cmd string) pubsub.CommandHandler {
-	switch cmd {
+//GetTopicHandler returns the corresponding command handler
+func (pm *PeerManager) GetTopicHandler(topic string) pubsub.TopicHandler {
+	switch topic {
 	case GetPeerListRequest:
 		return pm.GetPeerListRequestHandler
 	case GetPeerListResponse:

@@ -10,16 +10,16 @@ type Subscriber struct {
 	mock.Mock
 }
 
-// GetCommandHandler provides a mock function with given fields: commandName
-func (_m *Subscriber) GetCommandHandler(commandName string) pubsub.CommandHandler {
+// GetTopicHandler provides a mock function with given fields: commandName
+func (_m *Subscriber) GetCommandHandler(commandName string) pubsub.TopicHandler {
 	ret := _m.Called(commandName)
 
-	var r0 pubsub.CommandHandler
-	if rf, ok := ret.Get(0).(func(string) pubsub.CommandHandler); ok {
+	var r0 pubsub.TopicHandler
+	if rf, ok := ret.Get(0).(func(string) pubsub.TopicHandler); ok {
 		r0 = rf(commandName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(pubsub.CommandHandler)
+			r0 = ret.Get(0).(pubsub.TopicHandler)
 		}
 	}
 

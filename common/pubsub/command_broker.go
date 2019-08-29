@@ -9,7 +9,7 @@ var (
 	ErrNoSubscribersFound = errors.New("No command handlers")
 )
 
-type CommandHandler func(input interface{})
+type TopicHandler func(input interface{})
 
 type CommandBroker struct {
 	reservedTopics map[string]bool
@@ -60,7 +60,7 @@ func (cb *CommandBroker) Dispatch(topic string, content interface{}) error {
 
 	for _, subscriber := range cb.subscribers[topic] {
 		if subscriber != nil {
-			handler := subscriber.GetCommandHandler(topic)
+			handler := subscriber.GetTopicHandler(topic)
 			if handler != nil {
 				go handler(content)
 			}

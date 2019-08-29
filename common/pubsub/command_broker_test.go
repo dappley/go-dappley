@@ -84,12 +84,12 @@ func TestCommandBroker_Dispatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			md := pubsub.NewCommandBroker(reservedTopics)
 
-			var handler pubsub.CommandHandler
+			var handler pubsub.TopicHandler
 			handler = func(input interface{}) {
 			}
 			subscriber := &mocks.Subscriber{}
 			subscriber.On("GetSubscribedTopics").Return([]string{tt.subScribedCmd})
-			subscriber.On("GetCommandHandler", tt.dispatchedCmd).Return(handler)
+			subscriber.On("GetTopicHandler", tt.dispatchedCmd).Return(handler)
 			md.AddSubscriber(subscriber)
 
 			//fake received command and then dispatch
@@ -109,14 +109,14 @@ func TestCommandBroker_DispatchMultiple(t *testing.T) {
 	)
 
 	md := pubsub.NewCommandBroker(reservedTopics)
-	var handler pubsub.CommandHandler
+	var handler pubsub.TopicHandler
 	handler = func(input interface{}) {}
 
 	//Both handlers subscribe to reserved topic
 	topic := reservedTopics[0]
 	subscriber := &mocks.Subscriber{}
 	subscriber.On("GetSubscribedTopics").Return([]string{topic})
-	subscriber.On("GetCommandHandler", topic).Return(handler)
+	subscriber.On("GetTopicHandler", topic).Return(handler)
 	md.AddSubscriber(subscriber)
 
 	var input interface{}
