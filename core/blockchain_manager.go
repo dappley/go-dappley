@@ -19,6 +19,7 @@ package core
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/common/pubsub"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/pb"
@@ -84,12 +85,14 @@ func (bm *BlockChainManager) ListenToNetService() {
 		return
 	}
 
-	for _, command := range bmSubscribedTopics {
-		bm.netService.Listen(command, bm.GetCommandHandler(command))
-	}
+	bm.netService.Listen(bm)
 }
 
-func (bm *BlockChainManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+func (bm *BlockChainManager) GetSubscribedTopics() []string {
+	return bmSubscribedTopics
+}
+
+func (bm *BlockChainManager) GetTopicHandler(commandName string) pubsub.TopicHandler {
 
 	switch commandName {
 	case SendBlock:
@@ -240,7 +243,11 @@ func (bm *BlockChainManager) RequestBlock(hash Hash, pid network_model.PeerInfo)
 }
 
 //RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
-func (bm *BlockChainManager) RequestBlockHandler(command *network_model.DappRcvdCmdContext) {
+func (bm *BlockChainManager) RequestBlockHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	request := &corepb.RequestBlock{}
 
 	if err := proto.Unmarshal(command.GetData(), request); err != nil {
@@ -270,7 +277,11 @@ func (bm *BlockChainManager) BroadcastBlock(block *Block) {
 }
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
-func (bm *BlockChainManager) SendBlockHandler(command *network_model.DappRcvdCmdContext) {
+func (bm *BlockChainManager) SendBlockHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	blockpb := &corepb.Block{}
 
 	//unmarshal byte to proto
