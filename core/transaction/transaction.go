@@ -79,6 +79,7 @@ type Transaction struct {
 // ContractTx contains contract value
 type ContractTx struct {
 	Transaction
+	address account.Address
 }
 
 type TxIndex struct {
@@ -286,7 +287,8 @@ func (tx *Transaction) ToContractTx() *ContractTx {
 	if !tx.IsContract() {
 		return nil
 	}
-	return &ContractTx{*tx}
+	address := tx.Vout[ContractTxouputIndex].GetAddress()
+	return &ContractTx{*tx, address}
 }
 
 func (tx *Transaction) IsCoinbase() bool {
@@ -621,7 +623,7 @@ func (tx *Transaction) GetContractAddress() account.Address {
 		return account.NewAddress("")
 	}
 
-	return ctx.GetContractPubKeyHash().GenerateAddress()
+	return ctx.address
 }
 
 //GetContract returns the smart contract code in a transaction

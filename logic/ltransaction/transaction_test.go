@@ -309,11 +309,12 @@ func TestTransaction_Execute(t *testing.T) {
 					Contract:   contract,
 				},
 			}
-			tx := transaction.ContractTx{transaction.Transaction{
+			tx := transaction.Transaction{
 				Vout:     []transaction_base.TXOutput{{nil, toPKH, "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"}},
 				GasLimit: common.NewAmount(0),
 				GasPrice: common.NewAmount(0),
-			}}
+			}
+			ctx := tx.ToContractTx()
 
 			index := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {
@@ -336,13 +337,13 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
 			parentBlk := core.GenerateMockBlock()
-			preUTXO, err := lutxo.FindVinUtxosInUtxoPool(*index, tx.Transaction)
+			preUTXO, err := lutxo.FindVinUtxosInUtxoPool(*index, ctx.Transaction)
 
 			if err != nil {
 				println(err.Error())
 			}
 			isSCUTXO := (*index).GetAllUTXOsByPubKeyHash([]byte(tx.Vout[0].PubKeyHash)).Size() == 0
-			Execute(&tx, preUTXO, isSCUTXO, *index, scState.NewScState(), nil, sc, 0, parentBlk)
+			Execute(ctx, preUTXO, isSCUTXO, *index, scState.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}
