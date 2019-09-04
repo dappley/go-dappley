@@ -302,9 +302,6 @@ func (dpos *DPOS) updateNewBlock(ctx *core.BlockContext) {
 		return
 	}
 
-	// force set ready state
-	dpos.bm.Getblockchain().SetState(core.BlockchainReady)
-
 	for _,tx :=range ctx.Block.GetTransactions() {
 		if tx.CreateTime > 0 {
 			TxAddToBlockCost.Update((time.Now().UnixNano()/1e6-tx.CreateTime)/1e3)
