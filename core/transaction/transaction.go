@@ -771,7 +771,7 @@ func (tx *Transaction) GetDefaultFromTransactionAccount() *account.TransactionAc
 
 	ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 
-	return account.NewTransactionAccountByPubKey(ta.GetPubKeyHash())
+	return ta
 }
 
 //calculateUtxoSum calculates the total amount of all input utxos
