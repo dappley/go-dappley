@@ -1,6 +1,7 @@
 package download_manager
 
 import (
+	"github.com/dappley/go-dappley/common/pubsub"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 )
@@ -12,5 +13,5 @@ type NetService interface {
 	UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
 	BroadcastNormalPriorityCommand(commandName string, message proto.Message)
 	BroadcastHighProrityCommand(commandName string, message proto.Message)
-	Listen(command string, handler network_model.CommandHandlerFunc)
+	Listen(subscriber pubsub.Subscriber)
 }

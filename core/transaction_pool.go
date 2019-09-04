@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/asaskevich/EventBus"
+	"github.com/dappley/go-dappley/common/pubsub"
 	"github.com/dappley/go-dappley/core/pb"
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
@@ -80,14 +81,16 @@ func (txPool *TransactionPool) ListenToNetService() {
 		return
 	}
 
-	for _, command := range txPoolSubscribedTopics {
-		txPool.netService.Listen(command, txPool.GetCommandHandler(command))
-	}
+	txPool.netService.Listen(txPool)
 }
 
-func (txPool *TransactionPool) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+func (txPool *TransactionPool) GetSubscribedTopics() []string {
+	return txPoolSubscribedTopics
+}
 
-	switch commandName {
+func (txPool *TransactionPool) GetTopicHandler(topic string) pubsub.TopicHandler {
+
+	switch topic {
 	case BroadcastTx:
 		return txPool.BroadcastTxHandler
 	case BroadcastBatchTxs:
@@ -608,7 +611,11 @@ func (txPool *TransactionPool) BroadcastTx(tx *Transaction) {
 	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, tx.ToProto())
 }
 
-func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
+func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	//TODO: Check if the blockchain state is ready
 	txpb := &corepb.Transaction{}
 
@@ -644,7 +651,11 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []Transaction) {
 	txPool.netService.BroadcastNormalPriorityCommand(BroadcastBatchTxs, transactions.ToProto())
 }
 
-func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
+func (txPool *TransactionPool) BroadcastBatchTxsHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	//TODO: Check if the blockchain state is ready
 	txspb := &corepb.Transactions{}
 

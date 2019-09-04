@@ -299,7 +299,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
 		return err
 	}
-
+	ctx.State.Save(bc.db, ctx.Block.GetHash())
 	// Assign changes to receiver
 	*bc = *bcTemp
 
