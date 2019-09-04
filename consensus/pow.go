@@ -179,6 +179,8 @@ func (pow *ProofOfWork) updateNewBlock(ctx *core.BlockContext) {
 		logger.Warn(err)
 		return
 	}
+	// force set ready state
+	pow.bm.Getblockchain().SetState(core.BlockchainReady)
 
 	pow.bm.BroadcastBlock(ctx.Block)
 }
