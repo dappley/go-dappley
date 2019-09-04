@@ -69,7 +69,7 @@ type Blockchain struct {
 	consensus     Consensus
 	txPool        *TransactionPool
 	scManager     ScEngineManager
-	state         *BlockchainState
+	state         BlockchainState
 	eventManager  *EventManager
 	blkSizeLimit  int
 	mutex         *sync.Mutex
@@ -78,7 +78,6 @@ type Blockchain struct {
 // CreateBlockchain creates a new blockchain db
 func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *TransactionPool, scManager ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address)
-	state := BlockchainReady
 	bc := &Blockchain{
 		genesis.GetHash(),
 		genesis.GetHash(),
@@ -87,7 +86,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		consensus,
 		txPool,
 		scManager,
-		&state,
+		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
@@ -112,7 +111,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionP
 	if err != nil {
 		return nil, err
 	}
-	state := BlockchainReady
+
 	bc := &Blockchain{
 		tip,
 		lib,
@@ -121,7 +120,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *TransactionP
 		consensus,
 		txPool,
 		scManager,
-		&state,
+		BlockchainReady,
 		NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
@@ -221,11 +220,11 @@ func (bc *Blockchain) SetConsensus(consensus Consensus) {
 }
 
 func (bc *Blockchain) SetState(state BlockchainState) {
-	bc.state = &state
+	bc.state = state
 }
 
 func (bc *Blockchain) GetState() BlockchainState {
-	return *bc.state
+	return bc.state
 }
 
 func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
@@ -246,8 +245,9 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp := bc.deepCopy()
 	tailBlk, _ := bc.GetTailBlock()
 
-	bcTemp.db.EnableBatch()
-	defer bcTemp.db.DisableBatch()
+
+	 bcTemp.db.EnableBatch()
+	 defer bcTemp.db.DisableBatch()
 
 	if ctx.Lib != nil {
 		err := bcTemp.SetLIBHash(ctx.Lib.GetHash())
@@ -364,8 +364,7 @@ func (bc *Blockchain) FindTransactionFromIndexBlock(txID []byte, blockId []byte)
 }
 
 func (bc *Blockchain) Iterator() *Blockchain {
-	state := BlockchainInit
-	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, &state, nil, bc.blkSizeLimit, bc.mutex}
+	return &Blockchain{bc.tailBlockHash, bc.libHash, bc.db, bc.utxoCache, bc.consensus, nil, nil, BlockchainInit, nil, bc.blkSizeLimit, bc.mutex}
 }
 
 func (bc *Blockchain) Next() (*Block, error) {
