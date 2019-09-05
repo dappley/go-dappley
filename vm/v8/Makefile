@@ -40,6 +40,12 @@ ifeq ($(PLATFORM), marm)
 endif
 
 install: build
+ifeq ($(PLATFORM), m64)
+	sudo install ../lib/x86_64/*.$(FILESUFFIX) /usr/local/lib/
+endif
+ifeq ($(PLATFORM), marm)
+	sudo install ../lib/arm/*.$(FILESUFFIX) /usr/local/lib/
+endif
 	sudo install ../lib/*.$(FILESUFFIX) /usr/local/lib/
 	$(LDCONFIG)
 
