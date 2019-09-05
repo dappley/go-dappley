@@ -1,7 +1,5 @@
 ARCH = $(shell arch)
-ifneq ($(findstring 64, $(ARCH)),)
-	PLATFORM = m64
-endif
+PLATFORM = m64
 ifneq ($(findstring arm, $(ARCH)),)
 	PLATFORM = marm
 endif
