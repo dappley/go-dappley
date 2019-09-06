@@ -671,52 +671,49 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	validProducerAddress := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	//fmt.Println(validProducerAddress, validProducerKey)
-	conss := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
+
+	producer := block_producer_info.NewBlockProducerInfo(validProducerAddress)
+	dpos1 := consensus.NewDPOS(producer)
 	dynasty := consensus.NewDynasty([]string{validProducerAddress}, 1, 1)
-	conss.SetDynasty(dynasty)
+	dpos1.SetKey(validProducerKey)
+	dpos1.SetDynasty(dynasty)
 
 	db := storage.NewRamStorage()
 	seedNode := network.NewNode(db, nil)
 	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
 
-	bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), conss, transaction_pool.NewTransactionPool(seedNode, 128), nil, 100000)
-
-	//create and start seed node
-	pool := core.NewBlockPool()
-	bm := blockchain_logic.NewBlockchainManager(bc, pool, seedNode)
-
-	conss.SetKey(validProducerKey)
+	bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), dpos1, transaction_pool.NewTransactionPool(seedNode, 128), nil, 100000)
+	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), seedNode)
+	bp := block_producer.NewBlockProducer(bm, dpos1, producer)
 
 	// seed node start mining
-	conss.Start()
+	bp.Start()
 	util.WaitDoneOrTimeout(func() bool {
 		return bc.GetMaxHeight() > 8
 	}, 10)
 
 	// set up another node for syncing
-	dpos := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
-	dpos.SetDynasty(dynasty)
+	dpos2 := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
+	dpos2.SetKey(validProducerKey)
+	dpos2.SetDynasty(dynasty)
+	db2 := storage.NewRamStorage()
+	node2 := network.NewNode(db2, nil)
+	node2.Start(testport_fork_syncing+1, "")
+	defer node2.Stop()
 
-	db1 := storage.NewRamStorage()
-	node := network.NewNode(db1, nil)
-	node.Start(testport_fork_syncing+1, "")
-	defer node.Stop()
-
-	bc1 := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db1, dpos, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
-
-	dpos.SetKey(validProducerKey)
+	bc2 := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transaction_pool.NewTransactionPool(node2, 128), nil, 100000)
+	blockchain_logic.NewBlockchainManager(bc2, core.NewBlockPool(), node2)
 
 	// Trigger fork choice in node by broadcasting tail block of node[0]
 	tailBlk, _ := bc.GetTailBlock()
 
-	connectNodes(seedNode, node)
+	connectNodes(seedNode, node2)
 	bm.BroadcastBlock(tailBlk)
 
 	time.Sleep(time.Second * 5)
-	conss.Stop()
-	assert.True(t, bc.GetMaxHeight()-bc1.GetMaxHeight() <= 1)
+	bp.Stop()
+	assert.True(t, bc.GetMaxHeight()-bc2.GetMaxHeight() <= 1)
 }
 
 func TestUpdate(t *testing.T) {
