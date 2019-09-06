@@ -37,11 +37,15 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
+
+	"github.com/dappley/go-dappley/metrics/logMetrics"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	"github.com/spf13/viper"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 const (
@@ -91,7 +95,11 @@ func main() {
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
 	node, err := initNode(conf, db)
-	defer node.Stop()
+	if err != nil {
+		return
+	} else {
+		defer node.Stop()
+	}
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
@@ -141,6 +149,14 @@ func main() {
 
 	bm.RequestDownloadBlockchain()
 
+	if viper.GetBool("metrics.open") {
+		logMetrics.LogMetricsInfo(bm.Getblockchain())
+	}
+	if viper.GetBool("pprof.open") {
+		go func() {
+			http.ListenAndServe(":60001", nil)
+		}()
+	}
 	select {}
 }
 

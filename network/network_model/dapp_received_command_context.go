@@ -1,18 +1,14 @@
 package network_model
 
-import (
-	"github.com/libp2p/go-libp2p-core/peer"
-)
-
 type CommandHandlerFunc func(command *DappRcvdCmdContext)
 
 type DappRcvdCmdContext struct {
 	command *DappCmd
-	source  peer.ID
+	source  PeerInfo
 }
 
 //NewDappRcvdCmdContext returns a DappRcvdCmdContext object
-func NewDappRcvdCmdContext(command *DappCmd, source peer.ID) *DappRcvdCmdContext {
+func NewDappRcvdCmdContext(command *DappCmd, source PeerInfo) *DappRcvdCmdContext {
 	return &DappRcvdCmdContext{
 		command: command,
 		source:  source,
@@ -35,7 +31,7 @@ func (dcc *DappRcvdCmdContext) GetData() []byte {
 }
 
 //GetSource returns the sender of the command
-func (dcc *DappRcvdCmdContext) GetSource() peer.ID {
+func (dcc *DappRcvdCmdContext) GetSource() PeerInfo {
 	return dcc.source
 }
 

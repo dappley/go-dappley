@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/common/pubsub"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	blockpb "github.com/dappley/go-dappley/core/block/pb"
@@ -35,7 +36,6 @@ import (
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -99,14 +99,16 @@ func (bm *BlockchainManager) ListenToNetService() {
 		return
 	}
 
-	for _, command := range bmSubscribedTopics {
-		bm.netService.Listen(command, bm.GetCommandHandler(command))
-	}
+	bm.netService.Listen(bm)
 }
 
-func (bm *BlockchainManager) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+func (bm *BlockchainManager) GetSubscribedTopics() []string {
+	return bmSubscribedTopics
+}
 
-	switch commandName {
+func (bm *BlockchainManager) GetTopicHandler(topic string) pubsub.TopicHandler {
+
+	switch topic {
 	case SendBlock:
 		return bm.SendBlockHandler
 	case RequestBlock:
@@ -137,12 +139,12 @@ func (bm *BlockchainManager) VerifyBlock(blk *block.Block) bool {
 	return true
 }
 
-func (bm *BlockchainManager) Push(blk *block.Block, pid peer.ID) {
+func (bm *BlockchainManager) Push(blk *block.Block, pid network_model.PeerInfo) {
 	logger.WithFields(logger.Fields{
-		"from":   pid.String(),
+		"from":   pid.PeerId.String(),
 		"hash":   blk.GetHash().String(),
 		"height": blk.GetHeight(),
-	}).Info("BlockchainManager: received a new blk.")
+	}).Info("BlockChainManager: received a new block.")
 
 	if bm.blockchain.GetState() != blockchain.BlockchainReady {
 		logger.Info("BlockchainManager: Blockchain not ready, discard received blk")
@@ -255,14 +257,18 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 }
 
 //RequestBlock sends a requestBlock command to its peer with pid through network module
-func (bm *BlockchainManager) RequestBlock(hash hash.Hash, pid peer.ID) {
+func (bm *BlockchainManager) RequestBlock(hash hash.Hash, pid network_model.PeerInfo) {
 	request := &corepb.RequestBlock{Hash: hash}
 
-	bm.netService.SendCommand(RequestBlock, request, pid, network_model.Unicast, network_model.HighPriorityCommand)
+	bm.netService.UnicastHighProrityCommand(RequestBlock, request, pid)
 }
 
 //RequestBlockhandler handles when blockchain manager receives a requestBlock command from its peers
-func (bm *BlockchainManager) RequestBlockHandler(command *network_model.DappRcvdCmdContext) {
+func (bm *BlockchainManager) RequestBlockHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	request := &corepb.RequestBlock{}
 
 	if err := proto.Unmarshal(command.GetData(), request); err != nil {
@@ -281,41 +287,37 @@ func (bm *BlockchainManager) RequestBlockHandler(command *network_model.DappRcvd
 }
 
 //SendBlockToPeer unicasts a block to the peer with peer id "pid"
-func (bm *BlockchainManager) SendBlockToPeer(blk *block.Block, pid peer.ID) {
+func (bm *BlockchainManager) SendBlockToPeer(block *block.Block, pid network_model.PeerInfo) {
 
-	bm.SendBlock(blk, pid, network_model.Unicast)
+	bm.netService.UnicastNormalPriorityCommand(SendBlock, block.ToProto(), pid)
 }
 
 //BroadcastBlock broadcasts a block to all peers
-func (bm *BlockchainManager) BroadcastBlock(blk *block.Block) {
-	var broadcastPid peer.ID
-	bm.SendBlock(blk, broadcastPid, network_model.Broadcast)
-}
-
-//SendBlock sends a SendBlock command to its peer with pid by finding the block from its database
-func (bm *BlockchainManager) SendBlock(blk *block.Block, pid peer.ID, isBroadcast bool) {
-
-	bm.netService.SendCommand(SendBlock, blk.ToProto(), pid, isBroadcast, network_model.HighPriorityCommand)
+func (bm *BlockchainManager) BroadcastBlock(block *block.Block) {
+	bm.netService.BroadcastHighProrityCommand(SendBlock, block.ToProto())
 }
 
 //SendBlockHandler handles when blockchain manager receives a sendBlock command from its peers
-func (bm *BlockchainManager) SendBlockHandler(command *network_model.DappRcvdCmdContext) {
-	pb := &blockpb.Block{}
+func (bm *BlockchainManager) SendBlockHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
+	blockpb := &blockpb.Block{}
 
 	//unmarshal byte to proto
-	if err := proto.Unmarshal(command.GetData(), pb); err != nil {
+	if err := proto.Unmarshal(command.GetData(), blockpb); err != nil {
 		logger.WithError(err).Warn("BlockchainManager: parse data failed.")
 		return
 	}
 
 	blk := &block.Block{}
-	blk.FromProto(pb)
+	blk.FromProto(blockpb)
 	bm.Push(blk, command.GetSource())
 
 	if command.IsBroadcast() {
 		//relay the original command
-		var broadcastPid peer.ID
-		bm.netService.Relay(command.GetCommand(), broadcastPid, network_model.HighPriorityCommand)
+		bm.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.HighPriorityCommand)
 	}
 }
 

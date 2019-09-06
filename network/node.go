@@ -21,6 +21,7 @@ package network
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/dappley/go-dappley/common/pubsub"
 	"io/ioutil"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -28,7 +29,6 @@ import (
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 )
@@ -48,7 +48,7 @@ var (
 
 type Node struct {
 	network       *Network
-	commandBroker *CommandBroker
+	commandBroker *pubsub.CommandBroker
 	exitCh        chan bool
 	dispatcher    chan *network_model.DappPacketContext
 	commandSendCh chan *network_model.DappSendCmdContext
@@ -67,7 +67,7 @@ func NewNodeWithConfig(db Storage, config network_model.PeerConnectionConfig, se
 		exitCh:        make(chan bool, 1),
 		dispatcher:    make(chan *network_model.DappPacketContext, dispatchChLen),
 		commandSendCh: make(chan *network_model.DappSendCmdContext, requestChLen),
-		commandBroker: NewCommandBroker(reservedTopics),
+		commandBroker: pubsub.NewCommandBroker(reservedTopics),
 	}
 
 	node.network = NewNetwork(
@@ -131,9 +131,39 @@ func buildHostMultiAddress(host host.Host) (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", host.ID().Pretty()))
 }
 
-//SendCommand sends a command to a peer or all peers
-func (n *Node) SendCommand(commandName string, message proto.Message, destination peer.ID, isBroadcast bool, priority network_model.DappCmdPriority) {
-	command := network_model.NewDappSendCmdContext(commandName, message, destination, isBroadcast, priority)
+//UnicastNormalPriorityCommand sends a normal priority command to a peer
+func (n *Node) UnicastNormalPriorityCommand(commandName string, message proto.Message, destination network_model.PeerInfo) {
+	n.unicast(commandName, message, destination, network_model.NormalPriorityCommand)
+}
+
+//UnicastHighProrityCommand sends a high priority command to a peer
+func (n *Node) UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo) {
+	n.unicast(commandName, message, destination, network_model.HighPriorityCommand)
+}
+
+//BroadcastNormalPriorityCommand sends a normal priority command to all peers
+func (n *Node) BroadcastNormalPriorityCommand(commandName string, message proto.Message) {
+	n.broadcast(commandName, message, network_model.NormalPriorityCommand)
+}
+
+//BroadcastHighProrityCommand sends a high priority command to all peers
+func (n *Node) BroadcastHighProrityCommand(commandName string, message proto.Message) {
+	n.broadcast(commandName, message, network_model.HighPriorityCommand)
+}
+
+//Unicast sends a command to a peer
+func (n *Node) unicast(commandName string, message proto.Message, destination network_model.PeerInfo, priority network_model.DappCmdPriority) {
+	n.sendCommand(commandName, message, destination, network_model.Unicast, priority)
+}
+
+//Broadcast sends a command to all peers
+func (n *Node) broadcast(commandName string, message proto.Message, priority network_model.DappCmdPriority) {
+	n.sendCommand(commandName, message, network_model.PeerInfo{}, network_model.Broadcast, priority)
+}
+
+//Relay relays a command to a peer or all peers
+func (n *Node) Relay(dappCmd *network_model.DappCmd, destination network_model.PeerInfo, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination.PeerId, priority)
 	select {
 	case n.commandSendCh <- command:
 	default:
@@ -143,9 +173,9 @@ func (n *Node) SendCommand(commandName string, message proto.Message, destinatio
 	}
 }
 
-//Relay relays a command to a peer or all peers
-func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priority network_model.DappCmdPriority) {
-	command := network_model.NewDappSendCmdContextFromDappCmd(dappCmd, destination, priority)
+//sendCommand sens a command to a peer or all peers
+func (n *Node) sendCommand(commandName string, message proto.Message, destination network_model.PeerInfo, isBroadcast bool, priority network_model.DappCmdPriority) {
+	command := network_model.NewDappSendCmdContext(commandName, message, destination.PeerId, isBroadcast, priority)
 	select {
 	case n.commandSendCh <- command:
 	default:
@@ -156,8 +186,8 @@ func (n *Node) Relay(dappCmd *network_model.DappCmd, destination peer.ID, priori
 }
 
 //Listen registers a callback function for a topic
-func (n *Node) Listen(command string, handler network_model.CommandHandlerFunc) {
-	n.commandBroker.Subscribe(command, handler)
+func (n *Node) Listen(subscriber pubsub.Subscriber) {
+	n.commandBroker.AddSubscriber(subscriber)
 }
 
 //Stop stops the node
@@ -200,7 +230,7 @@ func (n *Node) StartListenLoop() {
 
 				cmdMsg := network_model.ParseDappMsgFromDappPacket(streamMsg.Packet)
 				dappRcvdCmd := network_model.NewDappRcvdCmdContext(cmdMsg, streamMsg.Source)
-				n.commandBroker.Dispatch(dappRcvdCmd)
+				n.commandBroker.Dispatch(cmdMsg.GetName(), dappRcvdCmd)
 
 			}
 		}
@@ -246,7 +276,7 @@ func (n *Node) onStreamStop(stream *Stream) {
 	}
 
 	dappCmd := network_model.NewDappCmd(TopicOnStreamStop, bytes, false)
-	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.GetHost().ID())
+	dappCmdCtx := network_model.NewDappRcvdCmdContext(dappCmd, n.network.GetHost().GetPeerInfo())
 
-	n.commandBroker.Dispatch(dappCmdCtx)
+	n.commandBroker.Dispatch(TopicOnStreamStop, dappCmdCtx)
 }

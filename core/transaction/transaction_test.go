@@ -151,6 +151,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			}
 
 			assert.Equal(t, account.NewAddress(tt.expectedRes), tx.GetContractAddress())
@@ -181,6 +182,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			true,
@@ -193,6 +195,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -212,6 +215,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			nil,
 			false,
@@ -231,6 +235,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -250,6 +255,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -276,6 +282,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -305,6 +312,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -335,6 +343,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
+				0,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",

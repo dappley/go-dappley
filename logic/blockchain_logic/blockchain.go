@@ -235,8 +235,9 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp := bc.DeepCopy()
 	tailBlk, _ := bc.GetTailBlock()
 
-	bcTemp.db.EnableBatch()
-	defer bcTemp.db.DisableBatch()
+
+	 bcTemp.db.EnableBatch()
+	 defer bcTemp.db.DisableBatch()
 
 	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
@@ -282,7 +283,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
 		return err
 	}
-
+	ctx.State.Save(bc.db, ctx.Block.GetHash())
 	// Assign changes to receiver
 	*bc = *bcTemp
 

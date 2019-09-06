@@ -31,11 +31,12 @@ import (
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 
 	"github.com/asaskevich/EventBus"
+	"github.com/dappley/go-dappley/common/pubsub"
+
 	"github.com/dappley/go-dappley/network/network_model"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -89,14 +90,16 @@ func (txPool *TransactionPool) ListenToNetService() {
 		return
 	}
 
-	for _, command := range txPoolSubscribedTopics {
-		txPool.netService.Listen(command, txPool.GetCommandHandler(command))
-	}
+	txPool.netService.Listen(txPool)
 }
 
-func (txPool *TransactionPool) GetCommandHandler(commandName string) network_model.CommandHandlerFunc {
+func (txPool *TransactionPool) GetSubscribedTopics() []string {
+	return txPoolSubscribedTopics
+}
 
-	switch commandName {
+func (txPool *TransactionPool) GetTopicHandler(topic string) pubsub.TopicHandler {
+
+	switch topic {
 	case BroadcastTx:
 		return txPool.BroadcastTxHandler
 	case BroadcastBatchTxs:
@@ -614,11 +617,14 @@ func (txPool *TransactionPool) FromProto(pb proto.Message) {
 }
 
 func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
-	var broadcastPid peer.ID
-	txPool.netService.SendCommand(BroadcastTx, tx.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
+	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, tx.ToProto())
 }
 
-func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcvdCmdContext) {
+func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	//TODO: Check if the blockchain state is ready
 	txpb := &transactionpb.Transaction{}
 
@@ -634,12 +640,12 @@ func (txPool *TransactionPool) BroadcastTxHandler(command *network_model.DappRcv
 	//	return
 	//}
 
+	tx.CreateTime = -1
 	txPool.Push(*tx)
 
 	if command.IsBroadcast() {
 		//relay the original command
-		var broadcastPid peer.ID
-		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
+		txPool.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.NormalPriorityCommand)
 	}
 }
 
@@ -651,11 +657,14 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []transaction.Transaction) 
 
 	transactions := transaction.NewTransactions(txs)
 
-	var broadcastPid peer.ID
-	txPool.netService.SendCommand(BroadcastBatchTxs, transactions.ToProto(), broadcastPid, network_model.Broadcast, network_model.NormalPriorityCommand)
+	txPool.netService.BroadcastNormalPriorityCommand(BroadcastBatchTxs, transactions.ToProto())
 }
 
-func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.DappRcvdCmdContext) {
+func (txPool *TransactionPool) BroadcastBatchTxsHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
+
 	//TODO: Check if the blockchain state is ready
 	txspb := &transactionpb.Transactions{}
 
@@ -674,13 +683,13 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(command *network_model.D
 		//if tx.IsFromContract(utxoIndex) {
 		//	return
 		//}
+		tx.CreateTime = -1
 		txPool.Push(tx)
 	}
 
 	if command.IsBroadcast() {
 		//relay the original command
-		var broadcastPid peer.ID
-		txPool.netService.Relay(command.GetCommand(), broadcastPid, network_model.NormalPriorityCommand)
+		txPool.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.NormalPriorityCommand)
 	}
 
 }

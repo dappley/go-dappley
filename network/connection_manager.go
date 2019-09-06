@@ -98,11 +98,13 @@ func (cm *ConnectionManager) RemoveConnection(connectionType ConnectionType) {
 	case ConnectionTypeIn:
 		if cm.connectionInCount > 0 {
 			cm.connectionInCount--
+			ConnectionTypeInNum.Update(int64(cm.connectionInCount))
 		}
 
 	case ConnectionTypeOut:
 		if cm.connectionOutCount > 0 {
 			cm.connectionOutCount--
+			ConnectionTypeOutNum.Update(int64(cm.connectionOutCount))
 		}
 	}
 }
@@ -111,8 +113,10 @@ func (cm *ConnectionManager) AddConnection(connectionType ConnectionType) {
 	switch connectionType {
 	case ConnectionTypeIn:
 		cm.connectionInCount++
+		ConnectionTypeInNum.Update(int64(cm.connectionInCount))
 
 	case ConnectionTypeOut:
 		cm.connectionOutCount++
+		ConnectionTypeOutNum.Update(int64(cm.connectionOutCount))
 	}
 }

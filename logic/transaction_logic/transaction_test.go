@@ -54,7 +54,7 @@ func TestSign(t *testing.T) {
 	txout := []transaction_base.TXOutput{
 		{common.NewAmount(19), pubKeyHash, ""},
 	}
-	tx := transaction.Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := transaction.Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
 
 	// transaction_logic.Sign the transaction
 	err := tx.Sign(*privKey, prevTXs)
@@ -113,7 +113,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := transaction_base.TXInput{nil, -1, bh1, []byte("Reward to test")}
 	txout1 := transaction_base.NewTXOutput(common.NewAmount(10000000), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
-	var t6 = transaction.Transaction{nil, []transaction_base.TXInput{txin1}, []transaction_base.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	var t6 = transaction.Transaction{nil, []transaction_base.TXInput{txin1}, []transaction_base.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
 
 	// test valid coinbase transaction
 	err5 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t5, 5)
@@ -130,7 +130,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	binary.BigEndian.PutUint64(bh2, 5)
 	txin2 := transaction_base.TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := transaction_base.NewTXOutput(common.NewAmount(9), account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"))
-	var t7 = transaction.Transaction{nil, []transaction_base.TXInput{txin2}, []transaction_base.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	var t7 = transaction.Transaction{nil, []transaction_base.TXInput{txin2}, []transaction_base.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
 	err7 := VerifyTransaction(&utxo_logic.UTXOIndex{}, &t7, 5)
 	assert.NotNil(t, err7)
 
@@ -176,12 +176,12 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		signWith []byte
 		ok       error
 	}{
-		{"normal", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, nil},
-		{"previous tx not found with wrong pubkey", transaction.Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong Txid", transaction.Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong TxIndex", transaction.Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"Amount invalid", transaction.Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, privKeyByte, errors.New("Transaction: ID is invalid")},
-		{"transaction_logic.Sign invalid", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
+		{"normal", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, nil},
+		{"previous tx not found with wrong pubkey", transaction.Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong Txid", transaction.Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong TxIndex", transaction.Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"Amount invalid", transaction.Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: ID is invalid")},
+		{"transaction_logic.Sign invalid", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

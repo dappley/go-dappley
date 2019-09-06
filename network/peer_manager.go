@@ -19,6 +19,7 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/common/pubsub"
 	"math/rand"
 	"sync"
 	"time"
@@ -113,15 +114,17 @@ func (pm *PeerManager) ListenToNetService() {
 	if pm.netService == nil {
 		return
 	}
-
-	for _, topic := range subscribedTopics {
-		pm.netService.Listen(topic, pm.GetCommandHandler(topic))
-	}
+	pm.netService.Listen(pm)
 }
 
-//GetCommandHandler returns the corresponding command handler
-func (pm *PeerManager) GetCommandHandler(cmd string) network_model.CommandHandlerFunc {
-	switch cmd {
+//GetSubscribedTopics returns the topics that peer manager subscribes
+func (pm *PeerManager) GetSubscribedTopics() []string {
+	return subscribedTopics
+}
+
+//GetTopicHandler returns the corresponding command handler
+func (pm *PeerManager) GetTopicHandler(topic string) pubsub.TopicHandler {
+	switch topic {
 	case GetPeerListRequest:
 		return pm.GetPeerListRequestHandler
 	case GetPeerListResponse:
@@ -360,13 +363,12 @@ func (pm *PeerManager) BroadcastGetPeerListRequest() {
 		MaxNumber: int32(maxSyncPeersCount),
 	}
 
-	var destination peer.ID
-	pm.netService.SendCommand(GetPeerListRequest, getPeerListPb, destination, network_model.Broadcast, network_model.HighPriorityCommand)
+	pm.netService.BroadcastHighProrityCommand(GetPeerListRequest, getPeerListPb)
 
 }
 
 //SendGetPeerListResponse sends its peer list to destination peer
-func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination peer.ID) {
+func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination network_model.PeerInfo) {
 
 	peers := pm.GetRandomPeers(maxNumOfPeers)
 	var peerPbs []*networkpb.PeerInfo
@@ -376,12 +378,15 @@ func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination pe
 
 	peerList := &networkpb.ReturnPeerList{PeerList: peerPbs}
 
-	pm.netService.SendCommand(GetPeerListResponse, peerList, destination, network_model.Unicast, network_model.HighPriorityCommand)
+	pm.netService.UnicastHighProrityCommand(GetPeerListResponse, peerList, destination)
 
 }
 
 //GetPeerListRequestHandler is the handler to GetPeerListRequest
-func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvdCmdContext) {
+func (pm *PeerManager) GetPeerListRequestHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
 
 	getPeerlistRequest := &networkpb.GetPeerList{}
 
@@ -394,7 +399,10 @@ func (pm *PeerManager) GetPeerListRequestHandler(command *network_model.DappRcvd
 }
 
 //GetPeerListResponseHandler is the handler to SendGetPeerListResponse
-func (pm *PeerManager) GetPeerListResponseHandler(command *network_model.DappRcvdCmdContext) {
+func (pm *PeerManager) GetPeerListResponseHandler(input interface{}) {
+
+	var command *network_model.DappRcvdCmdContext
+	command = input.(*network_model.DappRcvdCmdContext)
 
 	peerlistPb := &networkpb.ReturnPeerList{}
 
