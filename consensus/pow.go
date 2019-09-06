@@ -33,24 +33,18 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner      *block_producer_info.BlockProducerInfo
-	target     *big.Int
-	stopCh     chan bool
-	notifierCh chan bool
+	miner  *block_producer_info.BlockProducerInfo
+	target *big.Int
+	stopCh chan bool
 }
 
 func NewProofOfWork(producer *block_producer_info.BlockProducerInfo) *ProofOfWork {
 	p := &ProofOfWork{
-		miner:      producer,
-		stopCh:     make(chan bool, 1),
-		notifierCh: make(chan bool, 1),
+		miner:  producer,
+		stopCh: make(chan bool, 1),
 	}
 	p.SetTargetBit(defaultTargetBits)
 	return p
-}
-
-func (pow *ProofOfWork) GetBlockProduceNotifier() chan bool {
-	return pow.notifierCh
 }
 
 func (pow *ProofOfWork) SetTargetBit(bit int) {
@@ -67,34 +61,6 @@ func (pow *ProofOfWork) SetKey(key string) {
 
 func (pow *ProofOfWork) GetProducerAddress() string {
 	return pow.miner.Beneficiary()
-}
-
-func (pow *ProofOfWork) Start() {
-	logger.Info("PoW starts...")
-	pow.resetStopCh()
-	go pow.mineBlocks()
-}
-
-func (pow *ProofOfWork) Stop() {
-	logger.Info("PoW stops...")
-	pow.stopCh <- true
-}
-
-func (pow *ProofOfWork) mineBlocks() {
-	logger.Info("PoW: mining starts.")
-	for {
-		select {
-		case <-pow.stopCh:
-			logger.Info("PoW: mining stopped.")
-			return
-		default:
-			pow.sendNotification()
-		}
-	}
-}
-
-func (pow *ProofOfWork) sendNotification() {
-	pow.GetBlockProduceNotifier() <- true
 }
 
 func (pow *ProofOfWork) ShouldProduceBlock(producerAddr string, currTime int64) bool {
