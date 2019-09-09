@@ -18,6 +18,10 @@ package intergationTest
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/common/deadline"
+	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
+	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	"github.com/stretchr/testify/mock"
 	"reflect"
 	"testing"
 	"time"
@@ -589,10 +593,28 @@ func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *lblockchain
 
 func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
 	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(producerAddr.String()))
-	bc := lblockchain.CreateBlockchain(addr, db, pow, txPool, nil, 100000)
+
+	blkchainConsensus := &blockchainMock.Consensus{}
+	blkchainConsensus.On("GetProducers").Return(nil)
+	blkchainConsensus.On("GetLibProducerNum").Return(6)
+	blkchainConsensus.On("Validate", mock.Anything).Return(true)
+	blkchainConsensus.On("IsBypassingLibCheck").Return(true)
+	bc := lblockchain.CreateBlockchain(addr, db, blkchainConsensus, txPool, nil, 100000)
 	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
-	blockproducer := blockproducer.NewBlockProducer(bm, pow, producer)
+
+	bpConsensus := &mocks.Consensus{}
+	bpConsensus.On("Validate", mock.Anything).Return(true)
+	bpConsensus.On("ProduceBlock", mock.Anything).Run(func(args mock.Arguments) {
+		args.Get(0).(func(process func(*block.Block), deadline deadline.Deadline))(
+			func(blk *block.Block) {
+				hash := lblock.CalculateHash(blk)
+				blk.SetHash(hash)
+			},
+			deadline.NewUnlimitedDeadline(),
+		)
+	})
+
+	blockproducer := blockproducer.NewBlockProducer(bm, bpConsensus, producer)
 	return bm, blockproducer
 }
 
