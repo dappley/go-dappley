@@ -156,6 +156,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
+		0,
 	}
 	abnormalTX := transaction.Transaction{
 		hash.Hash("abnormal"),
@@ -164,6 +165,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
+		0,
 	}
 	prevBlock := block.NewBlock([]*transaction.Transaction{}, genesisBlock, "")
 	prevBlock.SetHash(lblock.CalculateHash(prevBlock))

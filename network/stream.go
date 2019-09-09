@@ -166,9 +166,8 @@ func (s *Stream) read(rw *bufio.ReadWriter, msgRcvCh chan *network_model.DappPac
 				s.StopStream()
 			}
 		}
-
 		select {
-		case msgRcvCh <- &network_model.DappPacketContext{packet, s.GetPeerId()}:
+		case msgRcvCh <- &network_model.DappPacketContext{packet, network_model.PeerInfo{s.GetPeerId(), []multiaddr.Multiaddr{s.GetRemoteAddr()}, nil}}:
 		default:
 			logger.WithFields(logger.Fields{
 				"dispatchCh_len": len(msgRcvCh),

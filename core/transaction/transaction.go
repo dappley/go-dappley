@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/dappley/go-dappley/core/utxo"
 
@@ -68,12 +69,13 @@ var (
 )
 
 type Transaction struct {
-	ID       []byte
-	Vin      []transaction_base.TXInput
-	Vout     []transaction_base.TXOutput
-	Tip      *common.Amount
-	GasLimit *common.Amount
-	GasPrice *common.Amount
+	ID         []byte
+	Vin        []transaction_base.TXInput
+	Vout       []transaction_base.TXOutput
+	Tip        *common.Amount
+	GasLimit   *common.Amount
+	GasPrice   *common.Amount
+	CreateTime int64
 }
 
 // ContractTx contains contract value
@@ -127,7 +129,7 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	toAccount := account.NewContractAccountByAddress(to)
 	txin := transaction_base.TXInput{nil, -1, bh, []byte(data)}
 	txout := transaction_base.NewTXOutput(Subsidy.Add(tip), toAccount)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -149,6 +151,7 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transactio
 		sendTxParam.Tip,
 		sendTxParam.GasLimit,
 		sendTxParam.GasPrice,
+		time.Now().UnixNano() / 1e6,
 	}
 	tx.ID = tx.Hash()
 
@@ -242,6 +245,7 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 		tip,
 		gasLimit,
 		gasPrice,
+		time.Now().UnixNano() / 1e6,
 	}
 	tx.ID = tx.Hash()
 
@@ -456,7 +460,7 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 		outputs = append(outputs, transaction_base.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
-	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice, tx.CreateTime}
 
 	return txCopy
 }
@@ -473,7 +477,7 @@ func (tx *Transaction) DeepCopy() Transaction {
 		outputs = append(outputs, transaction_base.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
-	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice}
+	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice, tx.CreateTime}
 
 	return txCopy
 }
@@ -561,7 +565,8 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 		acc := account.NewContractAccountByAddress(account.NewAddress(address))
 		txOutputs = append(txOutputs, *transaction_base.NewTXOutput(amt, acc))
 	}
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+
 	tx.ID = tx.Hash()
 
 	return tx
@@ -590,7 +595,7 @@ func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 
 	txin := transaction_base.TXInput{nil, -1, bh, gasRewardData}
 	txout := transaction_base.NewTXOutput(fee, to)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -611,7 +616,8 @@ func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 
 	txin := transaction_base.TXInput{nil, -1, bh, gasChangeData}
 	txout := transaction_base.NewTXOutput(changeValue, to)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+
 	tx.ID = tx.Hash()
 	return tx, nil
 }

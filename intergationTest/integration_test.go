@@ -281,146 +281,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 	cleanUpDatabase()
 }
 
-func TestBlockMsgRelaySingleMiner(t *testing.T) {
-	const (
-		timeBetweenBlock = 1
-	)
-	cleanUpDatabase()
-	var dposArray []*consensus.DPOS
-	var bcs []*lblockchain.Blockchain
-	var nodes []*network.Node
-
-	validProducerAddr := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
-	validProducerKey := "300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a"
-
-	producerAddrs := []string{}
-	producerKey := []string{}
-	numOfNodes := 4
-	for i := 0; i < numOfNodes; i++ {
-		producerAddrs = append(producerAddrs, validProducerAddr)
-		producerKey = append(producerKey, validProducerKey)
-	}
-
-	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock)
-
-	for i := 0; i < numOfNodes; i++ {
-		dpos := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(producerAddrs[0]))
-		dpos.SetDynasty(dynasty)
-
-		db := storage.NewRamStorage()
-		node := network.NewNode(db, nil)
-		node.Start(testport_msg_relay_port1+i, "")
-
-		bc := lblockchain.CreateBlockchain(account.NewAddress(producerAddrs[0]), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
-		bcs = append(bcs, bc)
-
-		nodes = append(nodes, node)
-
-		dpos.SetKey(producerKey[0])
-		dposArray = append(dposArray, dpos)
-	}
-	//each node connects to the subsequent node only
-	for i := 0; i < len(nodes)-1; i++ {
-		connectNodes(nodes[i], nodes[i+1])
-	}
-
-	//firstNode Starts Mining
-	dposArray[0].Start()
-	util.WaitDoneOrTimeout(func() bool {
-		return bcs[0].GetMaxHeight() >= 5
-	}, 8)
-	dposArray[0].Stop()
-
-	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
-	for i := 0; i < len(nodes)-1; i++ {
-		assert.Equal(t, bcs[i].GetMaxHeight(), bcs[i+1].GetMaxHeight())
-	}
-
-	for _, node := range nodes {
-		node.Stop()
-	}
-	cleanUpDatabase()
-}
-
-// Test if network radiation bounces forever
-func TestBlockMsgRelayMeshNetworkMultipleMiners(t *testing.T) {
-	const (
-		timeBetweenBlock = 1
-		dposRounds       = 2
-		bufferTime       = 0
-	)
-	cleanUpDatabase()
-	var dposArray []*consensus.DPOS
-	var bcs []*lblockchain.Blockchain
-	var nodes []*network.Node
-
-	var firstNode *network.Node
-
-	validProducerAddr := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
-	validProducerKey := "300c0338c4b0d49edc66113e3584e04c6b907f9ded711d396d522aae6a79be1a"
-
-	producerAddrs := []string{}
-	producerKey := []string{}
-	numOfNodes := 4
-	for i := 0; i < numOfNodes; i++ {
-		producerAddrs = append(producerAddrs, validProducerAddr)
-		producerKey = append(producerKey, validProducerKey)
-	}
-
-	dynasty := consensus.NewDynasty(producerAddrs, numOfNodes, timeBetweenBlock)
-
-	for i := 0; i < numOfNodes; i++ {
-		dpos := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(producerAddrs[0]))
-		dpos.SetDynasty(dynasty)
-
-		db := storage.NewRamStorage()
-		node := network.NewNode(db, nil)
-		node.Start(testport_msg_relay_port2+i, "")
-		bc := lblockchain.CreateBlockchain(account.NewAddress(producerAddrs[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
-		bcs = append(bcs, bc)
-
-		if i == 0 {
-			firstNode = node
-		} else {
-			node.GetNetwork().ConnectToSeed(firstNode.GetHostPeerInfo())
-		}
-		nodes = append(nodes, node)
-
-		dpos.SetKey(producerKey[0])
-		dposArray = append(dposArray, dpos)
-	}
-
-	//each node connects to every other node
-	for i := range nodes {
-		for j := range nodes {
-			if i != j {
-				connectNodes(nodes[i], nodes[j])
-			}
-		}
-	}
-
-	//firstNode Starts Mining
-	for _, dpos := range dposArray {
-		dpos.Start()
-	}
-
-	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds+bufferTime))
-
-	for _, dpos := range dposArray {
-		dpos.Stop()
-	}
-	//expect every node should have # of entries in dapmsg cache equal to their blockchain height
-	for i := 0; i < len(nodes)-1; i++ {
-		assert.Equal(t, bcs[i].GetMaxHeight(), bcs[i+1].GetMaxHeight())
-	}
-
-	for _, node := range nodes {
-		node.Stop()
-	}
-
-	cleanUpDatabase()
-}
-
 func TestForkChoice(t *testing.T) {
 	var bps []*blockproducer.BlockProducer
 	var bms []*lblockchain.BlockchainManager
@@ -751,7 +611,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := validProducerAccount.GetPubKeyHash()
-	tx := &transaction.Transaction{nil, []transaction_base.TXInput{{[]byte{}, -1, nil, nil}}, []transaction_base.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := &transaction.Transaction{nil, []transaction_base.TXInput{{[]byte{}, -1, nil, nil}}, []transaction_base.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock([]*transaction.Transaction{tx}, validProducerKey, validProducerAddr, parent)
@@ -812,52 +672,54 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	validProducerAddress := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
-	//fmt.Println(validProducerAddress, validProducerKey)
-	conss := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
+
+	producer := block_producer_info.NewBlockProducerInfo(validProducerAddress)
+	dpos1 := consensus.NewDPOS(producer)
 	dynasty := consensus.NewDynasty([]string{validProducerAddress}, 1, 1)
-	conss.SetDynasty(dynasty)
+	dpos1.SetKey(validProducerKey)
+	dpos1.SetDynasty(dynasty)
 
 	db := storage.NewRamStorage()
 	seedNode := network.NewNode(db, nil)
 	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
 
-	bc := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), conss, transactionpool.NewTransactionPool(seedNode, 128), nil, 100000)
+	bc := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db, dpos1, transactionpool.NewTransactionPool(seedNode, 128), nil, 100000)
 
 	//create and start seed node
 	pool := core.NewBlockPool()
 	bm := lblockchain.NewBlockchainManager(bc, pool, seedNode)
 
-	conss.SetKey(validProducerKey)
+	// conss.SetKey(validProducerKey)
+	bp := blockproducer.NewBlockProducer(bm, dpos1, producer)
 
 	// seed node start mining
-	conss.Start()
+	bp.Start()
 	util.WaitDoneOrTimeout(func() bool {
 		return bc.GetMaxHeight() > 8
 	}, 10)
 
 	// set up another node for syncing
-	dpos := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
-	dpos.SetDynasty(dynasty)
+	dpos2 := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
+	dpos2.SetKey(validProducerKey)
+	dpos2.SetDynasty(dynasty)
+	db2 := storage.NewRamStorage()
+	node2 := network.NewNode(db2, nil)
+	node2.Start(testport_fork_syncing+1, "")
+	defer node2.Stop()
 
-	db1 := storage.NewRamStorage()
-	node := network.NewNode(db1, nil)
-	node.Start(testport_fork_syncing+1, "")
-	defer node.Stop()
-
-	bc1 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db1, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
-
-	dpos.SetKey(validProducerKey)
+	bc2 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transactionpool.NewTransactionPool(node2, 128), nil, 100000)
+	lblockchain.NewBlockchainManager(bc2, core.NewBlockPool(), node2)
 
 	// Trigger fork choice in node by broadcasting tail block of node[0]
 	tailBlk, _ := bc.GetTailBlock()
 
-	connectNodes(seedNode, node)
+	connectNodes(seedNode, node2)
 	bm.BroadcastBlock(tailBlk)
 
 	time.Sleep(time.Second * 5)
-	conss.Stop()
-	assert.True(t, bc.GetMaxHeight()-bc1.GetMaxHeight() <= 1)
+	bp.Stop()
+	assert.True(t, bc.GetMaxHeight()-bc2.GetMaxHeight() <= 1)
 }
 
 func TestUpdate(t *testing.T) {

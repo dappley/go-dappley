@@ -20,6 +20,7 @@ package storage
 import (
 	"errors"
 	"os"
+	"sync"
 
 	logger "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -32,6 +33,7 @@ var (
 type LevelDB struct {
 	db    *leveldb.DB
 	batch *leveldb.Batch
+	batchPool *sync.Pool
 }
 
 //Create a new database instance
@@ -47,6 +49,9 @@ func OpenDatabase(dbFilePath string) *LevelDB {
 	return &LevelDB{
 		db:    db1,
 		batch: nil,
+		batchPool:&sync.Pool{New: func() interface{} {
+			return &leveldb.Batch{}
+		}},
 	}
 }
 
@@ -85,7 +90,8 @@ func (ldb *LevelDB) Del(key []byte) error {
 }
 
 func (ldb *LevelDB) EnableBatch() {
-	ldb.batch = new(leveldb.Batch)
+	//ldb.batch = new(leveldb.Batch)
+	ldb.batch = ldb.batchPool.Get().(*leveldb.Batch)
 }
 
 func (ldb *LevelDB) Flush() error {
@@ -97,6 +103,7 @@ func (ldb *LevelDB) Flush() error {
 }
 
 func (ldb *LevelDB) DisableBatch() {
+	ldb.batchPool.Put(ldb.batch)
 	ldb.batch = nil
 }
 
@@ -104,6 +111,5 @@ func DbExists(dbFilePath string) bool {
 	if _, err := os.Stat(dbFilePath); os.IsNotExist(err) {
 		return false
 	}
-
 	return true
 }

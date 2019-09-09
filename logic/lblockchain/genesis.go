@@ -18,6 +18,8 @@
 package lblockchain
 
 import (
+	"time"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
@@ -33,7 +35,7 @@ func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Blo
 	txin := transaction_base.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
 	txout := transaction_base.NewTXOutput(subsidy, acc)
 	txs := []*transaction.Transaction{}
-	tx := transaction.Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0)}
+	tx := transaction.Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 

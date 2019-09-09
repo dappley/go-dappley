@@ -34,7 +34,9 @@ func LoggerFunc(level C.uint, args **C.char, length C.int) {
 		return
 	}
 	var temp *C.char
+
 	argSlice := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(temp)]*C.char)(unsafe.Pointer(args))[:length:length]
+
 	goArgs := make([]interface{}, length+1)
 	goArgs[0] = "[Contract] "
 	for index, arg := range argSlice {

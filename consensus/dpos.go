@@ -44,15 +44,13 @@ type DPOS struct {
 	stopCh          chan bool
 	dynasty         *Dynasty
 	slot            *lru.Cache
-	notifierCh      chan bool
 	lastProduceTime int64
 }
 
 func NewDPOS(producer *block_producer_info.BlockProducerInfo) *DPOS {
 	dpos := &DPOS{
-		producer:   producer,
-		stopCh:     make(chan bool, 1),
-		notifierCh: make(chan bool, 1),
+		producer: producer,
+		stopCh:   make(chan bool, 1),
 	}
 
 	slot, err := lru.New(128)
@@ -88,27 +86,6 @@ func (dpos *DPOS) GetProducerAddress() string {
 	return dpos.producer.Beneficiary()
 }
 
-func (dpos *DPOS) Start() {
-	go func() {
-		logger.Info("DPoS starts...")
-		if len(dpos.stopCh) > 0 {
-			<-dpos.stopCh
-		}
-		ticker := time.NewTicker(time.Second).C
-
-		for {
-			select {
-			case now := <-ticker:
-				if dpos.dynasty.IsMyTurn(dpos.producer.Beneficiary(), now.Unix()) {
-					dpos.sendNotification()
-				}
-			case <-dpos.stopCh:
-				return
-			}
-		}
-	}()
-}
-
 func (dpos *DPOS) Stop() {
 	logger.Info("DPoS stops...")
 	dpos.stopCh <- true
@@ -123,6 +100,8 @@ func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))
 				ProduceBlockFunc(dpos.hashAndSign)
 				return
 			}
+		case <-dpos.stopCh:
+			return
 		}
 	}
 }
@@ -140,18 +119,6 @@ func (dpos *DPOS) ShouldProduceBlock(producerAddr string, currTime int64) bool {
 	}
 
 	return isMyTurn
-}
-
-func (dpos *DPOS) GetBlockProduceNotifier() chan bool {
-	return dpos.notifierCh
-}
-
-func (dpos *DPOS) sendNotification() {
-	select {
-	case dpos.GetBlockProduceNotifier() <- true:
-	default:
-		logger.Info("DPOS: notifier channel is full")
-	}
 }
 
 func (dpos *DPOS) GetProcess() Process {
