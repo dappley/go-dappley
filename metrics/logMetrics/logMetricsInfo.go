@@ -2,7 +2,7 @@ package logMetrics
 
 import (
 	"encoding/json"
-	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/logic/block_producer"
 	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"github.com/dappley/go-dappley/logic/transaction_pool"
 	"github.com/dappley/go-dappley/network"
@@ -126,7 +126,7 @@ type BlockStat struct {
 }
 
 func getBlockStats(bc *blockchain_logic.Blockchain) interface{} {
-	bs := BlockStat{Height: bc.GetMaxHeight(), TxPoolSize: getTransactionPoolSize().(int64), TxAddToBlockCost: consensus.TxAddToBlockCost.Snapshot().Mean()}
+	bs := BlockStat{Height: bc.GetMaxHeight(), TxPoolSize: getTransactionPoolSize().(int64), TxAddToBlockCost: block_producer.TxAddToBlockCost.Snapshot().Mean()}
 	return bs
 }
 

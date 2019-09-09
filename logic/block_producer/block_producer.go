@@ -284,6 +284,13 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext
 		logger.Warn(err)
 		return
 	}
+
+	for _, tx := range ctx.Block.GetTransactions() {
+		if tx.CreateTime > 0 {
+			TxAddToBlockCost.Update((time.Now().UnixNano()/1e6 - tx.CreateTime) / 1e3)
+		}
+	}
+
 	bp.bm.BroadcastBlock(ctx.Block)
 }
 
