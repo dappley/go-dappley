@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"math"
 	"math/big"
@@ -59,8 +60,8 @@ func (pow *ProofOfWork) GetProducerAddress() string {
 	return pow.miner.Beneficiary()
 }
 
-func (pow *ProofOfWork) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))) {
-	ProduceBlockFunc(pow.calculateValidHash)
+func (pow *ProofOfWork) ProduceBlock(ProduceBlockFunc func(process func(*block.Block), deadline deadline.Deadline)) {
+	ProduceBlockFunc(pow.calculateValidHash, deadline.NewUnlimitedDeadline())
 }
 
 func (pow *ProofOfWork) calculateValidHash(blk *block.Block) {

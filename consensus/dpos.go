@@ -20,6 +20,7 @@ package consensus
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"strings"
 	"time"
@@ -34,7 +35,8 @@ import (
 )
 
 const (
-	MinConsensusSize = 4
+	MinConsensusSize   = 4
+	maxMintingTimeInMs = 2000
 )
 
 type DPOS struct {
@@ -99,13 +101,14 @@ func (dpos *DPOS) Stop() {
 }
 
 //ProduceBlock starts producing block according to dpos consensus
-func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))) {
+func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block), deadline deadline.Deadline)) {
 	ticker := time.NewTicker(time.Second).C
 	for {
 		select {
 		case now := <-ticker:
 			if dpos.dynasty.IsMyTurn(dpos.producer.Beneficiary(), now.Unix()) {
-				ProduceBlockFunc(dpos.hashAndSign)
+				dl := deadline.NewDeadline(now.UnixNano()/deadline.NanoSecsInMilliSec + maxMintingTimeInMs)
+				ProduceBlockFunc(dpos.hashAndSign, dl)
 				return
 			}
 		case <-dpos.stopCh:

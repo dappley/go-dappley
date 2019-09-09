@@ -2,6 +2,7 @@ package block_producer
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/common/deadline"
 	"time"
 
 	"github.com/dappley/go-dappley/core/blockchain"
@@ -18,11 +19,6 @@ import (
 	"github.com/dappley/go-dappley/logic/utxo_logic"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
-)
-
-const (
-	maxMintingTimeInMs = 2000
-	NanoSecsInMilliSec = 1000000
 )
 
 type BlockProducer struct {
@@ -69,12 +65,10 @@ func (bp *BlockProducer) IsProducingBlock() bool {
 }
 
 //produceBlock produces a new block and add it to blockchain
-func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
+func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 
 	bp.producer.BlockProduceStart()
 	defer bp.producer.BlockProduceFinish()
-
-	deadlineInMs := time.Now().UnixNano()/NanoSecsInMilliSec + maxMintingTimeInMs
 
 	logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
 
@@ -84,7 +78,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 		return
 	}
 
-	ctx := bp.prepareBlock(deadlineInMs)
+	ctx := bp.prepareBlock(deadline)
 
 	if ctx != nil && processFunc != nil {
 		processFunc(ctx.Block)
@@ -99,7 +93,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 }
 
 //prepareBlock generates a new block
-func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
+func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *blockchain_logic.BlockContext {
 	parentBlock, err := bp.bm.Getblockchain().GetTailBlock()
 	if err != nil {
 		logger.WithError(err).Error("BlockProducerInfo: cannot get the current tail block!")
@@ -109,7 +103,7 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.Bloc
 	// Retrieve all valid transactions from tx pool
 	utxoIndex := utxo_logic.NewUTXOIndex(bp.bm.Getblockchain().GetUtxoCache())
 
-	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadlineInMs)
+	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadline)
 
 	totalTips := bp.calculateTips(validTxs)
 	cbtx := transaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
@@ -125,7 +119,7 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.Bloc
 }
 
 //collectTransactions pack transactions from transaction pool to a new block
-func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
+func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadline deadline.Deadline) ([]*transaction.Transaction, *scState.ScState) {
 	var validTxs []*transaction.Transaction
 	totalSize := 0
 
@@ -135,7 +129,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, pa
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
 
-	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !isExceedingDeadline(deadlineInMs) {
+	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
 		txNode := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
 		if txNode == nil {
@@ -294,9 +288,4 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext
 	}
 
 	bp.bm.BroadcastBlock(ctx.Block)
-}
-
-//isExceedingDeadline checks if the current time has exceeded the deadline
-func isExceedingDeadline(deadlineInMs int64) bool {
-	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
