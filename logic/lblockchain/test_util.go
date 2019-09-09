@@ -7,9 +7,11 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblock"
-	"github.com/dappley/go-dappley/logic/transactionpool"
+	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/stretchr/testify/mock"
 )
 
 func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
@@ -20,10 +22,15 @@ func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
 	return &ctx
 }
 
-func GenerateMockBlockchainWithCoinbaseTxOnly(size int, consensus Consensus) *Blockchain {
+func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	consensus := &mocks.Consensus{}
+	consensus.On("GetProducers").Return(nil)
+	consensus.On("GetLibProducerNum").Return(6)
+	consensus.On("Validate", mock.Anything).Return(true)
+	consensus.On("IsBypassingLibCheck").Return(true)
 	bc := CreateBlockchain(addr, s, consensus, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {

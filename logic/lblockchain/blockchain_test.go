@@ -131,7 +131,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 
 func TestBlockchain_RollbackToABlock(t *testing.T) {
 	//create a mock blockchain with max height of 5
-	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5, nil)
+	bc := GenerateMockBlockchainWithCoinbaseTxOnly(5)
 	defer bc.db.Close()
 
 	//find the hash at height 3
