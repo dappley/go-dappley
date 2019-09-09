@@ -32,6 +32,7 @@ type BlockProducer struct {
 	stopCh   chan bool
 }
 
+//NewBlockProducer returns a new block producer instance
 func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, producer *block_producer_info.BlockProducerInfo) *BlockProducer {
 	return &BlockProducer{
 		bm:       bm,
@@ -41,6 +42,7 @@ func NewBlockProducer(bm *blockchain_logic.BlockchainManager, con Consensus, pro
 	}
 }
 
+//Start starts the block producing process
 func (bp *BlockProducer) Start() {
 	go func() {
 		logger.Info("BlockProducer Starts...")
@@ -55,15 +57,18 @@ func (bp *BlockProducer) Start() {
 	}()
 }
 
+//Stop stops the block producing process
 func (bp *BlockProducer) Stop() {
 	logger.Info("Miner stops...")
 	bp.stopCh <- true
 }
 
+//IsProducingBlock returns if the local producer is producing a block
 func (bp *BlockProducer) IsProducingBlock() bool {
 	return !bp.producer.IsIdle()
 }
 
+//Getblockchain returns the blockchain
 func (bp *BlockProducer) Getblockchain() *blockchain_logic.Blockchain {
 	if bp.bm == nil {
 		return nil
@@ -71,6 +76,7 @@ func (bp *BlockProducer) Getblockchain() *blockchain_logic.Blockchain {
 	return bp.bm.Getblockchain()
 }
 
+//produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 
 	bp.producer.BlockProduceStart()
@@ -100,6 +106,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 	bp.addBlockToBlockchain(ctx)
 }
 
+//prepareBlock generates a new block
 func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.BlockContext {
 	parentBlock, err := bp.bm.Getblockchain().GetTailBlock()
 	if err != nil {
@@ -124,6 +131,7 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.Bloc
 	return &ctx
 }
 
+//collectTransactions pack transactions from transaction pool to a new block
 func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, parentBlk *block.Block, deadlineInMs int64) ([]*transaction.Transaction, *scState.ScState) {
 	var validTxs []*transaction.Transaction
 	totalSize := 0
@@ -192,6 +200,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, pa
 	return validTxs, scStorage
 }
 
+//calculateTips calculate how much tips are earned from the input transactions
 func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
 	//calculate tips
 	totalTips := common.NewAmount(0)
@@ -262,6 +271,7 @@ func (bp *BlockProducer) executeSmartContract(utxoIndex *utxo_logic.UTXOIndex,
 	return generatedTXs, scStorage
 }
 
+//addBlockToBlockchain adds the new block to blockchain
 func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext) {
 	logger.WithFields(logger.Fields{
 		"height": ctx.Block.GetHeight(),
@@ -294,6 +304,7 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *blockchain_logic.BlockContext
 	bp.bm.BroadcastBlock(ctx.Block)
 }
 
+//isExceedingDeadline checks if the current time has exceeded the deadline
 func isExceedingDeadline(deadlineInMs int64) bool {
 	return deadlineInMs > 0 && time.Now().UnixNano()/1000000 >= deadlineInMs
 }
