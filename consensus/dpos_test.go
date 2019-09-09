@@ -99,7 +99,7 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dpos := NewDPOS(nil)
 			dpos.SetDynasty(NewDynasty(producers, len(producers), defaultTimeBetweenBlk))
-			assert.Equal(t, tt.expected, dpos.beneficiaryIsProducer(tt.block))
+			assert.Equal(t, tt.expected, dpos.isProducerBeneficiary(tt.block))
 		})
 	}
 }

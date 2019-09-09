@@ -128,10 +128,6 @@ func (dpos *DPOS) Validate(block *block.Block) bool {
 		return false
 	}
 
-	if !dpos.beneficiaryIsProducer(block) {
-		logger.Debug("DPoS: failed to validate producer.")
-		return false
-	}
 	if dpos.isDoubleMint(block) {
 		logger.Warn("DPoS: double-minting is detected.")
 		return false
@@ -181,11 +177,16 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 		return false
 	}
 
+	if !dpos.isProducerBeneficiary(block) {
+		logger.Debug("DPoS: failed to validate producer.")
+		return false
+	}
+
 	return true
 }
 
-// beneficiaryIsProducer is a requirement that ensures the reward is paid to the producer at the time slot
-func (dpos *DPOS) beneficiaryIsProducer(block *block.Block) bool {
+// isProducerBeneficiary is a requirement that ensures the reward is paid to the producer at the time slot
+func (dpos *DPOS) isProducerBeneficiary(block *block.Block) bool {
 	if block == nil {
 		logger.Debug("DPoS: block is empty.")
 		return false
