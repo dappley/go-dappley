@@ -893,6 +893,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 	}
 	dynasty := consensus.NewDynasty(miners, len(miners), timeBetweenBlock)
 	var bps []*block_producer.BlockProducer
+	var bcs []*blockchain_logic.Blockchain
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
@@ -911,6 +912,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		bp := block_producer.NewBlockProducer(bm, dpos, producer)
 		bp.Start()
 		bps = append(bps, bp)
+		bcs = append(bcs, bc)
 	}
 
 	for i := range miners {
@@ -937,7 +939,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 	}
 
 	for i := range miners {
-		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bps[i].Getblockchain().GetMaxHeight())
+		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bcs[i].GetMaxHeight())
 	}
 }
 
@@ -963,6 +965,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	}
 	dynasty := consensus.NewDynasty(miners, len(miners), timeBetweenBlock)
 	var bps []*block_producer.BlockProducer
+	var bcs []*blockchain_logic.Blockchain
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
@@ -981,6 +984,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		bp := block_producer.NewBlockProducer(bm, dpos, producer)
 		bp.Start()
 		bps = append(bps, bp)
+		bcs = append(bcs, bc)
 	}
 
 	for i := range miners {
@@ -1006,11 +1010,11 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		}, 20)
 	}
 
-	block0, _ := bps[0].Getblockchain().GetLIB()
+	block0, _ := bcs[0].GetLIB()
 	assert.NotEqual(t, 0, block0.GetHeight())
 
 	for i := range miners {
-		block, _ := bps[i].Getblockchain().GetLIB()
+		block, _ := bcs[i].GetLIB()
 		assert.Equal(t, block0.GetHash(), block.GetHash())
 	}
 }

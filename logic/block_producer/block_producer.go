@@ -68,14 +68,6 @@ func (bp *BlockProducer) IsProducingBlock() bool {
 	return !bp.producer.IsIdle()
 }
 
-//Getblockchain returns the blockchain
-func (bp *BlockProducer) Getblockchain() *blockchain_logic.Blockchain {
-	if bp.bm == nil {
-		return nil
-	}
-	return bp.bm.Getblockchain()
-}
-
 //produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block)) {
 
