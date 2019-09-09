@@ -46,6 +46,7 @@ type DPOS struct {
 	lastProduceTime int64
 }
 
+//NewDPOS returns a new DPOS instance
 func NewDPOS(producer *block_producer_info.BlockProducerInfo) *DPOS {
 	dpos := &DPOS{
 		producer: producer,
@@ -60,36 +61,44 @@ func NewDPOS(producer *block_producer_info.BlockProducerInfo) *DPOS {
 	return dpos
 }
 
+//SetKey sets the producer key
 func (dpos *DPOS) SetKey(key string) {
 	dpos.producerKey = key
 }
 
+//SetDynasty sets the dynasty
 func (dpos *DPOS) SetDynasty(dynasty *Dynasty) {
 	dpos.dynasty = dynasty
 }
 
+//GetDynasty returns the dynasty
 func (dpos *DPOS) GetDynasty() *Dynasty {
 	return dpos.dynasty
 }
 
+//AddProducer adds a producer to the dynasty
 func (dpos *DPOS) AddProducer(producer string) error {
 	err := dpos.dynasty.AddProducer(producer)
 	return err
 }
 
+//GetProducers returns all current producers
 func (dpos *DPOS) GetProducers() []string {
 	return dpos.dynasty.GetProducers()
 }
 
+//GetProducerAddress returns the local producer's address
 func (dpos *DPOS) GetProducerAddress() string {
 	return dpos.producer.Beneficiary()
 }
 
+//Stop stops the current produce block process
 func (dpos *DPOS) Stop() {
 	logger.Info("DPoS stops...")
 	dpos.stopCh <- true
 }
 
+//ProduceBlock starts producing block according to dpos consensus
 func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))) {
 	ticker := time.NewTicker(time.Second).C
 	for {
@@ -105,6 +114,7 @@ func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))
 	}
 }
 
+//Produced returns if the local producer produced the block
 func (dpos *DPOS) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return dpos.producer.Produced(blk)
@@ -112,6 +122,7 @@ func (dpos *DPOS) Produced(blk *block.Block) bool {
 	return false
 }
 
+//hashAndSign signs the block
 func (dpos *DPOS) hashAndSign(blk *block.Block) {
 	hash := block_logic.CalculateHash(blk)
 	blk.SetHash(hash)
@@ -209,6 +220,7 @@ func (dpos *DPOS) isProducerBeneficiary(block *block.Block) bool {
 	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
 }
 
+//isDoubleMint returns if the block's producer has already produced a block in the current time slot
 func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 	existBlock, exist := dpos.slot.Get(int(blk.GetTimestamp() / int64(dpos.GetDynasty().timeBetweenBlk)))
 	if !exist {
@@ -218,18 +230,22 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
+//cacheBlock adds the block to cache for double minting check
 func (dpos *DPOS) cacheBlock(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
+//GetLibProducerNum returns the minimum number of producers required
 func (dpos *DPOS) GetLibProducerNum() int {
 	return len(dpos.dynasty.GetProducers())*2/3 + 1
 }
 
+//IsBypassingLibCheck returns if LIB check should be skipped
 func (dpos *DPOS) IsBypassingLibCheck() bool {
 	return len(dpos.dynasty.GetProducers()) < MinConsensusSize
 }
 
+//IsNonRepeatingBlockProducerRequired returns if the same producer can producer consecutive blocks
 func (dpos *DPOS) IsNonRepeatingBlockProducerRequired() bool {
 	return true
 }
