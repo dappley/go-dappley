@@ -105,7 +105,7 @@ func (dynasty *Dynasty) SetTimeBetweenBlk(timeBetweenBlk int) {
 
 //AddProducer adds a producer to the dynasty
 func (dynasty *Dynasty) AddProducer(producer string) error {
-	if err := dynasty.canAddProducer(producer); err != nil {
+	if err := dynasty.isAddingProducerAllowed(producer); err != nil {
 		return err
 	}
 	dynasty.producers = append(dynasty.producers, producer)
@@ -116,8 +116,8 @@ func (dynasty *Dynasty) AddProducer(producer string) error {
 	return nil
 }
 
-//canAddProducer checks if adding a producer is allowed
-func (dynasty *Dynasty) canAddProducer(producer string) error {
+//isAddingProducerAllowed checks if adding a producer is allowed
+func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 	for _, producerNow := range dynasty.producers {
 		if producerNow == producer {
 			return errors.New("already a producer")
