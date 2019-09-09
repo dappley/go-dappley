@@ -114,8 +114,8 @@ func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))
 	}
 }
 
-//Produced returns if the local producer produced the block
-func (dpos *DPOS) Produced(blk *block.Block) bool {
+//IsProducedLocally returns if the local producer produced the block
+func (dpos *DPOS) IsProducedLocally(blk *block.Block) bool {
 	if blk != nil {
 		return dpos.producer.Produced(blk)
 	}

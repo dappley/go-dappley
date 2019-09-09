@@ -188,7 +188,7 @@ func (ms *MetricsService) getBlockStats() []*metricspb.BlockStats {
 	blk, err := it.Next()
 	for t := time.Now().Unix() - ms.TimeSeriesInterval; err == nil && blk.GetTimestamp() > t; {
 		bs := &metricspb.BlockStats{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
-		if !cons.Produced(blk) {
+		if !cons.IsProducedLocally(blk) {
 			bs.NumTransactions = 0
 		}
 		stats = append(stats, bs)

@@ -111,7 +111,7 @@ func (pow *ProofOfWork) GetProducers() []string {
 	return nil
 }
 
-func (pow *ProofOfWork) Produced(blk *block.Block) bool {
+func (pow *ProofOfWork) IsProducedLocally(blk *block.Block) bool {
 	if blk != nil {
 		return pow.miner.Produced(blk)
 	}

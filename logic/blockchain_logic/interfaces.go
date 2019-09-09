@@ -17,8 +17,8 @@ type Consensus interface {
 
 	GetProducerAddress() string
 
-	// Produced returns true iff the underlying block producer of the consensus algorithm produced the specified block
-	Produced(*block.Block) bool
+	// IsProducedLocally returns true iff the underlying block producer of the consensus algorithm produced the specified block
+	IsProducedLocally(*block.Block) bool
 
 	// TODO: Should separate the concept of producers from PoW
 	AddProducer(string) error
