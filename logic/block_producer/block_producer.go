@@ -119,9 +119,10 @@ func (bp *BlockProducer) prepareBlock(deadlineInMs int64) *blockchain_logic.Bloc
 
 	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadlineInMs)
 
-	cbtx := bp.calculateTips(validTxs)
-	validTxs = append(validTxs, cbtx)
-	utxoIndex.UpdateUtxo(cbtx)
+	totalTips := bp.calculateTips(validTxs)
+	cbtx := transaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
+	validTxs = append(validTxs, &cbtx)
+	utxoIndex.UpdateUtxo(&cbtx)
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
@@ -201,14 +202,13 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *utxo_logic.UTXOIndex, pa
 }
 
 //calculateTips calculate how much tips are earned from the input transactions
-func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *transaction.Transaction {
+func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *common.Amount {
 	//calculate tips
 	totalTips := common.NewAmount(0)
 	for _, tx := range txs {
 		totalTips = totalTips.Add(tx.Tip)
 	}
-	cbtx := transaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
-	return &cbtx
+	return totalTips
 }
 
 //executeSmartContract executes all smart contracts
