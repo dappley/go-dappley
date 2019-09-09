@@ -55,31 +55,12 @@ func (pow *ProofOfWork) SetTargetBit(bit int) {
 	pow.target = target.Lsh(target, uint(256-bit))
 }
 
-func (pow *ProofOfWork) SetKey(key string) {
-	// pow does not require block signing
-}
-
 func (pow *ProofOfWork) GetProducerAddress() string {
 	return pow.miner.Beneficiary()
 }
 
-func (pow *ProofOfWork) ShouldProduceBlock(producerAddr string, currTime int64) bool {
-	return true
-}
-
 func (pow *ProofOfWork) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))) {
 	ProduceBlockFunc(pow.calculateValidHash)
-}
-
-func (pow *ProofOfWork) resetStopCh() {
-L:
-	for {
-		select {
-		case <-pow.stopCh:
-		default:
-			break L
-		}
-	}
 }
 
 func (pow *ProofOfWork) calculateValidHash(blk *block.Block) {
@@ -99,10 +80,6 @@ func (pow *ProofOfWork) calculateValidHash(blk *block.Block) {
 		}
 	}
 
-}
-
-func (pow *ProofOfWork) IsProducingBlock() bool {
-	return !pow.miner.IsIdle()
 }
 
 func (pow *ProofOfWork) isHashBelowTarget(block *block.Block) bool {
@@ -151,8 +128,4 @@ func (pow *ProofOfWork) IsBypassingLibCheck() bool {
 
 func (pow *ProofOfWork) IsNonRepeatingBlockProducerRequired() bool {
 	return false
-}
-
-func (pow *ProofOfWork) GetProcess() Process {
-	return pow.calculateValidHash
 }

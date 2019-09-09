@@ -105,25 +105,6 @@ func (dpos *DPOS) ProduceBlock(ProduceBlockFunc func(process func(*block.Block))
 	}
 }
 
-func (dpos *DPOS) ShouldProduceBlock(producerAddr string, currTime int64) bool {
-
-	if currTime-dpos.lastProduceTime < time.Second.Nanoseconds() {
-		return false
-	}
-
-	isMyTurn := dpos.dynasty.IsMyTurn(producerAddr, currTime)
-
-	if isMyTurn {
-		dpos.lastProduceTime = currTime
-	}
-
-	return isMyTurn
-}
-
-func (dpos *DPOS) GetProcess() Process {
-	return dpos.hashAndSign
-}
-
 func (dpos *DPOS) Produced(blk *block.Block) bool {
 	if blk != nil {
 		return dpos.producer.Produced(blk)
