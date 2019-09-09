@@ -342,21 +342,21 @@ func TestDynasty_CanSetProducers(t *testing.T) {
 
 	// <= max producers
 	for i := 0; i < len(producers); i++ {
-		require.Nil(t, dynasty.CanSetProducers(producers[:i]))
+		require.Nil(t, dynasty.IsSettingProducersAllowed(producers[:i]))
 	}
 
 	// > max producers
-	require.Error(t, dynasty.CanSetProducers(producers))
+	require.Error(t, dynasty.IsSettingProducersAllowed(producers))
 
 	// add producers
 	dynasty.SetProducers(producers[:2])
 	// can remove producer1
-	require.Nil(t, dynasty.CanSetProducers(producers[:1]))
+	require.Nil(t, dynasty.IsSettingProducersAllowed(producers[:1]))
 	dynasty.SetProducers(producers[:1])
 
 	// invalid producer
-	require.Error(t, dynasty.CanSetProducers([]string{"invalid-producer"}))
+	require.Error(t, dynasty.IsSettingProducersAllowed([]string{"invalid-producer"}))
 
 	// duplicate producer
-	require.Error(t, dynasty.CanSetProducers([]string{producers[0], producers[0]}))
+	require.Error(t, dynasty.IsSettingProducersAllowed([]string{producers[0], producers[0]}))
 }

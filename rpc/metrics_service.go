@@ -82,7 +82,7 @@ func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.S
 						maxProducers = int(request.GetMaxProducers())
 					}
 				}
-				if err := cons.GetDynasty().CanSetProducers(request.GetProducers(), maxProducers); err != nil {
+				if err := cons.GetDynasty().IsSettingProducersAllowed(request.GetProducers(), maxProducers); err != nil {
 					return nil, status.Error(codes.InvalidArgument, err.Error())
 				}
 			}

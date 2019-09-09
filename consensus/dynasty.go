@@ -192,8 +192,8 @@ func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
 }
 
-//CanSetProducers returns if setting producers is allowed
-func (dynasty *Dynasty) CanSetProducers(producers []string, maxProducers ...int) error {
+//IsSettingProducersAllowed returns if setting producers is allowed
+func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProducers ...int) error {
 
 	maxProd := dynasty.maxProducers
 	if len(maxProducers) > 0 {
