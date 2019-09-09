@@ -19,7 +19,7 @@
 package consensus
 
 import (
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"math"
 	"math/big"
 
@@ -33,12 +33,12 @@ const defaultTargetBits = 0
 var maxNonce int64 = math.MaxInt64
 
 type ProofOfWork struct {
-	miner  *block_producer_info.BlockProducerInfo
+	miner  *blockproducerinfo.BlockProducerInfo
 	target *big.Int
 	stopCh chan bool
 }
 
-func NewProofOfWork(producer *block_producer_info.BlockProducerInfo) *ProofOfWork {
+func NewProofOfWork(producer *blockproducerinfo.BlockProducerInfo) *ProofOfWork {
 	p := &ProofOfWork{
 		miner:  producer,
 		stopCh: make(chan bool, 1),

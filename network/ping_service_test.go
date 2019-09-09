@@ -7,7 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 )
 
 func TestNewPingService(t *testing.T) {
@@ -16,7 +16,7 @@ func TestNewPingService(t *testing.T) {
 	require.Error(t, err)
 
 	// invalid duration
-	_, err = NewPingService(network_model.NewHost(0, nil, nil), 0)
+	_, err = NewPingService(networkmodel.NewHost(0, nil, nil), 0)
 	require.Error(t, err)
 }
 
@@ -31,11 +31,11 @@ func TestPingService_Stop(t *testing.T) {
 }
 
 func startPingService(t *testing.T) *PingService {
-	h0 := network_model.NewHost(0, nil, nil)
+	h0 := networkmodel.NewHost(0, nil, nil)
 	ps, err := NewPingService(h0, time.Second)
 	require.Nil(t, err)
-	err = ps.Start(func() map[peer.ID]network_model.PeerInfo {
-		return make(map[peer.ID]network_model.PeerInfo, 0)
+	err = ps.Start(func() map[peer.ID]networkmodel.PeerInfo {
+		return make(map[peer.ID]networkmodel.PeerInfo, 0)
 	}, func(results []*PingResult) {})
 	require.Nil(t, err)
 	return ps

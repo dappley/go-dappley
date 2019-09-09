@@ -25,7 +25,7 @@ import (
 	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
@@ -588,8 +588,8 @@ func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *lblockchain
 }
 
 func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
-	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(producerAddr.String()))
+	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
+	pow := consensus.NewProofOfWork(blockproducerinfo.NewBlockProducerInfo(producerAddr.String()))
 	bc := lblockchain.CreateBlockchain(addr, db, pow, txPool, nil, 100000)
 	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
 	blockproducer := blockproducer.NewBlockProducer(bm, pow, producer)
@@ -624,7 +624,7 @@ func TestDoubleMint(t *testing.T) {
 	}
 	for i := 0; i < 2; i++ {
 
-		dpos := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddr))
+		dpos := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(validProducerAddr))
 		dpos.SetDynasty(dynasty)
 
 		db := storage.NewRamStorage()
@@ -673,7 +673,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	validProducerAddress := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
-	producer := block_producer_info.NewBlockProducerInfo(validProducerAddress)
+	producer := blockproducerinfo.NewBlockProducerInfo(validProducerAddress)
 	dpos1 := consensus.NewDPOS(producer)
 	dynasty := consensus.NewDynasty([]string{validProducerAddress}, 1, 1)
 	dpos1.SetKey(validProducerKey)
@@ -700,7 +700,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	}, 10)
 
 	// set up another node for syncing
-	dpos2 := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(validProducerAddress))
+	dpos2 := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(validProducerAddress))
 	dpos2.SetKey(validProducerKey)
 	dpos2.SetDynasty(dynasty)
 	db2 := storage.NewRamStorage()
@@ -896,7 +896,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
-		producer := block_producer_info.NewBlockProducerInfo(miner)
+		producer := blockproducerinfo.NewBlockProducerInfo(miner)
 		dpos := consensus.NewDPOS(producer)
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
@@ -966,7 +966,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
-		producer := block_producer_info.NewBlockProducerInfo(miner)
+		producer := blockproducerinfo.NewBlockProducerInfo(miner)
 		dpos := consensus.NewDPOS(producer)
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)

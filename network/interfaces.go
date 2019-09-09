@@ -2,7 +2,7 @@ package network
 
 import (
 	"github.com/dappley/go-dappley/common/pubsub"
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -12,8 +12,8 @@ type Storage interface {
 }
 
 type NetService interface {
-	UnicastNormalPriorityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
-	UnicastHighProrityCommand(commandName string, message proto.Message, destination network_model.PeerInfo)
+	UnicastNormalPriorityCommand(commandName string, message proto.Message, destination networkmodel.PeerInfo)
+	UnicastHighProrityCommand(commandName string, message proto.Message, destination networkmodel.PeerInfo)
 	BroadcastNormalPriorityCommand(commandName string, message proto.Message)
 	BroadcastHighProrityCommand(commandName string, message proto.Message)
 	Listen(subscriber pubsub.Subscriber)

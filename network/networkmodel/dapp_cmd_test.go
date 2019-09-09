@@ -16,44 +16,28 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package block_producer_info
+package networkmodel
 
 import (
-	"github.com/dappley/go-dappley/core/block"
+	"testing"
+
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/stretchr/testify/assert"
 )
 
-type BlockProducerInfo struct {
-	beneficiary string
-	idle        bool
+func TestDapmsg_ToProto(t *testing.T) {
+
+	msg := DappCmd{"name", []byte{1, 2, 3, 4}, false, 0}
+	retMsg := &networkpb.DappCmd{Cmd: "name", Data: []byte{1, 2, 3, 4}, IsBroadcast: false}
+	assert.Equal(t, msg.ToProto(), retMsg)
 }
 
-func NewBlockProducerInfo(beneficiaryAddr string) *BlockProducerInfo {
-	return &BlockProducerInfo{
-		beneficiary: beneficiaryAddr,
-		idle:        true,
-	}
-}
+func TestDapMsg_FromProto(t *testing.T) {
 
-// Beneficiary returns the address which receives rewards
-func (bp *BlockProducerInfo) Beneficiary() string {
-	return bp.beneficiary
-}
+	msg := DappCmd{"name", []byte{1, 2, 3, 4}, false, 0}
+	retMsg := &networkpb.DappCmd{Cmd: "name", Data: []byte{1, 2, 3, 4}, IsBroadcast: false}
+	msg2 := DappCmd{}
+	msg2.FromProto(retMsg)
 
-func (bp *BlockProducerInfo) BlockProduceFinish() {
-	bp.idle = true
-}
-
-func (bp *BlockProducerInfo) BlockProduceStart() {
-	bp.idle = false
-}
-
-func (bp *BlockProducerInfo) IsIdle() bool {
-	return bp.idle
-}
-
-func (bp *BlockProducerInfo) Produced(blk *block.Block) bool {
-	if blk != nil {
-		return bp.beneficiary == blk.GetProducer()
-	}
-	return false
+	assert.Equal(t, msg, msg2)
 }

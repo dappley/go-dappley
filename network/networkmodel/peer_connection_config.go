@@ -1,4 +1,4 @@
-package network_model
+package networkmodel
 
 type PeerConnectionConfig struct {
 	maxConnectionOutCount int

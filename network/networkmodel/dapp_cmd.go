@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package network_model
+package networkmodel
 
 import (
 	"github.com/golang/protobuf/proto"

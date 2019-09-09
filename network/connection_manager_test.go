@@ -1,7 +1,7 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -28,7 +28,7 @@ func TestConnectionManager_AddConnection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectionManager(network_model.NewPeerConnectionConfig(2, 2))
+			m := NewConnectionManager(networkmodel.NewPeerConnectionConfig(2, 2))
 			m.AddConnection(tt.connectionType)
 			assert.Equal(t, tt.expectedConnectionIn, m.connectionInCount)
 			assert.Equal(t, tt.expectedConnectionOut, m.connectionOutCount)
@@ -80,7 +80,7 @@ func TestConnectionManager_RemoveConnection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectionManager(network_model.NewPeerConnectionConfig(2, 2))
+			m := NewConnectionManager(networkmodel.NewPeerConnectionConfig(2, 2))
 			m.connectionInCount = tt.startingConnectionIn
 			m.connectionOutCount = tt.startingConnectionOut
 			m.RemoveConnection(tt.connectionType)
@@ -175,7 +175,7 @@ func TestConnectionManager_IsConnectionFull(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectionManager(network_model.NewPeerConnectionConfig(tt.maxConnectionOut, tt.maxConnectionIn))
+			m := NewConnectionManager(networkmodel.NewPeerConnectionConfig(tt.maxConnectionOut, tt.maxConnectionIn))
 			m.connectionInCount = tt.startingConnectionIn
 			m.connectionOutCount = tt.startingConnectionOut
 			assert.Equal(t, tt.expectedResult, m.IsConnectionFull(tt.connectionType))
@@ -214,7 +214,7 @@ func TestConnectionManager_GetNumOfConnectionsAllowed(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewConnectionManager(network_model.NewPeerConnectionConfig(tt.maxConnectionOut, tt.maxConnectionIn))
+			m := NewConnectionManager(networkmodel.NewPeerConnectionConfig(tt.maxConnectionOut, tt.maxConnectionIn))
 			m.connectionInCount = tt.startingConnectionIn
 			m.connectionOutCount = tt.startingConnectionOut
 			assert.Equal(t, tt.expectedConnectionInResult, m.GetNumOfConnectionsAllowed(ConnectionTypeIn))

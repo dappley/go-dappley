@@ -19,7 +19,7 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -30,7 +30,7 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 	node := NewNode(nil, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
-	peerInfo := network_model.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
+	peerInfo := networkmodel.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
 	node.GetNetwork().AddSeed(peerInfo)
 	return node
 }
@@ -41,8 +41,8 @@ func FakeNodeWithPidAndAddr(db Storage, pid, addr string) *Node {
 	node := NewNode(db, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
-	peerInfo := network_model.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
-	node.network.streamManager.host = &network_model.Host{nil, peerInfo}
+	peerInfo := networkmodel.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
+	node.network.streamManager.host = &networkmodel.Host{nil, peerInfo}
 
 	return node
 }

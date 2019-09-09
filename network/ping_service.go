@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 )
 
 type PingResult struct {
@@ -40,7 +40,7 @@ func NewPingService(host host.Host, interval time.Duration) (*PingService, error
 }
 
 //Start pings peers specified by getPeers() at PingService.interval invoking a callback with a list of PingResult
-func (ps *PingService) Start(getPeers func() map[peer.ID]network_model.PeerInfo, callback func([]*PingResult)) error {
+func (ps *PingService) Start(getPeers func() map[peer.ID]networkmodel.PeerInfo, callback func([]*PingResult)) error {
 	if !ps.started {
 		go func() {
 			logger.Debug("PingService: Starting ping service...")
@@ -76,7 +76,7 @@ func (ps *PingService) Stop() error {
 	}
 }
 
-func (ps *PingService) pingPeers(peers map[peer.ID]network_model.PeerInfo, callback func([]*PingResult)) {
+func (ps *PingService) pingPeers(peers map[peer.ID]networkmodel.PeerInfo, callback func([]*PingResult)) {
 	logger.Debug("PingService: pinging peers...")
 	resultsCh := make(chan *PingResult)
 	for _, p := range peers {

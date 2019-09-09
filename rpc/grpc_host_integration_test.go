@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -114,7 +114,7 @@ func TestRpcSend(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
+	producer := blockproducerinfo.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
@@ -204,7 +204,7 @@ func TestRpcSendContract(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
+	producer := blockproducerinfo.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
@@ -1090,7 +1090,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(acc.GetAddress().String()))
+	pow := consensus.NewProofOfWork(blockproducerinfo.NewBlockProducerInfo(acc.GetAddress().String()))
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(acc.GetAddress(), context.store, pow, transactionpool.NewTransactionPool(context.node, 128000), scManager, 1000000)
 	if err != nil {
@@ -1108,7 +1108,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 
-	context.bp = blockproducer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetAddress().String()))
+	context.bp = blockproducer.NewBlockProducer(context.bm, pow, blockproducerinfo.NewBlockProducerInfo(acc.GetAddress().String()))
 
 	return &context, nil
 }
@@ -1150,7 +1150,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
+	producer := blockproducerinfo.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
@@ -1247,7 +1247,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
+	producer := blockproducerinfo.NewBlockProducerInfo(minerAccount.GetAddress().String())
 	pow := consensus.NewProofOfWork(producer)
 	scManager := vm.NewV8EngineManager(account.Address{})
 	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(nil, 100), scManager, 1000000)

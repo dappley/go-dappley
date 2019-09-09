@@ -13,7 +13,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 )
 
 var (
@@ -24,11 +24,11 @@ var (
 type OnStreamCbFunc func(stream *Stream)
 
 type StreamManager struct {
-	host                     *network_model.Host
+	host                     *networkmodel.Host
 	streams                  map[peer.ID]*StreamInfo
 	connectionManager        *ConnectionManager
 	streamStopNotificationCh chan *Stream
-	streamMsgReceiveCh       chan *network_model.DappPacketContext
+	streamMsgReceiveCh       chan *networkmodel.DappPacketContext
 	onStreamStopCb           OnStreamCbFunc
 	onStreamConnectedCb      OnStreamCbFunc
 	ping                     *PingService
@@ -37,7 +37,7 @@ type StreamManager struct {
 }
 
 //NewStreamManager creates a new StreamManager instance
-func NewStreamManager(config network_model.PeerConnectionConfig, streamMessageReceiveCh chan *network_model.DappPacketContext, onStreamStopCb OnStreamCbFunc, onStreamConnectedCb OnStreamCbFunc) *StreamManager {
+func NewStreamManager(config networkmodel.PeerConnectionConfig, streamMessageReceiveCh chan *networkmodel.DappPacketContext, onStreamStopCb OnStreamCbFunc, onStreamConnectedCb OnStreamCbFunc) *StreamManager {
 
 	return &StreamManager{
 		streams:                  make(map[peer.ID]*StreamInfo),
@@ -51,7 +51,7 @@ func NewStreamManager(config network_model.PeerConnectionConfig, streamMessageRe
 }
 
 //Start starts the host and stream service
-func (sm *StreamManager) Start(host *network_model.Host) {
+func (sm *StreamManager) Start(host *networkmodel.Host) {
 	sm.host = host
 	sm.StartStreamStopListener()
 }
@@ -77,7 +77,7 @@ func (sm *StreamManager) StartStreamStopListener() {
 }
 
 //Broadcast sends a DappPacket to all peers
-func (sm *StreamManager) Broadcast(packet *network_model.DappPacket, priority network_model.DappCmdPriority) {
+func (sm *StreamManager) Broadcast(packet *networkmodel.DappPacket, priority networkmodel.DappCmdPriority) {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 	for _, s := range sm.streams {
@@ -86,7 +86,7 @@ func (sm *StreamManager) Broadcast(packet *network_model.DappPacket, priority ne
 }
 
 //Unicast sends a DappPacket to a peer indicated by "pid"
-func (sm *StreamManager) Unicast(packet *network_model.DappPacket, pid peer.ID, priority network_model.DappCmdPriority) {
+func (sm *StreamManager) Unicast(packet *networkmodel.DappPacket, pid peer.ID, priority networkmodel.DappCmdPriority) {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 
@@ -186,7 +186,7 @@ func (sm *StreamManager) isStreamConnected(peerId peer.ID) bool {
 }
 
 //ConnectPeers connect to multiple peers
-func (sm *StreamManager) ConnectPeers(peers []network_model.PeerInfo) {
+func (sm *StreamManager) ConnectPeers(peers []networkmodel.PeerInfo) {
 
 	numOfPeersToBeConnected := len(peers)
 
@@ -216,7 +216,7 @@ func (sm *StreamManager) ConnectPeers(peers []network_model.PeerInfo) {
 }
 
 //connectPeer connects to a peer
-func (sm *StreamManager) connectPeer(peerInfo network_model.PeerInfo, connectionType ConnectionType) error {
+func (sm *StreamManager) connectPeer(peerInfo networkmodel.PeerInfo, connectionType ConnectionType) error {
 
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
@@ -234,7 +234,7 @@ func (sm *StreamManager) connectPeer(peerInfo network_model.PeerInfo, connection
 	}
 
 	sm.host.Peerstore().AddAddrs(peerInfo.PeerId, peerInfo.Addrs, peerstore.PermanentAddrTTL)
-	s, err := sm.host.NewStream(context.Background(), peerInfo.PeerId, network_model.ProtocalName)
+	s, err := sm.host.NewStream(context.Background(), peerInfo.PeerId, networkmodel.ProtocalName)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"PeerId":  peerInfo.PeerId,
@@ -288,7 +288,7 @@ func (sm *StreamManager) Stop() {
 		streamInfo.stream.StopStream()
 	}
 
-	sm.host.RemoveStreamHandler(network_model.ProtocalName)
+	sm.host.RemoveStreamHandler(networkmodel.ProtocalName)
 	err := sm.host.Close()
 	if err != nil {
 		logger.WithError(err).Warn("StreamManager: host was not closed properly.")
@@ -296,13 +296,13 @@ func (sm *StreamManager) Stop() {
 }
 
 //GetConnectedPeers return a list of connected peers
-func (sm *StreamManager) GetConnectedPeers() map[peer.ID]network_model.PeerInfo {
+func (sm *StreamManager) GetConnectedPeers() map[peer.ID]networkmodel.PeerInfo {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
-	peers := make(map[peer.ID]network_model.PeerInfo)
+	peers := make(map[peer.ID]networkmodel.PeerInfo)
 
 	for _, streamInfo := range sm.streams {
-		peer := network_model.PeerInfo{
+		peer := networkmodel.PeerInfo{
 			PeerId:  streamInfo.stream.GetPeerId(),
 			Addrs:   []ma.Multiaddr{streamInfo.stream.GetRemoteAddr()},
 			Latency: streamInfo.latency,
@@ -314,7 +314,7 @@ func (sm *StreamManager) GetConnectedPeers() map[peer.ID]network_model.PeerInfo 
 }
 
 //ShufflePeers shuffles the order in the PeerInfo slice
-func ShufflePeers(peers []network_model.PeerInfo) []network_model.PeerInfo {
+func ShufflePeers(peers []networkmodel.PeerInfo) []networkmodel.PeerInfo {
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r.Shuffle(len(peers), func(i, j int) {

@@ -22,7 +22,7 @@ import (
 	"flag"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -142,7 +142,7 @@ func main() {
 	logic.SetLockAccount() //lock the account
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
-	producer := block_producer_info.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
+	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
 	blockProducer.Start()
 	defer blockProducer.Stop()
@@ -162,7 +162,7 @@ func main() {
 
 func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (*consensus.DPOS, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(generalConf.GetConsensusConfig().GetMinerAddress()))
+	conss := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(generalConf.GetConsensusConfig().GetMinerAddress()))
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
 	conss.SetDynasty(dynasty)
 	conss.SetKey(generalConf.GetConsensusConfig().GetPrivateKey())
