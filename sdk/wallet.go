@@ -4,21 +4,21 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
+	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 )
 
 type DappSdkAccount struct {
 	addrs     []account.Address
 	balances  map[account.Address]uint64
-	wm        *account_logic.AccountManager
+	wm        *wallet.AccountManager
 	sdk       *DappSdk
-	utxoIndex *utxo_logic.UTXOIndex
+	utxoIndex *lutxo.UTXOIndex
 	mutex     *sync.RWMutex
 }
 
@@ -32,7 +32,7 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 
 	var err error
 
-	dappSdkAccount.wm, err = logic.GetAccountManager(account_logic.GetAccountFilePath())
+	dappSdkAccount.wm, err = logic.GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
 		logger.WithError(err).Error("DappSdkAccount: Cannot get account manager.")
 		return nil
@@ -48,7 +48,7 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 			return nil
 		}
 		logger.WithFields(logger.Fields{
-			"address": w.GetKeyPair().GenerateAddress(),
+			"address": w.GetAddress(),
 		}).Info("DappSdkAccount: Account is created")
 	}
 
@@ -67,15 +67,15 @@ func (sdkw *DappSdkAccount) GetBalance(address account.Address) uint64 {
 	return sdkw.balances[address]
 }
 
-func (sdkw *DappSdkAccount) GetAccountManager() *account_logic.AccountManager { return sdkw.wm }
+func (sdkw *DappSdkAccount) GetAccountManager() *wallet.AccountManager { return sdkw.wm }
 
-func (sdkw *DappSdkAccount) GetUtxoIndex() *utxo_logic.UTXOIndex { return sdkw.utxoIndex }
+func (sdkw *DappSdkAccount) GetUtxoIndex() *lutxo.UTXOIndex { return sdkw.utxoIndex }
 
 func (sdkw *DappSdkAccount) Initialize() {
 	sdkw.mutex.Lock()
 	defer sdkw.mutex.Unlock()
 
-	sdkw.utxoIndex = utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	sdkw.utxoIndex = lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	sdkw.balances = make(map[account.Address]uint64)
 }
 
@@ -113,7 +113,7 @@ func (sdkw *DappSdkAccount) Update() error {
 	for _, addr := range sdkw.addrs {
 
 		kp := sdkw.wm.GetKeyPairByAddress(addr)
-		_, err := account.NewUserPubKeyHash(kp.GetPublicKey())
+		_, err := account.IsValidPubKey(kp.GetPublicKey())
 		if err != nil {
 			return err
 		}

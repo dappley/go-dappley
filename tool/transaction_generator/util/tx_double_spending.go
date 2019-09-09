@@ -22,19 +22,19 @@ func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 }
 
 func (txSender *DoubleSpendingTxSender) Generate(params transaction.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
-
-	if err != nil {
-		logger.WithError(err).Panic("DoubleSpendingTx: Unable to hash sender public key")
+	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
+		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	ta := account.NewAccountByKey(params.SenderKeyPair)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to get UTXOs to match the amount")
 	}
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
 
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }
 

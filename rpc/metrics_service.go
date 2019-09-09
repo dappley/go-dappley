@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
@@ -24,13 +24,13 @@ import (
 
 type MetricsService struct {
 	node *network.Node
-	bm   *blockchain_logic.BlockchainManager
+	bm   *lblockchain.BlockchainManager
 	ds   *metrics.DataStore
 	*MetricsServiceConfig
 	RPCPort uint32
 }
 
-func NewMetricsService(node *network.Node, bm *blockchain_logic.BlockchainManager, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
+func NewMetricsService(node *network.Node, bm *lblockchain.BlockchainManager, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
 	return (&MetricsService{node: node, bm: bm, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
 }
 
@@ -167,7 +167,7 @@ func getCPUPercent() metricspb.StatValue {
 
 func getTransactionPoolSize() metricspb.StatValue {
 	return &metricspb.Stat_TransactionPoolSize{
-		TransactionPoolSize: transaction_pool.MetricsTransactionPoolSize.Count(),
+		TransactionPoolSize: transactionpool.MetricsTransactionPoolSize.Count(),
 	}
 }
 

@@ -2,9 +2,13 @@ package logMetrics
 
 import (
 	"encoding/json"
-	"github.com/dappley/go-dappley/logic/block_producer"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/blockproducer"
+	"os"
+	"runtime"
+	"time"
+
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/shirou/gopsutil/cpu"
@@ -12,9 +16,6 @@ import (
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"os"
-	"runtime"
-	"time"
 )
 
 type memStat struct {
@@ -91,7 +92,7 @@ func getCPUPercent() interface{} {
 }
 
 func getTransactionPoolSize() interface{} {
-	return transaction_pool.MetricsTransactionPoolSize.Count()
+	return transactionpool.MetricsTransactionPoolSize.Count()
 }
 
 type RequestStats struct {
@@ -125,8 +126,9 @@ type BlockStat struct {
 	TxAddToBlockCost float64 `json:"txAddToBlockCost"`
 }
 
-func getBlockStats(bc *blockchain_logic.Blockchain) interface{} {
-	bs := BlockStat{Height: bc.GetMaxHeight(), TxPoolSize: getTransactionPoolSize().(int64), TxAddToBlockCost: block_producer.TxAddToBlockCost.Snapshot().Mean()}
+func getBlockStats(bc *lblockchain.Blockchain) interface{} {
+	bs := BlockStat{Height: bc.GetMaxHeight(), TxPoolSize: getTransactionPoolSize().(int64), TxAddToBlockCost: blockproducer.TxAddToBlockCost.Snapshot().Mean()}
+
 	return bs
 }
 
@@ -160,7 +162,7 @@ func NewMetricsInfo() *MetricsInfo {
 	return mi
 }
 
-func LogMetricsInfo(bc *blockchain_logic.Blockchain) {
+func LogMetricsInfo(bc *lblockchain.Blockchain) {
 	mi := NewMetricsInfo()
 	interval := viper.GetInt64("metrics.interval")
 	go func() {

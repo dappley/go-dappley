@@ -21,9 +21,10 @@ import (
 	"context"
 	"encoding/hex"
 
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
 	"time"
+
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/lblockchain"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,14 +32,14 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/network"
 	networkpb "github.com/dappley/go-dappley/network/pb"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/wallet"
 )
 
 type AdminRpcService struct {
-	bm   *blockchain_logic.BlockchainManager
+	bm   *lblockchain.BlockchainManager
 	node *network.Node
 }
 
@@ -51,10 +52,12 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 }
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	if len(in.GetAddress()) == 0 || !account.NewAddress(in.GetAddress()).IsValid() {
+	address := in.GetAddress()
+	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	if len(address) == 0 || !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
-	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(in.GetAddress())
+	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(address)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -133,7 +136,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 	}
 	path := in.GetAccountPath()
 	if len(path) == 0 {
-		path = account_logic.GetAccountFilePath()
+		path = wallet.GetAccountFilePath()
 	}
 
 	am, err := logic.GetAccountManager(path)
@@ -143,7 +146,7 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 
 	senderAccount := am.GetAccountByAddress(sendFromAddress)
 	if senderAccount == nil || senderAccount.GetKeyPair() == nil {
-		return nil, status.Error(codes.NotFound, account_logic.ErrAddressNotFound.Error())
+		return nil, status.Error(codes.NotFound, wallet.ErrAddressNotFound.Error())
 	}
 
 	txHash, scAddress, err := logic.Send(senderAccount, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),

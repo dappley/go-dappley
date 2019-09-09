@@ -10,8 +10,8 @@ import (
 
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/blockchain"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
@@ -19,7 +19,7 @@ import (
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/download_manager"
+	"github.com/dappley/go-dappley/logic/downloadmanager"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
@@ -138,9 +138,9 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 
 	bm1, node1 := prepareNode(db1)
 	bm2, node2 := prepareNode(db2)
-	dm1 := download_manager.NewDownloadManager(node1, bm1)
+	dm1 := downloadmanager.NewDownloadManager(node1, bm1)
 	bm1.SetDownloadRequestCh(dm1.GetDownloadRequestCh())
-	dm2 := download_manager.NewDownloadManager(node2, bm2)
+	dm2 := downloadmanager.NewDownloadManager(node2, bm2)
 	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
 
 	node1.Start(testport1, "")
@@ -174,7 +174,7 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	return elapsed, blkHeight, numOfTx
 }
 
-func prepareNode(db storage.Storage) (*blockchain_logic.BlockchainManager, *network.Node) {
+func prepareNode(db storage.Storage) (*lblockchain.BlockchainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
@@ -183,8 +183,8 @@ func prepareNode(db storage.Storage) (*blockchain_logic.BlockchainManager, *netw
 	conss.SetDynasty(dynasty)
 	node := network.NewNode(db, nil)
 	txPoolLimit := uint32(2000)
-	txPool := transaction_pool.NewTransactionPool(node, txPoolLimit)
-	bc, err := blockchain_logic.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
+	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 		if err != nil {
@@ -192,8 +192,8 @@ func prepareNode(db storage.Storage) (*blockchain_logic.BlockchainManager, *netw
 		}
 	}
 	bc.SetState(blockchain.BlockchainInit)
-	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
-	downloadManager := download_manager.NewDownloadManager(node, bm)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	downloadManager := downloadmanager.NewDownloadManager(node, bm)
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	return bm, node

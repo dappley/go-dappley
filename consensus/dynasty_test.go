@@ -334,9 +334,9 @@ func TestDynasty_ProducerAtATime(t *testing.T) {
 func TestDynasty_CanSetProducers(t *testing.T) {
 
 	producers := []string{
-		account.NewKeyPair().GenerateAddress().String(),
-		account.NewKeyPair().GenerateAddress().String(),
-		account.NewKeyPair().GenerateAddress().String(),
+		account.NewAccount().GetAddress().String(),
+		account.NewAccount().GetAddress().String(),
+		account.NewAccount().GetAddress().String(),
 	}
 	dynasty := NewDynasty([]string{}, len(producers)-1, 15)
 

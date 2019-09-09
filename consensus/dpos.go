@@ -21,16 +21,17 @@ package consensus
 import (
 	"bytes"
 	"github.com/dappley/go-dappley/common/deadline"
-	"github.com/dappley/go-dappley/core/block_producer_info"
 	"strings"
 	"time"
 
+	"github.com/dappley/go-dappley/core/block_producer_info"
+
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/logic/block_logic"
+	"github.com/dappley/go-dappley/logic/lblock"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -127,9 +128,9 @@ func (dpos *DPOS) IsProducedLocally(blk *block.Block) bool {
 
 //hashAndSign signs the block
 func (dpos *DPOS) hashAndSign(blk *block.Block) {
-	hash := block_logic.CalculateHash(blk)
+	hash := lblock.CalculateHash(blk)
 	blk.SetHash(hash)
-	ok := block_logic.SignBlock(blk, dpos.producerKey)
+	ok := lblock.SignBlock(blk, dpos.producerKey)
 	if !ok {
 		logger.Warn("DPoS: failed to sign the new block.")
 	}
@@ -178,15 +179,14 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 		return false
 	}
 
-	pubKeyHash, err := account.NewUserPubKeyHash(pubkey[1:])
-	if err != nil {
+	if ok, err := account.IsValidPubKey(pubkey[1:]); !ok {
 		logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
 		return false
 	}
 
-	address := pubKeyHash.GenerateAddress()
+	ta := account.NewTransactionAccountByPubKey(pubkey[1:])
 
-	if strings.Compare(address.String(), producer) != 0 {
+	if strings.Compare(ta.GetAddress().String(), producer) != 0 {
 		logger.Warn("DPoS: the signer is not the producer in this time slot.")
 		return false
 	}
@@ -207,8 +207,8 @@ func (dpos *DPOS) isProducerBeneficiary(block *block.Block) bool {
 	}
 
 	producer := dpos.dynasty.ProducerAtATime(block.GetTimestamp())
-	producerHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(producer))
-
+	producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
+	producerHash := producerAccount.GetPubKeyHash()
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {
 		logger.Debug("DPoS: coinbase tx is empty.")
@@ -230,7 +230,7 @@ func (dpos *DPOS) isDoubleMint(blk *block.Block) bool {
 		return false
 	}
 
-	return !block_logic.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
+	return !lblock.IsHashEqual(existBlock.(*block.Block).GetHash(), blk.GetHash())
 }
 
 //cacheBlock adds the block to cache for double minting check

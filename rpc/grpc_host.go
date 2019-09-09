@@ -20,7 +20,7 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
+	"github.com/dappley/go-dappley/logic/lblockchain"
 	"net"
 
 	logger "github.com/sirupsen/logrus"
@@ -54,15 +54,15 @@ type Server struct {
 	srv           *grpc.Server
 	node          *network.Node
 	password      string
-	bm            *blockchain_logic.BlockchainManager
+	bm            *lblockchain.BlockchainManager
 	metricsConfig *MetricsServiceConfig
 }
 
-func NewGrpcServer(node *network.Node, bm *blockchain_logic.BlockchainManager, adminPassword string) *Server {
+func NewGrpcServer(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string) *Server {
 	return NewGrpcServerWithMetrics(node, bm, adminPassword, nil)
 }
 
-func NewGrpcServerWithMetrics(node *network.Node, bm *blockchain_logic.BlockchainManager, adminPassword string, config *MetricsServiceConfig) *Server {
+func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string, config *MetricsServiceConfig) *Server {
 	return &Server{grpc.NewServer(), node, adminPassword, bm, config}
 }
 

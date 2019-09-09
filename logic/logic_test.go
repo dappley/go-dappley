@@ -23,12 +23,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dappley/go-dappley/logic/transaction_pool"
+	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/logic/account_logic"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,21 +46,15 @@ func TestMain(m *testing.M) {
 func TestCreateAccount(t *testing.T) {
 	acc, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
-	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
+	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphrase(t *testing.T) {
 	acc, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(acc.GetKeyPair().GenerateAddress())
-	assert.Equal(t, true, ok)
-	accountPubKeyHash, err := account.NewUserPubKeyHash(acc.GetKeyPair().GetPublicKey())
+	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
-	assert.Equal(t, pubKeyHash, accountPubKeyHash)
 }
 
 func TestCreateAccountWithPassphraseMismatch(t *testing.T) {
@@ -80,7 +74,7 @@ func TestCreateBlockchain(t *testing.T) {
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 
 	//create a blockchain
-	_, err := CreateBlockchain(addr, store, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
+	_, err := CreateBlockchain(addr, store, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 }
 
@@ -96,9 +90,8 @@ func TestLoopCreateBlockchain(t *testing.T) {
 	for i := 0; i < 2000; i++ {
 		err = nil
 		account := account.NewAccount()
-		addr := account.GetKeyPair().GenerateAddress()
-		if !addr.IsValid() {
-			fmt.Println(i, addr)
+		if !account.IsValid() {
+			fmt.Println(i, account.GetAddress())
 			err = ErrInvalidAddress
 			break
 		}
@@ -112,7 +105,7 @@ func TestCreateBlockchainWithInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//create a blockchain with an invalid address
-	bc, err := CreateBlockchain(account.NewAddress(InvalidAddress), store, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc, err := CreateBlockchain(account.NewAddress(InvalidAddress), store, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Equal(t, ErrInvalidAddress, err)
 	assert.Nil(t, bc)
 }
@@ -124,7 +117,7 @@ func TestGetBalance(t *testing.T) {
 	//create a account address
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc, err := CreateBlockchain(addr, store, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -142,7 +135,7 @@ func TestGetBalanceWithInvalidAddress(t *testing.T) {
 	//create a account address
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc, err := CreateBlockchain(addr, store, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -166,12 +159,12 @@ func TestGetAllAddresses(t *testing.T) {
 	//create a account address
 	account, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account)
-	addr := account.GetKeyPair().GenerateAddress()
+	addr := account.GetAddress()
 
 	expectedRes = append(expectedRes, addr)
 
 	//create a blockchain
-	bc, err := CreateBlockchain(addr, store, nil, transaction_pool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc, err := CreateBlockchain(addr, store, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -179,7 +172,7 @@ func TestGetAllAddresses(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		//create a account address
 		account, err = CreateAccount(GetTestAccountPath(), "test")
-		addr = account.GetKeyPair().GenerateAddress()
+		addr = account.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
 		expectedRes = append(expectedRes, addr)
@@ -212,7 +205,7 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	//create accounts address
 	account1, err := CreateAccount(GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetKeyPair().GenerateAddress()
+	addr1 := account1.GetAddress()
 
 	addressList := []account.Address{addr1}
 
@@ -261,5 +254,5 @@ func TestSetUnLockAccount(t *testing.T) {
 }
 
 func cleanUpDatabase() {
-	account_logic.RemoveAccountFile()
+	wallet.RemoveAccountFile()
 }

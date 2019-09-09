@@ -32,13 +32,13 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core"
 	clientpkg "github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
@@ -762,7 +762,7 @@ func sendCommandHandler(ctx context.Context, account interface{}, flags cmdFlags
 	}
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderWallet.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := transaction_logic.NewUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
 
 	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*corepb.Transaction)}
 	_, err = account.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
@@ -778,7 +778,7 @@ func sendCommandHandler(ctx context.Context, account interface{}, flags cmdFlags
 	}
 
 	if *(flags[flagToAddress].(*string)) == "" {
-		fmt.Println("Contract address:", tx.Vout[0].PubKeyHash.GenerateAddress().String())
+		fmt.Println("Contract address:", tx.Vout[0].GetAddress().String())
 	}
 
 	fmt.Println("Transaction is sent! Pending approval from network.")

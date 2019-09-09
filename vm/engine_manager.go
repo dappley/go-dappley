@@ -35,7 +35,7 @@ func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*utxo.UTXO,
 		if !strings.Contains(utxo.Contract, scheduleFuncName) {
 			continue
 		}
-		addr := utxo.PubKeyHash.GenerateAddress()
+		addr := utxo.GetAddress()
 
 		engine := em.CreateEngine()
 		// TODO confirm whether we need to set limit

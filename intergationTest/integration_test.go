@@ -22,20 +22,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/logic/block_producer"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/logic/account_logic"
-	"github.com/dappley/go-dappley/logic/block_logic"
-	"github.com/dappley/go-dappley/logic/blockchain_logic"
-	"github.com/dappley/go-dappley/logic/transaction_pool"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
+	"github.com/dappley/go-dappley/logic/lblock"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/logic/transactionpool"
+	"github.com/dappley/go-dappley/wallet"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -97,7 +97,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 			// Create a PoW blockchain with the logic.Sender wallet's address as the coinbase address
 			// i.e. logic.Sender's wallet would have mineReward amount after blockchain created
-			bm, bp := CreateProducer(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128), node)
+			bm, bp := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 			// Create a receiver account; Balance is 0 initially
 			receiverAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
@@ -111,7 +111,7 @@ func TestSend(t *testing.T) {
 			if isContract {
 				rcvAddr = account.NewAddress("")
 			} else {
-				rcvAddr = receiverAccount.GetKeyPair().GenerateAddress()
+				rcvAddr = receiverAccount.GetAddress()
 			}
 
 			_, _, err = logic.Send(SenderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bm.Getblockchain())
@@ -130,7 +130,7 @@ func TestSend(t *testing.T) {
 				return !bp.IsProducingBlock()
 			}, 20)
 			// Verify balance of logic.Sender's account (genesis "mineReward" - transferred amount)
-			SenderBalance, err := logic.GetBalance(SenderAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
+			SenderBalance, err := logic.GetBalance(SenderAccount.GetAddress(), bm.Getblockchain())
 			if err != nil {
 				panic(err)
 			}
@@ -139,7 +139,7 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, expectedBalance, SenderBalance)
 
 			// Balance of the miner's account should be the amount tipped + mineReward
-			minerBalance, err := logic.GetBalance(minerAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
+			minerBalance, err := logic.GetBalance(minerAccount.GetAddress(), bm.Getblockchain())
 			if err != nil {
 				panic(err)
 			}
@@ -167,7 +167,7 @@ func TestSend(t *testing.T) {
 			if isContract {
 				receiverBalance, err = logic.GetBalance(contractAddr, bm.Getblockchain())
 			} else {
-				receiverBalance, err = logic.GetBalance(receiverAccount.GetKeyPair().GenerateAddress(), bm.Getblockchain())
+				receiverBalance, err = logic.GetBalance(receiverAccount.GetAddress(), bm.Getblockchain())
 			}
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
@@ -189,11 +189,11 @@ func TestSendToInvalidAddress(t *testing.T) {
 	//create a account address
 	account1, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetKeyPair().GenerateAddress()
+	addr1 := account1.GetAddress()
 
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 	//create a blockchain
-	bc, err := logic.CreateBlockchain(addr1, store, nil, transaction_pool.NewTransactionPool(node, 128), nil, 1000000)
+	bc, err := logic.CreateBlockchain(addr1, store, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -203,7 +203,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Equal(t, mineReward, balance1)
 	//pool := core.NewBlockPool()
 
-	//bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+	//bm := lblockchain.NewBlockchainManager(bc, pool, node)
 
 	//logic.Send 5 coins from addr1 to an invalid address
 	_, _, err = logic.Send(account1, account.NewAddress(InvalidAddress), transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc)
@@ -235,12 +235,12 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//create a account address
 	account1, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account1)
-	addr1 := account1.GetKeyPair().GenerateAddress()
+	addr1 := account1.GetAddress()
 
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 
 	//create a blockchain
-	bc, err := logic.CreateBlockchain(addr1, store, nil, transaction_pool.NewTransactionPool(node, 128), nil, 1000000)
+	bc, err := logic.CreateBlockchain(addr1, store, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -253,7 +253,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	account2, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.NotEmpty(t, account2)
 	assert.Nil(t, err)
-	addr2 := account2.GetKeyPair().GenerateAddress()
+	addr2 := account2.GetAddress()
 
 	//The balance should be 0
 	balance2, err := logic.GetBalance(addr2, bc)
@@ -261,7 +261,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance2)
 	//pool := core.NewBlockPool()
 
-	//bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+	//bm := lblockchain.NewBlockchainManager(bc, pool, node)
 
 	//logic.Send 5 coins from addr1 to addr2
 	_, _, err = logic.Send(account1, addr2, transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc)
@@ -282,8 +282,8 @@ func TestSendInsufficientBalance(t *testing.T) {
 }
 
 func TestForkChoice(t *testing.T) {
-	var bps []*block_producer.BlockProducer
-	var bms []*blockchain_logic.BlockchainManager
+	var bps []*blockproducer.BlockProducer
+	var bms []*lblockchain.BlockchainManager
 	var dbs []storage.Storage
 	// Remember to close all opened databases after test
 	defer func() {
@@ -303,7 +303,7 @@ func TestForkChoice(t *testing.T) {
 		dbs = append(dbs, db)
 
 		node := network.NewNode(db, nil)
-		bm, bp := CreateProducer(addr, addr, db, transaction_pool.NewTransactionPool(node, 128), node)
+		bm, bp := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
 
 		node.Start(testport_fork+i, "")
 		nodes = append(nodes, node)
@@ -352,7 +352,7 @@ func TestForkChoice(t *testing.T) {
 }
 
 func TestForkSegmentHandling(t *testing.T) {
-	var bms []*blockchain_logic.BlockchainManager
+	var bms []*lblockchain.BlockchainManager
 	var dbs []storage.Storage
 	// Remember to close all opened databases after test
 	defer func() {
@@ -372,7 +372,7 @@ func TestForkSegmentHandling(t *testing.T) {
 		dbs = append(dbs, db)
 
 		node := network.NewNode(db, nil)
-		bm, _ := CreateProducer(addr, addr, db, transaction_pool.NewTransactionPool(node, 128), node)
+		bm, _ := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
 
 		node.Start(testport_fork+i, "")
 		nodes = append(nodes, node)
@@ -384,9 +384,9 @@ func TestForkSegmentHandling(t *testing.T) {
 	blk1 := &block.Block{}
 	blk2 := &block.Block{}
 
-	blockchain_logic.AddBlockToGeneratedBlockchain(bms[0].Getblockchain(), 12)
+	lblockchain.AddBlockToGeneratedBlockchain(bms[0].Getblockchain(), 12)
 
-	blockchain_logic.AddBlockToGeneratedBlockchain(bms[1].Getblockchain(), 3)
+	lblockchain.AddBlockToGeneratedBlockchain(bms[1].Getblockchain(), 3)
 
 	// Pick 2 blocks from blockchain[0] which can trigger syncing on node[1]
 	blk1, _ = bms[0].Getblockchain().GetBlockByHeight(7)
@@ -441,10 +441,10 @@ func TestAddBalance(t *testing.T) {
 			minerKeyPair := account.GenerateKeyPairByPrivateKey(key)
 			minerAccount := account.NewAccountByKey(minerKeyPair)
 
-			addr := minerAccount.GetKeyPair().GenerateAddress()
+			addr := minerAccount.GetAddress()
 			node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
-			bm, bp := CreateProducer(addr, addr, store, transaction_pool.NewTransactionPool(node, 128), node)
+			bm, bp := CreateProducer(addr, addr, store, transactionpool.NewTransactionPool(node, 128), node)
 
 			// Create a new account address for testing
 			testAddr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
@@ -490,7 +490,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			addr := account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs")
 			node := network.FakeNodeWithPidAndAddr(db, "a", "b")
 			// Create a blockchain
-			bc, err := logic.CreateBlockchain(addr, db, nil, transaction_pool.NewTransactionPool(node, 128), nil, 1000000)
+			bc, err := logic.CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
 			assert.Nil(t, err)
 
 			_, _, err = logic.SendFromMiner(account.NewAddress(tc.address), common.NewAmount(8), bc)
@@ -525,7 +525,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	minerAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
 	assert.Nil(t, err)
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
-	bm, bps := CreateProducer(minerAccount.GetKeyPair().GenerateAddress(), SenderAccount.GetKeyPair().GenerateAddress(), store, transaction_pool.NewTransactionPool(node, 128), node)
+	bm, bps := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 	//deploy smart contract
 	_, _, err = logic.Send(SenderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
@@ -578,7 +578,7 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.GetNetwork().ConnectToSeed(node2.GetHostPeerInfo())
 }
 
-func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *blockchain_logic.Blockchain, port int) *network.Node {
+func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *lblockchain.Blockchain, port int) *network.Node {
 	node := network.NewNode(bc.GetDb(), nil)
 
 	pow.SetTargetBit(12)
@@ -587,30 +587,31 @@ func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *blockchain_
 	return node
 }
 
-func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transaction_pool.TransactionPool, node *network.Node) (*blockchain_logic.BlockchainManager, *block_producer.BlockProducer) {
+func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
 	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
 	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(producerAddr.String()))
-	bc := blockchain_logic.CreateBlockchain(addr, db, pow, txPool, nil, 100000)
-	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), node)
-	block_producer := block_producer.NewBlockProducer(bm, pow, producer)
-	return bm, block_producer
+	bc := lblockchain.CreateBlockchain(addr, db, pow, txPool, nil, 100000)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	blockproducer := blockproducer.NewBlockProducer(bm, pow, producer)
+	return bm, blockproducer
 }
 
 func TestDoubleMint(t *testing.T) {
 	var SendNode *network.Node
 	var recvNode *network.Node
-	var recvNodeBc *blockchain_logic.Blockchain
+	var recvNodeBc *lblockchain.Blockchain
 	var blks []*block.Block
 	var parent *block.Block
 	var dposArray []*consensus.DPOS
-	var SendBm *blockchain_logic.BlockchainManager
+	var SendBm *lblockchain.BlockchainManager
 
 	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
+	validProducerAccount := account.NewContractAccountByAddress(account.NewAddress(validProducerAddr))
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
-	producerHash, _ := account.GeneratePubKeyHashByAddress(account.NewAddress(validProducerAddr))
-	tx := &transaction.Transaction{nil, []transaction_base.TXInput{{[]byte{}, -1, nil, nil}}, []transaction_base.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
+	producerHash := validProducerAccount.GetPubKeyHash()
+	tx := &transaction.Transaction{nil, []transactionbase.TXInput{{[]byte{}, -1, nil, nil}}, []transactionbase.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock([]*transaction.Transaction{tx}, validProducerKey, validProducerAddr, parent)
@@ -630,10 +631,10 @@ func TestDoubleMint(t *testing.T) {
 		node := network.NewNode(db, nil)
 		node.Start(testport_msg_relay_port3+i, "")
 
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(validProducerAddr), db, dpos, transaction_pool.NewTransactionPool(node, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(validProducerAccount.GetAddress(), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
 		pool := core.NewBlockPool()
 
-		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
+		bm := lblockchain.NewBlockchainManager(bc, pool, node)
 
 		dpos.SetKey(validProducerKey)
 		if i == 0 {
@@ -661,8 +662,8 @@ func TestDoubleMint(t *testing.T) {
 
 func createValidBlock(tx []*transaction.Transaction, validProducerKey, validProducerAddr string, parent *block.Block) *block.Block {
 	blk := block.NewBlock(tx, parent, validProducerAddr)
-	blk.SetHash(block_logic.CalculateHashWithNonce(blk))
-	block_logic.SignBlock(blk, validProducerKey)
+	blk.SetHash(lblock.CalculateHashWithNonce(blk))
+	lblock.SignBlock(blk, validProducerKey)
 	return blk
 }
 
@@ -683,9 +684,14 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
 
-	bc := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), storage.NewRamStorage(), dpos1, transaction_pool.NewTransactionPool(seedNode, 128), nil, 100000)
-	bm := blockchain_logic.NewBlockchainManager(bc, core.NewBlockPool(), seedNode)
-	bp := block_producer.NewBlockProducer(bm, dpos1, producer)
+	bc := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db, dpos1, transactionpool.NewTransactionPool(seedNode, 128), nil, 100000)
+
+	//create and start seed node
+	pool := core.NewBlockPool()
+	bm := lblockchain.NewBlockchainManager(bc, pool, seedNode)
+
+	// conss.SetKey(validProducerKey)
+	bp := blockproducer.NewBlockProducer(bm, dpos1, producer)
 
 	// seed node start mining
 	bp.Start()
@@ -702,8 +708,8 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	node2.Start(testport_fork_syncing+1, "")
 	defer node2.Stop()
 
-	bc2 := blockchain_logic.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transaction_pool.NewTransactionPool(node2, 128), nil, 100000)
-	blockchain_logic.NewBlockchainManager(bc2, core.NewBlockPool(), node2)
+	bc2 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transactionpool.NewTransactionPool(node2, 128), nil, 100000)
+	lblockchain.NewBlockchainManager(bc2, core.NewBlockPool(), node2)
 
 	// Trigger fork choice in node by broadcasting tail block of node[0]
 	tailBlk, _ := bc.GetTailBlock()
@@ -718,21 +724,21 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
-	var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
+	var address1TA = account.NewTransactionAccountByPubKey(address1Bytes)
 
 	db := storage.NewRamStorage()
 	defer db.Close()
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
-	utxoIndex := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	utxoIndex.UpdateUtxoState(blk.GetTransactions())
 	utxoIndex.Save()
-	utxoIndexInDB := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndexInDB := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 
 	// test updating UTXO index with non-dependent transactions
 	// Assert that both the original instance and the database copy are updated correctly
-	for _, index := range []utxo_logic.UTXOIndex{*utxoIndex, *utxoIndexInDB} {
-		utxoTx := index.GetAllUTXOsByPubKeyHash(address1Hash)
+	for _, index := range []lutxo.UTXOIndex{*utxoIndex, *utxoIndexInDB} {
+		utxoTx := index.GetAllUTXOsByPubKeyHash(address1TA.GetPubKeyHash())
 		assert.Equal(t, 2, utxoTx.Size())
 		utxo0 := utxoTx.GetUtxo(blk.GetTransactions()[0].ID, 0)
 		utx1 := utxoTx.GetUtxo(blk.GetTransactions()[0].ID, 1)
@@ -746,29 +752,23 @@ func TestUpdate(t *testing.T) {
 
 	// test updating UTXO index with dependent transactions
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
-	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
-	var pkHash1, _ = account.NewUserPubKeyHash(pubkey1)
+	var ta1 = account.NewAccountByPrivateKey(prikey1)
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
-	var pubkey2 = account.GenerateKeyPairByPrivateKey(prikey2).GetPublicKey()
-	var pkHash2, _ = account.NewUserPubKeyHash(pubkey2)
+	var ta2 = account.NewAccountByPrivateKey(prikey2)
 	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
-	var pubkey3 = account.GenerateKeyPairByPrivateKey(prikey3).GetPublicKey()
-	var pkHash3, _ = account.NewUserPubKeyHash(pubkey3)
+	var ta3 = account.NewAccountByPrivateKey(prikey3)
 	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
-	var pubkey4 = account.GenerateKeyPairByPrivateKey(prikey4).GetPublicKey()
-	var pkHash4, _ = account.NewUserPubKeyHash(pubkey4)
+	var ta4 = account.NewAccountByPrivateKey(prikey4)
 	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
-	var pubkey5 = account.GenerateKeyPairByPrivateKey(prikey5).GetPublicKey()
-	var pkHash5, _ = account.NewUserPubKeyHash(pubkey5)
-
+	var ta5 = account.NewAccountByPrivateKey(prikey5)
 	var dependentTx1 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
-			{util.GenerateRandomAoB(1), 1, nil, pubkey1},
+		Vin: []transactionbase.TXInput{
+			{util.GenerateRandomAoB(1), 1, nil, ta1.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(5), pkHash1, ""},
-			{common.NewAmount(10), pkHash2, ""},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(5), ta1.GetPubKeyHash(), ""},
+			{common.NewAmount(10), ta2.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(3),
 	}
@@ -776,12 +776,12 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx2 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
-			{dependentTx1.ID, 1, nil, pubkey2},
+		Vin: []transactionbase.TXInput{
+			{dependentTx1.ID, 1, nil, ta2.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(5), pkHash3, ""},
-			{common.NewAmount(3), pkHash4, ""},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(5), ta3.GetPubKeyHash(), ""},
+			{common.NewAmount(3), ta4.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(2),
 	}
@@ -789,11 +789,11 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx3 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
-			{dependentTx2.ID, 0, nil, pubkey3},
+		Vin: []transactionbase.TXInput{
+			{dependentTx2.ID, 0, nil, ta3.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(1), pkHash4, ""},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(1), ta4.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(4),
 	}
@@ -801,12 +801,12 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx4 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
-			{dependentTx2.ID, 1, nil, pubkey4},
-			{dependentTx3.ID, 0, nil, pubkey4},
+		Vin: []transactionbase.TXInput{
+			{dependentTx2.ID, 1, nil, ta4.GetKeyPair().GetPublicKey()},
+			{dependentTx3.ID, 0, nil, ta4.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(3), pkHash1, ""},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(1),
 	}
@@ -814,12 +814,12 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx5 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
-			{dependentTx1.ID, 0, nil, pubkey1},
-			{dependentTx4.ID, 0, nil, pubkey1},
+		Vin: []transactionbase.TXInput{
+			{dependentTx1.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
+			{dependentTx4.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
-			{common.NewAmount(4), pkHash5, ""},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(4), ta5.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(4),
 	}
@@ -834,11 +834,11 @@ func TestUpdate(t *testing.T) {
 	utxoTxPk1 := utxo.NewUTXOTx()
 	utxoTxPk1.PutUtxo(utxoPk1)
 
-	utxoIndex2 := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	utxoIndex2 := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	utxoIndex2.SetIndex(map[string]*utxo.UTXOTx{
-		pkHash2.String(): &utxoTxPk2,
-		pkHash1.String(): &utxoTxPk1,
+		ta2.GetPubKeyHash().String(): &utxoTxPk2,
+		ta1.GetPubKeyHash().String(): &utxoTxPk1,
 	})
 
 	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
@@ -846,29 +846,29 @@ func TestUpdate(t *testing.T) {
 	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
 	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
 	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).GetAllUtxos())
+	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
 	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 	dependentTx4.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
 	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txsForUpdate := []*transaction.Transaction{&dependentTx2, &dependentTx3}
 	utxoIndex2.UpdateUtxoState(txsForUpdate)
-	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash1).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
-	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash4).Size())
+	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
+	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta4.GetPubKeyHash()).Size())
 	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4}
 	utxoIndex2.UpdateUtxoState(txsForUpdate)
-	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash1).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
+	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
 	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5}
 	utxoIndex2.UpdateUtxoState(txsForUpdate)
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash1).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash2).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash3).Size())
-	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash4).Size())
-	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(pkHash5).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
+	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta4.GetPubKeyHash()).Size())
+	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(ta5.GetPubKeyHash()).Size())
 }
 
 func Test_MultipleMinersWithDPOS(t *testing.T) {
@@ -892,8 +892,10 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		"7c918ed7660d55759b7fc42b25f26bdab3caf8fc07586b2659a26470fb8dfc69",
 	}
 	dynasty := consensus.NewDynasty(miners, len(miners), timeBetweenBlock)
-	var bps []*block_producer.BlockProducer
-	var bcs []*blockchain_logic.Blockchain
+
+	var bcs []*lblockchain.Blockchain
+	var bps []*blockproducer.BlockProducer
+
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
@@ -901,15 +903,15 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		dpos := consensus.NewDPOS(producer)
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool()
 
 		node := network.NewNode(bc.GetDb(), nil)
 		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-		bp := block_producer.NewBlockProducer(bm, dpos, producer)
+		bm := lblockchain.NewBlockchainManager(bc, pool, node)
+		bp := blockproducer.NewBlockProducer(bm, dpos, producer)
 		bp.Start()
 		bps = append(bps, bp)
 		bcs = append(bcs, bc)
@@ -964,8 +966,10 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		"7c918ed7660d55759b7fc42b25f26bdab3caf8fc07586b2659a26470fb8dfc69",
 	}
 	dynasty := consensus.NewDynasty(miners, len(miners), timeBetweenBlock)
-	var bps []*block_producer.BlockProducer
-	var bcs []*blockchain_logic.Blockchain
+
+	var bcs []*lblockchain.Blockchain
+	var bps []*blockproducer.BlockProducer
+
 	var nodeArray []*network.Node
 
 	for i, miner := range miners {
@@ -973,15 +977,15 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		dpos := consensus.NewDPOS(producer)
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
-		bc := blockchain_logic.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transaction_pool.NewTransactionPool(nil, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
 		pool := core.NewBlockPool()
 
 		node := network.NewNode(bc.GetDb(), nil)
 		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := blockchain_logic.NewBlockchainManager(bc, pool, node)
-		bp := block_producer.NewBlockProducer(bm, dpos, producer)
+		bm := lblockchain.NewBlockchainManager(bc, pool, node)
+		bp := blockproducer.NewBlockProducer(bm, dpos, producer)
 		bp.Start()
 		bps = append(bps, bp)
 		bcs = append(bcs, bc)
@@ -1020,10 +1024,10 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 }
 
 func cleanUpDatabase() {
-	account_logic.RemoveAccountFile()
+	wallet.RemoveAccountFile()
 }
 
-func isSameBlockChain(bc1, bc2 *blockchain_logic.Blockchain) bool {
+func isSameBlockChain(bc1, bc2 *lblockchain.Blockchain) bool {
 	if bc1 == nil || bc2 == nil {
 		return false
 	}

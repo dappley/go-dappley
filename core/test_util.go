@@ -19,13 +19,14 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/core/transaction"
 	"time"
+
+	"github.com/dappley/go-dappley/core/transaction"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/util"
 )
@@ -55,8 +56,8 @@ func MockTransaction() *transaction.Transaction {
 	}
 }
 
-func MockTxInputs() []transaction_base.TXInput {
-	return []transaction_base.TXInput{
+func MockTxInputs() []transactionbase.TXInput {
+	return []transactionbase.TXInput{
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
@@ -68,8 +69,8 @@ func MockTxInputs() []transaction_base.TXInput {
 	}
 }
 
-func MockTxInputsWithPubkey(pubkey []byte) []transaction_base.TXInput {
-	return []transaction_base.TXInput{
+func MockTxInputsWithPubkey(pubkey []byte) []transactionbase.TXInput {
+	return []transactionbase.TXInput{
 		{util.GenerateRandomAoB(2),
 			6,
 			util.GenerateRandomAoB(2),
@@ -81,13 +82,13 @@ func MockTxInputsWithPubkey(pubkey []byte) []transaction_base.TXInput {
 	}
 }
 
-func MockUtxos(inputs []transaction_base.TXInput) []*utxo.UTXO {
+func MockUtxos(inputs []transactionbase.TXInput) []*utxo.UTXO {
 	utxos := make([]*utxo.UTXO, len(inputs))
 
 	for index, input := range inputs {
-		pubKeyHash, _ := account.NewUserPubKeyHash(input.PubKey)
+		ta := account.NewTransactionAccountByPubKey(input.PubKey)
 		utxos[index] = &utxo.UTXO{
-			TXOutput: transaction_base.TXOutput{Value: common.NewAmount(10), PubKeyHash: pubKeyHash, Contract: ""},
+			TXOutput: transactionbase.TXOutput{Value: common.NewAmount(10), PubKeyHash: ta.GetPubKeyHash(), Contract: ""},
 			Txid:     input.Txid,
 			TxIndex:  0,
 		}
@@ -96,10 +97,11 @@ func MockUtxos(inputs []transaction_base.TXInput) []*utxo.UTXO {
 	return utxos
 }
 
-func MockTxOutputs() []transaction_base.TXOutput {
-	return []transaction_base.TXOutput{
-		{common.NewAmount(5), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
-		{common.NewAmount(7), account.PubKeyHash(util.GenerateRandomAoB(2)), ""},
+func MockTxOutputs() []transactionbase.TXOutput {
+	ta := account.NewTransactionAccountByPubKey(util.GenerateRandomAoB(2))
+	return []transactionbase.TXOutput{
+		{common.NewAmount(5), ta.GetPubKeyHash(), ""},
+		{common.NewAmount(7), ta.GetPubKeyHash(), ""},
 	}
 }
 
@@ -133,7 +135,7 @@ func GenerateUtxoMockBlockWithInputs() *block.Block {
 func MockUtxoTransactionWithoutInputs() *transaction.Transaction {
 	return &transaction.Transaction{
 		ID:   []byte("tx1"),
-		Vin:  []transaction_base.TXInput{},
+		Vin:  []transactionbase.TXInput{},
 		Vout: MockUtxoOutputsWithoutInputs(),
 		Tip:  common.NewAmount(5),
 	}
@@ -151,11 +153,11 @@ func MockUtxoTransactionWithInputs() *transaction.Transaction {
 // Padding Address to 32 Byte
 var address1Bytes = []byte("address1000000000000000000000000")
 var address2Bytes = []byte("address2000000000000000000000000")
-var address1Hash, _ = account.NewUserPubKeyHash(address1Bytes)
-var address2Hash, _ = account.NewUserPubKeyHash(address2Bytes)
+var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
+var ta2 = account.NewTransactionAccountByPubKey(address2Bytes)
 
-func MockUtxoInputs() []transaction_base.TXInput {
-	return []transaction_base.TXInput{
+func MockUtxoInputs() []transactionbase.TXInput {
+	return []transactionbase.TXInput{
 		{
 			[]byte("tx1"),
 			0,
@@ -169,17 +171,17 @@ func MockUtxoInputs() []transaction_base.TXInput {
 	}
 }
 
-func MockUtxoOutputsWithoutInputs() []transaction_base.TXOutput {
-	return []transaction_base.TXOutput{
-		{common.NewAmount(5), address1Hash, ""},
-		{common.NewAmount(7), address1Hash, ""},
+func MockUtxoOutputsWithoutInputs() []transactionbase.TXOutput {
+	return []transactionbase.TXOutput{
+		{common.NewAmount(5), ta1.GetPubKeyHash(), ""},
+		{common.NewAmount(7), ta1.GetPubKeyHash(), ""},
 	}
 }
 
-func MockUtxoOutputsWithInputs() []transaction_base.TXOutput {
-	return []transaction_base.TXOutput{
-		{common.NewAmount(4), address1Hash, ""},
-		{common.NewAmount(5), address2Hash, ""},
-		{common.NewAmount(3), address2Hash, ""},
+func MockUtxoOutputsWithInputs() []transactionbase.TXOutput {
+	return []transactionbase.TXOutput{
+		{common.NewAmount(4), ta1.GetPubKeyHash(), ""},
+		{common.NewAmount(5), ta2.GetPubKeyHash(), ""},
+		{common.NewAmount(3), ta2.GetPubKeyHash(), ""},
 	}
 }

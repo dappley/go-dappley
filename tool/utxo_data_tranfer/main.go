@@ -26,7 +26,7 @@ import (
 	"sync"
 
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/logic/utxo_logic"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 )
@@ -130,8 +130,8 @@ func (utxos *UTXOIndexOld) serializeUTXOIndexOld() []byte {
 }
 
 // Convert old utxoIndex data to new utxoIndex data
-func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *utxo_logic.UTXOIndex {
-	utxoIndexNew := utxo_logic.NewUTXOIndex(utxo.NewUTXOCache(db))
+func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *lutxo.UTXOIndex {
+	utxoIndexNew := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	for address, utxoArray := range utxoIndexOld.index {
 		if address == contractUtxoKeyOld {
 			continue
@@ -142,14 +142,14 @@ func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *utxo_logic.UTX
 }
 
 // Add each utxo in utxoArray into new utxoIndex
-func addUtxoArrayToIndex(utxoArray []*utxo.UTXO, utxoIndexNew *utxo_logic.UTXOIndex) {
+func addUtxoArrayToIndex(utxoArray []*utxo.UTXO, utxoIndexNew *lutxo.UTXOIndex) {
 	if utxoArray == nil {
 		return
 	}
 	for _, utxo := range utxoArray {
 		utxoIndexNew.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
 		logger.WithFields(logger.Fields{
-			"address": utxo.PubKeyHash.GenerateAddress(),
+			"address": utxo.GetAddress(),
 			"Txid":    hex.EncodeToString(utxo.Txid),
 			"TxIndex": utxo.TxIndex,
 		}).Info("Utxo_data_transfer: add utxo")
@@ -157,7 +157,7 @@ func addUtxoArrayToIndex(utxoArray []*utxo.UTXO, utxoIndexNew *utxo_logic.UTXOIn
 }
 
 // Save all new data to storage
-func saveNewData(utxoIndexNew *utxo_logic.UTXOIndex) {
+func saveNewData(utxoIndexNew *lutxo.UTXOIndex) {
 	utxoIndexNew.Save()
 	logger.Info("Utxo_data_transfer: new data has been saved into storage...")
 }

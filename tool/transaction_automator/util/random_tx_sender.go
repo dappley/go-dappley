@@ -173,12 +173,12 @@ func getDifferentIndex(index int, maxIndex int) int {
 }
 
 func (sender *BatchTxSender) createTransaction(from, to account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string, senderKeyPair *account.KeyPair) *transaction.Transaction {
-
-	pkh, err := account.NewUserPubKeyHash(senderKeyPair.GetPublicKey())
-	if err != nil {
+	if ok, err := account.IsValidPubKey(senderKeyPair.GetPublicKey()); !ok {
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-	prevUtxos, err := sender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, amount)
+	ta := account.NewAccountByKey(senderKeyPair)
+
+	prevUtxos, err := sender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), amount)
 
 	if err != nil {
 		return nil

@@ -5,7 +5,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
@@ -25,27 +25,27 @@ func NewUnexistingUtxoTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount
 }
 
 func (txSender *UnexistingUtxoTxSender) Generate(params transaction.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
-
-	if err != nil {
+	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")
 	}
+	ta := account.NewAccountByKey(params.SenderKeyPair)
 
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to get UTXOs to match the amount")
 	}
-
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
 	unexistingUtxo := &utxo.UTXO{
-		TXOutput: *transaction_base.NewTXOutput(common.NewAmount(10), params.From),
+		TXOutput: *transactionbase.NewTXOutput(common.NewAmount(10), fromTA),
 		Txid:     []byte("FakeTxId"),
 		TxIndex:  0,
 		UtxoType: utxo.UtxoNormal,
 	}
 	prevUtxos = append(prevUtxos, unexistingUtxo)
 
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }
 

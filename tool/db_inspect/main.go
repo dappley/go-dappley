@@ -201,11 +201,11 @@ func GetUtxoHandle() {
 	flagSet.Parse(os.Args[2:])
 
 	addr := account.NewAddress(address)
-	pubKeyHash, ok := account.GeneratePubKeyHashByAddress(addr)
-	if !ok {
+	acc := account.NewContractAccountByAddress(addr)
+	if !acc.IsValid() {
 		panic("Decode address failed")
 	}
-
+	pubKeyHash := acc.GetPubKeyHash()
 	db := storage.OpenDatabase(dbPath)
 	defer db.Close()
 

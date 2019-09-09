@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/storage"
@@ -30,8 +30,8 @@ import (
 
 var tx1 = Transaction{
 	ID:       util.GenerateRandomAoB(1),
-	Vin:      transaction_base.GenerateFakeTxInputs(),
-	Vout:     transaction_base.GenerateFakeTxOutputs(),
+	Vin:      transactionbase.GenerateFakeTxInputs(),
+	Vout:     transactionbase.GenerateFakeTxOutputs(),
 	Tip:      common.NewAmount(5),
 	GasLimit: common.NewAmount(0),
 	GasPrice: common.NewAmount(0),
@@ -39,7 +39,7 @@ var tx1 = Transaction{
 
 func TestJournalPutAndGet(t *testing.T) {
 	db := storage.NewRamStorage()
-	vin := transaction_base.TXInput{tx1.ID, 1, nil, nil}
+	vin := transactionbase.TXInput{tx1.ID, 1, nil, nil}
 	err := PutTxJournal(tx1, db)
 	assert.Nil(t, err)
 	vout, err := GetTxOutput(vin, db)

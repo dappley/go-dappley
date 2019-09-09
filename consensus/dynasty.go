@@ -52,7 +52,8 @@ func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
-		if IsProducerAddressValid(producer) {
+		producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
+		if producerAccount.IsValid() {
 			validProducers = append(validProducers, producer)
 		}
 	}
@@ -123,12 +124,13 @@ func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 			return errors.New("already a producer")
 		}
 	}
+	producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
 
-	if IsProducerAddressValid(producer) && len(dynasty.producers) < dynasty.maxProducers {
+	if producerAccount.IsValid() && len(dynasty.producers) < dynasty.maxProducers {
 		return nil
 	}
 
-	if !IsProducerAddressValid(producer) {
+	if !producerAccount.IsValid() {
 		return errors.New("invalid producer address")
 	}
 	return errors.New("maximum number of producers reached")
@@ -181,12 +183,6 @@ func (dynasty *Dynasty) GetProducerIndex(producer string) int {
 	return -1
 }
 
-//IsProducerAddressValid returns if the producer address is a valid address
-func IsProducerAddressValid(producer string) bool {
-	addr := account.NewAddress(producer)
-	return addr.IsValid()
-}
-
 //GetDynastyTime returns the dynasty time
 func (dynasty *Dynasty) GetDynastyTime() int {
 	return dynasty.dynastyTime
@@ -206,11 +202,12 @@ func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProduce
 
 	seen := make(map[string]bool)
 	for _, producer := range producers {
+		producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
 		if seen[producer] {
 			return errors.New(fmt.Sprintf("can not add a duplicate producer: \"%v\"", producer))
 		}
 
-		if !IsProducerAddressValid(producer) {
+		if !producerAccount.IsValid() {
 			return errors.New(fmt.Sprintf("\"%v\" is a invalid producer", producer))
 		}
 		seen[producer] = true

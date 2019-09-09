@@ -5,7 +5,7 @@ package transactionpb
 
 import (
 	fmt "fmt"
-	pb "github.com/dappley/go-dappley/core/transaction_base/pb"
+	pb "github.com/dappley/go-dappley/core/transactionbase/pb"
 	proto "github.com/golang/protobuf/proto"
 	math "math"
 )

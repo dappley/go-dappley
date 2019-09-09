@@ -14,25 +14,24 @@ type UnauthorizedUtxoTxSender struct {
 }
 
 func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, acc *sdk.DappSdkAccount, unauthorizedAddr account.Address) *UnauthorizedUtxoTxSender {
-	unauthorizedpkh, _ := account.NewUserPubKeyHash(acc.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr).GetPublicKey())
+	unauthorizedTA := account.NewAccountByKey(acc.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr))
 
 	return &UnauthorizedUtxoTxSender{
 		TxSender{
 			dappSdk: dappSdk,
 			account: acc,
 		},
-		unauthorizedpkh,
+		unauthorizedTA.GetPubKeyHash(),
 	}
 }
 
 func (txSender *UnauthorizedUtxoTxSender) Generate(params transaction.SendTxParam) {
-	pkh, err := account.NewUserPubKeyHash(params.SenderKeyPair.GetPublicKey())
-
-	if err != nil {
-		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to hash sender public key")
+	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
+		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")
 	}
+	ta := account.NewAccountByKey(params.SenderKeyPair)
 
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to get UTXOs to match the amount")
@@ -40,8 +39,9 @@ func (txSender *UnauthorizedUtxoTxSender) Generate(params transaction.SendTxPara
 
 	unauthorizedUtxo := txSender.account.GetUtxoIndex().GetAllUTXOsByPubKeyHash(txSender.unauthorizedAddrPkh).GetAllUtxos()
 	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
-
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }
 
