@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
@@ -47,10 +47,10 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx1 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{tx1.ID, 1, nil, ta1.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(5), ta1.GetPubKeyHash(), ""},
 			{common.NewAmount(10), ta2.GetPubKeyHash(), ""},
 		},
@@ -60,10 +60,10 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx2 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx1.ID, 1, nil, ta2.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(5), ta3.GetPubKeyHash(), ""},
 			{common.NewAmount(3), ta4.GetPubKeyHash(), ""},
 		},
@@ -73,10 +73,10 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx3 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx2.ID, 0, nil, ta3.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(1), ta4.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(4),
@@ -85,11 +85,11 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx4 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx2.ID, 1, nil, ta4.GetKeyPair().GetPublicKey()},
 			{dependentTx3.ID, 0, nil, ta4.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(1),
@@ -98,11 +98,11 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	var dependentTx5 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx1.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
 			{dependentTx4.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(4), ta5.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(4),

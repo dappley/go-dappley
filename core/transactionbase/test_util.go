@@ -1,4 +1,4 @@
-package transaction_base
+package transactionbase
 
 import (
 	"github.com/dappley/go-dappley/common"

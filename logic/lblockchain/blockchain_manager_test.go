@@ -9,7 +9,7 @@ import (
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lutxo"
@@ -151,8 +151,8 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	normalTX := transaction.NewCoinbaseTX(acc.GetAddress(), "", 1, common.NewAmount(5))
 	normalTX2 := transaction.Transaction{
 		hash.Hash("normal2"),
-		[]transaction_base.TXInput{{normalTX.ID, 0, nil, acc.GetKeyPair().GetPublicKey()}},
-		[]transaction_base.TXOutput{{common.NewAmount(5), acc.GetPubKeyHash(), ""}},
+		[]transactionbase.TXInput{{normalTX.ID, 0, nil, acc.GetKeyPair().GetPublicKey()}},
+		[]transactionbase.TXOutput{{common.NewAmount(5), acc.GetPubKeyHash(), ""}},
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),
@@ -160,8 +160,8 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	}
 	abnormalTX := transaction.Transaction{
 		hash.Hash("abnormal"),
-		[]transaction_base.TXInput{{normalTX.ID, 1, nil, nil}},
-		[]transaction_base.TXOutput{{common.NewAmount(5), account.PubKeyHash([]byte("pkh")), ""}},
+		[]transactionbase.TXInput{{normalTX.ID, 1, nil, nil}},
+		[]transactionbase.TXOutput{{common.NewAmount(5), account.PubKeyHash([]byte("pkh")), ""}},
 		common.NewAmount(0),
 		common.NewAmount(0),
 		common.NewAmount(0),

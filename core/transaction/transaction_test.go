@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -35,15 +35,15 @@ func getAoB(length int64) []byte {
 	return util.GenerateRandomAoB(length)
 }
 
-func GenerateFakeTxInputs() []transaction_base.TXInput {
-	return []transaction_base.TXInput{
+func GenerateFakeTxInputs() []transactionbase.TXInput {
+	return []transactionbase.TXInput{
 		{getAoB(2), 10, getAoB(2), getAoB(2)},
 		{getAoB(2), 5, getAoB(2), getAoB(2)},
 	}
 }
 
-func GenerateFakeTxOutputs() []transaction_base.TXOutput {
-	return []transaction_base.TXOutput{
+func GenerateFakeTxOutputs() []transactionbase.TXOutput {
+	return []transactionbase.TXOutput{
 		{common.NewAmount(1), account.PubKeyHash(getAoB(2)), ""},
 		{common.NewAmount(2), account.PubKeyHash(getAoB(2)), ""},
 	}
@@ -142,7 +142,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 			tx := Transaction{
 				nil,
 				nil,
-				[]transaction_base.TXOutput{
+				[]transactionbase.TXOutput{
 					{nil,
 						acc.GetPubKeyHash(),
 						"",
@@ -170,8 +170,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"normal",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -190,8 +190,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"emptyVout",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{},
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{},
 				common.NewAmount(0),
 				common.NewAmount(0),
 				common.NewAmount(0),
@@ -203,8 +203,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"emptyRewardMap",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -223,8 +223,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"Wrong address",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -243,8 +243,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"Wrong amount",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(3),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -263,8 +263,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"twoAddresses",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -293,8 +293,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"MoreRewards",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,
@@ -324,8 +324,8 @@ func TestTransaction_MatchRewards(t *testing.T) {
 		{"MoreVout",
 			&Transaction{
 				nil,
-				[]transaction_base.TXInput{{nil, -1, nil, RewardTxData}},
-				[]transaction_base.TXOutput{{
+				[]transactionbase.TXInput{{nil, -1, nil, RewardTxData}},
+				[]transactionbase.TXOutput{{
 					common.NewAmount(1),
 					account.PubKeyHash([]byte{
 						0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80,

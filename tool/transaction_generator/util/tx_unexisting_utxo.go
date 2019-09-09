@@ -5,7 +5,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
@@ -38,7 +38,7 @@ func (txSender *UnexistingUtxoTxSender) Generate(params transaction.SendTxParam)
 	fromTA := account.NewContractAccountByAddress(params.From)
 	toTA := account.NewContractAccountByAddress(params.To)
 	unexistingUtxo := &utxo.UTXO{
-		TXOutput: *transaction_base.NewTXOutput(common.NewAmount(10), fromTA),
+		TXOutput: *transactionbase.NewTXOutput(common.NewAmount(10), fromTA),
 		Txid:     []byte("FakeTxId"),
 		TxIndex:  0,
 		UtxoType: utxo.UtxoNormal,

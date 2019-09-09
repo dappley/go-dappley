@@ -34,8 +34,8 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transaction_base"
-	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
+	"github.com/dappley/go-dappley/core/transactionbase"
+	transactionbasepb "github.com/dappley/go-dappley/core/transactionbase/pb"
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/golang/protobuf/proto"
@@ -70,8 +70,8 @@ var (
 
 type Transaction struct {
 	ID         []byte
-	Vin        []transaction_base.TXInput
-	Vout       []transaction_base.TXOutput
+	Vin        []transactionbase.TXInput
+	Vout       []transactionbase.TXOutput
 	Tip        *common.Amount
 	GasLimit   *common.Amount
 	GasPrice   *common.Amount
@@ -127,9 +127,9 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 	toAccount := account.NewContractAccountByAddress(to)
-	txin := transaction_base.TXInput{nil, -1, bh, []byte(data)}
-	txout := transaction_base.NewTXOutput(Subsidy.Add(tip), toAccount)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+	txin := transactionbase.TXInput{nil, -1, bh, []byte(data)}
+	txout := transactionbase.NewTXOutput(Subsidy.Add(tip), toAccount)
+	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.ID = tx.Hash()
 
 	return tx
@@ -166,22 +166,22 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transactio
 // Sign signs each input of a Transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
 	if tx.IsCoinbase() {
-		logger.Warn("Transaction: will not sign a coinbase transaction_base.")
+		logger.Warn("Transaction: will not sign a coinbase transactionbase.")
 		return nil
 	}
 
 	if tx.IsRewardTx() {
-		logger.Warn("Transaction: will not sign a reward transaction_base.")
+		logger.Warn("Transaction: will not sign a reward transactionbase.")
 		return nil
 	}
 
 	if tx.IsGasRewardTx() {
-		logger.Warn("Transaction: will not sign a gas reward transaction_base.")
+		logger.Warn("Transaction: will not sign a gas reward transactionbase.")
 		return nil
 	}
 
 	if tx.IsGasChangeTx() {
-		logger.Warn("Transaction: will not sign a gas change transaction_base.")
+		logger.Warn("Transaction: will not sign a gas change transactionbase.")
 		return nil
 	}
 
@@ -253,12 +253,12 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 }
 
 //prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transaction_base.TXInput {
-	var inputs []transaction_base.TXInput
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transactionbase.TXInput {
+	var inputs []transactionbase.TXInput
 
 	// Build a list of inputs
 	for _, utxo := range utxos {
-		input := transaction_base.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
+		input := transactionbase.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
 		inputs = append(inputs, input)
 	}
 
@@ -266,9 +266,9 @@ func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) [
 }
 
 //preapreOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transaction_base.TXOutput {
+func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
 
-	var outputs []transaction_base.TXOutput
+	var outputs []transactionbase.TXOutput
 	toAddr := to
 
 	if toAddr.GetAddress().String() == "" {
@@ -276,12 +276,12 @@ func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amo
 	}
 
 	if contract != "" {
-		outputs = append(outputs, *transaction_base.NewContractTXOutput(toAddr, contract))
+		outputs = append(outputs, *transactionbase.NewContractTXOutput(toAddr, contract))
 	}
 
-	outputs = append(outputs, *transaction_base.NewTXOutput(amount, toAddr))
+	outputs = append(outputs, *transactionbase.NewTXOutput(amount, toAddr))
 	if !change.IsZero() {
-		outputs = append(outputs, *transaction_base.NewTXOutput(change, from))
+		outputs = append(outputs, *transactionbase.NewTXOutput(change, from))
 	}
 	return outputs
 }
@@ -443,8 +443,8 @@ func (tx *Transaction) Hash() []byte {
 
 // TrimmedCopy creates a trimmed copy of Transaction to be used in signing
 func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
-	var inputs []transaction_base.TXInput
-	var outputs []transaction_base.TXOutput
+	var inputs []transactionbase.TXInput
+	var outputs []transactionbase.TXOutput
 	var pubkey []byte
 
 	for _, vin := range tx.Vin {
@@ -453,11 +453,11 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 		} else {
 			pubkey = nil
 		}
-		inputs = append(inputs, transaction_base.TXInput{vin.Txid, vin.Vout, nil, pubkey})
+		inputs = append(inputs, transactionbase.TXInput{vin.Txid, vin.Vout, nil, pubkey})
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, transaction_base.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+		outputs = append(outputs, transactionbase.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice, tx.CreateTime}
@@ -466,15 +466,15 @@ func (tx *Transaction) TrimmedCopy(withSignature bool) Transaction {
 }
 
 func (tx *Transaction) DeepCopy() Transaction {
-	var inputs []transaction_base.TXInput
-	var outputs []transaction_base.TXOutput
+	var inputs []transactionbase.TXInput
+	var outputs []transactionbase.TXOutput
 
 	for _, vin := range tx.Vin {
-		inputs = append(inputs, transaction_base.TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
+		inputs = append(inputs, transactionbase.TXInput{vin.Txid, vin.Vout, vin.Signature, vin.PubKey})
 	}
 
 	for _, vout := range tx.Vout {
-		outputs = append(outputs, transaction_base.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
+		outputs = append(outputs, transactionbase.TXOutput{vout.Value, vout.PubKeyHash, vout.Contract})
 	}
 
 	txCopy := Transaction{tx.ID, inputs, outputs, tx.Tip, tx.GasLimit, tx.GasPrice, tx.CreateTime}
@@ -552,8 +552,8 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction_base.TXInput{nil, -1, bh, RewardTxData}
-	txOutputs := []transaction_base.TXOutput{}
+	txin := transactionbase.TXInput{nil, -1, bh, RewardTxData}
+	txOutputs := []transactionbase.TXOutput{}
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
 		if err != nil {
@@ -563,9 +563,9 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 			}).Warn("Transaction: failed to parse reward amount")
 		}
 		acc := account.NewContractAccountByAddress(account.NewAddress(address))
-		txOutputs = append(txOutputs, *transaction_base.NewTXOutput(amt, acc))
+		txOutputs = append(txOutputs, *transactionbase.NewTXOutput(amt, acc))
 	}
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+	tx := Transaction{nil, []transactionbase.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 
 	tx.ID = tx.Hash()
 
@@ -575,10 +575,10 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) Transaction {
 	tx := Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{vinTxId, vinVout, nil, vinPubkey},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(voutValue), voutPubKeyHash, ""},
 		},
 		Tip: common.NewAmount(tip),
@@ -593,9 +593,9 @@ func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction_base.TXInput{nil, -1, bh, gasRewardData}
-	txout := transaction_base.NewTXOutput(fee, to)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+	txin := transactionbase.TXInput{nil, -1, bh, gasRewardData}
+	txout := transactionbase.NewTXOutput(fee, to)
+	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
@@ -614,9 +614,9 @@ func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transaction_base.TXInput{nil, -1, bh, gasChangeData}
-	txout := transaction_base.NewTXOutput(changeValue, to)
-	tx := Transaction{nil, []transaction_base.TXInput{txin}, []transaction_base.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+	txin := transactionbase.TXInput{nil, -1, bh, gasChangeData}
+	txout := transactionbase.NewTXOutput(changeValue, to)
+	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 
 	tx.ID = tx.Hash()
 	return tx, nil
@@ -719,16 +719,16 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 	tx.ID = pb.(*transactionpb.Transaction).GetId()
 	tx.Tip = common.NewAmountFromBytes(pb.(*transactionpb.Transaction).GetTip())
 
-	var vinArray []transaction_base.TXInput
-	txin := transaction_base.TXInput{}
+	var vinArray []transactionbase.TXInput
+	txin := transactionbase.TXInput{}
 	for _, txinpb := range pb.(*transactionpb.Transaction).GetVin() {
 		txin.FromProto(txinpb)
 		vinArray = append(vinArray, txin)
 	}
 	tx.Vin = vinArray
 
-	var voutArray []transaction_base.TXOutput
-	txout := transaction_base.TXOutput{}
+	var voutArray []transactionbase.TXOutput
+	txout := transactionbase.TXOutput{}
 	for _, txoutpb := range pb.(*transactionpb.Transaction).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)

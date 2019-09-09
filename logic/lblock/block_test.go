@@ -8,7 +8,7 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
@@ -99,13 +99,13 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	fmt.Println(hex.EncodeToString(generatedTxId))
 	generatedTX := &transaction.Transaction{
 		generatedTxId,
-		[]transaction_base.TXInput{
+		[]transactionbase.TXInput{
 			{[]byte("prevtxid"), 0, []byte("txid"), []byte(contractTA.GetPubKeyHash())},
 			{[]byte("prevtxid"), 1, []byte("txid"), []byte(contractTA.GetPubKeyHash())},
 		},
-		[]transaction_base.TXOutput{
-			*transaction_base.NewTxOut(common.NewAmount(23), userTA, ""),
-			*transaction_base.NewTxOut(common.NewAmount(10), contractTA, ""),
+		[]transactionbase.TXOutput{
+			*transactionbase.NewTxOut(common.NewAmount(23), userTA, ""),
+			*transactionbase.NewTxOut(common.NewAmount(10), contractTA, ""),
 		},
 		common.NewAmount(7),
 		common.NewAmount(0),
@@ -153,7 +153,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			"invalid normal txs",
 			[]*transaction.Transaction{{
 				ID: []byte("txid"),
-				Vin: []transaction_base.TXInput{{
+				Vin: []transactionbase.TXInput{{
 					[]byte("tx1"),
 					0,
 					util.GenerateRandomAoB(2),
@@ -182,10 +182,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*transaction.Transaction{&rewardTX},
 			map[string][]*utxo.UTXO{
 				contractTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(0), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(0), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
 				},
 				userTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,
@@ -195,11 +195,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*transaction.Transaction{generatedTX},
 			map[string][]*utxo.UTXO{
 				contractTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
-					{*transaction_base.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 1, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 1, utxo.UtxoNormal},
 				},
 				userTA.GetPubKeyHash().String(): {
-					{*transaction_base.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
 				},
 			},
 			false,

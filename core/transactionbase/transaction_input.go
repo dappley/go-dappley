@@ -16,10 +16,10 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package transaction_base
+package transactionbase
 
 import (
-	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
+	transactionbasepb "github.com/dappley/go-dappley/core/transactionbase/pb"
 	"github.com/golang/protobuf/proto"
 )
 

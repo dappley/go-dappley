@@ -32,7 +32,7 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 )
 
@@ -212,12 +212,12 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *transaction.Transaction, db storage
 	return nil
 }
 
-func getTXOutputSpent(in transaction_base.TXInput, db storage.Storage) (transaction_base.TXOutput, int, error) {
+func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transactionbase.TXOutput, int, error) {
 
 	vout, err := transaction.GetTxOutput(in, db)
 
 	if err != nil {
-		return transaction_base.TXOutput{}, 0, ErrTXInputInvalid
+		return transactionbase.TXOutput{}, 0, ErrTXInputInvalid
 	}
 	return vout, in.Vout, nil
 }
@@ -235,7 +235,7 @@ func (utxos *UTXOIndex) unspendVinsInTx(tx *transaction.Transaction, db storage.
 }
 
 // AddUTXO adds an unspent TXOutput to index
-func (utxos *UTXOIndex) AddUTXO(txout transaction_base.TXOutput, txid []byte, vout int) {
+func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vout int) {
 	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(txout.PubKeyHash)
 
 	var u *utxo.UTXO

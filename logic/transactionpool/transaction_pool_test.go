@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	transactionPoolpb "github.com/dappley/go-dappley/logic/transactionpool/pb"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -39,15 +39,15 @@ func getAoB(length int64) []byte {
 	return util.GenerateRandomAoB(length)
 }
 
-func GenerateFakeTxInputs() []transaction_base.TXInput {
-	return []transaction_base.TXInput{
+func GenerateFakeTxInputs() []transactionbase.TXInput {
+	return []transactionbase.TXInput{
 		{getAoB(2), 10, getAoB(2), getAoB(2)},
 		{getAoB(2), 5, getAoB(2), getAoB(2)},
 	}
 }
 
-func GenerateFakeTxOutputs() []transaction_base.TXOutput {
-	return []transaction_base.TXOutput{
+func GenerateFakeTxOutputs() []transactionbase.TXOutput {
+	return []transactionbase.TXOutput{
 		{common.NewAmount(1), account.PubKeyHash(getAoB(2)), ""},
 		{common.NewAmount(2), account.PubKeyHash(getAoB(2)), ""},
 	}
@@ -126,7 +126,7 @@ func TestTransactionPool_addTransaction(t *testing.T) {
 	txs := generateDependentTxs()
 
 	txPool := NewTransactionPool(nil, 128)
-	//push the first transaction_base. It should be in stored in txs and tipOrder
+	//push the first transactionbase. It should be in stored in txs and tipOrder
 	txPool.addTransactionAndSort(transaction.NewTransactionNode(txs[0]))
 	assert.Equal(t, 1, len(txPool.txs))
 	assert.Equal(t, 1, len(txPool.tipOrder))
@@ -246,10 +246,10 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 
 	var deploymentTx = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{tx1.ID, 1, nil, pubkey1},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "dapp_schedule"},
 		},
 		Tip:      common.NewAmount(1),
@@ -261,7 +261,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	var executionTx = transaction.Transaction{
 		ID:  nil,
 		Vin: GenerateFakeTxInputs(),
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "execution"},
 		},
 		Tip:      common.NewAmount(2),
@@ -353,7 +353,7 @@ func generateDependentTxs() []*transaction.Transaction {
 	//size 37
 	ttx1 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []transaction_base.TXInput{{Txid: ttx0.ID}},
+		Vin:  []transactionbase.TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2000),
 	}
@@ -361,7 +361,7 @@ func generateDependentTxs() []*transaction.Transaction {
 	//size 37
 	ttx2 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []transaction_base.TXInput{{Txid: ttx0.ID}},
+		Vin:  []transactionbase.TXInput{{Txid: ttx0.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(1000),
 	}
@@ -369,7 +369,7 @@ func generateDependentTxs() []*transaction.Transaction {
 	//size 37
 	ttx3 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []transaction_base.TXInput{{Txid: ttx1.ID}},
+		Vin:  []transactionbase.TXInput{{Txid: ttx1.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2000),
 	}
@@ -385,7 +385,7 @@ func generateDependentTxs() []*transaction.Transaction {
 	//size 38
 	ttx5 := &transaction.Transaction{
 		ID:   util.GenerateRandomAoB(5),
-		Vin:  []transaction_base.TXInput{{Txid: ttx4.ID}},
+		Vin:  []transactionbase.TXInput{{Txid: ttx4.ID}},
 		Vout: GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(5000),
 	}

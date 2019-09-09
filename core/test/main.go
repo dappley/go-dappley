@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -15,8 +15,8 @@ import (
 func main() {
 	tx1 := transaction.Transaction{
 		ID:   util.GenerateRandomAoB(1),
-		Vin:  transaction_base.GenerateFakeTxInputs(),
-		Vout: transaction_base.GenerateFakeTxOutputs(),
+		Vin:  transactionbase.GenerateFakeTxInputs(),
+		Vout: transactionbase.GenerateFakeTxOutputs(),
 		Tip:  common.NewAmount(2),
 	}
 	txpb := tx1.ToProto()

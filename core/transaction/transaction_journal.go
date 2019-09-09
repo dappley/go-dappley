@@ -21,8 +21,8 @@ import (
 	"errors"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/transaction_base"
-	transactionbasepb "github.com/dappley/go-dappley/core/transaction_base/pb"
+	"github.com/dappley/go-dappley/core/transactionbase"
+	transactionbasepb "github.com/dappley/go-dappley/core/transactionbase/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -33,14 +33,14 @@ var (
 )
 
 // TxJournal refers to transaction log data.
-// It holds output array in each transaction_base.
+// It holds output array in each transactionbase.
 type TxJournal struct {
 	Txid []byte
-	Vout []transaction_base.TXOutput
+	Vout []transactionbase.TXOutput
 }
 
 // Constructor
-func NewTxJournal(txid []byte, vouts []transaction_base.TXOutput) *TxJournal {
+func NewTxJournal(txid []byte, vouts []transactionbase.TXOutput) *TxJournal {
 	txJournal := &TxJournal{txid, vouts}
 	return txJournal
 }
@@ -58,18 +58,18 @@ func PutTxJournal(tx Transaction, db storage.Storage) error {
 }
 
 // Returns transaction log data from database
-func GetTxOutput(vin transaction_base.TXInput, db storage.Storage) (transaction_base.TXOutput, error) {
+func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionbase.TXOutput, error) {
 	key := getStorageKey(vin.Txid)
 	value, err := db.Get(key)
 	if err != nil {
-		return transaction_base.TXOutput{}, err
+		return transactionbase.TXOutput{}, err
 	}
 	txJournal, err := DeserializeJournal(value)
 	if err != nil {
-		return transaction_base.TXOutput{}, err
+		return transactionbase.TXOutput{}, err
 	}
 	if vin.Vout >= len(txJournal.Vout) {
-		return transaction_base.TXOutput{}, ErrVoutNotFound
+		return transactionbase.TXOutput{}, ErrVoutNotFound
 	}
 	return txJournal.Vout[vin.Vout], nil
 }
@@ -116,8 +116,8 @@ func (txJournal *TxJournal) toProto() proto.Message {
 }
 
 func (txJournal *TxJournal) fromProto(pb proto.Message) {
-	var voutArray []transaction_base.TXOutput
-	txout := transaction_base.TXOutput{}
+	var voutArray []transactionbase.TXOutput
+	txout := transactionbase.TXOutput{}
 	for _, txoutpb := range pb.(*transactionpb.TransactionJournal).GetVout() {
 		txout.FromProto(txoutpb)
 		voutArray = append(voutArray, txout)

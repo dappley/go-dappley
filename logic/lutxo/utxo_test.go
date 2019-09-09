@@ -27,7 +27,7 @@ import (
 
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/common"
@@ -48,7 +48,7 @@ func TestAddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
-	txout := transaction_base.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}
+	txout := transactionbase.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	utxoIndex.AddUTXO(txout, []byte{1}, 0)
@@ -70,12 +70,12 @@ func TestRemoveUTXO(t *testing.T) {
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	addr1UtxoTx := utxo.NewUTXOTx()
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal})
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{1}, 1, utxo.UtxoNormal})
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{2}, 0, utxo.UtxoNormal})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{1}, 1, utxo.UtxoNormal})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{2}, 0, utxo.UtxoNormal})
 
 	addr2UtxoTx := utxo.NewUTXOTx()
-	addr2UtxoTx.PutUtxo(&utxo.UTXO{transaction_base.TXOutput{common.NewAmount(4), ta2.GetPubKeyHash(), ""}, []byte{1}, 2, utxo.UtxoNormal})
+	addr2UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(4), ta2.GetPubKeyHash(), ""}, []byte{1}, 2, utxo.UtxoNormal})
 
 	utxoIndex.index[ta1.GetPubKeyHash().String()] = &addr1UtxoTx
 	utxoIndex.index[ta2.GetPubKeyHash().String()] = &addr2UtxoTx
@@ -111,8 +111,8 @@ func TestUpdate_Failed(t *testing.T) {
 func TestFindUTXO(t *testing.T) {
 	Txin := core.MockTxInputs()
 	Txin = append(Txin, core.MockTxInputs()...)
-	utxo1 := &utxo.UTXO{transaction_base.TXOutput{common.NewAmount(10), account.PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout, utxo.UtxoNormal}
-	utxo2 := &utxo.UTXO{transaction_base.TXOutput{common.NewAmount(9), account.PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout, utxo.UtxoNormal}
+	utxo1 := &utxo.UTXO{transactionbase.TXOutput{common.NewAmount(10), account.PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout, utxo.UtxoNormal}
+	utxo2 := &utxo.UTXO{transactionbase.TXOutput{common.NewAmount(9), account.PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout, utxo.UtxoNormal}
 	utxoTx1 := utxo.NewUTXOTxWithData(utxo1)
 	utxoTx2 := utxo.NewUTXOTxWithData(utxo2)
 
@@ -147,7 +147,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 				tmpExists := exists
 				mu.Unlock()
 				if !tmpExists {
-					index.AddUTXO(transaction_base.TXOutput{}, []byte("asd"), 65)
+					index.AddUTXO(transactionbase.TXOutput{}, []byte("asd"), 65)
 					atomic.AddUint64(&addOps, 1)
 					mu.Lock()
 					exists = true
@@ -176,7 +176,7 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	contractAccount := account.NewContractTransactionAccount()
 	contractPkh := contractAccount.GetPubKeyHash()
 	//preapre 3 utxos in the utxo index
-	TXOutputs := []transaction_base.TXOutput{
+	TXOutputs := []transactionbase.TXOutput{
 		{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		{common.NewAmount(4), ta2.GetPubKeyHash(), ""},
 		{common.NewAmount(5), ta2.GetPubKeyHash(), ""},

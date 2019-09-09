@@ -11,7 +11,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/util"
 
@@ -85,17 +85,17 @@ module.exports = new MathTest();`
 		{
 			Txid:     []byte("1"),
 			TxIndex:  0,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
+			TXOutput: *transactionbase.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
 		},
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(15), contractTA, ""),
+			TXOutput: *transactionbase.NewTxOut(common.NewAmount(15), contractTA, ""),
 		},
 		{
 			Txid:     []byte("2"),
 			TxIndex:  0,
-			TXOutput: *transaction_base.NewTxOut(common.NewAmount(3), contractTA, ""),
+			TXOutput: *transactionbase.NewTxOut(common.NewAmount(3), contractTA, ""),
 		},
 	}
 
@@ -459,9 +459,9 @@ func TestGetNodeAddress(t *testing.T) {
 }
 
 func TestAddGasCount(t *testing.T) {
-	vout := transaction_base.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
 	tx := transaction.Transaction{
-		Vout: []transaction_base.TXOutput{*vout},
+		Vout: []transactionbase.TXOutput{*vout},
 	}
 	ctx := tx.ToContractTx()
 	script, _ := ioutil.ReadFile("test/test_add.js")
@@ -493,10 +493,10 @@ func TestAddGasCount(t *testing.T) {
 }
 
 func TestStepRecordGasCount(t *testing.T) {
-	vout := transaction_base.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
+	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
 	tx := transaction.Transaction{
-		Vout: []transaction_base.TXOutput{*vout},
+		Vout: []transactionbase.TXOutput{*vout},
 	}
 	ctx := tx.ToContractTx()
 	script, _ := ioutil.ReadFile("test/test_step_recorder.js")

@@ -28,7 +28,7 @@ import (
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/lblock"
@@ -611,7 +611,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := validProducerAccount.GetPubKeyHash()
-	tx := &transaction.Transaction{nil, []transaction_base.TXInput{{[]byte{}, -1, nil, nil}}, []transaction_base.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
+	tx := &transaction.Transaction{nil, []transactionbase.TXInput{{[]byte{}, -1, nil, nil}}, []transactionbase.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock([]*transaction.Transaction{tx}, validProducerKey, validProducerAddr, parent)
@@ -763,10 +763,10 @@ func TestUpdate(t *testing.T) {
 	var ta5 = account.NewAccountByPrivateKey(prikey5)
 	var dependentTx1 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{util.GenerateRandomAoB(1), 1, nil, ta1.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(5), ta1.GetPubKeyHash(), ""},
 			{common.NewAmount(10), ta2.GetPubKeyHash(), ""},
 		},
@@ -776,10 +776,10 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx2 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx1.ID, 1, nil, ta2.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(5), ta3.GetPubKeyHash(), ""},
 			{common.NewAmount(3), ta4.GetPubKeyHash(), ""},
 		},
@@ -789,10 +789,10 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx3 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx2.ID, 0, nil, ta3.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(1), ta4.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(4),
@@ -801,11 +801,11 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx4 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx2.ID, 1, nil, ta4.GetKeyPair().GetPublicKey()},
 			{dependentTx3.ID, 0, nil, ta4.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(1),
@@ -814,11 +814,11 @@ func TestUpdate(t *testing.T) {
 
 	var dependentTx5 = transaction.Transaction{
 		ID: nil,
-		Vin: []transaction_base.TXInput{
+		Vin: []transactionbase.TXInput{
 			{dependentTx1.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
 			{dependentTx4.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
 		},
-		Vout: []transaction_base.TXOutput{
+		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(4), ta5.GetPubKeyHash(), ""},
 		},
 		Tip: common.NewAmount(4),

@@ -12,7 +12,7 @@ import (
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction_base"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
@@ -266,7 +266,7 @@ func CheckContractSyntaxTransaction(engine ScEngine, tx *transaction.Transaction
 	return nil
 }
 
-func CheckContractSyntax(sc ScEngine, out transaction_base.TXOutput) error {
+func CheckContractSyntax(sc ScEngine, out transactionbase.TXOutput) error {
 	if out.Contract != "" {
 		function, args := util.DecodeScInput(out.Contract)
 		if function == "" {
