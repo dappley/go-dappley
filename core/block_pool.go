@@ -19,11 +19,12 @@
 package core
 
 import (
-	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core/block"
 	"sync"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
+
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/common"
@@ -87,6 +88,7 @@ func (pool *BlockPool) findLongestChain(parentHash hash.Hash) *common.Tree {
 			if root.GetValue().(*block.Block).GetPrevHash().String() == parentHash.String() {
 				if root.Height() > longest {
 					longestForkHead = root
+					longest = root.Height()
 				}
 			}
 		}
