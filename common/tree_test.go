@@ -54,6 +54,8 @@ func Test_AddChild(t *testing.T) {
 }
 
 func Test_HasChild(t *testing.T) {
+	var nilTree Tree
+	newTree, _ := NewTree("new", "new")
 	parentNode1, _ := NewTree("parent1", "parent1")
 	parentNode2, _ := NewTree("parent2", "parent2")
 	childNode1, _ := NewTree("child1", "child1")
@@ -61,8 +63,11 @@ func Test_HasChild(t *testing.T) {
 	parentNode1.AddChild(childNode1)
 	childNode2.AddParent(parentNode2)
 
+	assert.Nil(t, nilTree.Children)
 	assert.True(t, parentNode1.hasChildren())
 	assert.True(t, parentNode2.hasChildren())
+	assert.False(t, newTree.hasChildren())
+	assert.False(t, nilTree.hasChildren())
 }
 
 func Test_FindHeightestChild(t *testing.T) {
