@@ -8,22 +8,22 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 )
 
 type Network struct {
 	streamManager         *StreamManager
 	peerManager           *PeerManager
-	streamMsgRcvCh        chan *network_model.DappPacketContext
-	streamMsgDispatcherCh chan *network_model.DappPacketContext
+	streamMsgRcvCh        chan *networkmodel.DappPacketContext
+	streamMsgDispatcherCh chan *networkmodel.DappPacketContext
 	recentlyRcvdDapMsgs   *lru.Cache
 	onStreamStopCb        OnStreamCbFunc
 }
 
 type NetworkContext struct {
 	netService            NetService
-	config                network_model.PeerConnectionConfig
-	streamMsgDispatcherCh chan *network_model.DappPacketContext
+	config                networkmodel.PeerConnectionConfig
+	streamMsgDispatcherCh chan *networkmodel.DappPacketContext
 	db                    Storage
 	onStreamStopCb        OnStreamCbFunc
 	seeds                 []string
@@ -35,7 +35,7 @@ func NewNetwork(netContext *NetworkContext) *Network {
 	var err error
 
 	net := &Network{
-		streamMsgRcvCh:        make(chan *network_model.DappPacketContext, dispatchChLen),
+		streamMsgRcvCh:        make(chan *networkmodel.DappPacketContext, dispatchChLen),
 		streamMsgDispatcherCh: netContext.streamMsgDispatcherCh,
 		onStreamStopCb:        netContext.onStreamStopCb,
 	}
@@ -52,9 +52,9 @@ func NewNetwork(netContext *NetworkContext) *Network {
 }
 
 //GetConnectedPeers returns a list of peers in the network
-func (net *Network) GetConnectedPeers() []network_model.PeerInfo {
+func (net *Network) GetConnectedPeers() []networkmodel.PeerInfo {
 	peers := net.streamManager.GetConnectedPeers()
-	peersInSlice := []network_model.PeerInfo{}
+	peersInSlice := []networkmodel.PeerInfo{}
 	for _, peer := range peers {
 		peersInSlice = append(peersInSlice, peer)
 	}
@@ -62,7 +62,7 @@ func (net *Network) GetConnectedPeers() []network_model.PeerInfo {
 }
 
 //GetHost returns a list of peers in the network
-func (net *Network) GetHost() *network_model.Host {
+func (net *Network) GetHost() *networkmodel.Host {
 	if net.streamManager == nil {
 		return nil
 	}
@@ -80,7 +80,7 @@ func (net *Network) StartNewPingService(interval time.Duration) error {
 
 //Start starts the network
 func (net *Network) Start(listenPort int, privKey crypto.PrivKey) error {
-	host := network_model.NewHost(listenPort, privKey, net.streamManager.StreamHandler)
+	host := networkmodel.NewHost(listenPort, privKey, net.streamManager.StreamHandler)
 	net.streamManager.Start(host)
 	net.connectToAllPeers()
 	net.peerManager.Start()
@@ -96,23 +96,23 @@ func (net *Network) Stop() {
 }
 
 //Unicast sends a message to a peer
-func (net *Network) Unicast(data []byte, pid peer.ID, priority network_model.DappCmdPriority) {
-	packet := network_model.ConstructDappPacketFromData(data, false)
+func (net *Network) Unicast(data []byte, pid peer.ID, priority networkmodel.DappCmdPriority) {
+	packet := networkmodel.ConstructDappPacketFromData(data, false)
 
 	net.recordMessage(packet)
 	net.streamManager.Unicast(packet, pid, priority)
 }
 
 //Broadcast sends a message to all peers
-func (net *Network) Broadcast(data []byte, priority network_model.DappCmdPriority) {
-	packet := network_model.ConstructDappPacketFromData(data, true)
+func (net *Network) Broadcast(data []byte, priority networkmodel.DappCmdPriority) {
+	packet := networkmodel.ConstructDappPacketFromData(data, true)
 
 	net.recordMessage(packet)
 	net.streamManager.Broadcast(packet, priority)
 }
 
 //ConnectToSeed adds a peer to its network and starts the connectionManager
-func (net *Network) ConnectToSeed(peerInfo network_model.PeerInfo) error {
+func (net *Network) ConnectToSeed(peerInfo networkmodel.PeerInfo) error {
 	err := net.streamManager.connectPeer(peerInfo, ConnectionTypeOut)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (net *Network) ConnectToSeed(peerInfo network_model.PeerInfo) error {
 //ConnectToSeedByString adds a peer by its full address string and starts the connectionManager
 func (net *Network) ConnectToSeedByString(fullAddr string) error {
 
-	peerInfo, err := network_model.NewPeerInfoFromString(fullAddr)
+	peerInfo, err := networkmodel.NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,
@@ -136,7 +136,7 @@ func (net *Network) ConnectToSeedByString(fullAddr string) error {
 }
 
 //AddSeed Add a seed peer to its network
-func (net *Network) AddSeed(peerInfo network_model.PeerInfo) {
+func (net *Network) AddSeed(peerInfo networkmodel.PeerInfo) {
 	net.peerManager.AddSeedByPeerInfo(peerInfo)
 }
 
@@ -201,12 +201,12 @@ func (net *Network) connectToSyncPeers() {
 }
 
 //isNetworkRadiation decides if a message is a network radiation (a message that it has received already)
-func (net *Network) isNetworkRadiation(msg *network_model.DappPacket) bool {
+func (net *Network) isNetworkRadiation(msg *networkmodel.DappPacket) bool {
 	return msg.IsBroadcast() && net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
 }
 
 //recordMessage records a message that is already received or sent
-func (net *Network) recordMessage(msg *network_model.DappPacket) {
+func (net *Network) recordMessage(msg *networkmodel.DappPacket) {
 	net.recentlyRcvdDapMsgs.Add(string(msg.GetRawBytes()), true)
 }
 
@@ -216,7 +216,7 @@ func (net *Network) onStreamStop(stream *Stream) {
 }
 
 //onPeerListReceived connects to new peers when a peer list is received
-func (net *Network) onPeerListReceived(newPeers []network_model.PeerInfo) {
+func (net *Network) onPeerListReceived(newPeers []networkmodel.PeerInfo) {
 	net.streamManager.ConnectPeers(newPeers)
 }
 

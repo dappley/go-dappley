@@ -21,26 +21,26 @@ package network
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStream_Send(t *testing.T) {
 	s := &Stream{
-		network_model.PeerInfo{},
+		networkmodel.PeerInfo{},
 		nil,
 		[]byte{},
-		make(chan *network_model.DappPacket, highPriorityChLength),
-		make(chan *network_model.DappPacket, normalPriorityChLength),
+		make(chan *networkmodel.DappPacket, highPriorityChLength),
+		make(chan *networkmodel.DappPacket, normalPriorityChLength),
 		make(chan bool, WriteChTotalLength),
 		make(chan bool, 1), //two channels to stop
 		make(chan bool, 1),
 	}
 
-	data1 := network_model.ConstructDappPacketFromData([]byte("data1"), network_model.Unicast)
-	data2 := network_model.ConstructDappPacketFromData([]byte("data2"), network_model.Unicast)
-	s.Send(data1, network_model.NormalPriorityCommand)
-	s.Send(data2, network_model.HighPriorityCommand)
+	data1 := networkmodel.ConstructDappPacketFromData([]byte("data1"), networkmodel.Unicast)
+	data2 := networkmodel.ConstructDappPacketFromData([]byte("data2"), networkmodel.Unicast)
+	s.Send(data1, networkmodel.NormalPriorityCommand)
+	s.Send(data2, networkmodel.HighPriorityCommand)
 	assert.Equal(t, 2, len(s.msgNotifyCh))
 	assert.Equal(t, 1, len(s.highPriorityWriteCh))
 	assert.Equal(t, 1, len(s.normalPriorityWriteCh))

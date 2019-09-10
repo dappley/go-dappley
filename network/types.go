@@ -3,7 +3,7 @@ package network
 import (
 	"github.com/libp2p/go-libp2p-core/peer"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 )
 
 type StreamInfo struct {
@@ -14,5 +14,5 @@ type StreamInfo struct {
 
 type SyncPeerContext struct {
 	checkingStreams map[peer.ID]*StreamInfo
-	newPeers        map[peer.ID]*network_model.PeerInfo
+	newPeers        map[peer.ID]*networkmodel.PeerInfo
 }

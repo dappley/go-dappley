@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -55,12 +55,12 @@ var (
 	}
 )
 
-type onPeerListReceived func(newPeers []network_model.PeerInfo)
+type onPeerListReceived func(newPeers []networkmodel.PeerInfo)
 
 type PeerManager struct {
 	hostPeerId           peer.ID
-	seeds                map[peer.ID]network_model.PeerInfo
-	syncPeers            map[peer.ID]network_model.PeerInfo
+	seeds                map[peer.ID]networkmodel.PeerInfo
+	syncPeers            map[peer.ID]networkmodel.PeerInfo
 	netService           NetService
 	db                   Storage
 	onPeerListReceivedCb onPeerListReceived
@@ -70,8 +70,8 @@ type PeerManager struct {
 //NewPeerManager create a new peer manager object
 func NewPeerManager(netService NetService, db Storage, onPeerListReceivedCb onPeerListReceived, seeds []string) *PeerManager {
 	pm := &PeerManager{
-		seeds:                make(map[peer.ID]network_model.PeerInfo),
-		syncPeers:            make(map[peer.ID]network_model.PeerInfo),
+		seeds:                make(map[peer.ID]networkmodel.PeerInfo),
+		syncPeers:            make(map[peer.ID]networkmodel.PeerInfo),
 		mutex:                sync.RWMutex{},
 		netService:           netService,
 		db:                   db,
@@ -86,11 +86,11 @@ func NewPeerManager(netService NetService, db Storage, onPeerListReceivedCb onPe
 }
 
 //GetSeeds return a slice of seed peers
-func (pm *PeerManager) GetSeeds() []network_model.PeerInfo {
+func (pm *PeerManager) GetSeeds() []networkmodel.PeerInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
-	allSeeds := []network_model.PeerInfo{}
+	allSeeds := []networkmodel.PeerInfo{}
 	for _, seed := range pm.seeds {
 		allSeeds = append(allSeeds, seed)
 	}
@@ -98,11 +98,11 @@ func (pm *PeerManager) GetSeeds() []network_model.PeerInfo {
 }
 
 //GetSyncPeers return a slice of sync peers
-func (pm *PeerManager) GetSyncPeers() []network_model.PeerInfo {
+func (pm *PeerManager) GetSyncPeers() []networkmodel.PeerInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
-	allPeers := []network_model.PeerInfo{}
+	allPeers := []networkmodel.PeerInfo{}
 	for _, peer := range pm.syncPeers {
 		allPeers = append(allPeers, peer)
 	}
@@ -146,7 +146,7 @@ func (pm *PeerManager) addSeeds(seeds []string) {
 //addSeedByString adds seed peer by multiaddr string
 func (pm *PeerManager) addSeedByString(fullAddr string) {
 
-	peerInfo, err := network_model.NewPeerInfoFromString(fullAddr)
+	peerInfo, err := networkmodel.NewPeerInfoFromString(fullAddr)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"full_addr": fullAddr,
@@ -157,7 +157,7 @@ func (pm *PeerManager) addSeedByString(fullAddr string) {
 }
 
 //AddSeedByPeerInfo adds seed by peerInfo
-func (pm *PeerManager) AddSeedByPeerInfo(peerInfo network_model.PeerInfo) {
+func (pm *PeerManager) AddSeedByPeerInfo(peerInfo networkmodel.PeerInfo) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 
@@ -170,7 +170,7 @@ func (pm *PeerManager) AddSeedByPeerInfo(peerInfo network_model.PeerInfo) {
 }
 
 //UpdateSyncPeers synchronizes the sync peers with the connected peer list
-func (pm *PeerManager) UpdateSyncPeers(connectedPeerList map[peer.ID]network_model.PeerInfo) {
+func (pm *PeerManager) UpdateSyncPeers(connectedPeerList map[peer.ID]networkmodel.PeerInfo) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 
@@ -185,7 +185,7 @@ func (pm *PeerManager) UpdateSyncPeers(connectedPeerList map[peer.ID]network_mod
 }
 
 //AddSyncPeer adds a sync peer and saves it to database
-func (pm *PeerManager) AddSyncPeer(peer network_model.PeerInfo) {
+func (pm *PeerManager) AddSyncPeer(peer networkmodel.PeerInfo) {
 
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
@@ -195,7 +195,7 @@ func (pm *PeerManager) AddSyncPeer(peer network_model.PeerInfo) {
 }
 
 //addSyncPeer adds a sync peer
-func (pm *PeerManager) addSyncPeer(peer network_model.PeerInfo) {
+func (pm *PeerManager) addSyncPeer(peer networkmodel.PeerInfo) {
 
 	if pm.isPeerNew(peer.PeerId) {
 		pm.syncPeers[peer.PeerId] = peer
@@ -239,7 +239,7 @@ func (pm *PeerManager) isPeerNew(peerId peer.ID) bool {
 }
 
 //AddPeers adds one of its peers' peerlist to its own peerlist
-func (pm *PeerManager) AddPeers(peers []network_model.PeerInfo) {
+func (pm *PeerManager) AddPeers(peers []networkmodel.PeerInfo) {
 
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
@@ -251,11 +251,11 @@ func (pm *PeerManager) AddPeers(peers []network_model.PeerInfo) {
 
 }
 
-func (pm *PeerManager) GetAllPeers() []network_model.PeerInfo {
+func (pm *PeerManager) GetAllPeers() []networkmodel.PeerInfo {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
 
-	var allPeers []network_model.PeerInfo
+	var allPeers []networkmodel.PeerInfo
 	for _, seed := range pm.seeds {
 		allPeers = append(allPeers, seed)
 	}
@@ -266,7 +266,7 @@ func (pm *PeerManager) GetAllPeers() []network_model.PeerInfo {
 }
 
 //GetRandomPeers get a number of random connected peers
-func (pm *PeerManager) GetRandomPeers(numOfPeers int) []network_model.PeerInfo {
+func (pm *PeerManager) GetRandomPeers(numOfPeers int) []networkmodel.PeerInfo {
 
 	peers := pm.GetAllPeers()
 
@@ -338,7 +338,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 	}
 
 	for _, peerPb := range peerListPb.GetPeerList() {
-		peerInfo := network_model.PeerInfo{}
+		peerInfo := networkmodel.PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
 		}
@@ -368,7 +368,7 @@ func (pm *PeerManager) BroadcastGetPeerListRequest() {
 }
 
 //SendGetPeerListResponse sends its peer list to destination peer
-func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination network_model.PeerInfo) {
+func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination networkmodel.PeerInfo) {
 
 	peers := pm.GetRandomPeers(maxNumOfPeers)
 	var peerPbs []*networkpb.PeerInfo
@@ -385,8 +385,8 @@ func (pm *PeerManager) SendGetPeerListResponse(maxNumOfPeers int, destination ne
 //GetPeerListRequestHandler is the handler to GetPeerListRequest
 func (pm *PeerManager) GetPeerListRequestHandler(input interface{}) {
 
-	var command *network_model.DappRcvdCmdContext
-	command = input.(*network_model.DappRcvdCmdContext)
+	var command *networkmodel.DappRcvdCmdContext
+	command = input.(*networkmodel.DappRcvdCmdContext)
 
 	getPeerlistRequest := &networkpb.GetPeerList{}
 
@@ -401,8 +401,8 @@ func (pm *PeerManager) GetPeerListRequestHandler(input interface{}) {
 //GetPeerListResponseHandler is the handler to SendGetPeerListResponse
 func (pm *PeerManager) GetPeerListResponseHandler(input interface{}) {
 
-	var command *network_model.DappRcvdCmdContext
-	command = input.(*network_model.DappRcvdCmdContext)
+	var command *networkmodel.DappRcvdCmdContext
+	command = input.(*networkmodel.DappRcvdCmdContext)
 
 	peerlistPb := &networkpb.ReturnPeerList{}
 
@@ -410,16 +410,16 @@ func (pm *PeerManager) GetPeerListResponseHandler(input interface{}) {
 		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
 	}
 
-	var peers []network_model.PeerInfo
+	var peers []networkmodel.PeerInfo
 	for _, peerPb := range peerlistPb.GetPeerList() {
-		peerInfo := network_model.PeerInfo{}
+		peerInfo := networkmodel.PeerInfo{}
 		if err := peerInfo.FromProto(peerPb); err != nil {
 			logger.WithError(err).Warn("PeerManager: parse PeerInfo failed.")
 		}
 		peers = append(peers, peerInfo)
 	}
 
-	newPeers := []network_model.PeerInfo{}
+	newPeers := []networkmodel.PeerInfo{}
 	for _, peer := range peers {
 		if pm.IsPeerNew(peer.PeerId) {
 			newPeers = append(newPeers, peer)

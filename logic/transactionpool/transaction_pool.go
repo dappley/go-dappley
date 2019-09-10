@@ -33,7 +33,7 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/pubsub"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
@@ -622,8 +622,8 @@ func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
 
 func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
 
-	var command *network_model.DappRcvdCmdContext
-	command = input.(*network_model.DappRcvdCmdContext)
+	var command *networkmodel.DappRcvdCmdContext
+	command = input.(*networkmodel.DappRcvdCmdContext)
 
 	//TODO: Check if the blockchain state is ready
 	txpb := &transactionpb.Transaction{}
@@ -645,7 +645,7 @@ func (txPool *TransactionPool) BroadcastTxHandler(input interface{}) {
 
 	if command.IsBroadcast() {
 		//relay the original command
-		txPool.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.NormalPriorityCommand)
+		txPool.netService.Relay(command.GetCommand(), networkmodel.PeerInfo{}, networkmodel.NormalPriorityCommand)
 	}
 }
 
@@ -662,8 +662,8 @@ func (txPool *TransactionPool) BroadcastBatchTxs(txs []transaction.Transaction) 
 
 func (txPool *TransactionPool) BroadcastBatchTxsHandler(input interface{}) {
 
-	var command *network_model.DappRcvdCmdContext
-	command = input.(*network_model.DappRcvdCmdContext)
+	var command *networkmodel.DappRcvdCmdContext
+	command = input.(*networkmodel.DappRcvdCmdContext)
 
 	//TODO: Check if the blockchain state is ready
 	txspb := &transactionpb.Transactions{}
@@ -689,7 +689,7 @@ func (txPool *TransactionPool) BroadcastBatchTxsHandler(input interface{}) {
 
 	if command.IsBroadcast() {
 		//relay the original command
-		txPool.netService.Relay(command.GetCommand(), network_model.PeerInfo{}, network_model.NormalPriorityCommand)
+		txPool.netService.Relay(command.GetCommand(), networkmodel.PeerInfo{}, networkmodel.NormalPriorityCommand)
 	}
 
 }

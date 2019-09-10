@@ -21,7 +21,7 @@ package network
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/dappley/go-dappley/util"
 	"github.com/sirupsen/logrus"
 
@@ -46,16 +46,16 @@ const (
 	test_port14
 )
 
-func initNode(port int, seedPeer network_model.PeerInfo, db storage.Storage) (*Node, error) {
+func initNode(port int, seedPeer networkmodel.PeerInfo, db storage.Storage) (*Node, error) {
 	n := NewNode(db, nil)
 	n.GetNetwork().AddSeed(seedPeer)
 	err := n.Start(port, "")
 	return n, err
 }
 
-func initNodeWithConfig(port, connectionInCount, connectionOutCount int, seedPeer network_model.PeerInfo, db storage.Storage) (*Node, error) {
+func initNodeWithConfig(port, connectionInCount, connectionOutCount int, seedPeer networkmodel.PeerInfo, db storage.Storage) (*Node, error) {
 
-	config := network_model.NewPeerConnectionConfig(connectionOutCount, connectionInCount)
+	config := networkmodel.NewPeerConnectionConfig(connectionOutCount, connectionInCount)
 	n := NewNodeWithConfig(db, config, nil)
 
 	n.GetNetwork().AddSeed(seedPeer)
@@ -70,7 +70,7 @@ func TestNetwork_AddStream(t *testing.T) {
 	defer db.Close()
 
 	//create node1
-	var emptyPeerInfo network_model.PeerInfo
+	var emptyPeerInfo networkmodel.PeerInfo
 	n1, err := initNode(test_port1, emptyPeerInfo, db)
 	defer n1.Stop()
 	assert.Nil(t, err)
@@ -94,7 +94,7 @@ func TestNode_SyncPeers(t *testing.T) {
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
 
-	var emptyPeerInfo network_model.PeerInfo
+	var emptyPeerInfo networkmodel.PeerInfo
 	n1, err := initNode(test_port7, emptyPeerInfo, db1)
 	defer n1.Stop()
 	assert.Nil(t, err)
@@ -141,7 +141,7 @@ func TestNode_ConnectionFull(t *testing.T) {
 	db1 := storage.NewRamStorage()
 	defer db1.Close()
 
-	n1, err := initNodeWithConfig(test_port10, 2, 2, network_model.PeerInfo{}, db1)
+	n1, err := initNodeWithConfig(test_port10, 2, 2, networkmodel.PeerInfo{}, db1)
 	defer n1.Stop()
 	assert.Nil(t, err)
 

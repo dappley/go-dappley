@@ -11,7 +11,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
@@ -24,12 +24,12 @@ import (
 type BlockProducer struct {
 	bm       *lblockchain.BlockchainManager
 	con      Consensus
-	producer *block_producer_info.BlockProducerInfo
+	producer *blockproducerinfo.BlockProducerInfo
 	stopCh   chan bool
 }
 
 //NewBlockProducer returns a new block producer instance
-func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer *block_producer_info.BlockProducerInfo) *BlockProducer {
+func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer *blockproducerinfo.BlockProducerInfo) *BlockProducer {
 	return &BlockProducer{
 		bm:       bm,
 		con:      con,

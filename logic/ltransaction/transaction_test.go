@@ -242,27 +242,6 @@ func TestInvalidExecutionTx(t *testing.T) {
 	assert.Nil(t, err2)
 }
 
-func TestNewCoinbaseTX(t *testing.T) {
-	t1 := transaction.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
-	expectVin := transactionbase.TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
-	expectVout := transactionbase.TXOutput{common.NewAmount(10000000), account.PubKeyHash([]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}), ""}
-	assert.Equal(t, 1, len(t1.Vin))
-	assert.Equal(t, expectVin, t1.Vin[0])
-	assert.Equal(t, 1, len(t1.Vout))
-	assert.Equal(t, expectVout, t1.Vout[0])
-	assert.Equal(t, common.NewAmount(0), t1.Tip)
-
-	t2 := transaction.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
-
-	// Assert that ltransaction.NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
-	assert.Equal(t, t1, t2)
-
-	t3 := transaction.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 1, common.NewAmount(0))
-
-	assert.NotEqual(t, t1, t3)
-	assert.NotEqual(t, t1.ID, t3.ID)
-}
-
 func TestTransaction_Execute(t *testing.T) {
 
 	tests := []struct {

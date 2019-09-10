@@ -16,28 +16,19 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package network_model
+package blockproducerinfo
 
 import (
 	"testing"
 
-	"github.com/dappley/go-dappley/network/pb"
-	"github.com/stretchr/testify/assert"
+	"github.com/dappley/go-dappley/core/block"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestDapmsg_ToProto(t *testing.T) {
-
-	msg := DappCmd{"name", []byte{1, 2, 3, 4}, false, 0}
-	retMsg := &networkpb.DappCmd{Cmd: "name", Data: []byte{1, 2, 3, 4}, IsBroadcast: false}
-	assert.Equal(t, msg.ToProto(), retMsg)
-}
-
-func TestDapMsg_FromProto(t *testing.T) {
-
-	msg := DappCmd{"name", []byte{1, 2, 3, 4}, false, 0}
-	retMsg := &networkpb.DappCmd{Cmd: "name", Data: []byte{1, 2, 3, 4}, IsBroadcast: false}
-	msg2 := DappCmd{}
-	msg2.FromProto(retMsg)
-
-	assert.Equal(t, msg, msg2)
+func TestBlockProducerInfo_Produced(t *testing.T) {
+	bp := NewBlockProducerInfo("key")
+	require.False(t, bp.Produced(nil))
+	require.False(t, bp.Produced(block.NewBlock(nil, nil, "")))
+	require.True(t, bp.Produced(block.NewBlock(nil, nil, "key")))
 }

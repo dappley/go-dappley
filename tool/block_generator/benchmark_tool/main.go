@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -179,7 +179,7 @@ func prepareNode(db storage.Storage) (*lblockchain.BlockchainManager, *network.N
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
-	conss := consensus.NewDPOS(block_producer_info.NewBlockProducerInfo(""))
+	conss := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(""))
 	conss.SetDynasty(dynasty)
 	node := network.NewNode(db, nil)
 	txPoolLimit := uint32(2000)

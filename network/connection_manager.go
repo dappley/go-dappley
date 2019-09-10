@@ -1,7 +1,7 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/network/network_model"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -15,12 +15,12 @@ const (
 )
 
 type ConnectionManager struct {
-	connectionConfig   network_model.PeerConnectionConfig
+	connectionConfig   networkmodel.PeerConnectionConfig
 	connectionOutCount int //Connection that current node connect to other nodes, exclude seed nodes
 	connectionInCount  int //Connection that other node connectionManager to current node.
 }
 
-func NewConnectionManager(config network_model.PeerConnectionConfig) *ConnectionManager {
+func NewConnectionManager(config networkmodel.PeerConnectionConfig) *ConnectionManager {
 	if config.GetMaxConnectionOutCount() == 0 {
 		config.SetMaxConnectionOutCount(defaultMaxConnectionOutCount)
 	}

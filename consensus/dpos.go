@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/logic/lblock"
@@ -41,7 +41,7 @@ const (
 )
 
 type DPOS struct {
-	producer        *block_producer_info.BlockProducerInfo
+	producer        *blockproducerinfo.BlockProducerInfo
 	producerKey     string
 	stopCh          chan bool
 	dynasty         *Dynasty
@@ -50,7 +50,7 @@ type DPOS struct {
 }
 
 //NewDPOS returns a new DPOS instance
-func NewDPOS(producer *block_producer_info.BlockProducerInfo) *DPOS {
+func NewDPOS(producer *blockproducerinfo.BlockProducerInfo) *DPOS {
 	dpos := &DPOS{
 		producer: producer,
 		stopCh:   make(chan bool, 1),

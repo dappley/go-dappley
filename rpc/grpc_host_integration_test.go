@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dappley/go-dappley/core/block_producer_info"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction/pb"
@@ -74,7 +74,7 @@ type RpcTestContext struct {
 }
 
 func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
-	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
+	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
 
 	blkchainConsensus := &blockchainMock.Consensus{}
 	blkchainConsensus.On("GetProducers").Return(nil)
