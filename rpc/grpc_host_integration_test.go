@@ -22,6 +22,13 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/common/deadline"
+	"github.com/dappley/go-dappley/core/block"
+	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
+
+	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
+	"github.com/dappley/go-dappley/logic/lblock"
+	"github.com/stretchr/testify/mock"
 	"strings"
 	"testing"
 	"time"
@@ -29,8 +36,8 @@ import (
 	"github.com/dappley/go-dappley/core/block_producer_info"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	"github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/lutxo"
@@ -39,13 +46,12 @@ import (
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/wallet"
@@ -65,6 +71,33 @@ type RpcTestContext struct {
 	node       *network.Node
 	rpcServer  *Server
 	serverPort uint32
+}
+
+func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
+	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
+
+	blkchainConsensus := &blockchainMock.Consensus{}
+	blkchainConsensus.On("GetProducers").Return(nil)
+	blkchainConsensus.On("GetLibProducerNum").Return(6)
+	blkchainConsensus.On("Validate", mock.Anything).Return(true)
+	blkchainConsensus.On("IsBypassingLibCheck").Return(true)
+	bc := lblockchain.CreateBlockchain(addr, db, blkchainConsensus, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+
+	bpConsensus := &mocks.Consensus{}
+	bpConsensus.On("Validate", mock.Anything).Return(true)
+	bpConsensus.On("ProduceBlock", mock.Anything).Run(func(args mock.Arguments) {
+		args.Get(0).(func(process func(*block.Block), deadline deadline.Deadline))(
+			func(blk *block.Block) {
+				hash := lblock.CalculateHash(blk)
+				blk.SetHash(hash)
+			},
+			deadline.NewUnlimitedDeadline(),
+		)
+	})
+
+	blockproducer := blockproducer.NewBlockProducer(bm, bpConsensus, producer)
+	return bm, blockproducer
 }
 
 func TestServer_StartRPC(t *testing.T) {
@@ -114,21 +147,13 @@ func TestRpcSend(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
-	pow := consensus.NewProofOfWork(producer)
-	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
-	if err != nil {
-		panic(err)
-	}
-
-	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool()
-
-	bm := lblockchain.NewBlockchainManager(bc, pool, node)
-	pow.SetTargetBit(0)
-
-	bp := blockproducer.NewBlockProducer(bm, pow, producer)
+	bm, bp := CreateProducer(
+		minerAccount.GetAddress(),
+		senderAccount.GetAddress(),
+		store,
+		transactionpool.NewTransactionPool(node, 128000),
+		node,
+	)
 
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, "temp")
@@ -158,7 +183,7 @@ func TestRpcSend(t *testing.T) {
 
 	// Start mining to approve the transaction
 	bp.Start()
-	for bc.GetMaxHeight() < 1 {
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
 	bp.Stop()
 
@@ -166,16 +191,16 @@ func TestRpcSend(t *testing.T) {
 
 	// Check balance
 	minedReward := common.NewAmount(10000000)
-	senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bc)
+	senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bm.Getblockchain())
 	assert.Nil(t, err)
-	receiverBalance, err := logic.GetBalance(receiverAccount.GetAddress(), bc)
+	receiverBalance, err := logic.GetBalance(receiverAccount.GetAddress(), bm.Getblockchain())
 	assert.Nil(t, err)
-	minerBalance, err := logic.GetBalance(minerAccount.GetAddress(), bc)
+	minerBalance, err := logic.GetBalance(minerAccount.GetAddress(), bm.Getblockchain())
 	assert.Nil(t, err)
 
 	leftBalance, _ := minedReward.Sub(common.NewAmount(7))
 	leftBalance, _ = leftBalance.Sub(common.NewAmount(2))
-	minerRewardBalance := minedReward.Times(bc.GetMaxHeight()).Add(common.NewAmount(2))
+	minerRewardBalance := minedReward.Times(bm.Getblockchain().GetMaxHeight()).Add(common.NewAmount(2))
 	assert.Equal(t, leftBalance, senderBalance)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 	assert.Equal(t, minerRewardBalance, minerBalance)
@@ -202,22 +227,14 @@ func TestRpcSendContract(t *testing.T) {
 	}
 
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	bm, bp := CreateProducer(
+		minerAccount.GetAddress(),
+		senderAccount.GetAddress(),
+		store,
+		transactionpool.NewTransactionPool(node, 128000),
+		node,
+	)
 
-	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
-	pow := consensus.NewProofOfWork(producer)
-	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
-	if err != nil {
-		panic(err)
-	}
-
-	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool()
-
-	bm := lblockchain.NewBlockchainManager(bc, pool, node)
-	pow.SetTargetBit(0)
-	bp := blockproducer.NewBlockProducer(bm, pow, producer)
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, "temp")
 	server.Start(defaultRpcPort + 10) // use a different port as other integration tests
@@ -249,7 +266,7 @@ func TestRpcSendContract(t *testing.T) {
 
 	// Start mining to approve the transaction
 	bp.Start()
-	for bc.GetMaxHeight() < 1 {
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
 	bp.Stop()
 
@@ -259,8 +276,8 @@ func TestRpcSendContract(t *testing.T) {
 	res := string("")
 	contractAddr := account.NewAddress("")
 loop:
-	for i := bc.GetMaxHeight(); i > 0; i-- {
-		blk, err := bc.GetBlockByHeight(i)
+	for i := bm.Getblockchain().GetMaxHeight(); i > 0; i-- {
+		blk, err := bm.Getblockchain().GetBlockByHeight(i)
 		assert.Nil(t, err)
 		for _, tx := range blk.GetTransactions() {
 			contractAddr = tx.GetContractAddress()
@@ -1088,27 +1105,18 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.account = acc
 
 	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
-
-	// Create a blockchain with PoW consensus and sender wallet as coinbase (so its balance starts with 10)
-	pow := consensus.NewProofOfWork(block_producer_info.NewBlockProducerInfo(acc.GetAddress().String()))
-	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(acc.GetAddress(), context.store, pow, transactionpool.NewTransactionPool(context.node, 128000), scManager, 1000000)
-	if err != nil {
-		context.destroyContext()
-		panic(err)
-	}
-
-	// Prepare a PoW node that put mining reward to the sender's address
-	pool := core.NewBlockPool()
-
-	context.bm = lblockchain.NewBlockchainManager(bc, pool, context.node)
+	context.bm, context.bp = CreateProducer(
+		acc.GetAddress(),
+		acc.GetAddress(),
+		context.store,
+		transactionpool.NewTransactionPool(context.node, 128000),
+		context.node,
+	)
 
 	// Start a grpc server
 	context.rpcServer = NewGrpcServer(context.node, context.bm, "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
-
-	context.bp = blockproducer.NewBlockProducer(context.bm, pow, block_producer_info.NewBlockProducerInfo(acc.GetAddress().String()))
 
 	return &context, nil
 }
@@ -1150,19 +1158,15 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
-	pow := consensus.NewProofOfWork(producer)
-	scManager := vm.NewV8EngineManager(account.Address{})
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	bm, bp := CreateProducer(
+		minerAccount.GetAddress(),
+		senderAccount.GetAddress(),
+		store,
+		transactionpool.NewTransactionPool(node, 128000),
+		node,
+	)
 
-	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(node, 128000), scManager, 1000000)
-	if err != nil {
-		panic(err)
-	}
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
-
-	pow.SetTargetBit(0)
-	bp := blockproducer.NewBlockProducer(bm, pow, producer)
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, "temp")
 	server.Start(defaultRpcPort + 15) // use a different port as other integration tests
@@ -1199,7 +1203,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	// Start mining to approve the transaction
 	bp.Start()
-	for bc.GetMaxHeight() < 1 {
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
 	bp.Stop()
 
@@ -1207,7 +1211,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
 	pubKeyHash := senderAccount.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(bc.GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	utxos, err := lutxo.NewUTXOIndex(bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := transaction.NewSendTxParam(senderAccount.GetAddress(),
 		senderAccount.GetKeyPair(),
 		account.NewAddress(contractAddr),
@@ -1246,22 +1250,15 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 		panic(err)
 	}
 
-	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	producer := block_producer_info.NewBlockProducerInfo(minerAccount.GetAddress().String())
-	pow := consensus.NewProofOfWork(producer)
-	scManager := vm.NewV8EngineManager(account.Address{})
-	bc, err := logic.CreateBlockchain(senderAccount.GetAddress(), store, pow, transactionpool.NewTransactionPool(nil, 100), scManager, 1000000)
-	if err != nil {
-		panic(err)
-	}
-
-	// Prepare a PoW node that put mining reward to the sender's address
 	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	bm, bp := CreateProducer(
+		minerAccount.GetAddress(),
+		senderAccount.GetAddress(),
+		store,
+		transactionpool.NewTransactionPool(node, 128000),
+		node,
+	)
 
-	pow.SetTargetBit(0)
-	pool := core.NewBlockPool()
-	bm := lblockchain.NewBlockchainManager(bc, pool, node)
-	bp := blockproducer.NewBlockProducer(bm, pow, producer)
 	// Start a grpc server
 	server := NewGrpcServer(node, nil, "temp")
 	server.Start(defaultRpcPort + 16) // use a different port as other integration tests
@@ -1279,7 +1276,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 
 	// Start mining to approve the transaction
 	bp.Start()
-	for bc.GetMaxHeight() < 1 {
+	for bm.Getblockchain().GetMaxHeight() < 1 {
 	}
 	bp.Stop()
 
