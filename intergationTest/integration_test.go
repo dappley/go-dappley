@@ -924,20 +924,12 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
 
 	for i := range miners {
+		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bps[i].Getblockchain().GetMaxHeight())
+	}
+
+	for i := range miners {
 		bps[i].Stop()
 		nodeArray[i].Stop()
-	}
-
-	//Waiting block sync to other nodes
-	//time.Sleep(time.Second * 2)
-	for i := range miners {
-		util.WaitDoneOrTimeout(func() bool {
-			return !bps[i].IsProducingBlock()
-		}, 20)
-	}
-
-	for i := range miners {
-		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bps[i].Getblockchain().GetMaxHeight())
 	}
 }
 
