@@ -582,15 +582,6 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 	node1.GetNetwork().ConnectToSeed(node2.GetHostPeerInfo())
 }
 
-func setupNode(addr account.Address, pow *consensus.ProofOfWork, bc *lblockchain.Blockchain, port int) *network.Node {
-	node := network.NewNode(bc.GetDb(), nil)
-
-	pow.SetTargetBit(12)
-	node.Start(port, "")
-	defer node.Stop()
-	return node
-}
-
 func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
 	producer := block_producer_info.NewBlockProducerInfo(producerAddr.String())
 
