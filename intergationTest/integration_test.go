@@ -585,13 +585,14 @@ func connectNodes(node1 *network.Node, node2 *network.Node) {
 func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
 	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
 
-	blkchainConsensus := &blockchainMock.Consensus{}
-	blkchainConsensus.On("GetProducers").Return(nil)
-	blkchainConsensus.On("GetLibProducerNum").Return(6)
-	blkchainConsensus.On("Validate", mock.Anything).Return(true)
-	blkchainConsensus.On("IsBypassingLibCheck").Return(true)
-	bc := lblockchain.CreateBlockchain(addr, db, blkchainConsensus, txPool, nil, 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, blkchainConsensus)
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetLibProducerNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	consensus := &blockchainMock.Consensus{}
+	consensus.On("Validate", mock.Anything).Return(true)
+	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, nil, 100000)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)

@@ -11,7 +11,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/stretchr/testify/mock"
 )
 
 func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
@@ -26,12 +25,11 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 	//create a new block chain
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	consensus := &mocks.Consensus{}
-	consensus.On("GetProducers").Return(nil)
-	consensus.On("GetLibProducerNum").Return(6)
-	consensus.On("Validate", mock.Anything).Return(true)
-	consensus.On("IsBypassingLibCheck").Return(true)
-	bc := CreateBlockchain(addr, s, consensus, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
+	libPolicy := &mocks.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetLibProducerNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	bc := CreateBlockchain(addr, s, libPolicy, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()

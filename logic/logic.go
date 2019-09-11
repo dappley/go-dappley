@@ -50,13 +50,13 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, consensus lblockchain.Consensus, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	addressAccount := account.NewContractAccountByAddress(address)
 	if !addressAccount.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := lblockchain.CreateBlockchain(address, db, consensus, txPool, scManager, blkSizeLimit)
+	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
 }

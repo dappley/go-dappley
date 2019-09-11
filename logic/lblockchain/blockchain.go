@@ -61,7 +61,7 @@ type Blockchain struct {
 	bc           blockchain.Blockchain
 	db           storage.Storage
 	utxoCache    *utxo.UTXOCache
-	consensus    Consensus
+	libPolicy    LIBPolicy
 	txPool       *transactionpool.TransactionPool
 	scManager    core.ScEngineManager
 	eventManager *scState.EventManager
@@ -70,13 +70,13 @@ type Blockchain struct {
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, consensus Consensus, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
 		db,
 		utxo.NewUTXOCache(db),
-		consensus,
+		libPolicy,
 		txPool,
 		scManager,
 		scState.NewEventManager(),
@@ -93,7 +93,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, consensus Consensus, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -108,7 +108,7 @@ func GetBlockchain(db storage.Storage, consensus Consensus, txPool *transactionp
 		blockchain.NewBlockchain(tip, lib),
 		db,
 		utxo.NewUTXOCache(db),
-		consensus,
+		libPolicy,
 		txPool,
 		scManager,
 		scState.NewEventManager(),
@@ -199,10 +199,6 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
 	bc.bc.SetTailBlockHash(tailBlockHash)
-}
-
-func (bc *Blockchain) SetConsensus(consensus Consensus) {
-	bc.consensus = consensus
 }
 
 func (bc *Blockchain) SetState(state blockchain.BlockchainState) {
@@ -315,7 +311,7 @@ func (bc *Blockchain) Iterator() *Blockchain {
 		blockchain.NewBlockchain(bc.GetTailBlockHash(), bc.GetLIBHash()),
 		bc.db,
 		bc.utxoCache,
-		bc.consensus,
+		bc.libPolicy,
 		nil,
 		nil,
 		nil,
@@ -503,11 +499,11 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 		return true
 	}
 
-	if bc.consensus.IsBypassingLibCheck() {
+	if bc.libPolicy.IsBypassingLibCheck() {
 		return true
 	}
 
-	if !bc.consensus.IsNonRepeatingBlockProducerRequired() {
+	if !bc.libPolicy.IsNonRepeatingBlockProducerRequired() {
 		return true
 	}
 
@@ -518,7 +514,7 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 	lib := bc.GetLIBHash()
 
-	libProduerNum := bc.consensus.GetLibProducerNum()
+	libProduerNum := bc.libPolicy.GetLibProducerNum()
 
 	existProducers := make(map[string]bool)
 	currBlk := blk
@@ -554,11 +550,11 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
-	if bc.consensus == nil {
+	if bc.libPolicy == nil {
 		return
 	}
 
-	minConfirmationNum := bc.consensus.GetLibProducerNum()
+	minConfirmationNum := bc.libPolicy.GetLibProducerNum()
 	LIBHeight := uint64(0)
 	if currBlkHeight > uint64(minConfirmationNum) {
 		LIBHeight = currBlkHeight - uint64(minConfirmationNum)

@@ -14,16 +14,9 @@ type Storage interface {
 
 type Consensus interface {
 	Validate(*block.Block) bool
+}
 
-	GetProducerAddress() string
-
-	// IsProducedLocally returns true iff the underlying block producer of the consensus algorithm produced the specified block
-	IsProducedLocally(*block.Block) bool
-
-	// TODO: Should separate the concept of producers from PoW
-	AddProducer(string) error
-	GetProducers() []string
-
+type LIBPolicy interface {
 	GetLibProducerNum() int
 	IsBypassingLibCheck() bool
 	IsNonRepeatingBlockProducerRequired() bool

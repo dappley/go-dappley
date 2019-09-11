@@ -70,6 +70,7 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *core.BlockPool, ser
 		blockchain: blockchain,
 		blockPool:  blockpool,
 		netService: service,
+		consensus:  consensus,
 	}
 	bm.ListenToNetService()
 	return bm
@@ -134,10 +135,10 @@ func (bm *BlockchainManager) VerifyBlock(blk *block.Block) bool {
 	}
 	//TODO: Verify double spending transactions in the same blk
 	if !(bm.consensus.Validate(blk)) {
-		logger.Warn("BlockchainManager: blk is invalid according to consensus!")
+		logger.Warn("BlockchainManager: blk is invalid according to libPolicy!")
 		return false
 	}
-	logger.Debug("BlockchainManager: blk is valid according to consensus.")
+	logger.Debug("BlockchainManager: blk is valid according to libPolicy.")
 	return true
 }
 

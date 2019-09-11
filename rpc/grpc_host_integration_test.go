@@ -77,13 +77,15 @@ type RpcTestContext struct {
 func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPool *transactionpool.TransactionPool, node *network.Node) (*lblockchain.BlockchainManager, *blockproducer.BlockProducer) {
 	producer := blockproducerinfo.NewBlockProducerInfo(producerAddr.String())
 
-	blkchainConsensus := &blockchainMock.Consensus{}
-	blkchainConsensus.On("GetProducers").Return(nil)
-	blkchainConsensus.On("GetLibProducerNum").Return(6)
-	blkchainConsensus.On("Validate", mock.Anything).Return(true)
-	blkchainConsensus.On("IsBypassingLibCheck").Return(true)
-	bc := lblockchain.CreateBlockchain(addr, db, blkchainConsensus, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, blkchainConsensus)
+	libPolicy := &blockchainMock.LIBPolicy{}
+	libPolicy.On("GetProducers").Return(nil)
+	libPolicy.On("GetLibProducerNum").Return(6)
+	libPolicy.On("IsBypassingLibCheck").Return(true)
+	consensus := &blockchainMock.Consensus{}
+	consensus.On("Validate", mock.Anything).Return(true)
+
+	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)
@@ -1115,7 +1117,9 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	)
 
 	// Start a grpc server
-	context.rpcServer = NewGrpcServer(context.node, context.bm, consensus.NewDPOS(nil), "temp")
+	dpos := consensus.NewDPOS(nil)
+	dpos.SetDynasty(consensus.NewDynasty(nil, 5, 15))
+	context.rpcServer = NewGrpcServer(context.node, context.bm, dpos, "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 
