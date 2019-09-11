@@ -159,6 +159,7 @@ L:
 			if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 				return false
 			}
+			utxoIndex.UpdateUtxo(tx)
 			ltransaction.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			allContractGeneratedTXs = append(allContractGeneratedTXs, scEngine.GetGeneratedTXs()...)
 		} else {
