@@ -19,6 +19,8 @@
 package downloadmanager
 
 import (
+	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	"github.com/stretchr/testify/mock"
 	"testing"
 
 	"github.com/dappley/go-dappley/core"
@@ -45,11 +47,13 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 	bms := make([]*lblockchain.BlockchainManager, size)
 	nodes := make([]*network.Node, size)
 	bc := lblockchain.GenerateMockBlockchainWithCoinbaseTxOnly(size)
+	consensus := &mocks.Consensus{}
+	consensus.On("Validate", mock.Anything).Return(true)
 	for i := 0; i < size; i++ {
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)
 		node.Start(portStart+i, "")
-		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), core.NewBlockPool(), node)
+		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), core.NewBlockPool(), node, consensus)
 		bms[i] = bm
 		nodes[i] = node
 	}

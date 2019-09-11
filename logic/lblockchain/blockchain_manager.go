@@ -60,11 +60,12 @@ var (
 type BlockchainManager struct {
 	blockchain        *Blockchain
 	blockPool         *core.BlockPool
+	consensus         Consensus
 	downloadRequestCh chan chan bool
 	netService        NetService
 }
 
-func NewBlockchainManager(blockchain *Blockchain, blockpool *core.BlockPool, service NetService) *BlockchainManager {
+func NewBlockchainManager(blockchain *Blockchain, blockpool *core.BlockPool, service NetService, consensus Consensus) *BlockchainManager {
 	bm := &BlockchainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
@@ -132,7 +133,7 @@ func (bm *BlockchainManager) VerifyBlock(blk *block.Block) bool {
 		return false
 	}
 	//TODO: Verify double spending transactions in the same blk
-	if !(bm.blockchain.GetConsensus().Validate(blk)) {
+	if !(bm.consensus.Validate(blk)) {
 		logger.Warn("BlockchainManager: blk is invalid according to consensus!")
 		return false
 	}

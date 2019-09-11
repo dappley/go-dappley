@@ -83,7 +83,7 @@ func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPo
 	blkchainConsensus.On("Validate", mock.Anything).Return(true)
 	blkchainConsensus.On("IsBypassingLibCheck").Return(true)
 	bc := lblockchain.CreateBlockchain(addr, db, blkchainConsensus, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, blkchainConsensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)

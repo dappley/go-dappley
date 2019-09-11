@@ -591,7 +591,7 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	blkchainConsensus.On("Validate", mock.Anything).Return(true)
 	blkchainConsensus.On("IsBypassingLibCheck").Return(true)
 	bc := lblockchain.CreateBlockchain(addr, db, blkchainConsensus, txPool, nil, 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, blkchainConsensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)
@@ -647,7 +647,7 @@ func TestDoubleMint(t *testing.T) {
 		bc := lblockchain.CreateBlockchain(validProducerAccount.GetAddress(), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
 		pool := core.NewBlockPool()
 
-		bm := lblockchain.NewBlockchainManager(bc, pool, node)
+		bm := lblockchain.NewBlockchainManager(bc, pool, node, dpos)
 
 		dpos.SetKey(validProducerKey)
 		if i == 0 {
@@ -701,7 +701,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	//create and start seed node
 	pool := core.NewBlockPool()
-	bm := lblockchain.NewBlockchainManager(bc, pool, seedNode)
+	bm := lblockchain.NewBlockchainManager(bc, pool, seedNode, dpos1)
 
 	// conss.SetKey(validProducerKey)
 	bp := blockproducer.NewBlockProducer(bm, dpos1, producer)
@@ -722,7 +722,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	defer node2.Stop()
 
 	bc2 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transactionpool.NewTransactionPool(node2, 128), nil, 100000)
-	lblockchain.NewBlockchainManager(bc2, core.NewBlockPool(), node2)
+	lblockchain.NewBlockchainManager(bc2, core.NewBlockPool(), node2, dpos2)
 
 	// Trigger fork choice in node by broadcasting tail block of node[0]
 	tailBlk, _ := bc.GetTailBlock()
@@ -923,7 +923,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := lblockchain.NewBlockchainManager(bc, pool, node)
+		bm := lblockchain.NewBlockchainManager(bc, pool, node, dpos)
 		bp := blockproducer.NewBlockProducer(bm, dpos, producer)
 		bp.Start()
 		bps = append(bps, bp)
@@ -987,7 +987,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		node.Start(21200+i, "")
 		nodeArray = append(nodeArray, node)
 
-		bm := lblockchain.NewBlockchainManager(bc, pool, node)
+		bm := lblockchain.NewBlockchainManager(bc, pool, node, dpos)
 		bp := blockproducer.NewBlockProducer(bm, dpos, producer)
 		bp.Start()
 		bps = append(bps, bp)

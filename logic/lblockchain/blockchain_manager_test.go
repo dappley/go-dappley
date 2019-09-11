@@ -64,7 +64,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	*/
 
 	bp := core.NewBlockPool()
-	bcm := NewBlockchainManager(bc, bp, nil)
+	bcm := NewBlockchainManager(bc, bp, nil, nil)
 
 	bp.Add(b2)
 	require.Equal(t, 1, testGetNumForkHeads(bp))
