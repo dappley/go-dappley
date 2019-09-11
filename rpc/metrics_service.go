@@ -25,13 +25,14 @@ import (
 type MetricsService struct {
 	node *network.Node
 	bm   *lblockchain.BlockchainManager
+	dpos *consensus.DPOS
 	ds   *metrics.DataStore
 	*MetricsServiceConfig
 	RPCPort uint32
 }
 
-func NewMetricsService(node *network.Node, bm *lblockchain.BlockchainManager, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
-	return (&MetricsService{node: node, bm: bm, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
+func NewMetricsService(node *network.Node, bm *lblockchain.BlockchainManager, dpos *consensus.DPOS, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
+	return (&MetricsService{node: node, bm: bm, dpos: dpos, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
 }
 
 func (ms *MetricsService) init() *MetricsService {
@@ -70,19 +71,18 @@ func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.S
 		}
 
 		if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS || v == rpcpb.SetNodeConfigRequest_PRODUCERS {
-			cons, ok := ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS)
-			if !ok {
+			if ms.dpos == nil {
 				return nil, status.Error(codes.InvalidArgument, "producer properties are only supported for DPOS Consensus")
 			}
 
 			if v == rpcpb.SetNodeConfigRequest_PRODUCERS {
-				maxProducers := cons.GetDynasty().GetMaxProducers()
+				maxProducers := ms.dpos.GetDynasty().GetMaxProducers()
 				for _, v := range request.GetUpdatedConfigs() {
 					if v == rpcpb.SetNodeConfigRequest_MAX_PRODUCERS {
 						maxProducers = int(request.GetMaxProducers())
 					}
 				}
-				if err := cons.GetDynasty().IsSettingProducersAllowed(request.GetProducers(), maxProducers); err != nil {
+				if err := ms.dpos.GetDynasty().IsSettingProducersAllowed(request.GetProducers(), maxProducers); err != nil {
 					return nil, status.Error(codes.InvalidArgument, err.Error())
 				}
 			}
@@ -100,11 +100,9 @@ func (ms *MetricsService) RpcSetNodeConfig(ctx context.Context, request *rpcpb.S
 		case rpcpb.SetNodeConfigRequest_MAX_CONN_IN:
 			ms.node.GetNetwork().GetStreamManager().GetConnectionManager().SetMaxConnectionInCount(int(request.GetMaxConnectionIn()))
 		case rpcpb.SetNodeConfigRequest_MAX_PRODUCERS:
-			ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS).
-				GetDynasty().SetMaxProducers(int(request.GetMaxProducers()))
+			ms.dpos.GetDynasty().SetMaxProducers(int(request.GetMaxProducers()))
 		case rpcpb.SetNodeConfigRequest_PRODUCERS:
-			ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS).
-				GetDynasty().SetProducers(request.GetProducers())
+			ms.dpos.GetDynasty().SetProducers(request.GetProducers())
 		}
 	}
 	return ms.getNodeConfig(), nil
@@ -116,8 +114,8 @@ func (ms *MetricsService) getNodeConfig() *rpcpb.GetNodeConfigResponse {
 		BlkSizeLimit:     uint32(ms.bm.Getblockchain().GetBlockSizeLimit()),
 		MaxConnectionOut: uint32(ms.node.GetNetwork().GetStreamManager().GetConnectionManager().GetMaxConnectionOutCount()),
 		MaxConnectionIn:  uint32(ms.node.GetNetwork().GetStreamManager().GetConnectionManager().GetMaxConnectionInCount()),
-		ProducerAddress:  ms.bm.Getblockchain().GetConsensus().GetProducerAddress(),
-		Producers:        ms.bm.Getblockchain().GetConsensus().GetProducers(),
+		ProducerAddress:  ms.dpos.GetProducerAddress(),
+		Producers:        ms.dpos.GetProducers(),
 		MaxProducers:     ms.getMaxProducers(),
 		IpfsAddresses:    ms.node.GetIPFSAddresses(),
 		RpcPort:          ms.RPCPort,
@@ -125,8 +123,8 @@ func (ms *MetricsService) getNodeConfig() *rpcpb.GetNodeConfigResponse {
 }
 
 func (ms *MetricsService) getMaxProducers() uint32 {
-	if dpos, ok := ms.bm.Getblockchain().GetConsensus().(*consensus.DPOS); ok {
-		return uint32(dpos.GetDynasty().GetMaxProducers())
+	if ms.dpos != nil {
+		return uint32(ms.dpos.GetDynasty().GetMaxProducers())
 	}
 	return 0
 }
@@ -184,11 +182,10 @@ func (ms *MetricsService) getNumForksInBlockChain() metricspb.StatValue {
 func (ms *MetricsService) getBlockStats() []*metricspb.BlockStats {
 	stats := make([]*metricspb.BlockStats, 0)
 	it := ms.bm.Getblockchain().Iterator()
-	cons := ms.bm.Getblockchain().GetConsensus()
 	blk, err := it.Next()
 	for t := time.Now().Unix() - ms.TimeSeriesInterval; err == nil && blk.GetTimestamp() > t; {
 		bs := &metricspb.BlockStats{NumTransactions: uint64(len(blk.GetTransactions())), Height: blk.GetHeight()}
-		if !cons.IsProducedLocally(blk) {
+		if !ms.dpos.IsProducedLocally(blk) {
 			bs.NumTransactions = 0
 		}
 		stats = append(stats, bs)

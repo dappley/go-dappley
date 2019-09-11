@@ -56,21 +56,21 @@ type Server struct {
 	node          *network.Node
 	password      string
 	bm            *lblockchain.BlockchainManager
-	dynasty       *consensus.Dynasty
+	dpos          *consensus.DPOS
 	metricsConfig *MetricsServiceConfig
 }
 
-func NewGrpcServer(node *network.Node, bm *lblockchain.BlockchainManager, dynasty *consensus.Dynasty, adminPassword string) *Server {
-	return NewGrpcServerWithMetrics(node, bm, adminPassword, dynasty, nil)
+func NewGrpcServer(node *network.Node, bm *lblockchain.BlockchainManager, dpos *consensus.DPOS, adminPassword string) *Server {
+	return NewGrpcServerWithMetrics(node, bm, adminPassword, dpos, nil)
 }
 
-func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string, dynasty *consensus.Dynasty, config *MetricsServiceConfig) *Server {
+func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string, dpos *consensus.DPOS, config *MetricsServiceConfig) *Server {
 	return &Server{
 		grpc.NewServer(),
 		node,
 		adminPassword,
 		bm,
-		dynasty,
+		dpos,
 		config}
 }
 
@@ -87,10 +87,10 @@ func (s *Server) Start(port uint32) {
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
-		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node, s.dynasty})
-		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node, s.dynasty})
+		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node, s.dpos.GetDynasty()})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node, s.dpos.GetDynasty()})
 		if s.metricsConfig != nil {
-			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.bm, s.metricsConfig, port))
+			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.bm, s.dpos, s.metricsConfig, port))
 		}
 
 		if err := srv.Serve(lis); err != nil {

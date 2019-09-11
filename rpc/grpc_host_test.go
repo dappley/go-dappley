@@ -19,6 +19,7 @@
 package rpc
 
 import (
+	"github.com/dappley/go-dappley/consensus"
 	"testing"
 
 	"github.com/dappley/go-dappley/network"
@@ -27,7 +28,7 @@ import (
 
 func TestNewGrpcServer(t *testing.T) {
 	node := network.NewNode(nil, nil)
-	grpcServer := NewGrpcServer(node, nil, nil, "password")
+	grpcServer := NewGrpcServer(node, nil, consensus.NewDPOS(nil), "password")
 	assert.Equal(t, node, grpcServer.node)
 	assert.Equal(t, "password", grpcServer.password)
 }

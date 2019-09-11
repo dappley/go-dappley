@@ -132,7 +132,7 @@ func main() {
 
 	//start rpc server
 	nodeConf := conf.GetNodeConfig()
-	server := rpc.NewGrpcServerWithMetrics(node, bm, defaultPassword, conss.GetDynasty(), &rpc.MetricsServiceConfig{
+	server := rpc.NewGrpcServerWithMetrics(node, bm, defaultPassword, conss, &rpc.MetricsServiceConfig{
 		PollingInterval: nodeConf.GetMetricsPollingInterval(), TimeSeriesInterval: nodeConf.GetMetricsInterval()})
 
 	server.Start(conf.GetNodeConfig().GetRpcPort())
