@@ -124,7 +124,7 @@ func main() {
 		return
 	}
 
-	downloadManager := downloadmanager.NewDownloadManager(node, bm)
+	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()))
 	downloadManager.Start()
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 

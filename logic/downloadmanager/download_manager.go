@@ -116,33 +116,38 @@ type ExecuteCommand struct {
 }
 
 type DownloadManager struct {
-	peersInfo         map[peer.ID]*PeerBlockInfo
-	downloadingPeer   *PeerBlockInfo
-	currentCmd        *ExecuteCommand
-	bm                *lblockchain.BlockchainManager
-	node              NetService
-	mutex             sync.RWMutex
-	status            int
-	commonHeight      uint64
-	msgId             int32
-	downloadRequestCh chan chan bool
-	finishCh          chan bool
+	peersInfo             map[peer.ID]*PeerBlockInfo
+	downloadingPeer       *PeerBlockInfo
+	currentCmd            *ExecuteCommand
+	bm                    *lblockchain.BlockchainManager
+	node                  NetService
+	mutex                 sync.RWMutex
+	status                int
+	commonHeight          uint64
+	msgId                 int32
+	downloadRequestCh     chan chan bool
+	finishCh              chan bool
+	numOfMinRequestHashes int
 }
 
-func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager) *DownloadManager {
+func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numOfProducers int) *DownloadManager {
 
 	downloadManager := &DownloadManager{
-		peersInfo:         make(map[peer.ID]*PeerBlockInfo),
-		downloadingPeer:   nil,
-		currentCmd:        nil,
-		bm:                bm,
-		node:              node,
-		mutex:             sync.RWMutex{},
-		status:            DownloadStatusIdle,
-		msgId:             0,
-		commonHeight:      0,
-		downloadRequestCh: make(chan chan bool, 100),
-		finishCh:          nil,
+		peersInfo:             make(map[peer.ID]*PeerBlockInfo),
+		downloadingPeer:       nil,
+		currentCmd:            nil,
+		bm:                    bm,
+		node:                  node,
+		mutex:                 sync.RWMutex{},
+		status:                DownloadStatusIdle,
+		msgId:                 0,
+		commonHeight:          0,
+		downloadRequestCh:     make(chan chan bool, 100),
+		finishCh:              nil,
+		numOfMinRequestHashes: numOfProducers,
+	}
+	if downloadManager.numOfMinRequestHashes < MinRequestHashesNum {
+		downloadManager.numOfMinRequestHashes = MinRequestHashesNum
 	}
 	downloadManager.Subscribe()
 	return downloadManager
@@ -567,14 +572,9 @@ func (downloadManager *DownloadManager) startDownload(retryCount int) {
 
 	downloadManager.status = DownloadStatusDownloading
 
-	producerNum := len(downloadManager.bm.Getblockchain().GetConsensus().GetProducers())
-	if producerNum < MinRequestHashesNum {
-		producerNum = MinRequestHashesNum
-	}
-
 	startBlockHeight := downloadManager.commonHeight
 	var hashes []hash.Hash
-	for i := 0; i < producerNum && startBlockHeight-uint64(i) > 0; i++ {
+	for i := 0; i < downloadManager.numOfMinRequestHashes && startBlockHeight-uint64(i) > 0; i++ {
 		block, err := downloadManager.bm.Getblockchain().GetBlockByHeight(startBlockHeight - uint64(i))
 		if err != nil {
 			break

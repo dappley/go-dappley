@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -138,9 +138,9 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 
 	bm1, node1 := prepareNode(db1)
 	bm2, node2 := prepareNode(db2)
-	dm1 := downloadmanager.NewDownloadManager(node1, bm1)
+	dm1 := downloadmanager.NewDownloadManager(node1, bm1, 0)
 	bm1.SetDownloadRequestCh(dm1.GetDownloadRequestCh())
-	dm2 := downloadmanager.NewDownloadManager(node2, bm2)
+	dm2 := downloadmanager.NewDownloadManager(node2, bm2, 0)
 	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
 
 	node1.Start(testport1, "")
@@ -193,7 +193,7 @@ func prepareNode(db storage.Storage) (*lblockchain.BlockchainManager, *network.N
 	}
 	bc.SetState(blockchain.BlockchainInit)
 	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
-	downloadManager := downloadmanager.NewDownloadManager(node, bm)
+	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()))
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	return bm, node
