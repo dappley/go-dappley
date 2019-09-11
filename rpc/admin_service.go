@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/consensus"
 
 	"time"
 
@@ -39,8 +40,9 @@ import (
 )
 
 type AdminRpcService struct {
-	bm   *lblockchain.BlockchainManager
-	node *network.Node
+	bm      *lblockchain.BlockchainManager
+	node    *network.Node
+	dynasty *consensus.Dynasty
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
@@ -57,7 +59,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	if len(address) == 0 || !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
-	err := adminRpcService.bm.Getblockchain().GetConsensus().AddProducer(address)
+	err := adminRpcService.dynasty.AddProducer(address)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

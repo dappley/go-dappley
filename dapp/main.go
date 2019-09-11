@@ -22,8 +22,8 @@ import (
 	"flag"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 
-	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -132,7 +132,7 @@ func main() {
 
 	//start rpc server
 	nodeConf := conf.GetNodeConfig()
-	server := rpc.NewGrpcServerWithMetrics(node, bm, defaultPassword, &rpc.MetricsServiceConfig{
+	server := rpc.NewGrpcServerWithMetrics(node, bm, defaultPassword, conss.GetDynasty(), &rpc.MetricsServiceConfig{
 		PollingInterval: nodeConf.GetMetricsPollingInterval(), TimeSeriesInterval: nodeConf.GetMetricsInterval()})
 
 	server.Start(conf.GetNodeConfig().GetRpcPort())

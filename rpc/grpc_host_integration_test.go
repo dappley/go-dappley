@@ -23,6 +23,7 @@ package rpc
 import (
 	"fmt"
 	"github.com/dappley/go-dappley/common/deadline"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
 
@@ -106,7 +107,7 @@ func TestServer_StartRPC(t *testing.T) {
 	addr := "/ip4/127.0.0.1/tcp/10000"
 	node := network.FakeNodeWithPeer(pid, addr)
 	//start grpc server
-	server := NewGrpcServer(node, nil, "temp")
+	server := NewGrpcServer(node, nil, nil, "temp")
 	server.Start(defaultRpcPort)
 	defer server.Stop()
 
@@ -156,7 +157,7 @@ func TestRpcSend(t *testing.T) {
 	)
 
 	// Start a grpc server
-	server := NewGrpcServer(node, bm, "temp")
+	server := NewGrpcServer(node, bm, nil, "temp")
 	server.Start(defaultRpcPort + 1) // use a different port as other integration tests
 	defer server.Stop()
 
@@ -236,7 +237,7 @@ func TestRpcSendContract(t *testing.T) {
 	)
 
 	// Start a grpc server
-	server := NewGrpcServer(node, bm, "temp")
+	server := NewGrpcServer(node, bm, nil, "temp")
 	server.Start(defaultRpcPort + 10) // use a different port as other integration tests
 	defer server.Stop()
 
@@ -1114,7 +1115,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	)
 
 	// Start a grpc server
-	context.rpcServer = NewGrpcServer(context.node, context.bm, "temp")
+	context.rpcServer = NewGrpcServer(context.node, context.bm, consensus.NewDynasty(nil, 5, 5), "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
 
@@ -1168,7 +1169,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	)
 
 	// Start a grpc server
-	server := NewGrpcServer(node, bm, "temp")
+	server := NewGrpcServer(node, bm, nil, "temp")
 	server.Start(defaultRpcPort + 15) // use a different port as other integration tests
 	defer server.Stop()
 
@@ -1260,7 +1261,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	)
 
 	// Start a grpc server
-	server := NewGrpcServer(node, nil, "temp")
+	server := NewGrpcServer(node, nil, nil, "temp")
 	server.Start(defaultRpcPort + 16) // use a different port as other integration tests
 	defer server.Stop()
 

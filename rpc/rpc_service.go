@@ -19,6 +19,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/consensus"
 	"strings"
 	"time"
 
@@ -56,8 +57,9 @@ const (
 )
 
 type RpcService struct {
-	bm   *lblockchain.BlockchainManager
-	node *network.Node
+	bm      *lblockchain.BlockchainManager
+	node    *network.Node
+	dynasty *consensus.Dynasty
 }
 
 func (rpcSerivce *RpcService) GetBlockchain() *lblockchain.Blockchain {
@@ -118,7 +120,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	return &rpcpb.GetBlockchainInfoResponse{
 		TailBlockHash: rpcService.GetBlockchain().GetTailBlockHash(),
 		BlockHeight:   rpcService.GetBlockchain().GetMaxHeight(),
-		Producers:     rpcService.GetBlockchain().GetConsensus().GetProducers(),
+		Producers:     rpcService.dynasty.GetProducers(),
 		Timestamp:     tailBlock.GetTimestamp(),
 	}, nil
 }
@@ -141,8 +143,8 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 
 	//TODO Race condition Blockchain update after GetUTXO
 	getHeaderCount := MinUtxoBlockHeaderCount
-	if int(getHeaderCount) < len(rpcService.GetBlockchain().GetConsensus().GetProducers()) {
-		getHeaderCount = uint64(len(rpcService.GetBlockchain().GetConsensus().GetProducers()))
+	if int(getHeaderCount) < len(rpcService.dynasty.GetProducers()) {
+		getHeaderCount = uint64(len(rpcService.dynasty.GetProducers()))
 	}
 
 	tailHeight := rpcService.GetBlockchain().GetMaxHeight()

@@ -20,6 +20,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"net"
 
@@ -55,15 +56,22 @@ type Server struct {
 	node          *network.Node
 	password      string
 	bm            *lblockchain.BlockchainManager
+	dynasty       *consensus.Dynasty
 	metricsConfig *MetricsServiceConfig
 }
 
-func NewGrpcServer(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string) *Server {
-	return NewGrpcServerWithMetrics(node, bm, adminPassword, nil)
+func NewGrpcServer(node *network.Node, bm *lblockchain.BlockchainManager, dynasty *consensus.Dynasty, adminPassword string) *Server {
+	return NewGrpcServerWithMetrics(node, bm, adminPassword, dynasty, nil)
 }
 
-func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string, config *MetricsServiceConfig) *Server {
-	return &Server{grpc.NewServer(), node, adminPassword, bm, config}
+func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string, dynasty *consensus.Dynasty, config *MetricsServiceConfig) *Server {
+	return &Server{
+		grpc.NewServer(),
+		node,
+		adminPassword,
+		bm,
+		dynasty,
+		config}
 }
 
 func (s *Server) Start(port uint32) {
@@ -79,8 +87,8 @@ func (s *Server) Start(port uint32) {
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
-		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node})
-		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node})
+		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node, s.dynasty})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node, s.dynasty})
 		if s.metricsConfig != nil {
 			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.bm, s.metricsConfig, port))
 		}
