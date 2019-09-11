@@ -138,10 +138,6 @@ func (bc *Blockchain) GetSCManager() core.ScEngineManager {
 	return bc.scManager
 }
 
-func (bc *Blockchain) GetConsensus() Consensus {
-	return bc.consensus
-}
-
 func (bc *Blockchain) GetTxPool() *transactionpool.TransactionPool {
 	return bc.txPool
 }
@@ -235,9 +231,8 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp := bc.DeepCopy()
 	tailBlk, _ := bc.GetTailBlock()
 
-
-	 bcTemp.db.EnableBatch()
-	 defer bcTemp.db.DisableBatch()
+	bcTemp.db.EnableBatch()
+	defer bcTemp.db.DisableBatch()
 
 	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
