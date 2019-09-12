@@ -46,6 +46,7 @@ import (
 	"github.com/spf13/viper"
 	"net/http"
 	_ "net/http/pprof"
+	"github.com/dappley/go-dappley/core/utxo"
 )
 
 const (
