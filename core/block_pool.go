@@ -148,7 +148,7 @@ func (pool *BlockPool) linkParent(forkHead *common.TreeNode) {
 	forkHeadKey := forkHead.GetValue().(*block.Block).GetHash().String()
 
 	if parent, ok := pool.blkCache.Get(parentBlkKey); ok {
-		forkHead.AddParent(parent.(*common.TreeNode))
+		forkHead.SetParent(parent.(*common.TreeNode))
 		logger.WithFields(logger.Fields{
 			"tree_height":   forkHead.GetValue().(*block.Block).GetHeight(),
 			"parent_height": parent.(*common.TreeNode).GetValue().(*block.Block).GetHeight(),

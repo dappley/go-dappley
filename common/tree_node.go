@@ -97,8 +97,8 @@ func (t *TreeNode) AddChild(child *TreeNode) {
 	child.Parent = t
 }
 
-//AddParent sets parent of the tree node
-func (t *TreeNode) AddParent(parent *TreeNode) error {
+//SetParent sets parent of the tree node
+func (t *TreeNode) SetParent(parent *TreeNode) error {
 	if t.Parent != nil {
 		return ErrNodeAlreadyHasParent
 	}

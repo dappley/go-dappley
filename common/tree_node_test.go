@@ -29,9 +29,9 @@ func Test_AddParent(t *testing.T) {
 	parentNode2, _ := NewTreeNode("parent2", "parent2")
 	childNode, _ := NewTreeNode("child2", "child2")
 
-	err1 := childNode.AddParent(parentNode1)
+	err1 := childNode.SetParent(parentNode1)
 	assert.Equal(t, nil, err1)
-	err2 := childNode.AddParent(parentNode2)
+	err2 := childNode.SetParent(parentNode2)
 	assert.Equal(t, ErrNodeAlreadyHasParent, err2)
 
 	assert.Equal(t, parentNode1, childNode.Parent)
@@ -61,7 +61,7 @@ func Test_HasChild(t *testing.T) {
 	childNode1, _ := NewTreeNode("child1", "child1")
 	childNode2, _ := NewTreeNode("child2", "child2")
 	parentNode1.AddChild(childNode1)
-	childNode2.AddParent(parentNode2)
+	childNode2.SetParent(parentNode2)
 
 	assert.Nil(t, nilTree.Children)
 	assert.True(t, parentNode1.hasChildren())
