@@ -55,23 +55,23 @@ func TestBlockPool_ForkHeadRange(t *testing.T) {
 	child := block.NewBlockWithRawInfo(hash.Hash("child"), blk.GetHash(), 0, 0, 3, nil)
 
 	// cache a blk
-	bp.Add(blk)
+	bp.AddBlock(blk)
 	readBlk, isFound := bp.blkCache.Get(blk.GetHash().String())
 	require.Equal(t, blk, readBlk.(*common.TreeNode).GetValue().(*block.Block))
 	require.True(t, isFound)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// attach child to blk
-	bp.Add(child)
+	bp.AddBlock(child)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// attach parent to blk
-	bp.Add(parent)
+	bp.AddBlock(parent)
 	require.ElementsMatch(t, []string{parent.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// cache extraneous block
 	unrelatedBlk := block.NewBlockWithRawInfo(hash.Hash("unrelated"), []byte{0}, 0, 0, 1, nil)
-	bp.Add(unrelatedBlk)
+	bp.AddBlock(unrelatedBlk)
 	require.ElementsMatch(t, []string{parent.GetHash().String(), unrelatedBlk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// remove parent

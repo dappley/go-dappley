@@ -166,21 +166,22 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 		return
 	}
 
-	forkHeadParentHash := bm.blockPool.Add(blk)
-	if forkHeadParentHash == nil {
+	bm.blockPool.AddBlock(blk)
+	forkHeadBlk := bm.blockPool.GetForkHead(blk)
+	if forkHeadBlk == nil {
 		return
 	}
 
-	if !bm.blockchain.IsInBlockchain(forkHeadParentHash) {
+	if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetPrevHash()) {
 		logger.WithFields(logger.Fields{
-			"parent_hash": forkHeadParentHash,
+			"parent_hash": forkHeadBlk.GetPrevHash(),
 			"from":        pid,
 		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHeadParentHash, pid)
+		bm.RequestBlock(forkHeadBlk.GetPrevHash(), pid)
 		return
 	}
 
-	fork := bm.blockPool.GetFork(forkHeadParentHash)
+	fork := bm.blockPool.GetFork(forkHeadBlk.GetPrevHash())
 	if fork == nil {
 		return
 	}
@@ -190,7 +191,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}
 
 	bm.blockchain.SetState(blockchain.BlockchainSync)
-	_ = bm.MergeFork(fork, forkHeadParentHash)
+	_ = bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
 	bm.blockPool.RemoveFork(fork)
 	bm.blockchain.SetState(blockchain.BlockchainReady)
 	return

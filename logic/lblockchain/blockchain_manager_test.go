@@ -66,19 +66,19 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	bp := core.NewBlockPool()
 	bcm := NewBlockchainManager(bc, bp, nil, nil)
 
-	bp.Add(b2)
+	bp.AddBlock(b2)
 	require.Equal(t, 1, testGetNumForkHeads(bp))
-	bp.Add(b4)
+	bp.AddBlock(b4)
 	require.Equal(t, 1, testGetNumForkHeads(bp))
-	bp.Add(b5)
+	bp.AddBlock(b5)
 	require.Equal(t, 1, testGetNumForkHeads(bp))
-	bp.Add(b7)
+	bp.AddBlock(b7)
 	require.Equal(t, 1, testGetNumForkHeads(bp))
 
 	// adding block that is not connected to BlockChain should be ignored
 	b8 := block.NewBlockWithRawInfo(nil, []byte{9}, 8, 0, 4, nil)
 	b8.SetHash(lblock.CalculateHash(b8))
-	bp.Add(b8)
+	bp.AddBlock(b8)
 	require.Equal(t, 2, testGetNumForkHeads(bp))
 
 	numForks, longestFork := bcm.NumForks()
@@ -89,7 +89,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	b9 := block.NewBlockWithRawInfo(nil, b6.GetHash(), 9, 0, 4, nil)
 	b9.SetHash(lblock.CalculateHash(b9))
 
-	bp.Add(b9)
+	bp.AddBlock(b9)
 	require.Equal(t, 3, testGetNumForkHeads(bp))
 
 	require.ElementsMatch(t,

@@ -49,19 +49,16 @@ func NewBlockPool() *BlockPool {
 	return pool
 }
 
-//Add adds the block to the forks and return the parent hash of the fork that contains the input block
-func (pool *BlockPool) Add(blk *block.Block) hash.Hash {
+//AddBlock adds the block to the forks and return the parent hash of the fork that contains the input block
+func (pool *BlockPool) AddBlock(blk *block.Block) {
 
 	if pool.blkCache.Contains(blk.GetHash().String()) {
-		treeNode, _ := pool.blkCache.Get(blk.GetHash().String())
-		return treeNode.(*common.TreeNode).GetRoot().GetValue().(*block.Block).GetPrevHash()
+		return
 	}
 
-	//TODO: inject consensus to check if the block should be disgarded
-	forkhead, _ := common.NewTreeNode(blk)
-	pool.blkCache.Add(blk.GetHash().String(), forkhead)
-	pool.updateForkHead(forkhead)
-	return forkhead.GetRoot().GetValue().(*block.Block).GetPrevHash()
+	node, _ := common.NewTreeNode(blk)
+	pool.blkCache.Add(blk.GetHash().String(), node)
+	pool.updateForkHead(node)
 }
 
 //GetForkHead returns the head of the fork that contains the input block
