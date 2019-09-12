@@ -54,6 +54,10 @@ func (t *TreeNode) GetRoot() *TreeNode {
 
 //GetLongestPath returns the path from the deepest leaf node to the current node
 func (t *TreeNode) GetLongestPath() []*TreeNode {
+	if t == nil {
+		return nil
+	}
+
 	if !t.hasChildren() {
 		return []*TreeNode{t}
 	}
@@ -64,6 +68,7 @@ func (t *TreeNode) GetLongestPath() []*TreeNode {
 		currentPath := child.GetLongestPath()
 		if len(currentPath) > longest {
 			path = currentPath
+			longest = len(currentPath)
 		}
 	}
 	return append(path, t)
