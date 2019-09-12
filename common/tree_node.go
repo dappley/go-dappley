@@ -74,6 +74,25 @@ func (t *TreeNode) GetLongestPath() []*TreeNode {
 	return append(path, t)
 }
 
+//DeleteAncestors removes the all ancestor nodes of the currnet node
+func (t *TreeNode) DeleteAncestors() {
+	if t == nil {
+		return
+	}
+
+	if t.Parent != nil {
+		t.Parent.DeleteAncestors()
+	}
+
+	for _, child := range t.Children {
+		if child.Parent != nil {
+			child.Parent = nil
+		}
+	}
+
+	t.Children = nil
+}
+
 //AddChild adds a child to the tree node
 func (t *TreeNode) AddChild(child *TreeNode) {
 	t.Children = append(t.Children, child)

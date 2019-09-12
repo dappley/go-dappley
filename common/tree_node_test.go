@@ -93,7 +93,7 @@ func TestTreeNode_GetLongestPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			root := deserializeTree(tt.deserializedTree)
+			root, _ := deserializeTree(tt.deserializedTree)
 			nodes := root.GetLongestPath()
 			assert.Equal(t, len(tt.expected), len(nodes))
 			for i, node := range nodes {
@@ -102,6 +102,29 @@ func TestTreeNode_GetLongestPath(t *testing.T) {
 		})
 	}
 
+}
+
+func TestTreeNode_DeleteAncestors(t *testing.T) {
+	tests := []struct {
+		name             string
+		deserializedTree string
+		nodeId           int
+	}{
+		{"Normal Case 1", "1, 1#2, 1#3, 2#4, 2#5", 5},
+		{"Normal Case 2", "1, 1#2, 1#3, 2#4, 2#5, 3#6", 5},
+		{"Normal Case 3", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7", 5},
+		{"Normal Case 4", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7, 7#8", 5},
+		{"Normal Case 5", "1, 1#2, 1#3, 3#4, 4#5, 5#6", 5},
+		{"More than 2 children", "1, 1#2, 1#3, 1#4, 4#5, 4#6, 3#7, 2#8, 8#9, 9#10, 10#11", 9},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, nodes := deserializeTree(tt.deserializedTree)
+			node := nodes[tt.nodeId]
+			node.DeleteAncestors()
+			assert.True(t, !root.hasChildren())
+		})
+	}
 }
 
 func TestTree_Size(t *testing.T) {
@@ -139,7 +162,7 @@ func TestTree_Height(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			root := deserializeTree(tt.deserializedTree)
+			root, _ := deserializeTree(tt.deserializedTree)
 			assert.Equal(t, tt.expected, root.Height())
 		})
 	}
@@ -167,27 +190,26 @@ func TestTree_NumLeaves(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			root := deserializeTree(tt.deserializedTree)
+			root, _ := deserializeTree(tt.deserializedTree)
 			assert.Equal(t, tt.expected, root.NumLeaves())
 		})
 	}
 }
 
 //deserializeTree creates a tree structure by deserializing the input string. return the root of the tree
-func deserializeTree(s string) *TreeNode {
+func deserializeTree(s string) (root *TreeNode, nodes map[int]*TreeNode) {
 	/* "1, 1#2, 1#3, 3#4" describes a tree like following"
 				1
 			   2 3
 	              4
 	*/
 	if s == "" {
-		return nil
+		return nil, nil
 	}
 
-	var root *TreeNode
 	var parentNode *TreeNode
-	nodes := map[int]*TreeNode{}
 	currStr := ""
+	nodes = make(map[int]*TreeNode)
 
 	for _, c := range s {
 		switch c {
@@ -201,6 +223,7 @@ func deserializeTree(s string) *TreeNode {
 				root = node
 			} else {
 				parentNode.Children = append(parentNode.Children, node)
+				node.SetParent(parentNode)
 			}
 			nodes[num] = node
 			currStr = ""
@@ -243,6 +266,7 @@ func deserializeTree(s string) *TreeNode {
 		root = node
 	} else {
 		parentNode.Children = append(parentNode.Children, node)
+		node.SetParent(parentNode)
 	}
 	nodes[num] = node
 	currStr = ""
@@ -256,6 +280,5 @@ func deserializeTree(s string) *TreeNode {
 			"parentNode": parentNode.value,
 		}).Debug("Add a new node")
 	}
-
-	return root
+	return root, nodes
 }
