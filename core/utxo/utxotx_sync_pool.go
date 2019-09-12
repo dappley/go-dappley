@@ -4,7 +4,11 @@ import (
 	"sync"
 )
 
-var DEFAULT_SYNC_POOL *SyncPool
+var DEFAULT_SYNC_POOL *SyncPool = NewSyncPool(
+	5,
+	30000,
+	2,
+)
 
 func NewPool() *SyncPool {
 	DEFAULT_SYNC_POOL = NewSyncPool(
