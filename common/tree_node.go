@@ -29,23 +29,19 @@ var (
 	ErrNodeAlreadyHasParent = errors.New("tree: node already has a parent")
 )
 
-type Entry struct {
-	key   interface{}
-	value interface{}
-}
-
 //entries include the node's entry itself as the first entry and its childrens' entry following
 type TreeNode struct {
-	entry    Entry
+	key      interface{}
+	value    interface{}
 	Parent   *TreeNode
 	Children []*TreeNode
 }
 
-func NewTreeNode(index interface{}, value interface{}) (*TreeNode, error) {
-	if index == nil || value == nil {
+func NewTreeNode(key interface{}, value interface{}) (*TreeNode, error) {
+	if key == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &TreeNode{Entry{index, value}, nil, nil}, nil
+	return &TreeNode{key, value, nil, nil}, nil
 }
 
 func (t *TreeNode) hasChildren() bool {
@@ -133,11 +129,11 @@ func (t *TreeNode) AddParent(parent *TreeNode) error {
 }
 
 func (t *TreeNode) GetValue() interface{} {
-	return t.entry.value
+	return t.value
 }
 
 func (t *TreeNode) GetKey() interface{} {
-	return t.entry.key
+	return t.key
 }
 
 // NumLeaves returns the number of leaves in the tree t
