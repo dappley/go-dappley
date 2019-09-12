@@ -57,7 +57,7 @@ func TestBlockPool_ForkHeadRange(t *testing.T) {
 	// cache a blk
 	bp.Add(blk)
 	readBlk, isFound := bp.blkCache.Get(blk.GetHash().String())
-	require.Equal(t, blk, readBlk.(*common.Tree).GetValue().(*block.Block))
+	require.Equal(t, blk, readBlk.(*common.TreeNode).GetValue().(*block.Block))
 	require.True(t, isFound)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
@@ -85,7 +85,7 @@ func TestBlockPool_ForkHeadRange(t *testing.T) {
 
 func testGetForkHeadHashes(bp *BlockPool) []string {
 	var hashes []string
-	bp.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+	bp.ForkHeadRange(func(blkHash string, tree *common.TreeNode) {
 		hashes = append(hashes, blkHash)
 	})
 	return hashes

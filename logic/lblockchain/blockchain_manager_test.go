@@ -106,7 +106,7 @@ func testGetNumForkHeads(bp *core.BlockPool) int {
 
 func testGetForkHeadHashes(bp *core.BlockPool) []string {
 	var hashes []string
-	bp.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+	bp.ForkHeadRange(func(blkHash string, tree *common.TreeNode) {
 		hashes = append(hashes, blkHash)
 	})
 	return hashes

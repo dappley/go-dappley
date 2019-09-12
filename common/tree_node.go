@@ -35,27 +35,27 @@ type Entry struct {
 }
 
 //entries include the node's entry itself as the first entry and its childrens' entry following
-type Tree struct {
+type TreeNode struct {
 	entry    Entry
-	Parent   *Tree
-	Children []*Tree
+	Parent   *TreeNode
+	Children []*TreeNode
 }
 
-func NewTree(index interface{}, value interface{}) (*Tree, error) {
+func NewTreeNode(index interface{}, value interface{}) (*TreeNode, error) {
 	if index == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &Tree{Entry{index, value}, nil, nil}, nil
+	return &TreeNode{Entry{index, value}, nil, nil}, nil
 }
 
-func (t *Tree) hasChildren() bool {
+func (t *TreeNode) hasChildren() bool {
 	if len(t.Children) > 0 {
 		return true
 	}
 	return false
 }
 
-func (t *Tree) containChild(child *Tree) bool {
+func (t *TreeNode) containChild(child *TreeNode) bool {
 	for _, c := range t.Children {
 		if c == child {
 			return true
@@ -64,7 +64,7 @@ func (t *Tree) containChild(child *Tree) bool {
 	return false
 }
 
-func (t *Tree) Delete() {
+func (t *TreeNode) Delete() {
 	if t.Parent != nil {
 		for i := 0; i < len(t.Parent.Children); i++ {
 			if t.Parent.Children[i].GetKey() == t.GetKey() {
@@ -75,7 +75,7 @@ func (t *Tree) Delete() {
 	t.Parent = nil
 }
 
-func (t *Tree) GetRoot() *Tree {
+func (t *TreeNode) GetRoot() *TreeNode {
 	root := t
 	parent := t.Parent
 	for parent != nil {
@@ -85,8 +85,8 @@ func (t *Tree) GetRoot() *Tree {
 	return root
 }
 
-func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
-	var parentTrees []*Tree
+func (t *TreeNode) GetParentTreesRange(head *TreeNode) []*TreeNode {
+	var parentTrees []*TreeNode
 	parentTrees = append(parentTrees, t)
 	if t.GetKey() == head.GetKey() { //fork of length 1
 		return parentTrees
@@ -96,14 +96,14 @@ func (t *Tree) GetParentTreesRange(head *Tree) []*Tree {
 			parentTrees = append(parentTrees, parent)
 		}
 	} else {
-		logger.Error("Tree: fork tail or head is empty!")
+		logger.Error("TreeNode: fork tail or head is empty!")
 		return nil
 	}
 	parentTrees = append(parentTrees, head)
 	return parentTrees
 }
 
-func (t *Tree) FindHeightestChild(path *Tree, prevDeep, deepest int) (deep int, deepPath *Tree) {
+func (t *TreeNode) FindHeightestChild(path *TreeNode, prevDeep, deepest int) (deep int, deepPath *TreeNode) {
 	if t.hasChildren() {
 		for _, child := range t.Children {
 			correntDeepest, correntPath := child.FindHeightestChild(path, prevDeep+1, deepest)
@@ -119,12 +119,12 @@ func (t *Tree) FindHeightestChild(path *Tree, prevDeep, deepest int) (deep int, 
 	return deepest, path
 }
 
-func (t *Tree) AddChild(child *Tree) {
+func (t *TreeNode) AddChild(child *TreeNode) {
 	t.Children = append(t.Children, child)
 	child.Parent = t
 }
 
-func (t *Tree) AddParent(parent *Tree) error {
+func (t *TreeNode) AddParent(parent *TreeNode) error {
 	if t.Parent != nil {
 		return ErrNodeAlreadyHasParent
 	}
@@ -132,16 +132,16 @@ func (t *Tree) AddParent(parent *Tree) error {
 	return nil
 }
 
-func (t *Tree) GetValue() interface{} {
+func (t *TreeNode) GetValue() interface{} {
 	return t.entry.value
 }
 
-func (t *Tree) GetKey() interface{} {
+func (t *TreeNode) GetKey() interface{} {
 	return t.entry.key
 }
 
 // NumLeaves returns the number of leaves in the tree t
-func (t *Tree) NumLeaves() int64 {
+func (t *TreeNode) NumLeaves() int64 {
 	if !t.hasChildren() {
 		return 1
 	}
@@ -154,7 +154,7 @@ func (t *Tree) NumLeaves() int64 {
 }
 
 // Size returns the number of nodes in the tree
-func (t *Tree) Size() int64 {
+func (t *TreeNode) Size() int64 {
 	var size int64 = 1
 	for _, child := range t.Children {
 		size += child.Size()
@@ -164,7 +164,7 @@ func (t *Tree) Size() int64 {
 }
 
 // Height returns the length of the deepest path counting nodes not edges
-func (t *Tree) Height() int64 {
+func (t *TreeNode) Height() int64 {
 	var length int64 = 0
 	for _, child := range t.Children {
 		t := child.Height()

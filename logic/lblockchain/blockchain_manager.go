@@ -372,7 +372,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 func (bm *BlockchainManager) NumForks() (int64, int64) {
 	var numForks, maxHeight int64 = 0, 0
 
-	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.Tree) {
+	bm.blockPool.ForkHeadRange(func(blkHash string, tree *common.TreeNode) {
 		rootBlk := tree.GetValue().(*block.Block)
 		_, err := bm.blockchain.GetBlockByHash(rootBlk.GetPrevHash())
 		if err == nil {
