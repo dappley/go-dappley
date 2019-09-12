@@ -81,7 +81,9 @@ func (ps *PingService) pingPeers(peers map[peer.ID]networkmodel.PeerInfo, callba
 	resultsCh := make(chan *PingResult)
 	for _, p := range peers {
 		go func(peerID peer.ID) {
-			result := <-ps.service.Ping(context.Background(), peerID)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			result := <-ps.service.Ping(ctx, peerID)
 			if result.Error != nil {
 				logger.WithError(result.Error).Errorf("PingService: error pinging peer %v", peerID.Pretty())
 				resultsCh <- &PingResult{ID: peerID, Latency: nil}

@@ -64,6 +64,8 @@ func (utxos *UTXOIndex) SetIndex(index map[string]*utxo.UTXOTx) {
 }
 
 func (utxos *UTXOIndex) Save() error {
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
 	for key, utxoTx := range utxos.index {
 		pubKeyHash, err := hex.DecodeString(key)
 		if err != nil {
@@ -94,15 +96,14 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 	}
 
 	utxoTx = utxos.cache.Get(pubkeyHash)
-	newUtxoTx := utxoTx.DeepCopy()
 	utxos.mutex.Lock()
-	//if utxos.index[key] != nil{
-	//	utxos.index[key].Indices = nil
-	//	utxos.index[key] = nil
-	//}
-	utxos.index[key] = &newUtxoTx
+	newUtxoTx := utxoTx.DeepCopy()
+	if utxos.index[key] != nil{
+		utxo.Free(utxos.index[key])
+	}
+	utxos.index[key] = newUtxoTx
 	utxos.mutex.Unlock()
-	return &newUtxoTx
+	return newUtxoTx
 }
 
 //SplitContractUtxo
@@ -314,7 +315,7 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	utxocopy := NewUTXOIndex(utxos.cache)
 	for pkh, utxoTx := range utxos.index {
 		newUtxoTx := utxoTx.DeepCopy()
-		utxocopy.index[pkh] = &newUtxoTx
+		utxocopy.index[pkh] = newUtxoTx
 	}
 	return utxocopy
 }

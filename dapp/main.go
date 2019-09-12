@@ -65,7 +65,6 @@ func main() {
 	}
 
 	log.BuildLogAndInit()
-	logger.Debugf("Debug mode open!")
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 
@@ -108,6 +107,7 @@ func main() {
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
+	utxo.NewPool()
 	bc, err := lblockchain.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
@@ -130,6 +130,11 @@ func main() {
 
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 
+
+	//start mining
+	logic.SetLockAccount() //lock the account
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
+
 	//start rpc server
 	nodeConf := conf.GetNodeConfig()
 	server := rpc.NewGrpcServerWithMetrics(node, bm, defaultPassword, &rpc.MetricsServiceConfig{
@@ -137,10 +142,6 @@ func main() {
 
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
-
-	//start mining
-	logic.SetLockAccount() //lock the account
-	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
 	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
