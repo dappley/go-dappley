@@ -74,7 +74,37 @@ func (t *TreeNode) GetLongestPath() []*TreeNode {
 	return append(path, t)
 }
 
-//RemoveAllDescendants remove all descendants of the current node, and call onDeleteCallback function when it is deleted
+//Prune removes all nodes that are not current node's descendants, and call onDeleteCallback function when a node is deleted
+func (t *TreeNode) Prune(onDeleteCallbackFn func(node *TreeNode)) {
+	if t == nil {
+		return
+	}
+
+	if t.Parent == nil {
+		return
+	}
+
+	for _, sibling := range t.Parent.Children {
+		if sibling == nil {
+			continue
+		}
+
+		if sibling.GetValue() == t.GetValue() {
+			continue
+		}
+
+		sibling.Parent = nil
+		onDeleteCallbackFn(sibling)
+		sibling.RemoveAllDescendants(onDeleteCallbackFn)
+	}
+
+	t.Parent.Children = nil
+	t.Parent.Prune(onDeleteCallbackFn)
+	onDeleteCallbackFn(t.Parent)
+	t.Parent = nil
+}
+
+//RemoveAllDescendants remove all descendants of the current node, and call onDeleteCallback function when a node is deleted
 func (t *TreeNode) RemoveAllDescendants(onDeleteCallback func(node *TreeNode)) {
 
 	if t == nil {
@@ -91,13 +121,13 @@ func (t *TreeNode) RemoveAllDescendants(onDeleteCallback func(node *TreeNode)) {
 
 //AddChild adds a child to the tree node
 func (t *TreeNode) AddChild(child *TreeNode) {
+	child.Parent = t
 	for _, c := range t.Children {
 		if child.value == c.value {
 			return
 		}
 	}
 	t.Children = append(t.Children, child)
-	child.Parent = t
 }
 
 //SetParent sets parent of the tree node
