@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_AddParent(t *testing.T) {
+func Test_SetParent(t *testing.T) {
 	parentNode1, _ := NewTreeNode("parent1")
 	parentNode2, _ := NewTreeNode("parent2")
 	childNode, _ := NewTreeNode("child2")
@@ -80,7 +80,15 @@ func TestTreeNode_GetLongestPath(t *testing.T) {
 		expected         []int
 	}{
 		{"Empty Root", "", []int{}},
-		{"Normal Case 1", "1, 1#2, 1#3, 3#4, 4#5, 5#6", []int{6, 5, 4, 3, 1}},
+		{"Normal Case 1", "1", []int{1}},
+		{"Normal Case 2", "1, 1#2", []int{2, 1}},
+		{"Normal Case 3", "1, 1#2, 1#3", []int{2, 1}},
+		{"Normal Case 4", "1, 1#2, 1#3, 2#4", []int{4, 2, 1}},
+		{"Normal Case 5", "1, 1#2, 1#3, 2#4, 2#5", []int{4, 2, 1}},
+		{"Normal Case 6", "1, 1#2, 1#3, 2#4, 2#5, 3#6", []int{4, 2, 1}},
+		{"Normal Case 7", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7", []int{4, 2, 1}},
+		{"Normal Case 8", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7, 7#8", []int{8, 7, 3, 1}},
+		{"Normal Case 9", "1, 1#2, 1#3, 3#4, 4#5, 5#6", []int{6, 5, 4, 3, 1}},
 		{"More than 2 children", "1, 1#2, 1#3, 1#4, 4#5, 4#6, 3#7, 2#8, 8#9, 9#10, 10#11", []int{11, 10, 9, 8, 2, 1}},
 	}
 	for _, tt := range tests {
@@ -111,62 +119,58 @@ func TestTree_Size(t *testing.T) {
 }
 
 func TestTree_Height(t *testing.T) {
-	t0, _ := NewTreeNode("t0")
-	t1, _ := NewTreeNode("t1")
-	t2, _ := NewTreeNode("t2")
-	t3, _ := NewTreeNode("t3")
 
-	assert.EqualValues(t, 1, t0.Height())
-	t0.AddChild(t1)
-	assert.EqualValues(t, 2, t0.Height())
-	t0.AddChild(t2)
-	assert.EqualValues(t, 2, t0.Height())
+	tests := []struct {
+		name             string
+		deserializedTree string
+		expected         int64
+	}{
+		{"Empty Root", "", 0},
+		{"Normal Case 1", "1", 1},
+		{"Normal Case 2", "1, 1#2", 2},
+		{"Normal Case 3", "1, 1#2, 1#3", 2},
+		{"Normal Case 4", "1, 1#2, 1#3, 2#4", 3},
+		{"Normal Case 5", "1, 1#2, 1#3, 2#4, 2#5", 3},
+		{"Normal Case 6", "1, 1#2, 1#3, 2#4, 2#5, 3#6", 3},
+		{"Normal Case 7", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7", 3},
+		{"Normal Case 8", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7, 7#8", 4},
+		{"Normal Case 9", "1, 1#2, 1#3, 3#4, 4#5, 5#6", 5},
+		{"More than 2 children", "1, 1#2, 1#3, 1#4, 4#5, 4#6, 3#7, 2#8, 8#9, 9#10, 10#11", 6},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := deserializeTree(tt.deserializedTree)
+			assert.Equal(t, tt.expected, root.Height())
+		})
+	}
 
-	/*
-	      t0
-	   t1   t2
-	       t3
-	*/
-
-	t2.AddChild(t3)
-	assert.EqualValues(t, 3, t0.Height())
 }
 
 func TestTree_NumLeaves(t *testing.T) {
-	n1, _ := NewTreeNode("n1")
-	n2, _ := NewTreeNode("n2")
-	n3, _ := NewTreeNode("n3")
-	n4, _ := NewTreeNode("n4")
-	n5, _ := NewTreeNode("n5")
-	n6, _ := NewTreeNode("n6")
-	n7, _ := NewTreeNode("n7")
-	n8, _ := NewTreeNode("n8")
 
-	assert.EqualValues(t, 1, n1.NumLeaves())
-	n1.AddChild(n2)
-	assert.EqualValues(t, 1, n1.NumLeaves())
-	n1.AddChild(n3)
-	assert.EqualValues(t, 2, n1.NumLeaves())
-	n2.AddChild(n4)
-	assert.EqualValues(t, 2, n1.NumLeaves())
-	n2.AddChild(n5)
-	assert.EqualValues(t, 3, n1.NumLeaves())
-	n3.AddChild(n6)
-	assert.EqualValues(t, 3, n1.NumLeaves())
-	n3.AddChild(n7)
-	assert.EqualValues(t, 4, n1.NumLeaves())
-	n7.AddChild(n8)
-
-	/*
-	         n1
-	     n2     n3
-	   n4 n5  n6  n7
-	                n8
-	*/
-
-	assert.EqualValues(t, 4, n1.NumLeaves())
-	assert.EqualValues(t, 8, n1.Size())
-	assert.EqualValues(t, 4, n1.Height())
+	tests := []struct {
+		name             string
+		deserializedTree string
+		expected         int64
+	}{
+		{"Empty Root", "", 0},
+		{"Normal Case 1", "1", 1},
+		{"Normal Case 2", "1, 1#2", 1},
+		{"Normal Case 3", "1, 1#2, 1#3", 2},
+		{"Normal Case 4", "1, 1#2, 1#3, 2#4", 2},
+		{"Normal Case 5", "1, 1#2, 1#3, 2#4, 2#5", 3},
+		{"Normal Case 6", "1, 1#2, 1#3, 2#4, 2#5, 3#6", 3},
+		{"Normal Case 7", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7", 4},
+		{"Normal Case 8", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7, 7#8", 4},
+		{"Normal Case 9", "1, 1#2, 1#3, 3#4, 4#5, 5#6", 2},
+		{"More than 2 children", "1, 1#2, 1#3, 1#4, 4#5, 4#6, 3#7, 2#8, 8#9, 9#10, 10#11", 4},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := deserializeTree(tt.deserializedTree)
+			assert.Equal(t, tt.expected, root.NumLeaves())
+		})
+	}
 }
 
 //deserializeTree creates a tree structure by deserializing the input string. return the root of the tree
@@ -203,12 +207,12 @@ func deserializeTree(s string) *TreeNode {
 			if parentNode == nil {
 				logger.WithFields(logger.Fields{
 					"root": num,
-				}).Info("Add a new node as root")
+				}).Debug("Add a new node as root")
 			} else {
 				logger.WithFields(logger.Fields{
 					"node":       num,
 					"parentNode": parentNode.value,
-				}).Info("Add a new node")
+				}).Debug("Add a new node")
 			}
 
 		case '#':
@@ -245,12 +249,12 @@ func deserializeTree(s string) *TreeNode {
 	if parentNode == nil {
 		logger.WithFields(logger.Fields{
 			"root": num,
-		}).Info("Add a new node as root")
+		}).Debug("Add a new node as root")
 	} else {
 		logger.WithFields(logger.Fields{
 			"node":       num,
 			"parentNode": parentNode.value,
-		}).Info("Add a new node")
+		}).Debug("Add a new node")
 	}
 
 	return root

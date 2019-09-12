@@ -96,6 +96,9 @@ func (t *TreeNode) GetValue() interface{} {
 
 // NumLeaves returns the number of leaves in the tree t
 func (t *TreeNode) NumLeaves() int64 {
+	if t == nil {
+		return 0
+	}
 	if !t.hasChildren() {
 		return 1
 	}
@@ -119,6 +122,9 @@ func (t *TreeNode) Size() int64 {
 
 // Height returns the length of the deepest path counting nodes not edges
 func (t *TreeNode) Height() int64 {
+	if t == nil {
+		return 0
+	}
 	var length int64 = 0
 	for _, child := range t.Children {
 		t := child.Height()
