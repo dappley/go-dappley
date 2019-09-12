@@ -58,7 +58,7 @@ func (pool *BlockPool) Add(blk *block.Block) hash.Hash {
 	}
 
 	//TODO: inject consensus to check if the block should be disgarded
-	forkhead, _ := common.NewTreeNode(blk.GetHash().String(), blk)
+	forkhead, _ := common.NewTreeNode(blk)
 	pool.blkCache.Add(blk.GetHash().String(), forkhead)
 	pool.updateForkHead(forkhead)
 	return forkhead.GetRoot().GetValue().(*block.Block).GetPrevHash()

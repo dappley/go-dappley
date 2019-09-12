@@ -25,9 +25,9 @@ import (
 )
 
 func Test_AddParent(t *testing.T) {
-	parentNode1, _ := NewTreeNode("parent1", "parent1")
-	parentNode2, _ := NewTreeNode("parent2", "parent2")
-	childNode, _ := NewTreeNode("child2", "child2")
+	parentNode1, _ := NewTreeNode("parent1")
+	parentNode2, _ := NewTreeNode("parent2")
+	childNode, _ := NewTreeNode("child2")
 
 	err1 := childNode.SetParent(parentNode1)
 	assert.Equal(t, nil, err1)
@@ -38,9 +38,9 @@ func Test_AddParent(t *testing.T) {
 }
 
 func Test_AddChild(t *testing.T) {
-	parentNode, _ := NewTreeNode("parent", "parent")
-	childNode1, _ := NewTreeNode("child1", "child1")
-	childNode2, _ := NewTreeNode("child2", "child2")
+	parentNode, _ := NewTreeNode("parent")
+	childNode1, _ := NewTreeNode("child1")
+	childNode2, _ := NewTreeNode("child2")
 
 	parentNode.AddChild(childNode1)
 	parentNode.AddChild(childNode2)
@@ -55,11 +55,11 @@ func Test_AddChild(t *testing.T) {
 
 func Test_HasChild(t *testing.T) {
 	var nilTree TreeNode
-	newTree, _ := NewTreeNode("new", "new")
-	parentNode1, _ := NewTreeNode("parent1", "parent1")
-	parentNode2, _ := NewTreeNode("parent2", "parent2")
-	childNode1, _ := NewTreeNode("child1", "child1")
-	childNode2, _ := NewTreeNode("child2", "child2")
+	newTree, _ := NewTreeNode("new")
+	parentNode1, _ := NewTreeNode("parent1")
+	parentNode2, _ := NewTreeNode("parent2")
+	childNode1, _ := NewTreeNode("child1")
+	childNode2, _ := NewTreeNode("child2")
 	parentNode1.AddChild(childNode1)
 	childNode2.SetParent(parentNode2)
 
@@ -75,10 +75,10 @@ func TestTreeNode_GetLongestPath(t *testing.T) {
 }
 
 func TestTree_Size(t *testing.T) {
-	t0, _ := NewTreeNode("t0", "t0")
-	t1, _ := NewTreeNode("t1", "t1")
-	t2, _ := NewTreeNode("t2", "t2")
-	t3, _ := NewTreeNode("t3", "t3")
+	t0, _ := NewTreeNode("t0")
+	t1, _ := NewTreeNode("t1")
+	t2, _ := NewTreeNode("t2")
+	t3, _ := NewTreeNode("t3")
 	assert.EqualValues(t, 1, t1.Size())
 	t1.AddChild(t0)
 	assert.EqualValues(t, 2, t1.Size())
@@ -89,10 +89,10 @@ func TestTree_Size(t *testing.T) {
 }
 
 func TestTree_Height(t *testing.T) {
-	t0, _ := NewTreeNode("t0", "t0")
-	t1, _ := NewTreeNode("t1", "t1")
-	t2, _ := NewTreeNode("t2", "t2")
-	t3, _ := NewTreeNode("t3", "t3")
+	t0, _ := NewTreeNode("t0")
+	t1, _ := NewTreeNode("t1")
+	t2, _ := NewTreeNode("t2")
+	t3, _ := NewTreeNode("t3")
 
 	assert.EqualValues(t, 1, t0.Height())
 	t0.AddChild(t1)
@@ -111,14 +111,14 @@ func TestTree_Height(t *testing.T) {
 }
 
 func TestTree_NumLeaves(t *testing.T) {
-	n1, _ := NewTreeNode("n1", "n1")
-	n2, _ := NewTreeNode("n2", "n2")
-	n3, _ := NewTreeNode("n3", "n3")
-	n4, _ := NewTreeNode("n4", "n4")
-	n5, _ := NewTreeNode("n5", "n5")
-	n6, _ := NewTreeNode("n6", "n6")
-	n7, _ := NewTreeNode("n7", "n7")
-	n8, _ := NewTreeNode("n8", "n8")
+	n1, _ := NewTreeNode("n1")
+	n2, _ := NewTreeNode("n2")
+	n3, _ := NewTreeNode("n3")
+	n4, _ := NewTreeNode("n4")
+	n5, _ := NewTreeNode("n5")
+	n6, _ := NewTreeNode("n6")
+	n7, _ := NewTreeNode("n7")
+	n8, _ := NewTreeNode("n8")
 
 	assert.EqualValues(t, 1, n1.NumLeaves())
 	n1.AddChild(n2)

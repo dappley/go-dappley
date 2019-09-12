@@ -28,18 +28,17 @@ var (
 )
 
 type TreeNode struct {
-	key      interface{}
 	value    interface{}
 	Parent   *TreeNode
 	Children []*TreeNode
 }
 
 //NewTreeNode creates a new tree node
-func NewTreeNode(key interface{}, value interface{}) (*TreeNode, error) {
-	if key == nil || value == nil {
+func NewTreeNode(value interface{}) (*TreeNode, error) {
+	if value == nil {
 		return nil, ErrCantCreateEmptyNode
 	}
-	return &TreeNode{key, value, nil, nil}, nil
+	return &TreeNode{value, nil, nil}, nil
 }
 
 //GetRoot returns the root of current tree node
