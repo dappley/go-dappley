@@ -29,7 +29,6 @@ var (
 	ErrNodeAlreadyHasParent = errors.New("tree: node already has a parent")
 )
 
-//entries include the node's entry itself as the first entry and its childrens' entry following
 type TreeNode struct {
 	key      interface{}
 	value    interface{}
@@ -37,6 +36,7 @@ type TreeNode struct {
 	Children []*TreeNode
 }
 
+//NewTreeNode creates a new tree node
 func NewTreeNode(key interface{}, value interface{}) (*TreeNode, error) {
 	if key == nil || value == nil {
 		return nil, ErrCantCreateEmptyNode
@@ -44,33 +44,7 @@ func NewTreeNode(key interface{}, value interface{}) (*TreeNode, error) {
 	return &TreeNode{key, value, nil, nil}, nil
 }
 
-func (t *TreeNode) hasChildren() bool {
-	if len(t.Children) > 0 {
-		return true
-	}
-	return false
-}
-
-func (t *TreeNode) containChild(child *TreeNode) bool {
-	for _, c := range t.Children {
-		if c == child {
-			return true
-		}
-	}
-	return false
-}
-
-func (t *TreeNode) Delete() {
-	if t.Parent != nil {
-		for i := 0; i < len(t.Parent.Children); i++ {
-			if t.Parent.Children[i].GetKey() == t.GetKey() {
-				t.Parent.Children = append(t.Parent.Children[:i], t.Parent.Children[i+1:]...)
-			}
-		}
-	}
-	t.Parent = nil
-}
-
+//GetRoot returns the root of current tree node
 func (t *TreeNode) GetRoot() *TreeNode {
 	root := t
 	parent := t.Parent
@@ -81,6 +55,7 @@ func (t *TreeNode) GetRoot() *TreeNode {
 	return root
 }
 
+//GetParentTreesRange returns all Treenodes between head -> current node
 func (t *TreeNode) GetParentTreesRange(head *TreeNode) []*TreeNode {
 	var parentTrees []*TreeNode
 	parentTrees = append(parentTrees, t)
@@ -99,6 +74,7 @@ func (t *TreeNode) GetParentTreesRange(head *TreeNode) []*TreeNode {
 	return parentTrees
 }
 
+//FindHeightestChild find the deepest leaf
 func (t *TreeNode) FindHeightestChild(path *TreeNode, prevDeep, deepest int) (deep int, deepPath *TreeNode) {
 	if t.hasChildren() {
 		for _, child := range t.Children {
@@ -115,11 +91,13 @@ func (t *TreeNode) FindHeightestChild(path *TreeNode, prevDeep, deepest int) (de
 	return deepest, path
 }
 
+//AddChild adds a child to the tree node
 func (t *TreeNode) AddChild(child *TreeNode) {
 	t.Children = append(t.Children, child)
 	child.Parent = t
 }
 
+//AddParent sets parent of the tree node
 func (t *TreeNode) AddParent(parent *TreeNode) error {
 	if t.Parent != nil {
 		return ErrNodeAlreadyHasParent
@@ -128,10 +106,12 @@ func (t *TreeNode) AddParent(parent *TreeNode) error {
 	return nil
 }
 
+//GetValue returns the value of current node
 func (t *TreeNode) GetValue() interface{} {
 	return t.value
 }
 
+//GetKey returns the key of the current node
 func (t *TreeNode) GetKey() interface{} {
 	return t.key
 }
@@ -170,4 +150,22 @@ func (t *TreeNode) Height() int64 {
 	}
 
 	return length + 1
+}
+
+//hasChildren returns if current node has any children
+func (t *TreeNode) hasChildren() bool {
+	if len(t.Children) > 0 {
+		return true
+	}
+	return false
+}
+
+//containChild returns if the input node is a child of current node
+func (t *TreeNode) containChild(child *TreeNode) bool {
+	for _, c := range t.Children {
+		if c == child {
+			return true
+		}
+	}
+	return false
 }
