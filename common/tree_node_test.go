@@ -70,59 +70,8 @@ func Test_HasChild(t *testing.T) {
 	assert.False(t, nilTree.hasChildren())
 }
 
-func Test_FindHeightestChild(t *testing.T) {
-	node1Height0, _ := NewTreeNode("node1Height0", "node1Height0")
-	node1Height1, _ := NewTreeNode("node1Height1", "node1Height1")
-	node2Height1, _ := NewTreeNode("node2Height1", "node2Height1")
-	node1Height2, _ := NewTreeNode("node1Height2", "node1Height2")
-	node2Height2, _ := NewTreeNode("node2Height2", "node2Height2")
-	node3Height2, _ := NewTreeNode("node3Height2", "node3Height2")
-	node4Height2, _ := NewTreeNode("node4Height2", "node4Height2")
-	node1Height3, _ := NewTreeNode("node1Height3", "node1Height3")
+func TestTreeNode_GetLongestPath(t *testing.T) {
 
-	node1Height0.AddChild(node1Height1)
-	node1Height0.AddChild(node2Height1)
-	node1Height1.AddChild(node1Height2)
-	node1Height1.AddChild(node2Height2)
-	node2Height1.AddChild(node3Height2)
-	node2Height1.AddChild(node4Height2)
-	node3Height2.AddChild(node1Height3)
-
-	var heightest1 *TreeNode
-	var heightest2 *TreeNode
-	var heightest3 *TreeNode
-
-	_, heightest1 = node1Height0.FindHeightestChild(heightest1, 0, 0)
-	_, heightest2 = node2Height1.FindHeightestChild(heightest2, 0, 0)
-	_, heightest3 = node1Height1.FindHeightestChild(heightest3, 0, 0)
-
-	assert.Equal(t, node1Height3, heightest1)
-	assert.Equal(t, node1Height3, heightest2)
-	assert.Equal(t, node1Height2, heightest3)
-}
-
-func Test_GetParentNodesRange(t *testing.T) {
-	tree1, _ := NewTreeNode("node1", "node1")
-	tree2, _ := NewTreeNode("node2", "node2")
-	tree3, _ := NewTreeNode("node3", "node3")
-	tree4, _ := NewTreeNode("node4", "node4")
-	tree5, _ := NewTreeNode("node5", "node5")
-	tree6, _ := NewTreeNode("node6", "node6")
-	tree7, _ := NewTreeNode("node7", "node7")
-	tree8, _ := NewTreeNode("node8", "node8")
-
-	tree1.AddChild(tree2)
-	tree2.AddChild(tree3)
-	tree3.AddChild(tree4)
-	tree4.AddChild(tree5)
-	tree5.AddChild(tree6)
-	tree6.AddChild(tree7)
-	tree7.AddChild(tree8)
-
-	expect := []*TreeNode{tree6, tree5, tree4, tree3, tree2}
-	trees := tree6.GetParentTreesRange(tree2)
-
-	assert.Equal(t, expect, trees)
 }
 
 func TestTree_Size(t *testing.T) {

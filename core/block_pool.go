@@ -68,13 +68,7 @@ func (pool *BlockPool) GetFork(parentHash hash.Hash) []*block.Block {
 
 	root := pool.findLongestChain(parentHash)
 
-	//if root == nil {
-	//	return nil
-	//}
-
-	_, forkTailTree := root.FindHeightestChild(&common.TreeNode{}, 0, 0)
-	forkTrees := forkTailTree.GetParentTreesRange(root)
-	return getBlocksFromTrees(forkTrees)
+	return getBlocksFromTrees(root.GetLongestPath())
 }
 
 func (pool *BlockPool) findLongestChain(parentHash hash.Hash) *common.TreeNode {

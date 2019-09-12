@@ -20,8 +20,6 @@ package common
 
 import (
 	"errors"
-
-	logger "github.com/sirupsen/logrus"
 )
 
 var (
@@ -55,40 +53,21 @@ func (t *TreeNode) GetRoot() *TreeNode {
 	return root
 }
 
-//GetParentTreesRange returns all Treenodes between head -> current node
-func (t *TreeNode) GetParentTreesRange(head *TreeNode) []*TreeNode {
-	var parentTrees []*TreeNode
-	parentTrees = append(parentTrees, t)
-	if t.GetKey() == head.GetKey() { //fork of length 1
-		return parentTrees
+//GetLongestPath returns the path from the deepest leaf node to the current node
+func (t *TreeNode) GetLongestPath() []*TreeNode {
+	if !t.hasChildren() {
+		return []*TreeNode{t}
 	}
-	if t.Parent != nil && head != nil {
-		for parent := t.Parent; parent.GetKey() != head.GetKey(); parent = parent.Parent {
-			parentTrees = append(parentTrees, parent)
-		}
-	} else {
-		logger.Error("TreeNode: fork tail or head is empty!")
-		return nil
-	}
-	parentTrees = append(parentTrees, head)
-	return parentTrees
-}
 
-//FindHeightestChild find the deepest leaf
-func (t *TreeNode) FindHeightestChild(path *TreeNode, prevDeep, deepest int) (deep int, deepPath *TreeNode) {
-	if t.hasChildren() {
-		for _, child := range t.Children {
-			correntDeepest, correntPath := child.FindHeightestChild(path, prevDeep+1, deepest)
-			if correntDeepest > deepest {
-				path = correntPath
-				deepest = correntDeepest
-			}
+	longest := 0
+	var path []*TreeNode
+	for _, child := range t.Children {
+		currentPath := child.GetLongestPath()
+		if len(currentPath) > longest {
+			path = currentPath
 		}
-	} else {
-		path = t
-		deepest = prevDeep
 	}
-	return deepest, path
+	return append(path, t)
 }
 
 //AddChild adds a child to the tree node
@@ -109,11 +88,6 @@ func (t *TreeNode) SetParent(parent *TreeNode) error {
 //GetValue returns the value of current node
 func (t *TreeNode) GetValue() interface{} {
 	return t.value
-}
-
-//GetKey returns the key of the current node
-func (t *TreeNode) GetKey() interface{} {
-	return t.key
 }
 
 // NumLeaves returns the number of leaves in the tree t
