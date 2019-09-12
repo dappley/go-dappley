@@ -19,6 +19,7 @@
 package common
 
 import (
+	"fmt"
 	logger "github.com/sirupsen/logrus"
 	"strconv"
 	"testing"
@@ -104,25 +105,36 @@ func TestTreeNode_GetLongestPath(t *testing.T) {
 
 }
 
-func TestTreeNode_DeleteAncestors(t *testing.T) {
+func TestTreeNode_RemoveAllDescendants(t *testing.T) {
+
 	tests := []struct {
-		name             string
-		deserializedTree string
-		nodeId           int
+		name                     string
+		deserializedTree         string
+		rootNodeId               int
+		expectedHeight           int64
+		expectedNumOfRemovedNode int
 	}{
-		{"Normal Case 1", "1, 1#2, 1#3, 2#4, 2#5", 5},
-		{"Normal Case 2", "1, 1#2, 1#3, 2#4, 2#5, 3#6", 5},
-		{"Normal Case 3", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7", 5},
-		{"Normal Case 4", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7, 7#8", 5},
-		{"Normal Case 5", "1, 1#2, 1#3, 3#4, 4#5, 5#6", 5},
-		{"More than 2 children", "1, 1#2, 1#3, 1#4, 4#5, 4#6, 3#7, 2#8, 8#9, 9#10, 10#11", 9},
+		{"Normal Case 1", "1, 1#2, 1#3, 2#4, 2#5", 2, 2, 2},
+		//{"Normal Case 2", "1, 1#2, 1#3, 2#4, 2#5, 3#6", 1, 1, 5},
+		//{"Normal Case 3", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7", 3, 3, 2},
+		//{"Normal Case 4", "1, 1#2, 1#3, 2#4, 2#5, 3#6, 3#7, 7#8", 2, 4, 2},
+		//{"Normal Case 5", "1, 1#2, 1#3, 3#4, 4#5, 5#6", 5, 4, 1},
+		//{"More than 2 children", "1, 1#2, 1#3, 1#4, 4#5, 4#6, 3#7, 2#8, 8#9, 9#10, 10#11", 4, 6, 2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root, nodes := deserializeTree(tt.deserializedTree)
-			node := nodes[tt.nodeId]
-			node.DeleteAncestors()
-			assert.True(t, !root.hasChildren())
+			node := nodes[tt.rootNodeId]
+			count := 0
+			fmt.Println(len(node.Children))
+			node.RemoveAllDescendants(
+				func(node *TreeNode) {
+					count++
+					fmt.Println(node.value)
+					fmt.Println(len(node.Children))
+				})
+			assert.Equal(t, tt.expectedHeight, root.Height())
+			assert.Equal(t, tt.expectedNumOfRemovedNode, count)
 		})
 	}
 }
