@@ -64,6 +64,21 @@ func (pool *BlockPool) Add(blk *block.Block) hash.Hash {
 	return forkhead.GetRoot().GetValue().(*block.Block).GetPrevHash()
 }
 
+//GetForkHead returns the head of the fork that contains the input block
+func (pool *BlockPool) GetForkHead(blk *block.Block) *block.Block {
+	if pool.blkCache == nil {
+		return nil
+	}
+
+	node, _ := pool.blkCache.Get(blk.GetHash().String())
+
+	if node == nil {
+		return nil
+	}
+
+	return node.(*common.TreeNode).GetRoot().GetValue().(*block.Block)
+}
+
 func (pool *BlockPool) GetFork(parentHash hash.Hash) []*block.Block {
 
 	root := pool.findLongestChain(parentHash)
