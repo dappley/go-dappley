@@ -238,8 +238,8 @@ func (dpos *DPOS) cacheBlock(block *block.Block) {
 	dpos.slot.Add(int(block.GetTimestamp()/int64(dpos.GetDynasty().timeBetweenBlk)), block)
 }
 
-//GetLibProducerNum returns the minimum number of producers required
-func (dpos *DPOS) GetLibProducerNum() int {
+//GetMinConfirmationNum returns the minimum number of producers required
+func (dpos *DPOS) GetMinConfirmationNum() int {
 	return len(dpos.dynasty.GetProducers())*2/3 + 1
 }
 

@@ -9,8 +9,8 @@ type LIBPolicy struct {
 	mock.Mock
 }
 
-// GetLibProducerNum provides a mock function with given fields:
-func (_m *LIBPolicy) GetLibProducerNum() int {
+// GetMinConfirmationNum provides a mock function with given fields:
+func (_m *LIBPolicy) GetMinConfirmationNum() int {
 	ret := _m.Called()
 
 	var r0 int

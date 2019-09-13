@@ -514,7 +514,7 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 	lib := bc.GetLIBHash()
 
-	libProduerNum := bc.libPolicy.GetLibProducerNum()
+	libProduerNum := bc.libPolicy.GetMinConfirmationNum()
 
 	existProducers := make(map[string]bool)
 	currBlk := blk
@@ -554,7 +554,7 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 		return
 	}
 
-	minConfirmationNum := bc.libPolicy.GetLibProducerNum()
+	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
 	LIBHeight := uint64(0)
 	if currBlkHeight > uint64(minConfirmationNum) {
 		LIBHeight = currBlkHeight - uint64(minConfirmationNum)
