@@ -1,6 +1,7 @@
 package lblockchain
 
 import (
+	"github.com/dappley/go-dappley/core/blockchain"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -63,7 +64,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 			BlockChain:  Genesis - b1 - b3 - b6
 	*/
 
-	bp := core.NewBlockPool(nil)
+	bp := blockchain.NewBlockPool(nil)
 	bcm := NewBlockchainManager(bc, bp, nil, nil)
 
 	bp.AddBlock(b2)
@@ -100,11 +101,11 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 	require.EqualValues(t, 3, longestFork)
 }
 
-func testGetNumForkHeads(bp *core.BlockPool) int {
+func testGetNumForkHeads(bp *blockchain.BlockPool) int {
 	return len(testGetForkHeadHashes(bp))
 }
 
-func testGetForkHeadHashes(bp *core.BlockPool) []string {
+func testGetForkHeadHashes(bp *blockchain.BlockPool) []string {
 	var hashes []string
 	bp.ForkHeadRange(func(blkHash string, tree *common.TreeNode) {
 		hashes = append(hashes, blkHash)

@@ -24,16 +24,15 @@ import (
 
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/common/pubsub"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
-	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/common"
-	lblockchainpb "github.com/dappley/go-dappley/logic/lblockchain/pb"
+	"github.com/dappley/go-dappley/logic/lblockchain/pb"
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -59,13 +58,13 @@ var (
 
 type BlockchainManager struct {
 	blockchain        *Blockchain
-	blockPool         *core.BlockPool
+	blockPool         *blockchain.BlockPool
 	consensus         Consensus
 	downloadRequestCh chan chan bool
 	netService        NetService
 }
 
-func NewBlockchainManager(blockchain *Blockchain, blockpool *core.BlockPool, service NetService, consensus Consensus) *BlockchainManager {
+func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPool, service NetService, consensus Consensus) *BlockchainManager {
 	bm := &BlockchainManager{
 		blockchain: blockchain,
 		blockPool:  blockpool,
@@ -124,7 +123,7 @@ func (bm *BlockchainManager) Getblockchain() *Blockchain {
 	return bm.blockchain
 }
 
-func (bm *BlockchainManager) GetblockPool() *core.BlockPool {
+func (bm *BlockchainManager) GetblockPool() *blockchain.BlockPool {
 	return bm.blockPool
 }
 

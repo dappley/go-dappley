@@ -205,7 +205,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	balance1, err := logic.GetBalance(addr1, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
-	//pool := core.NewBlockPool(nil)
+	//pool := blockchain.NewBlockPool(nil)
 
 	//bm := lblockchain.NewBlockchainManager(bc, pool, node)
 
@@ -263,7 +263,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	balance2, err := logic.GetBalance(addr2, bc)
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
-	//pool := core.NewBlockPool(nil)
+	//pool := blockchain.NewBlockPool(nil)
 
 	//bm := lblockchain.NewBlockchainManager(bc, pool, node)
 
@@ -592,7 +592,7 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	consensus := &blockchainMock.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
 	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, nil, 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(nil), node, consensus)
+	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)
@@ -646,7 +646,7 @@ func TestDoubleMint(t *testing.T) {
 		node.Start(testport_msg_relay_port3+i, "")
 
 		bc := lblockchain.CreateBlockchain(validProducerAccount.GetAddress(), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
-		pool := core.NewBlockPool(nil)
+		pool := blockchain.NewBlockPool(nil)
 
 		bm := lblockchain.NewBlockchainManager(bc, pool, node, dpos)
 
@@ -701,7 +701,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	bc := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db, dpos1, transactionpool.NewTransactionPool(seedNode, 128), nil, 100000)
 
 	//create and start seed node
-	pool := core.NewBlockPool(nil)
+	pool := blockchain.NewBlockPool(nil)
 	bm := lblockchain.NewBlockchainManager(bc, pool, seedNode, dpos1)
 
 	// conss.SetKey(validProducerKey)
@@ -723,7 +723,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	defer node2.Stop()
 
 	bc2 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transactionpool.NewTransactionPool(node2, 128), nil, 100000)
-	lblockchain.NewBlockchainManager(bc2, core.NewBlockPool(nil), node2, dpos2)
+	lblockchain.NewBlockchainManager(bc2, blockchain.NewBlockPool(nil), node2, dpos2)
 
 	// Trigger fork choice in node by broadcasting tail block of node[0]
 	tailBlk, _ := bc.GetTailBlock()
@@ -918,7 +918,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
 		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
-		pool := core.NewBlockPool(nil)
+		pool := blockchain.NewBlockPool(nil)
 
 		node := network.NewNode(bc.GetDb(), nil)
 		node.Start(21200+i, "")
@@ -982,7 +982,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
 		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
-		pool := core.NewBlockPool(nil)
+		pool := blockchain.NewBlockPool(nil)
 
 		node := network.NewNode(bc.GetDb(), nil)
 		node.Start(21200+i, "")

@@ -14,9 +14,8 @@ import (
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/config"
-	configpb "github.com/dappley/go-dappley/config/pb"
+	"github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/logic/downloadmanager"
@@ -193,7 +192,7 @@ func prepareNode(db storage.Storage) (*lblockchain.BlockchainManager, *network.N
 	}
 	bc.SetState(blockchain.BlockchainInit)
 	LIBBlk, _ := bc.GetLIB()
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(LIBBlk), node, conss)
+	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
 	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()))
 	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 

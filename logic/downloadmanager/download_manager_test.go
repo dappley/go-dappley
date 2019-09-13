@@ -23,8 +23,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"testing"
 
-	"github.com/dappley/go-dappley/core"
-
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/network"
@@ -53,7 +51,7 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 		db := storage.NewRamStorage()
 		node := network.NewNode(db, nil)
 		node.Start(portStart+i, "")
-		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), core.NewBlockPool(nil), node, consensus)
+		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), blockchain.NewBlockPool(nil), node, consensus)
 		bms[i] = bm
 		nodes[i] = node
 	}

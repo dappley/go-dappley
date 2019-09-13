@@ -25,6 +25,7 @@ import (
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
 
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
@@ -47,7 +48,6 @@ import (
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 
 	"github.com/dappley/go-dappley/logic"
@@ -85,7 +85,7 @@ func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPo
 	consensus.On("Validate", mock.Anything).Return(true)
 
 	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(nil), node, consensus)
+	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)
