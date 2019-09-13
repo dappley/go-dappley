@@ -63,7 +63,7 @@ func TestBlockChainManager_NumForks(t *testing.T) {
 			BlockChain:  Genesis - b1 - b3 - b6
 	*/
 
-	bp := core.NewBlockPool()
+	bp := core.NewBlockPool(nil)
 	bcm := NewBlockchainManager(bc, bp, nil, nil)
 
 	bp.AddBlock(b2)

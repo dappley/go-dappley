@@ -85,7 +85,7 @@ func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPo
 	consensus.On("Validate", mock.Anything).Return(true)
 
 	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, consensus)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(nil), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
 	bpConsensus.On("Validate", mock.Anything).Return(true)

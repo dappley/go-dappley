@@ -110,7 +110,6 @@ func (t *TreeNode) RemoveAllDescendants(onDeleteCallback func(node *TreeNode)) {
 	if t == nil {
 		return
 	}
-
 	for _, child := range t.Children {
 		child.Parent = nil
 		onDeleteCallback(child)

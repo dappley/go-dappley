@@ -117,7 +117,8 @@ func main() {
 	}
 	bc.SetState(blockchain.BlockchainInit)
 
-	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node, conss)
+	LIBBlk, _ := bc.GetLIB()
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(LIBBlk), node, conss)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
