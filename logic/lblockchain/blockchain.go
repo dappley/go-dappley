@@ -84,7 +84,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, consensus Con
 		&sync.Mutex{},
 	}
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
+	utxoIndex.UpdateUtxos(genesis.GetTransactions())
 	scState := scState.NewScState()
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {

@@ -386,7 +386,8 @@ func (ctx *ContractTx) IsContract() bool {
 	return true
 }
 
-func (ctx *ContractTx) IsExecutionContract() bool {
+// IsScheduleContract returns if the contract contains 'dapp_schedule'
+func (ctx *ContractTx) IsScheduleContract() bool {
 	if !strings.Contains(ctx.GetContract(), scheduleFuncName) {
 		return true
 	}

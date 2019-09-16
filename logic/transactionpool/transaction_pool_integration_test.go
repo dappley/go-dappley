@@ -147,21 +147,21 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 
 	// test a transaction whose Vin is from another transaction in transaction pool
 	utxoIndex2 := *utxoIndex.DeepCopy()
-	utxoIndex2.UpdateUtxoState(txPool.GetTransactions())
+	utxoIndex2.UpdateUtxos(txPool.GetTransactions())
 	err2 := ltransaction.VerifyTransaction(&utxoIndex2, &dependentTx3, 0)
 	assert.Nil(t, err2)
 	txPool.Push(dependentTx3)
 
 	// test a transaction whose Vin is from another two transactions in transaction pool
 	utxoIndex3 := *utxoIndex.DeepCopy()
-	utxoIndex3.UpdateUtxoState(txPool.GetTransactions())
+	utxoIndex3.UpdateUtxos(txPool.GetTransactions())
 	err3 := ltransaction.VerifyTransaction(&utxoIndex3, &dependentTx4, 0)
 	assert.Nil(t, err3)
 	txPool.Push(dependentTx4)
 
 	// test a transaction whose Vin is from another transaction in transaction pool and UtxoIndex
 	utxoIndex4 := *utxoIndex.DeepCopy()
-	utxoIndex4.UpdateUtxoState(txPool.GetTransactions())
+	utxoIndex4.UpdateUtxos(txPool.GetTransactions())
 	err4 := ltransaction.VerifyTransaction(&utxoIndex4, &dependentTx5, 0)
 	assert.Nil(t, err4)
 	txPool.Push(dependentTx5)

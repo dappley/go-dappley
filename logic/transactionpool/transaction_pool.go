@@ -309,7 +309,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 	for key, node := range txPool.txs {
 		nodes[key] = node
 		ctx := node.Value.ToContractTx()
-		if ctx != nil && !ctx.IsExecutionContract() {
+		if ctx != nil && !ctx.IsScheduleContract() {
 			scDeploymentTxExists[ctx.GetContractPubKeyHash().GenerateAddress().String()] = true
 		}
 	}
@@ -321,7 +321,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 				ctx := node.Value.ToContractTx()
 				if ctx != nil {
 					ctxPkhStr := ctx.GetContractPubKeyHash().GenerateAddress().String()
-					if ctx.IsExecutionContract() {
+					if ctx.IsScheduleContract() {
 						if !scDeploymentTxExists[ctxPkhStr] {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)

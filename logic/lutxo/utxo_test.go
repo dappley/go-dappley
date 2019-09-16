@@ -102,7 +102,7 @@ func TestUpdate_Failed(t *testing.T) {
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(db))
-	utxoIndex.UpdateUtxoState(blk.GetTransactions())
+	utxoIndex.UpdateUtxos(blk.GetTransactions())
 	err := utxoIndex.Save()
 	assert.Equal(t, simulatedFailure, err)
 	assert.Equal(t, 2, utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())

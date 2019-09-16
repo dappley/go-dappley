@@ -174,7 +174,7 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) UpdateUtxoState(txs []*transaction.Transaction) {
+func (utxos *UTXOIndex) UpdateUtxos(txs []*transaction.Transaction) {
 	// Create a copy of the index so operations below are only temporal
 	for _, tx := range txs {
 		utxos.UpdateUtxo(tx)
