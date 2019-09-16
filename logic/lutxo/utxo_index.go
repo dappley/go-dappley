@@ -34,6 +34,7 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
+	logger "github.com/sirupsen/logrus"
 )
 
 var contractUtxoKey = []byte("contractUtxoKey")
@@ -98,7 +99,7 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 	utxoTx = utxos.cache.Get(pubkeyHash)
 	utxos.mutex.Lock()
 	newUtxoTx := utxoTx.DeepCopy()
-	if utxos.index[key] != nil{
+	if utxos.index[key] != nil {
 		utxo.Free(utxos.index[key])
 	}
 	utxos.index[key] = newUtxoTx
@@ -147,21 +148,23 @@ func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash account.PubKeyHash, txid []byte
 func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 	if !tx.IsCoinbase() && !tx.IsRewardTx() && !tx.IsGasRewardTx() && !tx.IsGasChangeTx() {
 		for _, txin := range tx.Vin {
-			//TODO spent contract utxo
 			isContract, _ := account.PubKeyHash(txin.PubKey).IsContract()
-			_, err := account.IsValidPubKey(txin.PubKey)
-			ta := account.NewTransactionAccountByPubKey(txin.PubKey)
+			// spent contract utxo
+			pubKeyHash := txin.PubKey
 			if !isContract {
+				// spent normal utxo
+				ta := account.NewTransactionAccountByPubKey(txin.PubKey)
+				_, err := account.IsValidPubKey(txin.PubKey)
 				if err != nil {
+					logger.WithError(err).Warn("UTXOIndex: txin.pubKey error, discard update in utxo.")
 					return false
 				}
-			} else {
-				ta = account.NewTransactionAccountByPubKey(txin.PubKey)
+				pubKeyHash = ta.GetPubKeyHash()
 			}
 
-			err = utxos.removeUTXO(ta.GetPubKeyHash(), txin.Txid, txin.Vout)
+			err := utxos.removeUTXO(pubKeyHash, txin.Txid, txin.Vout)
 			if err != nil {
-				println(err.Error)
+				logger.WithError(err).Warn("UTXOIndex: removeUTXO error, discard update in utxo.")
 				return false
 			}
 		}

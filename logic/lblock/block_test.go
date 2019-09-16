@@ -119,9 +119,9 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
 	var ta2 = account.NewAccountByPrivateKey(prikey2)
 
-	dependentTx1 := transaction.NewTransactionByVin(util.GenerateRandomAoB(1), 1, ta1.GetKeyPair().GetPublicKey(), 10, ta2.GetPubKeyHash(), 3)
-	dependentTx2 := transaction.NewTransactionByVin(dependentTx1.ID, 0, ta2.GetKeyPair().GetPublicKey(), 5, ta1.GetPubKeyHash(), 5)
-	dependentTx3 := transaction.NewTransactionByVin(dependentTx2.ID, 0, ta1.GetKeyPair().GetPublicKey(), 1, ta2.GetPubKeyHash(), 4)
+	dependentTx1 := NewTransactionByVin(util.GenerateRandomAoB(1), 1, ta1.GetKeyPair().GetPublicKey(), 10, ta2.GetPubKeyHash(), 3)
+	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, ta2.GetKeyPair().GetPublicKey(), 5, ta1.GetPubKeyHash(), 5)
+	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, ta1.GetKeyPair().GetPublicKey(), 1, ta2.GetPubKeyHash(), 4)
 
 	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
 
@@ -234,4 +234,19 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk))
 		})
 	}
+}
+
+func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) transaction.Transaction {
+	tx := transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{vinTxId, vinVout, nil, vinPubkey},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(voutValue), voutPubKeyHash, ""},
+		},
+		Tip: common.NewAmount(tip),
+	}
+	tx.ID = tx.Hash()
+	return tx
 }

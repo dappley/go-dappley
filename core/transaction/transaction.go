@@ -573,21 +573,6 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 	return tx
 }
 
-func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) Transaction {
-	tx := Transaction{
-		ID: nil,
-		Vin: []transactionbase.TXInput{
-			{vinTxId, vinVout, nil, vinPubkey},
-		},
-		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(voutValue), voutPubKeyHash, ""},
-		},
-		Tip: common.NewAmount(tip),
-	}
-	tx.ID = tx.Hash()
-	return tx
-}
-
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
 func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount) (Transaction, error) {
 	fee := actualGasCount.Mul(gasPrice)

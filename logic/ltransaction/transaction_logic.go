@@ -19,8 +19,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const SCDestroyAddress = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
-
 var (
 	ErrInvalidGasPrice = errors.New("invalid gas price, should be in (0, 10^12]")
 	ErrInvalidGasLimit = errors.New("invalid gas limit, should be in (0, 5*10^10]")
