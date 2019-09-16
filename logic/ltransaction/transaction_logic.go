@@ -105,7 +105,9 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 
 			}
 			usedUTXO := utxoIndex.FindUTXOByVin([]byte(ta.GetPubKeyHash()), vin.Txid, vin.Vout)
-			inputAmount = inputAmount.Add(usedUTXO.Value)
+			if usedUTXO != nil {
+				inputAmount = inputAmount.Add(usedUTXO.Value)
+			}
 		} else {
 			logger.Debug("Transaction: using UTXO from multiple accounts.")
 		}
