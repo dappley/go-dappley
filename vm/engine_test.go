@@ -8,6 +8,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transactionbase"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/util"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
@@ -28,12 +35,15 @@ AddrChecker.prototype = {
     	return Blockchain.verifyAddress(addr)+dummy;
     }
 };
-var addrChecker = new AddrChecker;
+module.exports = new AddrChecker();
 `
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	assert.Equal(t, "35", sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	assert.Equal(t, "35", ret)
 }
 
 func TestScEngine_Execute_SyntaxError(t *testing.T) {
@@ -45,16 +55,19 @@ var AddrChecker = function(){
 };
 
 AddrChecker.prototype = {
-		check:function(addr,dummy){
+	check:function(addr,dummy){
     	return Blockchain.verifyAddress(addr)+dummy;
-    }
+	}
 };
-var addrChecker = new AddrChecker;
+module.exports = new AddrChecker();
 `
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	assert.Equal(t, "1", sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34"))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	_, err := sc.Execute("check", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\",34")
+	assert.NotNil(t, err)
 }
 
 func TestScEngine_BlockchainTransfer(t *testing.T) {
@@ -65,34 +78,35 @@ MathTest.prototype = {
         return Blockchain.transfer(to, amount, tip);
     }
 };
-var transferTest = new MathTest;`
+module.exports = new MathTest();`
 
-	contractPubKeyHash := core.NewContractPubKeyHash()
-	contractAddr := contractPubKeyHash.GenerateAddress()
-	contractUTXOs := []*core.UTXO{
+	contractTA := account.NewContractTransactionAccount()
+	contractUTXOs := []*utxo.UTXO{
 		{
 			Txid:     []byte("1"),
 			TxIndex:  0,
-			TXOutput: *core.NewTxOut(common.NewAmount(0), contractAddr, "somecontract"),
+			TXOutput: *transactionbase.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
 		},
 		{
 			Txid:     []byte("1"),
 			TxIndex:  1,
-			TXOutput: *core.NewTxOut(common.NewAmount(15), contractAddr, ""),
+			TXOutput: *transactionbase.NewTxOut(common.NewAmount(15), contractTA, ""),
 		},
 		{
 			Txid:     []byte("2"),
 			TxIndex:  0,
-			TXOutput: *core.NewTxOut(common.NewAmount(3), contractAddr, ""),
+			TXOutput: *transactionbase.NewTxOut(common.NewAmount(3), contractTA, ""),
 		},
 	}
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.ImportContractAddr(contractAddr)
+	sc.ImportContractAddr(contractTA.GetAddress())
 	sc.ImportSourceTXID([]byte("thatTX"))
 	sc.ImportUTXOs(contractUTXOs)
-	result := sc.Execute("transfer", "'16PencPNnF8CiSx2EBGEd1axhf7vuHCouj','10','2'")
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	result, _ := sc.Execute("transfer", "'16PencPNnF8CiSx2EBGEd1axhf7vuHCouj','10','2'")
 
 	assert.Equal(t, "0", result)
 	if assert.Equal(t, 1, len(sc.generatedTXs)) {
@@ -100,7 +114,7 @@ var transferTest = new MathTest;`
 			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[1].Txid)
 			assert.Equal(t, 1, sc.generatedTXs[0].Vin[1].Vout)
 			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[1].Signature)
-			assert.Equal(t, []byte(contractPubKeyHash), sc.generatedTXs[0].Vin[1].PubKey)
+			assert.Equal(t, []byte(contractTA.GetPubKeyHash()), sc.generatedTXs[0].Vin[1].PubKey)
 		}
 		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vout)) {
 			// payout
@@ -108,8 +122,8 @@ var transferTest = new MathTest;`
 			// change
 			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
 
-			assert.Equal(t, core.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].PubKeyHash.GenerateAddress())
-			assert.Equal(t, contractPubKeyHash, sc.generatedTXs[0].Vout[1].PubKeyHash)
+			assert.Equal(t, account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].GetAddress())
+			assert.Equal(t, contractTA.GetPubKeyHash(), sc.generatedTXs[0].Vout[1].PubKeyHash)
 		}
 	}
 }
@@ -129,16 +143,19 @@ StorageTest.prototype = {
     	return LocalStorage.get(key);
     }
 };
-var storageTest = new StorageTest;
+module.exports = new StorageTest();
 `
 
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	ss.GetStorageByAddress(dummyAddr)["key"] = "7"
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
-	sc.ImportContractAddr(core.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportLocalStorage(ss)
-	assert.Equal(t, "7", sc.Execute("get", "\"key\""))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "7", ret)
 }
 
 func TestScEngine_StorageSet(t *testing.T) {
@@ -164,20 +181,27 @@ StorageTest.prototype = {
 		return LocalStorage.get(key).color;
 	}
 };
-var storageTest = new StorageTest;
+module.exports = new StorageTest();
 `
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.ImportContractAddr(core.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 
-	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
-	assert.Equal(t, "6", sc.Execute("get", "\"key\""))
-	assert.Equal(t, "0", sc.Execute("set", "\"key\",\"abcd\""))
-	assert.Equal(t, "abcd", sc.Execute("get", "\"key\""))
-	assert.Equal(t, "0", sc.Execute("setColor", "\"key\",\"BLACK\""))
-	assert.Equal(t, "BLACK", sc.Execute("getColor", "\"key\""))
+	ret, _ := sc.Execute("set", "\"key\",6")
+	assert.Equal(t, "0", ret)
+	ret2, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "6", ret2)
+	ret3, _ := sc.Execute("set", "\"key\",\"abcd\"")
+	assert.Equal(t, "0", ret3)
+	ret4, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "abcd", ret4)
+	ret5, _ := sc.Execute("setColor", "\"key\",\"BLACK\"")
+	assert.Equal(t, "0", ret5)
+	ret6, _ := sc.Execute("getColor", "\"key\"")
+	assert.Equal(t, "BLACK", ret6)
 }
 
 func TestScEngine_StorageDel(t *testing.T) {
@@ -199,16 +223,20 @@ StorageTest.prototype = {
     	return LocalStorage.del(key);
     }
 };
-var storageTest = new StorageTest;
+module.exports = new StorageTest();
 `
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
-	sc.ImportContractAddr(core.NewAddress(dummyAddr))
-	assert.Equal(t, "0", sc.Execute("set", "\"key\",6"))
-	assert.Equal(t, "0", sc.Execute("del", "\"key\""))
-	assert.Equal(t, "null", sc.Execute("get", "\"key\""))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("set", "\"key\",6")
+	assert.Equal(t, "0", ret)
+	ret2, _ := sc.Execute("del", "\"key\"")
+	assert.Equal(t, "0", ret2)
+	ret3, _ := sc.Execute("get", "\"key\"")
+	assert.Equal(t, "null", ret3)
 }
 
 func TestScEngine_Reward(t *testing.T) {
@@ -224,15 +252,18 @@ RewardTest.prototype = {
     	return _native_reward.record(addr,amount);
     }
 };
-var rewardTest = new RewardTest;
+module.exports = new RewardTest();
 `
 	ss := make(map[string]string)
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportRewardStorage(ss)
 
-	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"8\""))
-	assert.Equal(t, "0", sc.Execute("reward", "\"myAddr\",\"9\""))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("reward", "\"myAddr\",\"8\"")
+	assert.Equal(t, "0", ret)
+	ret2, _ := sc.Execute("reward", "\"myAddr\",\"9\"")
+	assert.Equal(t, "0", ret2)
 	assert.Equal(t, "17", ss["myAddr"])
 }
 
@@ -264,15 +295,16 @@ TransactionTest.prototype = {
 		}
 	}
 };
-var transactionTest = new TransactionTest;
+module.exports = new TransactionTest();
 `
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
 	tx := core.MockTransaction()
 	sc.ImportTransaction(tx)
 	sc.ImportPrevUtxos(core.MockUtxos(tx.Vin))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	sc.Execute("dump", "\"dummy\"")
 }
 
@@ -280,23 +312,27 @@ func TestStepRecord(t *testing.T) {
 	script, _ := ioutil.ReadFile("jslib/step_recorder.js")
 
 	reward := make(map[string]string)
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 	sc.ImportLocalStorage(ss)
-	sc.ImportContractAddr(core.NewAddress(dummyAddr))
+	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
 
-	assert.Equal(t, "0", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20"))
-	assert.Equal(t, "20", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 20")
+	assert.Equal(t, "0", ret)
+	assert.Equal(t, "20", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "0", sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15"))
-	assert.Equal(t, "35", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	ret2, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15")
+	assert.Equal(t, "0", ret2)
+	assert.Equal(t, "35", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "0", sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10"))
-	assert.Equal(t, "10", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	ret3, _ := sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10")
+	assert.Equal(t, "0", ret3)
+	assert.Equal(t, "10", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "35", ss.GetStorageByAddress(core.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
+	assert.Equal(t, "35", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 }
 
@@ -306,22 +342,25 @@ func TestCrypto_VerifySignature(t *testing.T) {
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 
-	kp := core.NewKeyPair()
+	kp := account.NewKeyPair()
 	msg := "hello world dappley"
-	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
+	privateKey := kp.GetPrivateKey()
+	privData, _ := secp256k1.FromECDSAPrivateKey(&privateKey)
 	data := sha256.Sum256([]byte(msg))
 	signature, _ := secp256k1.Sign(data[:], privData)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("verifySig",
+		fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
+			msg,
+			hex.EncodeToString(kp.GetPublicKey()),
+			hex.EncodeToString(signature),
+		),
+	)
 	assert.Equal(
 		t,
 		"true",
-		sc.Execute("verifySig",
-			fmt.Sprintf("\"%s\", \"%s\", \"%s\"",
-				msg,
-				hex.EncodeToString(kp.PublicKey),
-				hex.EncodeToString(signature),
-			),
-		),
+		ret,
 	)
 }
 
@@ -330,33 +369,33 @@ func TestCrypto_VerifyPublicKey(t *testing.T) {
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
+	acc := account.NewAccount()
 
-	kp := core.NewKeyPair()
-	fmt.Println(kp.PublicKey)
-	pkh, err := core.NewUserPubKeyHash(kp.PublicKey)
+	_, err := account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
-	addr := pkh.GenerateAddress()
-	fmt.Println(addr)
 
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("verifyPk",
+		fmt.Sprintf("\"%s\", \"%s\"",
+			acc.GetAddress(),
+			hex.EncodeToString(acc.GetKeyPair().GetPublicKey()),
+		),
+	)
 	assert.Equal(
 		t,
 		"true",
-		sc.Execute("verifyPk",
-			fmt.Sprintf("\"%s\", \"%s\"",
-				addr,
-				hex.EncodeToString(kp.PublicKey),
-			),
+		ret,
+	)
+	ret2, _ := sc.Execute("verifyPk",
+		fmt.Sprintf("\"%s\", \"%s\"",
+			"IncorrectAddress",
+			hex.EncodeToString(acc.GetKeyPair().GetPublicKey()),
 		),
 	)
 	assert.Equal(
 		t,
 		"false",
-		sc.Execute("verifyPk",
-			fmt.Sprintf("\"%s\", \"%s\"",
-				"IncorrectAddress",
-				hex.EncodeToString(kp.PublicKey),
-			),
-		),
+		ret2,
 	)
 }
 
@@ -367,7 +406,8 @@ func TestMath(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportSeed(10)
 
-	res := sc.Execute("random", "20")
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	res, _ := sc.Execute("random", "20")
 	assert.Equal(t, "14", res)
 }
 
@@ -378,18 +418,22 @@ func TestBlkHeight(t *testing.T) {
 	sc.ImportSourceCode(string(script))
 	sc.ImportCurrBlockHeight(22334)
 
-	assert.Equal(t, "22334", sc.Execute("getBlkHeight", ""))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("getBlkHeight", "")
+	assert.Equal(t, "22334", ret)
 }
 
 func TestRecordEvent(t *testing.T) {
 	script, _ := ioutil.ReadFile("test/test_event.js")
 
-	ss := core.NewScState()
+	ss := scState.NewScState()
 	sc := NewV8Engine()
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
 
-	assert.Equal(t, "0", sc.Execute("trigger", "\"topic\",\"data\""))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("trigger", "\"topic\",\"data\"")
+	assert.Equal(t, "0", ret)
 	assert.Equal(t, "topic", ss.GetEvents()[0].GetTopic())
 	assert.Equal(t, "data", ss.GetEvents()[0].GetData())
 }
@@ -407,19 +451,80 @@ func TestGetNodeAddress(t *testing.T) {
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
-	sc.ImportNodeAddress(core.NewAddress("testAddr"))
+	sc.ImportNodeAddress(account.NewAddress("testAddr"))
 
-	assert.Equal(t, "testAddr", sc.Execute("getNodeAddress", ""))
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+	ret, _ := sc.Execute("getNodeAddress", "")
+	assert.Equal(t, "testAddr", ret)
 }
 
-func TestNewAddress(t *testing.T) {
-	kp := core.NewKeyPair()
-	privData, _ := secp256k1.FromECDSAPrivateKey(&kp.PrivateKey)
-	pk := hex.EncodeToString(privData)
-	publicKey := hex.EncodeToString(kp.PublicKey)
-	pkh, _ := core.NewUserPubKeyHash(kp.PublicKey)
-	addr := pkh.GenerateAddress()
-	fmt.Println("privatekey:", pk)
-	fmt.Println("publickey:", publicKey)
-	fmt.Println("addr:", addr)
+func TestAddGasCount(t *testing.T) {
+	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	tx := transaction.Transaction{
+		Vout: []transactionbase.TXOutput{*vout},
+	}
+	ctx := tx.ToContractTx()
+	script, _ := ioutil.ReadFile("test/test_add.js")
+
+	sc := NewV8Engine()
+	sc.ImportSourceCode(string(script))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+
+	function, args := util.DecodeScInput(vout.Contract)
+	assert.NotEmpty(t, function)
+
+	totalArgs := util.PrepareArgs(args)
+	_, err := sc.Execute("add", totalArgs)
+	assert.Nil(t, err)
+
+	gasCount := sc.ExecutionInstructions()
+	// record base gas
+	baseGas, _ := ctx.GasCountOfTxBase()
+	gasCount += baseGas.Uint64()
+
+	// min gas of each tx
+	minGasTx := transaction.MinGasCountPerTransaction.Uint64()
+	// dataLen
+	dataGas := uint64(35)
+	// instruction gas
+	instructionGas := uint64(25)
+	assert.Equal(t, minGasTx+dataGas+instructionGas, gasCount)
+}
+
+func TestStepRecordGasCount(t *testing.T) {
+	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
+		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
+	tx := transaction.Transaction{
+		Vout: []transactionbase.TXOutput{*vout},
+	}
+	ctx := tx.ToContractTx()
+	script, _ := ioutil.ReadFile("test/test_step_recorder.js")
+
+	ss := scState.NewScState()
+	sc := NewV8Engine()
+	sc.ImportLocalStorage(ss)
+	sc.ImportSourceCode(string(script))
+
+	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
+
+	function, args := util.DecodeScInput(vout.Contract)
+	assert.NotEmpty(t, function)
+
+	totalArgs := util.PrepareArgs(args)
+	_, err := sc.Execute("record", totalArgs)
+	assert.Nil(t, err)
+
+	gasCount := sc.ExecutionInstructions()
+	// record base gas
+	baseGas, _ := ctx.GasCountOfTxBase()
+	gasCount += baseGas.Uint64()
+
+	// min gas of each tx
+	minGasTx := transaction.MinGasCountPerTransaction.Uint64()
+	// dataLen
+	dataGas := uint64(74)
+	// instruction gas
+	instructionGas := uint64(61)
+	assert.Equal(t, minGasTx+dataGas+instructionGas, gasCount)
 }

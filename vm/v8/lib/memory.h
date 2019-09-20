@@ -4,6 +4,6 @@
 #include <stddef.h>
 
 void* MyMalloc(size_t size);
-void  MyFree(void* data);
+void MyFree(void* data);
 
 #endif /* __MEMORY_H__ */

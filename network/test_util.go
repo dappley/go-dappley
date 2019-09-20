@@ -19,28 +19,30 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+//FakeNodeWithPeer fakes a node with peer id and multiaddress string
 func FakeNodeWithPeer(pid, addr string) *Node {
 
 	node := NewNode(nil, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
-	peerInfo := &PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
-	node.GetPeerManager().AddSeedByPeerInfo(peerInfo)
+	peerInfo := networkmodel.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
+	node.GetNetwork().AddSeed(peerInfo)
 	return node
 }
 
-func FakeNodeWithPidAndAddr(pool *core.BlockPool, bc *core.Blockchain, pid, addr string) *Node {
+//FakeNodeWithPidAndAddr fakes a node with peer id, multiaddress string and a database instance
+func FakeNodeWithPidAndAddr(db Storage, pid, addr string) *Node {
 
-	node := NewNode(bc, pool)
+	node := NewNode(db, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
-	peerInfo := &PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
-	node.network.host = &Host{nil, peerInfo}
+	peerInfo := networkmodel.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}
+	node.network.streamManager.host = &networkmodel.Host{nil, peerInfo}
 
 	return node
 }

@@ -2,11 +2,14 @@ package sdk
 
 import (
 	"context"
-	"github.com/dappley/go-dappley/client"
+
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
-	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/wallet"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -45,17 +48,17 @@ func (sdk *DappSdk) GetBalance(address string) (int64, error) {
 //Send send a transaction to the network
 func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.SendResponse, error) {
 	return sdk.conn.adminClient.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:       from,
-		To:         to,
-		Amount:     common.NewAmount(amount).Bytes(),
-		Tip:        common.NewAmount(0).Bytes(),
-		WalletPath: client.GetWalletFilePath(),
-		Data:       data,
+		From:        from,
+		To:          to,
+		Amount:      common.NewAmount(amount).Bytes(),
+		Tip:         common.NewAmount(0).Bytes(),
+		AccountPath: wallet.GetAccountFilePath(),
+		Data:        data,
 	})
 }
 
 //SendTransaction send a transaction to the network
-func (sdk *DappSdk) SendTransaction(tx *corepb.Transaction) (*rpcpb.SendTransactionResponse, error) {
+func (sdk *DappSdk) SendTransaction(tx *transactionpb.Transaction) (*rpcpb.SendTransactionResponse, error) {
 	return sdk.conn.rpcClient.RpcSendTransaction(
 		context.Background(),
 		&rpcpb.SendTransactionRequest{
@@ -65,7 +68,7 @@ func (sdk *DappSdk) SendTransaction(tx *corepb.Transaction) (*rpcpb.SendTransact
 }
 
 //SendBatchTransactions sends a batch of transactions to the network
-func (sdk *DappSdk) SendBatchTransactions(txs []*corepb.Transaction) error {
+func (sdk *DappSdk) SendBatchTransactions(txs []*transactionpb.Transaction) error {
 	_, err := sdk.conn.rpcClient.RpcSendBatchTransaction(
 		context.Background(),
 		&rpcpb.SendBatchTransactionRequest{
@@ -91,7 +94,7 @@ func (sdk *DappSdk) RequestFund(fundAddr string, amount *common.Amount) {
 }
 
 //GetUtxoByAddr gets all utxos related to an address from the server
-func (sdk *DappSdk) GetUtxoByAddr(addr core.Address) ([]*corepb.Utxo, error) {
+func (sdk *DappSdk) GetUtxoByAddr(addr account.Address) ([]*utxopb.Utxo, error) {
 
 	resp, err := sdk.conn.rpcClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
 		Address: addr.String(),

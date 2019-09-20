@@ -1,8 +1,9 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
@@ -11,35 +12,35 @@ type DoubleSpendingTxSender struct {
 	TxSender
 }
 
-func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) *DoubleSpendingTxSender {
+func NewDoubleSpendingTxSender(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) *DoubleSpendingTxSender {
 	return &DoubleSpendingTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: account,
 		},
 	}
 }
 
-func (txSender *DoubleSpendingTxSender) Generate(params core.SendTxParam) {
-	pkh, err := core.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
-
-	if err != nil {
-		logger.WithError(err).Panic("DoubleSpendingTx: Unable to hash sender public key")
+func (txSender *DoubleSpendingTxSender) Generate(params transaction.SendTxParam) {
+	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
+		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
-
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	ta := account.NewAccountByKey(params.SenderKeyPair)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to get UTXOs to match the amount")
 	}
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
 
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }
 
 func (txSender *DoubleSpendingTxSender) Send() {
 
-	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err == nil {
 		logger.WithError(err).Info("DoubleSpendingTx: Sending transaction 1 succeeded")
@@ -47,7 +48,7 @@ func (txSender *DoubleSpendingTxSender) Send() {
 		logger.WithError(err).Panic("DoubleSpendingTx: Sending transaction 1 failed!")
 	}
 
-	_, err = txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err = txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err == nil {
 		logger.WithError(err).Info("DoubleSpendingTx: Sending transaction 2 succeeded")

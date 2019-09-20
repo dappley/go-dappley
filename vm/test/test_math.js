@@ -5,4 +5,4 @@ MathTest.prototype = {
         return math.random(max);
     }
 };
-var mathTest = new MathTest;
+module.exports = new MathTest();

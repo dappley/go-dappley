@@ -19,6 +19,8 @@
 package core
 
 import (
+	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/core/block"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +30,7 @@ import (
 )
 
 func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
-	bp := NewBlockPool(5)
+	bp := NewBlockPool()
 	assert.Equal(t, 0, bp.blkCache.Len())
 	const addCount = 200
 	for i := 0; i < addCount; i++ {
@@ -46,34 +48,38 @@ func TestLRUCacheWithIntKeyAndValue(t *testing.T) {
 }
 
 func TestBlockPool_ForkHeadRange(t *testing.T) {
-	bp := NewBlockPool(10)
-	parent := &Block{header: &BlockHeader{height: 1, prevHash: []byte{0}, hash: Hash("parent")}}
-	blk := &Block{header: &BlockHeader{height: 2, prevHash: parent.GetHash(), hash: Hash("blk")}}
-	child := &Block{header: &BlockHeader{height: 3, prevHash: blk.GetHash(), hash: Hash("child")}}
+	bp := NewBlockPool()
+
+	parent := block.NewBlockWithRawInfo(hash.Hash("parent"), []byte{0}, 0, 0, 1, nil)
+	blk := block.NewBlockWithRawInfo(hash.Hash("blk"), parent.GetHash(), 0, 0, 2, nil)
+	child := block.NewBlockWithRawInfo(hash.Hash("child"), blk.GetHash(), 0, 0, 3, nil)
 
 	// cache a blk
-	bp.CacheBlock(blk, 0)
+	bp.Add(blk)
+	readBlk, isFound := bp.blkCache.Get(blk.GetHash().String())
+	require.Equal(t, blk, readBlk.(*common.Tree).GetValue().(*block.Block))
+	require.True(t, isFound)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// attach child to blk
-	bp.CacheBlock(child, 0)
+	bp.Add(child)
 	require.ElementsMatch(t, []string{blk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// attach parent to blk
-	bp.CacheBlock(parent, 0)
+	bp.Add(parent)
 	require.ElementsMatch(t, []string{parent.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// cache extraneous block
-	unrelatedBlk := &Block{header: &BlockHeader{height: 1, prevHash: []byte{0}, hash: Hash("unrelated")}}
-	bp.CacheBlock(unrelatedBlk, 0)
+	unrelatedBlk := block.NewBlockWithRawInfo(hash.Hash("unrelated"), []byte{0}, 0, 0, 1, nil)
+	bp.Add(unrelatedBlk)
 	require.ElementsMatch(t, []string{parent.GetHash().String(), unrelatedBlk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// remove parent
-	bp.CleanCache(testGetForkHead(bp, parent))
+	bp.RemoveFork([]*block.Block{parent})
 	require.ElementsMatch(t, []string{unrelatedBlk.GetHash().String()}, testGetForkHeadHashes(bp))
 
 	// remove unrelated
-	bp.CleanCache(testGetForkHead(bp, unrelatedBlk))
+	bp.RemoveFork([]*block.Block{unrelatedBlk})
 	require.Nil(t, testGetForkHeadHashes(bp))
 }
 
@@ -83,18 +89,4 @@ func testGetForkHeadHashes(bp *BlockPool) []string {
 		hashes = append(hashes, blkHash)
 	})
 	return hashes
-}
-
-func testGetForkHead(bp *BlockPool, blk *Block) *common.Tree {
-	var t *common.Tree
-	bp.ForkHeadRange(func(blkHash string, tree *common.Tree) {
-		if blk.GetHash().String() == blkHash {
-			t = tree
-		}
-	})
-	return t
-}
-
-func testGetNumForkHeads(bp *BlockPool) int {
-	return len(testGetForkHeadHashes(bp))
 }

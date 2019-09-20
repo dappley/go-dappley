@@ -1,0 +1,18 @@
+syntax = "proto3";
+package scstatepb;
+
+message State {
+    map<string, string> state = 1;
+}
+
+message ScState {
+    map<string, State> states = 1;
+}
+
+message Log {
+    map<string, string> log = 1;
+}
+
+message ChangeLog {
+    map<string, Log> log = 1;
+}

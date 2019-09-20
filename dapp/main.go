@@ -20,18 +20,32 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
+
+	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/logic/downloadmanager"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/logic"
+
+	"github.com/dappley/go-dappley/metrics/logMetrics"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/vm"
+	"github.com/spf13/viper"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 const (
@@ -43,13 +57,14 @@ const (
 )
 
 func main() {
+	viper.AddConfigPath(".")
+	viper.SetConfigFile("conf/dappley.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		logger.Errorf("Cannot load dappley configurations from file!  error： %v", err.Error())
+		return
+	}
 
-	logger.SetFormatter(&logger.TextFormatter{
-		FullTimestamp: true,
-	})
-
-	logger.SetLevel(logger.InfoLevel)
-
+	log.BuildLogAndInit()
 	var filePath string
 	flag.StringVar(&filePath, "f", configFilePath, "Configuration File Path. Default to conf/default.conf")
 
@@ -78,82 +93,95 @@ func main() {
 	//setup
 	db := storage.OpenDatabase(conf.GetNodeConfig().GetDbPath())
 	defer db.Close()
+	node, err := initNode(conf, db)
+	if err != nil {
+		return
+	} else {
+		defer node.Stop()
+	}
 
 	//create blockchain
-	conss, _ := initConsensus(genesisConf)
+	conss, _ := initConsensus(genesisConf, conf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
-	scManager := vm.NewV8EngineManager(core.NewAddress(nodeAddr))
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, scManager, int(blkSizeLimit))
+	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
+	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
+	//utxo.NewPool()
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddr), db, conss, txPoolLimit, scManager, int(blkSizeLimit))
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
-	bc.SetState(core.BlockchainInit)
+	bc.SetState(blockchain.BlockchainInit)
 
-	node, err := initNode(conf, bc)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
-	defer node.Stop()
 
-	minerAddr := conf.GetConsensusConfig().GetMinerAddress()
-	conss.Setup(node, minerAddr)
-	conss.SetKey(conf.GetConsensusConfig().GetPrivateKey())
-	logger.WithFields(logger.Fields{
-		"miner_address": minerAddr,
-	}).Info("Consensus is configured.")
+	downloadManager := downloadmanager.NewDownloadManager(node, bm)
+	downloadManager.Start()
+	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
-	bc.SetState(core.BlockchainReady)
-	node.DownloadBlocks(bc)
+	bm.Getblockchain().SetState(blockchain.BlockchainReady)
+
+
+	//start mining
+	logic.SetLockAccount() //lock the account
+	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
 	//start rpc server
 	nodeConf := conf.GetNodeConfig()
-	server := rpc.NewGrpcServerWithMetrics(node, defaultPassword, &rpc.MetricsServiceConfig{
+	server := rpc.NewGrpcServerWithMetrics(node, bm, defaultPassword, &rpc.MetricsServiceConfig{
 		PollingInterval: nodeConf.GetMetricsPollingInterval(), TimeSeriesInterval: nodeConf.GetMetricsInterval()})
+
 	server.Start(conf.GetNodeConfig().GetRpcPort())
 	defer server.Stop()
 
-	//start mining
-	logic.SetLockWallet() //lock the wallet
-	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
-	conss.Start()
-	defer conss.Stop()
+	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
+	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
+	blockProducer.Start()
+	defer blockProducer.Stop()
 
+	bm.RequestDownloadBlockchain()
+
+	if viper.GetBool("metrics.open") {
+		logMetrics.LogMetricsInfo(bm.Getblockchain())
+	}
+	if viper.GetBool("pprof.open") {
+		go func() {
+			http.ListenAndServe(":60001", nil)
+		}()
+	}
 	select {}
 }
 
-func initConsensus(conf *configpb.DynastyConfig) (core.Consensus, *consensus.Dynasty) {
+func initConsensus(conf *configpb.DynastyConfig, generalConf *configpb.Config) (*consensus.DPOS, *consensus.Dynasty) {
 	//set up consensus
-	conss := consensus.NewDPOS()
+	conss := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(generalConf.GetConsensusConfig().GetMinerAddress()))
 	dynasty := consensus.NewDynastyWithConfigProducers(conf.GetProducers(), (int)(conf.GetMaxProducers()))
 	conss.SetDynasty(dynasty)
+	conss.SetKey(generalConf.GetConsensusConfig().GetPrivateKey())
+	logger.WithFields(logger.Fields{
+		"miner_address": generalConf.GetConsensusConfig().GetMinerAddress(),
+	}).Info("Consensus is configured.")
 	return conss, dynasty
 }
 
-func initNode(conf *configpb.Config, bc *core.Blockchain) (*network.Node, error) {
-	//create node
+func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) {
+
 	nodeConfig := conf.GetNodeConfig()
-	node := network.NewNode(bc, core.NewBlockPool(0))
+	seeds := nodeConfig.GetSeed()
 	port := nodeConfig.GetPort()
 	keyPath := nodeConfig.GetKeyPath()
-	if keyPath != "" {
-		err := node.LoadNetworkKeyFromFile(keyPath)
-		if err != nil {
-			logger.Error(err)
-		}
-	}
 
-	seeds := nodeConfig.GetSeed()
-	for _, seed := range seeds {
-		node.GetPeerManager().AddSeedByString(seed)
-	}
-
-	err := node.Start(int(port))
+	node := network.NewNode(db, seeds)
+	err := node.Start(int(port), keyPath)
 	if err != nil {
 		logger.Error(err)
 		return nil, err

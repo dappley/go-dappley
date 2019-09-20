@@ -4,30 +4,38 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
-	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
-	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/vm"
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/logic"
-	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/storage"
-	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/cpu"
-	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/dappley/go-dappley/core/blockproducerinfo"
+	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/lblockchain"
+	"github.com/dappley/go-dappley/logic/transactionpool"
+
+	"github.com/dappley/go-dappley/config"
+	configpb "github.com/dappley/go-dappley/config/pb"
+	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/logic"
+	"github.com/dappley/go-dappley/logic/downloadmanager"
+	"github.com/dappley/go-dappley/network"
+	"github.com/dappley/go-dappley/storage"
+	"github.com/dappley/go-dappley/vm"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
+	logger "github.com/sirupsen/logrus"
 )
 
-const(
-	nodeDbPath = "db/temp.db"
-	reportFilePath = "report.csv"
-	genesisAddrTest = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+const (
+	nodeDbPath          = "db/temp.db"
+	reportFilePath      = "report.csv"
+	genesisAddrTest     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	genesisFilePathTest = "../conf/genesis.conf"
-	testport1 = 10851
-	testport2 = 10852
-	cdBtwTest = time.Second*10
+	testport1           = 10851
+	testport2           = 10852
+	cdBtwTest           = time.Second * 10
 )
 
 func main() {
@@ -44,10 +52,10 @@ func main() {
 	reader.ReadString('\n')
 
 	files, err := ioutil.ReadDir("./db")
-	if err!= nil{
+	if err != nil {
 		logger.WithError(err).Panic("can not read db files")
 	}
-	if len(files)==0 {
+	if len(files) == 0 {
 		logger.Warn("No db files are found. Exiting...")
 		return
 	}
@@ -61,18 +69,18 @@ func main() {
 	initRecordFile(filePath)
 
 	for _, file := range files {
-		elapsed, blkHeight, numOfTx = runTest("./db/"+file.Name())
+		elapsed, blkHeight, numOfTx = runTest("./db/" + file.Name())
 		recordResult(filePath, file.Name(), elapsed, blkHeight, numOfTx)
 		logger.WithFields(logger.Fields{
-			"time_elapsed" : elapsed,
-			"ave_blk_time"  : elapsed/time.Duration(blkHeight),
-			"ave_tx_time"  : elapsed/time.Duration(blkHeight)/time.Duration(numOfTx),
+			"time_elapsed": elapsed,
+			"ave_blk_time": elapsed / time.Duration(blkHeight),
+			"ave_tx_time":  elapsed / time.Duration(blkHeight) / time.Duration(numOfTx),
 		}).Info("Test Finished")
 		time.Sleep(cdBtwTest)
 	}
 }
 
-func initRecordFile(filePath string){
+func initRecordFile(filePath string) {
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording failed transactions")
@@ -81,11 +89,11 @@ func initRecordFile(filePath string){
 	vmStat, err := mem.VirtualMemory()
 	cpuStat, err := cpu.Info()
 	w.Write([]string{
-		"","","","","","","Memory",
+		"", "", "", "", "", "", "Memory",
 		vmStat.String(),
 	})
 	w.Write([]string{
-		"","","","","","","Cpu",
+		"", "", "", "", "", "", "Cpu",
 		cpuStat[0].String(),
 	})
 	w.Write([]string{
@@ -100,7 +108,7 @@ func initRecordFile(filePath string){
 	w.Flush()
 }
 
-func recordResult(filePath string, dbfileName string, elapsed time.Duration, blkHeight uint64, numOfTx int){
+func recordResult(filePath string, dbfileName string, elapsed time.Duration, blkHeight uint64, numOfTx int) {
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		logger.Panic("Open file failed while recording failed transactions")
@@ -112,15 +120,15 @@ func recordResult(filePath string, dbfileName string, elapsed time.Duration, blk
 		fmt.Sprint(blkHeight),
 		fmt.Sprint(numOfTx),
 		elapsed.String(),
-		(elapsed/time.Duration(blkHeight)).String(),
-		(elapsed/time.Duration(blkHeight)/time.Duration(numOfTx)).String(),
+		(elapsed / time.Duration(blkHeight)).String(),
+		(elapsed / time.Duration(blkHeight) / time.Duration(numOfTx)).String(),
 	})
 	w.Flush()
 }
 
-func runTest(fileName string) (time.Duration, uint64, int){
+func runTest(fileName string) (time.Duration, uint64, int) {
 	logger.WithFields(logger.Fields{
-		"db_file_path" : fileName,
+		"db_file_path": fileName,
 	}).Info("Test starts...")
 	defer os.RemoveAll(nodeDbPath)
 	db1 := storage.OpenDatabase(fileName)
@@ -128,70 +136,65 @@ func runTest(fileName string) (time.Duration, uint64, int){
 	db2 := storage.OpenDatabase(nodeDbPath)
 	defer db2.Close()
 
-	bc, node1 := prepareNode(db1)
-	bc2, node2 := prepareNode(db2)
+	bm1, node1 := prepareNode(db1)
+	bm2, node2 := prepareNode(db2)
+	dm1 := downloadmanager.NewDownloadManager(node1, bm1)
+	bm1.SetDownloadRequestCh(dm1.GetDownloadRequestCh())
+	dm2 := downloadmanager.NewDownloadManager(node2, bm2)
+	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
 
-	node1.Start(testport1)
+	node1.Start(testport1, "")
 	defer node1.Stop()
-	node2.Start(testport2)
+	node2.Start(testport2, "")
 	defer node2.Stop()
 
-	node1.GetPeerManager().AddAndConnectPeer(node2.GetInfo())
+	node1.GetNetwork().ConnectToSeed(node2.GetHostPeerInfo())
 
-	blkHeight := bc.GetMaxHeight()
-	tailBlock,_ := bc.GetTailBlock()
+	blkHeight := bm1.Getblockchain().GetMaxHeight()
+	tailBlock, _ := bm1.Getblockchain().GetTailBlock()
 	numOfTx := len(tailBlock.GetTransactions())
 
 	logger.WithFields(logger.Fields{
-		"blk_height" : blkHeight,
-		"num_of_tx"  : numOfTx,
+		"blk_height": blkHeight,
+		"num_of_tx":  numOfTx,
 	}).Info("Start Downloading...")
 
 	time.Sleep(time.Second)
 
 	start := time.Now()
-	downloadBlocks(node2, bc2)
+	bm2.RequestDownloadBlockchain()
 	elapsed := time.Since(start)
 
 	logger.WithFields(logger.Fields{
-		"time_elapsed" : elapsed,
-		"ave_blk_time"  : elapsed/time.Duration(blkHeight),
-		"ave_tx_time"  : elapsed/time.Duration(blkHeight)/time.Duration(numOfTx),
+		"time_elapsed": elapsed,
+		"ave_blk_time": elapsed / time.Duration(blkHeight),
+		"ave_tx_time":  elapsed / time.Duration(blkHeight) / time.Duration(numOfTx),
 	}).Info("Downloading ends... Cleaning up files...")
-
-
 
 	return elapsed, blkHeight, numOfTx
 }
 
-
-
-func prepareNode(db storage.Storage) (*core.Blockchain, *network.Node){
+func prepareNode(db storage.Storage) (*lblockchain.BlockchainManager, *network.Node) {
 	genesisConf := &configpb.DynastyConfig{}
 	config.LoadConfig(genesisFilePathTest, genesisConf)
 	maxProducers := (int)(genesisConf.GetMaxProducers())
 	dynasty := consensus.NewDynastyWithConfigProducers(genesisConf.GetProducers(), maxProducers)
-	conss := consensus.NewDPOS()
+	conss := consensus.NewDPOS(blockproducerinfo.NewBlockProducerInfo(""))
 	conss.SetDynasty(dynasty)
-	txPoolLimit:=uint32(2000)
-	bc, err := core.GetBlockchain(db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}), 1000000)
+	node := network.NewNode(db, nil)
+	txPoolLimit := uint32(2000)
+	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(core.NewAddress(genesisAddrTest), db, conss, txPoolLimit, vm.NewV8EngineManager(core.Address{}),  1000000)
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}
 	}
+	bc.SetState(blockchain.BlockchainInit)
+	bm := lblockchain.NewBlockchainManager(bc, core.NewBlockPool(), node)
+	downloadManager := downloadmanager.NewDownloadManager(node, bm)
+	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
-	bc.SetState(core.BlockchainInit)
-	node := network.NewNode(bc, core.NewBlockPool(0))
-	return bc, node
-}
-
-func downloadBlocks(node *network.Node, bc *core.Blockchain) {
-	downloadManager := node.GetDownloadManager()
-	finishChan := make(chan bool, 1)
-	bc.SetState(core.BlockchainDownloading)
-	downloadManager.StartDownloadBlockchain(finishChan)
-	<-finishChan
-	bc.SetState(core.BlockchainReady)
+	return bm, node
 }

@@ -42,7 +42,9 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 	utxosAddr := (*C.struct_utxo_t)(C.malloc(C.size_t(C.sizeof_struct_utxo_t * utxoLength)))
 	defer C.free(unsafe.Pointer(utxosAddr))
 	var temp C.struct_utxo_t
+
 	utxos := (*[(math.MaxInt32 - 1) / unsafe.Sizeof(temp)]C.struct_utxo_t)(unsafe.Pointer(utxosAddr))[:utxoLength:utxoLength]
+
 	for index, prevUtxo := range engine.prevUtxos {
 		utxo := &utxos[index]
 		utxo.txid = C.CString(hex.EncodeToString(prevUtxo.Txid))
@@ -54,10 +56,10 @@ func PrevUtxoGetFunc(address unsafe.Pointer, context unsafe.Pointer) {
 		utxo.value = C.CString(prevUtxo.Value.String())
 		defer C.free(unsafe.Pointer(utxo.value))
 
-		utxo.pubkeyhash = C.CString(hex.EncodeToString([]byte(prevUtxo.PubKeyHash)))
+		utxo.pubkeyhash = C.CString(prevUtxo.PubKeyHash.String())
 		defer C.free(unsafe.Pointer(utxo.pubkeyhash))
 
-		utxo.address = C.CString(prevUtxo.PubKeyHash.GenerateAddress().Address)
+		utxo.address = C.CString(prevUtxo.GetAddress().String())
 		defer C.free(unsafe.Pointer(utxo.address))
 	}
 

@@ -1,32 +1,49 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/storage"
-	"github.com/hashicorp/golang-lru"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	logger "github.com/sirupsen/logrus"
+
+	"github.com/dappley/go-dappley/network/networkmodel"
 )
 
 type Network struct {
-	host                *Host
-	peerManager         *PeerManager
-	msgRcvCh            chan *StreamMsg
-	recentlyRcvdDapMsgs *lru.Cache
-	dispatcher          chan *StreamMsg
+	streamManager         *StreamManager
+	peerManager           *PeerManager
+	streamMsgRcvCh        chan *networkmodel.DappPacketContext
+	streamMsgDispatcherCh chan *networkmodel.DappPacketContext
+	recentlyRcvdDapMsgs   *lru.Cache
+	onStreamStopCb        OnStreamCbFunc
 }
 
-func NewNetwork(config *NodeConfig, dispatcher chan *StreamMsg, db storage.Storage) *Network {
+type NetworkContext struct {
+	netService            NetService
+	config                networkmodel.PeerConnectionConfig
+	streamMsgDispatcherCh chan *networkmodel.DappPacketContext
+	db                    Storage
+	onStreamStopCb        OnStreamCbFunc
+	seeds                 []string
+}
+
+//NewNetwork creates a network instance
+func NewNetwork(netContext *NetworkContext) *Network {
 
 	var err error
-	msgRcvCh := make(chan *StreamMsg, dispatchChLen)
 
 	net := &Network{
-		msgRcvCh:    msgRcvCh,
-		peerManager: NewPeerManager(config, msgRcvCh, db),
-		dispatcher:  dispatcher,
+		streamMsgRcvCh:        make(chan *networkmodel.DappPacketContext, dispatchChLen),
+		streamMsgDispatcherCh: netContext.streamMsgDispatcherCh,
+		onStreamStopCb:        netContext.onStreamStopCb,
 	}
 
 	net.recentlyRcvdDapMsgs, err = lru.New(1024000)
+	net.streamManager = NewStreamManager(netContext.config, net.streamMsgRcvCh, net.onStreamStop, net.onStreamConnected)
+	net.peerManager = NewPeerManager(netContext.netService, netContext.db, net.onPeerListReceived, netContext.seeds)
+
 	if err != nil {
 		logger.WithError(err).Panic("Network: Can not initialize lru cache for recentlyRcvdDapMsgs!")
 	}
@@ -34,29 +51,118 @@ func NewNetwork(config *NodeConfig, dispatcher chan *StreamMsg, db storage.Stora
 	return net
 }
 
+//GetConnectedPeers returns a list of peers in the network
+func (net *Network) GetConnectedPeers() []networkmodel.PeerInfo {
+	peers := net.streamManager.GetConnectedPeers()
+	peersInSlice := []networkmodel.PeerInfo{}
+	for _, peer := range peers {
+		peersInSlice = append(peersInSlice, peer)
+	}
+	return peersInSlice
+}
+
+//GetHost returns a list of peers in the network
+func (net *Network) GetHost() *networkmodel.Host {
+	if net.streamManager == nil {
+		return nil
+	}
+
+	return net.streamManager.host
+}
+
+func (net *Network) GetStreamManager() *StreamManager {
+	return net.streamManager
+}
+
+func (net *Network) StartNewPingService(interval time.Duration) error {
+	return net.streamManager.StartNewPingService(interval)
+}
+
+//Start starts the network
 func (net *Network) Start(listenPort int, privKey crypto.PrivKey) error {
-	net.host = NewHost(listenPort, privKey, net.peerManager.StreamHandler)
-	net.peerManager.Start(net.host)
-	net.StartReceivedMessageHandler()
+	host := networkmodel.NewHost(listenPort, privKey, net.streamManager.StreamHandler)
+	net.streamManager.Start(host)
+	net.connectToAllPeers()
+	net.peerManager.Start()
+	net.peerManager.SetHostPeerId(host.GetPeerInfo().PeerId)
+	net.startStreamMsgHandler()
+	net.startPeerConnectionSchedule()
 	return nil
 }
 
-func (net *Network) StartReceivedMessageHandler() {
+//Stop stops the network
+func (net *Network) Stop() {
+	net.streamManager.Stop()
+}
+
+//Unicast sends a message to a peer
+func (net *Network) Unicast(data []byte, pid peer.ID, priority networkmodel.DappCmdPriority) {
+	packet := networkmodel.ConstructDappPacketFromData(data, false)
+
+	net.recordMessage(packet)
+	net.streamManager.Unicast(packet, pid, priority)
+}
+
+//Broadcast sends a message to all peers
+func (net *Network) Broadcast(data []byte, priority networkmodel.DappCmdPriority) {
+	packet := networkmodel.ConstructDappPacketFromData(data, true)
+
+	net.recordMessage(packet)
+	net.streamManager.Broadcast(packet, priority)
+}
+
+//ConnectToSeed adds a peer to its network and starts the connectionManager
+func (net *Network) ConnectToSeed(peerInfo networkmodel.PeerInfo) error {
+	err := net.streamManager.connectPeer(peerInfo, ConnectionTypeOut)
+	if err != nil {
+		return err
+	}
+	net.peerManager.AddSeedByPeerInfo(peerInfo)
+	return nil
+}
+
+//ConnectToSeedByString adds a peer by its full address string and starts the connectionManager
+func (net *Network) ConnectToSeedByString(fullAddr string) error {
+
+	peerInfo, err := networkmodel.NewPeerInfoFromString(fullAddr)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"full_addr": fullAddr,
+		}).Warn("Network: create PeerInfo failed.")
+		return err
+	}
+
+	return net.ConnectToSeed(peerInfo)
+}
+
+//AddSeed Add a seed peer to its network
+func (net *Network) AddSeed(peerInfo networkmodel.PeerInfo) {
+	net.peerManager.AddSeedByPeerInfo(peerInfo)
+}
+
+//updatePeers removes stale sync peers from peer manager
+func (net *Network) updatePeers() {
+	peers := net.streamManager.GetConnectedPeers()
+	net.peerManager.UpdateSyncPeers(peers)
+}
+
+//startStreamMsgHandler starts a listening loop that listens to new message from all streams
+func (net *Network) startStreamMsgHandler() {
 	go func() {
 		for {
 			select {
-			case msg := <-net.msgRcvCh:
+			case msg := <-net.streamMsgRcvCh:
 
-				if net.IsNetworkRadiation(msg.msg) {
+				if net.isNetworkRadiation(msg.Packet) {
 					continue
 				}
-
+				net.recordMessage(msg.Packet)
 				select {
-				case net.dispatcher <- msg:
+				case net.streamMsgDispatcherCh <- msg:
 				default:
 					logger.WithFields(logger.Fields{
-						"dispatcherCh_len": len(net.dispatcher),
-					}).Warn("Stream: message dispatcher channel full! Message disgarded")
+						"dispatcherCh_len": len(net.streamMsgDispatcherCh),
+					}).Warn("Network: message streamMsgDispatcherCh channel full! Message disgarded")
 					return
 				}
 			}
@@ -64,23 +170,57 @@ func (net *Network) StartReceivedMessageHandler() {
 	}()
 }
 
-func (net *Network) IsNetworkRadiation(msg *DappPacket) bool {
-	return net.recentlyRcvdDapMsgs.Contains(msg)
+//startPeerConnectionSchedule trys to connect to seed peers periodically
+func (net *Network) startPeerConnectionSchedule() {
+	go func() {
+		ticker := time.NewTicker(PeerConnectionInterval)
+		for {
+			select {
+			case <-ticker.C:
+				net.connectToAllPeers()
+				net.updatePeers()
+			}
+		}
+	}()
 }
 
-func (net *Network) RecordMessage(msg *DappPacket) {
-	net.recentlyRcvdDapMsgs.Add(msg, true)
+//connectToAllPeers first connect to all seeds and then connect to sync peers
+func (net *Network) connectToAllPeers() {
+	net.connectToSeeds()
+	net.connectToSyncPeers()
 }
 
-func (net *Network) Stop() {
-	net.peerManager.StopAllStreams(nil)
-	net.host.RemoveStreamHandler(protocalName)
-	err := net.host.Close()
-	if err != nil {
-		logger.WithError(err).Warn("Node: host was not closed properly.")
-	}
+//connectToSeeds connects to all seeds
+func (net *Network) connectToSeeds() {
+	net.streamManager.ConnectPeers(net.peerManager.GetSeeds())
 }
 
-func (net *Network) OnStreamStop(cb onStreamStopFunc) {
-	net.peerManager.SubscribeOnStreamStop(cb)
+//ConnectToSyncPeers connects to sync peers
+func (net *Network) connectToSyncPeers() {
+	net.streamManager.ConnectPeers(net.peerManager.GetSyncPeers())
+}
+
+//isNetworkRadiation decides if a message is a network radiation (a message that it has received already)
+func (net *Network) isNetworkRadiation(msg *networkmodel.DappPacket) bool {
+	return msg.IsBroadcast() && net.recentlyRcvdDapMsgs.Contains(string(msg.GetRawBytes()))
+}
+
+//recordMessage records a message that is already received or sent
+func (net *Network) recordMessage(msg *networkmodel.DappPacket) {
+	net.recentlyRcvdDapMsgs.Add(string(msg.GetRawBytes()), true)
+}
+
+//onStreamStop runs cb function upon any stream stops
+func (net *Network) onStreamStop(stream *Stream) {
+	net.onStreamStopCb(stream)
+}
+
+//onPeerListReceived connects to new peers when a peer list is received
+func (net *Network) onPeerListReceived(newPeers []networkmodel.PeerInfo) {
+	net.streamManager.ConnectPeers(newPeers)
+}
+
+//onStreamConnected adds a peer in peer manager when a stream is connected
+func (net *Network) onStreamConnected(stream *Stream) {
+	net.peerManager.AddSyncPeer(stream.peerInfo)
 }

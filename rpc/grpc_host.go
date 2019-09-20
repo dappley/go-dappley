@@ -20,6 +20,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/logic/lblockchain"
 	"net"
 
 	logger "github.com/sirupsen/logrus"
@@ -30,12 +31,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/dappley/go-dappley/network"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 )
 
 const (
 	defaultRpcPort = 50051
-	passwordToken  = "password"
 )
 
 var (
@@ -54,15 +54,16 @@ type Server struct {
 	srv           *grpc.Server
 	node          *network.Node
 	password      string
+	bm            *lblockchain.BlockchainManager
 	metricsConfig *MetricsServiceConfig
 }
 
-func NewGrpcServer(node *network.Node, adminPassword string) *Server {
-	return NewGrpcServerWithMetrics(node, adminPassword, nil)
+func NewGrpcServer(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string) *Server {
+	return NewGrpcServerWithMetrics(node, bm, adminPassword, nil)
 }
 
-func NewGrpcServerWithMetrics(node *network.Node, adminPassword string, config *MetricsServiceConfig) *Server {
-	return &Server{grpc.NewServer(), node, adminPassword, config}
+func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainManager, adminPassword string, config *MetricsServiceConfig) *Server {
+	return &Server{grpc.NewServer(), node, adminPassword, bm, config}
 }
 
 func (s *Server) Start(port uint32) {
@@ -78,11 +79,12 @@ func (s *Server) Start(port uint32) {
 		}
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
-		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.node})
-		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.node})
+		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node})
 		if s.metricsConfig != nil {
-			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.metricsConfig))
+			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.bm, s.metricsConfig, port))
 		}
+
 		if err := srv.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Server: encounters an error while serving.")
 		}

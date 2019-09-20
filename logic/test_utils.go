@@ -3,25 +3,25 @@ package logic
 import (
 	"strings"
 
-	"github.com/dappley/go-dappley/client"
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/wallet"
 	"github.com/dappley/go-dappley/storage"
 )
 
 //get all addresses
-func GetAllAddressesByPath(path string) ([]core.Address, error) {
+func GetAllAddressesByPath(path string) ([]account.Address, error) {
 	fl := storage.NewFileLoader(path)
-	wm := client.NewWalletManager(fl)
-	err := wm.LoadFromFile()
+	am := wallet.NewAccountManager(fl)
+	err := am.LoadFromFile()
 	if err != nil {
 		return nil, err
 	}
 
-	addresses := wm.GetAddresses()
+	addresses := am.GetAddresses()
 
 	return addresses, err
 }
 
-func GetTestWalletPath() string {
-	return strings.Replace(client.GetWalletFilePath(), "wallets", "wallets_test", -1)
+func GetTestAccountPath() string {
+	return strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1)
 }

@@ -5,4 +5,4 @@ EventTest.prototype = {
         return event.trigger(topic, data);
     }
 };
-var eventTest = new EventTest;
+module.exports = new EventTest();

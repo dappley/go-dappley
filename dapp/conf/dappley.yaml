@@ -1,0 +1,11 @@
+log:
+  name:  "log/dappley.log"
+  level:  "info"
+  count:  7
+  rotateTime:  86400
+  stdout:  false
+metrics:
+  open: false
+  interval: 5000
+pprof:
+  open: false

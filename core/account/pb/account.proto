@@ -1,0 +1,26 @@
+syntax = "proto3";
+package accountpb;
+
+message Account{
+    KeyPair keyPair = 1;
+    Address address = 2;
+    bytes   pubKeyHash=3;
+}
+message TransactionAccount{
+    Address address = 1;
+    bytes   pubKeyHash=2;
+}
+
+
+message KeyPair{
+    bytes privateKey = 1;
+    bytes publicKey = 2;
+}
+
+message Address{
+    string address = 1;
+}
+
+message AccountConfig{
+    string file_path = 1;
+}

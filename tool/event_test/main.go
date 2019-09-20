@@ -8,9 +8,9 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/dappley/go-dappley/client"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/wallet"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 )
 
 func main() {
@@ -28,12 +28,12 @@ func main() {
 	}
 
 	resp, err := admin.RpcSend(context.Background(), &rpcpb.SendRequest{
-		From:       "dHvB2CF9PUtih7VM1VUZmf3g25ZGfNym5A",
-		To:         "",
-		Amount:     common.NewAmount(1).Bytes(),
-		Tip:        common.NewAmount(0).Bytes(),
-		WalletPath: client.GetWalletFilePath(),
-		Data:       string(raw),
+		From:        "dHvB2CF9PUtih7VM1VUZmf3g25ZGfNym5A",
+		To:          "",
+		Amount:      common.NewAmount(1).Bytes(),
+		Tip:         common.NewAmount(0).Bytes(),
+		AccountPath: wallet.GetAccountFilePath(),
+		Data:        string(raw),
 	})
 	if err != nil {
 		logger.Panic(err)
@@ -45,12 +45,12 @@ func main() {
 	for {
 		logger.Info("Sending event triggering...")
 		_, err := admin.RpcSend(context.Background(), &rpcpb.SendRequest{
-			From:       "dHvB2CF9PUtih7VM1VUZmf3g25ZGfNym5A",
-			To:         contractAddr,
-			Amount:     common.NewAmount(1).Bytes(),
-			Tip:        common.NewAmount(0).Bytes(),
-			WalletPath: client.GetWalletFilePath(),
-			Data:       fmt.Sprintf("{\"function\":\"trigger\",\"args\":[\"topic%d\",\"data%d\"]}", count%3+1, count),
+			From:        "dHvB2CF9PUtih7VM1VUZmf3g25ZGfNym5A",
+			To:          contractAddr,
+			Amount:      common.NewAmount(1).Bytes(),
+			Tip:         common.NewAmount(0).Bytes(),
+			AccountPath: wallet.GetAccountFilePath(),
+			Data:        fmt.Sprintf("{\"function\":\"trigger\",\"args\":[\"topic%d\",\"data%d\"]}", count%3+1, count),
 		})
 		if err != nil {
 			logger.Panic(err)

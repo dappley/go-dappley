@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/utxo"
+
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/tool/db_inspect/pb"
+	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"
 	"github.com/dappley/go-dappley/util"
 	"github.com/gogo/protobuf/proto"
 )
@@ -36,7 +39,7 @@ func GetBlockHandle() {
 
 	flagSet := flag.NewFlagSet("getBlock", flag.ExitOnError)
 	flagSet.StringVar(&dbPath, "d", "", "database path")
-	flagSet.StringVar(&blockHash, "hash", "", "block hash")
+	flagSet.StringVar(&blockHash, "hash", "", "blk hash")
 	flagSet.Parse(os.Args[2:])
 
 	fmt.Printf("path: %v\n", dbPath)
@@ -46,7 +49,7 @@ func GetBlockHandle() {
 
 	blockHashBytes, err := hex.DecodeString(blockHash)
 	if err != nil {
-		panic("Decode block hash failed " + blockHash)
+		panic("Decode blk hash failed " + blockHash)
 	}
 
 	rawBytes, err := db.Get(blockHashBytes)
@@ -54,12 +57,12 @@ func GetBlockHandle() {
 		panic("Block hash not found in database " + blockHash)
 	}
 
-	block := core.Deserialize(rawBytes)
-	if block == nil {
+	blk := block.Deserialize(rawBytes)
+	if blk == nil {
 		panic("Block deserialize failed with hash " + blockHash)
 	}
 
-	dumpBlock(block)
+	dumpBlock(blk)
 }
 
 func GetBlockByHeightHandle() {
@@ -68,7 +71,7 @@ func GetBlockByHeightHandle() {
 
 	flagSet := flag.NewFlagSet("getBlockByHeight", flag.ExitOnError)
 	flagSet.StringVar(&dbPath, "d", "", "database path")
-	flagSet.Uint64Var(&blockHeight, "height", 0, "block height")
+	flagSet.Uint64Var(&blockHeight, "height", 0, "blk height")
 	flagSet.Parse(os.Args[2:])
 
 	fmt.Printf("path: %v\n", dbPath)
@@ -86,12 +89,12 @@ func GetBlockByHeightHandle() {
 		panic("Block hash not found in database " + hex.EncodeToString(hash))
 	}
 
-	block := core.Deserialize(rawBytes)
-	if block == nil {
+	blk := block.Deserialize(rawBytes)
+	if blk == nil {
 		panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 	}
 
-	dumpBlock(block)
+	dumpBlock(blk)
 }
 
 func GetTransactionHandle() {
@@ -123,14 +126,14 @@ func GetTransactionHandle() {
 			panic(fmt.Sprintf("Block hash %v not found in database ", hex.EncodeToString(hash)))
 		}
 
-		block := core.Deserialize(rawBytes)
-		if block == nil {
+		blk := block.Deserialize(rawBytes)
+		if blk == nil {
 			panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 		}
 
-		for _, tx := range block.GetTransactions() {
+		for _, tx := range blk.GetTransactions() {
 			if bytes.Compare(txIdBytes, tx.ID) == 0 {
-				dumpBlock(block)
+				dumpBlock(blk)
 				return
 			}
 		}
@@ -170,15 +173,15 @@ func GetCostTransactionHandle() {
 			panic(fmt.Sprintf("Block hash %v not found in database ", hex.EncodeToString(hash)))
 		}
 
-		block := core.Deserialize(rawBytes)
-		if block == nil {
+		blk := block.Deserialize(rawBytes)
+		if blk == nil {
 			panic("Block deserialize failed with hash " + hex.EncodeToString(hash))
 		}
 
-		for _, tx := range block.GetTransactions() {
+		for _, tx := range blk.GetTransactions() {
 			for _, vin := range tx.Vin {
 				if bytes.Compare(txIdBytes, vin.Txid) == 0 && vOutIndex == vin.Vout {
-					dumpBlock(block)
+					dumpBlock(blk)
 					return
 				}
 			}
@@ -197,28 +200,28 @@ func GetUtxoHandle() {
 	flagSet.StringVar(&address, "a", "", "search utxo address")
 	flagSet.Parse(os.Args[2:])
 
-	addr := core.NewAddress(address)
-	pubKeyHash, ok := addr.GetPubKeyHash()
-	if !ok {
+	addr := account.NewAddress(address)
+	acc := account.NewContractAccountByAddress(addr)
+	if !acc.IsValid() {
 		panic("Decode address failed")
 	}
-
+	pubKeyHash := acc.GetPubKeyHash()
 	db := storage.OpenDatabase(dbPath)
 	defer db.Close()
 
-	utxoCache := core.NewUTXOCache(db)
+	utxoCache := utxo.NewUTXOCache(db)
 	utxoTx := utxoCache.Get(pubKeyHash)
 
 	dumpUtxos(utxoTx)
 }
 
-func block2PrettyPb(block *core.Block) proto.Message {
+func block2PrettyPb(block *block.Block) proto.Message {
 	blockHeaderPb := &db_inspect_pb.BlockHeader{
-		Hash:         hex.EncodeToString(block.GetHash()),
-		PreviousHash: hex.EncodeToString(block.GetPrevHash()),
+		Hash:         block.GetHash().String(),
+		PreviousHash: block.GetPrevHash().String(),
 		Nonce:        block.GetNonce(),
 		Timestamp:    block.GetTimestamp(),
-		Signature:    hex.EncodeToString(block.GetSign()),
+		Signature:    block.GetSign().String(),
 		Height:       block.GetHeight(),
 	}
 
@@ -241,7 +244,7 @@ func block2PrettyPb(block *core.Block) proto.Message {
 			txVoutPbs = append(txVoutPbs,
 				&db_inspect_pb.TXOutput{
 					Value:         vout.Value.String(),
-					PublicKeyHash: hex.EncodeToString(vout.PubKeyHash),
+					PublicKeyHash: vout.PubKeyHash.String(),
 					Contract:      vout.Contract,
 				})
 		}
@@ -249,10 +252,12 @@ func block2PrettyPb(block *core.Block) proto.Message {
 		txArray = append(
 			txArray,
 			&db_inspect_pb.Transaction{
-				Id:   hex.EncodeToString(tx.ID),
-				Vin:  txVinPbs,
-				Vout: txVoutPbs,
-				Tip:  tx.Tip.String(),
+				Id:       hex.EncodeToString(tx.ID),
+				Vin:      txVinPbs,
+				Vout:     txVoutPbs,
+				Tip:      tx.Tip.String(),
+				GasLimit: tx.GasLimit.String(),
+				GasPrice: tx.GasPrice.String(),
 			})
 	}
 
@@ -262,20 +267,20 @@ func block2PrettyPb(block *core.Block) proto.Message {
 	}
 }
 
-func dumpBlock(block *core.Block) {
+func dumpBlock(block *block.Block) {
 	fmt.Print(proto.MarshalTextString(block2PrettyPb(block)))
 }
 
-func utxo2PrettyPb(utxo *core.UTXO) proto.Message {
+func utxo2PrettyPb(utxo *utxo.UTXO) proto.Message {
 	return &db_inspect_pb.Utxo{
 		Amount:        utxo.Value.String(),
-		PublicKeyHash: hex.EncodeToString(utxo.PubKeyHash),
+		PublicKeyHash: utxo.PubKeyHash.String(),
 		Txid:          hex.EncodeToString(utxo.Txid),
 		TxIndex:       uint32(utxo.TxIndex),
 	}
 }
 
-func dumpUtxos(utxos *core.UTXOTx) {
+func dumpUtxos(utxos *utxo.UTXOTx) {
 	for _, utxo := range utxos.Indices {
 		fmt.Print(proto.MarshalTextString(utxo2PrettyPb(utxo)))
 	}

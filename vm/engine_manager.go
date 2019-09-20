@@ -1,19 +1,22 @@
 package vm
 
 import (
-	logger "github.com/sirupsen/logrus"
 	"strings"
 
+	"github.com/dappley/go-dappley/core/scState"
+	"github.com/dappley/go-dappley/core/utxo"
+
 	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 )
 
 const scheduleFuncName = "dapp_schedule"
 
 type V8EngineManager struct {
-	address core.Address
+	address account.Address
 }
 
-func NewV8EngineManager(address core.Address) *V8EngineManager {
+func NewV8EngineManager(address account.Address) *V8EngineManager {
 	return &V8EngineManager{address}
 }
 
@@ -23,20 +26,22 @@ func (em *V8EngineManager) CreateEngine() core.ScEngine {
 	return engine
 }
 
-func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*core.UTXO,
-	scStorage *core.ScState,
+func (em *V8EngineManager) RunScheduledEvents(contractUtxos []*utxo.UTXO,
+	scStorage *scState.ScState,
 	blkHeight uint64,
 	seed int64) {
-	logger.WithFields(logger.Fields{
-		"smart_contracts": len(contractUtxos),
-	}).Info("V8EngineManager: is running scheduled events...")
 
 	for _, utxo := range contractUtxos {
-		if !strings.Contains(utxo.Contract, scheduleFuncName){
+		if !strings.Contains(utxo.Contract, scheduleFuncName) {
 			continue
 		}
-		addr := utxo.PubKeyHash.GenerateAddress()
+		addr := utxo.GetAddress()
+
 		engine := em.CreateEngine()
+		// TODO confirm whether we need to set limit
+		if err := engine.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize); err != nil {
+			continue
+		}
 		engine.ImportSourceCode(utxo.Contract)
 		engine.ImportLocalStorage(scStorage)
 		engine.ImportContractAddr(addr)

@@ -20,9 +20,10 @@ package storage
 
 import (
 	"bytes"
-	logger "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+
+	logger "github.com/sirupsen/logrus"
 )
 
 type FileLoader struct {

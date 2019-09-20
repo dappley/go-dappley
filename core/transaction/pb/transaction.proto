@@ -1,0 +1,28 @@
+syntax = "proto3";
+package transactionpb;
+import "github.com/dappley/go-dappley/core/transactionbase/pb/transactionBase.proto";
+
+
+message Transactions{
+    repeated Transaction transactions = 1;
+}
+
+message Transaction{
+    bytes id = 1;
+    repeated transactionbasepb.TXInput vin = 2;
+    repeated transactionbasepb.TXOutput vout = 3;
+    bytes tip = 4;
+    bytes gas_limit = 5;
+    bytes gas_price = 6;
+}
+
+message TransactionNode{
+    map<string, Transaction> children = 1;
+    transactionpb.Transaction value = 2;
+    int64   size = 3;
+}
+
+message TransactionJournal {
+    repeated transactionbasepb.TXOutput vout = 1;
+}
+

@@ -475,7 +475,7 @@ struct __iterator_traits<_Iter, true>
 // iterator_traits<Iterator> will only have the nested types if Iterator::iterator_category
 //    exists.  Else iterator_traits<Iterator> will be an empty class.  This is a
 //    conforming extension which allows some programs to compile and behave as
-//    the client expects instead of failing at compile time.
+//    the account expects instead of failing at compile time.
 
 template <class _Iter>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits

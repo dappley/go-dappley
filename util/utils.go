@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -65,7 +66,7 @@ func DecodeScInput(s string) (function string, args []string) {
 			"input":             s,
 			"decoded_function":  input.Function,
 			"decoded_arguments": input.Args,
-		}).Warn("DecodeScInput: cannot decode the input of the smart contract!")
+		}).Debug("DecodeScInput: cannot decode the input of the smart contract!")
 	}
 	return input.Function, input.Args
 }
@@ -97,4 +98,13 @@ func ReverseSlice(slice interface{}) interface{} {
 		swap(low, high)
 	}
 	return slice
+}
+
+func InProtoEnum(enumType string, x string) bool {
+	if vm := proto.EnumValueMap(enumType); vm != nil {
+		_, ok := vm[x]
+		return ok
+	}
+
+	return false
 }

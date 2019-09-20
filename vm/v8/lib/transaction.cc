@@ -2,18 +2,15 @@
 #include "../engine.h"
 #include "util.h"
 
-const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(
-    PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+const PropertyAttribute DEFAULT_PROPERTY = static_cast<PropertyAttribute>(PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
 static FuncTransactionGet txGet = NULL;
 typedef struct {
-    Isolate *isolate;
-    Local<Context> *context;
+    Isolate* isolate;
+    Local<Context>* context;
 } TransactionContext;
 
-void InitializeTransaction(FuncTransactionGet get) {
-    txGet = get;
-}
+void InitializeTransaction(FuncTransactionGet get) { txGet = get; }
 
 void SetTransactionData(struct transaction_t* tx, void* context) {
     if (tx == NULL || context == NULL) {
@@ -23,51 +20,26 @@ void SetTransactionData(struct transaction_t* tx, void* context) {
     TransactionContext* txContext = static_cast<TransactionContext*>(context);
 
     Local<Object> txInstance = Object::New(txContext->isolate);
-    txInstance->DefineOwnProperty(
-        *(txContext->context),
-        String::NewFromUtf8(txContext->isolate, "id"),
-        String::NewFromUtf8(txContext->isolate, tx->id),
-        DEFAULT_PROPERTY
-    );
+    txInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "id"), String::NewFromUtf8(txContext->isolate, tx->id),
+                                  DEFAULT_PROPERTY);
 
     Local<Array> vins = Array::New(txContext->isolate, tx->vin_length);
     for (int i = 0; i < tx->vin_length; i++) {
         Local<Object> vinInstance = Object::New(txContext->isolate);
-        vinInstance->DefineOwnProperty(
-            *(txContext->context),
-            String::NewFromUtf8(txContext->isolate, "txid"),
-            String::NewFromUtf8(txContext->isolate, tx->vin[i].txid),
-            DEFAULT_PROPERTY
-        );
+        vinInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "txid"),
+                                       String::NewFromUtf8(txContext->isolate, tx->vin[i].txid), DEFAULT_PROPERTY);
 
-        vinInstance->DefineOwnProperty(
-            *(txContext->context),
-            String::NewFromUtf8(txContext->isolate, "vout"),
-            Integer::New(txContext->isolate, tx->vin[i].vout),
-            DEFAULT_PROPERTY
-        );
-        
-        vinInstance->DefineOwnProperty(
-            *(txContext->context),
-            String::NewFromUtf8(txContext->isolate, "signature"),
-            String::NewFromUtf8(txContext->isolate, tx->vin[i].signature),
-            DEFAULT_PROPERTY
-        );
+        vinInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "vout"),
+                                       Integer::New(txContext->isolate, tx->vin[i].vout), DEFAULT_PROPERTY);
 
-        vinInstance->DefineOwnProperty(
-            *(txContext->context), 
-            String::NewFromUtf8(txContext->isolate, "pubkey"),
-            String::NewFromUtf8(txContext->isolate, tx->vin[i].pubkey),
-            DEFAULT_PROPERTY
-        );
+        vinInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "signature"),
+                                       String::NewFromUtf8(txContext->isolate, tx->vin[i].signature), DEFAULT_PROPERTY);
+
+        vinInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "pubkey"),
+                                       String::NewFromUtf8(txContext->isolate, tx->vin[i].pubkey), DEFAULT_PROPERTY);
         vins->Set(*(txContext->context), i, vinInstance);
     }
-    txInstance->DefineOwnProperty(
-        *(txContext->context),
-        String::NewFromUtf8(txContext->isolate, "vin"),
-        vins,
-        DEFAULT_PROPERTY
-    );
+    txInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "vin"), vins, DEFAULT_PROPERTY);
 
     Local<Array> vouts = Array::New(txContext->isolate, tx->vout_length);
     for (int i = 0; i < tx->vout_length; i++) {
@@ -80,20 +52,11 @@ void SetTransactionData(struct transaction_t* tx, void* context) {
             DEFAULT_PROPERTY
         );
 
-        voutInstance->DefineOwnProperty(
-            *(txContext->context),
-            String::NewFromUtf8(txContext->isolate, "pubkeyhash"),
-            String::NewFromUtf8(txContext->isolate, tx->vout[i].pubkeyhash),
-            DEFAULT_PROPERTY
-        );
+        voutInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "pubkeyhash"),
+                                        String::NewFromUtf8(txContext->isolate, tx->vout[i].pubkeyhash), DEFAULT_PROPERTY);
         vouts->Set(*(txContext->context), i, voutInstance);
     }
-    txInstance->DefineOwnProperty(
-        *(txContext->context),
-        String::NewFromUtf8(txContext->isolate, "vout"),
-        vouts,
-        DEFAULT_PROPERTY
-    );
+    txInstance->DefineOwnProperty(*(txContext->context), String::NewFromUtf8(txContext->isolate, "vout"), vouts, DEFAULT_PROPERTY);
 
     txInstance->DefineOwnProperty(
         *(txContext->context),
@@ -108,8 +71,7 @@ void SetTransactionData(struct transaction_t* tx, void* context) {
       DEFAULT_PROPERTY);
 }
 
-void NewTransactionInstance(Isolate *isolate, Local<Context> context, void* address)
-{
+void NewTransactionInstance(Isolate* isolate, Local<Context> context, void* address) {
     if (txGet == NULL) {
         return;
     }

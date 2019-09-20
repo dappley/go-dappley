@@ -8,4 +8,4 @@ BlkHeightTest.prototype = {
         return Blockchain.getNodeAddress();
     }
 };
-var blkHeightTest = new BlkHeightTest;
+module.exports = new BlkHeightTest();

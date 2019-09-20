@@ -23,7 +23,7 @@ type Config struct {
 	Tps                  uint32   `protobuf:"varint,2,opt,name=tps,proto3" json:"tps,omitempty"`
 	ScFreq               uint32   `protobuf:"varint,3,opt,name=scFreq,proto3" json:"scFreq,omitempty"`
 	Password             string   `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
-	MaxWallet            uint32   `protobuf:"varint,5,opt,name=maxWallet,proto3" json:"maxWallet,omitempty"`
+	MaxAccount           uint32   `protobuf:"varint,5,opt,name=maxAccount,proto3" json:"maxAccount,omitempty"`
 	InitialAmount        uint64   `protobuf:"varint,6,opt,name=initialAmount,proto3" json:"initialAmount,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -82,9 +82,9 @@ func (m *Config) GetPassword() string {
 	return ""
 }
 
-func (m *Config) GetMaxWallet() uint32 {
+func (m *Config) GetMaxAccount() uint32 {
 	if m != nil {
-		return m.MaxWallet
+		return m.MaxAccount
 	}
 	return 0
 }

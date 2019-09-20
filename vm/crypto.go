@@ -7,7 +7,7 @@ import (
 
 	logger "github.com/sirupsen/logrus"
 
-	"github.com/dappley/go-dappley/core"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
@@ -67,15 +67,17 @@ func VerifyPublicKeyFunc(addr, pubkey *C.char) bool {
 		}).Debug("SmartContract: failed to decode public key.")
 		return false
 	}
+	if ok, err := account.IsValidPubKey(pubKeyBytes); !ok {
 
-	pubKeyHash, err := core.NewUserPubKeyHash(pubKeyBytes)
-	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"content":    goAddr,
 			"public_key": pubKeyBytes,
 		}).Debug("SmartContract: failed to hash public key.")
 		return false
+
 	}
 
-	return pubKeyHash.GenerateAddress().String() == goAddr
+	ta := account.NewTransactionAccountByPubKey(pubKeyBytes)
+
+	return ta.GetAddress().String() == goAddr
 }

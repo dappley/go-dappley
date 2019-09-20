@@ -29,7 +29,7 @@ func main() {
 	logger.Info("**Transaction automator tool starts**")
 	logger.Info("*************************************")
 
-	dappSdk, wallet, toolConfigs := initial_setup()
+	dappSdk, account, toolConfigs := initial_setup()
 
 	nextBlockTicker := tool.NewNextBlockTicker(dappSdk)
 	nextBlockTicker.Run()
@@ -37,11 +37,11 @@ func main() {
 	logger.Info("Start funding...")
 
 	waitTillBlockHeightTwo(nextBlockTicker, dappSdk)
-	fund(dappSdk, wallet, toolConfigs.GetInitialAmount())
+	fund(dappSdk, account, toolConfigs.GetInitialAmount())
 
-	isScDeployed, scAddr := deploySmartContract(dappSdk, wallet)
+	isScDeployed, scAddr := deploySmartContract(dappSdk, account)
 
-	sender := util.NewBatchTxSender(toolConfigs.GetTps(), wallet, dappSdk, toolConfigs.GetScFreq(), scAddr)
+	sender := util.NewBatchTxSender(toolConfigs.GetTps(), account, dappSdk, toolConfigs.GetScFreq(), scAddr)
 	if isScDeployed {
 		sender.EnableSmartContract()
 	}
@@ -51,24 +51,24 @@ func main() {
 		select {
 		case <-nextBlockTicker.GetTickerChan():
 			sender.EnableSmartContract()
-			wallet.DisplayBalances()
+			account.DisplayBalances()
 		}
 	}
 }
 
-func initial_setup() (*sdk.DappSdk, *sdk.DappSdkWallet, *tx_automator_configpb.Config) {
+func initial_setup() (*sdk.DappSdk, *sdk.DappSdkAccount, *tx_automator_configpb.Config) {
 	toolConfigs := &tx_automator_configpb.Config{}
 	config.LoadConfig(configFilePath, toolConfigs)
 
 	grpcClient := sdk.NewDappSdkGrpcClient(toolConfigs.GetPort())
 	dappSdk := sdk.NewDappSdk(grpcClient)
-	wallet := sdk.NewDappSdkWallet(
-		toolConfigs.GetMaxWallet(),
+	account := sdk.NewDappSdkAccount(
+		toolConfigs.GetMaxAccount(),
 		toolConfigs.GetPassword(),
 		dappSdk,
 	)
 
-	return dappSdk, wallet, toolConfigs
+	return dappSdk, account, toolConfigs
 }
 
 func waitTillBlockHeightTwo(ticker *tool.NextBlockTicker, dappSdk *sdk.DappSdk) {
@@ -84,8 +84,8 @@ func waitTillBlockHeightTwo(ticker *tool.NextBlockTicker, dappSdk *sdk.DappSdk) 
 	}
 }
 
-func fund(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, initialAmount uint64) {
-	fundAddr := getFundAddr(wallet)
+func fund(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount, initialAmount uint64) {
+	fundAddr := getFundAddr(account)
 	fundRequest := tool.NewFundRequest(dappSdk)
 	fundRequest.Fund(fundAddr, common.NewAmount(initialAmount))
 
@@ -93,17 +93,17 @@ func fund(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, initialAmount uint64)
 		"initial_total_amount": initialAmount,
 	}).Info("Funding is completed. Script starts.")
 
-	wallet.Update()
-	wallet.DisplayBalances()
+	account.Update()
+	account.DisplayBalances()
 }
 
-func getFundAddr(wallet *sdk.DappSdkWallet) string {
-	return wallet.GetAddrs()[0].String()
+func getFundAddr(account *sdk.DappSdkAccount) string {
+	return account.GetAddrs()[0].String()
 }
 
-func deploySmartContract(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) (bool, string) {
+func deploySmartContract(dappSdk *sdk.DappSdk, account *sdk.DappSdkAccount) (bool, string) {
 
-	from := getFundAddr(wallet)
+	from := getFundAddr(account)
 	smartContractAddr := getSmartContractAddr()
 	if smartContractAddr != "" {
 		logger.WithFields(logger.Fields{
@@ -121,6 +121,7 @@ func deploySmartContract(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) (bool,
 
 	contract := string(data)
 	resp, err := dappSdk.Send(from, "", 1, contract)
+
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"file_path":     contractFilePath,
@@ -135,7 +136,7 @@ func deploySmartContract(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet) (bool,
 		"contract_addr": smartContractAddr,
 	}).Info("Smart contract has been deployed")
 
-	wallet.Update()
+	account.Update()
 
 	return false, smartContractAddr
 }

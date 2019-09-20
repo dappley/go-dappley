@@ -1,5 +1,5 @@
 package rpc
 
-type Service interface{
+type Service interface {
 	IsPrivate() bool
 }

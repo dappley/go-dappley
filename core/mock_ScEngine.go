@@ -4,6 +4,11 @@ package core
 
 import (
 	"errors"
+
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/scState"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/utxo"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -18,7 +23,7 @@ func (_m *MockScEngine) DestroyEngine() {
 }
 
 // Execute provides a mock function with given fields: function, args
-func (_m *MockScEngine) Execute(function string, args string) string {
+func (_m *MockScEngine) Execute(function string, args string) (string, error) {
 	ret := _m.Called(function, args)
 
 	var r0 string
@@ -28,19 +33,19 @@ func (_m *MockScEngine) Execute(function string, args string) string {
 		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	return r0, nil
 }
 
 // GetGeneratedTXs provides a mock function with given fields:
-func (_m *MockScEngine) GetGeneratedTXs() []*Transaction {
+func (_m *MockScEngine) GetGeneratedTXs() []*transaction.Transaction {
 	ret := _m.Called()
 
-	var r0 []*Transaction
-	if rf, ok := ret.Get(0).(func() []*Transaction); ok {
+	var r0 []*transaction.Transaction
+	if rf, ok := ret.Get(0).(func() []*transaction.Transaction); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Transaction)
+			r0 = ret.Get(0).([]*transaction.Transaction)
 		}
 	}
 
@@ -48,7 +53,7 @@ func (_m *MockScEngine) GetGeneratedTXs() []*Transaction {
 }
 
 // ImportContractAddr provides a mock function with given fields: contractAddr
-func (_m *MockScEngine) ImportContractAddr(contractAddr Address) {
+func (_m *MockScEngine) ImportContractAddr(contractAddr account.Address) {
 	_m.Called(contractAddr)
 }
 
@@ -58,17 +63,17 @@ func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
 }
 
 // ImportLocalStorage provides a mock function with given fields: state
-func (_m *MockScEngine) ImportLocalStorage(state *ScState) {
+func (_m *MockScEngine) ImportLocalStorage(state *scState.ScState) {
 	_m.Called(state)
 }
 
 // ImportNodeAddress provides a mock function with given fields: addr
-func (_m *MockScEngine) ImportNodeAddress(addr Address) {
+func (_m *MockScEngine) ImportNodeAddress(addr account.Address) {
 	_m.Called(addr)
 }
 
 // ImportPrevUtxos provides a mock function with given fields: utxos
-func (_m *MockScEngine) ImportPrevUtxos(utxos []*UTXO) {
+func (_m *MockScEngine) ImportPrevUtxos(utxos []*utxo.UTXO) {
 	_m.Called(utxos)
 }
 
@@ -93,16 +98,16 @@ func (_m *MockScEngine) ImportSourceTXID(txid []byte) {
 }
 
 // ImportTransaction provides a mock function with given fields: tx
-func (_m *MockScEngine) ImportTransaction(tx *Transaction) {
+func (_m *MockScEngine) ImportTransaction(tx *transaction.Transaction) {
 	_m.Called(tx)
 }
 
-func (_m *MockScEngine) ImportContractCreateUTXO(utxo *UTXO) {
+func (_m *MockScEngine) ImportContractCreateUTXO(utxo *utxo.UTXO) {
 	_m.Called(utxo)
 }
 
 // ImportUTXOs provides a mock function with given fields: utxos
-func (_m *MockScEngine) ImportUTXOs(utxos []*UTXO) {
+func (_m *MockScEngine) ImportUTXOs(utxos []*utxo.UTXO) {
 	_m.Called(utxos)
 }
 
@@ -117,4 +122,14 @@ func (_m *MockScEngine) CheckContactSyntax(sourece string) error {
 		return errors.New("contract error syntax")
 	}
 	return nil
+}
+
+// SetExecutionLimits set execution limits of V8 Engine, prevent Halting Problem.
+func (_m *MockScEngine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
+	return nil
+}
+
+// ExecutionInstructions returns the execution instructions
+func (_m *MockScEngine) ExecutionInstructions() uint64 {
+	return uint64(100)
 }

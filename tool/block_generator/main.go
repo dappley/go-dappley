@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/tool/block_generator/src"
+	tool "github.com/dappley/go-dappley/tool/block_generator/src"
 )
 
 const (
@@ -41,7 +41,7 @@ func main() {
 		fmt.Printf("Enter file name for blockchain%d: \n", i+1)
 		text, _ := reader.ReadString('\n')
 		text = strings.TrimSuffix(text, "\n")
-		text = "db/"+text
+		text = "db/" + text
 		db := storage.OpenDatabase(text)
 		defer db.Close()
 		files[i].Db = db

@@ -1,52 +1,53 @@
 package util
 
 import (
-	"github.com/dappley/go-dappley/core"
-	"github.com/dappley/go-dappley/core/pb"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/sdk"
 	logger "github.com/sirupsen/logrus"
 )
 
 type UnauthorizedUtxoTxSender struct {
 	TxSender
-	unauthorizedAddrPkh core.PubKeyHash
+	unauthorizedAddrPkh account.PubKeyHash
 }
 
-func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, wallet *sdk.DappSdkWallet, unauthorizedAddr core.Address) *UnauthorizedUtxoTxSender {
-	unauthorizedpkh, _ := core.NewUserPubKeyHash(wallet.GetWalletManager().GetKeyPairByAddress(unauthorizedAddr).PublicKey)
+func NewUnauthorizedUtxoTxSender(dappSdk *sdk.DappSdk, acc *sdk.DappSdkAccount, unauthorizedAddr account.Address) *UnauthorizedUtxoTxSender {
+	unauthorizedTA := account.NewAccountByKey(acc.GetAccountManager().GetKeyPairByAddress(unauthorizedAddr))
 
 	return &UnauthorizedUtxoTxSender{
 		TxSender{
 			dappSdk: dappSdk,
-			wallet:  wallet,
+			account: acc,
 		},
-		unauthorizedpkh,
+		unauthorizedTA.GetPubKeyHash(),
 	}
 }
 
-func (txSender *UnauthorizedUtxoTxSender) Generate(params core.SendTxParam) {
-	pkh, err := core.NewUserPubKeyHash(params.SenderKeyPair.PublicKey)
-
-	if err != nil {
-		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to hash sender public key")
+func (txSender *UnauthorizedUtxoTxSender) Generate(params transaction.SendTxParam) {
+	if ok, err := account.IsValidPubKey(params.SenderKeyPair.GetPublicKey()); !ok {
+		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to hash sender public key")
 	}
+	ta := account.NewAccountByKey(params.SenderKeyPair)
 
-	prevUtxos, err := txSender.wallet.GetUtxoIndex().GetUTXOsByAmount(pkh, params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("UnauthorizedUtxoTx: Unable to get UTXOs to match the amount")
 	}
 
-	unauthorizedUtxo := txSender.wallet.GetUtxoIndex().GetAllUTXOsByPubKeyHash(txSender.unauthorizedAddrPkh).GetAllUtxos()
+	unauthorizedUtxo := txSender.account.GetUtxoIndex().GetAllUTXOsByPubKeyHash(txSender.unauthorizedAddrPkh).GetAllUtxos()
 	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
-
-	vouts := prepareOutputLists(prevUtxos, params.From, params.To, params.Amount, params.Tip)
+	fromTA := account.NewContractAccountByAddress(params.From)
+	toTA := account.NewContractAccountByAddress(params.To)
+	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }
 
 func (txSender *UnauthorizedUtxoTxSender) Send() {
 
-	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*corepb.Transaction))
+	_, err := txSender.dappSdk.SendTransaction(txSender.tx.ToProto().(*transactionpb.Transaction))
 
 	if err != nil {
 		logger.WithError(err).Error("UnauthorizedUtxoTx: Sending transaction failed!")

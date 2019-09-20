@@ -20,7 +20,7 @@ func (fr *FundRequest) Fund(fundAddr string, amount *common.Amount) {
 	logger.Info("FundRequest: Requesting fund from miner...")
 
 	if fundAddr == "" {
-		logger.Panic("FundRequest: There is no wallet to receive fund.")
+		logger.Panic("FundRequest: There is no account to receive fund.")
 	}
 
 	if _, isSufficient := fr.checkSufficientInitialAmount(fundAddr, amount); isSufficient {

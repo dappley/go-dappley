@@ -12,7 +12,7 @@ StepRecorder.prototype = {
     },
     destory: function(){
         
-            Blockchain.deleteContract()
+        Blockchain.deleteContract()
         
     },
     dapp_schedule: function(){}

@@ -2,7 +2,8 @@ package sdk
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/rpc/pb"
+
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"google.golang.org/grpc"
 )
 

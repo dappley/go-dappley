@@ -23,10 +23,12 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"flag"
-	"github.com/dappley/go-dappley/core"
+	"sync"
+
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"sync"
 )
 
 const utxoMapKeyOld = "utxo"
@@ -35,7 +37,7 @@ const dbFilePath = "../../bin/node1.db"
 
 // UTXOIndexOld holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndexOld struct {
-	index map[string][]*core.UTXO
+	index map[string][]*utxo.UTXO
 	mutex *sync.RWMutex
 }
 
@@ -100,7 +102,7 @@ func LoadUTXOIndexOld(db storage.Storage) *UTXOIndexOld {
 
 // NewUTXOIndexOld initializes an UTXOIndex instance
 func NewUTXOIndexOld() *UTXOIndexOld {
-	return &UTXOIndexOld{make(map[string][]*core.UTXO), &sync.RWMutex{}}
+	return &UTXOIndexOld{make(map[string][]*utxo.UTXO), &sync.RWMutex{}}
 }
 
 func deserializeUTXOIndexOld(d []byte) *UTXOIndexOld {
@@ -128,8 +130,8 @@ func (utxos *UTXOIndexOld) serializeUTXOIndexOld() []byte {
 }
 
 // Convert old utxoIndex data to new utxoIndex data
-func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *core.UTXOIndex {
-	utxoIndexNew := core.NewUTXOIndex(core.NewUTXOCache(db))
+func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *lutxo.UTXOIndex {
+	utxoIndexNew := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 	for address, utxoArray := range utxoIndexOld.index {
 		if address == contractUtxoKeyOld {
 			continue
@@ -140,14 +142,14 @@ func convertData(db storage.Storage, utxoIndexOld *UTXOIndexOld) *core.UTXOIndex
 }
 
 // Add each utxo in utxoArray into new utxoIndex
-func addUtxoArrayToIndex(utxoArray []*core.UTXO, utxoIndexNew *core.UTXOIndex) {
+func addUtxoArrayToIndex(utxoArray []*utxo.UTXO, utxoIndexNew *lutxo.UTXOIndex) {
 	if utxoArray == nil {
 		return
 	}
 	for _, utxo := range utxoArray {
 		utxoIndexNew.AddUTXO(utxo.TXOutput, utxo.Txid, utxo.TxIndex)
 		logger.WithFields(logger.Fields{
-			"address": utxo.PubKeyHash.GenerateAddress(),
+			"address": utxo.GetAddress(),
 			"Txid":    hex.EncodeToString(utxo.Txid),
 			"TxIndex": utxo.TxIndex,
 		}).Info("Utxo_data_transfer: add utxo")
@@ -155,7 +157,7 @@ func addUtxoArrayToIndex(utxoArray []*core.UTXO, utxoIndexNew *core.UTXOIndex) {
 }
 
 // Save all new data to storage
-func saveNewData(utxoIndexNew *core.UTXOIndex) {
+func saveNewData(utxoIndexNew *lutxo.UTXOIndex) {
 	utxoIndexNew.Save()
 	logger.Info("Utxo_data_transfer: new data has been saved into storage...")
 }
