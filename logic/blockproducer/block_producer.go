@@ -3,9 +3,9 @@ package blockproducer
 import (
 	"encoding/hex"
 	"github.com/dappley/go-dappley/common/deadline"
+	"github.com/dappley/go-dappley/core/blockchain"
 	"time"
 
-	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblock"
 
 	"github.com/dappley/go-dappley/common"
@@ -66,17 +66,16 @@ func (bp *BlockProducer) IsProducingBlock() bool {
 
 //produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
-
-	bp.producer.BlockProduceStart()
-	defer bp.producer.BlockProduceFinish()
-
-	logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
-
 	// Do not produce block if block pool is syncing
 	if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
 		logger.Info("BlockProducer: block producer paused because block pool is syncing.")
 		return
 	}
+
+	bp.producer.BlockProduceStart()
+	defer bp.producer.BlockProduceFinish()
+
+	logger.Infof("BlockProducerer: producing block... ***time is %v***", time.Now().Unix())
 
 	ctx := bp.prepareBlock(deadline)
 
@@ -150,18 +149,16 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				}).Warn("BlockProducer: cannot find vin while executing smart contract")
 				return nil, nil
 			}
-			isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-
+			isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
 
-			gasCount, generatedTxs, err := ltransaction.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			gasCount, generatedTxs, err := ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 
-			// record gas used
 			if err != nil {
-				// add utxo from txs into utxoIndex
-				logger.WithError(err).Error("executeSmartContract error.")
+				logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
 			}
+			// record gas used
 			if gasCount > 0 {
 				grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
 				if err == nil {
@@ -173,7 +170,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				generatedTxs = append(generatedTxs, &gctx)
 			}
 			validTxs = append(validTxs, generatedTxs...)
-			utxoIndex.UpdateUtxoState(generatedTxs)
+			utxoIndex.UpdateUtxos(generatedTxs)
 		} else {
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
@@ -198,66 +195,6 @@ func (bp *BlockProducer) calculateTips(txs []*transaction.Transaction) *common.A
 		totalTips = totalTips.Add(tx.Tip)
 	}
 	return totalTips
-}
-
-//executeSmartContract executes all smart contracts
-func (bp *BlockProducer) executeSmartContract(utxoIndex *lutxo.UTXOIndex,
-	txs []*transaction.Transaction, currBlkHeight uint64, parentBlk *block.Block) ([]*transaction.Transaction, *scState.ScState) {
-	//start a new smart contract engine
-
-	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
-	engine := vm.NewV8Engine()
-	defer engine.DestroyEngine()
-	var generatedTXs []*transaction.Transaction
-	rewards := make(map[string]string)
-
-	minerAddr := account.NewAddress(bp.producer.Beneficiary())
-	minerTA := account.NewContractAccountByAddress(minerAddr)
-	for _, tx := range txs {
-		ctx := tx.ToContractTx()
-		if ctx == nil {
-			// add utxo from txs into utxoIndex
-			utxoIndex.UpdateUtxo(tx)
-			continue
-		}
-		prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"txid": hex.EncodeToString(ctx.ID),
-			}).Warn("BlockProducer: cannot find vin while executing smart contract")
-			return nil, nil
-		}
-		isSCUTXO := (*utxoIndex).GetAllUTXOsByPubKeyHash([]byte(ctx.Vout[0].PubKeyHash)).Size() == 0
-		gasCount, newTxs, err := ltransaction.Execute(ctx, prevUtxos, isSCUTXO, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-		generatedTXs = append(generatedTXs, newTxs...)
-		// record gas used
-		if err != nil {
-			// add utxo from txs into utxoIndex
-			logger.WithFields(logger.Fields{
-				"err": err,
-			}).Error("executeSmartContract error.")
-		}
-		if gasCount > 0 {
-			grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
-			if err == nil {
-				generatedTXs = append(generatedTXs, &grtx)
-			}
-		}
-		gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
-		if err == nil {
-
-			generatedTXs = append(generatedTXs, &gctx)
-		}
-
-		// add utxo from txs into utxoIndex
-		utxoIndex.UpdateUtxo(tx)
-	}
-	// append reward transaction
-	if len(rewards) > 0 {
-		rtx := transaction.NewRewardTx(currBlkHeight, rewards)
-		generatedTXs = append(generatedTXs, &rtx)
-	}
-	return generatedTXs, scStorage
 }
 
 //addBlockToBlockchain adds the new block to blockchain

@@ -63,8 +63,8 @@ func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
 }
 
 // Construct with map size
-func NewUTXOTxWithSize(size int) UTXOTx {
-	return UTXOTx{Indices: make(map[string]*UTXO, size)}
+func NewUTXOTxWithSize(size int) *UTXOTx {
+	return Alloc(size)
 }
 
 func DeserializeUTXOTx(d []byte) UTXOTx {
@@ -157,7 +157,7 @@ func (utxoTx UTXOTx) PrepareUtxos(amount *common.Amount) ([]*UTXO, bool) {
 	return nil, false
 }
 
-func (utxoTx UTXOTx) DeepCopy() UTXOTx {
+func (utxoTx UTXOTx) DeepCopy() *UTXOTx {
 	newUtxoTx := NewUTXOTxWithSize(utxoTx.Size())
 	for key, utxo := range utxoTx.Indices {
 		newUtxoTx.Indices[key] = utxo

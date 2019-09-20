@@ -14,12 +14,17 @@ import (
 func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*utxo.UTXO, error) {
 	var res []*utxo.UTXO
 	for _, vin := range tx.Vin {
-		if ok, _ := account.IsValidPubKey(vin.PubKey); !ok {
-			return nil, transaction.ErrNewUserPubKeyHash
+		// some vin.PubKey is contract address's PubKeyHash
+		isContract, _ := account.PubKeyHash(vin.PubKey).IsContract()
+		pubKeyHash := vin.PubKey
+		if !isContract {
+			if ok, _ := account.IsValidPubKey(vin.PubKey); !ok {
+				return nil, transaction.ErrNewUserPubKeyHash
+			}
+			ta := account.NewTransactionAccountByPubKey(vin.PubKey)
+			pubKeyHash = ta.GetPubKeyHash()
 		}
-		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
-
-		utxo := utxoPool.FindUTXOByVin([]byte(ta.GetPubKeyHash()), vin.Txid, vin.Vout)
+		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
 				"txid":      hex.EncodeToString(tx.ID),

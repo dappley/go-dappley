@@ -24,6 +24,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
+	logger "github.com/sirupsen/logrus"
+
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 
 	"github.com/dappley/go-dappley/core/block"
@@ -31,8 +34,6 @@ import (
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
-	lru "github.com/hashicorp/golang-lru"
-	logger "github.com/sirupsen/logrus"
 )
 
 const (

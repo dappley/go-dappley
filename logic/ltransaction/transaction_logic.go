@@ -19,8 +19,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const SCDestroyAddress = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
-
 var (
 	ErrInvalidGasPrice = errors.New("invalid gas price, should be in (0, 10^12]")
 	ErrInvalidGasLimit = errors.New("invalid gas limit, should be in (0, 5*10^10]")
@@ -33,7 +31,7 @@ var (
 // VerifyInEstimate returns whether the current tx in estimate mode is valid.
 func VerifyInEstimate(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) error {
 	utxos := getPrevUTXOs(&ctx.Transaction, utxoIndex)
-	if ctx.IsExecutionContract() && !IsContractDeployed(utxoIndex, ctx) {
+	if ctx.IsScheduleContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return errors.New("Transaction: contract state check failed")
 	}
 
@@ -107,7 +105,9 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 
 			}
 			usedUTXO := utxoIndex.FindUTXOByVin([]byte(ta.GetPubKeyHash()), vin.Txid, vin.Vout)
-			inputAmount = inputAmount.Add(usedUTXO.Value)
+			if usedUTXO != nil {
+				inputAmount = inputAmount.Add(usedUTXO.Value)
+			}
 		} else {
 			logger.Debug("Transaction: using UTXO from multiple accounts.")
 		}
@@ -186,6 +186,7 @@ func IsFromContract(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) boo
 	return true
 }
 
+// IsContractDeployed returns if the current contract is deployed
 func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) bool {
 	pubkeyhash := ctx.GetContractPubKeyHash()
 	if pubkeyhash == nil {
@@ -196,9 +197,9 @@ func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx)
 	return contractUtxoTx.Size() > 0
 }
 
-//Execute executes the smart contract the transaction points to. it doesnt do anything if is a normal transaction
+//Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
 func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
-	isSCUTXO bool,
+	isContractDeployed bool,
 	index lutxo.UTXOIndex,
 	scStorage *scState.ScState,
 	rewards map[string]string,
@@ -209,16 +210,18 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	if engine == nil {
 		return 0, nil, nil
 	}
-
-	vout := ctx.Vout[transaction.ContractTxouputIndex]
-
-	if isSCUTXO {
+	if !isContractDeployed {
 		return 0, nil, nil
 	}
+
+	vout := ctx.Vout[transaction.ContractTxouputIndex]
 
 	function, args := util.DecodeScInput(vout.Contract)
 	if function == "" {
 		return 0, nil, ErrUnsupportedSourceType
+	}
+	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), 0); err != nil {
+		return 0, nil, ErrInvalidGasLimit
 	}
 
 	totalArgs := util.PrepareArgs(args)
@@ -230,9 +233,7 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	}).Debug("Transaction: is executing the smart contract...")
 
 	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
-	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), 0); err != nil {
-		return 0, nil, ErrInvalidGasLimit
-	}
+
 	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)

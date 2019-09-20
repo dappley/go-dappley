@@ -68,7 +68,7 @@ func (s *Stream) GetRemoteAddr() multiaddr.Multiaddr { return s.peerInfo.Addrs[0
 
 //Start starts a stream with a peer
 func (s *Stream) Start(quitCh chan<- *Stream, msgRcvCh chan *networkmodel.DappPacketContext) {
-	logger.Debug("Stream: Start new stream")
+	logger.Info("Stream: Start new stream")
 	rw := bufio.NewReadWriter(bufio.NewReader(s.stream), bufio.NewWriter(s.stream))
 	s.startLoop(rw, quitCh, msgRcvCh)
 }

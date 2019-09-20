@@ -745,7 +745,7 @@ func TestUpdate(t *testing.T) {
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
-	utxoIndex.UpdateUtxoState(blk.GetTransactions())
+	utxoIndex.UpdateUtxos(blk.GetTransactions())
 	utxoIndex.Save()
 	utxoIndexInDB := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 
@@ -866,18 +866,18 @@ func TestUpdate(t *testing.T) {
 	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txsForUpdate := []*transaction.Transaction{&dependentTx2, &dependentTx3}
-	utxoIndex2.UpdateUtxoState(txsForUpdate)
+	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
 	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta4.GetPubKeyHash()).Size())
 	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4}
-	utxoIndex2.UpdateUtxoState(txsForUpdate)
+	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
 	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5}
-	utxoIndex2.UpdateUtxoState(txsForUpdate)
+	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
@@ -941,11 +941,14 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
 
+	// assert before close node
 	for i := range miners {
 		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bcs[i].GetMaxHeight())
+	}
+
+	for i := range miners {
 		bps[i].Stop()
 		nodeArray[i].Stop()
-
 	}
 }
 

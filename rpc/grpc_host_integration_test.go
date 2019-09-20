@@ -717,7 +717,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		"")
 	transaction1, err := transaction.NewUTXOTransaction(utxos, sendTxParam1)
-	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction1})
+	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction1})
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
 	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
@@ -728,7 +728,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		"")
 	transaction2, err := transaction.NewUTXOTransaction(utxos, sendTxParam2)
-	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction2})
+	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction2})
 	pubKeyHash1 := receiverAccount1.GetPubKeyHash()
 	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
 	sendTxParam3 := transaction.NewSendTxParam(receiverAccount1.GetAddress(),
@@ -740,7 +740,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		common.NewAmount(0),
 		"")
 	transaction3, err := transaction.NewUTXOTransaction(utxos, sendTxParam3)
-	utxoIndex.UpdateUtxoState([]*transaction.Transaction{&transaction3})
+	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction3})
 
 	rpcContext.bp.Stop()
 	time.Sleep(time.Second)

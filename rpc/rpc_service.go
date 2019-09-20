@@ -127,7 +127,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
+	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
 
 	acc := account.NewContractAccountByAddress(account.NewAddress(in.GetAddress()))
 
@@ -241,7 +241,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
+	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
 
 	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
@@ -278,7 +278,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	statusCode := codes.OK
 	var details []proto.Message
 	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
+	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
 
 	txMap := make(map[int]transaction.Transaction, len(in.Transactions))
 	txs := []transaction.Transaction{}
@@ -428,7 +428,7 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
 	}
 	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxoState(rpcService.GetBlockchain().GetTxPool().GetTransactions())
+	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetTransactions())
 
 	err := ltransaction.VerifyInEstimate(utxoIndex, contractTx)
 	if err != nil {

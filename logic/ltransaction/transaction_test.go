@@ -321,8 +321,8 @@ func TestTransaction_Execute(t *testing.T) {
 			if err != nil {
 				println(err.Error())
 			}
-			isSCUTXO := (*index).GetAllUTXOsByPubKeyHash([]byte(tx.Vout[0].PubKeyHash)).Size() == 0
-			Execute(ctx, preUTXO, isSCUTXO, *index, scState.NewScState(), nil, sc, 0, parentBlk)
+			isContractDeployed := IsContractDeployed(index, ctx)
+			Execute(ctx, preUTXO, isContractDeployed, *index, scState.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}

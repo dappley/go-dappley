@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"github.com/lestrrat-go/file-rotatelogs"
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
@@ -62,7 +61,6 @@ func (logNew *Log) GetParameters() {
 	}
 
 	logNew.stdout = viper.GetBool("log.stdout")
-	fmt.Println(*logNew)
 }
 
 type LogNullWriter struct {

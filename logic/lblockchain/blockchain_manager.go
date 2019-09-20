@@ -363,6 +363,13 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			}).Warn("BlockchainManager: failed to calculate previous state of scState for the block")
 			return nil, nil, err
 		}
+       
+		if err != nil {
+			logger.WithError(err).WithFields(logger.Fields{
+				"hash": block.GetHash(),
+			}).Errorf("BlockchainManager: failed to delete block %v", err.Error())
+			return nil, nil, err
+		}
 	}
 
 	return index, scState, nil

@@ -84,7 +84,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 		&sync.Mutex{},
 	}
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxoState(genesis.GetTransactions())
+	utxoIndex.UpdateUtxos(genesis.GetTransactions())
 	scState := scState.NewScState()
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
@@ -227,19 +227,12 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	bcTemp := bc.DeepCopy()
 	tailBlk, _ := bc.GetTailBlock()
 
-	bcTemp.db.EnableBatch()
-	defer bcTemp.db.DisableBatch()
-
-	err := bcTemp.setTailBlockHash(ctx.Block.GetHash())
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to set tail block hash!")
-		return err
-	}
+	bcTemp.db.DisableBatch()
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 
 	bcTemp.runScheduleEvents(ctx, tailBlk)
-	err = ctx.UtxoIndex.Save()
+	err := ctx.UtxoIndex.Save()
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save utxo to database.")
 		return err
@@ -263,6 +256,12 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	err = bcTemp.AddBlockToDb(ctx.Block)
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to add block to database.")
+		return err
+	}
+
+	err = bcTemp.setTailBlockHash(ctx.Block.GetHash())
+	if err != nil {
+		blockLogger.Error("Blockchain: failed to set tail block hash!")
 		return err
 	}
 

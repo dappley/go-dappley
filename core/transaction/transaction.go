@@ -386,7 +386,8 @@ func (ctx *ContractTx) IsContract() bool {
 	return true
 }
 
-func (ctx *ContractTx) IsExecutionContract() bool {
+// IsScheduleContract returns if the contract contains 'dapp_schedule'
+func (ctx *ContractTx) IsScheduleContract() bool {
 	if !strings.Contains(ctx.GetContract(), scheduleFuncName) {
 		return true
 	}
@@ -569,21 +570,6 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 
 	tx.ID = tx.Hash()
 
-	return tx
-}
-
-func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) Transaction {
-	tx := Transaction{
-		ID: nil,
-		Vin: []transactionbase.TXInput{
-			{vinTxId, vinVout, nil, vinPubkey},
-		},
-		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(voutValue), voutPubKeyHash, ""},
-		},
-		Tip: common.NewAmount(tip),
-	}
-	tx.ID = tx.Hash()
 	return tx
 }
 
