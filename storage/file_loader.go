@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
-
+        "path/filepath"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -53,7 +53,17 @@ func (fl *FileLoader) ReadFromFile() ([]byte, error) {
 }
 
 func (fl *FileLoader) SaveToFile(buffer bytes.Buffer) {
-	err := ioutil.WriteFile(fl.filePath, buffer.Bytes(), 0644)
+	dir := filepath.Dir(fl.filePath)
+	_, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.Mkdir(dir,os.ModePerm)
+			if err != nil {
+				logger.Errorf("Create folder error: %v", err.Error())
+			}
+		}
+	}
+	err = ioutil.WriteFile(fl.filePath, buffer.Bytes(), 0644)
 	if err != nil {
 		logger.Panic(err)
 	}

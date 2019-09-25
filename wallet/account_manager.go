@@ -71,6 +71,16 @@ func GetAccountFilePath() string {
 		accountfile, _ = filepath.Abs(conf.GetFilePath())
 	} else if Exists(strings.Replace(accountPath, "..", "../..", 1)) {
 		accountfile, _ = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
+	} else {
+		err := os.Mkdir(accountPath,os.ModePerm)
+		if err != nil {
+			logger.Errorf("Create folder error: %v", err.Error())
+		}else {
+			accountfile, err = filepath.Abs(conf.GetFilePath())
+			if err != nil{
+				logger.Errorf("Get folder path error: %v", err.Error())
+			}
+		}	
 	}
 	return accountfile
 }
