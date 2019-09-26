@@ -60,25 +60,25 @@ func (ss *ScState) serialize() []byte {
 }
 
 //Get gets an item in scStorage
-func (ss *ScState) Get(pubKeyHash, key string) string {
+func (ss *ScState) Get(address, key string) string {
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
-	if len(ss.states[pubKeyHash]) == 0 {
+	if len(ss.states[address]) == 0 {
 		return ""
 	}
-	return ss.states[pubKeyHash][key]
+	return ss.states[address][key]
 }
 
 //Set sets an item in scStorage
-func (ss *ScState) Set(pubKeyHash, key, value string) int {
+func (ss *ScState) Set(address, key, value string) int {
 	ss.mutex.Lock()
 	defer ss.mutex.Unlock()
 
-	if len(ss.states[pubKeyHash]) == 0 {
+	if len(ss.states[address]) == 0 {
 		ls := make(map[string]string)
-		ss.states[pubKeyHash] = ls
+		ss.states[address] = ls
 	}
-	ss.states[pubKeyHash][key] = value
+	ss.states[address][key] = value
 	return 0
 }
 
@@ -107,7 +107,7 @@ func (ss *ScState) GetStorageByAddress(address string) map[string]string {
 }
 
 func GetScStateKey(blkHash hash.Hash) []byte {
-	return []byte(scStateMapKey + blkHash.String())
+	return []byte(scStateMapKey)
 }
 
 //LoadScStateFromDatabase loads states from database
@@ -121,7 +121,7 @@ func LoadScStateFromDatabase(db storage.Storage) *ScState {
 	return deserializeScState(rawBytes)
 }
 
-//SaveToDatabase saves states to database
+//SaveToDatabase saves states to database directly
 func (ss *ScState) SaveToDatabase(db storage.Storage) error {
 	return db.Put([]byte(scStateMapKey), ss.serialize())
 }
@@ -156,6 +156,7 @@ func (cl *ChangeLog) FromProto(pb proto.Message) {
 	}
 }
 
+// Save data with change logs
 func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 	scStateOld := LoadScStateFromDatabase(db)
 	change := NewChangeLog()
