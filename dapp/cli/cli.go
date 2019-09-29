@@ -66,6 +66,7 @@ const (
 	cliaddProducer       = "addProducer"
 	cliEstimateGas       = "estimateGas"
 	cliGasPrice          = "gasPrice"
+	cliContractQuery     = "contractQuery"
 	cliHelp              = "help"
 )
 
@@ -87,6 +88,9 @@ const (
 	flagListPrivateKey   = "privateKey"
 	flagGasLimit         = "gasLimit"
 	flagGasPrice         = "gasPrice"
+	flagContractAddr     = "contractAddr"
+	flagKey              = "key"
+	flagValue            = "value"
 )
 
 type valueType int
@@ -120,6 +124,7 @@ var cmdList = []string{
 	cliaddProducer,
 	cliEstimateGas,
 	cliGasPrice,
+	cliContractQuery,
 	cliHelp,
 }
 
@@ -282,6 +287,26 @@ var cmdFlagsMap = map[string][]flagPars{
 		},
 	},
 	cliGasPrice: {},
+	cliContractQuery: {
+		flagPars{
+			flagContractAddr,
+			"",
+			valueTypeString,
+			"Contract address. Eg. cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD",
+		},
+		flagPars{
+			flagKey,
+			"",
+			valueTypeString,
+			"The data key storaged in contract address.",
+		},
+		flagPars{
+			flagValue,
+			"",
+			valueTypeString,
+			"The data value storaged in contract address.",
+		},
+	},
 }
 
 //map the callback function to each command
@@ -299,6 +324,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliEstimateGas:       {rpcService, estimateGasCommandHandler},
 	cliGasPrice:          {rpcService, gasPriceCommandHandler},
 	cliHelp:              {adminRpcService, helpCommandHandler},
+	cliContractQuery:     {rpcService, contractQueryCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -1143,4 +1169,38 @@ func gasPriceCommandHandler(ctx context.Context, account interface{}, flags cmdF
 	}
 	gasPrice := gasPriceResponse.GasPrice
 	fmt.Println("Gas price: ", common.NewAmountFromBytes(gasPrice).String())
+}
+
+func contractQueryCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+	contractAddr := *(flags[flagContractAddr].(*string))
+	queryKey := *(flags[flagKey].(*string))
+	queryValue := *(flags[flagValue].(*string))
+	contractAccount := account.NewContractAccountByAddress(account.NewAddress(contractAddr))
+
+	if !contractAccount.IsValid() {
+		fmt.Println("Error: contract address is not valid!")
+		return
+	}
+	if queryKey == "" && queryValue == "" {
+		fmt.Println("Error: query key and value cannot be null at the same time!")
+		return
+	}
+	response, err := c.(rpcpb.RpcServiceClient).RpcContractQuery(ctx, &rpcpb.ContractQueryRequest{
+		ContractAddr: contractAddr,
+		Key:          queryKey,
+		Value:        queryValue,
+	})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+	resultKey := response.GetKey()
+	resultValue := response.GetValue()
+
+	fmt.Println("Contract query result: key=", resultKey, ", value=", resultValue)
 }
