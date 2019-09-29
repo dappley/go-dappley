@@ -1297,3 +1297,114 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 
 	wallet.RemoveAccountFile()
 }
+
+func TestRpcService_RpcContractQuery(t *testing.T) {
+	logger.SetLevel(logger.WarnLevel)
+	// Create storage
+	store := storage.NewRamStorage()
+	defer store.Close()
+	wallet.RemoveAccountFile()
+
+	// Create accounts
+	senderAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	minerAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
+	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	bm, bp := CreateProducer(
+		minerAccount.GetAddress(),
+		senderAccount.GetAddress(),
+		store,
+		transactionpool.NewTransactionPool(node, 128000),
+		node,
+	)
+
+	// Start a grpc server
+	server := NewGrpcServer(node, bm, consensus.NewDPOS(nil), "temp")
+	server.Start(defaultRpcPort + 17) // use a different port as other integration tests
+	defer server.Stop()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a grpc connection and a account
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+17), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewAdminServiceClient(conn)
+	rpcClient := rpcpb.NewRpcServiceClient(conn)
+
+	// deploy contract
+	contract := "'use strict';var VideoSign=function(){};VideoSign.prototype={put_sign:function(key,value){LocalStorage.set(key,value)},get_sign:function(key){return LocalStorage.get(key)}," +
+		"dapp_schedule:function(){}};module.exports=new VideoSign();"
+	// Initiate a RPC send request
+	sendResp, err := c.RpcSend(context.Background(), &rpcpb.SendRequest{
+		From:        senderAccount.GetAddress().String(),
+		To:          "",
+		Amount:      common.NewAmount(1).Bytes(),
+		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		Tip:         common.NewAmount(0).Bytes(),
+		Data:        contract,
+		GasLimit:    common.NewAmount(30000).Bytes(),
+		GasPrice:    common.NewAmount(1).Bytes(),
+	})
+
+	assert.Nil(t, err)
+	contractAddr := sendResp.ContractAddress
+
+	// Start mining to approve the transaction
+	bp.Start()
+	for bm.Getblockchain().GetMaxHeight() < 1 {
+	}
+	bp.Stop()
+
+	time.Sleep(time.Second)
+	key := "k"
+	value := "abc"
+	// estimate contract
+	contract = "{\"function\":\"put_sign\",\"args\":[\"" + key + "\",\"" + value + "\"]}"
+	sendResp, err = c.RpcSend(context.Background(), &rpcpb.SendRequest{
+		From:        senderAccount.GetAddress().String(),
+		To:          contractAddr,
+		Amount:      common.NewAmount(1).Bytes(),
+		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		Tip:         common.NewAmount(0).Bytes(),
+		Data:        contract,
+		GasLimit:    common.NewAmount(30000).Bytes(),
+		GasPrice:    common.NewAmount(1).Bytes(),
+	})
+
+	// Start mining to approve the transaction
+	maxHeight := bm.Getblockchain().GetMaxHeight()
+	bp.Start()
+	for bm.Getblockchain().GetMaxHeight() < maxHeight+2 {
+	}
+	bp.Stop()
+
+	// send query request
+	queryRequest := &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Key: key}
+	queryResp, err := rpcClient.RpcContractQuery(context.Background(), queryRequest)
+	assert.Nil(t, err)
+	logger.WithFields(logger.Fields{
+		"queryResp.Value": queryResp.Value,
+	}).Error("test error")
+	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
+	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
+
+	queryRequest = &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Value: value}
+	queryResp, err = rpcClient.RpcContractQuery(context.Background(), queryRequest)
+	assert.Nil(t, err)
+
+	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
+	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
+
+	wallet.RemoveAccountFile()
+}

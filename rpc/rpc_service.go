@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"github.com/dappley/go-dappley/consensus"
+	"strconv"
 	"strings"
 	"time"
 
@@ -464,11 +465,14 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 	scState := scState.LoadScStateFromDatabase(rpcService.GetBlockchain().GetDb())
 	var resultKey = ""
 	var resultValue = ""
+	// storage data has been JSON.stringfy before
 	if queryKey != "" {
 		resultKey = queryKey
 		resultValue = scState.Get(contractAddr, queryKey)
+		resultValue, _ = strconv.Unquote(resultValue)
 	} else {
 		resultValue = queryValue
+		queryValue = strconv.Quote(queryValue)
 		resultKey = scState.GetByValue(contractAddr, queryValue)
 	}
 	return &rpcpb.ContractQueryResponse{Key: resultKey, Value: resultValue}, nil
