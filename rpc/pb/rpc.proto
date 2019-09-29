@@ -24,6 +24,7 @@ service RpcService {
   rpc RpcGetLastIrreversibleBlock(GetLastIrreversibleBlockRequest) returns (GetLastIrreversibleBlockResponse) {}
   rpc RpcEstimateGas(EstimateGasRequest) returns (EstimateGasResponse) {}
   rpc RpcGasPrice(GasPriceRequest) returns (GasPriceResponse) {}
+  rpc RpcContractQuery(ContractQueryRequest) returns (ContractQueryResponse) {}
 }
 
 service AdminService{
@@ -126,6 +127,13 @@ message EstimateGasRequest {
 
 message GasPriceRequest {
 }
+
+message ContractQueryRequest {
+  string contract_addr = 1;
+  string key = 2;
+  string value = 3;
+}
+
 // Responses
 
 message AddProducerResponse {}
@@ -246,4 +254,9 @@ message EstimateGasResponse {
 
 message GasPriceResponse {
     bytes gas_price = 1;
+}
+
+message ContractQueryResponse {
+    string key = 1;
+    string value = 2;
 }

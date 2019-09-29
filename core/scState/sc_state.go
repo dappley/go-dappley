@@ -69,6 +69,21 @@ func (ss *ScState) Get(address, key string) string {
 	return ss.states[address][key]
 }
 
+//GetByValue gets an item in scStorage by the value
+func (ss *ScState) GetByValue(address, value string) string {
+	ss.mutex.Lock()
+	defer ss.mutex.Unlock()
+	if len(ss.states[address]) == 0 {
+		return ""
+	}
+	for key, val := range ss.states[address] {
+		if val == value {
+			return key
+		}
+	}
+	return ""
+}
+
 //Set sets an item in scStorage
 func (ss *ScState) Set(address, key, value string) int {
 	ss.mutex.Lock()

@@ -450,3 +450,26 @@ func (rpcService *RpcService) RpcGasPrice(ctx context.Context, in *rpcpb.GasPric
 	gasPrice := rpcService.GetBlockchain().GasPrice()
 	return &rpcpb.GasPriceResponse{GasPrice: byteutils.FromUint64(gasPrice)}, nil
 }
+
+// RpcContractQuery returns the query result of contract storage
+func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.ContractQueryRequest) (*rpcpb.ContractQueryResponse, error) {
+
+	contractAddr := in.ContractAddr
+	queryKey := in.Key
+	queryValue := in.Value
+
+	if contractAddr == "" || (queryKey == "" && queryValue == "") {
+		return nil, status.Error(codes.InvalidArgument, "contract query params error")
+	}
+	scState := scState.LoadScStateFromDatabase(rpcService.GetBlockchain().GetDb())
+	var resultKey = ""
+	var resultValue = ""
+	if queryKey != "" {
+		resultKey = queryKey
+		resultValue = scState.Get(contractAddr, queryKey)
+	} else {
+		resultValue = queryValue
+		resultKey = scState.GetByValue(contractAddr, queryValue)
+	}
+	return &rpcpb.ContractQueryResponse{Key: resultKey, Value: resultValue}, nil
+}
