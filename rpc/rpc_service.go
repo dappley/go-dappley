@@ -263,15 +263,16 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.GetBlockchain().GetTxPool().Push(*tx)
 	rpcService.GetBlockchain().GetTxPool().BroadcastTx(tx)
 
+	var generatedContractAddress = ""
 	if tx.IsContract() {
 		contractAddr := tx.GetContractAddress()
-		message := contractAddr.String()
+		generatedContractAddress = contractAddr.String()
 		logger.WithFields(logger.Fields{
-			"contractAddr": message,
+			"contractAddr": generatedContractAddress,
 		}).Info("Smart Contract Deployed Successful!")
 	}
 
-	return &rpcpb.SendTransactionResponse{}, nil
+	return &rpcpb.SendTransactionResponse{GeneratedContractAddress: generatedContractAddress}, nil
 }
 
 // RpcSendBatchTransaction sends a batch of transactions to blockchain created by account account
