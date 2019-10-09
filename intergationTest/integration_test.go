@@ -928,9 +928,12 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 
 		bm := lblockchain.NewBlockchainManager(bc, pool, node, dpos)
 		bp := blockproducer.NewBlockProducer(bm, dpos, producer)
-		bp.Start()
 		bps = append(bps, bp)
 		bcs = append(bcs, bc)
+	}
+
+	for i := range miners {
+		bps[i].Start()
 	}
 
 	for i := range miners {
@@ -944,8 +947,9 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 	time.Sleep(time.Second * time.Duration(dynasty.GetDynastyTime()*dposRounds))
 
 	// assert before close node
+	assertHeight := uint64(dynasty.GetDynastyTime() * dposRounds / timeBetweenBlock)
 	for i := range miners {
-		assert.Equal(t, uint64(dynasty.GetDynastyTime()*dposRounds/timeBetweenBlock), bcs[i].GetMaxHeight())
+		assert.Equal(t, assertHeight, bcs[i].GetMaxHeight())
 	}
 
 	for i := range miners {
