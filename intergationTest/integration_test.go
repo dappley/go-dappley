@@ -346,11 +346,11 @@ func TestForkChoice(t *testing.T) {
 	bms[0].BroadcastBlock(tailBlk)
 	// Make sure syncing starts on node[1]
 	util.WaitDoneOrTimeout(func() bool {
-		return bms[0].Getblockchain().GetState() == blockchain.BlockchainSync
+		return bms[1].Getblockchain().GetState() == blockchain.BlockchainSync
 	}, 10)
 	// Make sure syncing ends on node[1]
 	util.WaitDoneOrTimeout(func() bool {
-		return bms[0].Getblockchain().GetState() != blockchain.BlockchainSync
+		return bms[1].Getblockchain().GetState() != blockchain.BlockchainSync
 	}, 20)
 
 	assert.Equal(t, bms[0].Getblockchain().GetMaxHeight(), bms[1].Getblockchain().GetMaxHeight())
