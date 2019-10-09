@@ -55,6 +55,8 @@ var (
 	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 	// DefaultGasPrice default price of per gas
 	DefaultGasPrice uint64 = 1
+	// switch on RunScheduleEvents
+	isEnableRunScheduleEvents = false
 )
 
 type Blockchain struct {
@@ -231,7 +233,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 
-	bcTemp.runScheduleEvents(ctx, tailBlk)
+	if isEnableRunScheduleEvents {
+		bcTemp.runScheduleEvents(ctx, tailBlk)
+	}
+
 	err := ctx.UtxoIndex.Save()
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save utxo to database.")
@@ -566,4 +571,9 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	}
 
 	bc.SetLIBHash(LIBBlk.GetHash())
+}
+
+// Set value of switch tag on RunScheduleEvents
+func SetEnableRunScheduleEvents() {
+	isEnableRunScheduleEvents = true
 }

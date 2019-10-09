@@ -130,7 +130,6 @@ func main() {
 
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 
-
 	//start mining
 	logic.SetLockAccount() //lock the account
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
@@ -150,6 +149,10 @@ func main() {
 
 	bm.RequestDownloadBlockchain()
 
+	// switch on RunScheduleEvents
+	if viper.GetBool("scheduleEvents.enable") {
+		lblockchain.SetEnableRunScheduleEvents()
+	}
 	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())
 	}

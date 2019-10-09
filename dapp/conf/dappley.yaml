@@ -9,3 +9,5 @@ metrics:
   interval: 5000
 pprof:
   open: false
+scheduleEvents:
+  enable: false
