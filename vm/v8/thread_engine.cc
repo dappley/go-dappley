@@ -60,13 +60,13 @@ void *ThreadExecutor(void *args) {
         tContext.source_line_offset = 0;
         tContext.tracable_source = NULL;
         tContext.strictDisallowUsage = ctx->input.allow_usage;
-        ExecuteDelegate(ctx->input.source, 0, ctx->input.handler, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
+        ExecuteByV8(ctx->input.source, 0, ctx->input.handler, NULL, ctx->e, InjectTracingInstructionDelegate, (void *)&tContext);
 
         ctx->output.line_offset = tContext.source_line_offset;
         ctx->output.result = static_cast<char *>(tContext.tracable_source);
     } else {
         ctx->output.ret =
-            ExecuteDelegate(ctx->input.source, ctx->input.line_offset, ctx->input.handler, &ctx->output.result, ctx->e, ExecuteSourceDataDelegate, NULL);
+            ExecuteByV8(ctx->input.source, ctx->input.line_offset, ctx->input.handler, &ctx->output.result, ctx->e, ExecuteSourceDataDelegate, NULL);
     }
 
     ctx->is_finished = true;

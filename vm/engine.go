@@ -57,7 +57,6 @@ import (
 var (
 	v8once               = sync.Once{}
 	v8EngineList         = make(map[uint64]*V8Engine)
-	storagesMutex        = sync.RWMutex{}
 	currHandler          = uint64(100)
 	sourceModuleCache, _ = lru.New(40960)
 	enginesLock          = sync.RWMutex{}
@@ -151,23 +150,17 @@ func NewV8Engine() *V8Engine {
 		actualTotalMemorySize:              0,
 	}
 	currHandler++
-	storagesMutex.Lock()
-	defer storagesMutex.Unlock()
+	enginesLock.Lock()
+	defer enginesLock.Unlock()
 	v8EngineList[engine.handler] = engine
-
-	(func() {
-		enginesLock.Lock()
-		defer enginesLock.Unlock()
-	})()
-
 	return engine
 }
 
 //DestroyEngine destroy V8Engine instance
 func (sc *V8Engine) DestroyEngine() {
-	storagesMutex.Lock()
-	defer storagesMutex.Unlock()
+	enginesLock.Lock()
 	delete(v8EngineList, sc.handler)
+	enginesLock.Unlock()
 
 	C.DeleteEngine(sc.v8engine)
 }
@@ -239,9 +232,9 @@ func ClearSourceModuleCache() {
 }
 
 // AddModule add module.
-func (e *V8Engine) AddModule(id, source string, sourceLineOffset int) error {
+func (sc *V8Engine) AddModule(id, source string, sourceLineOffset int) error {
 	// inject tracing instruction when enable limits.
-	if e.enableLimits {
+	if sc.enableLimits {
 		var item *sourceModuleItem
 		sourceHash := byteutils.Hex(hash.Sha3256([]byte(source)))
 
@@ -251,7 +244,7 @@ func (e *V8Engine) AddModule(id, source string, sourceLineOffset int) error {
 			item = value.(*sourceModuleItem)
 		}
 		if item == nil {
-			traceableSource, lineOffset, err := e.InjectTracingInstructions(source)
+			traceableSource, lineOffset, err := sc.InjectTracingInstructions(source)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"err": err,
@@ -272,7 +265,7 @@ func (e *V8Engine) AddModule(id, source string, sourceLineOffset int) error {
 		source = item.traceableSource
 		sourceLineOffset = item.traceableSourceLineOffset
 	}
-	e.modules.Add(NewModule(id, source, sourceLineOffset))
+	sc.modules.Add(NewModule(id, source, sourceLineOffset))
 	return nil
 }
 
@@ -387,7 +380,7 @@ func (sc *V8Engine) CheckContactSyntax(source string) error {
 	cSource := C.CString(source)
 	defer C.free(unsafe.Pointer(cSource))
 	var err error = nil
-	if C.CheckContractSyntax(cSource) > 0 {
+	if C.CheckContractSyntax(cSource, sc.v8engine) > 0 {
 		err = errors.New("error syntax")
 	}
 	return err
@@ -410,8 +403,8 @@ func (sc *V8Engine) prepareFuncCallScript(source, function, args string) (string
 }
 
 func getV8EngineByAddress(handler uint64) *V8Engine {
-	storagesMutex.Lock()
-	defer storagesMutex.Unlock()
+	enginesLock.Lock()
+	defer enginesLock.Unlock()
 	return v8EngineList[handler]
 }
 
@@ -425,18 +418,18 @@ func (sc *V8Engine) CollectTracingStats() {
 }
 
 // SetExecutionLimits set execution limits of V8 Engine, prevent Halting Problem.
-func (e *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
+func (sc *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTotalMemorySize uint64) error {
 
 	totalMemorySize := DefaultLimitsOfTotalMemorySize
 	if limitsOfTotalMemorySize > 0 {
 		totalMemorySize = limitsOfTotalMemorySize
 	}
 
-	e.v8engine.limits_of_executed_instructions = C.size_t(limitsOfExecutionInstructions)
-	e.v8engine.limits_of_total_memory_size = C.size_t(totalMemorySize)
+	sc.v8engine.limits_of_executed_instructions = C.size_t(limitsOfExecutionInstructions)
+	sc.v8engine.limits_of_total_memory_size = C.size_t(totalMemorySize)
 
-	e.limitsOfExecutionInstructions = limitsOfExecutionInstructions
-	e.limitsOfTotalMemorySize = totalMemorySize
+	sc.limitsOfExecutionInstructions = limitsOfExecutionInstructions
+	sc.limitsOfTotalMemorySize = totalMemorySize
 
 	if limitsOfExecutionInstructions == 0 || totalMemorySize == 0 {
 		logger.Errorf("limit args has empty. limitsOfExecutionInstructions:%v,limitsOfTotalMemorySize:%d", limitsOfExecutionInstructions, totalMemorySize)
@@ -451,12 +444,12 @@ func (e *V8Engine) SetExecutionLimits(limitsOfExecutionInstructions, limitsOfTot
 }
 
 // InjectTracingInstructions process the source to inject tracing instructions.
-func (e *V8Engine) InjectTracingInstructions(source string) (string, int, error) {
+func (sc *V8Engine) InjectTracingInstructions(source string) (string, int, error) {
 	cSource := C.CString(source)
 	defer C.free(unsafe.Pointer(cSource))
 
 	lineOffset := C.int(0)
-	traceableCSource := C.RunInjectTracingInstructionsThread(e.v8engine, cSource, &lineOffset, C.int(e.strictDisallowUsageOfInstructionCounter), C.uintptr_t(e.handler))
+	traceableCSource := C.RunInjectTracingInstructionsThread(sc.v8engine, cSource, &lineOffset, C.int(sc.strictDisallowUsageOfInstructionCounter), C.uintptr_t(sc.handler))
 	if traceableCSource == nil {
 		return "", 0, ErrInjectTracingInstructionFailed
 	}
@@ -466,6 +459,6 @@ func (e *V8Engine) InjectTracingInstructions(source string) (string, int, error)
 }
 
 // ExecutionInstructions returns the execution instructions
-func (e *V8Engine) ExecutionInstructions() uint64 {
-	return e.actualCountOfExecutionInstructions
+func (sc *V8Engine) ExecutionInstructions() uint64 {
+	return sc.actualCountOfExecutionInstructions
 }

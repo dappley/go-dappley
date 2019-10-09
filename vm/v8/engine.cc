@@ -122,9 +122,9 @@ int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t ha
     return RunV8ScriptThread(result, e, sourceCode, source_line_offset, handler);
 }
 
-// Execute delegate function
-int ExecuteDelegate(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext) {
-    // Create a new Isolate and make it the current one.
+// Execute js codes by v8 engine
+int ExecuteByV8(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e, ExecutionDelegate delegate, void *delegateContext) {
+    // Get current Isolate
     Isolate *isolate = static_cast<Isolate *>(e->isolate);
     Locker locker(isolate);
 
@@ -163,12 +163,9 @@ int ExecuteDelegate(const char *sourceCode, int source_line_offset, uintptr_t ha
     return retTmp;
 }
 
-int CheckContractSyntax(const char* sourceCode)
+int CheckContractSyntax(const char* sourceCode, V8Engine *e)
 {
-
-  Isolate::CreateParams create_params;
-  create_params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
-  Isolate* isolate = Isolate::New(create_params);
+  Isolate *isolate = static_cast<Isolate *>(e->isolate);
   Locker locker(isolate);
   int errorCode = 0;
   {
@@ -197,9 +194,7 @@ int CheckContractSyntax(const char* sourceCode)
           errorCode = 1;
           script.Clear();
       }
-
   }
-
   return errorCode;
 }
 

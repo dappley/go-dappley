@@ -125,7 +125,7 @@ EXPORT void InitializeMemoryFunc(FuncMalloc mallocFunc, FuncFree freeFunc);
 EXPORT void DeleteEngine(V8Engine *e);
 EXPORT void ReadMemoryStatistics(V8Engine *e);
 EXPORT void TerminateExecution(V8Engine *e);
-EXPORT int CheckContractSyntax(const char* sourceCode);
+EXPORT int CheckContractSyntax(const char* sourceCode, V8Engine *e);
 
 // require callback.
 typedef char *(*RequireDelegate)(void *handler, const char *filename, size_t *lineOffset);
