@@ -169,7 +169,7 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 }
 
 //create a account
-func AddAccount() (*account.Account, error) {
+func CreateAccount() (*account.Account, error) {
 	am, err := GetAccountManager(wallet.GetAccountFilePath())
 	if err != nil {
 		return nil, err

@@ -622,7 +622,7 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			return
 		}
 	} else {
-		account, err := logic.AddAccount()
+		account, err := logic.CreateAccount()
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
