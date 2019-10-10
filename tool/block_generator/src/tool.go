@@ -295,7 +295,7 @@ func CreateAccount(wm *wallet.AccountManager) []account.Address {
 	addresses := wm.GetAddresses()
 	numOfAccounts := len(addresses)
 	for i := numOfAccounts; i < maxAccount; i++ {
-		_, err := logic.CreateAccountWithpassphrase(password)
+		_, err := logic.CreateAccountWithPassphrase(password)
 		if err != nil {
 			logger.WithError(err).Panic("Cannot create new account.")
 		}

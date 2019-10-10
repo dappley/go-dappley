@@ -62,32 +62,6 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lbl
 	return bc, nil
 }
 
-//create a account from path
-func CreateAccount(path string, password string) (*account.Account, error) {
-	if len(path) == 0 {
-		return nil, ErrPathEmpty
-	}
-
-	if len(password) == 0 {
-		return nil, ErrPasswordEmpty
-	}
-
-	fl := storage.NewFileLoader(path)
-	am := wallet.NewAccountManager(fl)
-	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-	am.PassPhrase = passBytes
-	am.Locked = true
-	err = am.LoadFromFile()
-	account := account.NewAccount()
-	am.AddAccount(account)
-	am.SaveAccountToFile()
-
-	return account, err
-}
-
 //get account
 func GetAccount() (*account.Account, error) {
 	am, err := GetAccountManager(wallet.GetAccountFilePath())
@@ -163,7 +137,7 @@ func SetUnLockAccount(optionalAccountFilePath ...string) error {
 }
 
 //create a account with passphrase
-func CreateAccountWithpassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
+func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
 	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
 		return nil, err

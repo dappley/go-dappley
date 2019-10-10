@@ -88,12 +88,12 @@ func TestSend(t *testing.T) {
 			defer store.Close()
 
 			// Create a account address
-			SenderAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+			SenderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 			if err != nil {
 				panic(err)
 			}
 			// Create a miner account; Balance is 0 initially
-			minerAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+			minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 			if err != nil {
 				panic(err)
 			}
@@ -104,7 +104,7 @@ func TestSend(t *testing.T) {
 			bm, bp := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 			// Create a receiver account; Balance is 0 initially
-			receiverAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+			receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 			if err != nil {
 				panic(err)
 			}
@@ -193,7 +193,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	transferAmount := common.NewAmount(25)
 	tip := common.NewAmount(5)
 	//create a account address
-	account1, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+	account1, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	assert.NotEmpty(t, account1)
 	addr1 := account1.GetAddress()
 
@@ -239,7 +239,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	transferAmount := common.NewAmount(250000000)
 
 	//create a account address
-	account1, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+	account1, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	assert.NotEmpty(t, account1)
 	addr1 := account1.GetAddress()
 
@@ -256,7 +256,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Equal(t, mineReward, balance1)
 
 	//Create a second account
-	account2, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+	account2, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	assert.NotEmpty(t, account2)
 	assert.Nil(t, err)
 	addr2 := account2.GetAddress()
@@ -527,8 +527,8 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	`
 
 	// Create a account address
-	SenderAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
-	minerAccount, err := logic.CreateAccount(logic.GetTestAccountPath(), "test")
+	SenderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	assert.Nil(t, err)
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 	bm, bps := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)

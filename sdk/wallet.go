@@ -42,7 +42,7 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 	numOfExisitingAccounts := len(dappSdkAccount.addrs)
 
 	for i := numOfExisitingAccounts; i < int(numOfAccounts); i++ {
-		w, err := logic.CreateAccountWithpassphrase(password)
+		w, err := logic.CreateAccountWithPassphrase(password)
 		if err != nil {
 			logger.WithError(err).Error("DappSdkAccount: Cannot create new account.")
 			return nil

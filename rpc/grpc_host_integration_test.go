@@ -134,16 +134,16 @@ func TestRpcSend(t *testing.T) {
 	wallet.RemoveAccountFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
-	receiverAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -219,12 +219,12 @@ func TestRpcSendContract(t *testing.T) {
 	wallet.RemoveAccountFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -376,7 +376,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -593,7 +593,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -675,15 +675,15 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount1, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test1")
+	receiverAccount1, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
-	receiverAccount2, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test2")
+	receiverAccount2, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
-	receiverAccount4, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test4")
+	receiverAccount4, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -820,7 +820,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -916,7 +916,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -1100,7 +1100,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	wallet.RemoveAccountFile()
 
 	// Create accounts
-	acc, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	acc, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1152,12 +1152,12 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	wallet.RemoveAccountFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -1245,12 +1245,12 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	wallet.RemoveAccountFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
@@ -1306,12 +1306,12 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	wallet.RemoveAccountFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccount(strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1), "test")
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
 	if err != nil {
 		panic(err)
 	}

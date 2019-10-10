@@ -44,24 +44,24 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	acc, err := CreateAccount(GetTestAccountPath(), "test")
+	acc, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
 }
 
 func TestCreateAccountWithPassphrase(t *testing.T) {
-	acc, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
+	acc, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
 }
 
 func TestCreateAccountWithPassphraseMismatch(t *testing.T) {
-	_, err := CreateAccountWithpassphrase("test", GetTestAccountPath())
+	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
 
-	_, err = CreateAccountWithpassphrase("wrong_password", GetTestAccountPath())
+	_, err = CreateAccountWithPassphrase("wrong_password", GetTestAccountPath())
 	assert.Error(t, err)
 }
 
@@ -157,7 +157,7 @@ func TestGetAllAddresses(t *testing.T) {
 
 	expectedRes := []account.Address{}
 	//create a account address
-	account, err := CreateAccount(GetTestAccountPath(), "test")
+	account, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.NotEmpty(t, account)
 	addr := account.GetAddress()
 
@@ -171,7 +171,7 @@ func TestGetAllAddresses(t *testing.T) {
 	//create 10 more addresses
 	for i := 0; i < 2; i++ {
 		//create a account address
-		account, err = CreateAccount(GetTestAccountPath(), "test")
+		account, err = CreateAccountWithPassphrase("test", GetTestAccountPath())
 		addr = account.GetAddress()
 		assert.NotEmpty(t, addr)
 		assert.Nil(t, err)
@@ -189,7 +189,7 @@ func TestGetAllAddresses(t *testing.T) {
 }
 
 func TestIsAccountEmptyAccount(t *testing.T) {
-	account1, err := CreateAccount(GetTestAccountPath(), "test")
+	account1, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.NotEmpty(t, account1)
 	assert.Nil(t, err)
 	empty, err := IsAccountEmpty(GetTestAccountPath())
@@ -203,7 +203,7 @@ func TestIsAccountEmptyAccount(t *testing.T) {
 
 func TestDeleteInvalidAccount(t *testing.T) {
 	//create accounts address
-	account1, err := CreateAccount(GetTestAccountPath(), "test")
+	account1, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.NotEmpty(t, account1)
 	addr1 := account1.GetAddress()
 
@@ -215,7 +215,7 @@ func TestDeleteInvalidAccount(t *testing.T) {
 }
 
 func TestIsAccountLocked(t *testing.T) {
-	_, err := CreateAccount(GetTestAccountPath(), "test")
+	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
 
 	status, err := IsAccountLocked(GetTestAccountPath())
@@ -228,7 +228,7 @@ func TestNilSetLockAccount(t *testing.T) {
 }
 
 func TestSetLockAccount(t *testing.T) {
-	_, err := CreateAccount(GetTestAccountPath(), "test")
+	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
 
 	assert.Nil(t, SetLockAccount(GetTestAccountPath()))
@@ -244,7 +244,7 @@ func TestSetLockAccount(t *testing.T) {
 }
 
 func TestSetUnLockAccount(t *testing.T) {
-	_, err := CreateAccount(GetTestAccountPath(), "test")
+	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
 	assert.Nil(t, err)
 
 	assert.Nil(t, SetUnLockAccount(GetTestAccountPath()))

@@ -578,7 +578,7 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			fmt.Println("Error: password cannot be empty!")
 			return
 		}
-		account, err := logic.CreateAccountWithpassphrase(passphrase)
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
@@ -601,7 +601,7 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			fmt.Println("Error: password should not be empty!")
 			return
 		}
-		acc, err := logic.CreateAccountWithpassphrase(passphrase)
+		acc, err := logic.CreateAccountWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return
