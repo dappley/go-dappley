@@ -152,6 +152,10 @@ func TestNode_ConnectionFull(t *testing.T) {
 	defer n2.Stop()
 	assert.Nil(t, err)
 
+	util.WaitDoneOrTimeout(func() bool {
+		return false
+	}, 3)
+
 	assert.Equal(t, 1, n1.GetNetwork().streamManager.connectionManager.connectionInCount)
 	assert.Equal(t, 0, n1.GetNetwork().streamManager.connectionManager.connectionOutCount)
 	assert.Equal(t, 0, n2.GetNetwork().streamManager.connectionManager.connectionInCount)
