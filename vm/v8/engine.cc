@@ -163,38 +163,35 @@ int ExecuteByV8(const char *sourceCode, int source_line_offset, uintptr_t handle
     return retTmp;
 }
 
-int CheckContractSyntax(const char* sourceCode, V8Engine *e)
-{
-  Isolate *isolate = static_cast<Isolate *>(e->isolate);
-  Locker locker(isolate);
-  int errorCode = 0;
-  {
-      Isolate::Scope isolate_scope(isolate);
+int CheckContractSyntax(const char* sourceCode, V8Engine *e){
+    Isolate *isolate = static_cast<Isolate *>(e->isolate);
+    Locker locker(isolate);
+    int errorCode = 0;
+    Isolate::Scope isolate_scope(isolate);
 
-      // Create a stack-allocated handle scope.
-      HandleScope handle_scope(isolate);
+    // Create a stack-allocated handle scope.
+    HandleScope handle_scope(isolate);
 
-      // Set up an exception handler
-      TryCatch try_catch(isolate);
+    // Set up an exception handler
+    TryCatch try_catch(isolate);
 
-      // Create a new context.
-      Local<Context> context = v8::Context::New(isolate);
-      v8::Context::Scope context_scope(context);
+    // Create a new context.
+    Local<Context> context = v8::Context::New(isolate);
+    v8::Context::Scope context_scope(context);
 
-      Local<String> source = String::NewFromUtf8(
-          isolate,
-          sourceCode,
-          NewStringType::kNormal
-        ).ToLocalChecked();
+    Local<String> source = String::NewFromUtf8(
+      isolate,
+      sourceCode,
+      NewStringType::kNormal
+    ).ToLocalChecked();
 
-        // Compile the source code.
-      Local<Script> script;
-      if (!Script::Compile(context, source).ToLocal(&script)) {
-          reportException(isolate, &try_catch);
-          errorCode = 1;
-          script.Clear();
-      }
-  }
+    // Compile the source code.
+    Local<Script> script;
+    if (!Script::Compile(context, source).ToLocal(&script)) {
+      reportException(isolate, &try_catch);
+      errorCode = 1;
+      script.Clear();
+    }
   return errorCode;
 }
 
