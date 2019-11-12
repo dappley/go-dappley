@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	contractFunctionCall = "{\"function\":\"record\",\"args\":[\"dEhFf5mWTSe67mbemZdK3WiJh8FcCayJqm\",\"4\"]}"
+	contractFunctionCall = "{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"4\"]}"
 	TimeBetweenBatch1    = time.Duration(1000)
 	timeoutInSec         = 1
 )
@@ -135,7 +135,7 @@ func (sender *BatchTxSender) createRandomTransaction() *transactionpb.Transactio
 	gasPrice := common.NewAmount(0)
 	if data != "" {
 		gasLimit = common.NewAmount(30000)
-		gasPrice = common.NewAmount(1)
+		gasPrice = common.NewAmount(0)
 	}
 	tx := sender.createTransaction(fromAddr, toAddr, common.NewAmount(sendAmount), common.NewAmount(0), gasLimit, gasPrice, data, senderKeyPair)
 	if tx == nil {
@@ -156,7 +156,7 @@ func (sender *BatchTxSender) getAddrWithNoneZeroBalance() int {
 
 	deadline := time.Now().Unix() + timeoutInSec
 
-	for amount <= 1 && time.Now().Unix() < deadline {
+	for amount <= 30000 && time.Now().Unix() < deadline {
 		fromIndex = rand.Intn(len(sender.account.GetAddrs()))
 		fromAddr = sender.account.GetAddrs()[fromIndex]
 		amount = sender.account.GetBalance(fromAddr)
