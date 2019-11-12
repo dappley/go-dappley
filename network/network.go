@@ -40,7 +40,7 @@ func NewNetwork(netContext *NetworkContext) *Network {
 		onStreamStopCb:        netContext.onStreamStopCb,
 	}
 
-	net.recentlyRcvdDapMsgs, err = lru.New(1024000)
+	net.recentlyRcvdDapMsgs, err = lru.New(10240)
 	net.streamManager = NewStreamManager(netContext.config, net.streamMsgRcvCh, net.onStreamStop, net.onStreamConnected)
 	net.peerManager = NewPeerManager(netContext.netService, netContext.db, net.onPeerListReceived, netContext.seeds)
 
