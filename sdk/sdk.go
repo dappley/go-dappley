@@ -8,8 +8,8 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/wallet"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -54,6 +54,8 @@ func (sdk *DappSdk) Send(from, to string, amount uint64, data string) (*rpcpb.Se
 		Tip:         common.NewAmount(0).Bytes(),
 		AccountPath: wallet.GetAccountFilePath(),
 		Data:        data,
+		GasLimit:    common.NewAmount(30000).Bytes(),
+		GasPrice:    common.NewAmount(1).Bytes(),
 	})
 }
 
