@@ -3,6 +3,7 @@ package ltransaction
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"testing"
@@ -67,7 +68,8 @@ func TestSign(t *testing.T) {
 				txCopy.Vin[i].Signature = nil
 				txCopy.Vin[i].PubKey = []byte(ta.GetPubKeyHash())
 
-				verified, err := secp256k1.Verify(txCopy.Hash(), vin.Signature, ecdsaPubKey)
+				secondHash := sha256.Sum256(txCopy.Hash())
+				verified, err := secp256k1.Verify(secondHash[:], vin.Signature, ecdsaPubKey)
 				assert.Nil(t, err)
 				assert.True(t, verified)
 			}
@@ -187,7 +189,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 				txCopy := tt.tx.TrimmedCopy(false)
 				txCopy.Vin[i].Signature = nil
 				txCopy.Vin[i].PubKey = []byte(ta.GetPubKeyHash())
-				signature, _ := secp256k1.Sign(txCopy.Hash(), tt.signWith)
+				secondHash := sha256.Sum256(txCopy.Hash())
+				signature, _ := secp256k1.Sign(secondHash[:], tt.signWith)
 				tt.tx.Vin[i].Signature = signature
 			}
 

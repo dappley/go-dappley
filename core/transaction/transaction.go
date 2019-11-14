@@ -200,7 +200,8 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) er
 
 		txCopy.Vin[i].PubKey = oldPubKey
 
-		signature, err := secp256k1.Sign(txCopy.ID, privData)
+		secondHash := sha256.Sum256(txCopy.ID)
+		signature, err := secp256k1.Sign(secondHash[:], privData)
 		if err != nil {
 			logger.WithError(err).Error("Transaction: failed to create a signature.")
 			return err
@@ -807,7 +808,8 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 		originPub[0] = 4 // uncompressed point
 		copy(originPub[1:], vin.PubKey)
 
-		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
+		secondHash := sha256.Sum256(txCopy.ID)
+		verifyResult, err := secp256k1.Verify(secondHash[:], vin.Signature, originPub)
 
 		if err != nil || verifyResult == false {
 			return false, errors.New("Transaction: Signatures is invalid")

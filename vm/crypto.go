@@ -41,7 +41,8 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool {
 	originPub[0] = 4 // uncompressed point
 	copy(originPub[1:], pubKeyBytes)
 
-	res, err := secp256k1.Verify(data[:], sigBytes, originPub)
+	secondHash := sha256.Sum256(data[:])
+	res, err := secp256k1.Verify(secondHash[:], sigBytes, originPub)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"content":    goMsg,

@@ -347,7 +347,8 @@ func TestCrypto_VerifySignature(t *testing.T) {
 	privateKey := kp.GetPrivateKey()
 	privData, _ := secp256k1.FromECDSAPrivateKey(&privateKey)
 	data := sha256.Sum256([]byte(msg))
-	signature, _ := secp256k1.Sign(data[:], privData)
+	secondHash := sha256.Sum256(data[:])
+	signature, _ := secp256k1.Sign(secondHash[:], privData)
 
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	ret, _ := sc.Execute("verifySig",
