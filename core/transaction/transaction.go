@@ -574,12 +574,9 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 }
 
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
-func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount) (Transaction, error) {
+func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (Transaction, error) {
 	fee := actualGasCount.Mul(gasPrice)
-	bh := make([]byte, 8)
-	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
-
-	txin := transactionbase.TXInput{nil, -1, bh, gasRewardData}
+	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), gasRewardData}
 	txout := transactionbase.NewTXOutput(fee, to)
 	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.ID = tx.Hash()
@@ -587,7 +584,7 @@ func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 }
 
 // NewGasChangeTx returns a change to contract invoker, pay for the change of unused gas
-func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (Transaction, error) {
+func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (Transaction, error) {
 	if gasLimit.Cmp(actualGasCount) <= 0 {
 		return Transaction{}, ErrNoGasChange
 	}
@@ -597,10 +594,8 @@ func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 		return Transaction{}, err
 	}
 	changeValue := change.Mul(gasPrice)
-	bh := make([]byte, 8)
-	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transactionbase.TXInput{nil, -1, bh, gasChangeData}
+	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), gasChangeData}
 	txout := transactionbase.NewTXOutput(changeValue, to)
 	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 
@@ -894,4 +889,14 @@ func (tx *Transaction) GetTotalBalance(prevUtxos []*utxo.UTXO) *common.Amount {
 	totalBalance, _ := totalPrev.Sub(totalVoutValue)
 	totalBalance, _ = totalBalance.Sub(tx.Tip)
 	return totalBalance
+}
+
+func getUniqueByte(height uint64, uniqueNum int) []byte {
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, uint64(height))
+	bUnique := make([]byte, 2)
+	binary.BigEndian.PutUint16(bUnique, uint16(uniqueNum))
+	bh[0] = bUnique[0]
+	bh[1] = bUnique[1]
+	return bh
 }

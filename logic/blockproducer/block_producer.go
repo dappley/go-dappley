@@ -123,6 +123,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	var validTxs []*transaction.Transaction
 	totalSize := 0
+	count := 0
 
 	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
@@ -137,6 +138,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			break
 		}
 		totalSize += txNode.Size
+		count++
 
 		ctx := txNode.Value.ToContractTx()
 		minerAddr := account.NewAddress(bp.producer.Beneficiary())
@@ -160,12 +162,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			}
 			// record gas used
 			if gasCount > 0 {
-				grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
+				grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
 				if err == nil {
 					generatedTxs = append(generatedTxs, &grtx)
 				}
 			}
-			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
+			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
 			if err == nil {
 				generatedTxs = append(generatedTxs, &gctx)
 			}
@@ -228,4 +230,5 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 	}
 
 	bp.bm.BroadcastBlock(ctx.Block)
+	logger.Info("BlockProducer: Broadcast block")
 }
