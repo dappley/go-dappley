@@ -68,6 +68,14 @@ int Cgo_StorageDelFunc(void *address, const char *key){
 	return StorageDelFunc(address,key);
 };
 
+bool Cgo_AuthenticateInitWithCertFunc(void *address , const char *cert){
+	return AuthenticateInitWithCertFunc(address, cert);
+};
+
+bool Cgo_AuthenticateVerifyWithPublicKeyFunc(void *address){
+	return AuthenticateVerifyWithPublicKeyFunc(address);
+};
+
 int Cgo_TriggerEventFunc(void *address, const char *topic, const char *data){
 	return TriggerEventFunc(address, topic, data);
 };

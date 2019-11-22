@@ -10,6 +10,7 @@
 #include "reward_distributor.h"
 #include "storage.h"
 #include "transaction.h"
+#include "authenticate.h"
 
 Local<ObjectTemplate> CreateGlobalObjectTemplate(Isolate *isolate) {
     Local<ObjectTemplate> globalTpl = ObjectTemplate::New(isolate);
@@ -28,6 +29,7 @@ void SetGlobalObjectProperties(Isolate *isolate, Local<Context> context, V8Engin
     NewBlockchainInstance(isolate, context, (void *)handler);
     NewCryptoInstance(isolate, context, (void *)handler);
     NewStorageInstance(isolate, context, (void *)handler);
+    NewAuthenCertInstance(isolate, context, (void *)handler);
     NewLoggerInstance(isolate, context, (void *)handler);
     NewTransactionInstance(isolate, context, (void *)handler);
     NewRewardDistributorInstance(isolate, context, (void *)handler);

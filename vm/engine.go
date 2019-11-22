@@ -18,6 +18,10 @@ int   Cgo_DeleteContractFunc(void *handler);
 char* Cgo_StorageGetFunc(void *address, const char *key);
 int   Cgo_StorageSetFunc(void *address, const char *key, const char *value);
 int   Cgo_StorageDelFunc(void *address, const char *key);
+//authen cert
+bool Cgo_AuthenticateInitWithCertFunc(void *address , const char *cert);
+bool Cgo_AuthenticateVerifyWithPublicKeyFunc(void *address);
+
 int   Cgo_TriggerEventFunc(void *address, const char *topic, const char *data);
 int	  Cgo_RecordRewardFunc(void *handler, const char *address, const char *amount);
 //transaction
@@ -119,6 +123,9 @@ func InitializeV8Engine() {
 		(C.FuncStorageGet)(unsafe.Pointer(C.Cgo_StorageGetFunc)),
 		(C.FuncStorageSet)(unsafe.Pointer(C.Cgo_StorageSetFunc)),
 		(C.FuncStorageDel)(unsafe.Pointer(C.Cgo_StorageDelFunc)))
+	C.InitializeAuthenCert(
+		(C.FuncAuthenticateInitWithCert)(unsafe.Pointer(C.Cgo_AuthenticateInitWithCertFunc)),
+		(C.FuncAuthenticateVerifyWithPublicKey)(unsafe.Pointer(C.Cgo_AuthenticateVerifyWithPublicKeyFunc)))
 	C.InitializeTransaction((C.FuncTransactionGet)(unsafe.Pointer(C.Cgo_TransactionGetFunc)))
 	C.InitializeLogger((C.FuncLogger)(unsafe.Pointer(C.Cgo_LoggerFunc)))
 	C.InitializeRewardDistributor((C.FuncRecordReward)(unsafe.Pointer(C.Cgo_RecordRewardFunc)))

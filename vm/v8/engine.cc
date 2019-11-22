@@ -23,6 +23,7 @@
 #include "lib/prev_utxo.h"
 #include "lib/reward_distributor.h"
 #include "lib/storage.h"
+#include "lib/authenticate.h"
 #include "lib/transaction.h"
 #include "lib/vm_error.h"
 
