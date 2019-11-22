@@ -26,14 +26,13 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	"github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
-	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/core/block"
-	blockpb "github.com/dappley/go-dappley/core/block/pb"
+	"github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -47,7 +46,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/vm"
 )
 
@@ -127,8 +126,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 }
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
-	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
+	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	acc := account.NewContractAccountByAddress(account.NewAddress(in.GetAddress()))
 
@@ -241,8 +239,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
 	}
 
-	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
+	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
@@ -279,8 +276,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	statusCode := codes.OK
 	var details []proto.Message
-	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetAllTransactions())
+	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	txMap := make(map[int]transaction.Transaction, len(in.Transactions))
 	txs := []transaction.Transaction{}
@@ -429,8 +425,7 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 	if contractTx == nil {
 		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
 	}
-	utxoIndex := lutxo.NewUTXOIndex(rpcService.GetBlockchain().GetUtxoCache())
-	utxoIndex.UpdateUtxos(rpcService.GetBlockchain().GetTxPool().GetTransactions())
+	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	err := ltransaction.VerifyInEstimate(utxoIndex, contractTx)
 	if err != nil {
