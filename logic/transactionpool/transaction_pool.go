@@ -27,8 +27,8 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
-	transactionPoolpb "github.com/dappley/go-dappley/logic/transactionpool/pb"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	transactionPoolpb "github.com/dappley/go-dappley/logic/transactionpool/pb"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/pubsub"
@@ -183,14 +183,13 @@ func (txPool *TransactionPool) PopTransactionWithMostTips(utxoIndex *lutxo.UTXOI
 	defer txPool.mutex.Unlock()
 
 	txNode := txPool.getMaxTipTransaction()
-	tempUtxoIndex := utxoIndex.DeepCopy()
 	if txNode == nil {
 		return txNode
 	}
 	//remove the transaction from tip order
 	txPool.tipOrder = txPool.tipOrder[1:]
 
-	if err := ltransaction.VerifyTransaction(tempUtxoIndex, txNode.Value, 0); err == nil {
+	if err := ltransaction.VerifyTransaction(utxoIndex, txNode.Value, 0); err == nil {
 		txPool.insertChildrenIntoSortedWaitlist(txNode)
 		txPool.removeTransaction(txNode)
 	} else {
