@@ -16,6 +16,10 @@ int   DeleteContractFunc(void *handler);
 char* StorageGetFunc(void *address, const char *key);
 int   StorageSetFunc(void *address,const char *key, const char *value);
 int   StorageDelFunc(void *address,const char *key);
+
+bool AuthenticateInitWithCertFunc(void *address , const char *cert);
+bool AuthenticateVerifyWithPublicKeyFunc(void *address);
+
 int   TriggerEventFunc(void *address, const char *topic, const char *data);
 void  TransactionGetFunc(void *address, void *context);
 void  LoggerFunc(unsigned int level, char ** args, int length);
