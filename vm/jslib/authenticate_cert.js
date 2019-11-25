@@ -25,12 +25,11 @@ LocalAuthenCert.prototype = {
     },
 
     hashCheck: function (key) {
-        var result = LocalStorage.get(key)
-        return result
+        var result = LocalStorage.get(key);
+        return result;
     },
 
     dapp_schedule: function () {
-        
     }
 };
 

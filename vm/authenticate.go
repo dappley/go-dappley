@@ -2,6 +2,7 @@ package vm
 
 import "C"
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"crypto/ecdsa"
@@ -62,7 +63,10 @@ func AuthenticateInitWithCertFunc(address unsafe.Pointer, cert *C.char) bool {
 		Roots:         roots,
 	}
 
-	block, _ := pem.Decode([]byte(goCert))
+	// decode from base64 string
+	decoded, err:= base64.StdEncoding.DecodeString(goCert)
+
+	block, _ := pem.Decode(decoded)
 	subCert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil{
 		logger.Infof("Parse certificate failed, %v",err.Error())
