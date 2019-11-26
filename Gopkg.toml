@@ -120,3 +120,9 @@
 [[constraint]]
   name = "google.golang.org/grpc"
   version = "1.21.1"
+
+[[override]]
+  name = "github.com/ipfs/go-log"
+  #branch = "master"
+  #revision = "c50c291a61bceccb914366d93eb24f58594e9134"
+  version = "0.0.1"
