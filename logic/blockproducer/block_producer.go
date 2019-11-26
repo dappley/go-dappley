@@ -161,15 +161,17 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
 			}
 			// record gas used
-			if gasCount > 0 {
-				grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
-				if err == nil {
-					generatedTxs = append(generatedTxs, &grtx)
+			if !ctx.GasPrice.IsZero() {
+				if gasCount > 0 {
+					grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
+					if err == nil {
+						generatedTxs = append(generatedTxs, &grtx)
+					}
 				}
-			}
-			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
-			if err == nil {
-				generatedTxs = append(generatedTxs, &gctx)
+				gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
+				if err == nil {
+					generatedTxs = append(generatedTxs, &gctx)
+				}
 			}
 			validTxs = append(validTxs, generatedTxs...)
 			utxoIndex.UpdateUtxos(generatedTxs)
