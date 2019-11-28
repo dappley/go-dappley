@@ -38,7 +38,7 @@ import (
 
 const (
 	MinConsensusSize   = 4
-	maxMintingTimeInMs = 2000
+	maxMintingTimeInMs = 1500
 )
 
 type DPOS struct {
