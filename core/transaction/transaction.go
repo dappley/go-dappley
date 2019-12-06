@@ -803,7 +803,7 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 		copy(originPub[1:], vin.PubKey)
 
 		if vin.Signature == nil || len(vin.Signature) == 0 {
-			return false, errors.New("Transaction: Signatures is null")
+			return false, errors.New("Transaction: Signatures is empty")
 		}
 
 		verifyResult, err := secp256k1.Verify(txCopy.ID, vin.Signature, originPub)
