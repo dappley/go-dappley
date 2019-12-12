@@ -18,13 +18,14 @@ package intergationTest
 
 import (
 	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	"github.com/stretchr/testify/mock"
-	"reflect"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/logic/blockproducer"
 
@@ -351,7 +352,7 @@ func TestForkChoice(t *testing.T) {
 	// Make sure syncing ends on node[1]
 	util.WaitDoneOrTimeout(func() bool {
 		return bms[1].Getblockchain().GetState() != blockchain.BlockchainSync
-	}, 20)
+	}, 30)
 
 	assert.Equal(t, bms[0].Getblockchain().GetMaxHeight(), bms[1].Getblockchain().GetMaxHeight())
 	assert.True(t, isSameBlockChain(bms[0].Getblockchain(), bms[1].Getblockchain()))

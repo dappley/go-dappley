@@ -19,13 +19,14 @@
 package utxo
 
 import (
+	"hash/fnv"
+	"strconv"
+
 	"github.com/dappley/go-dappley/common"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/raviqqe/hamt"
 	logger "github.com/sirupsen/logrus"
-	"hash/fnv"
-	"strconv"
 )
 
 // UTXOTx holds txid_vout and UTXO pairs
@@ -163,4 +164,15 @@ func (utxoTx UTXOTx) DeepCopy() *UTXOTx {
 		newUtxoTx.Indices[key] = utxo
 	}
 	return newUtxoTx
+}
+
+func (utxoTx UTXOTx) ToArray() []*UTXO {
+	var newUtxos []*UTXO
+	for _, utxo := range utxoTx.Indices {
+		if utxo.UtxoType != UtxoCreateContract {
+			newUtxos = append(newUtxos, utxo)
+		}
+
+	}
+	return newUtxos
 }
