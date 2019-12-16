@@ -509,10 +509,6 @@ func (tx *Transaction) VerifyAmount(totalPrev *common.Amount, totalVoutValue *co
 		}
 	}
 	if tx.Tip.Cmp(sub) != 0 {
-		logger.WithFields(logger.Fields{
-			"tx.Tip":    tx.Tip,
-			"remaining": sub,
-		}).Warn("Transaction: tip is invalid")
 		return false, errors.New("Transaction: tip is invalid")
 	}
 	return true, nil
