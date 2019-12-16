@@ -242,6 +242,51 @@ func TestInvalidExecutionTx(t *testing.T) {
 	assert.Nil(t, err2)
 }
 
+// Test with invalid tip amount, total vout != total vin
+func TestInvalidTipTx(t *testing.T) {
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var pubkey1 = account.GenerateKeyPairByPrivateKey(prikey1).GetPublicKey()
+	var ta1 = account.NewTransactionAccountByPubKey(pubkey1)
+	var deploymentTx = transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{tx1.ID, 1, nil, pubkey1},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(50000), ta1.GetPubKeyHash(), "dapp_schedule"},
+		},
+		Tip: common.NewAmount(1),
+	}
+	deploymentTx.ID = deploymentTx.Hash()
+	contractPubkeyHash := deploymentTx.Vout[0].PubKeyHash
+
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	utxoTx := utxo.NewUTXOTx()
+
+	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal})
+	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx,
+	})
+
+	var executionTx = transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{deploymentTx.ID, 0, nil, pubkey1},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(19998), contractPubkeyHash, "execution"},
+		},
+		Tip:      common.NewAmount(1),
+		GasLimit: common.NewAmount(30000),
+		GasPrice: common.NewAmount(1),
+	}
+	executionTx.ID = executionTx.Hash()
+	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
+
+	err := VerifyTransaction(utxoIndex, &executionTx, 0)
+	assert.NotNil(t, err)
+}
+
 func TestTransaction_Execute(t *testing.T) {
 
 	tests := []struct {

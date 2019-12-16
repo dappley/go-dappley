@@ -23,7 +23,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -496,19 +495,24 @@ func (tx *Transaction) VerifyID() (bool, error) {
 // VerifyAmount verifies if the transaction has the correct vout value
 func (tx *Transaction) VerifyAmount(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
 	//TotalVin amount must equal or greater than total vout
-	if totalPrev.Cmp(totalVoutValue) >= 0 {
-		return true, nil
+	if totalPrev.Cmp(totalVoutValue) < 0 {
+		return false, errors.New("Transaction: amount is invalid")
 	}
-	return false, errors.New("Transaction: amount is invalid")
-}
-
-//VerifyTip verifies if the transaction has the correct tip
-func (tx *Transaction) VerifyTip(totalPrev *common.Amount, totalVoutValue *common.Amount) (bool, error) {
 	sub, err := totalPrev.Sub(totalVoutValue)
 	if err != nil {
 		return false, err
 	}
-	if tx.Tip.Cmp(sub) > 0 {
+	if tx.GasLimit != nil {
+		sub, err = sub.Sub(tx.GasLimit.Mul(tx.GasPrice))
+		if err != nil {
+			return false, errors.New("Transaction: GasLimit is invalid")
+		}
+	}
+	if tx.Tip.Cmp(sub) != 0 {
+		logger.WithFields(logger.Fields{
+			"tx.Tip":    tx.Tip,
+			"remaining": sub,
+		}).Warn("Transaction: tip is invalid")
 		return false, errors.New("Transaction: tip is invalid")
 	}
 	return true, nil
@@ -785,6 +789,9 @@ func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount,
 	if err != nil {
 		return nil, ErrInsufficientFund
 	}
+	if change.Cmp(common.NewAmount(0)) < 0 {
+		return nil, ErrInsufficientFund
+	}
 	return change, nil
 }
 
@@ -870,13 +877,6 @@ func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 	}
 	result, err = tx.VerifyAmount(totalPrev, totalVoutValue)
 	if !result {
-		return err
-	}
-	result, err = tx.VerifyTip(totalPrev, totalVoutValue)
-	if !result {
-		logger.WithFields(logger.Fields{
-			"tx_id": hex.EncodeToString(tx.ID),
-		}).Warn("Transaction: tip is invalid.")
 		return err
 	}
 	result, err = tx.VerifySignatures(prevUtxos)
