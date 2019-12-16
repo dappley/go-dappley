@@ -55,15 +55,20 @@
 
 [[constraint]]
   name = "github.com/libp2p/go-libp2p"
-  version = "0.2.0"
+  version = "=0.2.1"
+
+[[constraint]]
+  name = "github.com/libp2p/go-libp2p-core"
+  version = "=0.2.2"
 
 [[constraint]]
   name = "github.com/libp2p/go-libp2p-crypto"
-  version = "0.1.0"
+  version = "=0.1.0"
 
 [[constraint]]
   name = "github.com/libp2p/go-libp2p-peer"
   version = "0.2.0"
+
 
 [[constraint]]
   name = "github.com/multiformats/go-multiaddr"
