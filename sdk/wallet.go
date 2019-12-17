@@ -52,6 +52,14 @@ func NewDappSdkAccount(numOfAccounts uint32, password string, sdk *DappSdk) *Dap
 		}).Info("DappSdkAccount: Account is created")
 	}
 
+	if numOfExisitingAccounts < int(numOfAccounts) {
+		dappSdkAccount.wm, err = logic.GetAccountManager(wallet.GetAccountFilePath())
+		if err != nil {
+			logger.WithError(err).Error("DappSdkAccount: Cannot get account manager.")
+			return nil
+		}
+	}
+
 	dappSdkAccount.addrs = dappSdkAccount.wm.GetAddresses()
 	dappSdkAccount.Initialize()
 
