@@ -102,11 +102,6 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 			utxo.Free(utxos.index[key])
 		}
 		utxos.index[key] = utxoTx
-		for _, u := range utxoTx.Indices {
-			if u.UtxoType == utxo.UtxoCreateContract {
-				utxos.contractIndex[u.PubKeyHash.String()] = u
-			}
-		}
 		utxos.mutex.Unlock()
 	}
 
@@ -120,9 +115,11 @@ func (utxos *UTXOIndex) GetContractUTXOsByPubKeyHash(pubkeyHash account.PubKeyHa
 	utxos.mutex.RUnlock()
 
 	if !ok {
-		utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
+		utxo = utxos.cache.GetContractCreateUtxo(pubkeyHash)
 		utxos.mutex.RLock()
-		utxo, ok = utxos.contractIndex[key]
+		if utxo != nil {
+			utxos.contractIndex[key] = utxo
+		}
 		utxos.mutex.RUnlock()
 	}
 	return utxo

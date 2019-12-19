@@ -77,6 +77,8 @@ func (utxoCache *UTXOCache) GetContractCreateUtxo(pubKeyHash account.PubKeyHash)
 		utxotx := utxoCache.Get(pubKeyHash)
 		if len(utxotx.Indices) > 0 {
 			mapData, ok = utxoCache.contractCache.Get(string(pubKeyHash))
+		} else {
+			return nil
 		}
 	}
 
@@ -88,6 +90,21 @@ func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) er
 	if pubKeyHash == nil {
 		return account.ErrEmptyPublicKeyHash
 	}
+	err := utxoCache.putUtxoTx(pubKeyHash, value)
+	if err != nil {
+		return err
+	}
+
+	for _, u := range value.Indices {
+		if u.UtxoType == UtxoCreateContract {
+			utxoCache.contractCache.Add(string(pubKeyHash), u)
+		}
+	}
+	return nil
+}
+
+// Add new data into cache
+func (utxoCache *UTXOCache) putUtxoTx(pubKeyHash account.PubKeyHash, value *UTXOTx) error {
 	savedUtxoTx := value.DeepCopy()
 	mapData, ok := utxoCache.cache.Get(string(pubKeyHash))
 	utxoCache.cache.Add(string(pubKeyHash), savedUtxoTx)
@@ -96,16 +113,6 @@ func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) er
 		Free(mapData.(*UTXOTx))
 	}
 	return err
-}
-
-// Add new data into cache
-func (utxoCache *UTXOCache) PutCreateContractUtxo(pubKeyHash account.PubKeyHash, value *UTXO) error {
-	if pubKeyHash == nil {
-		return account.ErrEmptyPublicKeyHash
-	}
-	utxoCache.contractCache.Add(string(pubKeyHash), value)
-
-	return nil
 }
 
 func (utxoCache *UTXOCache) Delete(pubKeyHash account.PubKeyHash) error {
