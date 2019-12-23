@@ -7,6 +7,11 @@ import (
 	"github.com/dappley/go-dappley/core/utxo"
 )
 
+type ScEngineManager interface {
+	CreateEngine() ScEngine
+	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *scState.ScState, blkHeight uint64, seed int64)
+}
+
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)

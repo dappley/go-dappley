@@ -5,8 +5,8 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/account"
 )
 
@@ -20,7 +20,7 @@ func NewV8EngineManager(address account.Address) *V8EngineManager {
 	return &V8EngineManager{address}
 }
 
-func (em *V8EngineManager) CreateEngine() core.ScEngine {
+func (em *V8EngineManager) CreateEngine() ltransaction.ScEngine {
 	engine := NewV8Engine()
 	engine.ImportNodeAddress(em.address)
 	return engine
