@@ -19,7 +19,7 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/json"
 	"github.com/dappley/go-dappley/consensus"
 	"google.golang.org/grpc/peer"
 	"strconv"
@@ -236,9 +236,10 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 	tx := &transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
 	tx.FromProto(in.GetTransaction())
+	txJson,_ := json.Marshal(tx)
 
 	peer, _ := peer.FromContext(ctx)
-	logger.WithField("ip", peer.Addr.String()).WithField("transaction ID",hex.EncodeToString(tx.ID)).Info("receive transaction info")
+	logger.WithField("ip", peer.Addr.String()).WithField("transaction json",string(txJson)).Info("receive transaction info")
 
 	if tx.IsCoinbase() {
 		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")

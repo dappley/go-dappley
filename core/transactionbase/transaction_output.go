@@ -27,9 +27,9 @@ import (
 )
 
 type TXOutput struct {
-	Value      *common.Amount
-	PubKeyHash account.PubKeyHash
-	Contract   string
+	Value      *common.Amount `json:"-"`
+	PubKeyHash account.PubKeyHash `json:"pub_key_hash"`
+	Contract   string `json:"contract"`
 }
 
 func (out *TXOutput) GetAddress() account.Address {

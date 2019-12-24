@@ -69,13 +69,13 @@ var (
 )
 
 type Transaction struct {
-	ID         []byte
-	Vin        []transactionbase.TXInput
-	Vout       []transactionbase.TXOutput
-	Tip        *common.Amount
-	GasLimit   *common.Amount
-	GasPrice   *common.Amount
-	CreateTime int64
+	ID         []byte `json:"id"`
+	Vin        []transactionbase.TXInput `json:"vin"`
+	Vout       []transactionbase.TXOutput `json:"vout"`
+	Tip        *common.Amount `json:"-"`
+	GasLimit   *common.Amount `json:"-"`
+	GasPrice   *common.Amount `json:"-"`
+	CreateTime int64 `json:"-"`
 }
 
 // ContractTx contains contract value

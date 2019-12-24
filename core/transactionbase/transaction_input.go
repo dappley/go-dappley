@@ -24,10 +24,10 @@ import (
 )
 
 type TXInput struct {
-	Txid      []byte
-	Vout      int
-	Signature []byte
-	PubKey    []byte
+	Txid      []byte `json:"txid"`
+	Vout      int `json:"vout"`
+	Signature []byte `json:"signature"`
+	PubKey    []byte `json:"pub_key"`
 }
 
 func (in *TXInput) ToProto() proto.Message {
