@@ -418,6 +418,7 @@ func (tx *Transaction) ToProto() proto.Message {
 		Tip:      tx.Tip.Bytes(),
 		GasLimit: tx.GasLimit.Bytes(),
 		GasPrice: tx.GasPrice.Bytes(),
+		Type:     int32(tx.Type),
 	}
 }
 
@@ -443,6 +444,7 @@ func (tx *Transaction) FromProto(pb proto.Message) {
 
 	tx.GasLimit = common.NewAmountFromBytes(pb.(*transactionpb.Transaction).GetGasLimit())
 	tx.GasPrice = common.NewAmountFromBytes(pb.(*transactionpb.Transaction).GetGasPrice())
+	tx.Type = TxType(int(pb.(*transactionpb.Transaction).GetType()))
 }
 
 func (tx *Transaction) GetSize() int {
