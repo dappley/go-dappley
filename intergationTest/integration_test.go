@@ -159,9 +159,9 @@ func TestSend(t *testing.T) {
 				blk, err := bm.Getblockchain().GetBlockByHeight(i)
 				assert.Nil(t, err)
 				for _, tx := range blk.GetTransactions() {
-					contractAddr = tx.GetContractAddress()
-					if contractAddr.String() != "" {
-						res = tx.Vout[transaction.ContractTxouputIndex].Contract
+					ctx := transaction.NewTxContract(tx)
+					if ctx != nil {
+						res = ctx.GetContract()
 						break loop
 					}
 				}
@@ -527,19 +527,19 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	`
 
 	// Create a account address
-	SenderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	assert.Nil(t, err)
 	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
-	bm, bps := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
+	bm, bps := CreateProducer(minerAccount.GetAddress(), senderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 	//deploy smart contract
-	_, _, err = logic.Send(SenderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
+	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
 
 	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
-	contractAddr := txp.GetContractAddress()
+	contractAddr := transaction.NewTxContract(txp).GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
 
@@ -561,7 +561,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//store data
 	functionCall := `{"function":"set","args":["testKey","222"]}`
-	_, _, err = logic.Send(SenderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
+	_, _, err = logic.Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
 
 	assert.Nil(t, err)
 	bps.Start()
@@ -571,7 +571,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 
 	//get data
 	functionCall = `{"function":"get","args":["testKey"]}`
-	_, _, err = logic.Send(SenderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
+	_, _, err = logic.Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
 
 	assert.Nil(t, err)
 	bps.Start()
@@ -627,7 +627,7 @@ func TestDoubleMint(t *testing.T) {
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
 	producerHash := validProducerAccount.GetPubKeyHash()
-	tx := &transaction.Transaction{nil, []transactionbase.TXInput{{[]byte{}, -1, nil, nil}}, []transactionbase.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
+	tx := &transaction.Transaction{nil, []transactionbase.TXInput{{[]byte{}, -1, nil, nil}}, []transactionbase.TXOutput{{common.NewAmount(0), account.PubKeyHash(producerHash), ""}}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}
 
 	for i := 0; i < 3; i++ {
 		blk := createValidBlock([]*transaction.Transaction{tx}, validProducerKey, validProducerAddr, parent)
@@ -777,7 +777,7 @@ func TestUpdate(t *testing.T) {
 	var ta4 = account.NewAccountByPrivateKey(prikey4)
 	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
 	var ta5 = account.NewAccountByPrivateKey(prikey5)
-	var dependentTx1 = transaction.Transaction{
+	var dependentTx1 = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{util.GenerateRandomAoB(1), 1, nil, ta1.GetKeyPair().GetPublicKey()},
@@ -790,7 +790,7 @@ func TestUpdate(t *testing.T) {
 	}
 	dependentTx1.ID = dependentTx1.Hash()
 
-	var dependentTx2 = transaction.Transaction{
+	var dependentTx2 = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{dependentTx1.ID, 1, nil, ta2.GetKeyPair().GetPublicKey()},
@@ -803,7 +803,7 @@ func TestUpdate(t *testing.T) {
 	}
 	dependentTx2.ID = dependentTx2.Hash()
 
-	var dependentTx3 = transaction.Transaction{
+	var dependentTx3 = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{dependentTx2.ID, 0, nil, ta3.GetKeyPair().GetPublicKey()},
@@ -815,7 +815,7 @@ func TestUpdate(t *testing.T) {
 	}
 	dependentTx3.ID = dependentTx3.Hash()
 
-	var dependentTx4 = transaction.Transaction{
+	var dependentTx4 = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{dependentTx2.ID, 1, nil, ta4.GetKeyPair().GetPublicKey()},
@@ -828,7 +828,7 @@ func TestUpdate(t *testing.T) {
 	}
 	dependentTx4.ID = dependentTx4.Hash()
 
-	var dependentTx5 = transaction.Transaction{
+	var dependentTx5 = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{dependentTx1.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
@@ -862,23 +862,23 @@ func TestUpdate(t *testing.T) {
 	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
 	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
 	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
-	dependentTx4.Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
-	dependentTx5.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
+	transaction.NewTxDecorator(dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
+	transaction.NewTxDecorator(dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
+	transaction.NewTxDecorator(dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
+	transaction.NewTxDecorator(dependentTx5).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
 
-	txsForUpdate := []*transaction.Transaction{&dependentTx2, &dependentTx3}
+	txsForUpdate := []*transaction.Transaction{dependentTx2, dependentTx3}
 	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 1, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
 	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta4.GetPubKeyHash()).Size())
-	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4}
+	txsForUpdate = []*transaction.Transaction{dependentTx2, dependentTx3, dependentTx4}
 	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
-	txsForUpdate = []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5}
+	txsForUpdate = []*transaction.Transaction{dependentTx2, dependentTx3, dependentTx4, dependentTx5}
 	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())

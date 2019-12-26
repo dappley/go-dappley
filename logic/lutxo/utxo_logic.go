@@ -11,7 +11,7 @@ import (
 )
 
 //FindVinUtxosInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*utxo.UTXO, error) {
+func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx *transaction.Transaction) ([]*utxo.UTXO, error) {
 	var res []*utxo.UTXO
 	for _, vin := range tx.Vin {
 		// some vin.PubKey is contract address's PubKeyHash

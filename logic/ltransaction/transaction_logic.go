@@ -2,7 +2,6 @@ package ltransaction
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -29,53 +28,42 @@ var (
 )
 
 // VerifyInEstimate returns whether the current tx in estimate mode is valid.
-func VerifyInEstimate(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) error {
-	utxos := getPrevUTXOs(&ctx.Transaction, utxoIndex)
+func VerifyInEstimate(utxoIndex *lutxo.UTXOIndex, ctx *transaction.TxContract) error {
+	utxos := getPrevUTXOs(ctx.Transaction, utxoIndex)
+	return verifyInEstimate(utxoIndex, utxos, ctx)
+}
+
+func verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, ctx *transaction.TxContract) error {
 	if ctx.IsScheduleContract() && !IsContractDeployed(utxoIndex, ctx) {
 		return errors.New("Transaction: contract state check failed")
 	}
-
-	err := ctx.Verify(utxos)
-
+	err := ctx.Verify(prevUtxos, 0)
 	return err
 }
 
-// VerifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func verifyContractTx(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) error {
-	utxos := getPrevUTXOs(&ctx.Transaction, utxoIndex)
-	err := VerifyInEstimate(utxoIndex, ctx)
+// verifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
+func verifyContractTx(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, ctx *transaction.TxContract) error {
+	err := verifyInEstimate(utxoIndex, prevUtxos, ctx)
 	if err != nil {
 		return err
 	}
-	totalBalance := ctx.GetTotalBalance(utxos)
+	totalBalance := ctx.GetTotalBalance(prevUtxos)
 	return ctx.VerifyGas(totalBalance)
 }
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
-	ctx := tx.ToContractTx()
-	if ctx != nil {
-		return verifyContractTx(utxoIndex, ctx)
-	}
-	if tx.IsCoinbase() {
-		//TODO coinbase vout check need add tip
-		if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
-			return errors.New("Transaction: subsidy check failed")
+	txDecorator := transaction.NewTxDecorator(tx)
+	if txDecorator.IsNeedVerify() {
+		utxos := getPrevUTXOs(tx, utxoIndex)
+		adaptedTx := transaction.NewTxAdapter(tx)
+		if adaptedTx.IsContract() {
+			ctx := transaction.NewTxContract(adaptedTx.Transaction)
+			return verifyContractTx(utxoIndex, utxos, ctx)
 		}
-		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
-		if blockHeight != bh {
-			return fmt.Errorf("Transaction: block height check failed expected=%v actual=%v", blockHeight, bh)
-		}
-		return nil
+		return txDecorator.Verify(utxos, blockHeight)
 	}
-	if tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
-		//TODO: verify reward tx here
-		return nil
-	}
-	utxos := getPrevUTXOs(tx, utxoIndex)
-	err := tx.Verify(utxos)
-
-	return err
+	return nil
 }
 
 // DescribeTransaction reverse-engineers the high-level description of a transaction
@@ -187,7 +175,7 @@ func IsFromContract(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) boo
 }
 
 // IsContractDeployed returns if the current contract is deployed
-func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) bool {
+func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *transaction.TxContract) bool {
 	pubkeyhash := ctx.GetContractPubKeyHash()
 	if pubkeyhash == nil {
 		return false
@@ -198,7 +186,7 @@ func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx)
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
-func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
+func Execute(ctx *transaction.TxContract, prevUtxos []*utxo.UTXO,
 	isContractDeployed bool,
 	index lutxo.UTXOIndex,
 	scStorage *scState.ScState,
@@ -240,7 +228,7 @@ func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
 	engine.ImportUTXOs(invokeUtxos)
 	engine.ImportSourceTXID(ctx.ID)
 	engine.ImportRewardStorage(rewards)
-	engine.ImportTransaction(&ctx.Transaction)
+	engine.ImportTransaction(ctx.Transaction)
 	engine.ImportContractCreateUTXO(createContractUtxo)
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)

@@ -140,7 +140,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		totalSize += txNode.Size
 		count++
 
-		ctx := txNode.Value.ToContractTx()
+		ctx := transaction.NewTxContract(txNode.Value)
 		minerAddr := account.NewAddress(bp.producer.Beneficiary())
 		minerTA := account.NewContractAccountByAddress(minerAddr)
 		if ctx != nil {

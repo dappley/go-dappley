@@ -111,6 +111,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		0,
+		transaction.TxTypeNormal,
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
@@ -128,8 +129,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*utxo.UTXO{
 		ta2.GetPubKeyHash().String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
+	transaction.NewTxDecorator(&dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
+	transaction.NewTxDecorator(&dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name  string

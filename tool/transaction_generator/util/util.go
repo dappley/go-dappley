@@ -18,10 +18,10 @@ func NewTransaction(prevUtxos []*utxo.UTXO, vouts []transactionbase.TXOutput, ti
 		tip,
 		common.NewAmount(0),
 		common.NewAmount(0),
-		time.Now().UnixNano()/1e6,}
+		time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
 	tx.ID = tx.Hash()
 
-	err := tx.Sign(senderKeyPair.GetPrivateKey(), prevUtxos)
+	err := transaction.NewTxDecorator(tx).Sign(senderKeyPair.GetPrivateKey(), prevUtxos)
 	if err != nil {
 		logger.Panic("Sign transaction failed. Terminating...")
 	}

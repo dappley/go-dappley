@@ -139,7 +139,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := account.NewContractAccountByAddress(account.NewAddress(tt.addr))
-			tx := Transaction{
+			tx := &Transaction{
 				nil,
 				nil,
 				[]transactionbase.TXOutput{
@@ -152,9 +152,12 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeContract,
 			}
-
-			assert.Equal(t, account.NewAddress(tt.expectedRes), tx.GetContractAddress())
+			ctx := NewTxContract(tx)
+			if ctx != nil {
+				assert.Equal(t, account.NewAddress(tt.expectedRes), ctx.GetContractAddress())
+			}
 		})
 	}
 }
@@ -183,6 +186,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			true,
@@ -196,6 +200,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -216,6 +221,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			nil,
 			false,
@@ -236,6 +242,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -256,6 +263,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -283,6 +291,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -313,6 +322,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -344,6 +354,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",

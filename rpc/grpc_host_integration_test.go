@@ -277,15 +277,14 @@ func TestRpcSendContract(t *testing.T) {
 
 	//check smart contract deployment
 	res := string("")
-	contractAddr := account.NewAddress("")
 loop:
 	for i := bm.Getblockchain().GetMaxHeight(); i > 0; i-- {
 		blk, err := bm.Getblockchain().GetBlockByHeight(i)
 		assert.Nil(t, err)
 		for _, tx := range blk.GetTransactions() {
-			contractAddr = tx.GetContractAddress()
-			if contractAddr.String() != "" {
-				res = tx.Vout[transaction.ContractTxouputIndex].Contract
+			ctx := transaction.NewTxContract(tx)
+			if ctx != nil {
+				res = ctx.GetContract()
 				break loop
 			}
 		}

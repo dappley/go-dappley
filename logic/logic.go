@@ -267,8 +267,9 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)
 
-	contractAddr := tx.GetContractAddress()
-	if contractAddr.String() != "" {
+	contractAddr := account.NewAddress("")
+	if tx.Type == transaction.TxTypeContract {
+		contractAddr := transaction.NewTxContract(&tx).GetContractAddress()
 		if sendTxParam.To.String() == contractAddr.String() {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),

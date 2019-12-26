@@ -54,10 +54,10 @@ func TestSign(t *testing.T) {
 	txout := []transactionbase.TXOutput{
 		{common.NewAmount(19), ta.GetPubKeyHash(), ""},
 	}
-	tx := transaction.Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
+	tx := &transaction.Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}
 
 	// ltransaction.Sign the transaction
-	err := tx.Sign(*privKey, prevTXs)
+	err := transaction.NewTxDecorator(tx).Sign(*privKey, prevTXs)
 	if assert.Nil(t, err) {
 		// Assert that the signatures were created by the fake key pair
 		for i, vin := range tx.Vin {
@@ -113,7 +113,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := transactionbase.TXInput{nil, -1, bh1, []byte("Reward to test")}
 	txout1 := transactionbase.NewTXOutput(common.NewAmount(10000000), account.NewContractAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
-	var t6 = transaction.Transaction{nil, []transactionbase.TXInput{txin1}, []transactionbase.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
+	var t6 = transaction.Transaction{nil, []transactionbase.TXInput{txin1}, []transactionbase.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeCoinbase}
 
 	// test valid coinbase transaction
 	err5 := VerifyTransaction(&lutxo.UTXOIndex{}, &t5, 5)
@@ -130,7 +130,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	binary.BigEndian.PutUint64(bh2, 5)
 	txin2 := transactionbase.TXInput{nil, -1, bh2, []byte(nil)}
 	txout2 := transactionbase.NewTXOutput(common.NewAmount(9), account.NewContractAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
-	var t7 = transaction.Transaction{nil, []transactionbase.TXInput{txin2}, []transactionbase.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}
+	var t7 = transaction.Transaction{nil, []transactionbase.TXInput{txin2}, []transactionbase.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeCoinbase}
 	err7 := VerifyTransaction(&lutxo.UTXOIndex{}, &t7, 5)
 	assert.NotNil(t, err7)
 
@@ -172,12 +172,12 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		signWith []byte
 		ok       error
 	}{
-		{"normal", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, nil},
-		{"previous tx not found with wrong pubkey", transaction.Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong Txid", transaction.Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong TxIndex", transaction.Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"Amount invalid", transaction.Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, privKeyByte, errors.New("Transaction: ID is invalid")},
-		{"ltransaction.Sign invalid", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
+		{"normal", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, nil},
+		{"previous tx not found with wrong pubkey", transaction.Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong Txid", transaction.Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong TxIndex", transaction.Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"Amount invalid", transaction.Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: ID is invalid")},
+		{"ltransaction.Sign invalid", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -223,7 +223,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
 
-	var executionTx = transaction.Transaction{
+	var executionTx = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{deploymentTx.ID, 0, nil, pubkey1},
@@ -231,13 +231,14 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(3), contractPubkeyHash, "execution"},
 		},
-		Tip: common.NewAmount(2),
+		Tip:  common.NewAmount(2),
+		Type: transaction.TxTypeNormal,
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
+	transaction.NewTxDecorator(executionTx).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
 
-	err1 := VerifyTransaction(lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), &executionTx, 0)
-	err2 := VerifyTransaction(utxoIndex, &executionTx, 0)
+	err1 := VerifyTransaction(lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), executionTx, 0)
+	err2 := VerifyTransaction(utxoIndex, executionTx, 0)
 	assert.NotNil(t, err1)
 	assert.Nil(t, err2)
 }
@@ -268,7 +269,7 @@ func TestInvalidTipTx(t *testing.T) {
 		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
 
-	var executionTx = transaction.Transaction{
+	var executionTx = &transaction.Transaction{
 		ID: nil,
 		Vin: []transactionbase.TXInput{
 			{deploymentTx.ID, 0, nil, pubkey1},
@@ -279,11 +280,12 @@ func TestInvalidTipTx(t *testing.T) {
 		Tip:      common.NewAmount(1),
 		GasLimit: common.NewAmount(30000),
 		GasPrice: common.NewAmount(1),
+		Type:     transaction.TxTypeContract,
 	}
 	executionTx.ID = executionTx.Hash()
-	executionTx.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
+	transaction.NewTxDecorator(executionTx).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
 
-	err := VerifyTransaction(utxoIndex, &executionTx, 0)
+	err := VerifyTransaction(utxoIndex, executionTx, 0)
 	assert.NotNil(t, err)
 }
 
@@ -338,7 +340,7 @@ func TestTransaction_Execute(t *testing.T) {
 				GasLimit: common.NewAmount(0),
 				GasPrice: common.NewAmount(0),
 			}
-			ctx := tx.ToContractTx()
+			ctx := transaction.NewTxContract(&tx)
 
 			index := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {
