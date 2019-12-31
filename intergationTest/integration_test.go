@@ -88,7 +88,7 @@ func TestSend(t *testing.T) {
 			defer store.Close()
 
 			// Create a account address
-			SenderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+			senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 			if err != nil {
 				panic(err)
 			}
@@ -101,7 +101,7 @@ func TestSend(t *testing.T) {
 			node := network.FakeNodeWithPidAndAddr(store, "test", "test")
 			// Create a PoW blockchain with the logic.Sender wallet's address as the coinbase address
 			// i.e. logic.Sender's wallet would have mineReward amount after blockchain created
-			bm, bp := CreateProducer(minerAccount.GetAddress(), SenderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
+			bm, bp := CreateProducer(minerAccount.GetAddress(), senderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 			// Create a receiver account; Balance is 0 initially
 			receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -111,14 +111,14 @@ func TestSend(t *testing.T) {
 
 			// logic.Send coins from logic.SenderAccount to receiverAccount
 			var rcvAddr account.Address
-			isContract := (tc.contract != "")
+			isContract := tc.contract != ""
 			if isContract {
 				rcvAddr = account.NewAddress("")
 			} else {
 				rcvAddr = receiverAccount.GetAddress()
 			}
 
-			_, _, err = logic.Send(SenderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bm.Getblockchain())
+			_, _, err = logic.Send(senderAccount, rcvAddr, tc.transferAmount, tc.tipAmount, tc.gasLimit, tc.gasPrice, tc.contract, bm.Getblockchain())
 
 			assert.Equal(t, tc.expectedErr, err)
 
@@ -130,7 +130,7 @@ func TestSend(t *testing.T) {
 			for bm.Getblockchain().GetMaxHeight() < 1 {
 			}
 			// Verify balance of logic.Sender's account (genesis "mineReward" - transferred amount)
-			SenderBalance, err := logic.GetBalance(SenderAccount.GetAddress(), bm.Getblockchain())
+			senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bm.Getblockchain())
 
 			bp.Stop()
 			util.WaitDoneOrTimeout(func() bool {
@@ -142,7 +142,7 @@ func TestSend(t *testing.T) {
 			}
 			expectedBalance, _ := mineReward.Sub(tc.expectedTransfer)
 			expectedBalance, _ = expectedBalance.Sub(tc.expectedTip)
-			assert.Equal(t, expectedBalance, SenderBalance)
+			assert.Equal(t, expectedBalance, senderBalance)
 
 			// Balance of the miner's account should be the amount tipped + mineReward
 			minerBalance, err := logic.GetBalance(minerAccount.GetAddress(), bm.Getblockchain())
@@ -161,6 +161,7 @@ func TestSend(t *testing.T) {
 				for _, tx := range blk.GetTransactions() {
 					ctx := transaction.NewTxContract(tx)
 					if ctx != nil {
+						contractAddr = ctx.GetContractAddress()
 						res = ctx.GetContract()
 						break loop
 					}

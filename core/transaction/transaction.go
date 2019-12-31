@@ -594,12 +594,15 @@ func (tx *Transaction) verify(prevUtxos []*utxo.UTXO) error {
 	return nil
 }
 
-func (tx *Transaction) GetTotalBalance(prevUtxos []*utxo.UTXO) *common.Amount {
+func (tx *Transaction) GetTotalBalance(prevUtxos []*utxo.UTXO) (*common.Amount, error) {
 	totalPrev := calculateUtxoSum(prevUtxos)
 	totalVoutValue, _ := tx.calculateTotalVoutValue()
-	totalBalance, _ := totalPrev.Sub(totalVoutValue)
+	totalBalance, err := totalPrev.Sub(totalVoutValue)
+	if err != nil {
+		return nil, ErrInsufficientBalance
+	}
 	totalBalance, _ = totalBalance.Sub(tx.Tip)
-	return totalBalance
+	return totalBalance, nil
 }
 
 func getUniqueByte(height uint64, uniqueNum int) []byte {

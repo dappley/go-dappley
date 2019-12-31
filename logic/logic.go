@@ -269,7 +269,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	contractAddr := account.NewAddress("")
 	if tx.Type == transaction.TxTypeContract {
-		contractAddr := transaction.NewTxContract(&tx).GetContractAddress()
+		contractAddr = transaction.NewTxContract(&tx).GetContractAddress()
 		if sendTxParam.To.String() == contractAddr.String() {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),

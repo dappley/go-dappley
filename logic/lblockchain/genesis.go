@@ -35,7 +35,7 @@ func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Blo
 	txin := transactionbase.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
 	txout := transactionbase.NewTXOutput(subsidy, acc)
 	txs := []*transaction.Transaction{}
-	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeNormal}
+	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeCoinbase}
 	tx.ID = tx.Hash()
 	txs = append(txs, &tx)
 

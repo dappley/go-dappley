@@ -246,7 +246,8 @@ func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValu
 		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(voutValue), voutPubKeyHash, ""},
 		},
-		Tip: common.NewAmount(tip),
+		Tip:  common.NewAmount(tip),
+		Type: transaction.TxTypeNormal,
 	}
 	tx.ID = tx.Hash()
 	return tx

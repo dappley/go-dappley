@@ -47,14 +47,17 @@ func verifyContractTx(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, ctx *t
 	if err != nil {
 		return err
 	}
-	totalBalance := ctx.GetTotalBalance(prevUtxos)
+	totalBalance, err := ctx.GetTotalBalance(prevUtxos)
+	if err != nil {
+		return err
+	}
 	return ctx.VerifyGas(totalBalance)
 }
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
 	txDecorator := transaction.NewTxDecorator(tx)
-	if txDecorator.IsNeedVerify() {
+	if txDecorator != nil && txDecorator.IsNeedVerify() {
 		utxos := getPrevUTXOs(tx, utxoIndex)
 		adaptedTx := transaction.NewTxAdapter(tx)
 		if adaptedTx.IsContract() {
@@ -120,6 +123,9 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 
 // Returns related previous UTXO for current transaction
 func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *lutxo.UTXOIndex) []*utxo.UTXO {
+	if tx.Type == transaction.TxTypeCoinbase {
+		return nil
+	}
 	var prevUtxos []*utxo.UTXO
 	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
 	for _, vin := range tx.Vin {
