@@ -9,6 +9,7 @@ RUN ldconfig
 WORKDIR /opt/go-dappley
 COPY dapp/dapp dapp/dapp
 COPY dapp/jslib dapp/jslib
+COPY dapp/cli dapp/cli
 COPY core/account/account.conf core/account/account.conf
 WORKDIR /opt/go-dappley/dapp
 EXPOSE 50051 12341
