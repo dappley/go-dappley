@@ -3,7 +3,7 @@ log:
   level:  "info"
   count:  7
   rotateTime:  86400
-  stdout:  false
+  stdout:  true
 metrics:
   open: false
   interval: 5000

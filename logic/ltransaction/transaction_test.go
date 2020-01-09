@@ -272,7 +272,7 @@ func TestTransaction_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := new(core.MockScEngine)
+			sc := new(MockScEngine)
 			contract := "helloworld!"
 			toAccount := account.NewContractAccountByAddress(account.NewAddress(tt.toAddr))
 			scAccount := account.NewContractAccountByAddress(account.NewAddress(tt.scAddr))
@@ -304,7 +304,6 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("ImportSourceCode", contract)
 				sc.On("ImportLocalStorage", mock.Anything)
 				sc.On("ImportContractAddr", mock.Anything)
-				sc.On("ImportUTXOs", mock.Anything)
 				sc.On("ImportSourceTXID", mock.Anything)
 				sc.On("ImportRewardStorage", mock.Anything)
 				sc.On("ImportTransaction", mock.Anything)

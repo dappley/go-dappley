@@ -2,9 +2,10 @@ package blockproducer
 
 import (
 	"encoding/hex"
+	"time"
+
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/blockchain"
-	"time"
 
 	"github.com/dappley/go-dappley/logic/lblock"
 

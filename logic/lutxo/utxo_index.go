@@ -126,16 +126,15 @@ func (utxos *UTXOIndex) GetContractUTXOsByPubKeyHash(pubkeyHash account.PubKeyHa
 }
 
 //SplitContractUtxo
-func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) (*utxo.UTXO, []*utxo.UTXO) {
+func (utxos *UTXOIndex) SplitContractUtxo(pubkeyHash account.PubKeyHash) []*utxo.UTXO {
 	if ok, _ := account.PubKeyHash(pubkeyHash).IsContract(); !ok {
-		return nil, nil
+		return nil
 	}
 
 	utxoTx := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 
 	invokeContractUtxos := utxoTx.ToArray()
-	createContractUtxo := utxos.GetContractUTXOsByPubKeyHash(pubkeyHash)
-	return createContractUtxo, invokeContractUtxos
+	return invokeContractUtxos
 }
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount

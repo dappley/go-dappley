@@ -5,6 +5,7 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
 )
 
 type ScEngineManager interface {
@@ -18,7 +19,7 @@ type ScEngine interface {
 	ImportLocalStorage(state *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
-	ImportUTXOs(utxos []*utxo.UTXO)
+	ImportUtxoIndex(utxoIndex *lutxo.UTXOIndex)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *transaction.Transaction)
 	ImportContractCreateUTXO(utxo *utxo.UTXO)
