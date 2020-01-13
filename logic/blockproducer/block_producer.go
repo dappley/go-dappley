@@ -106,7 +106,7 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadline)
 
 	totalTips := bp.calculateTips(validTxs)
-	cbtx := transaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
+	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
 
@@ -140,7 +140,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		totalSize += txNode.Size
 		count++
 
-		ctx := transaction.NewTxContract(txNode.Value)
+		ctx := ltransaction.NewTxContract(txNode.Value)
 		minerAddr := account.NewAddress(bp.producer.Beneficiary())
 		minerTA := account.NewContractAccountByAddress(minerAddr)
 		if ctx != nil {
@@ -163,12 +163,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			// record gas used
 			if !ctx.GasPrice.IsZero() {
 				if gasCount > 0 {
-					grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
+					grtx, err := ltransaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
 					if err == nil {
 						generatedTxs = append(generatedTxs, &grtx)
 					}
 				}
-				gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
+				gctx, err := ltransaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
 				if err == nil {
 					generatedTxs = append(generatedTxs, &gctx)
 				}
@@ -183,7 +183,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	// append reward transaction
 	if len(rewards) > 0 {
-		rtx := transaction.NewRewardTx(currBlkHeight, rewards)
+		rtx := ltransaction.NewRewardTx(currBlkHeight, rewards)
 		validTxs = append(validTxs, &rtx)
 		utxoIndex.UpdateUtxo(&rtx)
 	}

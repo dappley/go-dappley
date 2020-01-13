@@ -19,6 +19,7 @@
 package consensus
 
 import (
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/transaction"
@@ -44,8 +45,8 @@ func TestDpos_beneficiaryIsProducer(t *testing.T) {
 		"1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 		"1LCn8D5W7DLV1CbKE3buuJgNJjSeoBw2ct"}
 
-	cbtx := transaction.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
-	cbtxInvalidProducer := transaction.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
+	cbtxInvalidProducer := ltransaction.NewCoinbaseTX(account.NewAddress(producers[0]), "", 0, common.NewAmount(0))
 
 	tests := []struct {
 		name     string

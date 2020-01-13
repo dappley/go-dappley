@@ -1,6 +1,7 @@
 package ltransaction
 
 import (
+	"crypto/ecdsa"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -26,4 +27,11 @@ type ScEngine interface {
 	SetExecutionLimits(uint64, uint64) error
 	ExecutionInstructions() uint64
 	CheckContactSyntax(source string) error
+}
+
+// Decorator of transaction
+type TxDecorator interface {
+	Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error
+	IsNeedVerify() bool
+	Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error
 }

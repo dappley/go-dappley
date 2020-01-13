@@ -139,7 +139,7 @@ L:
 			continue L
 		}
 
-		ctx := transaction.NewTxContract(tx)
+		ctx := ltransaction.NewTxContract(tx)
 		if ctx != nil {
 			// Run the contract and collect generated transactions
 			if scEngine == nil {

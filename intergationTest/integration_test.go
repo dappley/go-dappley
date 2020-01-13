@@ -21,6 +21,7 @@ import (
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/stretchr/testify/mock"
 	"reflect"
 	"testing"
@@ -159,7 +160,7 @@ func TestSend(t *testing.T) {
 				blk, err := bm.Getblockchain().GetBlockByHeight(i)
 				assert.Nil(t, err)
 				for _, tx := range blk.GetTransactions() {
-					ctx := transaction.NewTxContract(tx)
+					ctx := ltransaction.NewTxContract(tx)
 					if ctx != nil {
 						contractAddr = ctx.GetContractAddress()
 						res = ctx.GetContract()
@@ -540,7 +541,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	assert.Nil(t, err)
 
 	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
-	contractAddr := transaction.NewTxContract(txp).GetContractAddress()
+	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
 
@@ -863,10 +864,10 @@ func TestUpdate(t *testing.T) {
 	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal}
 	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}
 	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
-	transaction.NewTxDecorator(dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
-	transaction.NewTxDecorator(dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
-	transaction.NewTxDecorator(dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
-	transaction.NewTxDecorator(dependentTx5).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
+	ltransaction.NewTxDecorator(dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
+	ltransaction.NewTxDecorator(dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
+	ltransaction.NewTxDecorator(dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
+	ltransaction.NewTxDecorator(dependentTx5).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo4, &tx2Utxo5})
 
 	txsForUpdate := []*transaction.Transaction{dependentTx2, dependentTx3}
 	utxoIndex2.UpdateUtxos(txsForUpdate)

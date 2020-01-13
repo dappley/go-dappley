@@ -20,6 +20,7 @@ package logic
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"time"
 
 	"github.com/dappley/go-dappley/core/transaction"
@@ -262,14 +263,14 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 		return nil, "", err
 	}
 
-	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)
 
 	contractAddr := account.NewAddress("")
 	if tx.Type == transaction.TxTypeContract {
-		contractAddr = transaction.NewTxContract(&tx).GetContractAddress()
+		contractAddr = ltransaction.NewTxContract(&tx).GetContractAddress()
 		if sendTxParam.To.String() == contractAddr.String() {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),

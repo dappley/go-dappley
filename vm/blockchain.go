@@ -2,9 +2,9 @@ package vm
 
 import "C"
 import (
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/common"
@@ -59,7 +59,7 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 		return 1
 	}
 
-	transferTX := transaction.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
+	transferTX := ltransaction.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,
@@ -108,7 +108,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 		return 1
 	}
 
-	transferTX, err := transaction.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
+	transferTX, err := ltransaction.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

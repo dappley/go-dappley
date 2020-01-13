@@ -72,11 +72,11 @@ func (adapter *TxAdapter) isCoinbase() bool {
 		return false
 	}
 
-	if bytes.Equal(adapter.Vin[0].PubKey, gasRewardData) {
+	if bytes.Equal(adapter.Vin[0].PubKey, GasRewardData) {
 		return false
 	}
 
-	if bytes.Equal(adapter.Vin[0].PubKey, gasChangeData) {
+	if bytes.Equal(adapter.Vin[0].PubKey, GasChangeData) {
 		return false
 	}
 
@@ -108,7 +108,7 @@ func (adapter *TxAdapter) isGasRewardTx() bool {
 		return false
 	}
 
-	if !bytes.Equal(adapter.Vin[0].PubKey, gasRewardData) {
+	if !bytes.Equal(adapter.Vin[0].PubKey, GasRewardData) {
 		return false
 	}
 	return true
@@ -125,15 +125,15 @@ func (adapter *TxAdapter) isGasChangeTx() bool {
 		return false
 	}
 
-	if !bytes.Equal(adapter.Vin[0].PubKey, gasChangeData) {
+	if !bytes.Equal(adapter.Vin[0].PubKey, GasChangeData) {
 		return false
 	}
 
 	return true
 }
 
-// isContract returns true if tx deploys/executes a smart contract; false otherwise
-func (adapter *TxAdapter) isContract() bool {
+// IsContract returns true if tx deploys/executes a smart contract; false otherwise
+func (adapter *TxAdapter) IsContract() bool {
 	if len(adapter.Vout) == 0 {
 		return false
 	}

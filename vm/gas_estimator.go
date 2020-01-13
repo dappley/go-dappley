@@ -27,7 +27,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 	engine := NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
-	ctx := transaction.NewTxContract(tx)
+	ctx := ltransaction.NewTxContract(tx)
 	if ctx == nil {
 		return 0, ErrTransactionVerifyFailed
 	}

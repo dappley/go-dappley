@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -463,7 +464,7 @@ func TestAddGasCount(t *testing.T) {
 	tx := &transaction.Transaction{
 		Vout: []transactionbase.TXOutput{*vout},
 	}
-	ctx := transaction.NewTxContract(tx)
+	ctx := ltransaction.NewTxContract(tx)
 	script, _ := ioutil.ReadFile("test/test_add.js")
 
 	sc := NewV8Engine()
@@ -498,7 +499,7 @@ func TestStepRecordGasCount(t *testing.T) {
 	tx := &transaction.Transaction{
 		Vout: []transactionbase.TXOutput{*vout},
 	}
-	ctx := transaction.NewTxContract(tx)
+	ctx := ltransaction.NewTxContract(tx)
 	script, _ := ioutil.ReadFile("test/test_step_recorder.js")
 
 	ss := scState.NewScState()

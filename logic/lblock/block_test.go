@@ -3,6 +3,7 @@ package lblock
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 	"time"
 
@@ -87,8 +88,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address1TA = account.NewTransactionAccountByPubKey(address1Bytes)
 
-	normalCoinbaseTX := transaction.NewCoinbaseTX(address1TA.GetAddress(), "", 1, common.NewAmount(0))
-	rewardTX := transaction.NewRewardTx(1, map[string]string{address1TA.GetAddress().String(): "10"})
+	normalCoinbaseTX := ltransaction.NewCoinbaseTX(address1TA.GetAddress(), "", 1, common.NewAmount(0))
+	rewardTX := ltransaction.NewRewardTx(1, map[string]string{address1TA.GetAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
 	userTA := account.NewTransactionAccountByPubKey(userPubKey)
 	contractTA := account.NewContractTransactionAccount()
@@ -129,8 +130,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*utxo.UTXO{
 		ta2.GetPubKeyHash().String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
 	}
-	transaction.NewTxDecorator(&dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
-	transaction.NewTxDecorator(&dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
+	ltransaction.NewTxDecorator(&dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
+	ltransaction.NewTxDecorator(&dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name  string

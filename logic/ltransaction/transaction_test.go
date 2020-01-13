@@ -57,7 +57,7 @@ func TestSign(t *testing.T) {
 	tx := &transaction.Transaction{nil, txin, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}
 
 	// ltransaction.Sign the transaction
-	err := transaction.NewTxDecorator(tx).Sign(*privKey, prevTXs)
+	err := NewTxDecorator(tx).Sign(*privKey, prevTXs)
 	if assert.Nil(t, err) {
 		// Assert that the signatures were created by the fake key pair
 		for i, vin := range tx.Vin {
@@ -108,7 +108,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	prevTXs[string(tx3.ID)] = tx4
 
 	// test verifying coinbase transactions
-	var t5 = transaction.NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
+	var t5 = NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 5, common.NewAmount(0))
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := transactionbase.TXInput{nil, -1, bh1, []byte("Reward to test")}
@@ -235,7 +235,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 		Type: transaction.TxTypeNormal,
 	}
 	executionTx.ID = executionTx.Hash()
-	transaction.NewTxDecorator(executionTx).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
+	NewTxDecorator(executionTx).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
 
 	err1 := VerifyTransaction(lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage())), executionTx, 0)
 	err2 := VerifyTransaction(utxoIndex, executionTx, 0)
@@ -283,7 +283,7 @@ func TestInvalidTipTx(t *testing.T) {
 		Type:     transaction.TxTypeContract,
 	}
 	executionTx.ID = executionTx.Hash()
-	transaction.NewTxDecorator(executionTx).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
+	NewTxDecorator(executionTx).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), utxoIndex.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).GetAllUtxos())
 
 	err := VerifyTransaction(utxoIndex, executionTx, 0)
 	assert.NotNil(t, err)
@@ -340,7 +340,7 @@ func TestTransaction_Execute(t *testing.T) {
 				GasLimit: common.NewAmount(0),
 				GasPrice: common.NewAmount(0),
 			}
-			ctx := transaction.NewTxContract(&tx)
+			ctx := NewTxContract(&tx)
 
 			index := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 			if tt.scAddr != "" {
@@ -386,7 +386,7 @@ func TestIsCoinBase(t *testing.T) {
 
 	assert.False(t, tx1.IsCoinbase())
 
-	t2 := transaction.NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
+	t2 := NewCoinbaseTX(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F"), "", 0, common.NewAmount(0))
 
 	assert.True(t, t2.IsCoinbase())
 
@@ -398,9 +398,9 @@ func TestTransaction_IsRewardTx(t *testing.T) {
 		tx          transaction.Transaction
 		expectedRes bool
 	}{
-		{"normal", transaction.NewRewardTx(1, map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "9"}), true},
-		{"no rewards", transaction.NewRewardTx(1, nil), true},
-		{"coinbase", transaction.NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 5, common.NewAmount(0)), false},
+		{"normal", NewRewardTx(1, map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "9"}), true},
+		{"no rewards", NewRewardTx(1, nil), true},
+		{"coinbase", NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 5, common.NewAmount(0)), false},
 		{"normal tx", *core.MockTransaction(), false},
 	}
 	for _, tt := range tests {
@@ -408,4 +408,92 @@ func TestTransaction_IsRewardTx(t *testing.T) {
 			assert.Equal(t, tt.expectedRes, tt.tx.IsRewardTx())
 		})
 	}
+}
+
+
+func TestNewRewardTx(t *testing.T) {
+	rewards := map[string]string{
+		"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "8",
+		"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa": "9",
+	}
+	tx := NewRewardTx(5, rewards)
+
+	values := []*common.Amount{tx.Vout[0].Value, tx.Vout[1].Value}
+	assert.Contains(t, values, common.NewAmount(8))
+	assert.Contains(t, values, common.NewAmount(9))
+}
+
+func TestTransaction_GetContractAddress(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		addr        string
+		expectedRes string
+	}{
+		{
+			name:        "ContainsContractAddress",
+			addr:        "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+			expectedRes: "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
+		},
+		{
+			name:        "ContainsUserAddress",
+			addr:        "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expectedRes: "",
+		},
+		{
+			name:        "EmptyInput",
+			addr:        "",
+			expectedRes: "",
+		},
+		{
+			name:        "InvalidAddress",
+			addr:        "dsdGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
+			expectedRes: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acc := account.NewContractAccountByAddress(account.NewAddress(tt.addr))
+			tx := &transaction.Transaction{
+				nil,
+				nil,
+				[]transactionbase.TXOutput{
+					{nil,
+						acc.GetPubKeyHash(),
+						"",
+					},
+				},
+				common.NewAmount(0),
+				common.NewAmount(0),
+				common.NewAmount(0),
+				0,
+				transaction.TxTypeContract,
+			}
+			ctx := NewTxContract(tx)
+			if ctx != nil {
+				assert.Equal(t, account.NewAddress(tt.expectedRes), ctx.GetContractAddress())
+			}
+		})
+	}
+}
+
+func TestNewCoinbaseTX(t *testing.T) {
+	t1 := NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
+	t2 := NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 0, common.NewAmount(0))
+	expectVin := transactionbase.TXInput{nil, -1, []byte{0, 0, 0, 0, 0, 0, 0, 0}, []byte("Reward to 'dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB'")}
+	expectVout := transactionbase.TXOutput{common.NewAmount(10000000), account.PubKeyHash([]byte{0x5a, 0xc9, 0x85, 0x37, 0x92, 0x37, 0x76, 0x80, 0xb1, 0x31, 0xa1, 0xab, 0xb, 0x5b, 0xa6, 0x49, 0xe5, 0x27, 0xf0, 0x42, 0x5d}), ""}
+	assert.Equal(t, 1, len(t1.Vin))
+	assert.Equal(t, expectVin, t1.Vin[0])
+	assert.Equal(t, 1, len(t1.Vout))
+	assert.Equal(t, expectVout, t1.Vout[0])
+	assert.Equal(t, common.NewAmount(0), t1.Tip)
+
+	// Assert that ltransaction.NewCoinbaseTX is deterministic (i.e. >1 coinbaseTXs in a block would have identical txid)
+	assert.Equal(t, t1, t2)
+
+	t3 := NewCoinbaseTX(account.NewAddress("dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"), "", 1, common.NewAmount(0))
+
+	assert.NotEqual(t, t1, t3)
+	assert.NotEqual(t, t1.ID, t3.ID)
 }

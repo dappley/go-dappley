@@ -262,7 +262,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	var generatedContractAddress = ""
 	if tx.IsContract() {
-		ctx := transaction.NewTxContract(tx)
+		ctx := ltransaction.NewTxContract(tx)
 		contractAddr := ctx.GetContractAddress()
 		generatedContractAddress = contractAddr.String()
 		logger.WithFields(logger.Fields{
@@ -422,7 +422,7 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 	if !tx.IsContract() {
 		return nil, status.Error(codes.InvalidArgument, "transaction type must be contract")
 	}
-	contractTx := transaction.NewTxContract(tx)
+	contractTx := ltransaction.NewTxContract(tx)
 	if contractTx == nil {
 		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
 	}

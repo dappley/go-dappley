@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -48,8 +47,8 @@ const (
 )
 
 var RewardTxData = []byte("Distribute X Rewards")
-var gasRewardData = []byte("Miner Gas Rewards")
-var gasChangeData = []byte("Unspent Gas Change")
+var GasRewardData = []byte("Miner Gas Rewards")
+var GasChangeData = []byte("Unspent Gas Change")
 
 var (
 	// MinGasCountPerTransaction default gas for normal transaction
@@ -124,7 +123,7 @@ func (st SendTxParam) TotalCost() *common.Amount {
 }
 
 // Sign signs each input of a Transaction
-func (tx *Transaction) sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
 	txCopy := tx.TrimmedCopy(false)
 	privData, err := secp256k1.FromECDSAPrivateKey(&privKey)
 	if err != nil {
@@ -151,38 +150,7 @@ func (tx *Transaction) sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) er
 	return nil
 }
 
-//prepareInputLists prepares a list of txinputs for a new transaction
-func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transactionbase.TXInput {
-	var inputs []transactionbase.TXInput
 
-	// Build a list of inputs
-	for _, utxo := range utxos {
-		input := transactionbase.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
-		inputs = append(inputs, input)
-	}
-
-	return inputs
-}
-
-//prepareOutPutLists prepares a list of txoutputs for a new transaction
-func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
-	var outputs []transactionbase.TXOutput
-	toAddr := to
-
-	if toAddr.GetAddress().String() == "" {
-		toAddr = account.NewContractTransactionAccount()
-	}
-
-	if contract != "" {
-		outputs = append(outputs, *transactionbase.NewContractTXOutput(toAddr, contract))
-	}
-
-	outputs = append(outputs, *transactionbase.NewTXOutput(amount, toAddr))
-	if !change.IsZero() {
-		outputs = append(outputs, *transactionbase.NewTXOutput(change, from))
-	}
-	return outputs
-}
 
 // IsNormal returns true if tx a normal tx
 func (tx *Transaction) IsNormal() bool {
@@ -333,8 +301,8 @@ func (tx *Transaction) verifyAmount(totalPrev *common.Amount, totalVoutValue *co
 	return true, nil
 }
 
-//calculateTotalVoutValue returns total amout of transaction's vout
-func (tx *Transaction) calculateTotalVoutValue() (*common.Amount, bool) {
+//CalculateTotalVoutValue returns total amout of transaction's vout
+func (tx *Transaction) CalculateTotalVoutValue() (*common.Amount, bool) {
 	totalVout := &common.Amount{}
 	for _, vout := range tx.Vout {
 		if vout.Value == nil || vout.Value.Validate() != nil {
@@ -472,8 +440,8 @@ func (tx *Transaction) GetDefaultFromTransactionAccount() *account.TransactionAc
 	return ta
 }
 
-//calculateUtxoSum calculates the total amount of all input utxos
-func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
+//CalculateUtxoSum calculates the total amount of all input utxos
+func CalculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 	sum := common.NewAmount(0)
 	for _, utxo := range utxos {
 		sum = sum.Add(utxo.Value)
@@ -481,8 +449,8 @@ func calculateUtxoSum(utxos []*utxo.UTXO) *common.Amount {
 	return sum
 }
 
-//calculateChange calculates the change
-func calculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
+//CalculateChange calculates the change
+func CalculateChange(input, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) (*common.Amount, error) {
 	change, err := input.Sub(amount)
 	if err != nil {
 		return nil, ErrInsufficientFund
@@ -563,7 +531,7 @@ func (tx *Transaction) VerifyPublicKeyHash(prevUtxos []*utxo.UTXO) (bool, error)
 	return true, nil
 }
 
-func (tx *Transaction) verify(prevUtxos []*utxo.UTXO) error {
+func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 	if prevUtxos == nil {
 		return errors.New("Transaction: prevUtxos not found")
 	}
@@ -577,8 +545,8 @@ func (tx *Transaction) verify(prevUtxos []*utxo.UTXO) error {
 		return err
 	}
 
-	totalPrev := calculateUtxoSum(prevUtxos)
-	totalVoutValue, ok := tx.calculateTotalVoutValue()
+	totalPrev := CalculateUtxoSum(prevUtxos)
+	totalVoutValue, ok := tx.CalculateTotalVoutValue()
 	if !ok {
 		return errors.New("Transaction: vout is invalid")
 	}
@@ -594,23 +562,6 @@ func (tx *Transaction) verify(prevUtxos []*utxo.UTXO) error {
 	return nil
 }
 
-func (tx *Transaction) GetTotalBalance(prevUtxos []*utxo.UTXO) (*common.Amount, error) {
-	totalPrev := calculateUtxoSum(prevUtxos)
-	totalVoutValue, _ := tx.calculateTotalVoutValue()
-	totalBalance, err := totalPrev.Sub(totalVoutValue)
-	if err != nil {
-		return nil, ErrInsufficientBalance
-	}
-	totalBalance, _ = totalBalance.Sub(tx.Tip)
-	return totalBalance, nil
-}
 
-func getUniqueByte(height uint64, uniqueNum int) []byte {
-	bh := make([]byte, 8)
-	binary.BigEndian.PutUint64(bh, uint64(height))
-	bUnique := make([]byte, 2)
-	binary.BigEndian.PutUint16(bUnique, uint16(uniqueNum))
-	bh[0] = bUnique[0]
-	bh[1] = bUnique[1]
-	return bh
-}
+
+

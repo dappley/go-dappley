@@ -16,7 +16,7 @@
 // along with the go-dappley library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package transaction
+package ltransaction
 
 import (
 	"crypto/ecdsa"
@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	logger "github.com/sirupsen/logrus"
@@ -32,61 +33,65 @@ import (
 	"time"
 )
 
+const (
+	scheduleFuncName = "dapp_schedule"
+)
+
 // Normal transaction
 type TxNormal struct {
-	*Transaction
+	*transaction.Transaction
 }
 
 // TxContract contains contract value
 type TxContract struct {
-	*Transaction
+	*transaction.Transaction
 	Address account.Address
 }
 
 // Coinbase transaction, rewards to miner
 type TxCoinbase struct {
-	*Transaction
+	*transaction.Transaction
 }
 
 // GasReward transaction, rewards to miner during vm execution
 type TxGasReward struct {
-	*Transaction
+	*transaction.Transaction
 }
 
 // GasChange transaction, change value to from user
 type TxGasChange struct {
-	*Transaction
+	*transaction.Transaction
 }
 
 // Reward transaction, step reward
 type TxReward struct {
-	*Transaction
+	*transaction.Transaction
 }
 
 // Returns decorator of transaction
-func NewTxDecorator(tx *Transaction) TxDecorator {
+func NewTxDecorator(tx *transaction.Transaction) TxDecorator {
 	// old data adapter
-	adaptedTx := NewTxAdapter(tx)
+	adaptedTx := transaction.NewTxAdapter(tx)
 	tx = adaptedTx.Transaction
 	switch tx.Type {
-	case TxTypeNormal:
+	case transaction.TxTypeNormal:
 		return &TxNormal{tx}
-	case TxTypeContract:
+	case transaction.TxTypeContract:
 		return NewTxContract(tx)
-	case TxTypeCoinbase:
+	case transaction.TxTypeCoinbase:
 		return &TxCoinbase{tx}
-	case TxTypeGasReward:
+	case transaction.TxTypeGasReward:
 		return &TxGasReward{tx}
-	case TxTypeGasChange:
+	case transaction.TxTypeGasChange:
 		return &TxGasChange{tx}
-	case TxTypeReward:
+	case transaction.TxTypeReward:
 		return &TxReward{tx}
 	}
 	return nil
 }
 
 func (tx *TxNormal) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
-	return tx.sign(privKey, prevUtxos)
+	return tx.Transaction.Sign(privKey, prevUtxos)
 }
 
 func (tx *TxNormal) IsNeedVerify() bool {
@@ -94,11 +99,11 @@ func (tx *TxNormal) IsNeedVerify() bool {
 }
 
 func (tx *TxNormal) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
-	return tx.verify(prevUtxos)
+	return tx.Transaction.Verify(prevUtxos)
 }
 
 func (tx *TxContract) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
-	return tx.sign(privKey, prevUtxos)
+	return tx.Transaction.Sign(privKey, prevUtxos)
 }
 
 func (tx *TxContract) IsNeedVerify() bool {
@@ -119,7 +124,7 @@ func (tx *TxCoinbase) IsNeedVerify() bool {
 
 func (tx *TxCoinbase) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
 	//TODO coinbase vout check need add tip
-	if tx.Vout[0].Value.Cmp(Subsidy) < 0 {
+	if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
 		return errors.New("Transaction: subsidy check failed")
 	}
 	bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
@@ -165,10 +170,10 @@ func (tx *TxReward) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
 	return nil
 }
 
-func NewTxContract(tx *Transaction) *TxContract {
-	adaptedTx := NewTxAdapter(tx)
-	if adaptedTx.isContract() {
-		address := tx.Vout[ContractTxouputIndex].GetAddress()
+func NewTxContract(tx *transaction.Transaction) *TxContract {
+	adaptedTx := transaction.NewTxAdapter(tx)
+	if adaptedTx.IsContract() {
+		address := tx.Vout[transaction.ContractTxouputIndex].GetAddress()
 		return &TxContract{tx, address}
 	}
 	return nil
@@ -184,19 +189,19 @@ func (ctx *TxContract) IsScheduleContract() bool {
 
 //GetContract returns the smart contract code in a transaction
 func (ctx *TxContract) GetContract() string {
-	return ctx.Vout[ContractTxouputIndex].Contract
+	return ctx.Vout[transaction.ContractTxouputIndex].Contract
 }
 
 //GetContractPubKeyHash returns the smart contract pubkeyhash in a transaction
 func (ctx *TxContract) GetContractPubKeyHash() account.PubKeyHash {
-	return ctx.Vout[ContractTxouputIndex].PubKeyHash
+	return ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash
 }
 
 // GasCountOfTxBase calculate the actual amount for a tx with data
 func (ctx *TxContract) GasCountOfTxBase() (*common.Amount, error) {
-	txGas := MinGasCountPerTransaction
+	txGas := transaction.MinGasCountPerTransaction
 	if dataLen := ctx.DataLen(); dataLen > 0 {
-		dataGas := common.NewAmount(uint64(dataLen)).Mul(GasCountPerByte)
+		dataGas := common.NewAmount(uint64(dataLen)).Mul(transaction.GasCountPerByte)
 		baseGas := txGas.Add(dataGas)
 		txGas = baseGas
 	}
@@ -218,28 +223,28 @@ func (ctx *TxContract) VerifyGas(totalBalance *common.Amount) error {
 				"acceptedGas": baseGas,
 			}).Warn("Failed to check GasLimit >= txBaseGas.")
 			// GasLimit is smaller than based tx gas, won't giveback the tx
-			return ErrOutOfGasLimit
+			return transaction.ErrOutOfGasLimit
 		}
 	}
 
 	limitedFee := ctx.GasLimit.Mul(ctx.GasPrice)
 	if totalBalance.Cmp(limitedFee) < 0 {
-		return ErrInsufficientBalance
+		return transaction.ErrInsufficientBalance
 	}
 	return nil
 }
 
 // ToContractTx Returns structure of ContractTx
-func ToContractTx(tx *Transaction) *TxContract {
-	address := tx.Vout[ContractTxouputIndex].GetAddress()
+func ToContractTx(tx *transaction.Transaction) *TxContract {
+	address := tx.Vout[transaction.ContractTxouputIndex].GetAddress()
 	if tx.IsContract() {
 		return &TxContract{tx, address}
 	}
-	if tx.Type != TxTypeDefault {
+	if tx.Type != transaction.TxTypeDefault {
 		return nil
 	}
-	txAdapter := NewTxAdapter(tx)
-	if txAdapter.isContract() {
+	txAdapter := transaction.NewTxAdapter(tx)
+	if txAdapter.IsContract() {
 		return &TxContract{tx, address}
 	}
 	return nil
@@ -251,12 +256,12 @@ func (tx *TxContract) GetContractAddress() account.Address {
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
-func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
+func NewRewardTx(blockHeight uint64, rewards map[string]string) transaction.Transaction {
 
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 
-	txin := transactionbase.TXInput{nil, -1, bh, RewardTxData}
+	txin := transactionbase.TXInput{nil, -1, bh, transaction.RewardTxData}
 	txOutputs := []transactionbase.TXOutput{}
 	for address, amount := range rewards {
 		amt, err := common.NewAmountFromString(amount)
@@ -269,7 +274,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 		acc := account.NewContractAccountByAddress(account.NewAddress(address))
 		txOutputs = append(txOutputs, *transactionbase.NewTXOutput(amt, acc))
 	}
-	tx := Transaction{nil, []transactionbase.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, TxTypeReward}
+	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeReward}
 
 	tx.ID = tx.Hash()
 
@@ -277,37 +282,37 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) Transaction {
 }
 
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
-func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (Transaction, error) {
+func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
 	fee := actualGasCount.Mul(gasPrice)
-	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), gasRewardData}
+	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasRewardData}
 	txout := transactionbase.NewTXOutput(fee, to)
-	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, TxTypeGasReward}
+	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeGasReward}
 	tx.ID = tx.Hash()
 	return tx, nil
 }
 
 // NewGasChangeTx returns a change to contract invoker, pay for the change of unused gas
-func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (Transaction, error) {
+func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
 	if gasLimit.Cmp(actualGasCount) <= 0 {
-		return Transaction{}, ErrNoGasChange
+		return transaction.Transaction{}, transaction.ErrNoGasChange
 	}
 	change, err := gasLimit.Sub(actualGasCount)
 
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 	changeValue := change.Mul(gasPrice)
 
-	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), gasChangeData}
+	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasChangeData}
 	txout := transactionbase.NewTXOutput(changeValue, to)
-	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, TxTypeGasChange}
+	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeGasChange}
 
 	tx.ID = tx.Hash()
 	return tx, nil
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *common.Amount) Transaction {
+func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *common.Amount) transaction.Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
@@ -315,27 +320,27 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
 	toAccount := account.NewContractAccountByAddress(to)
 	txin := transactionbase.TXInput{nil, -1, bh, []byte(data)}
-	txout := transactionbase.NewTXOutput(Subsidy.Add(tip), toAccount)
-	tx := Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, TxTypeCoinbase}
+	txout := transactionbase.NewTXOutput(transaction.Subsidy.Add(tip), toAccount)
+	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeCoinbase}
 	tx.ID = tx.Hash()
 
 	return tx
 }
 
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transaction, error) {
+func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
 	fromAccount := account.NewContractAccountByAddress(sendTxParam.From)
 	toAccount := account.NewContractAccountByAddress(sendTxParam.To)
-	sum := calculateUtxoSum(utxos)
-	change, err := calculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
+	sum := transaction.CalculateUtxoSum(utxos)
+	change, err := transaction.CalculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
-	txType := TxTypeNormal
+	txType := transaction.TxTypeNormal
 	if sendTxParam.Contract != "" {
-		txType = TxTypeContract
+		txType = transaction.TxTypeContract
 	}
-	tx := Transaction{
+	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
 		prepareOutputLists(fromAccount, toAccount, sendTxParam.Amount, change, sendTxParam.Contract),
@@ -347,42 +352,42 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam SendTxParam) (Transactio
 	}
 	tx.ID = tx.Hash()
 
-	err = tx.sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
+	err = tx.Sign(sendTxParam.SenderKeyPair.GetPrivateKey(), utxos)
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 
 	return tx, nil
 }
 
-func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) Transaction {
-	sum := calculateUtxoSum(utxos)
+func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address, sourceTXID []byte) transaction.Transaction {
+	sum := transaction.CalculateUtxoSum(utxos)
 	tips := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
 
-	tx, _ := NewContractTransferTX(utxos, contractAddr, account.NewAddress(SCDestroyAddress), sum, tips, gasLimit, gasPrice, sourceTXID)
+	tx, _ := NewContractTransferTX(utxos, contractAddr, account.NewAddress(transaction.SCDestroyAddress), sum, tips, gasLimit, gasPrice, sourceTXID)
 	return tx
 }
 
-func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (Transaction, error) {
+func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (transaction.Transaction, error) {
 	contractAccount := account.NewContractAccountByAddress(contractAddr)
 	toAccount := account.NewContractAccountByAddress(toAddr)
 	if !contractAccount.IsValid() {
-		return Transaction{}, account.ErrInvalidAddress
+		return transaction.Transaction{}, account.ErrInvalidAddress
 	}
 	if isContract, err := contractAccount.GetPubKeyHash().IsContract(); !isContract {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 
-	sum := calculateUtxoSum(utxos)
-	change, err := calculateChange(sum, amount, tip, gasLimit, gasPrice)
+	sum := transaction.CalculateUtxoSum(utxos)
+	change, err := transaction.CalculateChange(sum, amount, tip, gasLimit, gasPrice)
 	if err != nil {
-		return Transaction{}, err
+		return transaction.Transaction{}, err
 	}
 
 	// Intentionally set PubKeyHash as PubKey (to recognize it is from contract) and sourceTXID as signature in Vin
-	tx := Transaction{
+	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, contractAccount.GetPubKeyHash(), sourceTXID),
 		prepareOutputLists(contractAccount, toAccount, amount, change, ""),
@@ -390,9 +395,63 @@ func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Addr
 		gasLimit,
 		gasPrice,
 		time.Now().UnixNano() / 1e6,
-		TxTypeNormal,
+		transaction.TxTypeNormal,
 	}
 	tx.ID = tx.Hash()
 
 	return tx, nil
+}
+
+//prepareInputLists prepares a list of txinputs for a new transaction
+func prepareInputLists(utxos []*utxo.UTXO, publicKey []byte, signature []byte) []transactionbase.TXInput {
+	var inputs []transactionbase.TXInput
+
+	// Build a list of inputs
+	for _, utxo := range utxos {
+		input := transactionbase.TXInput{utxo.Txid, utxo.TxIndex, signature, publicKey}
+		inputs = append(inputs, input)
+	}
+
+	return inputs
+}
+
+//prepareOutPutLists prepares a list of txoutputs for a new transaction
+func prepareOutputLists(from, to *account.TransactionAccount, amount *common.Amount, change *common.Amount, contract string) []transactionbase.TXOutput {
+	var outputs []transactionbase.TXOutput
+	toAddr := to
+
+	if toAddr.GetAddress().String() == "" {
+		toAddr = account.NewContractTransactionAccount()
+	}
+
+	if contract != "" {
+		outputs = append(outputs, *transactionbase.NewContractTXOutput(toAddr, contract))
+	}
+
+	outputs = append(outputs, *transactionbase.NewTXOutput(amount, toAddr))
+	if !change.IsZero() {
+		outputs = append(outputs, *transactionbase.NewTXOutput(change, from))
+	}
+	return outputs
+}
+
+func (tx *TxContract) GetTotalBalance(prevUtxos []*utxo.UTXO) (*common.Amount, error) {
+	totalPrev := transaction.CalculateUtxoSum(prevUtxos)
+	totalVoutValue, _ := tx.CalculateTotalVoutValue()
+	totalBalance, err := totalPrev.Sub(totalVoutValue)
+	if err != nil {
+		return nil, transaction.ErrInsufficientBalance
+	}
+	totalBalance, _ = totalBalance.Sub(tx.Tip)
+	return totalBalance, nil
+}
+
+func getUniqueByte(height uint64, uniqueNum int) []byte {
+	bh := make([]byte, 8)
+	binary.BigEndian.PutUint64(bh, uint64(height))
+	bUnique := make([]byte, 2)
+	binary.BigEndian.PutUint16(bUnique, uint16(uniqueNum))
+	bh[0] = bUnique[0]
+	bh[1] = bUnique[1]
+	return bh
 }
