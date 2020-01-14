@@ -2,7 +2,6 @@ package ltransaction
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -27,44 +26,11 @@ var (
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
 )
 
-// VerifyInEstimate returns whether the current tx in estimate mode is valid.
-func VerifyInEstimate(utxoIndex *lutxo.UTXOIndex, ctx *TxContract) error {
-	utxos := getPrevUTXOs(ctx.Transaction, utxoIndex)
-	return verifyInEstimate(utxoIndex, utxos, ctx)
-}
-
-func verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, ctx *TxContract) error {
-	if ctx.IsScheduleContract() && !IsContractDeployed(utxoIndex, ctx) {
-		return errors.New("Transaction: contract state check failed")
-	}
-	err := ctx.Verify(prevUtxos, 0)
-	return err
-}
-
-// verifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func verifyContractTx(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, ctx *TxContract) error {
-	err := verifyInEstimate(utxoIndex, prevUtxos, ctx)
-	if err != nil {
-		return err
-	}
-	totalBalance, err := ctx.GetTotalBalance(prevUtxos)
-	if err != nil {
-		return err
-	}
-	return ctx.VerifyGas(totalBalance)
-}
-
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
 	txDecorator := NewTxDecorator(tx)
 	if txDecorator != nil && txDecorator.IsNeedVerify() {
-		utxos := getPrevUTXOs(tx, utxoIndex)
-		adaptedTx := transaction.NewTxAdapter(tx)
-		if adaptedTx.IsContract() {
-			ctx := NewTxContract(adaptedTx.Transaction)
-			return verifyContractTx(utxoIndex, utxos, ctx)
-		}
-		return txDecorator.Verify(utxos, blockHeight)
+		return txDecorator.Verify(utxoIndex, blockHeight)
 	}
 	return nil
 }
@@ -119,44 +85,6 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 	senderAddress := ta.GetAddress()
 
 	return &senderAddress, &receiverAddress, payoutAmount, tip, nil
-}
-
-// Returns related previous UTXO for current transaction
-func getPrevUTXOs(tx *transaction.Transaction, utxoIndex *lutxo.UTXOIndex) []*utxo.UTXO {
-	if tx.Type == transaction.TxTypeCoinbase {
-		return nil
-	}
-	var prevUtxos []*utxo.UTXO
-	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
-	for _, vin := range tx.Vin {
-		if ok, _ := account.IsValidPubKey(vin.PubKey); !ok {
-			logger.WithFields(logger.Fields{
-				"tx_id":          hex.EncodeToString(tx.ID),
-				"vin_tx_id":      hex.EncodeToString(vin.Txid),
-				"vin_public_key": hex.EncodeToString(vin.PubKey),
-			}).Warn("Transaction: failed to get PubKeyHash of vin.")
-			return nil
-		}
-
-		ta := account.NewTransactionAccountByPubKey(vin.PubKey)
-		tempUtxoTx, ok := tempUtxoTxMap[string(ta.GetPubKeyHash())]
-		if !ok {
-			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(ta.GetPubKeyHash())
-			tempUtxoTxMap[string(ta.GetPubKeyHash())] = tempUtxoTx
-		}
-		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
-		if utxo == nil {
-			logger.WithFields(logger.Fields{
-				"tx_id":      hex.EncodeToString(tx.ID),
-				"vin_tx_id":  hex.EncodeToString(vin.Txid),
-				"vin_index":  vin.Vout,
-				"pubKeyHash": ta.GetPubKeyHash().String(),
-			}).Warn("Transaction: cannot find vin.")
-			return nil
-		}
-		prevUtxos = append(prevUtxos, utxo)
-	}
-	return prevUtxos
 }
 
 // IsFromContract returns true if tx is generated from a contract execution; false otherwise
