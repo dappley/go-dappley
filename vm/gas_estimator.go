@@ -31,7 +31,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 	if ctx == nil {
 		return 0, ErrTransactionVerifyFailed
 	}
-	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(ctx.ID),

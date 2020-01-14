@@ -21,6 +21,7 @@ package ltransaction
 import (
 	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/dappley/go-dappley/common"
@@ -28,6 +29,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	logger "github.com/sirupsen/logrus"
 	"strings"
 	"time"
@@ -98,7 +100,14 @@ func (tx *TxNormal) IsNeedVerify() bool {
 	return true
 }
 
-func (tx *TxNormal) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
+func (tx *TxNormal) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid": hex.EncodeToString(tx.ID),
+		}).Warn("Verify: cannot find vin while verifying normal tx")
+		return err
+	}
 	return tx.Transaction.Verify(prevUtxos)
 }
 
@@ -110,8 +119,20 @@ func (tx *TxContract) IsNeedVerify() bool {
 	return true
 }
 
-func (tx *TxContract) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
-	return nil
+func (tx *TxContract) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
+	if err != nil {
+		return err
+	}
+	err = tx.verifyInEstimate(utxoIndex, prevUtxos)
+	if err != nil {
+		return err
+	}
+	totalBalance, err := tx.GetTotalBalance(prevUtxos)
+	if err != nil {
+		return err
+	}
+	return tx.VerifyGas(totalBalance)
 }
 
 func (tx *TxCoinbase) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
@@ -122,7 +143,7 @@ func (tx *TxCoinbase) IsNeedVerify() bool {
 	return true
 }
 
-func (tx *TxCoinbase) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
+func (tx *TxCoinbase) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	//TODO coinbase vout check need add tip
 	if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
 		return errors.New("Transaction: subsidy check failed")
@@ -142,7 +163,7 @@ func (tx *TxGasReward) IsNeedVerify() bool {
 	return false
 }
 
-func (tx *TxGasReward) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
+func (tx *TxGasReward) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	return nil
 }
 
@@ -154,7 +175,7 @@ func (tx *TxGasChange) IsNeedVerify() bool {
 	return false
 }
 
-func (tx *TxGasChange) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
+func (tx *TxGasChange) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	return nil
 }
 
@@ -166,7 +187,7 @@ func (tx *TxReward) IsNeedVerify() bool {
 	return false
 }
 
-func (tx *TxReward) Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error {
+func (tx *TxReward) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	return nil
 }
 
@@ -253,6 +274,23 @@ func ToContractTx(tx *transaction.Transaction) *TxContract {
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
 func (tx *TxContract) GetContractAddress() account.Address {
 	return tx.Address
+}
+
+// VerifyInEstimate returns whether the current tx in estimate mode is valid.
+func (tx *TxContract) VerifyInEstimate(utxoIndex *lutxo.UTXOIndex) error {
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
+	if err != nil {
+		return err
+	}
+	return tx.verifyInEstimate(utxoIndex, prevUtxos)
+}
+
+func (tx *TxContract) verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO) error {
+	if tx.IsScheduleContract() && !IsContractDeployed(utxoIndex, tx) {
+		return errors.New("Transaction: contract state check failed")
+	}
+	err := tx.Transaction.Verify(prevUtxos)
+	return err
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards

@@ -173,9 +173,9 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 		ok       error
 	}{
 		{"normal", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, nil},
-		{"previous tx not found with wrong pubkey", transaction.Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong Txid", transaction.Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
-		{"previous tx not found with wrong TxIndex", transaction.Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: prevUtxos not found")},
+		{"previous tx not found with wrong pubkey", transaction.Transaction{nil, txin2, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, transaction.ErrTXInputNotFound},
+		{"previous tx not found with wrong Txid", transaction.Transaction{nil, txin3, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, transaction.ErrTXInputNotFound},
+		{"previous tx not found with wrong TxIndex", transaction.Transaction{nil, txin4, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, transaction.ErrTXInputNotFound},
 		{"Amount invalid", transaction.Transaction{nil, txin1, txout2, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, privKeyByte, errors.New("Transaction: ID is invalid")},
 		{"ltransaction.Sign invalid", transaction.Transaction{nil, txin1, txout, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeNormal}, wrongPrivKeyByte, errors.New("Transaction: ID is invalid")},
 	}
@@ -363,7 +363,7 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
 			parentBlk := core.GenerateMockBlock()
-			preUTXO, err := lutxo.FindVinUtxosInUtxoPool(*index, ctx.Transaction)
+			preUTXO, err := lutxo.FindVinUtxosInUtxoPool(index, ctx.Transaction)
 
 			if err != nil {
 				println(err.Error())
@@ -409,7 +409,6 @@ func TestTransaction_IsRewardTx(t *testing.T) {
 		})
 	}
 }
-
 
 func TestNewRewardTx(t *testing.T) {
 	rewards := map[string]string{

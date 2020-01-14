@@ -144,7 +144,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		minerAddr := account.NewAddress(bp.producer.Beneficiary())
 		minerTA := account.NewContractAccountByAddress(minerAddr)
 		if ctx != nil {
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
 					"txid": hex.EncodeToString(ctx.ID),

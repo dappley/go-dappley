@@ -6,6 +6,7 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
 )
 
 type ScEngine interface {
@@ -33,5 +34,5 @@ type ScEngine interface {
 type TxDecorator interface {
 	Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error
 	IsNeedVerify() bool
-	Verify(prevUtxos []*utxo.UTXO, blockHeight uint64) error
+	Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error
 }

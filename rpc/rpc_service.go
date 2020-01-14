@@ -428,7 +428,7 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 	}
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
-	err := ltransaction.VerifyInEstimate(utxoIndex, contractTx)
+	err := contractTx.VerifyInEstimate(utxoIndex)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
