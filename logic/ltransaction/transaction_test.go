@@ -368,8 +368,8 @@ func TestTransaction_Execute(t *testing.T) {
 			if err != nil {
 				println(err.Error())
 			}
-			isContractDeployed := IsContractDeployed(index, ctx)
-			Execute(ctx, preUTXO, isContractDeployed, *index, scState.NewScState(), nil, sc, 0, parentBlk)
+			isContractDeployed := ctx.IsContractDeployed(index)
+			ctx.Execute(preUTXO, isContractDeployed, *index, scState.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}

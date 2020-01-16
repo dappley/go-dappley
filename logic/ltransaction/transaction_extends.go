@@ -26,10 +26,13 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"strings"
 	"time"
@@ -286,11 +289,81 @@ func (tx *TxContract) VerifyInEstimate(utxoIndex *lutxo.UTXOIndex) error {
 }
 
 func (tx *TxContract) verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO) error {
-	if tx.IsScheduleContract() && !IsContractDeployed(utxoIndex, tx) {
+	if tx.IsScheduleContract() && !tx.IsContractDeployed(utxoIndex) {
 		return errors.New("Transaction: contract state check failed")
 	}
 	err := tx.Transaction.Verify(prevUtxos)
 	return err
+}
+
+// IsContractDeployed returns if the current contract is deployed
+func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
+	pubkeyhash := tx.GetContractPubKeyHash()
+	if pubkeyhash == nil {
+		return false
+	}
+
+	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
+	return contractUtxoTx.Size() > 0
+}
+
+//Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
+func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
+	isContractDeployed bool,
+	index lutxo.UTXOIndex,
+	scStorage *scState.ScState,
+	rewards map[string]string,
+	engine ScEngine,
+	currblkHeight uint64,
+	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
+
+	if engine == nil {
+		return 0, nil, nil
+	}
+	if !isContractDeployed {
+		return 0, nil, nil
+	}
+
+	vout := tx.Vout[transaction.ContractTxouputIndex]
+
+	function, args := util.DecodeScInput(vout.Contract)
+	if function == "" {
+		return 0, nil, ErrUnsupportedSourceType
+	}
+	if err := engine.SetExecutionLimits(tx.GasLimit.Uint64(), 0); err != nil {
+		return 0, nil, ErrInvalidGasLimit
+	}
+
+	totalArgs := util.PrepareArgs(args)
+	address := vout.GetAddress()
+	logger.WithFields(logger.Fields{
+		"contract_address": address.String(),
+		"invoked_function": function,
+		"arguments":        totalArgs,
+	}).Debug("Transaction: is executing the smart contract...")
+
+	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
+
+	engine.ImportSourceCode(createContractUtxo.Contract)
+	engine.ImportLocalStorage(scStorage)
+	engine.ImportContractAddr(address)
+	engine.ImportUTXOs(invokeUtxos)
+	engine.ImportSourceTXID(tx.ID)
+	engine.ImportRewardStorage(rewards)
+	engine.ImportTransaction(tx.Transaction)
+	engine.ImportContractCreateUTXO(createContractUtxo)
+	engine.ImportPrevUtxos(prevUtxos)
+	engine.ImportCurrBlockHeight(currblkHeight)
+	engine.ImportSeed(parentBlk.GetTimestamp())
+	_, err := engine.Execute(function, totalArgs)
+	gasCount := engine.ExecutionInstructions()
+	// record base gas
+	baseGas, _ := tx.GasCountOfTxBase()
+	gasCount += baseGas.Uint64()
+	if err != nil {
+		return gasCount, nil, err
+	}
+	return gasCount, engine.GetGeneratedTXs(), err
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards

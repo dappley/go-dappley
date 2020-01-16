@@ -151,11 +151,11 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				}).Warn("BlockProducer: cannot find vin while executing smart contract")
 				return nil, nil
 			}
-			isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
+			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
 
-			gasCount, generatedTxs, err := ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+			gasCount, generatedTxs, err := ctx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 
 			if err != nil {
 				logger.WithError(err).Error("BlockProducer: executeSmartContract error.")

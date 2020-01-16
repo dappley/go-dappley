@@ -7,8 +7,6 @@ import (
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -106,76 +104,6 @@ func IsFromContract(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) boo
 		}
 	}
 	return true
-}
-
-// IsContractDeployed returns if the current contract is deployed
-func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *TxContract) bool {
-	pubkeyhash := ctx.GetContractPubKeyHash()
-	if pubkeyhash == nil {
-		return false
-	}
-
-	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
-	return contractUtxoTx.Size() > 0
-}
-
-//Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
-func Execute(ctx *TxContract, prevUtxos []*utxo.UTXO,
-	isContractDeployed bool,
-	index lutxo.UTXOIndex,
-	scStorage *scState.ScState,
-	rewards map[string]string,
-	engine ScEngine,
-	currblkHeight uint64,
-	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
-
-	if engine == nil {
-		return 0, nil, nil
-	}
-	if !isContractDeployed {
-		return 0, nil, nil
-	}
-
-	vout := ctx.Vout[transaction.ContractTxouputIndex]
-
-	function, args := util.DecodeScInput(vout.Contract)
-	if function == "" {
-		return 0, nil, ErrUnsupportedSourceType
-	}
-	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), 0); err != nil {
-		return 0, nil, ErrInvalidGasLimit
-	}
-
-	totalArgs := util.PrepareArgs(args)
-	address := vout.GetAddress()
-	logger.WithFields(logger.Fields{
-		"contract_address": address.String(),
-		"invoked_function": function,
-		"arguments":        totalArgs,
-	}).Debug("Transaction: is executing the smart contract...")
-
-	createContractUtxo, invokeUtxos := index.SplitContractUtxo([]byte(vout.PubKeyHash))
-
-	engine.ImportSourceCode(createContractUtxo.Contract)
-	engine.ImportLocalStorage(scStorage)
-	engine.ImportContractAddr(address)
-	engine.ImportUTXOs(invokeUtxos)
-	engine.ImportSourceTXID(ctx.ID)
-	engine.ImportRewardStorage(rewards)
-	engine.ImportTransaction(ctx.Transaction)
-	engine.ImportContractCreateUTXO(createContractUtxo)
-	engine.ImportPrevUtxos(prevUtxos)
-	engine.ImportCurrBlockHeight(currblkHeight)
-	engine.ImportSeed(parentBlk.GetTimestamp())
-	_, err := engine.Execute(function, totalArgs)
-	gasCount := engine.ExecutionInstructions()
-	// record base gas
-	baseGas, _ := ctx.GasCountOfTxBase()
-	gasCount += baseGas.Uint64()
-	if err != nil {
-		return gasCount, nil, err
-	}
-	return gasCount, engine.GetGeneratedTXs(), err
 }
 
 func CheckContractSyntaxTransaction(engine ScEngine, tx *transaction.Transaction) error {

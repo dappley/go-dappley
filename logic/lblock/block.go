@@ -156,13 +156,13 @@ L:
 				return false
 			}
 
-			isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
+			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
 			// TODO GAS LIMIT
 			if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 				return false
 			}
 			utxoIndex.UpdateUtxo(tx)
-			ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
+			ctx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
 			currentContractGenTXs = append(currentContractGenTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions

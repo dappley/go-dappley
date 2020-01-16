@@ -38,7 +38,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return 0, err
 	}
-	isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
-	gasCount, _, err := ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
+	isContractDeployed := ctx.IsContractDeployed(utxoIndex)
+	gasCount, _, err := ctx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
 	return gasCount, err
 }
