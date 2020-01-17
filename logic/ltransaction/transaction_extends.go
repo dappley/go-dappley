@@ -366,6 +366,40 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
+// Execute contract and return the generated transactions
+func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, validTxs []*transaction.Transaction, scStorage *scState.ScState,
+	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid": hex.EncodeToString(tx.ID),
+		}).Warn("BlockProducer: cannot find vin while executing smart contract")
+		return nil, err
+	}
+	isContractDeployed := tx.IsContractDeployed(utxoIndex)
+
+	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
+
+	if err != nil {
+		logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
+	}
+	// record gas used
+	if !tx.GasPrice.IsZero() {
+		if gasCount > 0 {
+			minerTA := account.NewContractAccountByAddress(minerAddr)
+			grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
+			if err == nil {
+				generatedTxs = append(generatedTxs, &grtx)
+			}
+		}
+		gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
+		if err == nil {
+			generatedTxs = append(generatedTxs, &gctx)
+		}
+	}
+	return generatedTxs, nil
+}
+
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
 func NewRewardTx(blockHeight uint64, rewards map[string]string) transaction.Transaction {
 

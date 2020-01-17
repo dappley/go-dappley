@@ -1,7 +1,6 @@
 package blockproducer
 
 import (
-	"encoding/hex"
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"time"
@@ -141,44 +140,20 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		count++
 
 		ctx := ltransaction.NewTxContract(txNode.Value)
-		minerAddr := account.NewAddress(bp.producer.Beneficiary())
-		minerTA := account.NewContractAccountByAddress(minerAddr)
 		if ctx != nil {
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
+			minerAddr := account.NewAddress(bp.producer.Beneficiary())
+			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, validTxs, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
 			if err != nil {
-				logger.WithError(err).WithFields(logger.Fields{
-					"txid": hex.EncodeToString(ctx.ID),
-				}).Warn("BlockProducer: cannot find vin while executing smart contract")
-				return nil, nil
+				continue
 			}
-			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
-			validTxs = append(validTxs, txNode.Value)
-			utxoIndex.UpdateUtxo(txNode.Value)
-
-			gasCount, generatedTxs, err := ctx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-
-			if err != nil {
-				logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
+			if generatedTxs != nil {
+				validTxs = append(validTxs, generatedTxs...)
+				utxoIndex.UpdateUtxos(generatedTxs)
 			}
-			// record gas used
-			if !ctx.GasPrice.IsZero() {
-				if gasCount > 0 {
-					grtx, err := ltransaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
-					if err == nil {
-						generatedTxs = append(generatedTxs, &grtx)
-					}
-				}
-				gctx, err := ltransaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
-				if err == nil {
-					generatedTxs = append(generatedTxs, &gctx)
-				}
-			}
-			validTxs = append(validTxs, generatedTxs...)
-			utxoIndex.UpdateUtxos(generatedTxs)
-		} else {
-			validTxs = append(validTxs, txNode.Value)
-			utxoIndex.UpdateUtxo(txNode.Value)
 		}
+
+		validTxs = append(validTxs, txNode.Value)
+		utxoIndex.UpdateUtxo(txNode.Value)
 	}
 
 	// append reward transaction

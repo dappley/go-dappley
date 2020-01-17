@@ -142,36 +142,22 @@ L:
 		ctx := ltransaction.NewTxContract(tx)
 		if ctx != nil {
 			// Run the contract and collect generated transactions
-			if scEngine == nil {
-				logger.Warn("Block: smart contract cannot be verified.")
-				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
-				return false
-			}
-
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
+			generatedTxs, err := ltransaction.VerifyContractTransaction(utxoIndex, ctx, scState, scEngine, b.GetHeight(), parentBlk, rewards)
 			if err != nil {
-				logger.WithError(err).WithFields(logger.Fields{
-					"txid": hex.EncodeToString(ctx.ID),
-				}).Warn("Transaction: cannot find vin while executing smart contract")
+				logger.Warn(err.Error())
 				return false
 			}
-
-			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
-			// TODO GAS LIMIT
-			if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
-				return false
+			if generatedTxs != nil {
+				currentContractGenTXs = append(currentContractGenTXs, generatedTxs...)
 			}
-			utxoIndex.UpdateUtxo(tx)
-			ctx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
-			currentContractGenTXs = append(currentContractGenTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
 			if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
 				logger.Warn(err.Error())
 				return false
 			}
-			utxoIndex.UpdateUtxo(tx)
 		}
+		utxoIndex.UpdateUtxo(tx)
 	}
 	// Assert that any contract-incurred transactions matches the ones generated from contract execution
 	if rewardTX != nil && !rewardTX.MatchRewards(rewards) {
