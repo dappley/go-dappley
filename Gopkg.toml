@@ -69,10 +69,17 @@
   name = "github.com/libp2p/go-ws-transport"
   version = "0.2.0"
 
+[[override]]
+name = "github.com/libp2p/go-eventbus"
+version = "0.1.0"
+
 [[constraint]]
   name = "github.com/multiformats/go-multiaddr"
   version = "0.2.0"
 
+[[override]]
+  name = "github.com/multiformats/go-multiaddr-dns"
+  version = "0.2.0"
 
 [[constraint]]
   name = "github.com/peterh/liner"
