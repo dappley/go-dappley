@@ -97,7 +97,7 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 	if !ok {
 		utxoTx = utxos.cache.Get(pubkeyHash)
 		utxos.mutex.Lock()
-		utxoTx := utxoTx.DeepCopy()
+		utxoTx = utxoTx.DeepCopy()
 		if utxos.index[key] != nil {
 			utxo.Free(utxos.index[key])
 		}
