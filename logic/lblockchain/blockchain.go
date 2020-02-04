@@ -527,11 +527,12 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 	lib := bc.GetLIBHash()
 
-	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
+	libProduerNum := bc.libPolicy.GetMinConfirmationNum()
+
 	existProducers := make(map[string]bool)
 	currBlk := blk
 
-	for i := 0; i < minConfirmationNum + 1; i++ {
+	for i := 0; i < libProduerNum; i++ {
 		if currBlk.GetHeight() == 0 {
 			return false
 		}
@@ -540,39 +541,23 @@ func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 			logger.WithFields(logger.Fields{
 				"currBlkHeight": currBlk.GetHeight(),
 				"producer":      currBlk.GetProducer(),
-			}).Info("Blockchain: repeating producer")
-			//return true
+			}).Debug("Blockchain: repeating producer")
+			return true
+		}
+
+		if lib.Equals(currBlk.GetHash()) {
+			return false
 		}
 
 		existProducers[currBlk.GetProducer()] = true
-		if lib.Equals(currBlk.GetHash()) {
-			logger.WithFields(logger.Fields{
-				"currBlkHeight": currBlk.GetHeight(),
-				"producer":      currBlk.GetProducer(),
-				"libHash": currBlk.GetHash(),
-			}).Info("Blockchain: hash equal")
-
-			if i == minConfirmationNum {
-				if len(existProducers) < minConfirmationNum{
-					logger.Infof("existProducers map is %v, index: %v", existProducers, minConfirmationNum)
-					return true
-				}
-			}
-
-			return false
-		}
 
 		newBlock, err := bc.GetBlockByHash(currBlk.GetPrevHash())
 		if err != nil {
 			logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking repeating producer")
 			return true
 		}
-		currBlk = newBlock
-	}
 
-	if len(existProducers) < minConfirmationNum{
-		logger.Infof("existProducers map is %v", existProducers)
-		return true
+		currBlk = newBlock
 	}
 	return false
 }
