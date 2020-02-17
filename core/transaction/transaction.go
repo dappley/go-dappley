@@ -798,6 +798,9 @@ func (tx *Transaction) VerifySignatures(prevUtxos []*utxo.UTXO) (bool, error) {
 	txCopy := tx.TrimmedCopy(false)
 
 	for i, vin := range tx.Vin {
+		if vin.Signature == nil || len(vin.Signature) == 0 {
+			return false, errors.New("Transaction: vin.Signature is empty")
+		}
 		txCopy.Vin[i].Signature = nil
 		oldPubKey := txCopy.Vin[i].PubKey
 		txCopy.Vin[i].PubKey = []byte(prevUtxos[i].PubKeyHash)
