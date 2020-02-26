@@ -2,6 +2,7 @@ package blockproducer
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/common/log"
 	"time"
 
 	"github.com/dappley/go-dappley/common/deadline"
@@ -42,6 +43,8 @@ func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer
 //Start starts the block producing process
 func (bp *BlockProducer) Start() {
 	go func() {
+		defer log.CrashHandler()
+
 		logger.Info("BlockProducer Starts...")
 		for {
 			select {

@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/log"
 	"math"
 	"sync"
 	"time"
@@ -163,6 +164,8 @@ func (downloadManager *DownloadManager) Start() {
 
 func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			select {
 			case returnCh := <-downloadManager.downloadRequestCh:
@@ -233,6 +236,8 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bo
 	waitTimer := time.NewTimer(CheckMaxWaitTime * time.Second)
 	logger.Info("DownloadManager: wait peer information")
 	go func() {
+		defer log.CrashHandler()
+
 		<-waitTimer.C
 		waitTimer.Stop()
 
@@ -525,6 +530,8 @@ func (downloadManager *DownloadManager) sendGetCommonBlockCommand(blockHeaders [
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
+		defer log.CrashHandler()
+
 		<-downloadTimer.C
 		downloadTimer.Stop()
 		downloadManager.CheckGetCommonBlockCommand(msgId, peerId, retryCount)
@@ -592,6 +599,8 @@ func (downloadManager *DownloadManager) sendDownloadCommand(hashes []hash.Hash, 
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
+		defer log.CrashHandler()
+
 		<-downloadTimer.C
 		downloadTimer.Stop()
 		downloadManager.CheckDownloadCommand(hashes, peerId, retryCount)

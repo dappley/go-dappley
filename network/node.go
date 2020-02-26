@@ -21,6 +21,7 @@ package network
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/common/pubsub"
 	"io/ioutil"
 
@@ -200,6 +201,8 @@ func (n *Node) Stop() {
 func (n *Node) StartRequestLoop() {
 
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			select {
 			case <-n.exitCh:
@@ -225,6 +228,8 @@ func (n *Node) StartRequestLoop() {
 //StartListenLoop starts a received message listener
 func (n *Node) StartListenLoop() {
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			if streamMsg, ok := <-n.dispatcher; ok {
 

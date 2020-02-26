@@ -19,6 +19,7 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/common/pubsub"
 	"math/rand"
 	"sync"
@@ -286,6 +287,8 @@ func (pm *PeerManager) GetRandomPeers(numOfPeers int) []networkmodel.PeerInfo {
 func (pm *PeerManager) startSyncPeersSchedule() {
 
 	go func() {
+		defer log.CrashHandler()
+
 		pm.BroadcastGetPeerListRequest()
 		ticker := time.NewTicker(syncPeersScheduleTime)
 		for {

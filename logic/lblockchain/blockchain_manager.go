@@ -19,6 +19,7 @@ package lblockchain
 
 import (
 	"bytes"
+	"github.com/dappley/go-dappley/common/log"
 
 	"github.com/pkg/errors"
 
@@ -81,6 +82,8 @@ func (bm *BlockchainManager) SetDownloadRequestCh(requestCh chan chan bool) {
 
 func (bm *BlockchainManager) RequestDownloadBlockchain() {
 	go func() {
+		defer log.CrashHandler()
+
 		finishChan := make(chan bool, 1)
 
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
