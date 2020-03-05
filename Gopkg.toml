@@ -57,6 +57,10 @@
   name = "github.com/libp2p/go-libp2p"
   version = "=0.2.1"
 
+[[override]]
+  name = "github.com/libp2p/go-mplex"	
+  version = "=0.1.0"
+  
 [[constraint]]
   name = "github.com/libp2p/go-libp2p-core"
   version = "=0.2.2"
