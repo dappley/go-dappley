@@ -442,9 +442,10 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*blockpb.
 			commonBlock = block
 			break
 		}
-	}
-	if findIndex == -1 {
-		logger.Panic("DownloadManager: invalid get common blocks result.")
+		if blockHeader.GetHeight() == 0 {
+			logger.Warn("DownloadManager: invalid get common blocks result.")
+			return findIndex, nil
+		}
 	}
 	return findIndex, commonBlock
 }
@@ -551,6 +552,10 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*blockpb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
+	if findIndex == -1 {
+		// no common blocks, code version is different
+		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes.")
+	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
 		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
@@ -702,7 +707,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 	var blockHeaderPbs []*blockpb.BlockHeader
 	if index == 0 {
 		blockHeaderPbs = blockHeaders[:1]
-	} else {
+	} else if index > 0 {
 		blockHeaders := downloadManager.GetCommonBlockCheckPoint(
 			blockHeaders[index].GetHeight(),
 			blockHeaders[index-1].GetHeight(),
