@@ -3,6 +3,7 @@ package metrics
 import (
 	"encoding/json"
 	"errors"
+	"github.com/dappley/go-dappley/common/log"
 	"sync"
 	"time"
 
@@ -87,6 +88,8 @@ func (ds *DataStore) RegisterNewMetric(name string, updateMetric func() metricsp
 func (ds *DataStore) StartUpdate() {
 	if !ds.tasksStarted {
 		go func() {
+			defer log.CrashHandler()
+
 			tick := time.NewTicker(ds.interval)
 			defer tick.Stop()
 			for {

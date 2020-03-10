@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"errors"
+	"github.com/dappley/go-dappley/common/log"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -43,6 +44,8 @@ func NewPingService(host host.Host, interval time.Duration) (*PingService, error
 func (ps *PingService) Start(getPeers func() map[peer.ID]networkmodel.PeerInfo, callback func([]*PingResult)) error {
 	if !ps.started {
 		go func() {
+			defer log.CrashHandler()
+
 			logger.Debug("PingService: Starting ping service...")
 			ticker := time.NewTicker(ps.interval)
 			defer ticker.Stop()

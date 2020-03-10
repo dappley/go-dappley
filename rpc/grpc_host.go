@@ -20,6 +20,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"net"
@@ -76,6 +77,8 @@ func NewGrpcServerWithMetrics(node *network.Node, bm *lblockchain.BlockchainMana
 
 func (s *Server) Start(port uint32) {
 	go func() {
+		defer log.CrashHandler()
+
 		if port == 0 {
 			port = defaultRpcPort
 		}

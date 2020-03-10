@@ -1393,9 +1393,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	queryRequest := &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Key: key}
 	queryResp, err := rpcClient.RpcContractQuery(context.Background(), queryRequest)
 	assert.Nil(t, err)
-	logger.WithFields(logger.Fields{
-		"queryResp.Value": queryResp.Value,
-	}).Error("test error")
+
 	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
 	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
 

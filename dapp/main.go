@@ -20,10 +20,9 @@ package main
 
 import (
 	"flag"
-	"github.com/dappley/go-dappley/logic/blockproducer"
-
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -58,6 +57,8 @@ const (
 )
 
 func main() {
+	defer log.CrashHandler()
+
 	viper.AddConfigPath(".")
 	viper.SetConfigFile("conf/dappley.yaml")
 	if err := viper.ReadInConfig(); err != nil {
@@ -117,7 +118,7 @@ func main() {
 		if err != nil {
 			logger.Panic(err)
 		}
-	}else {
+	} else {
 		LIBBlk, _ = bc.GetLIB()
 	}
 	bc.SetState(blockchain.BlockchainInit)

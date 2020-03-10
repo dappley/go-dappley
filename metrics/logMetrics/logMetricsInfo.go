@@ -2,6 +2,7 @@ package logMetrics
 
 import (
 	"encoding/json"
+	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"os"
 	"runtime"
@@ -166,6 +167,8 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 	mi := NewMetricsInfo()
 	interval := viper.GetInt64("metrics.interval")
 	go func() {
+		defer log.CrashHandler()
+
 		tick := time.NewTicker(time.Duration(interval) * time.Millisecond)
 		for {
 			select {

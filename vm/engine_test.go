@@ -14,6 +14,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
@@ -82,29 +83,35 @@ MathTest.prototype = {
 module.exports = new MathTest();`
 
 	contractTA := account.NewContractTransactionAccount()
-	contractUTXOs := []*utxo.UTXO{
-		{
-			Txid:     []byte("1"),
-			TxIndex:  0,
-			TXOutput: *transactionbase.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
-		},
-		{
-			Txid:     []byte("1"),
-			TxIndex:  1,
-			TXOutput: *transactionbase.NewTxOut(common.NewAmount(15), contractTA, ""),
-		},
-		{
-			Txid:     []byte("2"),
-			TxIndex:  0,
-			TXOutput: *transactionbase.NewTxOut(common.NewAmount(3), contractTA, ""),
-		},
+	utxoMap := make(map[string]*utxo.UTXO)
+	utxoMap["a"] = &utxo.UTXO{
+		Txid:     []byte("1"),
+		TxIndex:  0,
+		TXOutput: *transactionbase.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
 	}
+	utxoMap["b"] = &utxo.UTXO{
+		Txid:     []byte("1"),
+		TxIndex:  1,
+		TXOutput: *transactionbase.NewTxOut(common.NewAmount(15), contractTA, ""),
+	}
+	utxoMap["c"] = &utxo.UTXO{
+		Txid:     []byte("2"),
+		TxIndex:  0,
+		TXOutput: *transactionbase.NewTxOut(common.NewAmount(3), contractTA, ""),
+	}
+	utxoTx := utxo.NewUTXOTx()
+	utxoTx.Indices = utxoMap
+	index := make(map[string]*utxo.UTXOTx)
+	index[contractTA.GetPubKeyHash().String()] = &utxoTx
+
+	uTXOIndex := lutxo.NewUTXOIndex(nil)
+	uTXOIndex.SetIndex(index)
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportContractAddr(contractTA.GetAddress())
 	sc.ImportSourceTXID([]byte("thatTX"))
-	sc.ImportUTXOs(contractUTXOs)
+	sc.ImportUtxoIndex(uTXOIndex)
 
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 	result, _ := sc.Execute("transfer", "'16PencPNnF8CiSx2EBGEd1axhf7vuHCouj','10','2'")

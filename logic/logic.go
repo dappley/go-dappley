@@ -255,7 +255,6 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-
 	utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions())
 
 	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())

@@ -50,11 +50,12 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 	}
 
 	contractAddr := engine.contractAddr
-	utxos := engine.contractUTXOs
+	contractAccount := account.NewContractAccountByAddress(contractAddr)
+	utxos := engine.utxoIndex.SplitContractUtxo(contractAccount.GetPubKeyHash())
 	createUtxo := engine.contractCreateUTXO
 	utxos = append(utxos, createUtxo)
 	sourceTXID := engine.sourceTXID
-	contractAccount := account.NewContractAccountByAddress(contractAddr)
+
 	if !contractAccount.IsValid() {
 		return 1
 	}
@@ -95,9 +96,10 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	*gasCnt = C.size_t(TransferGasBase)
 
 	contractAddr := engine.contractAddr
-	utxos := engine.contractUTXOs
-	sourceTXID := engine.sourceTXID
 	contractAccount := account.NewContractAccountByAddress(contractAddr)
+	utxos := engine.utxoIndex.SplitContractUtxo(contractAccount.GetPubKeyHash())
+	sourceTXID := engine.sourceTXID
+
 	if !contractAccount.IsValid() {
 		return 1
 	}

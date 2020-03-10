@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/log"
 	"math"
 	"sync"
 	"time"
@@ -163,6 +164,8 @@ func (downloadManager *DownloadManager) Start() {
 
 func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			select {
 			case returnCh := <-downloadManager.downloadRequestCh:
@@ -233,6 +236,8 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bo
 	waitTimer := time.NewTimer(CheckMaxWaitTime * time.Second)
 	logger.Info("DownloadManager: wait peer information")
 	go func() {
+		defer log.CrashHandler()
+
 		<-waitTimer.C
 		waitTimer.Stop()
 
@@ -526,6 +531,8 @@ func (downloadManager *DownloadManager) sendGetCommonBlockCommand(blockHeaders [
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
+		defer log.CrashHandler()
+
 		<-downloadTimer.C
 		downloadTimer.Stop()
 		downloadManager.CheckGetCommonBlockCommand(msgId, peerId, retryCount)
@@ -557,7 +564,7 @@ func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders 
 		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes. Check code version or synchronize db files from other nodes.")
 	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
-		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
+		logger.Warnf("BtlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
 		downloadManager.currentCmd = nil
 		downloadManager.startDownload(0)
@@ -597,6 +604,8 @@ func (downloadManager *DownloadManager) sendDownloadCommand(hashes []hash.Hash, 
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
+		defer log.CrashHandler()
+
 		<-downloadTimer.C
 		downloadTimer.Stop()
 		downloadManager.CheckDownloadCommand(hashes, peerId, retryCount)

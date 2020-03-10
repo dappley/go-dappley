@@ -29,16 +29,19 @@ const UtxoCacheLRUCacheLimit = 1024
 // UTXOCache holds temporary UTXOTx data
 type UTXOCache struct {
 	// key: address, value: UTXOTx
-	cache *lru.Cache
-	db    storage.Storage
+	contractCache *lru.Cache
+	cache         *lru.Cache
+	db            storage.Storage
 }
 
 func NewUTXOCache(db storage.Storage) *UTXOCache {
 	utxoCache := &UTXOCache{
-		cache: nil,
-		db:    db,
+		contractCache: nil,
+		cache:         nil,
+		db:            db,
 	}
 	utxoCache.cache, _ = lru.New(UtxoCacheLRUCacheLimit)
+	utxoCache.contractCache, _ = lru.New(UtxoCacheLRUCacheLimit)
 	return utxoCache
 }
 
@@ -58,7 +61,28 @@ func (utxoCache *UTXOCache) Get(pubKeyHash account.PubKeyHash) *UTXOTx {
 	} else {
 		utxoTx = NewUTXOTx()
 	}
+
+	for _, u := range utxoTx.Indices {
+		if u.UtxoType == UtxoCreateContract {
+			utxoCache.contractCache.Add(string(pubKeyHash), u)
+		}
+	}
 	return &utxoTx
+}
+
+// Return value from cache
+func (utxoCache *UTXOCache) GetContractCreateUtxo(pubKeyHash account.PubKeyHash) *UTXO {
+	mapData, ok := utxoCache.contractCache.Get(string(pubKeyHash))
+	if !ok {
+		utxotx := utxoCache.Get(pubKeyHash)
+		if len(utxotx.Indices) > 0 {
+			mapData, ok = utxoCache.contractCache.Get(string(pubKeyHash))
+		} else {
+			return nil
+		}
+	}
+
+	return mapData.(*UTXO)
 }
 
 // Add new data into cache
@@ -66,6 +90,21 @@ func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) er
 	if pubKeyHash == nil {
 		return account.ErrEmptyPublicKeyHash
 	}
+	err := utxoCache.putUtxoTx(pubKeyHash, value)
+	if err != nil {
+		return err
+	}
+
+	for _, u := range value.Indices {
+		if u.UtxoType == UtxoCreateContract {
+			utxoCache.contractCache.Add(string(pubKeyHash), u)
+		}
+	}
+	return nil
+}
+
+// Add new data into cache
+func (utxoCache *UTXOCache) putUtxoTx(pubKeyHash account.PubKeyHash, value *UTXOTx) error {
 	savedUtxoTx := value.DeepCopy()
 	mapData, ok := utxoCache.cache.Get(string(pubKeyHash))
 	utxoCache.cache.Add(string(pubKeyHash), savedUtxoTx)

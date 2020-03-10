@@ -9,13 +9,18 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 )
 
+type ScEngineManager interface {
+	CreateEngine() ScEngine
+	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *scState.ScState, blkHeight uint64, seed int64)
+}
+
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
 	ImportLocalStorage(state *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
-	ImportUTXOs(utxos []*utxo.UTXO)
+	ImportUtxoIndex(utxoIndex *lutxo.UTXOIndex)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *transaction.Transaction)
 	ImportContractCreateUTXO(utxo *utxo.UTXO)

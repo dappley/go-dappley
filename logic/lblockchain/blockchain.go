@@ -26,11 +26,11 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblock"
@@ -65,14 +65,14 @@ type Blockchain struct {
 	utxoCache    *utxo.UTXOCache
 	libPolicy    LIBPolicy
 	txPool       *transactionpool.TransactionPool
-	scManager    core.ScEngineManager
+	scManager    ltransaction.ScEngineManager
 	eventManager *scState.EventManager
 	blkSizeLimit int
 	mutex        *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager ltransaction.ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
@@ -95,7 +95,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager ltransaction.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -136,7 +136,7 @@ func (bc *Blockchain) GetLIBHash() hash.Hash {
 	return bc.bc.GetLIBHash()
 }
 
-func (bc *Blockchain) GetSCManager() core.ScEngineManager {
+func (bc *Blockchain) GetSCManager() ltransaction.ScEngineManager {
 	return bc.scManager
 }
 
@@ -527,60 +527,37 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
 	lib := bc.GetLIBHash()
 
-	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
+	libProduerNum := bc.libPolicy.GetMinConfirmationNum()
+
 	existProducers := make(map[string]bool)
 	currBlk := blk
 
-	for i := 0; i < minConfirmationNum + 1; i++ {
+	for i := 0; i < libProduerNum; i++ {
 		if currBlk.GetHeight() == 0 {
 			return false
 		}
-
-		logger.WithFields(logger.Fields{
-			"currBlkHeight": currBlk.GetHeight(),
-			"producer":      currBlk.GetProducer(),
-			"hash":          currBlk.GetHash(),
-			"libHash":       lib.String(),
-			"index":			i,
-		}).Info("Blockchain: Info")
 
 		if _, ok := existProducers[currBlk.GetProducer()]; ok {
 			logger.WithFields(logger.Fields{
 				"currBlkHeight": currBlk.GetHeight(),
 				"producer":      currBlk.GetProducer(),
-			}).Info("Blockchain: repeating producer")
-			//return true
+			}).Debug("Blockchain: repeating producer")
+			return true
+		}
+
+		if lib.Equals(currBlk.GetHash()) {
+			return false
 		}
 
 		existProducers[currBlk.GetProducer()] = true
-		if lib.Equals(currBlk.GetHash()) {
-			logger.WithFields(logger.Fields{
-				"currBlkHeight": currBlk.GetHeight(),
-				"producer":      currBlk.GetProducer(),
-				"libHash": currBlk.GetHash(),
-			}).Info("Blockchain: hash equal")
-
-			if i == minConfirmationNum {
-				if len(existProducers) < minConfirmationNum{
-					logger.Infof("existProducers map is %v, index: %v", existProducers, minConfirmationNum)
-					return true
-				}
-			}
-
-			return false
-		}
 
 		newBlock, err := bc.GetBlockByHash(currBlk.GetPrevHash())
 		if err != nil {
 			logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking repeating producer")
 			return true
 		}
-		currBlk = newBlock
-	}
 
-	if len(existProducers) < minConfirmationNum{
-		logger.Infof("existProducers map is %v", existProducers)
-		return true
+		currBlk = newBlock
 	}
 	return false
 }
