@@ -23,6 +23,20 @@ func (_m *LIBPolicy) GetMinConfirmationNum() int {
 	return r0
 }
 
+// GetTotalProducersNum provides a mock function with given fields:
+func (_m *LIBPolicy) GetTotalProducersNum() int {
+	ret := _m.Called()
+
+	var r0 int
+	if rf, ok := ret.Get(0).(func() int); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	return r0
+}
+
 // IsBypassingLibCheck provides a mock function with given fields:
 func (_m *LIBPolicy) IsBypassingLibCheck() bool {
 	ret := _m.Called()

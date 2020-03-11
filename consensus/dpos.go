@@ -253,3 +253,8 @@ func (dpos *DPOS) IsBypassingLibCheck() bool {
 func (dpos *DPOS) IsNonRepeatingBlockProducerRequired() bool {
 	return true
 }
+
+//返回共有几个producer
+func (dpos *DPOS) GetTotalProducersNum() int {
+	return dpos.dynasty.maxProducers
+}
