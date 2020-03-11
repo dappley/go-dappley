@@ -1,7 +1,7 @@
 language: go
 
 go:
-- 1.11.x
+- 1.13.x
 os:
 - linux
 
@@ -22,7 +22,7 @@ install:
 - make
 - sudo make install
 - cd -
-- dep ensure
+- make dep
 - cd vm/v8
 - make install
 - cd -
