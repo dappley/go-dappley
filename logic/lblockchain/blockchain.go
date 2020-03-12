@@ -516,69 +516,59 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 		return true
 	}
 
-	if !bc.libPolicy.IsNonRepeatingBlockProducerRequired() {
-		return true
-	}
+	return bc.isAliveProducerSufficient(blk)
 
-	return !bc.checkRepeatingProducer(blk)
 }
 
-//checkRepeatingProducer returns true if it found a repeating block between the input block and last irreversible block
-func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
+//isAliveProducerSufficient returns true if alive producers are greater than minimum producers(total *2/3)
+func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 	minProduerNum := bc.libPolicy.GetMinConfirmationNum()
-	totalProducersNum:=bc.libPolicy.GetTotalProducersNum()
-	maxBlkHeight:=bc.GetMaxHeight()
 	onlineProducers := make(map[string]bool)
-	currBlock := blk
-	currloopBlock:=blk
-	foundProducer:=false
+	currentCheckBlk :=blk
 
-	if maxBlkHeight == 0 {
-		return false
+	if bc.GetMaxHeight() == 0 {
+		return true
 	}
-	if maxBlkHeight>uint64(minProduerNum-1) {
-		for i := 0; i < totalProducersNum-1; i++{
-			newBlock, err := bc.GetBlockByHash(currloopBlock.GetPrevHash())
+	if bc.GetMaxHeight()>uint64(minProduerNum-1) {
+		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++{
+			currentCheckBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
-				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking repeating producer")
-				return true
+				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
+				return false
 			}
-			currloopBlock = newBlock
-			if currloopBlock.GetHeight() == 0 {
+
+			if currentCheckBlk.GetHeight() == 0 {
 				break
 			}
 
-			if _, ok := onlineProducers[currBlock.GetProducer()]; ok {
+			if _, exist := onlineProducers[currentCheckBlk.GetProducer()]; !exist {
 				logger.WithFields(logger.Fields{
-					"\ncurrBlkHeight": currloopBlock.GetHeight(),
-					"\nproducer":      currloopBlock.GetProducer(),
+					"\ncurrBlkHeight": currentCheckBlk.GetHeight(),
+					"\nproducer":      currentCheckBlk.GetProducer(),
 				}).Debug("\nBlockchain: repeating producer")
-				foundProducer= true
-			}
 
-			if  foundProducer==false &&currBlock.GetProducer()!=currloopBlock.GetProducer(){
-				onlineProducers[currloopBlock.GetProducer()] = true
+				if  blk.GetProducer()!= currentCheckBlk.GetProducer(){
+					onlineProducers[currentCheckBlk.GetProducer()] = true
+				}
 			}
 		}
 		if len(onlineProducers)>=minProduerNum-1{
-			return false//add to chain
+			return true
 		}
+		return false
 	}else{
-		var i uint64
-		for i= 0; i < maxBlkHeight; i++ {
-			newBlock, err := bc.GetBlockByHash(currloopBlock.GetPrevHash())
+		for i:= uint64(0); i < bc.GetMaxHeight(); i++ {
+			currentCheckBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
-				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking repeating producer")
-				return true
+				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer.")
+				return false
 			}
-			currloopBlock = newBlock
-			if  currBlock.GetProducer()==currloopBlock.GetProducer(){
-				return true
+			if  blk.GetProducer()==currentCheckBlk.GetProducer(){
+				return false
 			}
 		}
-		return false	//add to chain
+		return true
 	}
-	return true//
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
