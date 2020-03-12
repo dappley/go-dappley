@@ -6,3 +6,4 @@ tool/*.db
 tool/tool
 bin
 Gopkg.lock
+.DS_Store
