@@ -258,22 +258,6 @@ func (ctx *TxContract) VerifyGas(totalBalance *common.Amount) error {
 	return nil
 }
 
-// ToContractTx Returns structure of ContractTx
-func ToContractTx(tx *transaction.Transaction) *TxContract {
-	address := tx.Vout[transaction.ContractTxouputIndex].GetAddress()
-	if tx.IsContract() {
-		return &TxContract{tx, address}
-	}
-	if tx.Type != transaction.TxTypeDefault {
-		return nil
-	}
-	txAdapter := transaction.NewTxAdapter(tx)
-	if txAdapter.IsContract() {
-		return &TxContract{tx, address}
-	}
-	return nil
-}
-
 //GetContractAddress gets the smart contract's address if a transaction deploys a smart contract
 func (tx *TxContract) GetContractAddress() account.Address {
 	return tx.Address

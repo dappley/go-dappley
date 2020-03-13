@@ -564,7 +564,7 @@ func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders 
 		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes. Check code version or synchronize db files from other nodes.")
 	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
-		logger.Warnf("BtlockManager: common height %v", commonBlock.GetHeight())
+		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
 		downloadManager.currentCmd = nil
 		downloadManager.startDownload(0)

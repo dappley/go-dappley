@@ -83,7 +83,7 @@ func (adapter *TxAdapter) isCoinbase() bool {
 	return true
 }
 
-// isRewardTx returns if the transaction is about the step reward
+// isRewardTx returns if the transaction is system level smart contract reward
 func (adapter *TxAdapter) isRewardTx() bool {
 
 	if !adapter.isVinCoinbase() {
@@ -97,7 +97,7 @@ func (adapter *TxAdapter) isRewardTx() bool {
 	return true
 }
 
-// isGasRewardTx returns if the transaction is about the gas reward to miner after smart contract execution
+// isGasRewardTx returns if the transaction is reward to miner after smart contract execution
 func (adapter *TxAdapter) isGasRewardTx() bool {
 
 	if !adapter.isVinCoinbase() {
@@ -114,7 +114,7 @@ func (adapter *TxAdapter) isGasRewardTx() bool {
 	return true
 }
 
-// isGasChangeTx returns if the transaction is about the gas change to from address after smart contract execution
+// isGasChangeTx returns if the transaction is gas change to from address after smart contract execution
 func (adapter *TxAdapter) isGasChangeTx() bool {
 
 	if !adapter.isVinCoinbase() {
