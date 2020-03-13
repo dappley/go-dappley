@@ -531,12 +531,12 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 	}
 	if bc.GetMaxHeight()>uint64(minProduerNum-1) {
 		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++{
-			currentCheckBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
+			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
 				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
 				return false
 			}
-
+			currentCheckBlk=newBlk
 			if currentCheckBlk.GetHeight() == 0 {
 				break
 			}
@@ -558,11 +558,12 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 		return false
 	}else{
 		for i:= uint64(0); i < bc.GetMaxHeight(); i++ {
-			currentCheckBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
+			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
 				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer.")
 				return false
 			}
+			currentCheckBlk=newBlk
 			if  blk.GetProducer()==currentCheckBlk.GetProducer(){
 				return false
 			}
