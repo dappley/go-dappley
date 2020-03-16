@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -85,15 +86,11 @@ module.exports = new MathTest();`
 	utxoMap := make(map[string]*utxo.UTXO)
 	utxoMap["a"] = &utxo.UTXO{
 		Txid:     []byte("1"),
-		TxIndex:  0,
-		TXOutput: *transactionbase.NewTxOut(common.NewAmount(0), contractTA, "somecontract"),
-	}
-	utxoMap["b"] = &utxo.UTXO{
-		Txid:     []byte("1"),
 		TxIndex:  1,
-		TXOutput: *transactionbase.NewTxOut(common.NewAmount(15), contractTA, ""),
+		TXOutput: *transactionbase.NewTxOut(common.NewAmount(10), contractTA, ""),
 	}
-	utxoMap["c"] = &utxo.UTXO{
+
+	utxoMap["b"] = &utxo.UTXO{
 		Txid:     []byte("2"),
 		TxIndex:  0,
 		TXOutput: *transactionbase.NewTxOut(common.NewAmount(3), contractTA, ""),
@@ -118,16 +115,16 @@ module.exports = new MathTest();`
 	assert.Equal(t, "0", result)
 	if assert.Equal(t, 1, len(sc.generatedTXs)) {
 		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vin)) {
-			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[1].Txid)
-			assert.Equal(t, 1, sc.generatedTXs[0].Vin[1].Vout)
-			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[1].Signature)
-			assert.Equal(t, []byte(contractTA.GetPubKeyHash()), sc.generatedTXs[0].Vin[1].PubKey)
+			assert.Equal(t, []byte("1"), sc.generatedTXs[0].Vin[0].Txid)
+			assert.Equal(t, 1, sc.generatedTXs[0].Vin[0].Vout)
+			assert.Equal(t, []byte("thatTX"), sc.generatedTXs[0].Vin[0].Signature)
+			assert.Equal(t, []byte(contractTA.GetPubKeyHash()), sc.generatedTXs[0].Vin[0].PubKey)
 		}
 		if assert.Equal(t, 2, len(sc.generatedTXs[0].Vout)) {
 			// payout
 			assert.Equal(t, common.NewAmount(10), sc.generatedTXs[0].Vout[0].Value)
 			// change
-			assert.Equal(t, common.NewAmount(15-10-2), sc.generatedTXs[0].Vout[1].Value)
+			assert.Equal(t, common.NewAmount(10+3-10-2), sc.generatedTXs[0].Vout[1].Value)
 
 			assert.Equal(t, account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj"), sc.generatedTXs[0].Vout[0].GetAddress())
 			assert.Equal(t, contractTA.GetPubKeyHash(), sc.generatedTXs[0].Vout[1].PubKeyHash)
@@ -467,10 +464,10 @@ func TestGetNodeAddress(t *testing.T) {
 
 func TestAddGasCount(t *testing.T) {
 	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
-	tx := transaction.Transaction{
+	tx := &transaction.Transaction{
 		Vout: []transactionbase.TXOutput{*vout},
 	}
-	ctx := tx.ToContractTx()
+	ctx := ltransaction.NewTxContract(tx)
 	script, _ := ioutil.ReadFile("test/test_add.js")
 
 	sc := NewV8Engine()
@@ -502,10 +499,10 @@ func TestAddGasCount(t *testing.T) {
 func TestStepRecordGasCount(t *testing.T) {
 	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
-	tx := transaction.Transaction{
+	tx := &transaction.Transaction{
 		Vout: []transactionbase.TXOutput{*vout},
 	}
-	ctx := tx.ToContractTx()
+	ctx := ltransaction.NewTxContract(tx)
 	script, _ := ioutil.ReadFile("test/test_step_recorder.js")
 
 	ss := scState.NewScState()

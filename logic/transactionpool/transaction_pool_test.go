@@ -255,6 +255,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		Tip:      common.NewAmount(1),
 		GasLimit: common.NewAmount(0),
 		GasPrice: common.NewAmount(0),
+		Type:     transaction.TxTypeContract,
 	}
 	deploymentTx.ID = deploymentTx.Hash()
 
@@ -267,6 +268,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		Tip:      common.NewAmount(2),
 		GasLimit: common.NewAmount(0),
 		GasPrice: common.NewAmount(0),
+		Type:     transaction.TxTypeContract,
 	}
 	executionTx.ID = executionTx.Hash()
 

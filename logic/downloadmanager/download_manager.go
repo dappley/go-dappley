@@ -344,7 +344,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		blocks = append(blocks, block)
 	}
 
-	logger.Warnf("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+	logger.Infof("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed.")
@@ -447,9 +447,10 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*blockpb.
 			commonBlock = block
 			break
 		}
-	}
-	if findIndex == -1 {
-		logger.Panic("DownloadManager: invalid get common blocks result.")
+		if blockHeader.GetHeight() == 0 {
+			logger.Warn("DownloadManager: invalid get common blocks result. Genesis block hash is different with the request source node.")
+			return findIndex, nil
+		}
 	}
 	return findIndex, commonBlock
 }
@@ -558,6 +559,10 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*blockpb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
+	if findIndex == -1 {
+		// no common blocks, code version is different
+		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes. Check code version or synchronize db files from other nodes.")
+	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
 		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
@@ -711,7 +716,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 	var blockHeaderPbs []*blockpb.BlockHeader
 	if index == 0 {
 		blockHeaderPbs = blockHeaders[:1]
-	} else {
+	} else if index > 0 {
 		blockHeaders := downloadManager.GetCommonBlockCheckPoint(
 			blockHeaders[index].GetHeight(),
 			blockHeaders[index-1].GetHeight(),

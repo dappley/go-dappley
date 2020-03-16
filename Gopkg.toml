@@ -60,8 +60,8 @@
 [[constraint]]
   name = "github.com/libp2p/go-libp2p-core"
   version = "=0.2.2"
-  
-[[override]]	
+
+[[override]]
   name = "github.com/libp2p/go-mplex"		
   version = "=0.1.0"	
 
@@ -80,6 +80,22 @@
 [[override]]
   name = "github.com/libp2p/go-libp2p-transport-upgrader"
   version = "=0.1.1" 
+
+[[override]]
+  name = "github.com/libp2p/go-libp2p-pnet"
+  version = "=0.1.0"
+
+[[override]]
+  name = "github.com/libp2p/go-libp2p-transport-upgrader"
+  version = "=0.1.1"
+
+[[override]]
+  name = "github.com/libp2p/go-libp2p-mplex"
+  version = "=0.2.1"
+
+[[override]]
+  name = "github.com/jbenet/go-temp-err-catcher"
+  revision = "aac704a3f4f27190b4ccc05f303a4931fd1241ff"
 
 [[constraint]]
   name = "github.com/multiformats/go-multiaddr"

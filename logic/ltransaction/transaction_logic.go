@@ -2,14 +2,14 @@ package ltransaction
 
 import (
 	"bytes"
-	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -27,54 +27,36 @@ var (
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
 )
 
-// VerifyInEstimate returns whether the current tx in estimate mode is valid.
-func VerifyInEstimate(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) error {
-	utxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
-	if ctx.IsScheduleContract() && !IsContractDeployed(utxoIndex, ctx) {
-		return errors.New("Transaction: contract state check failed")
-	}
-
-	err = ctx.Verify(utxos)
-
-	return err
-}
-
-// VerifyContractTx ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
-func verifyContractTx(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) error {
-	utxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
-	err = VerifyInEstimate(utxoIndex, ctx)
-	if err != nil {
-		return err
-	}
-	totalBalance := ctx.GetTotalBalance(utxos)
-	return ctx.VerifyGas(totalBalance)
-}
-
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
-	ctx := tx.ToContractTx()
-	if ctx != nil {
-		return verifyContractTx(utxoIndex, ctx)
+	txDecorator := NewTxDecorator(tx)
+	if txDecorator != nil && txDecorator.IsNeedVerify() {
+		return txDecorator.Verify(utxoIndex, blockHeight)
 	}
-	if tx.IsCoinbase() {
-		//TODO coinbase vout check need add tip
-		if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
-			return errors.New("Transaction: subsidy check failed")
-		}
-		bh := binary.BigEndian.Uint64(tx.Vin[0].Signature)
-		if blockHeight != bh {
-			return fmt.Errorf("Transaction: block height check failed expected=%v actual=%v", blockHeight, bh)
-		}
-		return nil
-	}
-	if tx.IsRewardTx() || tx.IsGasRewardTx() || tx.IsGasChangeTx() {
-		//TODO: verify reward tx here
-		return nil
-	}
-	utxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, *tx)
-	err = tx.Verify(utxos)
+	return nil
+}
 
-	return err
+// VerifyContractTransaction ensures the generated transactions from smart contract are the same with those in block
+func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string) (generatedTxs []*transaction.Transaction, err error) {
+	// Run the contract and collect generated transactions
+	if scEngine == nil {
+		return nil, errors.New("VerifyContractTransaction: is missing SCEngineManager when verifying transactions.")
+	}
+
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
+	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid": hex.EncodeToString(tx.ID),
+		}).Warn("VerifyContractTransaction: cannot find vin while executing smart contract")
+		return nil, err
+	}
+
+	isContractDeployed := tx.IsContractDeployed(utxoIndex)
+	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
+		return nil, err
+	}
+	tx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
+	return scEngine.GetGeneratedTXs(), nil
 }
 
 // DescribeTransaction reverse-engineers the high-level description of a transaction
@@ -148,74 +130,6 @@ func IsFromContract(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) boo
 		}
 	}
 	return true
-}
-
-// IsContractDeployed returns if the current contract is deployed
-func IsContractDeployed(utxoIndex *lutxo.UTXOIndex, ctx *transaction.ContractTx) bool {
-	pubkeyhash := ctx.GetContractPubKeyHash()
-	if pubkeyhash == nil {
-		return false
-	}
-
-	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
-	return contractUtxoTx.Size() > 0
-}
-
-//Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
-func Execute(ctx *transaction.ContractTx, prevUtxos []*utxo.UTXO,
-	isContractDeployed bool,
-	index lutxo.UTXOIndex,
-	scStorage *scState.ScState,
-	rewards map[string]string,
-	engine ScEngine,
-	currblkHeight uint64,
-	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
-
-	if engine == nil {
-		return 0, nil, nil
-	}
-	if !isContractDeployed {
-		return 0, nil, nil
-	}
-
-	vout := ctx.Vout[transaction.ContractTxouputIndex]
-
-	function, args := util.DecodeScInput(vout.Contract)
-	if function == "" {
-		return 0, nil, ErrUnsupportedSourceType
-	}
-	if err := engine.SetExecutionLimits(ctx.GasLimit.Uint64(), 0); err != nil {
-		return 0, nil, ErrInvalidGasLimit
-	}
-
-	totalArgs := util.PrepareArgs(args)
-	address := vout.GetAddress()
-	logger.WithFields(logger.Fields{
-		"contract_address": address.String(),
-		"invoked_function": function,
-		"arguments":        totalArgs,
-	}).Debug("Transaction: is executing the smart contract...")
-	createContractUtxo := index.GetContractUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
-
-	engine.ImportSourceCode(createContractUtxo.Contract)
-	engine.ImportLocalStorage(scStorage)
-	engine.ImportContractAddr(address)
-	engine.ImportSourceTXID(ctx.ID)
-	engine.ImportRewardStorage(rewards)
-	engine.ImportTransaction(&ctx.Transaction)
-	engine.ImportContractCreateUTXO(createContractUtxo)
-	engine.ImportPrevUtxos(prevUtxos)
-	engine.ImportCurrBlockHeight(currblkHeight)
-	engine.ImportSeed(parentBlk.GetTimestamp())
-	_, err := engine.Execute(function, totalArgs)
-	gasCount := engine.ExecutionInstructions()
-	// record base gas
-	baseGas, _ := ctx.GasCountOfTxBase()
-	gasCount += baseGas.Uint64()
-	if err != nil {
-		return gasCount, nil, err
-	}
-	return gasCount, engine.GetGeneratedTXs(), err
 }
 
 func CheckContractSyntaxTransaction(engine ScEngine, tx *transaction.Transaction) error {

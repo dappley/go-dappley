@@ -3,6 +3,7 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
 	"os"
 
@@ -147,7 +148,7 @@ func makeBlockChainToSize(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc
 func generateBlock(utxoIndex *lutxo.UTXOIndex, parentBlk *block.Block, bc *lblockchain.Blockchain, d *consensus.Dynasty, keys Keys, txs []*transaction.Transaction) *block.Block {
 	producer := account.NewAddress(d.ProducerAtATime(time))
 	key := keys.getPrivateKeyByAddress(producer)
-	cbtx := transaction.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
+	cbtx := ltransaction.NewCoinbaseTX(producer, "", parentBlk.GetHeight()+1, common.NewAmount(0))
 	txs = append(txs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
 	b := block.NewBlockWithTimestamp(txs, parentBlk, time, producer.String())
@@ -255,7 +256,7 @@ func newTransaction(sender, receiver account.Address, senderKeyPair *account.Key
 	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
 
 	sendTxParam := transaction.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
-	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
 
 	if err != nil {
 		logger.WithError(err).Panic("Create transaction failed!")

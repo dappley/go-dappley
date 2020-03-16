@@ -8,6 +8,7 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/dappley/go-dappley/storage"
@@ -33,7 +34,7 @@ func GenerateMockBlockchainWithCoinbaseTxOnly(size int) *Blockchain {
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := transaction.NewCoinbaseTX(addr, "", bc.GetMaxHeight()+1, common.NewAmount(0))
+		cbtx := ltransaction.NewCoinbaseTX(addr, "", bc.GetMaxHeight()+1, common.NewAmount(0))
 		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(lblock.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
@@ -45,7 +46,7 @@ func AddBlockToGeneratedBlockchain(bc *Blockchain, numOfBlks int) {
 	for i := 0; i < numOfBlks; i++ {
 		addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := transaction.NewCoinbaseTX(addr, "", bc.GetMaxHeight()+1, common.NewAmount(0))
+		cbtx := ltransaction.NewCoinbaseTX(addr, "", bc.GetMaxHeight()+1, common.NewAmount(0))
 		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 		b.SetHash(lblock.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))

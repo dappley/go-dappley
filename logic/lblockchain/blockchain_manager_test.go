@@ -2,6 +2,7 @@ package lblockchain
 
 import (
 	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -149,7 +150,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	}
 	acc := account.NewAccount()
 
-	normalTX := transaction.NewCoinbaseTX(acc.GetAddress(), "", 1, common.NewAmount(5))
+	normalTX := ltransaction.NewCoinbaseTX(acc.GetAddress(), "", 1, common.NewAmount(5))
 	normalTX2 := transaction.Transaction{
 		hash.Hash("normal2"),
 		[]transactionbase.TXInput{{normalTX.ID, 0, nil, acc.GetKeyPair().GetPublicKey()}},
@@ -158,6 +159,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		0,
+		transaction.TxTypeNormal,
 	}
 	abnormalTX := transaction.Transaction{
 		hash.Hash("abnormal"),
@@ -167,6 +169,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		0,
+		transaction.TxTypeNormal,
 	}
 	prevBlock := block.NewBlock([]*transaction.Transaction{}, genesisBlock, "")
 	prevBlock.SetHash(lblock.CalculateHash(prevBlock))

@@ -231,12 +231,12 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 // RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 
-	tx := &transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+	tx := &transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
 
 	tx.FromProto(in.GetTransaction())
 
-	if tx.IsCoinbase() {
-		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
+	if !tx.IsNormal() && !tx.IsContract() {
+		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
@@ -262,7 +262,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	var generatedContractAddress = ""
 	if tx.IsContract() {
-		contractAddr := tx.GetContractAddress()
+		ctx := ltransaction.NewTxContract(tx)
+		contractAddr := ctx.GetContractAddress()
 		generatedContractAddress = contractAddr.String()
 		logger.WithFields(logger.Fields{
 			"contractAddr": generatedContractAddress,
@@ -281,7 +282,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	txMap := make(map[int]transaction.Transaction, len(in.Transactions))
 	txs := []transaction.Transaction{}
 	for key, txInReq := range in.Transactions {
-		tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+		tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
 
 		tx.FromProto(txInReq)
 		txs = append(txs, tx)
@@ -298,14 +299,14 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				continue
 			}
 
-			if tx.IsCoinbase() {
+			if !tx.IsNormal() && !tx.IsContract() {
 				if statusCode == codes.OK {
 					statusCode = codes.Unknown
 				}
 				details = append(details, &rpcpb.SendTransactionStatus{
 					Txid:    tx.ID,
 					Code:    uint32(codes.InvalidArgument),
-					Message: "cannot send coinbase transaction",
+					Message: "transaction type error, must be normal or contract",
 				})
 				delete(txMap, key)
 				continue
@@ -414,27 +415,27 @@ func (rpcService *RpcService) RpcGetLastIrreversibleBlock(ctx context.Context, i
 // RpcEstimateGas estimate gas value of contract deploy and execution.
 func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.EstimateGasRequest) (*rpcpb.EstimateGasResponse, error) {
 
-	tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6}
+	tx := &transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
 
 	tx.FromProto(in.GetTransaction())
 
-	if tx.IsCoinbase() {
-		return nil, status.Error(codes.InvalidArgument, "cannot send coinbase transaction")
+	if !tx.IsContract() {
+		return nil, status.Error(codes.InvalidArgument, "transaction type must be contract")
 	}
-	contractTx := tx.ToContractTx()
+	contractTx := ltransaction.NewTxContract(tx)
 	if contractTx == nil {
 		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
 	}
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
-	err := ltransaction.VerifyInEstimate(utxoIndex, contractTx)
+	err := contractTx.VerifyInEstimate(utxoIndex)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	tx.GasLimit = common.NewAmount(vm.MaxLimitsOfExecutionInstructions)
 	tailBlk, _ := rpcService.GetBlockchain().GetTailBlock()
 	gasCount, err := vm.EstimateGas(
-		&tx,
+		tx,
 		tailBlk,
 		rpcService.GetBlockchain().GetUtxoCache(),
 		rpcService.GetBlockchain().GetDb(),
