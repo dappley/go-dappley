@@ -273,78 +273,68 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	return &rpcpb.SendTransactionResponse{GeneratedContractAddress: generatedContractAddress}, nil
 }
 
-// RpcSendBatchTransaction sends a batch of transactions to blockchain created by account account
+// RpcSendBatchTransaction sends a batch of ordered transactions to blockchain created by account
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	statusCode := codes.OK
-	var details []proto.Message
+	var respon []proto.Message
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
-	txMap := make(map[int]transaction.Transaction, len(in.Transactions))
 	txs := []transaction.Transaction{}
-	for key, txInReq := range in.Transactions {
+	for _, txInReq := range in.Transactions {
 		tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
 
 		tx.FromProto(txInReq)
 		txs = append(txs, tx)
-		txMap[key] = tx
 	}
 
-	// verify dependent transactions within batch of transactions
-	lastTxsLen := 0
+	// verify transactions
+	var unVerifiedTxIndex []int
 	verifiedTxs := []transaction.Transaction{}
-	for len(txMap) != lastTxsLen {
-		lastTxsLen = len(txMap)
-		for key, tx := range txs {
-			if _, ok := txMap[key]; !ok {
-				continue
+	for key, tx := range txs {
+		if !tx.IsNormal() && !tx.IsContract() {
+			if statusCode == codes.OK {
+				statusCode = codes.Unknown
 			}
-
-			if !tx.IsNormal() && !tx.IsContract() {
-				if statusCode == codes.OK {
-					statusCode = codes.Unknown
-				}
-				details = append(details, &rpcpb.SendTransactionStatus{
-					Txid:    tx.ID,
-					Code:    uint32(codes.InvalidArgument),
-					Message: "transaction type error, must be normal or contract",
-				})
-				delete(txMap, key)
-				continue
-			}
-
-			if err := ltransaction.VerifyTransaction(utxoIndex, &tx, 0); err != nil {
-				continue
-			}
-
-			utxoIndex.UpdateUtxo(&tx)
-			rpcService.GetBlockchain().GetTxPool().Push(tx)
-			verifiedTxs = append(verifiedTxs, tx)
-
-			details = append(details, &rpcpb.SendTransactionStatus{
+			respon = append(respon, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
-				Code:    uint32(codes.OK),
-				Message: "",
+				Code:    uint32(codes.InvalidArgument),
+				Message: "transaction type error, must be normal or contract",
 			})
-			delete(txMap, key)
+			continue
 		}
+
+		if err := ltransaction.VerifyTransaction(utxoIndex, &tx, 0); err != nil {
+			unVerifiedTxIndex=append(unVerifiedTxIndex,key)
+			continue
+		}
+
+		utxoIndex.UpdateUtxo(&tx)
+		rpcService.GetBlockchain().GetTxPool().Push(tx)
+		verifiedTxs = append(verifiedTxs, tx)
+
+		respon = append(respon, &rpcpb.SendTransactionStatus{
+			Txid:    tx.ID,
+			Code:    uint32(codes.OK),
+			Message: "",
+		})
 	}
 
 	rpcService.GetBlockchain().GetTxPool().BroadcastBatchTxs(verifiedTxs)
 
 	st := status.New(codes.OK, "")
 	// add invalid transactions to response details if exists
-	if statusCode == codes.Unknown || len(txMap) > 0 {
+	if statusCode == codes.Unknown || len(unVerifiedTxIndex) > 0 {
 		st = status.New(codes.Unknown, "one or more transactions are invalid")
-		for _, tx := range txMap {
-			details = append(details, &rpcpb.SendTransactionStatus{
-				Txid:    tx.ID,
+		for _,index:=range unVerifiedTxIndex{
+			respon = append(respon, &rpcpb.SendTransactionStatus{
+				Txid:    txs[index].ID,
 				Code:    uint32(codes.FailedPrecondition),
 				Message: lblockchain.ErrTransactionVerifyFailed.Error(),
 			})
-
 		}
 	}
-	st, _ = st.WithDetails(details...)
+
+	st, _ = st.WithDetails(respon...)
 
 	return &rpcpb.SendBatchTransactionResponse{}, st.Err()
 }
