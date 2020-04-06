@@ -275,26 +275,22 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 // RpcSendBatchTransaction sends a batch of ordered transactions to blockchain created by account
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
-	statusCode := codes.OK
 	var respon []proto.Message
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	txs := []transaction.Transaction{}
 	for _, txInReq := range in.Transactions {
 		tx := transaction.Transaction{nil, nil, nil, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeDefault}
-
 		tx.FromProto(txInReq)
 		txs = append(txs, tx)
 	}
 
 	// verify transactions
-	var unVerifiedTxIndex []int
 	verifiedTxs := []transaction.Transaction{}
-	for key, tx := range txs {
+	st := status.New(codes.OK, "")
+	for _, tx := range txs {
 		if !tx.IsNormal() && !tx.IsContract() {
-			if statusCode == codes.OK {
-				statusCode = codes.Unknown
-			}
+			st = status.New(codes.Unknown, "one or more transactions are invalid")
 			respon = append(respon, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
 				Code:    uint32(codes.InvalidArgument),
@@ -304,7 +300,13 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 		}
 
 		if err := ltransaction.VerifyTransaction(utxoIndex, &tx, 0); err != nil {
-			unVerifiedTxIndex=append(unVerifiedTxIndex,key)
+			st = status.New(codes.Unknown, "one or more transactions are invalid")
+			// add invalid transactions to response details if exists
+			respon = append(respon, &rpcpb.SendTransactionStatus{
+				Txid:    tx.ID,
+				Code:    uint32(codes.FailedPrecondition),
+				Message: lblockchain.ErrTransactionVerifyFailed.Error(),
+			})
 			continue
 		}
 
@@ -318,24 +320,9 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			Message: "",
 		})
 	}
-
 	rpcService.GetBlockchain().GetTxPool().BroadcastBatchTxs(verifiedTxs)
 
-	st := status.New(codes.OK, "")
-	// add invalid transactions to response details if exists
-	if statusCode == codes.Unknown || len(unVerifiedTxIndex) > 0 {
-		st = status.New(codes.Unknown, "one or more transactions are invalid")
-		for _,index:=range unVerifiedTxIndex{
-			respon = append(respon, &rpcpb.SendTransactionStatus{
-				Txid:    txs[index].ID,
-				Code:    uint32(codes.FailedPrecondition),
-				Message: lblockchain.ErrTransactionVerifyFailed.Error(),
-			})
-		}
-	}
-
 	st, _ = st.WithDetails(respon...)
-
 	return &rpcpb.SendBatchTransactionResponse{}, st.Err()
 }
 

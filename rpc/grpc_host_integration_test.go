@@ -782,8 +782,8 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	st := status.Convert(err)
 	assert.Equal(t, codes.Unknown, st.Code())
 
-	detail0 := st.Details()[1].(*rpcpb.SendTransactionStatus)
-	detail1 := st.Details()[0].(*rpcpb.SendTransactionStatus)
+	detail0 := st.Details()[0].(*rpcpb.SendTransactionStatus)
+	detail1 := st.Details()[1].(*rpcpb.SendTransactionStatus)
 	assert.Equal(t, errTransaction.ID, detail0.Txid)
 	assert.Equal(t, uint32(codes.FailedPrecondition), detail0.Code)
 	assert.Equal(t, uint32(codes.OK), detail1.Code)
