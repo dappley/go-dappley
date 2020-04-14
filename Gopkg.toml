@@ -89,6 +89,14 @@
   name = "github.com/libp2p/go-libp2p-mplex"
   version = "=0.2.1"
 
+[[override]]
+  name = "github.com/libp2p/go-libp2p-autonat"
+  version = "=0.1.1"
+
+[[override]]
+  name = "github.com/libp2p/go-libp2p-nat"
+  version = "=0.0.5"
+
 [[constraint]]
   name = "github.com/multiformats/go-multiaddr"
   version = "0.2.0"
