@@ -131,13 +131,14 @@ func TestSend(t *testing.T) {
 			bp.Start()
 			for bm.Getblockchain().GetMaxHeight() < 1 {
 			}
-			// Verify balance of logic.Sender's account (genesis "mineReward" - transferred amount)
-			senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bm.Getblockchain())
 
 			bp.Stop()
 			util.WaitDoneOrTimeout(func() bool {
 				return !bp.IsProducingBlock()
 			}, 20)
+
+			// Verify balance of logic.Sender's account (genesis "mineReward" - transferred amount)
+			senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bm.Getblockchain())
 
 			if err != nil {
 				panic(err)
@@ -336,7 +337,7 @@ func TestForkChoice(t *testing.T) {
 	bps[0].Start()
 	util.WaitDoneOrTimeout(func() bool {
 		return bms[0].Getblockchain().GetMaxHeight() > desiredHeight
-	}, 20)
+	}, 10)
 	bps[0].Stop()
 
 	util.WaitDoneOrTimeout(func() bool {

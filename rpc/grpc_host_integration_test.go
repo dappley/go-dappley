@@ -1174,13 +1174,13 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	// Start a grpc server
 	server := NewGrpcServer(node, bm, consensus.NewDPOS(nil), "temp")
-	server.Start(defaultRpcPort + 15) // use a different port as other integration tests
+	server.Start(defaultRpcPort + 100) // use a different port as other integration tests
 	defer server.Stop()
 
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a grpc connection and a account
-	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+15), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprint(":", defaultRpcPort+100), grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
