@@ -77,8 +77,8 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 				ta = account.NewTransactionAccountByPubKey(transaction.RewardTxData)
 				continue
 			case IsFromContract(utxoIndex, tx):
-				// vinPubKey is the ta if it is a sc generated tx
-				ta = account.NewTransactionAccountByPubKey(vinPubKey)
+				// vinPubKey is pubKeyHash of contract address if it is a sc generated tx
+				ta = account.NewContractAccountByPubKeyHash(vinPubKey)
 			default:
 				if ok, err := account.IsValidPubKey(vin.PubKey); !ok {
 					logger.WithError(err).Warn("DPoS: cannot compute the public key hash!")
@@ -123,12 +123,12 @@ func IsFromContract(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) boo
 	contractUtxos := utxoIndex.GetContractUtxos()
 
 	for _, vin := range tx.Vin {
-		pubKey := account.PubKeyHash(vin.PubKey)
-		if isContract, _ := pubKey.IsContract(); !isContract {
+		pubKeyHash := account.PubKeyHash(vin.PubKey)
+		if isContract, _ := pubKeyHash.IsContract(); !isContract {
 			return false
 		}
 
-		if !isPubkeyInUtxos(contractUtxos, pubKey) {
+		if !isPubkeyHashInUtxos(contractUtxos, pubKeyHash) {
 			return false
 		}
 	}
@@ -167,9 +167,9 @@ func prepareFuncCallScript(function, args string) string {
 	)
 }
 
-func isPubkeyInUtxos(contractUtxos []*utxo.UTXO, pubKey account.PubKeyHash) bool {
+func isPubkeyHashInUtxos(contractUtxos []*utxo.UTXO, pubKeyHash account.PubKeyHash) bool {
 	for _, contractUtxo := range contractUtxos {
-		if bytes.Compare(contractUtxo.PubKeyHash, pubKey) == 0 {
+		if bytes.Compare(contractUtxo.PubKeyHash, pubKeyHash) == 0 {
 			return true
 		}
 	}
