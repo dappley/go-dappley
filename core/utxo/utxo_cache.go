@@ -29,19 +29,19 @@ const UtxoCacheLRUCacheLimit = 1024
 // UTXOCache holds temporary UTXOTx data
 type UTXOCache struct {
 	// key: address, value: UTXOTx
-	contractCache *lru.Cache
-	cache         *lru.Cache
-	db            storage.Storage
+	contractCreateCache *lru.Cache
+	cache               *lru.Cache
+	db                  storage.Storage
 }
 
 func NewUTXOCache(db storage.Storage) *UTXOCache {
 	utxoCache := &UTXOCache{
-		contractCache: nil,
-		cache:         nil,
-		db:            db,
+		contractCreateCache: nil,
+		cache:               nil,
+		db:                  db,
 	}
 	utxoCache.cache, _ = lru.New(UtxoCacheLRUCacheLimit)
-	utxoCache.contractCache, _ = lru.New(UtxoCacheLRUCacheLimit)
+	utxoCache.contractCreateCache, _ = lru.New(UtxoCacheLRUCacheLimit)
 	return utxoCache
 }
 
@@ -64,7 +64,7 @@ func (utxoCache *UTXOCache) Get(pubKeyHash account.PubKeyHash) *UTXOTx {
 
 	for _, u := range utxoTx.Indices {
 		if u.UtxoType == UtxoCreateContract {
-			utxoCache.contractCache.Add(string(pubKeyHash), u)
+			utxoCache.contractCreateCache.Add(string(pubKeyHash), u)
 		}
 	}
 	return &utxoTx
@@ -72,11 +72,14 @@ func (utxoCache *UTXOCache) Get(pubKeyHash account.PubKeyHash) *UTXOTx {
 
 // Return value from cache
 func (utxoCache *UTXOCache) GetContractCreateUtxo(pubKeyHash account.PubKeyHash) *UTXO {
-	mapData, ok := utxoCache.contractCache.Get(string(pubKeyHash))
+	mapData, ok := utxoCache.contractCreateCache.Get(string(pubKeyHash))
 	if !ok {
 		utxotx := utxoCache.Get(pubKeyHash)
 		if len(utxotx.Indices) > 0 {
-			mapData, ok = utxoCache.contractCache.Get(string(pubKeyHash))
+			mapData, ok = utxoCache.contractCreateCache.Get(string(pubKeyHash))
+			if !ok {
+				return nil
+			}
 		} else {
 			return nil
 		}
@@ -97,7 +100,7 @@ func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) er
 
 	for _, u := range value.Indices {
 		if u.UtxoType == UtxoCreateContract {
-			utxoCache.contractCache.Add(string(pubKeyHash), u)
+			utxoCache.contractCreateCache.Add(string(pubKeyHash), u)
 		}
 	}
 	return nil

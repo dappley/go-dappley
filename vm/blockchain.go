@@ -51,9 +51,9 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 
 	contractAddr := engine.contractAddr
 	contractAccount := account.NewContractAccountByAddress(contractAddr)
-	utxos := engine.utxoIndex.SplitContractUtxo(contractAccount.GetPubKeyHash())
+	invokeUTXOs := engine.utxoIndex.GetContractInvokeUTXOsByPubKeyHash(contractAccount.GetPubKeyHash())
 	createUtxo := engine.contractCreateUTXO
-	utxos = append(utxos, createUtxo)
+	utxos := append(invokeUTXOs, createUtxo)
 	sourceTXID := engine.sourceTXID
 
 	if !contractAccount.IsValid() {
@@ -97,14 +97,14 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 
 	contractAddr := engine.contractAddr
 	contractAccount := account.NewContractAccountByAddress(contractAddr)
-	utxos := engine.utxoIndex.SplitContractUtxo(contractAccount.GetPubKeyHash())
+	invokeUTXOs := engine.utxoIndex.GetContractInvokeUTXOsByPubKeyHash(contractAccount.GetPubKeyHash())
 	sourceTXID := engine.sourceTXID
 
 	if !contractAccount.IsValid() {
 		return 1
 	}
 
-	utxosToSpend, ok := prepareUTXOs(utxos, amountValue.Add(tipValue))
+	utxosToSpend, ok := prepareUTXOs(invokeUTXOs, amountValue.Add(tipValue))
 	if !ok {
 		logger.Warn("SmartContract: there is insufficient fund for the transfer!")
 		return 1

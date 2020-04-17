@@ -88,12 +88,14 @@ module.exports = new MathTest();`
 		Txid:     []byte("1"),
 		TxIndex:  1,
 		TXOutput: *transactionbase.NewTxOut(common.NewAmount(10), contractTA, ""),
+		UtxoType: utxo.UtxoInvokeContract,
 	}
 
 	utxoMap["b"] = &utxo.UTXO{
 		Txid:     []byte("2"),
 		TxIndex:  0,
 		TXOutput: *transactionbase.NewTxOut(common.NewAmount(3), contractTA, ""),
+		UtxoType: utxo.UtxoInvokeContract,
 	}
 	utxoTx := utxo.NewUTXOTx()
 	utxoTx.Indices = utxoMap

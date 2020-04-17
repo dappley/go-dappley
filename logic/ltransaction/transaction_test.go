@@ -359,6 +359,7 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("GetGeneratedTXs").Return([]*transaction.Transaction{})
 				sc.On("ImportCurrBlockHeight", mock.Anything)
 				sc.On("ImportSeed", mock.Anything)
+				sc.On("ImportUtxoIndex", mock.Anything)
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
 			parentBlk := core.GenerateMockBlock()
@@ -368,7 +369,7 @@ func TestTransaction_Execute(t *testing.T) {
 				println(err.Error())
 			}
 			isContractDeployed := ctx.IsContractDeployed(index)
-			ctx.Execute(preUTXO, isContractDeployed, *index, scState.NewScState(), nil, sc, 0, parentBlk)
+			ctx.Execute(preUTXO, isContractDeployed, index, scState.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}

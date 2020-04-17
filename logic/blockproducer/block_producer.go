@@ -1,6 +1,7 @@
 package blockproducer
 
 import (
+	"encoding/hex"
 	"github.com/dappley/go-dappley/common/log"
 	"time"
 
@@ -146,7 +147,17 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		ctx := ltransaction.NewTxContract(txNode.Value)
 		if ctx != nil {
 			minerAddr := account.NewAddress(bp.producer.Beneficiary())
-			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, validTxs, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
+			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, txNode.Value)
+			if err != nil {
+				logger.WithError(err).WithFields(logger.Fields{
+					"txid": hex.EncodeToString(txNode.Value.ID),
+				}).Warn("BlockProducer: cannot find vin while executing smart contract")
+				continue
+			}
+			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
+			validTxs = append(validTxs, txNode.Value)
+			utxoIndex.UpdateUtxo(txNode.Value)
+			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, prevUtxos, isContractDeployed, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
 			if err != nil {
 				continue
 			}
@@ -154,10 +165,10 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 				validTxs = append(validTxs, generatedTxs...)
 				utxoIndex.UpdateUtxos(generatedTxs)
 			}
+		} else {
+			validTxs = append(validTxs, txNode.Value)
+			utxoIndex.UpdateUtxo(txNode.Value)
 		}
-
-		validTxs = append(validTxs, txNode.Value)
-		utxoIndex.UpdateUtxo(txNode.Value)
 	}
 
 	// append reward transaction

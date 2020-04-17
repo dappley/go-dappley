@@ -294,7 +294,7 @@ func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
 func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	isContractDeployed bool,
-	index lutxo.UTXOIndex,
+	utxoIndex *lutxo.UTXOIndex,
 	scStorage *scState.ScState,
 	rewards map[string]string,
 	engine ScEngine,
@@ -326,8 +326,10 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 		"arguments":        totalArgs,
 	}).Debug("Transaction: is executing the smart contract...")
 
-	createContractUtxo := index.GetContractUTXOsByPubKeyHash([]byte(vout.PubKeyHash))
-
+	createContractUtxo := utxoIndex.GetContractCreateUTXOByPubKeyHash([]byte(vout.PubKeyHash))
+	if createContractUtxo == nil {
+		return 0, nil, ErrLoadError
+	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
 	engine.ImportLocalStorage(scStorage)
 	engine.ImportContractAddr(address)
@@ -338,6 +340,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	engine.ImportPrevUtxos(prevUtxos)
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())
+	engine.ImportUtxoIndex(utxoIndex)
 	_, err := engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
 	// record base gas
@@ -350,19 +353,9 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 }
 
 // Execute contract and return the generated transactions
-func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, validTxs []*transaction.Transaction, scStorage *scState.ScState,
+func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
 	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
-	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
-	if err != nil {
-		logger.WithError(err).WithFields(logger.Fields{
-			"txid": hex.EncodeToString(tx.ID),
-		}).Warn("BlockProducer: cannot find vin while executing smart contract")
-		return nil, err
-	}
-	isContractDeployed := tx.IsContractDeployed(utxoIndex)
-
-	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-
+	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 	if err != nil {
 		logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
 	}
