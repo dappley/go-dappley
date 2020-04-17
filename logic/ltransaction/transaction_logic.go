@@ -25,7 +25,7 @@ var (
 	// vm error
 	ErrExecutionFailed       = errors.New("execution failed")
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
-	ErrLoadError = errors.New("contract load error")
+	ErrLoadError             = errors.New("contract load error")
 )
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
@@ -53,6 +53,8 @@ func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scSta
 	}
 
 	isContractDeployed := tx.IsContractDeployed(utxoIndex)
+	utxoIndex.UpdateUtxo(tx.Transaction)
+
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return nil, err
 	}

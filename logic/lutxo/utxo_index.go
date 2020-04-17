@@ -21,6 +21,7 @@ package lutxo
 import (
 	"encoding/hex"
 	"errors"
+	"sort"
 
 	"github.com/dappley/go-dappley/storage"
 
@@ -130,11 +131,19 @@ func (utxos *UTXOIndex) GetContractInvokeUTXOsByPubKeyHash(pubkeyHash account.Pu
 	if utxoTx == nil {
 		return nil
 	}
-	var invokeUTXOs []*utxo.UTXO
-	for _, u := range utxoTx.Indices {
+	// Use a sorted key array to make utxo list ordered
+	var sortedKeys []string
+	for k, u := range utxoTx.Indices {
 		if u.UtxoType != utxo.UtxoCreateContract {
-			invokeUTXOs = append(invokeUTXOs, u)
+			sortedKeys = append(sortedKeys, k)
 		}
+	}
+	sort.Strings(sortedKeys)
+
+	var invokeUTXOs []*utxo.UTXO
+	for _, k := range sortedKeys {
+		u := utxoTx.Indices[k]
+		invokeUTXOs = append(invokeUTXOs, u)
 	}
 	return invokeUTXOs
 }
