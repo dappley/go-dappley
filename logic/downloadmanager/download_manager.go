@@ -337,7 +337,10 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		block.FromProto(pbBlock)
 
 		if !downloadManager.bm.VerifyBlock(block) {
-			returnBlocksLogger.Warn("DownloadManager: verify block failed.")
+			returnBlocksLogger.WithFields(logger.Fields{
+				"height": block.GetHeight(),
+				"hash":   block.GetHash(),
+			}).Warn("DownloadManager: verify block failed.")
 			return
 		}
 

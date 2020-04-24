@@ -193,7 +193,7 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 	}
 
 	if !dpos.isProducerBeneficiary(block) {
-		logger.Debug("DPoS: failed to validate producer.")
+		logger.Warn("DPoS: failed to validate producer.")
 		return false
 	}
 
@@ -203,7 +203,7 @@ func (dpos *DPOS) verifyProducer(block *block.Block) bool {
 // isProducerBeneficiary is a requirement that ensures the reward is paid to the producer at the time slot
 func (dpos *DPOS) isProducerBeneficiary(block *block.Block) bool {
 	if block == nil {
-		logger.Debug("DPoS: block is empty.")
+		logger.Warn("DPoS: block is empty.")
 		return false
 	}
 
@@ -212,16 +212,24 @@ func (dpos *DPOS) isProducerBeneficiary(block *block.Block) bool {
 	producerHash := producerAccount.GetPubKeyHash()
 	cbtx := block.GetCoinbaseTransaction()
 	if cbtx == nil {
-		logger.Debug("DPoS: coinbase tx is empty.")
+		logger.Warn("DPoS: coinbase tx is empty.")
 		return false
 	}
 
 	if len(cbtx.Vout) == 0 {
-		logger.Debug("DPoS: coinbase vout is empty.")
+		logger.Warn("DPoS: coinbase vout is empty.")
 		return false
 	}
 
-	return bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0
+	if !(bytes.Compare(producerHash, cbtx.Vout[0].PubKeyHash) == 0) {
+		logger.WithFields(logger.Fields{
+			"height":             block.GetHeight(),
+			"producer(expected)": producer,
+			"producer(actual)":   cbtx.Vout[0].PubKeyHash.GenerateAddress().String(),
+		}).Warn("DPoS: coinbase out hash not right.")
+		return false
+	}
+	return true
 }
 
 //isDoubleMint returns if the block's producer has already produced a block in the current time slot
