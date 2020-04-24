@@ -1,11 +1,18 @@
 package ltransaction
 
 import (
+	"crypto/ecdsa"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
 )
+
+type ScEngineManager interface {
+	CreateEngine() ScEngine
+	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *scState.ScState, blkHeight uint64, seed int64)
+}
 
 type ScEngine interface {
 	DestroyEngine()
@@ -13,7 +20,7 @@ type ScEngine interface {
 	ImportLocalStorage(state *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
-	ImportUTXOs(utxos []*utxo.UTXO)
+	ImportUtxoIndex(utxoIndex *lutxo.UTXOIndex)
 	ImportRewardStorage(rewards map[string]string)
 	ImportTransaction(tx *transaction.Transaction)
 	ImportContractCreateUTXO(utxo *utxo.UTXO)
@@ -26,4 +33,11 @@ type ScEngine interface {
 	SetExecutionLimits(uint64, uint64) error
 	ExecutionInstructions() uint64
 	CheckContactSyntax(source string) error
+}
+
+// Decorator of transaction
+type TxDecorator interface {
+	Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error
+	IsNeedVerify() bool
+	Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error
 }

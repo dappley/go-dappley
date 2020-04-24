@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"errors"
+	"github.com/dappley/go-dappley/common/log"
 	"math/rand"
 	"sync"
 	"time"
@@ -65,6 +66,8 @@ func (sm *StreamManager) GetConnectionManager() *ConnectionManager { return sm.c
 //StartStreamStopListener starts the stream stop listener loop
 func (sm *StreamManager) StartStreamStopListener() {
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			if s, ok := <-sm.streamStopNotificationCh; ok {
 				sm.OnStreamStop(s)

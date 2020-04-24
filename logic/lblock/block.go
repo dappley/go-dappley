@@ -107,7 +107,8 @@ func VerifyHash(b *block.Block) bool {
 func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scState.ScState, parentBlk *block.Block) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
-			"hash": b.GetHash(),
+			"hash":   b.GetHash(),
+			"height": b.GetHeight(),
 		}).Debug("Block: there is no transaction to verify in this block.")
 		return true
 	}
@@ -127,7 +128,10 @@ L:
 		// Collect the contract-incurred transactions in this block
 		if tx.IsRewardTx() {
 			if rewardTX != nil {
-				logger.Warn("Block: contains more than 1 reward transaction.")
+				logger.WithFields(logger.Fields{
+					"hash":   b.GetHash(),
+					"height": b.GetHeight(),
+				}).Warn("Block: contains more than 1 reward transaction.")
 				return false
 			}
 			rewardTX = tx
@@ -139,35 +143,27 @@ L:
 			continue L
 		}
 
-		ctx := tx.ToContractTx()
+		ctx := ltransaction.NewTxContract(tx)
 		if ctx != nil {
 			// Run the contract and collect generated transactions
-			if scEngine == nil {
-				logger.Warn("Block: smart contract cannot be verified.")
-				logger.Debug("Block: is missing SCEngineManager when verifying transactions.")
-				return false
-			}
-
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+			generatedTxs, err := ltransaction.VerifyContractTransaction(utxoIndex, ctx, scState, scEngine, b.GetHeight(), parentBlk, rewards)
 			if err != nil {
-				logger.WithError(err).WithFields(logger.Fields{
-					"txid": hex.EncodeToString(ctx.ID),
-				}).Warn("Transaction: cannot find vin while executing smart contract")
+				logger.WithFields(logger.Fields{
+					"hash":   b.GetHash(),
+					"height": b.GetHeight(),
+				}).Warn(err.Error())
 				return false
 			}
-
-			isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
-			// TODO GAS LIMIT
-			if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
-				return false
+			if generatedTxs != nil {
+				currentContractGenTXs = append(currentContractGenTXs, generatedTxs...)
 			}
-			utxoIndex.UpdateUtxo(tx)
-			ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scState, rewards, scEngine, b.GetHeight(), parentBlk)
-			currentContractGenTXs = append(currentContractGenTXs, scEngine.GetGeneratedTXs()...)
 		} else {
 			// tx is a normal transactions
 			if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
-				logger.Warn(err.Error())
+				logger.WithFields(logger.Fields{
+					"hash":   b.GetHash(),
+					"height": b.GetHeight(),
+				}).Warn(err.Error())
 				return false
 			}
 			utxoIndex.UpdateUtxo(tx)
@@ -175,11 +171,17 @@ L:
 	}
 	// Assert that any contract-incurred transactions matches the ones generated from contract execution
 	if rewardTX != nil && !rewardTX.MatchRewards(rewards) {
-		logger.Warn("Block: reward tx cannot be verified.")
+		logger.WithFields(logger.Fields{
+			"hash":   b.GetHash(),
+			"height": b.GetHeight(),
+		}).Warn("Block: reward tx cannot be verified.")
 		return false
 	}
 	if len(originContractGenTxs) > 0 && !verifyGeneratedTXs(utxoIndex, originContractGenTxs, currentContractGenTXs) {
-		logger.Warn("Block: generated tx cannot be verified.")
+		logger.WithFields(logger.Fields{
+			"hash":   b.GetHash(),
+			"height": b.GetHeight(),
+		}).Warn("Block: generated tx cannot be verified.")
 		return false
 	}
 	utxoIndex.UpdateUtxos(currentContractGenTXs)

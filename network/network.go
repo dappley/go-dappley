@@ -1,6 +1,7 @@
 package network
 
 import (
+	"github.com/dappley/go-dappley/common/log"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -149,6 +150,8 @@ func (net *Network) updatePeers() {
 //startStreamMsgHandler starts a listening loop that listens to new message from all streams
 func (net *Network) startStreamMsgHandler() {
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			select {
 			case msg := <-net.streamMsgRcvCh:
@@ -173,6 +176,8 @@ func (net *Network) startStreamMsgHandler() {
 //startPeerConnectionSchedule trys to connect to seed peers periodically
 func (net *Network) startPeerConnectionSchedule() {
 	go func() {
+		defer log.CrashHandler()
+
 		ticker := time.NewTicker(PeerConnectionInterval)
 		for {
 			select {

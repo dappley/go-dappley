@@ -26,11 +26,11 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/common/hash"
-	"github.com/dappley/go-dappley/core"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblock"
@@ -65,14 +65,14 @@ type Blockchain struct {
 	utxoCache    *utxo.UTXOCache
 	libPolicy    LIBPolicy
 	txPool       *transactionpool.TransactionPool
-	scManager    core.ScEngineManager
+	scManager    ltransaction.ScEngineManager
 	eventManager *scState.EventManager
 	blkSizeLimit int
 	mutex        *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager ltransaction.ScEngineManager, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
@@ -95,7 +95,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager core.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager ltransaction.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -136,7 +136,7 @@ func (bc *Blockchain) GetLIBHash() hash.Hash {
 	return bc.bc.GetLIBHash()
 }
 
-func (bc *Blockchain) GetSCManager() core.ScEngineManager {
+func (bc *Blockchain) GetSCManager() ltransaction.ScEngineManager {
 	return bc.scManager
 }
 
@@ -146,6 +146,15 @@ func (bc *Blockchain) GetTxPool() *transactionpool.TransactionPool {
 
 func (bc *Blockchain) GetEventManager() *scState.EventManager {
 	return bc.eventManager
+}
+
+func (bc *Blockchain) GetUpdatedUTXOIndex() *lutxo.UTXOIndex {
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
+
+	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
+	utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions())
+	return utxoIndex
 }
 
 func (bc *Blockchain) SetBlockSizeLimit(limit int) {
@@ -507,50 +516,60 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 		return true
 	}
 
-	if !bc.libPolicy.IsNonRepeatingBlockProducerRequired() {
-		return true
-	}
+	return bc.isAliveProducerSufficient(blk)
 
-	return !bc.checkRepeatingProducer(blk)
 }
 
-//checkRepeatingProducer returns true if it found a repeating block between the input block and last irreversible block
-func (bc *Blockchain) checkRepeatingProducer(blk *block.Block) bool {
-	lib := bc.GetLIBHash()
+//isAliveProducerSufficient returns true if alive producers are greater than minimum producers(total *2/3)
+func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
+	minProduerNum := bc.libPolicy.GetMinConfirmationNum()
+	onlineProducers := make(map[string]bool)
+	currentCheckBlk :=blk
 
-	libProduerNum := bc.libPolicy.GetMinConfirmationNum()
-
-	existProducers := make(map[string]bool)
-	currBlk := blk
-
-	for i := 0; i < libProduerNum; i++ {
-		if currBlk.GetHeight() == 0 {
-			return false
-		}
-
-		if _, ok := existProducers[currBlk.GetProducer()]; ok {
-			logger.WithFields(logger.Fields{
-				"currBlkHeight": currBlk.GetHeight(),
-				"producer":      currBlk.GetProducer(),
-			}).Debug("Blockchain: repeating producer")
-			return true
-		}
-
-		if lib.Equals(currBlk.GetHash()) {
-			return false
-		}
-
-		existProducers[currBlk.GetProducer()] = true
-
-		newBlock, err := bc.GetBlockByHash(currBlk.GetPrevHash())
-		if err != nil {
-			logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking repeating producer")
-			return true
-		}
-
-		currBlk = newBlock
+	if bc.GetMaxHeight() == 0 {
+		return true
 	}
-	return false
+	if bc.GetMaxHeight()>uint64(minProduerNum-1) {
+		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++{
+			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
+			if err != nil {
+				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
+				return false
+			}
+			currentCheckBlk=newBlk
+			if currentCheckBlk.GetHeight() == 0 {
+				break
+			}
+
+			if _, exist := onlineProducers[currentCheckBlk.GetProducer()]; !exist {
+				logger.WithFields(logger.Fields{
+					"\ncurrBlkHeight": currentCheckBlk.GetHeight(),
+					"\nproducer":      currentCheckBlk.GetProducer(),
+				}).Debug("\nBlockchain: repeating producer")
+
+				if  blk.GetProducer()!= currentCheckBlk.GetProducer(){
+					onlineProducers[currentCheckBlk.GetProducer()] = true
+				}
+			}
+		}
+		if len(onlineProducers)>=minProduerNum-1{
+			return true
+		}
+		return false
+	}else{
+		for i:= uint64(0); i < bc.GetMaxHeight(); i++ {
+			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
+			if err != nil {
+				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer.")
+				return false
+			}
+			currentCheckBlk=newBlk
+			if  blk.GetProducer()==currentCheckBlk.GetProducer(){
+				return false
+			}
+		}
+		return true
+	}
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {

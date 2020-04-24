@@ -46,6 +46,8 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/dappley/go-dappley/logic/lutxo"
+
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -74,11 +76,11 @@ const (
 type V8Engine struct {
 	source             string
 	state              *scState.ScState
+	utxoIndex          *lutxo.UTXOIndex
 	tx                 *transaction.Transaction
 	rewards            map[string]string
 	contractAddr       account.Address
 	contractCreateUTXO *utxo.UTXO
-	contractUTXOs      []*utxo.UTXO
 	prevUtxos          []*utxo.UTXO
 	sourceTXID         []byte
 	generatedTXs       []*transaction.Transaction
@@ -176,6 +178,10 @@ func (sc *V8Engine) ImportSourceCode(source string) {
 	sc.source = source
 }
 
+func (sc *V8Engine) ImportUtxoIndex(utxoIndex *lutxo.UTXOIndex) {
+	sc.utxoIndex = utxoIndex
+}
+
 func (sc *V8Engine) ImportLocalStorage(state *scState.ScState) {
 	sc.state = state
 }
@@ -193,12 +199,6 @@ func (sc *V8Engine) ImportContractAddr(contractAddr account.Address) {
 	sc.contractAddr = contractAddr
 }
 
-// ImportUTXOs supplies the list of contract's UTXOs to the engine
-func (sc *V8Engine) ImportUTXOs(utxos []*utxo.UTXO) {
-	sc.contractUTXOs = make([]*utxo.UTXO, len(utxos))
-	copy(sc.contractUTXOs, utxos)
-}
-
 // ImportSourceTXID supplies the id of the transaction which executes the contract
 func (sc *V8Engine) ImportSourceTXID(txid []byte) {
 	sc.sourceTXID = txid
@@ -207,6 +207,11 @@ func (sc *V8Engine) ImportSourceTXID(txid []byte) {
 // GetGeneratedTXs returns the transactions generated as a result of executing the contract
 func (sc *V8Engine) GetGeneratedTXs() []*transaction.Transaction {
 	return sc.generatedTXs
+}
+
+// GetUtxoIndex returns UTXOIndex
+func (sc *V8Engine) GetUtxoIndex() *lutxo.UTXOIndex {
+	return sc.utxoIndex
 }
 
 func (sc *V8Engine) ImportRewardStorage(rewards map[string]string) {

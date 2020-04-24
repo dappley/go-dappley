@@ -11,8 +11,12 @@ import (
 )
 
 //FindVinUtxosInUtxoPool Find the transaction in a utxo pool. Returns true only if all Vins are found in the utxo pool
-func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*utxo.UTXO, error) {
+func FindVinUtxosInUtxoPool(utxoIndex *UTXOIndex, tx *transaction.Transaction) ([]*utxo.UTXO, error) {
+	if tx.Type == transaction.TxTypeCoinbase {
+		return nil, transaction.ErrTXInputNotFound
+	}
 	var res []*utxo.UTXO
+	tempUtxoTxMap := make(map[string]*utxo.UTXOTx)
 	for _, vin := range tx.Vin {
 		// some vin.PubKey is contract address's PubKeyHash
 		isContract, _ := account.PubKeyHash(vin.PubKey).IsContract()
@@ -24,7 +28,12 @@ func FindVinUtxosInUtxoPool(utxoPool UTXOIndex, tx transaction.Transaction) ([]*
 			ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 			pubKeyHash = ta.GetPubKeyHash()
 		}
-		utxo := utxoPool.FindUTXOByVin([]byte(pubKeyHash), vin.Txid, vin.Vout)
+		tempUtxoTx, ok := tempUtxoTxMap[string(pubKeyHash)]
+		if !ok {
+			tempUtxoTx = utxoIndex.GetAllUTXOsByPubKeyHash(pubKeyHash)
+			tempUtxoTxMap[string(pubKeyHash)] = tempUtxoTx
+		}
+		utxo := tempUtxoTx.GetUtxo(vin.Txid, vin.Vout)
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
 				"txid":      hex.EncodeToString(tx.ID),

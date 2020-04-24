@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common/log"
 	"math"
 	"sync"
 	"time"
@@ -163,6 +164,8 @@ func (downloadManager *DownloadManager) Start() {
 
 func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 	go func() {
+		defer log.CrashHandler()
+
 		for {
 			select {
 			case returnCh := <-downloadManager.downloadRequestCh:
@@ -233,6 +236,8 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bo
 	waitTimer := time.NewTimer(CheckMaxWaitTime * time.Second)
 	logger.Info("DownloadManager: wait peer information")
 	go func() {
+		defer log.CrashHandler()
+
 		<-waitTimer.C
 		waitTimer.Stop()
 
@@ -339,7 +344,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		blocks = append(blocks, block)
 	}
 
-	logger.Warnf("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+	logger.Infof("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed.")
@@ -442,9 +447,10 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*blockpb.
 			commonBlock = block
 			break
 		}
-	}
-	if findIndex == -1 {
-		logger.Panic("DownloadManager: invalid get common blocks result.")
+		if blockHeader.GetHeight() == 0 {
+			logger.Warn("DownloadManager: invalid get common blocks result. Genesis block hash is different with the request source node.")
+			return findIndex, nil
+		}
 	}
 	return findIndex, commonBlock
 }
@@ -525,6 +531,8 @@ func (downloadManager *DownloadManager) sendGetCommonBlockCommand(blockHeaders [
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
+		defer log.CrashHandler()
+
 		<-downloadTimer.C
 		downloadTimer.Stop()
 		downloadManager.CheckGetCommonBlockCommand(msgId, peerId, retryCount)
@@ -551,6 +559,10 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*blockpb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
+	if findIndex == -1 {
+		// no common blocks, code version is different
+		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes. Check code version or synchronize db files from other nodes.")
+	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
 		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
@@ -592,6 +604,8 @@ func (downloadManager *DownloadManager) sendDownloadCommand(hashes []hash.Hash, 
 
 	downloadTimer := time.NewTimer(DownloadMaxWaitTime * time.Second)
 	go func() {
+		defer log.CrashHandler()
+
 		<-downloadTimer.C
 		downloadTimer.Stop()
 		downloadManager.CheckDownloadCommand(hashes, peerId, retryCount)
@@ -702,7 +716,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 	var blockHeaderPbs []*blockpb.BlockHeader
 	if index == 0 {
 		blockHeaderPbs = blockHeaders[:1]
-	} else {
+	} else if index > 0 {
 		blockHeaders := downloadManager.GetCommonBlockCheckPoint(
 			blockHeaders[index].GetHeight(),
 			blockHeaders[index-1].GetHeight(),

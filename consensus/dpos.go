@@ -38,7 +38,7 @@ import (
 
 const (
 	MinConsensusSize   = 4
-	maxMintingTimeInMs = 2000
+	maxMintingTimeInMs = 1500
 )
 
 type DPOS struct {
@@ -249,7 +249,7 @@ func (dpos *DPOS) IsBypassingLibCheck() bool {
 	return len(dpos.dynasty.GetProducers()) < MinConsensusSize
 }
 
-//IsNonRepeatingBlockProducerRequired returns if the same producer can producer consecutive blocks
-func (dpos *DPOS) IsNonRepeatingBlockProducerRequired() bool {
-	return true
+//GetTotalProducersNum returns the total number of producers
+func (dpos *DPOS) GetTotalProducersNum() int {
+	return dpos.dynasty.maxProducers
 }

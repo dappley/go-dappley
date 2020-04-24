@@ -2,9 +2,11 @@ package blockproducer
 
 import (
 	"encoding/hex"
+	"github.com/dappley/go-dappley/common/log"
+	"time"
+
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/blockchain"
-	"time"
 
 	"github.com/dappley/go-dappley/logic/lblock"
 
@@ -41,6 +43,8 @@ func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer
 //Start starts the block producing process
 func (bp *BlockProducer) Start() {
 	go func() {
+		defer log.CrashHandler()
+
 		logger.Info("BlockProducer Starts...")
 		for {
 			select {
@@ -106,7 +110,7 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	validTxs, state := bp.collectTransactions(utxoIndex, parentBlock, deadline)
 
 	totalTips := bp.calculateTips(validTxs)
-	cbtx := transaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
+	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
 	utxoIndex.UpdateUtxo(&cbtx)
 
@@ -123,6 +127,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	var validTxs []*transaction.Transaction
 	totalSize := 0
+	count := 0
 
 	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
@@ -137,40 +142,29 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			break
 		}
 		totalSize += txNode.Size
+		count++
 
-		ctx := txNode.Value.ToContractTx()
-		minerAddr := account.NewAddress(bp.producer.Beneficiary())
-		minerTA := account.NewContractAccountByAddress(minerAddr)
+		ctx := ltransaction.NewTxContract(txNode.Value)
 		if ctx != nil {
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+			minerAddr := account.NewAddress(bp.producer.Beneficiary())
+			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, txNode.Value)
 			if err != nil {
 				logger.WithError(err).WithFields(logger.Fields{
-					"txid": hex.EncodeToString(ctx.ID),
+					"txid": hex.EncodeToString(txNode.Value.ID),
 				}).Warn("BlockProducer: cannot find vin while executing smart contract")
-				return nil, nil
+				continue
 			}
-			isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
+			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
-
-			gasCount, generatedTxs, err := ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-
+			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, prevUtxos, isContractDeployed, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
 			if err != nil {
-				logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
+				continue
 			}
-			// record gas used
-			if gasCount > 0 {
-				grtx, err := transaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice)
-				if err == nil {
-					generatedTxs = append(generatedTxs, &grtx)
-				}
+			if generatedTxs != nil {
+				validTxs = append(validTxs, generatedTxs...)
+				utxoIndex.UpdateUtxos(generatedTxs)
 			}
-			gctx, err := transaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice)
-			if err == nil {
-				generatedTxs = append(generatedTxs, &gctx)
-			}
-			validTxs = append(validTxs, generatedTxs...)
-			utxoIndex.UpdateUtxos(generatedTxs)
 		} else {
 			validTxs = append(validTxs, txNode.Value)
 			utxoIndex.UpdateUtxo(txNode.Value)
@@ -179,7 +173,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	// append reward transaction
 	if len(rewards) > 0 {
-		rtx := transaction.NewRewardTx(currBlkHeight, rewards)
+		rtx := ltransaction.NewRewardTx(currBlkHeight, rewards)
 		validTxs = append(validTxs, &rtx)
 		utxoIndex.UpdateUtxo(&rtx)
 	}
@@ -228,4 +222,5 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 	}
 
 	bp.bm.BroadcastBlock(ctx.Block)
+	logger.Info("BlockProducer: Broadcast block")
 }
