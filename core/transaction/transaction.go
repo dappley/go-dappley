@@ -320,7 +320,8 @@ func (tx *Transaction) MatchRewards(rewardStorage map[string]string) bool {
 		return false
 	}
 
-	if !tx.IsRewardTx() {
+	adaptedTx := NewTxAdapter(tx)
+	if !adaptedTx.IsRewardTx() {
 		logger.Debug("Transaction: is not a reward transaction")
 		return false
 	}

@@ -235,7 +235,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	tx.FromProto(in.GetTransaction())
 
-	if !tx.IsNormal() && !tx.IsContract() {
+	adaptedTx := transaction.NewTxAdapter(tx)
+	if !adaptedTx.IsNormal() && !adaptedTx.IsContract() {
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
@@ -261,7 +262,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	rpcService.GetBlockchain().GetTxPool().BroadcastTx(tx)
 
 	var generatedContractAddress = ""
-	if tx.IsContract() {
+	if adaptedTx.IsContract() {
 		ctx := ltransaction.NewTxContract(tx)
 		contractAddr := ctx.GetContractAddress()
 		generatedContractAddress = contractAddr.String()
@@ -289,7 +290,8 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 	verifiedTxs := []transaction.Transaction{}
 	st := status.New(codes.OK, "")
 	for _, tx := range txs {
-		if !tx.IsNormal() && !tx.IsContract() {
+		adaptedTx := transaction.NewTxAdapter(&tx)
+		if !adaptedTx.IsNormal() && !adaptedTx.IsContract() {
 			st = status.New(codes.Unknown, "one or more transactions are invalid")
 			respon = append(respon, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
@@ -396,9 +398,6 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 
 	tx.FromProto(in.GetTransaction())
 
-	if !tx.IsContract() {
-		return nil, status.Error(codes.InvalidArgument, "transaction type must be contract")
-	}
 	contractTx := ltransaction.NewTxContract(tx)
 	if contractTx == nil {
 		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
