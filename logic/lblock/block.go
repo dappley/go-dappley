@@ -126,7 +126,8 @@ func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scS
 L:
 	for _, tx := range b.GetTransactions() {
 		// Collect the contract-incurred transactions in this block
-		if tx.IsRewardTx() {
+		adaptedTx := transaction.NewTxAdapter(tx)
+		if adaptedTx.IsRewardTx() {
 			if rewardTX != nil {
 				logger.WithFields(logger.Fields{
 					"hash":   b.GetHash(),

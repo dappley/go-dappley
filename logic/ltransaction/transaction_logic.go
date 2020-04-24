@@ -70,10 +70,11 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 	inputAmount := common.NewAmount(0)
 	outputAmount := common.NewAmount(0)
 	payoutAmount := common.NewAmount(0)
+	adaptedTx := transaction.NewTxAdapter(tx)
 	for _, vin := range tx.Vin {
 		if bytes.Compare(vin.PubKey, vinPubKey) == 0 {
 			switch {
-			case tx.IsRewardTx():
+			case adaptedTx.IsRewardTx():
 				ta = account.NewTransactionAccountByPubKey(transaction.RewardTxData)
 				continue
 			case IsFromContract(utxoIndex, tx):
