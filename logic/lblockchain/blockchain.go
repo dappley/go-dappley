@@ -178,6 +178,7 @@ func (bc *Blockchain) GetLIB() (*block.Block, error) {
 func (bc *Blockchain) GetMaxHeight() uint64 {
 	block, err := bc.GetTailBlock()
 	if err != nil {
+		logger.Error(err)
 		return 0
 	}
 	return block.GetHeight()
