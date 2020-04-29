@@ -284,12 +284,17 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 }
 
 func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) (*PeerBlockInfo, error) {
+	downloadingPeer := ""
+	if downloadManager.downloadingPeer != nil {
+		downloadingPeer = downloadManager.downloadingPeer.peerid.String()
+	}
 	returnBlocksLogger := logger.WithFields(logger.Fields{
-		"name": "GetBlocksResponse",
+		"name":               "GetBlocksResponse",
+		"downloadingPeer.id": downloadingPeer,
 	})
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
-		returnBlocksLogger.Info("DownloadManager: peerId not in checklist")
+		returnBlocksLogger.Info("validateReturnBlocks: downloadingPeer is empty or peerId is not match.")
 		return nil, ErrPeerNotFound
 	}
 
@@ -378,10 +383,15 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
+	downloadingPeer := ""
+	if downloadManager.downloadingPeer != nil {
+		downloadingPeer = downloadManager.downloadingPeer.peerid.String()
+	}
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerInfo.PeerId {
 		logger.WithFields(logger.Fields{
-			"name": "GetCommonBlocksResponse",
-		}).Info("DownloadManager: PeerId not in checklist.")
+			"name":               "GetCommonBlocksResponse",
+			"downloadingPeer.id": downloadingPeer,
+		}).Info("GetCommonBlockDataHandler: downloadingPeer is empty or peerId is not match.")
 		downloadManager.mutex.Unlock()
 		return
 	}
@@ -744,7 +754,7 @@ func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(input inte
 
 	if err := proto.Unmarshal(command.GetData(), param); err != nil {
 		logger.WithFields(logger.Fields{
-			"name": "GetCommonBlocksResponse",
+			"name": "GetCommonBlockResponseHandler",
 		}).Info("DownloadManager: parse data failed.")
 	}
 
