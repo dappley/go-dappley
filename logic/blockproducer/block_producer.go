@@ -72,7 +72,7 @@ func (bp *BlockProducer) IsProducingBlock() bool {
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 	// Do not produce block if block pool is syncing
 	if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
-		logger.Info("BlockProducer: block producer paused because block pool is syncing.")
+		logger.Infof("BlockProducer: block producer paused because blockchain is not ready. Current status is %v", bp.bm.Getblockchain().GetState())
 		return
 	}
 

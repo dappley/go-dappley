@@ -212,7 +212,7 @@ func (pool *BlockPool) RemoveFork(fork []*block.Block) {
 	}
 
 	delete(pool.orphans, fork[0].GetHash().String())
-	logger.Debug("BlockPool: merge finished or exited, setting syncstate to false.")
+	logger.Info("BlockPool: merge finished or exited, setting syncstate to false.")
 }
 
 func getBlocksFromTrees(trees []*common.TreeNode) []*block.Block {

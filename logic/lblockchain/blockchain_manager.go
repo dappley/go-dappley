@@ -86,6 +86,7 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 
 		finishChan := make(chan bool, 1)
 
+		logger.Info("BlockchainManager: requestDownloadBlockchain start!")
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 
 		select {
@@ -95,6 +96,7 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
+		logger.Info("BlockchainManager: requestDownloadBlockchain finished!")
 		bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	}()
 }
@@ -152,7 +154,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}).Info("BlockChainManager: received a new block.")
 
 	if bm.blockchain.GetState() != blockchain.BlockchainReady {
-		logger.Info("BlockchainManager: Blockchain not ready, discard received blk")
+		logger.Infof("BlockchainManager: Blockchain not ready, discard received blk. Current status is %v", bm.blockchain.GetState())
 		return
 	}
 	if !bm.VerifyBlock(blk) {
@@ -163,7 +165,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	if receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == blockchain.BlockchainReady {
-		logger.Info("The height of the received blk is higher than the height of its own blk,to start download blockchain")
+		logger.Warn("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
 		return
 	}
@@ -193,9 +195,13 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}
 
 	bm.blockchain.SetState(blockchain.BlockchainSync)
+	logger.Info("Push: set blockchain status to sync.")
+
 	_ = bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
 	bm.blockPool.RemoveFork(fork)
+
 	bm.blockchain.SetState(blockchain.BlockchainReady)
+	logger.Info("Push: set blockchain status to ready.")
 	return
 }
 
@@ -366,7 +372,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			}).Warn("BlockchainManager: failed to calculate previous state of scState for the block")
 			return nil, nil, err
 		}
-       
+
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
