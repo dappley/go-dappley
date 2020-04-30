@@ -47,7 +47,7 @@ var tipKey = []byte("tailBlockHash")
 var libKey = []byte("lastIrreversibleBlockHash")
 
 var (
-	ErrBlockDoesNotExist       = errors.New("block does not exist")
+	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
 	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
@@ -228,6 +228,9 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	tailBlockHash := bc.GetTailBlockHash()
 	if ctx.Block.GetHeight() != 0 && bytes.Compare(ctx.Block.GetPrevHash(), tailBlockHash) != 0 {
+		logger.WithFields(logger.Fields{
+			"blockHeight": ctx.Block.GetHeight(),
+		}).Warn("AddBlockContextToTail : prevhash verify failed.")
 		return ErrPrevHashVerifyFailed
 	}
 
@@ -526,19 +529,19 @@ func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
 func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 	minProduerNum := bc.libPolicy.GetMinConfirmationNum()
 	onlineProducers := make(map[string]bool)
-	currentCheckBlk :=blk
+	currentCheckBlk := blk
 
 	if bc.GetMaxHeight() == 0 {
 		return true
 	}
-	if bc.GetMaxHeight()>uint64(minProduerNum-1) {
-		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++{
+	if bc.GetMaxHeight() > uint64(minProduerNum-1) {
+		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++ {
 			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
 				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
 				return false
 			}
-			currentCheckBlk=newBlk
+			currentCheckBlk = newBlk
 			if currentCheckBlk.GetHeight() == 0 {
 				break
 			}
@@ -549,24 +552,24 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 					"\nproducer":      currentCheckBlk.GetProducer(),
 				}).Debug("\nBlockchain: repeating producer")
 
-				if  blk.GetProducer()!= currentCheckBlk.GetProducer(){
+				if blk.GetProducer() != currentCheckBlk.GetProducer() {
 					onlineProducers[currentCheckBlk.GetProducer()] = true
 				}
 			}
 		}
-		if len(onlineProducers)>=minProduerNum-1{
+		if len(onlineProducers) >= minProduerNum-1 {
 			return true
 		}
 		return false
-	}else{
-		for i:= uint64(0); i < bc.GetMaxHeight(); i++ {
+	} else {
+		for i := uint64(0); i < bc.GetMaxHeight(); i++ {
 			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
 				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer.")
 				return false
 			}
-			currentCheckBlk=newBlk
-			if  blk.GetProducer()==currentCheckBlk.GetProducer(){
+			currentCheckBlk = newBlk
+			if blk.GetProducer() == currentCheckBlk.GetProducer() {
 				return false
 			}
 		}
