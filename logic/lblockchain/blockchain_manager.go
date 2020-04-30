@@ -86,7 +86,7 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 
 		finishChan := make(chan bool, 1)
 
-		logger.Info("BlockchainManager: requestDownloadBlockchain start!")
+		logger.Info("BlockchainManager: requestDownloadBlockchain start, set blockchain status to downloading!")
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 
 		select {
@@ -96,7 +96,7 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
-		logger.Info("BlockchainManager: requestDownloadBlockchain finished!")
+		logger.Info("BlockchainManager: requestDownloadBlockchain finished, set blockchain status to ready!")
 		bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	}()
 }
@@ -165,7 +165,10 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	if receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == blockchain.BlockchainReady {
-		logger.Warn("The height of the received blk is higher than the height of its own blk,to start download blockchain")
+		logger.WithFields(logger.Fields{
+			"receiveBlockHeight": receiveBlockHeight,
+			"ownBlockHeight":     ownBlockHeight,
+		}).Warn("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
 		return
 	}
