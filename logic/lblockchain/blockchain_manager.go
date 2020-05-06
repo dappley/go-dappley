@@ -167,7 +167,8 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 
 	receiveBlockHeight := blk.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
-	if receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
+	// Do the subtraction calculation after judging the size to avoid the overflow of the symbol uint64
+	if receiveBlockHeight > ownBlockHeight && receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == blockchain.BlockchainReady {
 		logger.WithFields(logger.Fields{
 			"receiveBlockHeight": receiveBlockHeight,
