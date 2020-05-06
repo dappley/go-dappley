@@ -169,12 +169,12 @@ func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 		for {
 			select {
 			case returnCh := <-downloadManager.downloadRequestCh:
-
+				logger.Info("StartDownloadRequestListener: Received download request.")
 				if downloadManager.status != DownloadStatusIdle {
 					logger.Warn("DownloadMananger: Blockchain is being downloaded. Received download request is dropped.")
 					continue
 				}
-
+				logger.Info("StartDownloadRequestListener: Prepare to download.")
 				go downloadManager.StartDownloadBlockchain(returnCh)
 			}
 		}
@@ -376,6 +376,10 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		nextHashes = append(nextHashes, block.GetHash())
 	}
 
+	logger.WithFields(logger.Fields{
+		"peerInfo.PeerId":  peerInfo.PeerId.String(),
+		"CurrentMaxHeight": downloadManager.bm.Getblockchain().GetMaxHeight(),
+	}).Info("GetBlocksDataHandler: start the next download.")
 	downloadManager.sendDownloadCommand(nextHashes, peerInfo.PeerId, 0)
 }
 
@@ -577,7 +581,7 @@ func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders 
 		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes. Check code version or synchronize db files from other nodes.")
 	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
-		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
+		logger.Warnf("checkGetCommonBlocksResult: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
 		downloadManager.currentCmd = nil
 		downloadManager.startDownload(0)

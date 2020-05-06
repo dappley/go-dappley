@@ -86,8 +86,10 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 
 		finishChan := make(chan bool, 1)
 
+		bm.Getblockchain().mutex.Lock()
 		logger.Info("BlockchainManager: requestDownloadBlockchain start, set blockchain status to downloading!")
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
+		bm.Getblockchain().mutex.Unlock()
 
 		select {
 		case bm.downloadRequestCh <- finishChan:
@@ -96,8 +98,10 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
+		bm.Getblockchain().mutex.Lock()
 		logger.Info("BlockchainManager: requestDownloadBlockchain finished, set blockchain status to ready!")
 		bm.Getblockchain().SetState(blockchain.BlockchainReady)
+		bm.Getblockchain().mutex.Unlock()
 	}()
 }
 
@@ -242,7 +246,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   forkBlks[i].GetHash().String(),
-		}).Debug("BlockchainManager: is verifying a block in the fork.")
+		}).Info("BlockchainManager: is verifying a block in the fork.")
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, parentBlk) {
 			return ErrTransactionVerifyFailed
