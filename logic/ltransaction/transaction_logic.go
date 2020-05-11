@@ -31,7 +31,7 @@ var (
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
 	txDecorator := NewTxDecorator(tx)
-	if txDecorator != nil && txDecorator.IsNeedVerify() {
+	if txDecorator != nil {
 		return txDecorator.Verify(utxoIndex, blockHeight)
 	}
 	return nil

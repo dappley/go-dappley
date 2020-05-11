@@ -99,10 +99,6 @@ func (tx *TxNormal) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error
 	return tx.Transaction.Sign(privKey, prevUtxos)
 }
 
-func (tx *TxNormal) IsNeedVerify() bool {
-	return true
-}
-
 func (tx *TxNormal) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
 	if err != nil {
@@ -116,10 +112,6 @@ func (tx *TxNormal) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error
 
 func (tx *TxContract) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
 	return tx.Transaction.Sign(privKey, prevUtxos)
-}
-
-func (tx *TxContract) IsNeedVerify() bool {
-	return true
 }
 
 func (tx *TxContract) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
@@ -142,10 +134,6 @@ func (tx *TxCoinbase) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) err
 	return nil
 }
 
-func (tx *TxCoinbase) IsNeedVerify() bool {
-	return true
-}
-
 func (tx *TxCoinbase) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	//TODO coinbase vout check need add tip
 	if tx.Vout[0].Value.Cmp(transaction.Subsidy) < 0 {
@@ -162,10 +150,6 @@ func (tx *TxGasReward) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) er
 	return nil
 }
 
-func (tx *TxGasReward) IsNeedVerify() bool {
-	return false
-}
-
 func (tx *TxGasReward) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	return nil
 }
@@ -174,20 +158,12 @@ func (tx *TxGasChange) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) er
 	return nil
 }
 
-func (tx *TxGasChange) IsNeedVerify() bool {
-	return false
-}
-
 func (tx *TxGasChange) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	return nil
 }
 
 func (tx *TxReward) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error {
 	return nil
-}
-
-func (tx *TxReward) IsNeedVerify() bool {
-	return false
 }
 
 func (tx *TxReward) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
