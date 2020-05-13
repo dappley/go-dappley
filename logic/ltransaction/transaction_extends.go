@@ -103,7 +103,8 @@ func (tx *TxNormal) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
-			"txid": hex.EncodeToString(tx.ID),
+			"txid":        hex.EncodeToString(tx.ID),
+			"blockHeight": blockHeight,
 		}).Warn("Verify: cannot find vin while verifying normal tx")
 		return err
 	}
@@ -117,10 +118,18 @@ func (tx *TxContract) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) err
 func (tx *TxContract) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
 	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid":        hex.EncodeToString(tx.ID),
+			"blockHeight": blockHeight,
+		}).Warn("Verify: cannot find vin while verifying contract tx")
 		return err
 	}
 	err = tx.verifyInEstimate(utxoIndex, prevUtxos)
 	if err != nil {
+		logger.WithError(err).WithFields(logger.Fields{
+			"txid":        hex.EncodeToString(tx.ID),
+			"blockHeight": blockHeight,
+		}).Warn("Verify: failed in estimate while verifying contract tx")
 		return err
 	}
 	totalBalance, err := tx.GetTotalBalance(prevUtxos)
