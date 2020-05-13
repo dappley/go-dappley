@@ -53,7 +53,7 @@ var (
 
 //create a blockchain
 func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
-	addressAccount := account.NewContractAccountByAddress(address)
+	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
 		return nil, ErrInvalidAddress
 	}
@@ -192,7 +192,7 @@ func GetUnlockDuration() time.Duration {
 
 //get balance
 func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
-	acc := account.NewContractAccountByAddress(address)
+	acc := account.NewTransactionAccountByAddress(address)
 	if acc.IsValid() == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
@@ -238,8 +238,8 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 }
 
 func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, string, error) {
-	fromAccount := account.NewContractAccountByAddress(sendTxParam.From)
-	toAccount := account.NewContractAccountByAddress(sendTxParam.To)
+	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
+	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	if !fromAccount.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}

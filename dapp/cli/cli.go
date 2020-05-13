@@ -550,7 +550,7 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 	}
 
 	address := *(flags[flagAddress].(*string))
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: address is not valid")
 		return
@@ -798,7 +798,7 @@ func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 		return
 	}
 
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(toAddr))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(toAddr))
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: address is invalid!")
 		return
@@ -842,7 +842,7 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 		fmt.Println()
 		return
 	}
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(producerAddress))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(producerAddress))
 
 	if !addressAccount.IsValid() {
 		fmt.Println("Error: address is invalid")
@@ -868,7 +868,7 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
 	fromAddress := *(flags[flagFromAddress].(*string))
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(fromAddress))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	path := *(flags[flagFilePath].(*string))
 	if path == "" {
 		data = *(flags[flagData].(*string))
@@ -905,14 +905,14 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 	utxos := response.GetUtxos()
-	var InputUtxos []*utxo.UTXO
+	var inputUtxos []*utxo.UTXO
 	for _, u := range utxos {
 		uu := utxo.UTXO{}
 		uu.Value = common.NewAmountFromBytes(u.Amount)
 		uu.Txid = u.Txid
 		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
 		uu.TxIndex = int(u.TxIndex)
-		InputUtxos = append(InputUtxos, &uu)
+		inputUtxos = append(inputUtxos, &uu)
 	}
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
@@ -926,7 +926,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	if flags[flagGasPrice] != nil {
 		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
 	}
-	tx_utxos, err := GetUTXOsfromAmount(InputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+	tx_utxos, err := GetUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
@@ -1068,9 +1068,9 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	var data string
 	path := *(flags[flagFilePath].(*string))
 	fromAddress := *(flags[flagFromAddress].(*string))
-	fromAccount := account.NewContractAccountByAddress(account.NewAddress(fromAddress))
+	fromAccount := account.NewTransactionAccountByAddress(account.NewAddress(fromAddress))
 	toAddress := *(flags[flagToAddress].(*string))
-	toAccount := account.NewContractAccountByAddress(account.NewAddress(toAddress))
+	toAccount := account.NewTransactionAccountByAddress(account.NewAddress(toAddress))
 	if path == "" {
 		data = *(flags[flagData].(*string))
 	} else {
@@ -1176,7 +1176,7 @@ func contractQueryCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 	contractAddr := *(flags[flagContractAddr].(*string))
 	queryKey := *(flags[flagKey].(*string))
 	queryValue := *(flags[flagValue].(*string))
-	contractAccount := account.NewContractAccountByAddress(account.NewAddress(contractAddr))
+	contractAccount := account.NewTransactionAccountByAddress(account.NewAddress(contractAddr))
 
 	if !contractAccount.IsValid() {
 		fmt.Println("Error: contract address is not valid!")

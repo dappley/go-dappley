@@ -31,7 +31,7 @@ import (
 const genesisCoinbaseData = "Hello world"
 
 func NewGenesisBlock(address account.Address, subsidy *common.Amount) *block.Block {
-	acc := account.NewContractAccountByAddress(address)
+	acc := account.NewTransactionAccountByAddress(address)
 	txin := transactionbase.TXInput{nil, -1, nil, []byte(genesisCoinbaseData)}
 	txout := transactionbase.NewTXOutput(subsidy, acc)
 	txs := []*transaction.Transaction{}

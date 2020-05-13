@@ -89,7 +89,7 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	if !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
@@ -128,7 +128,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
-	acc := account.NewContractAccountByAddress(account.NewAddress(in.GetAddress()))
+	acc := account.NewTransactionAccountByAddress(account.NewAddress(in.GetAddress()))
 
 	if !acc.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())

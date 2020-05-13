@@ -626,7 +626,7 @@ func TestDoubleMint(t *testing.T) {
 	var SendBm *lblockchain.BlockchainManager
 
 	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
-	validProducerAccount := account.NewContractAccountByAddress(account.NewAddress(validProducerAddr))
+	validProducerAccount := account.NewTransactionAccountByAddress(account.NewAddress(validProducerAddr))
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)

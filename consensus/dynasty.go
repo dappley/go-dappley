@@ -52,7 +52,7 @@ func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 func NewDynastyWithConfigProducers(producers []string, maxProducers int) *Dynasty {
 	validProducers := []string{}
 	for _, producer := range producers {
-		producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
+		producerAccount := account.NewTransactionAccountByAddress(account.NewAddress(producer))
 		if producerAccount.IsValid() {
 			validProducers = append(validProducers, producer)
 		}
@@ -124,7 +124,7 @@ func (dynasty *Dynasty) isAddingProducerAllowed(producer string) error {
 			return errors.New("already a producer")
 		}
 	}
-	producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
+	producerAccount := account.NewTransactionAccountByAddress(account.NewAddress(producer))
 
 	if producerAccount.IsValid() && len(dynasty.producers) < dynasty.maxProducers {
 		return nil
@@ -202,7 +202,7 @@ func (dynasty *Dynasty) IsSettingProducersAllowed(producers []string, maxProduce
 
 	seen := make(map[string]bool)
 	for _, producer := range producers {
-		producerAccount := account.NewContractAccountByAddress(account.NewAddress(producer))
+		producerAccount := account.NewTransactionAccountByAddress(account.NewAddress(producer))
 		if seen[producer] {
 			return errors.New(fmt.Sprintf("can not add a duplicate producer: \"%v\"", producer))
 		}

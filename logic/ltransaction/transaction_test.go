@@ -112,7 +112,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	bh1 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh1, 5)
 	txin1 := transactionbase.TXInput{nil, -1, bh1, []byte("Reward to test")}
-	txout1 := transactionbase.NewTXOutput(common.NewAmount(10000000), account.NewContractAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
+	txout1 := transactionbase.NewTXOutput(common.NewAmount(10000000), account.NewTransactionAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
 	var t6 = transaction.Transaction{nil, []transactionbase.TXInput{txin1}, []transactionbase.TXOutput{*txout1}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeCoinbase}
 
 	// test valid coinbase transaction
@@ -129,7 +129,7 @@ func TestVerifyCoinbaseTransaction(t *testing.T) {
 	bh2 := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh2, 5)
 	txin2 := transactionbase.TXInput{nil, -1, bh2, []byte(nil)}
-	txout2 := transactionbase.NewTXOutput(common.NewAmount(9), account.NewContractAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
+	txout2 := transactionbase.NewTXOutput(common.NewAmount(9), account.NewTransactionAccountByAddress(account.NewAddress("13ZRUc4Ho3oK3Cw56PhE5rmaum9VBeAn5F")))
 	var t7 = transaction.Transaction{nil, []transactionbase.TXInput{txin2}, []transactionbase.TXOutput{*txout2}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), 0, transaction.TxTypeCoinbase}
 	err7 := VerifyTransaction(&lutxo.UTXOIndex{}, &t7, 5)
 	assert.NotNil(t, err7)
@@ -321,8 +321,8 @@ func TestTransaction_Execute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sc := new(MockScEngine)
 			contract := "helloworld!"
-			toAccount := account.NewContractAccountByAddress(account.NewAddress(tt.toAddr))
-			scAccount := account.NewContractAccountByAddress(account.NewAddress(tt.scAddr))
+			toAccount := account.NewTransactionAccountByAddress(account.NewAddress(tt.toAddr))
+			scAccount := account.NewTransactionAccountByAddress(account.NewAddress(tt.scAddr))
 
 			toPKH := toAccount.GetPubKeyHash()
 			scPKH := scAccount.GetPubKeyHash()
@@ -453,7 +453,7 @@ func TestTransaction_GetContractAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			acc := account.NewContractAccountByAddress(account.NewAddress(tt.addr))
+			acc := account.NewTransactionAccountByAddress(account.NewAddress(tt.addr))
 			tx := &transaction.Transaction{
 				nil,
 				nil,

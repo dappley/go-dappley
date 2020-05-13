@@ -338,7 +338,7 @@ func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxo
 	// record gas used
 	if !tx.GasPrice.IsZero() {
 		if gasCount > 0 {
-			minerTA := account.NewContractAccountByAddress(minerAddr)
+			minerTA := account.NewTransactionAccountByAddress(minerAddr)
 			grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
 			if err == nil {
 				generatedTxs = append(generatedTxs, &grtx)
@@ -368,7 +368,7 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) transaction.Tran
 				"amount":  amount,
 			}).Warn("Transaction: failed to parse reward amount")
 		}
-		acc := account.NewContractAccountByAddress(account.NewAddress(address))
+		acc := account.NewTransactionAccountByAddress(account.NewAddress(address))
 		txOutputs = append(txOutputs, *transactionbase.NewTXOutput(amt, acc))
 	}
 	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, txOutputs, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeReward}
@@ -415,7 +415,7 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	}
 	bh := make([]byte, 8)
 	binary.BigEndian.PutUint64(bh, uint64(blockHeight))
-	toAccount := account.NewContractAccountByAddress(to)
+	toAccount := account.NewTransactionAccountByAddress(to)
 	txin := transactionbase.TXInput{nil, -1, bh, []byte(data)}
 	txout := transactionbase.NewTXOutput(transaction.Subsidy.Add(tip), toAccount)
 	tx := transaction.Transaction{nil, []transactionbase.TXInput{txin}, []transactionbase.TXOutput{*txout}, common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), time.Now().UnixNano() / 1e6, transaction.TxTypeCoinbase}
@@ -426,8 +426,8 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 
 // NewUTXOTransaction creates a new transaction
 func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
-	fromAccount := account.NewContractAccountByAddress(sendTxParam.From)
-	toAccount := account.NewContractAccountByAddress(sendTxParam.To)
+	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
+	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	sum := transaction.CalculateUtxoSum(utxos)
 	change, err := transaction.CalculateChange(sum, sendTxParam.Amount, sendTxParam.Tip, sendTxParam.GasLimit, sendTxParam.GasPrice)
 	if err != nil {
@@ -468,8 +468,8 @@ func NewSmartContractDestoryTX(utxos []*utxo.UTXO, contractAddr account.Address,
 }
 
 func NewContractTransferTX(utxos []*utxo.UTXO, contractAddr, toAddr account.Address, amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, sourceTXID []byte) (transaction.Transaction, error) {
-	contractAccount := account.NewContractAccountByAddress(contractAddr)
-	toAccount := account.NewContractAccountByAddress(toAddr)
+	contractAccount := account.NewTransactionAccountByAddress(contractAddr)
+	toAccount := account.NewTransactionAccountByAddress(toAddr)
 	if !contractAccount.IsValid() {
 		return transaction.Transaction{}, account.ErrInvalidAddress
 	}

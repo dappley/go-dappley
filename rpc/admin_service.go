@@ -55,7 +55,7 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 
 func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
 	address := in.GetAddress()
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	if len(address) == 0 || !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}

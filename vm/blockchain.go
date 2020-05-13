@@ -18,7 +18,7 @@ func VerifyAddressFunc(address *C.char, gasCnt *C.size_t) bool {
 	// calculate Gas.
 	*gasCnt = C.size_t(VerifyAddressGasBase)
 	addr := account.NewAddress(C.GoString(address))
-	contractAccount := account.NewContractAccountByAddress(addr)
+	contractAccount := account.NewTransactionAccountByAddress(addr)
 	return contractAccount.IsValid()
 }
 
@@ -50,7 +50,7 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 	}
 
 	contractAddr := engine.contractAddr
-	contractAccount := account.NewContractAccountByAddress(contractAddr)
+	contractAccount := account.NewTransactionAccountByAddress(contractAddr)
 	invokeUTXOs := engine.utxoIndex.GetContractInvokeUTXOsByPubKeyHash(contractAccount.GetPubKeyHash())
 	createUtxo := engine.contractCreateUTXO
 	utxos := append(invokeUTXOs, createUtxo)
@@ -96,7 +96,7 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	*gasCnt = C.size_t(TransferGasBase)
 
 	contractAddr := engine.contractAddr
-	contractAccount := account.NewContractAccountByAddress(contractAddr)
+	contractAccount := account.NewTransactionAccountByAddress(contractAddr)
 	invokeUTXOs := engine.utxoIndex.GetContractInvokeUTXOsByPubKeyHash(contractAccount.GetPubKeyHash())
 	sourceTXID := engine.sourceTXID
 
