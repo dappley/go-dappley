@@ -340,23 +340,26 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 // Execute contract and return the generated transactions
 func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
 	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
+	if tx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+		err := errors.New("CollectContractOutput: gas price must be a positive number")
+		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
+		return nil, err
+	}
 	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
 	if err != nil {
-		logger.WithError(err).Error("BlockProducer: executeSmartContract error.")
+		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 	}
 	// record gas used
-	if !tx.GasPrice.IsZero() {
-		if gasCount > 0 {
-			minerTA := account.NewTransactionAccountByAddress(minerAddr)
-			grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
-			if err == nil {
-				generatedTxs = append(generatedTxs, &grtx)
-			}
-		}
-		gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
+	if gasCount > 0 {
+		minerTA := account.NewTransactionAccountByAddress(minerAddr)
+		grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
 		if err == nil {
-			generatedTxs = append(generatedTxs, &gctx)
+			generatedTxs = append(generatedTxs, &grtx)
 		}
+	}
+	gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
+	if err == nil {
+		generatedTxs = append(generatedTxs, &gctx)
 	}
 	return generatedTxs, nil
 }

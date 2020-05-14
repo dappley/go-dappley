@@ -240,6 +240,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
+	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
+	}
+
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
@@ -297,6 +301,16 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				Txid:    tx.ID,
 				Code:    uint32(codes.InvalidArgument),
 				Message: "transaction type error, must be normal or contract",
+			})
+			continue
+		}
+
+		if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+			st = status.New(codes.Unknown, "one or more transactions are invalid")
+			respon = append(respon, &rpcpb.SendTransactionStatus{
+				Txid:    tx.ID,
+				Code:    uint32(codes.InvalidArgument),
+				Message: "gas price error, must be a positive number",
 			})
 			continue
 		}
