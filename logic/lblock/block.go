@@ -109,8 +109,8 @@ func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scS
 		logger.WithFields(logger.Fields{
 			"hash":   b.GetHash(),
 			"height": b.GetHeight(),
-		}).Debug("Block: there is no transaction to verify in this block.")
-		return true
+		}).Warn("Block: there is no transaction to verify in this block.")
+		return false
 	}
 
 	var coinbaseTx *transaction.Transaction
