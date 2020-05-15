@@ -38,10 +38,10 @@ func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, 
 }
 
 // VerifyContractTransaction ensures the generated transactions from smart contract are the same with those in block
-func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string) (generatedTxs []*transaction.Transaction, err error) {
+func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
 	// Run the contract and collect generated transactions
 	if scEngine == nil {
-		return nil, errors.New("VerifyContractTransaction: is missing SCEngineManager when verifying transactions.")
+		return 0, nil, errors.New("VerifyContractTransaction: is missing SCEngineManager when verifying transactions.")
 	}
 
 	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, tx.Transaction)
@@ -49,17 +49,17 @@ func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scSta
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(tx.ID),
 		}).Warn("VerifyContractTransaction: cannot find vin while executing smart contract")
-		return nil, err
+		return 0, nil, err
 	}
 
 	isContractDeployed := tx.IsContractDeployed(utxoIndex)
 	utxoIndex.UpdateUtxo(tx.Transaction)
 
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
-		return nil, err
+		return 0, nil, err
 	}
-	tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
-	return scEngine.GetGeneratedTXs(), nil
+	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
+	return gasCount, generatedTxs, nil
 }
 
 // DescribeTransaction reverse-engineers the high-level description of a transaction

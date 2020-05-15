@@ -390,6 +390,22 @@ func NewRewardTx(blockHeight uint64, rewards map[string]string) transaction.Tran
 	return tx
 }
 
+// GetChangeValue returns chang amount to from address
+func (tx *TxGasChange) GetChangeValue() *common.Amount {
+	if len(tx.Vout) == 0 {
+		return nil
+	}
+	return tx.Vout[0].Value
+}
+
+// GetRewardValue returns reward amount to miner address
+func (tx *TxGasReward) GetRewardValue() *common.Amount {
+	if len(tx.Vout) == 0 {
+		return nil
+	}
+	return tx.Vout[0].Value
+}
+
 // NewGasRewardTx returns a reward to miner, earned for contract execution gas fee
 func NewGasRewardTx(to *account.TransactionAccount, blockHeight uint64, actualGasCount *common.Amount, gasPrice *common.Amount, uniqueNum int) (transaction.Transaction, error) {
 	fee := actualGasCount.Mul(gasPrice)
