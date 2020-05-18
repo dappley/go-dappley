@@ -77,7 +77,7 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 			case adaptedTx.IsRewardTx():
 				ta = account.NewTransactionAccountByPubKey(transaction.RewardTxData)
 				continue
-			case IsFromContract(utxoIndex, tx):
+			case adaptedTx.IsContractGen():
 				// vinPubKey is pubKeyHash of contract address if it is a sc generated tx
 				ta = account.NewContractAccountByPubKeyHash(vinPubKey)
 			default:
@@ -113,27 +113,6 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 	senderAddress := ta.GetAddress()
 
 	return &senderAddress, &receiverAddress, payoutAmount, tip, nil
-}
-
-// IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func IsFromContract(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction) bool {
-	if len(tx.Vin) == 0 {
-		return false
-	}
-
-	contractUtxos := utxoIndex.GetContractUtxos()
-
-	for _, vin := range tx.Vin {
-		pubKeyHash := account.PubKeyHash(vin.PubKey)
-		if isContract, _ := pubKeyHash.IsContract(); !isContract {
-			return false
-		}
-
-		if !isPubkeyHashInUtxos(contractUtxos, pubKeyHash) {
-			return false
-		}
-	}
-	return true
 }
 
 func CheckContractSyntaxTransaction(engine ScEngine, tx *transaction.Transaction) error {

@@ -144,7 +144,7 @@ L:
 			utxoIndex.UpdateUtxo(tx)
 			continue L
 		}
-		if ltransaction.IsFromContract(utxoIndex, tx) {
+		if adaptedTx.IsContractGen() {
 			originContractGenTxs = append(originContractGenTxs, tx)
 			continue L
 		}
