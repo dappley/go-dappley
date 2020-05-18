@@ -146,7 +146,6 @@ L:
 		}
 		if adaptedTx.IsContractGen() {
 			originContractGenTxs = append(originContractGenTxs, tx)
-			continue L
 		}
 
 		ctx := ltransaction.NewTxContract(tx)
@@ -227,7 +226,6 @@ L:
 		}).Warn("Block: generated tx cannot be verified.")
 		return false
 	}
-	utxoIndex.UpdateUtxos(currentContractGenTXs)
 	return true
 }
 
