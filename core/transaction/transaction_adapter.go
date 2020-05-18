@@ -52,8 +52,8 @@ func (adapter *TxAdapter) fillType() {
 		txType = TxTypeGasChange
 	} else if adapter.isRewardTx() {
 		txType = TxTypeReward
-	} else if adapter.isContractGenTx() {
-		txType = TxTypeContractGen
+	} else if adapter.isContractSendTx() {
+		txType = TxTypeContractSend
 	} else {
 		txType = TxTypeNormal
 	}
@@ -150,8 +150,8 @@ func (adapter *TxAdapter) isVinCoinbase() bool {
 	return len(adapter.Vin) == 1 && len(adapter.Vin[0].Txid) == 0 && adapter.Vin[0].Vout == -1
 }
 
-// IsFromContract returns true if tx is generated from a contract execution; false otherwise
-func (adapter *TxAdapter) isContractGenTx() bool {
+// isContractSendTx returns true if tx is generated from a contract execution; false otherwise
+func (adapter *TxAdapter) isContractSendTx() bool {
 	if len(adapter.Vin) == 0 {
 		return false
 	}

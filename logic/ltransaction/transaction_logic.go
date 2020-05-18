@@ -77,7 +77,7 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 			case adaptedTx.IsRewardTx():
 				ta = account.NewTransactionAccountByPubKey(transaction.RewardTxData)
 				continue
-			case adaptedTx.IsContractGen():
+			case adaptedTx.IsContractSend():
 				// vinPubKey is pubKeyHash of contract address if it is a sc generated tx
 				ta = account.NewContractAccountByPubKeyHash(vinPubKey)
 			default:
