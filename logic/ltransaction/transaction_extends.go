@@ -191,14 +191,6 @@ func (tx *TxContractSend) Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO)
 }
 
 func (tx *TxContractSend) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error {
-	contractUtxos := utxoIndex.GetContractUtxos()
-	for _, vin := range tx.Vin {
-		pubKeyHash := account.PubKeyHash(vin.PubKey)
-
-		if !isPubkeyHashInUtxos(contractUtxos, pubKeyHash) {
-			return errors.New("Transaction: contract generated tx verify failed")
-		}
-	}
 	return nil
 }
 
