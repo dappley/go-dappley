@@ -63,19 +63,6 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lbl
 	return bc, nil
 }
 
-//get account
-func GetAccount() (*account.Account, error) {
-	am, err := GetAccountManager(wallet.GetAccountFilePath())
-	empty, err := am.IsFileEmpty()
-	if empty {
-		return nil, nil
-	}
-	if len(am.Accounts) > 0 {
-		return am.Accounts[0], err
-	}
-	return nil, err
-}
-
 // Returns default account file path or first argument of argument vector
 func getAccountFilePath(argv []string) string {
 	if len(argv) == 1 {
@@ -94,14 +81,14 @@ func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
-	if wallet.Exists(accountFilePath) {
-		am, _ := GetAccountManager(accountFilePath)
-		if len(am.Accounts) == 0 {
-			return true, nil
-		}
-		return am.IsFileEmpty()
+	am, _ := GetAccountManager(accountFilePath)
+	if am == nil {
+		return true, nil
 	}
-	return true, nil
+	if am.IsEmpty() {
+		return true, nil
+	}
+	return false, nil
 }
 
 //Set lock flag
@@ -112,12 +99,7 @@ func SetLockAccount(optionalAccountFilePath ...string) error {
 		return err1
 	}
 
-	empty, err2 := am.IsFileEmpty()
-
-	if err2 != nil {
-		return err2
-	}
-
+	empty := am.IsEmpty()
 	if empty {
 		return nil
 	}
@@ -141,6 +123,7 @@ func SetUnLockAccount(optionalAccountFilePath ...string) error {
 func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
 	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
+		logger.Error(err)
 		return nil, err
 	}
 
@@ -153,7 +136,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 		am.AddAccount(account)
 		am.SaveAccountToFile()
 		return account, err
-
 	}
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -166,7 +148,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	am.Locked = true
 	am.SaveAccountToFile()
 	return account, err
-
 }
 
 //create a account
