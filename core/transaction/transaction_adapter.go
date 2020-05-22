@@ -18,7 +18,10 @@
 
 package transaction
 
-import "bytes"
+import (
+	"bytes"
+	"github.com/dappley/go-dappley/core/account"
+)
 
 // Old transaction adapter
 type TxAdapter struct {
@@ -49,6 +52,8 @@ func (adapter *TxAdapter) fillType() {
 		txType = TxTypeGasChange
 	} else if adapter.isRewardTx() {
 		txType = TxTypeReward
+	} else if adapter.isContractSendTx() {
+		txType = TxTypeContractSend
 	} else {
 		txType = TxTypeNormal
 	}
@@ -143,4 +148,19 @@ func (adapter *TxAdapter) IsContract() bool {
 
 func (adapter *TxAdapter) isVinCoinbase() bool {
 	return len(adapter.Vin) == 1 && len(adapter.Vin[0].Txid) == 0 && adapter.Vin[0].Vout == -1
+}
+
+// isContractSendTx returns true if tx is generated from a contract execution; false otherwise
+func (adapter *TxAdapter) isContractSendTx() bool {
+	if len(adapter.Vin) == 0 {
+		return false
+	}
+
+	for _, vin := range adapter.Vin {
+		pubKeyHash := account.PubKeyHash(vin.PubKey)
+		if isContract, _ := pubKeyHash.IsContract(); !isContract {
+			return false
+		}
+	}
+	return true
 }

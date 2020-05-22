@@ -41,8 +41,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
-	"github.com/dappley/go-dappley/wallet"
-
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
@@ -186,7 +184,7 @@ func TestSend(t *testing.T) {
 
 //test logic.Send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -225,12 +223,12 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 }
 
 //insufficient fund
 func TestSendInsufficientBalance(t *testing.T) {
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -288,7 +286,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 }
 
 func TestForkChoice(t *testing.T) {
@@ -626,7 +624,7 @@ func TestDoubleMint(t *testing.T) {
 	var SendBm *lblockchain.BlockchainManager
 
 	validProducerAddr := "dPGZmHd73UpZhrM6uvgnzu49ttbLp4AzU8"
-	validProducerAccount := account.NewContractAccountByAddress(account.NewAddress(validProducerAddr))
+	validProducerAccount := account.NewTransactionAccountByAddress(account.NewAddress(validProducerAddr))
 	validProducerKey := "5a66b0fdb69c99935783059bb200e86e97b506ae443a62febd7d0750cd7fac55"
 
 	dynasty := consensus.NewDynasty([]string{validProducerAddr}, len([]string{validProducerAddr}), 15)
@@ -1069,7 +1067,7 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	bm, bps := CreateProducer(minerAccount.GetAddress(), senderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
 
 	//deploy smart contract
-	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(10), contract, bm.Getblockchain())
+	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
 
@@ -1147,7 +1145,7 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 
 	//deploy smart contract
 	toAmount := common.NewAmount(30000)
-	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(10), contract, bm.Getblockchain())
+	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
 
@@ -1195,8 +1193,85 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance)
 }
 
-func cleanUpDatabase() {
-	wallet.RemoveAccountFile()
+// TestZeroGasPriceOfContractTransaction tests send contract tx with zero or negative gas price value
+func TestZeroGasPriceOfContractTransaction(t *testing.T) {
+	store := storage.NewRamStorage()
+	defer store.Close()
+
+	contract := `'use strict';
+
+	var GasPriceTest = function(){
+
+	};
+
+	GasPriceTest.prototype = {
+		transfer: function(to, amount, tip){
+			return Blockchain.transfer(to, amount, tip);
+		},
+		dapp_schedule: function () {
+		}
+	};
+	module.exports = new GasPriceTest();
+	`
+
+	// Create a account address
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	assert.Nil(t, err)
+	node := network.FakeNodeWithPidAndAddr(store, "test", "test")
+	bm, bps := CreateProducer(minerAccount.GetAddress(), senderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
+
+	//deploy smart contract
+	toAmount := common.NewAmount(30000)
+	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
+
+	assert.Nil(t, err)
+
+	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
+
+	if err != nil {
+		panic(err)
+	}
+
+	//a short delay before mining starts
+	time.Sleep(time.Millisecond * 500)
+
+	// Make logic.Sender the miner and mine for 1 block (which should include the transaction)
+	bps.Start()
+	for bm.Getblockchain().GetMaxHeight() < 1 {
+	}
+	bps.Stop()
+
+	time.Sleep(time.Millisecond * 500)
+
+	// query contract address balance
+	balance, err := logic.GetBalance(contractAddr, bm.Getblockchain())
+
+	assert.Nil(t, err)
+	assert.Equal(t, toAmount, balance)
+
+	receiverAddress := account.NewAddress("dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo")
+	receiverAmount := common.NewAmount(5)
+	// transfer to receiverAddress
+	functionCall := `{"function":"transfer","args":["` + receiverAddress.String() + `","` + receiverAmount.String() + `","1"]}`
+
+	_, _, err = logic.Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(0), functionCall, bm.Getblockchain())
+
+	assert.Nil(t, err)
+
+	currentHeight := bm.Getblockchain().GetMaxHeight()
+
+	bps.Start()
+	for bm.Getblockchain().GetMaxHeight() < currentHeight+1 {
+	}
+	bps.Stop()
+
+	// query receiver balance
+	balance, err = logic.GetBalance(receiverAddress, bm.Getblockchain())
+
+	assert.Nil(t, err)
+	assert.Equal(t, common.NewAmount(0), balance)
 }
 
 func isSameBlockChain(bc1, bc2 *lblockchain.Blockchain) bool {

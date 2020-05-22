@@ -35,8 +35,8 @@ func (txSender *UnexistingUtxoTxSender) Generate(params transaction.SendTxParam)
 	if err != nil {
 		logger.WithError(err).Panic("UnexisitingUtxoTx: Unable to get UTXOs to match the amount")
 	}
-	fromTA := account.NewContractAccountByAddress(params.From)
-	toTA := account.NewContractAccountByAddress(params.To)
+	fromTA := account.NewTransactionAccountByAddress(params.From)
+	toTA := account.NewTransactionAccountByAddress(params.To)
 	unexistingUtxo := &utxo.UTXO{
 		TXOutput: *transactionbase.NewTXOutput(common.NewAmount(10), fromTA),
 		Txid:     []byte("FakeTxId"),

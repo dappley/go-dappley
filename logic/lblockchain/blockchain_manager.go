@@ -208,8 +208,10 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	_ = bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
 	bm.blockPool.RemoveFork(fork)
 
+	bm.Getblockchain().mutex.Lock()
 	bm.blockchain.SetState(blockchain.BlockchainReady)
 	logger.Info("Push: set blockchain status to ready.")
+	bm.Getblockchain().mutex.Unlock()
 	return
 }
 

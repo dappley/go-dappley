@@ -259,7 +259,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bo
 }
 
 func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, height uint64, libHeight uint64) {
-	logger.Debugf("DownloadManager: Receive blockchain info %v %v \n", peerId, height)
+	logger.Infof("DownloadManager: Receive blockchain info %v %v \n", peerId, height)
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
@@ -872,8 +872,8 @@ func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destinatio
 	}
 
 	result := &networkpb.ReturnBlockchainInfo{
-		TailBlockHash: downloadManager.bm.Getblockchain().GetTailBlockHash(),
-		BlockHeight:   downloadManager.bm.Getblockchain().GetMaxHeight(),
+		TailBlockHash: tailBlock.GetHash(),
+		BlockHeight:   tailBlock.GetHeight(),
 		Timestamp:     tailBlock.GetTimestamp(),
 		LibHash:       downloadManager.bm.Getblockchain().GetLIBHash(),
 		LibHeight:     downloadManager.bm.Getblockchain().GetLIBHeight(),

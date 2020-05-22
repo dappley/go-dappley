@@ -39,8 +39,8 @@ func (txSender *UnauthorizedUtxoTxSender) Generate(params transaction.SendTxPara
 
 	unauthorizedUtxo := txSender.account.GetUtxoIndex().GetAllUTXOsByPubKeyHash(txSender.unauthorizedAddrPkh).GetAllUtxos()
 	prevUtxos = append(prevUtxos, unauthorizedUtxo[0])
-	fromTA := account.NewContractAccountByAddress(params.From)
-	toTA := account.NewContractAccountByAddress(params.To)
+	fromTA := account.NewTransactionAccountByAddress(params.From)
+	toTA := account.NewTransactionAccountByAddress(params.To)
 	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }

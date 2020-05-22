@@ -167,7 +167,7 @@ func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash account.PubKeyHash, txid []byte
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 	adaptedTx := transaction.NewTxAdapter(tx)
-	if !adaptedTx.IsCoinbase() && !adaptedTx.IsRewardTx() && !adaptedTx.IsGasRewardTx() && !adaptedTx.IsGasChangeTx() {
+	if adaptedTx.IsNormal() || adaptedTx.IsContract() || adaptedTx.IsContractSend() {
 		for _, txin := range tx.Vin {
 			isContract, _ := account.PubKeyHash(txin.PubKey).IsContract()
 			// spent contract utxo

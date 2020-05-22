@@ -23,7 +23,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -58,31 +57,51 @@ func GetAccountFilePath() string {
 	conf := &accountpb.AccountConfig{}
 	if Exists(accountConfigFilePath) {
 		config.LoadConfig(accountConfigFilePath, conf)
-	} else if Exists(strings.Replace(accountConfigFilePath, "..", "../..", 1)) {
-		config.LoadConfig(strings.Replace(accountConfigFilePath, "..", "../..", 1), conf)
+	} else {
+		parentPath := "../" + accountConfigFilePath
+		if Exists(parentPath) {
+			config.LoadConfig(parentPath, conf)
+		} else {
+			logger.Panic("GetAccountFilePath: cannot find accountConfigFile")
+		}
 	}
 
 	if conf == nil {
+		logger.Error("Read account config file error")
 		return ""
 	}
-	accountPath := strings.Replace(conf.GetFilePath(), "/accounts.dat", "", 1)
-	var accountfile string
-	if Exists(accountPath) {
-		accountfile, _ = filepath.Abs(conf.GetFilePath())
-	} else if Exists(strings.Replace(accountPath, "..", "../..", 1)) {
-		accountfile, _ = filepath.Abs(strings.Replace(conf.GetFilePath(), "..", "../..", 1))
+
+	binFolder, fileName := filepath.Split(conf.GetFilePath())
+	var accountFilePath string
+	if Exists(binFolder) {
+		accountFilePath, _ = filepath.Abs(conf.GetFilePath())
 	} else {
-		err := os.Mkdir(accountPath,os.ModePerm)
-		if err != nil {
-			logger.Errorf("Create folder error: %v", err.Error())
-		}else {
-			accountfile, err = filepath.Abs(conf.GetFilePath())
-			if err != nil{
-				logger.Errorf("Get folder path error: %v", err.Error())
+		parentFolder := "../" + binFolder
+		if Exists(parentFolder) {
+			accountFilePath, _ = filepath.Abs(parentFolder + fileName)
+		} else {
+			err := os.Mkdir(binFolder, os.ModePerm)
+			if err != nil {
+				logger.Errorf("Create account file folder. parentFolder: %v, error: %v", parentFolder, err.Error())
+			} else {
+				accountFilePath, err = filepath.Abs(parentFolder + fileName)
+				if err != nil {
+					logger.Errorf("Get account file path error: %v", err.Error())
+				}
 			}
-		}	
+		}
 	}
-	return accountfile
+	//logger.WithFields(logger.Fields{
+	//	"accountFilePath":accountFilePath,
+	//}).Error("accountFilePath")
+	if !Exists(accountFilePath) {
+		file, err := os.Create(accountFilePath)
+		file.Close()
+		if err != nil {
+			logger.Errorf("Create account file error: %v", err.Error())
+		}
+	}
+	return accountFilePath
 }
 
 func NewAccountManager(fileLoader storage.FileStorage) *AccountManager {
@@ -107,15 +126,12 @@ func (am *AccountManager) NewTimer(timeout time.Duration) {
 }
 
 func (am *AccountManager) LoadFromFile() error {
-
 	am.mutex.Lock()
+	defer am.mutex.Unlock()
 	fileContent, err := am.fileLoader.ReadFromFile()
 
 	if err != nil {
-		am.mutex.Unlock()
-		am.SaveAccountToFile()
-		fileContent, err = am.fileLoader.ReadFromFile()
-		am.mutex.Lock()
+		return err
 	}
 	amProto := &laccountpb.AccountManager{}
 	err = proto.Unmarshal(fileContent, amProto)
@@ -125,17 +141,11 @@ func (am *AccountManager) LoadFromFile() error {
 	}
 
 	am.FromProto(amProto)
-	am.mutex.Unlock()
 	return nil
 }
 
-func (am *AccountManager) IsFileEmpty() (bool, error) {
-	fileContent, err := am.fileLoader.ReadFromFile()
-	if err != nil {
-		return true, err
-	}
-	return len(fileContent) == 0, nil
-
+func (am *AccountManager) IsEmpty() bool {
+	return len(am.Accounts) == 0
 }
 
 // SaveAccountToFile saves Accounts to a file
@@ -152,15 +162,6 @@ func (am *AccountManager) SaveAccountToFile() {
 	am.fileLoader.SaveToFile(content)
 }
 
-func RemoveAccountFile() {
-	conf := &accountpb.AccountConfig{}
-	config.LoadConfig(accountConfigFilePath, conf)
-	if conf == nil {
-		return
-	}
-	os.Remove(strings.Replace(conf.GetFilePath(), "accounts", "accounts_test", -1))
-}
-
 func (am *AccountManager) AddAccount(account *account.Account) {
 	am.mutex.Lock()
 	am.Accounts = append(am.Accounts, account)
@@ -174,7 +175,6 @@ func (am *AccountManager) GetAddresses() []account.Address {
 	defer am.mutex.Unlock()
 	for _, account := range am.Accounts {
 		addresses = append(addresses, account.GetAddress())
-
 	}
 
 	return addresses
@@ -198,13 +198,11 @@ func (am *AccountManager) GetAddressesWithPassphrase(password string) ([]string,
 }
 
 func (am *AccountManager) GetKeyPairByAddress(address account.Address) *account.KeyPair {
-
 	account := am.GetAccountByAddress(address)
 	if account == nil {
 		return nil
 	}
 	return account.GetKeyPair()
-
 }
 
 func (am *AccountManager) GetAccountByAddress(address account.Address) *account.Account {
@@ -215,7 +213,6 @@ func (am *AccountManager) GetAccountByAddress(address account.Address) *account.
 		if account.GetAddress() == address {
 			return account
 		}
-
 	}
 	return nil
 }
@@ -228,7 +225,6 @@ func (am *AccountManager) GetAccountByAddressWithPassphrase(address account.Addr
 			return nil, ErrAddressNotFound
 		}
 		return account, nil
-
 	}
 	return nil, ErrPasswordIncorrect
 

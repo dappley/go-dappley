@@ -460,7 +460,7 @@ func TestGetNodeAddress(t *testing.T) {
 }
 
 func TestAddGasCount(t *testing.T) {
-	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
+	vout := transactionbase.NewContractTXOutput(account.NewTransactionAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")), "{\"function\":\"add\",\"args\":[\"1\",\"3\"]}")
 	tx := &transaction.Transaction{
 		Vout: []transactionbase.TXOutput{*vout},
 	}
@@ -494,7 +494,7 @@ func TestAddGasCount(t *testing.T) {
 }
 
 func TestStepRecordGasCount(t *testing.T) {
-	vout := transactionbase.NewContractTXOutput(account.NewContractAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
+	vout := transactionbase.NewContractTXOutput(account.NewTransactionAccountByAddress(account.NewAddress("cd9N6MRsYxU1ToSZjLnqFhTb66PZcePnAD")),
 		"{\"function\":\"record\",\"args\":[\"dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo\",\"2000\"]}")
 	tx := &transaction.Transaction{
 		Vout: []transactionbase.TXOutput{*vout},

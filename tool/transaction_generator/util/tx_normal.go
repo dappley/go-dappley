@@ -32,8 +32,8 @@ func (txSender *NormalTxSender) Generate(params transaction.SendTxParam) {
 	if err != nil {
 		logger.WithError(err).Panic("NormalTx: Unable to get UTXOs to match the amount")
 	}
-	fromTA := account.NewContractAccountByAddress(params.From)
-	toTA := account.NewContractAccountByAddress(params.To)
+	fromTA := account.NewTransactionAccountByAddress(params.From)
+	toTA := account.NewTransactionAccountByAddress(params.To)
 	vouts := prepareOutputLists(prevUtxos, fromTA, toTA, params.Amount, params.Tip)
 	txSender.tx = NewTransaction(prevUtxos, vouts, params.Tip, params.SenderKeyPair)
 }

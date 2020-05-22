@@ -88,7 +88,6 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address1TA = account.NewTransactionAccountByPubKey(address1Bytes)
 
-	normalCoinbaseTX := ltransaction.NewCoinbaseTX(address1TA.GetAddress(), "", 1, common.NewAmount(0))
 	rewardTX := ltransaction.NewRewardTx(1, map[string]string{address1TA.GetAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
 	userTA := account.NewTransactionAccountByPubKey(userPubKey)
@@ -139,12 +138,6 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		utxos map[string][]*utxo.UTXO
 		ok    bool
 	}{
-		{
-			"normal txs",
-			[]*transaction.Transaction{&normalCoinbaseTX},
-			map[string][]*utxo.UTXO{},
-			true,
-		},
 		{
 			"no txs",
 			[]*transaction.Transaction{},
@@ -232,6 +225,13 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				0,
 				nil,
 			)
+			// add coinbase
+			totalTip := common.NewAmount(0)
+			for _, tx := range tt.txs {
+				totalTip = totalTip.Add(tx.Tip)
+			}
+			coninbaseTx := ltransaction.NewCoinbaseTX(address1TA.GetAddress(), "", parentBlk.GetHeight()+1, totalTip)
+			tt.txs = append(tt.txs, &coninbaseTx)
 			blk := block.NewBlock(tt.txs, parentBlk, "")
 			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk))
 		})

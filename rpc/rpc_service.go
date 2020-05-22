@@ -91,7 +91,7 @@ func (rpcService *RpcService) RpcGetVersion(ctx context.Context, in *rpcpb.GetVe
 
 func (rpcService *RpcService) RpcGetBalance(ctx context.Context, in *rpcpb.GetBalanceRequest) (*rpcpb.GetBalanceResponse, error) {
 	address := in.GetAddress()
-	addressAccount := account.NewContractAccountByAddress(account.NewAddress(address))
+	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	if !addressAccount.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
 	}
@@ -130,7 +130,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
-	acc := account.NewContractAccountByAddress(account.NewAddress(in.GetAddress()))
+	acc := account.NewTransactionAccountByAddress(account.NewAddress(in.GetAddress()))
 
 	if !acc.IsValid() {
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
@@ -246,6 +246,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
+	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
+	}
+
 	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
@@ -303,6 +307,16 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 				Txid:    tx.ID,
 				Code:    uint32(codes.InvalidArgument),
 				Message: "transaction type error, must be normal or contract",
+			})
+			continue
+		}
+
+		if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+			st = status.New(codes.Unknown, "one or more transactions are invalid")
+			respon = append(respon, &rpcpb.SendTransactionStatus{
+				Txid:    tx.ID,
+				Code:    uint32(codes.InvalidArgument),
+				Message: "gas price error, must be a positive number",
 			})
 			continue
 		}

@@ -38,6 +38,5 @@ type ScEngine interface {
 // Decorator of transaction
 type TxDecorator interface {
 	Sign(privKey ecdsa.PrivateKey, prevUtxos []*utxo.UTXO) error
-	IsNeedVerify() bool
 	Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) error
 }

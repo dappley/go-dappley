@@ -201,7 +201,7 @@ func GetUtxoHandle() {
 	flagSet.Parse(os.Args[2:])
 
 	addr := account.NewAddress(address)
-	acc := account.NewContractAccountByAddress(addr)
+	acc := account.NewTransactionAccountByAddress(addr)
 	if !acc.IsValid() {
 		panic("Decode address failed")
 	}

@@ -27,7 +27,7 @@ func TestTransferResult(t *testing.T) {
 	defer db.Close()
 
 	minerKey := "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"
-	minerAccount := account.NewContractAccountByAddress(account.NewAddress(minerKey))
+	minerAccount := account.NewTransactionAccountByAddress(account.NewAddress(minerKey))
 
 	if !minerAccount.IsValid() {
 		t.Error("ResultTest: account address is error!")
