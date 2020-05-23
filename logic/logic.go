@@ -20,8 +20,9 @@ package logic
 
 import (
 	"errors"
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"time"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
