@@ -22,11 +22,9 @@ import (
 	"bytes"
 	"errors"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/dappley/go-dappley/config"
 	"github.com/dappley/go-dappley/core/account"
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
 	"github.com/dappley/go-dappley/storage"
@@ -36,7 +34,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const accountConfigFilePath = "../core/account/account.conf"
+const accountDataPath = "./bin/accounts.dat"
 
 var (
 	ErrPasswordIncorrect = errors.New("password is incorrect")
@@ -54,54 +52,7 @@ type AccountManager struct {
 
 //GetAccountFilePath return account file Path
 func GetAccountFilePath() string {
-	conf := &accountpb.AccountConfig{}
-	if Exists(accountConfigFilePath) {
-		config.LoadConfig(accountConfigFilePath, conf)
-	} else {
-		parentPath := "../" + accountConfigFilePath
-		if Exists(parentPath) {
-			config.LoadConfig(parentPath, conf)
-		} else {
-			logger.Panic("GetAccountFilePath: cannot find accountConfigFile")
-		}
-	}
-
-	if conf == nil {
-		logger.Error("Read account config file error")
-		return ""
-	}
-
-	binFolder, fileName := filepath.Split(conf.GetFilePath())
-	var accountFilePath string
-	if Exists(binFolder) {
-		accountFilePath, _ = filepath.Abs(conf.GetFilePath())
-	} else {
-		parentFolder := "../" + binFolder
-		if Exists(parentFolder) {
-			accountFilePath, _ = filepath.Abs(parentFolder + fileName)
-		} else {
-			err := os.Mkdir(binFolder, os.ModePerm)
-			if err != nil {
-				logger.Errorf("Create account file folder. parentFolder: %v, error: %v", parentFolder, err.Error())
-			} else {
-				accountFilePath, err = filepath.Abs(parentFolder + fileName)
-				if err != nil {
-					logger.Errorf("Get account file path error: %v", err.Error())
-				}
-			}
-		}
-	}
-	//logger.WithFields(logger.Fields{
-	//	"accountFilePath":accountFilePath,
-	//}).Error("accountFilePath")
-	if !Exists(accountFilePath) {
-		file, err := os.Create(accountFilePath)
-		file.Close()
-		if err != nil {
-			logger.Errorf("Create account file error: %v", err.Error())
-		}
-	}
-	return accountFilePath
+	return accountDataPath
 }
 
 func NewAccountManager(fileLoader storage.FileStorage) *AccountManager {
