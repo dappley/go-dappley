@@ -20,7 +20,7 @@ package wallet
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -54,8 +54,6 @@ func TestAccountManager_LoadFromFileNotExists(t *testing.T) {
 
 	gomock.InOrder(
 		mockStorage.EXPECT().ReadFromFile().Return(nil, errors.New("err")),
-		mockStorage.EXPECT().SaveToFile(gomock.Any()),
-		mockStorage.EXPECT().ReadFromFile(),
 	)
 
 	am := NewAccountManager(mockStorage)
@@ -160,7 +158,8 @@ func TestAccountManager_GetKeyPairByAddressNilInput(t *testing.T) {
 }
 
 func TestNewAccountManager_UnlockTimer(t *testing.T) {
-	fl := storage.NewFileLoader(strings.Replace(GetAccountFilePath(), "accounts", "accounts_test", -1))
+	binFolder, _ := filepath.Split(GetAccountFilePath())
+	fl := storage.NewFileLoader(binFolder + "accounts_test.dat")
 	am := NewAccountManager(fl)
 	err1 := am.LoadFromFile()
 	if err1 != nil {

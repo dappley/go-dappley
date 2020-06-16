@@ -42,7 +42,6 @@ import (
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/wallet"
 	"github.com/golang/protobuf/proto"
@@ -670,9 +669,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 			fmt.Println("Password should not be empty!")
 			return
 		}
-		fl := storage.NewFileLoader(wallet.GetAccountFilePath())
-		am := wallet.NewAccountManager(fl)
-		err := am.LoadFromFile()
+		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
 		addressList, err := am.GetAddressesWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
@@ -730,9 +727,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 
 		}
 	} else {
-		fl := storage.NewFileLoader(wallet.GetAccountFilePath())
-		am := wallet.NewAccountManager(fl)
-		err := am.LoadFromFile()
+		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			return

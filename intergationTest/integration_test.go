@@ -41,8 +41,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
-	"github.com/dappley/go-dappley/wallet"
-
 	"github.com/dappley/go-dappley/util"
 
 	"github.com/dappley/go-dappley/common"
@@ -186,7 +184,7 @@ func TestSend(t *testing.T) {
 
 //test logic.Send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -225,12 +223,12 @@ func TestSendToInvalidAddress(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, mineReward, balance1)
 
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 }
 
 //insufficient fund
 func TestSendInsufficientBalance(t *testing.T) {
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 
 	store := storage.NewRamStorage()
 	defer store.Close()
@@ -288,7 +286,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance2)
 
-	cleanUpDatabase()
+	logic.RemoveAccountTestFile()
 }
 
 func TestForkChoice(t *testing.T) {
@@ -1274,10 +1272,6 @@ func TestZeroGasPriceOfContractTransaction(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance)
-}
-
-func cleanUpDatabase() {
-	wallet.RemoveAccountFile()
 }
 
 func isSameBlockChain(bc1, bc2 *lblockchain.Blockchain) bool {

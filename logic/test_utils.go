@@ -1,18 +1,16 @@
 package logic
 
 import (
-	"strings"
-
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/wallet"
-	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
+	"os"
+	"path/filepath"
 )
 
 //get all addresses
 func GetAllAddressesByPath(path string) ([]account.Address, error) {
-	fl := storage.NewFileLoader(path)
-	am := wallet.NewAccountManager(fl)
-	err := am.LoadFromFile()
+	am, err := GetAccountManager(path)
 	if err != nil {
 		return nil, err
 	}
@@ -23,5 +21,31 @@ func GetAllAddressesByPath(path string) ([]account.Address, error) {
 }
 
 func GetTestAccountPath() string {
-	return strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1)
+	binFolder, _ := filepath.Split(wallet.GetAccountFilePath())
+	testAccountPath := binFolder + "accounts_test.dat"
+	if wallet.Exists(testAccountPath) {
+		return testAccountPath
+	} else {
+		if !wallet.Exists(binFolder) {
+			err := os.Mkdir(binFolder, os.ModePerm)
+			if err != nil {
+				logger.Errorf("Create test account file folder error: %v", err.Error())
+			}
+		}
+		file, err := os.Create(testAccountPath)
+		file.Close()
+		if err != nil {
+			logger.Errorf("Create test account file error: %v", err.Error())
+		} else {
+			return testAccountPath
+		}
+	}
+	return ""
 }
+
+func RemoveAccountTestFile() {
+	binFolder, _ := filepath.Split(wallet.GetAccountFilePath())
+	testAccountPath := binFolder + "accounts_test.dat"
+	os.Remove(testAccountPath)
+}
+

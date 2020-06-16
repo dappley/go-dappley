@@ -32,7 +32,6 @@ import (
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/stretchr/testify/mock"
-	"strings"
 	"testing"
 	"time"
 
@@ -56,7 +55,6 @@ import (
 	"github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
-	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -132,19 +130,19 @@ func TestRpcSend(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
-	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -179,7 +177,7 @@ func TestRpcSend(t *testing.T) {
 		From:        senderAccount.GetAddress().String(),
 		To:          receiverAccount.GetAddress().String(),
 		Amount:      common.NewAmount(7).Bytes(),
-		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		AccountPath: logic.GetTestAccountPath(),
 		Tip:         common.NewAmount(2).Bytes(),
 		Data:        "",
 	})
@@ -208,7 +206,7 @@ func TestRpcSend(t *testing.T) {
 	assert.Equal(t, leftBalance, senderBalance)
 	assert.Equal(t, common.NewAmount(7), receiverBalance)
 	assert.Equal(t, minerRewardBalance, minerBalance)
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcSendContract(t *testing.T) {
@@ -217,15 +215,15 @@ func TestRpcSendContract(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -260,7 +258,7 @@ func TestRpcSendContract(t *testing.T) {
 		From:        senderAccount.GetAddress().String(),
 		To:          "",
 		Amount:      common.NewAmount(7).Bytes(),
-		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		AccountPath: logic.GetTestAccountPath(),
 		Tip:         common.NewAmount(2).Bytes(),
 		Data:        contract,
 		GasLimit:    common.NewAmount(30000).Bytes(),
@@ -292,7 +290,7 @@ loop:
 	}
 	assert.Equal(t, contract, res)
 
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcGetVersion(t *testing.T) {
@@ -376,7 +374,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -593,7 +591,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -675,15 +673,15 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount1, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount1, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
-	receiverAccount2, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount2, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
-	receiverAccount4, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount4, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -820,7 +818,7 @@ func TestGetNewTransaction(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -916,7 +914,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	}
 	defer rpcContext.destroyContext()
 
-	receiverAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	receiverAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -1097,10 +1095,10 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()
 
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 
 	// Create accounts
-	acc, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	acc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		context.destroyContext()
 		panic(err)
@@ -1149,15 +1147,15 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -1196,7 +1194,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 		From:        senderAccount.GetAddress().String(),
 		To:          "",
 		Amount:      common.NewAmount(1).Bytes(),
-		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		AccountPath: logic.GetTestAccountPath(),
 		Tip:         common.NewAmount(0).Bytes(),
 		Data:        contract,
 		GasLimit:    common.NewAmount(30000).Bytes(),
@@ -1234,7 +1232,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 
 	assert.True(t, gas.Cmp(common.NewAmount(0)) > 0)
 
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcService_RpcGasPrice(t *testing.T) {
@@ -1242,15 +1240,15 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -1295,7 +1293,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 
 	assert.True(t, price.Cmp(common.NewAmount(0)) > 0)
 
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcService_RpcContractQuery(t *testing.T) {
@@ -1303,15 +1301,15 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 
 	// Create accounts
-	senderAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
 
-	minerAccount, err := logic.CreateAccountWithPassphrase("test", strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1))
+	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
 	}
@@ -1350,7 +1348,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 		From:        senderAccount.GetAddress().String(),
 		To:          "",
 		Amount:      common.NewAmount(1).Bytes(),
-		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		AccountPath: logic.GetTestAccountPath(),
 		Tip:         common.NewAmount(0).Bytes(),
 		Data:        contract,
 		GasLimit:    common.NewAmount(30000).Bytes(),
@@ -1375,7 +1373,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 		From:        senderAccount.GetAddress().String(),
 		To:          contractAddr,
 		Amount:      common.NewAmount(1).Bytes(),
-		AccountPath: strings.Replace(wallet.GetAccountFilePath(), "accounts", "accounts_test", -1),
+		AccountPath: logic.GetTestAccountPath(),
 		Tip:         common.NewAmount(0).Bytes(),
 		Data:        contract,
 		GasLimit:    common.NewAmount(30000).Bytes(),
@@ -1404,5 +1402,5 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
 	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
 
-	wallet.RemoveAccountFile()
+	logic.RemoveAccountTestFile()
 }
