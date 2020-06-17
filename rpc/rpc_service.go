@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"strconv"
 	"strings"
 	"time"
@@ -228,6 +229,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	return &rpcpb.GetBlockByHeightResponse{Block: blk.ToProto().(*blockpb.Block)}, nil
 }
 
+var rpcUtxoCache *lutxo.UTXOIndex
 // RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 
@@ -244,7 +246,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
 	}
 
-	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
+	utxoIndex :=rpcUtxoCache
+	if utxoIndex==nil{//if not found, get utxo for cache/db
+		utxoIndex = rpcService.GetBlockchain().GetUpdatedUTXOIndex()
+	}
 
 	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
@@ -264,6 +269,9 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	rpcService.GetBlockchain().GetTxPool().Push(*tx)
 	rpcService.GetBlockchain().GetTxPool().BroadcastTx(tx)
+
+	utxoIndex.UpdateUtxo(tx)//update utxo with current transaction
+	rpcUtxoCache=utxoIndex	//save utxo to rpcUtxoCache that can be used next RpcSendTransaction
 
 	var generatedContractAddress = ""
 	if adaptedTx.IsContract() {
