@@ -230,6 +230,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 }
 
 var rpcUtxoCache *lutxo.UTXOIndex
+var blockMaxHeight uint64
 // RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 
@@ -247,8 +248,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	utxoIndex :=rpcUtxoCache
-	if utxoIndex==nil{//if not found, get utxo for cache/db
+	//utxo has been updated when have a new block,so as utxo cache
+	if blockMaxHeight<rpcService.GetBlockchain().GetMaxHeight()||rpcService.GetBlockchain().GetMaxHeight()==0{
 		utxoIndex = rpcService.GetBlockchain().GetUpdatedUTXOIndex()
+		blockMaxHeight=rpcService.GetBlockchain().GetMaxHeight()
 	}
 
 	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
