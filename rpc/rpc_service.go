@@ -23,6 +23,7 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -61,6 +62,9 @@ type RpcService struct {
 	bm      *lblockchain.BlockchainManager
 	node    *network.Node
 	dynasty *consensus.Dynasty
+	utxoIndex *lutxo.UTXOIndex//rpc cache
+	blockMaxHeight uint64
+	mutex sync.Mutex
 }
 
 func (rpcSerivce *RpcService) GetBlockchain() *lblockchain.Blockchain {
@@ -229,8 +233,7 @@ func (rpcService *RpcService) RpcGetBlockByHeight(ctx context.Context, in *rpcpb
 	return &rpcpb.GetBlockByHeightResponse{Block: blk.ToProto().(*blockpb.Block)}, nil
 }
 
-var rpcUtxoCache *lutxo.UTXOIndex
-var blockMaxHeight uint64
+
 // RpcSendTransaction Send transaction to blockchain created by account account
 func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.SendTransactionRequest) (*rpcpb.SendTransactionResponse, error) {
 
@@ -247,14 +250,12 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
 	}
 
-	utxoIndex :=rpcUtxoCache
-	//utxo has been updated when have a new block,so as utxo cache
-	if blockMaxHeight<rpcService.GetBlockchain().GetMaxHeight()||rpcService.GetBlockchain().GetMaxHeight()==0{
-		utxoIndex = rpcService.GetBlockchain().GetUpdatedUTXOIndex()
-		blockMaxHeight=rpcService.GetBlockchain().GetMaxHeight()
+	bc:=rpcService.GetBlockchain()
+	if rpcService.utxoIndex==nil{
+		rpcService.utxoIndex = bc.GetUpdatedUTXOIndex()
 	}
 
-	if err := ltransaction.VerifyTransaction(utxoIndex, tx, 0); err != nil {
+	if err := ltransaction.VerifyTransaction(rpcService.utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
 		return nil, status.Error(codes.FailedPrecondition, lblockchain.ErrTransactionVerifyFailed.Error())
 	}
@@ -270,11 +271,16 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	rpcService.GetBlockchain().GetTxPool().Push(*tx)
-	rpcService.GetBlockchain().GetTxPool().BroadcastTx(tx)
-
-	utxoIndex.UpdateUtxo(tx)//update utxo with current transaction
-	rpcUtxoCache=utxoIndex	//save utxo to rpcUtxoCache that can be used next RpcSendTransaction
+	rpcService.mutex.Lock()
+	bc.GetTxPool().Push(*tx)
+	if rpcService.blockMaxHeight<bc.GetMaxHeight(){
+		rpcService.utxoIndex = bc.GetUpdatedUTXOIndex()
+		rpcService.blockMaxHeight=bc.GetMaxHeight()
+	}else{
+		rpcService.utxoIndex.UpdateUtxo(tx)
+	}
+	rpcService.mutex.Unlock()
+	bc.GetTxPool().BroadcastTx(tx)
 
 	var generatedContractAddress = ""
 	if adaptedTx.IsContract() {
