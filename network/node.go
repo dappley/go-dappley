@@ -21,9 +21,9 @@ package network
 import (
 	"encoding/base64"
 	"fmt"
+
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/common/pubsub"
-	"io/ioutil"
 
 	"github.com/libp2p/go-libp2p-core/host"
 
@@ -114,9 +114,9 @@ func (n *Node) GetPeers() []networkmodel.PeerInfo { return n.network.GetConnecte
 func (n *Node) GetNetwork() *Network { return n.network }
 
 //Start starts the network, command listener and received message listener
-func (n *Node) Start(listenPort int, privKeyFilePath string) error {
+func (n *Node) Start(listenPort int, key string) error {
 
-	privKey := loadNetworkKeyFromFile(privKeyFilePath)
+	privKey := loadNetworkKeyFromFile(key)
 
 	err := n.network.Start(listenPort, privKey)
 	if err != nil {
@@ -244,18 +244,12 @@ func (n *Node) StartListenLoop() {
 }
 
 //loadNetworkKeyFromFile reads the network privatekey source a file
-func loadNetworkKeyFromFile(filePath string) crypto.PrivKey {
-	if filePath == "" {
+func loadNetworkKeyFromFile(key string) crypto.PrivKey {
+	if key == "" {
 		return nil
 	}
 
-	bytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
-		return nil
-	}
-
-	data, err := base64.StdEncoding.DecodeString(string(bytes))
+	data, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
 		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
 		return nil

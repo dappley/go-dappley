@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/logic/blockproducer"
@@ -31,12 +32,15 @@ import (
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/config"
-	"github.com/dappley/go-dappley/config/pb"
+	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/dappley/go-dappley/logic"
+
+	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/dappley/go-dappley/metrics/logMetrics"
 	"github.com/dappley/go-dappley/network"
@@ -44,8 +48,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	"github.com/spf13/viper"
-	"net/http"
-	_ "net/http/pprof"
 )
 
 const (
@@ -187,10 +189,10 @@ func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) 
 	nodeConfig := conf.GetNodeConfig()
 	seeds := nodeConfig.GetSeed()
 	port := nodeConfig.GetPort()
-	keyPath := nodeConfig.GetKeyPath()
+	key := nodeConfig.GetKeyPath()
 
 	node := network.NewNode(db, seeds)
-	err := node.Start(int(port), keyPath)
+	err := node.Start(int(port), key)
 	if err != nil {
 		logger.Error(err)
 		return nil, err

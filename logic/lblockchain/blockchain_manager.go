@@ -205,7 +205,10 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	bm.blockchain.SetState(blockchain.BlockchainSync)
 	logger.Info("Push: set blockchain status to sync.")
 
-	_ = bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
+	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
+	if err!=nil{
+		logger.Warn("Merge fork failed.err:",err)
+	}
 	bm.blockPool.RemoveFork(fork)
 
 	bm.Getblockchain().mutex.Lock()
