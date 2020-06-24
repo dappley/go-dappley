@@ -86,7 +86,10 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 
 		finishChan := make(chan bool, 1)
 
+		bm.Getblockchain().mutex.Lock()
+		logger.Info("BlockchainManager: requestDownloadBlockchain start, set blockchain status to downloading!")
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
+		bm.Getblockchain().mutex.Unlock()
 
 		select {
 		case bm.downloadRequestCh <- finishChan:
@@ -95,7 +98,10 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
+		bm.Getblockchain().mutex.Lock()
+		logger.Info("BlockchainManager: requestDownloadBlockchain finished, set blockchain status to ready!")
 		bm.Getblockchain().SetState(blockchain.BlockchainReady)
+		bm.Getblockchain().mutex.Unlock()
 	}()
 }
 
@@ -152,7 +158,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}).Info("BlockChainManager: received a new block.")
 
 	if bm.blockchain.GetState() != blockchain.BlockchainReady {
-		logger.Info("BlockchainManager: Blockchain not ready, discard received blk")
+		logger.Infof("BlockchainManager: Blockchain not ready, discard received blk. Current status is %v", bm.blockchain.GetState())
 		return
 	}
 	if !bm.VerifyBlock(blk) {
@@ -161,9 +167,13 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 
 	receiveBlockHeight := blk.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
-	if receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
+	// Do the subtraction calculation after judging the size to avoid the overflow of the symbol uint64
+	if receiveBlockHeight > ownBlockHeight && receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
 		bm.blockchain.GetState() == blockchain.BlockchainReady {
-		logger.Info("The height of the received blk is higher than the height of its own blk,to start download blockchain")
+		logger.WithFields(logger.Fields{
+			"receiveBlockHeight": receiveBlockHeight,
+			"ownBlockHeight":     ownBlockHeight,
+		}).Warn("The height of the received blk is higher than the height of its own blk,to start download blockchain")
 		bm.RequestDownloadBlockchain()
 		return
 	}
@@ -193,9 +203,18 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}
 
 	bm.blockchain.SetState(blockchain.BlockchainSync)
-	_ = bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
+	logger.Info("Push: set blockchain status to sync.")
+
+	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
+	if err!=nil{
+		logger.Warn("Merge fork failed.err:",err)
+	}
 	bm.blockPool.RemoveFork(fork)
+
+	bm.Getblockchain().mutex.Lock()
 	bm.blockchain.SetState(blockchain.BlockchainReady)
+	logger.Info("Push: set blockchain status to ready.")
+	bm.Getblockchain().mutex.Unlock()
 	return
 }
 
@@ -233,7 +252,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   forkBlks[i].GetHash().String(),
-		}).Debug("BlockchainManager: is verifying a block in the fork.")
+		}).Info("BlockchainManager: is verifying a block in the fork.")
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, parentBlk) {
 			return ErrTransactionVerifyFailed
@@ -366,7 +385,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			}).Warn("BlockchainManager: failed to calculate previous state of scState for the block")
 			return nil, nil, err
 		}
-       
+
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),

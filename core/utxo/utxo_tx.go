@@ -166,13 +166,3 @@ func (utxoTx UTXOTx) DeepCopy() *UTXOTx {
 	return newUtxoTx
 }
 
-func (utxoTx UTXOTx) ToArray() []*UTXO {
-	var newUtxos []*UTXO
-	for _, utxo := range utxoTx.Indices {
-		if utxo.UtxoType != UtxoCreateContract {
-			newUtxos = append(newUtxos, utxo)
-		}
-
-	}
-	return newUtxos
-}

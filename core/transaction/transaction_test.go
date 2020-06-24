@@ -70,18 +70,6 @@ func TestTrimmedCopy(t *testing.T) {
 	}
 }
 
-func TestNewRewardTx(t *testing.T) {
-	rewards := map[string]string{
-		"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "8",
-		"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa": "9",
-	}
-	tx := NewRewardTx(5, rewards)
-
-	values := []*common.Amount{tx.Vout[0].Value, tx.Vout[1].Value}
-	assert.Contains(t, values, common.NewAmount(8))
-	assert.Contains(t, values, common.NewAmount(9))
-}
-
 func TestTransaction_Proto(t *testing.T) {
 	tx1 := Transaction{
 		ID:   util.GenerateRandomAoB(1),
@@ -105,58 +93,6 @@ func TestTransaction_Proto(t *testing.T) {
 	tx2.FromProto(newpb)
 
 	assert.Equal(t, tx1, tx2)
-}
-
-func TestTransaction_GetContractAddress(t *testing.T) {
-
-	tests := []struct {
-		name        string
-		addr        string
-		expectedRes string
-	}{
-		{
-			name:        "ContainsContractAddress",
-			addr:        "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
-			expectedRes: "cavQdWxvUQU1HhBg1d7zJFwhf31SUaQwop",
-		},
-		{
-			name:        "ContainsUserAddress",
-			addr:        "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
-			expectedRes: "",
-		},
-		{
-			name:        "EmptyInput",
-			addr:        "",
-			expectedRes: "",
-		},
-		{
-			name:        "InvalidAddress",
-			addr:        "dsdGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf",
-			expectedRes: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			acc := account.NewContractAccountByAddress(account.NewAddress(tt.addr))
-			tx := Transaction{
-				nil,
-				nil,
-				[]transactionbase.TXOutput{
-					{nil,
-						acc.GetPubKeyHash(),
-						"",
-					},
-				},
-				common.NewAmount(0),
-				common.NewAmount(0),
-				common.NewAmount(0),
-				0,
-			}
-
-			assert.Equal(t, account.NewAddress(tt.expectedRes), tx.GetContractAddress())
-		})
-	}
 }
 
 func TestTransaction_MatchRewards(t *testing.T) {
@@ -183,6 +119,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			true,
@@ -196,6 +133,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -216,6 +154,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			nil,
 			false,
@@ -236,6 +175,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -256,6 +196,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{"dXnq2R6SzRNUt7ZsNAqyZc2P9ziF6vYekB": "1"},
 			false,
@@ -283,6 +224,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -313,6 +255,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",
@@ -344,6 +287,7 @@ func TestTransaction_MatchRewards(t *testing.T) {
 				common.NewAmount(0),
 				common.NewAmount(0),
 				0,
+				TxTypeReward,
 			},
 			map[string]string{
 				"dEcqjSgREFi9gTCbAWpEQ3kbPxgsBzzhWS": "4",

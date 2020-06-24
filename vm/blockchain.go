@@ -2,9 +2,9 @@ package vm
 
 import "C"
 import (
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"unsafe"
 
-	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 
 	"github.com/dappley/go-dappley/common"
@@ -18,7 +18,7 @@ func VerifyAddressFunc(address *C.char, gasCnt *C.size_t) bool {
 	// calculate Gas.
 	*gasCnt = C.size_t(VerifyAddressGasBase)
 	addr := account.NewAddress(C.GoString(address))
-	contractAccount := account.NewContractAccountByAddress(addr)
+	contractAccount := account.NewTransactionAccountByAddress(addr)
 	return contractAccount.IsValid()
 }
 
@@ -50,17 +50,17 @@ func DeleteContractFunc(handler unsafe.Pointer) int {
 	}
 
 	contractAddr := engine.contractAddr
-	contractAccount := account.NewContractAccountByAddress(contractAddr)
-	utxos := engine.utxoIndex.SplitContractUtxo(contractAccount.GetPubKeyHash())
+	contractAccount := account.NewTransactionAccountByAddress(contractAddr)
+	invokeUTXOs := engine.utxoIndex.GetContractInvokeUTXOsByPubKeyHash(contractAccount.GetPubKeyHash())
 	createUtxo := engine.contractCreateUTXO
-	utxos = append(utxos, createUtxo)
+	utxos := append(invokeUTXOs, createUtxo)
 	sourceTXID := engine.sourceTXID
 
 	if !contractAccount.IsValid() {
 		return 1
 	}
 
-	transferTX := transaction.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
+	transferTX := ltransaction.NewSmartContractDestoryTX(utxos, contractAddr, sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,
@@ -96,21 +96,21 @@ func TransferFunc(handler unsafe.Pointer, to *C.char, amount *C.char, tip *C.cha
 	*gasCnt = C.size_t(TransferGasBase)
 
 	contractAddr := engine.contractAddr
-	contractAccount := account.NewContractAccountByAddress(contractAddr)
-	utxos := engine.utxoIndex.SplitContractUtxo(contractAccount.GetPubKeyHash())
+	contractAccount := account.NewTransactionAccountByAddress(contractAddr)
+	invokeUTXOs := engine.utxoIndex.GetContractInvokeUTXOsByPubKeyHash(contractAccount.GetPubKeyHash())
 	sourceTXID := engine.sourceTXID
 
 	if !contractAccount.IsValid() {
 		return 1
 	}
 
-	utxosToSpend, ok := prepareUTXOs(utxos, amountValue.Add(tipValue))
+	utxosToSpend, ok := prepareUTXOs(invokeUTXOs, amountValue.Add(tipValue))
 	if !ok {
 		logger.Warn("SmartContract: there is insufficient fund for the transfer!")
 		return 1
 	}
 
-	transferTX, err := transaction.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
+	transferTX, err := ltransaction.NewContractTransferTX(utxosToSpend, contractAddr, toAddr, amountValue, tipValue, common.NewAmount(0), common.NewAmount(0), sourceTXID)
 
 	engine.generatedTXs = append(
 		engine.generatedTXs,

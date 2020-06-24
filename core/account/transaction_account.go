@@ -52,7 +52,7 @@ func NewContractAccountByPubKeyHash(pubKeyHash PubKeyHash) *TransactionAccount {
 	return account
 }
 
-func NewContractAccountByAddress(address Address) *TransactionAccount {
+func NewTransactionAccountByAddress(address Address) *TransactionAccount {
 	account := &TransactionAccount{}
 	account.address = address
 	account.pubKeyHash, _ = generatePubKeyHashByAddress(address)

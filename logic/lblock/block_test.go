@@ -3,6 +3,7 @@ package lblock
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 	"time"
 
@@ -87,8 +88,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	var address1Bytes = []byte("address1000000000000000000000000")
 	var address1TA = account.NewTransactionAccountByPubKey(address1Bytes)
 
-	normalCoinbaseTX := transaction.NewCoinbaseTX(address1TA.GetAddress(), "", 1, common.NewAmount(0))
-	rewardTX := transaction.NewRewardTx(1, map[string]string{address1TA.GetAddress().String(): "10"})
+	rewardTX := ltransaction.NewRewardTx(1, map[string]string{address1TA.GetAddress().String(): "10"})
 	userPubKey := account.NewKeyPair().GetPublicKey()
 	userTA := account.NewTransactionAccountByPubKey(userPubKey)
 	contractTA := account.NewContractTransactionAccount()
@@ -111,6 +111,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		common.NewAmount(0),
 		common.NewAmount(0),
 		0,
+		transaction.TxTypeNormal,
 	}
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
@@ -128,8 +129,8 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	tx1Utxos := map[string][]*utxo.UTXO{
 		ta2.GetPubKeyHash().String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
 	}
-	dependentTx2.Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
-	dependentTx3.Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
+	ltransaction.NewTxDecorator(&dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
+	ltransaction.NewTxDecorator(&dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 
 	tests := []struct {
 		name  string
@@ -137,12 +138,6 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 		utxos map[string][]*utxo.UTXO
 		ok    bool
 	}{
-		{
-			"normal txs",
-			[]*transaction.Transaction{&normalCoinbaseTX},
-			map[string][]*utxo.UTXO{},
-			true,
-		},
 		{
 			"no txs",
 			[]*transaction.Transaction{},
@@ -230,6 +225,13 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 				0,
 				nil,
 			)
+			// add coinbase
+			totalTip := common.NewAmount(0)
+			for _, tx := range tt.txs {
+				totalTip = totalTip.Add(tx.Tip)
+			}
+			coninbaseTx := ltransaction.NewCoinbaseTX(address1TA.GetAddress(), "", parentBlk.GetHeight()+1, totalTip)
+			tt.txs = append(tt.txs, &coninbaseTx)
 			blk := block.NewBlock(tt.txs, parentBlk, "")
 			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk))
 		})
@@ -245,7 +247,8 @@ func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValu
 		Vout: []transactionbase.TXOutput{
 			{common.NewAmount(voutValue), voutPubKeyHash, ""},
 		},
-		Tip: common.NewAmount(tip),
+		Tip:  common.NewAmount(tip),
+		Type: transaction.TxTypeNormal,
 	}
 	tx.ID = tx.Hash()
 	return tx

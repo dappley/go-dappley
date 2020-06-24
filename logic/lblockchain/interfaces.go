@@ -19,7 +19,7 @@ type Consensus interface {
 type LIBPolicy interface {
 	GetMinConfirmationNum() int
 	IsBypassingLibCheck() bool
-	IsNonRepeatingBlockProducerRequired() bool
+	GetTotalProducersNum() int
 }
 
 type NetService interface {

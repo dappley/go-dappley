@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testFile = "../bin/test.dat"
+const testFile = "../bin/account_test.dat"
 
 func TestFileLoader_SaveToFile(t *testing.T) {
 	os.Remove(testFile)
@@ -37,4 +37,5 @@ func TestFileLoader_SaveToFile(t *testing.T) {
 	ret, err := fl.ReadFromFile()
 	assert.Nil(t, err)
 	assert.Equal(t, expected.Bytes(), ret)
+	os.Remove(testFile)
 }

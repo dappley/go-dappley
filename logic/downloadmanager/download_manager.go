@@ -169,12 +169,12 @@ func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 		for {
 			select {
 			case returnCh := <-downloadManager.downloadRequestCh:
-
+				logger.Info("StartDownloadRequestListener: Received download request.")
 				if downloadManager.status != DownloadStatusIdle {
 					logger.Warn("DownloadMananger: Blockchain is being downloaded. Received download request is dropped.")
 					continue
 				}
-
+				logger.Info("StartDownloadRequestListener: Prepare to download.")
 				go downloadManager.StartDownloadBlockchain(returnCh)
 			}
 		}
@@ -259,7 +259,7 @@ func (downloadManager *DownloadManager) StartDownloadBlockchain(finishCh chan bo
 }
 
 func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, height uint64, libHeight uint64) {
-	logger.Debugf("DownloadManager: Receive blockchain info %v %v \n", peerId, height)
+	logger.Infof("DownloadManager: Receive blockchain info %v %v \n", peerId, height)
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
@@ -284,12 +284,17 @@ func (downloadManager *DownloadManager) AddPeerBlockChainInfo(peerId peer.ID, he
 }
 
 func (downloadManager *DownloadManager) validateReturnBlocks(blocksPb *networkpb.ReturnBlocks, peerId peer.ID) (*PeerBlockInfo, error) {
+	downloadingPeer := ""
+	if downloadManager.downloadingPeer != nil {
+		downloadingPeer = downloadManager.downloadingPeer.peerid.String()
+	}
 	returnBlocksLogger := logger.WithFields(logger.Fields{
-		"name": "GetBlocksResponse",
+		"name":               "GetBlocksResponse",
+		"downloadingPeer.id": downloadingPeer,
 	})
 
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerId {
-		returnBlocksLogger.Info("DownloadManager: peerId not in checklist")
+		returnBlocksLogger.Info("validateReturnBlocks: downloadingPeer is empty or peerId is not match.")
 		return nil, ErrPeerNotFound
 	}
 
@@ -337,17 +342,21 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		block.FromProto(pbBlock)
 
 		if !downloadManager.bm.VerifyBlock(block) {
-			returnBlocksLogger.Warn("DownloadManager: verify block failed.")
+			returnBlocksLogger.WithFields(logger.Fields{
+				"height": block.GetHeight(),
+				"hash":   block.GetHash(),
+			}).Warn("DownloadManager: verify block failed.")
 			return
 		}
 
 		blocks = append(blocks, block)
 	}
 
-	logger.Warnf("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
+	logger.Infof("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
-		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed.")
+		downloadManager.finishDownload()
+		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed:",err)
 		return
 	}
 
@@ -368,6 +377,10 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		nextHashes = append(nextHashes, block.GetHash())
 	}
 
+	logger.WithFields(logger.Fields{
+		"peerInfo.PeerId":  peerInfo.PeerId.String(),
+		"CurrentMaxHeight": downloadManager.bm.Getblockchain().GetMaxHeight(),
+	}).Info("GetBlocksDataHandler: start the next download.")
 	downloadManager.sendDownloadCommand(nextHashes, peerInfo.PeerId, 0)
 }
 
@@ -375,10 +388,15 @@ func (downloadManager *DownloadManager) GetCommonBlockDataHandler(blocksPb *netw
 	downloadManager.mutex.Lock()
 	defer downloadManager.mutex.Unlock()
 
+	downloadingPeer := ""
+	if downloadManager.downloadingPeer != nil {
+		downloadingPeer = downloadManager.downloadingPeer.peerid.String()
+	}
 	if downloadManager.downloadingPeer == nil || downloadManager.downloadingPeer.peerid != peerInfo.PeerId {
 		logger.WithFields(logger.Fields{
-			"name": "GetCommonBlocksResponse",
-		}).Info("DownloadManager: PeerId not in checklist.")
+			"name":               "GetCommonBlocksResponse",
+			"downloadingPeer.id": downloadingPeer,
+		}).Info("GetCommonBlockDataHandler: downloadingPeer is empty or peerId is not match.")
 		downloadManager.mutex.Unlock()
 		return
 	}
@@ -447,9 +465,10 @@ func (downloadManager *DownloadManager) FindCommonBlock(blockHeaders []*blockpb.
 			commonBlock = block
 			break
 		}
-	}
-	if findIndex == -1 {
-		logger.Panic("DownloadManager: invalid get common blocks result.")
+		if blockHeader.GetHeight() == 0 {
+			logger.Warn("DownloadManager: invalid get common blocks result. Genesis block hash is different with the request source node.")
+			return findIndex, nil
+		}
 	}
 	return findIndex, commonBlock
 }
@@ -558,8 +577,12 @@ func (downloadManager *DownloadManager) isSameGetCommonBlocksCommand(msgId int32
 func (downloadManager *DownloadManager) checkGetCommonBlocksResult(blockHeaders []*blockpb.BlockHeader) {
 	findIndex, commonBlock := downloadManager.FindCommonBlock(blockHeaders)
 
+	if findIndex == -1 {
+		// no common blocks, code version is different
+		logger.Panic("checkGetCommonBlocksResult: genesis block hash is different from other nodes. Check code version or synchronize db files from other nodes.")
+	}
 	if findIndex == 0 || blockHeaders[findIndex-1].GetHeight()-blockHeaders[findIndex].GetHeight() == 1 {
-		logger.Warnf("BlockManager: common height %v", commonBlock.GetHeight())
+		logger.Warnf("checkGetCommonBlocksResult: common height %v", commonBlock.GetHeight())
 		downloadManager.commonHeight = commonBlock.GetHeight()
 		downloadManager.currentCmd = nil
 		downloadManager.startDownload(0)
@@ -711,7 +734,7 @@ func (downloadManager *DownloadManager) SendGetCommonBlockResponse(blockHeaders 
 	var blockHeaderPbs []*blockpb.BlockHeader
 	if index == 0 {
 		blockHeaderPbs = blockHeaders[:1]
-	} else {
+	} else if index > 0 {
 		blockHeaders := downloadManager.GetCommonBlockCheckPoint(
 			blockHeaders[index].GetHeight(),
 			blockHeaders[index-1].GetHeight(),
@@ -736,7 +759,7 @@ func (downloadManager *DownloadManager) GetCommonBlockResponseHandler(input inte
 
 	if err := proto.Unmarshal(command.GetData(), param); err != nil {
 		logger.WithFields(logger.Fields{
-			"name": "GetCommonBlocksResponse",
+			"name": "GetCommonBlockResponseHandler",
 		}).Info("DownloadManager: parse data failed.")
 	}
 
@@ -849,8 +872,8 @@ func (downloadManager *DownloadManager) SendGetBlockchainInfoResponse(destinatio
 	}
 
 	result := &networkpb.ReturnBlockchainInfo{
-		TailBlockHash: downloadManager.bm.Getblockchain().GetTailBlockHash(),
-		BlockHeight:   downloadManager.bm.Getblockchain().GetMaxHeight(),
+		TailBlockHash: tailBlock.GetHash(),
+		BlockHeight:   tailBlock.GetHeight(),
 		Timestamp:     tailBlock.GetTimestamp(),
 		LibHash:       downloadManager.bm.Getblockchain().GetLIBHash(),
 		LibHeight:     downloadManager.bm.Getblockchain().GetLIBHeight(),

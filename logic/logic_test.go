@@ -28,7 +28,6 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -254,5 +253,5 @@ func TestSetUnLockAccount(t *testing.T) {
 }
 
 func cleanUpDatabase() {
-	wallet.RemoveAccountFile()
+	RemoveAccountTestFile()
 }

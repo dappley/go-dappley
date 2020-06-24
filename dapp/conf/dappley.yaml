@@ -1,9 +1,9 @@
 log:
   name:  "log/dappley.log"
   level:  "info"
-  count:  7
+  count:  180
   rotateTime:  86400
-  stdout:  false
+  stdout:  true
 metrics:
   open: false
   interval: 5000

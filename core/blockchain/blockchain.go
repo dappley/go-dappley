@@ -47,38 +47,6 @@ func (bc *Blockchain) SetState(state BlockchainState) {
 	bc.state = state
 }
 
-func (bc *Blockchain) SetStateToBlockchainReady() {
-	bc.state = BlockchainReady
-}
-
-func (bc *Blockchain) SetStateToBlockchainDownloading() {
-	bc.state = BlockchainDownloading
-}
-
-func (bc *Blockchain) SetStateToBlockchainSyncing() {
-	bc.state = BlockchainSync
-}
-
-func (bc *Blockchain) SetStateToBlockchainInit() {
-	bc.state = BlockchainInit
-}
-
 func (bc *Blockchain) GetState() BlockchainState {
 	return bc.state
-}
-
-func (bc *Blockchain) IsBlockchainInitializing() bool {
-	return bc.state == BlockchainInit
-}
-
-func (bc *Blockchain) IsBlockchainDownloading() bool {
-	return bc.state == BlockchainDownloading
-}
-
-func (bc *Blockchain) IsBlockchainSyncing() bool {
-	return bc.state == BlockchainSync
-}
-
-func (bc *Blockchain) IsBlockchainReady() bool {
-	return bc.state == BlockchainReady
 }

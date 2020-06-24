@@ -27,18 +27,18 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 	engine := NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
-	ctx := tx.ToContractTx()
+	ctx := ltransaction.NewTxContract(tx)
 	if ctx == nil {
 		return 0, ErrTransactionVerifyFailed
 	}
-	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(*utxoIndex, ctx.Transaction)
+	prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, ctx.Transaction)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid": hex.EncodeToString(ctx.ID),
 		}).Warn("Transaction: cannot find vin while executing smart contract")
 		return 0, err
 	}
-	isContractDeployed := ltransaction.IsContractDeployed(utxoIndex, ctx)
-	gasCount, _, err := ltransaction.Execute(ctx, prevUtxos, isContractDeployed, *utxoIndex, scStorage, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
+	isContractDeployed := ctx.IsContractDeployed(utxoIndex)
+	gasCount, _, err := ctx.Execute(prevUtxos, isContractDeployed, utxoIndex, scStorage, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
 	return gasCount, err
 }

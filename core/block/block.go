@@ -157,9 +157,6 @@ func (b *Block) Serialize() []byte {
 	if err != nil {
 		logger.WithError(err).Panic("Block: Cannot serialize block!")
 	}
-	logger.WithFields(logger.Fields{
-		"size": len(rawBytes),
-	}).Info("Block: Serialize Block!")
 	return rawBytes
 }
 
@@ -177,8 +174,9 @@ func Deserialize(d []byte) *Block {
 func (b *Block) GetCoinbaseTransaction() *transaction.Transaction {
 	//the coinbase transaction is usually placed at the end of all transactions
 	for i := len(b.transactions) - 1; i >= 0; i-- {
-		if b.transactions[i].IsCoinbase() {
-			return b.transactions[i]
+		adaptedTx := transaction.NewTxAdapter(b.transactions[i])
+		if adaptedTx.IsCoinbase() {
+			return adaptedTx.Transaction
 		}
 	}
 	return nil

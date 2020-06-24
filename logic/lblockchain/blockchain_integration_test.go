@@ -19,6 +19,7 @@
 package lblockchain
 
 import (
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
@@ -46,7 +47,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		tailBlk, _ := bc.GetTailBlock()
-		cbtx := transaction.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
+		cbtx := ltransaction.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
 		b := block.NewBlock([]*transaction.Transaction{&cbtx}, tailBlk, coinbaseAddr.String())
 		b.SetHash(lblock.CalculateHash(b))
 		bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
@@ -74,7 +75,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 
 	//add block 4 with tx0
 	tailBlk, _ := bc.GetTailBlock()
-	cbtx := transaction.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
+	cbtx := ltransaction.NewCoinbaseTX(coinbaseAddr, "", bc.GetMaxHeight(), common.NewAmount(0))
 	b := block.NewBlock([]*transaction.Transaction{&cbtx, &txs[0]}, tailBlk, "16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 	b.SetHash(lblock.CalculateHash(b))
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, b))
@@ -132,7 +133,10 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 		"",
 	}
 
-	txs = append(txs, createTransaction(utxoIndex, params))
+	newTx, err := createTransaction(utxoIndex, params)
+	if err == nil {
+		txs = append(txs, newTx)
+	}
 
 	for i := 0; i < numOfTx-1; i++ {
 		params := transaction.SendTxParam{
@@ -150,19 +154,23 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 			params.From = addr2
 			params.To = addr1
 		}
-		txs = append(txs, createTransaction(utxoIndex, params))
+		newTx, err := createTransaction(utxoIndex, params)
+		if err == nil {
+			txs = append(txs, newTx)
+		}
 	}
 
 	return txs
 }
 
-func createTransaction(utxoIndex *lutxo.UTXOIndex, params transaction.SendTxParam) transaction.Transaction {
+func createTransaction(utxoIndex *lutxo.UTXOIndex, params transaction.SendTxParam) (transaction.Transaction, error) {
 	ta := account.NewAccountByKey(params.SenderKeyPair)
 	utxos, _ := utxoIndex.GetUTXOsByAmount(ta.GetPubKeyHash(), params.TotalCost())
-	tx, err := transaction.NewUTXOTransaction(utxos, params)
+	tx, err := ltransaction.NewUTXOTransaction(utxos, params)
 	if err != nil {
 		logger.WithError(err).Error("CreateTransaction failed")
+		return tx, err
 	}
 	utxoIndex.UpdateUtxo(&tx)
-	return tx
+	return tx, nil
 }

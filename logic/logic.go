@@ -22,6 +22,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dappley/go-dappley/logic/ltransaction"
+
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/lutxo"
@@ -52,7 +54,7 @@ var (
 
 //create a blockchain
 func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
-	addressAccount := account.NewContractAccountByAddress(address)
+	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
 		return nil, ErrInvalidAddress
 	}
@@ -60,19 +62,6 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lbl
 	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, scManager, blkSizeLimit)
 
 	return bc, nil
-}
-
-//get account
-func GetAccount() (*account.Account, error) {
-	am, err := GetAccountManager(wallet.GetAccountFilePath())
-	empty, err := am.IsFileEmpty()
-	if empty {
-		return nil, nil
-	}
-	if len(am.Accounts) > 0 {
-		return am.Accounts[0], err
-	}
-	return nil, err
 }
 
 // Returns default account file path or first argument of argument vector
@@ -93,14 +82,14 @@ func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
 
-	if wallet.Exists(accountFilePath) {
-		am, _ := GetAccountManager(accountFilePath)
-		if len(am.Accounts) == 0 {
-			return true, nil
-		}
-		return am.IsFileEmpty()
+	am, _ := GetAccountManager(accountFilePath)
+	if am == nil {
+		return true, nil
 	}
-	return true, nil
+	if am.IsEmpty() {
+		return true, nil
+	}
+	return false, nil
 }
 
 //Set lock flag
@@ -111,12 +100,7 @@ func SetLockAccount(optionalAccountFilePath ...string) error {
 		return err1
 	}
 
-	empty, err2 := am.IsFileEmpty()
-
-	if err2 != nil {
-		return err2
-	}
-
+	empty := am.IsEmpty()
 	if empty {
 		return nil
 	}
@@ -140,6 +124,7 @@ func SetUnLockAccount(optionalAccountFilePath ...string) error {
 func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
 	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 	if err != nil {
+		logger.Error(err)
 		return nil, err
 	}
 
@@ -152,7 +137,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 		am.AddAccount(account)
 		am.SaveAccountToFile()
 		return account, err
-
 	}
 	passBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -165,7 +149,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	am.Locked = true
 	am.SaveAccountToFile()
 	return account, err
-
 }
 
 //create a account
@@ -191,7 +174,7 @@ func GetUnlockDuration() time.Duration {
 
 //get balance
 func GetBalance(address account.Address, bc *lblockchain.Blockchain) (*common.Amount, error) {
-	acc := account.NewContractAccountByAddress(address)
+	acc := account.NewTransactionAccountByAddress(address)
 	if acc.IsValid() == false {
 		return common.NewAmount(0), ErrInvalidAddress
 	}
@@ -237,8 +220,8 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 }
 
 func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, string, error) {
-	fromAccount := account.NewContractAccountByAddress(sendTxParam.From)
-	toAccount := account.NewContractAccountByAddress(sendTxParam.To)
+	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
+	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	if !fromAccount.IsValid() {
 		return nil, "", ErrInvalidSenderAddress
 	}
@@ -261,13 +244,14 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 		return nil, "", err
 	}
 
-	tx, err := transaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)
 
-	contractAddr := tx.GetContractAddress()
-	if contractAddr.String() != "" {
+	contractAddr := account.NewAddress("")
+	if tx.Type == transaction.TxTypeContract {
+		contractAddr = ltransaction.NewTxContract(&tx).GetContractAddress()
 		if sendTxParam.To.String() == contractAddr.String() {
 			logger.WithFields(logger.Fields{
 				"contract_address": contractAddr.String(),

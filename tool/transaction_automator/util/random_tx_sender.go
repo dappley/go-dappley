@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"math/rand"
 	"time"
 
@@ -184,7 +185,7 @@ func (sender *BatchTxSender) createTransaction(from, to account.Address, amount,
 		return nil
 	}
 	sendTxParam := transaction.NewSendTxParam(from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract)
-	tx, err := transaction.NewUTXOTransaction(prevUtxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(prevUtxos, sendTxParam)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{
