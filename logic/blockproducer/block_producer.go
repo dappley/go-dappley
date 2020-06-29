@@ -24,31 +24,43 @@ import (
 )
 
 type BlockProducer struct {
-	bm       *lblockchain.BlockchainManager
-	con      Consensus
-	producer *blockproducerinfo.BlockProducerInfo
-	stopCh   chan bool
+	bm        *lblockchain.BlockchainManager
+	con       Consensus
+	producer  *blockproducerinfo.BlockProducerInfo
+	stopCh    chan bool
+	isRunning bool
 }
 
 //NewBlockProducer returns a new block producer instance
 func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer *blockproducerinfo.BlockProducerInfo) *BlockProducer {
 	return &BlockProducer{
-		bm:       bm,
-		con:      con,
-		producer: producer,
-		stopCh:   make(chan bool, 1),
+		bm:        bm,
+		con:       con,
+		producer:  producer,
+		stopCh:    make(chan bool, 1),
+		isRunning: false,
 	}
 }
 
 //Start starts the block producing process
 func (bp *BlockProducer) Start() {
+	// clear stop channel buffer
+	select {
+	case <-bp.stopCh:
+	default:
+	}
+	if bp.isRunning {
+		return
+	}
 	go func() {
 		defer log.CrashHandler()
 
 		logger.Info("BlockProducer Starts...")
+		bp.isRunning = true
 		for {
 			select {
 			case <-bp.stopCh:
+				bp.isRunning = false
 				return
 			default:
 				bp.con.ProduceBlock(bp.produceBlock)
