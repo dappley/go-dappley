@@ -71,7 +71,7 @@ func (bp *BlockProducer) Start() {
 
 //Stop stops the block producing process
 func (bp *BlockProducer) Stop() {
-	logger.Info("Miner stops...")
+	logger.Info("BlockProducer stops...")
 	bp.stopCh <- true
 }
 
