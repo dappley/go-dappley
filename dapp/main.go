@@ -132,12 +132,6 @@ func main() {
 		return
 	}
 
-	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()))
-	downloadManager.Start()
-	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
-
-	bm.Getblockchain().SetState(blockchain.BlockchainReady)
-
 	//start mining
 	logic.SetLockAccount() //lock the account
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
@@ -152,9 +146,12 @@ func main() {
 
 	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
-	blockProducer.Start()
-	defer blockProducer.Stop()
 
+	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), blockProducer)
+	downloadManager.Start()
+	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
+
+	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	bm.RequestDownloadBlockchain()
 
 	// switch on RunScheduleEvents

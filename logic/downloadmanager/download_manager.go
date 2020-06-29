@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 	"math"
 	"sync"
 	"time"
@@ -129,9 +130,10 @@ type DownloadManager struct {
 	downloadRequestCh     chan chan bool
 	finishCh              chan bool
 	numOfMinRequestHashes int
+	bp                    *blockproducer.BlockProducer
 }
 
-func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numOfProducers int) *DownloadManager {
+func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numOfProducers int, bp *blockproducer.BlockProducer) *DownloadManager {
 
 	downloadManager := &DownloadManager{
 		peersInfo:             make(map[peer.ID]*PeerBlockInfo),
@@ -146,6 +148,7 @@ func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numO
 		downloadRequestCh:     make(chan chan bool, 100),
 		finishCh:              nil,
 		numOfMinRequestHashes: numOfProducers,
+		bp:                    bp,
 	}
 	if downloadManager.numOfMinRequestHashes < MinRequestHashesNum {
 		downloadManager.numOfMinRequestHashes = MinRequestHashesNum
@@ -356,7 +359,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		downloadManager.finishDownload()
-		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed:",err)
+		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed:", err)
 		return
 	}
 
@@ -524,6 +527,10 @@ func (downloadManager *DownloadManager) startGetCommonBlocks(retryCount int) {
 		return
 	}
 
+	if downloadManager.bp != nil {
+		downloadManager.bp.Stop()
+	}
+
 	downloadManager.status = DownloadStatusSyncCommonBlocks
 	highestPeer := downloadManager.selectHighestPeer()
 
@@ -667,6 +674,10 @@ func (downloadManager *DownloadManager) finishDownload() {
 	downloadManager.downloadingPeer = nil
 	downloadManager.currentCmd = nil
 	downloadManager.finishCh <- true
+
+	if downloadManager.bp != nil && !downloadManager.bp.IsProducingBlock() {
+		downloadManager.bp.Start()
+	}
 }
 
 func (downloadManager *DownloadManager) canStartDownload() bool {
