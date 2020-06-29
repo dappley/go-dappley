@@ -527,7 +527,7 @@ func (downloadManager *DownloadManager) startGetCommonBlocks(retryCount int) {
 		return
 	}
 
-	if downloadManager.bp != nil && downloadManager.bp.IsProducingBlock() {
+	if downloadManager.bp != nil {
 		logger.Info("startGetCommonBlocks: prepared to stop the block producer")
 		downloadManager.bp.Stop()
 	}
@@ -676,7 +676,7 @@ func (downloadManager *DownloadManager) finishDownload() {
 	downloadManager.currentCmd = nil
 	downloadManager.finishCh <- true
 
-	if downloadManager.bp != nil && !downloadManager.bp.IsProducingBlock() {
+	if downloadManager.bp != nil {
 		logger.Info("finishDownload: prepared to start the block producer")
 		downloadManager.bp.Start()
 	}
