@@ -121,7 +121,7 @@
   name = "github.com/jbenet/go-temp-err-catcher"
   version = "=0.1.0"
 
-[[constraint]]
+[[override]]
   name = "github.com/libp2p/go-libp2p-peerstore"
   version = "=0.1.3"
 
