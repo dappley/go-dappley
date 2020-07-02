@@ -1,4 +1,4 @@
-all: dep build deploy-v8 run test check-running
+all: build deploy-v8 run test check-running
 
 testall:
 	go clean -testcache

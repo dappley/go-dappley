@@ -9,10 +9,7 @@ Official Go implementation of the dappley protocol.
 ### Prerequisites
 | Components | Version | Description |
 |----------|-------------|-------------|
-|[Golang](https://golang.org) | >= 1.9.1| The Go Programming Language |
-[Dep](https://github.com/golang/dep) | >= 0.5.0 | Dep is a dependency management tool for Go. |
-
-Please ensure ```GOPATH``` and ```GOROOT``` are set up correctly for ```dep``` to install all required dependencies. You may find [this guide](https://github.com/golang/go/wiki/SettingGOPATH) helpful.
+|[Golang](https://golang.org) | >= 1.11.1| The Go Programming Language |
 
 For detailed instructions about the environment setup for go-dappley, please check out the [wiki](https://github.com/dappley/go-dappley/wiki) page.
 
