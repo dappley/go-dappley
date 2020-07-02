@@ -22,7 +22,6 @@ install:
 - make
 - sudo make install
 - cd -
-- make dep
 - cd vm/v8
 - make install
 - cd -

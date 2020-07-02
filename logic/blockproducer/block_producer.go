@@ -80,6 +80,11 @@ func (bp *BlockProducer) IsProducingBlock() bool {
 	return !bp.producer.IsIdle()
 }
 
+//IsProducingBlock returns if the local producer is producing a block
+func (bp *BlockProducer) GetProduceBlockStatus() bool {
+	return bp.isRunning
+}
+
 //produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 	// Do not produce block if block pool is syncing

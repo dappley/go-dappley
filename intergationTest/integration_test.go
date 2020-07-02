@@ -342,6 +342,8 @@ func TestForkChoice(t *testing.T) {
 		return !bps[0].IsProducingBlock()
 	}, 5)
 
+	util.WaitDone(bps[0].GetProduceBlockStatus)
+
 	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
 	tailBlk, _ := bms[0].Getblockchain().GetTailBlock()
 	connectNodes(nodes[0], nodes[1])

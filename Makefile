@@ -8,9 +8,6 @@ testall:
 		fi \
 	done
 
-dep:
-	dep ensure -v
-
 test:
 	go clean -testcache
 	for f in ./*/; do \
