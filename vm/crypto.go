@@ -4,11 +4,10 @@ import "C"
 import (
 	"crypto/sha256"
 	"encoding/hex"
-
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 )
 
 //export VerifySignatureFunc
@@ -42,6 +41,7 @@ func VerifySignatureFunc(msg, pubkey, sig *C.char) bool {
 	copy(originPub[1:], pubKeyBytes)
 
 	res, err := secp256k1.Verify(data[:], sigBytes, originPub)
+	//res, err := secp256r1.Verify(data[:], sigBytes, originPub)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"content":    goMsg,

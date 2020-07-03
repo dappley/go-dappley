@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"reflect"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -16,7 +17,6 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/crypto/sha3"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
@@ -91,6 +91,7 @@ func generateSignature(key string, data hash.Hash) (hash.Hash, error) {
 		logger.Warn("Block: cannot decode private key for signature!")
 		return []byte{}, err
 	}
+	//signature, err := secp256r1.Sign(data, privData)
 	signature, err := secp256k1.Sign(data, privData)
 	if err != nil {
 		logger.WithError(err).Warn("Block: failed to calculate signature!")
