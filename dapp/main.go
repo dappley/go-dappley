@@ -186,7 +186,7 @@ func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) 
 	nodeConfig := conf.GetNodeConfig()
 	seeds := nodeConfig.GetSeed()
 	port := nodeConfig.GetPort()
-	key := nodeConfig.GetKeyPath()
+	key := nodeConfig.GetKey()
 
 	node := network.NewNode(db, seeds)
 	err := node.Start(int(port), key)
