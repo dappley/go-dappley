@@ -44,21 +44,21 @@ func NewECDSAPrivateKey() (*ecdsa.PrivateKey, error) {
 
 	// in bitcoin src, they call SeckeyVerify func to verify the generated private key
 	// to make sure valid.
-	for {
+	//for {
 		//privKey, err := ecdsa.GenerateKey(S256(), rand.Reader)
 		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
 		}
-		privData, err := FromECDSAPrivateKey(privKey)
-		if err != nil {
-			return nil, err
-		}
+		//privData, err := FromECDSAPrivateKey(privKey)
+		//if err != nil {
+		//	return nil, err
+		//}
 		priv = privKey
-		if SeckeyVerify(privData) {
-			break
-		}
-	}
+		//if SeckeyVerify(privData) {
+		//	break
+		//}
+	//}
 	return priv, nil
 }
 

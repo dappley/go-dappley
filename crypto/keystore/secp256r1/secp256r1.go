@@ -77,6 +77,7 @@ func VerifySign(text []byte, signatureByte []byte, publicKeyBytes []byte) (bool,
 	y := new(big.Int).SetBytes(publicKeyBytes[32:])
 	//生成公钥对象
 	publicKey := ecdsa.PublicKey{Curve: curve, X: x, Y: y}
+	
 	r := new(big.Int).SetBytes(signatureByte[:32])
 	s := new(big.Int).SetBytes(signatureByte[32:64])
 	return ecdsa.Verify(&publicKey, text, r, s),nil

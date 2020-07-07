@@ -20,7 +20,6 @@ package main
 
 import (
 	"flag"
-
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/logic/blockproducer"
