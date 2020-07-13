@@ -149,7 +149,6 @@ func main() {
 
 	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), blockProducer)
 	downloadManager.Start()
-	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	bm.RequestDownloadBlockchain()

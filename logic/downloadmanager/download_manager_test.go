@@ -67,7 +67,6 @@ func TestMultiEqualNode(t *testing.T) {
 	node := nodes[0]
 	downloadManager := NewDownloadManager(node, bm, 0, nil)
 	downloadManager.Start()
-	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	//Connect all other nodes to the first node
 	for i := 1; i < len(nodes); i++ {
@@ -186,7 +185,6 @@ func TestValidateReturnBlocks(t *testing.T) {
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
 	downloadManager := NewDownloadManager(node, bm, 0, nil)
-	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
 
 	peerNode := nodes[1]
 

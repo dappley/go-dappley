@@ -127,7 +127,6 @@ type DownloadManager struct {
 	status                int
 	commonHeight          uint64
 	msgId                 int32
-	downloadRequestCh     chan chan bool
 	finishCh              chan bool
 	numOfMinRequestHashes int
 	bp                    *blockproducer.BlockProducer
@@ -145,7 +144,6 @@ func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numO
 		status:                DownloadStatusIdle,
 		msgId:                 0,
 		commonHeight:          0,
-		downloadRequestCh:     make(chan chan bool, 100),
 		finishCh:              nil,
 		numOfMinRequestHashes: numOfProducers,
 		bp:                    bp,
@@ -158,7 +156,7 @@ func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numO
 }
 
 func (downloadManager *DownloadManager) GetDownloadRequestCh() chan chan bool {
-	return downloadManager.downloadRequestCh
+	return downloadManager.bm.GetDownloadRequestCh()
 }
 
 func (downloadManager *DownloadManager) Start() {
@@ -171,7 +169,7 @@ func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 
 		for {
 			select {
-			case returnCh := <-downloadManager.downloadRequestCh:
+			case returnCh := <-downloadManager.bm.GetDownloadRequestCh():
 				logger.Info("StartDownloadRequestListener: Received download request.")
 				if downloadManager.status != DownloadStatusIdle {
 					logger.Warn("DownloadMananger: Blockchain is being downloaded. Received download request is dropped.")

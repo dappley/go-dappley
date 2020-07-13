@@ -71,13 +71,13 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPoo
 		blockPool:  blockpool,
 		netService: service,
 		consensus:  consensus,
+		downloadRequestCh:  make(chan chan bool, 100),
 	}
 	bm.ListenToNetService()
 	return bm
 }
-
-func (bm *BlockchainManager) SetDownloadRequestCh(requestCh chan chan bool) {
-	bm.downloadRequestCh = requestCh
+func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
+	return bm.downloadRequestCh
 }
 
 func (bm *BlockchainManager) RequestDownloadBlockchain() {

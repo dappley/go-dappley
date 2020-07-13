@@ -137,10 +137,8 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 
 	bm1, node1 := prepareNode(db1)
 	bm2, node2 := prepareNode(db2)
-	dm1 := downloadmanager.NewDownloadManager(node1, bm1, 0, nil)
-	bm1.SetDownloadRequestCh(dm1.GetDownloadRequestCh())
-	dm2 := downloadmanager.NewDownloadManager(node2, bm2, 0, nil)
-	bm2.SetDownloadRequestCh(dm2.GetDownloadRequestCh())
+	downloadmanager.NewDownloadManager(node1, bm1, 0, nil)
+	downloadmanager.NewDownloadManager(node2, bm2, 0, nil)
 
 	node1.Start(testport1, "")
 	defer node1.Stop()
@@ -193,8 +191,8 @@ func prepareNode(db storage.Storage) (*lblockchain.BlockchainManager, *network.N
 	bc.SetState(blockchain.BlockchainInit)
 	LIBBlk, _ := bc.GetLIB()
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
-	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), nil)
-	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
+	downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), nil)
+
 
 	return bm, node
 }
