@@ -67,11 +67,11 @@ type BlockchainManager struct {
 
 func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPool, service NetService, consensus Consensus) *BlockchainManager {
 	bm := &BlockchainManager{
-		blockchain: blockchain,
-		blockPool:  blockpool,
-		netService: service,
-		consensus:  consensus,
-		downloadRequestCh:  make(chan chan bool, 100),
+		blockchain:        blockchain,
+		blockPool:         blockpool,
+		netService:        service,
+		consensus:         consensus,
+		downloadRequestCh: make(chan chan bool, 100),
 	}
 	bm.ListenToNetService()
 	return bm
@@ -79,6 +79,7 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPoo
 func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
 	return bm.downloadRequestCh
 }
+
 
 func (bm *BlockchainManager) RequestDownloadBlockchain() {
 	go func() {
