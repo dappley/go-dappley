@@ -57,6 +57,13 @@ func GetAccountFilePath() string {
 }
 
 func createAccountFile(path string) {
+	binFolder := "../bin"
+	if !Exists(binFolder) {
+		err := os.Mkdir(binFolder, os.ModePerm)
+		if err != nil {
+			logger.Errorf("Create account file folder. binFolder: %v, error: %v", binFolder, err.Error())
+		}
+	}
 	if !Exists(path) {
 		file, err := os.Create(path)
 		file.Close()
