@@ -334,11 +334,13 @@ func TestDownloadRequestCh(t *testing.T) {
 	bps[0].Stop()
 
 	connectNodes(nodes[1], nodes[0])
+	// Set downloadManagerBp To Nil For stop blockProducer
 	dms[1].SetdownloadManagerBpToNil()
 	dms[0].SetdownloadManagerBpToNil()
 	util.WaitDone(func() bool {
 		return bps[0].GetProduceBlockStatus()
 	})
+	// node[1] start downloading
 	dms[1].Start()
 	bms[1].RequestDownloadBlockchain()
 
