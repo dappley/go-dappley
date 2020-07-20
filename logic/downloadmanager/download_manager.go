@@ -155,6 +155,10 @@ func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numO
 	return downloadManager
 }
 
+func (downloadManager *DownloadManager) GetBlockChainManage()*lblockchain.BlockchainManager {
+	return downloadManager.bm
+}
+
 func (downloadManager *DownloadManager) Start() {
 	downloadManager.StartDownloadRequestListener()
 }

@@ -18,6 +18,7 @@ package intergationTest
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/logic/downloadmanager"
 	"reflect"
 	"testing"
 	"time"
@@ -289,6 +290,40 @@ func TestSendInsufficientBalance(t *testing.T) {
 	logic.RemoveAccountTestFile()
 }
 
+func TestDownloadRequestCh(t *testing.T) {
+	var dbs []storage.Storage
+	// Remember to close all opened databases after test
+	defer func() {
+		for _, db := range dbs {
+			db.Close()
+		}
+	}()
+	addr := account.NewAddress("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz")
+	db := storage.NewRamStorage()
+	dbs = append(dbs, db)
+	node := network.NewNode(db, nil)
+	bm, bp := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
+	downloadManager := downloadmanager.NewDownloadManager(node, bm, 2, bp)
+	var downloadRequestChSend,downloadRequestChRecv bool
+	downloadRequestChSend = false
+	downloadRequestChRecv = false
+	go func() {
+		finishChan := make(chan bool, 1)
+		select {
+		case bm.GetDownloadRequestCh()<- finishChan:
+			downloadRequestChSend = true
+		default:
+		}
+		<-finishChan
+		return
+	}()
+	select {
+	case  <-downloadManager.GetBlockChainManage().GetDownloadRequestCh():
+		downloadRequestChRecv = true
+	}
+	assert.Equal(t, downloadRequestChSend,downloadRequestChRecv)
+}
+
 func TestForkChoice(t *testing.T) {
 	var bps []*blockproducer.BlockProducer
 	var bms []*lblockchain.BlockchainManager
@@ -338,16 +373,14 @@ func TestForkChoice(t *testing.T) {
 	}, 10)
 	bps[0].Stop()
 
-	util.WaitDoneOrTimeout(func() bool {
-		return !bps[0].IsProducingBlock()
-	}, 5)
-
+	util.WaitDone(bps[1].GetProduceBlockStatus)
 	util.WaitDone(bps[0].GetProduceBlockStatus)
 
 	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
 	tailBlk, _ := bms[0].Getblockchain().GetTailBlock()
 	connectNodes(nodes[0], nodes[1])
 	bms[0].BroadcastBlock(tailBlk)
+
 	// Make sure syncing starts on node[1]
 	util.WaitDoneOrTimeout(func() bool {
 		return bms[1].Getblockchain().GetState() == blockchain.BlockchainSync
