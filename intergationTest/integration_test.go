@@ -344,10 +344,12 @@ func TestDownloadRequestCh(t *testing.T) {
 	dms[1].Start()
 	bms[1].RequestDownloadBlockchain()
 
+	// Make sure downloading starts on node[1]
 	util.WaitDoneOrTimeout(func() bool {
 		return bms[1].Getblockchain().GetState() == blockchain.BlockchainDownloading
 	}, 10)
 
+	// Make sure downloading ends on node[1]
 	util.WaitDoneOrTimeout(func() bool {
 		return bms[1].Getblockchain().GetState() != blockchain.BlockchainDownloading
 	}, 30)
