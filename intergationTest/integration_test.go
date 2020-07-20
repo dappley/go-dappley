@@ -291,16 +291,11 @@ func TestSendInsufficientBalance(t *testing.T) {
 }
 
 func TestDownloadRequestCh(t *testing.T) {
-	var dbs []storage.Storage
-	// Remember to close all opened databases after test
+	db := storage.NewRamStorage()
 	defer func() {
-		for _, db := range dbs {
-			db.Close()
-		}
+		db.Close()
 	}()
 	addr := account.NewAddress("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz")
-	db := storage.NewRamStorage()
-	dbs = append(dbs, db)
 	node := network.NewNode(db, nil)
 	bm, bp := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
 	downloadManager := downloadmanager.NewDownloadManager(node, bm, 2, bp)
