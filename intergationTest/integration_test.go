@@ -291,32 +291,67 @@ func TestSendInsufficientBalance(t *testing.T) {
 }
 
 func TestDownloadRequestCh(t *testing.T) {
-	db := storage.NewRamStorage()
+	var bps []*blockproducer.BlockProducer
+	var bms []*lblockchain.BlockchainManager
+	var dms []*downloadmanager.DownloadManager
+	var dbs []storage.Storage
+	// Remember to close all opened databases after test
 	defer func() {
-		db.Close()
-	}()
-	addr := account.NewAddress("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz")
-	node := network.NewNode(db, nil)
-	bm, bp := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
-	downloadManager := downloadmanager.NewDownloadManager(node, bm, 2, bp)
-	var downloadRequestChSend,downloadRequestChRecv bool
-	downloadRequestChSend = false
-	downloadRequestChRecv = false
-	go func() {
-		finishChan := make(chan bool, 1)
-		select {
-		case bm.GetDownloadRequestCh()<- finishChan:
-			downloadRequestChSend = true
-		default:
+		for _, db := range dbs {
+			db.Close()
 		}
-		<-finishChan
-		return
 	}()
-	select {
-	case  <-downloadManager.GetBlockChainManage().GetDownloadRequestCh():
-		downloadRequestChRecv = true
+
+	addr := account.NewAddress("17DgRtQVvaytkiKAfXx9XbV23MESASSwUz")
+	//wait for mining for at least "targetHeight" blocks
+	//targetHeight := uint64(4)
+	//num of nodes to be created in the test
+	numOfNodes := 2
+	var nodes []*network.Node
+	for i := 0; i < numOfNodes; i++ {
+		db := storage.NewRamStorage()
+		dbs = append(dbs, db)
+
+		node := network.NewNode(db, nil)
+		bm, bp := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
+		dm := downloadmanager.NewDownloadManager(node, bm, 2, bp)
+
+		node.Start(testport_fork+i, "")
+		nodes = append(nodes, node)
+		bms = append(bms, bm)
+		bps = append(bps, bp)
+		dms = append(dms, dm)
 	}
-	assert.Equal(t, downloadRequestChSend,downloadRequestChRecv)
+	defer nodes[0].Stop()
+	defer nodes[1].Stop()
+
+	desiredHeight := uint64(10)
+	bms[0].Getblockchain().SetState(blockchain.BlockchainReady)
+	bps[0].Start()
+	util.WaitDoneOrTimeout(func() bool {
+		return bms[0].Getblockchain().GetMaxHeight() > desiredHeight
+	}, 10)
+	bps[0].Stop()
+
+	connectNodes(nodes[1], nodes[0])
+	dms[1].SetdownloadManagerBpToNil()
+	dms[0].SetdownloadManagerBpToNil()
+	util.WaitDone(func() bool {
+		return bps[0].GetProduceBlockStatus()
+	})
+	dms[1].Start()
+	bms[1].RequestDownloadBlockchain()
+
+	util.WaitDoneOrTimeout(func() bool {
+		return bms[1].Getblockchain().GetState() == blockchain.BlockchainDownloading
+	}, 10)
+
+	util.WaitDoneOrTimeout(func() bool {
+		return bms[1].Getblockchain().GetState() != blockchain.BlockchainDownloading
+	}, 30)
+
+	assert.Equal(t, bms[0].Getblockchain().GetMaxHeight(), bms[1].Getblockchain().GetMaxHeight())
+	assert.True(t, isSameBlockChain(bms[0].Getblockchain(), bms[1].Getblockchain()))
 }
 
 func TestForkChoice(t *testing.T) {
@@ -357,6 +392,9 @@ func TestForkChoice(t *testing.T) {
 		return bms[1].Getblockchain().GetMaxHeight() > 4
 	}, 10)
 	bps[1].Stop()
+	util.WaitDone(func() bool {
+		return bps[1].GetProduceBlockStatus()
+	})
 
 	desiredHeight := uint64(10)
 	if bms[1].Getblockchain().GetMaxHeight() > 10 {
@@ -368,14 +406,13 @@ func TestForkChoice(t *testing.T) {
 	}, 10)
 	bps[0].Stop()
 
-	util.WaitDone(bps[1].GetProduceBlockStatus)
-	util.WaitDone(bps[0].GetProduceBlockStatus)
-
+	util.WaitDone(func() bool {
+		return bps[0].GetProduceBlockStatus()
+	})
 	// Trigger fork choice in node[1] by broadcasting tail block of node[0]
 	tailBlk, _ := bms[0].Getblockchain().GetTailBlock()
 	connectNodes(nodes[0], nodes[1])
 	bms[0].BroadcastBlock(tailBlk)
-
 	// Make sure syncing starts on node[1]
 	util.WaitDoneOrTimeout(func() bool {
 		return bms[1].Getblockchain().GetState() == blockchain.BlockchainSync
