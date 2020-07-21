@@ -314,7 +314,7 @@ func TestDownloadRequestCh(t *testing.T) {
 
 		node := network.NewNode(db, nil)
 		bm, bp := CreateProducer(addr, addr, db, transactionpool.NewTransactionPool(node, 128), node)
-		dm := downloadmanager.NewDownloadManager(node, bm, 2, bp)
+		dm := downloadmanager.NewDownloadManager(node, bm, 2, nil)
 
 		node.Start(testport_fork+i, "")
 		nodes = append(nodes, node)
@@ -333,10 +333,9 @@ func TestDownloadRequestCh(t *testing.T) {
 	}, 10)
 	bps[0].Stop()
 
-	connectNodes(nodes[1], nodes[0])
-	// Set downloadManagerBp To Nil For stop blockProducer
-	dms[1].SetdownloadManagerBpToNil()
-	dms[0].SetdownloadManagerBpToNil()
+	connectNodes(nodes[0], nodes[1])
+	//a short delay for connect
+	time.Sleep(time.Millisecond * 500)
 	util.WaitDone(func() bool {
 		return bps[0].GetProduceBlockStatus()
 	})

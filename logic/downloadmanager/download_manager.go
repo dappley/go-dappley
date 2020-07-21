@@ -664,10 +664,6 @@ func (downloadManager *DownloadManager) isDownloadCommandFinished(hashes []hash.
 	return false
 }
 
-func (downloadManager *DownloadManager)SetdownloadManagerBpToNil()  {
-	downloadManager.bp = nil
-}
-
 func (downloadManager *DownloadManager) finishDownload() {
 	downloadManager.status = DownloadStatusIdle
 	downloadManager.downloadingPeer = nil
