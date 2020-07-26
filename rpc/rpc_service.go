@@ -251,9 +251,12 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	}
 
 	bc:=rpcService.GetBlockchain()
-	if rpcService.utxoIndex==nil{
+	rpcService.mutex.Lock()
+	if rpcService.utxoIndex==nil||rpcService.blockMaxHeight<bc.GetMaxHeight(){
 		rpcService.utxoIndex = bc.GetUpdatedUTXOIndex()
+		rpcService.blockMaxHeight=bc.GetMaxHeight()
 	}
+	rpcService.mutex.Unlock()
 
 	if err := ltransaction.VerifyTransaction(rpcService.utxoIndex, tx, 0); err != nil {
 		logger.Warn(err.Error())
@@ -273,12 +276,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	rpcService.mutex.Lock()
 	bc.GetTxPool().Push(*tx)
-	if rpcService.blockMaxHeight<bc.GetMaxHeight(){
-		rpcService.utxoIndex = bc.GetUpdatedUTXOIndex()
-		rpcService.blockMaxHeight=bc.GetMaxHeight()
-	}else{
-		rpcService.utxoIndex.UpdateUtxo(tx)
-	}
+	rpcService.utxoIndex.UpdateUtxo(tx)
 	rpcService.mutex.Unlock()
 	bc.GetTxPool().BroadcastTx(tx)
 
