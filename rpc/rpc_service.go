@@ -131,6 +131,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 }
 
 func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
+	// if rpcService.blockMaxHeight < bc.GetMaxHeight() UpdatedUTXOIndex otherwise use RpcService.utxoIndex
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
 	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
