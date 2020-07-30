@@ -21,19 +21,15 @@
 package rpc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/blockchain"
+	"github.com/dappley/go-dappley/core/utxo"
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	"github.com/dappley/go-dappley/logic/ltransaction"
-
-	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
-	"github.com/dappley/go-dappley/logic/lblock"
-	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
@@ -41,9 +37,14 @@ import (
 	"github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockproducer"
+	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
+	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
+	"github.com/stretchr/testify/mock"
+	"testing"
+	"time"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -582,6 +583,90 @@ func TestRpcGetBlockByHeight(t *testing.T) {
 	assert.Nil(t, response)
 	assert.Equal(t, codes.NotFound, status.Code(err))
 	assert.Equal(t, lblockchain.ErrBlockDoesNotExist.Error(), status.Convert(err).Message())
+}
+
+func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
+	if tip != nil {
+		amount = amount.Add(tip)
+	}
+	if gasLimit != nil {
+		limitedFee := gasLimit.Mul(gasPrice)
+		amount = amount.Add(limitedFee)
+	}
+	var retUtxos []*utxo.UTXO
+	sum := common.NewAmount(0)
+	for _, u := range inputUTXOs {
+		sum = sum.Add(u.Value)
+		retUtxos = append(retUtxos, u)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+	}
+
+	if sum.Cmp(amount) < 0 {
+		//return nil, "ErrInsufficientFund"
+		return nil, errors.New("cli: the balance is insufficient")
+	}
+
+	return retUtxos, nil
+}
+
+func TestRpcVerifyTransaction(t *testing.T) {
+	rpcContext, err := createRpcTestContext(8)
+	defer rpcContext.destroyContext()
+	if err != nil {
+		panic(err)
+	}
+	fromAcc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	if err != nil {
+		panic(err)
+	}
+	toAcc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
+	if err != nil {
+		panic(err)
+	}
+	gctx, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1)
+
+	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxo(&gctx)
+	utxoIndex.Save()
+
+	amount, err := logic.GetBalance(fromAcc.GetAddress(), rpcContext.bm.Getblockchain())
+	// Create a grpc connection and a account
+	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	c := rpcpb.NewRpcServiceClient(conn)
+	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	assert.Nil(t, err)
+	assert.NotNil(t, senderResponse)
+
+	utxos := senderResponse.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		uu := utxo.UTXO{}
+		uu.Value = common.NewAmountFromBytes(u.Amount)
+		uu.Txid = u.Txid
+		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
+		uu.TxIndex = int(u.TxIndex)
+		inputUtxos = append(inputUtxos, &uu)
+	}
+	tip := common.NewAmount(0)
+	gasLimit := common.NewAmount(0)
+	gasPrice := common.NewAmount(0)
+
+	tx_utxos, err := rpc.GetUTXOsfromAmount(inputUtxos, common.NewAmount(3000), tip, gasLimit, gasPrice)
+	if err != nil {
+		panic(err)
+	}
+	sendTxParam := transaction.NewSendTxParam(fromAcc.GetAddress(), fromAcc.GetKeyPair(),
+		toAcc.GetAddress(), common.NewAmount(2000), tip, gasLimit, gasPrice, "")
+	tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
+	assert.Nil(t, err)
+	err = ltransaction.VerifyTransaction(utxoIndex, &tx, 0)
+	assert.Nil(t, err)
 }
 
 func TestRpcSendTransaction(t *testing.T) {
