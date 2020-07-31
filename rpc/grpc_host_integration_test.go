@@ -612,7 +612,7 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 }
 
 func TestRpcVerifyTransaction(t *testing.T) {
-	rpcContext, err := createRpcTestContext(8)
+	rpcContext, err := createRpcTestContext(9)
 	defer rpcContext.destroyContext()
 	if err != nil {
 		panic(err)
