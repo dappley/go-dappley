@@ -631,7 +631,6 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	utxoIndex.UpdateUtxo(&gctx)
 	utxoIndex.Save()
 
-	amount, err := logic.GetBalance(fromAcc.GetAddress(), rpcContext.bm.Getblockchain())
 	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -657,7 +656,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
 
-	tx_utxos, err := rpc.GetUTXOsfromAmount(inputUtxos, common.NewAmount(3000), tip, gasLimit, gasPrice)
+	tx_utxos, err := GetUTXOsfromAmount(inputUtxos, common.NewAmount(3000), tip, gasLimit, gasPrice)
 	if err != nil {
 		panic(err)
 	}
