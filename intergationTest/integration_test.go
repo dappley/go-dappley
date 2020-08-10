@@ -1344,6 +1344,41 @@ func TestZeroGasPriceOfContractTransaction(t *testing.T) {
 	assert.Equal(t, common.NewAmount(0), balance)
 }
 
+// Test whether modification of blockchain state meets conflicts
+func TestBlockchain_StateConfict(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := lblockchain.CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
+
+	bc.SetState(blockchain.BlockchainReady)
+	assert.Equal(t, blockchain.BlockchainReady, bc.GetState())
+
+	blk := core.GenerateUtxoMockBlockWithoutInputs()
+
+	i := 0
+	total := 10
+	errorCount := 0
+	for i < total {
+		bc.SetState(blockchain.BlockchainReady)
+		go func() {
+			bc.SetState(blockchain.BlockchainSync)
+			t.Logf("go routine set state end, i=%d, time: %v", i, time.Now())
+		}()
+		bc.AddBlockContextToTail(lblockchain.PrepareBlockContext(bc, blk))
+		t.Logf("add to tail end, i=%d, time: %v", i, time.Now())
+
+		if bc.GetState() == blockchain.BlockchainReady {
+			errorCount++
+		}
+		i++
+	}
+	t.Logf("error count %d", errorCount)
+	assert.Greater(t, errorCount, 0)
+}
+
 func isSameBlockChain(bc1, bc2 *lblockchain.Blockchain) bool {
 	if bc1 == nil || bc2 == nil {
 		return false
