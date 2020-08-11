@@ -87,10 +87,8 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 
 		finishChan := make(chan bool, 1)
 
-		bm.Getblockchain().mutex.Lock()
 		logger.Info("BlockchainManager: requestDownloadBlockchain start, set blockchain status to downloading!")
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
-		bm.Getblockchain().mutex.Unlock()
 
 		select {
 		case bm.downloadRequestCh <- finishChan:
@@ -99,10 +97,8 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		}
 
 		<-finishChan
-		bm.Getblockchain().mutex.Lock()
 		logger.Info("BlockchainManager: requestDownloadBlockchain finished, set blockchain status to ready!")
 		bm.Getblockchain().SetState(blockchain.BlockchainReady)
-		bm.Getblockchain().mutex.Unlock()
 	}()
 }
 
@@ -212,10 +208,8 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}
 	bm.blockPool.RemoveFork(fork)
 
-	bm.Getblockchain().mutex.Lock()
 	bm.blockchain.SetState(blockchain.BlockchainReady)
 	logger.Info("Push: set blockchain status to ready.")
-	bm.Getblockchain().mutex.Unlock()
 	return
 }
 

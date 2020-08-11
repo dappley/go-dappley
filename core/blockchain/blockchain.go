@@ -4,26 +4,16 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 )
 
-type BlockchainState int
-
-const (
-	BlockchainInit BlockchainState = iota
-	BlockchainDownloading
-	BlockchainSync
-	BlockchainReady
-)
-
 type Blockchain struct {
 	tailBlockHash hash.Hash
 	libHash       hash.Hash
-	state         BlockchainState
 }
 
 func NewBlockchain(tailBlockHash hash.Hash, libBlockHash hash.Hash) Blockchain {
+	setBlockchainState(BlockchainReady)
 	return Blockchain{
 		tailBlockHash,
 		libBlockHash,
-		BlockchainReady,
 	}
 }
 
@@ -44,9 +34,9 @@ func (bc *Blockchain) SetLIBHash(libHash hash.Hash) {
 }
 
 func (bc *Blockchain) SetState(state BlockchainState) {
-	bc.state = state
+	setBlockchainState(state)
 }
 
 func (bc *Blockchain) GetState() BlockchainState {
-	return bc.state
+	return getBlockchainState()
 }
