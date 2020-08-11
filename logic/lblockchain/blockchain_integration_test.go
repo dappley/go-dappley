@@ -19,15 +19,15 @@
 package lblockchain
 
 import (
-	"github.com/dappley/go-dappley/logic/ltransaction"
-	"testing"
-
 	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblock"
+	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
+	"testing"
 
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
@@ -161,6 +161,35 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 	}
 
 	return txs
+}
+
+// Test deep copy of blockchain object
+func TestBlockchain_DeepCopy(t *testing.T) {
+	//create a new block chain
+	s := storage.NewRamStorage()
+	defer s.Close()
+
+	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
+
+	bc.SetState(blockchain.BlockchainReady)
+
+	bcCopy := bc.DeepCopy()
+
+	t.Logf("bc GetState: %v", bc.GetState())
+	t.Logf("bcCopy GetState: %v", bcCopy.GetState())
+	t.Logf("bc mutex: %p", bc.mutex)
+	t.Logf("bcCopy mutex: %p", bcCopy.mutex)
+	t.Logf("bc txPool: %p", bc.txPool)
+	t.Logf("bcCopy txPool: %p", bcCopy.txPool)
+	t.Logf("bc bc: %p", &bc.bc)
+	t.Logf("bcCopy bc: %p", &bcCopy.bc)
+	t.Logf("bc: %p", bc)
+	t.Logf("bcCopy: %p", bcCopy)
+	assert.True(t, bcCopy.GetState() == bc.GetState())
+	assert.True(t, bcCopy.mutex == bc.mutex)
+	assert.True(t, bcCopy.txPool == bc.txPool)
+	assert.False(t, bcCopy == bc)
 }
 
 func createTransaction(utxoIndex *lutxo.UTXOIndex, params transaction.SendTxParam) (transaction.Transaction, error) {
