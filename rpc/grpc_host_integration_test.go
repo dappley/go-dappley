@@ -131,7 +131,6 @@ func TestRpcSend(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	logic.RemoveAccountTestFile()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -216,7 +215,6 @@ func TestRpcSendContract(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	logic.RemoveAccountTestFile()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -417,6 +415,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcGetBlocks(t *testing.T) {
@@ -666,6 +665,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	assert.Nil(t, err)
 	err = ltransaction.VerifyTransaction(utxoIndex, &tx, 0)
 	assert.Nil(t, err)
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcSendTransaction(t *testing.T) {
@@ -747,6 +747,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	assert.Equal(t, leftAmount, realAmount)
 	recvAmount, err := logic.GetBalance(receiverAccount.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, common.NewAmount(6), recvAmount)
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
@@ -892,6 +893,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	assert.Equal(t, common.NewAmount(2), recvAmount1)
 	assert.Equal(t, common.NewAmount(3), recvAmount2)
 	assert.Equal(t, common.NewAmount(3), recvAmount4)
+	logic.RemoveAccountTestFile()
 }
 
 func TestGetNewTransaction(t *testing.T) {
@@ -989,6 +991,7 @@ func TestGetNewTransaction(t *testing.T) {
 		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 	time.Sleep(time.Second)
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
@@ -1036,6 +1039,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 	assert.Equal(t, 1, len(result.Transactions))
 
 	time.Sleep(time.Second)
+	logic.RemoveAccountTestFile()
 }
 
 func TestRpcService_RpcSubscribe(t *testing.T) {
@@ -1179,8 +1183,6 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()
 
-	logic.RemoveAccountTestFile()
-
 	// Create accounts
 	acc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1204,7 +1206,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context.rpcServer = NewGrpcServer(context.node, context.bm, dpos, "temp")
 	context.serverPort = defaultRpcPort + startPortOffset // use a different port as other integration tests
 	context.rpcServer.Start(context.serverPort)
-
+	logic.RemoveAccountTestFile()
 	return &context, nil
 }
 
@@ -1231,7 +1233,6 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	logic.RemoveAccountTestFile()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -1324,7 +1325,6 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	logic.RemoveAccountTestFile()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -1385,7 +1385,6 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-	logic.RemoveAccountTestFile()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
