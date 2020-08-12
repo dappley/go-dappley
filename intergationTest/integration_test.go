@@ -181,12 +181,11 @@ func TestSend(t *testing.T) {
 			assert.Equal(t, tc.expectedTransfer, receiverBalance)
 		})
 	}
+	logic.RemoveAccountTestFile()
 }
 
 //test logic.Send to invalid address
 func TestSendToInvalidAddress(t *testing.T) {
-	logic.RemoveAccountTestFile()
-
 	store := storage.NewRamStorage()
 	defer store.Close()
 
@@ -636,8 +635,9 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
 
 	assert.Nil(t, err)
+	currentHeight := bm.Getblockchain().GetMaxHeight()
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < 1 {
+	for bm.Getblockchain().GetMaxHeight() < currentHeight + 1 {
 	}
 	bps.Stop()
 
@@ -646,10 +646,12 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(100), common.NewAmount(1), functionCall, bm.Getblockchain())
 
 	assert.Nil(t, err)
+	currentHeight = bm.Getblockchain().GetMaxHeight()
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < 1 {
+	for bm.Getblockchain().GetMaxHeight() < currentHeight + 1 {
 	}
 	bps.Stop()
+	logic.RemoveAccountTestFile()
 }
 
 func connectNodes(node1 *network.Node, node2 *network.Node) {
@@ -1180,6 +1182,8 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, receiverAmount, balance)
+
+	logic.RemoveAccountTestFile()
 }
 
 // TestSmartContractOfContractDelete tests contract destroy interface, using system interface 'blockchain.js'
@@ -1261,6 +1265,8 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance)
+
+	logic.RemoveAccountTestFile()
 }
 
 // TestZeroGasPriceOfContractTransaction tests send contract tx with zero or negative gas price value
@@ -1342,6 +1348,8 @@ func TestZeroGasPriceOfContractTransaction(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance)
+
+	logic.RemoveAccountTestFile()
 }
 
 // Test whether modification of blockchain state meets conflicts
