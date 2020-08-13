@@ -611,7 +611,7 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 }
 
 func TestRpcVerifyTransaction(t *testing.T) {
-	rpcContext, err := createRpcTestContext(9)
+	rpcContext, err := createRpcTestContext(18)
 	defer rpcContext.destroyContext()
 	if err != nil {
 		panic(err)
@@ -624,12 +624,11 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	//
 	gctx, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(3000)), common.NewAmount(uint64(1)), 1)
-
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
 	utxoIndex.UpdateUtxo(&gctx)
 	utxoIndex.Save()
-
 	// Create a grpc connection and a account
 	conn, err := grpc.Dial(fmt.Sprint(":", rpcContext.serverPort), grpc.WithInsecure())
 	if err != nil {
@@ -660,10 +659,49 @@ func TestRpcVerifyTransaction(t *testing.T) {
 		panic(err)
 	}
 	sendTxParam := transaction.NewSendTxParam(fromAcc.GetAddress(), fromAcc.GetKeyPair(),
-		toAcc.GetAddress(), common.NewAmount(2000), tip, gasLimit, gasPrice, "")
+		toAcc.GetAddress(), common.NewAmount(3000), tip, gasLimit, gasPrice, "")
 	tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
+	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(context.Background(), sendTransactionRequest)
+	rpcContext.bp.Start()
+	maxHeight := rpcContext.bm.Getblockchain().GetMaxHeight()
+	for maxHeight < 2 {
+		maxHeight = rpcContext.bm.Getblockchain().GetMaxHeight()
+	}
+	rpcContext.bp.Stop()
+	util.WaitDoneOrTimeout(func() bool {
+		return !rpcContext.bp.IsProducingBlock()
+	}, 20)
+	//send second transaction
+	gctx2, err := ltransaction.NewGasChangeTx(account.NewTransactionAccountByAddress(fromAcc.GetAddress()), 0, common.NewAmount(uint64(0)), common.NewAmount(uint64(1000)), common.NewAmount(uint64(1)), 1)
+	utxoIndex = lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
+	utxoIndex.UpdateUtxo(&gctx2)
+	utxoIndex.Save()
+	rpcContext.bm.Getblockchain()
+	senderResponse2, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
-	err = ltransaction.VerifyTransaction(utxoIndex, &tx, 0)
+	assert.NotNil(t, senderResponse2)
+
+	utxos2 := senderResponse2.GetUtxos()
+	var inputUtxos2 []*utxo.UTXO
+	for _, u := range utxos2 {
+		uu := utxo.UTXO{}
+		uu.Value = common.NewAmountFromBytes(u.Amount)
+		uu.Txid = u.Txid
+		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
+		uu.TxIndex = int(u.TxIndex)
+		inputUtxos2 = append(inputUtxos2, &uu)
+	}
+
+	tx_utxos2, err := GetUTXOsfromAmount(inputUtxos2, common.NewAmount(1000), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0))
+	if err != nil {
+		panic(err)
+	}
+	sendTxParam2 := transaction.NewSendTxParam(fromAcc.GetAddress(), fromAcc.GetKeyPair(),
+		toAcc.GetAddress(), common.NewAmount(1000), tip, gasLimit, gasPrice, "")
+	txTmp, err := ltransaction.NewUTXOTransaction(tx_utxos2, sendTxParam2)
+	sendTransactionRequest2 := &rpcpb.SendTransactionRequest{Transaction: txTmp.ToProto().(*transactionpb.Transaction)}
+	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(context.Background(), sendTransactionRequest2)
 	assert.Nil(t, err)
 	logic.RemoveAccountTestFile()
 }
