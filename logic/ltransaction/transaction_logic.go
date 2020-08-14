@@ -12,7 +12,6 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
-	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
@@ -147,11 +146,74 @@ func prepareFuncCallScript(function, args string) string {
 	)
 }
 
-func isPubkeyHashInUtxos(contractUtxos []*utxo.UTXO, pubKeyHash account.PubKeyHash) bool {
-	for _, contractUtxo := range contractUtxos {
-		if bytes.Compare(contractUtxo.PubKeyHash, pubKeyHash) == 0 {
-			return true
+// Returns DAG structure of batch transaction
+func SplitToTxDags(txs []*transaction.Transaction) [][]*transaction.Transaction {
+	// key: prevTxId, value: currentTxId
+	relationMap := make(map[string][]string)
+	txIdMap := make(map[string]*transaction.Transaction)
+
+	// build data
+	for _, tx := range txs {
+		txId := hex.EncodeToString(tx.ID)
+		vins := tx.Vin
+		for _, vin := range vins {
+			refTxId := hex.EncodeToString(vin.Txid)
+			addToRelationMap(relationMap, refTxId, txId)
+		}
+		txIdMap[txId] = tx
+	}
+
+	// resolve relation
+	var dags [][]*transaction.Transaction
+	for _, tx := range txs {
+		txId := hex.EncodeToString(tx.ID)
+		var oneDag []*transaction.Transaction
+		if _, existed := txIdMap[txId]; existed {
+			oneDag = append(oneDag, tx)
+			delete(txIdMap, txId)
+			if childIds, exists := relationMap[hex.EncodeToString(tx.ID)]; exists {
+				oneDag = childTxDagRecursion(oneDag, childIds, relationMap, txIdMap)
+			}
+		}
+		if len(oneDag) > 0 {
+			dags = append(dags, oneDag)
 		}
 	}
-	return false
+	return dags
+}
+
+// Parsing relation between two transactions
+func addToRelationMap(m map[string][]string, refTxId string, txId string) {
+	ids, exists := m[refTxId]
+	if exists {
+		for _, item := range ids {
+			if txId == item {
+				return
+			}
+		}
+	}
+	if !exists {
+		ids = []string{}
+	}
+	ids = append(ids, txId)
+	m[refTxId] = ids
+}
+
+// Recursion to add tx to dag for child transactions depend on parent transaction
+func childTxDagRecursion(oneDag []*transaction.Transaction, childIds []string, relationMap map[string][]string,
+	txIdMap map[string]*transaction.Transaction) []*transaction.Transaction {
+	if len(childIds) == 0 {
+		return oneDag
+	}
+	for _, childId := range childIds {
+		if tx, existed := txIdMap[childId]; existed {
+			oneDag = append(oneDag, tx)
+			delete(txIdMap, childId)
+		}
+		// use recursion to handle deep dependency
+		if nextIds, existed := relationMap[childId]; existed {
+			oneDag = childTxDagRecursion(oneDag, nextIds, relationMap, txIdMap)
+		}
+	}
+	return oneDag
 }

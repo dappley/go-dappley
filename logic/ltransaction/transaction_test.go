@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
+	logger "github.com/sirupsen/logrus"
 	"testing"
 
 	"github.com/dappley/go-dappley/common"
@@ -495,4 +497,54 @@ func TestNewCoinbaseTX(t *testing.T) {
 
 	assert.NotEqual(t, t1, t3)
 	assert.NotEqual(t, t1.ID, t3.ID)
+}
+
+// Testcase of function SplitToTxDags
+func TestTxDag(t *testing.T) {
+	tx1 := transaction.Transaction{Vin: []transactionbase.TXInput{{[]byte{1}, 0, nil, nil}}}
+	tx1.ID = tx1.Hash()
+	tx2 := transaction.Transaction{Vin: []transactionbase.TXInput{{[]byte{2}, 0, nil, nil}}}
+	tx2.ID = tx2.Hash()
+	tx3 := transaction.Transaction{Vin: []transactionbase.TXInput{{tx1.ID, 0, nil, nil}}}
+	tx3.ID = tx3.Hash()
+	tx4 := transaction.Transaction{Vin: []transactionbase.TXInput{{tx2.ID, 0, nil, nil}}}
+	tx4.ID = tx4.Hash()
+	tx5 := transaction.Transaction{Vin: []transactionbase.TXInput{{tx3.ID, 0, nil, nil}}}
+	tx5.ID = tx5.Hash()
+	tx6 := transaction.Transaction{Vin: []transactionbase.TXInput{{tx1.ID, 1, nil, nil}}}
+	tx6.ID = tx6.Hash()
+	tx7 := transaction.Transaction{Vin: []transactionbase.TXInput{{tx4.ID, 0, nil, nil}}}
+	tx7.ID = tx7.Hash()
+	tx8 := transaction.Transaction{Vin: []transactionbase.TXInput{{[]byte{3}, 0, nil, nil}}}
+	tx8.ID = tx8.Hash()
+	tx9 := transaction.Transaction{Vin: []transactionbase.TXInput{{tx5.ID, 0, nil, nil}}}
+	tx9.ID = tx9.Hash()
+
+	txs := []*transaction.Transaction{&tx1, &tx2, &tx3, &tx4, &tx5, &tx6, &tx7, &tx8, &tx9}
+
+	txDags := SplitToTxDags(txs)
+
+	for i, value := range txDags {
+		for j, val := range value {
+			logger.Infof("dags i=%d, j=%d, txId=%s", i, j, hex.EncodeToString(val.ID))
+		}
+	}
+
+	// DAG structure:
+	// - tx1 | tx3 | tx5 | tx9 | tx6
+	// - tx2 | tx4 | tx7
+	// - tx8
+	assert.Equal(t, 3, len(txDags))
+	assert.Equal(t, 5, len(txDags[0]))
+	assert.Equal(t, 3, len(txDags[1]))
+	assert.Equal(t, 1, len(txDags[2]))
+	assert.Equal(t, tx1.ID, txDags[0][0].ID)
+	assert.Equal(t, tx3.ID, txDags[0][1].ID)
+	assert.Equal(t, tx5.ID, txDags[0][2].ID)
+	assert.Equal(t, tx9.ID, txDags[0][3].ID)
+	assert.Equal(t, tx6.ID, txDags[0][4].ID)
+	assert.Equal(t, tx2.ID, txDags[1][0].ID)
+	assert.Equal(t, tx4.ID, txDags[1][1].ID)
+	assert.Equal(t, tx7.ID, txDags[1][2].ID)
+	assert.Equal(t, tx8.ID, txDags[2][0].ID)
 }
