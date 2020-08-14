@@ -238,6 +238,88 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	}
 }
 
+// Test time cost of VerifyTransactions
+func TestBlock_VerifyTransactions_Time(t *testing.T) {
+	// Prepare test data
+	// Padding Address to 32 Byte
+	var address1Bytes = []byte("address1000000000000000000000000")
+	var address1TA = account.NewTransactionAccountByPubKey(address1Bytes)
+
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var ta1 = account.NewAccountByPrivateKey(prikey1)
+
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var ta2 = account.NewAccountByPrivateKey(prikey2)
+
+	prevTx1 := NewTransactionByVin(util.GenerateRandomAoB(1), 1, ta1.GetKeyPair().GetPublicKey(), 7, ta2.GetPubKeyHash(), 3)
+	prevTx2 := NewTransactionByVin(util.GenerateRandomAoB(1), 1, ta2.GetKeyPair().GetPublicKey(), 7, ta1.GetPubKeyHash(), 3)
+	dependentTx2 := NewTransactionByVin(prevTx1.ID, 0, ta2.GetKeyPair().GetPublicKey(), 6, ta1.GetPubKeyHash(), 1)
+	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, ta1.GetKeyPair().GetPublicKey(), 5, ta2.GetPubKeyHash(), 1)
+	dependentTx4 := NewTransactionByVin(prevTx2.ID, 0, ta1.GetKeyPair().GetPublicKey(), 6, ta2.GetPubKeyHash(), 1)
+	dependentTx5 := NewTransactionByVin(dependentTx4.ID, 0, ta2.GetKeyPair().GetPublicKey(), 5, ta1.GetPubKeyHash(), 1)
+	dependentTx6 := NewTransactionByVin(dependentTx5.ID, 0, ta1.GetKeyPair().GetPublicKey(), 4, ta2.GetPubKeyHash(), 1)
+
+	tx2Utxo := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
+	tx4Utxo := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal}
+	tx5Utxo := utxo.UTXO{dependentTx5.Vout[0], dependentTx5.ID, 0, utxo.UtxoNormal}
+
+	prev1Utxos := map[string][]*utxo.UTXO{
+		ta2.GetPubKeyHash().String(): {&utxo.UTXO{prevTx1.Vout[0], prevTx1.ID, 0, utxo.UtxoNormal}},
+	}
+	prev2Utxos := map[string][]*utxo.UTXO{
+		ta1.GetPubKeyHash().String(): {&utxo.UTXO{prevTx2.Vout[0], prevTx2.ID, 0, utxo.UtxoNormal}},
+	}
+	ltransaction.NewTxDecorator(&dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), prev1Utxos[ta2.GetPubKeyHash().String()])
+	ltransaction.NewTxDecorator(&dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo})
+	ltransaction.NewTxDecorator(&dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), prev2Utxos[ta1.GetPubKeyHash().String()])
+	ltransaction.NewTxDecorator(&dependentTx5).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), []*utxo.UTXO{&tx4Utxo})
+	ltransaction.NewTxDecorator(&dependentTx6).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx5Utxo})
+
+	txs := []*transaction.Transaction{&dependentTx2, &dependentTx3, &dependentTx4, &dependentTx5, &dependentTx6}
+	db := storage.NewRamStorage()
+	index := make(map[string]*utxo.UTXOTx)
+
+	for key, addrUtxos := range prev1Utxos {
+		utxoTx := utxo.NewUTXOTx()
+		for _, addrUtxo := range addrUtxos {
+			utxoTx.PutUtxo(addrUtxo)
+		}
+		index[key] = &utxoTx
+	}
+	for key, addrUtxos := range prev2Utxos {
+		utxoTx := utxo.NewUTXOTx()
+		for _, addrUtxo := range addrUtxos {
+			utxoTx.PutUtxo(addrUtxo)
+		}
+		index[key] = &utxoTx
+	}
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndex.SetIndex(index)
+	//{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
+	scState := scState.NewScState()
+	var parentBlk = block.NewBlockWithRawInfo(
+		[]byte{'a'},
+		[]byte{'e', 'c'},
+		0,
+		time.Now().Unix(),
+		0,
+		nil,
+	)
+	// add coinbase
+	totalTip := common.NewAmount(0)
+	for _, tx := range txs {
+		totalTip = totalTip.Add(tx.Tip)
+	}
+	coninbaseTx := ltransaction.NewCoinbaseTX(address1TA.GetAddress(), "", parentBlk.GetHeight()+1, totalTip)
+	txs = append(txs, &coninbaseTx)
+	blk := block.NewBlock(txs, parentBlk, "")
+	start := time.Now()
+	result := VerifyTransactions(blk, utxoIndex, scState, parentBlk)
+	elapsed := time.Since(start)
+	t.Logf("efficiency run with time: %v", elapsed)
+	assert.Equal(t, true, result)
+}
+
 func NewTransactionByVin(vinTxId []byte, vinVout int, vinPubkey []byte, voutValue uint64, voutPubKeyHash account.PubKeyHash, tip uint64) transaction.Transaction {
 	tx := transaction.Transaction{
 		ID: nil,
