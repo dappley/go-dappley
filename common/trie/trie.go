@@ -24,7 +24,7 @@ import (
 	"github.com/dappley/go-dappley/common/trie/pb"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/gogo/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 )
 
 // Errors
