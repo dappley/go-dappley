@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/hex"
 	"github.com/dappley/go-dappley/consensus"
+	"sync"
 
 	"time"
 
@@ -43,6 +44,7 @@ type AdminRpcService struct {
 	bm      *lblockchain.BlockchainManager
 	node    *network.Node
 	dynasty *consensus.Dynasty
+	mutex   sync.Mutex
 }
 
 func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcpb.AddPeerRequest) (*rpcpb.AddPeerResponse, error) {
@@ -100,7 +102,9 @@ func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in
 		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAmount.Error())
 	}
 
+	adminRpcService.mutex.Lock()
 	_, _, err := logic.SendFromMiner(sendToAddress, sendAmount, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
 		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
