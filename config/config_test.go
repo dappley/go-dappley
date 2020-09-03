@@ -19,7 +19,6 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -84,8 +83,7 @@ func TestLoadConfig(t *testing.T) {
 			defer os.Remove(filename)
 			config := &configpb.Config{}
 			LoadConfig(filename, config)
-			fmt.Println("config.ConsensusConfig.tt.expected:",tt.expected)
-			assert.Equal(t, tt.expected, config)
+			assert.Equal(t, tt.expected.String(), config.String())
 		})
 	}
 }
