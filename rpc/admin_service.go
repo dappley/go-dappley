@@ -155,8 +155,10 @@ func (adminRpcService *AdminRpcService) RpcSend(ctx context.Context, in *rpcpb.S
 		return nil, status.Error(codes.NotFound, wallet.ErrAddressNotFound.Error())
 	}
 
+	adminRpcService.mutex.Lock()
 	txHash, scAddress, err := logic.Send(senderAccount, sendToAddress, sendAmount, tip, gasLimit, gasPrice, in.GetData(),
 		adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
 
 	txHashStr := hex.EncodeToString(txHash)
 	if err != nil {
