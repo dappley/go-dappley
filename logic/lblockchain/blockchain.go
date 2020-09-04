@@ -535,7 +535,8 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 		return true
 	}
 	if bc.GetMaxHeight() > uint64(minProduerNum-1) {
-		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++ {//遍历次数为总节点数-1
+		onlineProducers[currentCheckBlk.GetProducer()] = true
+		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++ {
 			currentCheckBlk, err = bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
 				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
@@ -544,16 +545,11 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 			if currentCheckBlk.GetHeight() == 0 {
 				break
 			}
-			if _, exist := onlineProducers[currentCheckBlk.GetProducer()]; !exist {
-				if blk.GetProducer() != currentCheckBlk.GetProducer() {
-					onlineProducers[currentCheckBlk.GetProducer()] = true
-				}
-			}
+			onlineProducers[currentCheckBlk.GetProducer()] = true
 		}
-		if len(onlineProducers) >= minProduerNum-1 {
-			return true
+		if len(onlineProducers) < minProduerNum {
+			return false
 		}
-		return false
 	} else {
 		for i := uint64(0); i < bc.GetMaxHeight(); i++ {
 			currentCheckBlk, err = bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
@@ -565,8 +561,8 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 				return false
 			}
 		}
-		return true
 	}
+	return true
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
