@@ -92,7 +92,7 @@ func (s *Server) Start(port uint32) {
 
 		srv := grpc.NewServer(grpc.UnaryInterceptor(s.AuthInterceptor))
 		rpcpb.RegisterRpcServiceServer(srv, &RpcService{s.bm, s.node, s.dpos.GetDynasty(),nil,0,sync.Mutex{}})
-		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node, s.dpos.GetDynasty()})
+		rpcpb.RegisterAdminServiceServer(srv, &AdminRpcService{s.bm, s.node, s.dpos.GetDynasty(),sync.Mutex{}})
 		if s.metricsConfig != nil {
 			rpcpb.RegisterMetricServiceServer(srv, NewMetricsService(s.node, s.bm, s.dpos, s.metricsConfig, port))
 		}
