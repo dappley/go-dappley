@@ -318,6 +318,7 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 	)
 	cFunction := C.CString(runnableSource)
 	defer C.free(unsafe.Pointer(cFunction))
+	sc.v8engine.stats.count_of_executed_instructions=0
 	ret = C.executeV8Script(cFunction, C.int(sourceLineOffset), C.uintptr_t(sc.handler), &cResult, sc.v8engine)
 	sc.CollectTracingStats()
 
