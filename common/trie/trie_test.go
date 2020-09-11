@@ -29,7 +29,7 @@ import (
 	"github.com/dappley/go-dappley/crypto/byteutils"
 	"github.com/dappley/go-dappley/crypto/hash"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/gogo/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 
