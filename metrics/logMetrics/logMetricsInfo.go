@@ -102,8 +102,10 @@ func getCPUPercent() interface{} {
 	return cpuStat{percentageUsed, cpuTotalPercent, coreNum}
 }
 
-func getDiskStat(diskInfoMap map[string]int) interface{} {
-	diskUsage, err := disk.Usage("/")
+var preUsed uint64
+func getDiskStat() interface{} {
+	var diskUsageChange uint64
+ 	diskUsage, err := disk.Usage("/")
 	if err != nil {
 		logger.Warn(err)
 		return nil
@@ -113,8 +115,10 @@ func getDiskStat(diskInfoMap map[string]int) interface{} {
 		logger.Warn(err)
 		return nil
 	}
-	diskUsageChange := diskUsage.Used - uint64(diskInfoMap["preUsed"])
-	diskInfoMap["preUsed"] = int(diskUsage.Used)
+	if preUsed != 0 && diskUsage.Used > preUsed{
+		diskUsageChange = diskUsage.Used - preUsed
+	}
+	preUsed = diskUsage.Used
 	return diskStat{diskUsage.Used, diskUsageChange,diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
 }
 
@@ -204,7 +208,6 @@ func NewMetricsInfo() *MetricsInfo {
 var mi = NewMetricsInfo()
 
 func LogMetricsInfo(bc *lblockchain.Blockchain) {
-	diskInfoMap := make(map[string]int)
 	blkHeight := bc.GetMaxHeight()
 	interval := viper.GetInt64("metrics.interval")
 
@@ -215,17 +218,32 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 		for {
 			select {
 			case <-tick.C:
+				mi.Metrics["cpu"] = getCPUPercent()
+				mi.Metrics["memory"] = getMemoryStats()
+				mi.Metrics["block"] = getBlockStats(bc)
+				mi.Metrics["txRequest"] = getTxRequestStats()
+				mi.Metrics["network"] = getNetWorkStats()
 				if bc.GetMaxHeight() > blkHeight{
+					mi.Metrics["disk"] = getDiskStat()
 					blkHeight = bc.GetMaxHeight()
-					mi.Metrics["cpu"] = getCPUPercent()
-					mi.Metrics["memory"] = getMemoryStats()
-					mi.Metrics["disk"] = getDiskStat(diskInfoMap)
-					mi.Metrics["block"] = getBlockStats(bc)
-					mi.Metrics["txRequest"] = getTxRequestStats()
-					mi.Metrics["network"] = getNetWorkStats()
-					logger.WithField("metrics", mi.ToJsonString()).Infof("")
-					rpc.MetricsInfo = mi.ToJsonString()
 				}
+				logger.WithField("metrics", mi.ToJsonString()).Infof("")
+				rpc.MetricsInfo = mi.ToJsonString()
+			}
+		}
+	}()
+	go func() {
+		defer log.CrashHandler()
+
+		tick := time.NewTicker(time.Duration(1000) * time.Millisecond)
+		for {
+			select {
+			case <-tick.C:
+				if bc.GetMaxHeight() > blkHeight{
+					mi.Metrics["disk"] = getDiskStat()
+					blkHeight = bc.GetMaxHeight()
+				}
+				rpc.MetricsInfo = mi.ToJsonString()
 			}
 		}
 	}()
