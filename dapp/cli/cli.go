@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -28,8 +29,12 @@ import (
 	"fmt"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
+	"log"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -45,6 +50,7 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/wallet"
 	"github.com/golang/protobuf/proto"
+	"github.com/tidwall/gjson"
 	logger "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -68,6 +74,7 @@ const (
 	cliGasPrice          = "gasPrice"
 	cliContractQuery     = "contractQuery"
 	cliHelp              = "help"
+	cliGetMetricsInfo    = "getMetricsInfo"
 )
 
 //flag names
@@ -108,6 +115,7 @@ type serviceType int
 const (
 	rpcService = iota
 	adminRpcService
+	metricsRpcService
 )
 
 //list of commands
@@ -126,6 +134,7 @@ var cmdList = []string{
 	cliGasPrice,
 	cliContractQuery,
 	cliHelp,
+	cliGetMetricsInfo,
 }
 
 var (
@@ -287,6 +296,7 @@ var cmdFlagsMap = map[string][]flagPars{
 		},
 	},
 	cliGasPrice: {},
+	cliGetMetricsInfo: {},
 	cliContractQuery: {
 		flagPars{
 			flagContractAddr,
@@ -325,6 +335,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGasPrice:          {rpcService, gasPriceCommandHandler},
 	cliHelp:              {adminRpcService, helpCommandHandler},
 	cliContractQuery:     {rpcService, contractQueryCommandHandler},
+	cliGetMetricsInfo:    {metricsRpcService, getMetricsInfoCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -358,6 +369,7 @@ func main() {
 	clients := map[serviceType]interface{}{
 		rpcService:      rpcpb.NewRpcServiceClient(conn),
 		adminRpcService: rpcpb.NewAdminServiceClient(conn),
+		metricsRpcService: rpcpb.NewMetricServiceClient(conn),
 	}
 	args := os.Args[1:]
 
@@ -421,6 +433,84 @@ func printUsage() {
 		fmt.Println(" ", cmd)
 	}
 	fmt.Println("Note: Use the command 'cli help' to get the command usage in details")
+}
+
+func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+	var flag bool = true
+	file, err := os.Create("metricsInfo_result.csv")
+	if err != nil {
+		log.Println(err)
+	}
+	defer file.Close()
+	writer := csv.NewWriter(file)
+	writer.Comma = ','
+	tick := time.NewTicker(time.Duration(5000) * time.Millisecond)
+	for {
+		select {
+		case <-tick.C:
+			metricsServiceRequest := rpcpb.MetricsServiceRequest{}
+			metricsInfoResponse, err := c.(rpcpb.MetricServiceClient).RpcGetMetricsInfo(ctx, &metricsServiceRequest)
+			if err != nil {
+				switch status.Code(err) {
+				case codes.Unavailable:
+					fmt.Println("Error: server is not reachable!")
+				default:
+					fmt.Println("Error:", err.Error())
+				}
+				return
+			}
+			fmt.Println("metricsInfo:",metricsInfoResponse.Data)
+
+			m, ok := gjson.Parse(metricsInfoResponse.Data).Value().(map[string]interface{})
+			if !ok {
+				// not a map
+			}
+			var titleStr []string
+			var metricsInfostr []string
+			metricsInfoMap := make(map[string]string)
+			for key,value  := range m {
+				if value != nil{
+					childValue := value.(map[string]interface{})
+					for cKey,cValue := range childValue{
+						if cKey == "txRequestSend" || cKey == "txRequestSendFromMiner"{
+							grandChildValue := cValue.(map[string]interface{})
+							for gcKey,gcValue := range grandChildValue{
+								if gcValue != nil{
+									switch v := gcValue.(type) {
+									case float64:
+										metricsInfoMap[key+":"+cKey+":"+gcKey] = strconv.Itoa(int(v))
+									}
+								}
+							}
+						}else {
+							switch v := cValue.(type) {
+							case float64:
+								metricsInfoMap[key+":"+cKey] = strconv.Itoa(int(v))
+							}
+						}
+					}
+				}
+			}
+			var keys []string
+			for key := range metricsInfoMap {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			for i:=0;i<len(keys);i++{
+			  value := metricsInfoMap[keys[i]]
+			  metricsInfostr = append(metricsInfostr,value)
+			  titleStr = append(titleStr,keys[i])
+			}
+			var strArray [][]string
+			if flag == true{
+				strArray = append(strArray,titleStr)
+			}
+			strArray = append(strArray,metricsInfostr)
+			flag = false
+			writer.WriteAll(strArray)
+			writer.Flush()
+		}
+	}
 }
 
 func getBlocksCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
@@ -779,6 +869,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 	return
 }
 
+
 func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	toAddr := *(flags[flagAddressBalance].(*string))
 	if len(toAddr) == 0 {
@@ -827,6 +918,7 @@ func getPeerInfoCommandHandler(ctx context.Context, account interface{}, flags c
 		return
 	}
 	fmt.Println(proto.MarshalTextString(response))
+	fmt.Println("00000000")
 }
 
 func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
@@ -886,6 +978,18 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
+
+	_, err := c.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", err.Error())
+		}
+		return
+	}
+	//fmt.Println("getMetricsInfoCommandHandler:",metricsInfoResponse.Data)
 
 	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),

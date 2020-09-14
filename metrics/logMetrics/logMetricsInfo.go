@@ -14,8 +14,8 @@ import (
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -37,6 +37,7 @@ type cpuStat struct {
 
 type diskStat struct {
 	Used        uint64  `json:"used"`
+	UsedChange  uint64  `json:"UsedChange"`
 	UsedPercent float64 `json:"usedPercent"`
 	ReadBytes   uint64  `json:"readBytes"`
 	WriteBytes  uint64  `json:"writeBytes"`
@@ -101,7 +102,7 @@ func getCPUPercent() interface{} {
 	return cpuStat{percentageUsed, cpuTotalPercent, coreNum}
 }
 
-func getDiskStat() interface{} {
+func getDiskStat(diskInfoMap map[string]int) interface{} {
 	diskUsage, err := disk.Usage("/")
 	if err != nil {
 		logger.Warn(err)
@@ -112,7 +113,9 @@ func getDiskStat() interface{} {
 		logger.Warn(err)
 		return nil
 	}
-	return diskStat{diskUsage.Used, diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
+	diskUsageChange := diskUsage.Used - uint64(diskInfoMap["preUsed"])
+	diskInfoMap["preUsed"] = int(diskUsage.Used)
+	return diskStat{diskUsage.Used, diskUsageChange,diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
 }
 
 func getTransactionPoolSize() interface{} {
@@ -198,9 +201,13 @@ func NewMetricsInfo() *MetricsInfo {
 	return mi
 }
 
+var mi = NewMetricsInfo()
+
 func LogMetricsInfo(bc *lblockchain.Blockchain) {
-	mi := NewMetricsInfo()
+	diskInfoMap := make(map[string]int)
+	blkHeight := bc.GetMaxHeight()
 	interval := viper.GetInt64("metrics.interval")
+
 	go func() {
 		defer log.CrashHandler()
 
@@ -208,13 +215,17 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 		for {
 			select {
 			case <-tick.C:
-				mi.Metrics["cpu"] = getCPUPercent()
-				mi.Metrics["memory"] = getMemoryStats()
-				mi.Metrics["disk"] = getDiskStat()
-				mi.Metrics["block"] = getBlockStats(bc)
-				mi.Metrics["txRequest"] = getTxRequestStats()
-				mi.Metrics["network"] = getNetWorkStats()
-				logger.WithField("metrics", mi.ToJsonString()).Infof("")
+				if bc.GetMaxHeight() > blkHeight{
+					blkHeight = bc.GetMaxHeight()
+					mi.Metrics["cpu"] = getCPUPercent()
+					mi.Metrics["memory"] = getMemoryStats()
+					mi.Metrics["disk"] = getDiskStat(diskInfoMap)
+					mi.Metrics["block"] = getBlockStats(bc)
+					mi.Metrics["txRequest"] = getTxRequestStats()
+					mi.Metrics["network"] = getNetWorkStats()
+					logger.WithField("metrics", mi.ToJsonString()).Infof("")
+					rpc.MetricsInfo = mi.ToJsonString()
+				}
 			}
 		}
 	}()
