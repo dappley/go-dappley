@@ -9,7 +9,7 @@ Official Go implementation of the dappley protocol.
 ### Prerequisites
 | Components | Version | Description |
 |----------|-------------|-------------|
-|[Golang](https://golang.org) | >= 1.11.1| The Go Programming Language |
+|[Golang](https://golang.org) | >= 1.14| The Go Programming Language |
 
 For detailed instructions about the environment setup for go-dappley, please check out the [wiki](https://github.com/dappley/go-dappley/wiki) page.
 
@@ -26,7 +26,7 @@ go get -u -v github.com/dappley/go-dappley
 
 ```bash
 cd github.com/dappley/go-dappley
-make
+make build
 # note: you may be asked to grant super user permission
 ```
 
@@ -81,10 +81,12 @@ node_config{
     seed:   ["/ip4/<node 1 ip address>/tcp/12341/ipfs/QmNzA9rsEcM5nAzX9PzTrabJsGiifzaUU85Qe78HSDzSSE"]
     db_path: "../bin/node2.db"
     rpc_port: 50052
-    key_path: "key/node2NetworkKey"
+    key: "CAESYLUt8Dxqx0MKGZ/dF9cFei8Usm5CPBNat2GhZsv86jJD7oFAPV5Fm7GG1/enKfKAFhrMpyM3UGwvPo2tHNlIdVPugUA9XkWbsYbX96cp8oAWGsynIzdQbC8+ja0c2Uh1Uw=="
     tx_pool_limit: 102400
     blk_size_limit: 102400
     node_address: "dWNrwKvATvPNXNtNNXSj1yzMGerxRQhwUw"
+    metrics_interval: 7200
+    metrics_polling_interval: 5
 }
 ```
 
