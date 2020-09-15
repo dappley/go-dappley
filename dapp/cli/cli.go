@@ -463,7 +463,8 @@ func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdF
 
 			m, ok := gjson.Parse(metricsInfoResponse.Data).Value().(map[string]interface{})
 			if !ok {
-				// not a map
+				fmt.Println("parse data is not json")
+				continue
 			}
 			var titleStr []string
 			var metricsInfostr []string
