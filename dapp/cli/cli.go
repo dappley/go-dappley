@@ -980,18 +980,6 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	_, err := c.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{})
-	if err != nil {
-		switch status.Code(err) {
-		case codes.Unavailable:
-			fmt.Println("Error: server is not reachable!")
-		default:
-			fmt.Println("Error:", err.Error())
-		}
-		return
-	}
-	//fmt.Println("getMetricsInfoCommandHandler:",metricsInfoResponse.Data)
-
 	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
