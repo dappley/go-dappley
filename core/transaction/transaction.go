@@ -105,6 +105,11 @@ type SendTxParam struct {
 	Contract      string
 }
 
+//
+func SetSubsidy(amount int)  {
+	Subsidy = common.NewAmount(uint64(amount))
+}
+
 // NewSendTxParam Returns SendTxParam object
 func NewSendTxParam(from account.Address, senderKeyPair *account.KeyPair, to account.Address, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) SendTxParam {
 	return SendTxParam{from, senderKeyPair, to, amount, tip, gasLimit, gasPrice, contract}

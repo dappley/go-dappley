@@ -3,6 +3,7 @@ log:
   level:  "info"
   count:  180
   rotateTime:  86400
+  minerSubsidy:  1000000000
   stdout:  true
 metrics:
   open: false
