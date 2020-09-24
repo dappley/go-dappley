@@ -64,7 +64,7 @@ const InvalidAddress = "Invalid Address"
 
 //test logic.Send
 func TestSend(t *testing.T) {
-	var mineReward = common.NewAmount(10000000)
+	var mineReward = transaction.Subsidy
 	testCases := []struct {
 		name             string
 		transferAmount   *common.Amount
@@ -190,7 +190,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	defer store.Close()
 
 	//this is internally set. Dont modify
-	mineReward := common.NewAmount(10000000)
+	mineReward := transaction.Subsidy
 	//Transfer ammount
 	transferAmount := common.NewAmount(25)
 	tip := common.NewAmount(5)
@@ -236,7 +236,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	tip := common.NewAmount(5)
 
 	//this is internally set. Dont modify
-	mineReward := common.NewAmount(10000000)
+	mineReward := transaction.Subsidy
 	//Transfer ammount is larger than the balance
 	transferAmount := common.NewAmount(250000000)
 

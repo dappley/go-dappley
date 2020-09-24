@@ -20,6 +20,7 @@ package logic
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/core/transaction"
 	"os"
 	"testing"
 
@@ -126,7 +127,7 @@ func TestGetBalance(t *testing.T) {
 	//The balance should be 10000000 after creating a blockchain
 	balance, err := GetBalance(addr, bc)
 	assert.Nil(t, err)
-	assert.Equal(t, common.NewAmount(10000000), balance)
+	assert.Equal(t, transaction.Subsidy, balance)
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {

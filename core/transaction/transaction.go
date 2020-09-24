@@ -38,7 +38,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var Subsidy = common.NewAmount(10000000)
+var Subsidy = common.NewAmount(10000000000)
 
 const (
 	ContractTxouputIndex = 0

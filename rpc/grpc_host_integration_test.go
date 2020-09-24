@@ -141,7 +141,6 @@ func TestRpcSend(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
 	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
 		panic(err)
@@ -192,7 +191,7 @@ func TestRpcSend(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Check balance
-	minedReward := common.NewAmount(10000000)
+	minedReward := transaction.Subsidy
 	senderBalance, err := logic.GetBalance(senderAccount.GetAddress(), bm.Getblockchain())
 	assert.Nil(t, err)
 	receiverBalance, err := logic.GetBalance(receiverAccount.GetAddress(), bm.Getblockchain())
@@ -403,7 +402,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
-	minedReward := common.NewAmount(10000000)
+	minedReward := transaction.Subsidy
 	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	assert.Equal(t, leftAmount, getBalance(senderResponse.Utxos))
 
@@ -779,7 +778,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	}, 20)
 	time.Sleep(time.Second)
 
-	minedReward := common.NewAmount(10000000)
+	minedReward := transaction.Subsidy
 	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(6))
 	realAmount, err := logic.GetBalance(rpcContext.account.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, leftAmount, realAmount)
@@ -921,7 +920,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		return !rpcContext.bp.IsProducingBlock()
 	}, 20)
 
-	minedReward := common.NewAmount(10000000)
+	minedReward := transaction.Subsidy
 	leftAmount, err := minedReward.Times(rpcContext.bm.Getblockchain().GetMaxHeight() + 1).Sub(common.NewAmount(8))
 	realAmount, err := logic.GetBalance(rpcContext.account.GetAddress(), rpcContext.bm.Getblockchain())
 	assert.Equal(t, leftAmount, realAmount)
