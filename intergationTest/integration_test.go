@@ -238,7 +238,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	//this is internally set. Dont modify
 	mineReward := transaction.Subsidy
 	//Transfer ammount is larger than the balance
-	transferAmount := common.NewAmount(250000000)
+	transferAmount := common.NewAmount(25000000000)
 
 	//create a account address
 	account1, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -273,7 +273,6 @@ func TestSendInsufficientBalance(t *testing.T) {
 
 	//logic.Send 5 coins from addr1 to addr2
 	_, _, err = logic.Send(account1, addr2, transferAmount, tip, common.NewAmount(0), common.NewAmount(0), "", bc)
-
 	assert.NotNil(t, err)
 
 	//the balance of the first account should be still be 10
