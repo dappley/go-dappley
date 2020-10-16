@@ -946,12 +946,12 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
 	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta4.GetPubKeyHash()).Size())
-	txsForUpdate = []*transaction.Transaction{dependentTx2, dependentTx3, dependentTx4}
+	txsForUpdate = []*transaction.Transaction{dependentTx4}
 	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 2, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta3.GetPubKeyHash()).Size())
-	txsForUpdate = []*transaction.Transaction{dependentTx2, dependentTx3, dependentTx4, dependentTx5}
+	txsForUpdate = []*transaction.Transaction{dependentTx5}
 	utxoIndex2.UpdateUtxos(txsForUpdate)
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta1.GetPubKeyHash()).Size())
 	assert.Equal(t, 0, utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).Size())

@@ -70,8 +70,9 @@ func NewUTXOTxWithSize(size int) *UTXOTx {
 
 func (utxoTx UTXOTx) Serialize() []byte {
 	utxokeyList := &utxopb.UtxoKeyList{}
+	var utxoKey string
 	for _, utxo := range utxoTx.Indices {
-		utxoKey := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
+		utxoKey = string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 		utxokeyList.UtxoKey = append(utxokeyList.UtxoKey, util.Str2bytes(utxoKey))
 	}
 	bytes, err := proto.Marshal(utxokeyList)
