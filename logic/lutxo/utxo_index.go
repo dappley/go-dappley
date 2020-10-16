@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"sort"
+	"strconv"
 
 	"github.com/dappley/go-dappley/storage"
 
@@ -48,6 +49,8 @@ var (
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndex struct {
 	index               map[string]*utxo.UTXOTx
+	indexRemove         map[string]*utxo.UTXOTx
+	indexAdd            map[string]*utxo.UTXOTx
 	contractCreateIndex map[string]*utxo.UTXO
 	cache               *utxo.UTXOCache
 	mutex               *sync.RWMutex
@@ -57,6 +60,8 @@ type UTXOIndex struct {
 func NewUTXOIndex(cache *utxo.UTXOCache) *UTXOIndex {
 	return &UTXOIndex{
 		index:               make(map[string]*utxo.UTXOTx),
+		indexRemove:         make(map[string]*utxo.UTXOTx),
+		indexAdd:            make(map[string]*utxo.UTXOTx),
 		contractCreateIndex: make(map[string]*utxo.UTXO),
 		cache:               cache,
 		mutex:               &sync.RWMutex{},
@@ -81,6 +86,26 @@ func (utxos *UTXOIndex) Save() error {
 			return err
 		}
 	}
+
+	//save utxo to db/cache
+	for _, utxoTx := range utxos.indexAdd {
+		err := utxos.cache.AddUtxos(utxoTx)
+		if err != nil {
+			return err
+		}
+	}
+
+	//delete utxo from db/cache which in indexRemove
+	for _, utxoTx := range utxos.indexRemove {
+		err := utxos.cache.RemoveUtxos(utxoTx)
+		if err != nil {
+			return err
+		}
+	}
+	//clear
+	utxos.indexAdd = make(map[string]*utxo.UTXOTx)
+	utxos.indexRemove = make(map[string]*utxo.UTXOTx)
+
 	return nil
 }
 
@@ -283,9 +308,20 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	}
 
 	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
 	originalUtxos.PutUtxo(u)
 	utxos.index[txout.PubKeyHash.String()] = originalUtxos
-	utxos.mutex.Unlock()
+
+	//update indexAdd
+	utxoTx, ok := utxos.indexAdd[txout.PubKeyHash.String()]
+	if !ok {
+		utxoTx := utxo.NewUTXOTx()
+		utxoTx.PutUtxo(u)
+		utxos.indexAdd[txout.PubKeyHash.String()] = &utxoTx
+	} else {
+		utxoTx.PutUtxo(u)
+	}
+
 }
 
 func (utxos *UTXOIndex) GetContractUtxos() []*utxo.UTXO {
@@ -315,6 +351,26 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	if u.UtxoType != utxo.UtxoCreateContract {
 		return nil
 	}
+
+	//update indexRemove
+	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
+	ok := false
+	if _, ok = utxos.indexAdd[pkh.String()]; ok {
+		_, ok = utxos.indexAdd[pkh.String()].Indices[utxoKey]
+	}
+	if ok {
+		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
+	} else {
+		utxoTx, ok := utxos.indexRemove[pkh.String()]
+		if !ok {
+			utxoTx := utxo.NewUTXOTx()
+			utxoTx.PutUtxo(u)
+			utxos.indexRemove[pkh.String()] = &utxoTx
+		} else {
+			utxoTx.PutUtxo(u)
+		}
+	}
+
 	// remove contract utxos
 	isContract, _ := pkh.IsContract()
 	if isContract {

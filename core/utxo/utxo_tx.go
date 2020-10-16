@@ -19,14 +19,14 @@
 package utxo
 
 import (
-	"hash/fnv"
-	"strconv"
-
 	"github.com/dappley/go-dappley/common"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
+	"github.com/dappley/go-dappley/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/raviqqe/hamt"
 	logger "github.com/sirupsen/logrus"
+	"hash/fnv"
+	"strconv"
 )
 
 // UTXOTx holds txid_vout and UTXO pairs
@@ -68,32 +68,13 @@ func NewUTXOTxWithSize(size int) *UTXOTx {
 	return Alloc(size)
 }
 
-func DeserializeUTXOTx(d []byte) UTXOTx {
-	utxoTx := NewUTXOTx()
-
-	utxoList := &utxopb.UtxoList{}
-	err := proto.Unmarshal(d, utxoList)
-	if err != nil {
-		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: parse UtxoTx failed.")
-		return utxoTx
-	}
-
-	for _, utxoPb := range utxoList.Utxos {
-		var utxo = &UTXO{}
-		utxo.FromProto(utxoPb)
-		utxoTx.PutUtxo(utxo)
-	}
-
-	return utxoTx
-}
-
 func (utxoTx UTXOTx) Serialize() []byte {
-	utxoList := &utxopb.UtxoList{}
-
+	utxokeyList := &utxopb.UtxoKeyList{}
 	for _, utxo := range utxoTx.Indices {
-		utxoList.Utxos = append(utxoList.Utxos, utxo.ToProto().(*utxopb.Utxo))
+		utxoKey := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
+		utxokeyList.UtxoKey = append(utxokeyList.UtxoKey, util.Str2bytes(utxoKey))
 	}
-	bytes, err := proto.Marshal(utxoList)
+	bytes, err := proto.Marshal(utxokeyList)
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: serialize UtxoTx failed.")
 		return nil
@@ -165,4 +146,3 @@ func (utxoTx UTXOTx) DeepCopy() *UTXOTx {
 	}
 	return newUtxoTx
 }
-

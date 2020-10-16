@@ -10,6 +10,6 @@ message Utxo {
     string  contract = 6;
 }
 
-message UtxoList {
-    repeated Utxo utxos = 1;
+message UtxoKeyList {
+    repeated bytes utxoKey = 1;
 }
