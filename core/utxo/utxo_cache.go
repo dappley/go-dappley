@@ -35,6 +35,7 @@ type UTXOCache struct {
 	// key: address, value: UTXOTx
 	contractCreateCache *lru.Cache
 	cache               *lru.Cache
+	utxo                *lru.Cache
 	db                  storage.Storage
 }
 
@@ -42,9 +43,11 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 	utxoCache := &UTXOCache{
 		contractCreateCache: nil,
 		cache:               nil,
+		utxo:                nil,
 		db:                  db,
 	}
 	utxoCache.cache, _ = lru.New(UtxoCacheLRUCacheLimit)
+	utxoCache.utxo, _ = lru.New(UtxoCacheLRUCacheLimit)
 	utxoCache.contractCreateCache, _ = lru.New(UtxoCacheLRUCacheLimit)
 	return utxoCache
 }
@@ -60,7 +63,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx) error {
 		if err != nil {
 			return err
 		}
-		utxoCache.cache.Add(key, utxo)
+		utxoCache.utxo.Add(key, utxo)
 	}
 	return nil
 }
@@ -72,25 +75,25 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx) error {
 			logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
 			return err
 		}
-		utxoCache.cache.Remove(key)
+		utxoCache.utxo.Remove(key)
 	}
 	return nil
 }
 
-func (utxoCache *UTXOCache) DeserializeUTXOTx(d []byte) UTXOTx {
+func (utxoCache *UTXOCache) DeserializeUTXOTx(d []byte) (UTXOTx, error) {
 	utxoTx := NewUTXOTx()
 
 	utxokeyList := &utxopb.UtxoKeyList{}
 	err := proto.Unmarshal(d, utxokeyList)
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: parse UtxoTx failed.")
-		return utxoTx
+		return utxoTx, nil
 	}
 
 	//get all utxo from db by using utxokey
 	for _, utxoKey := range utxokeyList.UtxoKey {
 		var utxo = &UTXO{}
-		utxoData, ok := utxoCache.cache.Get(util.Bytes2str(utxoKey))
+		utxoData, ok := utxoCache.utxo.Get(util.Bytes2str(utxoKey))
 		if ok {
 			utxo = utxoData.(*UTXO)
 		} else {
@@ -99,17 +102,19 @@ func (utxoCache *UTXOCache) DeserializeUTXOTx(d []byte) UTXOTx {
 				utxoPb := &utxopb.Utxo{}
 				err := proto.Unmarshal(rawBytes, utxoPb)
 				if err != nil {
-					logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx get from db failed.")
+					logger.WithFields(logger.Fields{"error": err}).Error("DeserializeUTXOTx: Unmarshal utxo failed.")
+					return utxoTx, err
 				}
 				utxo.FromProto(utxoPb)
 			} else {
-				logger.WithFields(logger.Fields{"error": err}).Error("utxo didn't in db！")
+				logger.WithFields(logger.Fields{"error": err}).Error("DeserializeUTXOTx: utxo didn't in db！")
+				return utxoTx, err
 			}
 		}
-		utxoCache.cache.Add(util.Bytes2str(utxoKey), utxo)
+		utxoCache.utxo.Add(util.Bytes2str(utxoKey), utxo)
 		utxoTx.Indices[util.Bytes2str(utxoKey)] = utxo
 	}
-	return utxoTx
+	return utxoTx, nil
 }
 
 // Return value from cache
@@ -123,7 +128,7 @@ func (utxoCache *UTXOCache) Get(pubKeyHash account.PubKeyHash) *UTXOTx {
 
 	var utxoTx UTXOTx
 	if err == nil {
-		utxoTx = utxoCache.DeserializeUTXOTx(rawBytes)
+		utxoTx, err = utxoCache.DeserializeUTXOTx(rawBytes)
 		utxoCache.cache.Add(string(pubKeyHash), &utxoTx)
 	} else {
 		utxoTx = NewUTXOTx()
