@@ -21,17 +21,12 @@ package lutxo
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/storage"
 	"sort"
 	"strconv"
-
-	"github.com/dappley/go-dappley/storage"
-
 	"sync"
-
 	"github.com/dappley/go-dappley/core/transaction"
-
 	"github.com/dappley/go-dappley/core/block"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/transactionbase"
@@ -346,11 +341,6 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	utxos.mutex.Lock()
 	originalUtxos.RemoveUtxo(txid, vout)
 	utxos.index[pkh.String()] = originalUtxos
-	utxos.mutex.Unlock()
-
-	if u.UtxoType != utxo.UtxoCreateContract {
-		return nil
-	}
 
 	//update indexRemove
 	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
@@ -369,6 +359,11 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 		} else {
 			utxoTx.PutUtxo(u)
 		}
+	}
+	utxos.mutex.Unlock()
+
+	if u.UtxoType != utxo.UtxoCreateContract {
+		return nil
 	}
 
 	// remove contract utxos
