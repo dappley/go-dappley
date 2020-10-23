@@ -19,12 +19,9 @@
 package utxo
 
 import (
+	"bytes"
 	"github.com/dappley/go-dappley/common"
-	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
-	"github.com/dappley/go-dappley/util"
-	"github.com/golang/protobuf/proto"
 	"github.com/raviqqe/hamt"
-	logger "github.com/sirupsen/logrus"
 	"hash/fnv"
 	"strconv"
 )
@@ -68,21 +65,6 @@ func NewUTXOTxWithSize(size int) *UTXOTx {
 	return Alloc(size)
 }
 
-func (utxoTx UTXOTx) Serialize() []byte {
-	utxokeyList := &utxopb.UtxoKeyList{}
-	var utxoKey string
-	for _, utxo := range utxoTx.Indices {
-		utxoKey = string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-		utxokeyList.UtxoKey = append(utxokeyList.UtxoKey, util.Str2bytes(utxoKey))
-	}
-	bytes, err := proto.Marshal(utxokeyList)
-	if err != nil {
-		logger.WithFields(logger.Fields{"error": err}).Error("UtxoTx: serialize UtxoTx failed.")
-		return nil
-	}
-	return bytes
-}
-
 // Returns utxo info by transaction id and vout index
 func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 	key := string(txid) + "_" + strconv.Itoa(vout)
@@ -91,6 +73,15 @@ func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 		return nil
 	}
 	return utxo
+}
+
+func (utxoTx UTXOTx) GetPerUtxoByKey(utxokey []byte) *UTXO {
+	for _,utxo:= range utxoTx.Indices{
+		if bytes.Equal(utxo.NextUtxoKey,utxokey){
+			return utxo
+		}
+	}
+	return nil
 }
 
 // Add new utxo to map

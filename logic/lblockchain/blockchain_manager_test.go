@@ -146,6 +146,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			}
 		}
 		utxoIndex.SetIndex(utxosMap)
+		utxoIndex.SetIndexAdd(utxosMap)
 		return utxoIndex
 	}
 	acc := account.NewAccount()
