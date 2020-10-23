@@ -21,17 +21,17 @@ package lutxo
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
+	"github.com/dappley/go-dappley/core/transactionbase"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
+	logger "github.com/sirupsen/logrus"
 	"sort"
 	"strconv"
 	"sync"
-	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/transactionbase"
-	"github.com/dappley/go-dappley/core/utxo"
-	logger "github.com/sirupsen/logrus"
 )
 
 var contractUtxoKey = []byte("contractUtxoKey")
@@ -75,7 +75,6 @@ func (utxos *UTXOIndex) Save() error {
 		if err != nil {
 			return err
 		}
-
 		err = utxos.cache.Put(pubKeyHash, utxoTx)
 		if err != nil {
 			return err
@@ -83,16 +82,16 @@ func (utxos *UTXOIndex) Save() error {
 	}
 
 	//save utxo to db/cache
-	for _, utxoTx := range utxos.indexAdd {
-		err := utxos.cache.AddUtxos(utxoTx)
+	for pubkey, utxoTx := range utxos.indexAdd {
+		err := utxos.cache.AddUtxos(utxoTx, pubkey,utxos.index[pubkey])
 		if err != nil {
 			return err
 		}
 	}
 
 	//delete utxo from db/cache which in indexRemove
-	for _, utxoTx := range utxos.indexRemove {
-		err := utxos.cache.RemoveUtxos(utxoTx)
+	for pubkey, utxoTx := range utxos.indexRemove {
+		err := utxos.cache.RemoveUtxos(utxoTx, pubkey, utxos.index[pubkey])
 		if err != nil {
 			return err
 		}
@@ -100,7 +99,6 @@ func (utxos *UTXOIndex) Save() error {
 	//clear
 	utxos.indexAdd = make(map[string]*utxo.UTXOTx)
 	utxos.indexRemove = make(map[string]*utxo.UTXOTx)
-
 	return nil
 }
 
@@ -316,7 +314,6 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	} else {
 		utxoTx.PutUtxo(u)
 	}
-
 }
 
 func (utxos *UTXOIndex) GetContractUtxos() []*utxo.UTXO {
