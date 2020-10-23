@@ -67,6 +67,10 @@ func (utxos *UTXOIndex) SetIndex(index map[string]*utxo.UTXOTx) {
 	utxos.index = index
 }
 
+func (utxos *UTXOIndex) SetIndexAdd(indexAdd map[string]*utxo.UTXOTx) {
+	utxos.indexAdd = indexAdd
+}
+
 func (utxos *UTXOIndex) Save() error {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
