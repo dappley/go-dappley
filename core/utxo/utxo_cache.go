@@ -19,6 +19,7 @@
 package utxo
 
 import (
+	"encoding/hex"
 	"github.com/dappley/go-dappley/core/account"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/storage"
@@ -74,6 +75,17 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string, indexUtxoTx 
 	}
 
 	utxoCache.cache.Add(pubkey, indexUtxoTx)
+
+	//contract
+	pubKeyHash, err := hex.DecodeString(pubkey)
+	if err != nil {
+		return err
+	}
+	err = utxoCache.Put(pubKeyHash, utxoTx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

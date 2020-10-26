@@ -74,16 +74,6 @@ func (utxos *UTXOIndex) SetIndexAdd(indexAdd map[string]*utxo.UTXOTx) {
 func (utxos *UTXOIndex) Save() error {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
-	for key, utxoTx := range utxos.index {
-		pubKeyHash, err := hex.DecodeString(key)
-		if err != nil {
-			return err
-		}
-		err = utxos.cache.Put(pubKeyHash, utxoTx)
-		if err != nil {
-			return err
-		}
-	}
 
 	//save utxo to db/cache
 	for pubkey, utxoTx := range utxos.indexAdd {
