@@ -58,7 +58,7 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 	return utxoCache
 }
 
-func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string, indexUtxoTx *UTXOTx) error {
+func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 	lastestUtxoKey, err := utxoCache.db.Get(util.Str2bytes(pubkey))
 	for key, utxo := range utxoTx.Indices {
 		utxo.NextUtxoKey = lastestUtxoKey
@@ -79,8 +79,6 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string, indexUtxoTx 
 	}
 	utxoCache.lastUtxoKey.Add(pubkey, lastestUtxoKey)
 
-	//utxoCache.cache.Add(pubkey, indexUtxoTx)
-
 	//contract
 	pubKeyHash, err := hex.DecodeString(pubkey)
 	if err != nil {
@@ -94,7 +92,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string, indexUtxoTx 
 	return nil
 }
 
-func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string, indexUtxoTx *UTXOTx) error {
+func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	for key, utxo := range utxoTx.Indices {
 		preUtxo := utxoCache.GetPreUtxo(pubkey, key)
 		if preUtxo == nil { //this utxo is the head utxo
@@ -132,7 +130,6 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string, indexUtxo
 		}
 		utxoCache.utxo.Remove(key)
 	}
-	//utxoCache.cache.Add(pubkey, indexUtxoTx)
 	return nil
 }
 

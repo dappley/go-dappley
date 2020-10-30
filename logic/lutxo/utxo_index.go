@@ -81,7 +81,7 @@ func (utxos *UTXOIndex) Save() error {
 
 	//save utxo to db/cache
 	for pubkey, utxoTx := range utxos.indexAdd {
-		err := utxos.cache.AddUtxos(utxoTx, pubkey, utxos.index[pubkey])
+		err := utxos.cache.AddUtxos(utxoTx, pubkey)
 		if err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func (utxos *UTXOIndex) Save() error {
 
 	//delete utxo from db/cache which in indexRemove
 	for pubkey, utxoTx := range utxos.indexRemove {
-		err := utxos.cache.RemoveUtxos(utxoTx, pubkey, utxos.index[pubkey])
+		err := utxos.cache.RemoveUtxos(utxoTx, pubkey)
 		if err != nil {
 			return err
 		}
@@ -194,7 +194,7 @@ func (utxos *UTXOIndex) GetContractInvokeUTXOsByPubKeyHash(pubkeyHash account.Pu
 
 // GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
 func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
-	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash) //之后来优化这个方法 GetUTXOsByAmount
+	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	retUtxos, ok := allUtxos.PrepareUtxos(amount)
 	if !ok {
 		return nil, transaction.ErrInsufficientFund
@@ -347,27 +347,18 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
 	var u = &utxo.UTXO{}
 
-	ok := false
-	if _, ok = utxos.indexAdd[pkh.String()]; ok {
-		_, ok = utxos.indexAdd[pkh.String()].Indices[utxoKey]
-	}
-	if ok {
-		u = utxos.indexAdd[pkh.String()].GetUtxo(txid, vout)
-	} else {
-		u = utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
-		if u == nil {
-			return ErrUTXONotFound
-		}
-	}
-
 	//update indexRemove
-	ok = false
+	ok := false
 	if _, ok = utxos.indexAdd[pkh.String()]; ok {
 		_, ok = utxos.indexAdd[pkh.String()].Indices[utxoKey]
 	}
 	if ok {
 		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
 	} else {
+		u = utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
+		if u == nil {
+			return ErrUTXONotFound
+		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {
 			utxoTx := utxo.NewUTXOTx()
