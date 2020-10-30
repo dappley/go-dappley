@@ -286,9 +286,7 @@ func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
 	if pubkeyhash == nil {
 		return false
 	}
-
-	contractUtxoTx := utxoIndex.GetAllUTXOsByPubKeyHash(pubkeyhash)
-	return contractUtxoTx.Size() > 0
+	return utxoIndex.IsIndexAddExist(pubkeyhash) || utxoIndex.IsLastUtxoKeyExist(pubkeyhash)
 }
 
 //Execute executes the smart contract the transaction points to. it doesnt do anything if is a contract deploy transaction
