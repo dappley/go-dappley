@@ -259,12 +259,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	//Remove transactions in current transaction pool
 	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bcTemp.GetTxPool().ResetPendingTransactions()
-	err = bcTemp.GetTxPool().SaveToDatabase(bc.db)
-
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save txpool to database.")
-		return err
-	}
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_add_block":    numTxBeforeExe,
@@ -453,8 +447,6 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *lutxo.UTXOIndex, scSt
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
 	}
-
-	bc.txPool.SaveToDatabase(bc.db)
 
 	utxo.Save()
 	scState.SaveToDatabase(bc.db)
