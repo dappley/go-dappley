@@ -401,5 +401,14 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 		newUtxoTx := utxoTx.DeepCopy()
 		utxocopy.index[pkh] = newUtxoTx
 	}
+	for pkh, utxoTx := range utxos.indexAdd {
+		newUtxoTx := utxoTx.DeepCopy()
+		utxocopy.indexAdd[pkh] = newUtxoTx
+	}
+
+	for pkh, utxoTx := range utxos.indexRemove {
+		newUtxoTx := utxoTx.DeepCopy()
+		utxocopy.indexRemove[pkh] = newUtxoTx
+	}
 	return utxocopy
 }
