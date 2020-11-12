@@ -25,7 +25,10 @@ func FindVinUtxosInUtxoPool(utxoIndex *UTXOIndex, tx *transaction.Transaction) (
 			ta := account.NewTransactionAccountByPubKey(vin.PubKey)
 			pubKeyHash = ta.GetPubKeyHash()
 		}
-		utxo :=utxoIndex.GetUpdatedUtxo(pubKeyHash,vin.Txid, vin.Vout)
+		utxo,err :=utxoIndex.GetUpdatedUtxo(pubKeyHash,vin.Txid, vin.Vout)
+		if err!=nil{
+			return nil,err
+		}
 		if utxo == nil {
 			logger.WithFields(logger.Fields{
 				"txid":      hex.EncodeToString(tx.ID),

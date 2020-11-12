@@ -108,10 +108,6 @@ func (utxos *UTXOIndex) IsLastUtxoKeyExist(pubKeyHash account.PubKeyHash) bool {
 	return utxos.cache.IsLastUtxoKeyExist(pubKeyHash)
 }
 
-func (utxos *UTXOIndex) GetUtxo(pubKey, targetUtxokey string) *utxo.UTXO {
-	return utxos.cache.GetUtxoByPubkey(pubKey, targetUtxokey)
-}
-
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXOTx {
 	utxoTx := utxos.cache.GetUTXOTx(pubkeyHash)
 	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
@@ -132,25 +128,28 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 	return utxoTx
 }
 
-func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) *utxo.UTXO {
+func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) (*utxo.UTXO,error) {
 	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
 
 	if _, ok := utxos.indexAdd[pubkeyHash.String()]; ok {
 		utxo := utxos.indexAdd[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
-			return utxo
+			return utxo,nil
 		}
 	}
 
 	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
 		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
-			return nil
+			return utxo,nil
 		}
 	}
 
-	utxo := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxoKey)
-	return utxo
+	utxo ,err:= utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxoKey)
+	if err!=nil{
+		return nil,err
+	}
+	return utxo,nil
 }
 
 func (utxos *UTXOIndex) GetContractCreateUTXOByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXO {
@@ -355,9 +354,10 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	if ok {
 		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
 	} else {
-		u = utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
-		if u == nil {
-			return ErrUTXONotFound
+		u ,err:= utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
+		if err!=nil{
+			logger.Error(ErrUTXONotFound)
+			return  err
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {

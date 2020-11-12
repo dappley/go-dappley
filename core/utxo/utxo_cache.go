@@ -21,6 +21,7 @@ package utxo
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"github.com/dappley/go-dappley/core/account"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/storage"
@@ -94,7 +95,10 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 
 func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	for key, utxo := range utxoTx.Indices {
-		preUtxo := utxoCache.GetPreUtxo(pubkey, key)
+		preUtxo ,err:= utxoCache.GetPreUtxo(pubkey, key)
+		if err != nil {
+			return err
+		}
 		if preUtxo == nil { //this utxo is the head utxo
 			if len(utxo.NextUtxoKey) == 0 {
 				err := utxoCache.db.Del(util.Str2bytes(pubkey))
@@ -123,7 +127,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 			}
 			utxoCache.utxo.Add(preUtxokey, preUtxo)
 		}
-		err := utxoCache.db.Del(util.Str2bytes(key))
+		err = utxoCache.db.Del(util.Str2bytes(key))
 		if err != nil {
 			logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
 			return err
@@ -133,63 +137,71 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) GetUtxo(utxoKey string) *UTXO {
+func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO,error) {
 	var utxo = &UTXO{}
 	utxoData, ok := utxoCache.utxo.Get(utxoKey)
 	if ok {
 		utxo = utxoData.(*UTXO)
-	} else {
-		rawBytes, err := utxoCache.db.Get(util.Str2bytes(utxoKey))
-		if err == nil {
-			utxoPb := &utxopb.Utxo{}
-			err := proto.Unmarshal(rawBytes, utxoPb)
-			if err != nil {
-				logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: Unmarshal utxo failed.")
-				return nil
-			}
-			utxo.FromProto(utxoPb)
-		} else {
-			logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: utxo didn't in db！")
-			return nil
-		}
+		return utxo,nil
 	}
+
+	rawBytes, err := utxoCache.db.Get(util.Str2bytes(utxoKey))
+	if err == nil {
+		utxoPb := &utxopb.Utxo{}
+		err := proto.Unmarshal(rawBytes, utxoPb)
+		if err != nil {
+			logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: Unmarshal utxo failed.")
+			return nil, err
+		}
+		utxo.FromProto(utxoPb)
+	} else {
+		logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: utxo didn't in db！")
+		return nil, err
+	}
+
 	utxoCache.utxo.Add(utxoKey, utxo)
-	return utxo
+	return utxo,nil
 }
 
-func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) *UTXO {
+func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO,error) {
 	lastUtxokey, err := utxoCache.getLastUTXOKey(pubKey)
 	if err != nil {
-		return nil
+		return nil,err
 	}
 	utxoKey := util.Bytes2str(lastUtxokey)
 
 	for utxoKey != "" {
-		utxo := utxoCache.GetUtxo(utxoKey)
+		utxo,err := utxoCache.GetUtxo(utxoKey)
+		if err != nil {
+			return nil,err
+		}
 		utxokey := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 		if utxokey == targetUtxokey {
-			return utxo
+			return utxo,nil
 		}
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
-	return nil
+	return nil,errors.New("utxo not found")
 }
 
-func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) *UTXO {
+func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO,error) {
 	lastUtxokey, err := utxoCache.getLastUTXOKey(pubKey)
 	if err != nil {
-		return nil
+		return nil,err
 	}
 	utxoKey := util.Bytes2str(lastUtxokey)
 
 	for utxoKey != "" {
-		utxo := utxoCache.GetUtxo(utxoKey)
+		utxo,err:= utxoCache.GetUtxo(utxoKey)
+		if err!=nil{
+			return nil,err
+		}
 		if bytes.Equal(utxo.NextUtxoKey, util.Str2bytes(targetUtxokey)) {
-			return utxo
+			return utxo,nil
 		}
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
-	return nil
+	return nil,nil// preutxo not found
 }
 
 func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) ([]byte, error) {
@@ -221,7 +233,11 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 	if err == nil {
 		utxoKey := util.Bytes2str(lastUtxokey)
 		for utxoKey != "" {
-			utxo := utxoCache.GetUtxo(utxoKey)
+			utxo,err := utxoCache.GetUtxo(utxoKey)
+			if err!=nil{
+				//todo: return err
+				logger.Error(err)
+			}
 			utxoTx.Indices[utxoKey] = utxo
 			utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 		}

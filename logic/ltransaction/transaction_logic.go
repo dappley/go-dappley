@@ -88,7 +88,10 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 				ta = account.NewTransactionAccountByPubKey(vin.PubKey)
 
 			}
-			usedUTXO := utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
+			usedUTXO ,err:= utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
+			if err!=nil{
+				return nil, nil, nil, nil, err
+			}
 			if usedUTXO != nil {
 				inputAmount = inputAmount.Add(usedUTXO.Value)
 			}
