@@ -27,14 +27,11 @@ func FindVinUtxosInUtxoPool(utxoIndex *UTXOIndex, tx *transaction.Transaction) (
 		}
 		utxo,err :=utxoIndex.GetUpdatedUtxo(pubKeyHash,vin.Txid, vin.Vout)
 		if err!=nil{
-			return nil,err
-		}
-		if utxo == nil {
 			logger.WithFields(logger.Fields{
 				"txid":      hex.EncodeToString(tx.ID),
 				"vin_id":    hex.EncodeToString(vin.Txid),
 				"vin_index": vin.Vout,
-			}).Warn("Transaction: Can not find vin")
+			}).Warn("Transaction: Can not find vin,err:",err)
 			return nil, transaction.ErrTXInputNotFound
 		}
 		res = append(res, utxo)
