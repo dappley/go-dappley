@@ -163,7 +163,7 @@ L:
 				currentContractGenTXs = append(currentContractGenTXs, generatedTxs...)
 			}
 			totalGasFee = totalGasFee.Add(tx.GasLimit.Mul(tx.GasPrice))
-			actualGasList = append(actualGasList, gasCount)
+			actualGasList = append(actualGasList, gasCount*tx.GasPrice.Uint64())
 		} else {
 			// tx is a normal transactions
 			if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
