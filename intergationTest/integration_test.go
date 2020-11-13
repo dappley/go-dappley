@@ -925,7 +925,7 @@ func TestUpdate(t *testing.T) {
 
 	utxoIndex2 := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
-	utxoIndex2.SetIndex(map[string]*utxo.UTXOTx{
+	utxoIndex2.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta2.GetPubKeyHash().String(): &utxoTxPk2,
 		ta1.GetPubKeyHash().String(): &utxoTxPk1,
 	})

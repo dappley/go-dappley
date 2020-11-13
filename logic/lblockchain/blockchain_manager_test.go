@@ -145,7 +145,6 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 				utxosMap[vout.PubKeyHash.String()] = utxos
 			}
 		}
-		utxoIndex.SetIndex(utxosMap)
 		utxoIndex.SetIndexAdd(utxosMap)
 		return utxoIndex
 	}

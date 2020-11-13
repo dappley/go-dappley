@@ -219,7 +219,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 	utxoTx := utxo.NewUTXOTx()
 
 	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal,[]byte{}})
-	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
+	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
 
@@ -265,7 +265,7 @@ func TestInvalidTipTx(t *testing.T) {
 	utxoTx := utxo.NewUTXOTx()
 
 	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal,[]byte{}})
-	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
+	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
 
