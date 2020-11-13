@@ -214,7 +214,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			}
 
 			utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
-			utxoIndex.SetIndex(index)
+			utxoIndex.SetIndexAdd(index)
 			//{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
 			scState := scState.NewScState()
 			var parentBlk = block.NewBlockWithRawInfo(
