@@ -356,8 +356,8 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	} else {
 		u ,err:= utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
 		if err!=nil{
-			logger.Error(ErrUTXONotFound)
-			return  err
+			logger.Error(err)
+			return  ErrUTXONotFound
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {
