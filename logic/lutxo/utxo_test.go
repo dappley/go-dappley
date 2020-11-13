@@ -53,13 +53,13 @@ func TestAddUTXO(t *testing.T) {
 
 	utxoIndex.AddUTXO(txout, []byte{1}, 0)
 
-	addr1UTXOs := utxoIndex.index[ta1.GetPubKeyHash().String()]
+	addr1UTXOs := utxoIndex.indexAdd[ta1.GetPubKeyHash().String()]
 	assert.Equal(t, 1, addr1UTXOs.Size())
 	assert.Equal(t, txout.Value, addr1UTXOs.GetAllUtxos()[0].Value)
 	assert.Equal(t, []byte{1}, addr1UTXOs.GetAllUtxos()[0].Txid)
 	assert.Equal(t, 0, addr1UTXOs.GetAllUtxos()[0].TxIndex)
 
-	_, ok := utxoIndex.index["address2"]
+	_, ok := utxoIndex.indexAdd["address2"]
 	assert.Equal(t, false, ok)
 }
 
@@ -77,20 +77,20 @@ func TestRemoveUTXO(t *testing.T) {
 	addr2UtxoTx := utxo.NewUTXOTx()
 	addr2UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(4), ta2.GetPubKeyHash(), ""}, []byte{1}, 2, utxo.UtxoNormal,[]byte{}})
 
-	utxoIndex.index[ta1.GetPubKeyHash().String()] = &addr1UtxoTx
-	utxoIndex.index[ta2.GetPubKeyHash().String()] = &addr2UtxoTx
+	utxoIndex.indexAdd[ta1.GetPubKeyHash().String()] = &addr1UtxoTx
+	utxoIndex.indexAdd[ta2.GetPubKeyHash().String()] = &addr2UtxoTx
 
 	err := utxoIndex.removeUTXO(ta1.GetPubKeyHash(), []byte{1}, 0)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, utxoIndex.index[ta1.GetPubKeyHash().String()].Size())
-	assert.Equal(t, 1, utxoIndex.index[ta2.GetPubKeyHash().String()].Size())
+	assert.Equal(t, 2, utxoIndex.indexAdd[ta1.GetPubKeyHash().String()].Size())
+	assert.Equal(t, 1, utxoIndex.indexAdd[ta2.GetPubKeyHash().String()].Size())
 
 	err = utxoIndex.removeUTXO(ta2.GetPubKeyHash(), []byte{2}, 1) // Does not exists
 
 	assert.NotNil(t, err)
-	assert.Equal(t, 2, utxoIndex.index[ta1.GetPubKeyHash().String()].Size())
-	assert.Equal(t, 1, utxoIndex.index[ta2.GetPubKeyHash().String()].Size())
+	assert.Equal(t, 2, utxoIndex.indexAdd[ta1.GetPubKeyHash().String()].Size())
+	assert.Equal(t, 1, utxoIndex.indexAdd[ta2.GetPubKeyHash().String()].Size())
 }
 
 func TestUpdate_Failed(t *testing.T) {
@@ -243,35 +243,35 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 func TestUTXOIndex_DeepCopy(t *testing.T) {
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	utxoCopy := utxoIndex.DeepCopy()
-	assert.Equal(t, 0, len(utxoIndex.index))
-	assert.Equal(t, 0, len(utxoCopy.index))
+	assert.Equal(t, 0, len(utxoIndex.indexAdd))
+	assert.Equal(t, 0, len(utxoCopy.indexAdd))
 
 	addr1UtxoTx := utxo.NewUTXOTx()
-	utxoIndex.index[string(ta1.GetPubKeyHash())] = &addr1UtxoTx
-	assert.Equal(t, 1, len(utxoIndex.index))
-	assert.Equal(t, 0, len(utxoCopy.index))
+	utxoIndex.indexAdd[string(ta1.GetPubKeyHash())] = &addr1UtxoTx
+	assert.Equal(t, 1, len(utxoIndex.indexAdd))
+	assert.Equal(t, 0, len(utxoCopy.indexAdd))
 
 	copyUtxoTx := utxo.NewUTXOTxWithData(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal,[]byte{}})
-	utxoCopy.index[string(ta1.GetPubKeyHash())] = &copyUtxoTx
-	assert.Equal(t, 1, len(utxoIndex.index))
-	assert.Equal(t, 1, len(utxoCopy.index))
-	assert.Equal(t, 0, utxoIndex.index[string(ta1.GetPubKeyHash())].Size())
-	assert.Equal(t, 1, utxoCopy.index[string(ta1.GetPubKeyHash())].Size())
+	utxoCopy.indexAdd[string(ta1.GetPubKeyHash())] = &copyUtxoTx
+	assert.Equal(t, 1, len(utxoIndex.indexAdd))
+	assert.Equal(t, 1, len(utxoCopy.indexAdd))
+	assert.Equal(t, 0, utxoIndex.indexAdd[string(ta1.GetPubKeyHash())].Size())
+	assert.Equal(t, 1, utxoCopy.indexAdd[string(ta1.GetPubKeyHash())].Size())
 
 	copyUtxoTx1 := utxo.NewUTXOTx()
 	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal,[]byte{}})
 	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[1], []byte{}, 1, utxo.UtxoNormal,[]byte{}})
-	utxoCopy.index["1"] = &copyUtxoTx1
+	utxoCopy.indexAdd["1"] = &copyUtxoTx1
 
 	utxoCopy2 := utxoCopy.DeepCopy()
 	copy2UtxoTx1 := utxo.NewUTXOTx()
 	copy2UtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal,[]byte{}})
-	utxoCopy2.index["1"] = &copy2UtxoTx1
-	assert.Equal(t, 2, len(utxoCopy.index))
-	assert.Equal(t, 2, len(utxoCopy2.index))
-	assert.Equal(t, 2, utxoCopy.index["1"].Size())
-	assert.Equal(t, 1, utxoCopy2.index["1"].Size())
-	assert.Equal(t, 1, len(utxoIndex.index))
+	utxoCopy2.indexAdd["1"] = &copy2UtxoTx1
+	assert.Equal(t, 2, len(utxoCopy.indexAdd))
+	assert.Equal(t, 2, len(utxoCopy2.indexAdd))
+	assert.Equal(t, 2, utxoCopy.indexAdd["1"].Size())
+	assert.Equal(t, 1, utxoCopy2.indexAdd["1"].Size())
+	assert.Equal(t, 1, len(utxoIndex.indexAdd))
 
-	assert.EqualValues(t, utxoCopy.index[ta1.GetPubKeyHash().String()], utxoCopy2.index[ta1.GetPubKeyHash().String()])
+	assert.EqualValues(t, utxoCopy.indexAdd[ta1.GetPubKeyHash().String()], utxoCopy2.indexAdd[ta1.GetPubKeyHash().String()])
 }
