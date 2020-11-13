@@ -149,6 +149,23 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		utxoIndex.SetIndexAdd(utxosMap)
 		return utxoIndex
 	}
+	removeUTXOFromBlockchain := func(txs []*transaction.Transaction, cache *utxo.UTXOCache) *lutxo.UTXOIndex {
+		utxoIndex := lutxo.NewUTXOIndex(cache)
+		utxosMap := make(map[string]*utxo.UTXOTx)
+		for _, tx := range txs {
+			for i, vout := range tx.Vout {
+				utxos, ok := utxosMap[vout.PubKeyHash.String()]
+				if !ok {
+					newUtxos := utxo.NewUTXOTx()
+					utxos = &newUtxos
+				}
+				utxos.PutUtxo(utxo.NewUTXO(vout, tx.ID, i, utxo.UtxoNormal))
+				utxosMap[vout.PubKeyHash.String()] = utxos
+			}
+		}
+		utxoIndex.SetindexRemove(utxosMap)
+		return utxoIndex
+	}
 	acc := account.NewAccount()
 
 	normalTX := ltransaction.NewCoinbaseTX(acc.GetAddress(), "", 1, common.NewAmount(5))
@@ -182,8 +199,8 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 	normalBlock2.SetHash(lblock.CalculateHash(normalBlock2))
 	abnormalBlock := block.NewBlock([]*transaction.Transaction{&abnormalTX}, normalBlock, "")
 	abnormalBlock.SetHash(lblock.CalculateHash(abnormalBlock))
-	corruptedUTXOBlockchain := prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2})
-	err := utxoIndexFromTXs([]*transaction.Transaction{&normalTX}, corruptedUTXOBlockchain.GetUtxoCache()).Save()
+	uTXOBlockchain := prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2})
+	err := removeUTXOFromBlockchain([]*transaction.Transaction{&normalTX2}, uTXOBlockchain.GetUtxoCache()).Save()
 	if err != nil {
 		logger.Fatal("TestGetUTXOIndexAtBlockHash: cannot corrupt the utxoIndex in database.")
 	}
@@ -195,7 +212,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 		prepareBlockchainWithBlocks([]*block.Block{prevBlock, emptyBlock}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, normalBlock2}),
 		prepareBlockchainWithBlocks([]*block.Block{normalBlock, abnormalBlock}),
-		corruptedUTXOBlockchain,
+		uTXOBlockchain,
 	}
 	tests := []struct {
 		name     string

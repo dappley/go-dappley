@@ -71,6 +71,10 @@ func (utxos *UTXOIndex) SetIndexAdd(indexAdd map[string]*utxo.UTXOTx) {
 	utxos.indexAdd = indexAdd
 }
 
+func (utxos *UTXOIndex) SetindexRemove(indexRemove map[string]*utxo.UTXOTx) {
+	utxos.indexRemove = indexRemove
+}
+
 func (utxos *UTXOIndex) IsIndexAddExist(pubKeyHash account.PubKeyHash) bool {
 	_, ok := utxos.indexAdd[pubKeyHash.String()]
 	return ok
