@@ -60,7 +60,7 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 }
 
 func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
-	lastestUtxoKey, err := utxoCache.db.Get(util.Str2bytes(pubkey))
+	lastestUtxoKey, err :=utxoCache.getLastUTXOKey(pubkey)
 	for key, utxo := range utxoTx.Indices {
 		utxo.NextUtxoKey = lastestUtxoKey
 		err:=utxoCache.putUTXOToDB(utxo)
@@ -69,12 +69,10 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 		}
 		lastestUtxoKey = util.Str2bytes(key)
 	}
-	err = utxoCache.db.Put(util.Str2bytes(pubkey), lastestUtxoKey) // storage the latest utxokey
+	err =utxoCache.putLastUTXOKeyToDB(pubkey, lastestUtxoKey)
 	if err != nil {
 		return err
 	}
-	utxoCache.lastUtxoKey.Add(pubkey, lastestUtxoKey)
-
 	//contract
 	pubKeyHash, err := hex.DecodeString(pubkey)
 	if err != nil {
@@ -96,20 +94,15 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 		}
 		if preUTXO == nil { //this utxo is the head utxo
 			if len(utxo.NextUtxoKey) == 0 {
-				err := utxoCache.db.Del(util.Str2bytes(pubkey))
+				err =utxoCache.deleteLastUTXOKeyFromDB(pubkey)
 				if err != nil {
-					logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
 					return err
 				}
-				utxoCache.lastUtxoKey.Remove(pubkey)
-
 			} else {
-
-				err := utxoCache.db.Put(util.Str2bytes(pubkey), utxo.NextUtxoKey)
+				err := utxoCache.putLastUTXOKeyToDB(pubkey, utxo.NextUtxoKey)
 				if err != nil {
 					return err
 				}
-				utxoCache.lastUtxoKey.Add(pubkey, utxo.NextUtxoKey)
 			}
 		} else {
 			preUTXO.NextUtxoKey = utxo.NextUtxoKey
@@ -122,12 +115,6 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 				utxoTx.Indices[preUTXO.GetUTXOKey()] = preUTXO
 			}
 		}
-		//err = utxoCache.db.Del(util.Str2bytes(key))
-		//if err != nil {
-		//	logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
-		//	return err
-		//}
-		//utxoCache.utxo.Remove(key)
 		err = utxoCache.deleteUTXOFromDB(key)
 		if err != nil {
 			return err
@@ -194,12 +181,11 @@ func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) ([]byte, error) {
 	}
 
 	lastUtxoKey, err := utxoCache.db.Get(util.Str2bytes(pubKeyHash))
-	if err == nil {
-		utxoCache.lastUtxoKey.Add(pubKeyHash, lastUtxoKey)
-		return lastUtxoKey, nil
+	if err != nil {
+		return []byte{}, err
 	}
-
-	return []byte{}, err
+	utxoCache.lastUtxoKey.Add(pubKeyHash, lastUtxoKey)
+	return lastUtxoKey, nil
 }
 
 func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash account.PubKeyHash) bool {
@@ -280,6 +266,7 @@ func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO)error{
 	}
 	err = utxoCache.db.Put(util.Str2bytes(utxo.GetUTXOKey()), utxoBytes)
 	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("put utxo to db failed！")
 		return err
 	}
 	utxoCache.utxo.Add(utxo.GetUTXOKey(), utxo)
@@ -293,12 +280,12 @@ func (utxoCache *UTXOCache) getUTXOFromDB(utxoKey string)(*UTXO,error) {
 		utxoPb := &utxopb.Utxo{}
 		err := proto.Unmarshal(rawBytes, utxoPb)
 		if err != nil {
-			logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: Unmarshal utxo failed.")
+			logger.WithFields(logger.Fields{"error": err}).Error("Unmarshal utxo failed.")
 			return nil, err
 		}
 		utxo.FromProto(utxoPb)
 	} else {
-		logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: utxo didn't in db！")
+		logger.WithFields(logger.Fields{"error": err}).Error("get utxo from db failed！")
 		return nil, err
 	}
 	utxoCache.utxo.Add(utxoKey, utxo)
@@ -312,5 +299,25 @@ func (utxoCache *UTXOCache) deleteUTXOFromDB(utxoKey string)error{
 		return err
 	}
 	utxoCache.utxo.Remove(utxoKey)
+	return nil
+}
+
+func (utxoCache *UTXOCache) putLastUTXOKeyToDB(pubkey string, lastestUtxoKey []byte) error{
+	err := utxoCache.db.Put(util.Str2bytes(pubkey), lastestUtxoKey)
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("put last utxo key to db failed.")
+		return err
+	}
+	utxoCache.lastUtxoKey.Add(pubkey, lastestUtxoKey)
+	return nil
+}
+
+func (utxoCache *UTXOCache) deleteLastUTXOKeyFromDB(pubkey string) error{
+	err := utxoCache.db.Del(util.Str2bytes(pubkey))
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("delete last utxo key from db failed.")
+		return err
+	}
+	utxoCache.lastUtxoKey.Remove(pubkey)
 	return nil
 }
