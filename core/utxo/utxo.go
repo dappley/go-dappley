@@ -23,6 +23,7 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/golang/protobuf/proto"
+	"strconv"
 )
 
 type UtxoType int
@@ -68,4 +69,8 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.UtxoType = UtxoType(utxopb.UtxoType)
 	utxo.Contract = utxopb.Contract
 	utxo.NextUtxoKey = utxopb.NextUtxoKey
+}
+
+func (utxo *UTXO) GetUTXOKey() string {
+	return  string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 }

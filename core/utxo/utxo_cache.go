@@ -63,15 +63,10 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 	lastestUtxoKey, err := utxoCache.db.Get(util.Str2bytes(pubkey))
 	for key, utxo := range utxoTx.Indices {
 		utxo.NextUtxoKey = lastestUtxoKey
-		utxoBytes, err := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
+		err:=utxoCache.putUTXOToDB(utxo)
 		if err != nil {
 			return err
 		}
-		err = utxoCache.db.Put(util.Str2bytes(key), utxoBytes)
-		if err != nil {
-			return err
-		}
-		utxoCache.utxo.Add(key, utxo)
 		lastestUtxoKey = util.Str2bytes(key)
 	}
 	err = utxoCache.db.Put(util.Str2bytes(pubkey), lastestUtxoKey) // storage the latest utxokey
@@ -95,11 +90,11 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 
 func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	for key, utxo := range utxoTx.Indices {
-		perUtxo ,err:= utxoCache.GetPreUtxo(pubkey, key)
+		preUTXO ,err:= utxoCache.GetPreUtxo(pubkey, key)
 		if err != nil {
 			return err
 		}
-		if perUtxo == nil { //this utxo is the head utxo
+		if preUTXO == nil { //this utxo is the head utxo
 			if len(utxo.NextUtxoKey) == 0 {
 				err := utxoCache.db.Del(util.Str2bytes(pubkey))
 				if err != nil {
@@ -117,29 +112,26 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 				utxoCache.lastUtxoKey.Add(pubkey, utxo.NextUtxoKey)
 			}
 		} else {
-			preUtxokey := string(perUtxo.Txid) + "_" + strconv.Itoa(perUtxo.TxIndex)
-			perUtxo.NextUtxoKey = utxo.NextUtxoKey
-			utxoBytes, err := proto.Marshal(perUtxo.ToProto().(*utxopb.Utxo))
+			preUTXO.NextUtxoKey = utxo.NextUtxoKey
+			err = utxoCache.putUTXOToDB(preUTXO)
 			if err != nil {
 				return err
 			}
-			err = utxoCache.db.Put(util.Str2bytes(preUtxokey), utxoBytes)
-			if err != nil {
-				return err
-			}
-			utxoCache.utxo.Add(preUtxokey, perUtxo)
-
 			//*if this utxo in utxoTx,then need to update
-			if _, ok := utxoTx.Indices[preUtxokey]; ok {
-				utxoTx.Indices[preUtxokey] = perUtxo
+			if _, ok := utxoTx.Indices[preUTXO.GetUTXOKey()]; ok {
+				utxoTx.Indices[preUTXO.GetUTXOKey()] = preUTXO
 			}
 		}
-		err = utxoCache.db.Del(util.Str2bytes(key))
+		//err = utxoCache.db.Del(util.Str2bytes(key))
+		//if err != nil {
+		//	logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
+		//	return err
+		//}
+		//utxoCache.utxo.Remove(key)
+		err = utxoCache.deleteUTXOFromDB(key)
 		if err != nil {
-			logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
 			return err
 		}
-		utxoCache.utxo.Remove(key)
 	}
 	return nil
 }
@@ -151,23 +143,7 @@ func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO,error) {
 		utxo = utxoData.(*UTXO)
 		return utxo,nil
 	}
-
-	rawBytes, err := utxoCache.db.Get(util.Str2bytes(utxoKey))
-	if err == nil {
-		utxoPb := &utxopb.Utxo{}
-		err := proto.Unmarshal(rawBytes, utxoPb)
-		if err != nil {
-			logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: Unmarshal utxo failed.")
-			return nil, err
-		}
-		utxo.FromProto(utxoPb)
-	} else {
-		logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: utxo didn't in db！")
-		return nil, err
-	}
-
-	utxoCache.utxo.Add(utxoKey, utxo)
-	return utxo,nil
+	return utxoCache.getUTXOFromDB(utxoKey)
 }
 
 func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO,error) {
@@ -295,4 +271,46 @@ func (utxoCache *UTXOCache) Delete(pubKeyHash account.PubKeyHash) error {
 		return account.ErrEmptyPublicKeyHash
 	}
 	return utxoCache.db.Del(pubKeyHash)
+}
+
+func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO)error{
+	utxoBytes, err := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
+	if err != nil {
+		return err
+	}
+	err = utxoCache.db.Put(util.Str2bytes(utxo.GetUTXOKey()), utxoBytes)
+	if err != nil {
+		return err
+	}
+	utxoCache.utxo.Add(utxo.GetUTXOKey(), utxo)
+	return nil
+}
+
+func (utxoCache *UTXOCache) getUTXOFromDB(utxoKey string)(*UTXO,error) {
+	var utxo = &UTXO{}
+	rawBytes, err := utxoCache.db.Get(util.Str2bytes(utxoKey))
+	if err == nil {
+		utxoPb := &utxopb.Utxo{}
+		err := proto.Unmarshal(rawBytes, utxoPb)
+		if err != nil {
+			logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: Unmarshal utxo failed.")
+			return nil, err
+		}
+		utxo.FromProto(utxoPb)
+	} else {
+		logger.WithFields(logger.Fields{"error": err}).Error("GetUtxoByPubkey: utxo didn't in db！")
+		return nil, err
+	}
+	utxoCache.utxo.Add(utxoKey, utxo)
+	return utxo,nil
+}
+
+func (utxoCache *UTXOCache) deleteUTXOFromDB(utxoKey string)error{
+	err := utxoCache.db.Del(util.Str2bytes(utxoKey))
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
+		return err
+	}
+	utxoCache.utxo.Remove(utxoKey)
+	return nil
 }
