@@ -183,8 +183,8 @@ func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) []byte {
 	return lastUtxoKey
 }
 
-func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash account.PubKeyHash) bool {
-	if bytes.Equal(utxoCache.getLastUTXOKey(pubKeyHash.String()),[]byte{}) {
+func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash string) bool {
+	if bytes.Equal(utxoCache.getLastUTXOKey(pubKeyHash),[]byte{}) {
 		return false
 	}
 	return true
