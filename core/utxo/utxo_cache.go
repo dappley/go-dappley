@@ -63,7 +63,6 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 	lastestUtxoKey, err := utxoCache.db.Get(util.Str2bytes(pubkey))
 	for key, utxo := range utxoTx.Indices {
 		utxo.NextUtxoKey = lastestUtxoKey
-		lastestUtxoKey = util.Str2bytes(key)
 		utxoBytes, err := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
 		if err != nil {
 			return err
@@ -73,6 +72,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 			return err
 		}
 		utxoCache.utxo.Add(key, utxo)
+		lastestUtxoKey = util.Str2bytes(key)
 	}
 	err = utxoCache.db.Put(util.Str2bytes(pubkey), lastestUtxoKey) // storage the latest utxokey
 	if err != nil {
@@ -95,11 +95,11 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 
 func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	for key, utxo := range utxoTx.Indices {
-		preUtxo ,err:= utxoCache.GetPreUtxo(pubkey, key)
+		perUtxo ,err:= utxoCache.GetPreUtxo(pubkey, key)
 		if err != nil {
 			return err
 		}
-		if preUtxo == nil { //this utxo is the head utxo
+		if perUtxo == nil { //this utxo is the head utxo
 			if len(utxo.NextUtxoKey) == 0 {
 				err := utxoCache.db.Del(util.Str2bytes(pubkey))
 				if err != nil {
@@ -107,7 +107,9 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 					return err
 				}
 				utxoCache.lastUtxoKey.Remove(pubkey)
+
 			} else {
+
 				err := utxoCache.db.Put(util.Str2bytes(pubkey), utxo.NextUtxoKey)
 				if err != nil {
 					return err
@@ -115,17 +117,22 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 				utxoCache.lastUtxoKey.Add(pubkey, utxo.NextUtxoKey)
 			}
 		} else {
-			preUtxo.NextUtxoKey = utxo.NextUtxoKey
-			utxoBytes, err := proto.Marshal(preUtxo.ToProto().(*utxopb.Utxo))
+			preUtxokey := string(perUtxo.Txid) + "_" + strconv.Itoa(perUtxo.TxIndex)
+			perUtxo.NextUtxoKey = utxo.NextUtxoKey
+			utxoBytes, err := proto.Marshal(perUtxo.ToProto().(*utxopb.Utxo))
 			if err != nil {
 				return err
 			}
-			preUtxokey := string(preUtxo.Txid) + "_" + strconv.Itoa(preUtxo.TxIndex)
 			err = utxoCache.db.Put(util.Str2bytes(preUtxokey), utxoBytes)
 			if err != nil {
 				return err
 			}
-			utxoCache.utxo.Add(preUtxokey, preUtxo)
+			utxoCache.utxo.Add(preUtxokey, perUtxo)
+
+			//*if this utxo in utxoTx,then need to update
+			if _, ok := utxoTx.Indices[preUtxokey]; ok {
+				utxoTx.Indices[preUtxokey] = perUtxo
+			}
 		}
 		err = utxoCache.db.Del(util.Str2bytes(key))
 		if err != nil {
@@ -241,7 +248,6 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 			utxoTx.Indices[utxoKey] = utxo
 			utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 		}
-		//utxoCache.cache.Add(pubKeyHash.String(), &utxoTx)
 	}
 
 	for _, u := range utxoTx.Indices {
