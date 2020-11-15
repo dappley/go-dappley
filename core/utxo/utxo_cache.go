@@ -60,7 +60,7 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 }
 
 func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
-	lastestUtxoKey, err :=utxoCache.getLastUTXOKey(pubkey)
+	lastestUtxoKey:=utxoCache.getLastUTXOKey(pubkey)
 	for key, utxo := range utxoTx.Indices {
 		utxo.NextUtxoKey = lastestUtxoKey
 		err:=utxoCache.putUTXOToDB(utxo)
@@ -69,7 +69,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 		}
 		lastestUtxoKey = util.Str2bytes(key)
 	}
-	err =utxoCache.putLastUTXOKeyToDB(pubkey, lastestUtxoKey)
+	err :=utxoCache.putLastUTXOKeyToDB(pubkey, lastestUtxoKey)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 			return err
 		}
 		if preUTXO == nil { //this utxo is the head utxo
-			if len(utxo.NextUtxoKey) == 0 {
+			if bytes.Equal(utxo.NextUtxoKey,[]byte{}){
 				err =utxoCache.deleteLastUTXOKeyFromDB(pubkey)
 				if err != nil {
 					return err
@@ -134,10 +134,8 @@ func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO,error) {
 }
 
 func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO,error) {
-	lastUtxokey, err := utxoCache.getLastUTXOKey(pubKey)
-	if err != nil {
-		return nil,err
-	}
+	lastUtxokey:= utxoCache.getLastUTXOKey(pubKey)
+
 	utxoKey := util.Bytes2str(lastUtxokey)
 
 	for utxoKey != "" {
@@ -155,10 +153,7 @@ func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO
 }
 
 func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO,error) {
-	lastUtxokey, err := utxoCache.getLastUTXOKey(pubKey)
-	if err != nil {
-		return nil,err
-	}
+	lastUtxokey:= utxoCache.getLastUTXOKey(pubKey)
 	utxoKey := util.Bytes2str(lastUtxokey)
 
 	for utxoKey != "" {
@@ -174,42 +169,39 @@ func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO,erro
 	return nil,nil// preutxo not found
 }
 
-func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) ([]byte, error) {
+func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) []byte {
 	lastUtxoKeyData, ok := utxoCache.lastUtxoKey.Get(pubKeyHash)
 	if ok {
-		return lastUtxoKeyData.([]byte), nil
+		return lastUtxoKeyData.([]byte)
 	}
 
 	lastUtxoKey, err := utxoCache.db.Get(util.Str2bytes(pubKeyHash))
 	if err != nil {
-		return []byte{}, err
+		return []byte{}
 	}
 	utxoCache.lastUtxoKey.Add(pubKeyHash, lastUtxoKey)
-	return lastUtxoKey, nil
+	return lastUtxoKey
 }
 
 func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash account.PubKeyHash) bool {
-	_, err := utxoCache.getLastUTXOKey(pubKeyHash.String())
-	if err == nil {
-		return true
+	if bytes.Equal(utxoCache.getLastUTXOKey(pubKeyHash.String()),[]byte{}) {
+		return false
 	}
-	return false
+	return true
 }
 
 func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
-	lastUtxokey, err := utxoCache.getLastUTXOKey(pubKeyHash.String())
+	lastUtxokey:= utxoCache.getLastUTXOKey(pubKeyHash.String())
 	utxoTx := NewUTXOTx()
-	if err == nil {
-		utxoKey := util.Bytes2str(lastUtxokey)
-		for utxoKey != "" {
-			utxo,err := utxoCache.GetUtxo(utxoKey)
-			if err!=nil{
-				//todo: return err
-				logger.Error(err)
-			}
-			utxoTx.Indices[utxoKey] = utxo
-			utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
+	utxoKey := util.Bytes2str(lastUtxokey)
+	for utxoKey != "" {
+		utxo, err := utxoCache.GetUtxo(utxoKey)
+		if err != nil {
+			//todo: return err
+			logger.Error(err)
 		}
+		utxoTx.Indices[utxoKey] = utxo
+		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
 
 	for _, u := range utxoTx.Indices {
