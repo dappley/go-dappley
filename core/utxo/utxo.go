@@ -37,15 +37,15 @@ const (
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
 	transactionbase.TXOutput
-	Txid     []byte
-	TxIndex  int
-	UtxoType UtxoType
-	NextUtxoKey	[]byte
+	Txid        []byte
+	TxIndex     int
+	UtxoType    UtxoType
+	NextUtxoKey []byte
 }
 
 // NewUTXO returns an UTXO instance constructed from a TXOutput.
 func NewUTXO(txout transactionbase.TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
-	return &UTXO{txout, txid, vout, utxoType,[]byte{}}
+	return &UTXO{txout, txid, vout, utxoType, []byte{}}
 }
 
 func (utxo *UTXO) ToProto() proto.Message {
@@ -72,5 +72,5 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 }
 
 func (utxo *UTXO) GetUTXOKey() string {
-	return  string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
+	return string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 }

@@ -70,12 +70,12 @@ func TestRemoveUTXO(t *testing.T) {
 	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
 	addr1UtxoTx := utxo.NewUTXOTx()
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal,[]byte{}})
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{1}, 1, utxo.UtxoNormal,[]byte{}})
-	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{2}, 0, utxo.UtxoNormal,[]byte{}})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(5), ta1.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal, []byte{}})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{1}, 1, utxo.UtxoNormal, []byte{}})
+	addr1UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(2), ta1.GetPubKeyHash(), ""}, []byte{2}, 0, utxo.UtxoNormal, []byte{}})
 
 	addr2UtxoTx := utxo.NewUTXOTx()
-	addr2UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(4), ta2.GetPubKeyHash(), ""}, []byte{1}, 2, utxo.UtxoNormal,[]byte{}})
+	addr2UtxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(4), ta2.GetPubKeyHash(), ""}, []byte{1}, 2, utxo.UtxoNormal, []byte{}})
 
 	utxoIndex.indexAdd[ta1.GetPubKeyHash().String()] = &addr1UtxoTx
 	utxoIndex.indexAdd[ta2.GetPubKeyHash().String()] = &addr2UtxoTx
@@ -111,8 +111,8 @@ func TestUpdate_Failed(t *testing.T) {
 func TestFindUTXO(t *testing.T) {
 	Txin := core.MockTxInputs()
 	Txin = append(Txin, core.MockTxInputs()...)
-	utxo1 := &utxo.UTXO{transactionbase.TXOutput{common.NewAmount(10), account.PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout, utxo.UtxoNormal,[]byte{}}
-	utxo2 := &utxo.UTXO{transactionbase.TXOutput{common.NewAmount(9), account.PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout, utxo.UtxoNormal,[]byte{}}
+	utxo1 := &utxo.UTXO{transactionbase.TXOutput{common.NewAmount(10), account.PubKeyHash([]byte("addr1")), ""}, Txin[0].Txid, Txin[0].Vout, utxo.UtxoNormal, []byte{}}
+	utxo2 := &utxo.UTXO{transactionbase.TXOutput{common.NewAmount(9), account.PubKeyHash([]byte("addr1")), ""}, Txin[1].Txid, Txin[1].Vout, utxo.UtxoNormal, []byte{}}
 	utxoTx1 := utxo.NewUTXOTxWithData(utxo1)
 	utxoTx2 := utxo.NewUTXOTxWithData(utxo2)
 
@@ -251,7 +251,7 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, len(utxoIndex.indexAdd))
 	assert.Equal(t, 0, len(utxoCopy.indexAdd))
 
-	copyUtxoTx := utxo.NewUTXOTxWithData(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal,[]byte{}})
+	copyUtxoTx := utxo.NewUTXOTxWithData(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal, []byte{}})
 	utxoCopy.indexAdd[string(ta1.GetPubKeyHash())] = &copyUtxoTx
 	assert.Equal(t, 1, len(utxoIndex.indexAdd))
 	assert.Equal(t, 1, len(utxoCopy.indexAdd))
@@ -259,13 +259,13 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, utxoCopy.indexAdd[string(ta1.GetPubKeyHash())].Size())
 
 	copyUtxoTx1 := utxo.NewUTXOTx()
-	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal,[]byte{}})
-	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[1], []byte{}, 1, utxo.UtxoNormal,[]byte{}})
+	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal, []byte{}})
+	copyUtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[1], []byte{}, 1, utxo.UtxoNormal, []byte{}})
 	utxoCopy.indexAdd["1"] = &copyUtxoTx1
 
 	utxoCopy2 := utxoCopy.DeepCopy()
 	copy2UtxoTx1 := utxo.NewUTXOTx()
-	copy2UtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal,[]byte{}})
+	copy2UtxoTx1.PutUtxo(&utxo.UTXO{core.MockUtxoOutputsWithoutInputs()[0], []byte{}, 0, utxo.UtxoNormal, []byte{}})
 	utxoCopy2.indexAdd["1"] = &copy2UtxoTx1
 	assert.Equal(t, 2, len(utxoCopy.indexAdd))
 	assert.Equal(t, 2, len(utxoCopy2.indexAdd))

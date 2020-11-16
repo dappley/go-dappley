@@ -59,16 +59,16 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 }
 
 func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
-	lastestUtxoKey:=utxoCache.getLastUTXOKey(pubkey)
+	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkey)
 	for key, utxo := range utxoTx.Indices {
 		utxo.NextUtxoKey = lastestUtxoKey
-		err:=utxoCache.putUTXOToDB(utxo)
+		err := utxoCache.putUTXOToDB(utxo)
 		if err != nil {
 			return err
 		}
 		lastestUtxoKey = util.Str2bytes(key)
 	}
-	err :=utxoCache.putLastUTXOKeyToDB(pubkey, lastestUtxoKey)
+	err := utxoCache.putLastUTXOKeyToDB(pubkey, lastestUtxoKey)
 	if err != nil {
 		return err
 	}
@@ -87,13 +87,13 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 
 func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	for key, utxo := range utxoTx.Indices {
-		preUTXO ,err:= utxoCache.GetPreUtxo(pubkey, key)
+		preUTXO, err := utxoCache.GetPreUtxo(pubkey, key)
 		if err != nil {
 			return err
 		}
 		if preUTXO == nil { //this utxo is the head utxo
-			if bytes.Equal(utxo.NextUtxoKey,[]byte{}){
-				err =utxoCache.deleteLastUTXOKeyFromDB(pubkey)
+			if bytes.Equal(utxo.NextUtxoKey, []byte{}) {
+				err = utxoCache.deleteLastUTXOKeyFromDB(pubkey)
 				if err != nil {
 					return err
 				}
@@ -122,44 +122,44 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO,error) {
+func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO, error) {
 	var utxo = &UTXO{}
 	utxoData, ok := utxoCache.utxo.Get(utxoKey)
 	if ok {
 		utxo = utxoData.(*UTXO)
-		return utxo,nil
+		return utxo, nil
 	}
 	return utxoCache.getUTXOFromDB(utxoKey)
 }
 
-func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO,error) {
-	utxoKey:= utxoCache.getLastUTXOKey(pubKey)
-	for !bytes.Equal(utxoKey,[]byte{}) {
-		utxo,err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
+func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO, error) {
+	utxoKey := utxoCache.getLastUTXOKey(pubKey)
+	for !bytes.Equal(utxoKey, []byte{}) {
+		utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		if utxo.GetUTXOKey() == targetUtxokey {
-			return utxo,nil
+			return utxo, nil
 		}
 		utxoKey = utxo.NextUtxoKey
 	}
-	return nil,errors.New("utxo not found")
+	return nil, errors.New("utxo not found")
 }
 
-func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO,error) {
-	utxoKey:= utxoCache.getLastUTXOKey(pubKey)
-	for !bytes.Equal(utxoKey,[]byte{}){
-		utxo,err:= utxoCache.GetUtxo(util.Bytes2str(utxoKey))
-		if err!=nil{
-			return nil,err
+func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO, error) {
+	utxoKey := utxoCache.getLastUTXOKey(pubKey)
+	for !bytes.Equal(utxoKey, []byte{}) {
+		utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
+		if err != nil {
+			return nil, err
 		}
 		if bytes.Equal(utxo.NextUtxoKey, util.Str2bytes(targetUtxokey)) {
-			return utxo,nil
+			return utxo, nil
 		}
 		utxoKey = utxo.NextUtxoKey
 	}
-	return nil,nil//preutxo not found, this is a possible situation, not an error
+	return nil, nil //preutxo not found, this is a possible situation, not an error
 }
 
 func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) []byte {
@@ -177,14 +177,14 @@ func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) []byte {
 }
 
 func (utxoCache *UTXOCache) IsLastUtxoKeyExist(pubKeyHash string) bool {
-	if bytes.Equal(utxoCache.getLastUTXOKey(pubKeyHash),[]byte{}) {
+	if bytes.Equal(utxoCache.getLastUTXOKey(pubKeyHash), []byte{}) {
 		return false
 	}
 	return true
 }
 
 func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
-	lastUtxokey:= utxoCache.getLastUTXOKey(pubKeyHash.String())
+	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	utxoTx := NewUTXOTx()
 	utxoKey := util.Bytes2str(lastUtxokey)
 	for utxoKey != "" {
@@ -244,7 +244,7 @@ func (utxoCache *UTXOCache) Delete(pubKeyHash account.PubKeyHash) error {
 	return utxoCache.db.Del(pubKeyHash)
 }
 
-func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO)error{
+func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO) error {
 	utxoBytes, err := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
 	if err != nil {
 		return err
@@ -258,7 +258,7 @@ func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO)error{
 	return nil
 }
 
-func (utxoCache *UTXOCache) getUTXOFromDB(utxoKey string)(*UTXO,error) {
+func (utxoCache *UTXOCache) getUTXOFromDB(utxoKey string) (*UTXO, error) {
 	var utxo = &UTXO{}
 	rawBytes, err := utxoCache.db.Get(util.Str2bytes(utxoKey))
 	if err == nil {
@@ -274,10 +274,10 @@ func (utxoCache *UTXOCache) getUTXOFromDB(utxoKey string)(*UTXO,error) {
 		return nil, err
 	}
 	utxoCache.utxo.Add(utxoKey, utxo)
-	return utxo,nil
+	return utxo, nil
 }
 
-func (utxoCache *UTXOCache) deleteUTXOFromDB(utxoKey string)error{
+func (utxoCache *UTXOCache) deleteUTXOFromDB(utxoKey string) error {
 	err := utxoCache.db.Del(util.Str2bytes(utxoKey))
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("delete utxo from db failed.")
@@ -287,7 +287,7 @@ func (utxoCache *UTXOCache) deleteUTXOFromDB(utxoKey string)error{
 	return nil
 }
 
-func (utxoCache *UTXOCache) putLastUTXOKeyToDB(pubkey string, lastestUtxoKey []byte) error{
+func (utxoCache *UTXOCache) putLastUTXOKeyToDB(pubkey string, lastestUtxoKey []byte) error {
 	err := utxoCache.db.Put(util.Str2bytes(pubkey), lastestUtxoKey)
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("put last utxo key to db failed.")
@@ -297,7 +297,7 @@ func (utxoCache *UTXOCache) putLastUTXOKeyToDB(pubkey string, lastestUtxoKey []b
 	return nil
 }
 
-func (utxoCache *UTXOCache) deleteLastUTXOKeyFromDB(pubkey string) error{
+func (utxoCache *UTXOCache) deleteLastUTXOKeyFromDB(pubkey string) error {
 	err := utxoCache.db.Del(util.Str2bytes(pubkey))
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("delete last utxo key from db failed.")

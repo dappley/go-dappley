@@ -121,28 +121,28 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 	return utxoTx
 }
 
-func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) (*utxo.UTXO,error) {
+func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) (*utxo.UTXO, error) {
 	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
 
 	if _, ok := utxos.indexAdd[pubkeyHash.String()]; ok {
 		utxo := utxos.indexAdd[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
-			return utxo,nil
+			return utxo, nil
 		}
 	}
 
 	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
 		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
-			return utxo,nil
+			return utxo, nil
 		}
 	}
 
-	utxo ,err:= utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxoKey)
-	if err!=nil{
-		return nil,err
+	utxo, err := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxoKey)
+	if err != nil {
+		return nil, err
 	}
-	return utxo,nil
+	return utxo, nil
 }
 
 func (utxos *UTXOIndex) GetContractCreateUTXOByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXO {
@@ -344,10 +344,10 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	if ok {
 		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
 	} else {
-		u ,err:= utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
-		if err!=nil{
+		u, err := utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
+		if err != nil {
 			logger.Error(err)
-			return  ErrUTXONotFound
+			return ErrUTXONotFound
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
 		if !ok {
