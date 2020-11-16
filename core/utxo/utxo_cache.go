@@ -29,7 +29,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
-	"strconv"
 )
 
 const UtxoCacheLRUCacheLimit = 1024
@@ -134,39 +133,33 @@ func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO,error) {
 }
 
 func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO,error) {
-	lastUtxokey:= utxoCache.getLastUTXOKey(pubKey)
-
-	utxoKey := util.Bytes2str(lastUtxokey)
-
-	for utxoKey != "" {
-		utxo,err := utxoCache.GetUtxo(utxoKey)
+	utxoKey:= utxoCache.getLastUTXOKey(pubKey)
+	for !bytes.Equal(utxoKey,[]byte{}) {
+		utxo,err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
 		if err != nil {
 			return nil,err
 		}
-		utxokey := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-		if utxokey == targetUtxokey {
+		if utxo.GetUTXOKey() == targetUtxokey {
 			return utxo,nil
 		}
-		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
+		utxoKey = utxo.NextUtxoKey
 	}
 	return nil,errors.New("utxo not found")
 }
 
 func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO,error) {
-	lastUtxokey:= utxoCache.getLastUTXOKey(pubKey)
-	utxoKey := util.Bytes2str(lastUtxokey)
-
-	for utxoKey != "" {
-		utxo,err:= utxoCache.GetUtxo(utxoKey)
+	utxoKey:= utxoCache.getLastUTXOKey(pubKey)
+	for !bytes.Equal(utxoKey,[]byte{}){
+		utxo,err:= utxoCache.GetUtxo(util.Bytes2str(utxoKey))
 		if err!=nil{
 			return nil,err
 		}
 		if bytes.Equal(utxo.NextUtxoKey, util.Str2bytes(targetUtxokey)) {
 			return utxo,nil
 		}
-		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
+		utxoKey = utxo.NextUtxoKey
 	}
-	return nil,nil// preutxo not found
+	return nil,nil//preutxo not found, this is a possible situation, not an error
 }
 
 func (utxoCache *UTXOCache) getLastUTXOKey(pubKeyHash string) []byte {
