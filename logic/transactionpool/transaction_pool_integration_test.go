@@ -122,7 +122,7 @@ func TestTransactionPool_VerifyDependentTransactions(t *testing.T) {
 	utxoTx1 := utxo.NewUTXOTx()
 	utxoTx1.PutUtxo(&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal,[]byte{}})
 
-	utxoIndex.SetIndex(map[string]*utxo.UTXOTx{
+	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta2.GetPubKeyHash().String(): &utxoTx2,
 		ta1.GetPubKeyHash().String(): &utxoTx1,
 	})

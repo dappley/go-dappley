@@ -5,11 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/scState"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
@@ -89,7 +88,10 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 				ta = account.NewTransactionAccountByPubKey(vin.PubKey)
 
 			}
-			usedUTXO := utxoIndex.FindUTXOByVin([]byte(ta.GetPubKeyHash()), vin.Txid, vin.Vout)
+			usedUTXO ,err:= utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
+			if err!=nil{
+				return nil, nil, nil, nil, err
+			}
 			if usedUTXO != nil {
 				inputAmount = inputAmount.Add(usedUTXO.Value)
 			}

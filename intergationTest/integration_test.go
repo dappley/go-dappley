@@ -636,7 +636,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	assert.Nil(t, err)
 	currentHeight := bm.Getblockchain().GetMaxHeight()
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < currentHeight + 1 {
+	for bm.Getblockchain().GetMaxHeight() < currentHeight+1 {
 	}
 	bps.Stop()
 
@@ -647,7 +647,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	assert.Nil(t, err)
 	currentHeight = bm.Getblockchain().GetMaxHeight()
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < currentHeight + 1 {
+	for bm.Getblockchain().GetMaxHeight() < currentHeight+1 {
 	}
 	bps.Stop()
 	logic.RemoveAccountTestFile()
@@ -914,8 +914,8 @@ func TestUpdate(t *testing.T) {
 	}
 	dependentTx5.ID = dependentTx5.Hash()
 
-	utxoPk2 := &utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal,[]byte{}}
-	utxoPk1 := &utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal,[]byte{}}
+	utxoPk2 := &utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal, []byte{}}
+	utxoPk1 := &utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}}
 
 	utxoTxPk2 := utxo.NewUTXOTx()
 	utxoTxPk2.PutUtxo(utxoPk2)
@@ -925,16 +925,16 @@ func TestUpdate(t *testing.T) {
 
 	utxoIndex2 := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 
-	utxoIndex2.SetIndex(map[string]*utxo.UTXOTx{
+	utxoIndex2.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta2.GetPubKeyHash().String(): &utxoTxPk2,
 		ta1.GetPubKeyHash().String(): &utxoTxPk1,
 	})
 
-	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal,[]byte{}}
-	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal,[]byte{}}
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal, []byte{}}
+	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal, []byte{}}
+	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal, []byte{}}
+	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}}
+	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal, []byte{}}
 	ltransaction.NewTxDecorator(dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
 	ltransaction.NewTxDecorator(dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 	ltransaction.NewTxDecorator(dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})

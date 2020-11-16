@@ -210,7 +210,7 @@ func GetUtxoHandle() {
 	defer db.Close()
 
 	utxoCache := utxo.NewUTXOCache(db)
-	utxoTx := utxoCache.Get(pubKeyHash)
+	utxoTx := utxoCache.GetUTXOTx(pubKeyHash)
 
 	dumpUtxos(utxoTx)
 }
