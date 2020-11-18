@@ -20,7 +20,6 @@ package utxo
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/core/account"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -72,12 +71,9 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 	if err != nil {
 		return err
 	}
+
 	//contract
-	pubKeyHash, err := hex.DecodeString(pubkey)
-	if err != nil {
-		return err
-	}
-	err = utxoCache.Put(pubKeyHash, utxoTx)
+	err = utxoCache.addContractCreateUtxo(pubkey, utxoTx)
 	if err != nil {
 		return err
 	}
@@ -219,19 +215,14 @@ func (utxoCache *UTXOCache) GetContractCreateUtxo(pubKeyHash account.PubKeyHash)
 			return nil
 		}
 	}
-
 	return mapData.(*UTXO)
 }
 
 // Add new data into cache
-func (utxoCache *UTXOCache) Put(pubKeyHash account.PubKeyHash, value *UTXOTx) error {
-	if pubKeyHash == nil {
-		return account.ErrEmptyPublicKeyHash
-	}
-
+func (utxoCache *UTXOCache) addContractCreateUtxo(pubKeyHash string, value *UTXOTx) error {
 	for _, u := range value.Indices {
 		if u.UtxoType == UtxoCreateContract {
-			utxoCache.contractCreateCache.Add(string(pubKeyHash), u)
+			utxoCache.contractCreateCache.Add(pubKeyHash, u)
 		}
 	}
 	return nil
