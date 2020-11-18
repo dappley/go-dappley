@@ -160,10 +160,6 @@ func main() {
 	}
 	transaction.SetSubsidy(minerSubsidy)
 
-	// switch on RunScheduleEvents
-	if viper.GetBool("scheduleEvents.enable") {
-		lblockchain.SetEnableRunScheduleEvents()
-	}
 	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())
 	}

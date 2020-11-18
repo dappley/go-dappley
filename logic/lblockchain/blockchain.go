@@ -55,8 +55,6 @@ var (
 	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 	// DefaultGasPrice default price of per gas
 	DefaultGasPrice uint64 = 1
-	// switch on RunScheduleEvents
-	isEnableRunScheduleEvents = false
 )
 
 type Blockchain struct {
@@ -240,15 +238,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	})
 
 	bcTemp := bc.DeepCopy()
-	tailBlk, _ := bc.GetTailBlock()
 
 	bcTemp.db.DisableBatch()
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
-
-	if isEnableRunScheduleEvents {
-		bcTemp.runScheduleEvents(ctx, tailBlk)
-	}
 
 	err := ctx.UtxoIndex.Save()
 	if err != nil {
@@ -299,21 +292,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		"poolSize": poolsize,
 	}).Info("Blockchain: added a new block to tail.")
 
-	return nil
-}
-
-func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Block) error {
-	if parentBlk == nil {
-		//if the current block is genesis block. do not run smart contract
-		return nil
-	}
-
-	if bc.scManager == nil {
-		return nil
-	}
-
-	bc.scManager.RunScheduledEvents(ctx.UtxoIndex.GetContractUtxos(), ctx.State, ctx.Block.GetHeight(), parentBlk.GetTimestamp())
-	bc.eventManager.Trigger(ctx.State.GetEvents())
 	return nil
 }
 
@@ -577,7 +555,3 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	bc.SetLIBHash(LIBBlk.GetHash())
 }
 
-// Set value of switch tag on RunScheduleEvents
-func SetEnableRunScheduleEvents() {
-	isEnableRunScheduleEvents = true
-}

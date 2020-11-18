@@ -292,8 +292,8 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		contractAddr := ctx.GetContractAddress()
 		generatedContractAddress = contractAddr.String()
 		logger.WithFields(logger.Fields{
-			"contractAddr": generatedContractAddress,
-		}).Info("Smart Contract Deployed Successful!")
+			"Contract Address": generatedContractAddress,
+		}).Info("Smart Contract has been received.")
 	}
 
 	return &rpcpb.SendTransactionResponse{GeneratedContractAddress: generatedContractAddress}, nil

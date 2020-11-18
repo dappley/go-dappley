@@ -11,7 +11,6 @@ import (
 
 type ScEngineManager interface {
 	CreateEngine() ScEngine
-	RunScheduledEvents(contractUtxo []*utxo.UTXO, scStorage *scState.ScState, blkHeight uint64, seed int64)
 }
 
 type ScEngine interface {
