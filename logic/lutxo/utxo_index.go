@@ -320,16 +320,6 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	}
 }
 
-func (utxos *UTXOIndex) GetContractUtxos() []*utxo.UTXO {
-	utxoTx := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
-
-	var contractUtxos []*utxo.UTXO
-	for _, utxo := range utxoTx.Indices {
-		contractUtxos = append(contractUtxos, utxo)
-	}
-	return contractUtxos
-}
-
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int) error {
 	utxos.mutex.Lock()

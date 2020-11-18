@@ -185,12 +185,6 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 		utxoTx.Indices[utxoKey] = utxo
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
-
-	for _, u := range utxoTx.Indices {
-		if u.UtxoType == UtxoCreateContract {
-			utxoCache.contractCreateCache.Add(string(pubKeyHash), u)
-		}
-	}
 	return &utxoTx
 }
 
