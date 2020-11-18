@@ -71,13 +71,6 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 	if err != nil {
 		return err
 	}
-
-	//contract
-	err = utxoCache.addContractCreateUtxo(pubkey, utxoTx)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -203,29 +196,11 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 
 // Return value from cache
 func (utxoCache *UTXOCache) GetContractCreateUtxo(pubKeyHash account.PubKeyHash) *UTXO {
-	mapData, ok := utxoCache.contractCreateCache.Get(string(pubKeyHash))
-	if !ok {
-		utxotx := utxoCache.GetUTXOTx(pubKeyHash)
-		if len(utxotx.Indices) > 0 {
-			mapData, ok = utxoCache.contractCreateCache.Get(string(pubKeyHash))
-			if !ok {
-				return nil
-			}
-		} else {
-			return nil
-		}
+	mapData, ok := utxoCache.contractCreateCache.Get(pubKeyHash.String())
+	if ok{
+		return  mapData.(*UTXO)
 	}
-	return mapData.(*UTXO)
-}
-
-// Add new data into cache
-func (utxoCache *UTXOCache) addContractCreateUtxo(pubKeyHash string, value *UTXOTx) error {
-	for _, u := range value.Indices {
-		if u.UtxoType == UtxoCreateContract {
-			utxoCache.contractCreateCache.Add(pubKeyHash, u)
-		}
-	}
-	return nil
+	return utxoCache.getContractCreateUtxoFromDB(pubKeyHash.String())
 }
 
 func (utxoCache *UTXOCache) Delete(pubKeyHash account.PubKeyHash) error {
@@ -296,4 +271,20 @@ func (utxoCache *UTXOCache) deleteLastUTXOKeyFromDB(pubkey string) error {
 	}
 	utxoCache.lastUtxoKey.Remove(pubkey)
 	return nil
+}
+
+func (utxoCache *UTXOCache) getContractCreateUtxoFromDB(pubKey string) *UTXO {
+	utxoKey := utxoCache.getLastUTXOKey(pubKey)
+	for !bytes.Equal(utxoKey, []byte{}) {
+		utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
+		if err != nil {
+			return nil
+		}
+		if utxo.UtxoType == UtxoCreateContract {
+			utxoCache.contractCreateCache.Add(pubKey, utxo)
+			return utxo
+		}
+		utxoKey = utxo.NextUtxoKey
+	}
+	return  nil
 }
