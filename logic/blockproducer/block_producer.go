@@ -93,6 +93,15 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 		return
 	}
 
+	//makeup a block, fill in necessary information to check lib policy.
+	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(),bp.producer.Beneficiary())
+	if !bp.bm.Getblockchain().CheckLibPolicy(blk) {
+		logger.Warn("BlockProducer: the number of producers is not enough.")
+		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
+		bp.bm.BroadcastBlock(tailBlock)
+		return
+	}
+
 	bp.producer.BlockProduceStart()
 	defer bp.producer.BlockProduceFinish()
 
@@ -216,13 +225,6 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 	}).Info("BlockProducer: produced a new block.")
 	if !lblock.VerifyHash(ctx.Block) {
 		logger.Warn("BlockProducer: hash of the new block is invalid.")
-		return
-	}
-
-	if !bp.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
-		logger.Warn("BlockProducer: the number of producers is not enough.")
-		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
-		bp.bm.BroadcastBlock(tailBlock)
 		return
 	}
 
