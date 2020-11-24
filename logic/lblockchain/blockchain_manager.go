@@ -236,7 +236,6 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
-	rollBackUtxo := utxo.DeepCopy()
 	rollScState := scState.DeepCopy()
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
@@ -250,6 +249,15 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	firstCheck := true
 
 	for i := len(forkBlks) - 1; i >= 0; i-- {
+		if !bm.Getblockchain().CheckLibPolicy(forkBlks[i]) {
+			return ErrProducerNotEnough
+		}
+
+		if firstCheck {
+			firstCheck = false
+			bm.blockchain.Rollback(forkParentHash, utxo, rollScState)
+		}
+
 		logger.WithFields(logger.Fields{
 			"height": forkBlks[i].GetHeight(),
 			"hash":   forkBlks[i].GetHash().String(),
@@ -257,15 +265,6 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, parentBlk) {
 			return ErrTransactionVerifyFailed
-		}
-
-		if !bm.Getblockchain().CheckLibPolicy(forkBlks[i]) {
-			return ErrProducerNotEnough
-		}
-
-		if firstCheck {
-			firstCheck = false
-			bm.blockchain.Rollback(forkParentHash, rollBackUtxo, rollScState)
 		}
 
 		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
