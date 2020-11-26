@@ -97,14 +97,17 @@ func GetBlockByHeightHandle() {
 	dumpBlock(blk)
 }
 
+
 func GetTransactionHandle() {
 	var dbPath string
 	var txId string
 	var startHeight uint64
+	var endHeight uint64
 	flagSet := flag.NewFlagSet("getTransaction", flag.ExitOnError)
 	flagSet.StringVar(&dbPath, "d", "", "database path")
 	flagSet.StringVar(&txId, "t", "", "transaction id")
 	flagSet.Uint64Var(&startHeight, "height", 0, "search start block height")
+	flagSet.Uint64Var(&endHeight, "endHeight", 0, "search start block height")
 	flagSet.Parse(os.Args[2:])
 
 	db := storage.OpenDatabase(dbPath)
@@ -116,6 +119,9 @@ func GetTransactionHandle() {
 	}
 
 	for {
+		if endHeight > 0 && startHeight > endHeight{
+			return
+		}
 		hash, err := db.Get(util.UintToHex(startHeight))
 		if err != nil {
 			panic(fmt.Sprintf("Block height %v not found in database ", startHeight))
