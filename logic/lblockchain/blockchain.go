@@ -483,10 +483,6 @@ func (bc *Blockchain) GasPrice() uint64 {
 }
 
 func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
-	//Do not check genesis block
-	if blk.GetHeight() == 0 {
-		return true
-	}
 
 	if bc.libPolicy.IsBypassingLibCheck() {
 		return true
