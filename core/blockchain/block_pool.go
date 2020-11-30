@@ -57,6 +57,7 @@ func NewBlockPool(rootBlk *block.Block) *BlockPool {
 	if rootBlk != nil {
 		pool.blkCache.Add(getKey(node), node)
 	}
+
 	return pool
 }
 

@@ -352,6 +352,9 @@ func (bc *Blockchain) String() string {
 func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 
 	err := bc.db.Put(blk.GetHash(), blk.Serialize())
+	println("===================================")
+	println(blk.GetHeight())
+	println("===================================")
 	if err != nil {
 		logger.WithError(err).Warn("Blockchain: failed to add blk to database!")
 		return err
@@ -548,4 +551,3 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 
 	bc.SetLIBHash(LIBBlk.GetHash())
 }
-

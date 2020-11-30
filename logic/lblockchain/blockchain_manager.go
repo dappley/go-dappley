@@ -19,6 +19,7 @@ package lblockchain
 
 import (
 	"bytes"
+
 	"github.com/dappley/go-dappley/common/log"
 
 	"github.com/pkg/errors"
@@ -26,14 +27,14 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/common/pubsub"
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block/pb"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/logic/lblock"
 	"github.com/dappley/go-dappley/logic/lutxo"
 
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/logic/lblockchain/pb"
+	lblockchainpb "github.com/dappley/go-dappley/logic/lblockchain/pb"
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
@@ -79,7 +80,6 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPoo
 func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
 	return bm.downloadRequestCh
 }
-
 
 func (bm *BlockchainManager) RequestDownloadBlockchain() {
 	go func() {
@@ -181,20 +181,23 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 
 	bm.blockPool.AddBlock(blk)
 	forkHeadBlk := bm.blockPool.GetForkHead(blk)
+
 	if forkHeadBlk == nil {
 		return
 	}
 
-	if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetPrevHash()) {
-		logger.WithFields(logger.Fields{
-			"parent_hash": forkHeadBlk.GetPrevHash(),
-			"from":        pid,
-		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-		bm.RequestBlock(forkHeadBlk.GetPrevHash(), pid)
-		return
+	if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetHash()) {
+		if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetPrevHash()) {
+			logger.WithFields(logger.Fields{
+				"parent_hash": forkHeadBlk.GetPrevHash(),
+				"from":        pid,
+			}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
+			bm.RequestBlock(forkHeadBlk.GetPrevHash(), pid)
+			return
+		}
 	}
 
-	fork := bm.blockPool.GetFork(forkHeadBlk.GetPrevHash())
+	fork := bm.blockPool.GetFork(forkHeadBlk.GetHash())
 	if fork == nil {
 		return
 	}
@@ -207,8 +210,8 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	logger.Info("Push: set blockchain status to sync.")
 
 	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
-	if err!=nil{
-		logger.Warn("Merge fork failed.err:",err)
+	if err != nil {
+		logger.Warn("Merge fork failed.err:", err)
 	}
 	bm.blockPool.RemoveFork(fork)
 
