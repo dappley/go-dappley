@@ -352,9 +352,7 @@ func (bc *Blockchain) String() string {
 func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 
 	err := bc.db.Put(blk.GetHash(), blk.Serialize())
-	println("===================================")
-	println(blk.GetHeight())
-	println("===================================")
+
 	if err != nil {
 		logger.WithError(err).Warn("Blockchain: failed to add blk to database!")
 		return err
@@ -485,9 +483,15 @@ func (bc *Blockchain) GasPrice() uint64 {
 }
 
 func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
+	//Do not check genesis block
+	if blk.GetHeight() == 0 {
+		return true
+	}
+
 	if bc.libPolicy.IsBypassingLibCheck() {
 		return true
 	}
+
 	return bc.isAliveProducerSufficient(blk)
 
 }
