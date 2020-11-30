@@ -92,7 +92,8 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 		logger.Infof("BlockProducer: block producer paused because blockchain is not ready. Current status is %v", bp.bm.Getblockchain().GetState())
 		return
 	}
-
+	bp.bm.Getblockchain().SetState(blockchain.BlockchainProduce)
+	defer bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	//makeup a block, fill in necessary information to check lib policy.
 	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(),bp.producer.Beneficiary())
 	if !bp.bm.Getblockchain().CheckLibPolicy(blk) {
@@ -119,6 +120,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 	}
 
 	bp.addBlockToBlockchain(ctx)
+
 }
 
 //prepareBlock generates a new block
