@@ -181,7 +181,6 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 
 	bm.blockPool.AddBlock(blk)
 	forkHeadBlk := bm.blockPool.GetForkHead(blk)
-
 	if forkHeadBlk == nil {
 		return
 	}
@@ -198,6 +197,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}
 
 	fork := bm.blockPool.GetFork(forkHeadBlk.GetHash())
+
 	if fork == nil {
 		return
 	}

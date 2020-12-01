@@ -163,7 +163,7 @@ L:
 				currentContractGenTXs = append(currentContractGenTXs, generatedTxs...)
 			}
 			totalGasFee = totalGasFee.Add(tx.GasLimit.Mul(tx.GasPrice))
-			actualGasList = append(actualGasList, gasCount)
+			actualGasList = append(actualGasList, gasCount*tx.GasPrice.Uint64())
 		} else {
 			// tx is a normal transactions
 			if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
@@ -234,6 +234,7 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 	if totalGasFee.IsZero() && len(actualGasList) == 0 {
 		return true
 	}
+	var err error
 	for _, tx := range blockTxs {
 		adaptedTx := transaction.NewTxAdapter(tx)
 		if adaptedTx.IsGasRewardTx() {
@@ -246,7 +247,10 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 			for i, gasCount := range actualGasList {
 				if gasCount == rewardValue.Uint64() {
 					actualGasList = append(actualGasList[:i], actualGasList[i+1:]...)
-					totalGasFee, _ = totalGasFee.Sub(rewardValue)
+					totalGasFee, err = totalGasFee.Sub(rewardValue)
+					if err != nil {
+						return false
+					}
 					isFound = true
 					break
 				}
@@ -260,7 +264,10 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 			if changedValue == nil {
 				return false
 			}
-			totalGasFee, _ = totalGasFee.Sub(changedValue)
+			totalGasFee, err = totalGasFee.Sub(changedValue)
+			if err != nil {
+				return false
+			}
 		}
 	}
 	if !totalGasFee.IsZero() {

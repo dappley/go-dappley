@@ -193,7 +193,7 @@ func (pool *BlockPool) findLongestChain(parentHash hash.Hash) *common.TreeNode {
 	for _, blkHash := range pool.blkCache.Keys() {
 		if cachedBlk, ok := pool.blkCache.Get(blkHash); ok {
 			root := cachedBlk.(*common.TreeNode)
-			if root.GetValue().(*block.Block).GetPrevHash().String() == parentHash.String() {
+			if root.GetValue().(*block.Block).GetHash().String() == parentHash.String() {
 				if root.Height() > longest {
 					longestForkHead = root
 					longest = root.Height()
