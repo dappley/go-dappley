@@ -13,6 +13,8 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/process"
 	logger "github.com/sirupsen/logrus"
@@ -31,6 +33,13 @@ type cpuStat struct {
 	CurrentProcessCpuPercent float64 `json:"currentProcessCpuPercent"`
 	TotalProcessCpuPercent   float64 `json:"totalProcessCpuPercent"`
 	TotalCoreNum             int     `json:"totalCoreNum"`
+}
+
+type diskStat struct {
+	Used        uint64  `json:"used"`
+	UsedPercent float64 `json:"usedPercent"`
+	ReadBytes   uint64  `json:"readBytes"`
+	WriteBytes  uint64  `json:"writeBytes"`
 }
 
 func getMemoryStats() interface{} {
@@ -92,6 +101,20 @@ func getCPUPercent() interface{} {
 	return cpuStat{percentageUsed, cpuTotalPercent, coreNum}
 }
 
+func getDiskStat() interface{} {
+	diskUsage, err := disk.Usage("/")
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+	disk, err := disk.IOCounters()
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+	return diskStat{diskUsage.Used, diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
+}
+
 func getTransactionPoolSize() interface{} {
 	return transactionpool.MetricsTransactionPoolSize.Count()
 }
@@ -134,15 +157,27 @@ func getBlockStats(bc *lblockchain.Blockchain) interface{} {
 }
 
 type Network struct {
-	BroadCastTime        float64 `json:"broadcastTime"`
-	ConnectionTypeInNum  int64   `json:"connectionTypeInNum"`
-	ConnectionTypeOutNum int64   `json:"connectionTypeOutNum"`
+	//BroadCastTime        float64 `json:"broadcastTime"`
+	ConnectionTypeInNum  int64  `json:"connectionTypeInNum"`
+	ConnectionTypeOutNum int64  `json:"connectionTypeOutNum"`
+	BytesSent            uint64 `json:"bytesSent"`   // number of bytes sent
+	BytesRecv            uint64 `json:"bytesRecv"`   // number of bytes received
+	PacketsSent          uint64 `json:"packetsSent"` // number of packets sent
+	PacketsRecv          uint64 `json:"packetsRecv"` // number of packets received
 }
 
 func getNetWorkStats() interface{} {
-	nw := Network{ConnectionTypeInNum: network.ConnectionTypeInNum.Snapshot().Value(),
-		ConnectionTypeOutNum: network.ConnectionTypeOutNum.Snapshot().Value()}
-	return nw
+	net, err := net.IOCounters(false)
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+	return Network{network.ConnectionTypeInNum.Snapshot().Value(),
+		network.ConnectionTypeOutNum.Snapshot().Value(),
+		net[0].BytesSent,
+		net[0].BytesRecv,
+		net[0].PacketsSent,
+		net[0].PacketsRecv}
 }
 
 type MetricsInfo struct {
@@ -175,6 +210,7 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 			case <-tick.C:
 				mi.Metrics["cpu"] = getCPUPercent()
 				mi.Metrics["memory"] = getMemoryStats()
+				mi.Metrics["disk"] = getDiskStat()
 				mi.Metrics["block"] = getBlockStats(bc)
 				mi.Metrics["txRequest"] = getTxRequestStats()
 				mi.Metrics["network"] = getNetWorkStats()

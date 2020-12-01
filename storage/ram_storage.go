@@ -57,7 +57,7 @@ func (rs *RamStorage) Put(key []byte, val []byte) error {
 }
 
 func (rs *RamStorage) Del(key []byte) error {
-	rs.data.Delete(key)
+	rs.data.Delete(string(key))
 	return nil
 }
 

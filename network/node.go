@@ -116,7 +116,7 @@ func (n *Node) GetNetwork() *Network { return n.network }
 //Start starts the network, command listener and received message listener
 func (n *Node) Start(listenPort int, key string) error {
 
-	privKey := loadNetworkKeyFromFile(key)
+	privKey := decodeNetworkKey(key)
 
 	err := n.network.Start(listenPort, privKey)
 	if err != nil {
@@ -243,21 +243,21 @@ func (n *Node) StartListenLoop() {
 
 }
 
-//loadNetworkKeyFromFile reads the network privatekey source a file
-func loadNetworkKeyFromFile(key string) crypto.PrivKey {
+//decodeNetworkKey decode network key
+func decodeNetworkKey(key string) crypto.PrivKey {
 	if key == "" {
 		return nil
 	}
 
 	data, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
-		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
+		logger.WithError(err).Warn("Node: decodeNetworkKey failed.")
 		return nil
 	}
 
 	privKey, err := crypto.UnmarshalPrivateKey(data)
 	if err != nil {
-		logger.WithError(err).Warn("Node: LoadNetworkKeyFromFile failed.")
+		logger.WithError(err).Warn("Node: decodeNetworkKey failed.")
 		return nil
 	}
 

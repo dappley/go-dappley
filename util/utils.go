@@ -23,6 +23,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"reflect"
+	"unsafe"
 
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -107,4 +108,14 @@ func InProtoEnum(enumType string, x string) bool {
 	}
 
 	return false
+}
+
+func Str2bytes(s string) []byte {
+	x := (*[2]uintptr)(unsafe.Pointer(&s))
+	b := [3]uintptr{x[0], x[1], x[1]}
+	return *(*[]byte)(unsafe.Pointer(&b))
+}
+
+func Bytes2str(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }

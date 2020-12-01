@@ -24,10 +24,8 @@ import (
 
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
-	transactionPoolpb "github.com/dappley/go-dappley/logic/transactionpool/pb"
 
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 
 	"github.com/dappley/go-dappley/common"
@@ -282,24 +280,6 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	assert.Equal(t, &executionTx, txs[1])
 }
 
-func TestTransactionPool_SaveAndLoadDatabase(t *testing.T) {
-
-	txPool := NewTransactionPool(nil, 128000)
-	txPool.Push(tx1)
-
-	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	txPool.Push(tx2)
-	assert.Equal(t, 2, len(txPool.GetTransactions()))
-	txPool.Push(tx3)
-	txPool.Push(tx4)
-	assert.Equal(t, 4, len(txPool.GetTransactions()))
-	db := storage.NewRamStorage()
-	err := txPool.SaveToDatabase(db)
-	assert.Nil(t, err)
-	txPool2 := LoadTxPoolFromDatabase(db, nil, 128000)
-	assert.Equal(t, 4, len(txPool2.GetTransactions()))
-}
-
 func TestTransactionPool_Rollback(t *testing.T) {
 	txs := generateDependentTxs()
 
@@ -410,27 +390,6 @@ func generateDependentTxs() []*transaction.Transaction {
 	return []*transaction.Transaction{ttx0, ttx1, ttx2, ttx3, ttx4, ttx5, ttx6, ttx7}
 }
 
-func TestTransactionPool_Proto(t *testing.T) {
-	txPool := NewTransactionPool(nil, 128)
-	txs := generateDependentTxs()
-	for _, tx := range txs {
-		txPool.addTransactionAndSort(transaction.NewTransactionNode(tx))
-	}
-	rawBytes, err := proto.Marshal(txPool.ToProto())
-	assert.Nil(t, err)
-
-	txPoolProto := &transactionPoolpb.TransactionPool{}
-	err = proto.Unmarshal(rawBytes, txPoolProto)
-	assert.Nil(t, err)
-
-	txPool1 := NewTransactionPool(nil, 128)
-	txPool1.FromProto(txPoolProto)
-	assert.Equal(t, txPool.pendingTxs, txPool1.pendingTxs)
-	assert.Equal(t, txPool.tipOrder, txPool1.tipOrder)
-	assert.Equal(t, txPool.txs, txPool1.txs)
-	assert.Equal(t, txPool.currSize, txPool1.currSize)
-	assert.Equal(t, txPool.sizeLimit, txPool1.sizeLimit)
-}
 
 func TestNewTransactionNode(t *testing.T) {
 	ttx1 := &transaction.Transaction{

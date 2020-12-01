@@ -23,6 +23,7 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/golang/protobuf/proto"
+	"strconv"
 )
 
 type UtxoType int
@@ -36,14 +37,15 @@ const (
 // UTXO contains the meta info of an unspent TXOutput.
 type UTXO struct {
 	transactionbase.TXOutput
-	Txid     []byte
-	TxIndex  int
-	UtxoType UtxoType
+	Txid        []byte
+	TxIndex     int
+	UtxoType    UtxoType
+	NextUtxoKey []byte
 }
 
 // NewUTXO returns an UTXO instance constructed from a TXOutput.
 func NewUTXO(txout transactionbase.TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
-	return &UTXO{txout, txid, vout, utxoType}
+	return &UTXO{txout, txid, vout, utxoType, []byte{}}
 }
 
 func (utxo *UTXO) ToProto() proto.Message {
@@ -54,6 +56,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 		TxIndex:       uint32(utxo.TxIndex),
 		UtxoType:      uint32(utxo.UtxoType),
 		Contract:      utxo.Contract,
+		NextUtxoKey:   utxo.NextUtxoKey,
 	}
 }
 
@@ -65,4 +68,9 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.TxIndex = int(utxopb.TxIndex)
 	utxo.UtxoType = UtxoType(utxopb.UtxoType)
 	utxo.Contract = utxopb.Contract
+	utxo.NextUtxoKey = utxopb.NextUtxoKey
+}
+
+func (utxo *UTXO) GetUTXOKey() string {
+	return string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
 }

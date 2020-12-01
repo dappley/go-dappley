@@ -55,8 +55,6 @@ var (
 	ErrProducerNotEnough       = errors.New("producer number is less than ConsensusSize")
 	// DefaultGasPrice default price of per gas
 	DefaultGasPrice uint64 = 1
-	// switch on RunScheduleEvents
-	isEnableRunScheduleEvents = false
 )
 
 type Blockchain struct {
@@ -240,15 +238,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	})
 
 	bcTemp := bc.DeepCopy()
-	tailBlk, _ := bc.GetTailBlock()
 
 	bcTemp.db.DisableBatch()
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
-
-	if isEnableRunScheduleEvents {
-		bcTemp.runScheduleEvents(ctx, tailBlk)
-	}
 
 	err := ctx.UtxoIndex.Save()
 	if err != nil {
@@ -259,12 +252,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 	//Remove transactions in current transaction pool
 	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
 	bcTemp.GetTxPool().ResetPendingTransactions()
-	err = bcTemp.GetTxPool().SaveToDatabase(bc.db)
-
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save txpool to database.")
-		return err
-	}
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_add_block":    numTxBeforeExe,
@@ -305,21 +292,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		"poolSize": poolsize,
 	}).Info("Blockchain: added a new block to tail.")
 
-	return nil
-}
-
-func (bc *Blockchain) runScheduleEvents(ctx *BlockContext, parentBlk *block.Block) error {
-	if parentBlk == nil {
-		//if the current block is genesis block. do not run smart contract
-		return nil
-	}
-
-	if bc.scManager == nil {
-		return nil
-	}
-
-	bc.scManager.RunScheduledEvents(ctx.UtxoIndex.GetContractUtxos(), ctx.State, ctx.Block.GetHeight(), parentBlk.GetTimestamp())
-	bc.eventManager.Trigger(ctx.State.GetEvents())
 	return nil
 }
 
@@ -380,6 +352,7 @@ func (bc *Blockchain) String() string {
 func (bc *Blockchain) AddBlockToDb(blk *block.Block) error {
 
 	err := bc.db.Put(blk.GetHash(), blk.Serialize())
+
 	if err != nil {
 		logger.WithError(err).Warn("Blockchain: failed to add blk to database!")
 		return err
@@ -454,8 +427,6 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, utxo *lutxo.UTXOIndex, scSt
 		return false
 	}
 
-	bc.txPool.SaveToDatabase(bc.db)
-
 	utxo.Save()
 	scState.SaveToDatabase(bc.db)
 	bc.db.Flush()
@@ -512,10 +483,6 @@ func (bc *Blockchain) GasPrice() uint64 {
 }
 
 func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
-	//Do not check genesis block
-	if blk.GetHeight() == 0 {
-		return true
-	}
 
 	if bc.libPolicy.IsBypassingLibCheck() {
 		return true
@@ -530,51 +497,39 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 	minProduerNum := bc.libPolicy.GetMinConfirmationNum()
 	onlineProducers := make(map[string]bool)
 	currentCheckBlk := blk
-
+	var err error
 	if bc.GetMaxHeight() == 0 {
 		return true
 	}
-	if bc.GetMaxHeight() > uint64(minProduerNum-1) {
-		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++ {
-			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
-			if err != nil {
-				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
-				return false
-			}
-			currentCheckBlk = newBlk
-			if currentCheckBlk.GetHeight() == 0 {
-				break
-			}
-
-			if _, exist := onlineProducers[currentCheckBlk.GetProducer()]; !exist {
-				logger.WithFields(logger.Fields{
-					"\ncurrBlkHeight": currentCheckBlk.GetHeight(),
-					"\nproducer":      currentCheckBlk.GetProducer(),
-				}).Debug("\nBlockchain: repeating producer")
-
-				if blk.GetProducer() != currentCheckBlk.GetProducer() {
-					onlineProducers[currentCheckBlk.GetProducer()] = true
-				}
-			}
-		}
-		if len(onlineProducers) >= minProduerNum-1 {
-			return true
-		}
-		return false
-	} else {
+	if bc.GetMaxHeight() < uint64(minProduerNum) {
 		for i := uint64(0); i < bc.GetMaxHeight(); i++ {
-			newBlk, err := bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
+			currentCheckBlk, err = bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
 			if err != nil {
 				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer.")
 				return false
 			}
-			currentCheckBlk = newBlk
 			if blk.GetProducer() == currentCheckBlk.GetProducer() {
 				return false
 			}
 		}
-		return true
+	} else {
+		onlineProducers[currentCheckBlk.GetProducer()] = true
+		for i := 0; i < bc.libPolicy.GetTotalProducersNum()-1; i++ {
+			currentCheckBlk, err = bc.GetBlockByHash(currentCheckBlk.GetPrevHash())
+			if err != nil {
+				logger.WithError(err).Warn("Blockchain: Cant not read parent block while checking alive producer")
+				return false
+			}
+			if currentCheckBlk.GetHeight() == 0 {
+				break
+			}
+			onlineProducers[currentCheckBlk.GetProducer()] = true
+		}
+		if len(onlineProducers) < minProduerNum {
+			return false
+		}
 	}
+	return true
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
@@ -595,9 +550,4 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	}
 
 	bc.SetLIBHash(LIBBlk.GetHash())
-}
-
-// Set value of switch tag on RunScheduleEvents
-func SetEnableRunScheduleEvents() {
-	isEnableRunScheduleEvents = true
 }

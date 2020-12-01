@@ -16,7 +16,7 @@ message NodeConfig{
     repeated string seed = 2;
     string db_path = 3;
     uint32 rpc_port = 4;
-    string key_path = 5;
+    string key = 5;
     uint32 tx_pool_limit = 6;
     uint32 blk_size_limit = 7;
     string node_address = 8;

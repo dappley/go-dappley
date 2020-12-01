@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 	"math"
 	"sync"
 	"time"
@@ -126,12 +127,12 @@ type DownloadManager struct {
 	status                int
 	commonHeight          uint64
 	msgId                 int32
-	downloadRequestCh     chan chan bool
 	finishCh              chan bool
 	numOfMinRequestHashes int
+	bp                    *blockproducer.BlockProducer
 }
 
-func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numOfProducers int) *DownloadManager {
+func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numOfProducers int, bp *blockproducer.BlockProducer) *DownloadManager {
 
 	downloadManager := &DownloadManager{
 		peersInfo:             make(map[peer.ID]*PeerBlockInfo),
@@ -143,19 +144,15 @@ func NewDownloadManager(node NetService, bm *lblockchain.BlockchainManager, numO
 		status:                DownloadStatusIdle,
 		msgId:                 0,
 		commonHeight:          0,
-		downloadRequestCh:     make(chan chan bool, 100),
 		finishCh:              nil,
 		numOfMinRequestHashes: numOfProducers,
+		bp:                    bp,
 	}
 	if downloadManager.numOfMinRequestHashes < MinRequestHashesNum {
 		downloadManager.numOfMinRequestHashes = MinRequestHashesNum
 	}
 	downloadManager.Subscribe()
 	return downloadManager
-}
-
-func (downloadManager *DownloadManager) GetDownloadRequestCh() chan chan bool {
-	return downloadManager.downloadRequestCh
 }
 
 func (downloadManager *DownloadManager) Start() {
@@ -168,7 +165,7 @@ func (downloadManager *DownloadManager) StartDownloadRequestListener() {
 
 		for {
 			select {
-			case returnCh := <-downloadManager.downloadRequestCh:
+			case returnCh := <-downloadManager.bm.GetDownloadRequestCh():
 				logger.Info("StartDownloadRequestListener: Received download request.")
 				if downloadManager.status != DownloadStatusIdle {
 					logger.Warn("DownloadMananger: Blockchain is being downloaded. Received download request is dropped.")
@@ -356,7 +353,7 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
 		downloadManager.finishDownload()
-		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed:",err)
+		returnBlocksLogger.WithError(err).Warn("DownloadManager: merge fork failed:", err)
 		return
 	}
 
@@ -524,6 +521,11 @@ func (downloadManager *DownloadManager) startGetCommonBlocks(retryCount int) {
 		return
 	}
 
+	if downloadManager.bp != nil {
+		logger.Info("startGetCommonBlocks: prepared to stop the block producer")
+		downloadManager.bp.Stop()
+	}
+
 	downloadManager.status = DownloadStatusSyncCommonBlocks
 	highestPeer := downloadManager.selectHighestPeer()
 
@@ -667,6 +669,11 @@ func (downloadManager *DownloadManager) finishDownload() {
 	downloadManager.downloadingPeer = nil
 	downloadManager.currentCmd = nil
 	downloadManager.finishCh <- true
+
+	if downloadManager.bp != nil {
+		logger.Info("finishDownload: prepared to start the block producer")
+		downloadManager.bp.Start()
+	}
 }
 
 func (downloadManager *DownloadManager) canStartDownload() bool {

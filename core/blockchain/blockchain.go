@@ -11,6 +11,7 @@ const (
 	BlockchainDownloading
 	BlockchainSync
 	BlockchainReady
+	BlockchainProduce
 )
 
 type Blockchain struct {

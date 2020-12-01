@@ -28,13 +28,11 @@ import (
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
-	transactionPoolpb "github.com/dappley/go-dappley/logic/transactionpool/pb"
 
 	"github.com/asaskevich/EventBus"
 	"github.com/dappley/go-dappley/common/pubsub"
 
 	"github.com/dappley/go-dappley/network/networkmodel"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/golang-collections/collections/stack"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -506,45 +504,6 @@ func (txPool *TransactionPool) insertIntoTipOrder(txNode *transaction.Transactio
 	txPool.tipOrder[index] = hex.EncodeToString(txNode.Value.ID)
 }
 
-func deserializeTxPool(d []byte) *TransactionPool {
-
-	txPoolProto := &transactionPoolpb.TransactionPool{}
-	err := proto.Unmarshal(d, txPoolProto)
-	if err != nil {
-		println(err)
-		logger.WithError(err).Panic("TxPool: failed to deserialize TxPool transactions.")
-	}
-	txPool := NewTransactionPool(nil, 1)
-	txPool.FromProto(txPoolProto)
-
-	return txPool
-}
-
-func LoadTxPoolFromDatabase(db storage.Storage, netService NetService, txPoolSize uint32) *TransactionPool {
-	rawBytes, err := db.Get([]byte(TxPoolDbKey))
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return NewTransactionPool(netService, txPoolSize)
-	}
-	txPool := deserializeTxPool(rawBytes)
-	txPool.sizeLimit = txPoolSize
-	txPool.netService = netService
-	return txPool
-}
-
-func (txPool *TransactionPool) serialize() []byte {
-
-	rawBytes, err := proto.Marshal(txPool.ToProto())
-	if err != nil {
-		logger.WithError(err).Panic("TxPool: failed to serialize TxPool transactions.")
-	}
-	return rawBytes
-}
-
-func (txPool *TransactionPool) SaveToDatabase(db storage.Storage) error {
-	txPool.mutex.Lock()
-	defer txPool.mutex.Unlock()
-	return db.Put([]byte(TxPoolDbKey), txPool.serialize())
-}
 
 //getMinTipTransaction gets the transaction.TransactionNode with minimum tip
 func (txPool *TransactionPool) getMaxTipTransaction() *transaction.TransactionNode {
@@ -591,29 +550,6 @@ func (txPool *TransactionPool) getMinTipTxid() string {
 	return txPool.tipOrder[len(txPool.tipOrder)-1]
 }
 
-func (txPool *TransactionPool) ToProto() proto.Message {
-	txs := make(map[string]*transactionpb.TransactionNode)
-	for key, val := range txPool.txs {
-		txs[key] = val.ToProto().(*transactionpb.TransactionNode)
-	}
-	return &transactionPoolpb.TransactionPool{
-		Txs:      txs,
-		TipOrder: txPool.tipOrder,
-		CurrSize: txPool.currSize,
-	}
-}
-
-func (txPool *TransactionPool) FromProto(pb proto.Message) {
-	for key, val := range pb.(*transactionPoolpb.TransactionPool).Txs {
-		txNode := transaction.NewTransactionNode(nil)
-		txNode.FromProto(val)
-		txPool.txs[key] = txNode
-	}
-	txPool.tipOrder = pb.(*transactionPoolpb.TransactionPool).TipOrder
-	txPool.currSize = pb.(*transactionPoolpb.TransactionPool).CurrSize
-	MetricsTransactionPoolSize.Clear()
-	MetricsTransactionPoolSize.Inc(int64(len(txPool.txs)))
-}
 
 func (txPool *TransactionPool) BroadcastTx(tx *transaction.Transaction) {
 	txPool.netService.BroadcastNormalPriorityCommand(BroadcastTx, tx.ToProto())

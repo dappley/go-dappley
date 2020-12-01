@@ -19,23 +19,18 @@
 package lutxo
 
 import (
-	"encoding/hex"
 	"errors"
-	"sort"
-
-	"github.com/dappley/go-dappley/storage"
-
-	"sync"
-
-	"github.com/dappley/go-dappley/core/transaction"
-
-	"github.com/dappley/go-dappley/core/block"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/block"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
+	"sort"
+	"strconv"
+	"sync"
 )
 
 var contractUtxoKey = []byte("contractUtxoKey")
@@ -47,7 +42,8 @@ var (
 
 // UTXOIndex holds all unspent TXOutputs indexed by public key hash.
 type UTXOIndex struct {
-	index               map[string]*utxo.UTXOTx
+	indexRemove         map[string]*utxo.UTXOTx
+	indexAdd            map[string]*utxo.UTXOTx
 	contractCreateIndex map[string]*utxo.UTXO
 	cache               *utxo.UTXOCache
 	mutex               *sync.RWMutex
@@ -56,57 +52,97 @@ type UTXOIndex struct {
 // NewUTXOIndex initializes an UTXOIndex instance
 func NewUTXOIndex(cache *utxo.UTXOCache) *UTXOIndex {
 	return &UTXOIndex{
-		index:               make(map[string]*utxo.UTXOTx),
+		indexRemove:         make(map[string]*utxo.UTXOTx),
+		indexAdd:            make(map[string]*utxo.UTXOTx),
 		contractCreateIndex: make(map[string]*utxo.UTXO),
 		cache:               cache,
 		mutex:               &sync.RWMutex{},
 	}
 }
 
-func (utxos *UTXOIndex) SetIndex(index map[string]*utxo.UTXOTx) {
-	utxos.index = index
+func (utxos *UTXOIndex) SetIndexAdd(indexAdd map[string]*utxo.UTXOTx) {
+	utxos.indexAdd = indexAdd
 }
 
+func (utxos *UTXOIndex) SetindexRemove(indexRemove map[string]*utxo.UTXOTx) {
+	utxos.indexRemove = indexRemove
+}
+
+func (utxos *UTXOIndex) IsIndexAddExist(pubKeyHash account.PubKeyHash) bool {
+	_, ok := utxos.indexAdd[pubKeyHash.String()]
+	return ok
+}
 func (utxos *UTXOIndex) Save() error {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
-	for key, utxoTx := range utxos.index {
-		pubKeyHash, err := hex.DecodeString(key)
-		if err != nil {
-			return err
-		}
 
-		err = utxos.cache.Put(pubKeyHash, utxoTx)
+	//save utxo to db/cache
+	for pubkey, utxoTx := range utxos.indexAdd {
+		err := utxos.cache.AddUtxos(utxoTx, pubkey)
 		if err != nil {
 			return err
 		}
 	}
+
+	//delete utxo from db/cache which in indexRemove
+	for pubkey, utxoTx := range utxos.indexRemove {
+		err := utxos.cache.RemoveUtxos(utxoTx, pubkey)
+		if err != nil {
+			return err
+		}
+	}
+	//clear
+	utxos.indexAdd = make(map[string]*utxo.UTXOTx)
+	utxos.indexRemove = make(map[string]*utxo.UTXOTx)
 	return nil
 }
 
-func (utxos *UTXOIndex) Delete() error {
-	return nil
+func (utxos *UTXOIndex) IsLastUtxoKeyExist(pubKeyHash account.PubKeyHash) bool {
+	return utxos.cache.IsLastUtxoKeyExist(pubKeyHash.String())
 }
 
-// GetAllUTXOsByPubKeyHash returns all current UTXOs identified by pubkey.
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXOTx {
-	key := pubkeyHash.String()
-	utxos.mutex.RLock()
-	utxoTx, ok := utxos.index[key]
-	utxos.mutex.RUnlock()
-
-	if !ok {
-		utxoTx = utxos.cache.Get(pubkeyHash)
-		utxos.mutex.Lock()
-		utxoTx = utxoTx.DeepCopy()
-		if utxos.index[key] != nil {
-			utxo.Free(utxos.index[key])
+	utxoTx := utxos.cache.GetUTXOTx(pubkeyHash)
+	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
+	if utxoTxAdd != nil {
+		for k, v := range utxoTxAdd.Indices {
+			utxoTx.Indices[k] = v
 		}
-		utxos.index[key] = utxoTx
-		utxos.mutex.Unlock()
 	}
 
+	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
+	if utxoTxRemove != nil {
+		for k := range utxoTxRemove.Indices {
+			if _, ok := utxoTx.Indices[k]; ok {
+				delete(utxoTx.Indices, k)
+			}
+		}
+	}
 	return utxoTx
+}
+
+func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) (*utxo.UTXO, error) {
+	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
+
+	if _, ok := utxos.indexAdd[pubkeyHash.String()]; ok {
+		utxo := utxos.indexAdd[pubkeyHash.String()].GetUtxo(txid, vout)
+		if utxo != nil {
+			return utxo, nil
+		}
+	}
+
+	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
+		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
+		if utxo != nil {
+			return utxo, nil
+		}
+	}
+
+	utxo, err := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxoKey)
+	if err != nil {
+		return nil, err
+	}
+	return utxo, nil
 }
 
 func (utxos *UTXOIndex) GetContractCreateUTXOByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXO {
@@ -157,12 +193,6 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *
 	}
 
 	return retUtxos, nil
-}
-
-// FindUTXOByVin returns the UTXO instance identified by pubkeyHash, txid and vout
-func (utxos *UTXOIndex) FindUTXOByVin(pubkeyHash account.PubKeyHash, txid []byte, vout int) *utxo.UTXO {
-	utxoTx := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
-	return utxoTx.GetUtxo(txid, vout)
 }
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
@@ -262,17 +292,13 @@ func (utxos *UTXOIndex) unspendVinsInTx(tx *transaction.Transaction, db storage.
 
 // AddUTXO adds an unspent TXOutput to index
 func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vout int) {
-	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(txout.PubKeyHash)
-
 	var u *utxo.UTXO
 	//if it is a smart contract deployment utxo add it to contract utxos
 	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
-		if originalUtxos.Size() == 0 {
+		if !utxos.IsIndexAddExist(txout.PubKeyHash) &&
+			!utxos.IsLastUtxoKeyExist(txout.PubKeyHash) {
 			u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoCreateContract)
-			contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
 			utxos.mutex.Lock()
-			contractUtxos.PutUtxo(u)
-			utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
 			utxos.contractCreateIndex[u.PubKeyHash.String()] = u
 			utxos.mutex.Unlock()
 		} else {
@@ -283,33 +309,45 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	}
 
 	utxos.mutex.Lock()
-	originalUtxos.PutUtxo(u)
-	utxos.index[txout.PubKeyHash.String()] = originalUtxos
-	utxos.mutex.Unlock()
-}
-
-func (utxos *UTXOIndex) GetContractUtxos() []*utxo.UTXO {
-	utxoTx := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
-
-	var contractUtxos []*utxo.UTXO
-	for _, utxo := range utxoTx.Indices {
-		contractUtxos = append(contractUtxos, utxo)
+	defer utxos.mutex.Unlock()
+	utxoTx, ok := utxos.indexAdd[txout.PubKeyHash.String()]
+	if !ok {
+		utxoTx := utxo.NewUTXOTx()
+		utxoTx.PutUtxo(u)
+		utxos.indexAdd[txout.PubKeyHash.String()] = &utxoTx
+	} else {
+		utxoTx.PutUtxo(u)
 	}
-	return contractUtxos
 }
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int) error {
-	originalUtxos := utxos.GetAllUTXOsByPubKeyHash(pkh)
-
-	u := originalUtxos.GetUtxo(txid, vout)
-	if u == nil {
-		return ErrUTXONotFound
-	}
-
 	utxos.mutex.Lock()
-	originalUtxos.RemoveUtxo(txid, vout)
-	utxos.index[pkh.String()] = originalUtxos
+	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
+	var u = &utxo.UTXO{}
+
+	//update indexRemove
+	ok := false
+	if _, ok = utxos.indexAdd[pkh.String()]; ok {
+		_, ok = utxos.indexAdd[pkh.String()].Indices[utxoKey]
+	}
+	if ok {
+		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
+	} else {
+		u, err := utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
+		if err != nil {
+			logger.Error(err)
+			return ErrUTXONotFound
+		}
+		utxoTx, ok := utxos.indexRemove[pkh.String()]
+		if !ok {
+			utxoTx := utxo.NewUTXOTx()
+			utxoTx.PutUtxo(u)
+			utxos.indexRemove[pkh.String()] = &utxoTx
+		} else {
+			utxoTx.PutUtxo(u)
+		}
+	}
 	utxos.mutex.Unlock()
 
 	if u.UtxoType != utxo.UtxoCreateContract {
@@ -318,17 +356,8 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	// remove contract utxos
 	isContract, _ := pkh.IsContract()
 	if isContract {
-		contractUtxos := utxos.GetAllUTXOsByPubKeyHash(contractUtxoKey)
-
-		contractUtxo := contractUtxos.GetUtxo(txid, vout)
-
-		if contractUtxo == nil {
-			return ErrUTXONotFound
-		}
 		utxos.mutex.Lock()
-		contractUtxos.RemoveUtxo(txid, vout)
-		utxos.index[hex.EncodeToString(contractUtxoKey)] = contractUtxos
-		delete(utxos.contractCreateIndex, contractUtxo.PubKeyHash.String())
+		delete(utxos.contractCreateIndex, pkh.String())
 		utxos.mutex.Unlock()
 	}
 	return nil
@@ -340,9 +369,14 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	defer utxos.mutex.RUnlock()
 
 	utxocopy := NewUTXOIndex(utxos.cache)
-	for pkh, utxoTx := range utxos.index {
+	for pkh, utxoTx := range utxos.indexAdd {
 		newUtxoTx := utxoTx.DeepCopy()
-		utxocopy.index[pkh] = newUtxoTx
+		utxocopy.indexAdd[pkh] = newUtxoTx
+	}
+
+	for pkh, utxoTx := range utxos.indexRemove {
+		newUtxoTx := utxoTx.DeepCopy()
+		utxocopy.indexRemove[pkh] = newUtxoTx
 	}
 	return utxocopy
 }

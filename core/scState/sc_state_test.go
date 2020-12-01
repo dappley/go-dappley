@@ -6,7 +6,7 @@ import (
 
 	scstatepb "github.com/dappley/go-dappley/core/scState/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/gogo/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 

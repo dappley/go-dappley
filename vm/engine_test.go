@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/dappley/go-dappley/logic/ltransaction"
+	"github.com/dappley/go-dappley/storage"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -102,8 +103,11 @@ module.exports = new MathTest();`
 	index := make(map[string]*utxo.UTXOTx)
 	index[contractTA.GetPubKeyHash().String()] = &utxoTx
 
-	uTXOIndex := lutxo.NewUTXOIndex(nil)
-	uTXOIndex.SetIndex(index)
+	db := storage.NewRamStorage()
+	defer db.Close()
+	uTXOIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
+
+	uTXOIndex.SetIndexAdd(index)
 
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)

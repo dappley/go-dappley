@@ -124,10 +124,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 	dependentTx2 := NewTransactionByVin(dependentTx1.ID, 0, ta2.GetKeyPair().GetPublicKey(), 5, ta1.GetPubKeyHash(), 5)
 	dependentTx3 := NewTransactionByVin(dependentTx2.ID, 0, ta1.GetKeyPair().GetPublicKey(), 1, ta2.GetPubKeyHash(), 4)
 
-	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal}
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal, []byte{}}
 
 	tx1Utxos := map[string][]*utxo.UTXO{
-		ta2.GetPubKeyHash().String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal}},
+		ta2.GetPubKeyHash().String(): {&utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}}},
 	}
 	ltransaction.NewTxDecorator(&dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), tx1Utxos[ta2.GetPubKeyHash().String()])
 	ltransaction.NewTxDecorator(&dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey1).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
@@ -177,10 +177,10 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*transaction.Transaction{&rewardTX},
 			map[string][]*utxo.UTXO{
 				contractTA.GetPubKeyHash().String(): {
-					{*transactionbase.NewTXOutput(common.NewAmount(0), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(0), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal, []byte{}},
 				},
 				userTA.GetPubKeyHash().String(): {
-					{*transactionbase.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal, []byte{}},
 				},
 			},
 			false,
@@ -190,11 +190,11 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			[]*transaction.Transaction{generatedTX},
 			map[string][]*utxo.UTXO{
 				contractTA.GetPubKeyHash().String(): {
-					{*transactionbase.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal},
-					{*transactionbase.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 1, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 0, utxo.UtxoNormal, []byte{}},
+					{*transactionbase.NewTXOutput(common.NewAmount(20), contractTA), []byte("prevtxid"), 1, utxo.UtxoNormal, []byte{}},
 				},
 				userTA.GetPubKeyHash().String(): {
-					{*transactionbase.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal},
+					{*transactionbase.NewTXOutput(common.NewAmount(1), userTA), []byte("txinid"), 0, utxo.UtxoNormal, []byte{}},
 				},
 			},
 			false,
@@ -214,7 +214,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			}
 
 			utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
-			utxoIndex.SetIndex(index)
+			utxoIndex.SetIndexAdd(index)
 			//{index, utxo.NewUTXOCache(db), &sync.RWMutex{}}
 			scState := scState.NewScState()
 			var parentBlk = block.NewBlockWithRawInfo(

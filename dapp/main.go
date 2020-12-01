@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/core/transaction"
 
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
@@ -132,12 +133,6 @@ func main() {
 		return
 	}
 
-	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()))
-	downloadManager.Start()
-	bm.SetDownloadRequestCh(downloadManager.GetDownloadRequestCh())
-
-	bm.Getblockchain().SetState(blockchain.BlockchainReady)
-
 	//start mining
 	logic.SetLockAccount() //lock the account
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
@@ -152,15 +147,19 @@ func main() {
 
 	producer := blockproducerinfo.NewBlockProducerInfo(conf.GetConsensusConfig().GetMinerAddress())
 	blockProducer := blockproducer.NewBlockProducer(bm, conss, producer)
-	blockProducer.Start()
-	defer blockProducer.Stop()
 
+	downloadManager := downloadmanager.NewDownloadManager(node, bm, len(conss.GetProducers()), blockProducer)
+	downloadManager.Start()
+
+	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	bm.RequestDownloadBlockchain()
 
-	// switch on RunScheduleEvents
-	if viper.GetBool("scheduleEvents.enable") {
-		lblockchain.SetEnableRunScheduleEvents()
+	minerSubsidy := viper.GetInt("log.minerSubsidy")
+	if minerSubsidy == 0{
+		minerSubsidy = 1000000000
 	}
+	transaction.SetSubsidy(minerSubsidy)
+
 	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())
 	}
@@ -189,7 +188,7 @@ func initNode(conf *configpb.Config, db storage.Storage) (*network.Node, error) 
 	nodeConfig := conf.GetNodeConfig()
 	seeds := nodeConfig.GetSeed()
 	port := nodeConfig.GetPort()
-	key := nodeConfig.GetKeyPath()
+	key := nodeConfig.GetKey()
 
 	node := network.NewNode(db, seeds)
 	err := node.Start(int(port), key)

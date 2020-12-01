@@ -20,6 +20,7 @@ package logic
 
 import (
 	"fmt"
+	"github.com/dappley/go-dappley/core/transaction"
 	"os"
 	"testing"
 
@@ -47,6 +48,7 @@ func TestCreateAccount(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
+	cleanUpDatabase()
 }
 
 func TestCreateAccountWithPassphrase(t *testing.T) {
@@ -54,6 +56,7 @@ func TestCreateAccountWithPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = account.IsValidPubKey(acc.GetKeyPair().GetPublicKey())
 	assert.Nil(t, err)
+	cleanUpDatabase()
 }
 
 func TestCreateAccountWithPassphraseMismatch(t *testing.T) {
@@ -62,6 +65,7 @@ func TestCreateAccountWithPassphraseMismatch(t *testing.T) {
 
 	_, err = CreateAccountWithPassphrase("wrong_password", GetTestAccountPath())
 	assert.Error(t, err)
+	cleanUpDatabase()
 }
 
 func TestCreateBlockchain(t *testing.T) {
@@ -123,7 +127,7 @@ func TestGetBalance(t *testing.T) {
 	//The balance should be 10000000 after creating a blockchain
 	balance, err := GetBalance(addr, bc)
 	assert.Nil(t, err)
-	assert.Equal(t, common.NewAmount(10000000), balance)
+	assert.Equal(t, transaction.Subsidy, balance)
 }
 
 func TestGetBalanceWithInvalidAddress(t *testing.T) {
@@ -211,6 +215,7 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	list, err := GetAllAddressesByPath(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.ElementsMatch(t, list, addressList)
+	cleanUpDatabase()
 }
 
 func TestIsAccountLocked(t *testing.T) {
@@ -220,6 +225,7 @@ func TestIsAccountLocked(t *testing.T) {
 	status, err := IsAccountLocked(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.True(t, status)
+	cleanUpDatabase()
 }
 
 func TestNilSetLockAccount(t *testing.T) {
@@ -250,6 +256,7 @@ func TestSetUnLockAccount(t *testing.T) {
 	status, err := IsAccountLocked(GetTestAccountPath())
 	assert.Nil(t, err)
 	assert.False(t, status)
+	cleanUpDatabase()
 }
 
 func cleanUpDatabase() {

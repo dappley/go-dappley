@@ -59,6 +59,22 @@ func NewBlockWithTimestamp(txs []*transaction.Transaction, parent *Block, timeSt
 	}
 }
 
+func NewBlockByHash(preHash hash.Hash, producer string) *Block  {
+	return &Block{
+		header: &BlockHeader{
+			[]byte{},
+			preHash,
+			0,
+			0,
+			[]byte{},
+			0,
+			producer,
+		},
+		transactions: []*transaction.Transaction{},
+	}
+
+
+}
 func (b *Block) GetHeader() *BlockHeader {
 	return b.header
 }

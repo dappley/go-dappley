@@ -40,3 +40,8 @@ func WaitDoneOrTimeout(done Done, timeOut int) {
 	for !done() && !IsTimeOut(currentTime, int64(timeOut)) {
 	}
 }
+
+func WaitDone(done Done) {
+	for done(){
+	}
+}

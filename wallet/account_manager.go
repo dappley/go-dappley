@@ -34,7 +34,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const accountDataPath = "./bin/accounts.dat"
+const accountDataPath = "../bin/accounts.dat"
 
 var (
 	ErrPasswordIncorrect = errors.New("password is incorrect")
@@ -52,7 +52,25 @@ type AccountManager struct {
 
 //GetAccountFilePath return account file Path
 func GetAccountFilePath() string {
+	createAccountFile(accountDataPath)
 	return accountDataPath
+}
+
+func createAccountFile(path string) {
+	binFolder := "../bin"
+	if !Exists(binFolder) {
+		err := os.Mkdir(binFolder, os.ModePerm)
+		if err != nil {
+			logger.Errorf("Create account file folder. binFolder: %v, error: %v", binFolder, err.Error())
+		}
+	}
+	if !Exists(path) {
+		file, err := os.Create(path)
+		file.Close()
+		if err != nil {
+			logger.Errorf("Create account file error: %v", err.Error())
+		}
+	}
 }
 
 func NewAccountManager(fileLoader storage.FileStorage) *AccountManager {

@@ -8,8 +8,5 @@ message Utxo {
     uint32  tx_index = 4;
     uint32  utxoType = 5;
     string  contract = 6;
-}
-
-message UtxoList {
-    repeated Utxo utxos = 1;
+    bytes  nextUtxoKey = 7;
 }

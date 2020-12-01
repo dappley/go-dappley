@@ -38,7 +38,7 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-var Subsidy = common.NewAmount(10000000)
+var Subsidy = common.NewAmount(10000000000)
 
 const (
 	ContractTxouputIndex = 0
@@ -103,6 +103,11 @@ type SendTxParam struct {
 	GasLimit      *common.Amount
 	GasPrice      *common.Amount
 	Contract      string
+}
+
+//
+func SetSubsidy(amount int)  {
+	Subsidy = common.NewAmount(uint64(amount))
 }
 
 // NewSendTxParam Returns SendTxParam object

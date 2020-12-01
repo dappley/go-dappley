@@ -24,31 +24,43 @@ import (
 )
 
 type BlockProducer struct {
-	bm       *lblockchain.BlockchainManager
-	con      Consensus
-	producer *blockproducerinfo.BlockProducerInfo
-	stopCh   chan bool
+	bm        *lblockchain.BlockchainManager
+	con       Consensus
+	producer  *blockproducerinfo.BlockProducerInfo
+	stopCh    chan bool
+	isRunning bool
 }
 
 //NewBlockProducer returns a new block producer instance
 func NewBlockProducer(bm *lblockchain.BlockchainManager, con Consensus, producer *blockproducerinfo.BlockProducerInfo) *BlockProducer {
 	return &BlockProducer{
-		bm:       bm,
-		con:      con,
-		producer: producer,
-		stopCh:   make(chan bool, 1),
+		bm:        bm,
+		con:       con,
+		producer:  producer,
+		stopCh:    make(chan bool, 1),
+		isRunning: false,
 	}
 }
 
 //Start starts the block producing process
 func (bp *BlockProducer) Start() {
+	// clear stop channel buffer
+	select {
+	case <-bp.stopCh:
+	default:
+	}
+	if bp.isRunning {
+		return
+	}
 	go func() {
 		defer log.CrashHandler()
 
 		logger.Info("BlockProducer Starts...")
+		bp.isRunning = true
 		for {
 			select {
 			case <-bp.stopCh:
+				bp.isRunning = false
 				return
 			default:
 				bp.con.ProduceBlock(bp.produceBlock)
@@ -59,7 +71,7 @@ func (bp *BlockProducer) Start() {
 
 //Stop stops the block producing process
 func (bp *BlockProducer) Stop() {
-	logger.Info("Miner stops...")
+	logger.Info("BlockProducer stops...")
 	bp.stopCh <- true
 }
 
@@ -68,11 +80,26 @@ func (bp *BlockProducer) IsProducingBlock() bool {
 	return !bp.producer.IsIdle()
 }
 
+//IsProducingBlock returns if the local producer is producing a block
+func (bp *BlockProducer) GetProduceBlockStatus() bool {
+	return bp.isRunning
+}
+
 //produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 	// Do not produce block if block pool is syncing
 	if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
 		logger.Infof("BlockProducer: block producer paused because blockchain is not ready. Current status is %v", bp.bm.Getblockchain().GetState())
+		return
+	}
+	bp.bm.Getblockchain().SetState(blockchain.BlockchainProduce)
+	defer bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
+	//makeup a block, fill in necessary information to check lib policy.
+	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(),bp.producer.Beneficiary())
+	if !bp.bm.Getblockchain().CheckLibPolicy(blk) {
+		logger.Warn("BlockProducer: the number of producers is not enough.")
+		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
+		bp.bm.BroadcastBlock(tailBlock)
 		return
 	}
 
@@ -93,6 +120,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 	}
 
 	bp.addBlockToBlockchain(ctx)
+
 }
 
 //prepareBlock generates a new block
@@ -199,13 +227,6 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 	}).Info("BlockProducer: produced a new block.")
 	if !lblock.VerifyHash(ctx.Block) {
 		logger.Warn("BlockProducer: hash of the new block is invalid.")
-		return
-	}
-
-	if !bp.bm.Getblockchain().CheckLibPolicy(ctx.Block) {
-		logger.Warn("BlockProducer: the number of producers is not enough.")
-		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
-		bp.bm.BroadcastBlock(tailBlock)
 		return
 	}
 

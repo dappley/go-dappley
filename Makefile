@@ -1,4 +1,4 @@
-all: dep build deploy-v8 run test check-running
+all: build deploy-v8 run test check-running
 
 testall:
 	go clean -testcache
@@ -7,9 +7,6 @@ testall:
 			cd $$f; go test -tags=integration ./... ; cd ..; \
 		fi \
 	done
-
-dep:
-	dep ensure -v
 
 test:
 	go clean -testcache
