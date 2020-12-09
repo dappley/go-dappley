@@ -14,7 +14,7 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	db_inspect_pb "github.com/dappley/go-dappley/tool/db_inspect/pb"
 	"github.com/dappley/go-dappley/util"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 type HandleFunc func()
