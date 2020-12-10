@@ -29,7 +29,6 @@ import (
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
 	"sort"
-	"strconv"
 	"sync"
 )
 
@@ -122,8 +121,6 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 }
 
 func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) (*utxo.UTXO, error) {
-	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
-
 	if _, ok := utxos.indexAdd[pubkeyHash.String()]; ok {
 		utxo := utxos.indexAdd[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
@@ -138,7 +135,7 @@ func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byt
 		}
 	}
 
-	utxo, err := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxoKey)
+	utxo, err := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxo.GetUTXOKey(txid,vout))
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +319,7 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 
 // removeUTXO finds and removes a UTXO from UTXOIndex
 func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int) error {
-	utxoKey := string(txid) + "_" + strconv.Itoa(vout)
+	utxoKey := utxo.GetUTXOKey(txid,vout)
 	var u = &utxo.UTXO{}
 
 	//update indexRemove

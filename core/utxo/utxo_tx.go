@@ -23,7 +23,6 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/raviqqe/hamt"
 	"hash/fnv"
-	"strconv"
 )
 
 // UTXOTx holds txid_vout and UTXO pairs
@@ -56,8 +55,7 @@ func NewUTXOTx() UTXOTx {
 
 // Construct with UTXO data
 func NewUTXOTxWithData(utxo *UTXO) UTXOTx {
-	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	return UTXOTx{Indices: map[string]*UTXO{key: utxo}}
+	return UTXOTx{Indices: map[string]*UTXO{GetUTXOKey(utxo.Txid,utxo.TxIndex): utxo}}
 }
 
 // Construct with map size
@@ -67,8 +65,7 @@ func NewUTXOTxWithSize(size int) *UTXOTx {
 
 // Returns utxo info by transaction id and vout index
 func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
-	key := string(txid) + "_" + strconv.Itoa(vout)
-	utxo, ok := utxoTx.Indices[key]
+	utxo, ok := utxoTx.Indices[GetUTXOKey(txid,vout)]
 	if !ok {
 		return nil
 	}
@@ -86,14 +83,12 @@ func (utxoTx UTXOTx) GetPerUtxoByKey(utxokey []byte) *UTXO {
 
 // Add new utxo to map
 func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) {
-	key := string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
-	utxoTx.Indices[key] = utxo
+	utxoTx.Indices[GetUTXOKey(utxo.Txid,utxo.TxIndex)] = utxo
 }
 
 // Delete invalid element in map
 func (utxoTx UTXOTx) RemoveUtxo(txid []byte, vout int) {
-	key := string(txid) + "_" + strconv.Itoa(vout)
-	delete(utxoTx.Indices, key)
+	delete(utxoTx.Indices, GetUTXOKey(txid,vout))
 }
 
 func (utxoTx UTXOTx) Size() int {

@@ -72,5 +72,9 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 }
 
 func (utxo *UTXO) GetUTXOKey() string {
-	return string(utxo.Txid) + "_" + strconv.Itoa(utxo.TxIndex)
+	return GetUTXOKey(utxo.Txid,utxo.TxIndex)
+}
+
+func GetUTXOKey(txid []byte, vout int) string{
+	return string(txid) + "_" + strconv.Itoa(vout)
 }
