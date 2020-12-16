@@ -206,7 +206,15 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 		return
 	}
 
-	bm.blockchain.SetState(blockchain.BlockchainSync)
+	func() {
+		bm.Getblockchain().mutex.Lock()
+		defer bm.Getblockchain().mutex.Unlock()
+		if bm.blockchain.GetState() != blockchain.BlockchainReady {
+			logger.Infof("Push: MergeFork cancelled  because blockchain is not ready. Current status is %v", bm.blockchain.GetState())
+			return
+		}
+		bm.blockchain.SetState(blockchain.BlockchainSync)
+	}()
 	logger.Info("Push: set blockchain status to sync.")
 
 	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
@@ -217,8 +225,9 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 
 	bm.Getblockchain().mutex.Lock()
 	bm.blockchain.SetState(blockchain.BlockchainReady)
-	logger.Info("Push: set blockchain status to ready.")
 	bm.Getblockchain().mutex.Unlock()
+	logger.Info("Push: set blockchain status to ready.")
+
 	return
 }
 
