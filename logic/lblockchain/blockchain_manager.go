@@ -233,13 +233,13 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		return nil
 	}
 
-	//verify transactions in the fork
+	//utxo has been reverted to forkParentHash in this step
 	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
 	if err != nil {
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
-	rollScState := scState.DeepCopy()
+	bm.blockchain.Rollback(forkParentHash, scState)
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if err != nil {
@@ -249,16 +249,9 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		}).Error("BlockchainManager: get fork parent block failed.")
 	}
 
-	firstCheck := true
-
 	for i := len(forkBlks) - 1; i >= 0; i-- {
 		if !bm.Getblockchain().CheckLibPolicy(forkBlks[i]) {
 			return ErrProducerNotEnough
-		}
-
-		if firstCheck {
-			firstCheck = false
-			bm.blockchain.Rollback(forkParentHash, utxo, rollScState)
 		}
 
 		logger.WithFields(logger.Fields{
@@ -396,7 +389,11 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 	}
-
+	//updated utxo in db
+	err:=index.Save()
+	if err!=nil{
+		return nil, nil, err
+	}
 	return index, scState, nil
 }
 
