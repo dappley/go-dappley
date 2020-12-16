@@ -60,6 +60,9 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkey)
 	for key, utxo := range utxoTx.Indices {
+		if bytes.Equal(util.Str2bytes(utxo.GetUTXOKey()),lastestUtxoKey){
+			return errors.New("Add utxo error: utxo already exist.")
+		}
 		utxo.NextUtxoKey = lastestUtxoKey
 		err := utxoCache.putUTXOToDB(utxo)
 		if err != nil {
