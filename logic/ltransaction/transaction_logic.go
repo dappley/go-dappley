@@ -58,6 +58,11 @@ func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scSta
 		return 0, nil, err
 	}
 	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
+	if err!=nil{
+		logger.Warn(err)
+		//invoke smart contracts before they are completed deploy, will cause an ErrLoadError.
+		//for example: deploy and invoke contracts in the same block
+	}
 	return gasCount, generatedTxs, nil
 }
 

@@ -69,6 +69,13 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 			return err
 		}
 		lastestUtxoKey = util.Str2bytes(key)
+
+		if utxo.UtxoType == UtxoCreateContract {
+			err := utxoCache.putUtxoCreateContractKey(pubkey, util.Str2bytes(key))
+			if err != nil {
+				return err
+			}
+		}
 	}
 	err := utxoCache.putLastUTXOKey(pubkey, lastestUtxoKey)
 	if err != nil {
@@ -185,22 +192,6 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 	return &utxoTx
 }
 
-// Return value from cache
-func (utxoCache *UTXOCache) GetContractCreateUtxo(pubKeyHash account.PubKeyHash) *UTXO {
-	mapData, ok := utxoCache.contractCreateCache.Get(pubKeyHash.String())
-	if ok {
-		return mapData.(*UTXO)
-	}
-	return utxoCache.getContractCreateUtxoFromDB(pubKeyHash.String())
-}
-
-func (utxoCache *UTXOCache) Delete(pubKeyHash account.PubKeyHash) error {
-	if pubKeyHash == nil {
-		return account.ErrEmptyPublicKeyHash
-	}
-	return utxoCache.db.Del(pubKeyHash)
-}
-
 func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO) error {
 	utxoBytes, err := proto.Marshal(utxo.ToProto().(*utxopb.Utxo))
 	if err != nil {
@@ -303,18 +294,29 @@ func (utxoCache *UTXOCache) deleteUTXOInfo(pubkey string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) getContractCreateUtxoFromDB(pubKey string) *UTXO {
-	utxoKey := utxoCache.getLastUTXOKey(pubKey)
-	for !bytes.Equal(utxoKey, []byte{}) {
-		utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
-		if err != nil {
-			return nil
-		}
-		if utxo.UtxoType == UtxoCreateContract {
-			utxoCache.contractCreateCache.Add(pubKey, utxo)
-			return utxo
-		}
-		utxoKey = utxo.NextUtxoKey
+func (utxoCache *UTXOCache) putUtxoCreateContractKey(pubkey string, utxoCreateContractKey []byte) error {
+	utxoInfo, err := utxoCache.getUTXOInfo(pubkey)
+	if err != nil {
+		return err
+	}
+	utxoInfo.UtxoCreateContractKey = utxoCreateContractKey
+	err = utxoCache.putUTXOInfo(pubkey, utxoInfo)
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("put utxoCreateContractKey to db failed.")
+		return err
 	}
 	return nil
+}
+
+func (utxoCache *UTXOCache) GetUtxoCreateContract(pubKeyHash string) *UTXO {
+	utxoInfo, err := utxoCache.getUTXOInfo(pubKeyHash)
+	if err != nil || utxoInfo.UtxoCreateContractKey == nil {
+		return nil
+	}
+	utxo, err := utxoCache.GetUtxoByPubkey(pubKeyHash, util.Bytes2str(utxoInfo.UtxoCreateContractKey))
+	if err != nil {
+		logger.WithFields(logger.Fields{"error": err}).Error("Get UtxoCreateContract failed.")
+		return nil
+	}
+	return utxo
 }
