@@ -2,11 +2,13 @@ package logMetrics
 
 import (
 	"encoding/json"
-	"github.com/dappley/go-dappley/common/log"
-	"github.com/dappley/go-dappley/logic/blockproducer"
+	"go/build"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/logic/blockproducer"
 
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -36,6 +38,7 @@ type cpuStat struct {
 }
 
 type diskStat struct {
+	DBUsed      uint64  `json:"dbUsed"`
 	Used        uint64  `json:"used"`
 	UsedChange  uint64  `json:"UsedChange"`
 	UsedPercent float64 `json:"usedPercent"`
@@ -103,9 +106,22 @@ func getCPUPercent() interface{} {
 }
 
 var preUsed uint64
+
 func getDiskStat() interface{} {
+	path := build.Default.GOPATH + "/src/github.com/dappley/go-dappley/bin"
+	info, err := os.Lstat(path)
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+	dbused, err := dbDiskUsage(path, info)
+	if err != nil {
+		logger.Warn(err)
+		return nil
+	}
+
 	var diskUsageChange uint64
- 	diskUsage, err := disk.Usage("/")
+	diskUsage, err := disk.Usage(build.Default.GOPATH)
 	if err != nil {
 		logger.Warn(err)
 		return nil
@@ -115,11 +131,41 @@ func getDiskStat() interface{} {
 		logger.Warn(err)
 		return nil
 	}
-	if preUsed != 0 && diskUsage.Used > preUsed{
+	if preUsed != 0 && diskUsage.Used > preUsed {
 		diskUsageChange = diskUsage.Used - preUsed
 	}
 	preUsed = diskUsage.Used
-	return diskStat{diskUsage.Used, diskUsageChange,diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
+	return diskStat{uint64(dbused), diskUsage.Used, diskUsageChange, diskUsage.UsedPercent, disk["disk0"].WriteBytes, disk["disk0"].ReadBytes}
+}
+
+func dbDiskUsage(currentPath string, info os.FileInfo) (int64, error) {
+	size := info.Size()
+	if !info.IsDir() {
+		return size, nil
+	}
+
+	dir, err := os.Open(currentPath)
+	if err != nil {
+		return size, err
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(-1)
+	if err != nil {
+		return size, err
+	}
+
+	for _, file := range files {
+		if file.Name() == "." || file.Name() == ".." {
+			continue
+		}
+		currSize, err := dbDiskUsage(currentPath+"/"+file.Name(), file)
+		if err != nil {
+			return size, err
+		}
+		size += currSize
+	}
+	return size, nil
 }
 
 func getTransactionPoolSize() interface{} {
@@ -223,7 +269,7 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 				mi.Metrics["block"] = getBlockStats(bc)
 				mi.Metrics["txRequest"] = getTxRequestStats()
 				mi.Metrics["network"] = getNetWorkStats()
-				if bc.GetMaxHeight() > blkHeight{
+				if bc.GetMaxHeight() > blkHeight {
 					mi.Metrics["disk"] = getDiskStat()
 					blkHeight = bc.GetMaxHeight()
 				}
@@ -239,7 +285,7 @@ func LogMetricsInfo(bc *lblockchain.Blockchain) {
 		for {
 			select {
 			case <-tick.C:
-				if bc.GetMaxHeight() > blkHeight{
+				if bc.GetMaxHeight() > blkHeight {
 					mi.Metrics["disk"] = getDiskStat()
 					blkHeight = bc.GetMaxHeight()
 				}

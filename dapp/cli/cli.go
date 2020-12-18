@@ -27,7 +27,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
 	"log"
 	"os"
@@ -35,6 +34,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -50,8 +51,8 @@ import (
 	"github.com/dappley/go-dappley/util"
 	"github.com/dappley/go-dappley/wallet"
 	"github.com/golang/protobuf/proto"
-	"github.com/tidwall/gjson"
 	logger "github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -75,6 +76,7 @@ const (
 	cliContractQuery     = "contractQuery"
 	cliHelp              = "help"
 	cliGetMetricsInfo    = "getMetricsInfo"
+	cliGetBlockByHeight  = "getBlockByHeight"
 )
 
 //flag names
@@ -98,6 +100,7 @@ const (
 	flagContractAddr     = "contractAddr"
 	flagKey              = "key"
 	flagValue            = "value"
+	flagBlockHeight      = "height"
 )
 
 type valueType int
@@ -135,6 +138,7 @@ var cmdList = []string{
 	cliContractQuery,
 	cliHelp,
 	cliGetMetricsInfo,
+	cliGetBlockByHeight,
 }
 
 var (
@@ -295,7 +299,7 @@ var cmdFlagsMap = map[string][]flagPars{
 			"Gas price of smart contract execution.",
 		},
 	},
-	cliGasPrice: {},
+	cliGasPrice:       {},
 	cliGetMetricsInfo: {},
 	cliContractQuery: {
 		flagPars{
@@ -317,6 +321,14 @@ var cmdFlagsMap = map[string][]flagPars{
 			"The data value storaged in contract address.",
 		},
 	},
+	cliGetBlockByHeight: {
+		flagPars{
+			flagBlockHeight,
+			0,
+			valueTypeInt,
+			"height. Eg. 1",
+		},
+	},
 }
 
 //map the callback function to each command
@@ -336,6 +348,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliHelp:              {adminRpcService, helpCommandHandler},
 	cliContractQuery:     {rpcService, contractQueryCommandHandler},
 	cliGetMetricsInfo:    {metricsRpcService, getMetricsInfoCommandHandler},
+	cliGetBlockByHeight:  {rpcService, getBlockByHeightCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -367,8 +380,8 @@ func main() {
 	conn := initRpcClient(int(cliConfig.GetPort()))
 	defer conn.Close()
 	clients := map[serviceType]interface{}{
-		rpcService:      rpcpb.NewRpcServiceClient(conn),
-		adminRpcService: rpcpb.NewAdminServiceClient(conn),
+		rpcService:        rpcpb.NewRpcServiceClient(conn),
+		adminRpcService:   rpcpb.NewAdminServiceClient(conn),
 		metricsRpcService: rpcpb.NewMetricServiceClient(conn),
 	}
 	args := os.Args[1:]
@@ -459,7 +472,7 @@ func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdF
 				}
 				return
 			}
-			fmt.Println("metricsInfo:",metricsInfoResponse.Data)
+			fmt.Println("metricsInfo:", metricsInfoResponse.Data)
 
 			m, ok := gjson.Parse(metricsInfoResponse.Data).Value().(map[string]interface{})
 			if !ok {
@@ -469,21 +482,21 @@ func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdF
 			var titleStr []string
 			var metricsInfostr []string
 			metricsInfoMap := make(map[string]string)
-			for key,value  := range m {
-				if value != nil{
+			for key, value := range m {
+				if value != nil {
 					childValue := value.(map[string]interface{})
-					for cKey,cValue := range childValue{
-						if cKey == "txRequestSend" || cKey == "txRequestSendFromMiner"{
+					for cKey, cValue := range childValue {
+						if cKey == "txRequestSend" || cKey == "txRequestSendFromMiner" {
 							grandChildValue := cValue.(map[string]interface{})
-							for gcKey,gcValue := range grandChildValue{
-								if gcValue != nil{
+							for gcKey, gcValue := range grandChildValue {
+								if gcValue != nil {
 									switch v := gcValue.(type) {
 									case float64:
 										metricsInfoMap[key+":"+cKey+":"+gcKey] = strconv.Itoa(int(v))
 									}
 								}
 							}
-						}else {
+						} else {
 							switch v := cValue.(type) {
 							case float64:
 								metricsInfoMap[key+":"+cKey] = strconv.Itoa(int(v))
@@ -497,16 +510,16 @@ func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdF
 				keys = append(keys, key)
 			}
 			sort.Strings(keys)
-			for i:=0;i<len(keys);i++{
-			  value := metricsInfoMap[keys[i]]
-			  metricsInfostr = append(metricsInfostr,value)
-			  titleStr = append(titleStr,keys[i])
+			for i := 0; i < len(keys); i++ {
+				value := metricsInfoMap[keys[i]]
+				metricsInfostr = append(metricsInfostr, value)
+				titleStr = append(titleStr, keys[i])
 			}
 			var strArray [][]string
-			if flag == true{
-				strArray = append(strArray,titleStr)
+			if flag == true {
+				strArray = append(strArray, titleStr)
 			}
-			strArray = append(strArray,metricsInfostr)
+			strArray = append(strArray, metricsInfostr)
 			flag = false
 			writer.WriteAll(strArray)
 			writer.Flush()
@@ -562,14 +575,14 @@ func getBlocksCommandHandler(ctx context.Context, account interface{}, flags cmd
 				encodedVin = append(encodedVin, map[string]interface{}{
 					"Vout":      vin.GetVout(),
 					"Signature": hex.EncodeToString(vin.GetSignature()),
-					"PubKey":    string(vin.GetPublicKey()),
+					"PubKey":    hex.EncodeToString(vin.GetPublicKey()),
 				})
 			}
 
 			var encodedVout []map[string]interface{}
 			for _, vout := range transaction.GetVout() {
 				encodedVout = append(encodedVout, map[string]interface{}{
-					"Value":      string(vout.GetValue()),
+					"Value":      common.NewAmountFromBytes(vout.GetValue()),
 					"PubKeyHash": hex.EncodeToString(vout.GetPublicKeyHash()),
 					"Contract":   vout.GetContract(),
 				})
@@ -587,7 +600,7 @@ func getBlocksCommandHandler(ctx context.Context, account interface{}, flags cmd
 			"Header": map[string]interface{}{
 				"Hash":      hex.EncodeToString(block.GetHeader().GetHash()),
 				"Prevhash":  hex.EncodeToString(block.GetHeader().GetPreviousHash()),
-				"Timestamp": block.GetHeader().GetTimestamp(),
+				"Timestamp": time.Unix(block.GetHeader().GetTimestamp(), 0).String(),
 				"Sign":      hex.EncodeToString(block.GetHeader().GetSignature()),
 				"height":    block.GetHeader().GetHeight(),
 			},
@@ -869,7 +882,6 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 	}
 	return
 }
-
 
 func sendFromMinerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	toAddr := *(flags[flagAddressBalance].(*string))
@@ -1292,4 +1304,73 @@ func contractQueryCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 	resultValue := response.GetValue()
 
 	fmt.Println("Contract query result: key=", resultKey, ", value=", resultValue)
+}
+
+func getBlockByHeightCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+	blkHeight := uint64(*(flags[flagBlockHeight].(*int)))
+	if blkHeight <= 0 {
+		fmt.Println("\n Example: cli getBlocksByHeight -height 5")
+		fmt.Println()
+		return
+	}
+
+	getBlockByHeightRequest := &rpcpb.GetBlockByHeightRequest{Height: blkHeight}
+
+	response, err := c.(rpcpb.RpcServiceClient).RpcGetBlockByHeight(ctx, getBlockByHeightRequest)
+	if err != nil {
+		switch status.Code(err) {
+		case codes.Unavailable:
+			fmt.Println("Error: server is not reachable!")
+		default:
+			fmt.Println("Error:", status.Convert(err).Message())
+		}
+		return
+	}
+
+	block := response.Block
+	var encodedTransactions []map[string]interface{}
+	for _, transaction := range block.GetTransactions() {
+		var encodedVin []map[string]interface{}
+		for _, vin := range transaction.GetVin() {
+			encodedVin = append(encodedVin, map[string]interface{}{
+				"Vout":      vin.GetVout(),
+				"Signature": hex.EncodeToString(vin.GetSignature()),
+				"PubKey":    hex.EncodeToString(vin.GetPublicKey()),
+			})
+		}
+
+		var encodedVout []map[string]interface{}
+		for _, vout := range transaction.GetVout() {
+			encodedVout = append(encodedVout, map[string]interface{}{
+				"Value":      common.NewAmountFromBytes(vout.GetValue()),
+				"PubKeyHash": hex.EncodeToString(vout.GetPublicKeyHash()),
+				"Contract":   vout.GetContract(),
+			})
+		}
+
+		encodedTransaction := map[string]interface{}{
+			"ID":   hex.EncodeToString(transaction.GetId()),
+			"Vin":  encodedVin,
+			"Vout": encodedVout,
+		}
+		encodedTransactions = append(encodedTransactions, encodedTransaction)
+	}
+
+	encodedBlock := map[string]interface{}{
+		"Header": map[string]interface{}{
+			"Hash":      hex.EncodeToString(block.GetHeader().GetHash()),
+			"Prevhash":  hex.EncodeToString(block.GetHeader().GetPreviousHash()),
+			"Timestamp": time.Unix(block.GetHeader().GetTimestamp(), 0).String(),
+			"Sign":      hex.EncodeToString(block.GetHeader().GetSignature()),
+			"height":    block.GetHeader().GetHeight(),
+		},
+		"Transactions": encodedTransactions,
+	}
+
+	blockJSON, err := json.MarshalIndent(encodedBlock, "", "  ")
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+	}
+
+	fmt.Println(string(blockJSON))
 }

@@ -34,9 +34,7 @@ type MetricsService struct {
 func NewMetricsService(node *network.Node, bm *lblockchain.BlockchainManager, dpos *consensus.DPOS, config *MetricsServiceConfig, RPCPort uint32) *MetricsService {
 	return (&MetricsService{node: node, bm: bm, dpos: dpos, MetricsServiceConfig: config, RPCPort: RPCPort}).init()
 }
-//RpcGetStats(context.Context, *MetricsServiceRequest) (*GetStatsResponse, error)
-//RpcGetNodeConfig(context.Context, *MetricsServiceRequest) (*GetNodeConfigResponse, error)
-//RpcSetNodeConfig(context.Context, *SetNodeConfigRequest) (*GetNodeConfigResponse, error)
+
 func (ms *MetricsService) init() *MetricsService {
 	if err := ms.node.GetNetwork().StartNewPingService(time.Duration(ms.PollingInterval) * time.Second); err != nil {
 		logger.WithError(err).Error("MetricsService: Unable to start new ping service.")
