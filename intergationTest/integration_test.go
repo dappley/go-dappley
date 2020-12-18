@@ -18,10 +18,11 @@ package intergationTest
 
 import (
 	"fmt"
-	"github.com/dappley/go-dappley/logic/downloadmanager"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/dappley/go-dappley/logic/downloadmanager"
 
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
@@ -561,13 +562,16 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			db := storage.NewRamStorage()
 			defer db.Close()
-
+			// Create a coinbase address
+			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
 			// Create a coinbase wallet address
 			addr := account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs")
 			node := network.FakeNodeWithPidAndAddr(db, "a", "b")
 			// Create a blockchain
 			bc, err := logic.CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
 			assert.Nil(t, err)
+
+			logic.SetMinerKeyPair(key)
 
 			_, _, err = logic.SendFromMiner(account.NewAddress(tc.address), common.NewAmount(8), bc)
 			assert.Equal(t, logic.ErrInvalidRcverAddress, err)
