@@ -37,6 +37,7 @@ service AdminService{
 }
 
 service MetricService {
+  rpc RpcGetMetricsInfo(MetricsServiceRequest) returns (GetMetricsInfoResponse) {}
   rpc RpcGetStats(MetricsServiceRequest) returns (GetStatsResponse) {}
   rpc RpcGetNodeConfig(MetricsServiceRequest) returns (GetNodeConfigResponse) {}
   rpc RpcSetNodeConfig(SetNodeConfigRequest) returns (GetNodeConfigResponse) {}
@@ -214,6 +215,10 @@ message GetAllTransactionsResponse{
 
 message GetLastIrreversibleBlockResponse {
   blockpb.Block block = 1;
+}
+
+message GetMetricsInfoResponse {
+  string data = 1;
 }
 
 message GetStatsResponse {
