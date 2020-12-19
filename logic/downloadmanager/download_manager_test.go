@@ -19,14 +19,19 @@
 package downloadmanager
 
 import (
-	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
-	"github.com/stretchr/testify/mock"
+	"io/ioutil"
+	"os"
+	"path"
+	"strconv"
 	"testing"
+
+	"github.com/dappley/go-dappley/logic/lblockchain/mocks"
+	networkpb "github.com/dappley/go-dappley/network/pb"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/network/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +44,7 @@ const (
 	multiPortDisconnectStart int = 10320
 	multiPortNotEqualStart   int = 10330
 	multiPortReturnBlocks    int = 10340
+	confDir                      = "../../storage/fakeFileLoaders/"
 )
 
 func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainManager, []*network.Node) {
@@ -48,8 +54,8 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 	consensus := &mocks.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
 	for i := 0; i < size; i++ {
-		db := storage.NewRamStorage()
-		node := network.NewNode(db, nil)
+		rfl := storage.NewRamFileLoader(confDir, "dl"+strconv.Itoa(i)+".conf")
+		node := network.NewNode(rfl.File, nil)
 		node.Start(portStart+i, "")
 		bm := lblockchain.NewBlockchainManager(bc.DeepCopy(), blockchain.NewBlockPool(nil), node, consensus)
 		bms[i] = bm
@@ -180,7 +186,7 @@ func TestDisconnectNode(t *testing.T) {
 func TestValidateReturnBlocks(t *testing.T) {
 	// Test empty blocks in GetBlocksResponse message
 	bms, nodes := createTestBlockchains(2, multiPortReturnBlocks)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -205,4 +211,14 @@ func TestValidateReturnBlocks(t *testing.T) {
 	fakeReturnMsg := &networkpb.ReturnBlocks{Blocks: nil, StartBlockHashes: nil}
 	_, err = downloadManager.validateReturnBlocks(fakeReturnMsg, peerNode.GetHostPeerInfo().PeerId)
 	assert.Equal(t, ErrEmptyBlocks, err)
+}
+func deleteConfFolderFiles() error {
+	dir, err := ioutil.ReadDir(confDir)
+	if err != nil {
+		return err
+	}
+	for _, d := range dir {
+		os.RemoveAll(path.Join([]string{confDir, d.Name()}...))
+	}
+	return nil
 }

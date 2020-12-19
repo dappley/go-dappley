@@ -24,6 +24,7 @@ import (
 
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/common/pubsub"
+	"github.com/dappley/go-dappley/storage"
 
 	"github.com/libp2p/go-libp2p-core/host"
 
@@ -56,12 +57,12 @@ type Node struct {
 }
 
 //NewNode creates a new Node instance
-func NewNode(db Storage, seeds []string) *Node {
-	return NewNodeWithConfig(db, networkmodel.PeerConnectionConfig{}, seeds)
+func NewNode(peerinfoConf *storage.FileLoader, seeds []string) *Node {
+	return NewNodeWithConfig(peerinfoConf, networkmodel.PeerConnectionConfig{}, seeds)
 }
 
 //NewNodeWithConfig creates a new Node instance with configurations
-func NewNodeWithConfig(db Storage, config networkmodel.PeerConnectionConfig, seeds []string) *Node {
+func NewNodeWithConfig(peerinfoConf *storage.FileLoader, config networkmodel.PeerConnectionConfig, seeds []string) *Node {
 	var err error
 
 	node := &Node{
@@ -76,7 +77,7 @@ func NewNodeWithConfig(db Storage, config networkmodel.PeerConnectionConfig, see
 			node,
 			config,
 			node.dispatcher,
-			db,
+			peerinfoConf,
 			node.onStreamStop,
 			seeds,
 		})

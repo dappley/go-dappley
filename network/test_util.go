@@ -20,6 +20,7 @@ package network
 
 import (
 	"github.com/dappley/go-dappley/network/networkmodel"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -36,9 +37,9 @@ func FakeNodeWithPeer(pid, addr string) *Node {
 }
 
 //FakeNodeWithPidAndAddr fakes a node with peer id, multiaddress string and a database instance
-func FakeNodeWithPidAndAddr(db Storage, pid, addr string) *Node {
+func FakeNodeWithPidAndAddr(peerinfoConf *storage.FileLoader, pid, addr string) *Node {
 
-	node := NewNode(db, nil)
+	node := NewNode(peerinfoConf, nil)
 	peerid, _ := peer.IDB58Decode(pid)
 	maddr, _ := ma.NewMultiaddr(addr)
 	peerInfo := networkmodel.PeerInfo{PeerId: peerid, Addrs: []ma.Multiaddr{maddr}}

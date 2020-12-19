@@ -1,9 +1,10 @@
 package network
 
 import (
+	"testing"
+
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNetwork_RecordMessage(t *testing.T) {

@@ -19,11 +19,15 @@
 package network
 
 import (
-	"github.com/dappley/go-dappley/common/log"
-	"github.com/dappley/go-dappley/common/pubsub"
+	"bytes"
+	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/common/pubsub"
 
 	"github.com/dappley/go-dappley/network/networkmodel"
 
@@ -63,24 +67,25 @@ type PeerManager struct {
 	seeds                map[peer.ID]networkmodel.PeerInfo
 	syncPeers            map[peer.ID]networkmodel.PeerInfo
 	netService           NetService
-	db                   Storage
+	peerInfoConf         *storage.FileLoader
 	onPeerListReceivedCb onPeerListReceived
 	mutex                sync.RWMutex
 }
 
 //NewPeerManager create a new peer manager object
-func NewPeerManager(netService NetService, db Storage, onPeerListReceivedCb onPeerListReceived, seeds []string) *PeerManager {
+func NewPeerManager(netService NetService, peerinfoConf *storage.FileLoader, onPeerListReceivedCb onPeerListReceived, seeds []string) *PeerManager {
 	pm := &PeerManager{
 		seeds:                make(map[peer.ID]networkmodel.PeerInfo),
 		syncPeers:            make(map[peer.ID]networkmodel.PeerInfo),
 		mutex:                sync.RWMutex{},
 		netService:           netService,
-		db:                   db,
+		peerInfoConf:         peerinfoConf,
 		onPeerListReceivedCb: onPeerListReceivedCb,
 	}
 	pm.ListenToNetService()
 	pm.addSeeds(seeds)
-	if db != nil {
+	//pm.peerInfoConf = storage.NewFileLoader(peerinfoPath)
+	if pm.peerInfoConf != nil {
 		pm.loadSyncPeers()
 	}
 	return pm
@@ -302,21 +307,41 @@ func (pm *PeerManager) startSyncPeersSchedule() {
 
 //saveSyncPeers saves the syncPeers to database
 func (pm *PeerManager) saveSyncPeers() {
-
 	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range pm.syncPeers {
 		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
-
-	bytes, err := proto.Marshal(&networkpb.ReturnPeerList{PeerList: peerPbs})
-	if err != nil {
-		logger.WithError(err).Info("PeerManager: serialize sync peers failed.")
+	//
+	var config_content string = "peer_list: [\n"
+	for index, peerInfo := range peerPbs {
+		pid := "\t{\n\t\tid: \"" + peerInfo.GetId() + "\"\n"
+		paddr := "\t\taddress: " + addr_content(peerInfo) + "\n"
+		platency := ""
+		if peerInfo.GetLatency() != 0 {
+			platency = ("\t\tlatency: " + fmt.Sprintf("%f", peerInfo.GetLatency()) + "\n")
+		}
+		config_content += (pid + paddr + platency + "\t}")
+		if index != len(peerPbs)-1 {
+			config_content += ","
+		}
+		config_content += "\n"
 	}
+	config_content += "]"
 
-	err = pm.db.Put([]byte(syncPeersKey), bytes)
-	if err != nil {
-		logger.WithError(err).Info("PeerManager: save sync peers failed.")
+	//save process
+	var buf bytes.Buffer
+	buf.Write([]byte(config_content))
+	pm.peerInfoConf.SaveToFile(buf)
+}
+
+//help function for saveSyncPeers function
+func addr_content(p *networkpb.PeerInfo) string {
+	var addstr []string
+
+	for _, addr := range p.GetAddress() {
+		addstr = append(addstr, "\""+addr+"\"")
 	}
+	return ("[" + strings.Join(addstr, ",") + "]")
 }
 
 //loadSyncPeers loads the syncPeers from database
@@ -324,19 +349,16 @@ func (pm *PeerManager) loadSyncPeers() error {
 
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
-	peersBytes, err := pm.db.Get([]byte(syncPeersKey))
 
+	peersBytes, err := pm.peerInfoConf.ReadFromFile()
 	if err != nil {
-		logger.WithError(err).Warn("PeerManager: load sync peers database failed.")
-		if err == storage.ErrKeyInvalid {
-			return nil
-		}
+		logger.WithError(err).Warn("cannot read the config file!")
 		return err
 	}
 
 	peerListPb := &networkpb.ReturnPeerList{}
 
-	if err := proto.Unmarshal(peersBytes, peerListPb); err != nil {
+	if err := proto.UnmarshalText(string(peersBytes), peerListPb); err != nil {
 		logger.WithError(err).Warn("PeerManager: parse Peerlist failed.")
 	}
 
@@ -350,7 +372,7 @@ func (pm *PeerManager) loadSyncPeers() error {
 		logger.WithFields(logger.Fields{
 			"peer_id": peerInfo.PeerId,
 			"addr":    peerInfo.Addrs[0].String(),
-		}).Info("PeerManager: Loading syncPeers from database...")
+		}).Info("PeerManager: Loading syncPeers from peer conf...")
 	}
 
 	logger.Infof("PeerManager: load sync peers count %v.", len(pm.syncPeers))

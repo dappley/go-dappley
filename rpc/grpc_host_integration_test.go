@@ -23,6 +23,7 @@ package rpc
 import (
 	"errors"
 	"fmt"
+
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
@@ -31,11 +32,14 @@ import (
 	blockchainMock "github.com/dappley/go-dappley/logic/lblockchain/mocks"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 
+	"testing"
+	"time"
+
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/blockproducer/mocks"
 	"github.com/dappley/go-dappley/logic/lblock"
@@ -43,8 +47,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 
 	"github.com/dappley/go-dappley/util"
 
@@ -53,7 +55,7 @@ import (
 
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
@@ -131,7 +133,8 @@ func TestRpcSend(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -145,7 +148,7 @@ func TestRpcSend(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
 	bm, bp := CreateProducer(
@@ -214,6 +217,8 @@ func TestRpcSendContract(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -226,7 +231,7 @@ func TestRpcSendContract(t *testing.T) {
 		panic(err)
 	}
 
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -1219,7 +1224,8 @@ func TestRpcGetLastIrreversibleBlock(t *testing.T) {
 func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
 	// Create accounts
 	acc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1228,7 +1234,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	}
 	context.account = acc
 
-	context.node = network.FakeNodeWithPidAndAddr(context.store, "a", "b")
+	context.node = network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	context.bm, context.bp = CreateProducer(
 		acc.GetAddress(),
 		acc.GetAddress(),
@@ -1270,7 +1276,8 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1283,7 +1290,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -1362,7 +1369,8 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1374,7 +1382,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 		panic(err)
 	}
 
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),
@@ -1422,7 +1430,8 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	// Create storage
 	store := storage.NewRamStorage()
 	defer store.Close()
-
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1435,7 +1444,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	}
 
 	// Create a blockchain with PoW consensus and sender account as coinbase (so its balance starts with 10)
-	node := network.FakeNodeWithPidAndAddr(store, "a", "b")
+	node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 	bm, bp := CreateProducer(
 		minerAccount.GetAddress(),
 		senderAccount.GetAddress(),

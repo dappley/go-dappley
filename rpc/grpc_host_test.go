@@ -19,15 +19,21 @@
 package rpc
 
 import (
-	"github.com/dappley/go-dappley/consensus"
 	"testing"
+
+	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/storage"
 
 	"github.com/dappley/go-dappley/network"
 	"github.com/stretchr/testify/assert"
 )
 
+const grpcConfDir = "../storage/fakeFileLoaders/"
+
 func TestNewGrpcServer(t *testing.T) {
-	node := network.NewNode(nil, nil)
+	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
+	defer rfl.Close()
+	node := network.NewNode(rfl.File, nil)
 	grpcServer := NewGrpcServer(node, nil, consensus.NewDPOS(nil), "password")
 	assert.Equal(t, node, grpcServer.node)
 	assert.Equal(t, "password", grpcServer.password)
