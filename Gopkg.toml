@@ -101,6 +101,10 @@
   name = "github.com/libp2p/go-libp2p-swarm"
   version = "=0.2.3"
 
+[[override]]
+  name = "github.com/libp2p/go-libp2p-circuit"
+  version = "=0.2.3"
+
 [[constraint]]
   name = "github.com/multiformats/go-multiaddr"
   version = "0.2.0"
@@ -117,7 +121,7 @@
   name = "github.com/jbenet/go-temp-err-catcher"
   version = "=0.1.0"
 
-[[constraint]]
+[[override]]
   name = "github.com/libp2p/go-libp2p-peerstore"
   version = "=0.1.3"
 
