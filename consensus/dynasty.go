@@ -35,7 +35,7 @@ type Dynasty struct {
 
 const (
 	defaultMaxProducers   = 21
-	defaultTimeBetweenBlk = 5
+	defaultTimeBetweenBlk = 25
 )
 
 //NewDynasty returns a new dynasty instance
