@@ -291,12 +291,12 @@ func (utxos *UTXOIndex) AddUTXO(txout transactionbase.TXOutput, txid []byte, vou
 	}
 
 	utxoTx, ok := utxos.indexAdd[txout.PubKeyHash.String()]
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
 	if !ok {
 		utxoTx := utxo.NewUTXOTx()
 		utxoTx.PutUtxo(u)
-		utxos.mutex.Lock()
 		utxos.indexAdd[txout.PubKeyHash.String()] = &utxoTx
-		utxos.mutex.Unlock()
 	} else {
 		utxoTx.PutUtxo(u)
 	}
