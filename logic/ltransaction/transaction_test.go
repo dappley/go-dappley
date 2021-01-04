@@ -331,6 +331,7 @@ func TestTransaction_Execute(t *testing.T) {
 				TxIndex: 0,
 				Txid:    nil,
 				TXOutput: transactionbase.TXOutput{
+					Value:common.NewAmount(0),
 					PubKeyHash: scPKH,
 					Contract:   contract,
 				},
@@ -346,7 +347,10 @@ func TestTransaction_Execute(t *testing.T) {
 			if tt.scAddr != "" {
 				index.AddUTXO(scUtxo.TXOutput, nil, 0)
 			}
-
+			err :=index.Save()
+			if err != nil {
+				println(err.Error())
+			}
 			if tt.expectContractRun {
 				sc.On("ImportSourceCode", contract)
 				sc.On("ImportLocalStorage", mock.Anything)
