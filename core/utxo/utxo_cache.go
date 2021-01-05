@@ -313,7 +313,7 @@ func (utxoCache *UTXOCache) GetUtxoCreateContract(pubKeyHash string) *UTXO {
 	if err != nil || utxoInfo.UtxoCreateContractKey == nil {
 		return nil
 	}
-	utxo, err := utxoCache.GetUtxoByPubkey(pubKeyHash, util.Bytes2str(utxoInfo.UtxoCreateContractKey))
+	utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoInfo.UtxoCreateContractKey))
 	if err != nil {
 		logger.WithFields(logger.Fields{"error": err}).Error("Get UtxoCreateContract failed.")
 		return nil
