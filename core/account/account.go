@@ -59,6 +59,13 @@ func (a Account) GetAddress() Address {
 	return a.address
 }
 
+func (a *Account) SetAddress(addr string)  {
+	address := Address{}
+	address.address = addr
+	a.address = address
+	return
+}
+
 func (a Account) GetPubKeyHash() PubKeyHash {
 	return a.pubKeyHash
 }
