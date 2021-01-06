@@ -348,9 +348,8 @@ func TestTransaction_Execute(t *testing.T) {
 				index.AddUTXO(scUtxo.TXOutput, nil, 0)
 			}
 			err :=index.Save()
-			if err != nil {
-				println(err.Error())
-			}
+			assert.Nil(t, err)
+
 			if tt.expectContractRun {
 				sc.On("ImportSourceCode", contract)
 				sc.On("ImportLocalStorage", mock.Anything)
@@ -368,10 +367,8 @@ func TestTransaction_Execute(t *testing.T) {
 			}
 			parentBlk := core.GenerateMockBlock()
 			preUTXO, err := lutxo.FindVinUtxosInUtxoPool(index, ctx.Transaction)
+			assert.Nil(t, err)
 
-			if err != nil {
-				println(err.Error())
-			}
 			isContractDeployed := ctx.IsContractDeployed(index)
 			ctx.Execute(preUTXO, isContractDeployed, index, scState.NewScState(), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)

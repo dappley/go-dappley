@@ -24,19 +24,35 @@ import (
 )
 
 type UTXOInfo struct {
-	LastUtxoKey           []byte
-	UtxoCreateContractKey []byte
+	lastUTXOKey           []byte
+	createContractUTXOKey []byte
 }
 
 func (utxoHead *UTXOInfo) ToProto() proto.Message {
 	return &utxopb.UtxoInfo{
-		LastUtxoKey:           utxoHead.LastUtxoKey,
-		UtxoCreateContractKey: utxoHead.UtxoCreateContractKey,
+		LastUtxoKey:           utxoHead.lastUTXOKey,
+		UtxoCreateContractKey: utxoHead.createContractUTXOKey,
 	}
 }
 
 func (utxoHead *UTXOInfo) FromProto(pb proto.Message) {
 	utxoHeadpb := pb.(*utxopb.UtxoInfo)
-	utxoHead.LastUtxoKey = utxoHeadpb.LastUtxoKey
-	utxoHead.UtxoCreateContractKey = utxoHeadpb.UtxoCreateContractKey
+	utxoHead.lastUTXOKey = utxoHeadpb.LastUtxoKey
+	utxoHead.createContractUTXOKey = utxoHeadpb.UtxoCreateContractKey
+}
+
+func (utxoHead *UTXOInfo) GetLastUtxoKey  () []byte {
+	return utxoHead.lastUTXOKey
+}
+
+func (utxoHead *UTXOInfo) SetLastUtxoKey(lastUTXOKey []byte) {
+	utxoHead.lastUTXOKey = lastUTXOKey
+}
+
+func (utxoHead *UTXOInfo) GetCreateContractUTXOKey  () []byte {
+	return utxoHead.createContractUTXOKey
+}
+
+func (utxoHead *UTXOInfo) SetCreateContractUTXOKey(createContractUTXOKey []byte) {
+	utxoHead.createContractUTXOKey = createContractUTXOKey
 }
