@@ -32,7 +32,7 @@ const grpcConfDir = "../storage/fakeFileLoaders/"
 
 func TestNewGrpcServer(t *testing.T) {
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	node := network.NewNode(rfl.File, nil)
 	grpcServer := NewGrpcServer(node, nil, consensus.NewDPOS(nil), "password")
 	assert.Equal(t, node, grpcServer.node)

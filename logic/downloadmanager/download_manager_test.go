@@ -66,7 +66,7 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 
 func TestMultiEqualNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortEqualStart)
-
+	defer deleteConfFolderFiles()
 	//setup download manager for the first node
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
@@ -90,7 +90,7 @@ func TestMultiEqualNode(t *testing.T) {
 
 func TestMultiNotEqualNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortNotEqualStart)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -120,7 +120,7 @@ func TestMultiNotEqualNode(t *testing.T) {
 
 func TestMultiSuccessNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortSuccessStart)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -150,7 +150,7 @@ func TestMultiSuccessNode(t *testing.T) {
 
 func TestDisconnectNode(t *testing.T) {
 	bms, nodes := createTestBlockchains(5, multiPortDisconnectStart)
-
+	defer deleteConfFolderFiles()
 	bm := bms[0]
 	bm.Getblockchain().SetState(blockchain.BlockchainInit)
 	node := nodes[0]
@@ -172,7 +172,10 @@ func TestDisconnectNode(t *testing.T) {
 	for i := 1; i < len(nodes); i++ {
 		node.GetNetwork().ConnectToSeed(nodes[i].GetHostPeerInfo())
 	}
-
+	info := node.GetPeers()
+	for _, i := range info {
+		println(i.PeerId)
+	}
 	finishCh := make(chan bool, 1)
 	bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 	downloadManager.StartDownloadBlockchain(finishCh)

@@ -94,7 +94,7 @@ func TestSend(t *testing.T) {
 			store := storage.NewRamStorage()
 			defer store.Close()
 			rfl := storage.NewRamFileLoader(confDir, "test.conf")
-			defer rfl.Close()
+			defer rfl.DeleteFolder()
 			// Create a account address
 			senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 			if err != nil {
@@ -196,7 +196,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	//this is internally set. Dont modify
 	mineReward := transaction.Subsidy
 	//Transfer ammount
@@ -241,7 +241,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	tip := common.NewAmount(5)
 
 	//this is internally set. Dont modify
@@ -311,7 +311,7 @@ func TestDownloadRequestCh(t *testing.T) {
 	}()
 	defer func() {
 		for _, rfl := range rfls {
-			rfl.Close()
+			rfl.DeleteFolder()
 		}
 	}()
 
@@ -384,7 +384,7 @@ func TestForkChoice(t *testing.T) {
 	}()
 	defer func() {
 		for _, rfl := range rfls {
-			rfl.Close()
+			rfl.DeleteFolder()
 		}
 	}()
 
@@ -462,7 +462,7 @@ func TestForkSegmentHandling(t *testing.T) {
 	}()
 	defer func() {
 		for _, rfl := range rfls {
-			rfl.Close()
+			rfl.DeleteFolder()
 		}
 	}()
 
@@ -542,7 +542,7 @@ func TestAddBalance(t *testing.T) {
 			store := storage.NewRamStorage()
 			defer store.Close()
 			rfl := storage.NewRamFileLoader(confDir, "test.conf")
-			defer rfl.Close()
+			defer rfl.DeleteFolder()
 			// Create a coinbase address
 			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
 			minerKeyPair := account.GenerateKeyPairByPrivateKey(key)
@@ -593,7 +593,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			db := storage.NewRamStorage()
 			defer db.Close()
 			rfl := storage.NewRamFileLoader(confDir, "test.conf")
-			defer rfl.Close()
+			defer rfl.DeleteFolder()
 			// Create a coinbase address
 			key := "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa7e"
 			// Create a coinbase wallet address
@@ -615,7 +615,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	contract := `'use strict';
 
 	var StorageTest = function(){
@@ -808,7 +808,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 
 	db := storage.NewRamStorage()
 	rfl1 := storage.NewRamFileLoader(confDir, "test1.conf")
-	defer rfl1.Close()
+	defer rfl1.DeleteFolder()
 	seedNode := network.NewNode(rfl1.File, nil)
 	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
@@ -834,7 +834,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	dpos2.SetDynasty(dynasty)
 	db2 := storage.NewRamStorage()
 	rfl2 := storage.NewRamFileLoader(confDir, "test2.conf")
-	defer rfl2.Close()
+	defer rfl2.DeleteFolder()
 	node2 := network.NewNode(rfl2.File, nil)
 	node2.Start(testport_fork_syncing+1, "")
 	defer node2.Stop()
@@ -1158,7 +1158,7 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	contract := `'use strict';
 
 	var TransferTest = function(){
@@ -1235,7 +1235,7 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	contract := `'use strict';
 
 	var DeleteTest = function(){
@@ -1319,7 +1319,7 @@ func TestZeroGasPriceOfContractTransaction(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	contract := `'use strict';
 
 	var GasPriceTest = function(){

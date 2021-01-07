@@ -136,9 +136,9 @@ func runTest(fileName string) (time.Duration, uint64, int) {
 	db2 := storage.OpenDatabase(nodeDbPath)
 	defer db2.Close()
 	rfl1 := storage.NewRamFileLoader(confDir, "test1.conf")
-	defer rfl1.Close()
+	defer rfl1.DeleteFolder()
 	rfl2 := storage.NewRamFileLoader(confDir, "test2.conf")
-	defer rfl2.Close()
+	defer rfl2.DeleteFolder()
 
 	bm1, node1 := prepareNode(db1, rfl1.File)
 	bm2, node2 := prepareNode(db2, rfl2.File)

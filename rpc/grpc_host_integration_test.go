@@ -134,7 +134,7 @@ func TestRpcSend(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -218,7 +218,7 @@ func TestRpcSendContract(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
@@ -1225,7 +1225,7 @@ func createRpcTestContext(startPortOffset uint32) (*RpcTestContext, error) {
 	context := RpcTestContext{}
 	context.store = storage.NewRamStorage()
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	// Create accounts
 	acc, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1277,7 +1277,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1370,7 +1370,7 @@ func TestRpcService_RpcGasPrice(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
@@ -1431,7 +1431,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	store := storage.NewRamStorage()
 	defer store.Close()
 	rfl := storage.NewRamFileLoader(grpcConfDir, "test.conf")
-	defer rfl.Close()
+	defer rfl.DeleteFolder()
 	// Create accounts
 	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
 	if err != nil {
