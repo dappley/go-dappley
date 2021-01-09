@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/dappley/go-dappley/common/log"
-	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"math"
 	"sync"
@@ -350,16 +349,6 @@ func (downloadManager *DownloadManager) GetBlocksDataHandler(blocksPb *networkpb
 		blocks = append(blocks, block)
 	}
 	logger.Infof("DownloadManager: receive blocks source %v to %v.", blocks[0].GetHeight(), blocks[len(blocks)-1].GetHeight())
-
-	downloadManager.bm.Getblockchain().GetBlockMutex().Lock()
-	if downloadManager.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
-		logger.Infof("DownloadManager: MergeFork cancelled  because blockchain is not ready. Current status is %v", downloadManager.bm.Getblockchain().GetState())
-		downloadManager.bm.Getblockchain().GetBlockMutex().Unlock()
-		return
-	}
-	downloadManager.bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
-	downloadManager.bm.Getblockchain().GetBlockMutex().Unlock()
-
 	logger.Info("DownloadManager: set blockchain status to downloading.")
 
 	if err := downloadManager.bm.MergeFork(blocks, blocks[len(blocks)-1].GetPrevHash()); err != nil {
