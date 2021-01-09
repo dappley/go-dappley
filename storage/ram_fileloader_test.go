@@ -34,9 +34,8 @@ func TestRamFileLoader_Create(t *testing.T) {
 func TestRamFileLoader_Close(t *testing.T) {
 	rfl := NewRamFileLoader(confDir, "test.conf")
 	targetFilename := confDir + "test.conf"
-	err := rfl.DeleteFolder()
+	rfl.DeleteFolder()
 	flag := Exist(targetFilename)
-	assert.Nil(t, err)
 	assert.Equal(t, flag, false)
 }
 

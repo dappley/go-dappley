@@ -305,32 +305,31 @@ func (pm *PeerManager) startSyncPeersSchedule() {
 	}()
 }
 
-//saveSyncPeers saves the syncPeers to database
+//saveSyncPeers saves the syncPeers to config file
 func (pm *PeerManager) saveSyncPeers() {
 	var peerPbs []*networkpb.PeerInfo
 	for _, peerInfo := range pm.syncPeers {
 		peerPbs = append(peerPbs, peerInfo.ToProto().(*networkpb.PeerInfo))
 	}
-	//
-	var config_content string = "peer_list: [\n"
+	var configContent = "peer_list: [\n"
 	for index, peerInfo := range peerPbs {
 		pid := "\t{\n\t\tid: \"" + peerInfo.GetId() + "\"\n"
 		paddr := "\t\taddress: " + addr_content(peerInfo) + "\n"
 		platency := ""
 		if peerInfo.GetLatency() != 0 {
-			platency = ("\t\tlatency: " + fmt.Sprintf("%f", peerInfo.GetLatency()) + "\n")
+			platency = "\t\tlatency: " + fmt.Sprintf("%f", peerInfo.GetLatency()) + "\n"
 		}
-		config_content += (pid + paddr + platency + "\t}")
+		configContent += (pid + paddr + platency + "\t}")
 		if index != len(peerPbs)-1 {
-			config_content += ","
+			configContent += ","
 		}
-		config_content += "\n"
+		configContent += "\n"
 	}
-	config_content += "]"
+	configContent += "]"
 
 	//save process
 	var buf bytes.Buffer
-	buf.Write([]byte(config_content))
+	buf.Write([]byte(configContent))
 	pm.peerInfoConf.SaveToFile(buf)
 }
 

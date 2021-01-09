@@ -48,12 +48,12 @@ func NewRamFileLoader(dirpath string, filename string) *RamFileLoader {
 	return newRamFileLoader
 }
 
-func (rfl *RamFileLoader) DeleteFolder() error {
+func (rfl *RamFileLoader) DeleteFolder() {
 	//delete the file
 	err := os.Remove(rfl.dirpath + rfl.filename)
 	if err != nil {
 		fmt.Println("Fail to delete file!")
-		return err
+
 	}
-	return nil
+
 }
