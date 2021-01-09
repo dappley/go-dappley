@@ -100,9 +100,10 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 
 		<-finishChan
 		bm.Getblockchain().mutex.Lock()
-		logger.Info("BlockchainManager: requestDownloadBlockchain finished, set blockchain status to ready!")
 		bm.Getblockchain().SetState(blockchain.BlockchainReady)
 		bm.Getblockchain().mutex.Unlock()
+		logger.Info("BlockchainManager: requestDownloadBlockchain finished, set blockchain status to ready!")
+
 	}()
 }
 
@@ -205,22 +206,20 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	if fork[0].GetHeight() <= bm.Getblockchain().GetMaxHeight() {
 		return
 	}
-	err := func() error{
-		bm.Getblockchain().mutex.Lock()
-		defer bm.Getblockchain().mutex.Unlock()
-		if bm.blockchain.GetState() != blockchain.BlockchainReady {
-			logger.Infof("Push: MergeFork cancelled  because blockchain is not ready. Current status is %v", bm.blockchain.GetState())
-			return errors.New("blockchain is not ready")
-		}
-		bm.blockchain.SetState(blockchain.BlockchainSync)
-		return nil
-	}()
-    if err != nil{
+
+	bm.Getblockchain().mutex.Lock()
+	if bm.blockchain.GetState() != blockchain.BlockchainReady {
+		logger.Infof("Push: MergeFork cancelled  because blockchain is not ready. Current status is %v", bm.blockchain.GetState())
+		bm.Getblockchain().mutex.Unlock()
 		return
 	}
+	bm.blockchain.SetState(blockchain.BlockchainSync)
+	bm.Getblockchain().mutex.Unlock()
+
+
 	logger.Info("Push: set blockchain status to sync.")
 
-	err = bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
+	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
 	if err != nil {
 		logger.Warn("Merge fork failed.err:", err)
 	}
