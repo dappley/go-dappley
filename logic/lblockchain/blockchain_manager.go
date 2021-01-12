@@ -88,6 +88,11 @@ func (bm *BlockchainManager) RequestDownloadBlockchain() {
 		finishChan := make(chan bool, 1)
 
 		bm.Getblockchain().mutex.Lock()
+		if bm.blockchain.GetState() != blockchain.BlockchainReady {
+			logger.Infof("BlockchainManager: requestDownloadBlockchain cancelled  because blockchain is not ready. Current status is %v", bm.blockchain.GetState())
+			bm.Getblockchain().mutex.Unlock()
+			return
+		}
 		logger.Info("BlockchainManager: requestDownloadBlockchain start, set blockchain status to downloading!")
 		bm.Getblockchain().SetState(blockchain.BlockchainDownloading)
 		bm.Getblockchain().mutex.Unlock()
@@ -170,18 +175,14 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	receiveBlockHeight := blk.GetHeight()
 	ownBlockHeight := bm.Getblockchain().GetMaxHeight()
 	// Do the subtraction calculation after judging the size to avoid the overflow of the symbol uint64
-	bm.Getblockchain().mutex.Lock()
-	if receiveBlockHeight > ownBlockHeight && receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold &&
-		bm.blockchain.GetState() == blockchain.BlockchainReady {
+	if receiveBlockHeight > ownBlockHeight && receiveBlockHeight-ownBlockHeight >= HeightDiffThreshold {
 		logger.WithFields(logger.Fields{
 			"receiveBlockHeight": receiveBlockHeight,
 			"ownBlockHeight":     ownBlockHeight,
 		}).Warn("The height of the received blk is higher than the height of its own blk,to start download blockchain")
-		bm.Getblockchain().mutex.Unlock()
 		bm.RequestDownloadBlockchain()
 		return
 	}
-	bm.Getblockchain().mutex.Unlock()
 
 	bm.blockPool.AddBlock(blk)
 	forkHeadBlk := bm.blockPool.GetForkHead(blk)
