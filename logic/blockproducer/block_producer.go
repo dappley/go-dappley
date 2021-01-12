@@ -88,12 +88,22 @@ func (bp *BlockProducer) GetProduceBlockStatus() bool {
 //produceBlock produces a new block and add it to blockchain
 func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline deadline.Deadline) {
 	// Do not produce block if block pool is syncing
+	bp.bm.Getblockchain().GetBlockMutex().Lock()
 	if bp.bm.Getblockchain().GetState() != blockchain.BlockchainReady {
 		logger.Infof("BlockProducer: block producer paused because blockchain is not ready. Current status is %v", bp.bm.Getblockchain().GetState())
+		bp.bm.Getblockchain().GetBlockMutex().Unlock()
 		return
 	}
 	bp.bm.Getblockchain().SetState(blockchain.BlockchainProduce)
-	defer bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
+	bp.bm.Getblockchain().GetBlockMutex().Unlock()
+
+	defer func(){
+		bp.bm.Getblockchain().GetBlockMutex().Lock()
+		bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
+		bp.bm.Getblockchain().GetBlockMutex().Unlock()
+		logger.Info("BlockProducer: set blockchain status to ready.")
+	}()
+
 	//makeup a block, fill in necessary information to check lib policy.
 	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(),bp.producer.Beneficiary())
 	if !bp.bm.Getblockchain().CheckLibPolicy(blk) {
@@ -118,9 +128,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 		logger.Error("BlockProducer: produced an invalid block!")
 		return
 	}
-
 	bp.addBlockToBlockchain(ctx)
-
 }
 
 //prepareBlock generates a new block

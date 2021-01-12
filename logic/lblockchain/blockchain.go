@@ -207,6 +207,11 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 	return bc.GetBlockByHash(hash)
 }
 
+
+func (bc *Blockchain) GetBlockMutex() *sync.Mutex {
+	return bc.mutex
+}
+
 func (bc *Blockchain) SetTailBlockHash(tailBlockHash hash.Hash) {
 	bc.bc.SetTailBlockHash(tailBlockHash)
 }
