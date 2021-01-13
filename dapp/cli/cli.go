@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -36,6 +37,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/logic/ltransaction"
+	crypto "github.com/libp2p/go-libp2p-crypto"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -77,6 +79,7 @@ const (
 	cliHelp              = "help"
 	cliGetMetricsInfo    = "getMetricsInfo"
 	cliGetBlockByHeight  = "getBlockByHeight"
+	cliGenerateSeed      = "generateSeed"
 )
 
 //flag names
@@ -139,6 +142,7 @@ var cmdList = []string{
 	cliHelp,
 	cliGetMetricsInfo,
 	cliGetBlockByHeight,
+	cliGenerateSeed,
 }
 
 var (
@@ -329,6 +333,7 @@ var cmdFlagsMap = map[string][]flagPars{
 			"height. Eg. 1",
 		},
 	},
+	cliGenerateSeed: {},
 }
 
 //map the callback function to each command
@@ -349,6 +354,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliContractQuery:     {rpcService, contractQueryCommandHandler},
 	cliGetMetricsInfo:    {metricsRpcService, getMetricsInfoCommandHandler},
 	cliGetBlockByHeight:  {rpcService, getBlockByHeightCommandHandler},
+	cliGenerateSeed:      {adminRpcService, generateSeedCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -446,6 +452,26 @@ func printUsage() {
 		fmt.Println(" ", cmd)
 	}
 	fmt.Println("Note: Use the command 'cli help' to get the command usage in details")
+}
+
+func generateSeedCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+
+	key, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
+
+	if err != nil {
+		fmt.Printf("Generate key error %v\n", err)
+		return
+	}
+
+	bytes, err := crypto.MarshalPrivateKey(key)
+	if err != nil {
+		fmt.Printf("MarshalPrivateKey error %v\n", err)
+		return
+	}
+
+	str := base64.StdEncoding.EncodeToString(bytes)
+	fmt.Printf("%v\n", str)
+
 }
 
 func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
