@@ -2,8 +2,9 @@ package blockproducer
 
 import (
 	"encoding/hex"
-	"github.com/dappley/go-dappley/common/log"
 	"time"
+
+	"github.com/dappley/go-dappley/common/log"
 
 	"github.com/dappley/go-dappley/common/deadline"
 	"github.com/dappley/go-dappley/core/blockchain"
@@ -97,7 +98,7 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 	bp.bm.Getblockchain().SetState(blockchain.BlockchainProduce)
 	bp.bm.Getblockchain().GetBlockMutex().Unlock()
 
-	defer func(){
+	defer func() {
 		bp.bm.Getblockchain().GetBlockMutex().Lock()
 		bp.bm.Getblockchain().SetState(blockchain.BlockchainReady)
 		bp.bm.Getblockchain().GetBlockMutex().Unlock()
@@ -105,8 +106,8 @@ func (bp *BlockProducer) produceBlock(processFunc func(*block.Block), deadline d
 	}()
 
 	//makeup a block, fill in necessary information to check lib policy.
-	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(),bp.producer.Beneficiary())
-	if !bp.bm.Getblockchain().CheckLibPolicy(blk) {
+	blk := block.NewBlockByHash(bp.bm.Getblockchain().GetTailBlockHash(), bp.producer.Beneficiary())
+	if !bp.bm.Getblockchain().CheckMinProducerPolicy(blk) {
 		logger.Warn("BlockProducer: the number of producers is not enough.")
 		tailBlock, _ := bp.bm.Getblockchain().GetTailBlock()
 		bp.bm.BroadcastBlock(tailBlock)

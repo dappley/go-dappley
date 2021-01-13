@@ -207,7 +207,6 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 	return bc.GetBlockByHash(hash)
 }
 
-
 func (bc *Blockchain) GetBlockMutex() *sync.Mutex {
 	return bc.mutex
 }
@@ -486,7 +485,7 @@ func (bc *Blockchain) GasPrice() uint64 {
 	return DefaultGasPrice
 }
 
-func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
+func (bc *Blockchain) CheckMinProducerPolicy(blk *block.Block) bool {
 
 	if bc.libPolicy.IsBypassingLibCheck() {
 		return true
