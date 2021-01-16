@@ -401,6 +401,12 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) b
 		return true
 	}
 
+	targetBlock, err := bc.GetBlockByHash(targetHash)
+	if targetBlock.GetHeight() < bc.GetLIBHeight() {
+		println("LIB can't be rollback")
+		return false
+	}
+
 	//keep rolling back blocks until the block with the input hash
 	for bytes.Compare(parentblockHash, targetHash) != 0 {
 
@@ -425,7 +431,7 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) b
 	bc.db.EnableBatch()
 	defer bc.db.DisableBatch()
 
-	err := bc.setTailBlockHash(parentblockHash)
+	err = bc.setTailBlockHash(parentblockHash)
 	if err != nil {
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false

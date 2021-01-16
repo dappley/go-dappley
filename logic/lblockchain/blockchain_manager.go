@@ -253,7 +253,10 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
-	bm.blockchain.Rollback(forkParentHash, scState)
+	ok := bm.blockchain.Rollback(forkParentHash, scState)
+	if !ok {
+		return nil
+	}
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if err != nil {
