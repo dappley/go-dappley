@@ -44,6 +44,7 @@ const (
 	ContractTxouputIndex = 0
 	scheduleFuncName     = "dapp_schedule"
 	SCDestroyAddress     = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
+	maxVinNumber         = 50
 )
 
 var RewardTxData = []byte("Distribute X Rewards")
@@ -569,5 +570,12 @@ func (tx *Transaction) Verify(prevUtxos []*utxo.UTXO) error {
 		return err
 	}
 
+	return nil
+}
+
+func (tx *Transaction) CheckVinNum() error {
+	if len(tx.Vin) > maxVinNumber {
+		return errors.New("too many vin in a transaction")
+	}
 	return nil
 }
