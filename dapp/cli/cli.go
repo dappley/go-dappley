@@ -80,6 +80,7 @@ const (
 	cliGetMetricsInfo    = "getMetricsInfo"
 	cliGetBlockByHeight  = "getBlockByHeight"
 	cliGenerateSeed      = "generateSeed"
+	cliConfigGenerator   = "generateConfig"
 )
 
 //flag names
@@ -104,6 +105,7 @@ const (
 	flagKey              = "key"
 	flagValue            = "value"
 	flagBlockHeight      = "height"
+	flagGenerateConfig   = "generateConfig"
 )
 
 type valueType int
@@ -122,6 +124,12 @@ const (
 	rpcService = iota
 	adminRpcService
 	metricsRpcService
+)
+
+const (
+	InvalidNode = iota
+	MinerNode
+	FullNode
 )
 
 //list of commands
@@ -143,6 +151,7 @@ var cmdList = []string{
 	cliGetMetricsInfo,
 	cliGetBlockByHeight,
 	cliGenerateSeed,
+	cliConfigGenerator,
 }
 
 var (
@@ -355,6 +364,8 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliGetMetricsInfo:    {metricsRpcService, getMetricsInfoCommandHandler},
 	cliGetBlockByHeight:  {rpcService, getBlockByHeightCommandHandler},
 	cliGenerateSeed:      {adminRpcService, generateSeedCommandHandler},
+
+	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -369,6 +380,20 @@ type flagPars struct {
 	defaultValue interface{}
 	valueType    valueType
 	usage        string
+}
+
+type Node struct {
+	NodeType      int
+	nodeType      string
+	fileName      string
+	miner_address string
+	private_key   string
+	port          string
+	seed          string
+	db_path       string
+	rpc_port      string
+	key           string
+	node_address  string
 }
 
 //map key: flag name   map defaultValue: flag defaultValue
@@ -472,6 +497,233 @@ func generateSeedCommandHandler(ctx context.Context, c interface{}, flags cmdFla
 	str := base64.StdEncoding.EncodeToString(bytes)
 	fmt.Printf("%v\n", str)
 
+}
+
+func setNodeType(node *Node, nodeType string) {
+	if nodeType == "minernode" {
+		node.NodeType = MinerNode
+	} else if nodeType == "fullnode" {
+		node.NodeType = FullNode
+	} else {
+		node.NodeType = InvalidNode
+	}
+}
+
+func configContent(node *Node) string {
+	val1 := ("consensus_config{\n" +
+		"	miner_address: " + "\"" + node.miner_address + "\"" + "\n" +
+		"	private_key: \"" + node.private_key + "\"\n" +
+		"}\n\n")
+	val2 := ("node_config{\n" +
+		"	port:	" + node.port + "\n" +
+		"	seed:	[\"" + node.seed + "\"]\n" +
+		"	db_path: \"" + node.db_path + node.fileName + ".db\"\n" +
+		"	rpc_port: " + node.rpc_port + "\n")
+	val3 := ("	key: \"" + node.key + "\"\n")
+	val4 := ("	tx_pool_limit: 102400\n" +
+		"	blk_size_limit: 102400\n" +
+		"	node_address: \"" + node.node_address + "\"\n" +
+		"	metrics_interval: 7200\n" +
+		"	metrics_polling_interval: 5\n}")
+	if node.NodeType == MinerNode && node.key == "" {
+		val := val1 + val2 + val4
+		return val
+	} else if node.NodeType == MinerNode && node.key != "" {
+		val := val1 + val2 + val3 + val4
+		return val
+	} else if node.NodeType == FullNode && node.key == "" {
+		val := val2 + val4
+		return val
+	} else {
+		val := val2 + val3 + val4
+		return val
+	}
+
+}
+
+func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+
+	var node *Node
+	node = new(Node)
+
+	//Check and set the node type
+	for {
+		fmt.Println("Input FullNode or MinerNode")
+		fmt.Print("Type: ")
+		fmt.Scanln(&node.nodeType)
+		setNodeType(node, strings.ToLower(node.nodeType))
+
+		if node.NodeType == MinerNode || node.NodeType == FullNode {
+			fmt.Println("Type set to " + strings.ToLower(node.nodeType))
+			break
+		} else {
+			fmt.Println("Invalid input")
+			fmt.Println("To choose node type, input FullNode or MinerNode")
+		}
+	}
+
+	//Name file
+	fmt.Println("Press \"Return\" for default setting")
+	fmt.Println("Default value: node")
+	fmt.Print("File name: ")
+	fmt.Scanln(&node.fileName)
+	if node.fileName == "" {
+		node.fileName = "node"
+	}
+
+	if node.NodeType == MinerNode {
+		fmt.Println("Press \"Return\" to generate")
+		for {
+			fmt.Print("miner_address: ")
+			fmt.Scanln(&node.miner_address)
+			if node.miner_address == "" {
+				acc := createAccount(ctx, c, flags)
+				node.miner_address = acc.GetAddress().String()
+				pvk := acc.GetKeyPair().GetPrivateKey()
+				hex_private_key, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
+				if err1 != nil {
+					//err = err1
+					return
+				}
+				node.private_key = hex.EncodeToString(hex_private_key)
+				fmt.Println("New miner_address & pravte_key generated")
+				fmt.Println("miner_address: ", node.miner_address)
+				fmt.Println("private_key: ", node.private_key)
+				break
+			} else {
+				fmt.Print("private_key: ")
+				fmt.Scanln(&node.private_key)
+				fmt.Println("Verifying account information....")
+				acc := account.NewAccountByPrivateKey(node.private_key)
+				if acc.GetAddress().String() == node.miner_address {
+					fmt.Println("Account verified")
+					break
+				} else {
+					fmt.Println("miner_address and private_key doesn't match")
+				}
+			}
+		}
+		node.node_address = node.miner_address
+	}
+
+	fmt.Println("Press \"Return\" for default setting")
+	fmt.Println("Default value: 12341")
+	for {
+		fmt.Print("Port: ")
+		fmt.Scanln(&node.port)
+		if node.port == "" {
+			node.port = "12341"
+			break
+		} else if _, err := strconv.Atoi(node.port); err != nil {
+			fmt.Println("Input must be integer")
+		} else {
+			break
+		}
+	}
+
+	for {
+		fmt.Println("It is mandatory to input the seed value.")
+		fmt.Print("Seed: ")
+		fmt.Scanln(&node.seed)
+
+		if len(node.seed) <= 32 {
+			fmt.Println("seed has to be longer than 32 characters")
+		} else {
+			break
+		}
+	}
+
+	fmt.Println("Press \"Return\" for default setting")
+	fmt.Println("Default value: ../bin/" + node.fileName + ".db")
+	fmt.Print("db_path: ")
+	fmt.Scanln(&node.db_path)
+	if node.db_path == "" {
+		node.db_path = "../bin/"
+	}
+
+	fmt.Println("Press \"Return\" for default setting")
+	fmt.Println("Default value: 50051")
+	for {
+		fmt.Print("Rpc_port: ")
+		fmt.Scanln(&node.rpc_port)
+		if node.rpc_port == "" {
+			node.rpc_port = "50051"
+			break
+		} else if _, err := strconv.Atoi(node.rpc_port); err != nil {
+			fmt.Println("Input must be integer")
+		} else {
+			break
+		}
+	}
+
+	fmt.Println("Type \"generate\" to generate new key\nPress \"Return\" to skip this step")
+	fmt.Print("Key: ")
+	fmt.Scanln(&node.key)
+	if strings.ToLower(node.key) == "generate" {
+		//generate key
+		KeyPair, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
+
+		if err != nil {
+			fmt.Printf("Generate key error %v\n", err)
+			return
+		}
+
+		bytes, err := crypto.MarshalPrivateKey(KeyPair)
+		if err != nil {
+			fmt.Printf("MarshalPrivateKey error %v\n", err)
+			return
+		}
+		str := base64.StdEncoding.EncodeToString(bytes)
+		node.key = str
+		fmt.Println("Key: " + node.key)
+	}
+
+	if node.NodeType == FullNode {
+		for {
+			fmt.Println("Type \"generate\" to generate new address")
+			fmt.Print("Node_address: ")
+			fmt.Scanln(&node.node_address)
+
+			if strings.ToLower(node.node_address) == "generate" {
+				account := createAccount(ctx, c, flags)
+				if account == nil {
+					return
+				}
+				node.node_address = account.GetAddress().String()
+				if account != nil {
+					fmt.Printf("Account created\nAddress: %s\n", node.node_address)
+				}
+				break
+			} else if node.node_address == "" {
+				fmt.Println("Node_address is required")
+			} else {
+				break
+			}
+		}
+	}
+
+	//write file name
+	f, err := os.Create("../conf/" + node.fileName + ".conf")
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer f.Close()
+
+	val := configContent(node)
+
+	data := []byte(val)
+	_, err = f.Write(data)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(node.fileName + " is created successfully")
+	fmt.Println("Location: ../conf/" + node.fileName)
 }
 
 func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
@@ -698,49 +950,45 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 	fmt.Printf("The balance is: %d\n", response.GetAmount())
 }
 
-func createAccountCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.Account {
+	var acc *account.Account
 	empty, err := logic.IsAccountEmpty()
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
+
 	if empty {
 		passphrase = prompter.GetPassPhrase("Please input the password for the new account: ", true)
 		if passphrase == "" {
 			fmt.Println("Error: password cannot be empty!")
-			return
+			return nil
 		}
 		account, err := logic.CreateAccountWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			return
+			return nil
 		}
-		if account != nil {
-			fmt.Printf("Account is created. The address is %s \n", account.GetAddress().String())
-			return
-		}
+		acc = account
 	}
 
 	locked, err := logic.IsAccountLocked()
 	if err != nil {
 		fmt.Println("Error:", err.Error())
-		return
+		return nil
 	}
 
 	if locked {
 		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
 		if passphrase == "" {
 			fmt.Println("Error: password should not be empty!")
-			return
+			return nil
 		}
-		acc, err := logic.CreateAccountWithPassphrase(passphrase)
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			return
+			return nil
 		}
-		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", acc.GetAddress().String())
-		}
-		//unlock the account
-		_, err = account.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
+
+		_, err = c.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
 
 		if err != nil {
 			switch status.Code(err) {
@@ -749,17 +997,30 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			default:
 				fmt.Println("Error:", status.Convert(err).Message())
 			}
-			return
+			return nil
 		}
+
+		acc = account
 	} else {
 		account, err := logic.CreateAccount()
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			return
+			return nil
 		}
-		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().String())
-		}
+		acc = account
+	}
+
+	return acc
+}
+
+func createAccountCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+	acc := createAccount(ctx, account, flags)
+	if acc == nil {
+		return
+	}
+	if account != nil {
+		fmt.Printf("Account is created. The address is %s \n", acc.GetAddress().String())
+		return
 	}
 
 	return
