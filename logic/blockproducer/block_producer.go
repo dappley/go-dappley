@@ -149,7 +149,9 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	totalTips := bp.calculateTips(validTxs)
 	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
-	utxoIndex.UpdateUtxo(&cbtx)
+	if !utxoIndex.UpdateUtxo(&cbtx){
+		logger.Warn("prepareBlock warn")
+	}
 
 	logger.WithFields(logger.Fields{
 		"valid_txs": len(validTxs),
@@ -174,9 +176,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
-		txNode := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
-		if txNode == nil {
+		txNode ,err:= bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		if err!=nil{
 			break
+		}
+		if txNode == nil {
+			continue
 		}
 		totalSize += txNode.Size
 		count++
@@ -193,18 +198,24 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			}
 			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
 			validTxs = append(validTxs, txNode.Value)
-			utxoIndex.UpdateUtxo(txNode.Value)
+			if !utxoIndex.UpdateUtxo(txNode.Value) {
+				logger.Warn("collectTransactions warn: ctx update utxo error")
+			}
 			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, prevUtxos, isContractDeployed, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
 			if err != nil {
 				continue
 			}
 			if generatedTxs != nil {
 				validTxs = append(validTxs, generatedTxs...)
-				utxoIndex.UpdateUtxos(generatedTxs)
+				if !utxoIndex.UpdateUtxos(generatedTxs){
+					logger.Warn("collectTransactions warn: generatedTxs != nil")
+				}
 			}
 		} else {
 			validTxs = append(validTxs, txNode.Value)
-			utxoIndex.UpdateUtxo(txNode.Value)
+			if !utxoIndex.UpdateUtxo(txNode.Value) {
+				logger.Warn("collectTransactions warn: update utxo error")
+			}
 		}
 	}
 
@@ -212,7 +223,9 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	if len(rewards) > 0 {
 		rtx := ltransaction.NewRewardTx(currBlkHeight, rewards)
 		validTxs = append(validTxs, &rtx)
-		utxoIndex.UpdateUtxo(&rtx)
+		if !utxoIndex.UpdateUtxo(&rtx) {
+			logger.Warn("collectTransactions warn: rewards update utxo error")
+		}
 	}
 
 	return validTxs, scStorage

@@ -28,6 +28,10 @@ type UTXOInfo struct {
 	createContractUTXOKey []byte
 }
 
+func NewUTXOInfo() *UTXOInfo {
+	return &UTXOInfo{[]byte{}, []byte{}}
+}
+
 func (utxoHead *UTXOInfo) ToProto() proto.Message {
 	return &utxopb.UtxoInfo{
 		LastUtxoKey:           utxoHead.lastUTXOKey,

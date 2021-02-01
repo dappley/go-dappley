@@ -146,13 +146,17 @@ func (bc *Blockchain) GetEventManager() *scState.EventManager {
 	return bc.eventManager
 }
 
-func (bc *Blockchain) GetUpdatedUTXOIndex() *lutxo.UTXOIndex {
+func (bc *Blockchain) GetUpdatedUTXOIndex() (*lutxo.UTXOIndex, bool){
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
+	errFlag:=true
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions())
-	return utxoIndex
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()){
+		logger.Warn("GetUpdatedUTXOIndex error")
+		errFlag=false
+	}
+	return utxoIndex,errFlag
 }
 
 func (bc *Blockchain) SetBlockSizeLimit(limit int) {

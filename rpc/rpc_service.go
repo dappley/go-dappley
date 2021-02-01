@@ -135,7 +135,7 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
 	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
-		rpcService.utxoIndex = bc.GetUpdatedUTXOIndex()
+		rpcService.utxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
 		rpcService.blockMaxHeight = bc.GetMaxHeight()
 	}
 	rpcService.mutex.Unlock()
@@ -259,7 +259,11 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
 	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
-		rpcService.utxoIndex = bc.GetUpdatedUTXOIndex()
+		errFlag:=true
+		rpcService.utxoIndex, errFlag= bc.GetUpdatedUTXOIndex()
+		if !errFlag{
+			logger.Warn("RpcSendTransaction update utxoIndex error")
+		}
 		rpcService.blockMaxHeight = bc.GetMaxHeight()
 	}
 	rpcService.mutex.Unlock()
@@ -282,7 +286,10 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 
 	rpcService.mutex.Lock()
 	bc.GetTxPool().Push(*tx)
-	rpcService.utxoIndex.UpdateUtxo(tx)
+	if !rpcService.utxoIndex.UpdateUtxo(tx){
+		rpcService.mutex.Unlock()
+		logger.Error("updateUTXO failed.")
+	}
 	rpcService.mutex.Unlock()
 	bc.GetTxPool().BroadcastTx(tx)
 
@@ -302,7 +309,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 // RpcSendBatchTransaction sends a batch of ordered transactions to blockchain created by account
 func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *rpcpb.SendBatchTransactionRequest) (*rpcpb.SendBatchTransactionResponse, error) {
 	var respon []proto.Message
-	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
+	utxoIndex ,_:= rpcService.GetBlockchain().GetUpdatedUTXOIndex()
 
 	txs := []transaction.Transaction{}
 	for _, txInReq := range in.Transactions {
@@ -437,8 +444,10 @@ func (rpcService *RpcService) RpcEstimateGas(ctx context.Context, in *rpcpb.Esti
 	if contractTx == nil {
 		return nil, status.Error(codes.FailedPrecondition, "cannot estimate normal transaction")
 	}
-	utxoIndex := rpcService.GetBlockchain().GetUpdatedUTXOIndex()
-
+	utxoIndex ,errFlag:= rpcService.GetBlockchain().GetUpdatedUTXOIndex()
+	if !errFlag{
+		logger.Warn("RpcEstimateGase error")
+	}
 	err := contractTx.VerifyInEstimate(utxoIndex)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())

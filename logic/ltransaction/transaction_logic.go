@@ -56,7 +56,10 @@ func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scSta
 	}
 
 	isContractDeployed := tx.IsContractDeployed(utxoIndex)
-	utxoIndex.UpdateUtxo(tx.Transaction)
+	if !utxoIndex.UpdateUtxo(tx.Transaction){
+		logger.Warn("VerifyContractTransaction warn")
+	}
+
 
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return 0, nil, err

@@ -851,6 +851,7 @@ func getBlocksCommandHandler(ctx context.Context, account interface{}, flags cmd
 			var encodedVin []map[string]interface{}
 			for _, vin := range transaction.GetVin() {
 				encodedVin = append(encodedVin, map[string]interface{}{
+					"Txid":      hex.EncodeToString(vin.GetTxid()),
 					"Vout":      vin.GetVout(),
 					"Signature": hex.EncodeToString(vin.GetSignature()),
 					"PubKey":    hex.EncodeToString(vin.GetPublicKey()),
@@ -1620,6 +1621,7 @@ func getBlockByHeightCommandHandler(ctx context.Context, c interface{}, flags cm
 		var encodedVin []map[string]interface{}
 		for _, vin := range transaction.GetVin() {
 			encodedVin = append(encodedVin, map[string]interface{}{
+				"Txid":      hex.EncodeToString(vin.GetTxid()),
 				"Vout":      vin.GetVout(),
 				"Signature": hex.EncodeToString(vin.GetSignature()),
 				"PubKey":    hex.EncodeToString(vin.GetPublicKey()),

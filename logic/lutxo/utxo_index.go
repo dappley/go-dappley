@@ -126,15 +126,9 @@ func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byt
 		}
 	}
 
-	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
-		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
-		if utxo != nil {
-			return utxo, nil
-		}
-	}
-
 	utxo, err := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxo.GetUTXOKey(txid, vout))
 	if err != nil {
+		logger.Warn("GetUpdatedUtxo err.")
 		return nil, err
 	}
 	return utxo, nil
@@ -213,11 +207,15 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 
 // Update removes the UTXOs spent in the transactions in newBlk from the index and adds UTXOs generated in the
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
-func (utxos *UTXOIndex) UpdateUtxos(txs []*transaction.Transaction) {
+func (utxos *UTXOIndex) UpdateUtxos(txs []*transaction.Transaction) bool {
 	// Create a copy of the index so operations below are only temporal
+	errFlag:=true
 	for _, tx := range txs {
-		utxos.UpdateUtxo(tx)
+		if !utxos.UpdateUtxo(tx){
+			errFlag=false
+		}
 	}
+	return  errFlag
 }
 
 // UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
@@ -247,6 +245,7 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *transaction.Transaction, db storage
 	for i, vout := range tx.Vout {
 		err := utxos.removeUTXO(vout.PubKeyHash, tx.ID, i)
 		if err != nil {
+			logger.Warn("excludeVoutsInTx error")
 			return err
 		}
 	}
@@ -317,16 +316,16 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	} else {
 		u, err := utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
 		if err != nil {
-			logger.Error(err)
+			logger.Error("removeUTXO err")
 			return ErrUTXONotFound
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
+		utxos.mutex.Lock()
+		defer utxos.mutex.Unlock()
 		if !ok {
 			utxoTx := utxo.NewUTXOTx()
 			utxoTx.PutUtxo(u)
-			utxos.mutex.Lock()
 			utxos.indexRemove[pkh.String()] = &utxoTx
-			utxos.mutex.Unlock()
 		} else {
 			utxoTx.PutUtxo(u)
 		}
