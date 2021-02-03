@@ -548,13 +548,12 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 
 	//Check and set the node type
 	for {
-		fmt.Println("Input FullNode or MinerNode")
-		fmt.Print("Type: ")
+		fmt.Println("Choose config type:")
+		fmt.Println("FullNode or MinerNode: ")
 		fmt.Scanln(&node.nodeType)
 		setNodeType(node, strings.ToLower(node.nodeType))
 
 		if node.NodeType == MinerNode || node.NodeType == FullNode {
-			fmt.Println("Type set to " + strings.ToLower(node.nodeType))
 			break
 		} else {
 			fmt.Println("Invalid input")
@@ -563,16 +562,17 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 	}
 
 	//Name file
-	fmt.Println("Press \"Return\" for default setting")
-	fmt.Println("Default value: node")
-	fmt.Print("File name: ")
+	fmt.Print("File name(don't need extension name): ")
+	fmt.Println("Input nothing for default: \"node\"")
+
 	fmt.Scanln(&node.fileName)
 	if node.fileName == "" {
 		node.fileName = "node"
 	}
 
 	if node.NodeType == MinerNode {
-		fmt.Println("Press \"Return\" to generate")
+		fmt.Println("Miner address info:")
+		fmt.Println("Input nothing to generate new key pair or input valueable key pair")
 		for {
 			fmt.Print("miner_address: ")
 			fmt.Scanln(&node.miner_address)
@@ -596,7 +596,6 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 				fmt.Println("Verifying account information....")
 				acc := account.NewAccountByPrivateKey(node.private_key)
 				if acc.GetAddress().String() == node.miner_address {
-					fmt.Println("Account verified")
 					break
 				} else {
 					fmt.Println("miner_address and private_key doesn't match")
@@ -606,10 +605,10 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		node.node_address = node.miner_address
 	}
 
-	fmt.Println("Press \"Return\" for default setting")
-	fmt.Println("Default value: 12341")
 	for {
-		fmt.Print("Port: ")
+		fmt.Println("Port info:")
+		fmt.Println("Input nothing for default setting: 12341")
+
 		fmt.Scanln(&node.port)
 		if node.port == "" {
 			node.port = "12341"
@@ -622,29 +621,27 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 	}
 
 	for {
-		fmt.Println("It is mandatory to input the seed value.")
-		fmt.Print("Seed: ")
-		fmt.Scanln(&node.seed)
 
+		fmt.Println("Seed: ")
+
+		fmt.Scanln(&node.seed)
 		if len(node.seed) <= 32 {
-			fmt.Println("seed has to be longer than 32 characters")
+			fmt.Println("Please input an valid seed")
 		} else {
 			break
 		}
 	}
-
-	fmt.Println("Press \"Return\" for default setting")
-	fmt.Println("Default value: ../bin/" + node.fileName + ".db")
 	fmt.Print("db_path: ")
+	fmt.Println("Input nothing for default: ../bin/" + node.fileName + ".db")
+
 	fmt.Scanln(&node.db_path)
 	if node.db_path == "" {
 		node.db_path = "../bin/"
 	}
 
-	fmt.Println("Press \"Return\" for default setting")
-	fmt.Println("Default value: 50051")
 	for {
 		fmt.Print("Rpc_port: ")
+		fmt.Println("Input nothing for default setting : 50051")
 		fmt.Scanln(&node.rpc_port)
 		if node.rpc_port == "" {
 			node.rpc_port = "50051"
@@ -656,10 +653,10 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		}
 	}
 
-	fmt.Println("Type \"generate\" to generate new key\nPress \"Return\" to skip this step")
 	fmt.Print("Key: ")
+	fmt.Println("Input nothing to generate new key")
 	fmt.Scanln(&node.key)
-	if strings.ToLower(node.key) == "generate" {
+	if strings.ToLower(node.key) == "" {
 		//generate key
 		KeyPair, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
 
@@ -676,30 +673,6 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		str := base64.StdEncoding.EncodeToString(bytes)
 		node.key = str
 		fmt.Println("Key: " + node.key)
-	}
-
-	if node.NodeType == FullNode {
-		for {
-			fmt.Println("Type \"generate\" to generate new address")
-			fmt.Print("Node_address: ")
-			fmt.Scanln(&node.node_address)
-
-			if strings.ToLower(node.node_address) == "generate" {
-				account := createAccount(ctx, c, flags)
-				if account == nil {
-					return
-				}
-				node.node_address = account.GetAddress().String()
-				if account != nil {
-					fmt.Printf("Account created\nAddress: %s\n", node.node_address)
-				}
-				break
-			} else if node.node_address == "" {
-				fmt.Println("Node_address is required")
-			} else {
-				break
-			}
-		}
 	}
 
 	//write file name
@@ -722,8 +695,8 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 		return
 	}
 
-	fmt.Println(node.fileName + " is created successfully")
-	fmt.Println("Location: ../conf/" + node.fileName)
+	fmt.Println(node.fileName + ".conf" + " is created successfully")
+	fmt.Println("Location: ../conf/" + node.fileName + ".conf")
 }
 
 func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
