@@ -392,7 +392,7 @@ func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) bool {
+func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex,targetHash hash.Hash, scState *scState.ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -430,6 +430,12 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) b
 				bc.txPool.Rollback(*tx)
 			}
 		}
+	}
+
+	//updated utxo in db
+	err = index.Save()
+	if err != nil {
+		return false
 	}
 
 	bc.db.EnableBatch()

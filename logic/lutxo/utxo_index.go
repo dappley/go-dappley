@@ -95,10 +95,14 @@ func (utxos *UTXOIndex) Save() error {
 }
 
 func (utxos *UTXOIndex) IsLastUtxoKeyExist(pubKeyHash account.PubKeyHash) bool {
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
 	return utxos.cache.IsLastUtxoKeyExist(pubKeyHash.String())
 }
 
 func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *utxo.UTXOTx {
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
 	utxoTx := utxos.cache.GetUTXOTx(pubkeyHash)
 	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
 	if utxoTxAdd != nil {
@@ -119,8 +123,17 @@ func (utxos *UTXOIndex) GetAllUTXOsByPubKeyHash(pubkeyHash account.PubKeyHash) *
 }
 
 func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byte, vout int) (*utxo.UTXO, error) {
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
 	if _, ok := utxos.indexAdd[pubkeyHash.String()]; ok {
 		utxo := utxos.indexAdd[pubkeyHash.String()].GetUtxo(txid, vout)
+		if utxo != nil {
+			return utxo, nil
+		}
+	}
+
+	if _, ok := utxos.indexRemove[pubkeyHash.String()]; ok {
+		utxo := utxos.indexRemove[pubkeyHash.String()].GetUtxo(txid, vout)
 		if utxo != nil {
 			return utxo, nil
 		}
@@ -306,13 +319,13 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	utxoKey := utxo.GetUTXOKey(txid, vout)
 	//update indexRemove
 	ok := false
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
 	if _, ok = utxos.indexAdd[pkh.String()]; ok {
 		_, ok = utxos.indexAdd[pkh.String()].Indices[utxoKey]
 	}
 	if ok {
-		utxos.mutex.Lock()
 		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
-		utxos.mutex.Unlock()
 	} else {
 		u, err := utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
 		if err != nil {
@@ -320,8 +333,6 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 			return ErrUTXONotFound
 		}
 		utxoTx, ok := utxos.indexRemove[pkh.String()]
-		utxos.mutex.Lock()
-		defer utxos.mutex.Unlock()
 		if !ok {
 			utxoTx := utxo.NewUTXOTx()
 			utxoTx.PutUtxo(u)

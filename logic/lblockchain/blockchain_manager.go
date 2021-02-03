@@ -253,7 +253,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
-	ok := bm.blockchain.Rollback(forkParentHash, scState)
+	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
 	if !ok {
 		return nil
 	}
@@ -405,11 +405,6 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			}).Errorf("BlockchainManager: failed to delete block %v", err.Error())
 			return nil, nil, err
 		}
-	}
-	//updated utxo in db
-	err := index.Save()
-	if err != nil {
-		return nil, nil, err
 	}
 	return index, scState, nil
 }
