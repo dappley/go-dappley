@@ -165,8 +165,12 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 
 // RpcGetBlocks Get blocks in blockchain from head to tail
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
+	result := &rpcpb.GetBlocksResponse{}
 	blk := rpcService.findBlockInRequestHash(in.GetStartBlockHashes())
-
+	if blk.GetTimestamp() == -1{
+		result.Blocks = append(result.Blocks, blk.ToProto().(*blockpb.Block))
+		return result,nil
+	}
 	// Reach the blockchain's tail
 	if blk.GetHeight() >= rpcService.GetBlockchain().GetMaxHeight() {
 		return &rpcpb.GetBlocksResponse{}, nil
@@ -184,12 +188,9 @@ func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlo
 		blk, err = rpcService.GetBlockchain().GetBlockByHeight(blk.GetHeight() + 1)
 	}
 
-	result := &rpcpb.GetBlocksResponse{}
-
 	for _, blk = range blocks {
 		result.Blocks = append(result.Blocks, blk.ToProto().(*blockpb.Block))
 	}
-
 	return result, nil
 }
 
@@ -203,6 +204,9 @@ func (rpcService *RpcService) findBlockInRequestHash(startBlockHashes [][]byte) 
 
 	// Return Genesis Block
 	blk, _ := rpcService.GetBlockchain().GetBlockByHeight(0)
+	if len(startBlockHashes) > 0{
+		blk.SetTimestamp(-1)
+	}
 	return blk
 }
 
