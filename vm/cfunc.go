@@ -10,7 +10,6 @@ char *AttachLibVersionDelegateFunc(void *handler, const char *libname);
 bool  VerifyAddressFunc(const char* address, size_t *gasCnt);
 int   TransferFunc(void *handler, const char *to, const char *amount, const char *tip, size_t *gasCnt);
 int   GetCurrBlockHeightFunc(void *handler);
-char* GetNodeAddressFunc(void *handler);
 int   DeleteContractFunc(void *handler);
 
 char* StorageGetFunc(void *address, const char *key);
@@ -46,10 +45,6 @@ int Cgo_TransferFunc(void *handler, const char *to, const char *amount, const ch
 
 int Cgo_GetCurrBlockHeightFunc(void *handler){
 	return GetCurrBlockHeightFunc(handler);
-};
-
-char* Cgo_GetNodeAddressFunc(void *handler){
-	return GetNodeAddressFunc(handler);
 };
 
 int Cgo_DeleteContractFunc(void *handler){

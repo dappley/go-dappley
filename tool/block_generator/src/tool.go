@@ -3,9 +3,10 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"io/ioutil"
 	"os"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -67,7 +68,7 @@ func GenerateNewBlockChain(files []FileInfo, d *consensus.Dynasty, keys Keys, co
 	numOfTx = config.NumOfNormalTx
 	numOfScTx = config.NumOfScTx
 	for i := range files {
-		bc := lblockchain.CreateBlockchain(addr, files[i].Db, nil, transactionpool.NewTransactionPool(nil, 200), nil, 1000000)
+		bc := lblockchain.CreateBlockchain(addr, files[i].Db, nil, transactionpool.NewTransactionPool(nil, 200), 1000000)
 		bcs[i] = bc
 	}
 

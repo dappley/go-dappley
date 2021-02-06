@@ -2,8 +2,9 @@ package vm
 
 import "C"
 import (
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"unsafe"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/utxo"
 
@@ -132,18 +133,4 @@ func GetCurrBlockHeightFunc(handler unsafe.Pointer) uint64 {
 	}
 
 	return engine.blkHeight
-}
-
-//export GetNodeAddressFunc
-func GetNodeAddressFunc(handler unsafe.Pointer) *C.char {
-	engine := getV8EngineByAddress(uint64(uintptr(handler)))
-	if engine == nil {
-		logger.WithFields(logger.Fields{
-			"handler":  uint64(uintptr(handler)),
-			"function": "Blockchain.GetNodeAddressFunc",
-		}).Debug("SmartContract: failed to get the engine instance!")
-		return nil
-	}
-
-	return C.CString(engine.nodeAddr.String())
 }

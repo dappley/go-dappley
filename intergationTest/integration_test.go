@@ -209,7 +209,7 @@ func TestSendToInvalidAddress(t *testing.T) {
 
 	node := network.FakeNodeWithPidAndAddr(rfl.File, "test", "test")
 	//create a blockchain
-	bc, err := logic.CreateBlockchain(addr1, store, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
+	bc, err := logic.CreateBlockchain(addr1, store, nil, transactionpool.NewTransactionPool(node, 128), 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -257,7 +257,7 @@ func TestSendInsufficientBalance(t *testing.T) {
 	node := network.FakeNodeWithPidAndAddr(rfl.File, "test", "test")
 
 	//create a blockchain
-	bc, err := logic.CreateBlockchain(addr1, store, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
+	bc, err := logic.CreateBlockchain(addr1, store, nil, transactionpool.NewTransactionPool(node, 128), 1000000)
 	assert.Nil(t, err)
 	assert.NotNil(t, bc)
 
@@ -600,7 +600,7 @@ func TestAddBalanceWithInvalidAddress(t *testing.T) {
 			addr := account.NewAddress("dG6HhzSdA5m7KqvJNszVSf8i5f4neAteSs")
 			node := network.FakeNodeWithPidAndAddr(rfl.File, "a", "b")
 			// Create a blockchain
-			bc, err := logic.CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(node, 128), nil, 1000000)
+			bc, err := logic.CreateBlockchain(addr, db, nil, transactionpool.NewTransactionPool(node, 128), 1000000)
 			assert.Nil(t, err)
 
 			logic.SetMinerKeyPair(key)
@@ -703,7 +703,7 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	consensus := &blockchainMock.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
-	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, nil, 100000)
+	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, 100000)
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}
@@ -758,7 +758,7 @@ func TestDoubleMint(t *testing.T) {
 		node := network.NewNode(rfl.File, nil)
 		node.Start(testport_msg_relay_port3+i, "")
 
-		bc := lblockchain.CreateBlockchain(validProducerAccount.GetAddress(), db, dpos, transactionpool.NewTransactionPool(node, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(validProducerAccount.GetAddress(), db, dpos, transactionpool.NewTransactionPool(node, 128), 100000)
 		pool := blockchain.NewBlockPool(nil)
 
 		bm := lblockchain.NewBlockchainManager(bc, pool, node, dpos)
@@ -813,7 +813,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	seedNode.Start(testport_fork_syncing, "")
 	defer seedNode.Stop()
 
-	bc := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db, dpos1, transactionpool.NewTransactionPool(seedNode, 128), nil, 100000)
+	bc := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db, dpos1, transactionpool.NewTransactionPool(seedNode, 128), 100000)
 
 	//create and start seed node
 	pool := blockchain.NewBlockPool(nil)
@@ -839,7 +839,7 @@ func TestSimultaneousSyncingAndBlockProducing(t *testing.T) {
 	node2.Start(testport_fork_syncing+1, "")
 	defer node2.Stop()
 
-	bc2 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transactionpool.NewTransactionPool(node2, 128), nil, 100000)
+	bc2 := lblockchain.CreateBlockchain(account.NewAddress(genesisAddr), db2, dpos2, transactionpool.NewTransactionPool(node2, 128), 100000)
 	lblockchain.NewBlockchainManager(bc2, blockchain.NewBlockPool(nil), node2, dpos2)
 
 	// Trigger fork choice in node by broadcasting tail block of node[0]
@@ -1034,7 +1034,7 @@ func Test_MultipleMinersWithDPOS(t *testing.T) {
 		dpos := consensus.NewDPOS(producer)
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
-		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), 100000)
 		pool := blockchain.NewBlockPool(nil)
 
 		rfl := storage.NewRamFileLoader(confDir, "tm"+strconv.Itoa(i)+".conf")
@@ -1106,7 +1106,7 @@ func TestDPOS_UpdateLIB(t *testing.T) {
 		dpos := consensus.NewDPOS(producer)
 		dpos.SetKey(keystrs[i])
 		dpos.SetDynasty(dynasty)
-		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
+		bc := lblockchain.CreateBlockchain(account.NewAddress(miners[0]), storage.NewRamStorage(), dpos, transactionpool.NewTransactionPool(nil, 128), 100000)
 		pool := blockchain.NewBlockPool(nil)
 
 		rfl := storage.NewRamFileLoader(confDir, "tm"+strconv.Itoa(i)+".conf")

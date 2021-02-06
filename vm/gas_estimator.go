@@ -6,6 +6,7 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 
 	"errors"
+
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"

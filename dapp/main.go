@@ -48,7 +48,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/rpc"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/spf13/viper"
 )
 
@@ -119,16 +118,14 @@ func main() {
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
-	nodeAddr := conf.GetNodeConfig().GetNodeAddress()
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
-	scManager := vm.NewV8EngineManager(account.NewAddress(nodeAddr))
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
 	//utxo.NewPool()
-	bc, err := lblockchain.GetBlockchain(db, conss, txPool, scManager, int(blkSizeLimit))
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
 
 	var LIBBlk *block.Block = nil
 	if err != nil {
-		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, scManager, int(blkSizeLimit))
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
