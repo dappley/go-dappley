@@ -40,12 +40,13 @@ type UTXO struct {
 	Txid        []byte
 	TxIndex     int
 	UtxoType    UtxoType
+	PrevUtxoKey []byte
 	NextUtxoKey []byte
 }
 
 // NewUTXO returns an UTXO instance constructed from a TXOutput.
 func NewUTXO(txout transactionbase.TXOutput, txid []byte, vout int, utxoType UtxoType) *UTXO {
-	return &UTXO{txout, txid, vout, utxoType, []byte{}}
+	return &UTXO{txout, txid, vout, utxoType, []byte{},[]byte{}}
 }
 
 func (utxo *UTXO) ToProto() proto.Message {
@@ -56,6 +57,7 @@ func (utxo *UTXO) ToProto() proto.Message {
 		TxIndex:       uint32(utxo.TxIndex),
 		UtxoType:      uint32(utxo.UtxoType),
 		Contract:      utxo.Contract,
+		PrevUtxoKey:   utxo.PrevUtxoKey,
 		NextUtxoKey:   utxo.NextUtxoKey,
 	}
 }
@@ -68,6 +70,7 @@ func (utxo *UTXO) FromProto(pb proto.Message) {
 	utxo.TxIndex = int(utxopb.TxIndex)
 	utxo.UtxoType = UtxoType(utxopb.UtxoType)
 	utxo.Contract = utxopb.Contract
+	utxo.PrevUtxoKey = utxopb.PrevUtxoKey
 	utxo.NextUtxoKey = utxopb.NextUtxoKey
 }
 

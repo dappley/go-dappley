@@ -8,5 +8,6 @@ message Utxo {
     uint32  tx_index = 4;
     uint32  utxoType = 5;
     string  contract = 6;
-    bytes  nextUtxoKey = 7;
+    bytes  prevUtxoKey = 7;
+    bytes  nextUtxoKey = 8;
 }
