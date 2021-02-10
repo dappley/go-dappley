@@ -139,7 +139,7 @@ func (utxos *UTXOIndex) GetUpdatedUtxo(pubkeyHash account.PubKeyHash, txid []byt
 		}
 	}
 
-	utxo, err := utxos.cache.GetUtxoByPubkey(pubkeyHash.String(), utxo.GetUTXOKey(txid, vout))
+	utxo, err := utxos.cache.GetUtxo(utxo.GetUTXOKey(txid, vout))
 	if err != nil {
 		logger.Warn("GetUpdatedUtxo err.")
 		return nil, err
@@ -327,7 +327,7 @@ func (utxos *UTXOIndex) removeUTXO(pkh account.PubKeyHash, txid []byte, vout int
 	if ok {
 		delete(utxos.indexAdd[pkh.String()].Indices, utxoKey)
 	} else {
-		u, err := utxos.cache.GetUtxoByPubkey(pkh.String(), utxoKey)
+		u, err := utxos.cache.GetUtxo(utxoKey)
 		if err != nil {
 			logger.Error("removeUTXO err")
 			return ErrUTXONotFound

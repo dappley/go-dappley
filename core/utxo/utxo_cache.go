@@ -132,24 +132,6 @@ func (utxoCache *UTXOCache) GetUtxo(utxoKey string) (*UTXO, error) {
 	return utxoCache.getUTXOFromDB(utxoKey)
 }
 
-func (utxoCache *UTXOCache) GetUtxoByPubkey(pubKey, targetUtxokey string) (*UTXO, error) {
-	utxoKey := utxoCache.getLastUTXOKey(pubKey)
-	if bytes.Equal(utxoKey, []byte{}) {
-		return nil, errors.New("utxoInfo not found")
-	}
-	for !bytes.Equal(utxoKey, []byte{}) {
-		utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
-		if err != nil {
-			return nil, err
-		}
-		if utxo.GetUTXOKey() == targetUtxokey {
-			return utxo, nil
-		}
-		utxoKey = utxo.NextUtxoKey
-	}
-	return nil, errors.New("utxo not found")
-}
-
 func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO, error) {
 	utxoKey := utxoCache.getLastUTXOKey(pubKey)
 	if bytes.Equal(utxoKey, []byte{}) {
