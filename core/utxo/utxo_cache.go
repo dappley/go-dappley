@@ -64,12 +64,7 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 		}
 
 		if !bytes.Equal([]byte{},lastestUtxoKey){//this pubkey already has a UTXO
-			nextUTXO,err := utxoCache.GetUtxo(util.Bytes2str(lastestUtxoKey))
-			if err != nil {
-				return err
-			}
-			nextUTXO.PrevUtxoKey=util.Str2bytes(key)
-			err = utxoCache.putUTXOToDB(nextUTXO)
+			_,err := utxoCache.UpdateNextUTXO(lastestUtxoKey,key)
 			if err != nil {
 				return err
 			}
@@ -114,14 +109,12 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 					return err
 				}
 
-				nextUTXO,err := utxoCache.GetUtxo(util.Bytes2str(utxo.NextUtxoKey))
+				nextUTXO,err := utxoCache.UpdateNextUTXO(utxo.NextUtxoKey,"")
 				if err != nil {
 					return err
 				}
-				nextUTXO.PrevUtxoKey=[]byte{}
-				err = utxoCache.putUTXOToDB(nextUTXO)
-				if err != nil {
-					return err
+				if _, ok := utxoTx.Indices[nextUTXO.GetUTXOKey()]; ok {
+					utxoTx.Indices[nextUTXO.GetUTXOKey()] = nextUTXO
 				}
 			}
 		} else {
@@ -139,12 +132,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 			}
 
 			if !bytes.Equal(utxo.NextUtxoKey, []byte{}) {
-				nextUTXO, err := utxoCache.GetUtxo(util.Bytes2str(utxo.NextUtxoKey))
-				if err != nil {
-					return err
-				}
-				nextUTXO.PrevUtxoKey = util.Str2bytes(preUTXO.GetUTXOKey())
-				err = utxoCache.putUTXOToDB(nextUTXO)
+				nextUTXO,err := utxoCache.UpdateNextUTXO(utxo.NextUtxoKey,preUTXO.GetUTXOKey())
 				if err != nil {
 					return err
 				}
@@ -346,8 +334,15 @@ func (utxoCache *UTXOCache) GetUtxoCreateContract(pubKeyHash string) *UTXO {
 	return utxo
 }
 
-
-//把当前utxo的下一个utxokey的前一个稍微他
-func (utxoCache *UTXOCache) UpdateThisUTXOsNextUtxosPrevUtxoKey(utxoKey string)  error {
-
+func (utxoCache *UTXOCache) UpdateNextUTXO(nextUTXOKey []byte, preUTXOKey string) (*UTXO,error) {
+	nextUTXO, err := utxoCache.GetUtxo(util.Bytes2str(nextUTXOKey))
+	if err != nil {
+		return nil,err
+	}
+	nextUTXO.PrevUtxoKey = util.Str2bytes(preUTXOKey)
+	err = utxoCache.putUTXOToDB(nextUTXO)
+	if err != nil {
+		return nil,err
+	}
+	return nextUTXO,nil
 }
