@@ -114,7 +114,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 					return err
 				}
 				if _, ok := utxoTx.Indices[nextUTXO.GetUTXOKey()]; ok {
-					utxoTx.Indices[nextUTXO.GetUTXOKey()] = nextUTXO
+					utxoTx.PutUtxo(nextUTXO)
 				}
 			}
 		} else {
@@ -128,7 +128,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 			}
 			//*if this utxo in utxoTx,then need to update
 			if _, ok := utxoTx.Indices[preUTXO.GetUTXOKey()]; ok {
-				utxoTx.Indices[preUTXO.GetUTXOKey()] = preUTXO
+				utxoTx.PutUtxo(preUTXO)
 			}
 
 			if !bytes.Equal(utxo.NextUtxoKey, []byte{}) {
@@ -137,7 +137,7 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 					return err
 				}
 				if _, ok := utxoTx.Indices[nextUTXO.GetUTXOKey()]; ok {
-					utxoTx.Indices[nextUTXO.GetUTXOKey()] = nextUTXO
+					utxoTx.PutUtxo(nextUTXO)
 				}
 			}
 

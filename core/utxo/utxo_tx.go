@@ -19,7 +19,6 @@
 package utxo
 
 import (
-	"bytes"
 	"github.com/dappley/go-dappley/common"
 	"github.com/raviqqe/hamt"
 	"hash/fnv"
@@ -72,18 +71,9 @@ func (utxoTx UTXOTx) GetUtxo(txid []byte, vout int) *UTXO {
 	return utxo
 }
 
-func (utxoTx UTXOTx) GetPerUtxoByKey(utxokey []byte) *UTXO {
-	for _,utxo:= range utxoTx.Indices{
-		if bytes.Equal(utxo.NextUtxoKey,utxokey){
-			return utxo
-		}
-	}
-	return nil
-}
-
 // Add new utxo to map
 func (utxoTx UTXOTx) PutUtxo(utxo *UTXO) {
-	utxoTx.Indices[GetUTXOKey(utxo.Txid,utxo.TxIndex)] = utxo
+	utxoTx.Indices[utxo.GetUTXOKey()] = utxo
 }
 
 // Delete invalid element in map
