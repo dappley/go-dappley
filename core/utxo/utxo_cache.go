@@ -308,10 +308,12 @@ func (utxoCache *UTXOCache) deleteUTXOInfo(pubkey string) error {
 }
 
 func (utxoCache *UTXOCache) putCreateContractUTXOKey(pubkey string, createContractUTXOKey []byte) error {
-	utxoInfo, err := utxoCache.getUTXOInfo(pubkey)
-	if err != nil {
-		logger.Warn(err)
+	_,err := utxoCache.db.Get(util.Str2bytes(pubkey))
+	if err == nil {
+		return errors.New("this utxoInfo already exists")
 	}
+
+	utxoInfo := NewUTXOInfo()
 	utxoInfo.SetCreateContractUTXOKey(createContractUTXOKey)
 	err = utxoCache.putUTXOInfo(pubkey, utxoInfo)
 	if err != nil {
