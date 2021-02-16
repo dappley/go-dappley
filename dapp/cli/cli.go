@@ -578,6 +578,9 @@ func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmd
 			fmt.Scanln(&node.miner_address)
 			if node.miner_address == "" {
 				acc := createAccount(ctx, c, flags)
+				if acc == nil {
+					continue
+				}
 				node.miner_address = acc.GetAddress().String()
 				pvk := acc.GetKeyPair().GetPrivateKey()
 				hex_private_key, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
