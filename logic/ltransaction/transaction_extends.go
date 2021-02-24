@@ -34,12 +34,7 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-	"strings"
 	"time"
-)
-
-const (
-	scheduleFuncName = "dapp_schedule"
 )
 
 // Normal transaction
@@ -131,7 +126,7 @@ func (tx *TxContract) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) err
 		}).Warn("Verify: cannot find vin while verifying contract tx")
 		return err
 	}
-	err = tx.verifyInEstimate(utxoIndex, prevUtxos)
+	err = tx.Transaction.Verify(prevUtxos)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid":        hex.EncodeToString(tx.ID),
@@ -205,7 +200,9 @@ func NewTxContract(tx *transaction.Transaction) *TxContract {
 
 // IsScheduleContract returns if the contract contains 'dapp_schedule'
 func (ctx *TxContract) IsScheduleContract() bool {
-	if !strings.Contains(ctx.GetContract(), scheduleFuncName) {
+func (ctx *TxContract) IsScheduleContract(utxoIndex *lutxo.UTXOIndex) bool {
+	if utxoIndex.IsIndexAddExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) ||
+		utxoIndex.IsLastUtxoKeyExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) {
 		return true
 	}
 	return false
@@ -269,15 +266,7 @@ func (tx *TxContract) VerifyInEstimate(utxoIndex *lutxo.UTXOIndex) error {
 	if err != nil {
 		return err
 	}
-	return tx.verifyInEstimate(utxoIndex, prevUtxos)
-}
-
-func (tx *TxContract) verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO) error {
-	if tx.IsScheduleContract() && !tx.IsContractDeployed(utxoIndex) {
-		return errors.New("Transaction: contract state check failed")
-	}
-	err := tx.Transaction.Verify(prevUtxos)
-	return err
+	return tx.Transaction.Verify(prevUtxos)
 }
 
 // IsContractDeployed returns if the current contract is deployed

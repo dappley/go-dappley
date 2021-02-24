@@ -415,7 +415,10 @@ func (rpcService *RpcService) IsPrivate() bool { return false }
 
 // RpcGetAllTransactionsFromTxPool get all transactions from transactionpool
 func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Context, in *rpcpb.GetAllTransactionsRequest) (*rpcpb.GetAllTransactionsResponse, error) {
-	txs := rpcService.GetBlockchain().GetTxPool().GetTransactions()
+	bc := rpcService.GetBlockchain()
+	utxoIndex, _:= bc.GetUpdatedUTXOIndex()
+
+	txs := rpcService.GetBlockchain().GetTxPool().GetTransactions(utxoIndex)
 	result := &rpcpb.GetAllTransactionsResponse{}
 	for _, tx := range txs {
 		result.Transactions = append(result.Transactions, tx.ToProto().(*transactionpb.Transaction))
