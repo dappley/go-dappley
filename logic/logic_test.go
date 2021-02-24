@@ -249,17 +249,6 @@ func TestSetLockAccount(t *testing.T) {
 	assert.False(t, status)
 }
 
-func TestSetUnLockAccount(t *testing.T) {
-	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
-	assert.Nil(t, err)
-
-	assert.Nil(t, SetUnLockAccount(GetTestAccountPath()))
-	status, err := IsAccountLocked(GetTestAccountPath())
-	assert.Nil(t, err)
-	assert.False(t, status)
-	cleanUpDatabase()
-}
-
 func cleanUpDatabase() {
 	RemoveAccountTestFile()
 }

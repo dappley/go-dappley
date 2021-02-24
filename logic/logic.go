@@ -20,7 +20,6 @@ package logic
 
 import (
 	"errors"
-	"time"
 
 	"github.com/dappley/go-dappley/logic/ltransaction"
 
@@ -37,8 +36,6 @@ import (
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
-
-const unlockduration = 300 * time.Second
 
 var minerPrivateKey string
 var (
@@ -109,16 +106,6 @@ func SetLockAccount(optionalAccountFilePath ...string) error {
 	return nil
 }
 
-//Set unlock and timer
-func SetUnLockAccount(optionalAccountFilePath ...string) error {
-	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
-	if err != nil {
-		return err
-	}
-	am.SetUnlockTimer(unlockduration)
-	return nil
-}
-
 //create a account with passphrase
 func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...string) (*account.Account, error) {
 	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
@@ -164,11 +151,6 @@ func CreateAccount() (*account.Account, error) {
 	am.AddAccount(account)
 	am.SaveAccountToFile()
 	return account, err
-}
-
-//Get duration
-func GetUnlockDuration() time.Duration {
-	return unlockduration
 }
 
 //get balance

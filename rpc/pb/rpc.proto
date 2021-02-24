@@ -33,7 +33,6 @@ service AdminService{
   rpc RpcGetPeerInfo (GetPeerInfoRequest) returns (GetPeerInfoResponse) {}
   rpc RpcSendFromMiner (SendFromMinerRequest) returns (SendFromMinerResponse) {}
   rpc RpcAddProducer (AddProducerRequest) returns (AddProducerResponse) {}
-  rpc RpcUnlockAccount (UnlockAccountRequest) returns (UnlockAccountResponse) {}
 }
 
 service MetricService {
@@ -48,8 +47,6 @@ service MetricService {
 message CreateAccountRequest {
   string passphrase = 1;
 }
-
-message UnlockAccountRequest {}
 
 message AddProducerRequest {
   string address = 1;
@@ -138,8 +135,6 @@ message ContractQueryRequest {
 // Responses
 
 message AddProducerResponse {}
-
-message UnlockAccountResponse {}
 
 message GetBalanceResponse {
   int64 amount = 1;

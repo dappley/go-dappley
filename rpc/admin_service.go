@@ -20,8 +20,9 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"github.com/dappley/go-dappley/consensus"
 	"sync"
+
+	"github.com/dappley/go-dappley/consensus"
 
 	"time"
 
@@ -73,15 +74,6 @@ func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *
 	return &rpcpb.GetPeerInfoResponse{
 		PeerList: getPeerInfo(adminRpcService.node),
 	}, nil
-}
-
-//unlock the account through rpc service
-func (adminRpcService *AdminRpcService) RpcUnlockAccount(ctx context.Context, in *rpcpb.UnlockAccountRequest) (*rpcpb.UnlockAccountResponse, error) {
-	err := logic.SetUnLockAccount()
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return &rpcpb.UnlockAccountResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcSendFromMiner(ctx context.Context, in *rpcpb.SendFromMinerRequest) (*rpcpb.SendFromMinerResponse, error) {

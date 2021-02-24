@@ -965,18 +965,6 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 			return nil
 		}
 
-		_, err = c.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
-
-		if err != nil {
-			switch status.Code(err) {
-			case codes.Unavailable:
-				fmt.Println("Error: server is not reachable!")
-			default:
-				fmt.Println("Error:", status.Convert(err).Message())
-			}
-			return nil
-		}
-
 		acc = account
 	} else {
 		account, err := logic.CreateAccount()
@@ -1043,16 +1031,7 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 			fmt.Println("Error:", err.Error())
 			return
 		}
-		//unlock the account
-		_, err = c.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
-		if err != nil {
-			switch status.Code(err) {
-			case codes.Unavailable:
-				fmt.Println("Error: server is not reachable!")
-			default:
-				fmt.Println("Error:", status.Convert(err).Message())
-			}
-		}
+
 		if !listPriv {
 			if len(addressList) == 0 {
 				fmt.Println("The addresses in the account is empty!")
