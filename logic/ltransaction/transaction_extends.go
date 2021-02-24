@@ -198,14 +198,10 @@ func NewTxContract(tx *transaction.Transaction) *TxContract {
 	return nil
 }
 
-// IsScheduleContract returns if the contract contains 'dapp_schedule'
-func (ctx *TxContract) IsScheduleContract() bool {
-func (ctx *TxContract) IsScheduleContract(utxoIndex *lutxo.UTXOIndex) bool {
-	if utxoIndex.IsIndexAddExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) ||
-		utxoIndex.IsLastUtxoKeyExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) {
-		return true
-	}
-	return false
+// IsInvokeContract returns if the contract is invoke Contract
+func (ctx *TxContract) IsInvokeContract(utxoIndex *lutxo.UTXOIndex) bool {
+	return utxoIndex.IsIndexAddExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) ||
+		utxoIndex.IsLastUtxoKeyExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash)
 }
 
 //GetContract returns the smart contract code in a transaction

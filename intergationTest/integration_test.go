@@ -644,8 +644,8 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
@@ -1186,8 +1186,8 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {
@@ -1267,8 +1267,8 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {
@@ -1348,8 +1348,8 @@ func TestZeroGasPriceOfContractTransaction(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {

@@ -297,7 +297,7 @@ func (txPool *TransactionPool) getSortedTransactions(utxoIndex *lutxo.UTXOIndex)
 	for key, node := range txPool.txs {
 		nodes[key] = node
 		ctx := ltransaction.NewTxContract(node.Value)
-		if ctx != nil && !ctx.IsScheduleContract(utxoIndex) {
+		if ctx != nil && !ctx.IsInvokeContract(utxoIndex) {
 			scDeploymentTxExists[ctx.GetContractPubKeyHash().GenerateAddress().String()] = true
 		}
 	}
@@ -309,7 +309,7 @@ func (txPool *TransactionPool) getSortedTransactions(utxoIndex *lutxo.UTXOIndex)
 				ctx := ltransaction.NewTxContract(node.Value)
 				if ctx != nil {
 					ctxPkhStr := ctx.GetContractPubKeyHash().GenerateAddress().String()
-					if ctx.IsScheduleContract(utxoIndex) {
+					if ctx.IsInvokeContract(utxoIndex) {
 						if !scDeploymentTxExists[ctxPkhStr] {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)
