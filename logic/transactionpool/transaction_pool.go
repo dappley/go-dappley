@@ -140,10 +140,10 @@ func (txPool *TransactionPool) GetSizeLimit() uint32 {
 	return txPool.sizeLimit
 }
 
-func (txPool *TransactionPool) GetTransactions() []*transaction.Transaction {
+func (txPool *TransactionPool) GetTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
-	return txPool.getSortedTransactions()
+	return txPool.getSortedTransactions(utxoIndex)
 }
 
 func (txPool *TransactionPool) GetNumOfTxInPool() int {
@@ -160,7 +160,7 @@ func (txPool *TransactionPool) ResetPendingTransactions() {
 	txPool.pendingTxs = make([]*transaction.Transaction, 0)
 }
 
-func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
+func (txPool *TransactionPool) GetAllTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
 	txPool.mutex.RLock()
 	defer txPool.mutex.RUnlock()
 
@@ -169,7 +169,7 @@ func (txPool *TransactionPool) GetAllTransactions() []*transaction.Transaction {
 		txs = append(txs, tx)
 	}
 
-	for _, tx := range txPool.getSortedTransactions() {
+	for _, tx := range txPool.getSortedTransactions(utxoIndex) {
 		txs = append(txs, tx)
 
 	}
@@ -289,7 +289,7 @@ func (txPool *TransactionPool) removeFromTipOrder(txID []byte) {
 
 }
 
-func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transaction {
+func (txPool *TransactionPool) getSortedTransactions(utxoIndex *lutxo.UTXOIndex) []*transaction.Transaction {
 
 	nodes := make(map[string]*transaction.TransactionNode)
 	scDeploymentTxExists := make(map[string]bool)
@@ -297,7 +297,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 	for key, node := range txPool.txs {
 		nodes[key] = node
 		ctx := ltransaction.NewTxContract(node.Value)
-		if ctx != nil && !ctx.IsScheduleContract() {
+		if ctx != nil && !ctx.IsInvokeContract(utxoIndex) {
 			scDeploymentTxExists[ctx.GetContractPubKeyHash().GenerateAddress().String()] = true
 		}
 	}
@@ -309,7 +309,7 @@ func (txPool *TransactionPool) getSortedTransactions() []*transaction.Transactio
 				ctx := ltransaction.NewTxContract(node.Value)
 				if ctx != nil {
 					ctxPkhStr := ctx.GetContractPubKeyHash().GenerateAddress().String()
-					if ctx.IsScheduleContract() {
+					if ctx.IsInvokeContract(utxoIndex) {
 						if !scDeploymentTxExists[ctxPkhStr] {
 							sortedTxs = append(sortedTxs, node.Value)
 							delete(nodes, key)

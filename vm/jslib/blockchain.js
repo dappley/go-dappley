@@ -21,8 +21,6 @@ Blockchain.prototype = {
     },
     deleteContract : function(){
         return this.nativeBlockchain.deleteContract();
-    },
-    dapp_schedule: function () {
     }
 };
 module.exports = new Blockchain();

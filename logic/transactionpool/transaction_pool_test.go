@@ -20,10 +20,12 @@ package transactionpool
 
 import (
 	"encoding/hex"
-	"testing"
-
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transactionbase"
+	"github.com/dappley/go-dappley/core/utxo"
+	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/storage"
+	"testing"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/golang/protobuf/proto"
@@ -100,12 +102,12 @@ func TestTransactionPool_Push(t *testing.T) {
 	txPool := NewTransactionPool(nil, 128000)
 	txPool.Push(tx1)
 
-	assert.Equal(t, 1, len(txPool.GetTransactions()))
+	assert.Equal(t, 1, len(txPool.GetTransactions(nil)))
 	txPool.Push(tx2)
-	assert.Equal(t, 2, len(txPool.GetTransactions()))
+	assert.Equal(t, 2, len(txPool.GetTransactions(nil)))
 	txPool.Push(tx3)
 	txPool.Push(tx4)
-	assert.Equal(t, 4, len(txPool.GetTransactions()))
+	assert.Equal(t, 4, len(txPool.GetTransactions(nil)))
 
 	newTxPool := NewTransactionPool(nil, 128000)
 	var txs = []transaction.Transaction{tx1, tx2, tx3, tx4}
@@ -113,7 +115,7 @@ func TestTransactionPool_Push(t *testing.T) {
 		//txPointer := tx.DeepCopy()
 		newTxPool.Push(tx) // &txPointer)
 	}
-	diffTxs := newTxPool.GetTransactions()
+	diffTxs := newTxPool.GetTransactions(nil)
 	for i := 0; i < 3; i++ {
 		assert.NotEqual(t, diffTxs[i].ID, diffTxs[i+1].ID)
 	}
@@ -227,13 +229,13 @@ func TestTransactionPool_Update(t *testing.T) {
 func TestTransactionPoolLimit(t *testing.T) {
 	txPool := NewTransactionPool(nil, 0)
 	txPool.Push(tx1)
-	assert.Equal(t, 0, len(txPool.GetTransactions()))
+	assert.Equal(t, 0, len(txPool.GetTransactions(nil)))
 
 	txPool = NewTransactionPool(nil, 1)
 	txPool.Push(tx1)
 	txPool.Push(tx2) // Note: t2 should be ignore
-	assert.Equal(t, 1, len(txPool.GetTransactions()))
-	assert.Equal(t, tx1, *(txPool.GetTransactions()[0]))
+	assert.Equal(t, 1, len(txPool.GetTransactions(nil)))
+	assert.Equal(t, tx1, *(txPool.GetTransactions(nil)[0]))
 
 }
 
@@ -248,7 +250,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 			{tx1.ID, 1, nil, pubkey1},
 		},
 		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "dapp_schedule"},
+			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "CreateContractTx"},
 		},
 		Tip:      common.NewAmount(1),
 		GasLimit: common.NewAmount(0),
@@ -261,7 +263,7 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 		ID:  nil,
 		Vin: GenerateFakeTxInputs(),
 		Vout: []transactionbase.TXOutput{
-			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "execution"},
+			{common.NewAmount(5), contractAccount.GetPubKeyHash(), "InvokeContractTx"},
 		},
 		Tip:      common.NewAmount(2),
 		GasLimit: common.NewAmount(0),
@@ -270,12 +272,19 @@ func TestTransactionPool_GetTransactions(t *testing.T) {
 	}
 	executionTx.ID = executionTx.Hash()
 
+	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	index := make(map[string]*utxo.UTXOTx)
+	newUtxos := utxo.NewUTXOTx()
+	index[contractAccount.GetPubKeyHash().String()]=&newUtxos
+
 	txPool := NewTransactionPool(nil, 100000)
-	txPool.Push(executionTx)
 	txPool.Push(deploymentTx)
+	utxoIndex.SetIndexAdd(index)
+
+	txPool.Push(executionTx)
 
 	// deployment transaction should be ahead of execution transaction
-	txs := txPool.GetTransactions()
+	txs := txPool.GetTransactions(utxoIndex)
 	assert.Equal(t, &deploymentTx, txs[0])
 	assert.Equal(t, &executionTx, txs[1])
 }

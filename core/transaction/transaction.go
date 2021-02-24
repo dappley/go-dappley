@@ -42,7 +42,6 @@ var Subsidy = common.NewAmount(10000000000)
 
 const (
 	ContractTxouputIndex = 0
-	scheduleFuncName     = "dapp_schedule"
 	SCDestroyAddress     = "dRxukNqeADQrAvnHD52BVNdGg6Bgmyuaw4"
 	maxVinNumber         = 50
 )
