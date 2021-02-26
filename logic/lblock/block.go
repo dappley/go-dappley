@@ -141,7 +141,7 @@ L:
 				return false
 			}
 			rewardTX = tx
-			if !utxoIndex.UpdateUtxo(tx){
+			if !utxoIndex.UpdateUtxo(tx) {
 				logger.Warn("VerifyTransactions warn")
 			}
 			continue L
@@ -176,7 +176,14 @@ L:
 			actualGasList = append(actualGasList, gasCount*tx.GasPrice.Uint64())
 		} else {
 			// tx is a normal transactions
-			if	!utxoIndex.UpdateUtxo(tx){
+			if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
+				logger.WithFields(logger.Fields{
+					"hash":   b.GetHash(),
+					"height": b.GetHeight(),
+				}).Warn(err.Error())
+				return false
+			}
+			if !utxoIndex.UpdateUtxo(tx) {
 				logger.Warn("VerifyTransactions warn.")
 			}
 		}
@@ -273,6 +280,8 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 			if err != nil {
 				return false
 			}
+		} else if adaptedTx.IsChangeProducter() {
+			//TODO
 		}
 	}
 	if !totalGasFee.IsZero() {
