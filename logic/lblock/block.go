@@ -141,7 +141,7 @@ L:
 				return false
 			}
 			rewardTX = tx
-			if !utxoIndex.UpdateUtxo(tx){
+			if !utxoIndex.UpdateUtxo(tx) {
 				logger.Warn("VerifyTransactions warn")
 			}
 			continue L
@@ -175,7 +175,7 @@ L:
 				}).Warn(err.Error())
 				return false
 			}
-			if	!utxoIndex.UpdateUtxo(tx){
+			if !utxoIndex.UpdateUtxo(tx) {
 				logger.Warn("VerifyTransactions warn.")
 			}
 		}
@@ -272,6 +272,8 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 			if err != nil {
 				return false
 			}
+		} else if adaptedTx.IsChangeProducter() {
+			//TODO
 		}
 	}
 	if !totalGasFee.IsZero() {
