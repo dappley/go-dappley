@@ -1235,9 +1235,10 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
+
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -1435,8 +1436,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
-
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {
