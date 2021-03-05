@@ -126,7 +126,6 @@ func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scS
 
 	scEngine := vm.NewV8Engine()
 	defer scEngine.DestroyEngine()
-
 L:
 	for _, tx := range b.GetTransactions() {
 		totalTip = totalTip.Add(tx.Tip)
@@ -280,8 +279,6 @@ func verifyGasTxs(blockTxs []*transaction.Transaction, totalGasFee *common.Amoun
 			if err != nil {
 				return false
 			}
-		} else if adaptedTx.IsChangeProducter() {
-			//TODO
 		}
 	}
 	if !totalGasFee.IsZero() {
