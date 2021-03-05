@@ -219,10 +219,9 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	}
 	bm.blockchain.SetState(blockchain.BlockchainSync)
 	bm.Getblockchain().mutex.Unlock()
-
 	logger.Info("Push: set blockchain status to sync.")
 
-	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
+	err := bm.MergeFork(bm.getRollbackFork(fork,forkHeadBlk.GetPrevHash()))
 	if err != nil {
 		logger.Warn("Merge fork failed.err:", err)
 	}
@@ -427,4 +426,19 @@ func (bm *BlockchainManager) NumForks() (int64, int64) {
 	})
 
 	return numForks, maxHeight
+}
+
+//Remove the blocks in the fork which are already on the chain
+func (bm *BlockchainManager) getRollbackFork(fork []*block.Block, forkHeadParentkHash hash.Hash) ([]*block.Block, hash.Hash) {
+	rollbackForkParentHash := forkHeadParentkHash
+	var rollbackFork []*block.Block
+	for i := len(fork) - 1; i >= 0; i-- {
+		if blk, _ := bm.Getblockchain().GetBlockByHash(fork [i].GetHash()); blk != nil {
+			rollbackForkParentHash = fork [i].GetHash()
+		} else {
+			rollbackFork = fork[:i+1]
+			break
+		}
+	}
+	return rollbackFork, rollbackForkParentHash
 }
