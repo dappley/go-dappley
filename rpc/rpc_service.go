@@ -63,6 +63,7 @@ type RpcService struct {
 	node           *network.Node
 	dynasty        *consensus.Dynasty
 	utxoIndex      *lutxo.UTXOIndex //rpc cache
+	dbUtxoIndex    *lutxo.UTXOIndex
 	blockMaxHeight uint64
 	mutex          sync.Mutex
 }
@@ -130,49 +131,47 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	}, nil
 }
 
-func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
-	// if rpcService.blockMaxHeight < bc.GetMaxHeight() UpdatedUTXOIndex otherwise use RpcService.utxoIndex
+func (rpcService *RpcService) RpcGetUTXO(in *rpcpb.GetUTXORequest,server rpcpb.RpcService_RpcGetUTXOServer) error {
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
 	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
-		rpcService.utxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
+		rpcService.dbUtxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
 		rpcService.blockMaxHeight = bc.GetMaxHeight()
 	}
 	rpcService.mutex.Unlock()
 
-	acc := account.NewTransactionAccountByAddress(account.NewAddress(in.GetAddress()))
-
+	acc := account.NewTransactionAccountByAddress(account.NewAddress(in.Address))
 	if !acc.IsValid() {
-		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
+		return  status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}
-
-	utxos := rpcService.utxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
+	utxos := rpcService.dbUtxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
 	response := rpcpb.GetUTXOResponse{}
-	for _, utxo := range utxos.Indices {
-		response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
-	}
-
-	//TODO Race condition Blockchain update after GetUTXO
-	getHeaderCount := MinUtxoBlockHeaderCount
-	if int(getHeaderCount) < len(rpcService.dynasty.GetProducers()) {
-		getHeaderCount = uint64(len(rpcService.dynasty.GetProducers()))
-	}
-
-	tailHeight := rpcService.GetBlockchain().GetMaxHeight()
-	if getHeaderCount > tailHeight {
-		getHeaderCount = tailHeight
-	}
-
-	for i := uint64(0); i < getHeaderCount; i++ {
-		blk, err := rpcService.GetBlockchain().GetBlockByHeight(tailHeight - uint64(i))
+	if len(utxos.Indices) == 0{
+		err := server.Send(&response)
 		if err != nil {
-			break
+			logger.WithFields(logger.Fields{
+				"error": err,
+			}).Error("Server Send Failed!")
+			return err
 		}
-
-		response.BlockHeaders = append(response.BlockHeaders, blk.GetHeader().ToProto().(*blockpb.BlockHeader))
+	}else {
+		count:=1
+		for _, utxo := range utxos.Indices {
+			response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
+			if count%1000 == 0 || count==len(utxos.Indices){
+				err := server.Send(&response)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"error": err,
+					}).Error("Server Send Failed!")
+					return err
+				}
+				response = rpcpb.GetUTXOResponse{}
+			}
+			count++
+		}
 	}
-
-	return &response, nil
+	return nil
 }
 
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
