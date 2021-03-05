@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
@@ -29,6 +30,12 @@ var (
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
+	println("============================================================")
+	adaptedTx := transaction.NewTxAdapter(tx)
+	if adaptedTx.IsChangeProducter() {
+		//TODO
+		println(adaptedTx.Vout[0].Contract)
+	}
 	err := tx.CheckVinNum()
 	if err != nil {
 		return err
@@ -56,16 +63,15 @@ func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scSta
 	}
 
 	isContractDeployed := tx.IsContractDeployed(utxoIndex)
-	if !utxoIndex.UpdateUtxo(tx.Transaction){
+	if !utxoIndex.UpdateUtxo(tx.Transaction) {
 		logger.Warn("VerifyContractTransaction warn")
 	}
-
 
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return 0, nil, err
 	}
 	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
-	if err!=nil{
+	if err != nil {
 		logger.Warn(err)
 		//invoke smart contracts before they are completed deploy, will cause an ErrLoadError.
 		//for example: deploy and invoke contracts in the same block
@@ -100,8 +106,8 @@ func DescribeTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction
 				ta = account.NewTransactionAccountByPubKey(vin.PubKey)
 
 			}
-			usedUTXO ,err:= utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
-			if err!=nil{
+			usedUTXO, err := utxoIndex.GetUpdatedUtxo(ta.GetPubKeyHash(), vin.Txid, vin.Vout)
+			if err != nil {
 				return nil, nil, nil, nil, err
 			}
 			if usedUTXO != nil {

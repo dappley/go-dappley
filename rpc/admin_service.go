@@ -56,17 +56,32 @@ func (adminRpcService *AdminRpcService) RpcAddPeer(ctx context.Context, in *rpcp
 	return &rpcpb.AddPeerResponse{}, nil
 }
 
-func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
-	address := in.GetAddress()
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
-	if len(address) == 0 || !addressAccount.IsValid() {
-		return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
-	}
-	err := adminRpcService.dynasty.AddProducer(address)
+func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, in *rpcpb.ChangeProducerRequest) (*rpcpb.ChangeProducerResponse, error) {
+
+	addresses := in.GetAddresses()
+	height := in.GetHeight()
+	adminRpcService.mutex.Lock()
+	_, _, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case transaction.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
 	}
-	return &rpcpb.AddProducerResponse{}, nil
+	// addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
+	// if len(address) == 0 || !addressAccount.IsValid() {
+	// 	return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
+	// }
+	// err := adminRpcService.dynasty.AddProducer(address)
+	// if err != nil {
+	// 	return nil, status.Error(codes.FailedPrecondition, err.Error())
+	// }
+	return &rpcpb.ChangeProducerResponse{}, nil
 }
 
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {

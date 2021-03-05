@@ -24,6 +24,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
@@ -34,8 +37,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-	"strings"
-	"time"
 )
 
 const (
@@ -477,6 +478,9 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam)
 	txType := transaction.TxTypeNormal
 	if sendTxParam.Contract != "" {
 		txType = transaction.TxTypeContract
+	}
+	if sendTxParam.From.String() == sendTxParam.To.String() {
+		txType = transaction.TxTypeProducerChange
 	}
 	tx := transaction.Transaction{
 		nil,

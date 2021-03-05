@@ -181,12 +181,20 @@ var cmdFlagsMap = map[string][]flagPars{
 		valueTypeString,
 		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 	}},
-	cliaddProducer: {flagPars{
-		flagProducerAddr,
-		"",
-		valueTypeString,
-		"Producer's address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
-	}},
+	cliaddProducer: {
+		flagPars{
+			flagProducerAddr,
+			"",
+			valueTypeString,
+			"Producer's address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
+		},
+		flagPars{
+			flagBlockHeight,
+			uint64(0),
+			valueTypeUint64,
+			"height. Eg. 1",
+		},
+	},
 	clisendFromMiner: {
 		flagPars{
 			flagAddressBalance,
@@ -1179,6 +1187,7 @@ func getPeerInfoCommandHandler(ctx context.Context, account interface{}, flags c
 
 func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	producerAddress := *(flags[flagProducerAddr].(*string))
+	height := *(flags[flagBlockHeight].(*uint64))
 	if len(producerAddress) == 0 {
 		printUsage()
 		fmt.Println("\n Example: cli addProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
@@ -1192,8 +1201,9 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 		return
 	}
 
-	_, err := c.(rpcpb.AdminServiceClient).RpcAddProducer(ctx, &rpcpb.AddProducerRequest{
-		Address: producerAddress,
+	_, err := c.(rpcpb.AdminServiceClient).RpcChangeProducer(ctx, &rpcpb.ChangeProducerRequest{
+		Addresses: producerAddress,
+		Height:    height,
 	})
 
 	if err != nil {
