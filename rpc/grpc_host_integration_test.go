@@ -681,7 +681,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	utxoIndex.UpdateUtxo(&gctx2)
 	utxoIndex.Save()
 	rpcContext.bm.Getblockchain()
-	senderResponse2, err := logic.GetUtxoStream(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse2, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse2)
 
