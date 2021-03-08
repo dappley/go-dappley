@@ -260,7 +260,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 func GetUtxoStream(streamClient rpcpb.RpcServiceClient,getUTXORequest *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse,error) {
 	stream, err := streamClient.RpcGetUTXO(context.Background())
 	if err != nil {
-		logger.Error("get conversations stream err: %v", err)
+		logger.Error("get conversations stream err:", err)
 	}
 	response := rpcpb.GetUTXOResponse{}
 	for {
