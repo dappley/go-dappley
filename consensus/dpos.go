@@ -20,11 +20,12 @@ package consensus
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/common/deadline"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/dappley/go-dappley/common/deadline"
+
+	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
 
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
@@ -42,12 +43,14 @@ const (
 )
 
 type DPOS struct {
-	producer        *blockproducerinfo.BlockProducerInfo
-	producerKey     string
-	stopCh          chan bool
-	dynasty         *Dynasty
-	slot            *lru.Cache
-	lastProduceTime int64
+	producer            *blockproducerinfo.BlockProducerInfo
+	producerKey         string
+	stopCh              chan bool
+	dynasty             *Dynasty
+	slot                *lru.Cache
+	lastProduceTime     int64
+	changeDynastyHeight uint64
+	nextDynsaty         *Dynasty
 }
 
 //NewDPOS returns a new DPOS instance
@@ -260,4 +263,16 @@ func (dpos *DPOS) IsBypassingLibCheck() bool {
 //GetTotalProducersNum returns the total number of producers
 func (dpos *DPOS) GetTotalProducersNum() int {
 	return dpos.dynasty.maxProducers
+}
+
+func (dpos *DPOS) SetChangeDynasty(height uint64, dynasty *Dynasty) {
+	dpos.changeDynastyHeight = height
+	dpos.nextDynsaty = dynasty
+}
+
+func (dpos *DPOS) ChangeDynasty(height uint64) {
+	if height == dpos.changeDynastyHeight {
+		dpos.dynasty = dpos.nextDynsaty
+		logger.Info("DPOS: Dynasty changed")
+	}
 }

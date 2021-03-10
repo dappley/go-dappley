@@ -149,7 +149,7 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	totalTips := bp.calculateTips(validTxs)
 	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
-	if !utxoIndex.UpdateUtxo(&cbtx){
+	if !utxoIndex.UpdateUtxo(&cbtx) {
 		logger.Warn("prepareBlock warn")
 	}
 
@@ -176,8 +176,8 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
-		txNode ,err:= bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
-		if err!=nil{
+		txNode, err := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		if err != nil {
 			break
 		}
 		if txNode == nil {
@@ -207,7 +207,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			}
 			if generatedTxs != nil {
 				validTxs = append(validTxs, generatedTxs...)
-				if !utxoIndex.UpdateUtxos(generatedTxs){
+				if !utxoIndex.UpdateUtxos(generatedTxs) {
 					logger.Warn("collectTransactions warn: generatedTxs != nil")
 				}
 			}
@@ -266,4 +266,5 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 
 	bp.bm.BroadcastBlock(ctx.Block)
 	logger.Info("BlockProducer: Broadcast block")
+	bp.bm.CheckDynast(ctx.Block.GetHeight())
 }

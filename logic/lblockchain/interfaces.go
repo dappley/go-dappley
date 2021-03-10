@@ -2,6 +2,7 @@ package lblockchain
 
 import (
 	"github.com/dappley/go-dappley/common/pubsub"
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/golang/protobuf/proto"
@@ -14,6 +15,9 @@ type Storage interface {
 
 type Consensus interface {
 	Validate(*block.Block) bool
+	SetDynasty(dynasty *consensus.Dynasty)
+	ChangeDynasty(height uint64)
+	SetChangeDynasty(height uint64, dynasty *consensus.Dynasty)
 }
 
 type LIBPolicy interface {

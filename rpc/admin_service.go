@@ -73,6 +73,8 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 			return nil, status.Error(codes.Unknown, err.Error())
 		}
 	}
+
+	logic.ChangeProducers(addresses, height, adminRpcService.bm)
 	// addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
 	// if len(address) == 0 || !addressAccount.IsValid() {
 	// 	return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())

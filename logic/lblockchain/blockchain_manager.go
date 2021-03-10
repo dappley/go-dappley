@@ -21,6 +21,7 @@ import (
 	"bytes"
 
 	"github.com/dappley/go-dappley/common/log"
+	"github.com/dappley/go-dappley/consensus"
 
 	"github.com/pkg/errors"
 
@@ -79,6 +80,13 @@ func NewBlockchainManager(blockchain *Blockchain, blockpool *blockchain.BlockPoo
 }
 func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
 	return bm.downloadRequestCh
+}
+func (bm *BlockchainManager) SetNewDynasty(dynasty *consensus.Dynasty, height uint64) {
+	bm.consensus.SetChangeDynasty(height, dynasty)
+}
+
+func (bm *BlockchainManager) CheckDynast(height uint64) {
+	bm.consensus.ChangeDynasty(height)
 }
 
 func (bm *BlockchainManager) RequestDownloadBlockchain() {
@@ -253,7 +261,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
-	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
+	ok := bm.blockchain.Rollback(utxo, forkParentHash, scState)
 	if !ok {
 		return nil
 	}

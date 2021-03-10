@@ -21,7 +21,9 @@ package logic
 import (
 	"errors"
 	"strconv"
+	"strings"
 
+	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/transaction"
@@ -191,7 +193,10 @@ func SendFromMiner(address account.Address, amount *common.Amount, bc *lblockcha
 	return sendTo(sendTxParam, bc)
 }
 
-func ChangeProducers(addresses string, height uint64, bc *lblockchain.Blockchain) {
+func ChangeProducers(addresses string, height uint64, bm *lblockchain.BlockchainManager) {
+	addressList := strings.Split(addresses, ",")
+	dynasty := consensus.NewDynastyWithConfigProducers(addressList, len(addressList))
+	bm.SetNewDynasty(dynasty, height)
 
 }
 
