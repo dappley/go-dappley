@@ -221,8 +221,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	bm.Getblockchain().mutex.Unlock()
 	logger.Info("Push: set blockchain status to sync.")
 
-	err := bm.MergeFork(bm.getRollbackFork(fork,forkHeadBlk.GetPrevHash()))
-	if err != nil {
+	if err := bm.MergeFork(bm.getRollbackFork(fork, forkHeadBlk.GetPrevHash())); err != nil {
 		logger.Warn("Merge fork failed.err:", err)
 	}
 	bm.blockPool.RemoveFork(fork)
@@ -246,23 +245,24 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		return nil
 	}
 
-	//utxo has been reverted to forkParentHash in this step
-	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
-	if err != nil {
-		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
-		return err
-	}
-	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
-	if !ok {
-		return nil
-	}
-
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"error": err,
 			"hash":  forkParentHash.String(),
 		}).Error("BlockchainManager: get fork parent block failed.")
+		return nil
+	}
+
+	//utxo has been reverted to forkParentHash in this step
+	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
+	if err != nil {
+		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
+		return nil
+	}
+	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
+	if !ok {
+		return nil
 	}
 
 	for i := len(forkBlks) - 1; i >= 0; i-- {
@@ -286,6 +286,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 				"error":  err,
 				"height": forkBlks[i].GetHeight(),
 			}).Error("BlockchainManager: add fork to tail failed.")
+			return nil
 		}
 		parentBlk = forkBlks[i]
 	}
