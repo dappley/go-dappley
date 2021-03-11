@@ -19,24 +19,21 @@ package lblockchain
 
 import (
 	"bytes"
-	"github.com/dappley/go-dappley/common/log"
-
-	"github.com/pkg/errors"
-
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
+	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/common/pubsub"
 	"github.com/dappley/go-dappley/core/block"
 	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/logic/lblock"
-	"github.com/dappley/go-dappley/logic/lutxo"
-
-	"github.com/dappley/go-dappley/common"
 	lblockchainpb "github.com/dappley/go-dappley/logic/lblockchain/pb"
+	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/network/networkmodel"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -225,9 +222,8 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	if err != nil {
 		logger.Warn("Back up original Fork failed: ", err)
 	}
-	
 	if err := bm.MergeFork(rollBackforkBlks, rollBackforkParentHash); err != nil {
-		logger.Warn("Merge fork failed.err:", err, "Start to add back original fork...")
+		logger.Warn("Merge fork failed.err:", err, " .Start to add back original fork...")
 		if err = bm.MergeFork(originalFork, forkHeadBlk.GetPrevHash()); err != nil {
 			logger.Warn("Merge original fork failed.err:", err)
 		}
@@ -245,7 +241,6 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 }
 
 func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash hash.Hash) error {
-
 	//find parent block
 	if len(forkBlks) == 0 {
 		return nil
@@ -267,10 +262,10 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	//utxo has been reverted to forkParentHash in this step
 	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
 	if err != nil {
-		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network:",err)
+		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network:", err)
 		return nil
 	}
-	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
+	ok := bm.blockchain.Rollback(utxo, forkParentHash, scState)
 	if !ok {
 		return nil
 	}
@@ -456,16 +451,16 @@ func (bm *BlockchainManager) getRollbackFork(fork []*block.Block, forkHeadParent
 }
 
 func (bm *BlockchainManager) backUpOriginalFork(rollBackfork []*block.Block) ([]*block.Block, error) {
-	forkHeadParentHeight:=rollBackfork[len(rollBackfork)-1].GetHeight()-1
+	forkHeadParentHeight := rollBackfork[len(rollBackfork)-1].GetHeight() - 1
 
 	var originalFork []*block.Block
 	blockHeight := bm.blockchain.GetMaxHeight()
-	logger.Info("max block height:",blockHeight,"forkHeadParent height:",forkHeadParentHeight)
+	logger.Info("max block height:", blockHeight, "forkHeadParent height:", forkHeadParentHeight)
 
-	for blockHeight>forkHeadParentHeight{
+	for blockHeight > forkHeadParentHeight {
 		blk, err := bm.blockchain.GetBlockByHeight(blockHeight)
 		if err != nil {
-			logger.Warn("GetBlockByHeight err:blockHeight:",blockHeight)
+			logger.Warn("GetBlockByHeight err:blockHeight:", blockHeight)
 			return nil, err
 		}
 		originalFork = append(originalFork, blk)
@@ -474,8 +469,8 @@ func (bm *BlockchainManager) backUpOriginalFork(rollBackfork []*block.Block) ([]
 	return originalFork, nil
 }
 
-func (bm *BlockchainManager) DeleteForkFromDB(deleteFork[]*block.Block){
-	for i:=0;i<len(deleteFork);i++{
+func (bm *BlockchainManager) DeleteForkFromDB(deleteFork []*block.Block) {
+	for i := 0; i < len(deleteFork); i++ {
 		bm.Getblockchain().DeleteBlockByHash(deleteFork[i].GetHash())
 	}
 }
