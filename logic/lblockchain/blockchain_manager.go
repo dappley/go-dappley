@@ -227,7 +227,7 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 		if err = bm.MergeFork(originalFork, forkHeadBlk.GetPrevHash()); err != nil {
 			logger.Warn("Merge original fork failed.err:", err)
 		}
-		bm.DeleteForkFromDB(rollBackforkBlks)
+		originalFork = rollBackforkBlks
 	}
 	bm.DeleteForkFromDB(originalFork)
 	bm.blockPool.RemoveFork(fork)
