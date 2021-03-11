@@ -221,8 +221,17 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	bm.Getblockchain().mutex.Unlock()
 	logger.Info("Push: set blockchain status to sync.")
 
-	if err := bm.MergeFork(bm.getRollbackFork(fork, forkHeadBlk.GetPrevHash())); err != nil {
-		logger.Warn("Merge fork failed.err:", err)
+	rollBackforkBlks, rollBackforkParentHash := bm.getRollbackFork(fork, forkHeadBlk.GetPrevHash())
+	originalFork, err := bm.backUpOriginalFork(rollBackforkBlks)
+	if err != nil {
+		logger.Warn("Back up original Fork failed: ", err)
+	}
+	
+	if err := bm.MergeFork(rollBackforkBlks, rollBackforkParentHash); err != nil {
+		logger.Warn("Merge fork failed.err:", err, "Start to add back original fork...")
+		if err = bm.MergeFork(originalFork, forkHeadBlk.GetPrevHash()); err != nil {
+			logger.Warn("Merge original fork failed.err:", err)
+		}
 	}
 	bm.blockPool.RemoveFork(fork)
 
@@ -442,4 +451,23 @@ func (bm *BlockchainManager) getRollbackFork(fork []*block.Block, forkHeadParent
 		}
 	}
 	return rollbackFork, rollbackForkParentHash
+}
+
+func (bm *BlockchainManager) backUpOriginalFork(rollBackfork []*block.Block) ([]*block.Block, error) {
+	forkHeadParentHeight:=rollBackfork[len(rollBackfork)-1].GetHeight()-1
+
+	var originalFork []*block.Block
+	blockHeight := bm.blockchain.GetMaxHeight()
+	logger.Info("max block height:",blockHeight,"forkHeadParent height:",forkHeadParentHeight)
+
+	for blockHeight>forkHeadParentHeight{
+		blk, err := bm.blockchain.GetBlockByHeight(blockHeight)
+		if err != nil {
+			logger.Warn("GetBlockByHeight err:blockHeight:",blockHeight)
+			return nil, err
+		}
+		originalFork = append(originalFork, blk)
+		blockHeight--
+	}
+	return originalFork, nil
 }
