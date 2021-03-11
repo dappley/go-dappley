@@ -565,3 +565,9 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 
 	bc.SetLIBHash(LIBBlk.GetHash())
 }
+
+func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
+	if err := bc.db.Del(hash); err != nil {
+		logger.Warn("Delete the block failed.")
+	}
+}

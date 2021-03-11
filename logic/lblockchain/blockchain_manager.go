@@ -19,7 +19,6 @@ package lblockchain
 
 import (
 	"bytes"
-
 	"github.com/dappley/go-dappley/common/log"
 
 	"github.com/pkg/errors"
@@ -232,7 +231,9 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 		if err = bm.MergeFork(originalFork, forkHeadBlk.GetPrevHash()); err != nil {
 			logger.Warn("Merge original fork failed.err:", err)
 		}
+		bm.DeleteForkFromDB(rollBackforkBlks)
 	}
+	bm.DeleteForkFromDB(originalFork)
 	bm.blockPool.RemoveFork(fork)
 
 	bm.Getblockchain().mutex.Lock()
@@ -266,7 +267,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	//utxo has been reverted to forkParentHash in this step
 	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
 	if err != nil {
-		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
+		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network:",err)
 		return nil
 	}
 	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
@@ -440,6 +441,7 @@ func (bm *BlockchainManager) NumForks() (int64, int64) {
 
 //Remove the blocks in the fork which are already on the chain
 func (bm *BlockchainManager) getRollbackFork(fork []*block.Block, forkHeadParentkHash hash.Hash) ([]*block.Block, hash.Hash) {
+
 	rollbackForkParentHash := forkHeadParentkHash
 	var rollbackFork []*block.Block
 	for i := len(fork) - 1; i >= 0; i-- {
@@ -470,4 +472,10 @@ func (bm *BlockchainManager) backUpOriginalFork(rollBackfork []*block.Block) ([]
 		blockHeight--
 	}
 	return originalFork, nil
+}
+
+func (bm *BlockchainManager) DeleteForkFromDB(deleteFork[]*block.Block){
+	for i:=0;i<len(deleteFork);i++{
+		bm.Getblockchain().DeleteBlockByHash(deleteFork[i].GetHash())
+	}
 }
