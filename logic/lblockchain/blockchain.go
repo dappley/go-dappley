@@ -388,6 +388,7 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	defer bc.mutex.Unlock()
 
 	if !bc.IsInBlockchain(targetHash) {
+		logger.Warn("fork Parent block is not in Blockchain.")
 		return false
 	}
 	parentblockHash := bc.GetTailBlockHash()
@@ -398,19 +399,19 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 
 	targetBlock, err := bc.GetBlockByHash(targetHash)
 	if targetBlock.GetHeight() < bc.GetLIBHeight() {
-		println("LIB can't be rollback")
+		logger.Info("LIB can't be rollback")
 		return false
 	}
 
 	//keep rolling back blocks until the block with the input hash
 	for bytes.Compare(parentblockHash, targetHash) != 0 {
-
 		block, err := bc.GetBlockByHash(parentblockHash)
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   parentblockHash.String(),
 		}).Info("Blockchain: is about to rollback the block...")
 		if err != nil {
+			logger.Warn(err)
 			return false
 		}
 		parentblockHash = block.GetPrevHash()
@@ -424,13 +425,13 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	}
 
 	//updated utxo in db
-	err = index.Save()
-	if err != nil {
+	if err = index.Save(); err != nil {
+		logger.Warn(err)
 		return false
 	}
 
-	bc.db.EnableBatch()
-	defer bc.db.DisableBatch()
+	//bc.db.EnableBatch()
+	//defer bc.db.DisableBatch()
 
 	err = bc.setTailBlockHash(parentblockHash)
 	if err != nil {
@@ -438,8 +439,11 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		return false
 	}
 
-	scState.SaveToDatabase(bc.db)
-	bc.db.Flush()
+	if err = scState.SaveToDatabase(bc.db); err != nil {
+		logger.Warn(err)
+		return false
+	}
+	//bc.db.Flush()
 
 	return true
 }
@@ -560,4 +564,10 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	}
 
 	bc.SetLIBHash(LIBBlk.GetHash())
+}
+
+func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
+	if err := bc.db.Del(hash); err != nil {
+		logger.Warn("Delete the block failed.")
+	}
 }
