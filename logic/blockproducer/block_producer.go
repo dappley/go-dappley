@@ -262,6 +262,12 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 		if tx.CreateTime > 0 {
 			TxAddToBlockCost.Update((time.Now().UnixNano()/1e6 - tx.CreateTime) / 1e3)
 		}
+
+		if tx.IsChangeProducter() {
+			info := tx.Vout[0].Contract
+
+			bp.bm.SetNewDynastyByString(info)
+		}
 	}
 
 	bp.bm.BroadcastBlock(ctx.Block)

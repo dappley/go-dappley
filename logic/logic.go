@@ -202,7 +202,7 @@ func ChangeProducers(addresses string, height uint64, bm *lblockchain.Blockchain
 
 func SendProducerChangeTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, string, error) {
 	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
-	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "height:"+strconv.FormatUint(height, 10)+",addressed:"+addresses)
+	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\"}")
 	return sendTo(sendTxParam, bc)
 }
 

@@ -19,6 +19,8 @@ package lblockchain
 
 import (
 	"bytes"
+	"encoding/json"
+	"strings"
 
 	"github.com/dappley/go-dappley/common/log"
 	"github.com/dappley/go-dappley/consensus"
@@ -47,6 +49,11 @@ const (
 	SendBlock           = "SendBlockByHash"
 	RequestBlock        = "requestBlock"
 )
+
+type Dynasty struct {
+	Height   uint64 `json:"height"`
+	Producer string `json:"addresses"`
+}
 
 var (
 	bmSubscribedTopics = []string{
@@ -83,6 +90,19 @@ func (bm *BlockchainManager) GetDownloadRequestCh() chan chan bool {
 }
 func (bm *BlockchainManager) SetNewDynasty(dynasty *consensus.Dynasty, height uint64) {
 	bm.consensus.SetChangeDynasty(height, dynasty)
+}
+
+func (bm *BlockchainManager) SetNewDynastyByString(info string) {
+	var dynasty Dynasty
+	err := json.Unmarshal([]byte(info), &dynasty)
+	if err != nil {
+
+		logger.Warn(err.Error())
+
+	}
+	addressList := strings.Split(dynasty.Producer, ",")
+	producer := consensus.NewDynastyWithConfigProducers(addressList, len(addressList))
+	bm.consensus.SetChangeDynasty(dynasty.Height, producer)
 }
 
 func (bm *BlockchainManager) CheckDynast(height uint64) {
@@ -287,9 +307,16 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, parentBlk) {
 			return ErrTransactionVerifyFailed
 		}
+		println("=====================================================")
 
 		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
+		for _, tx := range ctx.Block.GetTransactions() {
+			if tx.IsChangeProducter() {
+				bm.SetNewDynastyByString(tx.Vout[0].Contract)
+			}
+		}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
+		bm.CheckDynast(ctx.Block.GetHeight())
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":  err,
