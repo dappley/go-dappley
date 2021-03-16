@@ -335,33 +335,6 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	return gasCount, engine.GetGeneratedTXs(), err
 }
 
-// Execute contract and return the generated transactions
-func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
-	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
-	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
-		err := errors.New("CollectContractOutput: gas price must be a positive number")
-		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
-		return nil, err
-	}
-	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-	if err != nil {
-		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
-	}
-	// record gas used
-	if gasCount > 0 {
-		minerTA := account.NewTransactionAccountByAddress(minerAddr)
-		grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
-		if err == nil {
-			generatedTxs = append(generatedTxs, &grtx)
-		}
-	}
-	gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
-	if err == nil {
-		generatedTxs = append(generatedTxs, &gctx)
-	}
-	return generatedTxs, nil
-}
-
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards
 func NewRewardTx(blockHeight uint64, rewards map[string]string) transaction.Transaction {
 
