@@ -20,6 +20,7 @@ package rpc
 import (
 	"context"
 	"github.com/dappley/go-dappley/consensus"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"io"
 	"strconv"
@@ -30,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -135,7 +135,7 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServer) error {
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
-	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
+	if rpcService.dbUtxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
 		rpcService.dbUtxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
 		rpcService.blockMaxHeight = bc.GetMaxHeight()
 	}
@@ -170,10 +170,8 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 		if err != nil {
 			break
 		}
-
 		response.BlockHeaders = append(response.BlockHeaders, blk.GetHeader().ToProto().(*blockpb.BlockHeader))
 	}
-
 	utxos := rpcService.dbUtxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
 	if len(utxos.Indices) == 0{
 		err := server.Send(&response)
@@ -184,8 +182,9 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 			return err
 		}
 	}else {
-		count:=1
+		count:=0
 		for _, utxo := range utxos.Indices {
+			count++
 			response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
 			if count%1000 == 0 || count==len(utxos.Indices){
 				err := server.Send(&response)
@@ -195,63 +194,21 @@ func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServe
 					}).Error("Server Send Failed!")
 					return err
 				}
-				_, err = server.Recv()
-				if err == io.EOF {
-					return nil
+				if (count!=len(utxos.Indices)){
+					_, err = server.Recv()
+					if err == io.EOF {
+						return nil
+					}
+					if err != nil {
+						return err
+					}
+					response = rpcpb.GetUTXOResponse{}
 				}
-				if err != nil {
-					return err
-				}
-				response = rpcpb.GetUTXOResponse{}
 			}
-			count++
 		}
 	}
 	return nil
 }
-
-//func (rpcService *RpcService) RpcGetUTXO(in *rpcpb.GetUTXORequest,server rpcpb.RpcService_RpcGetUTXOServer) error {
-//	bc := rpcService.GetBlockchain()
-//	rpcService.mutex.Lock()
-//	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
-//		rpcService.dbUtxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
-//		rpcService.blockMaxHeight = bc.GetMaxHeight()
-//	}
-//	rpcService.mutex.Unlock()
-//
-//	acc := account.NewTransactionAccountByAddress(account.NewAddress(in.Address))
-//	if !acc.IsValid() {
-//		return  status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
-//	}
-//	utxos := rpcService.dbUtxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
-//	response := rpcpb.GetUTXOResponse{}
-//	if len(utxos.Indices) == 0{
-//		err := server.Send(&response)
-//		if err != nil {
-//			logger.WithFields(logger.Fields{
-//				"error": err,
-//			}).Error("Server Send Failed!")
-//			return err
-//		}
-//	}else {
-//		count:=1
-//		for _, utxo := range utxos.Indices {
-//			response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
-//			if count%1000 == 0 || count==len(utxos.Indices){
-//				err := server.Send(&response)
-//				if err != nil {
-//					logger.WithFields(logger.Fields{
-//						"error": err,
-//					}).Error("Server Send Failed!")
-//					return err
-//				}
-//				response = rpcpb.GetUTXOResponse{}
-//			}
-//			count++
-//		}
-//	}
-//	return nil
-//}
 
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
 	result := &rpcpb.GetBlocksResponse{}

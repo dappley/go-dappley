@@ -1251,12 +1251,9 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	utxos := response.GetUtxos()
 	var inputUtxos []*utxo.UTXO
 	for _, u := range utxos {
-		uu := utxo.UTXO{}
-		uu.Value = common.NewAmountFromBytes(u.Amount)
-		uu.Txid = u.Txid
-		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
-		uu.TxIndex = int(u.TxIndex)
-		inputUtxos = append(inputUtxos, &uu)
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
 	}
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
