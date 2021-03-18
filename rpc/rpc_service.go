@@ -244,7 +244,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
-	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
 		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
 	}
 

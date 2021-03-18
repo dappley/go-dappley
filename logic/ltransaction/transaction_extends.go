@@ -356,7 +356,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 // Execute contract and return the generated transactions
 func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
 	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
-	if tx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
 		err := errors.New("CollectContractOutput: gas price must be a positive number")
 		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 		return nil, err
