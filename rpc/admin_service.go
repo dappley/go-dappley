@@ -75,14 +75,6 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 	}
 
 	logic.ChangeProducers(addresses, height, adminRpcService.bm)
-	// addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
-	// if len(address) == 0 || !addressAccount.IsValid() {
-	// 	return nil, status.Error(codes.InvalidArgument, account.ErrInvalidAddress.Error())
-	// }
-	// err := adminRpcService.dynasty.AddProducer(address)
-	// if err != nil {
-	// 	return nil, status.Error(codes.FailedPrecondition, err.Error())
-	// }
 	return &rpcpb.ChangeProducerResponse{}, nil
 }
 

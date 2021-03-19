@@ -117,6 +117,7 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
+	conss.SetFilePath(genesisPath)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)

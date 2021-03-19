@@ -33,6 +33,12 @@ type Dynasty struct {
 	dynastyTime    int
 }
 
+type DynastyReplacement struct {
+	original string
+	new      string
+	height   uint64
+}
+
 const (
 	defaultMaxProducers   = 21
 	defaultTimeBetweenBlk = 5
@@ -45,6 +51,14 @@ func NewDynasty(producers []string, maxProducers, timeBetweenBlk int) *Dynasty {
 		maxProducers:   maxProducers,
 		timeBetweenBlk: timeBetweenBlk,
 		dynastyTime:    timeBetweenBlk * maxProducers,
+	}
+}
+
+func NewDynastyReplacement(original, new string, height uint64) *DynastyReplacement {
+	return &DynastyReplacement{
+		original: original,
+		new:      new,
+		height:   height,
 	}
 }
 

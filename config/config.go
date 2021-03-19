@@ -20,6 +20,7 @@ package config
 
 import (
 	"io/ioutil"
+	"strconv"
 
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
@@ -36,4 +37,27 @@ func LoadConfig(filename string, pb proto.Message) {
 	if err != nil {
 		logger.WithError(err).Warn("LoadConfig: cannot parse content of the config file!")
 	}
+}
+
+func UpdateProducer(filename string, producers []string, height uint64) {
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logger.WithError(err).Warn("LoadConfig: cannot read the config file!")
+		return
+	}
+	err = ioutil.WriteFile(filename+strconv.FormatUint(height, 10), bytes, 0644)
+	if err != nil {
+		logger.WithError(err).Warn("LoadConfig: cannot backup the config file!")
+		return
+	}
+
+	info := "producers: [\n"
+	for i := 0; i < len(producers)-1; i++ {
+		info = info + "\"" + producers[i] + "\",\n"
+	}
+
+	info = info + "\"" + producers[len(producers)-1] + "\"\n]\n"
+	info = info + "max_producers: " + strconv.Itoa(len(producers))
+	err = ioutil.WriteFile(filename, []byte(info), 0644)
+
 }

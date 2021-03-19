@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/common/deadline"
+	"github.com/dappley/go-dappley/config"
 
 	lru "github.com/hashicorp/golang-lru"
 	logger "github.com/sirupsen/logrus"
@@ -43,14 +44,14 @@ const (
 )
 
 type DPOS struct {
-	producer            *blockproducerinfo.BlockProducerInfo
-	producerKey         string
-	stopCh              chan bool
-	dynasty             *Dynasty
-	slot                *lru.Cache
-	lastProduceTime     int64
-	changeDynastyHeight uint64
-	nextDynsaty         *Dynasty
+	producer        *blockproducerinfo.BlockProducerInfo
+	producerKey     string
+	stopCh          chan bool
+	dynasty         *Dynasty
+	slot            *lru.Cache
+	lastProduceTime int64
+	replacement     []*DynastyReplacement
+	filePath        string
 }
 
 //NewDPOS returns a new DPOS instance
@@ -66,6 +67,11 @@ func NewDPOS(producer *blockproducerinfo.BlockProducerInfo) *DPOS {
 	}
 	dpos.slot = slot
 	return dpos
+}
+
+//SetFilePath sets the path
+func (dpos *DPOS) SetFilePath(path string) {
+	dpos.filePath = path
 }
 
 //SetKey sets the producer key
@@ -97,6 +103,16 @@ func (dpos *DPOS) GetProducers() []string {
 //GetProducerAddress returns the local producer's address
 func (dpos *DPOS) GetProducerAddress() string {
 	return dpos.producer.Beneficiary()
+}
+
+func (dpos *DPOS) AddReplacement(original, new string, height uint64) {
+	for _, p := range dpos.dynasty.producers {
+		if p == original {
+			replacement := NewDynastyReplacement(original, new, height)
+			dpos.replacement = append(dpos.replacement, replacement)
+			return
+		}
+	}
 }
 
 //Stop stops the current produce block process
@@ -265,14 +281,18 @@ func (dpos *DPOS) GetTotalProducersNum() int {
 	return dpos.dynasty.maxProducers
 }
 
-func (dpos *DPOS) SetChangeDynasty(height uint64, dynasty *Dynasty) {
-	dpos.changeDynastyHeight = height
-	dpos.nextDynsaty = dynasty
-}
-
 func (dpos *DPOS) ChangeDynasty(height uint64) {
-	if height == dpos.changeDynastyHeight {
-		dpos.dynasty = dpos.nextDynsaty
-		logger.Info("DPOS: Dynasty changed")
+	for _, r := range dpos.replacement {
+		if height == r.height {
+			logger.Info("DPOS: Dynasty changed", r.original, " -> ", r.new)
+			newProducers := dpos.dynasty.producers
+			for i := 0; i < len(newProducers); i++ {
+				if newProducers[i] == r.original {
+					newProducers[i] = r.new
+				}
+			}
+			dpos.dynasty.producers = newProducers
+		}
 	}
+	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
 }

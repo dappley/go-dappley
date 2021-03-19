@@ -264,9 +264,8 @@ func (bp *BlockProducer) addBlockToBlockchain(ctx *lblockchain.BlockContext) {
 		}
 
 		if tx.IsChangeProducter() {
-			info := tx.Vout[0].Contract
 
-			bp.bm.SetNewDynastyByString(info)
+			bp.bm.SetNewDynastyByString(tx.Vout[0].Contract, tx.Vout[0].PubKeyHash.GenerateAddress().String())
 		}
 	}
 
