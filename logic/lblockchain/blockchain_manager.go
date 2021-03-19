@@ -217,19 +217,19 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	bm.Getblockchain().mutex.Unlock()
 	logger.Info("Push: set blockchain status to sync.")
 
-	rollBackforkBlks, rollBackforkParentHash := bm.getRollbackFork(fork, forkHeadBlk.GetPrevHash())
-	originalFork, err := bm.backUpOriginalFork(rollBackforkBlks)
+	purifiedFork, purifiedForkParentHash := bm.removeRedundantBlks(fork, forkHeadBlk.GetPrevHash())
+	originalFork, err := bm.getForkIndex(purifiedFork)
 	if err != nil {
 		logger.Warn("Back up original Fork failed: ", err)
 	}
-	if err := bm.MergeFork(rollBackforkBlks, rollBackforkParentHash); err != nil {
+	if err := bm.MergeFork(purifiedFork, purifiedForkParentHash); err != nil {
 		logger.Warn("Merge fork failed.err:", err, " .Start to add back original fork...")
 		if err = bm.MergeFork(originalFork, forkHeadBlk.GetPrevHash()); err != nil {
 			logger.Warn("Merge original fork failed.err:", err)
 		}
-		originalFork = rollBackforkBlks
+		originalFork = purifiedFork
 	}
-	bm.DeleteForkFromDB(originalFork)
+	bm.deleteForkFromDB(originalFork)
 	bm.blockPool.RemoveFork(fork)
 
 	bm.Getblockchain().mutex.Lock()
@@ -434,26 +434,26 @@ func (bm *BlockchainManager) NumForks() (int64, int64) {
 	return numForks, maxHeight
 }
 
-//Remove the blocks in the fork which are already on the chain
-func (bm *BlockchainManager) getRollbackFork(fork []*block.Block, forkHeadParentkHash hash.Hash) ([]*block.Block, hash.Hash) {
+//Remove the blocks in the fork which are already on the chain and return the blocks which are not
+func (bm *BlockchainManager) removeRedundantBlks(fork []*block.Block, forkHeadParentkHash hash.Hash) ([]*block.Block, hash.Hash) {
 
-	rollbackForkParentHash := forkHeadParentkHash
-	var rollbackFork []*block.Block
+	purifiedForkParentHash := forkHeadParentkHash
+	var purifiedFork []*block.Block
 	for i := len(fork) - 1; i >= 0; i-- {
 		if blk, _ := bm.Getblockchain().GetBlockByHash(fork [i].GetHash()); blk != nil {
-			rollbackForkParentHash = fork [i].GetHash()
+			purifiedForkParentHash = fork [i].GetHash()
 		} else {
-			rollbackFork = fork[:i+1]
+			purifiedFork = fork[:i+1]
 			break
 		}
 	}
-	return rollbackFork, rollbackForkParentHash
+	return purifiedFork, purifiedForkParentHash
 }
 
-func (bm *BlockchainManager) backUpOriginalFork(rollBackfork []*block.Block) ([]*block.Block, error) {
+func (bm *BlockchainManager) getForkIndex(rollBackfork []*block.Block) ([]*block.Block, error) {
 	forkHeadParentHeight := rollBackfork[len(rollBackfork)-1].GetHeight() - 1
 
-	var originalFork []*block.Block
+	var forkIndex []*block.Block
 	blockHeight := bm.blockchain.GetMaxHeight()
 	logger.Info("max block height:", blockHeight, "forkHeadParent height:", forkHeadParentHeight)
 
@@ -463,13 +463,13 @@ func (bm *BlockchainManager) backUpOriginalFork(rollBackfork []*block.Block) ([]
 			logger.Warn("GetBlockByHeight err:blockHeight:", blockHeight)
 			return nil, err
 		}
-		originalFork = append(originalFork, blk)
+		forkIndex = append(forkIndex, blk)
 		blockHeight--
 	}
-	return originalFork, nil
+	return forkIndex, nil
 }
 
-func (bm *BlockchainManager) DeleteForkFromDB(deleteFork []*block.Block) {
+func (bm *BlockchainManager) deleteForkFromDB(deleteFork []*block.Block) {
 	for i := 0; i < len(deleteFork); i++ {
 		bm.Getblockchain().DeleteBlockByHash(deleteFork[i].GetHash())
 	}
