@@ -105,16 +105,6 @@ func (dpos *DPOS) GetProducerAddress() string {
 	return dpos.producer.Beneficiary()
 }
 
-func (dpos *DPOS) AddReplacement(original, new string, height uint64) {
-	for _, p := range dpos.dynasty.producers {
-		if p == original {
-			replacement := NewDynastyReplacement(original, new, height)
-			dpos.replacement = append(dpos.replacement, replacement)
-			return
-		}
-	}
-}
-
 //Stop stops the current produce block process
 func (dpos *DPOS) Stop() {
 	logger.Info("DPoS stops...")
@@ -295,4 +285,13 @@ func (dpos *DPOS) ChangeDynasty(height uint64) {
 		}
 	}
 	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
+}
+func (dpos *DPOS) AddReplacement(original, new string, height uint64) {
+	for _, p := range dpos.dynasty.producers {
+		if p == original {
+			replacement := NewDynastyReplacement(original, new, height)
+			dpos.replacement = append(dpos.replacement, replacement)
+			return
+		}
+	}
 }

@@ -52,13 +52,14 @@ import (
 )
 
 const (
-	genesisAddr     = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
-	configFilePath  = "conf/default.conf"
-	genesisFilePath = "conf/genesis.conf"
-	peerFilePath    = "conf/peer.conf"
-	peerConfDirPath = "../dapp/"
-	defaultPassword = "password"
-	size1kB         = 1024
+	genesisAddr      = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
+	configFilePath   = "conf/default.conf"
+	genesisFilePath  = "conf/genesis.conf"
+	producerFilePath = "conf/producer.conf"
+	peerFilePath     = "conf/peer.conf"
+	peerConfDirPath  = "../dapp/"
+	defaultPassword  = "password"
+	size1kB          = 1024
 )
 
 func main() {
@@ -117,7 +118,7 @@ func main() {
 
 	//create blockchain
 	conss, _ := initConsensus(genesisConf, conf)
-	conss.SetFilePath(genesisPath)
+	conss.SetFilePath(producerFilePath)
 	txPoolLimit := conf.GetNodeConfig().GetTxPoolLimit() * size1kB
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
