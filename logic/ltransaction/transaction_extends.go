@@ -26,8 +26,6 @@ import (
 	"fmt"
 	"time"
 
-	"time"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
