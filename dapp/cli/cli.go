@@ -906,15 +906,9 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		fmt.Println()
 		return
 	}
-
-	address := *(flags[flagAddress].(*string))
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
-	if !addressAccount.IsValid() {
-		fmt.Println("Error: address is not valid")
-		return
-	}
-
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &rpcpb.GetBalanceRequest{Address: address})
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
+		Address: account.NewAddress(*(flags[flagAddress].(*string))).String(),
+	})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -924,7 +918,18 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		}
 		return
 	}
-	fmt.Printf("The balance is: %d\n", response.GetAmount())
+	utxos := response.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
+	}
+	sum := common.NewAmount(0)
+	for _, u := range inputUtxos {
+		sum = sum.Add(u.Value)
+	}
+	fmt.Printf("The balance is: %d\n", sum)
 }
 
 func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.Account {
@@ -1208,6 +1213,23 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 	fmt.Println("Producer is added.")
 }
 
+type utxoSlice []*utxo.UTXO
+func (I utxoSlice) Len() int {
+	return len(I)
+}
+
+func (I utxoSlice) Less(i, j int) bool {
+	if I[i].Value.Cmp(I[j].Value) == -1{
+		return true
+	}else {
+		return false
+	}
+}
+
+func (I utxoSlice) Swap(i, j int) {
+	I[i], I[j] = I[j], I[i]
+}
+
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
 	fromAddress := *(flags[flagFromAddress].(*string))
@@ -1255,6 +1277,7 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		utxo.FromProto(u)
 		inputUtxos = append(inputUtxos, &utxo)
 	}
+	sort.Sort(utxoSlice(inputUtxos))
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
@@ -1317,18 +1340,31 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
-	for _, u := range inputUTXOs {
+	for i, u := range inputUTXOs {
+		if i == 50{
+			break
+		}
 		sum = sum.Add(u.Value)
 		retUtxos = append(retUtxos, u)
 		if sum.Cmp(amount) >= 0 {
 			break
 		}
 	}
-
+	if  sum.Cmp(amount) >= 0 {
+		return retUtxos, nil
+	}
+	sum = common.NewAmount(0)
+	retUtxos = []*utxo.UTXO{}
+	for i:=len(inputUTXOs)-1;i>=(len(inputUTXOs)-50)&&i>=0;i-- {
+		sum = sum.Add(inputUTXOs[i].Value)
+		retUtxos = append(retUtxos, inputUTXOs[i])
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+	}
 	if sum.Cmp(amount) < 0 {
 		return nil, ErrInsufficientFund
 	}
-
 	return retUtxos, nil
 }
 

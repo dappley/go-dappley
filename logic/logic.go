@@ -265,6 +265,9 @@ func GetUtxoStream(streamClient rpcpb.RpcServiceClient,getUTXORequest *rpcpb.Get
 	response := rpcpb.GetUTXOResponse{}
 	for {
 		err := stream.Send(getUTXORequest)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			return &response,err
 		}
