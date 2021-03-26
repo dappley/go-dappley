@@ -1214,20 +1214,20 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 }
 
 type utxoSlice []*utxo.UTXO
-func (I utxoSlice) Len() int {
-	return len(I)
+func (u utxoSlice) Len() int {
+	return len(u)
 }
 
-func (I utxoSlice) Less(i, j int) bool {
-	if I[i].Value.Cmp(I[j].Value) == -1{
+func (u utxoSlice) Less(i, j int) bool {
+	if u[i].Value.Cmp(u[j].Value) == -1{
 		return true
 	}else {
 		return false
 	}
 }
 
-func (I utxoSlice) Swap(i, j int) {
-	I[i], I[j] = I[j], I[i]
+func (u utxoSlice) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
 }
 
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
@@ -1340,25 +1340,10 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
-	for i, u := range inputUTXOs {
-		if i == 50{
-			break
-		}
-		sum = sum.Add(u.Value)
-		retUtxos = append(retUtxos, u)
-		if sum.Cmp(amount) >= 0 {
-			break
-		}
-	}
-	if  sum.Cmp(amount) >= 0 {
-		return retUtxos, nil
-	}
-	sum = common.NewAmount(0)
-	retUtxos = []*utxo.UTXO{}
 	for i:=len(inputUTXOs)-1;i>=(len(inputUTXOs)-50)&&i>=0;i-- {
 		sum = sum.Add(inputUTXOs[i].Value)
 		retUtxos = append(retUtxos, inputUTXOs[i])
-		if sum.Cmp(amount) >= 0 {
+		if sum.Cmp(amount) >= 0 && len(inputUTXOs)< 100{
 			break
 		}
 	}
