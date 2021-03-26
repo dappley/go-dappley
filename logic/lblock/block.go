@@ -175,13 +175,6 @@ L:
 			actualGasList = append(actualGasList, gasCount*tx.GasPrice.Uint64())
 		} else {
 			// tx is a normal transactions
-			if err := ltransaction.VerifyTransaction(utxoIndex, tx, b.GetHeight()); err != nil {
-				logger.WithFields(logger.Fields{
-					"hash":   b.GetHash(),
-					"height": b.GetHeight(),
-				}).Warn(err.Error())
-				return false
-			}
 			if !utxoIndex.UpdateUtxo(tx) {
 				logger.Warn("VerifyTransactions warn.")
 			}
