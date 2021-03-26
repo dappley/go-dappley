@@ -30,7 +30,6 @@ var (
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
-	println("============================================================")
 	adaptedTx := transaction.NewTxAdapter(tx)
 	if adaptedTx.IsChangeProducter() {
 		//TODO
