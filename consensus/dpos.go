@@ -289,9 +289,18 @@ func (dpos *DPOS) ChangeDynasty(height uint64) {
 func (dpos *DPOS) AddReplacement(original, new string, height uint64) {
 	for _, p := range dpos.dynasty.producers {
 		if p == original {
+			for i := 0; i < len(dpos.replacement); i++ {
+				if dpos.replacement[i].original == p {
+					dpos.replacement[i].new = new
+					dpos.replacement[i].height = height
+				}
+
+				return
+			}
 			replacement := NewDynastyReplacement(original, new, height)
 			dpos.replacement = append(dpos.replacement, replacement)
 			return
+
 		}
 	}
 }
