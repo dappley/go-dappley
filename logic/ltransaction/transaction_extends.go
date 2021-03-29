@@ -24,6 +24,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
@@ -34,8 +37,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-	"strings"
-	"time"
 )
 
 const (
@@ -353,7 +354,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 // Execute contract and return the generated transactions
 func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
 	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
-	if tx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+	if tx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
 		err := errors.New("CollectContractOutput: gas price must be a positive number")
 		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 		return nil, err
@@ -363,17 +364,19 @@ func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxo
 		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
 	}
 	// record gas used
-	if gasCount > 0 {
+	if tx.GasPrice.Times(gasCount).Cmp(common.NewAmount(0)) > 0 {
 		minerTA := account.NewTransactionAccountByAddress(minerAddr)
 		grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
 		if err == nil {
 			generatedTxs = append(generatedTxs, &grtx)
 		}
+
+		gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
+		if err == nil {
+			generatedTxs = append(generatedTxs, &gctx)
+		}
 	}
-	gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
-	if err == nil {
-		generatedTxs = append(generatedTxs, &gctx)
-	}
+
 	return generatedTxs, nil
 }
 

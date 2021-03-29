@@ -19,22 +19,23 @@ package rpc
 
 import (
 	"context"
-	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/logic/lutxo"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/dappley/go-dappley/consensus"
+	"github.com/dappley/go-dappley/logic/lutxo"
+
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
 	"github.com/dappley/go-dappley/core/block"
-	"github.com/dappley/go-dappley/core/block/pb"
+	blockpb "github.com/dappley/go-dappley/core/block/pb"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 
 	"github.com/dappley/go-dappley/core/account"
@@ -48,7 +49,7 @@ import (
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/logic"
 	"github.com/dappley/go-dappley/network"
-	"github.com/dappley/go-dappley/rpc/pb"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/vm"
 )
 
@@ -326,7 +327,7 @@ func (rpcService *RpcService) RpcSendBatchTransaction(ctx context.Context, in *r
 			continue
 		}
 
-		if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+		if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
 			st = status.New(codes.Unknown, "one or more transactions are invalid")
 			respon = append(respon, &rpcpb.SendTransactionStatus{
 				Txid:    tx.ID,
