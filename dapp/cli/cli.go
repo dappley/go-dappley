@@ -156,6 +156,7 @@ var cmdList = []string{
 
 var (
 	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
+	ErrTooManyUtxoFund = errors.New("cli: utxo is too many should to merge")
 )
 
 //configure input parameters/flags for each command
@@ -1220,9 +1221,9 @@ func (u utxoSlice) Len() int {
 
 func (u utxoSlice) Less(i, j int) bool {
 	if u[i].Value.Cmp(u[j].Value) == -1{
-		return true
-	}else {
 		return false
+	}else {
+		return true
 	}
 }
 
@@ -1340,14 +1341,21 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
-	for i:=len(inputUTXOs)-1;i>=(len(inputUTXOs)-50)&&i>=0;i-- {
-		sum = sum.Add(inputUTXOs[i].Value)
-		retUtxos = append(retUtxos, inputUTXOs[i])
-		if sum.Cmp(amount) >= 0 && len(inputUTXOs)< 100{
+	sumTotal := common.NewAmount(0)
+	for i:=0;i<len(inputUTXOs);i++ {
+		if i<50{
+			retUtxos = append(retUtxos, inputUTXOs[i])
+			sum = sum.Add(inputUTXOs[i].Value)
+		}
+		sumTotal = sumTotal.Add(inputUTXOs[i].Value)
+		if (sum.Cmp(amount)>=0 && len(inputUTXOs)<100)||(sumTotal.Cmp(amount)>=0 && i>=50){
 			break
 		}
 	}
 	if sum.Cmp(amount) < 0 {
+		if sumTotal.Cmp(amount) > 0{
+			return nil,ErrTooManyUtxoFund
+		}
 		return nil, ErrInsufficientFund
 	}
 	return retUtxos, nil
