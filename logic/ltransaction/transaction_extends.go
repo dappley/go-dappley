@@ -371,12 +371,11 @@ func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxo
 			generatedTxs = append(generatedTxs, &grtx)
 		}
 
-		gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
-		if err == nil {
-			generatedTxs = append(generatedTxs, &gctx)
-		}
 	}
-
+	gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
+	if err == nil {
+		generatedTxs = append(generatedTxs, &gctx)
+	}
 	return generatedTxs, nil
 }
 
@@ -443,6 +442,9 @@ func NewGasChangeTx(to *account.TransactionAccount, blockHeight uint64, actualGa
 		return transaction.Transaction{}, err
 	}
 	changeValue := change.Mul(gasPrice)
+	if changeValue.Cmp(common.NewAmount(0)) <= 0 {
+		return transaction.Transaction{}, transaction.ErrNoGasChange
+	}
 
 	txin := transactionbase.TXInput{nil, -1, getUniqueByte(blockHeight, uniqueNum), transaction.GasChangeData}
 	txout := transactionbase.NewTXOutput(changeValue, to)
