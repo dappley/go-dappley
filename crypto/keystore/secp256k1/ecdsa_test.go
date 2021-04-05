@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"strconv"
 	"testing"
 
 	"github.com/dappley/go-dappley/crypto/hash"
@@ -79,7 +80,7 @@ func TestSign(t *testing.T) {
 		io.ReadFull(rand.Reader, mainBuff)
 		priv, err := NewECDSAPrivateKey()
 		assert.Nil(t, err)
-		test := test{string(index), priv, args{hash.Sha3256(mainBuff)}, 1}
+		test := test{strconv.Itoa(index), priv, args{hash.Sha3256(mainBuff)}, 1}
 		tests = append(tests, test)
 	}
 	for _, tt := range tests {
