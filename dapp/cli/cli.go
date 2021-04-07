@@ -72,7 +72,7 @@ const (
 	clicreateAccount     = "createAccount"
 	cliListAddresses     = "listAddresses"
 	clisendFromMiner     = "sendFromMiner"
-	cliaddProducer       = "addProducer"
+	clichangeProducer    = "changeProducer"
 	cliEstimateGas       = "estimateGas"
 	cliGasPrice          = "gasPrice"
 	cliContractQuery     = "contractQuery"
@@ -143,7 +143,7 @@ var cmdList = []string{
 	clicreateAccount,
 	cliListAddresses,
 	clisendFromMiner,
-	cliaddProducer,
+	clichangeProducer,
 	cliEstimateGas,
 	cliGasPrice,
 	cliContractQuery,
@@ -181,7 +181,7 @@ var cmdFlagsMap = map[string][]flagPars{
 		valueTypeString,
 		"Address. Eg. 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7",
 	}},
-	cliaddProducer: {
+	clichangeProducer: {
 		flagPars{
 			flagProducerAddr,
 			"",
@@ -364,7 +364,7 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	clicreateAccount:     {adminRpcService, createAccountCommandHandler},
 	cliListAddresses:     {adminRpcService, listAddressesCommandHandler},
 	clisendFromMiner:     {adminRpcService, sendFromMinerCommandHandler},
-	cliaddProducer:       {adminRpcService, cliAddProducerCommandHandler},
+	clichangeProducer:    {adminRpcService, clichangeProducerCommandHandler},
 	cliEstimateGas:       {rpcService, estimateGasCommandHandler},
 	cliGasPrice:          {rpcService, gasPriceCommandHandler},
 	cliHelp:              {adminRpcService, helpCommandHandler},
@@ -1185,12 +1185,12 @@ func getPeerInfoCommandHandler(ctx context.Context, account interface{}, flags c
 	fmt.Println("00000000")
 }
 
-func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+func clichangeProducerCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	producerAddress := *(flags[flagProducerAddr].(*string))
 	height := *(flags[flagBlockHeight].(*uint64))
 	if len(producerAddress) == 0 {
 		printUsage()
-		fmt.Println("\n Example: cli addProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7")
+		fmt.Println("\n Example: cli changeProducer -address 1MeSBgufmzwpiJNLemUe1emxAussBnz7a7 -height 100")
 		fmt.Println()
 		return
 	}
