@@ -276,15 +276,22 @@ func (dpos *DPOS) ChangeDynasty(height uint64) {
 		if height == r.height {
 			logger.Info("DPOS: Dynasty changed", r.original, " -> ", r.new)
 			newProducers := dpos.dynasty.producers
+		l:
 			for i := 0; i < len(newProducers); i++ {
 				if newProducers[i] == r.original {
+					for _, o := range newProducers {
+						if o == r.new {
+							continue l
+						}
+					}
 					newProducers[i] = r.new
 				}
 			}
 			dpos.dynasty.producers = newProducers
+			config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
 		}
 	}
-	config.UpdateProducer(dpos.filePath, dpos.dynasty.producers, height)
+
 }
 func (dpos *DPOS) AddReplacement(original, new string, height uint64) {
 	for _, p := range dpos.dynasty.producers {
