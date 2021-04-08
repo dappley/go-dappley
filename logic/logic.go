@@ -69,12 +69,6 @@ func getAccountFilePath(argv []string) string {
 	return wallet.GetAccountFilePath()
 }
 
-//Get lock flag
-func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
-	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
-	return am.Locked, err
-}
-
 //Tell if the file empty or not exist
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
@@ -102,7 +96,6 @@ func SetLockAccount(optionalAccountFilePath ...string) error {
 		return nil
 	}
 
-	am.Locked = true
 	am.SaveAccountToFile()
 	return nil
 }
@@ -133,7 +126,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	logger.Info("Account password is set!")
 	account := account.NewAccount()
 	am.AddAccount(account)
-	am.Locked = true
 	am.SaveAccountToFile()
 	return account, err
 }
@@ -146,9 +138,6 @@ func CreateAccount() (*account.Account, error) {
 	}
 
 	account := account.NewAccount()
-	if len(am.Accounts) == 0 {
-		am.Locked = true
-	}
 	am.AddAccount(account)
 	am.SaveAccountToFile()
 	return account, err

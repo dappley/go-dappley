@@ -941,6 +941,10 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
 
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return nil
+	}
 	if empty {
 		passphrase = prompter.GetPassPhrase("Please input the password for the new account: ", true)
 		if passphrase == "" {
@@ -955,33 +959,18 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 		acc = account
 	}
 
-	locked, err := logic.IsAccountLocked()
+	passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+	if passphrase == "" {
+		fmt.Println("Error: password should not be empty!")
+		return nil
+	}
+	account, err := logic.CreateAccountWithPassphrase(passphrase)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return nil
 	}
 
-	if locked {
-		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-		if passphrase == "" {
-			fmt.Println("Error: password should not be empty!")
-			return nil
-		}
-		account, err := logic.CreateAccountWithPassphrase(passphrase)
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return nil
-		}
-
-		acc = account
-	} else {
-		account, err := logic.CreateAccount()
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return nil
-		}
-		acc = account
-	}
+	acc = account
 
 	return acc
 }
@@ -1022,115 +1011,60 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 		return
 	}
 
-	locked, err := logic.IsAccountLocked()
+	passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+	if passphrase == "" {
+		fmt.Println("Password should not be empty!")
+		return
+	}
+	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
+	addressList, err := am.GetAddressesWithPassphrase(passphrase)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	if locked {
-		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-		if passphrase == "" {
-			fmt.Println("Password should not be empty!")
-			return
-		}
-		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
-		addressList, err := am.GetAddressesWithPassphrase(passphrase)
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return
-		}
 
-		if !listPriv {
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list:")
-				for _, addr := range addressList {
-					fmt.Printf("Address[%d]: %s\n", i, addr)
-					i++
-				}
-				fmt.Println()
-				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
-			}
+	if !listPriv {
+		if len(addressList) == 0 {
+			fmt.Println("The addresses in the account is empty!")
 		} else {
-			privateKeyList := []string{}
+			i := 1
+			fmt.Println("The address list:")
 			for _, addr := range addressList {
-				keyPair := am.GetKeyPairByAddress(account.NewAddress(addr))
-				pvk := keyPair.GetPrivateKey()
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
-				if err1 != nil {
-					err = err1
-					return
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
-				err = err1
+				fmt.Printf("Address[%d]: %s\n", i, addr)
+				i++
 			}
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list with private keys:")
-				for _, addr := range addressList {
-					fmt.Println("--------------------------------------------------------------------------------")
-					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr, i, privateKeyList[i-1])
-					fmt.Println()
-					i++
-				}
-				fmt.Println("--------------------------------------------------------------------------------")
-			}
-
+			fmt.Println()
+			fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
 		}
 	} else {
-		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return
-		}
-		addressList := am.GetAddresses()
-		if !listPriv {
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list:")
-				for _, addr := range addressList {
-					fmt.Printf("Address[%d]: %s\n", i, addr.String())
-					i++
-				}
-				fmt.Println()
-				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
-			}
-		} else {
-			privateKeyList := []string{}
-			for _, addr := range addressList {
-				keyPair := am.GetKeyPairByAddress(addr)
-				pvk := keyPair.GetPrivateKey()
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
-				if err1 != nil {
-					err = err1
-					return
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+		privateKeyList := []string{}
+		for _, addr := range addressList {
+			keyPair := am.GetKeyPairByAddress(account.NewAddress(addr))
+			pvk := keyPair.GetPrivateKey()
+			privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
+			if err1 != nil {
 				err = err1
+				return
 			}
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list with private keys:")
-				for _, addr := range addressList {
-					fmt.Println("--------------------------------------------------------------------------------")
-					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr.String(), i, privateKeyList[i-1])
-					fmt.Println()
-					i++
-				}
+			privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+			err = err1
+		}
+		if len(addressList) == 0 {
+			fmt.Println("The addresses in the account is empty!")
+		} else {
+			i := 1
+			fmt.Println("The address list with private keys:")
+			for _, addr := range addressList {
 				fmt.Println("--------------------------------------------------------------------------------")
+				fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr, i, privateKeyList[i-1])
+				fmt.Println()
+				i++
 			}
-
+			fmt.Println("--------------------------------------------------------------------------------")
 		}
 
 	}
+
 	return
 }
 

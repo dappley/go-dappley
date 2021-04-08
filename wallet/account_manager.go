@@ -45,7 +45,6 @@ type AccountManager struct {
 	fileLoader storage.FileStorage
 	PassPhrase []byte
 	mutex      sync.Mutex
-	Locked     bool
 }
 
 //GetAccountFilePath return account file Path
@@ -202,7 +201,6 @@ func (am *AccountManager) ToProto() proto.Message {
 	return &laccountpb.AccountManager{
 		Accounts:   pbAccounts,
 		PassPhrase: am.PassPhrase,
-		Locked:     am.Locked,
 	}
 }
 
@@ -216,5 +214,5 @@ func (am *AccountManager) FromProto(pb proto.Message) {
 
 	am.Accounts = accounts
 	am.PassPhrase = pb.(*laccountpb.AccountManager).PassPhrase
-	am.Locked = pb.(*laccountpb.AccountManager).Locked
+
 }
