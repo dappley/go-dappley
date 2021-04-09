@@ -22,13 +22,6 @@ type ScState struct {
 	mutex  *sync.RWMutex
 }
 
-type ContractState struct {
-	address string
-	state map[string]string//key, value
-	events []*Event
-	mutex  *sync.RWMutex
-}
-
 const (
 	scStateLogKey = "scLog"
 	scStateMapKey = "scState"
@@ -208,21 +201,14 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 	return nil
 }
 
-func (ss *ScState) RevertState(db storage.Storage, prevHash hash.Hash) error {
+func (ss *ScState) RevertState(db storage.Storage, prevHash hash.Hash)  {
+	changelog := getChangeLog(db, prevHash)
 
-
-
-	//changelog := getChangeLog(db, prevHash)
-	//if len(changelog) < 1 {
-	//	return nil
-	//}
-	//ss.revertState(changelog)
-	//err := deleteLog(db, prevHash)
-	//if err != nil {
-	//	return err
-	//}
-
-	return nil
+	for address,state:=range changelog.log{
+		for key,value:=range state{
+			ss.states[address]=map[string]string{key: value}
+		}
+	}
 }
 
 func (ss *ScState) findChangedValue(newState *ScState) map[string]map[string]string {
@@ -284,21 +270,19 @@ func (ss *ScState) revertState(changelog map[string]map[string]string) {
 	}
 }
 
-func getChangeLog(db storage.Storage, prevHash hash.Hash) map[string]map[string]string {
-	change := make(map[string]map[string]string)
+func getChangeLog(db storage.Storage, prevHash hash.Hash) *ChangeLog {
+	changeLog :=NewChangeLog()
 
-	rawBytes, err := db.Get([]byte(scStateLogKey + prevHash.String()))
-
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return change
+	rawBytes, err := db.Get(util.Str2bytes(scStateLogKey + prevHash.String()))
+	if err != nil {
+		return changeLog
 	}
-	change = deserializeChangeLog(rawBytes).log
 
-	return change
+	return deserializeChangeLog(rawBytes)
 }
 
 func deleteLog(db storage.Storage, prevHash hash.Hash) error {
-	err := db.Del([]byte(scStateLogKey + prevHash.String()))
+	err := db.Del(util.Str2bytes(scStateLogKey + prevHash.String()))
 	return err
 }
 
@@ -340,29 +324,6 @@ func (scState *ScState) DeepCopy() *ScState {
 	return newScState
 }
 
-func (ss *ScState) GetStateByAddress(scAddress string) *ContractState {
-	cs:=NewContractState()
-	for address, state := range ss.states {
-		if address == scAddress {
-			cs.address=address
-			cs.state=state
-			return cs
-		}
-	}
-	return nil
-}
-
-func (ss *ScState) AddState(cs *ContractState){
-		if _, ok := ss.states[cs.address]; !ok {
-			ss.states[cs.address]=make(map[string]string)
-		}
-		ss.states[cs.address]=cs.state
-}
-
-func NewContractState() *ContractState {
-	return &ContractState{"",make(map[string]string), make([]*Event, 0), &sync.RWMutex{}}
-}
-
 func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string {
 	if _, ok := ss.states[address]; ok {
 		if value, ok := ss.states[address][key]; ok {
@@ -383,21 +344,8 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 	return value
 }
 
-func (ss *ScState) SetStateValue(db storage.Storage, address, key, value string) error {
-	if _, ok := ss.states[address]; ok {
-		if value, ok := ss.states[address][key]; ok {
-			ss.states[address][key] = value
-			return nil
-		}
-	}
-
-	valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
-	if err != nil {
-		logger.Warn("get state value failed.")
-		return err
-	}
-	ss.states[address] = map[string]string{key: util.Bytes2str(valBytes)}
-	return nil
+func (ss *ScState) SetStateValue(db storage.Storage, address, key, value string)  {
+	ss.states[address] = map[string]string{key: value}
 }
 
 func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
@@ -414,43 +362,4 @@ func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
 		return
 	}
 	ss.states[address] = map[string]string{key: scStateValueIsNotExist}
-}
-
-func (cs *ContractState) RecordEvent(event *Event) {
-	cs.events = append(cs.events, event)
-}
-
-// Save data with change logs
-func (cs *ContractState) Save(db storage.Storage) error {
-	//scStateOld := LoadScStateFromDatabase(db)
-	//change := NewChangeLog()
-	//change.log = scStateOld.findChangedValue(ss)
-	//logger.Warn("changelog:")
-	//for k,v:=range change.log {
-	//	logger.Info("change.log address: ",k)
-	//	for k,v:=range v {
-	//		logger.Info("change.log  key: ",k,",value: ",v)
-	//	}
-	//}
-
-	//err := db.Put([]byte(scStateLogKey+blkHash.String()), change.serializeChangeLog())
-	//if err != nil {
-	//	return err
-	//}
-
-	for key,val:=range cs.state{
-		err := db.Put(util.Str2bytes(scStateMapKey+cs.address+key), util.Str2bytes(val))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (cs *ContractState) RevertState(db storage.Storage, prevHash hash.Hash) error {
-	return nil
-}
-
-func (cs *ContractState) SetAddress(address string){
-	cs.address=address
 }

@@ -371,7 +371,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 	index := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	//scState := scState.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
-	stateSlice := scState.NewScState()
+	contractStates := scState.NewScState()
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
 	// in the block, until the block hash matches.
 	for {
@@ -398,13 +398,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 
-		err = stateSlice.RevertState(db, block.GetHash())
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
-			}).Warn("BlockchainManager: failed to calculate previous state of scState for the block")
-			return nil, nil, err
-		}
+		contractStates.RevertState(db, block.GetHash())
 
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
@@ -413,7 +407,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 	}
-	return index, stateSlice, nil
+	return index, contractStates, nil
 }
 
 /* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */
