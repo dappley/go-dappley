@@ -40,9 +40,9 @@ func TestSign(t *testing.T) {
 
 	// Previous transactions containing UTXO of the Address
 	prevTXs := []*utxo.UTXO{
-		{transactionbase.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("01"), 0, utxo.UtxoNormal,[]byte{},[]byte{}},
-		{transactionbase.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("02"), 0, utxo.UtxoNormal,[]byte{},[]byte{}},
-		{transactionbase.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("03"), 0, utxo.UtxoNormal,[]byte{},[]byte{}},
+		{transactionbase.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("01"), 0, utxo.UtxoNormal, []byte{}, []byte{}},
+		{transactionbase.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("02"), 0, utxo.UtxoNormal, []byte{}, []byte{}},
+		{transactionbase.TXOutput{common.NewAmount(13), ta.GetPubKeyHash(), ""}, []byte("03"), 0, utxo.UtxoNormal, []byte{}, []byte{}},
 	}
 
 	// New transaction to be signed (paid from the fake account)
@@ -150,8 +150,8 @@ func TestVerifyNoCoinbaseTransaction(t *testing.T) {
 	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := utxo.NewUTXOTx()
 
-	utxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(4), ta.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal,[]byte{},[]byte{}})
-	utxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(3), ta.GetPubKeyHash(), ""}, []byte{2}, 1, utxo.UtxoNormal,[]byte{},[]byte{}})
+	utxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(4), ta.GetPubKeyHash(), ""}, []byte{1}, 0, utxo.UtxoNormal, []byte{}, []byte{}})
+	utxoTx.PutUtxo(&utxo.UTXO{transactionbase.TXOutput{common.NewAmount(3), ta.GetPubKeyHash(), ""}, []byte{2}, 1, utxo.UtxoNormal, []byte{}, []byte{}})
 
 	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta.GetPubKeyHash().String(): &utxoTx,
@@ -218,7 +218,7 @@ func TestInvalidExecutionTx(t *testing.T) {
 	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := utxo.NewUTXOTx()
 
-	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal,[]byte{},[]byte{}})
+	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}})
 	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
@@ -264,7 +264,7 @@ func TestInvalidTipTx(t *testing.T) {
 	utxoIndex := lutxo.NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
 	utxoTx := utxo.NewUTXOTx()
 
-	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal,[]byte{},[]byte{}})
+	utxoTx.PutUtxo(&utxo.UTXO{deploymentTx.Vout[0], deploymentTx.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}})
 	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
 		ta1.GetPubKeyHash().String(): &utxoTx,
 	})
@@ -331,7 +331,7 @@ func TestTransaction_Execute(t *testing.T) {
 				TxIndex: 0,
 				Txid:    nil,
 				TXOutput: transactionbase.TXOutput{
-					Value:common.NewAmount(0),
+					Value:      common.NewAmount(0),
 					PubKeyHash: scPKH,
 					Contract:   contract,
 				},
@@ -343,13 +343,13 @@ func TestTransaction_Execute(t *testing.T) {
 			}
 			ctx := NewTxContract(&tx)
 
-			db:=storage.NewRamStorage()
+			db := storage.NewRamStorage()
 			defer db.Close()
 			index := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
 			if tt.scAddr != "" {
 				index.AddUTXO(scUtxo.TXOutput, nil, 0)
 			}
-			err :=index.Save()
+			err := index.Save()
 			assert.Nil(t, err)
 
 			if tt.expectContractRun {
@@ -373,7 +373,7 @@ func TestTransaction_Execute(t *testing.T) {
 			assert.Nil(t, err)
 
 			isContractDeployed := ctx.IsContractDeployed(index)
-			ctx.Execute(preUTXO, isContractDeployed, index, scState.NewScState(), nil, sc, 0, parentBlk,db)
+			ctx.Execute(preUTXO, isContractDeployed, index, scState.NewScState(), nil, sc, 0, parentBlk, db)
 			sc.AssertExpectations(t)
 		})
 	}

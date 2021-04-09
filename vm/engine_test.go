@@ -153,13 +153,13 @@ module.exports = new StorageTest();
 
 	ss := scState.NewScState()
 
-	ss.SetStateValue(dummyAddr,"key","7")
+	ss.SetStateValue(dummyAddr, "key", "7")
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportLocalStorage(ss)
 
-	assert.Nil(t,sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize))
+	assert.Nil(t, sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize))
 	ret, _ := sc.Execute("get", "\"key\"")
 	assert.Equal(t, "7", ret)
 }
@@ -327,22 +327,22 @@ func TestStepRecord(t *testing.T) {
 	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
 	sc.ImportDB(db)
-	assert.Nil(t,sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize))
+	assert.Nil(t, sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize))
 	ret, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", \"20\"")
 
 	assert.Equal(t, "0", ret)
 	//assert.Equal(t, "20", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "20", ss.GetStateValue(db,dummyAddr,"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "20", ss.GetStateValue(db, dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	ret2, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15")
 	assert.Equal(t, "0", ret2)
-	assert.Equal(t, "35", ss.GetStateValue(db,dummyAddr,"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "35", ss.GetStateValue(db, dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	ret3, _ := sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10")
 	assert.Equal(t, "0", ret3)
-	assert.Equal(t, "10", ss.GetStateValue(db,dummyAddr,"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "10", ss.GetStateValue(db, dummyAddr, "fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "35", ss.GetStateValue(db,dummyAddr,"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "35", ss.GetStateValue(db, dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 }
 

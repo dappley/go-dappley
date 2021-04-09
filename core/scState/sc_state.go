@@ -17,15 +17,15 @@ type ChangeLog struct {
 }
 
 type ScState struct {
-	states map[string]map[string]string//address key, value
+	states map[string]map[string]string //address key, value
 	events []*Event
 	mutex  *sync.RWMutex
 }
 
 const (
-	scStateLogKey = "scLog"
-	scStateMapKey = "scState"
-	scStateValueIsNotExist="scStateValueIsNotExist"
+	scStateLogKey          = "scLog"
+	scStateMapKey          = "scState"
+	scStateValueIsNotExist = "scStateValueIsNotExist"
 )
 
 func NewChangeLog() *ChangeLog {
@@ -103,7 +103,7 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 			valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
 			if err != nil {
 				changeLog.log[address][key] = scStateValueIsNotExist
-			}else{
+			} else {
 				changeLog.log[address][key] = util.Bytes2str(valBytes)
 			}
 			//update new states in db
@@ -126,22 +126,21 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 		return err
 	}
 
-
 	return nil
 }
 
-func (ss *ScState) RevertState(db storage.Storage, blkHash hash.Hash)  {
+func (ss *ScState) RevertState(db storage.Storage, blkHash hash.Hash) {
 	changelog := getChangeLog(db, blkHash)
 
-	for address,state:=range changelog.log{
-		for key,value:=range state{
-			ss.states[address]=map[string]string{key: value}
+	for address, state := range changelog.log {
+		for key, value := range state {
+			ss.states[address] = map[string]string{key: value}
 		}
 	}
 }
 
 func getChangeLog(db storage.Storage, blkHash hash.Hash) *ChangeLog {
-	changeLog :=NewChangeLog()
+	changeLog := NewChangeLog()
 
 	rawBytes, err := db.Get(util.Str2bytes(scStateLogKey + blkHash.String()))
 	if err != nil {
@@ -184,8 +183,8 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 				return value
 			}
 		}
-	}else{
-		ss.states[address]=make(map[string]string)
+	} else {
+		ss.states[address] = make(map[string]string)
 	}
 
 	valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
@@ -197,11 +196,11 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 	return value
 }
 
-func (ss *ScState) SetStateValue(address, key, value string)  {
-	if _,ok:=ss.states[address];!ok{
-		ss.states[address]=make(map[string]string)
+func (ss *ScState) SetStateValue(address, key, value string) {
+	if _, ok := ss.states[address]; !ok {
+		ss.states[address] = make(map[string]string)
 	}
-	ss.states[address][key]=value
+	ss.states[address][key] = value
 }
 
 func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
@@ -219,4 +218,3 @@ func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
 	}
 	ss.states[address] = map[string]string{key: scStateValueIsNotExist}
 }
-

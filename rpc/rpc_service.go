@@ -476,12 +476,12 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 	contractAddr := in.ContractAddr
 	queryKey := in.Key
 
-	if contractAddr == "" || queryKey == ""  {
+	if contractAddr == "" || queryKey == "" {
 		return nil, status.Error(codes.InvalidArgument, "contract query params error")
 	}
 	scState := scState.NewScState()
-	resultValue,err := strconv.Unquote(scState.GetStateValue(rpcService.GetBlockchain().GetDb(),contractAddr, queryKey))
-	if err!=nil{
+	resultValue, err := strconv.Unquote(scState.GetStateValue(rpcService.GetBlockchain().GetDb(), contractAddr, queryKey))
+	if err != nil {
 		logger.Warn("err")
 	}
 	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil

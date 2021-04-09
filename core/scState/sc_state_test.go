@@ -11,7 +11,7 @@ import (
 
 func TestScState_Serialize(t *testing.T) {
 	ss := NewScState()
-	ss.states["addr1"]=map[string]string{"key1": "Value"}
+	ss.states["addr1"] = map[string]string{"key1": "Value"}
 	rawBytes := ss.serialize()
 	ssRet := deserializeScState(rawBytes)
 	assert.Equal(t, ss.states, ssRet.states)
@@ -19,7 +19,7 @@ func TestScState_Serialize(t *testing.T) {
 
 func TestScState_ToProto(t *testing.T) {
 	ss := NewScState()
-	ss.states["addr1"]=map[string]string{"key1": "Value"}
+	ss.states["addr1"] = map[string]string{"key1": "Value"}
 	expected := "0a180a056164647231120f0a0d0a046b657931120556616c7565"
 	rawBytes, err := proto.Marshal(ss.ToProto())
 	assert.Nil(t, err)
@@ -36,7 +36,7 @@ func TestScState_FromProto(t *testing.T) {
 	ss.FromProto(scStateProto)
 
 	ss1 := NewScState()
-	ss1.states["addr1"]=map[string]string{"key1": "Value"}
+	ss1.states["addr1"] = map[string]string{"key1": "Value"}
 
 	assert.Equal(t, ss1, ss)
 }

@@ -148,7 +148,7 @@ func (bp *BlockProducer) prepareBlock(deadline deadline.Deadline) *lblockchain.B
 	totalTips := bp.calculateTips(validTxs)
 	cbtx := ltransaction.NewCoinbaseTX(account.NewAddress(bp.producer.Beneficiary()), "", bp.bm.Getblockchain().GetMaxHeight()+1, totalTips)
 	validTxs = append(validTxs, &cbtx)
-	if !utxoIndex.UpdateUtxo(&cbtx){
+	if !utxoIndex.UpdateUtxo(&cbtx) {
 		logger.Warn("prepareBlock warn")
 	}
 
@@ -176,8 +176,8 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
-		txNode ,err:= bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
-		if err!=nil{
+		txNode, err := bp.bm.Getblockchain().GetTxPool().PopTransactionWithMostTips(utxoIndex)
+		if err != nil {
 			break
 		}
 		if txNode == nil {
@@ -189,9 +189,9 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		ctx := ltransaction.NewTxContract(txNode.Value)
 		if ctx != nil {
 			minerAddr := account.NewAddress(bp.producer.Beneficiary())
-			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, engine, currBlkHeight, parentBlk, rewards,bp.bm.Getblockchain().GetDb())
+			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, engine, currBlkHeight, parentBlk, rewards, bp.bm.Getblockchain().GetDb())
 			if err != nil {
-				logger.Warn("VerifyAndCollectContractOutput error: ",err)
+				logger.Warn("VerifyAndCollectContractOutput error: ", err)
 				continue
 			}
 
@@ -215,7 +215,6 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 					logger.Warn("collectTransactions warn: generatedTxs != nil")
 				}
 			}
-			//这里其实是一个changelog
 		} else {
 			validTxs = append(validTxs, txNode.Value)
 			if !utxoIndex.UpdateUtxo(txNode.Value) {
