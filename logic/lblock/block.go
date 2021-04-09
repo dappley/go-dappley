@@ -105,7 +105,7 @@ func VerifyHash(b *block.Block) bool {
 	return bytes.Compare(b.GetHash(), CalculateHash(b)) == 0
 }
 
-func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, stateSlice *scState.ScState, parentBlk *block.Block, db storage.Storage) bool {
+func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, contractState *scState.ScState, parentBlk *block.Block, db storage.Storage) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash":   b.GetHash(),
@@ -159,7 +159,6 @@ L:
 			return false
 		}
 
-		contractState:=scState.NewScState()
 		ctx := ltransaction.NewTxContract(tx)
 		if ctx != nil {
 			// Run the contract and collect generated transactions

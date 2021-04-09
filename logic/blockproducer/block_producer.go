@@ -232,7 +232,6 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			logger.Warn("collectTransactions warn: rewards update utxo error")
 		}
 	}
-
 	return validTxs, contractState
 }
 

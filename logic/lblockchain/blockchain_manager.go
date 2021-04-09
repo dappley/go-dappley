@@ -280,13 +280,13 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			"hash":   forkBlks[i].GetHash().String(),
 		}).Info("BlockchainManager: is verifying a block in the fork.")
 
-		stateSlice := scState.NewScState()
+		contractStates := scState.NewScState()
 
-		if !lblock.VerifyTransactions(forkBlks[i], utxo,stateSlice, parentBlk,bm.Getblockchain().GetDb()) {
+		if !lblock.VerifyTransactions(forkBlks[i], utxo,contractStates, parentBlk,bm.Getblockchain().GetDb()) {
 			return ErrTransactionVerifyFailed
 		}
 
-		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: stateSlice}
+		ctx := BlockContext{ forkBlks[i],  utxo,contractStates}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{

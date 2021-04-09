@@ -175,6 +175,29 @@ func (cl *ChangeLog) FromProto(pb proto.Message) {
 
 // Save data with change logs
 func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
+	changeLog := NewChangeLog()
+	//before saving, read out the original value and save it in the changelog
+	for address, state := range ss.states {
+		if _, ok := changeLog.log[address]; !ok {
+			changeLog.log[address] = make(map[string]string)
+		}
+		for key, _ := range state {
+			valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
+			if err != nil {
+				changeLog.log[address][key] = scStateValueIsNotExist
+			}else{
+				changeLog.log[address][key] = util.Bytes2str(valBytes)
+			}
+		}
+	}
+	//save change log first
+	err := db.Put(util.Str2bytes(scStateLogKey+blkHash.String()), changeLog.serializeChangeLog())
+	if err != nil {
+		return err
+	}
+
+
+	//save new states
 	for address, state := range ss.states {
 		for key, value := range state {
 			if value == scStateValueIsNotExist {
@@ -191,18 +214,13 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 		}
 	}
 
-	changeLog := NewChangeLog()
-	changeLog.log = ss.states
-	err := db.Put(util.Str2bytes(scStateLogKey+blkHash.String()), changeLog.serializeChangeLog())
-	if err != nil {
-		return err
-	}
+
 
 	return nil
 }
 
-func (ss *ScState) RevertState(db storage.Storage, prevHash hash.Hash)  {
-	changelog := getChangeLog(db, prevHash)
+func (ss *ScState) RevertState(db storage.Storage, blkHash hash.Hash)  {
+	changelog := getChangeLog(db, blkHash)
 
 	for address,state:=range changelog.log{
 		for key,value:=range state{
@@ -270,10 +288,10 @@ func (ss *ScState) revertState(changelog map[string]map[string]string) {
 	}
 }
 
-func getChangeLog(db storage.Storage, prevHash hash.Hash) *ChangeLog {
+func getChangeLog(db storage.Storage, blkHash hash.Hash) *ChangeLog {
 	changeLog :=NewChangeLog()
 
-	rawBytes, err := db.Get(util.Str2bytes(scStateLogKey + prevHash.String()))
+	rawBytes, err := db.Get(util.Str2bytes(scStateLogKey + blkHash.String()))
 	if err != nil {
 		return changeLog
 	}
@@ -333,6 +351,8 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 				return value
 			}
 		}
+	}else{
+		ss.states[address]=make(map[string]string)
 	}
 
 	valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
@@ -340,12 +360,15 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 		logger.Warn("get state value failed: ", err)
 	}
 	value := util.Bytes2str(valBytes)
-	ss.states[address] = map[string]string{key: value}
+	ss.states[address][key] = value
 	return value
 }
 
 func (ss *ScState) SetStateValue(db storage.Storage, address, key, value string)  {
-	ss.states[address] = map[string]string{key: value}
+	if _,ok:=ss.states[address];!ok{
+		ss.states[address]=make(map[string]string)
+	}
+	ss.states[address][key]=value
 }
 
 func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
@@ -363,3 +386,4 @@ func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
 	}
 	ss.states[address] = map[string]string{key: scStateValueIsNotExist}
 }
+
