@@ -21,7 +21,6 @@ import (
 	"context"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/logic/lutxo"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -473,26 +472,15 @@ func (rpcService *RpcService) RpcGasPrice(ctx context.Context, in *rpcpb.GasPric
 
 // RpcContractQuery returns the query result of contract storage
 func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.ContractQueryRequest) (*rpcpb.ContractQueryResponse, error) {
-
 	contractAddr := in.ContractAddr
 	queryKey := in.Key
-	queryValue := in.Value
 
-	if contractAddr == "" || (queryKey == "" && queryValue == "") {
+	if contractAddr == "" || queryKey == ""  {
 		return nil, status.Error(codes.InvalidArgument, "contract query params error")
 	}
-	scState := scState.LoadScStateFromDatabase(rpcService.GetBlockchain().GetDb())
-	var resultKey = ""
-	var resultValue = ""
-	// storage data has been JSON.stringfy before
-	if queryKey != "" {
-		resultKey = queryKey
-		resultValue = scState.Get(contractAddr, queryKey)
-		resultValue, _ = strconv.Unquote(resultValue)
-	} else {
-		resultValue = queryValue
-		queryValue = strconv.Quote(queryValue)
-		resultKey = scState.GetByValue(contractAddr, queryValue)
-	}
-	return &rpcpb.ContractQueryResponse{Key: resultKey, Value: resultValue}, nil
+	scState := scState.NewScState()
+	var resultValue string
+	resultValue = scState.GetStateValue(rpcService.GetBlockchain().GetDb(),contractAddr, queryKey)
+
+	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
 }

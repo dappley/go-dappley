@@ -4,10 +4,16 @@ var StepRecorder = function () {
 };
 
 StepRecorder.prototype = {
-    record: function (addr, steps) {
-        var originalSteps = LocalStorage.get(addr);
-        LocalStorage.set(addr, originalSteps + steps);
-        return _native_reward.record(addr, steps);
+    record: function (key, value) {
+        var originalSteps = LocalStorage.get(key);
+        if (originalSteps === "null"){
+            originalSteps = 0;
+        }
+        LocalStorage.set(key, parseInt(originalSteps) + parseInt(value));
+    },
+    delete: function (key) {
+        LocalStorage.del(key);
     }
 };
 module.exports = new StepRecorder();
+
