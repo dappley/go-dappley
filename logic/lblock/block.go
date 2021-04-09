@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/dappley/go-dappley/storage"
 	"reflect"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -104,7 +105,7 @@ func VerifyHash(b *block.Block) bool {
 	return bytes.Compare(b.GetHash(), CalculateHash(b)) == 0
 }
 
-func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, scState *scState.ScState, parentBlk *block.Block) bool {
+func VerifyTransactions(b *block.Block, utxoIndex *lutxo.UTXOIndex, contractState *scState.ScState, parentBlk *block.Block, db storage.Storage) bool {
 	if len(b.GetTransactions()) == 0 {
 		logger.WithFields(logger.Fields{
 			"hash":   b.GetHash(),
@@ -160,7 +161,7 @@ L:
 		ctx := ltransaction.NewTxContract(tx)
 		if ctx != nil {
 			// Run the contract and collect generated transactions
-			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, scState, scEngine, b.GetHeight(), parentBlk, rewards)
+			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, scEngine, b.GetHeight(), parentBlk, rewards,db)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"hash":   b.GetHash(),

@@ -14,6 +14,7 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
@@ -47,7 +48,7 @@ func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, 
 }
 
 // VerifyAndCollectContractOutput ensures the generated transactions from smart contract are the same with those in block
-func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
+func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, ctState *scState.ScState, scEngine ScEngine, currBlkHeight uint64, parentBlk *block.Block, rewards map[string]string,	db storage.Storage) (gasCount uint64, generatedTxs []*transaction.Transaction, err error) {
 	// Run the contract and collect generated transactions
 	if scEngine == nil {
 		return 0, nil, errors.New("VerifyAndCollectContractOutput: is missing SCEngineManager when verifying transactions.")
@@ -72,8 +73,8 @@ func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, 
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return 0, nil, err
 	}
-	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scState, rewards, scEngine, currBlkHeight, parentBlk)
-	if err != nil {
+	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, ctState, rewards, scEngine, currBlkHeight, parentBlk, db)
+	if err!=nil{
 		logger.Warn(err)
 		//invoke smart contracts before they are completed deploy, will cause an ErrLoadError.
 		//for example: deploy and invoke contracts in the same block

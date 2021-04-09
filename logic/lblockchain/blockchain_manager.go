@@ -260,12 +260,12 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	}
 
 	//utxo has been reverted to forkParentHash in this step
-	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
+	utxo, sState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
 	if err != nil {
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network:", err)
 		return nil
 	}
-	ok := bm.blockchain.Rollback(utxo, forkParentHash, scState)
+	ok := bm.blockchain.Rollback(utxo, forkParentHash, sState)
 	if !ok {
 		return nil
 	}
@@ -280,11 +280,13 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			"hash":   forkBlks[i].GetHash().String(),
 		}).Info("BlockchainManager: is verifying a block in the fork.")
 
-		if !lblock.VerifyTransactions(forkBlks[i], utxo, scState, parentBlk) {
+		contractStates := scState.NewScState()
+
+		if !lblock.VerifyTransactions(forkBlks[i], utxo,contractStates, parentBlk,bm.Getblockchain().GetDb()) {
 			return ErrTransactionVerifyFailed
 		}
 
-		ctx := BlockContext{Block: forkBlks[i], UtxoIndex: utxo, State: scState}
+		ctx := BlockContext{ forkBlks[i],  utxo,contractStates}
 		err = bm.blockchain.AddBlockContextToTail(&ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -367,9 +369,9 @@ func (bm *BlockchainManager) SendBlockHandler(input interface{}) {
 // RevertUtxoAndScStateAtBlockHash returns the previous snapshot of UTXOIndex when the block of given hash was the tail block.
 func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash hash.Hash) (*lutxo.UTXOIndex, *scState.ScState, error) {
 	index := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	scState := scState.LoadScStateFromDatabase(db)
+	//scState := scState.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
-
+	contractStates := scState.NewScState()
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
 	// in the block, until the block hash matches.
 	for {
@@ -396,13 +398,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 
-		err = scState.RevertState(db, block.GetHash())
-		if err != nil {
-			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
-			}).Warn("BlockchainManager: failed to calculate previous state of scState for the block")
-			return nil, nil, err
-		}
+		contractStates.RevertState(db, block.GetHash())
 
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
@@ -411,7 +407,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 	}
-	return index, scState, nil
+	return index, contractStates, nil
 }
 
 /* NumForks returns the number of forks in the BlockPool and the height of the current longest fork */

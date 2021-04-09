@@ -165,8 +165,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Storage will allow blockchain creation to succeed
 	db.On("Put", mock.Anything, mock.Anything).Return(nil)
 	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
-	db.On("Get", scState.GetScStateKey([]byte{})).Return([]byte{}, nil)
-	db.On("Get", scState.GetScStateKey(genesis.GetHash())).Return([]byte{}, nil)
+	db.On("Get", []byte("scState")).Return([]byte{}, nil)
+	db.On("Get", []byte("scState")).Return([]byte{}, nil)
 	db.On("Get", mock.Anything).Return(serializedBlk, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()
@@ -232,7 +232,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 		b := block.NewBlock(txs, tailBlk, "")
 		b.SetHash(lblock.CalculateHash(b))
-		state := scState.LoadScStateFromDatabase(bc.GetDb())
+		state := scState.NewScState()
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }

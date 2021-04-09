@@ -38,6 +38,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"github.com/dappley/go-dappley/storage"
 	"sync"
 	"unsafe"
 
@@ -82,6 +83,7 @@ type V8Engine struct {
 	handler            uint64
 	blkHeight          uint64
 	seed               int64
+	db 				   storage.Storage
 
 	modules                                 Modules
 	v8engine                                *C.V8Engine
@@ -221,6 +223,10 @@ func (sc *V8Engine) ImportCurrBlockHeight(blkHeight uint64) {
 // ImportCurrBlockHeight imports the current block height
 func (sc *V8Engine) ImportSeed(seed int64) {
 	sc.seed = seed
+}
+
+func (sc *V8Engine) ImportDB(db storage.Storage) {
+	sc.db = db
 }
 
 // ClearModuleCache ..
