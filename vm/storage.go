@@ -63,7 +63,7 @@ func StorageSetFunc(address unsafe.Pointer, key, value *C.char) int {
 		}).Debug("SmartContract: failed to get state handler!")
 		return 1
 	}
-	engine.state.SetStateValue(engine.db,engine.contractAddr.String(),goKey,goVal)
+	engine.state.SetStateValue(engine.contractAddr.String(),goKey,goVal)
 	return 0
 }
 

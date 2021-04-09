@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/dappley/go-dappley/consensus"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -479,8 +480,9 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 		return nil, status.Error(codes.InvalidArgument, "contract query params error")
 	}
 	scState := scState.NewScState()
-	var resultValue string
-	resultValue = scState.GetStateValue(rpcService.GetBlockchain().GetDb(),contractAddr, queryKey)
-
+	resultValue,err := strconv.Unquote(scState.GetStateValue(rpcService.GetBlockchain().GetDb(),contractAddr, queryKey))
+	if err!=nil{
+		logger.Warn("err")
+	}
 	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
 }

@@ -61,73 +61,6 @@ func (ss *ScState) serialize() []byte {
 	return rawBytes
 }
 
-//Get gets an item in scStorage
-func (ss *ScState) Get(address, key string) string {
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
-	if len(ss.states[address]) == 0 {
-		return ""
-	}
-	return ss.states[address][key]
-}
-
-//Set sets an item in scStorage
-func (ss *ScState) Set(address, key, value string) int {
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
-
-	if len(ss.states[address]) == 0 {
-		ls := make(map[string]string)
-		ss.states[address] = ls
-	}
-	ss.states[address][key] = value
-	return 0
-}
-
-//Del deletes an item in scStorage
-func (ss *ScState) Del(pubKeyHash, key string) int {
-	ss.mutex.Lock()
-	defer ss.mutex.Unlock()
-	if len(ss.states[pubKeyHash]) == 0 {
-		return 1
-	}
-	if ss.states[pubKeyHash][key] == "" {
-		return 1
-	}
-
-	delete(ss.states[pubKeyHash], key)
-	return 0
-}
-
-//GetStorageByAddress gets a storage map by address
-func (ss *ScState) GetStorageByAddress(address string) map[string]string {
-	if len(ss.states[address]) == 0 {
-		//initializes the map with dummy data
-		ss.states[address] = map[string]string{"init": "i"}
-	}
-	return ss.states[address]
-}
-
-func GetScStateKey(blkHash hash.Hash) []byte {
-	return []byte(scStateMapKey)
-}
-
-//LoadScStateFromDatabase loads states from database
-func LoadScStateFromDatabase(db storage.Storage) *ScState {
-
-	rawBytes, err := db.Get([]byte(scStateMapKey))
-
-	if err != nil && err.Error() == storage.ErrKeyInvalid.Error() || len(rawBytes) == 0 {
-		return NewScState()
-	}
-	return deserializeScState(rawBytes)
-}
-
-//SaveToDatabase saves states to database directly
-func (ss *ScState) SaveToDatabase(db storage.Storage) error {
-	return db.Put([]byte(scStateMapKey), ss.serialize())
-}
-
 func (ss *ScState) ToProto() proto.Message {
 	scState := make(map[string]*scstatepb.State)
 
@@ -264,7 +197,7 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 	return value
 }
 
-func (ss *ScState) SetStateValue(db storage.Storage, address, key, value string)  {
+func (ss *ScState) SetStateValue(address, key, value string)  {
 	if _,ok:=ss.states[address];!ok{
 		ss.states[address]=make(map[string]string)
 	}

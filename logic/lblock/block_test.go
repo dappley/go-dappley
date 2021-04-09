@@ -233,7 +233,7 @@ func TestBlock_VerifyTransactions(t *testing.T) {
 			coninbaseTx := ltransaction.NewCoinbaseTX(address1TA.GetAddress(), "", parentBlk.GetHeight()+1, totalTip)
 			tt.txs = append(tt.txs, &coninbaseTx)
 			blk := block.NewBlock(tt.txs, parentBlk, "")
-			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk))
+			assert.Equal(t, tt.ok, VerifyTransactions(blk, utxoIndex, scState, parentBlk,db))
 		})
 	}
 }
