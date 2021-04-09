@@ -167,11 +167,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	totalSize := 0
 	count := 0
 
-	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
+
+	contractState := scState.NewScState()
 
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
@@ -188,7 +189,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		ctx := ltransaction.NewTxContract(txNode.Value)
 		if ctx != nil {
 			minerAddr := account.NewAddress(bp.producer.Beneficiary())
-			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, scStorage, engine, currBlkHeight, parentBlk, rewards)
+			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, engine, currBlkHeight, parentBlk, rewards,bp.bm.Getblockchain().GetDb())
 			if err != nil {
 				logger.Warn("VerifyAndCollectContractOutput error: ",err)
 				continue
@@ -214,6 +215,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 					logger.Warn("collectTransactions warn: generatedTxs != nil")
 				}
 			}
+			//这里其实是一个changelog
 		} else {
 			validTxs = append(validTxs, txNode.Value)
 			if !utxoIndex.UpdateUtxo(txNode.Value) {
@@ -231,7 +233,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		}
 	}
 
-	return validTxs, scStorage
+	return validTxs, contractState
 }
 
 //calculateTips calculate how much tips are earned from the input transactions

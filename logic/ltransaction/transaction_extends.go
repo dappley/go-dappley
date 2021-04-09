@@ -32,6 +32,7 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 	"time"
@@ -278,11 +279,12 @@ func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
 func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	isContractDeployed bool,
 	utxoIndex *lutxo.UTXOIndex,
-	scStorage *scState.ScState,
+	ctState *scState.ScState,
 	rewards map[string]string,
 	engine ScEngine,
 	currblkHeight uint64,
-	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
+	parentBlk *block.Block,
+	db storage.Storage) (uint64, []*transaction.Transaction, error) {
 
 	if engine == nil {
 		return 0, nil, nil
@@ -314,7 +316,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 		return 0, nil, ErrLoadError
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
-	engine.ImportLocalStorage(scStorage)
+	engine.ImportLocalStorage(ctState)
 	engine.ImportContractAddr(address)
 	engine.ImportSourceTXID(tx.ID)
 	engine.ImportRewardStorage(rewards)
@@ -324,6 +326,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())
 	engine.ImportUtxoIndex(utxoIndex)
+	engine.ImportDB(db)
 	_, err := engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
 	// record base gas
