@@ -60,6 +60,7 @@ const (
 	peerConfDirPath = "../dapp/"
 	defaultPassword = "password"
 	size1kB         = 1024
+	version         = "v0.4.1"
 )
 
 func main() {
@@ -82,7 +83,14 @@ func main() {
 
 	var peerinfoPath string
 	flag.StringVar(&peerinfoPath, "p", peerFilePath, "Peer info configuration file Path. Default to conf/peer_default.conf")
+	var ver bool
+	flag.BoolVar(&ver, "v", false, "display version")
 	flag.Parse()
+
+	if ver {
+		println(version)
+		return
+	}
 
 	logger.Infof("Genesis conf file is %v,node conf file is %v,peer info conf file is %v", genesisPath, filePath, peerinfoPath)
 

@@ -59,6 +59,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const version = "v0.4.1"
+
 //command names
 const (
 	cliGetBlocks         = "getBlocks"
@@ -372,7 +374,14 @@ func main() {
 
 	var filePath string
 	flag.StringVar(&filePath, "f", "default.conf", "CLI config file path")
+	var ver bool
+	flag.BoolVar(&ver, "v", false, "display version")
 	flag.Parse()
+
+	if ver {
+		println(version)
+		return
+	}
 
 	cliConfig := &configpb.CliConfig{}
 	config.LoadConfig(filePath, cliConfig)
