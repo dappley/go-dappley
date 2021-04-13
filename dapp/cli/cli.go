@@ -1341,24 +1341,27 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
-	sumTotal := common.NewAmount(0)
-	for i:=0;i<len(inputUTXOs);i++ {
-		if i<50{
-			retUtxos = append(retUtxos, inputUTXOs[i])
-			sum = sum.Add(inputUTXOs[i].Value)
-		}
-		sumTotal = sumTotal.Add(inputUTXOs[i].Value)
-		if (sum.Cmp(amount)>=0 && len(inputUTXOs)<100)||(sumTotal.Cmp(amount)>=0 && i>=50){
+
+	vinRulesCheck := false
+	for i := 0; i < len(inputUTXOs); i++ {
+		retUtxos = append(retUtxos, inputUTXOs[i])
+		sum = sum.Add(inputUTXOs[i].Value)
+		if vinRules(sum, amount, i, len(inputUTXOs)) {
+			vinRulesCheck = true
 			break
 		}
 	}
-	if sum.Cmp(amount) < 0 {
-		if sumTotal.Cmp(amount) > 0{
-			return nil,ErrTooManyUtxoFund
-		}
-		return nil, ErrInsufficientFund
+	if vinRulesCheck {
+		return retUtxos, nil
 	}
-	return retUtxos, nil
+	if sum.Cmp(amount) > 0 {
+		return nil, ErrTooManyUtxoFund
+	}
+	return nil, ErrInsufficientFund
+}
+
+func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {
+	return utxoSum.Cmp(amount) >= 0 && (utxoNum == 50 || remainUtxoNum < 100)
 }
 
 func helpCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
