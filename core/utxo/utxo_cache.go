@@ -30,7 +30,10 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const UtxoCacheLRUCacheLimit = 1024
+const (
+	UtxoCacheLRUCacheLimit    = 1024
+	ScStateCacheLRUCacheLimit = 1024
+)
 
 // UTXOCache holds temporary data
 type UTXOCache struct {
@@ -38,7 +41,13 @@ type UTXOCache struct {
 	cache               *lru.Cache
 	utxo                *lru.Cache
 	utxoInfo            *lru.Cache
+	scStateCache 		*ScStateCache
 	db                  storage.Storage
+}
+
+type ScStateCache struct {
+	changeLogCache *lru.Cache
+	scStateCache   *lru.Cache
 }
 
 func NewUTXOCache(db storage.Storage) *UTXOCache {
@@ -47,13 +56,27 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 		cache:               nil,
 		utxo:                nil,
 		utxoInfo:            nil,
+		scStateCache:        nil,
 		db:                  db,
 	}
 	utxoCache.cache, _ = lru.New(UtxoCacheLRUCacheLimit)
 	utxoCache.utxo, _ = lru.New(UtxoCacheLRUCacheLimit)
 	utxoCache.utxoInfo, _ = lru.New(UtxoCacheLRUCacheLimit)
 	utxoCache.contractCreateCache, _ = lru.New(UtxoCacheLRUCacheLimit)
+	utxoCache.scStateCache = NewScStateCache()
 	return utxoCache
+}
+
+
+
+func NewScStateCache() *ScStateCache {
+	scStateCache := &ScStateCache{
+		changeLogCache: nil,
+		scStateCache:   nil,
+	}
+	scStateCache.changeLogCache, _ = lru.New(ScStateCacheLRUCacheLimit)
+	scStateCache.scStateCache, _ = lru.New(ScStateCacheLRUCacheLimit)
+	return scStateCache
 }
 
 func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {

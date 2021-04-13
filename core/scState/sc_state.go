@@ -42,25 +42,6 @@ func (ss *ScState) RecordEvent(event *Event) {
 	ss.events = append(ss.events, event)
 }
 
-func deserializeScState(d []byte) *ScState {
-	scStateProto := &scstatepb.ScState{}
-	err := proto.Unmarshal(d, scStateProto)
-	if err != nil {
-		logger.WithError(err).Panic("ScState: failed to deserialize UTXO states.")
-	}
-	ss := NewScState()
-	ss.FromProto(scStateProto)
-	return ss
-}
-
-func (ss *ScState) serialize() []byte {
-	rawBytes, err := proto.Marshal(ss.ToProto())
-	if err != nil {
-		logger.WithError(err).Panic("ScState: failed to serialize UTXO states.")
-	}
-	return rawBytes
-}
-
 func (ss *ScState) ToProto() proto.Message {
 	scState := make(map[string]*scstatepb.State)
 

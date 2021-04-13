@@ -9,14 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestScState_Serialize(t *testing.T) {
-	ss := NewScState()
-	ss.states["addr1"] = map[string]string{"key1": "Value"}
-	rawBytes := ss.serialize()
-	ssRet := deserializeScState(rawBytes)
-	assert.Equal(t, ss.states, ssRet.states)
-}
-
 func TestScState_ToProto(t *testing.T) {
 	ss := NewScState()
 	ss.states["addr1"] = map[string]string{"key1": "Value"}
