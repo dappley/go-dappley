@@ -92,7 +92,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState())
+	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState(bc.GetUtxoCache()))
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()

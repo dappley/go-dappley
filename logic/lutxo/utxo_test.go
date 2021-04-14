@@ -429,8 +429,18 @@ func TestUTXOIndexSave(t *testing.T) {
 	assert.Equal(t, errors.New("add utxo failed: the utxo is same as the last utxo"), err)
 
 	utxoIndex2 := NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoTx10 := utxo.NewUTXOTx() //ta1
+	utxoTx10.PutUtxo(utxoPk10)
 	utxoIndex2.SetIndexAdd(map[string]*utxo.UTXOTx{
-		ta1.GetPubKeyHash().String(): &utxoTx1, //first time add utxoPk10
+		ta1.GetPubKeyHash().String(): &utxoTx10, //first time add utxoPk10
+	})
+	err = utxoIndex2.Save()
+	assert.Nil(t, err)
+
+	utxoTx40 := utxo.NewUTXOTx() //ta1
+	utxoTx40.PutUtxo(utxoPk40)
+	utxoIndex2.SetIndexAdd(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx40, //add utxoPk40
 	})
 	err = utxoIndex2.Save()
 	assert.Nil(t, err)

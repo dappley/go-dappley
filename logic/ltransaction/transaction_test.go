@@ -345,7 +345,8 @@ func TestTransaction_Execute(t *testing.T) {
 
 			db := storage.NewRamStorage()
 			defer db.Close()
-			index := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
+			cache:=utxo.NewUTXOCache(db)
+			index := lutxo.NewUTXOIndex(cache)
 			if tt.scAddr != "" {
 				index.AddUTXO(scUtxo.TXOutput, nil, 0)
 			}
@@ -364,7 +365,6 @@ func TestTransaction_Execute(t *testing.T) {
 				sc.On("GetGeneratedTXs").Return([]*transaction.Transaction{})
 				sc.On("ImportCurrBlockHeight", mock.Anything)
 				sc.On("ImportSeed", mock.Anything)
-				sc.On("ImportDB", mock.Anything)
 				sc.On("ImportUtxoIndex", mock.Anything)
 				sc.On("Execute", mock.Anything, mock.Anything).Return("")
 			}
@@ -373,7 +373,7 @@ func TestTransaction_Execute(t *testing.T) {
 			assert.Nil(t, err)
 
 			isContractDeployed := ctx.IsContractDeployed(index)
-			ctx.Execute(preUTXO, isContractDeployed, index, scState.NewScState(), nil, sc, 0, parentBlk, db)
+			ctx.Execute(preUTXO, isContractDeployed, index, scState.NewScState(cache), nil, sc, 0, parentBlk)
 			sc.AssertExpectations(t)
 		})
 	}
