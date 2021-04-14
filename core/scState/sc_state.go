@@ -20,13 +20,11 @@ type ChangeLog struct {
 type ScState struct {
 	states map[string]map[string]string //address key, value
 	events []*Event
-	cache       *utxo.UTXOCache
+	cache *utxo.UTXOCache
 	mutex  *sync.RWMutex
 }
 
 const (
-	scStateLogKey          = "scLog"
-	scStateMapKey          = "scState"
 	scStateValueIsNotExist = "scStateValueIsNotExist"
 )
 
@@ -80,7 +78,7 @@ func (cl *ChangeLog) FromProto(pb proto.Message) {
 }
 
 // Save data with change logs
-func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
+func (ss *ScState) Save(blkHash hash.Hash) error {
 	changeLog := NewChangeLog()
 	for address, state := range ss.states {
 		if _, ok := changeLog.log[address]; !ok {
@@ -88,20 +86,20 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 		}
 		for key, value := range state {
 			//before saving, read out the original value and save it in the changelog
-			valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
+			val, err := ss.cache.GetScStates(address, key)
 			if err != nil {
 				changeLog.log[address][key] = scStateValueIsNotExist
 			} else {
-				changeLog.log[address][key] = util.Bytes2str(valBytes)
+				changeLog.log[address][key] = val
 			}
 			//update new states in db
 			if value == scStateValueIsNotExist {
-				err := db.Del(util.Str2bytes(scStateMapKey + address + key))
+				err := ss.cache.DelScStates(address, key)
 				if err != nil {
 					return err
 				}
 			} else {
-				err := db.Put(util.Str2bytes(scStateMapKey+address+key), util.Str2bytes(value))
+				err := ss.cache.AddScStates(address, key, value)
 				if err != nil {
 					return err
 				}
@@ -109,7 +107,7 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 		}
 	}
 
-	err := db.Put(util.Str2bytes(scStateLogKey+blkHash.String()), changeLog.serializeChangeLog())
+	err :=ss.cache.AddStateLog(util.Bytes2str(blkHash),changeLog)
 	if err != nil {
 		return err
 	}
@@ -117,8 +115,8 @@ func (ss *ScState) Save(db storage.Storage, blkHash hash.Hash) error {
 	return nil
 }
 
-func (ss *ScState) RevertState(db storage.Storage, blkHash hash.Hash) {
-	changelog := getChangeLog(db, blkHash)
+func (ss *ScState) RevertState(blkHash hash.Hash) {
+	changelog := ss.getChangeLog(blkHash)
 
 	for address, state := range changelog.log {
 		for key, value := range state {
@@ -127,23 +125,21 @@ func (ss *ScState) RevertState(db storage.Storage, blkHash hash.Hash) {
 	}
 }
 
-func getChangeLog(db storage.Storage, blkHash hash.Hash) *ChangeLog {
+func (ss *ScState) getChangeLog(blkHash hash.Hash) *ChangeLog {
 	changeLog := NewChangeLog()
-
-	rawBytes, err := db.Get(util.Str2bytes(scStateLogKey + blkHash.String()))
+	rawBytes, err :=ss.cache.GetStateLog(util.Bytes2str(blkHash))
 	if err != nil {
 		return changeLog
 	}
-
-	return deserializeChangeLog(rawBytes)
+	return rawBytes
 }
 
-func deleteLog(db storage.Storage, prevHash hash.Hash) error {
-	err := db.Del(util.Str2bytes(scStateLogKey + prevHash.String()))
+func (ss *ScState)deleteLog(prevHash hash.Hash) error {
+	err := ss.cache.DelStateLog(util.Bytes2str(prevHash))
 	return err
 }
 
-func deserializeChangeLog(d []byte) *ChangeLog {
+func DeserializeChangeLog(d []byte) *ChangeLog {
 	scStateProto := &scstatepb.ChangeLog{}
 	err := proto.Unmarshal(d, scStateProto)
 	if err != nil {
@@ -154,7 +150,7 @@ func deserializeChangeLog(d []byte) *ChangeLog {
 	return cl
 }
 
-func (cl *ChangeLog) serializeChangeLog() []byte {
+func (cl *ChangeLog) SerializeChangeLog() []byte {
 	rawBytes, err := proto.Marshal(cl.ToProto())
 	if err != nil {
 		logger.WithError(err).Panic("ScState: failed to serialize changelog.")
@@ -162,7 +158,7 @@ func (cl *ChangeLog) serializeChangeLog() []byte {
 	return rawBytes
 }
 
-func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string {
+func (ss *ScState) GetStateValue(address, key string) string {
 	if _, ok := ss.states[address]; ok {
 		if value, ok := ss.states[address][key]; ok {
 			if value == scStateValueIsNotExist {
@@ -174,12 +170,10 @@ func (ss *ScState) GetStateValue(db storage.Storage, address, key string) string
 	} else {
 		ss.states[address] = make(map[string]string)
 	}
-
-	valBytes, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
+	value, err := ss.cache.GetScStates(address, key)
 	if err != nil {
 		logger.Warn("get state value failed: ", err)
 	}
-	value := util.Bytes2str(valBytes)
 	ss.states[address][key] = value
 	return value
 }
@@ -198,11 +192,4 @@ func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
 			return
 		}
 	}
-
-	_, err := db.Get(util.Str2bytes(scStateMapKey + address + key))
-	if err != nil {
-		logger.Warn("The key to be deleted does not exist.")
-		return
-	}
-	ss.states[address] = map[string]string{key: scStateValueIsNotExist}
 }

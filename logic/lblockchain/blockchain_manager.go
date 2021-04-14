@@ -398,7 +398,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 
-		contractStates.RevertState(db, block.GetHash())
+		contractStates.RevertState(block.GetHash())
 
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
