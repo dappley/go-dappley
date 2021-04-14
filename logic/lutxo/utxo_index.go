@@ -74,16 +74,16 @@ func (utxos *UTXOIndex) Save() error {
 	defer utxos.mutex.Unlock()
 
 	//save utxo to db/cache
-	for pubkey, utxoTx := range utxos.indexAdd {
-		err := utxos.cache.AddUtxos(utxoTx, pubkey)
+	for pubkeyHash, utxoTx := range utxos.indexAdd {
+		err := utxos.cache.AddUtxos(utxoTx, pubkeyHash)
 		if err != nil {
 			return err
 		}
 	}
 
 	//delete utxo from db/cache which in indexRemove
-	for pubkey, utxoTx := range utxos.indexRemove {
-		err := utxos.cache.RemoveUtxos(utxoTx, pubkey)
+	for pubkeyHash, utxoTx := range utxos.indexRemove {
+		err := utxos.cache.RemoveUtxos(utxoTx, pubkeyHash)
 		if err != nil {
 			return err
 		}

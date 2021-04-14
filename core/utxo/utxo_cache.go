@@ -79,14 +79,14 @@ func NewScStateCache() ScStateCache {
 	return scStateCache
 }
 
-func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
-	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkey)
+func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
+	lastestUtxoKey := utxoCache.getLastUTXOKey(pubkeyHash)
 	for key, utxo := range utxoTx.Indices {
 		if bytes.Equal(util.Str2bytes(key), lastestUtxoKey) {
 			return errors.New("add utxo failed: the utxo is same as the last utxo")
 		}
 
-		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkey already has a UTXO
+		if !bytes.Equal([]byte{}, lastestUtxoKey) { //this pubkeyHash already has a UTXO
 			_, err := utxoCache.UpdateNextUTXO(lastestUtxoKey, key)
 			if err != nil {
 				return err
@@ -101,20 +101,20 @@ func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
 		lastestUtxoKey = util.Str2bytes(key)
 
 		if utxo.UtxoType == UtxoCreateContract {
-			err := utxoCache.putCreateContractUTXOKey(pubkey, util.Str2bytes(key))
+			err := utxoCache.putCreateContractUTXOKey(pubkeyHash, util.Str2bytes(key))
 			if err != nil {
 				return err
 			}
 		}
 	}
-	err := utxoCache.putLastUTXOKey(pubkey, lastestUtxoKey)
+	err := utxoCache.putLastUTXOKey(pubkeyHash, lastestUtxoKey)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
+func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkeyHash string) error {
 	for key, utxo := range utxoTx.Indices {
 		preUTXO, err := utxoCache.GetPreUtxo(key)
 		if err != nil {
@@ -122,12 +122,12 @@ func (utxoCache *UTXOCache) RemoveUtxos(utxoTx *UTXOTx, pubkey string) error {
 		}
 		if preUTXO == nil { //this utxo is the head utxo
 			if bytes.Equal(utxo.NextUtxoKey, []byte{}) { //the only utxo
-				err = utxoCache.deleteUTXOInfo(pubkey)
+				err = utxoCache.deleteUTXOInfo(pubkeyHash)
 				if err != nil {
 					return err
 				}
 			} else { //the first utxo in the chain
-				err := utxoCache.putLastUTXOKey(pubkey, utxo.NextUtxoKey)
+				err := utxoCache.putLastUTXOKey(pubkeyHash, utxo.NextUtxoKey)
 				if err != nil {
 					return err
 				}
@@ -264,27 +264,27 @@ func (utxoCache *UTXOCache) deleteUTXOFromDB(utxoKey string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) putLastUTXOKey(pubkey string, lastUTXOKey []byte) error {
-	utxoInfo, err := utxoCache.getUTXOInfo(pubkey)
+func (utxoCache *UTXOCache) putLastUTXOKey(pubkeyHash string, lastUTXOKey []byte) error {
+	utxoInfo, err := utxoCache.getUTXOInfo(pubkeyHash)
 	if err != nil {
 		logger.Warn("putLastUTXOKey:", err)
 	}
 	utxoInfo.SetLastUtxoKey(lastUTXOKey)
-	if err = utxoCache.putUTXOInfo(pubkey, utxoInfo); err != nil {
+	if err = utxoCache.putUTXOInfo(pubkeyHash, utxoInfo); err != nil {
 		logger.Error("put last utxo key to db failed.")
 		return err
 	}
 	return nil
 }
 
-func (utxoCache *UTXOCache) getUTXOInfo(pubkey string) (*UTXOInfo, error) {
-	utxoInfoData, ok := utxoCache.utxoInfo.Get(pubkey)
+func (utxoCache *UTXOCache) getUTXOInfo(pubkeyHash string) (*UTXOInfo, error) {
+	utxoInfoData, ok := utxoCache.utxoInfo.Get(pubkeyHash)
 	if ok {
 		return utxoInfoData.(*UTXOInfo), nil
 	}
 
 	utxoInfo := NewUTXOInfo()
-	rawBytes, err := utxoCache.db.Get(util.Str2bytes(pubkey))
+	rawBytes, err := utxoCache.db.Get(util.Str2bytes(pubkeyHash))
 	if err != nil {
 		logger.Warn("utxoInfo not found in db")
 		return utxoInfo, err
@@ -298,41 +298,41 @@ func (utxoCache *UTXOCache) getUTXOInfo(pubkey string) (*UTXOInfo, error) {
 	}
 	utxoInfo.FromProto(utxoInfoPb)
 
-	utxoCache.utxoInfo.Add(pubkey, utxoInfo)
+	utxoCache.utxoInfo.Add(pubkeyHash, utxoInfo)
 	return utxoInfo, nil
 }
 
-func (utxoCache *UTXOCache) putUTXOInfo(pubkey string, utxoInfo *UTXOInfo) error {
+func (utxoCache *UTXOCache) putUTXOInfo(pubkeyHash string, utxoInfo *UTXOInfo) error {
 	utxoBytes, err := proto.Marshal(utxoInfo.ToProto().(*utxopb.UtxoInfo))
 	if err != nil {
 		return err
 	}
-	err = utxoCache.db.Put(util.Str2bytes(pubkey), utxoBytes)
+	err = utxoCache.db.Put(util.Str2bytes(pubkeyHash), utxoBytes)
 	if err != nil {
 		logger.Error("put utxoInfo to db failed.")
 		return err
 	}
-	utxoCache.utxoInfo.Add(pubkey, utxoInfo)
+	utxoCache.utxoInfo.Add(pubkeyHash, utxoInfo)
 	return nil
 }
 
-func (utxoCache *UTXOCache) deleteUTXOInfo(pubkey string) error {
-	if err := utxoCache.db.Del(util.Str2bytes(pubkey)); err != nil {
+func (utxoCache *UTXOCache) deleteUTXOInfo(pubkeyHash string) error {
+	if err := utxoCache.db.Del(util.Str2bytes(pubkeyHash)); err != nil {
 		logger.Error("deleteUTXOInfo: delete utxoInfo from db failed.")
 		return err
 	}
-	utxoCache.utxoInfo.Remove(pubkey)
+	utxoCache.utxoInfo.Remove(pubkeyHash)
 	return nil
 }
 
-func (utxoCache *UTXOCache) putCreateContractUTXOKey(pubkey string, createContractUTXOKey []byte) error {
-	if _, err := utxoCache.db.Get(util.Str2bytes(pubkey)); err == nil {
+func (utxoCache *UTXOCache) putCreateContractUTXOKey(pubkeyHash string, createContractUTXOKey []byte) error {
+	if _, err := utxoCache.db.Get(util.Str2bytes(pubkeyHash)); err == nil {
 		return errors.New("this utxoInfo already exists")
 	}
 
 	utxoInfo := NewUTXOInfo()
 	utxoInfo.SetCreateContractUTXOKey(createContractUTXOKey)
-	if err := utxoCache.putUTXOInfo(pubkey, utxoInfo); err != nil {
+	if err := utxoCache.putUTXOInfo(pubkeyHash, utxoInfo); err != nil {
 		logger.Error("put utxoCreateContractKey to db failed.")
 		return err
 	}
