@@ -172,7 +172,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
 
-	contractState := scState.NewScState()
+	contractState := scState.NewScState(bp.bm.Getblockchain().GetUtxoCache())
 
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 

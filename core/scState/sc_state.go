@@ -1,6 +1,7 @@
 package scState
 
 import (
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/util"
 	"sync"
 
@@ -19,6 +20,7 @@ type ChangeLog struct {
 type ScState struct {
 	states map[string]map[string]string //address key, value
 	events []*Event
+	cache       *utxo.UTXOCache
 	mutex  *sync.RWMutex
 }
 
@@ -32,8 +34,13 @@ func NewChangeLog() *ChangeLog {
 	return &ChangeLog{make(map[string]map[string]string)}
 }
 
-func NewScState() *ScState {
-	return &ScState{make(map[string]map[string]string), make([]*Event, 0), &sync.RWMutex{}}
+func NewScState(cache *utxo.UTXOCache) *ScState {
+	return &ScState{
+		make(map[string]map[string]string),
+		make([]*Event, 0),
+		cache,
+		&sync.RWMutex{},
+	}
 }
 
 func (ss *ScState) GetEvents() []*Event { return ss.events }

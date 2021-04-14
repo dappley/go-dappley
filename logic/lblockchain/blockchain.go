@@ -82,7 +82,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	}
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxos(genesis.GetTransactions())
-	scState := scState.NewScState()
+	scState := scState.NewScState(bc.GetUtxoCache())
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")

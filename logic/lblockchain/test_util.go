@@ -15,7 +15,7 @@ import (
 )
 
 func PrepareBlockContext(bc *Blockchain, blk *block.Block) *BlockContext {
-	state := scState.NewScState()
+	state := scState.NewScState(bc.GetUtxoCache())
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxos(blk.GetTransactions())
 	ctx := BlockContext{Block: blk, UtxoIndex: utxoIndex, State: state}
