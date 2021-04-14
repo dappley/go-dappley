@@ -1,7 +1,0 @@
-syntax = "proto3";
- package utxopb;
-
- message UtxoInfo {
-     bytes   lastUtxoKey = 1;
-     bytes   utxoCreateContractKey = 2;
- }
