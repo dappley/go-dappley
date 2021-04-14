@@ -8,7 +8,6 @@ import (
 	"github.com/dappley/go-dappley/common/hash"
 
 	scstatepb "github.com/dappley/go-dappley/core/scState/pb"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
@@ -185,7 +184,7 @@ func (ss *ScState) SetStateValue(address, key, value string) {
 	ss.states[address][key] = value
 }
 
-func (ss *ScState) DelStateValue(db storage.Storage, address, key string) {
+func (ss *ScState) DelStateValue( address, key string) {
 	if _, ok := ss.states[address]; ok {
 		if _, ok := ss.states[address][key]; ok {
 			ss.states[address][key] = scStateValueIsNotExist

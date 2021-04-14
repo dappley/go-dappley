@@ -327,7 +327,6 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())
 	engine.ImportUtxoIndex(utxoIndex)
-	engine.ImportDB(db)
 	_, err := engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
 	// record base gas
