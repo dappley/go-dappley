@@ -39,7 +39,7 @@ func EstimateGas(tx *transaction.Transaction, tailBlk *block.Block, utxoCache *u
 		return 0, err
 	}
 	isContractDeployed := ctx.IsContractDeployed(utxoIndex)
-	contractState:=scState.NewScState()
-	gasCount, _, err := ctx.Execute(prevUtxos, isContractDeployed, utxoIndex, contractState, rewards, engine, tailBlk.GetHeight()+1, tailBlk,db)
+	contractState:=scState.NewScState(utxoCache)
+	gasCount, _, err := ctx.Execute(prevUtxos, isContractDeployed, utxoIndex, contractState, rewards, engine, tailBlk.GetHeight()+1, tailBlk)
 	return gasCount, err
 }

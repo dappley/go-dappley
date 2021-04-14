@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/stateLog"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -30,7 +31,12 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-const UtxoCacheLRUCacheLimit = 1024
+const (
+	UtxoCacheLRUCacheLimit    = 1024
+	ScStateCacheLRUCacheLimit = 1024
+	scStateMapKey             = "scState"
+	scStateLogKey             = "scLog"
+)
 
 // UTXOCache holds temporary data
 type UTXOCache struct {
@@ -38,7 +44,13 @@ type UTXOCache struct {
 	cache               *lru.Cache
 	utxo                *lru.Cache
 	utxoInfo            *lru.Cache
-	db                  storage.Storage
+	ScStateCache
+	db storage.Storage
+}
+
+type ScStateCache struct {
+	stateLogCache *lru.Cache
+	scStateCache  *lru.Cache
 }
 
 func NewUTXOCache(db storage.Storage) *UTXOCache {
@@ -53,7 +65,18 @@ func NewUTXOCache(db storage.Storage) *UTXOCache {
 	utxoCache.utxo, _ = lru.New(UtxoCacheLRUCacheLimit)
 	utxoCache.utxoInfo, _ = lru.New(UtxoCacheLRUCacheLimit)
 	utxoCache.contractCreateCache, _ = lru.New(UtxoCacheLRUCacheLimit)
+	utxoCache.ScStateCache = NewScStateCache()
 	return utxoCache
+}
+
+func NewScStateCache() ScStateCache {
+	scStateCache := ScStateCache{
+		stateLogCache: nil,
+		scStateCache:  nil,
+	}
+	scStateCache.stateLogCache, _ = lru.New(ScStateCacheLRUCacheLimit)
+	scStateCache.scStateCache, _ = lru.New(ScStateCacheLRUCacheLimit)
+	return scStateCache
 }
 
 func (utxoCache *UTXOCache) AddUtxos(utxoTx *UTXOTx, pubkey string) error {
@@ -339,4 +362,67 @@ func (utxoCache *UTXOCache) UpdateNextUTXO(nextUTXOKey []byte, preUTXOKey string
 		return nil, err
 	}
 	return nextUTXO, nil
+}
+
+func (utxoCache *UTXOCache) AddScStates(address, key, value string) error {
+	err := utxoCache.db.Put(util.Str2bytes(scStateMapKey+address+key), util.Str2bytes(value))
+	if err != nil {
+		return err
+	}
+	utxoCache.scStateCache.Add(scStateMapKey+address+key, value)
+	return nil
+}
+
+func (utxoCache *UTXOCache) GetScStates(address, key string) (string, error) {
+	scStateData, ok := utxoCache.scStateCache.Get(scStateMapKey + address + key)
+	if ok {
+		return scStateData.(string), nil
+	}
+
+	valBytes, err := utxoCache.db.Get(util.Str2bytes(scStateMapKey + address + key))
+	if err != nil {
+		return "", err
+	}
+	return util.Bytes2str(valBytes), nil
+}
+
+func (utxoCache *UTXOCache) DelScStates(address, key string) error {
+	err := utxoCache.db.Del(util.Str2bytes(scStateMapKey + address + key))
+	if err != nil {
+		return err
+	}
+	utxoCache.scStateCache.Remove(scStateMapKey + address + key)
+	return nil
+}
+
+func (utxoCache *UTXOCache) AddStateLog(blkHash string, stLog *stateLog.StateLog) error {
+	utxoCache.stateLogCache.Add(scStateLogKey + blkHash, stLog)
+
+	err := utxoCache.db.Put(util.Str2bytes(scStateLogKey + blkHash), stLog.SerializeStateLog())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (utxoCache *UTXOCache) GetStateLog(blkHash string) (*stateLog.StateLog, error) {
+	stLogData, ok := utxoCache.stateLogCache.Get(scStateLogKey + blkHash)
+	if ok {
+		return stLogData.(*stateLog.StateLog), nil
+	}
+
+	stLogBytes, err := utxoCache.db.Get(util.Str2bytes(scStateLogKey + blkHash))
+	if err != nil {
+		return nil, err
+	}
+	return stateLog.DeserializeStateLog(stLogBytes), nil
+}
+
+func (utxoCache *UTXOCache) DelStateLog(blkHash string) error {
+	err := utxoCache.db.Del(util.Str2bytes(scStateLogKey + blkHash))
+	if err != nil {
+		return err
+	}
+	utxoCache.stateLogCache.Remove(scStateLogKey + blkHash)
+	return nil
 }

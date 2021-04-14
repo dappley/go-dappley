@@ -1,0 +1,10 @@
+syntax = "proto3";
+package stateLogpb;
+
+message Log {
+    map<string, string> log = 1;
+}
+
+message StateLog {
+    map<string, Log> log = 1;
+}

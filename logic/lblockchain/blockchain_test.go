@@ -139,7 +139,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState())
+	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState(bc.GetUtxoCache()))
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -232,7 +232,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 		b := block.NewBlock(txs, tailBlk, "")
 		b.SetHash(lblock.CalculateHash(b))
-		state := scState.NewScState()
+		state := scState.NewScState(bc.GetUtxoCache())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }

@@ -280,7 +280,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 			"hash":   forkBlks[i].GetHash().String(),
 		}).Info("BlockchainManager: is verifying a block in the fork.")
 
-		contractStates := scState.NewScState()
+		contractStates := scState.NewScState(bm.blockchain.GetUtxoCache())
 
 		if !lblock.VerifyTransactions(forkBlks[i], utxo,contractStates, parentBlk,bm.Getblockchain().GetDb()) {
 			return ErrTransactionVerifyFailed
@@ -371,7 +371,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 	index := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	//scState := scState.LoadScStateFromDatabase(db)
 	bci := bc.Iterator()
-	contractStates := scState.NewScState()
+	contractStates := scState.NewScState(bc.GetUtxoCache())
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
 	// in the block, until the block hash matches.
 	for {
@@ -398,7 +398,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			return nil, nil, err
 		}
 
-		contractStates.RevertState(db, block.GetHash())
+		contractStates.RevertState(block.GetHash())
 
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{

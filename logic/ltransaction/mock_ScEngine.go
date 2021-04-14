@@ -10,7 +10,6 @@ import (
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -62,11 +61,6 @@ func (_m *MockScEngine) ImportContractAddr(contractAddr account.Address) {
 // ImportCurrBlockHeight provides a mock function with given fields: currBlkHeight
 func (_m *MockScEngine) ImportCurrBlockHeight(currBlkHeight uint64) {
 	_m.Called(currBlkHeight)
-}
-
-// ImportDB provides a mock function with given fields: db
-func (_m *MockScEngine) ImportDB(db storage.Storage) {
-	_m.Called(db)
 }
 
 // ImportLocalStorage provides a mock function with given fields: state

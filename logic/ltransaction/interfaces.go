@@ -2,8 +2,6 @@ package ltransaction
 
 import (
 	"crypto/ecdsa"
-	"github.com/dappley/go-dappley/storage"
-
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -28,7 +26,6 @@ type ScEngine interface {
 	ImportPrevUtxos(utxos []*utxo.UTXO)
 	ImportCurrBlockHeight(currBlkHeight uint64)
 	ImportSeed(seed int64)
-	ImportDB(db storage.Storage)
 	GetGeneratedTXs() []*transaction.Transaction
 	Execute(function, args string) (string, error)
 	SetExecutionLimits(uint64, uint64) error

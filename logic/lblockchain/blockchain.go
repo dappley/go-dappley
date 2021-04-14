@@ -82,7 +82,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	}
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxos(genesis.GetTransactions())
-	scState := scState.NewScState()
+	scState := scState.NewScState(bc.GetUtxoCache())
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
@@ -278,7 +278,7 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
 		return err
 	}
-	err=ctx.State.Save(bc.db, ctx.Block.GetHash())
+	err=ctx.State.Save(ctx.Block.GetHash())
 	if err!=nil{
 		logger.Warn("scState save failed",err)
 	}
@@ -442,7 +442,7 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		return false
 	}
 
-	if err = scState.Save(bc.db,parentblockHash); err != nil {
+	if err = scState.Save(parentblockHash); err != nil {
 		logger.Warn(err)
 		return false
 	}

@@ -34,7 +34,6 @@ import (
 	"github.com/dappley/go-dappley/core/transactionbase"
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/logic/lutxo"
-	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
 )
@@ -284,8 +283,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	rewards map[string]string,
 	engine ScEngine,
 	currblkHeight uint64,
-	parentBlk *block.Block,
-	db storage.Storage) (uint64, []*transaction.Transaction, error) {
+	parentBlk *block.Block) (uint64, []*transaction.Transaction, error) {
 
 	if engine == nil {
 		return 0, nil, nil
@@ -327,7 +325,6 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	engine.ImportCurrBlockHeight(currblkHeight)
 	engine.ImportSeed(parentBlk.GetTimestamp())
 	engine.ImportUtxoIndex(utxoIndex)
-	engine.ImportDB(db)
 	_, err := engine.Execute(function, totalArgs)
 	gasCount := engine.ExecutionInstructions()
 	// record base gas

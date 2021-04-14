@@ -150,8 +150,7 @@ StorageTest.prototype = {
 };
 module.exports = new StorageTest();
 `
-
-	ss := scState.NewScState()
+	ss := scState.NewScState(&utxo.UTXOCache{ScStateCache:utxo.NewScStateCache()})
 
 	ss.SetStateValue(dummyAddr, "key", "7")
 	sc := NewV8Engine()
@@ -189,7 +188,7 @@ StorageTest.prototype = {
 };
 module.exports = new StorageTest();
 `
-	ss := scState.NewScState()
+	ss := scState.NewScState(&utxo.UTXOCache{ScStateCache:utxo.NewScStateCache()})
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -231,7 +230,7 @@ StorageTest.prototype = {
 };
 module.exports = new StorageTest();
 `
-	ss := scState.NewScState()
+	ss := scState.NewScState(&utxo.UTXOCache{ScStateCache:utxo.NewScStateCache()})
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -303,7 +302,7 @@ TransactionTest.prototype = {
 };
 module.exports = new TransactionTest();
 `
-	ss := scState.NewScState()
+	ss := scState.NewScState(&utxo.UTXOCache{ScStateCache:utxo.NewScStateCache()})
 	sc := NewV8Engine()
 	sc.ImportSourceCode(script)
 	sc.ImportLocalStorage(ss)
@@ -320,29 +319,28 @@ func TestStepRecord(t *testing.T) {
 	reward := make(map[string]string)
 	db := storage.NewRamStorage()
 	defer db.Close()
-	ss := scState.NewScState()
+	ss := scState.NewScState(utxo.NewUTXOCache(db))
 	sc := NewV8Engine()
 	sc.ImportSourceCode(string(script))
 	sc.ImportLocalStorage(ss)
 	sc.ImportContractAddr(account.NewAddress(dummyAddr))
 	sc.ImportRewardStorage(reward)
-	sc.ImportDB(db)
 	assert.Nil(t, sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize))
 	ret, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", \"20\"")
 
 	assert.Equal(t, "0", ret)
 	//assert.Equal(t, "20", ss.GetStorageByAddress(account.NewAddress(dummyAddr).String())["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "20", ss.GetStateValue(db, dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "20", ss.GetStateValue( dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "20", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	ret2, _ := sc.Execute("record", "\"dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 15")
 	assert.Equal(t, "0", ret2)
-	assert.Equal(t, "35", ss.GetStateValue(db, dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "35", ss.GetStateValue(dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 	ret3, _ := sc.Execute("record", "\"fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa\", 10")
 	assert.Equal(t, "0", ret3)
-	assert.Equal(t, "10", ss.GetStateValue(db, dummyAddr, "fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "10", ss.GetStateValue(dummyAddr, "fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "10", reward["fastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
-	assert.Equal(t, "35", ss.GetStateValue(db, dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
+	assert.Equal(t, "35", ss.GetStateValue(dummyAddr, "dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"))
 	assert.Equal(t, "35", reward["dastXXWLe5pxbRYFhcyUq8T3wb5srWkHKa"])
 }
 
@@ -436,7 +434,7 @@ func TestBlkHeight(t *testing.T) {
 func TestRecordEvent(t *testing.T) {
 	script, _ := ioutil.ReadFile("test/test_event.js")
 
-	ss := scState.NewScState()
+	ss := scState.NewScState(&utxo.UTXOCache{ScStateCache:utxo.NewScStateCache()})
 	sc := NewV8Engine()
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
@@ -501,11 +499,10 @@ func TestStepRecordGasCount(t *testing.T) {
 
 	db := storage.NewRamStorage()
 	defer db.Close()
-	ss := scState.NewScState()
+	ss := scState.NewScState(utxo.NewUTXOCache(db))
 	sc := NewV8Engine()
 	sc.ImportLocalStorage(ss)
 	sc.ImportSourceCode(string(script))
-	sc.ImportDB(db)
 	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
 
 	function, args := util.DecodeScInput(vout.Contract)

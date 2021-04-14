@@ -73,7 +73,7 @@ func VerifyAndCollectContractOutput(utxoIndex *lutxo.UTXOIndex, tx *TxContract, 
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return 0, nil, err
 	}
-	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, ctState, rewards, scEngine, currBlkHeight, parentBlk, db)
+	gasCount, generatedTxs, err = tx.Execute(prevUtxos, isContractDeployed, utxoIndex, ctState, rewards, scEngine, currBlkHeight, parentBlk)
 	if err!=nil{
 		logger.Warn(err)
 		//invoke smart contracts before they are completed deploy, will cause an ErrLoadError.

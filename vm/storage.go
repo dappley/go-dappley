@@ -38,7 +38,7 @@ func StorageGetFunc(address unsafe.Pointer, key *C.char) *C.char {
 		return nil
 	}
 
-	val := engine.state.GetStateValue(engine.db, engine.contractAddr.String(), goKey)
+	val := engine.state.GetStateValue(engine.contractAddr.String(), goKey)
 	if val == "" {
 		logger.WithFields(logger.Fields{
 			"contract_address": addr,
@@ -80,6 +80,6 @@ func StorageDelFunc(address unsafe.Pointer, key *C.char) int {
 		}).Debug("SmartContract: failed to get state handler!")
 		return 1
 	}
-	engine.state.DelStateValue(engine.db, engine.contractAddr.String(), goKey)
+	engine.state.DelStateValue(engine.contractAddr.String(), goKey)
 	return 0
 }
