@@ -107,7 +107,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 		}
 	}
 
-	err :=ss.cache.AddStateLog(util.Bytes2str(blkHash),changeLog)
+	err :=ss.cache.AddStateLog(util.Bytes2str(blkHash),changeLog.SerializeChangeLog())
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (ss *ScState) getChangeLog(blkHash hash.Hash) *ChangeLog {
 	if err != nil {
 		return changeLog
 	}
-	return rawBytes
+	return DeserializeChangeLog(rawBytes)
 }
 
 func (ss *ScState)deleteLog(prevHash hash.Hash) error {

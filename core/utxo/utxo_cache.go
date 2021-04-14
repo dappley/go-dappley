@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"errors"
 	"github.com/dappley/go-dappley/core/account"
-	"github.com/dappley/go-dappley/core/scState"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/storage"
 	"github.com/dappley/go-dappley/util"
@@ -395,8 +394,8 @@ func (utxoCache *UTXOCache) DelScStates(address, key string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) AddStateLog(blkHash string, changeLog *scState.ChangeLog) error {
-	err := utxoCache.db.Put(util.Str2bytes(scStateLogKey+blkHash), changeLog.SerializeChangeLog())
+func (utxoCache *UTXOCache) AddStateLog(blkHash string, changeLog []byte) error {
+	err := utxoCache.db.Put(util.Str2bytes(scStateLogKey+blkHash), changeLog)
 	if err != nil {
 		return err
 	}
@@ -404,17 +403,17 @@ func (utxoCache *UTXOCache) AddStateLog(blkHash string, changeLog *scState.Chang
 	return nil
 }
 
-func (utxoCache *UTXOCache) GetStateLog(blkHash string) (*scState.ChangeLog, error) {
+func (utxoCache *UTXOCache) GetStateLog(blkHash string) ([]byte, error) {
 	changeLogData, ok := utxoCache.changeLogCache.Get(scStateLogKey + blkHash)
 	if ok {
-		return changeLogData.(*scState.ChangeLog), nil
+		return changeLogData.([]byte), nil
 	}
 
 	changeLogBytes, err := utxoCache.db.Get(util.Str2bytes(scStateLogKey + blkHash))
 	if err != nil {
 		return nil, err
 	}
-	return scState.DeserializeChangeLog(changeLogBytes), nil
+	return changeLogBytes, nil
 }
 
 func (utxoCache *UTXOCache) DelStateLog(blkHash string) error {
