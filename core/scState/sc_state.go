@@ -21,7 +21,7 @@ type ScState struct {
 }
 
 const (
-	scStateValueIsNotExist = "scStateValueIsNotExist"
+	scStateValueIsNotExist = ""
 )
 
 
@@ -150,4 +150,11 @@ func (ss *ScState) DelStateValue( address, key string) {
 			return
 		}
 	}
+
+	_, err := ss.cache.GetScStates(address, key)
+	if err != nil {
+		logger.Warn("The key to be deleted does not exist.")
+		return
+	}
+	ss.states[address] = map[string]string{key: scStateValueIsNotExist}
 }
