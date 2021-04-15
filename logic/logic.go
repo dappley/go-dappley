@@ -33,7 +33,6 @@ import (
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/storage"
 
-	"github.com/dappley/go-dappley/vm"
 	"github.com/dappley/go-dappley/wallet"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -53,13 +52,13 @@ var (
 )
 
 //create a blockchain
-func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, scManager *vm.V8EngineManager, blkSizeLimit int) (*lblockchain.Blockchain, error) {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy lblockchain.LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*lblockchain.Blockchain, error) {
 	addressAccount := account.NewTransactionAccountByAddress(address)
 	if !addressAccount.IsValid() {
 		return nil, ErrInvalidAddress
 	}
 
-	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, scManager, blkSizeLimit)
+	bc := lblockchain.CreateBlockchain(address, db, libPolicy, txPool, blkSizeLimit)
 
 	return bc, nil
 }
@@ -237,7 +236,9 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions())
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
+		logger.Warn("sendTo error")
+	}
 
 	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
 	if err != nil {

@@ -57,7 +57,6 @@ import (
 	"github.com/dappley/go-dappley/network"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/vm"
 	logger "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
@@ -86,7 +85,7 @@ func CreateProducer(producerAddr, addr account.Address, db storage.Storage, txPo
 	consensus := &blockchainMock.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
 
-	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, vm.NewV8EngineManager(account.Address{}), 100000)
+	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, 100000)
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 
 	bpConsensus := &mocks.Consensus{}

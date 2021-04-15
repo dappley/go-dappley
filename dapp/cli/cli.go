@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -36,6 +37,7 @@ import (
 	"time"
 
 	"github.com/dappley/go-dappley/logic/ltransaction"
+	crypto "github.com/libp2p/go-libp2p-crypto"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
@@ -79,6 +81,8 @@ const (
 	cliHelp              = "help"
 	cliGetMetricsInfo    = "getMetricsInfo"
 	cliGetBlockByHeight  = "getBlockByHeight"
+	cliGenerateSeed      = "generateSeed"
+	cliConfigGenerator   = "generateConfig"
 )
 
 //flag names
@@ -103,6 +107,7 @@ const (
 	flagKey              = "key"
 	flagValue            = "value"
 	flagBlockHeight      = "height"
+	flagGenerateConfig   = "generateConfig"
 )
 
 type valueType int
@@ -123,6 +128,12 @@ const (
 	metricsRpcService
 )
 
+const (
+	InvalidNode = iota
+	MinerNode
+	FullNode
+)
+
 //list of commands
 var cmdList = []string{
 	cliGetBlocks,
@@ -141,6 +152,8 @@ var cmdList = []string{
 	cliHelp,
 	cliGetMetricsInfo,
 	cliGetBlockByHeight,
+	cliGenerateSeed,
+	cliConfigGenerator,
 }
 
 var (
@@ -331,6 +344,7 @@ var cmdFlagsMap = map[string][]flagPars{
 			"height. Eg. 1",
 		},
 	},
+	cliGenerateSeed: {},
 }
 
 //map the callback function to each command
@@ -351,6 +365,9 @@ var cmdHandlers = map[string]commandHandlersWithType{
 	cliContractQuery:     {rpcService, contractQueryCommandHandler},
 	cliGetMetricsInfo:    {metricsRpcService, getMetricsInfoCommandHandler},
 	cliGetBlockByHeight:  {rpcService, getBlockByHeightCommandHandler},
+	cliGenerateSeed:      {adminRpcService, generateSeedCommandHandler},
+
+	cliConfigGenerator: {adminRpcService, configGeneratorCommandHandler},
 }
 
 type commandHandlersWithType struct {
@@ -365,6 +382,20 @@ type flagPars struct {
 	defaultValue interface{}
 	valueType    valueType
 	usage        string
+}
+
+type Node struct {
+	NodeType      int
+	nodeType      string
+	fileName      string
+	miner_address string
+	private_key   string
+	port          string
+	seed          string
+	db_path       string
+	rpc_port      string
+	key           string
+	node_address  string
 }
 
 //map key: flag name   map defaultValue: flag defaultValue
@@ -455,6 +486,226 @@ func printUsage() {
 		fmt.Println(" ", cmd)
 	}
 	fmt.Println("Note: Use the command 'cli help' to get the command usage in details")
+}
+
+func generateSeedCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+
+	key, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
+
+	if err != nil {
+		fmt.Printf("Generate key error %v\n", err)
+		return
+	}
+
+	bytes, err := crypto.MarshalPrivateKey(key)
+	if err != nil {
+		fmt.Printf("MarshalPrivateKey error %v\n", err)
+		return
+	}
+
+	str := base64.StdEncoding.EncodeToString(bytes)
+	fmt.Printf("%v\n", str)
+
+}
+
+func setNodeType(node *Node, nodeType string) {
+	if nodeType == "minernode" {
+		node.NodeType = MinerNode
+	} else if nodeType == "fullnode" {
+		node.NodeType = FullNode
+	} else {
+		node.NodeType = InvalidNode
+	}
+}
+
+func configContent(node *Node) string {
+	val1 := ("consensus_config{\n" +
+		"	miner_address: " + "\"" + node.miner_address + "\"" + "\n" +
+		"	private_key: \"" + node.private_key + "\"\n" +
+		"}\n\n")
+	val2 := ("node_config{\n" +
+		"	port:	" + node.port + "\n" +
+		"	seed:	[\"" + node.seed + "\"]\n" +
+		"	db_path: \"" + node.db_path + node.fileName + ".db\"\n" +
+		"	rpc_port: " + node.rpc_port + "\n")
+	val3 := ("	key: \"" + node.key + "\"\n")
+	val4 := ("	tx_pool_limit: 102400\n" +
+		"	blk_size_limit: 102400\n" +
+		"	node_address: \"" + node.node_address + "\"\n" +
+		"	metrics_interval: 7200\n" +
+		"	metrics_polling_interval: 5\n}")
+	if node.NodeType == MinerNode && node.key == "" {
+		val := val1 + val2 + val4
+		return val
+	} else if node.NodeType == MinerNode && node.key != "" {
+		val := val1 + val2 + val3 + val4
+		return val
+	} else if node.NodeType == FullNode && node.key == "" {
+		val := val2 + val4
+		return val
+	} else {
+		val := val2 + val3 + val4
+		return val
+	}
+
+}
+
+func configGeneratorCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
+
+	var node *Node
+	node = new(Node)
+
+	//Check and set the node type
+	for {
+		fmt.Println("Choose config type:")
+		fmt.Println("FullNode or MinerNode: ")
+		fmt.Scanln(&node.nodeType)
+		setNodeType(node, strings.ToLower(node.nodeType))
+
+		if node.NodeType == MinerNode || node.NodeType == FullNode {
+			break
+		} else {
+			fmt.Println("Invalid input")
+			fmt.Println("To choose node type, input FullNode or MinerNode")
+		}
+	}
+
+	//Name file
+	fmt.Print("File name(don't need extension name): ")
+	fmt.Println("Input nothing for default: \"node\"")
+
+	fmt.Scanln(&node.fileName)
+	if node.fileName == "" {
+		node.fileName = "node"
+	}
+
+	if node.NodeType == MinerNode {
+		fmt.Println("Miner address info:")
+		fmt.Println("Input nothing to generate new key pair or input valueable key pair")
+		for {
+			fmt.Print("miner_address: ")
+			fmt.Scanln(&node.miner_address)
+			if node.miner_address == "" {
+				acc := createAccount(ctx, c, flags)
+				node.miner_address = acc.GetAddress().String()
+				pvk := acc.GetKeyPair().GetPrivateKey()
+				hex_private_key, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
+				if err1 != nil {
+					//err = err1
+					return
+				}
+				node.private_key = hex.EncodeToString(hex_private_key)
+				fmt.Println("New miner_address & pravte_key generated")
+				fmt.Println("miner_address: ", node.miner_address)
+				fmt.Println("private_key: ", node.private_key)
+				break
+			} else {
+				fmt.Print("private_key: ")
+				fmt.Scanln(&node.private_key)
+				fmt.Println("Verifying account information....")
+				acc := account.NewAccountByPrivateKey(node.private_key)
+				if acc.GetAddress().String() == node.miner_address {
+					break
+				} else {
+					fmt.Println("miner_address and private_key doesn't match")
+				}
+			}
+		}
+		node.node_address = node.miner_address
+	}
+
+	for {
+		fmt.Println("Port info:")
+		fmt.Println("Input nothing for default setting: 12341")
+
+		fmt.Scanln(&node.port)
+		if node.port == "" {
+			node.port = "12341"
+			break
+		} else if _, err := strconv.Atoi(node.port); err != nil {
+			fmt.Println("Input must be integer")
+		} else {
+			break
+		}
+	}
+
+	for {
+
+		fmt.Println("Seed: ")
+
+		fmt.Scanln(&node.seed)
+		if len(node.seed) <= 32 {
+			fmt.Println("Please input an valid seed")
+		} else {
+			break
+		}
+	}
+	fmt.Print("db_path: ")
+	fmt.Println("Input nothing for default: ../bin/" + node.fileName + ".db")
+
+	fmt.Scanln(&node.db_path)
+	if node.db_path == "" {
+		node.db_path = "../bin/"
+	}
+
+	for {
+		fmt.Print("Rpc_port: ")
+		fmt.Println("Input nothing for default setting : 50051")
+		fmt.Scanln(&node.rpc_port)
+		if node.rpc_port == "" {
+			node.rpc_port = "50051"
+			break
+		} else if _, err := strconv.Atoi(node.rpc_port); err != nil {
+			fmt.Println("Input must be integer")
+		} else {
+			break
+		}
+	}
+
+	fmt.Print("Key: ")
+	fmt.Println("Input nothing to generate new key")
+	fmt.Scanln(&node.key)
+	if strings.ToLower(node.key) == "" {
+		//generate key
+		KeyPair, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
+
+		if err != nil {
+			fmt.Printf("Generate key error %v\n", err)
+			return
+		}
+
+		bytes, err := crypto.MarshalPrivateKey(KeyPair)
+		if err != nil {
+			fmt.Printf("MarshalPrivateKey error %v\n", err)
+			return
+		}
+		str := base64.StdEncoding.EncodeToString(bytes)
+		node.key = str
+		fmt.Println("Key: " + node.key)
+	}
+
+	//write file name
+	f, err := os.Create("../conf/" + node.fileName + ".conf")
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer f.Close()
+
+	val := configContent(node)
+
+	data := []byte(val)
+	_, err = f.Write(data)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(node.fileName + ".conf" + " is created successfully")
+	fmt.Println("Location: ../conf/" + node.fileName + ".conf")
 }
 
 func getMetricsInfoCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
@@ -582,6 +833,7 @@ func getBlocksCommandHandler(ctx context.Context, account interface{}, flags cmd
 			var encodedVin []map[string]interface{}
 			for _, vin := range transaction.GetVin() {
 				encodedVin = append(encodedVin, map[string]interface{}{
+					"Txid":      hex.EncodeToString(vin.GetTxid()),
 					"Vout":      vin.GetVout(),
 					"Signature": hex.EncodeToString(vin.GetSignature()),
 					"PubKey":    hex.EncodeToString(vin.GetPublicKey()),
@@ -681,49 +933,45 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 	fmt.Printf("The balance is: %d\n", response.GetAmount())
 }
 
-func createAccountCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.Account {
+	var acc *account.Account
 	empty, err := logic.IsAccountEmpty()
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
+
 	if empty {
 		passphrase = prompter.GetPassPhrase("Please input the password for the new account: ", true)
 		if passphrase == "" {
 			fmt.Println("Error: password cannot be empty!")
-			return
+			return nil
 		}
 		account, err := logic.CreateAccountWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			return
+			return nil
 		}
-		if account != nil {
-			fmt.Printf("Account is created. The address is %s \n", account.GetAddress().String())
-			return
-		}
+		acc = account
 	}
 
 	locked, err := logic.IsAccountLocked()
 	if err != nil {
 		fmt.Println("Error:", err.Error())
-		return
+		return nil
 	}
 
 	if locked {
 		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
 		if passphrase == "" {
 			fmt.Println("Error: password should not be empty!")
-			return
+			return nil
 		}
-		acc, err := logic.CreateAccountWithPassphrase(passphrase)
+		account, err := logic.CreateAccountWithPassphrase(passphrase)
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			return
+			return nil
 		}
-		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", acc.GetAddress().String())
-		}
-		//unlock the account
-		_, err = account.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
+
+		_, err = c.(rpcpb.AdminServiceClient).RpcUnlockAccount(ctx, &rpcpb.UnlockAccountRequest{})
 
 		if err != nil {
 			switch status.Code(err) {
@@ -732,17 +980,30 @@ func createAccountCommandHandler(ctx context.Context, account interface{}, flags
 			default:
 				fmt.Println("Error:", status.Convert(err).Message())
 			}
-			return
+			return nil
 		}
+
+		acc = account
 	} else {
 		account, err := logic.CreateAccount()
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			return
+			return nil
 		}
-		if account != nil {
-			fmt.Printf("Account is created. The address is %s\n", account.GetAddress().String())
-		}
+		acc = account
+	}
+
+	return acc
+}
+
+func createAccountCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
+	acc := createAccount(ctx, account, flags)
+	if acc == nil {
+		return
+	}
+	if account != nil {
+		fmt.Printf("Account is created. The address is %s \n", acc.GetAddress().String())
+		return
 	}
 
 	return
@@ -1342,6 +1603,7 @@ func getBlockByHeightCommandHandler(ctx context.Context, c interface{}, flags cm
 		var encodedVin []map[string]interface{}
 		for _, vin := range transaction.GetVin() {
 			encodedVin = append(encodedVin, map[string]interface{}{
+				"Txid":      hex.EncodeToString(vin.GetTxid()),
 				"Vout":      vin.GetVout(),
 				"Signature": hex.EncodeToString(vin.GetSignature()),
 				"PubKey":    hex.EncodeToString(vin.GetPublicKey()),

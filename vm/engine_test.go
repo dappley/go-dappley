@@ -4,11 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/dappley/go-dappley/logic/ltransaction"
-	"github.com/dappley/go-dappley/storage"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
+	"github.com/dappley/go-dappley/storage"
 
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/scState"
@@ -448,18 +449,6 @@ func TestTrimWhiteSpaces(t *testing.T) {
 	str := strings.Replace(scriptStr, " ", "", -1)
 	str = strings.Replace(str, "\\n", "", -1)
 	fmt.Println(str)
-}
-
-func TestGetNodeAddress(t *testing.T) {
-	script, _ := ioutil.ReadFile("test/test_blockchain.js")
-
-	sc := NewV8Engine()
-	sc.ImportSourceCode(string(script))
-	sc.ImportNodeAddress(account.NewAddress("testAddr"))
-
-	sc.SetExecutionLimits(DefaultLimitsOfGas, DefaultLimitsOfTotalMemorySize)
-	ret, _ := sc.Execute("getNodeAddress", "")
-	assert.Equal(t, "testAddr", ret)
 }
 
 func TestAddGasCount(t *testing.T) {

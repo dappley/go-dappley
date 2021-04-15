@@ -59,7 +59,7 @@ func TestCreateBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 
 	//find next block. This block should be the genesis block and its prev hash should be empty
 	blk, err := bc.Next()
@@ -72,7 +72,7 @@ func TestBlockchain_SetTailBlockHash(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 
 	tailHash := hash.Hash("TestHash")
 	bc.SetTailBlockHash(tailHash)
@@ -89,7 +89,7 @@ func TestBlockchain_HigherThanBlockchainTestHigher(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	blk := block.GenerateMockBlock()
 	blk.SetHeight(1)
 	assert.True(t, bc.IsHigherThanBlockchain(blk))
@@ -101,7 +101,7 @@ func TestBlockchain_HigherThanBlockchainTestLower(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 1000000)
 	tailblk, _ := bc.GetTailBlock()
 	blk := ltransaction.GenerateBlockWithCbtx(addr, tailblk)
 	blk.SetHeight(1)
@@ -117,7 +117,7 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	defer s.Close()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128), 100000)
 
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
@@ -139,7 +139,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), scState.NewScState())
+	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -156,7 +156,7 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 
 	// Create a blockchain for testing
 	addr := account.NewAddress("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf")
-	bc := &Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, utxo.NewUTXOCache(db), nil, transactionpool.NewTransactionPool(nil, 128), nil, nil, 1000000, &sync.Mutex{}}
+	bc := &Blockchain{blockchain.NewBlockchain(hash.Hash{}, hash.Hash{}), db, utxo.NewUTXOCache(db), nil, transactionpool.NewTransactionPool(nil, 128), nil, 1000000, &sync.Mutex{}}
 	bc.SetState(blockchain.BlockchainInit)
 
 	// Add genesis block
@@ -208,7 +208,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 	s := storage.NewRamStorage()
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
 
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 1280000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 1280000), 100000)
 	var accounts []*account.Account
 	for i := 0; i < 10; i++ {
 		acc := account.NewAccount()
@@ -242,7 +242,7 @@ func GenerateMockBlockchain(size int) *Blockchain {
 	s := storage.NewRamStorage()
 
 	addr := account.NewAddress("16PencPNnF8CiSx2EBGEd1axhf7vuHCouj")
-	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(addr, s, nil, transactionpool.NewTransactionPool(nil, 128000), 100000)
 
 	for i := 0; i < size; i++ {
 		tailBlk, _ := bc.GetTailBlock()

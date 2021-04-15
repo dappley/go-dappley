@@ -68,11 +68,6 @@ func (_m *MockScEngine) ImportLocalStorage(state *scState.ScState) {
 	_m.Called(state)
 }
 
-// ImportNodeAddress provides a mock function with given fields: addr
-func (_m *MockScEngine) ImportNodeAddress(addr account.Address) {
-	_m.Called(addr)
-}
-
 // ImportPrevUtxos provides a mock function with given fields: utxos
 func (_m *MockScEngine) ImportPrevUtxos(utxos []*utxo.UTXO) {
 	_m.Called(utxos)

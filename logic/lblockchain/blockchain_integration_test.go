@@ -19,8 +19,9 @@
 package lblockchain
 
 import (
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"testing"
+
+	"github.com/dappley/go-dappley/logic/ltransaction"
 
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/scState"
@@ -43,7 +44,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	defer s.Close()
 	coinbaseAccount := account.NewAccount()
 	coinbaseAddr := coinbaseAccount.GetAddress()
-	bc := CreateBlockchain(coinbaseAddr, s, nil, transactionpool.NewTransactionPool(nil, 128000), nil, 100000)
+	bc := CreateBlockchain(coinbaseAddr, s, nil, transactionpool.NewTransactionPool(nil, 128000), 100000)
 
 	for i := 0; i < 3; i++ {
 		tailBlk, _ := bc.GetTailBlock()
@@ -91,7 +92,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(blk.GetHash(), scState.NewScState())
+	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState())
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()

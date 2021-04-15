@@ -20,6 +20,7 @@ package lutxo
 
 import (
 	"errors"
+	"github.com/dappley/go-dappley/util"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -274,4 +275,182 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.Equal(t, 1, len(utxoIndex.indexAdd))
 
 	assert.EqualValues(t, utxoCopy.indexAdd[ta1.GetPubKeyHash().String()], utxoCopy2.indexAdd[ta1.GetPubKeyHash().String()])
+}
+
+func TestUTXOIndexSave(t *testing.T) {
+
+	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
+	var ta1 = account.NewAccountByPrivateKey(prikey1)
+	var prikey2 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa72"
+	var ta2 = account.NewAccountByPrivateKey(prikey2)
+	var prikey3 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa73"
+	var ta3 = account.NewAccountByPrivateKey(prikey3)
+	var prikey4 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa74"
+	var ta4 = account.NewAccountByPrivateKey(prikey4)
+	var prikey5 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa75"
+	var ta5 = account.NewAccountByPrivateKey(prikey5)
+
+	var dependentTx1 = &transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{util.GenerateRandomAoB(1), 1, nil, ta1.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(5), ta1.GetPubKeyHash(), ""},
+			{common.NewAmount(10), ta2.GetPubKeyHash(), ""},
+		},
+		Tip: common.NewAmount(3),
+	}
+	dependentTx1.ID = dependentTx1.Hash()
+
+	utxoPk10 := &utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}}
+	utxoPk11 := &utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal, []byte{}}
+
+	var dependentTx2 = &transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{dependentTx1.ID, 1, nil, ta2.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(5), ta3.GetPubKeyHash(), ""},
+			{common.NewAmount(3), ta4.GetPubKeyHash(), ""},
+		},
+		Tip: common.NewAmount(2),
+	}
+	dependentTx2.ID = dependentTx2.Hash()
+	//ta1 5,ta2 0,ta3 5,ta4 5
+	utxoPk20 := &utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal, []byte{}}
+	utxoPk21 := &utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal, []byte{}}
+
+	var dependentTx3 = &transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{dependentTx2.ID, 0, nil, ta3.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(1), ta4.GetPubKeyHash(), ""},
+		},
+		Tip: common.NewAmount(4),
+	}
+	dependentTx3.ID = dependentTx3.Hash()
+	//ta1 5,ta2 0,ta3 0,ta4 5+1
+	utxoPk30 := &utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal, []byte{}}
+
+	var dependentTx4 = &transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{dependentTx2.ID, 1, nil, ta4.GetKeyPair().GetPublicKey()},
+			{dependentTx3.ID, 0, nil, ta4.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
+		},
+		Tip: common.NewAmount(1),
+	}
+	dependentTx4.ID = dependentTx4.Hash()
+	//ta1 5+3,ta2 0,ta3 0,ta4 6-3-1
+	utxoPk40 := &utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal, []byte{}}
+
+	var dependentTx5 = &transaction.Transaction{
+		ID: nil,
+		Vin: []transactionbase.TXInput{
+			{dependentTx1.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
+			{dependentTx4.ID, 0, nil, ta1.GetKeyPair().GetPublicKey()},
+		},
+		Vout: []transactionbase.TXOutput{
+			{common.NewAmount(4), ta5.GetPubKeyHash(), ""},
+		},
+		Tip: common.NewAmount(4),
+	}
+	dependentTx5.ID = dependentTx5.Hash()
+	//ta1 8-4-4,ta2 0,ta3 0,ta4 2
+	//ta1 0,ta2 0,ta3 0,ta4 2,ta5 4
+	utxoPk50 := &utxo.UTXO{dependentTx5.Vout[0], dependentTx5.ID, 0, utxo.UtxoNormal, []byte{}}
+
+	db := storage.NewRamStorage()
+	defer db.Close()
+	utxoIndex := NewUTXOIndex(utxo.NewUTXOCache(db))
+
+	utxoTx1 := utxo.NewUTXOTx() //ta1
+	utxoTx1.PutUtxo(utxoPk10)
+	utxoTx1.PutUtxo(utxoPk40)
+
+	utxoTx2 := utxo.NewUTXOTx() //ta2
+	utxoTx2.PutUtxo(utxoPk11)
+
+	utxoTx3 := utxo.NewUTXOTx() //ta3
+	utxoTx3.PutUtxo(utxoPk20)
+
+	utxoTx4 := utxo.NewUTXOTx() //ta4
+	utxoTx4.PutUtxo(utxoPk21)
+	utxoTx4.PutUtxo(utxoPk30)
+
+	utxoTx5 := utxo.NewUTXOTx() //ta5
+	utxoTx5.PutUtxo(utxoPk50)
+
+	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx1,
+		ta2.GetPubKeyHash().String(): &utxoTx2,
+		ta3.GetPubKeyHash().String(): &utxoTx3,
+		ta4.GetPubKeyHash().String(): &utxoTx4,
+		ta5.GetPubKeyHash().String(): &utxoTx5,
+	})
+
+	utxoIndex.SetindexRemove(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx1,
+		ta2.GetPubKeyHash().String(): &utxoTx2,
+		ta3.GetPubKeyHash().String(): &utxoTx3,
+		ta4.GetPubKeyHash().String(): &utxoTx4,
+	})
+
+	//test add and remove utxo
+	err := utxoIndex.Save()
+	assert.Nil(t, err)
+	assert.Equal(t, false, utxoIndex.IsLastUtxoKeyExist(ta1.GetPubKeyHash()))
+	assert.Equal(t, false, utxoIndex.IsLastUtxoKeyExist(ta2.GetPubKeyHash()))
+	assert.Equal(t, false, utxoIndex.IsLastUtxoKeyExist(ta3.GetPubKeyHash()))
+	assert.Equal(t, false, utxoIndex.IsLastUtxoKeyExist(ta4.GetPubKeyHash()))
+	assert.Equal(t, true, utxoIndex.IsLastUtxoKeyExist(ta5.GetPubKeyHash()))
+
+	//remove utxo which not in db
+	utxoIndex.SetindexRemove(map[string]*utxo.UTXOTx{
+		ta4.GetPubKeyHash().String(): &utxoTx4,
+	})
+	err = utxoIndex.Save()
+	assert.Equal(t, errors.New("this pubkey's utxo is not exist"), err)
+
+	//add a utxo which is same as last utxo
+	utxoIndex.SetIndexAdd(map[string]*utxo.UTXOTx{
+		ta5.GetPubKeyHash().String(): &utxoTx5,
+	})
+	err = utxoIndex.Save()
+	assert.Equal(t, errors.New("add utxo failed: the utxo is same as the last utxo"), err)
+
+	utxoIndex2 := NewUTXOIndex(utxo.NewUTXOCache(db))
+	utxoIndex2.SetIndexAdd(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx1, //first time add utxoPk10
+	})
+	err = utxoIndex2.Save()
+	assert.Nil(t, err)
+
+	utxoTx1Add := utxo.NewUTXOTx()
+	utxoTx1Add.PutUtxo(utxoPk10) //second time add utxoPk10
+	utxoIndex2.SetIndexAdd(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx1Add,
+	})
+	utxoTx1Remove := utxo.NewUTXOTx()
+	utxoTx1Remove.PutUtxo(utxoPk40) //delete utxoPK40 will connect two utxoPk10 together, which should be captured.
+	utxoIndex2.SetindexRemove(map[string]*utxo.UTXOTx{
+		ta1.GetPubKeyHash().String(): &utxoTx1Remove,
+	})
+	err = utxoIndex2.Save()
+	assert.Equal(t, errors.New("remove utxo error: find duplicate utxo in db"), err)
+
+	//The following print outs are normal, because the utxoInfo has not been created
+	// until the first pubkey's utxo is stored.
+	//time="2021-01-27T16:37:06-08:00" level=warning msg="utxoInfo not found in db"
+	//time="2021-01-27T16:37:06-08:00" level=warning msg="getLastUTXOKey error:key is invalid"
+	//time="2021-01-27T16:37:06-08:00" level=warning msg="utxoInfo not found in db"
+	//time="2021-01-27T16:37:06-08:00" level=warning msg="key is invalid"
+
 }

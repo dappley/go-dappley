@@ -29,6 +29,10 @@ var (
 
 // VerifyTransaction ensures signature of transactions is correct or verifies against blockHeight if it's a coinbase transactions
 func VerifyTransaction(utxoIndex *lutxo.UTXOIndex, tx *transaction.Transaction, blockHeight uint64) error {
+	err := tx.CheckVinNum()
+	if err != nil {
+		return err
+	}
 	txDecorator := NewTxDecorator(tx)
 	if txDecorator != nil {
 		return txDecorator.Verify(utxoIndex, blockHeight)
@@ -52,7 +56,10 @@ func VerifyContractTransaction(utxoIndex *lutxo.UTXOIndex, tx *TxContract, scSta
 	}
 
 	isContractDeployed := tx.IsContractDeployed(utxoIndex)
-	utxoIndex.UpdateUtxo(tx.Transaction)
+	if !utxoIndex.UpdateUtxo(tx.Transaction){
+		logger.Warn("VerifyContractTransaction warn")
+	}
+
 
 	if err := scEngine.SetExecutionLimits(1000, 0); err != nil {
 		return 0, nil, err

@@ -141,7 +141,9 @@ L:
 				return false
 			}
 			rewardTX = tx
-			utxoIndex.UpdateUtxo(tx)
+			if !utxoIndex.UpdateUtxo(tx){
+				logger.Warn("VerifyTransactions warn")
+			}
 			continue L
 		}
 		if adaptedTx.IsContractSend() {
@@ -173,7 +175,9 @@ L:
 				}).Warn(err.Error())
 				return false
 			}
-			utxoIndex.UpdateUtxo(tx)
+			if	!utxoIndex.UpdateUtxo(tx){
+				logger.Warn("VerifyTransactions warn.")
+			}
 		}
 		if adaptedTx.IsCoinbase() {
 			if coinbaseTx != nil {

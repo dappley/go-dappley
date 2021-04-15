@@ -99,7 +99,6 @@ extern "C" {
     typedef int (*FuncRandom)(void *handler, int max);
     typedef int (*FuncGetCurrBlockHeight)(void *handler);
     typedef int (*FuncDeleteContract)(void *handler);
-    typedef char* (*FuncGetNodeAddress)(void *handler);
 	typedef void* (*FuncMalloc)(size_t size);
 	typedef void  (*FuncFree)(void* data);
 
@@ -107,7 +106,7 @@ EXPORT V8Engine *CreateEngine();
 EXPORT void Initialize();
 EXPORT int executeV8Script(const char *sourceCode, int source_line_offset, uintptr_t handler, char **result, V8Engine *e);
 EXPORT void InitializeBlockchain(FuncVerifyAddress verifyAddress, FuncTransfer transfer, FuncGetCurrBlockHeight getCurrBlockHeight,
-                                 FuncGetNodeAddress getNodeAddress, FuncDeleteContract deleteContract);
+                                  FuncDeleteContract deleteContract);
 EXPORT void InitializeRewardDistributor(FuncRecordReward recordReward);
 EXPORT void InitializeStorage(FuncStorageGet get, FuncStorageSet set, FuncStorageDel del);
 EXPORT void InitializeEvent(FuncTriggerEvent triggerEvent);

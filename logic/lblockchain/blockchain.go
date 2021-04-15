@@ -26,7 +26,6 @@ import (
 
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
-	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -63,14 +62,13 @@ type Blockchain struct {
 	utxoCache    *utxo.UTXOCache
 	libPolicy    LIBPolicy
 	txPool       *transactionpool.TransactionPool
-	scManager    ltransaction.ScEngineManager
 	eventManager *scState.EventManager
 	blkSizeLimit int
 	mutex        *sync.Mutex
 }
 
 // CreateBlockchain creates a new blockchain db
-func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager ltransaction.ScEngineManager, blkSizeLimit int) *Blockchain {
+func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) *Blockchain {
 	genesis := NewGenesisBlock(address, transaction.Subsidy)
 	bc := &Blockchain{
 		blockchain.NewBlockchain(genesis.GetHash(), genesis.GetHash()),
@@ -78,7 +76,6 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 		utxo.NewUTXOCache(db),
 		libPolicy,
 		txPool,
-		scManager,
 		scState.NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
@@ -93,7 +90,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, scManager ltransaction.ScEngineManager, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
@@ -110,7 +107,6 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 		utxo.NewUTXOCache(db),
 		libPolicy,
 		txPool,
-		scManager,
 		scState.NewEventManager(),
 		blkSizeLimit,
 		&sync.Mutex{},
@@ -134,10 +130,6 @@ func (bc *Blockchain) GetLIBHash() hash.Hash {
 	return bc.bc.GetLIBHash()
 }
 
-func (bc *Blockchain) GetSCManager() ltransaction.ScEngineManager {
-	return bc.scManager
-}
-
 func (bc *Blockchain) GetTxPool() *transactionpool.TransactionPool {
 	return bc.txPool
 }
@@ -146,13 +138,17 @@ func (bc *Blockchain) GetEventManager() *scState.EventManager {
 	return bc.eventManager
 }
 
-func (bc *Blockchain) GetUpdatedUTXOIndex() *lutxo.UTXOIndex {
+func (bc *Blockchain) GetUpdatedUTXOIndex() (*lutxo.UTXOIndex, bool) {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
+	errFlag := true
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions())
-	return utxoIndex
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
+		logger.Warn("GetUpdatedUTXOIndex error")
+		errFlag = false
+	}
+	return utxoIndex, errFlag
 }
 
 func (bc *Blockchain) SetBlockSizeLimit(limit int) {
@@ -206,7 +202,6 @@ func (bc *Blockchain) GetBlockByHeight(height uint64) (*block.Block, error) {
 
 	return bc.GetBlockByHash(hash)
 }
-
 
 func (bc *Blockchain) GetBlockMutex() *sync.Mutex {
 	return bc.mutex
@@ -308,7 +303,6 @@ func (bc *Blockchain) Iterator() *Blockchain {
 		bc.libPolicy,
 		nil,
 		nil,
-		nil,
 		bc.blkSizeLimit,
 		bc.mutex,
 	}
@@ -389,7 +383,7 @@ func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 }
 
 //rollback the blockchain to a block with the targetHash
-func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) bool {
+func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scState *scState.ScState) bool {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -400,6 +394,12 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) b
 	//if is child of tail, skip rollback
 	if lblock.IsHashEqual(parentblockHash, targetHash) {
 		return true
+	}
+
+	targetBlock, err := bc.GetBlockByHash(targetHash)
+	if targetBlock.GetHeight() < bc.GetLIBHeight() {
+		println("LIB can't be rollback")
+		return false
 	}
 
 	//keep rolling back blocks until the block with the input hash
@@ -423,10 +423,16 @@ func (bc *Blockchain) Rollback(targetHash hash.Hash, scState *scState.ScState) b
 		}
 	}
 
+	//updated utxo in db
+	err = index.Save()
+	if err != nil {
+		return false
+	}
+
 	bc.db.EnableBatch()
 	defer bc.db.DisableBatch()
 
-	err := bc.setTailBlockHash(parentblockHash)
+	err = bc.setTailBlockHash(parentblockHash)
 	if err != nil {
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
@@ -486,7 +492,7 @@ func (bc *Blockchain) GasPrice() uint64 {
 	return DefaultGasPrice
 }
 
-func (bc *Blockchain) CheckLibPolicy(blk *block.Block) bool {
+func (bc *Blockchain) CheckMinProducerPolicy(blk *block.Block) bool {
 
 	if bc.libPolicy.IsBypassingLibCheck() {
 		return true

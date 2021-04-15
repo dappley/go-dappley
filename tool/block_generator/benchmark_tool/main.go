@@ -21,7 +21,6 @@ import (
 	"github.com/dappley/go-dappley/logic/downloadmanager"
 	"github.com/dappley/go-dappley/network"
 	"github.com/dappley/go-dappley/storage"
-	"github.com/dappley/go-dappley/vm"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	logger "github.com/sirupsen/logrus"
@@ -186,9 +185,9 @@ func prepareNode(db storage.Storage, rfl *storage.FileLoader) (*lblockchain.Bloc
 	node := network.NewNode(rfl, nil)
 	txPoolLimit := uint32(2000)
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
-	bc, err := lblockchain.GetBlockchain(db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, 1000000)
 	if err != nil {
-		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, vm.NewV8EngineManager(account.Address{}), 1000000)
+		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddrTest), db, conss, txPool, 1000000)
 		if err != nil {
 			logger.Panic(err)
 		}

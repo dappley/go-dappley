@@ -12,7 +12,6 @@ char *Cgo_AttachLibVersionDelegateFunc(void *handler, const char *libname);
 bool  Cgo_VerifyAddressFunc(const char *address, size_t *gasCnt);
 int	  Cgo_TransferFunc(void *handler, const char *to, const char *amount, const char *tip, size_t *gasCnt);
 int   Cgo_GetCurrBlockHeightFunc(void *handler);
-char* Cgo_GetNodeAddressFunc(void *handler);
 int   Cgo_DeleteContractFunc(void *handler);
 //storage
 char* Cgo_StorageGetFunc(void *address, const char *key);
@@ -83,7 +82,6 @@ type V8Engine struct {
 	handler            uint64
 	blkHeight          uint64
 	seed               int64
-	nodeAddr           account.Address
 
 	modules                                 Modules
 	v8engine                                *C.V8Engine
@@ -114,7 +112,6 @@ func InitializeV8Engine() {
 		(C.FuncVerifyAddress)(unsafe.Pointer(C.Cgo_VerifyAddressFunc)),
 		(C.FuncTransfer)(unsafe.Pointer(C.Cgo_TransferFunc)),
 		(C.FuncGetCurrBlockHeight)(unsafe.Pointer(C.Cgo_GetCurrBlockHeightFunc)),
-		(C.FuncGetNodeAddress)(unsafe.Pointer(C.Cgo_GetNodeAddressFunc)),
 		(C.FuncDeleteContract)(unsafe.Pointer(C.Cgo_DeleteContractFunc)),
 	)
 	C.InitializeStorage(
@@ -226,11 +223,6 @@ func (sc *V8Engine) ImportSeed(seed int64) {
 	sc.seed = seed
 }
 
-// ImportCurrBlockHeight imports the current block height
-func (sc *V8Engine) ImportNodeAddress(addr account.Address) {
-	sc.nodeAddr = addr
-}
-
 // ClearModuleCache ..
 func ClearSourceModuleCache() {
 	sourceModuleCache.Purge()
@@ -318,7 +310,7 @@ func (sc *V8Engine) RunScriptSource(runnableSource string, sourceLineOffset int)
 	)
 	cFunction := C.CString(runnableSource)
 	defer C.free(unsafe.Pointer(cFunction))
-	sc.v8engine.stats.count_of_executed_instructions=0
+	sc.v8engine.stats.count_of_executed_instructions = 0
 	ret = C.executeV8Script(cFunction, C.int(sourceLineOffset), C.uintptr_t(sc.handler), &cResult, sc.v8engine)
 	sc.CollectTracingStats()
 

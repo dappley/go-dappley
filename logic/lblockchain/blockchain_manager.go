@@ -220,7 +220,6 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 	bm.blockchain.SetState(blockchain.BlockchainSync)
 	bm.Getblockchain().mutex.Unlock()
 
-
 	logger.Info("Push: set blockchain status to sync.")
 
 	err := bm.MergeFork(fork, forkHeadBlk.GetPrevHash())
@@ -254,7 +253,10 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
 		return err
 	}
-	bm.blockchain.Rollback(forkParentHash, scState)
+	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
+	if !ok {
+		return nil
+	}
 
 	parentBlk, err := bm.blockchain.GetBlockByHash(forkParentHash)
 	if err != nil {
@@ -265,7 +267,7 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	}
 
 	for i := len(forkBlks) - 1; i >= 0; i-- {
-		if !bm.Getblockchain().CheckLibPolicy(forkBlks[i]) {
+		if !bm.Getblockchain().CheckMinProducerPolicy(forkBlks[i]) {
 			return ErrProducerNotEnough
 		}
 
@@ -403,11 +405,6 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			}).Errorf("BlockchainManager: failed to delete block %v", err.Error())
 			return nil, nil, err
 		}
-	}
-	//updated utxo in db
-	err:=index.Save()
-	if err!=nil{
-		return nil, nil, err
 	}
 	return index, scState, nil
 }
