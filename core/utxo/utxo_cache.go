@@ -137,6 +137,9 @@ func (utxoCache *UTXOCache) GetPreUtxo(pubKey, targetUtxokey string) (*UTXO, err
 	if bytes.Equal(utxoKey, []byte{}) {
 		return nil, errors.New("this pubkey's utxo is not exist")
 	}
+	if bytes.Equal(utxoKey, util.Str2bytes(targetUtxokey)){
+		return nil, nil
+	}
 	for !bytes.Equal(utxoKey, []byte{}) {
 		utxo, err := utxoCache.GetUtxo(util.Bytes2str(utxoKey))
 		if err != nil {
