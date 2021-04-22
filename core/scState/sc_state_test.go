@@ -13,6 +13,7 @@ import (
 
 func TestScState_Save(t *testing.T) {
 	db := storage.NewRamStorage()
+	defer db.Close()
 	cache := utxo.NewUTXOCache(db)
 
 	testState := []struct {
@@ -110,4 +111,17 @@ func TestScState_Save(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, testState[2].value, util.Bytes2str(valBytes))
 
+}
+
+func TestScState_getStateLog(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := utxo.NewUTXOCache(db)
+
+	stLog := stateLog.NewStateLog()
+	stLog.Log = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": "99"}}
+	assert.Nil(t, db.Put(util.Str2bytes(utxo.ScStateLogKey+"blkHash"), stLog.SerializeStateLog()))
+
+	scState := NewScState(cache)
+	assert.Equal(t, stLog, scState.getStateLog(util.Str2bytes("blkHash")))
 }
