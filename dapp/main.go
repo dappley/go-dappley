@@ -149,7 +149,7 @@ func main() {
 	}
 
 	//start mining
-	logic.SetLockAccount() //lock the account
+	logic.SaveAccount()
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
 	//start rpc server

@@ -219,8 +219,8 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	cleanUpDatabase()
 }
 
-func TestNilSetLockAccount(t *testing.T) {
-	assert.Nil(t, SetLockAccount(GetTestAccountPath()))
+func TestNilSaveAccount(t *testing.T) {
+	assert.Nil(t, SaveAccount(GetTestAccountPath()))
 }
 
 func cleanUpDatabase() {

@@ -83,8 +83,7 @@ func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	return false, nil
 }
 
-//Set lock flag
-func SetLockAccount(optionalAccountFilePath ...string) error {
+func SaveAccount(optionalAccountFilePath ...string) error {
 	am, err1 := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 
 	if err1 != nil {
