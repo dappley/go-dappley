@@ -34,8 +34,8 @@ import (
 const (
 	UtxoCacheLRUCacheLimit    = 1024
 	ScStateCacheLRUCacheLimit = 1024
-	scStateMapKey             = "scState"
-	scStateLogKey             = "scLog"
+	ScStateMapKey             = "scState"
+	ScStateLogKey             = "scLog"
 )
 
 // UTXOCache holds temporary data
@@ -365,21 +365,21 @@ func (utxoCache *UTXOCache) UpdateNextUTXO(nextUTXOKey []byte, preUTXOKey string
 }
 
 func (utxoCache *UTXOCache) AddScStates(address, key, value string) error {
-	err := utxoCache.db.Put(util.Str2bytes(scStateMapKey+address+key), util.Str2bytes(value))
+	err := utxoCache.db.Put(util.Str2bytes(ScStateMapKey+address+key), util.Str2bytes(value))
 	if err != nil {
 		return err
 	}
-	utxoCache.scStateCache.Add(scStateMapKey+address+key, value)
+	utxoCache.scStateCache.Add(ScStateMapKey+address+key, value)
 	return nil
 }
 
 func (utxoCache *UTXOCache) GetScStates(address, key string) (string, error) {
-	scStateData, ok := utxoCache.scStateCache.Get(scStateMapKey + address + key)
+	scStateData, ok := utxoCache.scStateCache.Get(ScStateMapKey + address + key)
 	if ok {
 		return scStateData.(string), nil
 	}
 
-	valBytes, err := utxoCache.db.Get(util.Str2bytes(scStateMapKey + address + key))
+	valBytes, err := utxoCache.db.Get(util.Str2bytes(ScStateMapKey + address + key))
 	if err != nil {
 		return "", err
 	}
@@ -387,18 +387,18 @@ func (utxoCache *UTXOCache) GetScStates(address, key string) (string, error) {
 }
 
 func (utxoCache *UTXOCache) DelScStates(address, key string) error {
-	err := utxoCache.db.Del(util.Str2bytes(scStateMapKey + address + key))
+	err := utxoCache.db.Del(util.Str2bytes(ScStateMapKey + address + key))
 	if err != nil {
 		return err
 	}
-	utxoCache.scStateCache.Remove(scStateMapKey + address + key)
+	utxoCache.scStateCache.Remove(ScStateMapKey + address + key)
 	return nil
 }
 
 func (utxoCache *UTXOCache) AddStateLog(blkHash string, stLog *stateLog.StateLog) error {
-	utxoCache.stateLogCache.Add(scStateLogKey + blkHash, stLog)
+	utxoCache.stateLogCache.Add(ScStateLogKey+ blkHash, stLog)
 
-	err := utxoCache.db.Put(util.Str2bytes(scStateLogKey + blkHash), stLog.SerializeStateLog())
+	err := utxoCache.db.Put(util.Str2bytes(ScStateLogKey+ blkHash), stLog.SerializeStateLog())
 	if err != nil {
 		return err
 	}
@@ -406,12 +406,12 @@ func (utxoCache *UTXOCache) AddStateLog(blkHash string, stLog *stateLog.StateLog
 }
 
 func (utxoCache *UTXOCache) GetStateLog(blkHash string) (*stateLog.StateLog, error) {
-	stLogData, ok := utxoCache.stateLogCache.Get(scStateLogKey + blkHash)
+	stLogData, ok := utxoCache.stateLogCache.Get(ScStateLogKey + blkHash)
 	if ok {
 		return stLogData.(*stateLog.StateLog), nil
 	}
 
-	stLogBytes, err := utxoCache.db.Get(util.Str2bytes(scStateLogKey + blkHash))
+	stLogBytes, err := utxoCache.db.Get(util.Str2bytes(ScStateLogKey + blkHash))
 	if err != nil {
 		return nil, err
 	}
@@ -419,10 +419,10 @@ func (utxoCache *UTXOCache) GetStateLog(blkHash string) (*stateLog.StateLog, err
 }
 
 func (utxoCache *UTXOCache) DelStateLog(blkHash string) error {
-	err := utxoCache.db.Del(util.Str2bytes(scStateLogKey + blkHash))
+	err := utxoCache.db.Del(util.Str2bytes(ScStateLogKey + blkHash))
 	if err != nil {
 		return err
 	}
-	utxoCache.stateLogCache.Remove(scStateLogKey + blkHash)
+	utxoCache.stateLogCache.Remove(ScStateLogKey + blkHash)
 	return nil
 }

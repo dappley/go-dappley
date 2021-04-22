@@ -8,8 +8,6 @@ import (
 
 	"github.com/dappley/go-dappley/common/hash"
 
-	scstatepb "github.com/dappley/go-dappley/core/scState/pb"
-	"github.com/golang/protobuf/proto"
 	logger "github.com/sirupsen/logrus"
 )
 
@@ -21,7 +19,7 @@ type ScState struct {
 }
 
 const (
-	scStateValueIsNotExist = ""
+	ScStateValueIsNotExist = ""
 )
 
 
@@ -40,21 +38,6 @@ func (ss *ScState) RecordEvent(event *Event) {
 	ss.events = append(ss.events, event)
 }
 
-func (ss *ScState) ToProto() proto.Message {
-	scState := make(map[string]*scstatepb.State)
-
-	for key, val := range ss.states {
-		scState[key] = &scstatepb.State{State: val}
-	}
-	return &scstatepb.ScState{States: scState}
-}
-
-func (ss *ScState) FromProto(pb proto.Message) {
-	for key, val := range pb.(*scstatepb.ScState).States {
-		ss.states[key] = val.State
-	}
-}
-
 // Save data with change logs
 func (ss *ScState) Save(blkHash hash.Hash) error {
 	stLog := stateLog.NewStateLog()
@@ -63,15 +46,15 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 			stLog.Log[address] = make(map[string]string)
 		}
 		for key, value := range state {
-			//before saving, read out the original value and save it in the changelog
+			//before saving, read out the original value and save it in the state log
 			val, err := ss.cache.GetScStates(address, key)
 			if err != nil {
-				stLog.Log[address][key] = scStateValueIsNotExist
+				stLog.Log[address][key] = ScStateValueIsNotExist
 			} else {
 				stLog.Log[address][key] = val
 			}
 			//update new states in db
-			if value == scStateValueIsNotExist {
+			if value == ScStateValueIsNotExist {
 				err := ss.cache.DelScStates(address, key)
 				if err != nil {
 					return err
@@ -119,7 +102,7 @@ func (ss *ScState)deleteLog(prevHash hash.Hash) error {
 func (ss *ScState) GetStateValue(address, key string) string {
 	if _, ok := ss.states[address]; ok {
 		if value, ok := ss.states[address][key]; ok {
-			if value == scStateValueIsNotExist {
+			if value == ScStateValueIsNotExist {
 				return ""
 			} else {
 				return value
@@ -146,7 +129,7 @@ func (ss *ScState) SetStateValue(address, key, value string) {
 func (ss *ScState) DelStateValue( address, key string) {
 	if _, ok := ss.states[address]; ok {
 		if _, ok := ss.states[address][key]; ok {
-			ss.states[address][key] = scStateValueIsNotExist
+			ss.states[address][key] = ScStateValueIsNotExist
 			return
 		}
 	}
@@ -156,5 +139,5 @@ func (ss *ScState) DelStateValue( address, key string) {
 		logger.Warn("The key to be deleted does not exist.")
 		return
 	}
-	ss.states[address] = map[string]string{key: scStateValueIsNotExist}
+	ss.states[address] = map[string]string{key: ScStateValueIsNotExist}
 }
