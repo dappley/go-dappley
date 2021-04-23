@@ -18,12 +18,12 @@ func NewStateLog() *StateLog {
 
 
 func (sl *StateLog) ToProto() proto.Message {
-	changelog := make(map[string]*stateLogpb.Log)
+	statelog := make(map[string]*stateLogpb.Log)
 
 	for key, val := range sl.Log {
-		changelog[key] = &stateLogpb.Log{Log: val}
+		statelog[key] = &stateLogpb.Log{Log: val}
 	}
-	return &stateLogpb.StateLog{Log: changelog}
+	return &stateLogpb.StateLog{Log: statelog}
 }
 
 func (sl *StateLog) FromProto(pb proto.Message) {
