@@ -85,7 +85,7 @@ func TestScState_Save(t *testing.T) {
 	for _, tt := range testState {
 		t.Run(tt.name, func(t *testing.T) {
 			scState := NewScState(cache)
-			scState.SetStateValue(tt.address, tt.key, tt.value)
+			scState.states = map[string]map[string]string{tt.address: {tt.key: tt.value}}
 			assert.Nil(t, scState.Save(tt.block))
 
 			valBytes, err := db.Get(util.Str2bytes(utxo.ScStateMapKey + tt.address + tt.key))
@@ -120,10 +120,51 @@ func TestScState_RevertState(t *testing.T) {
 
 	stLog := stateLog.NewStateLog()
 	stLog.Log = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account3": "399"}}
-	assert.Nil(t, db.Put(util.Str2bytes(utxo.ScStateLogKey + "blkHash"), stLog.SerializeStateLog()))
+	assert.Nil(t, db.Put(util.Str2bytes(utxo.ScStateLogKey+"blkHash"), stLog.SerializeStateLog()))
 
 	scState := NewScState(cache)
-	scState.RevertState(util.Str2bytes( "blkHash"))
-	assert.Equal(t,stLog.Log,scState.states)
+	scState.RevertState(util.Str2bytes("blkHash"))
+	assert.Equal(t, stLog.Log, scState.states)
 }
 
+func TestScState_GetStateValue(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := utxo.NewUTXOCache(db)
+	scState := NewScState(cache)
+
+	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": "399"}}
+	assert.Equal(t, "399", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1"))
+
+	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": ScStateValueIsNotExist}}
+	assert.Equal(t, "", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1"))
+
+	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account2": "99"}}
+	assert.Nil(t, scState.Save(util.Str2bytes("blkHash")))
+	scState = NewScState(cache)
+	assert.Equal(t, "99", scState.GetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2"))
+}
+
+func TestScState_SetStateValue(t *testing.T) {
+	cache := utxo.NewUTXOCache(nil)
+	scState := NewScState(cache)
+	scState.SetStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1", "99")
+	assert.Equal(t, "99", scState.states["dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"]["Account1"])
+}
+
+func TestScState_DelStateValue(t *testing.T) {
+	db := storage.NewRamStorage()
+	defer db.Close()
+	cache := utxo.NewUTXOCache(db)
+	scState := NewScState(cache)
+	scState.states = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": "399"}}
+
+	scState.DelStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1")
+	assert.Equal(t, ScStateValueIsNotExist, scState.states["dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"]["Account1"])
+
+	assert.Nil(t, scState.cache.AddScStates("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2", "199"))
+	scState = NewScState(cache)
+	scState.DelStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2")
+	assert.Equal(t, ScStateValueIsNotExist, scState.states["dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"]["Account1"])
+
+}
