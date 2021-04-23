@@ -70,7 +70,7 @@ func TestScState_Save(t *testing.T) {
 			},
 		},
 		{
-			name:     "Delet Data",
+			name:     "Delete Data",
 			address:  "dUuPPYshbBgkzUrgScEHWvdGbSxC8z4R12",
 			key:      "Account3",
 			value:    ScStateValueIsNotExist,
@@ -113,15 +113,17 @@ func TestScState_Save(t *testing.T) {
 
 }
 
-func TestScState_getStateLog(t *testing.T) {
+func TestScState_RevertState(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 	cache := utxo.NewUTXOCache(db)
 
 	stLog := stateLog.NewStateLog()
-	stLog.Log = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account1": "99"}}
-	assert.Nil(t, db.Put(util.Str2bytes(utxo.ScStateLogKey+"blkHash"), stLog.SerializeStateLog()))
+	stLog.Log = map[string]map[string]string{"dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf": {"Account3": "399"}}
+	assert.Nil(t, db.Put(util.Str2bytes(utxo.ScStateLogKey + "blkHash"), stLog.SerializeStateLog()))
 
 	scState := NewScState(cache)
-	assert.Equal(t, stLog, scState.getStateLog(util.Str2bytes("blkHash")))
+	scState.RevertState(util.Str2bytes( "blkHash"))
+	assert.Equal(t,stLog.Log,scState.states)
 }
+

@@ -77,26 +77,16 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 }
 
 func (ss *ScState) RevertState(blkHash hash.Hash) {
-	stlog := ss.getStateLog(blkHash)
+	stlog,err := ss.cache.GetStateLog(util.Bytes2str(blkHash))
+	if err!=nil{
+		logger.Warn("get state log failed: ", err)
+	}
 
 	for address, state := range stlog.Log {
 		for key, value := range state {
 			ss.states[address] = map[string]string{key: value}
 		}
 	}
-}
-
-func (ss *ScState) getStateLog(blkHash hash.Hash) *stateLog.StateLog {
-	stLog, err :=ss.cache.GetStateLog(util.Bytes2str(blkHash))
-	if err != nil {
-		logger.Warn("get state log failed: ", err)
-	}
-	return stLog
-}
-
-func (ss *ScState)deleteLog(prevHash hash.Hash) error {
-	err := ss.cache.DelStateLog(util.Bytes2str(prevHash))
-	return err
 }
 
 func (ss *ScState) GetStateValue(address, key string) string {
