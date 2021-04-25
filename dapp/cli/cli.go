@@ -158,6 +158,7 @@ var cmdList = []string{
 
 var (
 	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
+	ErrTooManyUtxoFund = errors.New("cli: utxo is too many should to merge")
 )
 
 //configure input parameters/flags for each command
@@ -923,15 +924,9 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		fmt.Println()
 		return
 	}
-
-	address := *(flags[flagAddress].(*string))
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
-	if !addressAccount.IsValid() {
-		fmt.Println("Error: address is not valid")
-		return
-	}
-
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &rpcpb.GetBalanceRequest{Address: address})
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
+		Address: account.NewAddress(*(flags[flagAddress].(*string))).String(),
+	})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -941,7 +936,18 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		}
 		return
 	}
-	fmt.Printf("The balance is: %d\n", response.GetAmount())
+	utxos := response.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
+	}
+	sum := common.NewAmount(0)
+	for _, u := range inputUtxos {
+		sum = sum.Add(u.Value)
+	}
+	fmt.Printf("The balance is: %d\n", sum)
 }
 
 func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.Account {
@@ -1161,6 +1167,23 @@ func cliAddProducerCommandHandler(ctx context.Context, c interface{}, flags cmdF
 	fmt.Println("Producer is added.")
 }
 
+type utxoSlice []*utxo.UTXO
+func (u utxoSlice) Len() int {
+	return len(u)
+}
+
+func (u utxoSlice) Less(i, j int) bool {
+	if u[i].Value.Cmp(u[j].Value) == -1{
+		return false
+	}else {
+		return true
+	}
+}
+
+func (u utxoSlice) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
+}
+
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
 	fromAddress := *(flags[flagFromAddress].(*string))
@@ -1188,9 +1211,10 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
+
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -1203,13 +1227,11 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	utxos := response.GetUtxos()
 	var inputUtxos []*utxo.UTXO
 	for _, u := range utxos {
-		uu := utxo.UTXO{}
-		uu.Value = common.NewAmountFromBytes(u.Amount)
-		uu.Txid = u.Txid
-		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
-		uu.TxIndex = int(u.TxIndex)
-		inputUtxos = append(inputUtxos, &uu)
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
 	}
+	sort.Sort(utxoSlice(inputUtxos))
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
@@ -1272,19 +1294,27 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
-	for _, u := range inputUTXOs {
-		sum = sum.Add(u.Value)
-		retUtxos = append(retUtxos, u)
-		if sum.Cmp(amount) >= 0 {
+
+	vinRulesCheck := false
+	for i := 0; i < len(inputUTXOs); i++ {
+		retUtxos = append(retUtxos, inputUTXOs[i])
+		sum = sum.Add(inputUTXOs[i].Value)
+		if vinRules(sum, amount, i, len(inputUTXOs)) {
+			vinRulesCheck = true
 			break
 		}
 	}
-
-	if sum.Cmp(amount) < 0 {
-		return nil, ErrInsufficientFund
+	if vinRulesCheck {
+		return retUtxos, nil
 	}
+	if sum.Cmp(amount) > 0 {
+		return nil, ErrTooManyUtxoFund
+	}
+	return nil, ErrInsufficientFund
+}
 
-	return retUtxos, nil
+func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {
+	return utxoSum.Cmp(amount) >= 0 && (utxoNum == 50 || remainUtxoNum < 100)
 }
 
 func helpCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
@@ -1388,8 +1418,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
-
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {

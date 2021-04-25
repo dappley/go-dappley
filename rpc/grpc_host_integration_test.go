@@ -403,7 +403,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
+	senderResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 	minedReward := transaction.Subsidy
@@ -414,7 +414,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
 	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
-	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
+	receiverResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
@@ -639,7 +639,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	}
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 
@@ -681,7 +681,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	utxoIndex.UpdateUtxo(&gctx2)
 	utxoIndex.Save()
 	rpcContext.bm.Getblockchain()
-	senderResponse2, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse2, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse2)
 

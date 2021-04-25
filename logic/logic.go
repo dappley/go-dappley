@@ -19,10 +19,12 @@
 package logic
 
 import (
+	"context"
 	"errors"
 	"strconv"
-
 	"github.com/dappley/go-dappley/logic/ltransaction"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
+	"io"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
@@ -252,4 +254,39 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	}
 
 	return tx.ID, contractAddr.String(), err
+}
+
+func GetUtxoStream(streamClient rpcpb.RpcServiceClient,getUTXORequest *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse,error) {
+	stream, err := streamClient.RpcGetUTXO(context.Background())
+	if err != nil {
+		logger.Error("get conversations stream err:", err)
+	}
+	response := rpcpb.GetUTXOResponse{}
+	for {
+		err := stream.Send(getUTXORequest)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response,err
+		}
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response,err
+		}
+		for i := 0; i < len(res.Utxos); i++ {
+			response.Utxos = append(response.Utxos, res.Utxos[i])
+		}
+		for i := 0; i < len(res.BlockHeaders); i++ {
+			response.BlockHeaders = append(response.BlockHeaders, res.BlockHeaders[i])
+		}
+	}
+	err = stream.CloseSend()
+	if err != nil {
+		return &response,err
+	}
+	return &response,nil
 }
