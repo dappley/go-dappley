@@ -382,6 +382,22 @@ func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
 	return err == nil
 }
 
+func (bc *Blockchain) IsFoundBeforeLib(hash hash.Hash) bool {
+	bci := bc.Iterator()
+	for{
+		blk, err := bci.Next()
+		if err!=nil{
+			return false
+		}
+		if blk.GetHash().Equals(hash){
+			return true
+		}
+		if blk.GetHash().Equals(bc.GetLIBHash()){
+			return false
+		}
+	}
+}
+
 //rollback the blockchain to a block with the targetHash
 func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scState *scState.ScState) bool {
 	bc.mutex.Lock()

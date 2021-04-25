@@ -190,8 +190,8 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 		return
 	}
 
-	if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetHash()) {
-		if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetPrevHash()) {
+	if !bm.blockchain.IsFoundBeforeLib(forkHeadBlk.GetHash()) {
+		if !bm.blockchain.IsFoundBeforeLib(forkHeadBlk.GetPrevHash()) {
 			logger.WithFields(logger.Fields{
 				"parent_hash": forkHeadBlk.GetPrevHash(),
 				"from":        pid,
