@@ -240,7 +240,7 @@ func TestGetUTXOIndexAtBlockHash(t *testing.T) {
 			bc:       bcs[2],
 			hash:     hash.Hash("not there"),
 			expected: lutxo.NewUTXOIndex(bcs[2].GetUtxoCache()),
-			err:      ErrBlockDoesNotExist,
+			err:      ErrBlockDoesNotFound,
 		},
 		{
 			name:     "no txs in blocks",

@@ -18,7 +18,6 @@
 package lblockchain
 
 import (
-	"bytes"
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/common/log"
@@ -186,15 +185,13 @@ func (bm *BlockchainManager) Push(blk *block.Block, pid networkmodel.PeerInfo) {
 		return
 	}
 
-	if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetHash()) {
-		if !bm.blockchain.IsInBlockchain(forkHeadBlk.GetPrevHash()) {
-			logger.WithFields(logger.Fields{
-				"parent_hash": forkHeadBlk.GetPrevHash(),
-				"from":        pid,
-			}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
-			bm.RequestBlock(forkHeadBlk.GetPrevHash(), pid)
-			return
-		}
+	if !bm.blockchain.IsFoundBeforeLib(forkHeadBlk.GetPrevHash()) {
+		logger.WithFields(logger.Fields{
+			"parent_hash": forkHeadBlk.GetPrevHash(),
+			"from":        pid,
+		}).Info("BlockchainManager: cannot find the parent of the received blk from blockchain. Requesting the parent...")
+		bm.RequestBlock(forkHeadBlk.GetPrevHash(), pid)
+		return
 	}
 
 	fork := bm.blockPool.GetFork(forkHeadBlk.GetHash())
@@ -375,34 +372,33 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 	// Start from the tail of blockchain, compute the previous UTXOIndex by undoing transactions
 	// in the block, until the block hash matches.
 	for {
-		block, err := bci.Next()
-
-		if bytes.Compare(block.GetHash(), hash) == 0 {
-			break
-		}
-
+		blk, err := bci.Next()
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if len(block.GetPrevHash()) == 0 {
-			return nil, nil, ErrBlockDoesNotExist
+		if blk.GetHash().Equals(hash){
+			break
 		}
 
-		err = index.UndoTxsInBlock(block, db)
+		if blk.GetHash().Equals(bc.GetLIBHash()){
+			return nil, nil, ErrBlockDoesNotFound
+		}
+
+		err = index.UndoTxsInBlock(blk, db)
 
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
+				"hash": blk.GetHash(),
 			}).Warn("BlockchainManager: failed to calculate previous state of UTXO index for the block")
 			return nil, nil, err
 		}
 
-		contractStates.RevertState(block.GetHash())
+		contractStates.RevertState(blk.GetHash())
 
 		if err != nil {
 			logger.WithError(err).WithFields(logger.Fields{
-				"hash": block.GetHash(),
+				"hash": blk.GetHash(),
 			}).Errorf("BlockchainManager: failed to delete block %v", err.Error())
 			return nil, nil, err
 		}

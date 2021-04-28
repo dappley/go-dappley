@@ -47,6 +47,7 @@ var libKey = []byte("lastIrreversibleBlockHash")
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
+	ErrBlockDoesNotFound       = errors.New("the block does not found after lib")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
 	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
@@ -380,9 +381,20 @@ func (bc *Blockchain) IsHigherThanBlockchain(block *block.Block) bool {
 	return block.GetHeight() > bc.GetMaxHeight()
 }
 
-func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
-	_, err := bc.GetBlockByHash(hash)
-	return err == nil
+func (bc *Blockchain) IsFoundBeforeLib(hash hash.Hash) bool {
+	bci := bc.Iterator()
+	for{
+		blk, err := bci.Next()
+		if err!=nil{
+			return false
+		}
+		if blk.GetHash().Equals(hash){
+			return true
+		}
+		if blk.GetHash().Equals(bc.GetLIBHash()){
+			return false
+		}
+	}
 }
 
 //rollback the blockchain to a block with the targetHash
@@ -390,20 +402,10 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
-	if !bc.IsInBlockchain(targetHash) {
-		logger.Warn("fork Parent block is not in Blockchain.")
-		return false
-	}
 	parentblockHash := bc.GetTailBlockHash()
 	//if is child of tail, skip rollback
 	if lblock.IsHashEqual(parentblockHash, targetHash) {
 		return true
-	}
-
-	targetBlock, err := bc.GetBlockByHash(targetHash)
-	if targetBlock.GetHeight() < bc.GetLIBHeight() {
-		logger.Info("LIB can't be rollback")
-		return false
 	}
 
 	//keep rolling back blocks until the block with the input hash
@@ -428,7 +430,8 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	}
 
 	//updated utxo in db
-	if err = index.Save(); err != nil {
+	err := index.Save()
+	if err != nil {
 		logger.Warn(err)
 		return false
 	}

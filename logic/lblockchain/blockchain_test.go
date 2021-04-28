@@ -122,10 +122,10 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
-	isFound := bc.IsInBlockchain([]byte("hash"))
+	isFound := bc.IsFoundBeforeLib([]byte("hash"))
 	assert.True(t, isFound)
 
-	isFound = bc.IsInBlockchain([]byte("hash2"))
+	isFound = bc.IsFoundBeforeLib([]byte("hash2"))
 	assert.False(t, isFound)
 }
 
