@@ -62,13 +62,16 @@ func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionba
 	key := getStorageKey(vin.Txid)
 	value, err := db.Get(key)
 	if err != nil {
+		logger.Warn(err)
 		return transactionbase.TXOutput{}, err
 	}
 	txJournal, err := DeserializeJournal(value)
 	if err != nil {
+		logger.Warn(err)
 		return transactionbase.TXOutput{}, err
 	}
 	if vin.Vout >= len(txJournal.Vout) {
+		logger.Warn(ErrVoutNotFound)
 		return transactionbase.TXOutput{}, ErrVoutNotFound
 	}
 	return txJournal.Vout[vin.Vout], nil
