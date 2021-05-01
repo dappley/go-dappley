@@ -19,10 +19,13 @@
 package logic
 
 import (
+	"context"
 	"errors"
+	"io"
 	"strconv"
 
 	"github.com/dappley/go-dappley/logic/ltransaction"
+	rpcpb "github.com/dappley/go-dappley/rpc/pb"
 
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/lblockchain"
@@ -69,12 +72,6 @@ func getAccountFilePath(argv []string) string {
 	return wallet.GetAccountFilePath()
 }
 
-//Get lock flag
-func IsAccountLocked(optionalAccountFilePath ...string) (bool, error) {
-	am, err := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
-	return am.Locked, err
-}
-
 //Tell if the file empty or not exist
 func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	accountFilePath := getAccountFilePath(optionalAccountFilePath)
@@ -89,8 +86,7 @@ func IsAccountEmpty(optionalAccountFilePath ...string) (bool, error) {
 	return false, nil
 }
 
-//Set lock flag
-func SetLockAccount(optionalAccountFilePath ...string) error {
+func SaveAccount(optionalAccountFilePath ...string) error {
 	am, err1 := GetAccountManager(getAccountFilePath(optionalAccountFilePath))
 
 	if err1 != nil {
@@ -102,7 +98,6 @@ func SetLockAccount(optionalAccountFilePath ...string) error {
 		return nil
 	}
 
-	am.Locked = true
 	am.SaveAccountToFile()
 	return nil
 }
@@ -133,7 +128,6 @@ func CreateAccountWithPassphrase(password string, optionalAccountFilePath ...str
 	logger.Info("Account password is set!")
 	account := account.NewAccount()
 	am.AddAccount(account)
-	am.Locked = true
 	am.SaveAccountToFile()
 	return account, err
 }
@@ -146,9 +140,6 @@ func CreateAccount() (*account.Account, error) {
 	}
 
 	account := account.NewAccount()
-	if len(am.Accounts) == 0 {
-		am.Locked = true
-	}
 	am.AddAccount(account)
 	am.SaveAccountToFile()
 	return account, err
@@ -231,7 +222,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 
 	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
 		logger.Warn("sendTo error")
 	}
 
@@ -266,4 +257,39 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	}
 
 	return tx.ID, contractAddr.String(), err
+}
+
+func GetUtxoStream(streamClient rpcpb.RpcServiceClient, getUTXORequest *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
+	stream, err := streamClient.RpcGetUTXO(context.Background())
+	if err != nil {
+		logger.Error("get conversations stream err:", err)
+	}
+	response := rpcpb.GetUTXOResponse{}
+	for {
+		err := stream.Send(getUTXORequest)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response, err
+		}
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return &response, err
+		}
+		for i := 0; i < len(res.Utxos); i++ {
+			response.Utxos = append(response.Utxos, res.Utxos[i])
+		}
+		for i := 0; i < len(res.BlockHeaders); i++ {
+			response.BlockHeaders = append(response.BlockHeaders, res.BlockHeaders[i])
+		}
+	}
+	err = stream.CloseSend()
+	if err != nil {
+		return &response, err
+	}
+	return &response, nil
 }

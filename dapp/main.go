@@ -52,14 +52,15 @@ import (
 )
 
 const (
+	producerFilePath = "conf/producer.conf"
 	genesisAddr      = "121yKAXeG4cw6uaGCBYjWk9yTWmMkhcoDD"
 	configFilePath   = "conf/default.conf"
 	genesisFilePath  = "conf/genesis.conf"
-	producerFilePath = "conf/producer.conf"
 	peerFilePath     = "conf/peer.conf"
 	peerConfDirPath  = "../dapp/"
 	defaultPassword  = "password"
 	size1kB          = 1024
+	version          = "v0.5.0"
 )
 
 func main() {
@@ -79,10 +80,16 @@ func main() {
 	var genesisPath string
 	flag.StringVar(&genesisPath, "g", genesisFilePath, "Genesis Configuration File Path. Default to conf/genesis.conf")
 	//flag.Parse()
-
+	var ver bool
+	flag.BoolVar(&ver, "v", false, "display version")
 	var peerinfoPath string
 	flag.StringVar(&peerinfoPath, "p", peerFilePath, "Peer info configuration file Path. Default to conf/peer_default.conf")
 	flag.Parse()
+
+	if ver {
+		printVersion()
+		return
+	}
 
 	logger.Infof("Genesis conf file is %v,node conf file is %v,peer info conf file is %v", genesisPath, filePath, peerinfoPath)
 
@@ -144,7 +151,7 @@ func main() {
 	}
 
 	//start mining
-	logic.SetLockAccount() //lock the account
+	logic.SaveAccount()
 	logic.SetMinerKeyPair(conf.GetConsensusConfig().GetPrivateKey())
 
 	//start rpc server
@@ -207,4 +214,8 @@ func initNode(conf *configpb.Config, peerinfoConf *storage.FileLoader) (*network
 		return nil, err
 	}
 	return node, nil
+}
+
+func printVersion() {
+	println(version)
 }

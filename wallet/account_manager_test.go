@@ -113,7 +113,6 @@ func TestAccountManager_GetAccountByAddress_withPassphrase(t *testing.T) {
 	passPhrase, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	assert.Equal(t, nil, err)
 	am.PassPhrase = passPhrase
-	am.Locked = true
 	account := account.NewAccount()
 	am.Accounts = append(am.Accounts, account)
 	account1, err := am.GetAccountByAddressWithPassphrase(account.GetAddress(), "password")
@@ -169,5 +168,4 @@ func TestAccountManager_Proto(t *testing.T) {
 	am1.FromProto(amProto)
 	assert.Equal(t, am.Accounts, am1.Accounts)
 	assert.Equal(t, am.PassPhrase, am1.PassPhrase)
-	assert.Equal(t, am.Locked, am1.Locked)
 }

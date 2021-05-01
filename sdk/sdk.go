@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"context"
+	"github.com/dappley/go-dappley/logic"
 
 	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -98,7 +99,7 @@ func (sdk *DappSdk) RequestFund(fundAddr string, amount *common.Amount) {
 //GetUtxoByAddr gets all utxos related to an address from the server
 func (sdk *DappSdk) GetUtxoByAddr(addr account.Address) ([]*utxopb.Utxo, error) {
 
-	resp, err := sdk.conn.rpcClient.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{
+	resp, err := logic.GetUtxoStream(sdk.conn.rpcClient, &rpcpb.GetUTXORequest{
 		Address: addr.String(),
 	})
 

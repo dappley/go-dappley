@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/dappley/go-dappley/common"
@@ -37,10 +36,6 @@ import (
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"github.com/dappley/go-dappley/util"
 	logger "github.com/sirupsen/logrus"
-)
-
-const (
-	scheduleFuncName = "dapp_schedule"
 )
 
 // Normal transaction
@@ -132,7 +127,7 @@ func (tx *TxContract) Verify(utxoIndex *lutxo.UTXOIndex, blockHeight uint64) err
 		}).Warn("Verify: cannot find vin while verifying contract tx")
 		return err
 	}
-	err = tx.verifyInEstimate(utxoIndex, prevUtxos)
+	err = tx.Transaction.Verify(prevUtxos)
 	if err != nil {
 		logger.WithError(err).WithFields(logger.Fields{
 			"txid":        hex.EncodeToString(tx.ID),
@@ -204,12 +199,10 @@ func NewTxContract(tx *transaction.Transaction) *TxContract {
 	return nil
 }
 
-// IsScheduleContract returns if the contract contains 'dapp_schedule'
-func (ctx *TxContract) IsScheduleContract() bool {
-	if !strings.Contains(ctx.GetContract(), scheduleFuncName) {
-		return true
-	}
-	return false
+// IsInvokeContract returns if the contract is invoke Contract
+func (ctx *TxContract) IsInvokeContract(utxoIndex *lutxo.UTXOIndex) bool {
+	return utxoIndex.IsIndexAddExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash) ||
+		utxoIndex.IsLastUtxoKeyExist(ctx.Vout[transaction.ContractTxouputIndex].PubKeyHash)
 }
 
 //GetContract returns the smart contract code in a transaction
@@ -270,15 +263,7 @@ func (tx *TxContract) VerifyInEstimate(utxoIndex *lutxo.UTXOIndex) error {
 	if err != nil {
 		return err
 	}
-	return tx.verifyInEstimate(utxoIndex, prevUtxos)
-}
-
-func (tx *TxContract) verifyInEstimate(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO) error {
-	if tx.IsScheduleContract() && !tx.IsContractDeployed(utxoIndex) {
-		return errors.New("Transaction: contract state check failed")
-	}
-	err := tx.Transaction.Verify(prevUtxos)
-	return err
+	return tx.Transaction.Verify(prevUtxos)
 }
 
 // IsContractDeployed returns if the current contract is deployed
@@ -294,7 +279,7 @@ func (tx *TxContract) IsContractDeployed(utxoIndex *lutxo.UTXOIndex) bool {
 func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 	isContractDeployed bool,
 	utxoIndex *lutxo.UTXOIndex,
-	scStorage *scState.ScState,
+	ctState *scState.ScState,
 	rewards map[string]string,
 	engine ScEngine,
 	currblkHeight uint64,
@@ -330,7 +315,7 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 		return 0, nil, ErrLoadError
 	}
 	engine.ImportSourceCode(createContractUtxo.Contract)
-	engine.ImportLocalStorage(scStorage)
+	engine.ImportLocalStorage(ctState)
 	engine.ImportContractAddr(address)
 	engine.ImportSourceTXID(tx.ID)
 	engine.ImportRewardStorage(rewards)
@@ -349,33 +334,6 @@ func (tx *TxContract) Execute(prevUtxos []*utxo.UTXO,
 		return gasCount, nil, err
 	}
 	return gasCount, engine.GetGeneratedTXs(), err
-}
-
-// Execute contract and return the generated transactions
-func (tx *TxContract) CollectContractOutput(utxoIndex *lutxo.UTXOIndex, prevUtxos []*utxo.UTXO, isContractDeployed bool, scStorage *scState.ScState,
-	engine ScEngine, currBlkHeight uint64, parentBlk *block.Block, minerAddr account.Address, rewards map[string]string, count int) (generatedTxs []*transaction.Transaction, err error) {
-	if tx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
-		err := errors.New("CollectContractOutput: gas price must be a positive number")
-		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
-		return nil, err
-	}
-	gasCount, generatedTxs, err := tx.Execute(prevUtxos, isContractDeployed, utxoIndex, scStorage, rewards, engine, currBlkHeight, parentBlk)
-	if err != nil {
-		logger.WithError(err).Error("CollectContractOutput: executeSmartContract error")
-	}
-	// record gas used
-	if gasCount > 0 {
-		minerTA := account.NewTransactionAccountByAddress(minerAddr)
-		grtx, err := NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), tx.GasPrice, count)
-		if err == nil {
-			generatedTxs = append(generatedTxs, &grtx)
-		}
-	}
-	gctx, err := NewGasChangeTx(tx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), tx.GasLimit, tx.GasPrice, count)
-	if err == nil {
-		generatedTxs = append(generatedTxs, &gctx)
-	}
-	return generatedTxs, nil
 }
 
 //NewRewardTx creates a new transaction that gives reward to addresses according to the input rewards

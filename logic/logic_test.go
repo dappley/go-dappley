@@ -219,34 +219,8 @@ func TestDeleteInvalidAccount(t *testing.T) {
 	cleanUpDatabase()
 }
 
-func TestIsAccountLocked(t *testing.T) {
-	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
-	assert.Nil(t, err)
-
-	status, err := IsAccountLocked(GetTestAccountPath())
-	assert.Nil(t, err)
-	assert.True(t, status)
-	cleanUpDatabase()
-}
-
-func TestNilSetLockAccount(t *testing.T) {
-	assert.Nil(t, SetLockAccount(GetTestAccountPath()))
-}
-
-func TestSetLockAccount(t *testing.T) {
-	_, err := CreateAccountWithPassphrase("test", GetTestAccountPath())
-	assert.Nil(t, err)
-
-	assert.Nil(t, SetLockAccount(GetTestAccountPath()))
-	status, err := IsAccountLocked(GetTestAccountPath())
-	assert.Nil(t, err)
-	assert.True(t, status)
-
-	cleanUpDatabase()
-
-	status, err = IsAccountLocked(GetTestAccountPath())
-	assert.Nil(t, err)
-	assert.False(t, status)
+func TestNilSaveAccount(t *testing.T) {
+	assert.Nil(t, SaveAccount(GetTestAccountPath()))
 }
 
 func cleanUpDatabase() {

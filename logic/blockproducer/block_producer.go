@@ -1,7 +1,6 @@
 package blockproducer
 
 import (
-	"encoding/hex"
 	"time"
 
 	"github.com/dappley/go-dappley/common/log"
@@ -168,11 +167,12 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 	totalSize := 0
 	count := 0
 
-	scStorage := scState.LoadScStateFromDatabase(bp.bm.Getblockchain().GetDb())
 	engine := vm.NewV8Engine()
 	defer engine.DestroyEngine()
 	rewards := make(map[string]string)
 	currBlkHeight := parentBlk.GetHeight() + 1
+
+	contractState := scState.NewScState(bp.bm.Getblockchain().GetUtxoCache())
 
 	for totalSize < bp.bm.Getblockchain().GetBlockSizeLimit() && bp.bm.Getblockchain().GetTxPool().GetNumOfTxInPool() > 0 && !deadline.IsPassed() {
 
@@ -189,22 +189,26 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 		ctx := ltransaction.NewTxContract(txNode.Value)
 		if ctx != nil {
 			minerAddr := account.NewAddress(bp.producer.Beneficiary())
-			prevUtxos, err := lutxo.FindVinUtxosInUtxoPool(utxoIndex, txNode.Value)
+			gasCount, generatedTxs, err := ltransaction.VerifyAndCollectContractOutput(utxoIndex, ctx, contractState, engine, currBlkHeight, parentBlk, rewards, bp.bm.Getblockchain().GetDb())
 			if err != nil {
-				logger.WithError(err).WithFields(logger.Fields{
-					"txid": hex.EncodeToString(txNode.Value.ID),
-				}).Warn("BlockProducer: cannot find vin while executing smart contract")
+				logger.Warn("VerifyAndCollectContractOutput error: ", err)
 				continue
 			}
-			isContractDeployed := ctx.IsContractDeployed(utxoIndex)
+
+			// record gas used
+			if gasCount > 0 {
+				minerTA := account.NewTransactionAccountByAddress(minerAddr)
+				grtx, err := ltransaction.NewGasRewardTx(minerTA, currBlkHeight, common.NewAmount(gasCount), ctx.GasPrice, count)
+				if err == nil {
+					generatedTxs = append(generatedTxs, &grtx)
+				}
+			}
+			gctx, err := ltransaction.NewGasChangeTx(ctx.GetDefaultFromTransactionAccount(), currBlkHeight, common.NewAmount(gasCount), ctx.GasLimit, ctx.GasPrice, count)
+			if err == nil {
+				generatedTxs = append(generatedTxs, &gctx)
+			}
 			validTxs = append(validTxs, txNode.Value)
-			if !utxoIndex.UpdateUtxo(txNode.Value) {
-				logger.Warn("collectTransactions warn: ctx update utxo error")
-			}
-			generatedTxs, err := ctx.CollectContractOutput(utxoIndex, prevUtxos, isContractDeployed, scStorage, engine, currBlkHeight, parentBlk, minerAddr, rewards, count)
-			if err != nil {
-				continue
-			}
+
 			if generatedTxs != nil {
 				validTxs = append(validTxs, generatedTxs...)
 				if !utxoIndex.UpdateUtxos(generatedTxs) {
@@ -227,8 +231,7 @@ func (bp *BlockProducer) collectTransactions(utxoIndex *lutxo.UTXOIndex, parentB
 			logger.Warn("collectTransactions warn: rewards update utxo error")
 		}
 	}
-
-	return validTxs, scStorage
+	return validTxs, contractState
 }
 
 //calculateTips calculate how much tips are earned from the input transactions

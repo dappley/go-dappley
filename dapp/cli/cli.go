@@ -61,6 +61,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const version = "v0.5.0"
+
 //command names
 const (
 	cliGetBlocks         = "getBlocks"
@@ -156,6 +158,7 @@ var cmdList = []string{
 
 var (
 	ErrInsufficientFund = errors.New("cli: the balance is insufficient")
+	ErrTooManyUtxoFund  = errors.New("cli: utxo is too many should to merge")
 )
 
 //configure input parameters/flags for each command
@@ -411,7 +414,14 @@ func main() {
 
 	var filePath string
 	flag.StringVar(&filePath, "f", "default.conf", "CLI config file path")
+	var ver bool
+	flag.BoolVar(&ver, "v", false, "display version")
 	flag.Parse()
+
+	if ver {
+		println(version)
+		return
+	}
 
 	cliConfig := &configpb.CliConfig{}
 	config.LoadConfig(filePath, cliConfig)
@@ -914,15 +924,9 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		fmt.Println()
 		return
 	}
-
-	address := *(flags[flagAddress].(*string))
-	addressAccount := account.NewTransactionAccountByAddress(account.NewAddress(address))
-	if !addressAccount.IsValid() {
-		fmt.Println("Error: address is not valid")
-		return
-	}
-
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetBalance(ctx, &rpcpb.GetBalanceRequest{Address: address})
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
+		Address: account.NewAddress(*(flags[flagAddress].(*string))).String(),
+	})
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -932,7 +936,18 @@ func getBalanceCommandHandler(ctx context.Context, c interface{}, flags cmdFlags
 		}
 		return
 	}
-	fmt.Printf("The balance is: %d\n", response.GetAmount())
+	utxos := response.GetUtxos()
+	var inputUtxos []*utxo.UTXO
+	for _, u := range utxos {
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
+	}
+	sum := common.NewAmount(0)
+	for _, u := range inputUtxos {
+		sum = sum.Add(u.Value)
+	}
+	fmt.Printf("The balance is: %d\n", sum)
 }
 
 func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.Account {
@@ -941,6 +956,10 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 	prompter := util.NewTerminalPrompter()
 	passphrase := ""
 
+	if err != nil {
+		fmt.Println("Error:", err.Error())
+		return nil
+	}
 	if empty {
 		passphrase = prompter.GetPassPhrase("Please input the password for the new account: ", true)
 		if passphrase == "" {
@@ -955,33 +974,18 @@ func createAccount(ctx context.Context, c interface{}, flags cmdFlags) *account.
 		acc = account
 	}
 
-	locked, err := logic.IsAccountLocked()
+	passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+	if passphrase == "" {
+		fmt.Println("Error: password should not be empty!")
+		return nil
+	}
+	account, err := logic.CreateAccountWithPassphrase(passphrase)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return nil
 	}
 
-	if locked {
-		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-		if passphrase == "" {
-			fmt.Println("Error: password should not be empty!")
-			return nil
-		}
-		account, err := logic.CreateAccountWithPassphrase(passphrase)
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return nil
-		}
-
-		acc = account
-	} else {
-		account, err := logic.CreateAccount()
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return nil
-		}
-		acc = account
-	}
+	acc = account
 
 	return acc
 }
@@ -1022,115 +1026,60 @@ func listAddressesCommandHandler(ctx context.Context, c interface{}, flags cmdFl
 		return
 	}
 
-	locked, err := logic.IsAccountLocked()
+	passphrase = prompter.GetPassPhrase("Please input the password: ", false)
+	if passphrase == "" {
+		fmt.Println("Password should not be empty!")
+		return
+	}
+	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
+	addressList, err := am.GetAddressesWithPassphrase(passphrase)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		return
 	}
-	if locked {
-		passphrase = prompter.GetPassPhrase("Please input the password: ", false)
-		if passphrase == "" {
-			fmt.Println("Password should not be empty!")
-			return
-		}
-		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
-		addressList, err := am.GetAddressesWithPassphrase(passphrase)
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return
-		}
 
-		if !listPriv {
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list:")
-				for _, addr := range addressList {
-					fmt.Printf("Address[%d]: %s\n", i, addr)
-					i++
-				}
-				fmt.Println()
-				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
-			}
+	if !listPriv {
+		if len(addressList) == 0 {
+			fmt.Println("The addresses in the account is empty!")
 		} else {
-			privateKeyList := []string{}
+			i := 1
+			fmt.Println("The address list:")
 			for _, addr := range addressList {
-				keyPair := am.GetKeyPairByAddress(account.NewAddress(addr))
-				pvk := keyPair.GetPrivateKey()
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
-				if err1 != nil {
-					err = err1
-					return
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
-				err = err1
+				fmt.Printf("Address[%d]: %s\n", i, addr)
+				i++
 			}
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list with private keys:")
-				for _, addr := range addressList {
-					fmt.Println("--------------------------------------------------------------------------------")
-					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr, i, privateKeyList[i-1])
-					fmt.Println()
-					i++
-				}
-				fmt.Println("--------------------------------------------------------------------------------")
-			}
-
+			fmt.Println()
+			fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
 		}
 	} else {
-		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
-		if err != nil {
-			fmt.Println("Error:", err.Error())
-			return
-		}
-		addressList := am.GetAddresses()
-		if !listPriv {
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list:")
-				for _, addr := range addressList {
-					fmt.Printf("Address[%d]: %s\n", i, addr.String())
-					i++
-				}
-				fmt.Println()
-				fmt.Println("Use the command 'cli listAddresses -privateKey' to list the addresses with private keys")
-			}
-		} else {
-			privateKeyList := []string{}
-			for _, addr := range addressList {
-				keyPair := am.GetKeyPairByAddress(addr)
-				pvk := keyPair.GetPrivateKey()
-				privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
-				if err1 != nil {
-					err = err1
-					return
-				}
-				privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+		privateKeyList := []string{}
+		for _, addr := range addressList {
+			keyPair := am.GetKeyPairByAddress(account.NewAddress(addr))
+			pvk := keyPair.GetPrivateKey()
+			privateKey, err1 := secp256k1.FromECDSAPrivateKey(&pvk)
+			if err1 != nil {
 				err = err1
+				return
 			}
-			if len(addressList) == 0 {
-				fmt.Println("The addresses in the account is empty!")
-			} else {
-				i := 1
-				fmt.Println("The address list with private keys:")
-				for _, addr := range addressList {
-					fmt.Println("--------------------------------------------------------------------------------")
-					fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr.String(), i, privateKeyList[i-1])
-					fmt.Println()
-					i++
-				}
+			privateKeyList = append(privateKeyList, hex.EncodeToString(privateKey))
+			err = err1
+		}
+		if len(addressList) == 0 {
+			fmt.Println("The addresses in the account is empty!")
+		} else {
+			i := 1
+			fmt.Println("The address list with private keys:")
+			for _, addr := range addressList {
 				fmt.Println("--------------------------------------------------------------------------------")
+				fmt.Printf("Address[%d]: %s \nPrivate Key[%d]: %s", i, addr, i, privateKeyList[i-1])
+				fmt.Println()
+				i++
 			}
-
+			fmt.Println("--------------------------------------------------------------------------------")
 		}
 
 	}
+
 	return
 }
 
@@ -1218,6 +1167,24 @@ func clichangeProducerCommandHandler(ctx context.Context, c interface{}, flags c
 	fmt.Println("Producer is added.")
 }
 
+type utxoSlice []*utxo.UTXO
+
+func (u utxoSlice) Len() int {
+	return len(u)
+}
+
+func (u utxoSlice) Less(i, j int) bool {
+	if u[i].Value.Cmp(u[j].Value) == -1 {
+		return false
+	} else {
+		return true
+	}
+}
+
+func (u utxoSlice) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
+}
+
 func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	var data string
 	fromAddress := *(flags[flagFromAddress].(*string))
@@ -1245,9 +1212,10 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		return
 	}
 
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
+
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -1260,13 +1228,11 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	utxos := response.GetUtxos()
 	var inputUtxos []*utxo.UTXO
 	for _, u := range utxos {
-		uu := utxo.UTXO{}
-		uu.Value = common.NewAmountFromBytes(u.Amount)
-		uu.Txid = u.Txid
-		uu.PubKeyHash = account.PubKeyHash(u.PublicKeyHash)
-		uu.TxIndex = int(u.TxIndex)
-		inputUtxos = append(inputUtxos, &uu)
+		utxo := utxo.UTXO{}
+		utxo.FromProto(u)
+		inputUtxos = append(inputUtxos, &utxo)
 	}
+	sort.Sort(utxoSlice(inputUtxos))
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
@@ -1329,19 +1295,27 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 	}
 	var retUtxos []*utxo.UTXO
 	sum := common.NewAmount(0)
-	for _, u := range inputUTXOs {
-		sum = sum.Add(u.Value)
-		retUtxos = append(retUtxos, u)
-		if sum.Cmp(amount) >= 0 {
+
+	vinRulesCheck := false
+	for i := 0; i < len(inputUTXOs); i++ {
+		retUtxos = append(retUtxos, inputUTXOs[i])
+		sum = sum.Add(inputUTXOs[i].Value)
+		if vinRules(sum, amount, i, len(inputUTXOs)) {
+			vinRulesCheck = true
 			break
 		}
 	}
-
-	if sum.Cmp(amount) < 0 {
-		return nil, ErrInsufficientFund
+	if vinRulesCheck {
+		return retUtxos, nil
 	}
+	if sum.Cmp(amount) > 0 {
+		return nil, ErrTooManyUtxoFund
+	}
+	return nil, ErrInsufficientFund
+}
 
-	return retUtxos, nil
+func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {
+	return utxoSum.Cmp(amount) >= 0 && (utxoNum == 50 || remainUtxoNum < 100)
 }
 
 func helpCommandHandler(ctx context.Context, account interface{}, flags cmdFlags) {
@@ -1445,8 +1419,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 		fmt.Println("Error: 'to' address is not valid!")
 		return
 	}
-
-	response, err := c.(rpcpb.RpcServiceClient).RpcGetUTXO(ctx, &rpcpb.GetUTXORequest{
+	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
 	if err != nil {

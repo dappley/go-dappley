@@ -71,7 +71,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 		bc.txPool.Push(txs[i])
 	}
 
-	assert.Equal(t, 3, len(bc.txPool.GetAllTransactions()))
+	assert.Equal(t, 3, len(bc.txPool.GetAllTransactions(utxoIndex)))
 	assert.Equal(t, 1, len(bc.txPool.GetTipOrder()))
 
 	//add block 4 with tx0
@@ -92,7 +92,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState())
+	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState(bc.GetUtxoCache()))
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -103,7 +103,7 @@ func TestBlockchain_RollbackToABlockWithTransactions(t *testing.T) {
 	/*
 		tx0 - tx1 - tx2 - tx3 - tx4
 	*/
-	assert.Equal(t, 5, len(bc.txPool.GetAllTransactions()))
+	assert.Equal(t, 5, len(bc.txPool.GetAllTransactions(utxoIndex)))
 	assert.Equal(t, 1, len(bc.txPool.GetTipOrder()))
 
 }

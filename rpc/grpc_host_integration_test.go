@@ -403,7 +403,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
 
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
+	senderResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: rpcContext.account.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 	minedReward := transaction.Subsidy
@@ -414,7 +414,7 @@ func TestRpcGetUTXO(t *testing.T) {
 	assert.Equal(t, int(MinUtxoBlockHeaderCount), len(senderResponse.BlockHeaders))
 	assert.Equal(t, []byte(tailBlock.GetHash()), senderResponse.BlockHeaders[0].GetHash())
 
-	receiverResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
+	receiverResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: receiverAccount.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, receiverResponse)
 	assert.Equal(t, common.NewAmount(6), getBalance(receiverResponse.Utxos))
@@ -639,7 +639,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	}
 	defer conn.Close()
 	c := rpcpb.NewRpcServiceClient(conn)
-	senderResponse, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse)
 
@@ -681,7 +681,7 @@ func TestRpcVerifyTransaction(t *testing.T) {
 	utxoIndex.UpdateUtxo(&gctx2)
 	utxoIndex.Save()
 	rpcContext.bm.Getblockchain()
-	senderResponse2, err := c.RpcGetUTXO(context.Background(), &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
+	senderResponse2, err := logic.GetUtxoStream(c, &rpcpb.GetUTXORequest{Address: fromAcc.GetAddress().String()})
 	assert.Nil(t, err)
 	assert.NotNil(t, senderResponse2)
 
@@ -1469,8 +1469,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	rpcClient := rpcpb.NewRpcServiceClient(conn)
 
 	// deploy contract
-	contract := "'use strict';var VideoSign=function(){};VideoSign.prototype={put_sign:function(key,value){LocalStorage.set(key,value)},get_sign:function(key){return LocalStorage.get(key)}," +
-		"dapp_schedule:function(){}};module.exports=new VideoSign();"
+	contract := "'use strict';var VideoSign=function(){};VideoSign.prototype={put_sign:function(key,value){LocalStorage.set(key,value)},get_sign:function(key){return LocalStorage.get(key)}};module.exports=new VideoSign();"
 	// Initiate a RPC send request
 	sendResp, err := c.RpcSend(context.Background(), &rpcpb.SendRequest{
 		From:        senderAccount.GetAddress().String(),
@@ -1519,16 +1518,8 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	queryRequest := &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Key: key}
 	queryResp, err := rpcClient.RpcContractQuery(context.Background(), queryRequest)
 	assert.Nil(t, err)
-
-	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
-	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
-
-	queryRequest = &rpcpb.ContractQueryRequest{ContractAddr: contractAddr, Value: value}
-	queryResp, err = rpcClient.RpcContractQuery(context.Background(), queryRequest)
-	assert.Nil(t, err)
-
-	assert.Equal(t, key, queryResp.Key, "RpcContractQuery get key failed")
-	assert.Equal(t, value, queryResp.Value, "RpcContractQuery get value failed")
+	assert.Equal(t, key, queryResp.GetKey(), "RpcContractQuery get key failed")
+	assert.Equal(t, value, queryResp.GetValue(), "RpcContractQuery get value failed")
 
 	logic.RemoveAccountTestFile()
 }

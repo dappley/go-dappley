@@ -2,7 +2,6 @@ package ltransaction
 
 import (
 	"crypto/ecdsa"
-
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -17,7 +16,7 @@ type ScEngineManager interface {
 type ScEngine interface {
 	DestroyEngine()
 	ImportSourceCode(source string)
-	ImportLocalStorage(state *scState.ScState)
+	ImportLocalStorage(ctState *scState.ScState)
 	ImportContractAddr(contractAddr account.Address)
 	ImportSourceTXID(txid []byte)
 	ImportUtxoIndex(utxoIndex *lutxo.UTXOIndex)

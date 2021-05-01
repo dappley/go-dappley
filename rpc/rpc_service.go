@@ -20,7 +20,9 @@ package rpc
 import (
 	"context"
 	"github.com/dappley/go-dappley/consensus"
+	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/lutxo"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,7 +31,6 @@ import (
 	"github.com/dappley/go-dappley/core/scState"
 	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	"github.com/dappley/go-dappley/logic/transactionpool"
 
@@ -63,6 +64,7 @@ type RpcService struct {
 	node           *network.Node
 	dynasty        *consensus.Dynasty
 	utxoIndex      *lutxo.UTXOIndex //rpc cache
+	dbUtxoIndex    *lutxo.UTXOIndex
 	blockMaxHeight uint64
 	mutex          sync.Mutex
 }
@@ -130,28 +132,28 @@ func (rpcService *RpcService) RpcGetBlockchainInfo(ctx context.Context, in *rpcp
 	}, nil
 }
 
-func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXORequest) (*rpcpb.GetUTXOResponse, error) {
-	// if rpcService.blockMaxHeight < bc.GetMaxHeight() UpdatedUTXOIndex otherwise use RpcService.utxoIndex
+func (rpcService *RpcService) RpcGetUTXO(server rpcpb.RpcService_RpcGetUTXOServer) error {
 	bc := rpcService.GetBlockchain()
 	rpcService.mutex.Lock()
-	if rpcService.utxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
-		rpcService.utxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
+	if rpcService.dbUtxoIndex == nil || rpcService.blockMaxHeight < bc.GetMaxHeight() {
+		rpcService.dbUtxoIndex = lutxo.NewUTXOIndex(bc.GetUtxoCache())
 		rpcService.blockMaxHeight = bc.GetMaxHeight()
 	}
 	rpcService.mutex.Unlock()
 
-	acc := account.NewTransactionAccountByAddress(account.NewAddress(in.GetAddress()))
+	req, err := server.Recv()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
+	acc := account.NewTransactionAccountByAddress(account.NewAddress(req.Address))
 	if !acc.IsValid() {
-		return nil, status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
+		return status.Error(codes.InvalidArgument, logic.ErrInvalidAddress.Error())
 	}
-
-	utxos := rpcService.utxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
 	response := rpcpb.GetUTXOResponse{}
-	for _, utxo := range utxos.Indices {
-		response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
-	}
-
 	//TODO Race condition Blockchain update after GetUTXO
 	getHeaderCount := MinUtxoBlockHeaderCount
 	if int(getHeaderCount) < len(rpcService.dynasty.GetProducers()) {
@@ -168,11 +170,44 @@ func (rpcService *RpcService) RpcGetUTXO(ctx context.Context, in *rpcpb.GetUTXOR
 		if err != nil {
 			break
 		}
-
 		response.BlockHeaders = append(response.BlockHeaders, blk.GetHeader().ToProto().(*blockpb.BlockHeader))
 	}
-
-	return &response, nil
+	utxos := rpcService.dbUtxoIndex.GetAllUTXOsByPubKeyHash(acc.GetPubKeyHash())
+	if len(utxos.Indices) == 0 {
+		err := server.Send(&response)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error": err,
+			}).Error("Server Send Failed!")
+			return err
+		}
+	} else {
+		count := 0
+		for _, utxo := range utxos.Indices {
+			count++
+			response.Utxos = append(response.Utxos, utxo.ToProto().(*utxopb.Utxo))
+			if count%1000 == 0 || count == len(utxos.Indices) {
+				err := server.Send(&response)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"error": err,
+					}).Error("Server Send Failed!")
+					return err
+				}
+				if count != len(utxos.Indices) {
+					_, err = server.Recv()
+					if err == io.EOF {
+						return nil
+					}
+					if err != nil {
+						return err
+					}
+					response = rpcpb.GetUTXOResponse{}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (rpcService *RpcService) RpcGetBlocks(ctx context.Context, in *rpcpb.GetBlocksRequest) (*rpcpb.GetBlocksResponse, error) {
@@ -255,7 +290,7 @@ func (rpcService *RpcService) RpcSendTransaction(ctx context.Context, in *rpcpb.
 		return nil, status.Error(codes.InvalidArgument, "transaction type error, must be normal or contract")
 	}
 
-	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) <= 0 {
+	if adaptedTx.IsContract() && adaptedTx.GasPrice.Cmp(common.NewAmount(0)) < 0 {
 		return nil, status.Error(codes.InvalidArgument, "gas price error, must be a positive number")
 	}
 
@@ -415,7 +450,9 @@ func (rpcService *RpcService) IsPrivate() bool { return false }
 
 // RpcGetAllTransactionsFromTxPool get all transactions from transactionpool
 func (rpcService *RpcService) RpcGetAllTransactionsFromTxPool(ctx context.Context, in *rpcpb.GetAllTransactionsRequest) (*rpcpb.GetAllTransactionsResponse, error) {
-	txs := rpcService.GetBlockchain().GetTxPool().GetTransactions()
+	bc := rpcService.GetBlockchain()
+	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
+	txs := bc.GetTxPool().GetAllTransactions(utxoIndex)
 	result := &rpcpb.GetAllTransactionsResponse{}
 	for _, tx := range txs {
 		result.Transactions = append(result.Transactions, tx.ToProto().(*transactionpb.Transaction))
@@ -471,26 +508,16 @@ func (rpcService *RpcService) RpcGasPrice(ctx context.Context, in *rpcpb.GasPric
 
 // RpcContractQuery returns the query result of contract storage
 func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.ContractQueryRequest) (*rpcpb.ContractQueryResponse, error) {
-
 	contractAddr := in.ContractAddr
 	queryKey := in.Key
-	queryValue := in.Value
 
-	if contractAddr == "" || (queryKey == "" && queryValue == "") {
+	if contractAddr == "" || queryKey == "" {
 		return nil, status.Error(codes.InvalidArgument, "contract query params error")
 	}
-	scState := scState.LoadScStateFromDatabase(rpcService.GetBlockchain().GetDb())
-	var resultKey = ""
-	var resultValue = ""
-	// storage data has been JSON.stringfy before
-	if queryKey != "" {
-		resultKey = queryKey
-		resultValue = scState.Get(contractAddr, queryKey)
-		resultValue, _ = strconv.Unquote(resultValue)
-	} else {
-		resultValue = queryValue
-		queryValue = strconv.Quote(queryValue)
-		resultKey = scState.GetByValue(contractAddr, queryValue)
+	scState := scState.NewScState(rpcService.GetBlockchain().GetUtxoCache())
+	resultValue, err := strconv.Unquote(scState.GetStateValue( contractAddr, queryKey))
+	if err != nil {
+		logger.Warn("err")
 	}
-	return &rpcpb.ContractQueryResponse{Key: resultKey, Value: resultValue}, nil
+	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
 }

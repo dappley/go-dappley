@@ -122,10 +122,10 @@ func TestBlockchain_IsInBlockchain(t *testing.T) {
 	blk := core.GenerateUtxoMockBlockWithoutInputs()
 	bc.AddBlockContextToTail(PrepareBlockContext(bc, blk))
 
-	isFound := bc.IsInBlockchain([]byte("hash"))
+	isFound := bc.IsFoundBeforeLib([]byte("hash"))
 	assert.True(t, isFound)
 
-	isFound = bc.IsInBlockchain([]byte("hash2"))
+	isFound = bc.IsFoundBeforeLib([]byte("hash2"))
 	assert.False(t, isFound)
 }
 
@@ -139,7 +139,7 @@ func TestBlockchain_RollbackToABlock(t *testing.T) {
 	assert.Nil(t, err)
 
 	//rollback to height 3
-	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState())
+	bc.Rollback(lutxo.NewUTXOIndex(bc.GetUtxoCache()), blk.GetHash(), scState.NewScState(bc.GetUtxoCache()))
 
 	//the height 3 block should be the new tail block
 	newTailBlk, err := bc.GetTailBlock()
@@ -165,8 +165,8 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	// Storage will allow blockchain creation to succeed
 	db.On("Put", mock.Anything, mock.Anything).Return(nil)
 	db.On("Get", []byte("utxo")).Return([]byte{}, nil)
-	db.On("Get", scState.GetScStateKey([]byte{})).Return([]byte{}, nil)
-	db.On("Get", scState.GetScStateKey(genesis.GetHash())).Return([]byte{}, nil)
+	db.On("Get", []byte("scState")).Return([]byte{}, nil)
+	db.On("Get", []byte("scState")).Return([]byte{}, nil)
 	db.On("Get", mock.Anything).Return(serializedBlk, nil)
 	db.On("EnableBatch").Return()
 	db.On("DisableBatch").Return()
@@ -232,7 +232,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 
 		b := block.NewBlock(txs, tailBlk, "")
 		b.SetHash(lblock.CalculateHash(b))
-		state := scState.LoadScStateFromDatabase(bc.GetDb())
+		state := scState.NewScState(bc.GetUtxoCache())
 		bc.AddBlockContextToTail(&BlockContext{Block: b, UtxoIndex: utxo, State: state})
 	}
 }

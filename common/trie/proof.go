@@ -21,6 +21,7 @@ package trie
 import (
 	"bytes"
 	"errors"
+	"strconv"
 )
 
 // MerkleProof is a path from root to the proved node
@@ -114,7 +115,7 @@ func (t *Trie) Verify(rootHash []byte, key []byte, proof MerkleProof) error {
 			}
 			return errors.New("unknown node type")
 		default:
-			return errors.New("wrong node value, expect [16][]byte or [3][]byte, get [" + string(len(proofHash)) + "][]byte")
+			return errors.New("wrong node value, expect [16][]byte or [3][]byte, get [" + strconv.Itoa(len(proofHash)) + "][]byte")
 		}
 	}
 	return nil

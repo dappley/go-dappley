@@ -47,6 +47,7 @@ var libKey = []byte("lastIrreversibleBlockHash")
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
+	ErrBlockDoesNotFound       = errors.New("the block does not found after lib")
 	ErrPrevHashVerifyFailed    = errors.New("prevhash verify failed")
 	ErrTransactionNotFound     = errors.New("transaction not found")
 	ErrTransactionVerifyFailed = errors.New("transaction verification failed")
@@ -82,7 +83,7 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	}
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
 	utxoIndex.UpdateUtxos(genesis.GetTransactions())
-	scState := scState.NewScState()
+	scState := scState.NewScState(bc.GetUtxoCache())
 	err := bc.AddBlockContextToTail(&BlockContext{Block: genesis, UtxoIndex: utxoIndex, State: scState})
 	if err != nil {
 		logger.Panic("CreateBlockchain: failed to add genesis block!")
@@ -144,7 +145,7 @@ func (bc *Blockchain) GetUpdatedUTXOIndex() (*lutxo.UTXOIndex, bool) {
 
 	errFlag := true
 	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
-	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
 		logger.Warn("GetUpdatedUTXOIndex error")
 		errFlag = false
 	}
@@ -278,7 +279,10 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
 		return err
 	}
-	ctx.State.Save(bc.db, ctx.Block.GetHash())
+	err=ctx.State.Save(ctx.Block.GetHash())
+	if err!=nil{
+		logger.Warn("scState save failed",err)
+	}
 	// Assign changes to receiver
 	*bc = *bcTemp
 
@@ -377,9 +381,20 @@ func (bc *Blockchain) IsHigherThanBlockchain(block *block.Block) bool {
 	return block.GetHeight() > bc.GetMaxHeight()
 }
 
-func (bc *Blockchain) IsInBlockchain(hash hash.Hash) bool {
-	_, err := bc.GetBlockByHash(hash)
-	return err == nil
+func (bc *Blockchain) IsFoundBeforeLib(hash hash.Hash) bool {
+	bci := bc.Iterator()
+	for{
+		blk, err := bci.Next()
+		if err!=nil{
+			return false
+		}
+		if blk.GetHash().Equals(hash){
+			return true
+		}
+		if blk.GetHash().Equals(bc.GetLIBHash()){
+			return false
+		}
+	}
 }
 
 //rollback the blockchain to a block with the targetHash
@@ -387,30 +402,21 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
-	if !bc.IsInBlockchain(targetHash) {
-		return false
-	}
 	parentblockHash := bc.GetTailBlockHash()
 	//if is child of tail, skip rollback
 	if lblock.IsHashEqual(parentblockHash, targetHash) {
 		return true
 	}
 
-	targetBlock, err := bc.GetBlockByHash(targetHash)
-	if targetBlock.GetHeight() < bc.GetLIBHeight() {
-		println("LIB can't be rollback")
-		return false
-	}
-
 	//keep rolling back blocks until the block with the input hash
 	for bytes.Compare(parentblockHash, targetHash) != 0 {
-
 		block, err := bc.GetBlockByHash(parentblockHash)
 		logger.WithFields(logger.Fields{
 			"height": block.GetHeight(),
 			"hash":   parentblockHash.String(),
 		}).Info("Blockchain: is about to rollback the block...")
 		if err != nil {
+			logger.Warn(err)
 			return false
 		}
 		parentblockHash = block.GetPrevHash()
@@ -424,13 +430,14 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 	}
 
 	//updated utxo in db
-	err = index.Save()
+	err := index.Save()
 	if err != nil {
+		logger.Warn(err)
 		return false
 	}
 
-	bc.db.EnableBatch()
-	defer bc.db.DisableBatch()
+	//bc.db.EnableBatch()
+	//defer bc.db.DisableBatch()
 
 	err = bc.setTailBlockHash(parentblockHash)
 	if err != nil {
@@ -438,8 +445,12 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		return false
 	}
 
-	scState.SaveToDatabase(bc.db)
-	bc.db.Flush()
+	if err = scState.Save(parentblockHash); err != nil {
+		logger.Warn(err)
+		return false
+	}
+
+	//bc.db.Flush()
 
 	return true
 }
@@ -560,4 +571,10 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	}
 
 	bc.SetLIBHash(LIBBlk.GetHash())
+}
+
+func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
+	if err := bc.db.Del(hash); err != nil {
+		logger.Warn("Delete the block failed.")
+	}
 }

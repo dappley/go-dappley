@@ -644,8 +644,8 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	// Create a miner account; Balance is 0 initially
@@ -1186,8 +1186,8 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {
@@ -1267,8 +1267,8 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
+	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
 	if err != nil {
@@ -1307,90 +1307,6 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 
 	// query contract address balance
 	balance, err = logic.GetBalance(contractAddr, bm.Getblockchain())
-
-	assert.Nil(t, err)
-	assert.Equal(t, common.NewAmount(0), balance)
-
-	logic.RemoveAccountTestFile()
-}
-
-// TestZeroGasPriceOfContractTransaction tests send contract tx with zero or negative gas price value
-func TestZeroGasPriceOfContractTransaction(t *testing.T) {
-	store := storage.NewRamStorage()
-	defer store.Close()
-	rfl := storage.NewRamFileLoader(confDir, "test.conf")
-	defer rfl.DeleteFolder()
-	contract := `'use strict';
-
-	var GasPriceTest = function(){
-
-	};
-
-	GasPriceTest.prototype = {
-		transfer: function(to, amount, tip){
-			return Blockchain.transfer(to, amount, tip);
-		},
-		dapp_schedule: function () {
-		}
-	};
-	module.exports = new GasPriceTest();
-	`
-
-	// Create a account address
-	senderAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
-	minerAccount, err := logic.CreateAccountWithPassphrase("test", logic.GetTestAccountPath())
-	assert.Nil(t, err)
-	node := network.FakeNodeWithPidAndAddr(rfl.File, "test", "test")
-	bm, bps := CreateProducer(minerAccount.GetAddress(), senderAccount.GetAddress(), store, transactionpool.NewTransactionPool(node, 128), node)
-
-	//deploy smart contract
-	toAmount := common.NewAmount(30000)
-	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
-
-	assert.Nil(t, err)
-
-	txp := bm.Getblockchain().GetTxPool().GetTransactions()[0]
-	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
-
-	if err != nil {
-		panic(err)
-	}
-
-	//a short delay before mining starts
-	time.Sleep(time.Millisecond * 500)
-
-	// Make logic.Sender the miner and mine for 1 block (which should include the transaction)
-	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < 1 {
-	}
-	bps.Stop()
-
-	time.Sleep(time.Millisecond * 500)
-
-	// query contract address balance
-	balance, err := logic.GetBalance(contractAddr, bm.Getblockchain())
-
-	assert.Nil(t, err)
-	assert.Equal(t, toAmount, balance)
-
-	receiverAddress := account.NewAddress("dYgmFyXLg5jSfbysWoZF7Zimnx95xg77Qo")
-	receiverAmount := common.NewAmount(5)
-	// transfer to receiverAddress
-	functionCall := `{"function":"transfer","args":["` + receiverAddress.String() + `","` + receiverAmount.String() + `","1"]}`
-
-	_, _, err = logic.Send(senderAccount, contractAddr, common.NewAmount(1), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(0), functionCall, bm.Getblockchain())
-
-	assert.Nil(t, err)
-
-	currentHeight := bm.Getblockchain().GetMaxHeight()
-
-	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < currentHeight+1 {
-	}
-	bps.Stop()
-
-	// query receiver balance
-	balance, err = logic.GetBalance(receiverAddress, bm.Getblockchain())
 
 	assert.Nil(t, err)
 	assert.Equal(t, common.NewAmount(0), balance)

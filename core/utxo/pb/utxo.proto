@@ -11,3 +11,8 @@ message Utxo {
     bytes  prevUtxoKey = 7;
     bytes  nextUtxoKey = 8;
 }
+
+ message UtxoInfo {
+     bytes   lastUtxoKey = 1;
+     bytes   utxoCreateContractKey = 2;
+ }
