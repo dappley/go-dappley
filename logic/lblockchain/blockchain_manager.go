@@ -251,6 +251,9 @@ func (bm *BlockchainManager) MergeFork(forkBlks []*block.Block, forkParentHash h
 	utxo, scState, err := RevertUtxoAndScStateAtBlockHash(bm.blockchain.GetDb(), bm.blockchain, forkParentHash)
 	if err != nil {
 		logger.Error("BlockchainManager: blockchain is corrupted! Delete the database file and resynchronize to the network.")
+		for _ ,blk  := range forkBlks{
+			logger.Info("blk height:",blk.GetHeight(),",blk hash:",blk.GetHash())
+		}
 		return err
 	}
 	ok := bm.blockchain.Rollback(utxo,forkParentHash, scState)
@@ -388,6 +391,7 @@ func RevertUtxoAndScStateAtBlockHash(db storage.Storage, bc *Blockchain, hash ha
 			logger.WithError(err).WithFields(logger.Fields{
 				"hash": block.GetHash(),
 			}).Warn("BlockchainManager: failed to calculate previous state of UTXO index for the block")
+			logger.Warn("compare forkParentHash:",hash)
 			return nil, nil, err
 		}
 

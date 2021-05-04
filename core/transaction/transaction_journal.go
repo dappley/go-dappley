@@ -62,7 +62,7 @@ func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionba
 	key := getStorageKey(vin.Txid)
 	value, err := db.Get(key)
 	if err != nil {
-		logger.Warn(err)
+		logger.Warn(err,"vin.txid:",vin.Txid,",vin.Vout:",vin.Vout,"vin.PubKey:",vin.PubKey,",vin.Signature:",vin.Signature)
 		return transactionbase.TXOutput{}, err
 	}
 	txJournal, err := DeserializeJournal(value)

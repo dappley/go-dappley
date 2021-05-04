@@ -19,10 +19,8 @@
 package lutxo
 
 import (
-	"bytes"
 	"errors"
 	"github.com/dappley/go-dappley/common"
-	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -30,7 +28,6 @@ import (
 	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/storage"
 	logger "github.com/sirupsen/logrus"
-	"os"
 	"sort"
 	"sync"
 )
@@ -248,8 +245,9 @@ func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) err
 		if adaptedTx.IsCoinbase() || adaptedTx.IsRewardTx() || adaptedTx.IsGasRewardTx() || adaptedTx.IsGasChangeTx() {
 			continue
 		}
-		err = utxos.unspendVinsInTx(blk.GetHash(),tx, db)
+		err = utxos.unspendVinsInTx(tx, db)
 		if err != nil {
+			logger.Warn("blk height:",blk.GetHeight(),", hash: ",blk.GetHash(),", prev hash: ",blk.GetPrevHash())
 			return err
 		}
 	}
@@ -278,41 +276,15 @@ func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transacti
 	return vout, in.Vout, nil
 }
 
-func getTXOutputForBlk(hash hash.Hash, in transactionbase.TXInput, db storage.Storage) (transactionbase.TXOutput, int, error) {
-	var blk *block.Block
-	blkhash := hash
-	for {
-		blkbyte, err := db.Get(blkhash)
-		if err != nil {
-			logger.Warn(err)
-		}
-		if blk.GetHeight() == 1 {
-			logger.Error("tx did not find!")
-			os.Exit(1)
-		}
-		blk = block.Deserialize(blkbyte)
 
-		for _, tx := range blk.GetTransactions() {
-			if bytes.Equal(tx.ID, in.Txid) {
-				logger.Info("find tx on block height:",blk.GetHeight())
-				return tx.Vout[in.Vout], in.Vout, nil
-			}
-		}
-		blkhash = blk.GetPrevHash()
-	}
-}
 
 // unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
-func (utxos *UTXOIndex) unspendVinsInTx(blkhash hash.Hash,tx *transaction.Transaction, db storage.Storage) error {
+func (utxos *UTXOIndex) unspendVinsInTx(tx *transaction.Transaction, db storage.Storage) error {
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, db)
 		if err != nil {
 			logger.Warn(err)
-			vout, voutIndex, err= getTXOutputForBlk(blkhash,vin, db)
-			if err != nil {
-				logger.Warn("getTXOutputForBlk err:",err)
-				return err
-			}
+			return err
 		}
 		utxos.AddUTXO(vout, vin.Txid, voutIndex)
 	}
