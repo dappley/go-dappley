@@ -320,7 +320,7 @@ func (bm *BlockchainManager) RequestBlockHandler(input interface{}) {
 
 	block, err := bm.Getblockchain().GetBlockByHash(request.Hash)
 	if err != nil {
-		logger.WithError(err).Warn("BlockchainManager: failed to get the requested block.")
+		logger.WithError(err).Warn("BlockchainManager: failed to get the requested block. Request hash:",request.Hash,", request source:",command.GetSource())
 		return
 	}
 

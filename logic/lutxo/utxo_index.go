@@ -234,7 +234,6 @@ func (utxos *UTXOIndex) UpdateUtxos(txs []*transaction.Transaction) bool {
 // UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
 // Note that the operation does not save the index to db.
 func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) error {
-
 	for i := len(blk.GetTransactions()) - 1; i >= 0; i-- {
 		tx := blk.GetTransactions()[i]
 		err := utxos.excludeVoutsInTx(tx, db)
@@ -243,11 +242,16 @@ func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) err
 		}
 		adaptedTx := transaction.NewTxAdapter(tx)
 		if adaptedTx.IsCoinbase() || adaptedTx.IsRewardTx() || adaptedTx.IsGasRewardTx() || adaptedTx.IsGasChangeTx() {
+			logger.Info("continue")
 			continue
 		}
 		err = utxos.unspendVinsInTx(tx, db)
 		if err != nil {
 			logger.Warn("blk height:",blk.GetHeight(),", hash: ",blk.GetHash(),", prev hash: ",blk.GetPrevHash())
+			newTXs:=blk.GetTransactions()
+			for _,t := range newTXs{
+				logger.Info(t)
+			}
 			return err
 		}
 	}
@@ -267,7 +271,6 @@ func (utxos *UTXOIndex) excludeVoutsInTx(tx *transaction.Transaction, db storage
 }
 
 func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transactionbase.TXOutput, int, error) {
-
 	vout, err := transaction.GetTxOutput(in, db)
 
 	if err != nil {
@@ -280,6 +283,7 @@ func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transacti
 
 // unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
 func (utxos *UTXOIndex) unspendVinsInTx(tx *transaction.Transaction, db storage.Storage) error {
+
 	for _, vin := range tx.Vin {
 		vout, voutIndex, err := getTXOutputSpent(vin, db)
 		if err != nil {

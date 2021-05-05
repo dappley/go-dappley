@@ -59,6 +59,8 @@ func PutTxJournal(tx Transaction, db storage.Storage) error {
 
 // Returns transaction log data from database
 func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionbase.TXOutput, error) {
+	logger.Info("in Revert GetTxOutput")
+
 	key := getStorageKey(vin.Txid)
 	value, err := db.Get(key)
 	if err != nil {
@@ -70,6 +72,7 @@ func GetTxOutput(vin transactionbase.TXInput, db storage.Storage) (transactionba
 		logger.Warn(err)
 		return transactionbase.TXOutput{}, err
 	}
+	logger.Warn("vin.Vout: ",vin.Vout)
 	if vin.Vout >= len(txJournal.Vout) {
 		logger.Warn(ErrVoutNotFound)
 		return transactionbase.TXOutput{}, ErrVoutNotFound
