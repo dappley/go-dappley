@@ -248,6 +248,7 @@ func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) err
 		err = utxos.unspendVinsInTx(tx, db)
 		if err != nil {
 			logger.Warn("blk height:",blk.GetHeight(),", hash: ",blk.GetHash(),", prev hash: ",blk.GetPrevHash())
+			logger.Info("tx.Type:",tx.Type)
 			newTXs:=blk.GetTransactions()
 			for _,t := range newTXs{
 				logger.Info(t)
