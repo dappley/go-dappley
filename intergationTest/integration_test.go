@@ -644,7 +644,7 @@ func TestSmartContractLocalStorage(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(1), common.NewAmount(0), common.NewAmount(10000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
 	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
@@ -703,6 +703,9 @@ func CreateProducer(producerAddr, addr account.Address, db *storage.RamStorage, 
 	libPolicy.On("IsBypassingLibCheck").Return(true)
 	consensus := &blockchainMock.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
+	consensus.On("ChangeDynasty", mock.Anything).Return(true)
+	consensus.On("SetDynasty", mock.Anything).Return(true)
+	consensus.On("AddReplacement", mock.Anything).Return(true)
 	bc := lblockchain.CreateBlockchain(addr, db, libPolicy, txPool, 100000)
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(nil), node, consensus)
 
@@ -956,8 +959,8 @@ func TestUpdate(t *testing.T) {
 	}
 	dependentTx5.ID = dependentTx5.Hash()
 
-	utxoPk2 := &utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal, []byte{},[]byte{}}
-	utxoPk1 := &utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{},[]byte{}}
+	utxoPk2 := &utxo.UTXO{dependentTx1.Vout[1], dependentTx1.ID, 1, utxo.UtxoNormal, []byte{}, []byte{}}
+	utxoPk1 := &utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
 
 	utxoTxPk2 := utxo.NewUTXOTx()
 	utxoTxPk2.PutUtxo(utxoPk2)
@@ -972,11 +975,11 @@ func TestUpdate(t *testing.T) {
 		ta1.GetPubKeyHash().String(): &utxoTxPk1,
 	})
 
-	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal, []byte{},[]byte{}}
-	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal, []byte{},[]byte{}}
-	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal, []byte{},[]byte{}}
-	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{},[]byte{}}
-	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal, []byte{},[]byte{}}
+	tx2Utxo1 := utxo.UTXO{dependentTx2.Vout[0], dependentTx2.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo2 := utxo.UTXO{dependentTx2.Vout[1], dependentTx2.ID, 1, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo3 := utxo.UTXO{dependentTx3.Vout[0], dependentTx3.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo4 := utxo.UTXO{dependentTx1.Vout[0], dependentTx1.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
+	tx2Utxo5 := utxo.UTXO{dependentTx4.Vout[0], dependentTx4.ID, 0, utxo.UtxoNormal, []byte{}, []byte{}}
 	ltransaction.NewTxDecorator(dependentTx2).Sign(account.GenerateKeyPairByPrivateKey(prikey2).GetPrivateKey(), utxoIndex2.GetAllUTXOsByPubKeyHash(ta2.GetPubKeyHash()).GetAllUtxos())
 	ltransaction.NewTxDecorator(dependentTx3).Sign(account.GenerateKeyPairByPrivateKey(prikey3).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo1})
 	ltransaction.NewTxDecorator(dependentTx4).Sign(account.GenerateKeyPairByPrivateKey(prikey4).GetPrivateKey(), []*utxo.UTXO{&tx2Utxo2, &tx2Utxo3})
@@ -1186,7 +1189,7 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), common.NewAmount(30000), common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
 	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 
@@ -1267,7 +1270,7 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	_, _, err = logic.Send(senderAccount, account.NewAddress(""), toAmount, common.NewAmount(0), common.NewAmount(30000), common.NewAmount(1), contract, bm.Getblockchain())
 
 	assert.Nil(t, err)
-	utxoIndex,_:=bm.Getblockchain().GetUpdatedUTXOIndex()
+	utxoIndex, _ := bm.Getblockchain().GetUpdatedUTXOIndex()
 	txp := bm.Getblockchain().GetTxPool().GetTransactions(utxoIndex)[0]
 	contractAddr := ltransaction.NewTxContract(txp).GetContractAddress()
 

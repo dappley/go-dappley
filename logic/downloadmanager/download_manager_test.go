@@ -53,6 +53,9 @@ func createTestBlockchains(size int, portStart int) ([]*lblockchain.BlockchainMa
 	bc := lblockchain.GenerateMockBlockchainWithCoinbaseTxOnly(size)
 	consensus := &mocks.Consensus{}
 	consensus.On("Validate", mock.Anything).Return(true)
+	consensus.On("ChangeDynasty", mock.Anything).Return(true)
+	consensus.On("SetDynasty", mock.Anything).Return(true)
+	consensus.On("AddReplacement", mock.Anything).Return(true)
 	for i := 0; i < size; i++ {
 		rfl := storage.NewRamFileLoader(confDir, "dl"+strconv.Itoa(i)+".conf")
 		node := network.NewNode(rfl.File, nil)
