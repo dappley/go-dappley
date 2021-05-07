@@ -174,7 +174,7 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	utxoTx := NewUTXOTx()
 	utxoKey := util.Bytes2str(lastUtxokey)
-	count:=0
+	//count:=0
 	for utxoKey != "" {
 		utxo, err := utxoCache.GetUtxo(utxoKey)
 		if err != nil {
@@ -183,10 +183,10 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 		}
 		utxoTx.Indices[utxoKey] = utxo
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
-		count++
-		if count==1000{
-			break
-		}
+		//count++
+		//if count==1000{
+		//	break
+		//}
 	}
 	return &utxoTx
 }
