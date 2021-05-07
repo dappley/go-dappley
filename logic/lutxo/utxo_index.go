@@ -176,7 +176,7 @@ func (utxos *UTXOIndex) GetContractInvokeUTXOsByPubKeyHash(pubkeyHash account.Pu
 	return invokeUTXOs
 }
 
-// GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
+// GetUTXOsByAmountWithOutRemovedUTXOs returns a number of UTXOs that has a sum more than or equal to the amount
 func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
 	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
 	retUtxos, ok := allUtxos.PrepareUtxos(amount)
@@ -185,6 +185,45 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *
 	}
 
 	return retUtxos, nil
+}
+
+// GetUTXOsByAmountWithOutRemovedUTXOs returns a number of UTXOs that has a sum more than or equal to the amount
+func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
+	utxos.mutex.RLock()
+	defer utxos.mutex.RUnlock()
+	//这里也封装一下
+	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
+	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
+
+	var utxoSlice []*utxo.UTXO
+	targetAmount := common.NewAmount(0)
+	if utxoTxAdd != nil {
+		for _, u := range utxoTxAdd.Indices {
+			if utxoTxRemove != nil {
+				if _, ok := utxoTxRemove.Indices[u.GetUTXOKey()]; ok {
+					delete(utxoTxRemove.Indices, u.GetUTXOKey())
+					delete(utxoTxAdd.Indices, u.GetUTXOKey())
+					continue
+				}
+			}
+			targetAmount = targetAmount.Add(u.Value)
+			utxoSlice = append(utxoSlice, u)
+			delete(utxoTxAdd.Indices, u.GetUTXOKey())
+			if targetAmount.Cmp(amount) >= 0 {
+				return utxoSlice, nil
+			}
+		}
+	}
+	//从db拿
+	leftAmount,err:=amount.Sub(targetAmount)
+	if err!=nil{
+		return nil,err
+	}
+	leftUtxo,err:=utxos.cache.GetUTXOsByAmountWithOutRemovedUTXOs(pubkeyHash,leftAmount,utxoTxRemove)
+	if err!=nil{
+		return nil,err
+	}
+	return append(utxoSlice,leftUtxo...) ,nil
 }
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
@@ -222,13 +261,13 @@ func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
 // transactions to the index. The index will be saved to db as a result. If saving failed, index won't be updated.
 func (utxos *UTXOIndex) UpdateUtxos(txs []*transaction.Transaction) bool {
 	// Create a copy of the index so operations below are only temporal
-	errFlag:=true
+	errFlag := true
 	for _, tx := range txs {
-		if !utxos.UpdateUtxo(tx){
-			errFlag=false
+		if !utxos.UpdateUtxo(tx) {
+			errFlag = false
 		}
 	}
-	return  errFlag
+	return errFlag
 }
 
 // UndoTxsInBlock compute the (previous) UTXOIndex resulted from undoing the transactions in given blk.
@@ -247,10 +286,10 @@ func (utxos *UTXOIndex) UndoTxsInBlock(blk *block.Block, db storage.Storage) err
 		}
 		err = utxos.unspendVinsInTx(tx, db)
 		if err != nil {
-			logger.Warn("blk height:",blk.GetHeight(),", hash: ",blk.GetHash(),", prev hash: ",blk.GetPrevHash())
-			logger.Info("tx.Type:",tx.Type)
-			newTXs:=blk.GetTransactions()
-			for _,t := range newTXs{
+			logger.Warn("blk height:", blk.GetHeight(), ", hash: ", blk.GetHash(), ", prev hash: ", blk.GetPrevHash())
+			logger.Info("tx.Type:", tx.Type)
+			newTXs := blk.GetTransactions()
+			for _, t := range newTXs {
 				logger.Info(t)
 			}
 			return err
@@ -279,8 +318,6 @@ func getTXOutputSpent(in transactionbase.TXInput, db storage.Storage) (transacti
 	}
 	return vout, in.Vout, nil
 }
-
-
 
 // unspendVinsInTx adds UTXOs back to the UTXOIndex as a result of undoing the spending of the UTXOs in a transaction.
 func (utxos *UTXOIndex) unspendVinsInTx(tx *transaction.Transaction, db storage.Storage) error {

@@ -21,6 +21,7 @@ package utxo
 import (
 	"bytes"
 	"errors"
+	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/core/account"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/storage"
@@ -188,6 +189,34 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 		}
 	}
 	return &utxoTx
+}
+
+func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash,amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO,error) {
+	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
+	var utxoSlice []*UTXO
+	targetAmount := common.NewAmount(0)
+	utxoKey := util.Bytes2str(lastUtxokey)
+
+	for utxoKey != "" {
+		utxo, err := utxoCache.GetUtxo(utxoKey)
+		if err != nil {
+			logger.Warn( err)
+		}
+		if utxoTxRemove != nil {
+			if _, ok := utxoTxRemove.Indices[utxo.GetUTXOKey()]; ok {
+				delete(utxoTxRemove.Indices, utxo.GetUTXOKey())
+				continue
+			}
+		}
+		targetAmount = targetAmount.Add(utxo.Value)
+		utxoSlice = append(utxoSlice, utxo)
+		if targetAmount.Cmp(amount) >= 0 {
+			return utxoSlice, nil
+		}
+
+		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
+	}
+	return nil, errors.New("transaction: insufficient balance")
 }
 
 func (utxoCache *UTXOCache) putUTXOToDB(utxo *UTXO) error {
