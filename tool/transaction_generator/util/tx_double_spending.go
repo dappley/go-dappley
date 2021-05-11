@@ -26,7 +26,7 @@ func (txSender *DoubleSpendingTxSender) Generate(params transaction.SendTxParam)
 		logger.WithError(err).Panic("Unable to hash sender public key")
 	}
 	ta := account.NewAccountByKey(params.SenderKeyPair)
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsAccordingToAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("DoubleSpendingTx: Unable to get UTXOs to match the amount")

@@ -254,7 +254,7 @@ func generateTransaction(addrs []account.Address, wm *wallet.AccountManager, utx
 }
 
 func newTransaction(sender, receiver account.Address, senderKeyPair *account.KeyPair, utxoIndex *lutxo.UTXOIndex, senderPkh account.PubKeyHash, amount *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount, contract string) *transaction.Transaction {
-	utxos, _ := utxoIndex.GetUTXOsByAmount([]byte(senderPkh), amount)
+	utxos, _ := utxoIndex.GetUTXOsAccordingToAmount([]byte(senderPkh), amount)
 
 	sendTxParam := transaction.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
 	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)

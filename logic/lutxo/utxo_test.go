@@ -183,11 +183,13 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 		{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		{common.NewAmount(4), ta2.GetPubKeyHash(), ""},
 		{common.NewAmount(5), ta2.GetPubKeyHash(), ""},
+		{common.NewAmount(6), ta2.GetPubKeyHash(), ""},
 		{common.NewAmount(2), contractPkh, "helloworld!"},
 		{common.NewAmount(4), contractPkh, ""},
 	}
-
-	index := NewUTXOIndex(utxo.NewUTXOCache(storage.NewRamStorage()))
+	db := storage.NewRamStorage()
+	defer db.Close()
+	index := NewUTXOIndex(utxo.NewUTXOCache(db))
 	for i, TXOutput := range TXOutputs {
 		index.AddUTXO(TXOutput, []byte("01"), i)
 	}
@@ -210,7 +212,7 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 			transaction.ErrInsufficientFund},
 
 		{"justEnoughUtxo",
-			common.NewAmount(9),
+			common.NewAmount(11),
 			[]byte(ta2.GetPubKeyHash()),
 			nil},
 		{"notEnoughUtxo2",
@@ -228,7 +230,7 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			utxos, err := index.GetUTXOsByAmount(tt.pubKey, tt.amount)
+			utxos, err := index.GetUTXOsAccordingToAmount(tt.pubKey, tt.amount)
 			assert.Equal(t, tt.err, err)
 			if err != nil {
 				return

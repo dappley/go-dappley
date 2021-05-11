@@ -28,7 +28,7 @@ func (txSender *InsufficientBalanceTxSender) Generate(params transaction.SendTxP
 	}
 	ta := account.NewAccountByKey(params.SenderKeyPair)
 
-	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsByAmount(ta.GetPubKeyHash(), params.Amount)
+	prevUtxos, err := txSender.account.GetUtxoIndex().GetUTXOsAccordingToAmount(ta.GetPubKeyHash(), params.Amount)
 
 	if err != nil {
 		logger.WithError(err).Panic("InsufficientBalanceTx: Unable to get UTXOs to match the amount")

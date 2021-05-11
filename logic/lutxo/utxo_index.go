@@ -176,17 +176,6 @@ func (utxos *UTXOIndex) GetContractInvokeUTXOsByPubKeyHash(pubkeyHash account.Pu
 	return invokeUTXOs
 }
 
-// GetUTXOsByAmount returns a number of UTXOs that has a sum more than or equal to the amount
-func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
-	allUtxos := utxos.GetAllUTXOsByPubKeyHash(pubkeyHash)
-	retUtxos, ok := allUtxos.PrepareUtxos(amount)
-	if !ok {
-		return nil, transaction.ErrInsufficientFund
-	}
-
-	return retUtxos, nil
-}
-
 // GetUTXOsAccordingToAmount returns a number of UTXOs that has a sum more than or equal to the amount
 func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
 	utxos.mutex.RLock()

@@ -736,7 +736,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	c := rpcpb.NewRpcServiceClient(conn)
 
 	pubKeyHash := rpcContext.account.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
@@ -756,7 +756,7 @@ func TestRpcSendTransaction(t *testing.T) {
 	for (rpcContext.bm.Getblockchain().GetMaxHeight() - maxHeight) < 2 {
 	}
 
-	utxos2, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos2, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(6))
 	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
 		receiverAccount.GetAddress(),
@@ -829,7 +829,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 
 	pubKeyHash := rpcContext.account.GetPubKeyHash()
 	utxoIndex := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache())
-	utxos, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
+	utxos, err := utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(3))
 	assert.Nil(t, err)
 
 	sendTxParam1 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
@@ -842,7 +842,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 		"")
 	transaction1, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam1)
 	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction1})
-	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(2))
+	utxos, err = utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(2))
 	sendTxParam2 := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
 		receiverAccount2.GetAddress(),
@@ -854,7 +854,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	transaction2, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam2)
 	utxoIndex.UpdateUtxos([]*transaction.Transaction{&transaction2})
 	pubKeyHash1 := receiverAccount1.GetPubKeyHash()
-	utxos, err = utxoIndex.GetUTXOsByAmount(pubKeyHash1, common.NewAmount(1))
+	utxos, err = utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash1, common.NewAmount(1))
 	sendTxParam3 := transaction.NewSendTxParam(receiverAccount1.GetAddress(),
 		receiverAccount1.GetKeyPair(),
 		receiverAccount2.GetAddress(),
@@ -880,7 +880,7 @@ func TestRpcService_RpcSendBatchTransaction(t *testing.T) {
 	rpcContext.bp.Stop()
 	time.Sleep(time.Second)
 
-	utxos2, err := utxoIndex.GetUTXOsByAmount(pubKeyHash, common.NewAmount(3))
+	utxos2, err := utxoIndex.GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(3))
 	sendTxParamErr := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
 		rpcContext.account.GetKeyPair(),
 		receiverAccount4.GetAddress(),
@@ -1055,7 +1055,7 @@ func TestRpcGetAllTransactionsFromTxPool(t *testing.T) {
 
 	// generate new transaction
 	pubKeyHash := rpcContext.account.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(6))
+	utxos, err := lutxo.NewUTXOIndex(rpcContext.bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(6))
 	assert.Nil(t, err)
 
 	sendTxParam := transaction.NewSendTxParam(rpcContext.account.GetAddress(),
@@ -1342,7 +1342,7 @@ func TestRpcService_RpcEstimateGas(t *testing.T) {
 	// estimate contract
 	contract = "{\"function\":\"record\",\"args\":[\"damnkW1X8KtnDLoKErLzAgaBtXDZKRywfF\",\"2000\"]}"
 	pubKeyHash := senderAccount.GetPubKeyHash()
-	utxos, err := lutxo.NewUTXOIndex(bm.Getblockchain().GetUtxoCache()).GetUTXOsByAmount(pubKeyHash, common.NewAmount(1))
+	utxos, err := lutxo.NewUTXOIndex(bm.Getblockchain().GetUtxoCache()).GetUTXOsAccordingToAmount(pubKeyHash, common.NewAmount(1))
 	sendTxParam := transaction.NewSendTxParam(senderAccount.GetAddress(),
 		senderAccount.GetKeyPair(),
 		account.NewAddress(contractAddr),

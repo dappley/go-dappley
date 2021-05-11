@@ -166,7 +166,7 @@ func fakeDependentTxs(utxoIndex *lutxo.UTXOIndex, fundAccount *account.Account, 
 
 func createTransaction(utxoIndex *lutxo.UTXOIndex, params transaction.SendTxParam) (transaction.Transaction, error) {
 	ta := account.NewAccountByKey(params.SenderKeyPair)
-	utxos, _ := utxoIndex.GetUTXOsByAmount(ta.GetPubKeyHash(), params.TotalCost())
+	utxos, _ := utxoIndex.GetUTXOsAccordingToAmount(ta.GetPubKeyHash(), params.TotalCost())
 	tx, err := ltransaction.NewUTXOTransaction(utxos, params)
 	if err != nil {
 		logger.WithError(err).Error("CreateTransaction failed")
