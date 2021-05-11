@@ -174,7 +174,6 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	utxoTx := NewUTXOTx()
 	utxoKey := util.Bytes2str(lastUtxokey)
-	//count:=0
 	for utxoKey != "" {
 		utxo, err := utxoCache.GetUtxo(utxoKey)
 		if err != nil {
@@ -183,18 +182,15 @@ func (utxoCache *UTXOCache) GetUTXOTx(pubKeyHash account.PubKeyHash) *UTXOTx {
 		}
 		utxoTx.Indices[utxoKey] = utxo
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
-		//count++
-		//if count==1000{
-		//	break
-		//}
 	}
 	return &utxoTx
 }
 
+
 func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash account.PubKeyHash,amount *common.Amount, utxoTxRemove *UTXOTx) ([]*UTXO,error) {
 	lastUtxokey := utxoCache.getLastUTXOKey(pubKeyHash.String())
 	var utxoSlice []*UTXO
-	targetAmount := common.NewAmount(0)
+	utxoAmount := common.NewAmount(0)
 	utxoKey := util.Bytes2str(lastUtxokey)
 
 	for utxoKey != "" {
@@ -208,9 +204,9 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 				continue
 			}
 		}
-		targetAmount = targetAmount.Add(utxo.Value)
+		utxoAmount = utxoAmount.Add(utxo.Value)
 		utxoSlice = append(utxoSlice, utxo)
-		if targetAmount.Cmp(amount) >= 0 {
+		if utxoAmount.Cmp(amount) >= 0 {
 			return utxoSlice, nil
 		}
 

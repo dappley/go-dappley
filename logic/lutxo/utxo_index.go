@@ -187,16 +187,38 @@ func (utxos *UTXOIndex) GetUTXOsByAmount(pubkeyHash account.PubKeyHash, amount *
 	return retUtxos, nil
 }
 
-// GetUTXOsByAmountWithOutRemovedUTXOs returns a number of UTXOs that has a sum more than or equal to the amount
+// GetUTXOsAccordingToAmount returns a number of UTXOs that has a sum more than or equal to the amount
 func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash, amount *common.Amount) ([]*utxo.UTXO, error) {
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
-	//这里也封装一下
+
 	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
 	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
 
+	utxoCache,cacheUTXOAmount,err:=getUTXOsFromCacheUTXO(utxoTxAdd,utxoTxRemove,amount)
+	if err!=nil{
+		return nil,err
+	}
+	if cacheUTXOAmount.Cmp(amount)>=0{
+		return utxoCache,nil
+	}
+
+	leftAmount,err:=amount.Sub(cacheUTXOAmount)
+	if err!=nil{
+		return nil,err
+	}
+
+	utxoFromdb,err:=utxos.cache.GetUTXOsByAmountWithOutRemovedUTXOs(pubkeyHash,leftAmount,utxoTxRemove)
+	if err!=nil{
+		return nil,err
+	}
+	return append(utxoCache,utxoFromdb...) ,nil
+}
+
+func getUTXOsFromCacheUTXO (utxoTxAdd,utxoTxRemove *utxo.UTXOTx,amount *common.Amount ) ([]*utxo.UTXO,*common.Amount,error){
 	var utxoSlice []*utxo.UTXO
-	targetAmount := common.NewAmount(0)
+	utxoAmount := common.NewAmount(0)
+
 	if utxoTxAdd != nil {
 		for _, u := range utxoTxAdd.Indices {
 			if utxoTxRemove != nil {
@@ -206,24 +228,15 @@ func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash,
 					continue
 				}
 			}
-			targetAmount = targetAmount.Add(u.Value)
+			utxoAmount = utxoAmount.Add(u.Value)
 			utxoSlice = append(utxoSlice, u)
 			delete(utxoTxAdd.Indices, u.GetUTXOKey())
-			if targetAmount.Cmp(amount) >= 0 {
-				return utxoSlice, nil
+			if utxoAmount.Cmp(amount) >= 0 {
+				break
 			}
 		}
 	}
-	//从db拿
-	leftAmount,err:=amount.Sub(targetAmount)
-	if err!=nil{
-		return nil,err
-	}
-	leftUtxo,err:=utxos.cache.GetUTXOsByAmountWithOutRemovedUTXOs(pubkeyHash,leftAmount,utxoTxRemove)
-	if err!=nil{
-		return nil,err
-	}
-	return append(utxoSlice,leftUtxo...) ,nil
+	return utxoSlice, utxoAmount,nil
 }
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
