@@ -239,8 +239,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions()) {
 		logger.Warn("sendTo error")
 	}
-
-	utxos, err := utxoIndex.GetUTXOsByAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
+	utxos, err := utxoIndex.GetUTXOsAccordingToAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
 	if err != nil {
 		return nil, "", err
 	}
