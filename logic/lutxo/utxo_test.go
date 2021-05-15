@@ -183,7 +183,6 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 		{common.NewAmount(3), ta1.GetPubKeyHash(), ""},
 		{common.NewAmount(4), ta2.GetPubKeyHash(), ""},
 		{common.NewAmount(5), ta2.GetPubKeyHash(), ""},
-		{common.NewAmount(6), ta2.GetPubKeyHash(), ""},
 		{common.NewAmount(2), contractPkh, "helloworld!"},
 		{common.NewAmount(4), contractPkh, ""},
 	}
@@ -212,7 +211,7 @@ func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
 			transaction.ErrInsufficientFund},
 
 		{"justEnoughUtxo",
-			common.NewAmount(11),
+			common.NewAmount(9),
 			[]byte(ta2.GetPubKeyHash()),
 			nil},
 		{"notEnoughUtxo2",

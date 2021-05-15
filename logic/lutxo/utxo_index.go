@@ -181,10 +181,7 @@ func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash,
 	utxos.mutex.RLock()
 	defer utxos.mutex.RUnlock()
 
-	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
-	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
-
-	utxoCache,cacheUTXOAmount,err:=getUTXOsFromCacheUTXO(utxoTxAdd,utxoTxRemove,amount)
+	utxoTxRemove,utxoCache,cacheUTXOAmount,err:=utxos.getUTXOsFromCacheUTXO(pubkeyHash, amount)
 	if err!=nil{
 		return nil,err
 	}
@@ -204,12 +201,18 @@ func (utxos *UTXOIndex) GetUTXOsAccordingToAmount(pubkeyHash account.PubKeyHash,
 	return append(utxoCache,utxoFromdb...) ,nil
 }
 
-func getUTXOsFromCacheUTXO (utxoTxAdd,utxoTxRemove *utxo.UTXOTx,amount *common.Amount ) ([]*utxo.UTXO,*common.Amount,error){
+func (utxos *UTXOIndex)getUTXOsFromCacheUTXO (pubkeyHash account.PubKeyHash,amount *common.Amount ) (*utxo.UTXOTx,[]*utxo.UTXO,*common.Amount,error){
+	utxoTxAdd := utxos.indexAdd[pubkeyHash.String()]
+	utxoTxRemove := utxos.indexRemove[pubkeyHash.String()]
+
 	var utxoSlice []*utxo.UTXO
 	utxoAmount := common.NewAmount(0)
 
 	if utxoTxAdd != nil {
 		for _, u := range utxoTxAdd.Indices {
+			if u.UtxoType == utxo.UtxoCreateContract {
+				continue
+			}
 			if utxoTxRemove != nil {
 				if _, ok := utxoTxRemove.Indices[u.GetUTXOKey()]; ok {
 					delete(utxoTxRemove.Indices, u.GetUTXOKey())
@@ -219,13 +222,12 @@ func getUTXOsFromCacheUTXO (utxoTxAdd,utxoTxRemove *utxo.UTXOTx,amount *common.A
 			}
 			utxoAmount = utxoAmount.Add(u.Value)
 			utxoSlice = append(utxoSlice, u)
-			delete(utxoTxAdd.Indices, u.GetUTXOKey())
 			if utxoAmount.Cmp(amount) >= 0 {
 				break
 			}
 		}
 	}
-	return utxoSlice, utxoAmount,nil
+	return utxoTxRemove,utxoSlice, utxoAmount,nil
 }
 
 func (utxos *UTXOIndex) UpdateUtxo(tx *transaction.Transaction) bool {
