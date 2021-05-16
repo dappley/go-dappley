@@ -215,8 +215,6 @@ func (utxos *UTXOIndex)getUTXOsFromCacheUTXO (pubkeyHash account.PubKeyHash,amou
 			}
 			if utxoTxRemove != nil {
 				if _, ok := utxoTxRemove.Indices[u.GetUTXOKey()]; ok {
-					delete(utxoTxRemove.Indices, u.GetUTXOKey())
-					delete(utxoTxAdd.Indices, u.GetUTXOKey())
 					continue
 				}
 			}
