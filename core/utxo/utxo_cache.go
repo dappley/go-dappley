@@ -198,9 +198,11 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 		if err != nil {
 			logger.Warn( err)
 		}
+		if utxo.UtxoType == UtxoCreateContract {
+			continue
+		}
 		if utxoTxRemove != nil {
 			if _, ok := utxoTxRemove.Indices[utxo.GetUTXOKey()]; ok {
-				delete(utxoTxRemove.Indices, utxo.GetUTXOKey())
 				continue
 			}
 		}

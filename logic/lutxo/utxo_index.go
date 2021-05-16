@@ -221,6 +221,9 @@ func getUTXOsFromCacheUTXO (utxoTxAdd,utxoTxRemove *utxo.UTXOTx,amount *common.A
 
 	if utxoTxAdd != nil {
 		for _, u := range utxoTxAdd.Indices {
+			if u.UtxoType == utxo.UtxoCreateContract {
+				continue
+			}
 			if utxoTxRemove != nil {
 				if _, ok := utxoTxRemove.Indices[u.GetUTXOKey()]; ok {
 					delete(utxoTxRemove.Indices, u.GetUTXOKey())
@@ -230,7 +233,6 @@ func getUTXOsFromCacheUTXO (utxoTxAdd,utxoTxRemove *utxo.UTXOTx,amount *common.A
 			}
 			utxoAmount = utxoAmount.Add(u.Value)
 			utxoSlice = append(utxoSlice, u)
-			delete(utxoTxAdd.Indices, u.GetUTXOKey())
 			if utxoAmount.Cmp(amount) >= 0 {
 				break
 			}
