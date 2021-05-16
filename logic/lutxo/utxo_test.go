@@ -47,7 +47,7 @@ var address2Bytes = []byte("address2000000000000000000000000")
 var ta1 = account.NewTransactionAccountByPubKey(address1Bytes)
 var ta2 = account.NewTransactionAccountByPubKey(address2Bytes)
 
-func TestAddUTXO(t *testing.T) {
+func TestUTXOIndex_AddUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
@@ -66,7 +66,7 @@ func TestAddUTXO(t *testing.T) {
 	assert.Equal(t, false, ok)
 }
 
-func TestRemoveUTXO(t *testing.T) {
+func TestUTXOIndex_RemoveUTXO(t *testing.T) {
 	db := storage.NewRamStorage()
 	defer db.Close()
 
@@ -175,7 +175,7 @@ func TestConcurrentUTXOindexReadWrite(t *testing.T) {
 	assert.True(t, true)
 }
 
-func TestUTXOIndex_GetUTXOsByAmount(t *testing.T) {
+func TestUTXOIndex_GetUTXOsAccordingToAmount(t *testing.T) {
 	contractAccount := account.NewContractTransactionAccount()
 	contractPkh := contractAccount.GetPubKeyHash()
 	//preapre 3 utxos in the utxo index
@@ -280,7 +280,7 @@ func TestUTXOIndex_DeepCopy(t *testing.T) {
 	assert.EqualValues(t, utxoCopy.indexAdd[ta1.GetPubKeyHash().String()], utxoCopy2.indexAdd[ta1.GetPubKeyHash().String()])
 }
 
-func TestUTXOIndexSave(t *testing.T) {
+func TestUTXOIndex_Save(t *testing.T) {
 
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var ta1 = account.NewAccountByPrivateKey(prikey1)
@@ -468,7 +468,7 @@ func TestUTXOIndexSave(t *testing.T) {
 
 }
 
-func TestUTXOIndexAddAndRmove(t *testing.T) {
+func TestUTXOIndex_AddAndRmoveUTXO(t *testing.T) {
 	var prikey1 = "bb23d2ff19f5b16955e8a24dca34dd520980fe3bddca2b3e1b56663f0ec1aa71"
 	var ta1 = account.NewAccountByPrivateKey(prikey1)
 
