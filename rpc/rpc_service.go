@@ -23,7 +23,6 @@ import (
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
 	"github.com/dappley/go-dappley/logic/lutxo"
 	"io"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -515,9 +514,7 @@ func (rpcService *RpcService) RpcContractQuery(ctx context.Context, in *rpcpb.Co
 		return nil, status.Error(codes.InvalidArgument, "contract query params error")
 	}
 	scState := scState.NewScState(rpcService.GetBlockchain().GetUtxoCache())
-	resultValue, err := strconv.Unquote(scState.GetStateValue( contractAddr, queryKey))
-	if err != nil {
-		logger.Warn("err")
-	}
+	resultValue := scState.GetStateValue(contractAddr, queryKey)
+
 	return &rpcpb.ContractQueryResponse{Key: queryKey, Value: resultValue}, nil
 }
