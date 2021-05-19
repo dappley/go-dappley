@@ -221,7 +221,6 @@ func (bc *Blockchain) GetState() blockchain.BlockchainState {
 }
 
 func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
-	// Atomically set tail block hash and update UTXO index in db
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -238,62 +237,52 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		"hash":   ctx.Block.GetHash().String(),
 	})
 
-	bcTemp := bc.DeepCopy()
+	bc.db.DisableBatch()
 
-	bcTemp.db.DisableBatch()
+	err :=ctx.State.Save(ctx.Block.GetHash())
+	if err!=nil{
+		logger.Warn("scState save failed",err)
+	}
 
-	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
+	err = bc.AddBlockToDb(ctx.Block)
+	if err != nil {
+		blockLogger.Warn("Blockchain: failed to add block to database.")
+		return err
+	}
 
-	err := ctx.UtxoIndex.Save()
+	err = ctx.UtxoIndex.Save()
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save utxo to database.")
 		return err
 	}
 
+	err = bc.setTailBlockHash(ctx.Block.GetHash())
+	if err != nil {
+		blockLogger.Error("Blockchain: failed to set tail block hash!")
+		return err
+	}
+
+	bc.updateLIB(ctx.Block.GetHeight())
+
+	// Flush batch changes to storage
+	err = bc.db.Flush()
+	if err != nil {
+		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
+		return err
+	}
+
+	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 	//Remove transactions in current transaction pool
-	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
-	bcTemp.GetTxPool().ResetPendingTransactions()
+	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
+	bc.GetTxPool().ResetPendingTransactions()
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_add_block":    numTxBeforeExe,
 		"num_txs_after_update_txpool": bc.GetTxPool().GetNumOfTxInPool(),
 	}).Info("Blockchain : update tx pool")
 
-	err = bcTemp.AddBlockToDb(ctx.Block)
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to add block to database.")
-		return err
-	}
-
-	err = bcTemp.setTailBlockHash(ctx.Block.GetHash())
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to set tail block hash!")
-		return err
-	}
-
-	bcTemp.updateLIB(ctx.Block.GetHeight())
-
-	// Flush batch changes to storage
-	err = bcTemp.db.Flush()
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
-		return err
-	}
-	err=ctx.State.Save(ctx.Block.GetHash())
-	if err!=nil{
-		logger.Warn("scState save failed",err)
-	}
-	// Assign changes to receiver
-	*bc = *bcTemp
-
-	poolsize := 0
-	if bc.txPool != nil {
-		poolsize = bc.txPool.GetNumOfTxInPool()
-	}
-
 	blockLogger.WithFields(logger.Fields{
 		"numOfTx":  len(ctx.Block.GetTransactions()),
-		"poolSize": poolsize,
 	}).Info("Blockchain: added a new block to tail.")
 
 	return nil

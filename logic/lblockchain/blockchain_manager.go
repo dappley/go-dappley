@@ -477,7 +477,6 @@ func (bm *BlockchainManager) getForkIndex(rollBackfork []*block.Block) ([]*block
 
 	var forkIndex []*block.Block
 	blockHeight := bm.blockchain.GetMaxHeight()
-	logger.Info("max block height:", blockHeight, "forkHeadParent height:", forkHeadParentHeight)
 
 	for blockHeight > forkHeadParentHeight {
 		blk, err := bm.blockchain.GetBlockByHeight(blockHeight)
