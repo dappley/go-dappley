@@ -128,8 +128,13 @@ func main() {
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
 	//utxo.NewPool()
-	var LIBBlk *block.Block = nil
+	minerSubsidy := viper.GetInt("log.minerSubsidy")
+	if minerSubsidy == 0 {
+		minerSubsidy = 10000000000
+	}
+	transaction.SetSubsidy(minerSubsidy)
 
+	var LIBBlk *block.Block = nil
 	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
 	if err ==nil{
 		LIBBlk, _ = bc.GetLIB()
@@ -170,12 +175,6 @@ func main() {
 
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	bm.RequestDownloadBlockchain()
-
-	minerSubsidy := viper.GetInt("log.minerSubsidy")
-	if minerSubsidy == 0 {
-		minerSubsidy = 1000000000
-	}
-	transaction.SetSubsidy(minerSubsidy)
 
 	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())
