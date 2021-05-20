@@ -43,7 +43,10 @@ import (
 )
 
 var tipKey = []byte("tailBlockHash")
-var libKey = []byte("lastIrreversibleBlockHash")
+
+var scStateSaveHash =[]byte("scStateSaved")
+var blockSaveHash =[]byte("blockSaved")
+var utxoSaveHash =[]byte("utxoSaved")
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
@@ -242,28 +245,33 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 
 	bc.db.DisableBatch()
 
-	err :=ctx.State.Save(ctx.Block.GetHash())
-	if err!=nil{
-		logger.Warn("scState save failed",err)
-	}
-
-	err = bc.AddBlockToDb(ctx.Block)
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to add block to database.")
-		return err
-	}
-
-	err = bc.setTailBlockHash(ctx.Block.GetHash())
+	err := bc.setTailBlockHash(ctx.Block.GetHash()) //order1
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
 		return err
 	}
+	// 这里是原始TBH
 
-	err = ctx.UtxoIndex.Save()
+	err =ctx.State.Save(ctx.Block.GetHash()) //order2
+	if err!=nil{
+		logger.Warn("scState save failed",err)
+	}
+	bc.savedHash(scStateSaveHash)
+
+	err = bc.AddBlockToDb(ctx.Block)//order3
+	if err != nil {
+		blockLogger.Warn("Blockchain: failed to add block to database.")
+		return err
+	}
+	bc.savedHash(blockSaveHash)
+
+	err = ctx.UtxoIndex.Save() //order4
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to save utxo to database.")
 		return err
 	}
+	bc.savedHash(utxoSaveHash)
+
 
 	bc.updateLIB(ctx.Block.GetHeight())
 
@@ -456,6 +464,22 @@ func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	return nil
 }
 
+func (bc *Blockchain) savedHash(bytes []byte) {
+	err := bc.db.Put(bytes, bc.GetTailBlockHash())
+	if err != nil {
+		logger.Warn(err)
+	}
+}
+
+func (bc *Blockchain) getHash(savedHash []byte) (hash.Hash, error) {
+	tbh, err := bc.db.Get(savedHash)
+	if err != nil {
+		logger.Warn(err)
+		return nil, err
+	}
+	return tbh, nil
+}
+
 func (bc *Blockchain) DeepCopy() *Blockchain {
 	newCopy := &Blockchain{}
 	copier.Copy(newCopy, bc)
@@ -575,7 +599,8 @@ func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
 	}
 }
 
-func (bc *Blockchain) SelfCheking(){
+func (bc *Blockchain) DataCheking(){
+	//recovery utxo
 	blk,err:=bc.GetTailBlock()
 	if err==nil{
 		parentBlk,err:=bc.GetBlockByHash(blk.GetPrevHash())
@@ -586,12 +611,14 @@ func (bc *Blockchain) SelfCheking(){
 				logger.Warn("get check utxo failed")
 			}
 			utxo.SelfCheckingUTXO()
-			//recovery utxo
 			err:=utxo.Save()
 			if err!=nil{
-				logger.Warn("main:",err)
+				logger.Warn(err)
 			}
 
 		}
 	}
+	//recovery scState,scLog
+
+
 }

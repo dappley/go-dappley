@@ -138,7 +138,7 @@ func main() {
 	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
 	if err ==nil{
 		LIBBlk, _ = bc.GetLIB()
-		bc.SelfCheking()
+		bc.DataCheking()
 	}else {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
