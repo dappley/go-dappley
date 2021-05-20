@@ -555,7 +555,6 @@ func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error){
 	}
 
 	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
-	logger.Info("minConfirmationNum:",minConfirmationNum)
 	LIBHeight := uint64(0)
 	if currBlkHeight > uint64(minConfirmationNum) {
 		LIBHeight = currBlkHeight - uint64(minConfirmationNum)
@@ -576,3 +575,23 @@ func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
 	}
 }
 
+func (bc *Blockchain) SelfCheking(){
+	blk,err:=bc.GetTailBlock()
+	if err==nil{
+		parentBlk,err:=bc.GetBlockByHash(blk.GetPrevHash())
+		if err==nil{
+			contractStates := scState.NewScState(bc.GetUtxoCache())
+			utxo:=lutxo.NewUTXOIndex(bc.GetUtxoCache())
+			if !lblock.VerifyTransactions(blk, utxo, contractStates, parentBlk,bc.GetDb()) {
+				logger.Warn("get check utxo failed")
+			}
+			utxo.SelfCheckingUTXO()
+			//recovery utxo
+			err:=utxo.Save()
+			if err!=nil{
+				logger.Warn("main:",err)
+			}
+
+		}
+	}
+}

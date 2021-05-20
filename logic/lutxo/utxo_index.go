@@ -402,3 +402,28 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	}
 	return utxocopy
 }
+
+
+
+func (utxos *UTXOIndex) SelfCheckingUTXO(){
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
+	logger.Info("start utxo self checking...")
+	//remove utxo from addUTXO list which already has been added to db
+	for _,utxoTx:=range utxos.indexAdd{
+		for _,utxo:=range utxoTx.Indices{
+			if _,err:=utxos.cache.GetUtxo(utxo.GetUTXOKey());err==nil{
+				delete(utxoTx.Indices,utxo.GetUTXOKey())
+			}
+		}
+	}
+	//remove utxo from removeUTXO list which already has been deleted from db
+	for _,utxoTx:=range utxos.indexRemove{
+		for _,utxo:=range utxoTx.Indices{
+			if _,err:=utxos.cache.GetUtxo(utxo.GetUTXOKey());err!=nil{
+				delete(utxoTx.Indices,utxo.GetUTXOKey())
+			}
+		}
+	}
+	logger.Info("self checking complete")
+}

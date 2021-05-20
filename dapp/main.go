@@ -20,11 +20,9 @@ package main
 
 import (
 	"flag"
-
-	"github.com/dappley/go-dappley/core/transaction"
-
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -130,17 +128,19 @@ func main() {
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
 	//utxo.NewPool()
-	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
-
 	var LIBBlk *block.Block = nil
-	if err != nil {
+
+	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
+	if err ==nil{
+		LIBBlk, _ = bc.GetLIB()
+		bc.SelfCheking()
+	}else {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
-	} else {
-		LIBBlk, _ = bc.GetLIB()
 	}
+
 	bc.SetState(blockchain.BlockchainInit)
 
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
