@@ -424,8 +424,23 @@ func NewCoinbaseTX(to account.Address, data string, blockHeight uint64, tip *com
 	return tx
 }
 
+func NewProducerChangeUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+	txType := transaction.TxTypeProducerChange
+	return NewUTXOTransaction(txType, utxos, sendTxParam)
+}
+
 // NewUTXOTransaction creates a new transaction
-func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+func NewNormalUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
+	txType := transaction.TxTypeNormal
+	if sendTxParam.Contract != "" {
+		txType = transaction.TxTypeContract
+
+	}
+	return NewUTXOTransaction(txType, utxos, sendTxParam)
+}
+
+// NewUTXOTransaction creates a new transaction
+func NewUTXOTransaction(txType transaction.TxType, utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam) (transaction.Transaction, error) {
 	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
 	toAccount := account.NewTransactionAccountByAddress(sendTxParam.To)
 	sum := transaction.CalculateUtxoSum(utxos)
@@ -433,13 +448,7 @@ func NewUTXOTransaction(utxos []*utxo.UTXO, sendTxParam transaction.SendTxParam)
 	if err != nil {
 		return transaction.Transaction{}, err
 	}
-	txType := transaction.TxTypeNormal
-	if sendTxParam.Contract != "" {
-		txType = transaction.TxTypeContract
-	}
-	if sendTxParam.From.String() == sendTxParam.To.String() {
-		txType = transaction.TxTypeProducerChange
-	}
+
 	tx := transaction.Transaction{
 		nil,
 		prepareInputLists(utxos, sendTxParam.SenderKeyPair.GetPublicKey(), nil),
