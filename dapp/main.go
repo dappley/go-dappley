@@ -134,6 +134,7 @@ func main() {
 	}
 	transaction.SetSubsidy(minerSubsidy)
 
+	lblockchain.DbChecking(db)
 	var LIBBlk *block.Block = nil
 	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
 	if err ==nil{

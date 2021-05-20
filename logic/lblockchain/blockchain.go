@@ -250,7 +250,6 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
 		return err
 	}
-	// 这里是原始TBH
 
 	err =ctx.State.Save(ctx.Block.GetHash()) //order2
 	if err!=nil{
@@ -471,15 +470,6 @@ func (bc *Blockchain) savedHash(bytes []byte) {
 	}
 }
 
-func (bc *Blockchain) getHash(savedHash []byte) (hash.Hash, error) {
-	tbh, err := bc.db.Get(savedHash)
-	if err != nil {
-		logger.Warn(err)
-		return nil, err
-	}
-	return tbh, nil
-}
-
 func (bc *Blockchain) DeepCopy() *Blockchain {
 	newCopy := &Blockchain{}
 	copier.Copy(newCopy, bc)
@@ -600,6 +590,9 @@ func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
 }
 
 func (bc *Blockchain) DataCheking(){
+	//这里会根据外面的结果来进行恢复，恢复前先创建bc
+	//recovery scState,scLog
+
 	//recovery utxo
 	blk,err:=bc.GetTailBlock()
 	if err==nil{
@@ -618,7 +611,62 @@ func (bc *Blockchain) DataCheking(){
 
 		}
 	}
-	//recovery scState,scLog
 
 
+
+}
+
+func DbChecking(db storage.Storage){
+	//分别拿出4个hash 进行比较，
+	tbHash, err := db.Get(tipKey)
+	if err != nil {
+		logger.Warn(err) //这里要改下，如果拿不到就是新的区块链，要创建新的
+	}
+	sHash, err := db.Get(scStateSaveHash)
+	if err != nil {
+		logger.Warn(err)//这里要改下，如果拿不到就是新的区块链，要创建新的
+	}
+	//新 tail block hash
+	//旧 scState
+	//旧 Block
+	//旧 utxo
+	if !bytes.Equal(tbHash,sHash){
+		//这情况，把tail 设置成旧的scState
+		return
+	}
+
+
+	bHash, err := db.Get(blockSaveHash)
+	if err != nil {
+		logger.Warn(err)//这里要改下，如果拿不到就是新的区块链，要创建新的
+	}
+	//新tail block hash
+	//新 scState
+	//旧Block
+	//旧 utxo
+	if !bytes.Equal(sHash,bHash){
+		////这个情况，1.把tail设置成scState
+		//2.把scState 根据 stateLog还原
+		return
+	}
+
+	uHash, err := db.Get(utxoSaveHash)
+	if err != nil {
+		logger.Warn(err)//这里要改下，如果拿不到就是新的区块链，要创建新的
+	}
+	//新tail block hash
+	//新scState
+	//新Block
+	//旧utxo
+	if !bytes.Equal(bHash,uHash){
+		//根据block生成utxo ，更新现有utxo，已经完成
+		return
+	}
+
+	//
+	//新
+	//新
+	//新
+	//新
+	//啥都不做
 }
