@@ -97,13 +97,9 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 	if err != nil {
 		return nil, err
 	}
-	lib, err := db.Get(libKey)
-	if err != nil {
-		return nil, err
-	}
 
 	bc := &Blockchain{
-		blockchain.NewBlockchain(tip, lib),
+		blockchain.NewBlockchain(tip, []byte{}),
 		db,
 		utxo.NewUTXOCache(db),
 		libPolicy,
@@ -112,6 +108,13 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
+
+	lib,err:=bc.getLIB(bc.GetMaxHeight())
+	if err != nil {
+		return nil, err
+	}
+	bc.SetLIBHash(lib)
+
 	return bc, nil
 }
 
@@ -250,15 +253,15 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	err = ctx.UtxoIndex.Save()
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save utxo to database.")
-		return err
-	}
-
 	err = bc.setTailBlockHash(ctx.Block.GetHash())
 	if err != nil {
 		blockLogger.Error("Blockchain: failed to set tail block hash!")
+		return err
+	}
+
+	err = ctx.UtxoIndex.Save()
+	if err != nil {
+		blockLogger.Warn("Blockchain: failed to save utxo to database.")
 		return err
 	}
 
@@ -459,13 +462,8 @@ func (bc *Blockchain) DeepCopy() *Blockchain {
 	return newCopy
 }
 
-func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
-	err := bc.db.Put(libKey, hash)
-	if err != nil {
-		return err
-	}
+func (bc *Blockchain) SetLIBHash(hash hash.Hash)  {
 	bc.bc.SetLIBHash(hash)
-	return nil
 }
 
 func (bc *Blockchain) IsLIB(blk *block.Block) bool {
@@ -543,11 +541,21 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
-	if bc.libPolicy == nil {
+	libHash,err:=bc.getLIB(currBlkHeight)
+	if err != nil {
+		logger.Warn("updateLIB failed")
 		return
+	}
+	bc.SetLIBHash(libHash)
+}
+
+func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error){
+	if bc.libPolicy == nil {
+		return []byte{} , errors.New("libPolicy is nil")
 	}
 
 	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
+	logger.Info("minConfirmationNum:",minConfirmationNum)
 	LIBHeight := uint64(0)
 	if currBlkHeight > uint64(minConfirmationNum) {
 		LIBHeight = currBlkHeight - uint64(minConfirmationNum)
@@ -556,10 +564,10 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	LIBBlk, err := bc.GetBlockByHeight(LIBHeight)
 	if err != nil {
 		logger.WithError(err).Warn("Blockchain: Can not find LIB block in database")
-		return
+		return []byte{} , err
 	}
 
-	bc.SetLIBHash(LIBBlk.GetHash())
+	return LIBBlk.GetHash(),nil
 }
 
 func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
@@ -567,3 +575,4 @@ func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
 		logger.Warn("Delete the block failed.")
 	}
 }
+
