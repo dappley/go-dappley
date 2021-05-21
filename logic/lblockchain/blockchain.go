@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -245,42 +244,11 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		"hash":   ctx.Block.GetHash().String(),
 	})
 
-	bc.db.DisableBatch()
-
-	err := bc.setTailBlockHash(ctx.Block.GetHash()) //order1
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to set tail block hash!")
+	if err := bc.saveDataToDb(ctx); err != nil {
 		return err
 	}
-
-	err = bc.AddBlockToDb(ctx.Block)//order2
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to add block to database.")
-		return err
-	}
-	bc.savedHash(blockSaveHash)
-
-	err =ctx.State.Save(ctx.Block.GetHash()) //order3
-	if err!=nil{
-		logger.Warn("scState save failed",err)
-	}
-
-	err = ctx.UtxoIndex.Save() //order4
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save utxo to database.")
-		return err
-	}
-	bc.savedHash(utxoSaveHash)
-
 
 	bc.updateLIB(ctx.Block.GetHeight())
-
-	// Flush batch changes to storage
-	err = bc.db.Flush()
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
-		return err
-	}
 
 	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 	//Remove transactions in current transaction pool
@@ -653,5 +621,36 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 		putHash(utxoSaveHash, bHash)
 		logger.Info("utxo and scState have been recovered.")
 	}
+	return nil
+}
+
+func (bc *Blockchain) saveDataToDb(ctx *BlockContext) error {
+	//be careful, change the order may cost data checking and recover error
+	err := bc.setTailBlockHash(ctx.Block.GetHash()) //order1 save tail block hash to db
+	if err != nil {
+		logger.Error("Failed to set tail block hash!")
+		return err
+	}
+
+	err = bc.AddBlockToDb(ctx.Block) //order2
+	if err != nil {
+		logger.Warn("Failed to add block to db.")
+		return err
+	}
+	bc.savedHash(blockSaveHash)
+
+	err = ctx.State.Save(ctx.Block.GetHash()) //order3
+	if err != nil {
+		logger.Warn("Failed to add scState to db.")
+		return err
+	}
+
+	err = ctx.UtxoIndex.Save() //order4
+	if err != nil {
+		logger.Warn("Failed to save utxo to db.")
+		return err
+	}
+	bc.savedHash(utxoSaveHash)
+
 	return nil
 }
