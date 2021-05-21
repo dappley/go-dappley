@@ -404,8 +404,6 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 	return utxocopy
 }
 
-
-
 func (utxos *UTXOIndex) SelfCheckingUTXO(){
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()

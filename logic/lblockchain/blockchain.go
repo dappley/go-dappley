@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/dappley/go-dappley/core/scState"
@@ -615,6 +616,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 	}
 	if !bytes.Equal(tbHash, bHash) {//set tail block hash to previous tbh
 		putHash(tipKey, bHash)
+		logger.Info("Incomplete data found, fixed tail block hash")
 		return nil
 	}
 
@@ -624,6 +626,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 		return err
 	}
 	if !bytes.Equal(uHash,bHash){ //checking and recovery utxo and scState
+		logger.Info("Incomplete data found, recovering utxo and scState")
 		getBlock := func(hash hash.Hash) *block.Block {
 			rawBytes, err := db.Get(hash)
 			if err != nil {
@@ -648,6 +651,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 			logger.Warn(err)
 		}
 		putHash(utxoSaveHash, bHash)
+		logger.Info("utxo and scState have been recovered.")
 	}
 	return nil
 }
