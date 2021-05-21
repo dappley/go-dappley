@@ -134,27 +134,22 @@ func main() {
 	}
 	transaction.SetSubsidy(minerSubsidy)
 
-	lblockchain.DbChecking(db)
 	var LIBBlk *block.Block = nil
-	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
+	var bc *lblockchain.Blockchain
+	err =lblockchain.DataCheckingAndRecovery(db)
 	if err ==nil{
+		bc= lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
 		LIBBlk, _ = bc.GetLIB()
-		bc.DataCheking()
 	}else {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
-			logger.Panic(err)
+			logger.WithError(err).Error("Failed to initialize the node! Exiting...")
+			return
 		}
 	}
 
 	bc.SetState(blockchain.BlockchainInit)
-
 	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
-
-	if err != nil {
-		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
-		return
-	}
 
 	//start mining
 	logic.SaveAccount()

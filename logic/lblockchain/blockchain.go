@@ -44,7 +44,6 @@ import (
 
 var tipKey = []byte("tailBlockHash")
 
-var scStateSaveHash =[]byte("scStateSaved")
 var blockSaveHash =[]byte("blockSaved")
 var utxoSaveHash =[]byte("utxoSaved")
 
@@ -94,11 +93,12 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*Blockchain, error) {
+func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) *Blockchain {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
-		return nil, err
+		logger.Warn("get tailBlockHash failed: ",err)
+		return nil
 	}
 
 	bc := &Blockchain{
@@ -114,11 +114,12 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 
 	lib,err:=bc.getLIB(bc.GetMaxHeight())
 	if err != nil {
-		return nil, err
+		logger.Warn("getLIB failed: ",err)
+		return nil
 	}
 	bc.SetLIBHash(lib)
 
-	return bc, nil
+	return bc
 }
 
 func (bc *Blockchain) GetDb() storage.Storage {
@@ -251,18 +252,17 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		return err
 	}
 
-	err =ctx.State.Save(ctx.Block.GetHash()) //order2
-	if err!=nil{
-		logger.Warn("scState save failed",err)
-	}
-	bc.savedHash(scStateSaveHash)
-
-	err = bc.AddBlockToDb(ctx.Block)//order3
+	err = bc.AddBlockToDb(ctx.Block)//order2
 	if err != nil {
 		blockLogger.Warn("Blockchain: failed to add block to database.")
 		return err
 	}
 	bc.savedHash(blockSaveHash)
+
+	err =ctx.State.Save(ctx.Block.GetHash()) //order3
+	if err!=nil{
+		logger.Warn("scState save failed",err)
+	}
 
 	err = ctx.UtxoIndex.Save() //order4
 	if err != nil {
@@ -589,84 +589,65 @@ func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
 	}
 }
 
-func (bc *Blockchain) DataCheking(){
-	//这里会根据外面的结果来进行恢复，恢复前先创建bc
-	//recovery scState,scLog
-
-	//recovery utxo
-	blk,err:=bc.GetTailBlock()
-	if err==nil{
-		parentBlk,err:=bc.GetBlockByHash(blk.GetPrevHash())
-		if err==nil{
-			contractStates := scState.NewScState(bc.GetUtxoCache())
-			utxo:=lutxo.NewUTXOIndex(bc.GetUtxoCache())
-			if !lblock.VerifyTransactions(blk, utxo, contractStates, parentBlk,bc.GetDb()) {
-				logger.Warn("get check utxo failed")
-			}
-			utxo.SelfCheckingUTXO()
-			err:=utxo.Save()
-			if err!=nil{
-				logger.Warn(err)
-			}
-
+func DataCheckingAndRecovery(db storage.Storage) error {
+	getHash := func(byte []byte) (hash.Hash, error) {
+		hash, err := db.Get(byte)
+		if err != nil {
+			return hash, err
+		}
+		return hash, nil
+	}
+	putHash := func(name, hash []byte) {
+		err := db.Put(name, hash)
+		if err != nil {
+			logger.Warn(err)
 		}
 	}
 
-
-
-}
-
-func DbChecking(db storage.Storage){
-	//分别拿出4个hash 进行比较，
-	tbHash, err := db.Get(tipKey)
+	//tail block hash checked，block no ，utxo no
+	tbHash, err := getHash(tipKey)
 	if err != nil {
-		logger.Warn(err) //这里要改下，如果拿不到就是新的区块链，要创建新的
+		return err
 	}
-	sHash, err := db.Get(scStateSaveHash)
+	bHash, err := getHash(blockSaveHash)
 	if err != nil {
-		logger.Warn(err)//这里要改下，如果拿不到就是新的区块链，要创建新的
+		return err
 	}
-	//新 tail block hash
-	//旧 scState
-	//旧 Block
-	//旧 utxo
-	if !bytes.Equal(tbHash,sHash){
-		//这情况，把tail 设置成旧的scState
-		return
+	if !bytes.Equal(tbHash, bHash) {//set tail block hash to previous tbh
+		putHash(tipKey, bHash)
+		return nil
 	}
 
-
-	bHash, err := db.Get(blockSaveHash)
+	//tail block hash checked，block checked ，utxo no
+	uHash, err := getHash(utxoSaveHash)
 	if err != nil {
-		logger.Warn(err)//这里要改下，如果拿不到就是新的区块链，要创建新的
+		return err
 	}
-	//新tail block hash
-	//新 scState
-	//旧Block
-	//旧 utxo
-	if !bytes.Equal(sHash,bHash){
-		////这个情况，1.把tail设置成scState
-		//2.把scState 根据 stateLog还原
-		return
-	}
+	if !bytes.Equal(uHash,bHash){ //checking and recovery utxo and scState
+		getBlock := func(hash hash.Hash) *block.Block {
+			rawBytes, err := db.Get(hash)
+			if err != nil {
+				logger.Warn(err) //处理下
+			}
+			return block.Deserialize(rawBytes)
+		}
+		blk := getBlock(bHash)
+		parentBlk := getBlock(blk.GetPrevHash())
+		contractStates := scState.NewScState(utxo.NewUTXOCache(db))
+		utxo := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
+		if !lblock.VerifyTransactions(blk, utxo, contractStates, parentBlk, db) {
+			logger.Warn("get check utxo failed")
+		}
+		if err = contractStates.Save(bHash); err != nil {//recover scState
+			logger.Warn(err)
+		}
 
-	uHash, err := db.Get(utxoSaveHash)
-	if err != nil {
-		logger.Warn(err)//这里要改下，如果拿不到就是新的区块链，要创建新的
+		utxo.SelfCheckingUTXO()
+		err := utxo.Save()
+		if err != nil {
+			logger.Warn(err)
+		}
+		putHash(utxoSaveHash, bHash)
 	}
-	//新tail block hash
-	//新scState
-	//新Block
-	//旧utxo
-	if !bytes.Equal(bHash,uHash){
-		//根据block生成utxo ，更新现有utxo，已经完成
-		return
-	}
-
-	//
-	//新
-	//新
-	//新
-	//新
-	//啥都不做
+	return nil
 }
