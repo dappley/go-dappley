@@ -1524,7 +1524,7 @@ func TestRpcService_RpcContractQuery(t *testing.T) {
 	queryResp, err := rpcClient.RpcContractQuery(context.Background(), queryRequest)
 	assert.Nil(t, err)
 	assert.Equal(t, key, queryResp.GetKey(), "RpcContractQuery get key failed")
-	assert.Equal(t, value, queryResp.GetValue(), "RpcContractQuery get value failed")
+	assert.Equal(t, "\"abc\"", queryResp.GetValue(), "RpcContractQuery get value failed")
 
 	logic.RemoveAccountTestFile()
 }

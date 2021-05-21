@@ -176,9 +176,9 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	err := bc.AddBlockContextToTail(PrepareBlockContext(bc, genesis))
 
 	// Expect batch write was used
-	//db.AssertCalled(t, "EnableBatch")
-	db.AssertCalled(t, "Flush")
-	db.AssertCalled(t, "DisableBatch")
+	db.AssertCalled(t, "EnableBatch")
+	//db.AssertCalled(t, "Flush")
+	//db.AssertCalled(t, "DisableBatch")
 
 	// Expect no error when adding genesis block
 	assert.Nil(t, err)
