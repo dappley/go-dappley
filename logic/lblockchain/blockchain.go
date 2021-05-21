@@ -93,12 +93,12 @@ func CreateBlockchain(address account.Address, db storage.Storage, libPolicy LIB
 	return bc
 }
 
-func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) *Blockchain {
+func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionpool.TransactionPool, blkSizeLimit int) (*Blockchain, error) {
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
-		logger.Warn("get tailBlockHash failed: ",err)
-		return nil
+		logger.Warn("get tailBlockHash failed")
+		return nil, err
 	}
 
 	bc := &Blockchain{
@@ -112,14 +112,14 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 		&sync.Mutex{},
 	}
 
-	lib,err:=bc.getLIB(bc.GetMaxHeight())
+	lib, err := bc.getLIB(bc.GetMaxHeight())
 	if err != nil {
-		logger.Warn("getLIB failed: ",err)
-		return nil
+		logger.Warn("getLIB failed")
+		return nil, err
 	}
 	bc.SetLIBHash(lib)
 
-	return bc
+	return bc, nil
 }
 
 func (bc *Blockchain) GetDb() storage.Storage {
@@ -600,7 +600,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 	putHash := func(name, hash []byte) {
 		err := db.Put(name, hash)
 		if err != nil {
-			logger.Warn(err)
+			logger.Warn("put hash to db faild:",err)
 		}
 	}
 

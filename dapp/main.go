@@ -20,6 +20,7 @@ package main
 
 import (
 	"flag"
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
 	"github.com/dappley/go-dappley/core/transaction"
@@ -34,7 +35,6 @@ import (
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/dappley/go-dappley/logic"
@@ -136,16 +136,23 @@ func main() {
 
 	var LIBBlk *block.Block = nil
 	var bc *lblockchain.Blockchain
-	err =lblockchain.DataCheckingAndRecovery(db)
-	if err ==nil{
-		bc= lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
-		LIBBlk, _ = bc.GetLIB()
-	}else {
+	err = lblockchain.DataCheckingAndRecovery(db)
+	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
-			logger.WithError(err).Error("Failed to initialize the node! Exiting...")
-			return
+			logger.Panic(err)
 		}
+	} else {
+		bc ,err= lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
+		if err != nil {
+			logger.Panic(err)
+		}
+		LIBBlk, _ = bc.GetLIB()
+	}
+
+	if err != nil {
+		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
+		return
 	}
 
 	bc.SetState(blockchain.BlockchainInit)
