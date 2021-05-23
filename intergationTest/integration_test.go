@@ -17,6 +17,7 @@
 package intergationTest
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -564,9 +565,17 @@ func TestAddBalance(t *testing.T) {
 
 			// Add `addAmount` to the balance of the new account
 			_, _, err := logic.SendFromMiner(testAddr, tc.addAmount, bm.Getblockchain())
-			height := bm.Getblockchain().GetMaxHeight()
 			assert.Equal(t, err, tc.expectedErr)
-			for bm.Getblockchain().GetMaxHeight()-height <= 1 {
+
+			uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+			assert.Nil(t, err)
+			for  {
+				uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+				assert.Nil(t, err)
+				if !bytes.Equal(uHash, uHashNew) {
+					uHash=uHashNew
+					break
+				}
 			}
 
 			bp.Stop()
@@ -1171,8 +1180,6 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	TransferTest.prototype = {
 		transfer: function(to, amount, tip){
 			return Blockchain.transfer(to, amount, tip);
-		},
-		dapp_schedule: function () {
 		}
 	};
 	module.exports = new TransferTest();
@@ -1201,8 +1208,16 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Make logic.Sender the miner and mine for 1 block (which should include the transaction)
+	uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+	assert.Nil(t, err)
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < 1 {
+	for  {
+		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+		assert.Nil(t, err)
+		if !bytes.Equal(uHash, uHashNew) {
+			uHash=uHashNew
+			break
+		}
 	}
 	bps.Stop()
 
@@ -1217,10 +1232,14 @@ func TestSmartContractOfContractTransfer(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	currentHeight := bm.Getblockchain().GetMaxHeight()
-
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < currentHeight+1 {
+	for  {
+		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+		assert.Nil(t, err)
+		if !bytes.Equal(uHash, uHashNew) {
+			uHash=uHashNew
+			break
+		}
 	}
 	bps.Stop()
 
@@ -1251,8 +1270,6 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 		},
 		deleteContract: function(){
 			return Blockchain.deleteContract();
-		},
-		dapp_schedule: function () {
 		}
 	};
 	module.exports = new DeleteTest();
@@ -1282,8 +1299,16 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 
 	// Make logic.Sender the miner and mine for 1 block (which should include the transaction)
+	uHash, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+	assert.Nil(t, err)
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < 1 {
+	for  {
+		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+		assert.Nil(t, err)
+		if !bytes.Equal(uHash, uHashNew) {
+			uHash=uHashNew
+			break
+		}
 	}
 	bps.Stop()
 
@@ -1301,10 +1326,14 @@ func TestSmartContractOfContractDelete(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	currentHeight := bm.Getblockchain().GetMaxHeight()
-
 	bps.Start()
-	for bm.Getblockchain().GetMaxHeight() < currentHeight+1 {
+	for  {
+		uHashNew, err := bm.Getblockchain().GetDb().Get(lblockchain.UtxoSaveHash)
+		assert.Nil(t, err)
+		if !bytes.Equal(uHash, uHashNew) {
+			uHash=uHashNew
+			break
+		}
 	}
 	bps.Stop()
 

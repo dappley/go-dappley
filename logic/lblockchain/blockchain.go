@@ -45,7 +45,7 @@ import (
 var tipKey = []byte("tailBlockHash")
 
 var blockSaveHash =[]byte("blockSaved")
-var utxoSaveHash =[]byte("utxoSaved")
+var UtxoSaveHash =[]byte("utxoSaved")
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
@@ -589,7 +589,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 	}
 
 	//tail block hash checked，block checked ，utxo no
-	uHash, err := getHash(utxoSaveHash)
+	uHash, err := getHash(UtxoSaveHash)
 	if err != nil {
 		return err
 	}
@@ -618,7 +618,7 @@ func DataCheckingAndRecovery(db storage.Storage) error {
 		if err != nil {
 			logger.Warn(err)
 		}
-		putHash(utxoSaveHash, bHash)
+		putHash(UtxoSaveHash, bHash)
 		logger.Info("utxo and scState have been recovered.")
 	}
 	return nil
@@ -650,7 +650,7 @@ func (bc *Blockchain) saveDataToDb(ctx *BlockContext) error {
 		logger.Warn("Failed to save utxo to db.")
 		return err
 	}
-	bc.savedHash(utxoSaveHash)
+	bc.savedHash(UtxoSaveHash)
 
 	return nil
 }
