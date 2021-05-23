@@ -252,7 +252,7 @@ func (utxoCache *UTXOCache) getUTXOFromDB(utxoKey string) (*UTXO, error) {
 		utxoCache.utxo.Add(utxoKey, utxo)
 		return utxo, nil
 	}
-	logger.Error("get utxo from db failed！")
+	logger.Warn("get utxo from db failed！")
 	return nil, err
 }
 

@@ -69,6 +69,7 @@ func (utxos *UTXOIndex) IsIndexAddExist(pubKeyHash account.PubKeyHash) bool {
 	_, ok := utxos.indexAdd[pubKeyHash.String()]
 	return ok
 }
+
 func (utxos *UTXOIndex) Save() error {
 	utxos.mutex.Lock()
 	defer utxos.mutex.Unlock()
@@ -401,4 +402,33 @@ func (utxos *UTXOIndex) DeepCopy() *UTXOIndex {
 		utxocopy.indexRemove[pkh] = newUtxoTx
 	}
 	return utxocopy
+}
+
+func (utxos *UTXOIndex) SelfCheckingUTXO(){
+	utxos.mutex.Lock()
+	defer utxos.mutex.Unlock()
+	logger.Info("start utxo self checking...")
+	//remove utxo from addUTXO list which already has been added to db
+	for key,utxoTx:=range utxos.indexAdd{
+		for _,utxo:=range utxoTx.Indices{
+			if _,err:=utxos.cache.GetUtxo(utxo.GetUTXOKey());err==nil{
+				delete(utxoTx.Indices,utxo.GetUTXOKey())
+			}
+			if len(utxoTx.Indices)==0{
+				delete(utxos.indexAdd,key)
+			}
+		}
+	}
+	//remove utxo from removeUTXO list which already has been deleted from db
+	for key,utxoTx:=range utxos.indexRemove{
+		for _,utxo:=range utxoTx.Indices{
+			if _,err:=utxos.cache.GetUtxo(utxo.GetUTXOKey());err!=nil{
+				delete(utxoTx.Indices,utxo.GetUTXOKey())
+			}
+			if len(utxoTx.Indices)==0{
+				delete(utxos.indexRemove,key)
+			}
+		}
+	}
+	logger.Info("self checking complete")
 }
