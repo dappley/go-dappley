@@ -397,27 +397,27 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		}
 	}
 
-	//updated utxo in db
-	err := index.Save()
-	if err != nil {
-		logger.Warn(err)
-		return false
-	}
-
-	//bc.db.EnableBatch()
-	//defer bc.db.DisableBatch()
-
-	err = bc.setTailBlockHash(parentblockHash)
+	err := bc.setTailBlockHash(parentblockHash)
 	if err != nil {
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
 	}
+	bc.savedHash(blockSaveHash)
 
 	if err = scState.Save(parentblockHash); err != nil {
 		logger.Warn(err)
 		return false
 	}
 
+	//bc.db.EnableBatch()
+	//updated utxo in db
+	err = index.Save()
+	if err != nil {
+		logger.Warn(err)
+		return false
+	}
+	bc.savedHash(UtxoSaveHash)
+	//bc.db.DisableBatch()
 	//bc.db.Flush()
 
 	return true
