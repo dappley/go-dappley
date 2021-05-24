@@ -3,7 +3,6 @@ package scState
 import (
 	"github.com/dappley/go-dappley/core/stateLog"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/util"
 	"sync"
 
 	"github.com/dappley/go-dappley/common/hash"
@@ -68,7 +67,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 		}
 	}
 
-	err :=ss.cache.AddStateLog(util.Bytes2str(blkHash), stLog)
+	err :=ss.cache.AddStateLog(utxo.GetscStateLogKey(blkHash), stLog)
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 }
 
 func (ss *ScState) RevertState(blkHash hash.Hash) {
-	stlog,err := ss.cache.GetStateLog(util.Bytes2str(blkHash))
+	stlog,err := ss.cache.GetStateLog(utxo.GetscStateLogKey(blkHash))
 	if err!=nil{
 		logger.Warn("get state log failed: ", err)
 	}

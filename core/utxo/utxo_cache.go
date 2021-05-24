@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/dappley/go-dappley/common"
+	"github.com/dappley/go-dappley/common/hash"
 	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/stateLog"
 	utxopb "github.com/dappley/go-dappley/core/utxo/pb"
@@ -35,8 +36,6 @@ import (
 const (
 	UtxoCacheLRUCacheLimit    = 1024
 	ScStateCacheLRUCacheLimit = 1024
-//	ScStateMapKey             = "scState"
-	ScStateLogKey             = "scLog"
 )
 
 // UTXOCache holds temporary data
@@ -396,35 +395,35 @@ func (utxoCache *UTXOCache) DelScStates(scStateKey string) error {
 	return nil
 }
 
-func (utxoCache *UTXOCache) AddStateLog(blkHash string, stLog *stateLog.StateLog) error {
-	utxoCache.stateLogCache.Add(ScStateLogKey+ blkHash, stLog)
+func (utxoCache *UTXOCache) AddStateLog(scStateLogKey string, stLog *stateLog.StateLog) error {
+	utxoCache.stateLogCache.Add(scStateLogKey, stLog)
 
-	err := utxoCache.db.Put(util.Str2bytes(ScStateLogKey+ blkHash), stLog.SerializeStateLog())
+	err := utxoCache.db.Put(util.Str2bytes(scStateLogKey), stLog.SerializeStateLog())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (utxoCache *UTXOCache) GetStateLog(blkHash string) (*stateLog.StateLog, error) {
-	stLogData, ok := utxoCache.stateLogCache.Get(ScStateLogKey + blkHash)
+func (utxoCache *UTXOCache) GetStateLog(scStateLogKey string) (*stateLog.StateLog, error) {
+	stLogData, ok := utxoCache.stateLogCache.Get(scStateLogKey)
 	if ok {
 		return stLogData.(*stateLog.StateLog), nil
 	}
 
-	stLogBytes, err := utxoCache.db.Get(util.Str2bytes(ScStateLogKey + blkHash))
+	stLogBytes, err := utxoCache.db.Get(util.Str2bytes(scStateLogKey))
 	if err != nil {
 		return nil, err
 	}
 	return stateLog.DeserializeStateLog(stLogBytes), nil
 }
 
-func (utxoCache *UTXOCache) DelStateLog(blkHash string) error {
-	err := utxoCache.db.Del(util.Str2bytes(ScStateLogKey + blkHash))
+func (utxoCache *UTXOCache) DelStateLog(scStateLogKey string) error {
+	err := utxoCache.db.Del(util.Str2bytes(scStateLogKey))
 	if err != nil {
 		return err
 	}
-	utxoCache.stateLogCache.Remove(ScStateLogKey + blkHash)
+	utxoCache.stateLogCache.Remove(scStateLogKey)
 	return nil
 }
 
@@ -461,3 +460,7 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 func GetscStateKey(address, key string) string {
 	return "scState" + address + key
 }
+func GetscStateLogKey(blockHash hash.Hash) string {
+	return "scLog" + util.Bytes2str(blockHash)
+}
+

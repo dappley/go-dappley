@@ -13,7 +13,7 @@ var (
 	address = "dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"
 	key     = "Account1"
 	value   = "99"
-	blkHash = "blkHash"
+	blkHash = []byte{7,7,7,7}
 )
 
 func TestUTXO_AddStateLog(t *testing.T) {
@@ -23,12 +23,12 @@ func TestUTXO_AddStateLog(t *testing.T) {
 
 	stLog := stateLog.NewStateLog()
 	stLog.Log = map[string]map[string]string{address: {key: value}}
-	assert.Nil(t, cache.AddStateLog(blkHash, stLog))
+	assert.Nil(t, cache.AddStateLog(GetscStateLogKey(blkHash), stLog))
 
-	stLogData, _ := cache.stateLogCache.Get(ScStateLogKey + blkHash)
+	stLogData, _ := cache.stateLogCache.Get(GetscStateLogKey(blkHash))
 	assert.Equal(t, stLog, stLogData.(*stateLog.StateLog))
 
-	stLogBytes, err := cache.db.Get(util.Str2bytes(ScStateLogKey + blkHash))
+	stLogBytes, err := cache.db.Get(util.Str2bytes(GetscStateLogKey(blkHash)))
 	assert.Nil(t, err)
 	assert.Equal(t, stLog, stateLog.DeserializeStateLog(stLogBytes))
 }
@@ -40,14 +40,14 @@ func TestUTXO_GetStateLog(t *testing.T) {
 
 	stLog := stateLog.NewStateLog()
 	stLog.Log = map[string]map[string]string{address: {key: value}}
-	assert.Nil(t, db.Put(util.Str2bytes(ScStateLogKey + blkHash), stLog.SerializeStateLog()))
+	assert.Nil(t, db.Put(util.Str2bytes(GetscStateLogKey(blkHash)), stLog.SerializeStateLog()))
 
-	getLog, err := cache.GetStateLog(blkHash)
+	getLog, err := cache.GetStateLog(GetscStateLogKey(blkHash))
 	assert.Nil(t, err)
 	assert.Equal(t, stLog, getLog)
 
-	cache.stateLogCache.Add(ScStateLogKey + "blkHash2", stLog)
-	getLog, err = cache.GetStateLog("blkHash2")
+	cache.stateLogCache.Add(GetscStateLogKey([]byte{8,8,8,8}) , stLog)
+	getLog, err = cache.GetStateLog(GetscStateLogKey([]byte{8,8,8,8}))
 	assert.Nil(t, err)
 	assert.Equal(t, stLog, getLog)
 }
@@ -59,14 +59,14 @@ func TestUTXO_DelStateLog(t *testing.T) {
 
 	stLog := stateLog.NewStateLog()
 	stLog.Log = map[string]map[string]string{address: {key: value}}
-	cache.stateLogCache.Add(ScStateLogKey + blkHash, stLog)
-	assert.Nil(t, db.Put(util.Str2bytes(ScStateLogKey + blkHash), stLog.SerializeStateLog()))
+	cache.stateLogCache.Add(GetscStateLogKey(blkHash), stLog)
+	assert.Nil(t, db.Put(util.Str2bytes(GetscStateLogKey(blkHash)), stLog.SerializeStateLog()))
 
-	assert.Nil(t, cache.DelStateLog(blkHash))
+	assert.Nil(t, cache.DelStateLog(GetscStateLogKey(blkHash)))
 
-	_, ok := cache.stateLogCache.Get(ScStateLogKey + blkHash)
+	_, ok := cache.stateLogCache.Get(GetscStateLogKey(blkHash))
 	assert.Equal(t, false, ok)
-	_, err := cache.db.Get(util.Str2bytes(ScStateLogKey + blkHash))
+	_, err := cache.db.Get(util.Str2bytes(GetscStateLogKey(blkHash)))
 	assert.Equal(t, errors.New("key is invalid"), err)
 
 }
