@@ -162,7 +162,7 @@ func TestScState_DelStateValue(t *testing.T) {
 	scState.DelStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account1")
 	assert.Equal(t, ScStateValueIsNotExist, scState.states["dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"]["Account1"])
 
-	assert.Nil(t, scState.cache.AddScStates("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2", "199"))
+	assert.Nil(t, scState.cache.AddScStates(utxo.GetscStateKey("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2"), "199"))
 	scState = NewScState(cache)
 	scState.DelStateValue("dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf", "Account2")
 	assert.Equal(t, ScStateValueIsNotExist, scState.states["dGDrVKjCG3sdXtDUgWZ7Fp3Q97tLhqWivf"]["Account1"])

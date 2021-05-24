@@ -35,7 +35,7 @@ import (
 const (
 	UtxoCacheLRUCacheLimit    = 1024
 	ScStateCacheLRUCacheLimit = 1024
-	ScStateMapKey             = "scState"
+//	ScStateMapKey             = "scState"
 	ScStateLogKey             = "scLog"
 )
 
@@ -365,34 +365,34 @@ func (utxoCache *UTXOCache) UpdateNextUTXO(nextUTXOKey []byte, preUTXOKey string
 	return nextUTXO, nil
 }
 
-func (utxoCache *UTXOCache) AddScStates(address, key, value string) error {
-	err := utxoCache.db.Put(util.Str2bytes(ScStateMapKey+address+key), util.Str2bytes(value))
+func (utxoCache *UTXOCache) AddScStates(scStateKey, value string) error {
+	err := utxoCache.db.Put(util.Str2bytes(scStateKey), util.Str2bytes(value))
 	if err != nil {
 		return err
 	}
-	utxoCache.scStateCache.Add(ScStateMapKey+address+key, value)
+	utxoCache.scStateCache.Add(scStateKey, value)
 	return nil
 }
 
-func (utxoCache *UTXOCache) GetScStates(address, key string) (string, error) {
-	scStateData, ok := utxoCache.scStateCache.Get(ScStateMapKey + address + key)
+func (utxoCache *UTXOCache) GetScStates(scStateKey string) (string, error) {
+	scStateData, ok := utxoCache.scStateCache.Get(scStateKey)
 	if ok {
 		return scStateData.(string), nil
 	}
 
-	valBytes, err := utxoCache.db.Get(util.Str2bytes(ScStateMapKey + address + key))
+	valBytes, err := utxoCache.db.Get(util.Str2bytes(scStateKey))
 	if err != nil {
 		return "", err
 	}
 	return util.Bytes2str(valBytes), nil
 }
 
-func (utxoCache *UTXOCache) DelScStates(address, key string) error {
-	err := utxoCache.db.Del(util.Str2bytes(ScStateMapKey + address + key))
+func (utxoCache *UTXOCache) DelScStates(scStateKey string) error {
+	err := utxoCache.db.Del(util.Str2bytes(scStateKey))
 	if err != nil {
 		return err
 	}
-	utxoCache.scStateCache.Remove(ScStateMapKey + address + key)
+	utxoCache.scStateCache.Remove(scStateKey)
 	return nil
 }
 
@@ -456,4 +456,8 @@ func (utxoCache *UTXOCache) GetUTXOsByAmountWithOutRemovedUTXOs(pubKeyHash accou
 		utxoKey = util.Bytes2str(utxo.NextUtxoKey) //get previous utxo key
 	}
 	return nil, errors.New("transaction: insufficient balance")
+}
+
+func GetscStateKey(address, key string) string {
+	return "scState" + address + key
 }
