@@ -20,6 +20,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/csv"
@@ -28,6 +29,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/dappley/go-dappley/core/transactionbase"
 	"io/ioutil"
 	"log"
 	"os"
@@ -39,14 +41,13 @@ import (
 	"github.com/dappley/go-dappley/logic/ltransaction"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 
-	"github.com/dappley/go-dappley/core/transaction"
-	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
-	"github.com/dappley/go-dappley/core/utxo"
-
 	"github.com/dappley/go-dappley/common"
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/core/account"
+	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	"github.com/dappley/go-dappley/core/utxo"
 	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
 	"github.com/dappley/go-dappley/logic"
 	rpcpb "github.com/dappley/go-dappley/rpc/pb"
@@ -103,6 +104,7 @@ const (
 	flagListPrivateKey   = "privateKey"
 	flagGasLimit         = "gasLimit"
 	flagGasPrice         = "gasPrice"
+	flagSendNumber       = "sendNumber"
 	flagContractAddr     = "contractAddr"
 	flagKey              = "key"
 	flagValue            = "value"
@@ -259,6 +261,12 @@ var cmdFlagsMap = map[string][]flagPars{
 			uint64(0),
 			valueTypeUint64,
 			"Gas price of smart contract execution.",
+		},
+		flagPars{
+			flagSendNumber,
+			uint64(1),
+			valueTypeUint64,
+			"send transcation number. Eg. 1",
 		},
 	},
 	cliAddPeer: {flagPars{
@@ -1215,7 +1223,6 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	response, err := logic.GetUtxoStream(c.(rpcpb.RpcServiceClient), &rpcpb.GetUTXORequest{
 		Address: account.NewAddress(*(flags[flagFromAddress].(*string))).String(),
 	})
-
 	if err != nil {
 		switch status.Code(err) {
 		case codes.Unavailable:
@@ -1225,17 +1232,20 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 		}
 		return
 	}
+	utxoTx := utxo.NewUTXOTx()
 	utxos := response.GetUtxos()
 	var inputUtxos []*utxo.UTXO
 	for _, u := range utxos {
 		utxo := utxo.UTXO{}
 		utxo.FromProto(u)
 		inputUtxos = append(inputUtxos, &utxo)
+		utxoTx.PutUtxo(&utxo)
 	}
 	sort.Sort(utxoSlice(inputUtxos))
 	tip := common.NewAmount(0)
 	gasLimit := common.NewAmount(0)
 	gasPrice := common.NewAmount(0)
+	sendNmumber := 1
 	if flags[flagTip] != nil {
 		tip = common.NewAmount(*(flags[flagTip].(*uint64)))
 	}
@@ -1245,44 +1255,51 @@ func sendCommandHandler(ctx context.Context, c interface{}, flags cmdFlags) {
 	if flags[flagGasPrice] != nil {
 		gasPrice = common.NewAmount(*(flags[flagGasPrice].(*uint64)))
 	}
-	tx_utxos, err := GetUTXOsfromAmount(inputUtxos, common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		return
+	if flags[flagSendNumber] != nil {
+		sendNmumber = int(*(flags[flagSendNumber].(*uint64)))
 	}
-
-	am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		return
-	}
-	senderAccount := am.GetAccountByAddress(account.NewAddress(*(flags[flagFromAddress].(*string))))
-
-	if senderAccount == nil {
-		fmt.Println("Error: invalid account address.")
-		return
-	}
-	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
-		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := ltransaction.NewNormalUTXOTransaction(tx_utxos, sendTxParam)
-	sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
-	_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
-
-	if err != nil {
-		switch status.Code(err) {
-		case codes.Unavailable:
-			fmt.Println("Error: server is not reachable!")
-		default:
-			fmt.Println("Error:", status.Convert(err).Message())
+	for i:=0;i<sendNmumber;i++{
+		tx_utxos, err := GetUTXOsWithAmountByUTXOs(&utxoTx,common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice)
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+			return
 		}
-		return
-	}
 
-	if *(flags[flagToAddress].(*string)) == "" {
-		fmt.Println("Contract address:", tx.Vout[0].GetAddress().String())
-	}
+		am, err := logic.GetAccountManager(wallet.GetAccountFilePath())
+		if err != nil {
+			fmt.Println("Error:", err.Error())
+			return
+		}
+		senderAccount := am.GetAccountByAddress(account.NewAddress(*(flags[flagFromAddress].(*string))))
 
-	fmt.Println("Transaction is sent! Pending approval from network.")
+		if senderAccount == nil {
+			fmt.Println("Error: invalid account address.")
+			return
+		}
+		sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
+			account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
+		tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
+		sendTransactionRequest := &rpcpb.SendTransactionRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
+		_, err = c.(rpcpb.RpcServiceClient).RpcSendTransaction(ctx, sendTransactionRequest)
+
+		UpdateUTXOs(addressAccount.GetPubKeyHash(),&utxoTx,&tx)
+
+		if err != nil {
+			switch status.Code(err) {
+			case codes.Unavailable:
+				fmt.Println("Error: server is not reachable!")
+			default:
+				fmt.Println("Error:", status.Convert(err).Message())
+			}
+			return
+		}
+
+		if *(flags[flagToAddress].(*string)) == "" {
+			fmt.Println("Contract address:", tx.Vout[0].GetAddress().String())
+		}
+
+		fmt.Println("Transaction is sent! Pending approval from network.")
+	}
 }
 
 func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
@@ -1312,6 +1329,90 @@ func GetUTXOsfromAmount(inputUTXOs []*utxo.UTXO, amount *common.Amount, tip *com
 		return nil, ErrTooManyUtxoFund
 	}
 	return nil, ErrInsufficientFund
+}
+
+func GetUTXOsWithAmountByUTXOs(utxoTx *utxo.UTXOTx, amount *common.Amount, tip *common.Amount, gasLimit *common.Amount, gasPrice *common.Amount) ([]*utxo.UTXO, error) {
+	if tip != nil {
+		amount = amount.Add(tip)
+	}
+	if gasLimit != nil {
+		limitedFee := gasLimit.Mul(gasPrice)
+		amount = amount.Add(limitedFee)
+	}
+
+	var retUtxos []*utxo.UTXO
+	sum := common.NewAmount(0)
+	for _, u := range utxoTx.Indices {
+		sum = sum.Add(u.Value)
+		retUtxos = append(retUtxos, u)
+		if sum.Cmp(amount) >= 0 {
+			break
+		}
+	}
+
+	if sum.Cmp(amount) < 0 {
+		fmt.Println("sum:",sum)
+		fmt.Println("amount:",amount)
+		return nil, errors.New("util: the balance is insufficient")
+	}
+
+	return retUtxos, nil
+}
+
+func UpdateUTXOs(pubkeyHash account.PubKeyHash, utxos *utxo.UTXOTx, tx *transaction.Transaction) {
+	adaptedTx := transaction.NewTxAdapter(tx)
+	if adaptedTx.IsNormal() || adaptedTx.IsContract() || adaptedTx.IsContractSend() {
+		//把这笔交易中所有的vin全都从utxo中删除
+		for _, txin := range tx.Vin {
+			//是否为智能合约
+			isContract, _ := account.PubKeyHash(txin.PubKey).IsContract()
+			// spent contract utxo
+			if !isContract {
+				_, err := account.IsValidPubKey(txin.PubKey)
+				if err != nil {
+					logger.WithError(err).Warn("UTXOIndex: txin.pubKey error, discard update in utxo.")
+					return
+				}
+			}
+			//从utxos中把单笔utxo移除
+			err := removeUTXO(utxos, txin.Txid, txin.Vout)
+			if err != nil {
+				logger.WithError(err).Warn("UTXOIndex: removeUTXO error, discard update in utxo.")
+				return
+			}
+		}
+	}
+	//把这笔交易中所有的Vout添加到utxos中
+	for i, txout := range tx.Vout {
+		AddUTXO(pubkeyHash, utxos, txout, tx.ID, i)
+	}
+}
+
+func removeUTXO(utxoTx *utxo.UTXOTx, txid []byte, vout int) error {
+	u := utxoTx.GetUtxo(txid, vout)
+	//检查出不存在，不存在就报错
+	if u == nil {
+		return errors.New("utxo not found when trying to remove from cache")
+	}
+	//移除utxos中的utxo
+	utxoTx.RemoveUtxo(txid, vout)
+
+	return nil
+}
+
+func AddUTXO(pubkeyHash account.PubKeyHash, utxoTx *utxo.UTXOTx, txout transactionbase.TXOutput, txid []byte, vout int) {
+	//通过fromaccount 的哈希判断，如果不是他的vout就不加到utxo
+	if !bytes.Equal(txout.PubKeyHash, pubkeyHash) {
+		return
+	}
+
+	var u *utxo.UTXO
+	//if it is a smart contract deployment utxo add it to contract utxos
+	if isContract, _ := txout.PubKeyHash.IsContract(); isContract {
+	} else {
+		u = utxo.NewUTXO(txout, txid, vout, utxo.UtxoNormal)
+	}
+	utxoTx.PutUtxo(u)
 }
 
 func vinRules(utxoSum, amount *common.Amount, utxoNum, remainUtxoNum int) bool {
@@ -1463,7 +1564,7 @@ func estimateGasCommandHandler(ctx context.Context, c interface{}, flags cmdFlag
 	}
 	sendTxParam := transaction.NewSendTxParam(account.NewAddress(*(flags[flagFromAddress].(*string))), senderAccount.GetKeyPair(),
 		account.NewAddress(*(flags[flagToAddress].(*string))), common.NewAmount(uint64(*(flags[flagAmount].(*int)))), tip, gasLimit, gasPrice, data)
-	tx, err := ltransaction.NewNormalUTXOTransaction(tx_utxos, sendTxParam)
+	tx, err := ltransaction.NewUTXOTransaction(tx_utxos, sendTxParam)
 	estimateGasRequest := &rpcpb.EstimateGasRequest{Transaction: tx.ToProto().(*transactionpb.Transaction)}
 	gasResponse, err := c.(rpcpb.RpcServiceClient).RpcEstimateGas(ctx, estimateGasRequest)
 
