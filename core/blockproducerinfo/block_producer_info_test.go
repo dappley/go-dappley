@@ -19,6 +19,7 @@
 package blockproducerinfo
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/dappley/go-dappley/core/block"
@@ -31,4 +32,13 @@ func TestBlockProducerInfo_Produced(t *testing.T) {
 	require.False(t, bp.Produced(nil))
 	require.False(t, bp.Produced(block.NewBlock(nil, nil, "")))
 	require.True(t, bp.Produced(block.NewBlock(nil, nil, "key")))
+}
+
+func TestBlockProducerInfo_StartFinish(t *testing.T) {
+	bp := NewBlockProducerInfo("key")
+	assert.True(t, bp.IsIdle())
+	bp.BlockProduceStart()
+	assert.False(t, bp.IsIdle())
+	bp.BlockProduceFinish()
+	assert.True(t, bp.IsIdle())
 }

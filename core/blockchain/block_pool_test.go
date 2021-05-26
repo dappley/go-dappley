@@ -401,3 +401,12 @@ func deserializeBlockPool(s string, rootBlkHash string) (*BlockPool, map[string]
 
 	return bp, blocks
 }
+
+func TestGetKey (t *testing.T) {
+	node1, _ := common.NewTreeNode(createBlock(hash.Hash("hello"), hash.Hash("world"), 0))
+	node2, _ := common.NewTreeNode(createBlock(hash.Hash("hallo"), hash.Hash("123"), 0))
+
+	assert.NotEqual(t, getKey(node1), getKey(node2))
+	assert.Equal(t, "68656c6c6f", getKey(node1))
+	assert.Equal(t, "68616c6c6f", getKey(node2))
+}

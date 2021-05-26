@@ -77,12 +77,6 @@ func generatePubKeyHashByAddress(a Address) (PubKeyHash, bool) {
 
 }
 
-func turnAddressToPubKeyHash(a Address) PubKeyHash {
-	pubKeyHash := base58.Decode(a.String())
-	pubKeyHash = pubKeyHash[0 : len(pubKeyHash)-addressChecksumLen]
-	return pubKeyHash
-}
-
 func (ca *TransactionAccount) IsValid() bool {
 	if !ca.GetPubKeyHash().IsValid() {
 		return false

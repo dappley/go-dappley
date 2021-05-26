@@ -112,3 +112,34 @@ func TestBlock_Proto(t *testing.T) {
 
 	assert.Equal(t, *b1, *b2)
 }
+
+func TestBlock_IsSigned(t *testing.T) {
+	block := NewBlock(nil, nil, "")
+	assert.False(t, block.IsSigned())
+
+	block.SetSignature(hash.Hash{0x88})
+	assert.True(t, block.IsSigned())
+}
+
+func TestBlock_Serialize(t *testing.T) {
+	block := GenerateMockBlock()
+	serializedBytes, _ := proto.Marshal(block.ToProto())
+	assert.Equal(t, serializedBytes, block.Serialize())
+}
+
+func TestDeserialize(t *testing.T) {
+	rawBytes := []byte{10, 10, 32, 2, 48, 1, 58, 4, 116, 101, 115, 116}
+
+	expectedBlock := NewBlockWithTimestamp(nil, nil, 2, "test")
+
+	assert.Equal(t, expectedBlock, Deserialize(rawBytes))
+}
+
+func TestBlock_GetCoinbaseTransaction(t *testing.T) {
+	b1 := NewBlock(nil, nil, "")
+	assert.Nil(t, b1.GetCoinbaseTransaction())
+
+	b2 := GenerateMockBlock()
+	b2.transactions[1].Type = transaction.TxTypeCoinbase
+	assert.Equal(t, b2.transactions[1], b2.GetCoinbaseTransaction())
+}
