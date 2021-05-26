@@ -1,21 +1,40 @@
 package account
 
 import (
+	"github.com/btcsuite/btcutil/base58"
 	"testing"
 
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
-	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAddress_Proto(t *testing.T) {
-	addr := NewAddress("1Xnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB")
-	rawBytes, err := proto.Marshal(addr.ToProto())
-	assert.Nil(t, err)
-	addrProto := &accountpb.Address{}
-	err = proto.Unmarshal(rawBytes, addrProto)
-	assert.Nil(t, err)
-	addr1 := Address{}
-	addr1.FromProto(addrProto)
-	assert.Equal(t, addr, addr1)
+var addressString = "1Xnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"
+
+func TestAddress_ToProto(t *testing.T) {
+	addr := NewAddress(addressString)
+	expected := &accountpb.Address{Address: addressString}
+	assert.Equal(t, expected, addr.ToProto())
+}
+
+func TestAddress_FromProto(t *testing.T) {
+	addr := &Address{}
+	addrProto := &accountpb.Address{Address: addressString}
+	addr.FromProto(addrProto)
+
+	expected := &Address{address: addressString}
+	assert.Equal(t, expected, addr)
+}
+
+func TestAddress_decode(t *testing.T) {
+	addr := NewAddress(addressString)
+	expected := base58.Decode(addressString)
+	assert.Equal(t, expected, addr.decode())
+}
+
+func TestAddress_getAddressCheckSum(t *testing.T) {
+	addr := NewAddress(addressString)
+	addrHash := base58.Decode(addressString)
+	expected := addrHash[len(addrHash)-addressChecksumLen:]
+
+	assert.Equal(t, expected, addr.getAddressCheckSum())
 }

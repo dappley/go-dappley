@@ -18,21 +18,54 @@
 package account
 
 import (
+	"github.com/dappley/go-dappley/crypto/keystore/secp256k1"
+	logger "github.com/sirupsen/logrus"
 	"testing"
 
 	accountpb "github.com/dappley/go-dappley/core/account/pb"
-	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAccount_Proto(t *testing.T) {
+func TestAccount_ToProto(t *testing.T) {
 	account := NewAccount()
-	rawBytes, err := proto.Marshal(account.ToProto())
-	assert.Nil(t, err)
-	accountProto := &accountpb.Account{}
-	err = proto.Unmarshal(rawBytes, accountProto)
-	assert.Nil(t, err)
-	account1 := &Account{}
-	account1.FromProto(accountProto)
-	assert.Equal(t, account, account1)
+	privateKey, err := secp256k1.FromECDSAPrivateKey(&account.key.privateKey)
+	if err != nil {
+		logger.Error("Keypair: ToProto: Can not convert private key to bytes")
+	}
+	expected := &accountpb.Account{
+		KeyPair: &accountpb.KeyPair{
+			PrivateKey: privateKey,
+			PublicKey: account.key.publicKey,
+		},
+		Address: &accountpb.Address{Address: account.address.address},
+		PubKeyHash: account.pubKeyHash,
+	}
+	assert.Equal(t, expected, account.ToProto())
+}
+
+func TestAccount_FromProto(t *testing.T) {
+	expected := NewAccount()
+	account := &Account{}
+	privateKey, err := secp256k1.FromECDSAPrivateKey(&expected.key.privateKey)
+	if err != nil {
+		logger.Error("Keypair: ToProto: Can not convert private key to bytes")
+	}
+	accountProto := &accountpb.Account{
+		KeyPair: &accountpb.KeyPair{
+			PrivateKey: privateKey,
+			PublicKey:  expected.key.publicKey,
+		},
+		Address:    &accountpb.Address{Address: expected.address.address},
+		PubKeyHash: expected.pubKeyHash,
+	}
+	account.FromProto(accountProto)
+	assert.Equal(t, expected, account)
+}
+
+func TestAccount_IsValid(t *testing.T) {
+	account := NewAccount()
+	assert.True(t, account.IsValid())
+
+	account.address.address = "address000000000000000000000000011"
+	assert.False(t, account.IsValid())
 }

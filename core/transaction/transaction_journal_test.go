@@ -26,6 +26,9 @@ import (
 
 	"github.com/dappley/go-dappley/storage"
 	"github.com/stretchr/testify/assert"
+
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
+	transactionbasepb "github.com/dappley/go-dappley/core/transactionbase/pb"
 )
 
 var tx1 = Transaction{
@@ -46,4 +49,28 @@ func TestJournalPutAndGet(t *testing.T) {
 	// Expect transaction logs have been successfully saved
 	assert.Nil(t, err)
 	assert.Equal(t, vout.PubKeyHash, tx1.Vout[1].PubKeyHash)
+}
+
+func TestJournalToProto(t *testing.T) {
+	journal := &TxJournal{Txid: tx1.ID, Vout: tx1.Vout}
+	var voutArray []*transactionbasepb.TXOutput
+	for _, txout := range tx1.Vout {
+		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
+	}
+
+	expected := &transactionpb.TransactionJournal{Vout: voutArray}
+	assert.Equal(t, expected, journal.toProto())
+}
+
+func TestJournalFromProto(t *testing.T) {
+	journal := &TxJournal{}
+	var voutArray []*transactionbasepb.TXOutput
+	for _, txout := range tx1.Vout {
+		voutArray = append(voutArray, txout.ToProto().(*transactionbasepb.TXOutput))
+	}
+	journalProto := &transactionpb.TransactionJournal{Vout: voutArray}
+	journal.fromProto(journalProto)
+
+	expected := &TxJournal{Txid: tx1.ID, Vout: tx1.Vout}
+	assert.Equal(t, expected, journal)
 }
