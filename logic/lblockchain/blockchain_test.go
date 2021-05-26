@@ -176,9 +176,10 @@ func TestBlockchain_AddBlockToTail(t *testing.T) {
 	err := bc.AddBlockContextToTail(PrepareBlockContext(bc, genesis))
 
 	// Expect batch write was used
+	//todo:to test Batch, if it's efficient than use it to save utxo
 	//db.AssertCalled(t, "EnableBatch")
-	db.AssertCalled(t, "Flush")
-	db.AssertCalled(t, "DisableBatch")
+	//db.AssertCalled(t, "Flush")
+	//db.AssertCalled(t, "DisableBatch")
 
 	// Expect no error when adding genesis block
 	assert.Nil(t, err)
@@ -225,7 +226,7 @@ func BenchmarkBlockchain_AddBlockToTail(b *testing.B) {
 		txs = append(txs, &cbtx)
 		for j := 0; j < 10; j++ {
 			sendTxParam := transaction.NewSendTxParam(accounts[0].GetAddress(), accounts[0].GetKeyPair(), accounts[i%10].GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "")
-			tx, _ := ltransaction.NewUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(accounts[0].GetPubKeyHash()).GetAllUtxos(), sendTxParam)
+			tx, _ := ltransaction.NewNormalUTXOTransaction(utxo.GetAllUTXOsByPubKeyHash(accounts[0].GetPubKeyHash()).GetAllUtxos(), sendTxParam)
 			utxo.UpdateUtxo(&tx)
 			txs = append(txs, &tx)
 		}

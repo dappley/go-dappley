@@ -43,7 +43,9 @@ import (
 )
 
 var tipKey = []byte("tailBlockHash")
-var libKey = []byte("lastIrreversibleBlockHash")
+
+var blockSaveHash =[]byte("blockSaved")
+var UtxoSaveHash =[]byte("utxoSaved")
 
 var (
 	ErrBlockDoesNotExist       = errors.New("block does not exist in db")
@@ -95,15 +97,12 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 	var tip []byte
 	tip, err := db.Get(tipKey)
 	if err != nil {
-		return nil, err
-	}
-	lib, err := db.Get(libKey)
-	if err != nil {
+		logger.Warn("get tailBlockHash failed")
 		return nil, err
 	}
 
 	bc := &Blockchain{
-		blockchain.NewBlockchain(tip, lib),
+		blockchain.NewBlockchain(tip, []byte{}),
 		db,
 		utxo.NewUTXOCache(db),
 		libPolicy,
@@ -112,6 +111,14 @@ func GetBlockchain(db storage.Storage, libPolicy LIBPolicy, txPool *transactionp
 		blkSizeLimit,
 		&sync.Mutex{},
 	}
+
+	lib, err := bc.getLIB(bc.GetMaxHeight())
+	if err != nil {
+		logger.Warn("getLIB failed")
+		return nil, err
+	}
+	bc.SetLIBHash(lib)
+
 	return bc, nil
 }
 
@@ -221,7 +228,6 @@ func (bc *Blockchain) GetState() blockchain.BlockchainState {
 }
 
 func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
-	// Atomically set tail block hash and update UTXO index in db
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
@@ -238,62 +244,24 @@ func (bc *Blockchain) AddBlockContextToTail(ctx *BlockContext) error {
 		"hash":   ctx.Block.GetHash().String(),
 	})
 
-	bcTemp := bc.DeepCopy()
-
-	bcTemp.db.DisableBatch()
-
-	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
-
-	err := ctx.UtxoIndex.Save()
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to save utxo to database.")
+	if err := bc.saveDataToDb(ctx); err != nil {
 		return err
 	}
 
+	bc.updateLIB(ctx.Block.GetHeight())
+
+	numTxBeforeExe := bc.GetTxPool().GetNumOfTxInPool()
 	//Remove transactions in current transaction pool
-	bcTemp.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
-	bcTemp.GetTxPool().ResetPendingTransactions()
+	bc.GetTxPool().CleanUpMinedTxs(ctx.Block.GetTransactions())
+	bc.GetTxPool().ResetPendingTransactions()
 
 	logger.WithFields(logger.Fields{
 		"num_txs_before_add_block":    numTxBeforeExe,
 		"num_txs_after_update_txpool": bc.GetTxPool().GetNumOfTxInPool(),
 	}).Info("Blockchain : update tx pool")
 
-	err = bcTemp.AddBlockToDb(ctx.Block)
-	if err != nil {
-		blockLogger.Warn("Blockchain: failed to add block to database.")
-		return err
-	}
-
-	err = bcTemp.setTailBlockHash(ctx.Block.GetHash())
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to set tail block hash!")
-		return err
-	}
-
-	bcTemp.updateLIB(ctx.Block.GetHeight())
-
-	// Flush batch changes to storage
-	err = bcTemp.db.Flush()
-	if err != nil {
-		blockLogger.Error("Blockchain: failed to update tail block hash and UTXO index!")
-		return err
-	}
-	err=ctx.State.Save(ctx.Block.GetHash())
-	if err!=nil{
-		logger.Warn("scState save failed",err)
-	}
-	// Assign changes to receiver
-	*bc = *bcTemp
-
-	poolsize := 0
-	if bc.txPool != nil {
-		poolsize = bc.txPool.GetNumOfTxInPool()
-	}
-
 	blockLogger.WithFields(logger.Fields{
 		"numOfTx":  len(ctx.Block.GetTransactions()),
-		"poolSize": poolsize,
 	}).Info("Blockchain: added a new block to tail.")
 
 	return nil
@@ -429,27 +397,27 @@ func (bc *Blockchain) Rollback(index *lutxo.UTXOIndex, targetHash hash.Hash, scS
 		}
 	}
 
-	//updated utxo in db
-	err := index.Save()
-	if err != nil {
-		logger.Warn(err)
-		return false
-	}
-
-	//bc.db.EnableBatch()
-	//defer bc.db.DisableBatch()
-
-	err = bc.setTailBlockHash(parentblockHash)
+	err := bc.setTailBlockHash(parentblockHash)
 	if err != nil {
 		logger.Error("Blockchain: failed to set tail block hash during rollback!")
 		return false
 	}
+	bc.savedHash(blockSaveHash)
 
 	if err = scState.Save(parentblockHash); err != nil {
 		logger.Warn(err)
 		return false
 	}
 
+	//bc.db.EnableBatch()
+	//updated utxo in db
+	err = index.Save()
+	if err != nil {
+		logger.Warn(err)
+		return false
+	}
+	bc.savedHash(UtxoSaveHash)
+	//bc.db.DisableBatch()
 	//bc.db.Flush()
 
 	return true
@@ -464,19 +432,21 @@ func (bc *Blockchain) setTailBlockHash(hash hash.Hash) error {
 	return nil
 }
 
+func (bc *Blockchain) savedHash(bytes []byte) {
+	err := bc.db.Put(bytes, bc.GetTailBlockHash())
+	if err != nil {
+		logger.Warn(err)
+	}
+}
+
 func (bc *Blockchain) DeepCopy() *Blockchain {
 	newCopy := &Blockchain{}
 	copier.Copy(newCopy, bc)
 	return newCopy
 }
 
-func (bc *Blockchain) SetLIBHash(hash hash.Hash) error {
-	err := bc.db.Put(libKey, hash)
-	if err != nil {
-		return err
-	}
+func (bc *Blockchain) SetLIBHash(hash hash.Hash)  {
 	bc.bc.SetLIBHash(hash)
-	return nil
 }
 
 func (bc *Blockchain) IsLIB(blk *block.Block) bool {
@@ -554,8 +524,17 @@ func (bc *Blockchain) isAliveProducerSufficient(blk *block.Block) bool {
 }
 
 func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
-	if bc.libPolicy == nil {
+	libHash,err:=bc.getLIB(currBlkHeight)
+	if err != nil {
+		logger.Warn("updateLIB failed")
 		return
+	}
+	bc.SetLIBHash(libHash)
+}
+
+func (bc *Blockchain) getLIB(currBlkHeight uint64) (hash.Hash, error){
+	if bc.libPolicy == nil {
+		return []byte{} , errors.New("libPolicy is nil")
 	}
 
 	minConfirmationNum := bc.libPolicy.GetMinConfirmationNum()
@@ -567,14 +546,111 @@ func (bc *Blockchain) updateLIB(currBlkHeight uint64) {
 	LIBBlk, err := bc.GetBlockByHeight(LIBHeight)
 	if err != nil {
 		logger.WithError(err).Warn("Blockchain: Can not find LIB block in database")
-		return
+		return []byte{} , err
 	}
 
-	bc.SetLIBHash(LIBBlk.GetHash())
+	return LIBBlk.GetHash(),nil
 }
 
 func (bc *Blockchain) DeleteBlockByHash(hash hash.Hash) {
 	if err := bc.db.Del(hash); err != nil {
 		logger.Warn("Delete the block failed.")
 	}
+}
+
+func DataCheckingAndRecovery(db storage.Storage) error {
+	getHash := func(byte []byte) (hash.Hash, error) {
+		hash, err := db.Get(byte)
+		if err != nil {
+			return hash, err
+		}
+		return hash, nil
+	}
+	putHash := func(name, hash []byte) {
+		err := db.Put(name, hash)
+		if err != nil {
+			logger.Warn("put hash to db faild:",err)
+		}
+	}
+
+	//tail block hash checked，block no ，utxo no
+	tbHash, err := getHash(tipKey)
+	if err != nil {
+		return err
+	}
+	bHash, err := getHash(blockSaveHash)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(tbHash, bHash) {//set tail block hash to previous tbh
+		putHash(tipKey, bHash)
+		logger.Info("Incomplete data found, fixed tail block hash")
+		return nil
+	}
+
+	//tail block hash checked，block checked ，utxo no
+	uHash, err := getHash(UtxoSaveHash)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(uHash,bHash){ //checking and recovery utxo and scState
+		logger.Info("Incomplete data found, recovering utxo and scState")
+		getBlock := func(hash hash.Hash) *block.Block {
+			rawBytes, err := db.Get(hash)
+			if err != nil {
+				logger.Warn(err) //处理下
+			}
+			return block.Deserialize(rawBytes)
+		}
+		blk := getBlock(bHash)
+		parentBlk := getBlock(blk.GetPrevHash())
+		contractStates := scState.NewScState(utxo.NewUTXOCache(db))
+		utxo := lutxo.NewUTXOIndex(utxo.NewUTXOCache(db))
+		if !lblock.VerifyTransactions(blk, utxo, contractStates, parentBlk, db) {
+			logger.Warn("get check utxo failed")
+		}
+		if err = contractStates.Save(bHash); err != nil {//recover scState
+			logger.Warn(err)
+		}
+
+		utxo.SelfCheckingUTXO()
+		err := utxo.Save()
+		if err != nil {
+			logger.Warn(err)
+		}
+		putHash(UtxoSaveHash, bHash)
+		logger.Info("utxo and scState have been recovered.")
+	}
+	return nil
+}
+
+func (bc *Blockchain) saveDataToDb(ctx *BlockContext) error {
+	//be careful, change the order may cost data checking and recover error
+	err := bc.setTailBlockHash(ctx.Block.GetHash()) //order1 save tail block hash to db
+	if err != nil {
+		logger.Error("Failed to set tail block hash!")
+		return err
+	}
+
+	err = bc.AddBlockToDb(ctx.Block) //order2
+	if err != nil {
+		logger.Warn("Failed to add block to db.")
+		return err
+	}
+	bc.savedHash(blockSaveHash)
+
+	err = ctx.State.Save(ctx.Block.GetHash()) //order3
+	if err != nil {
+		logger.Warn("Failed to add scState to db.")
+		return err
+	}
+
+	err = ctx.UtxoIndex.Save() //order4
+	if err != nil {
+		logger.Warn("Failed to save utxo to db.")
+		return err
+	}
+	bc.savedHash(UtxoSaveHash)
+
+	return nil
 }

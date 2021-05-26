@@ -188,10 +188,10 @@ func ChangeProducers(addresses string, height uint64, bm *lblockchain.Blockchain
 
 }
 
-func SendProducerChangeTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, string, error) {
+func SendProducerChangeTX(addresses string, height uint64, bc *lblockchain.Blockchain) ([]byte, error) {
 	minerAccount := account.NewAccountByPrivateKey(minerPrivateKey)
 	sendTxParam := transaction.NewSendTxParam(minerAccount.GetAddress(), minerAccount.GetKeyPair(), minerAccount.GetAddress(), common.NewAmount(1), common.NewAmount(0), common.NewAmount(0), common.NewAmount(0), "{ \"height\":"+strconv.FormatUint(height, 10)+",\"addresses\":\""+addresses+"\"}")
-	return sendTo(sendTxParam, bc)
+	return sendProducerChange(sendTxParam, bc)
 }
 
 func GetAccountManager(path string) (*wallet.AccountManager, error) {
@@ -202,6 +202,38 @@ func GetAccountManager(path string) (*wallet.AccountManager, error) {
 		return nil, err
 	}
 	return am, nil
+}
+
+func sendProducerChange(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, error) {
+	fromAccount := account.NewTransactionAccountByAddress(sendTxParam.From)
+	if !fromAccount.IsValid() {
+		return nil, ErrInvalidSenderAddress
+	}
+	if sendTxParam.Amount.Validate() != nil || sendTxParam.Amount.IsZero() {
+		return nil, ErrInvalidAmount
+	}
+
+	acc := account.NewAccountByKey(sendTxParam.SenderKeyPair)
+	utxoIndex := lutxo.NewUTXOIndex(bc.GetUtxoCache())
+	if !utxoIndex.UpdateUtxos(bc.GetTxPool().GetAllTransactions(utxoIndex)) {
+		logger.Warn("sendTo error")
+	}
+
+	utxos, err := utxoIndex.GetUTXOsAccordingToAmount([]byte(acc.GetPubKeyHash()), sendTxParam.TotalCost())
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := ltransaction.NewProducerChangeUTXOTransaction(utxos, sendTxParam)
+
+	bc.GetTxPool().Push(tx)
+	bc.GetTxPool().BroadcastTx(&tx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tx.ID, err
 }
 
 func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]byte, string, error) {
@@ -231,7 +263,7 @@ func sendTo(sendTxParam transaction.SendTxParam, bc *lblockchain.Blockchain) ([]
 		return nil, "", err
 	}
 
-	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 
 	bc.GetTxPool().Push(tx)
 	bc.GetTxPool().BroadcastTx(&tx)

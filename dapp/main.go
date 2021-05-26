@@ -20,11 +20,10 @@ package main
 
 import (
 	"flag"
-
-	"github.com/dappley/go-dappley/core/transaction"
-
+	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/blockchain"
 	"github.com/dappley/go-dappley/core/blockproducerinfo"
+	"github.com/dappley/go-dappley/core/transaction"
 	"github.com/dappley/go-dappley/logic/blockproducer"
 	"github.com/dappley/go-dappley/logic/lblockchain"
 	"github.com/dappley/go-dappley/logic/transactionpool"
@@ -36,7 +35,6 @@ import (
 	"github.com/dappley/go-dappley/config"
 	configpb "github.com/dappley/go-dappley/config/pb"
 	"github.com/dappley/go-dappley/consensus"
-	"github.com/dappley/go-dappley/core/account"
 	"github.com/dappley/go-dappley/core/block"
 
 	"github.com/dappley/go-dappley/logic"
@@ -130,25 +128,35 @@ func main() {
 	blkSizeLimit := conf.GetNodeConfig().GetBlkSizeLimit() * size1kB
 	txPool := transactionpool.NewTransactionPool(node, txPoolLimit)
 	//utxo.NewPool()
-	bc, err := lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
+	minerSubsidy := viper.GetInt("log.minerSubsidy")
+	if minerSubsidy == 0 {
+		minerSubsidy = 10000000000
+	}
+	transaction.SetSubsidy(minerSubsidy)
 
 	var LIBBlk *block.Block = nil
+	var bc *lblockchain.Blockchain
+	err = lblockchain.DataCheckingAndRecovery(db)
 	if err != nil {
 		bc, err = logic.CreateBlockchain(account.NewAddress(genesisAddr), db, conss, txPool, int(blkSizeLimit))
 		if err != nil {
 			logger.Panic(err)
 		}
 	} else {
+		bc ,err= lblockchain.GetBlockchain(db, conss, txPool, int(blkSizeLimit))
+		if err != nil {
+			logger.Panic(err)
+		}
 		LIBBlk, _ = bc.GetLIB()
 	}
-	bc.SetState(blockchain.BlockchainInit)
-
-	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize the node! Exiting...")
 		return
 	}
+
+	bc.SetState(blockchain.BlockchainInit)
+	bm := lblockchain.NewBlockchainManager(bc, blockchain.NewBlockPool(LIBBlk), node, conss)
 
 	//start mining
 	logic.SaveAccount()
@@ -170,12 +178,6 @@ func main() {
 
 	bm.Getblockchain().SetState(blockchain.BlockchainReady)
 	bm.RequestDownloadBlockchain()
-
-	minerSubsidy := viper.GetInt("log.minerSubsidy")
-	if minerSubsidy == 0 {
-		minerSubsidy = 1000000000
-	}
-	transaction.SetSubsidy(minerSubsidy)
 
 	if viper.GetBool("metrics.open") {
 		logMetrics.LogMetricsInfo(bm.Getblockchain())

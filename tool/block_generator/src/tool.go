@@ -257,7 +257,7 @@ func newTransaction(sender, receiver account.Address, senderKeyPair *account.Key
 	utxos, _ := utxoIndex.GetUTXOsAccordingToAmount([]byte(senderPkh), amount)
 
 	sendTxParam := transaction.NewSendTxParam(sender, senderKeyPair, receiver, amount, common.NewAmount(0), gasLimit, gasPrice, contract)
-	tx, err := ltransaction.NewUTXOTransaction(utxos, sendTxParam)
+	tx, err := ltransaction.NewNormalUTXOTransaction(utxos, sendTxParam)
 
 	if err != nil {
 		logger.WithError(err).Panic("Create transaction failed!")

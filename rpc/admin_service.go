@@ -61,7 +61,7 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 	addresses := in.GetAddresses()
 	height := in.GetHeight()
 	adminRpcService.mutex.Lock()
-	_, _, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {

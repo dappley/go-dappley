@@ -3,7 +3,6 @@ package scState
 import (
 	"github.com/dappley/go-dappley/core/stateLog"
 	"github.com/dappley/go-dappley/core/utxo"
-	"github.com/dappley/go-dappley/util"
 	"sync"
 
 	"github.com/dappley/go-dappley/common/hash"
@@ -47,7 +46,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 		}
 		for key, value := range state {
 			//before saving, read out the original value and save it in the state log
-			val, err := ss.cache.GetScStates(address, key)
+			val, err := ss.cache.GetScStates(utxo.GetscStateKey(address, key))
 			if err != nil {
 				stLog.Log[address][key] = ScStateValueIsNotExist
 			} else {
@@ -55,12 +54,12 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 			}
 			//update new states in db
 			if value == ScStateValueIsNotExist {
-				err := ss.cache.DelScStates(address, key)
+				err := ss.cache.DelScStates(utxo.GetscStateKey(address, key))
 				if err != nil {
 					return err
 				}
 			} else {
-				err := ss.cache.AddScStates(address, key, value)
+				err := ss.cache.AddScStates(utxo.GetscStateKey(address, key), value)
 				if err != nil {
 					return err
 				}
@@ -68,7 +67,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 		}
 	}
 
-	err :=ss.cache.AddStateLog(util.Bytes2str(blkHash), stLog)
+	err :=ss.cache.AddStateLog(utxo.GetscStateLogKey(blkHash), stLog)
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,7 @@ func (ss *ScState) Save(blkHash hash.Hash) error {
 }
 
 func (ss *ScState) RevertState(blkHash hash.Hash) {
-	stlog,err := ss.cache.GetStateLog(util.Bytes2str(blkHash))
+	stlog,err := ss.cache.GetStateLog(utxo.GetscStateLogKey(blkHash))
 	if err!=nil{
 		logger.Warn("get state log failed: ", err)
 	}
@@ -101,7 +100,7 @@ func (ss *ScState) GetStateValue(address, key string) string {
 	} else {
 		ss.states[address] = make(map[string]string)
 	}
-	value, err := ss.cache.GetScStates(address, key)
+	value, err := ss.cache.GetScStates(utxo.GetscStateKey(address, key))
 	if err != nil {
 		logger.Warn("get state value failed: ", err)
 	}
@@ -124,7 +123,7 @@ func (ss *ScState) DelStateValue( address, key string) {
 		}
 	}
 
-	_, err := ss.cache.GetScStates(address, key)
+	_, err := ss.cache.GetScStates(utxo.GetscStateKey(address, key))
 	if err != nil {
 		logger.Warn("The key to be deleted does not exist.")
 		return
