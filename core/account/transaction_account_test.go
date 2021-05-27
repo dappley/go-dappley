@@ -8,7 +8,7 @@ import (
 )
 
 func TestTransactionAccount_ToProto(t *testing.T) {
-	pubKeyHash := newUserPubKeyHash([]byte("address1000000000000000000000000"))
+	pubKeyHash := newUserPubKeyHash([]byte("hash"))
 	address := pubKeyHash.GenerateAddress()
 	transactionAccount := &TransactionAccount{pubKeyHash: pubKeyHash, address: address}
 
@@ -22,7 +22,7 @@ func TestTransactionAccount_ToProto(t *testing.T) {
 }
 
 func TestTransactionAccount_FromProto(t *testing.T) {
-	pubKeyHash := newUserPubKeyHash([]byte("address1000000000000000000000000"))
+	pubKeyHash := newUserPubKeyHash([]byte("hash"))
 	address := pubKeyHash.GenerateAddress()
 
 	transactionAccount := &TransactionAccount{}

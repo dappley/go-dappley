@@ -2,6 +2,7 @@ package block
 
 import (
 	"github.com/dappley/go-dappley/core/transaction"
+	transactionpb "github.com/dappley/go-dappley/core/transaction/pb"
 	"testing"
 	"time"
 
@@ -92,25 +93,52 @@ func TestBlockHeader_Proto(t *testing.T) {
 	assert.Equal(t, bh1, bh2)
 }
 
-func TestBlock_Proto(t *testing.T) {
-
+func TestBlock_ToProto(t *testing.T) {
 	b1 := GenerateMockBlock()
 
-	pb := b1.ToProto()
-	var i interface{} = pb
-	_, correct := i.(proto.Message)
-	assert.Equal(t, true, correct)
-	mpb, err := proto.Marshal(pb)
-	assert.Nil(t, err)
+	var txArray []*transactionpb.Transaction
+	for _, tx := range b1.transactions {
+		txArray = append(txArray, tx.ToProto().(*transactionpb.Transaction))
+	}
+	expected := &blockpb.Block{
+		Header: &blockpb.BlockHeader{
+			Hash: b1.header.hash,
+			PreviousHash: b1.header.prevHash,
+			Nonce: b1.header.nonce,
+			Timestamp: b1.header.timestamp,
+			Signature: b1.header.signature,
+			Height: b1.header.height,
+			Producer: b1.header.producer,
+		},
+		Transactions: txArray,
+	}
 
-	newpb := &blockpb.Block{}
-	err = proto.Unmarshal(mpb, newpb)
-	assert.Nil(t, err)
+	assert.Equal(t, expected, b1.ToProto())
+}
 
-	b2 := &Block{}
-	b2.FromProto(newpb)
+func TestBlock_FromProto(t *testing.T) {
+	expected := GenerateMockBlock()
 
-	assert.Equal(t, *b1, *b2)
+	var txArray []*transactionpb.Transaction
+	for _, tx := range expected.transactions {
+		txArray = append(txArray, tx.ToProto().(*transactionpb.Transaction))
+	}
+	blockProto := &blockpb.Block{
+		Header: &blockpb.BlockHeader{
+			Hash: expected.header.hash,
+			PreviousHash: expected.header.prevHash,
+			Nonce: expected.header.nonce,
+			Timestamp: expected.header.timestamp,
+			Signature: expected.header.signature,
+			Height: expected.header.height,
+			Producer: expected.header.producer,
+		},
+		Transactions: txArray,
+	}
+
+	b1 := &Block{}
+	b1.FromProto(blockProto)
+	assert.Equal(t, expected, b1)
 }
 
 func TestBlock_IsSigned(t *testing.T) {
@@ -129,10 +157,12 @@ func TestBlock_Serialize(t *testing.T) {
 
 func TestDeserialize(t *testing.T) {
 	rawBytes := []byte{10, 10, 32, 2, 48, 1, 58, 4, 116, 101, 115, 116}
+	b1 := Deserialize(rawBytes)
 
 	expectedBlock := NewBlockWithTimestamp(nil, nil, 2, "test")
 
-	assert.Equal(t, expectedBlock, Deserialize(rawBytes))
+	assert.Equal(t, expectedBlock.header, b1.header)
+	assert.Equal(t, expectedBlock.transactions, b1.transactions)
 }
 
 func TestBlock_GetCoinbaseTransaction(t *testing.T) {
