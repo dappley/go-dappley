@@ -404,9 +404,12 @@ func deserializeBlockPool(s string, rootBlkHash string) (*BlockPool, map[string]
 
 func TestGetKey (t *testing.T) {
 	node1, _ := common.NewTreeNode(createBlock(hash.Hash("hello"), hash.Hash("world"), 0))
-	node2, _ := common.NewTreeNode(createBlock(hash.Hash("hallo"), hash.Hash("123"), 0))
+	node2, _ := common.NewTreeNode(createBlock(hash.Hash("123"), hash.Hash("456"), 0))
+	node3, _ := common.NewTreeNode(createBlock(nil, nil, 0))
+	node4, _ := common.NewTreeNode(createBlock(hash.Hash(nil), hash.Hash(nil), 0))
 
-	assert.NotEqual(t, getKey(node1), getKey(node2))
 	assert.Equal(t, "68656c6c6f", getKey(node1))
-	assert.Equal(t, "68616c6c6f", getKey(node2))
+	assert.Equal(t, "313233", getKey(node2))
+	assert.Equal(t, "", getKey(node3))
+	assert.Equal(t, "", getKey(node4))
 }
