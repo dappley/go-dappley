@@ -1,6 +1,7 @@
 package account
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,29 +72,15 @@ func TestPubKeyHash_IsValid(t *testing.T) {
 }
 
 func TestPubKeyHash_GenerateAddress(t *testing.T) {
-	pubKey1 := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
-	pubKey2 := []uint8([]byte{versionUser, 0xb0, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
-
-	expected1 := Address{address: "dVaFsQL9He4Xn4CEUh1TCNtfEhHNHKX3hs"}
-
-	pkh1 := PubKeyHash(pubKey1)
-	pkh2 := PubKeyHash(pubKey2)
-	pkh3 := PubKeyHash(pubKey1)
-	assert.Equal(t, expected1, pkh1.GenerateAddress())
-	assert.NotEqual(t, pkh1.GenerateAddress(), pkh2.GenerateAddress())
-	assert.Equal(t, pkh1.GenerateAddress(), pkh3.GenerateAddress())
+	pubKey := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	expected := Address{address: "dVaFsQL9He4Xn4CEUh1TCNtfEhHNHKX3hs"}
+	assert.Equal(t, expected, PubKeyHash(pubKey).GenerateAddress())
 }
 
 func TestGeneratePubKeyHash(t *testing.T) {
-	pubKey1 := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
-	pubKey2 := []uint8([]byte{versionUser, 0xb0, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
-
-	hash1 := generatePubKeyHash(pubKey1)
-	hash2 := generatePubKeyHash(pubKey2)
-	hash3 := generatePubKeyHash(pubKey1)
-
-	assert.NotEqual(t, hash1, hash2)
-	assert.Equal(t, hash1, hash3)
+	pubKey := []uint8([]byte{versionUser, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c})
+	pubKeyHash := generatePubKeyHash(pubKey)
+	assert.Equal(t, pubKeyHash, []byte{118,190,241,208,155,158,113,47,115,229,101,237,223,142,29,219,129,187,19,126})
 }
 
 func TestIsValidPubKey(t *testing.T) {
@@ -106,10 +93,10 @@ func TestIsValidPubKey(t *testing.T) {
 	isPubKey3Valid, err3 := IsValidPubKey(pubKey3)
 
 	assert.False(t, isPubKey1Valid)
-	assert.NotNil(t, err1)
+	assert.Equal(t, errors.New("public key not correct"),err1)
 
 	assert.False(t, isPubKey2Valid)
-	assert.NotNil(t, err2)
+	assert.Equal(t, errors.New("public key not correct"),err2)
 
 	assert.True(t, isPubKey3Valid)
 	assert.Nil(t, err3)
