@@ -78,6 +78,33 @@ func (adminRpcService *AdminRpcService) RpcChangeProducer(ctx context.Context, i
 	return &rpcpb.ChangeProducerResponse{}, nil
 }
 
+func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *rpcpb.AddProducerRequest) (*rpcpb.AddProducerResponse, error) {
+
+	addresses := in.GetAddresses()
+	height := in.GetHeight()
+	adminRpcService.mutex.Lock()
+	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
+	if err != nil {
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case transaction.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
+	}
+
+	logic.ChangeProducers(addresses, height, adminRpcService.bm)
+	return &rpcpb.AddProducerResponse{}, nil
+}
+
+func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, in *rpcpb.DeleteProducerRequest) (*rpcpb.DeleteProducerResponse, error) {
+
+	return &rpcpb.DeleteProducerResponse{}, nil
+}
+
 func (adminRpcService *AdminRpcService) RpcGetPeerInfo(ctx context.Context, in *rpcpb.GetPeerInfoRequest) (*rpcpb.GetPeerInfoResponse, error) {
 
 	return &rpcpb.GetPeerInfoResponse{
