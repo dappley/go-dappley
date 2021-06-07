@@ -8,39 +8,50 @@ import (
 )
 
 func TestTransactionAccount_ToProto(t *testing.T) {
-	pubKeyHash := newUserPubKeyHash([]byte("hash"))
-	address := pubKeyHash.GenerateAddress()
-	transactionAccount := &TransactionAccount{pubKeyHash: pubKeyHash, address: address}
+	transactionAccount := &TransactionAccount{
+		Address{ "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
+		[]byte{88,134, 181, 86, 183, 18, 242, 27, 204, 7, 217, 60, 186, 131, 186, 176, 222, 153, 72, 62, 0},
+	}
 
 	expected := &accountpb.TransactionAccount{
 		Address: &accountpb.Address{
-			Address: address.address,
+			Address: "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL",
 		},
-		PubKeyHash: pubKeyHash,
+		PubKeyHash: []byte{88,134, 181, 86, 183, 18, 242, 27, 204, 7, 217, 60, 186, 131, 186, 176, 222, 153, 72, 62, 0},
 	}
+
 	assert.Equal(t, expected, transactionAccount.ToProto())
 }
 
 func TestTransactionAccount_FromProto(t *testing.T) {
-	pubKeyHash := newUserPubKeyHash([]byte("hash"))
-	address := pubKeyHash.GenerateAddress()
 
 	transactionAccount := &TransactionAccount{}
 	transactionAccountProto := &accountpb.TransactionAccount{
 		Address: &accountpb.Address{
-			Address: address.address,
+			Address: 		"cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL",
 		},
-		PubKeyHash: pubKeyHash,
+		PubKeyHash: []byte{88,134, 181, 86, 183, 18, 242, 27, 204, 7, 217, 60, 186, 131, 186, 176, 222, 153, 72, 62, 0},
 	}
 	transactionAccount.FromProto(transactionAccountProto)
 
-	expected := &TransactionAccount{address: address, pubKeyHash: pubKeyHash}
+	expected  := &TransactionAccount{
+		Address{ "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
+		[]byte{88,134, 181, 86, 183, 18, 242, 27, 204, 7, 217, 60, 186, 131, 186, 176, 222, 153, 72, 62, 0},
+	}
 	assert.Equal(t, expected, transactionAccount)
 }
 
 func TestTransactionAccount_IsValid(t *testing.T) {
-	transactionAccount := NewContractTransactionAccount()
+	transactionAccount := &TransactionAccount{
+		Address{ "cd2MRu285Uwiu8ZkDp4jtL8tcZeHMZk8YL"},
+		[]byte{88,134, 181, 86, 183, 18, 242, 27, 204, 7, 217, 60, 186, 131, 186, 176, 222, 153, 72, 62, 0},
+	}
 	assert.True(t, transactionAccount.IsValid())
+
+	transactionAccount.pubKeyHash=[]byte{}
+	assert.False(t, transactionAccount.IsValid())
+
+	transactionAccount.pubKeyHash = []byte{88,134, 181, 86, 183, 18, 242, 27, 204, 7, 217, 60, 186, 131, 186, 176, 222, 153, 72, 62, 0}
 	transactionAccount.address.address = "address000000000000000000000000011"
 	assert.False(t, transactionAccount.IsValid())
 }
