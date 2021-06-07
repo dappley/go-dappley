@@ -412,4 +412,5 @@ func TestGetKey (t *testing.T) {
 	assert.Equal(t, "313233", getKey(node2))
 	assert.Equal(t, "", getKey(node3))
 	assert.Equal(t, "", getKey(node4))
+	assert.Equal(t, "", getKey(nil))
 }

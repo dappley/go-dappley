@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var addressString = "1Xnq2R6SzRNUt7ZANAqyZc2P9ziF6vYekB"
+var addressString = "dVaFsQL9He4Xn4CEUh1TCNtfEhHNHKX3hs"
 
 func TestAddress_ToProto(t *testing.T) {
-	addr := NewAddress(addressString)
+	addr := &Address{address: addressString}
 	expected := &accountpb.Address{Address: addressString}
 	assert.Equal(t, expected, addr.ToProto())
 }
@@ -25,14 +25,14 @@ func TestAddress_FromProto(t *testing.T) {
 }
 
 func TestAddress_decode(t *testing.T) {
-	addr := NewAddress(addressString)
-	expected := []byte{0x0, 0x1, 0x51, 0xbe, 0x94, 0x9e, 0xbd, 0x47, 0xf8, 0x7e, 0x77, 0x4a, 0x12, 0x36, 0x28, 0x6d, 0x7, 0x49, 0xe1, 0x77, 0x56, 0x35, 0x3b, 0x48, 0x9a, 0x44}
+	addr := &Address{address: addressString}
+	expected := []byte{0x5a, 0xb1, 0x34, 0x4c, 0x17, 0x67, 0x4c, 0x18, 0xd1, 0xa2, 0xdc, 0xea, 0x9f, 0x17, 0x16, 0xe0, 0x49, 0xf4, 0xa0, 0x5e, 0x6c, 0x8d, 0xc6, 0x1e, 0x9a}
 	assert.Equal(t, expected, addr.decode())
 }
 
 func TestAddress_getAddressCheckSum(t *testing.T) {
-	addr := NewAddress(addressString)
-	expected := []byte{0x3b, 0x48, 0x9a, 0x44}
+	addr := &Address{address: addressString}
+	expected := []byte{0x8d, 0xc6, 0x1e, 0x9a}
 
 	assert.Equal(t, expected, addr.getAddressCheckSum())
 }

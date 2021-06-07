@@ -64,7 +64,7 @@ func TestNewTransactionAccountByPubKey(t *testing.T) {
 	assert.NotNil(t, transactionAccount.pubKeyHash)
 	assert.NotNil(t, transactionAccount.address)
 	assert.Equal(t, PubKeyHash([]byte{0x5a, 0xad, 0xec, 0x2c, 0x21, 0x3b, 0x67, 0xfa, 0x96, 0xe5, 0xa8, 0xb9, 0xb4, 0x99, 0xf3, 0x26, 0x41, 0xf7, 0xff, 0x36, 0x8a}), transactionAccount.pubKeyHash)
-	assert.Equal(t, NewAddress("dVGuSWFXE91Ay36n9HnCzpu8AfckEgvnnR"), transactionAccount.address)
+	assert.Equal(t, Address{address: "dVGuSWFXE91Ay36n9HnCzpu8AfckEgvnnR"}, transactionAccount.address)
 }
 
 func TestNewContractAccountByPubKeyHash(t *testing.T) {
@@ -75,13 +75,13 @@ func TestNewContractAccountByPubKeyHash(t *testing.T) {
 	assert.NotNil(t, transactionAccount.pubKeyHash)
 	assert.NotNil(t, transactionAccount.address)
 	assert.Equal(t, pubKeyBytes, transactionAccount.pubKeyHash)
-	assert.Equal(t, NewAddress("dVaFsQL9He4Xn4CEUh1TCNtfEhHNHKX3hs"), transactionAccount.address)
+	assert.Equal(t, Address{address: "dVaFsQL9He4Xn4CEUh1TCNtfEhHNHKX3hs"}, transactionAccount.address)
 }
 
 func TestGeneratePubKeyHashByAddress(t *testing.T) {
-	address1 := NewAddress("dZSj3ehsCXKzbTAxfgZU6hokbNFe7Unsuy")
-	address2 := NewAddress("invalid000000000000000000000000000")
-	address3 := NewAddress("tooshort")
+	address1 := Address{address: "dZSj3ehsCXKzbTAxfgZU6hokbNFe7Unsuy"}
+	address2 := Address{address: "invalid000000000000000000000000000"}
+	address3 := Address{address: "tooshort"}
 	hash1, success1 := generatePubKeyHashByAddress(address1)
 	hash2, success2 := generatePubKeyHashByAddress(address2)
 	hash3, success3 := generatePubKeyHashByAddress(address3)
@@ -99,7 +99,7 @@ func TestGeneratePubKeyHashByAddress(t *testing.T) {
 }
 
 func TestNewTransactionAccountByAddress(t *testing.T) {
-	address := NewAddress("dZSj3ehsCXKzbTAxfgZU6hokbNFe7Unsuy")
+	address := Address{address: "dZSj3ehsCXKzbTAxfgZU6hokbNFe7Unsuy"}
 	transactionAccount := NewTransactionAccountByAddress(address)
 	expectedHash := PubKeyHash([]byte{0x5a, 0xdb, 0xa8, 0x28, 0x9b, 0xe2, 0xa9, 0xf, 0x21, 0x1f, 0xf5, 0x0, 0x5f, 0x2a, 0x8e, 0x1e, 0xe8, 0x90, 0x62, 0x5c, 0x2})
 

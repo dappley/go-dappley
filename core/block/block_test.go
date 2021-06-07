@@ -142,34 +142,85 @@ func TestBlock_FromProto(t *testing.T) {
 }
 
 func TestBlock_IsSigned(t *testing.T) {
-	block := NewBlock(nil, nil, "")
+	block := &Block{
+		header: &BlockHeader{
+			hash:      []byte{},
+			prevHash:  nil,
+			nonce:     0,
+			timestamp: 0,
+			signature: nil,
+			height:    0,
+			producer:  "",
+		},
+		transactions: []*transaction.Transaction{},
+	}
 	assert.False(t, block.IsSigned())
 
-	block.SetSignature(hash.Hash{0x88})
+	block.header.signature = hash.Hash{0x88}
 	assert.True(t, block.IsSigned())
+
+	block.header = nil
+	assert.False(t, block.IsSigned())
 }
 
 func TestBlock_Serialize(t *testing.T) {
-	block := GenerateMockBlock()
-	serializedBytes, _ := proto.Marshal(block.ToProto())
-	assert.Equal(t, serializedBytes, block.Serialize())
+	block := &Block{
+		header: &BlockHeader{
+			hash: hash.Hash{104,97,115,104},
+			prevHash: hash.Hash{112,114,101,118,104,97,115,104},
+			nonce: 1,
+			timestamp: 1623087951,
+			signature: hash.Hash{88},
+			height: 0,
+			producer: "producer",
+		},
+		transactions: []*transaction.Transaction{
+
+		},
+	}
+	expected := []byte{10, 37, 10, 4, 104, 97, 115, 104, 18, 8, 112, 114, 101, 118, 104, 97, 115, 104, 24, 1, 32, 207, 182, 249, 133, 6, 42, 1, 88, 58, 8, 112, 114, 111, 100, 117, 99, 101, 114}
+	assert.Equal(t, expected, block.Serialize())
 }
 
 func TestDeserialize(t *testing.T) {
-	rawBytes := []byte{10, 10, 32, 2, 48, 1, 58, 4, 116, 101, 115, 116}
+	rawBytes := []byte{10, 37, 10, 4, 104, 97, 115, 104, 18, 8, 112, 114, 101, 118, 104, 97, 115, 104, 24, 1, 32, 207, 182, 249, 133, 6, 42, 1, 88, 58, 8, 112, 114, 111, 100, 117, 99, 101, 114}
 	b1 := Deserialize(rawBytes)
 
-	expectedBlock := NewBlockWithTimestamp(nil, nil, 2, "test")
+	expectedBlock := &Block{
+		header: &BlockHeader{
+			hash: hash.Hash{104,97,115,104},
+			prevHash: hash.Hash{112,114,101,118,104,97,115,104},
+			nonce: 1,
+			timestamp: 1623087951,
+			signature: hash.Hash{88},
+			height: 0,
+			producer: "producer",
+		},
+		transactions: nil,
+	}
 
 	assert.Equal(t, expectedBlock.header, b1.header)
 	assert.Equal(t, expectedBlock.transactions, b1.transactions)
 }
 
 func TestBlock_GetCoinbaseTransaction(t *testing.T) {
-	b1 := NewBlock(nil, nil, "")
+	b1 := &Block{
+		header: &BlockHeader{
+			hash:      []byte{},
+			prevHash:  nil,
+			nonce:     0,
+			timestamp: 0,
+			signature: nil,
+			height:    0,
+			producer:  "",
+		},
+		transactions: []*transaction.Transaction{},
+	}
 	assert.Nil(t, b1.GetCoinbaseTransaction())
 
 	b2 := GenerateMockBlock()
+	assert.Nil(t, b2.GetCoinbaseTransaction())
+
 	b2.transactions[1].Type = transaction.TxTypeCoinbase
 	assert.Equal(t, b2.transactions[1], b2.GetCoinbaseTransaction())
 }
