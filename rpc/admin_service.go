@@ -83,7 +83,7 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 	addresses := in.GetAddresses()
 	height := in.GetHeight()
 	adminRpcService.mutex.Lock()
-	_, err := logic.SendProducerChangeTX(addresses, height, adminRpcService.bm.Getblockchain())
+	_, err := logic.SendProducerAddTX(addresses, height, adminRpcService.bm.Getblockchain())
 	adminRpcService.mutex.Unlock()
 	if err != nil {
 		switch err {
@@ -101,7 +101,21 @@ func (adminRpcService *AdminRpcService) RpcAddProducer(ctx context.Context, in *
 }
 
 func (adminRpcService *AdminRpcService) RpcDeleteProducer(ctx context.Context, in *rpcpb.DeleteProducerRequest) (*rpcpb.DeleteProducerResponse, error) {
-
+	height := in.GetHeight()
+	adminRpcService.mutex.Lock()
+	_, err := logic.SendProducerDeleteTX(height, adminRpcService.bm.Getblockchain())
+	adminRpcService.mutex.Unlock()
+	if err != nil {
+		switch err {
+		case logic.ErrInvalidSenderAddress, logic.ErrInvalidRcverAddress, logic.ErrInvalidAmount:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case transaction.ErrInsufficientFund:
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		default:
+			return nil, status.Error(codes.Unknown, err.Error())
+		}
+	}
+	logic.ChangeProducers("", height, adminRpcService.bm)
 	return &rpcpb.DeleteProducerResponse{}, nil
 }
 
